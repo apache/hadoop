@@ -28,7 +28,6 @@ import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientRatis;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.*;
@@ -645,10 +644,10 @@ public class TestOzoneRpcClient {
     Assert
         .assertEquals(value.getBytes().length, keyLocations.get(0).getLength());
 
-    ContainerWithPipeline container =
-        cluster.getStorageContainerManager().getContainerManager()
-            .getContainerWithPipeline(new ContainerID(containerID));
-    Pipeline pipeline = container.getPipeline();
+    ContainerInfo container = cluster.getStorageContainerManager()
+        .getContainerManager().getContainer(ContainerID.valueof(containerID));
+    Pipeline pipeline = cluster.getStorageContainerManager()
+        .getPipelineManager().getPipeline(container.getPipelineID());
     List<DatanodeDetails> datanodes = pipeline.getNodes();
 
     DatanodeDetails datanodeDetails = datanodes.get(0);
@@ -662,17 +661,17 @@ public class TestOzoneRpcClient {
     // shutdown the datanode
     cluster.shutdownHddsDatanode(datanodeDetails);
 
-    Assert.assertTrue(container.getContainerInfo().getState()
+    Assert.assertTrue(container.getState()
         == HddsProtos.LifeCycleState.OPEN);
     // try to read, this shouls be successful
     readKey(bucket, keyName, value);
 
-    Assert.assertTrue(container.getContainerInfo().getState()
+    Assert.assertTrue(container.getState()
         == HddsProtos.LifeCycleState.OPEN);
     // shutdown the second datanode
     datanodeDetails = datanodes.get(1);
     cluster.shutdownHddsDatanode(datanodeDetails);
-    Assert.assertTrue(container.getContainerInfo().getState()
+    Assert.assertTrue(container.getState()
         == HddsProtos.LifeCycleState.OPEN);
 
     // the container is open and with loss of 2 nodes we still should be able
@@ -750,10 +749,10 @@ public class TestOzoneRpcClient {
 
     // Second, sum the data size from chunks in Container via containerID
     // and localID, make sure the size equals to the size from keyDetails.
+    ContainerInfo container = cluster.getStorageContainerManager()
+        .getContainerManager().getContainer(ContainerID.valueof(containerID));
     Pipeline pipeline = cluster.getStorageContainerManager()
-        .getContainerManager().getContainerWithPipeline(
-            ContainerID.valueof(containerID))
-        .getPipeline();
+        .getPipelineManager().getPipeline(container.getPipelineID());
     List<DatanodeDetails> datanodes = pipeline.getNodes();
     Assert.assertEquals(datanodes.size(), 1);
 

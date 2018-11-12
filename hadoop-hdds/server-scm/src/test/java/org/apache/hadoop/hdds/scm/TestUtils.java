@@ -413,7 +413,7 @@ public final class TestUtils {
       throws IOException {
     return containerManager
         .allocateContainer(HddsProtos.ReplicationType.STAND_ALONE,
-            HddsProtos.ReplicationFactor.THREE, "root").getContainerInfo();
+            HddsProtos.ReplicationFactor.THREE, "root");
 
   }
 

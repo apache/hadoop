@@ -32,6 +32,7 @@ public class CommandForDatanode<T extends GeneratedMessage> implements
 
   private final SCMCommand<T> command;
 
+  // TODO: Command for datanode should take DatanodeDetails as parameter.
   public CommandForDatanode(UUID datanodeId, SCMCommand<T> command) {
     this.datanodeId = datanodeId;
     this.command = command;

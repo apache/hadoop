@@ -25,8 +25,8 @@ import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
@@ -155,12 +155,13 @@ public class TestContainerPlacement {
       assertEquals(remaining * nodeCount,
           (long) nodeManager.getStats().getRemaining().get());
 
-      ContainerWithPipeline containerWithPipeline = containerManager
+      ContainerInfo container = containerManager
           .allocateContainer(
           xceiverClientManager.getType(),
           xceiverClientManager.getFactor(), "OZONE");
       assertEquals(xceiverClientManager.getFactor().getNumber(),
-          containerWithPipeline.getPipeline().getNodes().size());
+          containerManager.getContainerReplicas(
+              container.containerID()).size());
     } finally {
       IOUtils.closeQuietly(containerManager);
       IOUtils.closeQuietly(nodeManager);

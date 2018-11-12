@@ -21,15 +21,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ContainerInfoProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
@@ -185,42 +181,6 @@ public class SCMContainerManager implements ContainerManager {
   }
 
   /**
-   * Returns the ContainerInfo and pipeline from the containerID. If container
-   * has no available replicas in datanodes it returns pipeline with no
-   * datanodes and empty leaderID . Pipeline#isEmpty can be used to check for
-   * an empty pipeline.
-   *
-   * @param containerID - ID of container.
-   * @return - ContainerWithPipeline such as creation state and the pipeline.
-   * @throws IOException
-   */
-  @Override
-  public ContainerWithPipeline getContainerWithPipeline(ContainerID containerID)
-      throws ContainerNotFoundException, PipelineNotFoundException {
-    lock.lock();
-    try {
-      final ContainerInfo contInfo = getContainer(containerID);
-      Pipeline pipeline;
-      if (contInfo.isOpen()) {
-        // If pipeline with given pipeline Id already exist return it
-        pipeline = pipelineManager.getPipeline(contInfo.getPipelineID());
-      } else {
-        // For close containers create pipeline from datanodes with replicas
-        Set<ContainerReplica> dnWithReplicas = containerStateManager
-            .getContainerReplicas(contInfo.containerID());
-        List<DatanodeDetails> dns =
-            dnWithReplicas.stream().map(ContainerReplica::getDatanodeDetails)
-                .collect(Collectors.toList());
-        pipeline = pipelineManager.createPipeline(ReplicationType.STAND_ALONE,
-            contInfo.getReplicationFactor(), dns);
-      }
-      return new ContainerWithPipeline(contInfo, pipeline);
-    } finally {
-      lock.unlock();
-    }
-  }
-
-  /**
    * {@inheritDoc}
    */
   @Override
@@ -261,16 +221,13 @@ public class SCMContainerManager implements ContainerManager {
    * @throws IOException - Exception
    */
   @Override
-  public ContainerWithPipeline allocateContainer(final ReplicationType type,
+  public ContainerInfo allocateContainer(final ReplicationType type,
       final ReplicationFactor replicationFactor, final String owner)
       throws IOException {
     lock.lock();
     try {
       final ContainerInfo containerInfo; containerInfo = containerStateManager
           .allocateContainer(pipelineManager, type, replicationFactor, owner);
-      final Pipeline pipeline = pipelineManager.getPipeline(
-          containerInfo.getPipelineID());
-
       try {
         final byte[] containerIDBytes = Longs.toByteArray(
             containerInfo.getContainerID());
@@ -286,7 +243,7 @@ public class SCMContainerManager implements ContainerManager {
         }
         throw ex;
       }
-      return new ContainerWithPipeline(containerInfo, pipeline);
+      return containerInfo;
     } finally {
       lock.unlock();
     }
@@ -366,11 +323,7 @@ public class SCMContainerManager implements ContainerManager {
       break;
     case CLOSE:
       break;
-    case UPDATE:
-      break;
     case DELETE:
-      break;
-    case TIMEOUT:
       break;
     case CLEANUP:
       break;
@@ -434,17 +387,11 @@ public class SCMContainerManager implements ContainerManager {
    * @param state - State of the Container-- {Open, Allocated etc.}
    * @return ContainerInfo, null if there is no match found.
    */
-  public ContainerWithPipeline getMatchingContainerWithPipeline(
+  public ContainerInfo getMatchingContainer(
       final long sizeRequired, String owner, ReplicationType type,
       ReplicationFactor factor, LifeCycleState state) throws IOException {
-    ContainerInfo containerInfo = containerStateManager
-        .getMatchingContainer(sizeRequired, owner, type, factor, state);
-    if (containerInfo == null) {
-      return null;
-    }
-    Pipeline pipeline = pipelineManager
-        .getPipeline(containerInfo.getPipelineID());
-    return new ContainerWithPipeline(containerInfo, pipeline);
+    return containerStateManager.getMatchingContainer(
+        sizeRequired, owner, type, factor, state);
   }
 
   /**

@@ -23,6 +23,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -102,10 +103,10 @@ public class TestCloseContainerByPipeline {
             .get(0).getBlocksLatestVersionOnly().get(0);
 
     long containerID = omKeyLocationInfo.getContainerID();
+    ContainerInfo container = cluster.getStorageContainerManager()
+        .getContainerManager().getContainer(ContainerID.valueof(containerID));
     Pipeline pipeline = cluster.getStorageContainerManager()
-        .getContainerManager().getContainerWithPipeline(
-            ContainerID.valueof(containerID))
-        .getPipeline();
+        .getPipelineManager().getPipeline(container.getPipelineID());
     List<DatanodeDetails> datanodes = pipeline.getNodes();
     Assert.assertEquals(datanodes.size(), 1);
 
@@ -158,10 +159,10 @@ public class TestCloseContainerByPipeline {
             .get(0).getBlocksLatestVersionOnly().get(0);
 
     long containerID = omKeyLocationInfo.getContainerID();
+    ContainerInfo container = cluster.getStorageContainerManager()
+        .getContainerManager().getContainer(ContainerID.valueof(containerID));
     Pipeline pipeline = cluster.getStorageContainerManager()
-        .getContainerManager().getContainerWithPipeline(
-            ContainerID.valueof(containerID))
-        .getPipeline();
+        .getPipelineManager().getPipeline(container.getPipelineID());
     List<DatanodeDetails> datanodes = pipeline.getNodes();
     Assert.assertEquals(datanodes.size(), 1);
 
@@ -216,10 +217,10 @@ public class TestCloseContainerByPipeline {
             .get(0).getBlocksLatestVersionOnly().get(0);
 
     long containerID = omKeyLocationInfo.getContainerID();
+    ContainerInfo container = cluster.getStorageContainerManager()
+        .getContainerManager().getContainer(ContainerID.valueof(containerID));
     Pipeline pipeline = cluster.getStorageContainerManager()
-        .getContainerManager().getContainerWithPipeline(
-            ContainerID.valueof(containerID))
-        .getPipeline();
+        .getPipelineManager().getPipeline(container.getPipelineID());
     List<DatanodeDetails> datanodes = pipeline.getNodes();
     Assert.assertEquals(3, datanodes.size());
 

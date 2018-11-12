@@ -207,13 +207,13 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     pipelineManager = new SCMPipelineManager(conf, scmNodeManager, eventQueue);
     containerManager = new SCMContainerManager(
         conf, scmNodeManager, pipelineManager, eventQueue);
-    scmBlockManager = new BlockManagerImpl(
-        conf, scmNodeManager, containerManager, eventQueue);
+    scmBlockManager = new BlockManagerImpl(conf, scmNodeManager,
+        pipelineManager, containerManager, eventQueue);
 
     replicationStatus = new ReplicationActivityStatus();
 
     CloseContainerEventHandler closeContainerHandler =
-        new CloseContainerEventHandler(containerManager);
+        new CloseContainerEventHandler(pipelineManager, containerManager);
     NodeReportHandler nodeReportHandler =
         new NodeReportHandler(scmNodeManager);
     PipelineReportHandler pipelineReportHandler =

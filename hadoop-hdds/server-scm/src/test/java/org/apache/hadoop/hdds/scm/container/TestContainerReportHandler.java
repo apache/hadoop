@@ -100,14 +100,14 @@ public class TestContainerReportHandler implements EventPublisher {
 
     ContainerInfo cont1 = containerManager
         .allocateContainer(ReplicationType.STAND_ALONE,
-            ReplicationFactor.THREE, "root").getContainerInfo();
+            ReplicationFactor.THREE, "root");
     ContainerInfo cont2 = containerManager
         .allocateContainer(ReplicationType.STAND_ALONE,
-            ReplicationFactor.THREE, "root").getContainerInfo();
+            ReplicationFactor.THREE, "root");
     // Open Container
     ContainerInfo cont3 = containerManager
         .allocateContainer(ReplicationType.STAND_ALONE,
-            ReplicationFactor.THREE, "root").getContainerInfo();
+            ReplicationFactor.THREE, "root");
 
     long c1 = cont1.getContainerID();
     long c2 = cont2.getContainerID();

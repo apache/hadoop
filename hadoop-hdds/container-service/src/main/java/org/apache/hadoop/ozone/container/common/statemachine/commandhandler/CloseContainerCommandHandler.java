@@ -84,7 +84,7 @@ public class CloseContainerCommandHandler implements CommandHandler {
         cmdExecuted = false;
         return;
       }
-      if (container.getContainerData().isClosed()) {
+      if (!container.getContainerData().isClosed()) {
         LOG.debug("Closing container {}.", containerID);
         HddsProtos.PipelineID pipelineID = closeContainerProto.getPipelineID();
         HddsProtos.ReplicationType replicationType =
