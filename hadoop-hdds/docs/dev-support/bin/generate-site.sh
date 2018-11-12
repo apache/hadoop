@@ -22,7 +22,7 @@ if [ ! "$(which hugo)" ]; then
    exit 0
 fi
 
-DESTDIR="$DOCDIR/target/classes/webapps/docs"
+DESTDIR="$DOCDIR/target/classes/docs"
 mkdir -p "$DESTDIR"
 cd "$DOCDIR"
 hugo -d "$DESTDIR" "$@"

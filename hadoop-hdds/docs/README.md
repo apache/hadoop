@@ -30,7 +30,7 @@ You can check the rendering with:
 hugo serve
 ```
 
-This maven project will create the rendered HTML page during the build (ONLY if hugo is available). 
+This maven project will create the rendered HTML page during the build (ONLY if hugo is available).
 And the dist project will include the documentation.
 
 You can adjust the menu hierarchy with adjusting the header of the markdown file:
@@ -43,7 +43,7 @@ menu: main
 ---
 ```
 
-To show it as a subpage, you can set the parent. (The value could be the title of the parent page, 
+To show it as a subpage, you can set the parent. (The value could be the title of the parent page,
 our you can defined an `id: ...` in the parent markdown and use that in the parent reference.
 
 ```

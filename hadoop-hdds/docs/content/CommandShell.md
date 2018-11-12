@@ -106,4 +106,3 @@ or it can be invoked to explain a specific action like
 ozone sh volume create --help
 {{< /highlight >}}
 This command will give you command line options of the create command.
-

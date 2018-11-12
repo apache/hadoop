@@ -36,4 +36,3 @@ Ozone consists of volumes, buckets, and Keys.
 
 
 <a href="{{< ref "RunningViaDocker.md" >}}"><button class="btn btn-danger btn-lg">Getting started</button></a>
-
