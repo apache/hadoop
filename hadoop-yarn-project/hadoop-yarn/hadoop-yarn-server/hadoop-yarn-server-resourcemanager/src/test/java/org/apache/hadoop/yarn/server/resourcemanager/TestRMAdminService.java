@@ -1585,6 +1585,16 @@ public class TestRMAdminService {
     Mockito.verify(spiedAttributesManager, Mockito.times(1))
         .addNodeAttributes(Mockito.anyMap());
 
+    // add attributes for later removals
+    request =
+        NodesToAttributesMappingRequest
+            .newInstance(AttributeMappingOperationType.ADD,
+                ImmutableList.of(NodeToAttributes.newInstance("host4",
+                    ImmutableList.of(NodeAttribute.newInstance(
+                        NodeAttribute.PREFIX_CENTRALIZED, "x",
+                        NodeAttributeType.STRING, "dfasdf")))),
+                true);
+    rm.adminService.mapAttributesToNodes(request);
     request =
         NodesToAttributesMappingRequest
             .newInstance(AttributeMappingOperationType.REMOVE,
@@ -1600,6 +1610,24 @@ public class TestRMAdminService {
     }
     Mockito.verify(spiedAttributesManager, Mockito.times(1))
         .removeNodeAttributes(Mockito.anyMap());
+
+    // Assert node to attributes mappings are empty.
+    Assert.assertTrue("Attributes of host4 should be empty",
+        rm.getRMContext().getNodeAttributesManager()
+            .getAttributesForNode("host4").isEmpty());
+    // remove non existing attributes.
+    request = NodesToAttributesMappingRequest
+        .newInstance(AttributeMappingOperationType.REMOVE, ImmutableList
+            .of(NodeToAttributes.newInstance("host4", ImmutableList
+                .of(NodeAttribute
+                    .newInstance(NodeAttribute.PREFIX_CENTRALIZED, "x",
+                        NodeAttributeType.STRING, "dfasdf")))), true);
+    try {
+      rm.adminService.mapAttributesToNodes(request);
+      fail("Should have failed for non exists attribute");
+    } catch (Exception ex) {
+      assertTrue("Exception expected if attributes does not exist", true);
+    }
 
     request =
         NodesToAttributesMappingRequest
