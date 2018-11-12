@@ -107,8 +107,7 @@ run cp "${ROOT}/hadoop-ozone/objectstore-service/target/hadoop-ozone-objectstore
 
 
 # Optional documentation, could be missing
-cp -r "${ROOT}/hadoop-ozone/docs/target/classes/webapps/docs" ./share/hadoop/ozone/webapps/ozoneManager/
-cp -r "${ROOT}/hadoop-ozone/docs/target/classes/webapps/docs" ./share/hadoop/hdds/webapps/scm/
+cp -r "${ROOT}/hadoop-hdds/docs/target/classes/docs" ./
 
 #Copy docker compose files
 run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/compose" .

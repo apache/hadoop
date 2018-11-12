@@ -51,6 +51,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <dependency>
       <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdds-docs</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdds-container-service</artifactId>
       <scope>test</scope>
       <type>test-jar</type>
@@ -117,6 +122,13 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <outputDirectory>${project.build.outputDirectory}
                   </outputDirectory>
                   <includes>webapps/static/**/*.*</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.apache.hadoop</groupId>
+                  <artifactId>hadoop-hdds-docs</artifactId>
+                  <outputDirectory>${project.build.outputDirectory}/webapps/scm
+                  </outputDirectory>
+                  <includes>docs/**/*.*</includes>
                 </artifactItem>
               </artifactItems>
               <overWriteSnapshots>true</overWriteSnapshots>

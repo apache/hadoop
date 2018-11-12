@@ -41,6 +41,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     </dependency>
 
     <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdds-docs</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk16</artifactId>
       <scope>test</scope>
@@ -74,6 +79,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <outputDirectory>${project.build.outputDirectory}
                   </outputDirectory>
                   <includes>webapps/static/**/*.*</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.apache.hadoop</groupId>
+                  <artifactId>hadoop-hdds-docs</artifactId>
+                  <outputDirectory>${project.build.outputDirectory}/webapps/ozoneManager</outputDirectory>
+                  <includes>docs/**/*.*</includes>
                 </artifactItem>
               </artifactItems>
               <overWriteSnapshots>true</overWriteSnapshots>
