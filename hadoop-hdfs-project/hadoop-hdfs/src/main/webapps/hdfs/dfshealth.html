@@ -429,7 +429,7 @@ No nodes are decommissioning
     <td>{#helper_date_tostring value="{lastVolumeFailureDate}"/}</td>
     <td>{volfails}</td>
     <td>{estimatedCapacityLostTotal|fmt_bytes}</td>
-    <td>{#failedStorageLocations}{.}{@sep}<br />{/sep}{/failedStorageLocations}</td>
+    <td>{#failedStorageIDs}{.}{@sep}<br />{/sep}{/failedStorageIDs}</td>
   </tr>
   {/LiveNodes}
 </table>
