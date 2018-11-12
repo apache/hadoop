@@ -1,6 +1,21 @@
 Hadoop YARN Change Log
 
-elease 2.7.7 - 2018-07-18
+Release 2.7.8 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    YARN-4245. Generalize config file handling in container-executor.
+    (Sidharta Seethana, Andrew Purtell via shv).
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 2.7.7 - 2018-07-18
 
   INCOMPATIBLE CHANGES
 

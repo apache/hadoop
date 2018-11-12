@@ -769,7 +769,7 @@ int main(int argc, char **argv) {
   if (write_config_file(TEST_ROOT "/test.cfg", 1) != 0) {
     exit(1);
   }
-  read_config(TEST_ROOT "/test.cfg");
+  read_executor_config(TEST_ROOT "/test.cfg");
 
   local_dirs = extract_values(strdup(NM_LOCAL_DIRS));
   log_dirs = extract_values(strdup(NM_LOG_DIRS));
@@ -872,14 +872,14 @@ int main(int argc, char **argv) {
   ret++;
   // test_delete_user must run as root since that's how we use the delete_as_user
   test_delete_user();
-  free_configurations();
+  free_executor_configurations();
 
   printf("\nTrying banned default user()\n");
   if (write_config_file(TEST_ROOT "/test.cfg", 0) != 0) {
     exit(1);
   }
 
-  read_config(TEST_ROOT "/test.cfg");
+  read_executor_config(TEST_ROOT "/test.cfg");
 #ifdef __APPLE__
   username = "_uucp";
   test_check_user(1);
@@ -898,6 +898,6 @@ int main(int argc, char **argv) {
   printf("\nFinished tests\n");
 
   free(current_username);
-  free_configurations();
+  free_executor_configurations();
   return 0;
 }
