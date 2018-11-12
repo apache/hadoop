@@ -701,7 +701,8 @@ public class Component implements EventHandler<ComponentEvent> {
             org.apache.hadoop.yarn.api.records.ResourceInformation.newInstance(
                 entry.getKey(),
                 specInfo.getUnit(),
-                specInfo.getValue());
+                specInfo.getValue(),
+                specInfo.getAttributes());
         resource.setResourceInformation(resourceName, ri);
       }
     }

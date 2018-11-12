@@ -18,10 +18,12 @@
 package org.apache.hadoop.yarn.service.api.records;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 import com.google.gson.annotations.SerializedName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -35,8 +37,22 @@ public class ResourceInformation {
   @SerializedName("unit")
   private String unit = null;
 
+  @SerializedName("attributes")
+  private Map<String, String> attributes = null;
+
   public ResourceInformation value(Long value) {
     this.value = value;
+    return this;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("attributes")
+  public Map<String, String> getAttributes() {
+    return attributes == null ? ImmutableMap.of() : attributes;
+  }
+
+  public ResourceInformation attributes(Map<String, String> attributes) {
+    this.attributes = attributes;
     return this;
   }
 
@@ -98,6 +114,8 @@ public class ResourceInformation {
     sb.append("class ResourceInformation {\n");
     sb.append("    value: ").append(toIndentedString(value)).append("\n");
     sb.append("    unit: ").append(toIndentedString(unit)).append("\n");
+    sb.append("    attributes: ").append(toIndentedString(attributes))
+        .append("\n");
     sb.append("}");
     return sb.toString();
   }

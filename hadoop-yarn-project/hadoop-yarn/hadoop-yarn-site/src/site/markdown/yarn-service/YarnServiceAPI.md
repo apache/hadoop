@@ -371,7 +371,7 @@ Resource determines the amount of resources (vcores, memory, network, etc.) usab
 |profile|Each resource profile has a unique id which is associated with a cluster-level predefined memory, cpus, etc.|false|string||
 |cpus|Amount of vcores allocated to each container (optional but overrides cpus in profile if specified).|false|integer (int32)||
 |memory|Amount of memory allocated to each container (optional but overrides memory in profile if specified). Currently accepts only an integer value and default unit is in MB.|false|string||
-|additional|A map of resource type name to resource type information. Including value (integer), and unit (string). This will be used to specify resource other than cpu and memory. Please refer to example below.|false|object||
+|additional|A map of resource type name to resource type information. Including value (integer), unit (string) and optional attributes (map). This will be used to specify resource other than cpu and memory. Please refer to example below.|false|object||
 
 
 ### ResourceInformation
