@@ -386,28 +386,26 @@ public class KeyValueHandler extends Handler {
     }
 
     long containerID = kvContainer.getContainerData().getContainerID();
-    ContainerDataProto.State containerState = kvContainer.getContainerState();
-
     try {
-      if (containerState == ContainerDataProto.State .CLOSED) {
-        LOG.debug("Container {} is already closed.", containerID);
-        return ContainerUtils.getSuccessResponse(request);
-      } else if (containerState == ContainerDataProto.State .INVALID) {
-        LOG.debug("Invalid container data. ContainerID: {}", containerID);
-        throw new StorageContainerException("Invalid container data. " +
-            "ContainerID: " + containerID, INVALID_CONTAINER_STATE);
-      }
-
+      checkContainerOpen(kvContainer);
       KeyValueContainerData kvData = kvContainer.getContainerData();
 
       // remove the container from open block map once, all the blocks
       // have been committed and the container is closed
-      kvData.setState(ContainerDataProto.State.CLOSING);
       commitPendingBlocks(kvContainer);
+
+      // TODO : The close command should move the container to either quasi
+      // closed/closed depending upon how the closeContainer gets executed.
+      // If it arrives by Standalone, it will be moved to Quasi Closed or
+      // otherwise moved to Closed state if it gets executed via Ratis.
       kvContainer.close();
       // make sure the the container open keys from BlockMap gets removed
       openContainerBlockMap.removeContainer(kvData.getContainerID());
     } catch (StorageContainerException ex) {
+      if (ex.getResult() == CLOSED_CONTAINER_IO) {
+        LOG.debug("Container {} is already closed.", containerID);
+        return ContainerUtils.getSuccessResponse(request);
+      }
       return ContainerUtils.logAndReturnError(LOG, ex, request);
     } catch (IOException ex) {
       return ContainerUtils.logAndReturnError(LOG,
@@ -799,14 +797,21 @@ public class KeyValueHandler extends Handler {
 
     ContainerDataProto.State containerState = kvContainer.getContainerState();
 
-    if (containerState == ContainerDataProto.State.OPEN) {
+    /**
+     * In a closing state, follower will receive transactions from leader.
+     * Once the leader is put to closing state, it will reject further requests
+     * from clients. Only the transactions which happened before the container
+     * in the leader goes to closing state, will arrive here even the container
+     * might already be in closing state here.
+     */
+    if (containerState == ContainerDataProto.State.OPEN
+        || containerState == ContainerDataProto.State.CLOSING) {
       return;
     } else {
       String msg = "Requested operation not allowed as ContainerState is " +
           containerState;
       ContainerProtos.Result result = null;
       switch (containerState) {
-      case CLOSING:
       case CLOSED:
         result = CLOSED_CONTAINER_IO;
         break;

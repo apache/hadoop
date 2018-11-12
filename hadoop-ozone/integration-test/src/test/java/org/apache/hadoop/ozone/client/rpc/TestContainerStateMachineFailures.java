@@ -162,9 +162,9 @@ public class TestContainerStateMachineFailures {
       key.close();
       Assert.fail("Expected exception not thrown");
     } catch (IOException ioe) {
-      Assert.assertTrue(ioe.getCause() instanceof StorageContainerException);
-      Assert.assertTrue(((StorageContainerException) ioe.getCause()).getResult()
-          == ContainerProtos.Result.CONTAINER_UNHEALTHY);
+      Assert.assertTrue(ioe instanceof StorageContainerException);
+      Assert.assertTrue(((StorageContainerException) ioe).getResult()
+          == ContainerProtos.Result.BLOCK_NOT_COMMITTED);
     }
   }
 }

@@ -205,6 +205,17 @@ public class ContainerStateMachine extends BaseStateMachine {
     final ContainerCommandRequestProto proto =
         getRequestProto(request.getMessage().getContent());
     Preconditions.checkArgument(request.getRaftGroupId().equals(gid));
+    try {
+      dispatcher.validateContainerCommand(proto);
+    } catch (IOException ioe) {
+      TransactionContext ctxt = TransactionContext.newBuilder()
+          .setClientRequest(request)
+          .setStateMachine(this)
+          .setServerRole(RaftPeerRole.LEADER)
+          .build();
+      ctxt.setException(ioe);
+      return ctxt;
+    }
     if (proto.getCmdType() == Type.WriteChunk) {
       final WriteChunkRequestProto write = proto.getWriteChunk();
       // create the state machine data proto
