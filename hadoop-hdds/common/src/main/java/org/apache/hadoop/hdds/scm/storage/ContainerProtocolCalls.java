@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdds.scm.storage;
 
+import org.apache.hadoop.hdds.scm.XceiverClientAsyncReply;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .BlockNotCommittedException;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
@@ -64,6 +65,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
 import org.apache.hadoop.hdds.client.BlockID;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Implementation of all container protocol calls performed by Container
@@ -163,6 +165,31 @@ public final class ContainerProtocolCalls  {
   }
 
   /**
+   * Calls the container protocol to put a container block.
+   *
+   * @param xceiverClient client to perform call
+   * @param containerBlockData block data to identify container
+   * @param traceID container protocol call args
+   * @return putBlockResponse
+   * @throws Exception if there is an error while performing the call
+   */
+  public static XceiverClientAsyncReply putBlockAsync(
+      XceiverClientSpi xceiverClient, BlockData containerBlockData,
+      String traceID)
+      throws IOException, InterruptedException, ExecutionException {
+    PutBlockRequestProto.Builder createBlockRequest =
+        PutBlockRequestProto.newBuilder().setBlockData(containerBlockData);
+    String id = xceiverClient.getPipeline().getFirstNode().getUuidString();
+    ContainerCommandRequestProto request =
+        ContainerCommandRequestProto.newBuilder().setCmdType(Type.PutBlock)
+            .setContainerID(containerBlockData.getBlockID().getContainerID())
+            .setTraceID(traceID).setDatanodeUuid(id)
+            .setPutBlock(createBlockRequest).build();
+    xceiverClient.sendCommand(request);
+    return xceiverClient.sendCommandAsync(request);
+  }
+
+  /**
    * Calls the container protocol to read a chunk.
    *
    * @param xceiverClient client to perform call
@@ -200,7 +227,7 @@ public final class ContainerProtocolCalls  {
    * @param blockID ID of the block
    * @param data the data of the chunk to write
    * @param traceID container protocol call args
-   * @throws IOException if there is an I/O error while performing the call
+   * @throws Exception if there is an error while performing the call
    */
   public static void writeChunk(XceiverClientSpi xceiverClient, ChunkInfo chunk,
       BlockID blockID, ByteString data, String traceID)
@@ -221,6 +248,32 @@ public final class ContainerProtocolCalls  {
         .build();
     ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
     validateContainerResponse(response);
+  }
+
+  /**
+   * Calls the container protocol to write a chunk.
+   *
+   * @param xceiverClient client to perform call
+   * @param chunk information about chunk to write
+   * @param blockID ID of the block
+   * @param data the data of the chunk to write
+   * @param traceID container protocol call args
+   * @throws IOException if there is an I/O error while performing the call
+   */
+  public static XceiverClientAsyncReply writeChunkAsync(
+      XceiverClientSpi xceiverClient, ChunkInfo chunk, BlockID blockID,
+      ByteString data, String traceID)
+      throws IOException, ExecutionException, InterruptedException {
+    WriteChunkRequestProto.Builder writeChunkRequest =
+        WriteChunkRequestProto.newBuilder()
+            .setBlockID(blockID.getDatanodeBlockIDProtobuf())
+            .setChunkData(chunk).setData(data);
+    String id = xceiverClient.getPipeline().getFirstNode().getUuidString();
+    ContainerCommandRequestProto request =
+        ContainerCommandRequestProto.newBuilder().setCmdType(Type.WriteChunk)
+            .setContainerID(blockID.getContainerID()).setTraceID(traceID)
+            .setDatanodeUuid(id).setWriteChunk(writeChunkRequest).build();
+    return xceiverClient.sendCommandAsync(request);
   }
 
   /**
@@ -420,7 +473,7 @@ public final class ContainerProtocolCalls  {
    * @param response container protocol call response
    * @throws IOException if the container protocol call failed
    */
-  private static void validateContainerResponse(
+  public static void validateContainerResponse(
       ContainerCommandResponseProto response
   ) throws StorageContainerException {
     if (response.getResult() == ContainerProtos.Result.SUCCESS) {

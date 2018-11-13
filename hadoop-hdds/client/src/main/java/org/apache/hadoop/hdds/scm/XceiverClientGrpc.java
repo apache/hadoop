@@ -21,6 +21,7 @@ package org.apache.hadoop.hdds.scm;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandRequestProto;
@@ -47,6 +48,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * A Client for the storageContainer protocol.
@@ -163,7 +165,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
         // In case the command gets retried on a 2nd datanode,
         // sendCommandAsyncCall will create a new channel and async stub
         // in case these don't exist for the specific datanode.
-        responseProto = sendCommandAsync(request, dn).get();
+        responseProto = sendCommandAsync(request, dn).getResponse().get();
         if (responseProto.getResult() == ContainerProtos.Result.SUCCESS) {
           break;
         }
@@ -197,13 +199,23 @@ public class XceiverClientGrpc extends XceiverClientSpi {
    * @throws IOException
    */
   @Override
-  public CompletableFuture<ContainerCommandResponseProto> sendCommandAsync(
+  public XceiverClientAsyncReply sendCommandAsync(
       ContainerCommandRequestProto request)
       throws IOException, ExecutionException, InterruptedException {
-    return sendCommandAsync(request, pipeline.getFirstNode());
+    XceiverClientAsyncReply asyncReply =
+        sendCommandAsync(request, pipeline.getFirstNode());
+
+    // TODO : for now make this API sync in nature as async requests are
+    // served out of order over XceiverClientGrpc. This needs to be fixed
+    // if this API is to be used for I/O path. Currently, this is not
+    // used for Read/Write Operation but for tests.
+    if (!HddsUtils.isReadOnly(request)) {
+      asyncReply.getResponse().get();
+    }
+    return asyncReply;
   }
 
-  private CompletableFuture<ContainerCommandResponseProto> sendCommandAsync(
+  private XceiverClientAsyncReply sendCommandAsync(
       ContainerCommandRequestProto request, DatanodeDetails dn)
       throws IOException, ExecutionException, InterruptedException {
     if (closed) {
@@ -257,7 +269,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
             });
     requestObserver.onNext(request);
     requestObserver.onCompleted();
-    return replyFuture;
+    return new XceiverClientAsyncReply(replyFuture);
   }
 
   private void reconnect(DatanodeDetails dn)
@@ -287,6 +299,12 @@ public class XceiverClientGrpc extends XceiverClientSpi {
   public void destroyPipeline() {
     // For stand alone pipeline, there is no notion called destroy pipeline.
   }
+
+  @Override
+  public void watchForCommit(long index, long timeout)
+      throws InterruptedException, ExecutionException, TimeoutException {
+    // there is no notion of watch for commit index in standalone pipeline
+  };
 
   /**
    * Returns pipeline Type.

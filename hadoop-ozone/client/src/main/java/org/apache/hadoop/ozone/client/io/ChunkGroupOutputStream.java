@@ -24,11 +24,10 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
@@ -41,18 +40,17 @@ import org.apache.hadoop.hdds.scm.container.common.helpers
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.storage.ChunkOutputStream;
-import org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.ListIterator;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Maintaining a list of ChunkInputStream. Write based on offset.
@@ -71,7 +69,6 @@ public class ChunkGroupOutputStream extends OutputStream {
   // array list's get(index) is O(1)
   private final ArrayList<ChunkOutputStreamEntry> streamEntries;
   private int currentStreamIndex;
-  private long byteOffset;
   private final OzoneManagerProtocolClientSideTranslatorPB omClient;
   private final
       StorageContainerLocationProtocolClientSideTranslatorPB scmClient;
@@ -81,7 +78,11 @@ public class ChunkGroupOutputStream extends OutputStream {
   private final int chunkSize;
   private final String requestID;
   private boolean closed;
-  private final RetryPolicy retryPolicy;
+  private final long streamBufferFlushSize;
+  private final long streamBufferMaxSize;
+  private final long watchTimeout;
+  private final long blockSize;
+  private ByteBuffer buffer;
   /**
    * A constructor for testing purpose only.
    */
@@ -96,7 +97,11 @@ public class ChunkGroupOutputStream extends OutputStream {
     chunkSize = 0;
     requestID = null;
     closed = false;
-    retryPolicy = null;
+    streamBufferFlushSize = 0;
+    streamBufferMaxSize = 0;
+    buffer = ByteBuffer.allocate(1);
+    watchTimeout = 0;
+    blockSize = 0;
   }
 
   /**
@@ -127,35 +132,54 @@ public class ChunkGroupOutputStream extends OutputStream {
           new OmKeyLocationInfo.Builder().setBlockID(streamEntry.blockID)
               .setLength(streamEntry.currentPosition).setOffset(0)
               .build();
+      LOG.debug("block written " + streamEntry.blockID + ", length "
+          + streamEntry.currentPosition + " bcsID " + streamEntry.blockID
+          .getBlockCommitSequenceId());
       locationInfoList.add(info);
     }
     return locationInfoList;
   }
 
-  public ChunkGroupOutputStream(
-      OpenKeySession handler, XceiverClientManager xceiverClientManager,
+  public ChunkGroupOutputStream(OpenKeySession handler,
+      XceiverClientManager xceiverClientManager,
       StorageContainerLocationProtocolClientSideTranslatorPB scmClient,
-      OzoneManagerProtocolClientSideTranslatorPB omClient,
-      int chunkSize, String requestId, ReplicationFactor factor,
-      ReplicationType type, RetryPolicy retryPolicy) throws IOException {
+      OzoneManagerProtocolClientSideTranslatorPB omClient, int chunkSize,
+      String requestId, ReplicationFactor factor, ReplicationType type,
+      long bufferFlushSize, long bufferMaxSize, long size, long watchTimeout) {
     this.streamEntries = new ArrayList<>();
     this.currentStreamIndex = 0;
-    this.byteOffset = 0;
     this.omClient = omClient;
     this.scmClient = scmClient;
     OmKeyInfo info = handler.getKeyInfo();
-    this.keyArgs = new OmKeyArgs.Builder()
-        .setVolumeName(info.getVolumeName())
-        .setBucketName(info.getBucketName())
-        .setKeyName(info.getKeyName())
-        .setType(type)
-        .setFactor(factor)
-        .setDataSize(info.getDataSize()).build();
+    this.keyArgs = new OmKeyArgs.Builder().setVolumeName(info.getVolumeName())
+        .setBucketName(info.getBucketName()).setKeyName(info.getKeyName())
+        .setType(type).setFactor(factor).setDataSize(info.getDataSize())
+        .build();
     this.openID = handler.getId();
     this.xceiverClientManager = xceiverClientManager;
     this.chunkSize = chunkSize;
     this.requestID = requestId;
-    this.retryPolicy = retryPolicy;
+    this.streamBufferFlushSize = bufferFlushSize * OzoneConsts.MB;
+    this.streamBufferMaxSize = bufferMaxSize * OzoneConsts.MB;
+    this.blockSize = size * OzoneConsts.MB;
+    this.watchTimeout = watchTimeout;
+
+    Preconditions.checkState(chunkSize > 0);
+    Preconditions.checkState(streamBufferFlushSize > 0);
+    Preconditions.checkState(streamBufferMaxSize > 0);
+    Preconditions.checkState(blockSize > 0);
+    Preconditions.checkState(streamBufferFlushSize % chunkSize == 0);
+    Preconditions.checkState(streamBufferMaxSize % streamBufferFlushSize == 0);
+    Preconditions.checkState(blockSize % streamBufferMaxSize == 0);
+
+    // This byteBuffer will be used to cache data until all the blockCommits
+    // (putBlock) gets replicated to all/majority servers. The idea here is to
+    // allocate the buffer of size blockSize so that as and when a chunk is
+    // is replicated to all servers, as a part of discarding the buffer, we
+    // don't necessarily need to run compaction(buffer.compact() on the buffer
+    // to actually discard the acknowledged data. Compaction is inefficient so
+    // it would be a better choice to avoid compaction on the happy I/O path.
+    this.buffer = ByteBuffer.allocate((int) blockSize);
   }
 
   /**
@@ -191,12 +215,13 @@ public class ChunkGroupOutputStream extends OutputStream {
         xceiverClientManager.acquireClient(containerWithPipeline.getPipeline());
     streamEntries.add(new ChunkOutputStreamEntry(subKeyInfo.getBlockID(),
         keyArgs.getKeyName(), xceiverClientManager, xceiverClient, requestID,
-        chunkSize, subKeyInfo.getLength()));
+        chunkSize, subKeyInfo.getLength(), streamBufferFlushSize,
+        streamBufferMaxSize, watchTimeout, buffer));
   }
 
   @VisibleForTesting
   public long getByteOffset() {
-    return byteOffset;
+    return getKeyLength();
   }
 
 
@@ -223,21 +248,23 @@ public class ChunkGroupOutputStream extends OutputStream {
   public void write(byte[] b, int off, int len)
       throws IOException {
     checkNotClosed();
-    handleWrite(b, off, len);
+    handleWrite(b, off, len, false, buffer.position());
   }
 
-  private void handleWrite(byte[] b, int off, int len) throws IOException {
+  private void handleWrite(byte[] b, int off, int len, boolean retry,
+      int pos) throws IOException {
     if (b == null) {
       throw new NullPointerException();
     }
-    if ((off < 0) || (off > b.length) || (len < 0) ||
-        ((off + len) > b.length) || ((off + len) < 0)) {
+    if ((off < 0) || (off > b.length) || (len < 0) || ((off + len) > b.length)
+        || ((off + len) < 0)) {
       throw new IndexOutOfBoundsException();
     }
     if (len == 0) {
       return;
     }
     int succeededAllocates = 0;
+    int initialPos;
     while (len > 0) {
       if (streamEntries.size() <= currentStreamIndex) {
         Preconditions.checkNotNull(omClient);
@@ -247,8 +274,8 @@ public class ChunkGroupOutputStream extends OutputStream {
           allocateNewBlock(currentStreamIndex);
           succeededAllocates += 1;
         } catch (IOException ioe) {
-          LOG.error("Try to allocate more blocks for write failed, already " +
-              "allocated " + succeededAllocates + " blocks for this write.");
+          LOG.error("Try to allocate more blocks for write failed, already "
+              + "allocated " + succeededAllocates + " blocks for this write.");
           throw ioe;
         }
       }
@@ -257,12 +284,19 @@ public class ChunkGroupOutputStream extends OutputStream {
       Preconditions.checkArgument(currentStreamIndex < streamEntries.size());
       ChunkOutputStreamEntry current = streamEntries.get(currentStreamIndex);
       int writeLen = Math.min(len, (int) current.getRemaining());
+      initialPos = pos < buffer.position() ? pos : buffer.position();
       try {
-        current.write(b, off, writeLen);
+        if (retry) {
+          current.writeOnRetry(len);
+        } else {
+          current.write(b, off, writeLen);
+        }
       } catch (IOException ioe) {
-        if (checkIfContainerIsClosed(ioe)) {
-          handleCloseContainerException(current, currentStreamIndex);
-          continue;
+        if (checkIfContainerIsClosed(ioe) || checkIfTimeoutException(ioe)) {
+          // for the current iteration, current pos - initialPos gives the
+          // amount of data already written to the buffer
+          writeLen = buffer.position() - initialPos;
+          handleException(current, currentStreamIndex);
         } else {
           throw ioe;
         }
@@ -274,57 +308,6 @@ public class ChunkGroupOutputStream extends OutputStream {
       }
       len -= writeLen;
       off += writeLen;
-      byteOffset += writeLen;
-    }
-  }
-
-  private long getCommittedBlockLength(ChunkOutputStreamEntry streamEntry)
-      throws IOException {
-    long blockLength;
-    ContainerProtos.GetCommittedBlockLengthResponseProto responseProto;
-    RetryPolicy.RetryAction action;
-    int numRetries = 0;
-    while (true) {
-      try {
-        responseProto = ContainerProtocolCalls
-            .getCommittedBlockLength(streamEntry.xceiverClient,
-                streamEntry.blockID, requestID);
-        blockLength = responseProto.getBlockLength();
-        return blockLength;
-      } catch (StorageContainerException sce) {
-        try {
-          action = retryPolicy.shouldRetry(sce, numRetries, 0, true);
-        } catch (Exception e) {
-          throw e instanceof IOException ? (IOException) e : new IOException(e);
-        }
-        if (action.action == RetryPolicy.RetryAction.RetryDecision.FAIL) {
-          if (action.reason != null) {
-            LOG.error(
-                "GetCommittedBlockLength request failed. " + action.reason,
-                sce);
-          }
-          throw sce;
-        }
-
-        // Throw the exception if the thread is interrupted
-        if (Thread.currentThread().isInterrupted()) {
-          LOG.warn("Interrupted while trying for connection");
-          throw sce;
-        }
-        Preconditions.checkArgument(
-            action.action == RetryPolicy.RetryAction.RetryDecision.RETRY);
-        try {
-          Thread.sleep(action.delayMillis);
-        } catch (InterruptedException e) {
-          throw (IOException) new InterruptedIOException(
-              "Interrupted: action=" + action + ", retry policy=" + retryPolicy)
-              .initCause(e);
-        }
-        numRetries++;
-        LOG.trace("Retrying GetCommittedBlockLength request. Already tried "
-            + numRetries + " time(s); retry policy is " + retryPolicy);
-        continue;
-      }
     }
   }
 
@@ -373,55 +356,35 @@ public class ChunkGroupOutputStream extends OutputStream {
    *
    * @param streamEntry StreamEntry
    * @param streamIndex Index of the entry
-   * @throws IOException Throws IOexception if Write fails
+   * @throws IOException Throws IOException if Write fails
    */
-  private void handleCloseContainerException(ChunkOutputStreamEntry streamEntry,
+  private void handleException(ChunkOutputStreamEntry streamEntry,
       int streamIndex) throws IOException {
-    long committedLength = 0;
-    ByteBuffer buffer = streamEntry.getBuffer();
-    if (buffer == null) {
-      // the buffer here will be null only when closeContainerException is
-      // hit while calling putKey during close on chunkOutputStream.
-      // Since closeContainer auto commit pending keys, no need to do
-      // anything here.
-      return;
-    }
+    int lastSuccessfulFlushIndex = streamEntry.getLastSuccessfulFlushIndex();
+    int currentPos = buffer.position();
 
-    // update currentStreamIndex in case of closed container exception. The
-    // current stream entry cannot be used for further writes because
-    // container is closed.
-    currentStreamIndex += 1;
-
-    // In case where not a single chunk of data has been written to the Datanode
-    // yet. This block does not yet exist on the datanode but cached on the
-    // outputStream buffer. No need to call GetCommittedBlockLength here
-    // for this block associated with the stream here.
-    if (streamEntry.currentPosition >= chunkSize
-        || streamEntry.currentPosition != buffer.position()) {
-      committedLength = getCommittedBlockLength(streamEntry);
-      // update the length of the current stream
-      streamEntry.currentPosition = committedLength;
+    // In case of a failure, read the data from the position till the last
+    // acknowledgement happened.
+    if (lastSuccessfulFlushIndex > 0) {
+      buffer.position(lastSuccessfulFlushIndex);
+      buffer.limit(currentPos);
+      buffer.compact();
     }
 
     if (buffer.position() > 0) {
+      //set the correct length for the current stream
+      streamEntry.currentPosition = lastSuccessfulFlushIndex;
       // If the data is still cached in the underlying stream, we need to
-      // allocate new block and write this data in the datanode. The cached
-      // data in the buffer does not exceed chunkSize.
-      Preconditions.checkState(buffer.position() < chunkSize);
-      // readjust the byteOffset value to the length actually been written.
-      byteOffset -= buffer.position();
-      handleWrite(buffer.array(), 0, buffer.position());
+      // allocate new block and write this data in the datanode.
+      currentStreamIndex += 1;
+      handleWrite(buffer.array(), 0, buffer.position(), true,
+          lastSuccessfulFlushIndex);
     }
 
-    // just clean up the current stream. Since the container is already closed,
-    // it will be auto committed. No need to call close again here.
+    // just clean up the current stream.
     streamEntry.cleanup();
-    // This case will arise when while writing the first chunk itself fails.
-    // In such case, the current block associated with the stream has no data
-    // written. Remove it from the current stream list.
-    if (committedLength == 0) {
+    if (lastSuccessfulFlushIndex == 0) {
       streamEntries.remove(streamIndex);
-      Preconditions.checkArgument(currentStreamIndex != 0);
       currentStreamIndex -= 1;
     }
     // discard subsequent pre allocated blocks from the streamEntries list
@@ -430,11 +393,15 @@ public class ChunkGroupOutputStream extends OutputStream {
   }
 
   private boolean checkIfContainerIsClosed(IOException ioe) {
-    return checkIfContainerNotOpenException(ioe) || Optional.of(ioe.getCause())
-        .filter(e -> e instanceof StorageContainerException)
-        .map(e -> (StorageContainerException) e)
-        .filter(sce -> sce.getResult() == Result.CLOSED_CONTAINER_IO)
-        .isPresent();
+    if (ioe.getCause() != null) {
+      return checkIfContainerNotOpenException(ioe) || Optional
+          .of(ioe.getCause())
+          .filter(e -> e instanceof StorageContainerException)
+          .map(e -> (StorageContainerException) e)
+          .filter(sce -> sce.getResult() == Result.CLOSED_CONTAINER_IO)
+          .isPresent();
+    }
+    return false;
   }
 
   private boolean checkIfContainerNotOpenException(IOException ioe) {
@@ -446,6 +413,15 @@ public class ChunkGroupOutputStream extends OutputStream {
       t = t.getCause();
     }
     return false;
+  }
+
+  private boolean checkIfTimeoutException(IOException ioe) {
+    if (ioe.getCause() != null) {
+      return Optional.of(ioe.getCause())
+          .filter(e -> e instanceof TimeoutException).isPresent();
+    } else {
+      return false;
+    }
   }
 
   private long getKeyLength() {
@@ -495,11 +471,11 @@ public class ChunkGroupOutputStream extends OutputStream {
           entry.flush();
         }
       } catch (IOException ioe) {
-        if (checkIfContainerIsClosed(ioe)) {
+        if (checkIfContainerIsClosed(ioe) || checkIfTimeoutException(ioe)) {
           // This call will allocate a new streamEntry and write the Data.
           // Close needs to be retried on the newly allocated streamEntry as
           // as well.
-          handleCloseContainerException(entry, streamIndex);
+          handleException(entry, streamIndex);
           handleFlushOrClose(close);
         } else {
           throw ioe;
@@ -519,16 +495,24 @@ public class ChunkGroupOutputStream extends OutputStream {
       return;
     }
     closed = true;
-    handleFlushOrClose(true);
-    if (keyArgs != null) {
-      // in test, this could be null
-      removeEmptyBlocks();
-      Preconditions.checkState(byteOffset == getKeyLength());
-      keyArgs.setDataSize(byteOffset);
-      keyArgs.setLocationInfoList(getLocationInfoList());
-      omClient.commitKey(keyArgs, openID);
-    } else {
-      LOG.warn("Closing ChunkGroupOutputStream, but key args is null");
+    try {
+      handleFlushOrClose(true);
+      if (keyArgs != null) {
+        // in test, this could be null
+        removeEmptyBlocks();
+        keyArgs.setDataSize(getKeyLength());
+        keyArgs.setLocationInfoList(getLocationInfoList());
+        omClient.commitKey(keyArgs, openID);
+      } else {
+        LOG.warn("Closing ChunkGroupOutputStream, but key args is null");
+      }
+    } catch (IOException ioe) {
+      throw ioe;
+    } finally {
+      if (buffer != null) {
+        buffer.clear();
+      }
+      buffer = null;
     }
   }
 
@@ -544,7 +528,10 @@ public class ChunkGroupOutputStream extends OutputStream {
     private String requestID;
     private ReplicationType type;
     private ReplicationFactor factor;
-    private RetryPolicy retryPolicy;
+    private long streamBufferFlushSize;
+    private long streamBufferMaxSize;
+    private long blockSize;
+    private long watchTimeout;
 
     public Builder setHandler(OpenKeySession handler) {
       this.openHandler = handler;
@@ -588,16 +575,31 @@ public class ChunkGroupOutputStream extends OutputStream {
       return this;
     }
 
-    public ChunkGroupOutputStream build() throws IOException {
-      return new ChunkGroupOutputStream(openHandler, xceiverManager, scmClient,
-          omClient, chunkSize, requestID, factor, type, retryPolicy);
-    }
-
-    public Builder setRetryPolicy(RetryPolicy rPolicy) {
-      this.retryPolicy = rPolicy;
+    public Builder setStreamBufferFlushSize(long size) {
+      this.streamBufferFlushSize = size;
       return this;
     }
 
+    public Builder setStreamBufferMaxSize(long size) {
+      this.streamBufferMaxSize = size;
+      return this;
+    }
+
+    public Builder setBlockSize(long size) {
+      this.blockSize = size;
+      return this;
+    }
+
+    public Builder setWatchTimeout(long timeout) {
+      this.watchTimeout = timeout;
+      return this;
+    }
+
+    public ChunkGroupOutputStream build() throws IOException {
+      return new ChunkGroupOutputStream(openHandler, xceiverManager, scmClient,
+          omClient, chunkSize, requestID, factor, type, streamBufferFlushSize,
+          streamBufferMaxSize, blockSize, watchTimeout);
+    }
   }
 
   private static class ChunkOutputStreamEntry extends OutputStream {
@@ -613,10 +615,16 @@ public class ChunkGroupOutputStream extends OutputStream {
     // the current position of this stream 0 <= currentPosition < length
     private long currentPosition;
 
+    private final long streamBufferFlushSize;
+    private final long streamBufferMaxSize;
+    private final long watchTimeout;
+    private ByteBuffer buffer;
+
     ChunkOutputStreamEntry(BlockID blockID, String key,
         XceiverClientManager xceiverClientManager,
         XceiverClientSpi xceiverClient, String requestId, int chunkSize,
-        long length) {
+        long length, long streamBufferFlushSize, long streamBufferMaxSize,
+        long watchTimeout, ByteBuffer buffer) {
       this.outputStream = null;
       this.blockID = blockID;
       this.key = key;
@@ -627,6 +635,10 @@ public class ChunkGroupOutputStream extends OutputStream {
 
       this.length = length;
       this.currentPosition = 0;
+      this.streamBufferFlushSize = streamBufferFlushSize;
+      this.streamBufferMaxSize = streamBufferMaxSize;
+      this.watchTimeout = watchTimeout;
+      this.buffer = buffer;
     }
 
     /**
@@ -645,6 +657,10 @@ public class ChunkGroupOutputStream extends OutputStream {
 
       this.length = length;
       this.currentPosition = 0;
+      streamBufferFlushSize = 0;
+      streamBufferMaxSize = 0;
+      buffer = null;
+      watchTimeout = 0;
     }
 
     long getLength() {
@@ -657,9 +673,10 @@ public class ChunkGroupOutputStream extends OutputStream {
 
     private void checkStream() {
       if (this.outputStream == null) {
-        this.outputStream = new ChunkOutputStream(blockID,
-            key, xceiverClientManager, xceiverClient,
-            requestId, chunkSize);
+        this.outputStream =
+            new ChunkOutputStream(blockID, key, xceiverClientManager,
+                xceiverClient, requestId, chunkSize, streamBufferFlushSize,
+                streamBufferMaxSize, watchTimeout, buffer);
       }
     }
 
@@ -696,15 +713,21 @@ public class ChunkGroupOutputStream extends OutputStream {
       }
     }
 
-    ByteBuffer getBuffer() throws IOException {
+    int getLastSuccessfulFlushIndex() throws IOException {
       if (this.outputStream instanceof ChunkOutputStream) {
         ChunkOutputStream out = (ChunkOutputStream) this.outputStream;
-        return out.getBuffer();
+        blockID = out.getBlockID();
+        return out.getLastSuccessfulFlushIndex();
+      } else if (outputStream == null) {
+        // For a pre allocated block for which no write has been initiated,
+        // the OutputStream will be null here.
+        // In such cases, the default blockCommitSequenceId will be 0
+        return 0;
       }
       throw new IOException("Invalid Output Stream for Key: " + key);
     }
 
-    public void cleanup() {
+    void cleanup() {
       checkStream();
       if (this.outputStream instanceof ChunkOutputStream) {
         ChunkOutputStream out = (ChunkOutputStream) this.outputStream;
@@ -712,6 +735,16 @@ public class ChunkGroupOutputStream extends OutputStream {
       }
     }
 
+    void writeOnRetry(int len) throws IOException {
+      checkStream();
+      if (this.outputStream instanceof ChunkOutputStream) {
+        ChunkOutputStream out = (ChunkOutputStream) this.outputStream;
+        out.writeOnRetry(len);
+        this.currentPosition += len;
+      } else {
+        throw new IOException("Invalid Output Stream for Key: " + key);
+      }
+    }
   }
 
   /**

@@ -50,9 +50,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -192,9 +195,22 @@ public final class XceiverClientRatis extends XceiverClientSpi {
         getClient().sendAsync(() -> byteString);
   }
 
-  public void watchForCommit(long index, long timeout) throws Exception {
-    getClient().sendWatchAsync(index, RaftProtos.ReplicationLevel.ALL_COMMITTED)
-        .get(timeout, TimeUnit.MILLISECONDS);
+  @Override
+  public void watchForCommit(long index, long timeout)
+      throws InterruptedException, ExecutionException, TimeoutException {
+    // TODO: Create a new Raft client instance to watch
+    CompletableFuture<RaftClientReply> replyFuture = getClient()
+        .sendWatchAsync(index, RaftProtos.ReplicationLevel.ALL_COMMITTED);
+    try {
+      replyFuture.get(timeout, TimeUnit.MILLISECONDS);
+    } catch (TimeoutException toe) {
+      LOG.warn("3 way commit failed ", toe);
+      getClient()
+          .sendWatchAsync(index, RaftProtos.ReplicationLevel.MAJORITY_COMMITTED)
+          .get(timeout, TimeUnit.MILLISECONDS);
+      LOG.info("Could not commit " + index + " to all the nodes."
+          + "Committed by majority.");
+    }
   }
   /**
    * Sends a given command to server gets a waitable future back.
@@ -204,18 +220,37 @@ public final class XceiverClientRatis extends XceiverClientSpi {
    * @throws IOException
    */
   @Override
-  public CompletableFuture<ContainerCommandResponseProto> sendCommandAsync(
+  public XceiverClientAsyncReply sendCommandAsync(
       ContainerCommandRequestProto request) {
-    return sendRequestAsync(request).whenComplete((reply, e) ->
-          LOG.debug("received reply {} for request: {} exception: {}", request,
-              reply, e))
-        .thenApply(reply -> {
-          try {
-            return ContainerCommandResponseProto.parseFrom(
-                reply.getMessage().getContent());
-          } catch (InvalidProtocolBufferException e) {
-            throw new CompletionException(e);
-          }
-        });
+    XceiverClientAsyncReply asyncReply = new XceiverClientAsyncReply(null);
+    CompletableFuture<RaftClientReply> raftClientReply =
+        sendRequestAsync(request);
+    Collection<XceiverClientAsyncReply.CommitInfo> commitInfos =
+        new ArrayList<>();
+    CompletableFuture<ContainerCommandResponseProto> containerCommandResponse =
+        raftClientReply.whenComplete((reply, e) -> LOG
+            .debug("received reply {} for request: {} exception: {}", request,
+                reply, e))
+            .thenApply(reply -> {
+              try {
+                ContainerCommandResponseProto response =
+                    ContainerCommandResponseProto
+                        .parseFrom(reply.getMessage().getContent());
+                reply.getCommitInfos().forEach(e -> {
+                  XceiverClientAsyncReply.CommitInfo commitInfo =
+                      new XceiverClientAsyncReply.CommitInfo(
+                          e.getServer().getAddress(), e.getCommitIndex());
+                  commitInfos.add(commitInfo);
+                  asyncReply.setCommitInfos(commitInfos);
+                  asyncReply.setLogIndex(reply.getLogIndex());
+                });
+                return response;
+              } catch (InvalidProtocolBufferException e) {
+                throw new CompletionException(e);
+              }
+            });
+    asyncReply.setResponse(containerCommandResponse);
+    return asyncReply;
   }
+
 }
