@@ -62,7 +62,7 @@ public class TestOzoneRestWithMiniCluster {
   private static OzoneConfiguration conf;
   private static ClientProtocol client;
   private static ReplicationFactor replicationFactor = ReplicationFactor.ONE;
-  private static ReplicationType replicationType = ReplicationType.STAND_ALONE;
+  private static ReplicationType replicationType = ReplicationType.RATIS;
 
   @Rule
   public ExpectedException exception = ExpectedException.none();

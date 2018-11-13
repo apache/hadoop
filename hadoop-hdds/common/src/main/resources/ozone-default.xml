@@ -335,19 +335,29 @@
     </description>
   </property>
   <property>
-    <name>ozone.client.max.retries</name>
-    <value>50</value>
+    <name>ozone.client.stream.buffer.flush.size</name>
+    <value>64</value>
     <tag>OZONE, CLIENT</tag>
-    <description>Maximum number of retries by Ozone Client on encountering
-      exception while fetching committed block length.
+    <description>Size in mb which determines at what buffer position , a partial
+      flush will be initiated during write. It should be ideally a mutiple
+      of chunkSize.
     </description>
   </property>
   <property>
-    <name>ozone.client.retry.interval</name>
-    <value>200ms</value>
+    <name>ozone.client.stream.buffer.max.size</name>
+    <value>128</value>
     <tag>OZONE, CLIENT</tag>
-    <description>Interval between retries by Ozone Client on encountering
-      exception while fetching committed block length.
+    <description>Size in mb which determines at what buffer position ,
+      write call be blocked till acknowledgement of the fisrt partial flush
+      happens by all servers.
+    </description>
+  </property>
+  <property>
+    <name>ozone.client.watch.request.timeout</name>
+    <value>30s</value>
+    <tag>OZONE, CLIENT</tag>
+    <description>Timeout for the watch API in Ratis client to acknowledge
+      a particular request getting replayed to all servers.
     </description>
   </property>
   <property>

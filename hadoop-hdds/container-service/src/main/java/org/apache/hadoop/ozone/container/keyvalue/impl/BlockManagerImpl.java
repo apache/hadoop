@@ -121,6 +121,9 @@ public class BlockManagerImpl implements BlockManager {
     container.updateBlockCommitSequenceId(bcsId);
     // Increment keycount here
     container.getContainerData().incrKeyCount();
+    LOG.debug(
+        "Block " + data.getBlockID() + " successfully committed with bcsId "
+            + bcsId + " chunk size " + data.getChunks().size());
     return data.getSize();
   }
 

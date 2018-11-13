@@ -50,7 +50,7 @@ public interface RatisTestHelper {
 
   /** For testing Ozone with Ratis. */
   class RatisTestSuite implements Closeable {
-    static final RpcType RPC = SupportedRpcType.NETTY;
+    static final RpcType RPC = SupportedRpcType.GRPC;
     static final int NUM_DATANODES = 3;
 
     private final OzoneConfiguration conf;

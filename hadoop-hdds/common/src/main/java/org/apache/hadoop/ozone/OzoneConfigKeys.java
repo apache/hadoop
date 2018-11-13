@@ -112,6 +112,22 @@ public final class OzoneConfigKeys {
   public static final String OZONE_CLIENT_PROTOCOL =
       "ozone.client.protocol";
 
+  public static final String OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE =
+      "ozone.client.stream.buffer.flush.size";
+
+  public static final long OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE_DEFAULT = 64;
+
+  public static final String OZONE_CLIENT_STREAM_BUFFER_MAX_SIZE =
+      "ozone.client.stream.buffer.max.size";
+
+  public static final long OZONE_CLIENT_STREAM_BUFFER_MAX_SIZE_DEFAULT = 128;
+
+  public static final String OZONE_CLIENT_WATCH_REQUEST_TIMEOUT =
+      "ozone.client.watch.request.timeout";
+
+  public static final String OZONE_CLIENT_WATCH_REQUEST_TIMEOUT_DEFAULT =
+      "30s";
+
   // This defines the overall connection limit for the connection pool used in
   // RestClient.
   public static final String OZONE_REST_CLIENT_HTTP_CONNECTION_MAX =
@@ -191,14 +207,6 @@ public final class OzoneConfigKeys {
       = "ozone.block.deleting.container.limit.per.interval";
   public static final int
       OZONE_BLOCK_DELETING_CONTAINER_LIMIT_PER_INTERVAL_DEFAULT = 10;
-
-  public static final String OZONE_CLIENT_MAX_RETRIES =
-      "ozone.client.max.retries";
-  public static final int OZONE_CLIENT_MAX_RETRIES_DEFAULT = 50;
-
-  public static final String OZONE_CLIENT_RETRY_INTERVAL =
-      "ozone.client.retry.interval";
-  public static final String OZONE_CLIENT_RETRY_INTERVAL_DEFAULT = "200ms";
 
   public static final String DFS_CONTAINER_RATIS_ENABLED_KEY
       = ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY;

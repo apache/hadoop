@@ -23,8 +23,6 @@ import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.scm.container.
-    common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClient;
@@ -141,15 +139,8 @@ public class TestContainerStateMachineFailures {
             .getContainer().getContainerSet()
             .getContainer(omKeyLocationInfo.getContainerID()).getContainerData()
             .getContainerPath()));
-    try {
-      // flush will throw an exception for the second write as the container
-      // dir has been deleted.
-      key.flush();
-      Assert.fail("Expected exception not thrown");
-    } catch (IOException ioe) {
-      Assert.assertTrue(ioe.getCause() instanceof StorageContainerException);
-    }
 
+    key.close();
     // Make sure the container is marked unhealthy
     Assert.assertTrue(
         cluster.getHddsDatanodes().get(0).getDatanodeStateMachine()
@@ -157,14 +148,5 @@ public class TestContainerStateMachineFailures {
             .getContainer(omKeyLocationInfo.getContainerID())
             .getContainerState()
             == ContainerProtos.ContainerDataProto.State.UNHEALTHY);
-    try {
-      // subsequent requests will fail with unhealthy container exception
-      key.close();
-      Assert.fail("Expected exception not thrown");
-    } catch (IOException ioe) {
-      Assert.assertTrue(ioe instanceof StorageContainerException);
-      Assert.assertTrue(((StorageContainerException) ioe).getResult()
-          == ContainerProtos.Result.BLOCK_NOT_COMMITTED);
-    }
   }
 }
