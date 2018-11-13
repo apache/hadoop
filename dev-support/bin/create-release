@@ -253,7 +253,8 @@ function startgpgagent
   if [[ "${SIGN}" = true ]]; then
     if [[ -n "${GPGAGENT}" && -z "${GPG_AGENT_INFO}" ]]; then
       echo "starting gpg agent"
-      echo "default-cache-ttl 14400" > "${LOGDIR}/gpgagent.conf"
+      echo "default-cache-ttl 36000" > "${LOGDIR}/gpgagent.conf"
+      echo "max-cache-ttl 36000" >> "${LOGDIR}/gpgagent.conf"
       # shellcheck disable=2046
       eval $("${GPGAGENT}" --daemon \
         --options "${LOGDIR}/gpgagent.conf" \
