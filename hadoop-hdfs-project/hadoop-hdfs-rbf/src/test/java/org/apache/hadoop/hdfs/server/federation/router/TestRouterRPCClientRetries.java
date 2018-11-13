@@ -81,7 +81,7 @@ public class TestRouterRPCClientRetries {
         .rpc()
         .build();
     routerConf.setTimeDuration(
-        NamenodeBeanMetrics.DN_REPORT_CACHE_EXPIRE, 1, TimeUnit.SECONDS);
+        RBFConfigKeys.DN_REPORT_CACHE_EXPIRE, 1, TimeUnit.SECONDS);
 
     // reduce IPC client connection retry times and interval time
     Configuration clientConf = new Configuration(false);

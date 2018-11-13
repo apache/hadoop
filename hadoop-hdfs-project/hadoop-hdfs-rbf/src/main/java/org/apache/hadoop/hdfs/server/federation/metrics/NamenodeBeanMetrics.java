@@ -74,21 +74,6 @@ public class NamenodeBeanMetrics
   private static final Logger LOG =
       LoggerFactory.getLogger(NamenodeBeanMetrics.class);
 
-  /** Prevent holding the page from loading too long. */
-  private static final String DN_REPORT_TIME_OUT =
-      RBFConfigKeys.FEDERATION_ROUTER_PREFIX + "dn-report.time-out";
-  /** We only wait for 1 second. */
-  private static final long DN_REPORT_TIME_OUT_DEFAULT =
-      TimeUnit.SECONDS.toMillis(1);
-
-  /** Time to cache the DN information. */
-  public static final String DN_REPORT_CACHE_EXPIRE =
-      RBFConfigKeys.FEDERATION_ROUTER_PREFIX + "dn-report.cache-expire";
-  /** We cache the DN information for 10 seconds by default. */
-  public static final long DN_REPORT_CACHE_EXPIRE_DEFAULT =
-      TimeUnit.SECONDS.toMillis(10);
-
-
   /** Instance of the Router being monitored. */
   private final Router router;
 
@@ -148,10 +133,11 @@ public class NamenodeBeanMetrics
     // Initialize the cache for the DN reports
     Configuration conf = router.getConfig();
     this.dnReportTimeOut = conf.getTimeDuration(
-        DN_REPORT_TIME_OUT, DN_REPORT_TIME_OUT_DEFAULT, TimeUnit.MILLISECONDS);
+        RBFConfigKeys.DN_REPORT_TIME_OUT,
+        RBFConfigKeys.DN_REPORT_TIME_OUT_MS_DEFAULT, TimeUnit.MILLISECONDS);
     long dnCacheExpire = conf.getTimeDuration(
-        DN_REPORT_CACHE_EXPIRE,
-        DN_REPORT_CACHE_EXPIRE_DEFAULT, TimeUnit.MILLISECONDS);
+        RBFConfigKeys.DN_REPORT_CACHE_EXPIRE,
+        RBFConfigKeys.DN_REPORT_CACHE_EXPIRE_MS_DEFAULT, TimeUnit.MILLISECONDS);
     this.dnCache = CacheBuilder.newBuilder()
         .expireAfterWrite(dnCacheExpire, TimeUnit.MILLISECONDS)
         .build(
