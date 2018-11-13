@@ -72,7 +72,7 @@ public class CliUtils {
       resourcesStr = resourcesStr.substring(1);
     }
     if (resourcesStr.endsWith("]")) {
-      resourcesStr = resourcesStr.substring(0, resourcesStr.length());
+      resourcesStr = resourcesStr.substring(0, resourcesStr.length() - 1);
     }
 
     for (String resource : resourcesStr.trim().split(",")) {
