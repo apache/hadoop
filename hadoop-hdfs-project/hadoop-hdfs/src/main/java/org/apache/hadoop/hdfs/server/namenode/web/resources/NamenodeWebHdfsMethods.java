@@ -333,9 +333,22 @@ public class NamenodeWebHdfsMethods {
     throw new IOException("No active nodes contain this block");
   }
 
-  private Token<? extends TokenIdentifier> generateDelegationToken(
-      final NameNode namenode, final UserGroupInformation ugi,
+  public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
+      throws IOException {
+    ClientProtocol cp = getRpcClientProtocol();
+    return cp.renewDelegationToken(token);
+  }
+
+  public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
+          throws IOException {
+    ClientProtocol cp = getRpcClientProtocol();
+    cp.cancelDelegationToken(token);
+  }
+
+  public Token<? extends TokenIdentifier> generateDelegationToken(
+      final UserGroupInformation ugi,
       final String renewer) throws IOException {
+    final NameNode namenode = (NameNode)context.getAttribute("name.node");
     final Credentials c = DelegationTokenSecretManager.createCredentials(
         namenode, ugi, renewer != null? renewer: ugi.getShortUserName());
     if (c == null) {
@@ -380,7 +393,7 @@ public class NamenodeWebHdfsMethods {
     } else {
       //generate a token
       final Token<? extends TokenIdentifier> t = generateDelegationToken(
-          namenode, ugi, null);
+          ugi, null);
       delegationQuery = "&" + new DelegationParam(t.encodeToUrlString());
     }
 
@@ -701,7 +714,7 @@ public class NamenodeWebHdfsMethods {
       validateOpParams(op, delegationTokenArgument);
       final Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>();
       token.decodeFromUrlString(delegationTokenArgument.getValue());
-      final long expiryTime = cp.renewDelegationToken(token);
+      final long expiryTime = renewDelegationToken(token);
       final String js = JsonUtil.toJsonString("long", expiryTime);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
@@ -710,7 +723,7 @@ public class NamenodeWebHdfsMethods {
       validateOpParams(op, delegationTokenArgument);
       final Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>();
       token.decodeFromUrlString(delegationTokenArgument.getValue());
-      cp.cancelDelegationToken(token);
+      cancelDelegationToken(token);
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case MODIFYACLENTRIES: {
@@ -1120,9 +1133,8 @@ public class NamenodeWebHdfsMethods {
         throw new IllegalArgumentException(delegation.getName()
             + " parameter is not null.");
       }
-      final NameNode namenode = (NameNode)context.getAttribute("name.node");
       final Token<? extends TokenIdentifier> token = generateDelegationToken(
-          namenode, ugi, renewer.getValue());
+          ugi, renewer.getValue());
 
       final String setServiceName = tokenService.getValue();
       final String setKind = tokenKind.getValue();
