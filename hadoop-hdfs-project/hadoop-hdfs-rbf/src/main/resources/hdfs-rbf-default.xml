@@ -143,6 +143,23 @@
     </description>
   </property>
 
+
+  <property>
+    <name>dfs.federation.router.dn-report.time-out</name>
+    <value>1000</value>
+    <description>
+      Time out, in milliseconds for getDatanodeReport.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.dn-report.cache-expire</name>
+    <value>10s</value>
+    <description>
+      Expiration time in seconds for datanodereport.
+    </description>
+  </property>
+
   <property>
     <name>dfs.federation.router.metrics.class</name>
     <value>org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCPerformanceMonitor</value>

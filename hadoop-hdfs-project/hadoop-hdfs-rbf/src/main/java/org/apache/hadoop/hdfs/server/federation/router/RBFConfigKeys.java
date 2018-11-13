@@ -233,6 +233,13 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "https-bind-host";
   public static final String DFS_ROUTER_HTTPS_ADDRESS_DEFAULT =
       "0.0.0.0:" + DFS_ROUTER_HTTPS_PORT_DEFAULT;
+  public static final String DN_REPORT_TIME_OUT =
+      FEDERATION_ROUTER_PREFIX + "dn-report.time-out";
+  public static final long  DN_REPORT_TIME_OUT_MS_DEFAULT = 1000;
+  public static final String DN_REPORT_CACHE_EXPIRE =
+      FEDERATION_ROUTER_PREFIX + "dn-report.cache-expire";
+  public static final long DN_REPORT_CACHE_EXPIRE_MS_DEFAULT =
+      TimeUnit.SECONDS.toMillis(10);
 
   // HDFS Router-based federation quota
   public static final String DFS_ROUTER_QUOTA_ENABLE =
