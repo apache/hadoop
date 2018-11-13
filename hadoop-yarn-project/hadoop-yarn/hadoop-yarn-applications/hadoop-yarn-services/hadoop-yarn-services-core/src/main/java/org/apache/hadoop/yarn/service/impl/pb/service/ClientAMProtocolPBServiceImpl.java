@@ -25,6 +25,8 @@ import org.apache.hadoop.yarn.proto.ClientAMProtocol.CancelUpgradeRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.CancelUpgradeResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeResponseProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.DecommissionCompInstancesRequestProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.DecommissionCompInstancesResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetCompInstancesRequestProto;
@@ -125,6 +127,17 @@ public class ClientAMProtocolPBServiceImpl implements ClientAMProtocolPB {
       throws ServiceException {
     try {
       return real.cancelUpgrade(request);
+    } catch (IOException | YarnException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public DecommissionCompInstancesResponseProto decommissionCompInstances(
+      RpcController controller, DecommissionCompInstancesRequestProto
+      request) throws ServiceException {
+    try {
+      return real.decommissionCompInstances(request);
     } catch (IOException | YarnException e) {
       throw new ServiceException(e);
     }

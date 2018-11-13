@@ -746,4 +746,32 @@ public class ApiServiceClient extends AppAdminClient {
     }
     return result;
   }
+
+  @Override
+  public int actionDecommissionInstances(String appName, List<String>
+      componentInstances) throws IOException, YarnException {
+    int result = EXIT_SUCCESS;
+    try {
+      Service service = new Service();
+      service.setName(appName);
+      for (String instance : componentInstances) {
+        String componentName = ServiceApiUtil.parseComponentName(instance);
+        Component component = service.getComponent(componentName);
+        if (component == null) {
+          component = new Component();
+          component.setName(componentName);
+          service.addComponent(component);
+        }
+        component.addDecommissionedInstance(instance);
+      }
+      String buffer = jsonSerDeser.toJson(service);
+      ClientResponse response = getApiClient(getServicePath(appName))
+          .put(ClientResponse.class, buffer);
+      result = processResponse(response);
+    } catch (Exception e) {
+      LOG.error("Fail to decommission instance: ", e);
+      result = EXIT_EXCEPTION_THROWN;
+    }
+    return result;
+  }
 }
