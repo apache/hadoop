@@ -175,7 +175,7 @@ public class TestRouterRpc {
         .build();
     // We decrease the DN cache times to make the test faster
     routerConf.setTimeDuration(
-        NamenodeBeanMetrics.DN_REPORT_CACHE_EXPIRE, 1, TimeUnit.SECONDS);
+        RBFConfigKeys.DN_REPORT_CACHE_EXPIRE, 1, TimeUnit.SECONDS);
     cluster.addRouterOverrides(routerConf);
     cluster.startRouters();
 

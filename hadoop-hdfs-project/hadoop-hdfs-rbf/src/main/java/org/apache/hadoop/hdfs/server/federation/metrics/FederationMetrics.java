@@ -47,12 +47,14 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
+import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.federation.store.MembershipStore;
@@ -95,7 +97,7 @@ public class FederationMetrics implements FederationMBean {
   private static final String DATE_FORMAT = "yyyy/MM/dd HH:mm:ss";
 
   /** Prevent holding the page from load too long. */
-  private static final long TIME_OUT = TimeUnit.SECONDS.toMillis(1);
+  private final long timeOut;
 
 
   /** Router interface. */
@@ -143,6 +145,12 @@ public class FederationMetrics implements FederationMBean {
       this.routerStore = stateStore.getRegisteredRecordStore(
           RouterStore.class);
     }
+
+    // Initialize the cache for the DN reports
+    Configuration conf = router.getConfig();
+    this.timeOut = conf.getTimeDuration(RBFConfigKeys.DN_REPORT_TIME_OUT,
+        RBFConfigKeys.DN_REPORT_TIME_OUT_MS_DEFAULT, TimeUnit.MILLISECONDS);
+
   }
 
   /**
@@ -434,7 +442,7 @@ public class FederationMetrics implements FederationMBean {
     try {
       RouterRpcServer rpcServer = this.router.getRpcServer();
       DatanodeInfo[] live = rpcServer.getDatanodeReport(
-          DatanodeReportType.LIVE, false, TIME_OUT);
+          DatanodeReportType.LIVE, false, timeOut);
 
       if (live.length > 0) {
         float totalDfsUsed = 0;
