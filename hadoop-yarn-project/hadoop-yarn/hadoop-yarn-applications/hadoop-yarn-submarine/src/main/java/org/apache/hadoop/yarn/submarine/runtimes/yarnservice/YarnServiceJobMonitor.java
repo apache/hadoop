@@ -14,9 +14,10 @@
 
 package org.apache.hadoop.yarn.submarine.runtimes.yarnservice;
 
+import org.apache.hadoop.yarn.client.api.AppAdminClient;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.Service;
-import org.apache.hadoop.yarn.service.client.ServiceClient;
+import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.submarine.common.ClientContext;
 import org.apache.hadoop.yarn.submarine.common.api.JobStatus;
 import org.apache.hadoop.yarn.submarine.common.api.builder.JobStatusBuilder;
@@ -25,21 +26,33 @@ import org.apache.hadoop.yarn.submarine.runtimes.common.JobMonitor;
 import java.io.IOException;
 
 public class YarnServiceJobMonitor extends JobMonitor {
-  private ServiceClient serviceClient = null;
+  private volatile AppAdminClient serviceClient = null;
 
   public YarnServiceJobMonitor(ClientContext clientContext) {
     super(clientContext);
   }
 
   @Override
-  public synchronized JobStatus getTrainingJobStatus(String jobName)
+  public JobStatus getTrainingJobStatus(String jobName)
       throws IOException, YarnException {
     if (this.serviceClient == null) {
-      this.serviceClient = YarnServiceUtils.createServiceClient(
-          clientContext.getYarnConfig());
+      synchronized(this) {
+        if (this.serviceClient == null) {
+          this.serviceClient = YarnServiceUtils.createServiceClient(
+              clientContext.getYarnConfig());
+        }
+      }
     }
+    String appStatus=serviceClient.getStatusString(jobName);
+    Service serviceSpec= ServiceApiUtil.jsonSerDeser.fromJson(appStatus);
+    JobStatus jobStatus = JobStatusBuilder.fromServiceSpec(serviceSpec);
+    return jobStatus;
+  }
 
-    Service serviceSpec = this.serviceClient.getStatus(jobName);
-    return JobStatusBuilder.fromServiceSpec(serviceSpec);
+  @Override
+  public void cleanup() throws IOException{
+    if (this.serviceClient != null) {
+      this.serviceClient.close();
+    }
   }
 }

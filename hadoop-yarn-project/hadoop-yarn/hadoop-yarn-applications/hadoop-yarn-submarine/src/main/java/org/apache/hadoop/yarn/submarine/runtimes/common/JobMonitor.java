@@ -48,6 +48,11 @@ public abstract class JobMonitor {
       throws IOException, YarnException;
 
   /**
+   * Cleanup AppAdminClient, etc.
+   */
+  public void cleanup() throws IOException {}
+
+  /**
    * Continue wait and print status if job goes to ready or final state.
    * @param jobName
    * @throws IOException
@@ -80,5 +85,6 @@ public abstract class JobMonitor {
         throw new IOException(e);
       }
     }
+    cleanup();
   }
 }

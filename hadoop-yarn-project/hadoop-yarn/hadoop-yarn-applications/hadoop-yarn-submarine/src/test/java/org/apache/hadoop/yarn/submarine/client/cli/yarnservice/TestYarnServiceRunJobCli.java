@@ -19,12 +19,11 @@
 package org.apache.hadoop.yarn.submarine.client.cli.yarnservice;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.client.api.AppAdminClient;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Service;
-import org.apache.hadoop.yarn.service.client.ServiceClient;
 import org.apache.hadoop.yarn.submarine.client.cli.RunJobCli;
 import org.apache.hadoop.yarn.submarine.common.MockClientContext;
 import org.apache.hadoop.yarn.submarine.common.api.TaskType;
@@ -45,6 +44,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
 
+import static org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes.EXIT_SUCCESS;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -53,9 +53,11 @@ public class TestYarnServiceRunJobCli {
   @Before
   public void before() throws IOException, YarnException {
     SubmarineLogs.verboseOff();
-    ServiceClient serviceClient = mock(ServiceClient.class);
-    when(serviceClient.actionCreate(any(Service.class))).thenReturn(
-        ApplicationId.newInstance(1234L, 1));
+    AppAdminClient serviceClient = mock(AppAdminClient.class);
+    when(serviceClient.actionLaunch(any(String.class), any(String.class),
+        any(Long.class), any(String.class))).thenReturn(EXIT_SUCCESS);
+    when(serviceClient.getStatusString(any(String.class))).thenReturn(
+        "{\"id\": \"application_1234_1\"}");
     YarnServiceUtils.setStubServiceClient(serviceClient);
   }
 
