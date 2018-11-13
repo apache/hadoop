@@ -358,16 +358,16 @@ public class ECAdmin extends Configured implements Tool {
       final DistributedFileSystem dfs = AdminHelper.getDFS(p.toUri(), conf);
       try {
         dfs.setErasureCodingPolicy(p, ecPolicyName);
-
-        String actualECPolicyName = dfs.getErasureCodingPolicy(p).getName();
-
-        System.out.println("Set " + actualECPolicyName +
-            " erasure coding policy on "+ path);
+        if (ecPolicyName == null){
+          ecPolicyName = "default";
+        }
+        System.out.println("Set " + ecPolicyName + " erasure coding policy on" +
+            " " + path);
         RemoteIterator<FileStatus> dirIt = dfs.listStatusIterator(p);
         if (dirIt.hasNext()) {
           System.out.println("Warning: setting erasure coding policy on a " +
               "non-empty directory will not automatically convert existing " +
-              "files to " + actualECPolicyName + " erasure coding policy");
+              "files to " + ecPolicyName + " erasure coding policy");
         }
       } catch (Exception e) {
         System.err.println(AdminHelper.prettifyException(e));
