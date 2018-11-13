@@ -1552,6 +1552,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       LOG.info("Service {} does not have an application ID", serviceName);
       return appSpec;
     }
+    appSpec.setId(currentAppId.toString());
     ApplicationReport appReport = yarnClient.getApplicationReport(currentAppId);
     appSpec.setState(convertState(appReport.getYarnApplicationState()));
     ApplicationTimeout lifetime =
