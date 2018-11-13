@@ -21,9 +21,7 @@ package org.apache.hadoop.yarn.service.component.instance;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
-import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.registry.client.types.yarn.PersistencePolicies;
 import org.apache.hadoop.util.StringUtils;
@@ -984,21 +982,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
   }
 
   public String getHostname() {
-    String domain = getComponent().getScheduler().getConfig()
-        .get(RegistryConstants.KEY_DNS_DOMAIN);
-    String hostname;
-    if (domain == null || domain.isEmpty()) {
-      hostname = MessageFormat
-          .format("{0}.{1}.{2}", getCompInstanceName(),
-              getComponent().getContext().service.getName(),
-              RegistryUtils.currentUser());
-    } else {
-      hostname = MessageFormat
-          .format("{0}.{1}.{2}.{3}", getCompInstanceName(),
-              getComponent().getContext().service.getName(),
-              RegistryUtils.currentUser(), domain);
-    }
-    return hostname;
+    return getCompInstanceName() + getComponent().getHostnameSuffix();
   }
 
   @Override

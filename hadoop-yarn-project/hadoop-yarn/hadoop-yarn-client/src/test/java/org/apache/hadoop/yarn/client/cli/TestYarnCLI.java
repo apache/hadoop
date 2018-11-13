@@ -2149,6 +2149,15 @@ public class TestYarnCLI {
     pw.println(" -components <Components>                 Works with -upgrade option to");
     pw.println("                                          trigger the upgrade of specified");
     pw.println("                                          components of the application.");
+    pw.println("                                          Multiple components should be");
+    pw.println("                                          separated by commas.");
+    pw.println(" -decommission <Application Name>         Decommissions component");
+    pw.println("                                          instances for an application /");
+    pw.println("                                          long-running service. Requires");
+    pw.println("                                          -instances option. Supports");
+    pw.println("                                          -appTypes option to specify");
+    pw.println("                                          which client implementation to");
+    pw.println("                                          use.");
     pw.println(" -destroy <Application Name>              Destroys a saved application");
     pw.println("                                          specification and removes all");
     pw.println("                                          application data permanently.");
@@ -2190,7 +2199,11 @@ public class TestYarnCLI {
     pw.println(" -instances <Component Instances>         Works with -upgrade option to");
     pw.println("                                          trigger the upgrade of specified");
     pw.println("                                          component instances of the");
-    pw.println("                                          application.");
+    pw.println("                                          application. Also works with");
+    pw.println("                                          -decommission option to");
+    pw.println("                                          decommission specified component");
+    pw.println("                                          instances. Multiple instances");
+    pw.println("                                          should be separated by commas.");
     pw.println(" -kill <Application ID>                   Kills the application. Set of");
     pw.println("                                          applications can be provided");
     pw.println("                                          separated with space");

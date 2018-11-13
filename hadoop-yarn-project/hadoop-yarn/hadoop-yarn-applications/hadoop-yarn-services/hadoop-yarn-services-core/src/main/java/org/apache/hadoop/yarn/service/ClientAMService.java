@@ -35,6 +35,8 @@ import org.apache.hadoop.yarn.proto.ClientAMProtocol.CancelUpgradeResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.ComponentCountProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.DecommissionCompInstancesRequestProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.DecommissionCompInstancesResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetCompInstancesRequestProto;
@@ -60,6 +62,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
 
+import static org.apache.hadoop.yarn.service.component.ComponentEventType.DECOMMISSION_INSTANCE;
 import static org.apache.hadoop.yarn.service.component.ComponentEventType.FLEX;
 
 public class ClientAMService extends AbstractService
@@ -219,5 +222,22 @@ public class ClientAMService extends AbstractService
     ServiceEvent event = new ServiceEvent(ServiceEventType.CANCEL_UPGRADE);
     context.scheduler.getDispatcher().getEventHandler().handle(event);
     return CancelUpgradeResponseProto.newBuilder().build();
+  }
+
+  @Override
+  public DecommissionCompInstancesResponseProto decommissionCompInstances(
+      DecommissionCompInstancesRequestProto request)
+      throws IOException, YarnException {
+    if (!request.getCompInstancesList().isEmpty()) {
+      for (String instance : request.getCompInstancesList()) {
+        String componentName = ServiceApiUtil.parseComponentName(instance);
+        ComponentEvent event = new ComponentEvent(componentName,
+            DECOMMISSION_INSTANCE).setInstanceName(instance);
+        context.scheduler.getDispatcher().getEventHandler().handle(event);
+        LOG.info("Decommissioning component {} instance {}", componentName,
+            instance);
+      }
+    }
+    return DecommissionCompInstancesResponseProto.newBuilder().build();
   }
 }

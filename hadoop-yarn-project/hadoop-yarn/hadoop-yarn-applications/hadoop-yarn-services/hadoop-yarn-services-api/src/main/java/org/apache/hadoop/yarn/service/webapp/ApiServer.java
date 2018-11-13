@@ -469,6 +469,12 @@ public class ApiServer {
           && updateServiceData.getLifetime() > 0) {
         return updateLifetime(appName, updateServiceData, ugi);
       }
+
+      for (Component c : updateServiceData.getComponents()) {
+        if (c.getDecommissionedInstances().size() > 0) {
+          return decommissionInstances(updateServiceData, ugi);
+        }
+      }
     } catch (UndeclaredThrowableException e) {
       return formatResponse(Status.BAD_REQUEST,
           e.getCause().getMessage());
@@ -822,6 +828,40 @@ public class ApiServer {
       }
       return result1;
     });
+  }
+
+  private Response decommissionInstances(Service service, UserGroupInformation
+      ugi) throws IOException, InterruptedException {
+    String appName = service.getName();
+    Response response = Response.status(Status.BAD_REQUEST).build();
+
+    List<String> instances = new ArrayList<>();
+    for (Component c : service.getComponents()) {
+      instances.addAll(c.getDecommissionedInstances());
+    }
+    Integer result = ugi.doAs(new PrivilegedExceptionAction<Integer>() {
+      @Override
+      public Integer run() throws YarnException, IOException {
+        int result = 0;
+        ServiceClient sc = new ServiceClient();
+        sc.init(YARN_CONFIG);
+        sc.start();
+        result = sc
+            .actionDecommissionInstances(appName, instances);
+        sc.close();
+        return Integer.valueOf(result);
+      }
+    });
+    if (result == EXIT_SUCCESS) {
+      String message = "Service " + appName + " has successfully " +
+          "decommissioned instances.";
+      LOG.info(message);
+      ServiceStatus status = new ServiceStatus();
+      status.setDiagnostics(message);
+      status.setState(ServiceState.ACCEPTED);
+      response = formatResponse(Status.ACCEPTED, status);
+    }
+    return response;
   }
 
   private Service getServiceFromClient(UserGroupInformation ugi,

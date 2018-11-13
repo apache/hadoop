@@ -99,6 +99,7 @@ public class ApplicationCLI extends YarnCLI {
   public static final String DESTROY_CMD = "destroy";
   public static final String FLEX_CMD = "flex";
   public static final String COMPONENT = "component";
+  public static final String DECOMMISSION = "decommission";
   public static final String ENABLE_FAST_LAUNCH = "enableFastLaunch";
   public static final String UPGRADE_CMD = "upgrade";
   public static final String UPGRADE_EXPRESS = "express";
@@ -239,6 +240,10 @@ public class ApplicationCLI extends YarnCLI {
           "yarn-service. If ID is provided, the appType will be looked up. " +
           "Supports -appTypes option to specify which client implementation " +
           "to use.");
+      opts.addOption(DECOMMISSION, true, "Decommissions component " +
+          "instances for an application / long-running service. Requires " +
+          "-instances option. Supports -appTypes option to specify which " +
+          "client implementation to use.");
       opts.addOption(COMPONENT, true, "Works with -flex option to change " +
           "the number of components/containers running for an application / " +
           "long-running service. Supports absolute or relative changes, such " +
@@ -258,9 +263,12 @@ public class ApplicationCLI extends YarnCLI {
           "application specification file.");
       opts.addOption(COMPONENT_INSTS, true, "Works with -upgrade option to " +
           "trigger the upgrade of specified component instances of the " +
-          "application.");
+          "application. Also works with -decommission option to decommission " +
+          "specified component instances. Multiple instances should be " +
+          "separated by commas.");
       opts.addOption(COMPONENTS, true, "Works with -upgrade option to " +
-          "trigger the upgrade of specified components of the application.");
+          "trigger the upgrade of specified components of the application. " +
+          "Multiple components should be separated by commas.");
       opts.addOption(UPGRADE_FINALIZE, false, "Works with -upgrade option to " +
           "finalize the upgrade.");
       opts.addOption(UPGRADE_AUTO_FINALIZE, false, "Works with -upgrade and " +
@@ -290,6 +298,8 @@ public class ApplicationCLI extends YarnCLI {
       opts.getOption(COMPONENTS).setArgName("Components");
       opts.getOption(COMPONENTS).setValueSeparator(',');
       opts.getOption(COMPONENTS).setArgs(Option.UNLIMITED_VALUES);
+      opts.getOption(DECOMMISSION).setArgName("Application Name");
+      opts.getOption(DECOMMISSION).setArgs(1);
     } else if (title != null && title.equalsIgnoreCase(APPLICATION_ATTEMPT)) {
       opts.addOption(STATUS_CMD, true,
           "Prints the status of the application attempt.");
@@ -708,6 +718,18 @@ public class ApplicationCLI extends YarnCLI {
         }
         return client.actionCancelUpgrade(appName);
       }
+    } else if (cliParser.hasOption(DECOMMISSION)) {
+      if (!cliParser.hasOption(COMPONENT_INSTS) ||
+          hasAnyOtherCLIOptions(cliParser, opts, DECOMMISSION, COMPONENT_INSTS,
+              APP_TYPE_CMD)) {
+        printUsage(title, opts);
+        return exitCode;
+      }
+      String[] instances = cliParser.getOptionValues(COMPONENT_INSTS);
+      String[] appNameAndType = getAppNameAndType(cliParser, DECOMMISSION);
+      return AppAdminClient.createAppAdminClient(appNameAndType[1], getConf())
+          .actionDecommissionInstances(appNameAndType[0],
+              Arrays.asList(instances));
     } else {
       syserr.println("Invalid Command Usage : ");
       printUsage(title, opts);

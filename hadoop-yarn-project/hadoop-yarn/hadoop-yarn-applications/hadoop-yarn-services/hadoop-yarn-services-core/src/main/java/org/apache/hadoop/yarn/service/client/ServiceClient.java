@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.CancelUpgradeRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.ComponentCountProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.DecommissionCompInstancesRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetCompInstancesRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetCompInstancesResponseProto;
@@ -375,6 +376,61 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
   }
 
   @Override
+  public int actionDecommissionInstances(String appName,
+      List<String> componentInstances) throws IOException, YarnException {
+    checkAppExistOnHdfs(appName);
+    Service persistedService = ServiceApiUtil.loadService(fs, appName);
+    if (StringUtils.isEmpty(persistedService.getId())) {
+      throw new YarnException(
+          persistedService.getName() + " appId is null, may be not submitted " +
+              "to YARN yet");
+    }
+    cachedAppInfo.put(persistedService.getName(), new AppInfo(
+        ApplicationId.fromString(persistedService.getId()), persistedService
+        .getKerberosPrincipal().getPrincipalName()));
+
+    for (String instance : componentInstances) {
+      String componentName = ServiceApiUtil.parseComponentName(
+          ServiceApiUtil.parseAndValidateComponentInstanceName(instance,
+              appName, getConfig()));
+      Component component = persistedService.getComponent(componentName);
+      if (component == null) {
+        throw new IllegalArgumentException(instance + " does not exist !");
+      }
+      if (!component.getDecommissionedInstances().contains(instance)) {
+        component.addDecommissionedInstance(instance);
+        component.setNumberOfContainers(Math.max(0, component
+            .getNumberOfContainers() - 1));
+      }
+    }
+    ServiceApiUtil.writeAppDefinition(fs, persistedService);
+
+    ApplicationReport appReport =
+        yarnClient.getApplicationReport(ApplicationId.fromString(
+            persistedService.getId()));
+    if (appReport.getYarnApplicationState() != RUNNING) {
+      String message =
+          persistedService.getName() + " is at " + appReport
+              .getYarnApplicationState() + " state, decommission can only be " +
+              "invoked when service is running";
+      LOG.error(message);
+      throw new YarnException(message);
+    }
+
+    if (StringUtils.isEmpty(appReport.getHost())) {
+      throw new YarnException(persistedService.getName() + " AM hostname is " +
+          "empty");
+    }
+    ClientAMProtocol proxy =
+        createAMProxy(persistedService.getName(), appReport);
+    DecommissionCompInstancesRequestProto.Builder requestBuilder =
+        DecommissionCompInstancesRequestProto.newBuilder();
+    requestBuilder.addAllCompInstances(componentInstances);
+    proxy.decommissionCompInstances(requestBuilder.build());
+    return EXIT_SUCCESS;
+  }
+
+  @Override
   public int actionCleanUp(String appName, String userName) throws
       IOException, YarnException {
     if (cleanUpRegistry(appName, userName)) {
@@ -577,9 +633,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       throw new YarnException("Components " + componentCounts.keySet()
           + " do not exist in app definition.");
     }
-    jsonSerDeser
-        .save(fs.getFileSystem(), ServiceApiUtil.getServiceJsonPath(fs, serviceName),
-            persistedService, true);
+    ServiceApiUtil.writeAppDefinition(fs, persistedService);
 
     ApplicationId appId = getAppId(serviceName);
     if (appId == null) {

@@ -31,6 +31,7 @@ public class ComponentEvent extends AbstractEvent<ComponentEventType> {
   private final ComponentEventType type;
   private Container container;
   private ComponentInstance instance;
+  private String instanceName;
   private ContainerStatus status;
   private ContainerId containerId;
   private org.apache.hadoop.yarn.service.api.records.Component targetSpec;
@@ -83,6 +84,15 @@ public class ComponentEvent extends AbstractEvent<ComponentEventType> {
 
   public ComponentEvent setInstance(ComponentInstance instance) {
     this.instance = instance;
+    return this;
+  }
+
+  public String getInstanceName() {
+    return instanceName;
+  }
+
+  public ComponentEvent setInstanceName(String instanceName) {
+    this.instanceName = instanceName;
     return this;
   }
 
