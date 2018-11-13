@@ -410,6 +410,11 @@ definitions:
         type: integer
         format: int64
         description: Number of containers for this component (optional). If not specified, the service level global number_of_containers takes effect.
+      decommissioned_instances:
+        type: array
+        items:
+          type: string
+        description: List of decommissioned component instances.
       containers:
         type: array
         description: Containers of a started component. Specifying a value for this attribute for the POST payload raises a validation error. This blob is available only in the GET response of a started service.

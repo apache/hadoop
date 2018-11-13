@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.service.monitor.probe.MonitorUtils;
 import org.apache.hadoop.yarn.service.monitor.probe.Probe;
 import org.apache.hadoop.yarn.service.containerlaunch.ContainerLaunchService;
 import org.apache.hadoop.yarn.service.provider.ProviderUtils;
+import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
@@ -142,6 +143,9 @@ public class Component implements EventHandler<ComponentEvent> {
           // container recovered on AM restart
           .addTransition(INIT, INIT, CONTAINER_RECOVERED,
               new ContainerRecoveredTransition())
+          // instance decommissioned
+          .addTransition(INIT, INIT, DECOMMISSION_INSTANCE,
+              new DecommissionInstanceTransition())
 
           // container recovered in AM heartbeat
           .addTransition(FLEXING, FLEXING, CONTAINER_RECOVERED,
@@ -161,6 +165,9 @@ public class Component implements EventHandler<ComponentEvent> {
               new FlexComponentTransition())
           .addTransition(FLEXING, EnumSet.of(UPGRADING, FLEXING, STABLE),
               CHECK_STABLE, new CheckStableTransition())
+          // instance decommissioned
+          .addTransition(FLEXING, FLEXING, DECOMMISSION_INSTANCE,
+              new DecommissionInstanceTransition())
 
           // container failed while stable
           .addTransition(STABLE, FLEXING, CONTAINER_COMPLETED,
@@ -173,6 +180,10 @@ public class Component implements EventHandler<ComponentEvent> {
           // For flex down, go to STABLE state
           .addTransition(STABLE, EnumSet.of(STABLE, FLEXING),
               FLEX, new FlexComponentTransition())
+          // instance decommissioned
+          .addTransition(STABLE, STABLE, DECOMMISSION_INSTANCE,
+              new DecommissionInstanceTransition())
+          // upgrade component
           .addTransition(STABLE, UPGRADING, UPGRADE,
               new NeedsUpgradeTransition())
           .addTransition(STABLE, CANCEL_UPGRADING, CANCEL_UPGRADE,
@@ -187,6 +198,9 @@ public class Component implements EventHandler<ComponentEvent> {
               CHECK_STABLE, new CheckStableTransition())
           .addTransition(UPGRADING, UPGRADING, CONTAINER_COMPLETED,
               new CompletedAfterUpgradeTransition())
+          // instance decommissioned
+          .addTransition(UPGRADING, UPGRADING, DECOMMISSION_INSTANCE,
+              new DecommissionInstanceTransition())
 
           .addTransition(CANCEL_UPGRADING, EnumSet.of(CANCEL_UPGRADING, FLEXING,
               STABLE), CHECK_STABLE, new CheckStableTransition())
@@ -194,7 +208,9 @@ public class Component implements EventHandler<ComponentEvent> {
               CONTAINER_COMPLETED, new CompletedAfterUpgradeTransition())
           .addTransition(CANCEL_UPGRADING, FLEXING, CONTAINER_ALLOCATED,
               new ContainerAllocatedTransition())
-
+          // instance decommissioned
+          .addTransition(CANCEL_UPGRADING, CANCEL_UPGRADING,
+              DECOMMISSION_INSTANCE, new DecommissionInstanceTransition())
           .installTopology();
 
   public Component(
@@ -241,6 +257,11 @@ public class Component implements EventHandler<ComponentEvent> {
     ComponentInstanceId id =
         new ComponentInstanceId(instanceIdCounter.getAndIncrement(),
             componentSpec.getName());
+    while (componentSpec.getDecommissionedInstances().contains(id
+        .getCompInstanceName())) {
+      id = new ComponentInstanceId(instanceIdCounter.getAndIncrement(),
+          componentSpec.getName());
+    }
     ComponentInstance instance = new ComponentInstance(this, id);
     compInstances.put(instance.getCompInstanceName(), instance);
     pendingInstances.add(instance);
@@ -374,6 +395,38 @@ public class Component implements EventHandler<ComponentEvent> {
             event.getDesired() + " instances, ignoring");
         return STABLE;
       }
+    }
+  }
+
+  private static class DecommissionInstanceTransition extends BaseTransition {
+    @Override
+    public void transition(Component component, ComponentEvent event) {
+      String instanceName = event.getInstanceName();
+      String hostnameSuffix = component.getHostnameSuffix();
+      if (instanceName.endsWith(hostnameSuffix)) {
+        instanceName = instanceName.substring(0,
+            instanceName.length() - hostnameSuffix.length());
+      }
+      if (component.getComponentSpec().getDecommissionedInstances()
+          .contains(instanceName)) {
+        LOG.info("Instance {} already decommissioned", instanceName);
+        return;
+      }
+      component.getComponentSpec().addDecommissionedInstance(instanceName);
+      ComponentInstance instance = component.getComponentInstance(instanceName);
+      if (instance == null) {
+        LOG.info("Instance was null for decommissioned instance {}",
+            instanceName);
+        return;
+      }
+      // remove the instance
+      component.compInstances.remove(instance.getCompInstanceName());
+      component.pendingInstances.remove(instance);
+      component.scheduler.getServiceMetrics().containersDesired.decr();
+      component.componentMetrics.containersDesired.decr();
+      component.getComponentSpec().setNumberOfContainers(component
+          .getComponentSpec().getNumberOfContainers() - 1);
+      instance.destroy();
     }
   }
 
@@ -807,10 +860,8 @@ public class Component implements EventHandler<ComponentEvent> {
 
   private void setDesiredContainers(int n) {
     int delta = n - scheduler.getServiceMetrics().containersDesired.value();
-    if (delta > 0) {
+    if (delta != 0) {
       scheduler.getServiceMetrics().containersDesired.incr(delta);
-    } else {
-      scheduler.getServiceMetrics().containersDesired.decr(delta);
     }
     componentMetrics.containersDesired.set(n);
   }
@@ -1201,5 +1252,10 @@ public class Component implements EventHandler<ComponentEvent> {
   public ComponentRestartPolicy getRestartPolicyHandler() {
     RestartPolicyEnum restartPolicyEnum = getComponentSpec().getRestartPolicy();
     return getRestartPolicyHandler(restartPolicyEnum);
+  }
+
+  public String getHostnameSuffix() {
+    return ServiceApiUtil.getHostnameSuffix(context.service.getName(),
+        scheduler.getConfig());
   }
 }

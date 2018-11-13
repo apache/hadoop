@@ -55,6 +55,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -547,6 +548,13 @@ public class ServiceApiUtil {
     return appJson;
   }
 
+  public static Path writeAppDefinition(SliderFileSystem fs, Service service)
+      throws IOException {
+    Path appJson = getServiceJsonPath(fs, service.getName());
+    jsonSerDeser.save(fs.getFileSystem(), appJson, service, true);
+    return appJson;
+  }
+
   public static List<Container> getLiveContainers(Service service,
       List<String> componentInstances)
       throws YarnException {
@@ -656,9 +664,53 @@ public class ServiceApiUtil {
     return containerNeedUpgrade;
   }
 
-  private static String parseComponentName(String componentInstanceName)
+  public static String getHostnameSuffix(String serviceName, org.apache
+      .hadoop.conf.Configuration conf) {
+    String domain = conf.get(RegistryConstants.KEY_DNS_DOMAIN);
+    String hostnameSuffix;
+    if (domain == null || domain.isEmpty()) {
+      hostnameSuffix = MessageFormat
+          .format(".{0}.{1}", serviceName, RegistryUtils.currentUser());
+    } else {
+      hostnameSuffix = MessageFormat
+          .format(".{0}.{1}.{2}", serviceName,
+              RegistryUtils.currentUser(), domain);
+    }
+    return hostnameSuffix;
+  }
+
+  public static String parseAndValidateComponentInstanceName(String
+      instanceOrHostname, String serviceName, org.apache.hadoop.conf
+      .Configuration conf) throws IllegalArgumentException {
+    int idx = instanceOrHostname.indexOf('.');
+    String hostnameSuffix = getHostnameSuffix(serviceName, conf);
+    if (idx != -1) {
+      if (!instanceOrHostname.endsWith(hostnameSuffix)) {
+        throw new IllegalArgumentException("Specified hostname " +
+            instanceOrHostname + " does not have the expected format " +
+            "componentInstanceName" +
+            hostnameSuffix);
+      }
+      instanceOrHostname = instanceOrHostname.substring(0, instanceOrHostname
+          .length() - hostnameSuffix.length());
+    }
+    idx = instanceOrHostname.indexOf('.');
+    if (idx != -1) {
+      throw new IllegalArgumentException("Specified hostname " +
+          instanceOrHostname + " does not have the expected format " +
+          "componentInstanceName" +
+          hostnameSuffix);
+    }
+    return instanceOrHostname;
+  }
+
+  public static String parseComponentName(String componentInstanceName)
       throws YarnException {
-    int idx = componentInstanceName.lastIndexOf('-');
+    int idx = componentInstanceName.indexOf('.');
+    if (idx != -1) {
+      componentInstanceName = componentInstanceName.substring(0, idx);
+    }
+    idx = componentInstanceName.lastIndexOf('-');
     if (idx == -1) {
       throw new YarnException("Invalid component instance (" +
           componentInstanceName + ") name.");
