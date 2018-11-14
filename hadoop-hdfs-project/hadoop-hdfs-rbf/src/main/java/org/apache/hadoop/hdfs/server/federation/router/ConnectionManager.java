@@ -393,7 +393,7 @@ public class ConnectionManager {
   /**
    * Thread that creates connections asynchronously.
    */
-  private static class ConnectionCreator extends Thread {
+  static class ConnectionCreator extends Thread {
     /** If the creator is running. */
     private boolean running = true;
     /** Queue to push work to. */
@@ -426,6 +426,8 @@ public class ConnectionManager {
         } catch (InterruptedException e) {
           LOG.error("The connection creator was interrupted");
           this.running = false;
+        } catch (Throwable e) {
+          LOG.error("Fatal error caught by connection creator ", e);
         }
       }
     }
