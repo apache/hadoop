@@ -211,7 +211,14 @@ public class ObserverReadProxyProvider<T extends ClientProtocol>
     currentProxy = null;
     currentIndex = (currentIndex + 1) % nameNodeProxies.size();
     currentProxy = createProxyIfNeeded(nameNodeProxies.get(currentIndex));
-    currentProxy.refreshCachedState();
+    try {
+      HAServiceState state = currentProxy.proxy.getHAServiceState();
+      currentProxy.setCachedState(state);
+    } catch (IOException e) {
+      LOG.info("Failed to connect to {}. Setting cached state to Standby",
+          currentProxy.getAddress(), e);
+      currentProxy.setCachedState(HAServiceState.STANDBY);
+    }
     LOG.debug("Changed current proxy from {} to {}",
         initial == null ? "none" : initial.proxyInfo,
         currentProxy.proxyInfo);

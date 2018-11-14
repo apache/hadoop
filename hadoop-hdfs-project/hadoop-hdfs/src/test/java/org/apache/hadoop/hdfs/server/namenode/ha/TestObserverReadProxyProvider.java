@@ -27,8 +27,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.ha.HAServiceProtocol;
-import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -47,7 +45,6 @@ import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * Tests for {@link ObserverReadProxyProvider} under various configurations of
@@ -79,8 +76,6 @@ public class TestObserverReadProxyProvider {
     namenodeAnswers = new NameNodeAnswer[namenodeCount];
     ClientProtocol[] proxies = new ClientProtocol[namenodeCount];
     Map<String, ClientProtocol> proxyMap = new HashMap<>();
-    HAServiceProtocol[] serviceProxies = new HAServiceProtocol[namenodeCount];
-    Map<String, HAServiceProtocol> serviceProxyMap = new HashMap<>();
     for (int i  = 0; i < namenodeCount; i++) {
       namenodeIDs[i] = "nn" + i;
       namenodeAddrs[i] = "namenode" + i + ".test:8020";
@@ -92,11 +87,9 @@ public class TestObserverReadProxyProvider {
           .when(proxies[i]));
       doRead(Mockito.doAnswer(namenodeAnswers[i].clientAnswer)
           .when(proxies[i]));
-      serviceProxies[i] = mock(HAServiceProtocol.class);
-      Mockito.doAnswer(namenodeAnswers[i].serviceAnswer)
-          .when(serviceProxies[i]).getServiceStatus();
+      Mockito.doAnswer(namenodeAnswers[i].clientAnswer)
+          .when(proxies[i]).getHAServiceState();
       proxyMap.put(namenodeAddrs[i], proxies[i]);
-      serviceProxyMap.put(namenodeAddrs[i], serviceProxies[i]);
     }
     conf.set(HdfsClientConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + "." + ns,
         Joiner.on(",").join(namenodeIDs));
@@ -116,10 +109,6 @@ public class TestObserverReadProxyProvider {
           URI uri, String addressKey) {
         List<NNProxyInfo<ClientProtocol>> nnProxies =
             super.getProxyAddresses(uri, addressKey);
-        for (NNProxyInfo<ClientProtocol> nnProxy : nnProxies) {
-          String addressStr = nnProxy.getAddress().toString();
-          nnProxy.setServiceProxyForTesting(serviceProxyMap.get(addressStr));
-        }
         return nnProxies;
       }
     };
@@ -322,8 +311,8 @@ public class TestObserverReadProxyProvider {
   }
 
   /**
-   * An {@link Answer} used for mocking of {@link ClientProtocol} and
-   * {@link HAServiceProtocol}. Setting the state or unreachability of this
+   * An {@link Answer} used for mocking of {@link ClientProtocol}.
+   * Setting the state or unreachability of this
    * Answer will make the linked ClientProtocol respond as if it was
    * communicating with a NameNode of the corresponding state. It is in Standby
    * state by default.
@@ -338,30 +327,28 @@ public class TestObserverReadProxyProvider {
     private volatile boolean allowReads = false;
 
     private ClientProtocolAnswer clientAnswer = new ClientProtocolAnswer();
-    private HAServiceProtocolAnswer serviceAnswer =
-        new HAServiceProtocolAnswer();
 
-    private class HAServiceProtocolAnswer implements Answer<HAServiceStatus> {
+    private class ClientProtocolAnswer implements Answer<Object> {
       @Override
-      public HAServiceStatus answer(InvocationOnMock invocation)
-          throws Throwable {
-        HAServiceStatus status = mock(HAServiceStatus.class);
-        if (allowReads && allowWrites) {
-          when(status.getState()).thenReturn(HAServiceState.ACTIVE);
-        } else if (allowReads) {
-          when(status.getState()).thenReturn(HAServiceState.OBSERVER);
-        } else {
-          when(status.getState()).thenReturn(HAServiceState.STANDBY);
-        }
-        return status;
-      }
-    }
-
-    private class ClientProtocolAnswer implements Answer<Void> {
-      @Override
-      public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+      public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
         if (unreachable) {
           throw new IOException("Unavailable");
+        }
+        // retryActive should be checked before getHAServiceState.
+        // Check getHAServiceState first here only because in test,
+        // it relies read call, which relies on getHAServiceState
+        // to have passed already. May revisit future.
+        if (invocationOnMock.getMethod()
+            .getName().equals("getHAServiceState")) {
+          HAServiceState status;
+          if (allowReads && allowWrites) {
+            status = HAServiceState.ACTIVE;
+          } else if (allowReads) {
+            status = HAServiceState.OBSERVER;
+          } else {
+            status = HAServiceState.STANDBY;
+          }
+          return status;
         }
         if (retryActive) {
           throw new RemoteException(
