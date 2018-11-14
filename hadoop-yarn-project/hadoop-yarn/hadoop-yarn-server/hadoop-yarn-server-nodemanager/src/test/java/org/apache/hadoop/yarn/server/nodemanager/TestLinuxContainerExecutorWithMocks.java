@@ -308,7 +308,7 @@ public class TestLinuxContainerExecutorWithMocks {
           .build());
 
       List<String> result=readMockParams();
-      Assert.assertEquals(result.size(), 25);
+      Assert.assertEquals(result.size(), 26);
       Assert.assertEquals(result.get(0), YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LOCAL_USER);
       Assert.assertEquals(result.get(1), "test");
       Assert.assertEquals(result.get(2), "0" );
@@ -334,6 +334,7 @@ public class TestLinuxContainerExecutorWithMocks {
       Assert.assertEquals(result.get(21), "12345");
       Assert.assertEquals(result.get(22), "localhost");
       Assert.assertEquals(result.get(23), "8040");
+      Assert.assertEquals(result.get(24), "nmPrivateCTokensPath");
 
     } catch (InterruptedException e) {
       LOG.error("Error:"+e.getMessage(),e);

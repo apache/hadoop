@@ -37,6 +37,8 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -447,7 +449,9 @@ public class TestContainerLocalizer {
     FakeContainerLocalizer(FileContext lfs, String user, String appId,
         String localizerId, List<Path> localDirs,
         RecordFactory recordFactory) throws IOException {
-      super(lfs, user, appId, localizerId, localDirs, recordFactory);
+      super(lfs, user, appId, localizerId,
+          String.format(ContainerExecutor.TOKEN_FILE_NAME_FMT, containerId),
+          localDirs, recordFactory);
     }
 
     FakeLongDownload getDownloader() {
@@ -523,7 +527,7 @@ public class TestContainerLocalizer {
       DataInputBuffer appTokens = createFakeCredentials(random, 10);
       tokenPath =
         lfs.makeQualified(new Path(
-              String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
+            String.format(ContainerExecutor.TOKEN_FILE_NAME_FMT,
                   containerId)));
       doReturn(new FSDataInputStream(new FakeFSDataInputStream(appTokens))
           ).when(spylfs).open(tokenPath);
@@ -655,7 +659,8 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
     RecordFactory recordFactory = mock(RecordFactory.class);
     ContainerLocalizer localizer = new ContainerLocalizer(lfs,
         UserGroupInformation.getCurrentUser().getUserName(), "application_01",
-        "container_01", new ArrayList<Path>(), recordFactory);
+        "container_01", String.format(ContainerExecutor.TOKEN_FILE_NAME_FMT,
+        "container_01"), new ArrayList<>(), recordFactory);
     LocalResource rsrc = mock(LocalResource.class);
     when(rsrc.getVisibility()).thenReturn(LocalResourceVisibility.PRIVATE);
     Path destDirPath = new Path(fileCacheDir, "0/0/85");
