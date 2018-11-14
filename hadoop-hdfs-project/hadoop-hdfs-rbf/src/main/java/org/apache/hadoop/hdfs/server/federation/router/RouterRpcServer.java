@@ -63,6 +63,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -2064,7 +2065,13 @@ public class RouterRpcServer extends AbstractService
         OpenFilesIterator.FILTER_PATH_DEFAULT);
   }
 
-  @Override
+  @Override // ClientProtocol
+  public HAServiceProtocol.HAServiceState getHAServiceState()
+      throws IOException {
+    return null;
+  }
+
+  @Override // ClientProtocol
   public BatchedEntries<OpenFileEntry> listOpenFiles(long prevId,
       EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException {
     checkOperation(OperationCategory.READ, false);
