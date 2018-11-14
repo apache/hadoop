@@ -175,6 +175,7 @@ public class AliyunOSSFileSystemStore {
       CannedAccessControlList cannedACL =
           CannedAccessControlList.valueOf(cannedACLName);
       ossClient.setBucketAcl(bucketName, cannedACL);
+      statistics.incrementWriteOps(1);
     }
 
     maxKeys = conf.getInt(MAX_PAGING_KEYS_KEY, MAX_PAGING_KEYS_DEFAULT);
@@ -216,6 +217,7 @@ public class AliyunOSSFileSystemStore {
       // Here, we choose the simple mode to do batch delete.
       deleteRequest.setQuiet(true);
       DeleteObjectsResult result = ossClient.deleteObjects(deleteRequest);
+      statistics.incrementWriteOps(1);
       deleteFailed = result.getDeletedObjects();
       tries++;
       if (tries == retry) {
@@ -268,11 +270,13 @@ public class AliyunOSSFileSystemStore {
    */
   public ObjectMetadata getObjectMetadata(String key) {
     try {
-      return ossClient.getObjectMetadata(bucketName, key);
-    } catch (OSSException osse) {
-      return null;
-    } finally {
+      ObjectMetadata objectMeta = ossClient.getObjectMetadata(bucketName, key);
       statistics.incrementReadOps(1);
+      return objectMeta;
+    } catch (OSSException osse) {
+      LOG.error("Exception thrown when get object meta: "
+              + key + ", exception: " + osse);
+      return null;
     }
   }
 
@@ -289,6 +293,7 @@ public class AliyunOSSFileSystemStore {
     dirMeta.setContentLength(0);
     try {
       ossClient.putObject(bucketName, key, in, dirMeta);
+      statistics.incrementWriteOps(1);
     } finally {
       in.close();
     }
@@ -304,6 +309,7 @@ public class AliyunOSSFileSystemStore {
   public boolean copyFile(String srcKey, String dstKey) {
     ObjectMetadata objectMeta =
         ossClient.getObjectMetadata(bucketName, srcKey);
+    statistics.incrementReadOps(1);
     long contentLength = objectMeta.getContentLength();
     if (contentLength <= multipartThreshold) {
       return singleCopy(srcKey, dstKey);
@@ -323,6 +329,7 @@ public class AliyunOSSFileSystemStore {
   private boolean singleCopy(String srcKey, String dstKey) {
     CopyObjectResult copyResult =
         ossClient.copyObject(bucketName, srcKey, bucketName, dstKey);
+    statistics.incrementWriteOps(1);
     LOG.debug(copyResult.getETag());
     return true;
   }
@@ -372,6 +379,7 @@ public class AliyunOSSFileSystemStore {
         UploadPartCopyResult partCopyResult =
             ossClient.uploadPartCopy(partCopyRequest);
         statistics.incrementWriteOps(1);
+        statistics.incrementBytesWritten(size);
         partETags.add(partCopyResult.getPartETag());
       }
       CompleteMultipartUploadRequest completeMultipartUploadRequest =
@@ -408,6 +416,7 @@ public class AliyunOSSFileSystemStore {
       PutObjectResult result = ossClient.putObject(bucketName, key, fis, meta);
       LOG.debug(result.getETag());
       statistics.incrementWriteOps(1);
+      statistics.incrementBytesWritten(file.length());
     } finally {
       fis.close();
     }
@@ -449,7 +458,9 @@ public class AliyunOSSFileSystemStore {
     try {
       GetObjectRequest request = new GetObjectRequest(bucketName, key);
       request.setRange(byteStart, byteEnd);
-      return ossClient.getObject(request).getObjectContent();
+      InputStream in = ossClient.getObject(request).getObjectContent();
+      statistics.incrementReadOps(1);
+      return in;
     } catch (OSSException | ClientException e) {
       LOG.error("Exception thrown when store retrieves key: "
               + key + ", exception: " + e);
@@ -480,6 +491,7 @@ public class AliyunOSSFileSystemStore {
       for (OSSObjectSummary object : objects.getObjectSummaries()) {
         key = object.getKey();
         ossClient.deleteObject(bucketName, key);
+        statistics.incrementWriteOps(1);
       }
 
       for (String dir: objects.getCommonPrefixes()) {
@@ -604,6 +616,8 @@ public class AliyunOSSFileSystemStore {
         uploadRequest.setPartSize(file.length());
         uploadRequest.setPartNumber(idx);
         UploadPartResult uploadResult = ossClient.uploadPart(uploadRequest);
+        statistics.incrementWriteOps(1);
+        statistics.incrementBytesWritten(file.length());
         return uploadResult.getPartETag();
       } catch (Exception e) {
         LOG.debug("Failed to upload "+ file.getPath() +", " +
