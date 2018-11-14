@@ -118,6 +118,11 @@ please raise your issues with them.
     </property>
 
     <property>
+    <name>fs.oss.impl</name>
+    <value>org.apache.hadoop.fs.aliyun.oss.AliyunOSSFileSystem</value>
+    </property>
+
+    <property>
       <name>fs.oss.assumed.role.arn</name>
       <description>
         Role ARN for the role to be assumed.
