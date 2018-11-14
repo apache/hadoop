@@ -89,6 +89,9 @@ public class TestConsistentReadsObserver {
     // 0 == not completed, 1 == succeeded, -1 == failed
     AtomicInteger readStatus = new AtomicInteger(0);
 
+    // Making an uncoordinated call, which initialize the proxy
+    // to Observer node.
+    dfs.getClient().getHAServiceState();
     dfs.mkdir(testPath, FsPermission.getDefault());
     assertSentTo(0);
 
