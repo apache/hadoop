@@ -195,6 +195,30 @@ message ContainerBlockID {
     required int64 localID = 2;
 }
 
+
+/**
+ * Information for the Hdds block token.
+ * When adding further fields, make sure they are optional as they would
+ * otherwise not be backwards compatible.
+ */
+message BlockTokenSecretProto {
+    /**
+ * File access permissions mode.
+ */
+    enum AccessModeProto {
+        READ = 1;
+        WRITE = 2;
+        COPY = 3;
+        DELETE = 4;
+    }
+    required string ownerId = 1;
+    required string blockId = 2;
+    required uint64 expiryDate = 3;
+    required string omCertSerialId = 4;
+    repeated AccessModeProto modes = 5;
+
+}
+
 message BlockID {
     required ContainerBlockID containerBlockID = 1;
     optional uint64 blockCommitSequenceId = 2 [default = 0];

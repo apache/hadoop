@@ -18,6 +18,15 @@
  */
 package org.apache.hadoop.hdds.security.x509.keys;
 
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.exceptions.CertificateException;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Sequence;
@@ -76,4 +85,54 @@ public final class SecurityUtil {
     }
     throw new CertificateException("No PKCS#9 extension found in CSR");
   }
+
+  /*
+   * Returns private key created from encoded key.
+   * @return private key if successful else returns null.
+   */
+  public static PrivateKey getPrivateKey(byte[] encodedKey,
+      SecurityConfig secureConfig) {
+    PrivateKey pvtKey = null;
+    if (encodedKey == null || encodedKey.length == 0) {
+      return null;
+    }
+
+    try {
+      KeyFactory kf = null;
+
+      kf = KeyFactory.getInstance(secureConfig.getKeyAlgo(),
+          secureConfig.getProvider());
+      pvtKey = kf.generatePrivate(new PKCS8EncodedKeySpec(encodedKey));
+
+    } catch (NoSuchAlgorithmException | InvalidKeySpecException |
+        NoSuchProviderException e) {
+      return null;
+    }
+    return pvtKey;
+  }
+
+  /*
+   * Returns public key created from encoded key.
+   * @return public key if successful else returns null.
+   */
+  public static PublicKey getPublicKey(byte[] encodedKey,
+      SecurityConfig secureConfig) {
+    PublicKey key = null;
+    if (encodedKey == null || encodedKey.length == 0) {
+      return null;
+    }
+
+    try {
+      KeyFactory kf = null;
+      kf = KeyFactory.getInstance(secureConfig.getKeyAlgo(),
+          secureConfig.getProvider());
+      key = kf.generatePublic(new X509EncodedKeySpec(encodedKey));
+
+    } catch (NoSuchAlgorithmException | InvalidKeySpecException |
+        NoSuchProviderException e) {
+      return null;
+    }
+    return key;
+  }
+
 }

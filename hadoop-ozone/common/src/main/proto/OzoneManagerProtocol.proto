@@ -466,6 +466,26 @@ message DeleteKeyResponse {
     optional uint64 openVersion = 4;
 }
 
+message OMTokenProto {
+    optional uint32 version        = 1;
+    optional string owner          = 2;
+    optional string renewer        = 3;
+    optional string realUser       = 4;
+    optional uint64 issueDate      = 5;
+    optional uint64 maxDate        = 6;
+    optional uint32 sequenceNumber = 7;
+    optional uint32 masterKeyId    = 8;
+    optional uint64 expiryDate     = 9;
+}
+
+message SecretKeyProto {
+    required uint32 keyId = 1;
+    required uint64 expiryDate = 2;
+    required bytes privateKeyBytes = 3;
+    required bytes publicKeyBytes = 4;
+    required uint32 maxKeyLen = 5;
+}
+
 message ListKeysRequest {
     required string volumeName = 1;
     required string bucketName = 2;
