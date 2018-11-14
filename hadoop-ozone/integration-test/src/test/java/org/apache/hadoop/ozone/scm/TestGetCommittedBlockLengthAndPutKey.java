@@ -118,42 +118,6 @@ public class TestGetCommittedBlockLengthAndPutKey {
   }
 
   @Test
-  public void tesGetCommittedBlockLengthWithClosedContainer()
-      throws Exception {
-    String traceID = UUID.randomUUID().toString();
-    ContainerWithPipeline container = storageContainerLocationClient
-        .allocateContainer(xceiverClientManager.getType(),
-            HddsProtos.ReplicationFactor.ONE, containerOwner);
-    long containerID = container.getContainerInfo().getContainerID();
-    Pipeline pipeline = container.getPipeline();
-    XceiverClientSpi client =
-        xceiverClientManager.acquireClient(pipeline);
-    // create the container
-    ContainerProtocolCalls.createContainer(client, containerID, traceID);
-
-    byte[] data =
-        RandomStringUtils.random(RandomUtils.nextInt(0, 1024)).getBytes();
-    BlockID blockID = ContainerTestHelper.getTestBlockID(containerID);
-    ContainerProtos.ContainerCommandRequestProto writeChunkRequest =
-        ContainerTestHelper
-            .getWriteChunkRequest(container.getPipeline(), blockID,
-                data.length);
-    client.sendCommand(writeChunkRequest);
-    // close the container
-    ContainerProtocolCalls.closeContainer(client, containerID, traceID);
-    ContainerProtos.GetCommittedBlockLengthResponseProto response =
-        ContainerProtocolCalls
-            .getCommittedBlockLength(client, blockID, traceID);
-    // make sure the block ids in the request and response are same.
-    // This will also ensure that closing the container committed the block
-    // on the Datanodes.
-    Assert.assertTrue(
-        BlockID.getFromProtobuf(response.getBlockID()).equals(blockID));
-    Assert.assertTrue(response.getBlockLength() == data.length);
-    xceiverClientManager.releaseClient(client);
-  }
-
-  @Test
   public void testGetCommittedBlockLengthForInvalidBlock() throws Exception {
     String traceID = UUID.randomUUID().toString();
     ContainerWithPipeline container = storageContainerLocationClient
@@ -175,41 +139,6 @@ public class TestGetCommittedBlockLengthAndPutKey {
     } catch (StorageContainerException sce) {
       Assert.assertTrue(sce.getMessage().contains("Unable to find the block"));
     }
-    xceiverClientManager.releaseClient(client);
-  }
-
-  @Test
-  public void testGetCommittedBlockLengthForOpenBlock() throws Exception {
-    String traceID = UUID.randomUUID().toString();
-    ContainerWithPipeline container = storageContainerLocationClient
-        .allocateContainer(xceiverClientManager.getType(),
-            HddsProtos.ReplicationFactor.ONE, containerOwner);
-    long containerID = container.getContainerInfo().getContainerID();
-    XceiverClientSpi client = xceiverClientManager
-        .acquireClient(container.getPipeline());
-    ContainerProtocolCalls
-        .createContainer(client, containerID, traceID);
-
-    BlockID blockID =
-        ContainerTestHelper.getTestBlockID(containerID);
-    ContainerProtos.ContainerCommandRequestProto requestProto =
-        ContainerTestHelper
-            .getWriteChunkRequest(container.getPipeline(), blockID, 1024);
-    client.sendCommand(requestProto);
-    try {
-      ContainerProtocolCalls.getCommittedBlockLength(client, blockID, traceID);
-      Assert.fail("Expected Exception not thrown");
-    } catch (StorageContainerException sce) {
-      Assert.assertEquals(ContainerProtos.Result.BLOCK_NOT_COMMITTED,
-          sce.getResult());
-    }
-    // now close the container, it should auto commit pending open blocks
-    ContainerProtocolCalls
-        .closeContainer(client, containerID, traceID);
-    ContainerProtos.GetCommittedBlockLengthResponseProto response =
-        ContainerProtocolCalls
-            .getCommittedBlockLength(client, blockID, traceID);
-    Assert.assertTrue(response.getBlockLength() == 1024);
     xceiverClientManager.releaseClient(client);
   }
 
