@@ -1200,7 +1200,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
   // While the container is running, localize new resources.
   // Verify the symlink is created properly
   @Test
-  public void testLocalingResourceWhileContainerRunning() throws Exception {
+  public void testLocalizingResourceWhileContainerRunning() throws Exception {
     // Real del service
     delSrvc = new DeletionService(exec);
     delSrvc.init(conf);

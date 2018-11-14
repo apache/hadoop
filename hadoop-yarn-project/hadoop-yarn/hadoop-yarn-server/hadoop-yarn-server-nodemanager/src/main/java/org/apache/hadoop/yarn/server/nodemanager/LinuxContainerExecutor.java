@@ -390,8 +390,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
     List<String> localizerArgs = new ArrayList<>();
 
-    buildMainArgs(localizerArgs, user, appId, locId, nmAddr, localDirs);
-
+    buildMainArgs(localizerArgs, user, appId, locId, nmAddr,
+        nmPrivateContainerTokensPath.getName(), localDirs);
     Path containerLogDir = getContainerLogDir(dirsHandler, appId, locId);
     localizerArgs = replaceWithContainerLogDir(localizerArgs, containerLogDir);
 
@@ -449,9 +449,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
    */
   @VisibleForTesting
   public void buildMainArgs(List<String> command, String user, String appId,
-      String locId, InetSocketAddress nmAddr, List<String> localDirs) {
+      String locId, InetSocketAddress nmAddr, String tokenFileName,
+      List<String> localDirs) {
     ContainerLocalizer.buildMainArgs(command, user, appId, locId, nmAddr,
-        localDirs, super.getConf());
+        tokenFileName, localDirs, super.getConf());
   }
 
   @Override

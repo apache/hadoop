@@ -2533,7 +2533,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     Assert.assertEquals(new Path(nmPrivate, ContainerLaunch.CONTAINER_SCRIPT),
         csc.getNmPrivateContainerScriptPath());
     Assert.assertEquals(new Path(nmPrivate,
-        String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
+        String.format(ContainerExecutor.TOKEN_FILE_NAME_FMT,
             id.toString())), csc.getNmPrivateTokensPath());
     Assert.assertEquals("script",
         readStringFromPath(csc.getNmPrivateContainerScriptPath()));
