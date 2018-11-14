@@ -34,6 +34,7 @@ import "acl.proto";
 import "xattr.proto";
 import "encryption.proto";
 import "inotify.proto";
+import "HAServiceProtocol.proto";
 
 /**
  * The ClientNamenodeProtocol Service defines the interface between a client 
@@ -768,6 +769,13 @@ message MsyncRequestProto {
 message MsyncResponseProto {
 }
 
+message HAServiceStateRequestProto {
+}
+
+message HAServiceStateResponseProto {
+  required hadoop.common.HAServiceStateProto state = 1;
+}
+
 service ClientNamenodeProtocol {
   rpc getBlockLocations(GetBlockLocationsRequestProto)
       returns(GetBlockLocationsResponseProto);
@@ -924,4 +932,6 @@ service ClientNamenodeProtocol {
       returns(ListOpenFilesResponseProto);
   rpc msync(MsyncRequestProto)
       returns(MsyncResponseProto);
+  rpc getHAServiceState(HAServiceStateRequestProto)
+      returns(HAServiceStateResponseProto);
 }

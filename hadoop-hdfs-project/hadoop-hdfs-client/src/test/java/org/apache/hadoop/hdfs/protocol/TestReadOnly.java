@@ -72,7 +72,8 @@ public class TestReadOnly {
           "getCurrentEditLogTxid",
           "getEditsFromTxid",
           "getQuotaUsage",
-          "msync"
+          "msync",
+          "getHAServiceState"
       )
   );
 

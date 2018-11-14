@@ -28,14 +28,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HAUtilClient;
-import org.apache.hadoop.hdfs.NameNodeProxiesClient;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.io.retry.FailoverProxyProvider;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -122,43 +119,21 @@ public abstract class AbstractNNFailoverProxyProvider<T> implements
      */
     private HAServiceState cachedState;
 
-    /** Proxy for getting HA service status from the given NameNode. */
-    private HAServiceProtocol serviceProxy;
-
-    public NNProxyInfo(InetSocketAddress address, Configuration conf) {
+    public NNProxyInfo(InetSocketAddress address) {
       super(null, address.toString());
       this.address = address;
-      try {
-        serviceProxy = NameNodeProxiesClient
-            .createNonHAProxyWithHAServiceProtocol(address, conf);
-      } catch (IOException ioe) {
-        LOG.error("Failed to create HAServiceProtocol proxy to NameNode" +
-            " at {}", address, ioe);
-        throw new RuntimeException(ioe);
-      }
     }
 
     public InetSocketAddress getAddress() {
       return address;
     }
 
-    public void refreshCachedState() {
-      try {
-        cachedState = serviceProxy.getServiceStatus().getState();
-      } catch (IOException e) {
-        LOG.warn("Failed to connect to {}. Setting cached state to Standby",
-            address, e);
-        cachedState = HAServiceState.STANDBY;
-      }
+    public void setCachedState(HAServiceState state) {
+      cachedState = state;
     }
 
     public HAServiceState getCachedState() {
       return cachedState;
-    }
-
-    @VisibleForTesting
-    public void setServiceProxyForTesting(HAServiceProtocol proxy) {
-      this.serviceProxy = proxy;
     }
   }
 
@@ -202,7 +177,7 @@ public abstract class AbstractNNFailoverProxyProvider<T> implements
 
     Collection<InetSocketAddress> addressesOfNns = addressesInNN.values();
     for (InetSocketAddress address : addressesOfNns) {
-      proxies.add(new NNProxyInfo<T>(address, conf));
+      proxies.add(new NNProxyInfo<T>(address));
     }
     // Randomize the list to prevent all clients pointing to the same one
     boolean randomized = getRandomOrder(conf, uri);

@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
@@ -1514,7 +1515,7 @@ public interface ClientProtocol {
    * @throws IOException see specific implementation
    */
   @Idempotent
-  @ReadOnly // TODO : after HDFS-13749 is done, change to coordinated call
+  @ReadOnly(isCoordinated = true)
   void checkAccess(String path, FsAction mode) throws IOException;
 
   /**
@@ -1565,6 +1566,16 @@ public interface ClientProtocol {
   @Idempotent
   @ReadOnly(isCoordinated = true)
   BatchedEntries<OpenFileEntry> listOpenFiles(long prevId) throws IOException;
+
+  /**
+   * Get HA service state of the server.
+   *
+   * @return server HA state
+   * @throws IOException
+   */
+  @Idempotent
+  @ReadOnly
+  HAServiceProtocol.HAServiceState getHAServiceState() throws IOException;
 
   /**
    * Called by client to wait until the server has reached the state id of the

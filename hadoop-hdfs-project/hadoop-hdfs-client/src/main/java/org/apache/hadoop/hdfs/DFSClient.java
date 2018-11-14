@@ -96,6 +96,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
@@ -3039,5 +3040,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   public void msync() throws IOException {
     namenode.msync();
+  }
+
+  /**
+   * An unblocking call to get the HA service state of NameNode.
+   *
+   * @return HA state of NameNode
+   * @throws IOException
+   */
+  @VisibleForTesting
+  public HAServiceProtocol.HAServiceState getHAServiceState()
+      throws IOException {
+    return namenode.getHAServiceState();
   }
 }
