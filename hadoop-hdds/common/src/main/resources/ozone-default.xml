@@ -175,10 +175,10 @@
   </property>
   <property>
     <name>dfs.container.ratis.segment.size</name>
-    <value>1073741824</value>
+    <value>16384</value>
     <tag>OZONE, RATIS, PERFORMANCE</tag>
     <description>The size of the raft segment used by Apache Ratis on datanodes.
-      (1 GB by default)
+      (16 KB by default)
     </description>
   </property>
   <property>
