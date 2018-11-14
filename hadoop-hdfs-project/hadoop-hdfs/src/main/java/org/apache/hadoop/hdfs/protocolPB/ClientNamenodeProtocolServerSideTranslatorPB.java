@@ -30,6 +30,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.ha.proto.HAServiceProtocolProtos;
+import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceStateProto;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -155,6 +158,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSto
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePoliciesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePolicyRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePolicyResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.HAServiceStateRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.HAServiceStateResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.IsFileClosedRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.IsFileClosedResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpgradeStatusRequestProto;
@@ -1895,6 +1900,37 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     try {
       server.msync();
       return MsyncResponseProto.newBuilder().build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public HAServiceStateResponseProto getHAServiceState(
+      RpcController controller,
+      HAServiceStateRequestProto request) throws ServiceException {
+    try {
+      HAServiceProtocol.HAServiceState state = server.getHAServiceState();
+      HAServiceStateProto retState;
+      switch (state) {
+      case ACTIVE:
+        retState = HAServiceProtocolProtos.HAServiceStateProto.ACTIVE;
+        break;
+      case STANDBY:
+        retState = HAServiceProtocolProtos.HAServiceStateProto.STANDBY;
+        break;
+      case OBSERVER:
+        retState = HAServiceProtocolProtos.HAServiceStateProto.OBSERVER;
+        break;
+      case INITIALIZING:
+      default:
+        retState = HAServiceProtocolProtos.HAServiceStateProto.INITIALIZING;
+        break;
+      }
+      HAServiceStateResponseProto.Builder builder =
+          HAServiceStateResponseProto.newBuilder();
+      builder.setState(retState);
+      return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
