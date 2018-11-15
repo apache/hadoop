@@ -69,7 +69,7 @@ public final class HddsTestUtils {
    * Creates list of ContainerInfo.
    *
    * @param numContainers number of ContainerInfo to be included in list.
-   * @return List<ContainerInfo>
+   * @return {@literal List<ContainerInfo>}
    */
   public static List<ContainerInfo> getContainerInfo(int numContainers) {
     List<ContainerInfo> containerInfoList = new ArrayList<>();
