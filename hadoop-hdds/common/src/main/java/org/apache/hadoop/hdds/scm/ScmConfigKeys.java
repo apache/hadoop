@@ -226,8 +226,8 @@ public final class ScmConfigKeys {
 
   public static final String OZONE_SCM_HEARTBEAT_RPC_TIMEOUT =
       "ozone.scm.heartbeat.rpc-timeout";
-  public static final long OZONE_SCM_HEARTBEAT_RPC_TIMEOUT_DEFAULT =
-      1000;
+  public static final String OZONE_SCM_HEARTBEAT_RPC_TIMEOUT_DEFAULT =
+      "1s";
 
   /**
    * Defines how frequently we will log the missing of heartbeat to a specific
