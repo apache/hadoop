@@ -17,7 +17,7 @@
 version: "3"
 services:
    namenode:
-      image: flokkr/hadoop:${HADOOP_VERSION}
+      image: apache/hadoop:${HADOOP_VERSION}
       ports:
       - 9870:9870
       env_file:
@@ -26,7 +26,7 @@ services:
          ENSURE_NAMENODE_DIR: "/tmp/hadoop-root/dfs/name"
       command: ["hdfs", "namenode"]
    datanode:
-      image: flokkr/hadoop:${HADOOP_VERSION}
+      image: apache/hadoop:${HADOOP_VERSION}
       ports:
         - 9864
       volumes:
@@ -58,3 +58,12 @@ services:
       environment:
           ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
       command: ["ozone","scm"]
+   s3g:
+      image: apache/hadoop-runner
+      volumes:
+         - ../..:/opt/hadoop
+      ports:
+         - 9878:9878
+      env_file:
+          - ./docker-config
+      command: ["ozone","s3g"]

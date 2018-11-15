@@ -20,7 +20,7 @@ Resource            ../commonlib.robot
 
 *** Variables ***
 ${COMMON_REST_HEADER}   -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H  "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE root"
-${DATANODE_HOST}        localhost
+${DATANODE_HOST}        datanode
 
 
 *** Test Cases ***
