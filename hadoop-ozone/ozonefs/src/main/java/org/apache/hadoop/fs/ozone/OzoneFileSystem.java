@@ -24,13 +24,17 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Iterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Preconditions;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -199,17 +203,7 @@ public class OzoneFileSystem extends FileSystem {
         deleteObject(key);
       }
     } catch (FileNotFoundException ignored) {
-      // check if the parent directory needs to be created
-      Path parent = f.getParent();
-      try {
-        // create all the directories for the parent
-        FileStatus parentStatus = getFileStatus(parent);
-        LOG.trace("parent key:{} status:{}", key, parentStatus);
-      } catch (FileNotFoundException e) {
-        mkdirs(parent);
-      }
-      // This exception needs to ignored as this means that the file currently
-      // does not exists and a new file can thus be created.
+      // this means the file is not found
     }
 
     OzoneOutputStream ozoneOutputStream =
@@ -390,8 +384,14 @@ public class OzoneFileSystem extends FileSystem {
     }
   }
 
-  @Override
-  public boolean delete(Path f, boolean recursive) throws IOException {
+  /**
+   * Deletes the children of the input dir path by iterating though the
+   * DeleteIterator.
+   * @param f directory path to be deleted
+   * @return true if successfully deletes all required keys, false otherwise
+   * @throws IOException
+   */
+  private boolean innerDelete(Path f, boolean recursive) throws IOException {
     LOG.trace("delete() path:{} recursive:{}", f, recursive);
     try {
       DeleteIterator iterator = new DeleteIterator(f, recursive);
@@ -402,35 +402,185 @@ public class OzoneFileSystem extends FileSystem {
     }
   }
 
+  @Override
+  public boolean delete(Path f, boolean recursive) throws IOException {
+    LOG.debug("Delete path {} - recursive {}", f, recursive);
+    FileStatus status;
+    try {
+      status = getFileStatus(f);
+    } catch (FileNotFoundException ex) {
+      LOG.warn("delete: Path does not exist: {}", f);
+      return false;
+    }
+
+    String key = pathToKey(f);
+    boolean result;
+
+    if (status.isDirectory()) {
+      LOG.debug("delete: Path is a directory: {}", f);
+      key = addTrailingSlashIfNeeded(key);
+
+      if (key.equals("/")) {
+        LOG.warn("Cannot delete root directory.");
+        return false;
+      }
+
+      result = innerDelete(f, recursive);
+    } else {
+      LOG.debug("delete: Path is a file: {}", f);
+      result = deleteObject(key);
+    }
+
+    if (result) {
+      // If this delete operation removes all files/directories from the
+      // parent direcotry, then an empty parent directory must be created.
+      Path parent = f.getParent();
+      if (parent != null && !parent.isRoot()) {
+        createFakeDirectoryIfNecessary(parent);
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Create a fake parent directory key if it does not already exist and no
+   * other child of this parent directory exists.
+   * @param f path to the fake parent directory
+   * @throws IOException
+   */
+  private void createFakeDirectoryIfNecessary(Path f) throws IOException {
+    String key = pathToKey(f);
+    if (!key.isEmpty() && !o3Exists(f)) {
+      LOG.debug("Creating new fake directory at {}", f);
+      String dirKey = addTrailingSlashIfNeeded(key);
+      createDirectory(dirKey);
+    }
+  }
+
+  /**
+   * Check if a file or directory exists corresponding to given path.
+   * @param f path to file/directory.
+   * @return true if it exists, false otherwise.
+   * @throws IOException
+   */
+  private boolean o3Exists(final Path f) throws IOException {
+    Path path = makeQualified(f);
+    try {
+      getFileStatus(path);
+      return true;
+    } catch (FileNotFoundException ex) {
+      return false;
+    }
+  }
+
   private class ListStatusIterator extends OzoneListingIterator {
-    private  List<FileStatus> statuses = new ArrayList<>(LISTING_PAGE_SIZE);
-    private Path f;
+    // _fileStatuses_ maintains a list of file(s) which is either the input
+    // path itself or a child of the input directory path.
+    private List<FileStatus> fileStatuses = new ArrayList<>(LISTING_PAGE_SIZE);
+    // _subDirStatuses_ maintains a list of sub-dirs of the input directory
+    // path.
+    private Map<Path, FileStatus> subDirStatuses =
+        new HashMap<>(LISTING_PAGE_SIZE);
+    private Path f; // the input path
 
     ListStatusIterator(Path f) throws IOException  {
       super(f);
       this.f = f;
     }
 
+    /**
+     * Add the key to the listStatus result if the key corresponds to the
+     * input path or is an immediate child of the input path.
+     * @param key key to be processed
+     * @return always returns true
+     * @throws IOException
+     */
     boolean processKey(String key) throws IOException {
       Path keyPath = new Path(OZONE_URI_DELIMITER + key);
       if (key.equals(getPathKey())) {
         if (pathIsDirectory()) {
+          // if input path is a directory, we add the sub-directories and
+          // files under this directory.
           return true;
         } else {
-          statuses.add(getFileStatus(keyPath));
+          addFileStatus(keyPath);
           return true;
         }
       }
-      // left with only subkeys now
+      // Left with only subkeys now
+      // We add only the immediate child files and sub-dirs i.e. we go only
+      // upto one level down the directory tree structure.
       if (pathToKey(keyPath.getParent()).equals(pathToKey(f))) {
-        // skip keys which are for subdirectories of the directory
-        statuses.add(getFileStatus(keyPath));
+        // This key is an immediate child. Can be file or directory
+        if (key.endsWith(OZONE_URI_DELIMITER)) {
+         // Key is a directory
+          addSubDirStatus(keyPath);
+        } else {
+          addFileStatus(keyPath);
+        }
+      } else {
+        // This key is not the immediate child of the input directory. So we
+        // traverse the parent tree structure of this key until we get the
+        // immediate child of the input directory.
+        Path immediateChildPath = getImmediateChildPath(keyPath.getParent());
+        addSubDirStatus(immediateChildPath);
       }
       return true;
     }
 
+    /**
+     * Adds the FileStatus of keyPath to final result of listStatus.
+     * @param filePath path to the file
+     * @throws FileNotFoundException
+     */
+    void addFileStatus(Path filePath) throws IOException {
+      fileStatuses.add(getFileStatus(filePath));
+    }
+
+    /**
+     * Adds the FileStatus of the subdir to final result of listStatus, if not
+     * already included.
+     * @param dirPath path to the dir
+     * @throws FileNotFoundException
+     */
+    void addSubDirStatus(Path dirPath) throws FileNotFoundException {
+      // Check if subdir path is already included in statuses.
+      if (!subDirStatuses.containsKey(dirPath)) {
+        subDirStatuses.put(dirPath, innerGetFileStatusForDir(dirPath));
+      }
+    }
+
+    /**
+     * Traverse the parent directory structure of keyPath to determine the
+     * which parent/ grand-parent/.. is the immediate child of the input path f.
+     * @param keyPath path whose parent directory structure should be traversed.
+     * @return immediate child path of the input path f.
+     * @return immediate child path of the input path f.
+     */
+    Path getImmediateChildPath(Path keyPath) {
+      Path path = keyPath;
+      Path parent = path.getParent();
+      while (parent != null && !parent.isRoot()) {
+        if (pathToKey(parent).equals(pathToKey(f))) {
+          return path;
+        }
+        path = parent;
+        parent = path.getParent();
+      }
+      return null;
+    }
+
+    /**
+     * Return the result of listStatus operation. If the input path is a
+     * file, return the status for only that file. If the input path is a
+     * directory, return the statuses for all the child files and sub-dirs.
+     */
     FileStatus[] getStatuses() {
-      return statuses.toArray(new FileStatus[statuses.size()]);
+      List<FileStatus> result = Stream.concat(
+          fileStatuses.stream(), subDirStatuses.values().stream())
+          .collect(Collectors.toList());
+      return result.toArray(new FileStatus[result.size()]);
     }
   }
 
@@ -529,28 +679,58 @@ public class OzoneFileSystem extends FileSystem {
           bucket.getCreationTime(), qualifiedPath);
     }
 
-    // consider this a file and get key status
-    OzoneKey meta = getKeyInfo(key);
-    if (meta == null) {
-      key = addTrailingSlashIfNeeded(key);
-      meta = getKeyInfo(key);
-    }
-
-    if (meta == null) {
-      LOG.trace("File:{} not found", f);
-      throw new FileNotFoundException(f + ": No such file or directory!");
-    } else if (isDirectory(meta)) {
-      return new FileStatus(0, true, 1, 0,
-          meta.getModificationTime(), 0,
-          FsPermission.getDirDefault(), getUsername(), getUsername(),
-          qualifiedPath);
-    } else {
-      //TODO: Fetch replication count from ratis config
-      return new FileStatus(meta.getDataSize(), false, 1,
-          getDefaultBlockSize(f), meta.getModificationTime(), 0,
+    // Check if the key exists
+    OzoneKey ozoneKey = getKeyInfo(key);
+    if (ozoneKey != null) {
+      LOG.debug("Found exact file for path {}: normal file", f);
+      return new FileStatus(ozoneKey.getDataSize(), false, 1,
+          getDefaultBlockSize(f), ozoneKey.getModificationTime(), 0,
           FsPermission.getFileDefault(), getUsername(), getUsername(),
           qualifiedPath);
     }
+
+    return innerGetFileStatusForDir(f);
+  }
+
+  /**
+   * Get the FileStatus for input directory path.
+   * They key corresponding to input path is appended with a trailing slash
+   * to return only the corresponding directory key in the bucket.
+   * @param f directory path
+   * @return FileStatus for the input directory path
+   * @throws FileNotFoundException
+   */
+  public FileStatus innerGetFileStatusForDir(Path f)
+      throws FileNotFoundException {
+    Path qualifiedPath = f.makeQualified(uri, workingDir);
+    String key = pathToKey(qualifiedPath);
+    key = addTrailingSlashIfNeeded(key);
+
+    OzoneKey ozoneKey = getKeyInfo(key);
+    if(ozoneKey != null) {
+      if (isDirectory(ozoneKey)) {
+        // Key is a directory
+        LOG.debug("Found file (with /) for path {}: fake directory", f);
+      } else {
+        // Key is a file with trailing slash
+        LOG.warn("Found file (with /) for path {}: real file? should not " +
+            "happen", f, key);
+      }
+      return new FileStatus(0, true, 1, 0,
+          ozoneKey.getModificationTime(), 0,
+          FsPermission.getDirDefault(), getUsername(), getUsername(),
+          qualifiedPath);
+    }
+
+    // File or directory corresponding to input path does not exist.
+    // Check if there exists a key prefixed with this key.
+    boolean hasChildren = bucket.listKeys(key).hasNext();
+    if (hasChildren) {
+      return new FileStatus(0, true, 1, 0, 0, 0, FsPermission.getDirDefault(),
+          getUsername(), getUsername(), qualifiedPath);
+    }
+
+    throw new FileNotFoundException(f + ": No such file or directory!");
   }
 
   /**
@@ -562,7 +742,7 @@ public class OzoneFileSystem extends FileSystem {
     try {
       return bucket.getKey(key);
     } catch (IOException e) {
-      LOG.trace("Key:{} does not exists", key);
+      LOG.trace("Key:{} does not exist", key);
       return null;
     }
   }
@@ -651,6 +831,13 @@ public class OzoneFileSystem extends FileSystem {
         + "}";
   }
 
+  /**
+   *  This class provides an interface to iterate through all the keys in the
+   *  bucket prefixed with the input path key and process them.
+   *
+   *  Each implementing class should define how the keys should be processed
+   *  through the processKey() function.
+   */
   private abstract class OzoneListingIterator {
     private final Path path;
     private final FileStatus status;
@@ -668,9 +855,23 @@ public class OzoneFileSystem extends FileSystem {
       keyIterator = bucket.listKeys(pathKey);
     }
 
+    /**
+     * The output of processKey determines if further iteration through the
+     * keys should be done or not.
+     * @return true if we should continue iteration of keys, false otherwise.
+     * @throws IOException
+     */
     abstract boolean processKey(String key) throws IOException;
 
-    // iterates all the keys in the particular path
+    /**
+     * Iterates thorugh all the keys prefixed with the input path's key and
+     * processes the key though processKey().
+     * If for any key, the processKey() returns false, then the iteration is
+     * stopped and returned with false indicating that all the keys could not
+     * be processed successfully.
+     * @return true if all keys are processed successfully, false otherwise.
+     * @throws IOException
+     */
     boolean iterate() throws IOException {
       LOG.trace("Iterating path {}", path);
       if (status.isDirectory()) {
