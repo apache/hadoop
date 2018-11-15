@@ -68,6 +68,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.either;
+import static org.junit.Assert.assertThat;
+
 /**
  * This class is to test all the public facing APIs of Ozone Client.
  */
@@ -220,6 +224,36 @@ public class TestOzoneRpcClient {
     Assert.assertEquals(bucketName, bucket.getName());
     Assert.assertTrue(bucket.getCreationTime() >= currentTime);
     Assert.assertTrue(volume.getCreationTime() >= currentTime);
+  }
+
+
+  @Test
+  public void testListS3Buckets()
+      throws IOException, OzoneException {
+    String userName = "ozone100";
+    String bucketName1 = UUID.randomUUID().toString();
+    String bucketName2 = UUID.randomUUID().toString();
+    store.createS3Bucket(userName, bucketName1);
+    store.createS3Bucket(userName, bucketName2);
+    Iterator<? extends OzoneBucket> iterator = store.listS3Buckets(userName,
+        null);
+
+    while (iterator.hasNext()) {
+      assertThat(iterator.next().getName(), either(containsString(bucketName1))
+          .or(containsString(bucketName2)));
+    }
+
+  }
+
+  @Test
+  public void testListS3BucketsFail()
+      throws IOException, OzoneException {
+    String userName = "randomUser";
+    Iterator<? extends OzoneBucket> iterator = store.listS3Buckets(userName,
+        null);
+
+    Assert.assertFalse(iterator.hasNext());
+
   }
 
   @Test

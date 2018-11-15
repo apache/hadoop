@@ -18,17 +18,20 @@
 
 package org.apache.hadoop.ozone.client;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Objects;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
 
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 
 /**
  * ObjectStore class is responsible for the client operations that can be
@@ -150,6 +153,36 @@ public class ObjectStore {
     return volume;
   }
 
+  /**
+   * Returns Iterator to iterate over all buckets for a user.
+   * The result can be restricted using bucket prefix, will return all
+   * buckets if bucket prefix is null.
+   *
+   * @param userName user name
+   * @param bucketPrefix Bucket prefix to match
+   * @return {@code Iterator<OzoneBucket>}
+   */
+  public Iterator<? extends OzoneBucket> listS3Buckets(String userName,
+                                                       String bucketPrefix) {
+    return listS3Buckets(userName, bucketPrefix, null);
+  }
+
+  /**
+   * Returns Iterator to iterate over all buckets after prevBucket for a
+   * specific user. If prevBucket is null it returns an iterator to iterate over
+   * all the buckets of a user. The result can be restricted using bucket
+   * prefix, will return all buckets if bucket prefix is null.
+   *
+   * @param userName user name
+   * @param bucketPrefix Bucket prefix to match
+   * @param prevBucket Buckets are listed after this bucket
+   * @return {@code Iterator<OzoneBucket>}
+   */
+  public Iterator<? extends OzoneBucket> listS3Buckets(String userName,
+                                                       String bucketPrefix,
+                                                       String prevBucket) {
+    return new S3BucketIterator(userName, bucketPrefix, prevBucket);
+  }
 
   /**
    * Returns Iterator to iterate over all the volumes in object store.
@@ -266,6 +299,74 @@ public class ObjectStore {
         return proxy.listVolumes(volPrefix, prevVolume, listCacheSize);
       } catch (IOException e) {
         throw new RuntimeException(e);
+      }
+    }
+  }
+
+  /**
+   * An Iterator to iterate over {@link OzoneBucket} list.
+   */
+  public class S3BucketIterator implements Iterator<OzoneBucket> {
+
+    private String bucketPrefix = null;
+    private String userName;
+
+    private Iterator<OzoneBucket> currentIterator;
+    private OzoneBucket currentValue;
+
+
+    /**
+     * Creates an Iterator to iterate over all buckets after prevBucket for
+     * a user. If prevBucket is null it returns an iterator which list all
+     * the buckets of the user.
+     * The returned buckets match bucket prefix.
+     * @param user
+     * @param bucketPrefix
+     * @param prevBucket
+     */
+    public S3BucketIterator(String user, String bucketPrefix, String
+        prevBucket) {
+      Objects.requireNonNull(user);
+      this.userName = user;
+      this.bucketPrefix = bucketPrefix;
+      this.currentValue = null;
+      this.currentIterator = getNextListOfS3Buckets(prevBucket).iterator();
+    }
+
+    @Override
+    public boolean hasNext() {
+      if(!currentIterator.hasNext()) {
+        currentIterator = getNextListOfS3Buckets(
+            currentValue != null ? currentValue.getName() : null)
+            .iterator();
+      }
+      return currentIterator.hasNext();
+    }
+
+    @Override
+    public OzoneBucket next() {
+      if(hasNext()) {
+        currentValue = currentIterator.next();
+        return currentValue;
+      }
+      throw new NoSuchElementException();
+    }
+
+    /**
+     * Gets the next set of bucket list using proxy.
+     * @param prevBucket
+     * @return {@code List<OzoneVolume>}
+     */
+    private List<OzoneBucket> getNextListOfS3Buckets(String prevBucket) {
+      try {
+        return proxy.listS3Buckets(userName, bucketPrefix, prevBucket,
+            listCacheSize);
+      } catch (IOException e) {
+        if (e.getMessage().contains("VOLUME_NOT_FOUND")) {
+          return new ArrayList<OzoneBucket>();
+        } else {
+          throw new RuntimeException(e);
+        }
       }
     }
   }

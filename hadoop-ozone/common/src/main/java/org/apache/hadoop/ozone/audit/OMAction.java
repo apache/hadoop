@@ -45,7 +45,8 @@ public enum OMAction implements AuditAction {
   LIST_KEYS("LIST_KEYS"),
   READ_VOLUME("READ_VOLUME"),
   READ_BUCKET("READ_BUCKET"),
-  READ_KEY("READ_BUCKET");
+  READ_KEY("READ_BUCKET"),
+  LIST_S3BUCKETS("LIST_S3BUCKETS");
 
   private String action;
 

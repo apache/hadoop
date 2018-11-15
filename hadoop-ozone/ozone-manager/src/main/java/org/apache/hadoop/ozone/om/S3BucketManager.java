@@ -63,4 +63,10 @@ public interface S3BucketManager {
    * @throws IOException - in case of failure to retrieve mapping.
    */
   String getOzoneBucketName(String s3BucketName) throws IOException;
+
+  /**
+   * Returns volume Name for a user.
+   * @param userName
+   */
+  String getOzoneVolumeNameForUser(String userName) throws IOException;
 }

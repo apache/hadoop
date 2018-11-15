@@ -102,6 +102,10 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .S3DeleteBucketResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .S3ListBucketsResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .S3ListBucketsRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .ServiceListRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .ServiceListResponse;
@@ -621,6 +625,26 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     try {
       resp.setOzoneMapping(
           impl.getOzoneBucketMapping(request.getS3BucketName()));
+      resp.setStatus(Status.OK);
+    } catch (IOException e) {
+      resp.setStatus(exceptionToResponseStatus(e));
+    }
+    return resp.build();
+  }
+
+  @Override
+  public S3ListBucketsResponse listS3Buckets(RpcController controller,
+                                             S3ListBucketsRequest request) {
+    S3ListBucketsResponse.Builder resp = S3ListBucketsResponse.newBuilder();
+    try {
+      List<OmBucketInfo> buckets = impl.listS3Buckets(
+          request.getUserName(),
+          request.getStartKey(),
+          request.getPrefix(),
+          request.getCount());
+      for(OmBucketInfo bucket : buckets) {
+        resp.addBucketInfo(bucket.getProtobuf());
+      }
       resp.setStatus(Status.OK);
     } catch (IOException e) {
       resp.setStatus(exceptionToResponseStatus(e));

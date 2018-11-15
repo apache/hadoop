@@ -31,7 +31,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 
+import static org.apache.hadoop.ozone.OzoneConsts.OM_S3_VOLUME_PREFIX;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.FAILED_VOLUME_ALREADY_EXISTS;
 
 /**
@@ -152,7 +154,7 @@ public class S3BucketManagerImpl implements S3BucketManager {
   }
 
   private String formatOzoneVolumeName(String userName) {
-    return String.format("s3%s", userName);
+    return String.format(OM_S3_VOLUME_PREFIX + "%s", userName);
   }
 
   private void createOzoneVolumeIfNeeded(String userName, String volumeName)
@@ -225,6 +227,12 @@ public class S3BucketManagerImpl implements S3BucketManager {
   public String getOzoneBucketName(String s3BucketName) throws IOException {
     String mapping = getOzoneBucketMapping(s3BucketName);
     return mapping.split("/")[1];
+  }
+
+  @Override
+  public String getOzoneVolumeNameForUser(String userName) throws IOException {
+    Objects.requireNonNull(userName, "UserName cannot be null");
+    return formatOzoneVolumeName(userName);
   }
 
 }
