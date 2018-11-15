@@ -73,7 +73,7 @@ public interface StorageContainerLocationProtocol {
    * searching range cannot exceed the value of count.
    *
    * @param startContainerID start container ID.
-   * @param count count, if count < 0, the max size is unlimited.(
+   * @param count count, if count {@literal <} 0, the max size is unlimited.(
    *              Usually the count will be replace with a very big
    *              value instead of being unlimited in case the db is very big)
    *

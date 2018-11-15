@@ -25,7 +25,7 @@ import java.util.Map;
 public interface Auditable {
   /**
    * Must override in implementation.
-   * @return Map<String, String> with values to be logged in audit.
+   * @return {@literal Map<String, String>} with values to be logged in audit.
    */
   Map<String, String> toAuditMap();
 }
