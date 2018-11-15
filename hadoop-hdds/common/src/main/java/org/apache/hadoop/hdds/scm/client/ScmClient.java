@@ -104,7 +104,7 @@ public interface ScmClient extends Closeable {
    * Lists a range of containers and get their info.
    *
    * @param startContainerID start containerID.
-   * @param count count must be > 0.
+   * @param count count must be {@literal >} 0.
    *
    * @return a list of pipeline.
    * @throws IOException

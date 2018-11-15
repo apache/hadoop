@@ -171,7 +171,9 @@ public final class ContainerProtocolCalls  {
    * @param containerBlockData block data to identify container
    * @param traceID container protocol call args
    * @return putBlockResponse
-   * @throws Exception if there is an error while performing the call
+   * @throws IOException if there is an error while performing the call
+   * @throws InterruptedException
+   * @throws ExecutionException
    */
   public static XceiverClientAsyncReply putBlockAsync(
       XceiverClientSpi xceiverClient, BlockData containerBlockData,
@@ -227,7 +229,7 @@ public final class ContainerProtocolCalls  {
    * @param blockID ID of the block
    * @param data the data of the chunk to write
    * @param traceID container protocol call args
-   * @throws Exception if there is an error while performing the call
+   * @throws IOException if there is an error while performing the call
    */
   public static void writeChunk(XceiverClientSpi xceiverClient, ChunkInfo chunk,
       BlockID blockID, ByteString data, String traceID)
@@ -471,7 +473,7 @@ public final class ContainerProtocolCalls  {
    * return code is mapped to a corresponding exception and thrown.
    *
    * @param response container protocol call response
-   * @throws IOException if the container protocol call failed
+   * @throws StorageContainerException if the container protocol call failed
    */
   public static void validateContainerResponse(
       ContainerCommandResponseProto response
