@@ -95,6 +95,7 @@ public class TestStorageContainerManagerHttpServer {
 
   @Test public void testHttpPolicy() throws Exception {
     conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, policy.name());
+    conf.set(ScmConfigKeys.OZONE_SCM_HTTP_ADDRESS_KEY, "localhost:0");
     conf.set(ScmConfigKeys.OZONE_SCM_HTTPS_ADDRESS_KEY, "localhost:0");
 
     InetSocketAddress.createUnresolved("localhost", 0);
