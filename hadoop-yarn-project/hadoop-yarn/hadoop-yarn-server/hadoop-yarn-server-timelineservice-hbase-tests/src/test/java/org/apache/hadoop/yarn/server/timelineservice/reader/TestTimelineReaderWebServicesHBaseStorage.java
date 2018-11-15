@@ -35,6 +35,8 @@ import java.util.Set;
 
 import javax.ws.rs.core.MediaType;
 
+import mockit.Mock;
+import mockit.MockUp;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -50,6 +52,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric.Type;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
+import org.apache.hadoop.yarn.server.timelineservice.metrics.TimelineReaderMetrics;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineSchemaUtils;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -73,9 +76,17 @@ public class TestTimelineReaderWebServicesHBaseStorage
   private static long dayTs =
       HBaseTimelineSchemaUtils.getTopOfTheDayTimestamp(ts);
   private static String doAsUser = "remoteuser";
+  private static final DummyTimelineReaderMetrics METRICS
+      = new DummyTimelineReaderMetrics();
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
+    new MockUp<TimelineReaderMetrics>() {
+      @Mock
+      public TimelineReaderMetrics getInstance() {
+        return METRICS;
+      }
+    };
     setup();
     loadData();
     initialize();
