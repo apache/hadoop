@@ -24,7 +24,6 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
-import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.states.NodeAlreadyExistsException;
 import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
@@ -281,7 +280,6 @@ public class SCMNodeManager
    *
    * @param datanodeDetails - DatanodeDetailsProto.
    * @return SCMheartbeat response.
-   * @throws IOException
    */
   @Override
   public List<SCMCommand> processHeartbeat(DatanodeDetails datanodeDetails) {
@@ -396,8 +394,8 @@ public class SCMNodeManager
    * Update set of containers available on a datanode.
    * @param datanodeDetails - DatanodeID
    * @param containerIds - Set of containerIDs
-   * @throws SCMException - if datanode is not known. For new datanode use
-   *                        addDatanodeInContainerMap call.
+   * @throws NodeNotFoundException - if datanode is not known. For new datanode
+   *                        use addDatanodeInContainerMap call.
    */
   @Override
   public void setContainers(DatanodeDetails datanodeDetails,
