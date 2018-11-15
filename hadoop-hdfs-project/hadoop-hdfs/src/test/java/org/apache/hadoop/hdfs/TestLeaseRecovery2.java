@@ -562,17 +562,6 @@ public class TestLeaseRecovery2 {
     
     // set the hard limit to be 1 second 
     cluster.setLeasePeriod(LONG_LEASE_PERIOD, SHORT_LEASE_PERIOD);
-    
-    // Make sure lease recovery begins.
-    final String path = fileStr;
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        String holder =
-            NameNodeAdapter.getLeaseHolderForPath(cluster.getNameNode(), path);
-        return holder.startsWith(HdfsServerConstants.NAMENODE_LEASE_HOLDER);
-      }
-    }, (int)SHORT_LEASE_PERIOD, (int)SHORT_LEASE_PERIOD * 10);
 
     // Normally, the in-progress edit log would be finalized by
     // FSEditLog#endCurrentLogSegment.  For testing purposes, we
@@ -580,6 +569,18 @@ public class TestLeaseRecovery2 {
     FSEditLog spyLog = spy(cluster.getNameNode().getFSImage().getEditLog());
     doNothing().when(spyLog).endCurrentLogSegment(Mockito.anyBoolean());
     DFSTestUtil.setEditLogForTesting(cluster.getNamesystem(), spyLog);
+
+    // Make sure lease recovery begins.
+    final String path = fileStr;
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        String holder =
+            NameNodeAdapter.getLeaseHolderForPath(cluster.getNameNode(), path);
+        return holder!=null && holder
+            .startsWith(HdfsServerConstants.NAMENODE_LEASE_HOLDER);
+      }
+    }, (int)SHORT_LEASE_PERIOD, (int)SHORT_LEASE_PERIOD * 20);
 
     cluster.restartNameNode(false);
     
