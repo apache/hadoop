@@ -365,6 +365,22 @@ public interface ClientProtocol {
   String getOzoneBucketName(String s3BucketName) throws IOException;
 
   /**
+   * Returns Iterator to iterate over all buckets after prevBucket for a
+   * specific user. If prevBucket is null it returns an iterator to iterate over
+   * all the buckets of a user. The result can be restricted using bucket
+   * prefix, will return all buckets if bucket prefix is null.
+   *
+   * @param userName user name
+   * @param bucketPrefix Bucket prefix to match
+   * @param prevBucket Buckets are listed after this bucket
+   * @return {@code Iterator<OzoneBucket>}
+   * @throws IOException
+   */
+  List<OzoneBucket> listS3Buckets(String userName, String bucketPrefix,
+                                String prevBucket, int maxListResult)
+      throws IOException;
+
+  /**
    * Close and release the resources.
    */
   void close() throws IOException;

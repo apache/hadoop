@@ -623,6 +623,25 @@ public class RpcClient implements ClientProtocol {
   }
 
   @Override
+  public List<OzoneBucket> listS3Buckets(String userName, String bucketPrefix,
+                                         String prevBucket, int maxListResult)
+      throws IOException {
+    List<OmBucketInfo> buckets = ozoneManagerClient.listS3Buckets(
+        userName, prevBucket, bucketPrefix, maxListResult);
+
+    return buckets.stream().map(bucket -> new OzoneBucket(
+        conf,
+        this,
+        bucket.getVolumeName(),
+        bucket.getBucketName(),
+        bucket.getAcls(),
+        bucket.getStorageType(),
+        bucket.getIsVersionEnabled(),
+        bucket.getCreationTime()))
+        .collect(Collectors.toList());
+  }
+
+  @Override
   public void close() throws IOException {
     IOUtils.cleanupWithLogger(LOG, storageContainerLocationClient);
     IOUtils.cleanupWithLogger(LOG, ozoneManagerClient);

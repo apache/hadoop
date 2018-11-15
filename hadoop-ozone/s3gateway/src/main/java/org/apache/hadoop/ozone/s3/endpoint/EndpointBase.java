@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.s3.endpoint;
 import javax.inject.Inject;
 import javax.ws.rs.NotFoundException;
 import java.io.IOException;
+import java.util.Iterator;
 
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
@@ -170,6 +171,37 @@ public class EndpointBase {
    */
   public String getOzoneBucketName(String s3BucketName) throws IOException {
     return client.getObjectStore().getOzoneBucketName(s3BucketName);
+  }
+
+  /**
+   * Returns Iterator to iterate over all buckets for a specific user.
+   * The result can be restricted using bucket prefix, will return all
+   * buckets if bucket prefix is null.
+   *
+   * @param userName
+   * @param prefix
+   * @return {@code Iterator<OzoneBucket>}
+   */
+  public Iterator<? extends OzoneBucket> listS3Buckets(String userName,
+                                                       String prefix)  {
+    return client.getObjectStore().listS3Buckets(userName, prefix);
+  }
+
+  /**
+   * Returns Iterator to iterate over all buckets after prevBucket for a
+   * specific user. If prevBucket is null it returns an iterator to iterate
+   * over all buckets for this user. The result can be restricted using
+   * bucket prefix, will return all buckets if bucket prefix is null.
+   *
+   * @param prefix Bucket prefix to match
+   * @param previousBucket Buckets are listed after this bucket
+   * @return {@code Iterator<OzoneBucket>}
+   */
+  public Iterator<? extends OzoneBucket> listS3Buckets(String userName,
+                                                       String prefix,
+                                                       String previousBucket)  {
+    return client.getObjectStore().listS3Buckets(userName, prefix,
+        previousBucket);
   }
 
   public AuthenticationHeaderParser getAuthenticationHeaderParser() {

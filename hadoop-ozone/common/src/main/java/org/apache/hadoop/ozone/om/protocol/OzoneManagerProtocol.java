@@ -281,5 +281,28 @@ public interface OzoneManagerProtocol {
    */
   String getOzoneBucketMapping(String s3BucketName) throws IOException;
 
+  /**
+   * Returns a list of buckets represented by {@link OmBucketInfo}
+   * for the given user. Argument username is required, others
+   * are optional.
+   *
+   * @param userName
+   *   user Name.
+   * @param startBucketName
+   *   the start bucket name, only the buckets whose name is
+   *   after this value will be included in the result.
+   * @param bucketPrefix
+   *   bucket name prefix, only the buckets whose name has
+   *   this prefix will be included in the result.
+   * @param maxNumOfBuckets
+   *   the maximum number of buckets to return. It ensures
+   *   the size of the result will not exceed this limit.
+   * @return a list of buckets.
+   * @throws IOException
+   */
+  List<OmBucketInfo> listS3Buckets(String userName, String startBucketName,
+                                   String bucketPrefix, int maxNumOfBuckets)
+      throws IOException;
+
 }
 

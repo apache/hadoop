@@ -51,7 +51,6 @@ public class TestObjectGet {
     client.getObjectStore().createS3Bucket("bilbo", "b1");
     String volumeName = client.getObjectStore().getOzoneVolumeName("b1");
     OzoneVolume volume = client.getObjectStore().getVolume(volumeName);
-    volume.createBucket("b1");
     OzoneBucket bucket =
         volume.getBucket("b1");
     OzoneOutputStream keyStream =

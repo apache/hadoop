@@ -126,6 +126,10 @@ import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.S3BucketInfoRequest;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.S3BucketInfoResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .S3ListBucketsRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .S3ListBucketsResponse;
 
 
 
@@ -835,6 +839,40 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
           .getStatus());
     }
     return resp.getOzoneMapping();
+  }
+
+  @Override
+  public List<OmBucketInfo> listS3Buckets(String userName, String startKey,
+                                          String prefix, int count)
+      throws IOException {
+    List<OmBucketInfo> buckets = new ArrayList<>();
+    S3ListBucketsRequest.Builder reqBuilder = S3ListBucketsRequest.newBuilder();
+    reqBuilder.setUserName(userName);
+    reqBuilder.setCount(count);
+    if (startKey != null) {
+      reqBuilder.setStartKey(startKey);
+    }
+    if (prefix != null) {
+      reqBuilder.setPrefix(prefix);
+    }
+    S3ListBucketsRequest request = reqBuilder.build();
+    final S3ListBucketsResponse resp;
+    try {
+      resp = rpcProxy.listS3Buckets(NULL_RPC_CONTROLLER, request);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+
+    if (resp.getStatus() == Status.OK) {
+      buckets.addAll(
+          resp.getBucketInfoList().stream()
+              .map(OmBucketInfo::getFromProtobuf)
+              .collect(Collectors.toList()));
+      return buckets;
+    } else {
+      throw new IOException("List S3 Buckets failed, error: "
+          + resp.getStatus());
+    }
   }
 
   /**

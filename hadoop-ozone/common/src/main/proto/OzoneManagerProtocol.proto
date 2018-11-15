@@ -393,6 +393,18 @@ message S3DeleteBucketResponse {
     required Status status = 1;
 }
 
+message S3ListBucketsRequest {
+    required string userName = 1;
+    optional string startKey = 2;
+    optional string prefix = 3;
+    optional int32 count = 4;
+}
+
+message S3ListBucketsResponse {
+    required Status status = 1;
+    repeated BucketInfo bucketInfo = 2;
+}
+
 
 /**
  The OM service that takes care of Ozone namespace.
@@ -526,4 +538,7 @@ service OzoneManagerService {
     */
     rpc getS3Bucketinfo(S3BucketInfoRequest)
     returns(S3BucketInfoResponse);
+
+    rpc listS3Buckets(S3ListBucketsRequest)
+    returns(S3ListBucketsResponse);
 }

@@ -854,6 +854,14 @@ public class RestClient implements ClientProtocol {
         "support this operation.");
   }
 
+  @Override
+  public List<OzoneBucket> listS3Buckets(String userName, String bucketPrefix,
+                                  String prevBucket, int maxListResult)
+      throws IOException {
+    throw new UnsupportedOperationException("Ozone REST protocol does not " +
+        "support this operation.");
+  }
+
   /**
    * Adds Ozone headers to http request.
    *

@@ -20,15 +20,12 @@
 
 package org.apache.hadoop.ozone.s3.endpoint;
 
-
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClientStub;
-import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.s3.header.AuthenticationHeaderParser;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import static org.junit.Assert.assertEquals;
-
-import org.apache.hadoop.ozone.s3.header.AuthenticationHeaderParser;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -39,7 +36,6 @@ public class TestRootList {
 
   private OzoneClientStub clientStub;
   private ObjectStore objectStoreStub;
-  private OzoneVolume volumeStub;
   private RootEndpoint rootEndpoint;
   private String userName = "ozone";
 
@@ -49,9 +45,6 @@ public class TestRootList {
     //Create client stub and object store stub.
     clientStub = new OzoneClientStub();
     objectStoreStub = clientStub.getObjectStore();
-    String volumeName = "s3" + userName;
-    objectStoreStub.createVolume(volumeName);
-    volumeStub = objectStoreStub.getVolume(volumeName);
 
     // Create HeadBucket and setClient to OzoneClientStub
     rootEndpoint = new RootEndpoint();
@@ -71,7 +64,7 @@ public class TestRootList {
 
     String bucketBaseName = "bucket-";
     for(int i = 0; i < 10; i++) {
-      volumeStub.createBucket(
+      objectStoreStub.createS3Bucket(userName,
           bucketBaseName + RandomStringUtils.randomNumeric(3));
     }
     response = rootEndpoint.get();
