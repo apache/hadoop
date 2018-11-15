@@ -436,13 +436,16 @@ public class TestBPOfferService {
     // function to return the corresponding proxies.
 
     final Map<InetSocketAddress, DatanodeProtocolClientSideTranslatorPB> nnMap = Maps.newLinkedHashMap();
+    List<String> nnIds = Lists.newArrayListWithCapacity(nns.length);
     for (int port = 0; port < nns.length; port++) {
       nnMap.put(new InetSocketAddress(port), nns[port]);
       Mockito.doReturn(nns[port]).when(mockDn).connectToNN(
           Mockito.eq(new InetSocketAddress(port)));
+      nnIds.add("nn" + port);
     }
 
-    return new BPOfferService("test_ns", Lists.newArrayList(nnMap.keySet()),
+    return new BPOfferService("test_ns", nnIds,
+        Lists.newArrayList(nnMap.keySet()),
         Collections.<InetSocketAddress>nCopies(nnMap.size(), null), mockDn);
   }
 
@@ -912,7 +915,12 @@ public class TestBPOfferService {
       addrs.add(new InetSocketAddress(2));
       lifelineAddrs.add(null);
 
-      bpos.refreshNNList(addrs, lifelineAddrs);
+      ArrayList<String> nnIds = new ArrayList<>(addrs.size());
+      for (int i = 0; i < addrs.size(); i++) {
+        nnIds.add("nn" + i);
+      }
+
+      bpos.refreshNNList("serviceId", nnIds, addrs, lifelineAddrs);
 
       assertEquals(2, bpos.getBPServiceActors().size());
       // wait for handshake to run

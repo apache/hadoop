@@ -367,14 +367,24 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `ReplaceBlockOpAvgTime` | Average time of block replace operations in milliseconds |
 | `HeartbeatsNumOps` | Total number of heartbeats |
 | `HeartbeatsAvgTime` | Average heartbeat time in milliseconds |
+| `HeartbeatsFor`*ServiceId*`-`*NNId*`NumOps` | Total number of heartbeats to specific serviceId and nnId |
+| `HeartbeatsFor`*ServiceId*`-`*NNId*`AvgTime` | Average heartbeat time in milliseconds to specific serviceId and nnId |
 | `HeartbeatsTotalNumOps` | Total number of heartbeats which is a duplicate of HeartbeatsNumOps |
 | `HeartbeatsTotalAvgTime` | Average total heartbeat time in milliseconds |
+| `HeartbeatsTotalFor`*ServiceId*`-`*NNId*`NumOps` | Total number of heartbeats to specific serviceId and nnId which is a duplicate of `HeartbeatsFor`*ServiceId*`-`*NNId*`NumOps` |
+| `HeartbeatsTotalFor`*ServiceId*`-`*NNId*`AvgTime` | Average total heartbeat time in milliseconds to specific serviceId and nnId |
 | `LifelinesNumOps` | Total number of lifeline messages |
 | `LifelinesAvgTime` | Average lifeline message processing time in milliseconds |
+| `LifelinesFor`*ServiceId*`-`*NNId*`NumOps` | Total number of lifeline messages to specific serviceId and nnId |
+| `LifelinesFor`*ServiceId*`-`*NNId*`AvgTime` | Average lifeline message processing time to specific serviceId and nnId in milliseconds |
 | `BlockReportsNumOps` | Total number of block report operations |
 | `BlockReportsAvgTime` | Average time of block report operations in milliseconds |
+| `BlockReports`*ServiceId*`-`*NNId*`NumOps` | Total number of block report operations to specific serviceId and nnId |
+| `BlockReports`*ServiceId*`-`*NNId*`AvgTime` | Average time of block report operations to specific serviceId and nnId in milliseconds |
 | `IncrementalBlockReportsNumOps` | Total number of incremental block report operations |
 | `IncrementalBlockReportsAvgTime` | Average time of incremental block report operations in milliseconds |
+| `IncrementalBlockReports`*ServiceId*`-`*NNId*`NumOps` | Total number of incremental block report operations to specific serviceId and nnId |
+| `IncrementalBlockReports`*ServiceId*`-`*NNId*`AvgTime` | Average time of incremental block report operations to specific serviceId and nnId in milliseconds |
 | `CacheReportsNumOps` | Total number of cache report operations |
 | `CacheReportsAvgTime` | Average time of cache report operations in milliseconds |
 | `PacketAckRoundTripTimeNanosNumOps` | Total number of ack round trip |

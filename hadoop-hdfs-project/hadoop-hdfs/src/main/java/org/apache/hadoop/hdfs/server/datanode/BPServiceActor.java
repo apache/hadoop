@@ -100,6 +100,8 @@ class BPServiceActor implements Runnable {
     CONNECTING, INIT_FAILED, RUNNING, EXITED, FAILED;
   }
 
+  private String serviceId = null;
+  private String nnId = null;
   private volatile RunningState runningState = RunningState.CONNECTING;
   private volatile boolean shouldServiceRun = true;
   private final DataNode dn;
@@ -115,8 +117,8 @@ class BPServiceActor implements Runnable {
   final LinkedList<BPServiceActorAction> bpThreadQueue 
       = new LinkedList<BPServiceActorAction>();
 
-  BPServiceActor(InetSocketAddress nnAddr, InetSocketAddress lifelineNnAddr,
-      BPOfferService bpos) {
+  BPServiceActor(String serviceId, String nnId, InetSocketAddress nnAddr,
+      InetSocketAddress lifelineNnAddr, BPOfferService bpos) {
     this.bpos = bpos;
     this.dn = bpos.getDataNode();
     this.nnAddr = nnAddr;
@@ -134,6 +136,12 @@ class BPServiceActor implements Runnable {
         dnConf.outliersReportIntervalMs);
     // get the value of maxDataLength.
     this.maxDataLength = dnConf.getMaxDataLength();
+    if (serviceId != null) {
+      this.serviceId = serviceId;
+    }
+    if (nnId != null) {
+      this.nnId = nnId;
+    }
   }
 
   public DatanodeRegistration getBpRegistration() {
@@ -354,7 +362,7 @@ class BPServiceActor implements Runnable {
     // or we will report an RBW replica after the BlockReport already reports
     // a FINALIZED one.
     ibrManager.sendIBRs(bpNamenode, bpRegistration,
-        bpos.getBlockPoolId());
+        bpos.getBlockPoolId(), getRpcMetricSuffix());
 
     long brCreateStartTime = monotonicNow();
     Map<DatanodeStorage, BlockListAsLongs> perVolumeBlockLists =
@@ -417,7 +425,7 @@ class BPServiceActor implements Runnable {
       // Log the block report processing stats from Datanode perspective
       long brSendCost = monotonicNow() - brSendStartTime;
       long brCreateCost = brSendStartTime - brCreateStartTime;
-      dn.getMetrics().addBlockReport(brSendCost);
+      dn.getMetrics().addBlockReport(brSendCost, getRpcMetricSuffix());
       final int nCmds = cmds.size();
       LOG.info((success ? "S" : "Uns") +
           "uccessfully sent block report 0x" +
@@ -437,6 +445,18 @@ class BPServiceActor implements Runnable {
     scheduler.updateLastBlockReportTime(monotonicNow());
     scheduler.scheduleNextBlockReport();
     return cmds.size() == 0 ? null : cmds;
+  }
+
+  private String getRpcMetricSuffix() {
+    if (serviceId == null && nnId == null) {
+      return null;
+    } else if (serviceId == null && nnId != null) {
+      return nnId;
+    } else if (serviceId != null && nnId == null) {
+      return serviceId;
+    } else {
+      return serviceId + "-" + nnId;
+    }
   }
 
   DatanodeCommand cacheReport() throws IOException {
@@ -657,7 +677,8 @@ class BPServiceActor implements Runnable {
               }
               fullBlockReportLeaseId = resp.getFullBlockReportLeaseId();
             }
-            dn.getMetrics().addHeartbeat(scheduler.monotonicNow() - startTime);
+            dn.getMetrics().addHeartbeat(scheduler.monotonicNow() - startTime,
+                getRpcMetricSuffix());
 
             // If the state of this NN has changed (eg STANDBY->ACTIVE)
             // then let the BPOfferService update itself.
@@ -687,7 +708,7 @@ class BPServiceActor implements Runnable {
         if (!dn.areIBRDisabledForTests() &&
             (ibrManager.sendImmediately()|| sendHeartbeat)) {
           ibrManager.sendIBRs(bpNamenode, bpRegistration,
-              bpos.getBlockPoolId());
+              bpos.getBlockPoolId(), getRpcMetricSuffix());
         }
 
         List<DatanodeCommand> cmds = null;
@@ -709,7 +730,7 @@ class BPServiceActor implements Runnable {
 
         if (sendHeartbeat) {
           dn.getMetrics().addHeartbeatTotal(
-              scheduler.monotonicNow() - startTime);
+              scheduler.monotonicNow() - startTime, getRpcMetricSuffix());
         }
 
         // There is no work to do;  sleep until hearbeat timer elapses, 
@@ -1059,7 +1080,8 @@ class BPServiceActor implements Runnable {
         return;
       }
       sendLifeline();
-      dn.getMetrics().addLifeline(scheduler.monotonicNow() - startTime);
+      dn.getMetrics().addLifeline(scheduler.monotonicNow() - startTime,
+          getRpcMetricSuffix());
       scheduler.scheduleNextLifeline(scheduler.monotonicNow());
     }
 
