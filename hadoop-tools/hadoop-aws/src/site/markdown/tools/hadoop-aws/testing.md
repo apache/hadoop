@@ -1182,6 +1182,7 @@ as it may take a couple of SDK updates before it is ready.
 1. Identify the latest AWS SDK [available for download](https://aws.amazon.com/sdk-for-java/).
 1. Create a private git branch of trunk for JIRA, and in
   `hadoop-project/pom.xml` update the `aws-java-sdk.version` to the new SDK version.
+1. Update AWS SDK versions in NOTICE.txt.
 1. Do a clean build and rerun all the `hadoop-aws` tests, with and without the `-Ds3guard -Ddynamodb` options.
   This includes the `-Pscale` set, with a role defined for the assumed role tests.
   in `fs.s3a.assumed.role.arn` for testing assumed roles,
