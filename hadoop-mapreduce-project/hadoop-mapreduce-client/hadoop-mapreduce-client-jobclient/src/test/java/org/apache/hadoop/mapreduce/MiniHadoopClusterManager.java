@@ -137,7 +137,7 @@ public class MiniHadoopClusterManager {
     while (true) {
       try {
         Thread.sleep(1000 * 60);
-      } catch (InterruptedException _) {
+      } catch (InterruptedException e) {
         // nothing
       }
     }
