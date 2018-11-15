@@ -22,7 +22,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
+
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
@@ -153,6 +155,15 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .SetVolumePropertyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .SetVolumePropertyResponse;
+import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CancelDelegationTokenResponseProto;
+import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetDelegationTokenResponseProto;
+import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.RenewDelegationTokenResponseProto;
+import org.apache.hadoop.security.token.Token;
+
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type;
 import org.slf4j.Logger;
@@ -316,6 +327,21 @@ public class OzoneManagerRequestHandler {
       ServiceListResponse serviceListResponse = getServiceList(
           request.getServiceListRequest());
       responseBuilder.setServiceListResponse(serviceListResponse);
+      break;
+    case GetDelegationToken:
+      GetDelegationTokenResponseProto getDtResp = getDelegationToken(
+          request.getGetDelegationTokenRequest());
+      responseBuilder.setGetDelegationTokenResponse(getDtResp);
+      break;
+    case RenewDelegationToken:
+      RenewDelegationTokenResponseProto renewDtResp = renewDelegationToken(
+          request.getRenewDelegationTokenRequest());
+      responseBuilder.setRenewDelegationTokenResponse(renewDtResp);
+      break;
+    case CancelDelegationToken:
+      CancelDelegationTokenResponseProto cancelDtResp = cancelDelegationToken(
+          request.getCancelDelegationTokenRequest());
+      responseBuilder.setCancelDelegationTokenResponse(cancelDtResp);
       break;
     default:
       responseBuilder.setSuccess(false);
@@ -914,5 +940,62 @@ public class OzoneManagerRequestHandler {
       response.setStatus(exceptionToResponseStatus(ex));
     }
     return response.build();
+  }
+
+  private GetDelegationTokenResponseProto getDelegationToken(
+      GetDelegationTokenRequestProto request){
+    GetDelegationTokenResponseProto.Builder rb =
+        GetDelegationTokenResponseProto.newBuilder();
+    try {
+      Token<OzoneTokenIdentifier> token = impl
+          .getDelegationToken(new Text(request.getRenewer()));
+      if (token != null) {
+        rb.setResponse(org.apache.hadoop.security.proto.SecurityProtos
+            .GetDelegationTokenResponseProto.newBuilder().setToken(OMPBHelper
+                .convertToTokenProto(token)).build());
+      }
+      rb.setStatus(Status.OK);
+      } catch (IOException ex) {
+      rb.setStatus(exceptionToResponseStatus(ex));
+    }
+    return rb.build();
+  }
+
+  private RenewDelegationTokenResponseProto renewDelegationToken(
+      RenewDelegationTokenRequestProto request) {
+    RenewDelegationTokenResponseProto.Builder rb =
+        RenewDelegationTokenResponseProto.newBuilder();
+    try {
+      if(request.hasToken()) {
+        long expiryTime = impl
+            .renewDelegationToken(
+                OMPBHelper.convertToDelegationToken(request.getToken()));
+        rb.setResponse(org.apache.hadoop.security.proto.SecurityProtos
+            .RenewDelegationTokenResponseProto.newBuilder()
+            .setNewExpiryTime(expiryTime).build());
+      }
+      rb.setStatus(Status.OK);
+    } catch (IOException ex) {
+      rb.setStatus(exceptionToResponseStatus(ex));
+    }
+    return rb.build();
+  }
+
+  private CancelDelegationTokenResponseProto cancelDelegationToken(
+      CancelDelegationTokenRequestProto req) {
+    CancelDelegationTokenResponseProto.Builder rb =
+        CancelDelegationTokenResponseProto.newBuilder();
+    try {
+      if(req.hasToken()) {
+        impl.cancelDelegationToken(
+            OMPBHelper.convertToDelegationToken(req.getToken()));
+      }
+      rb.setResponse(org.apache.hadoop.security.proto.SecurityProtos
+          .CancelDelegationTokenResponseProto.getDefaultInstance());
+      rb.setStatus(Status.OK);
+    } catch (IOException ex) {
+      rb.setStatus(exceptionToResponseStatus(ex));
+    }
+    return rb.build();
   }
 }

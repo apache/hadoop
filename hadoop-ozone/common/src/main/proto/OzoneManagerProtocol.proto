@@ -36,6 +36,7 @@ This is similar to Namenode for Ozone.
 */
 
 import "hdds.proto";
+import "Security.proto";
 
 enum Type {
   CreateVolume = 11;
@@ -69,6 +70,10 @@ enum Type {
   AbortMultiPartUpload = 48;
 
   ServiceList = 51;
+
+  GetDelegationToken = 61;
+  RenewDelegationToken = 62;
+  CancelDelegationToken = 63;
 }
 
 message OMRequest {
@@ -111,6 +116,11 @@ message OMRequest {
   optional MultipartUploadAbortRequest      abortMultiPartUploadRequest    = 48;
 
   optional ServiceListRequest               serviceListRequest             = 51;
+
+  optional hadoop.common.GetDelegationTokenRequestProto getDelegationTokenRequest = 61;
+  optional hadoop.common.RenewDelegationTokenRequestProto renewDelegationTokenRequest= 62;
+  optional hadoop.common.CancelDelegationTokenRequestProto cancelDelegationTokenRequest = 63;
+
 }
 
 message OMResponse {
@@ -154,6 +164,10 @@ message OMResponse {
   optional MultipartUploadAbortResponse    abortMultiPartUploadResponse    = 48;
 
   optional ServiceListResponse               ServiceListResponse           = 51;
+
+  optional GetDelegationTokenResponseProto getDelegationTokenResponse = 61;
+  optional RenewDelegationTokenResponseProto renewDelegationTokenResponse = 62;
+  optional CancelDelegationTokenResponseProto cancelDelegationTokenResponse = 63;
 }
 
 enum Status {
@@ -638,6 +652,21 @@ message MultipartUploadAbortRequest {
 
 message MultipartUploadAbortResponse {
     required Status status = 1;
+}
+
+message GetDelegationTokenResponseProto{
+    required Status status = 1;
+    optional hadoop.common.GetDelegationTokenResponseProto response = 2;
+}
+
+message RenewDelegationTokenResponseProto{
+    required Status status = 1;
+    optional hadoop.common.RenewDelegationTokenResponseProto response = 2;
+}
+
+message CancelDelegationTokenResponseProto{
+    required Status status = 1;
+    optional hadoop.common.CancelDelegationTokenResponseProto response = 2;
 }
 
 /**

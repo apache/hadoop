@@ -184,4 +184,17 @@ public final class OMConfigKeys {
       "ozone.om.http.kerberos.keytab.file";
   public static final String OZONE_OM_HTTP_KERBEROS_PRINCIPAL_KEY
       = "ozone.om.http.kerberos.principal";
+  // Delegation token related keys
+  public static final String  DELEGATION_REMOVER_SCAN_INTERVAL_KEY =
+      "ozone.manager.delegation.remover.scan.interval";
+  public static final long    DELEGATION_REMOVER_SCAN_INTERVAL_DEFAULT =
+      60*60*1000;
+  public static final String  DELEGATION_TOKEN_RENEW_INTERVAL_KEY =
+      "ozone.manager.delegation.token.renew-interval";
+  public static final long    DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT =
+      24*60*60*1000;  // 1 day = 86400000 ms
+  public static final String  DELEGATION_TOKEN_MAX_LIFETIME_KEY =
+      "ozone.manager.delegation.token.max-lifetime";
+  public static final long    DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT =
+      7*24*60*60*1000; // 7 days
 }

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.ozone.protocolPB;
 
+import com.google.protobuf.ByteString;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneAclInfo;
@@ -24,6 +26,9 @@ import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclType;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclRights;
+import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
+import org.apache.hadoop.security.token.Token;
 
 /**
  * Utilities for converting protobuf classes.
@@ -109,5 +114,38 @@ public final class OMPBHelper {
     }
 
     return new OzoneAcl(aclType, aclInfo.getName(), aclRights);
+  }
+
+  /**
+   * Converts Ozone delegation token to @{@link TokenProto}.
+   * @return tokenProto
+   */
+  public static TokenProto convertToTokenProto(Token<?> tok) {
+    if(tok == null){
+      throw new IllegalArgumentException("Invalid argument: token is null");
+    }
+
+    return TokenProto.newBuilder().
+        setIdentifier(getByteString(tok.getIdentifier())).
+        setPassword(getByteString(tok.getPassword())).
+        setKind(tok.getKind().toString()).
+        setService(tok.getService().toString()).build();
+  }
+
+  public static ByteString getByteString(byte[] bytes) {
+    // return singleton to reduce object allocation
+    return (bytes.length == 0) ? ByteString.EMPTY : ByteString.copyFrom(bytes);
+  }
+
+  /**
+   * Converts @{@link TokenProto} to Ozone delegation token.
+   *
+   * @return Ozone
+   */
+  public static Token<OzoneTokenIdentifier> convertToDelegationToken(
+      TokenProto tokenProto) {
+    return new Token<>(tokenProto.getIdentifier()
+        .toByteArray(), tokenProto.getPassword().toByteArray(), new Text(
+        tokenProto.getKind()), new Text(tokenProto.getService()));
   }
 }
