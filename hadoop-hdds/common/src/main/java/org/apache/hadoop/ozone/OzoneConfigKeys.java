@@ -350,6 +350,10 @@ public final class OzoneConfigKeys {
   public static final String OZONE_CONTAINER_COPY_WORKDIR =
       "hdds.datanode.replication.work.dir";
 
+  public static final String OZONE_MAX_KEY_LEN =
+      "ozone.max.key.len";
+  public static final int OZONE_MAX_KEY_LEN_DEFAULT = 1024 * 1024;
+
   /**
    * Config properties to set client side checksum properties.
    */

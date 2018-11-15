@@ -19,7 +19,6 @@ package org.apache.hadoop.ozone.security;
 
 import java.util.Collection;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -32,7 +31,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class OzoneDelegationTokenSelector
-    extends AbstractDelegationTokenSelector<DelegationTokenIdentifier> {
+    extends AbstractDelegationTokenSelector<OzoneTokenIdentifier> {
 
   public OzoneDelegationTokenSelector() {
     super(OzoneTokenIdentifier.KIND_NAME);

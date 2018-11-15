@@ -23,6 +23,8 @@ import org.apache.hadoop.ipc.ProtocolInfo;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneManagerService;
 import org.apache.hadoop.security.KerberosInfo;
+import org.apache.hadoop.security.token.TokenInfo;
+import org.apache.hadoop.ozone.security.OzoneDelegationTokenSelector;
 
 /**
  * Protocol used to communicate with OM.
@@ -32,6 +34,7 @@ import org.apache.hadoop.security.KerberosInfo;
     protocolVersion = 1)
 @KerberosInfo(
     serverPrincipal = OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY)
+@TokenInfo(OzoneDelegationTokenSelector.class)
 @InterfaceAudience.Private
 public interface OzoneManagerProtocolPB
     extends OzoneManagerService.BlockingInterface {

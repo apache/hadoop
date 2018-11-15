@@ -176,9 +176,10 @@ public final class HddsServerUtil {
         ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_ADDRESS_KEY);
 
     return NetUtils.createSocketAddr(
-        host.or(ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_BIND_HOST_DEFAULT) +
-            ":" + port
-            .or(conf.getInt(ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_PORT_KEY,
+        host.orElse(ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_BIND_HOST_DEFAULT)
+            + ":" + port
+            .orElse(conf.getInt(ScmConfigKeys
+                    .OZONE_SCM_SECURITY_SERVICE_PORT_KEY,
                 ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_PORT_DEFAULT)));
   }
 

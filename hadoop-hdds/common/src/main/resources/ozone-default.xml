@@ -1014,6 +1014,15 @@
       every principal specified in the keytab file.
     </description>
   </property>
+  <property>
+    <name>ozone.max.key.len</name>
+    <value>1048576</value>
+    <tag>OZONE, SECURITY</tag>
+    <description>
+      Maximum length of private key in Ozone. Used in Ozone delegation and
+      block tokens.
+    </description>
+  </property>
 
   <!--Client Settings-->
   <property>
@@ -1689,6 +1698,30 @@
     <tag>X509, SECURITY</tag>
     <description>
       Name of file which stores public key generated for SCM CA.
+    </description>
+  </property>
+  <property>
+    <name>ozone.manager.delegation.remover.scan.interval</name>
+    <value>3600000</value>
+    <description>
+      Time interval after which ozone secret manger scans for expired
+      delegation token.
+    </description>
+  </property>
+  <property>
+    <name>ozone.manager.delegation.token.renew-interval</name>
+    <value>1d</value>
+    <description>
+      Default time interval after which ozone delegation token will
+      require renewal before any further use.
+    </description>
+  </property>
+  <property>
+    <name>ozone.manager.delegation.token.max-lifetime</name>
+    <value>7d</value>
+    <description>
+      Default max time interval after which ozone delegation token will
+      not be renewed.
     </description>
   </property>
 </configuration>

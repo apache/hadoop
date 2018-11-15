@@ -54,14 +54,21 @@ public final class OmUtils {
    * @param conf
    * @return Target InetSocketAddress for the SCM service endpoint.
    */
-  public static InetSocketAddress getOmAddress(
-      Configuration conf) {
+  public static InetSocketAddress getOmAddress(Configuration conf) {
+    return NetUtils.createSocketAddr(getOmRpcAddress(conf));
+  }
+
+  /**
+   * Retrieve the socket address that is used by OM.
+   * @param conf
+   * @return Target InetSocketAddress for the SCM service endpoint.
+   */
+  public static String getOmRpcAddress(Configuration conf) {
     final Optional<String> host = getHostNameFromConfigKeys(conf,
         OZONE_OM_ADDRESS_KEY);
 
-    return NetUtils.createSocketAddr(
-        host.orElse(OZONE_OM_BIND_HOST_DEFAULT) + ":" +
-            getOmRpcPort(conf));
+    return host.orElse(OZONE_OM_BIND_HOST_DEFAULT) + ":" +
+        getOmRpcPort(conf);
   }
 
   /**

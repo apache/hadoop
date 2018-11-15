@@ -41,7 +41,7 @@ import org.apache.hadoop.security.KerberosInfo;
  */
 @KerberosInfo(
     serverPrincipal = OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY)
-public interface OzoneManagerProtocol {
+public interface OzoneManagerProtocol  extends OzoneManagerSecurityProtocol {
 
   /**
    * Creates a volume.
