@@ -26,8 +26,10 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
+import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClientStub;
+import org.apache.hadoop.ozone.client.OzoneKeyDetails;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 
@@ -47,7 +49,7 @@ import static org.mockito.Mockito.when;
 /**
  * Test put object.
  */
-public class TestPutObject {
+public class TestObjectPut {
   public static final String CONTENT = "0123456789";
   private String userName = "ozone";
   private String bucketName = "b1";
@@ -240,6 +242,27 @@ public class TestPutObject {
           ex.getErrorMessage());
       assertEquals("random", ex.getResource());
     }
+  }
 
+  @Test
+  public void testEmptyStorageType() throws IOException, OS3Exception {
+    HttpHeaders headers = Mockito.mock(HttpHeaders.class);
+    ByteArrayInputStream body = new ByteArrayInputStream(CONTENT.getBytes());
+    objectEndpoint.setHeaders(headers);
+    keyName = "sourceKey";
+    when(headers.getHeaderString(STORAGE_CLASS_HEADER)).thenReturn("");
+
+    Response response =
+        objectEndpoint.put(bucketName, keyName, CONTENT.length(), body);
+
+    String volumeName = clientStub.getObjectStore()
+        .getOzoneVolumeName(bucketName);
+
+    OzoneKeyDetails key =
+        clientStub.getObjectStore().getVolume(volumeName).getBucket(bucketName)
+            .getKey(keyName);
+
+    //default type is set
+    Assert.assertEquals(ReplicationType.RATIS, key.getReplicationType());
   }
 }
