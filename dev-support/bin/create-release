@@ -524,7 +524,7 @@ function makearelease
   big_console_header "Cleaning the Source Tree"
 
   # git clean to clear any remnants from previous build
-  run "${GIT}" clean -xdf
+  run "${GIT}" clean -xdf -e /patchprocess
 
   mkdir -p "${LOGDIR}"
 
