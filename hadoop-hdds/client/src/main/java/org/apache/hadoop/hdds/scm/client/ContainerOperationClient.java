@@ -78,9 +78,7 @@ public class ContainerOperationClient implements ScmClient {
     containerSizeB = size;
   }
 
-  /**
-   * @inheritDoc
-   */
+
   @Override
   public ContainerWithPipeline createContainer(String owner)
       throws IOException {
@@ -173,9 +171,6 @@ public class ContainerOperationClient implements ScmClient {
         pipeline.toString());
   }
 
-  /**
-   * @inheritDoc
-   */
   @Override
   public ContainerWithPipeline createContainer(HddsProtos.ReplicationType type,
       HddsProtos.ReplicationFactor factor, String owner) throws IOException {
@@ -280,9 +275,6 @@ public class ContainerOperationClient implements ScmClient {
     deleteContainer(containerID, info.getPipeline(), force);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public List<ContainerInfo> listContainer(long startContainerID,
       int count) throws IOException {
