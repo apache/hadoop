@@ -141,6 +141,11 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
   }
 
   @Override
+  public boolean isExist(HddsProtos.PipelineID pipelineId) {
+    return PipelineID.valueOf(id).getProtobuf().equals(pipelineId);
+  }
+
+  @Override
   public List<PipelineReport> getPipelineReport() {
     return Collections.singletonList(
             PipelineReport.newBuilder()

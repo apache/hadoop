@@ -19,7 +19,6 @@ package org.apache.hadoop.hdds.scm.node;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
@@ -960,7 +959,7 @@ public class TestNodeManager {
                   TestUtils.getRandomPipelineReports());
       eq.fireEvent(DATANODE_COMMAND,
           new CommandForDatanode<>(datanodeDetails.getUuid(),
-              new CloseContainerCommand(1L, ReplicationType.STAND_ALONE,
+              new CloseContainerCommand(1L,
                   PipelineID.randomId())));
 
       eq.processAll(1000L);
