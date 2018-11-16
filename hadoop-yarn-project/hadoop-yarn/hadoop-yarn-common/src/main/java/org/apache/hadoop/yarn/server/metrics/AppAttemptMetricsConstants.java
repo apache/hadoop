@@ -36,7 +36,7 @@ public class AppAttemptMetricsConstants {
 
   public static final String PARENT_PRIMARY_FILTER =
       "YARN_APPLICATION_ATTEMPT_PARENT";
-      
+
   public static final String TRACKING_URL_INFO =
       "YARN_APPLICATION_ATTEMPT_TRACKING_URL";
 
