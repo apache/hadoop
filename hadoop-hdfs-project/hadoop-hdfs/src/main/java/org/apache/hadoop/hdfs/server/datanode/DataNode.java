@@ -294,7 +294,8 @@ public class DataNode extends ReconfigurableBase
 
   static final int CURRENT_BLOCK_FORMAT_VERSION = 1;
   public static final int MAX_VOLUME_FAILURE_TOLERATED_LIMIT = -1;
-  public static final String MAX_VOLUME_FAILURES_TOLERATED_MSG = "should be greater than -1";
+  public static final String MAX_VOLUME_FAILURES_TOLERATED_MSG =
+      "should be greater than or equal to -1";
 
   /** A list of property that are reconfigurable at runtime. */
   private static final List<String> RECONFIGURABLE_PROPERTIES =
@@ -1405,7 +1406,7 @@ public class DataNode extends ReconfigurableBase
         || volFailuresTolerated >= volsConfigured) {
       throw new DiskErrorException("Invalid value configured for "
           + "dfs.datanode.failed.volumes.tolerated - " + volFailuresTolerated
-          + ". Value configured is either greater than -1 or >= "
+          + ". Value configured is either less than -1 or >= "
           + "to the number of configured volumes (" + volsConfigured + ").");
     }
 
