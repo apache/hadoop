@@ -149,6 +149,7 @@ public class YarnClientImpl extends YarnClient {
   private long asyncApiPollIntervalMillis;
   private long asyncApiPollTimeoutMillis;
   protected AHSClient historyClient;
+  private AHSClient ahsV2Client;
   private boolean historyServiceEnabled;
   protected volatile TimelineClient timelineClient;
   @VisibleForTesting
@@ -158,6 +159,8 @@ public class YarnClientImpl extends YarnClient {
   private boolean timelineV1ServiceEnabled;
   protected boolean timelineServiceBestEffort;
   private boolean loadResourceTypesFromServer;
+
+  private boolean timelineV2ServiceEnabled;
 
   private static final String ROOT = "root";
 
@@ -188,6 +191,10 @@ public class YarnClientImpl extends YarnClient {
       timelineService = TimelineUtils.buildTimelineTokenService(conf);
     }
 
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      timelineV2ServiceEnabled = true;
+    }
+
     // The AHSClientService is enabled by default when we start the
     // TimelineServer which means we are able to get history information
     // for applications/applicationAttempts/containers by using ahsClient
@@ -198,6 +205,11 @@ public class YarnClientImpl extends YarnClient {
       historyServiceEnabled = true;
       historyClient = AHSClient.createAHSClient();
       historyClient.init(conf);
+    }
+
+    if (timelineV2ServiceEnabled) {
+      ahsV2Client = AHSClient.createAHSv2Client();
+      ahsV2Client.init(conf);
     }
 
     timelineServiceBestEffort = conf.getBoolean(
@@ -223,6 +235,9 @@ public class YarnClientImpl extends YarnClient {
       if (historyServiceEnabled) {
         historyClient.start();
       }
+      if (timelineV2ServiceEnabled) {
+        ahsV2Client.start();
+      }
     } catch (IOException e) {
       throw new YarnRuntimeException(e);
     }
@@ -243,6 +258,9 @@ public class YarnClientImpl extends YarnClient {
     }
     if (historyServiceEnabled) {
       historyClient.stop();
+    }
+    if (timelineV2ServiceEnabled) {
+      ahsV2Client.stop();
     }
     if (timelineClient != null) {
       timelineClient.stop();
@@ -516,6 +534,14 @@ public class YarnClientImpl extends YarnClient {
       request.setApplicationId(appId);
       response = rmClient.getApplicationReport(request);
     } catch (ApplicationNotFoundException e) {
+      if (timelineV2ServiceEnabled) {
+        try {
+          return ahsV2Client.getApplicationReport(appId);
+        } catch (Exception ex) {
+          LOG.warn("Failed to fetch application report from "
+              + "ATS v2", ex);
+        }
+      }
       if (!historyServiceEnabled) {
         // Just throw it as usual if historyService is not enabled.
         throw e;
@@ -726,13 +752,22 @@ public class YarnClientImpl extends YarnClient {
           .getApplicationAttemptReport(request);
       return response.getApplicationAttemptReport();
     } catch (YarnException e) {
-      if (!historyServiceEnabled) {
-        // Just throw it as usual if historyService is not enabled.
-        throw e;
-      }
+
       // Even if history-service is enabled, treat all exceptions still the same
       // except the following
       if (e.getClass() != ApplicationNotFoundException.class) {
+        throw e;
+      }
+      if (timelineV2ServiceEnabled) {
+        try {
+          return ahsV2Client.getApplicationAttemptReport(appAttemptId);
+        } catch (Exception ex) {
+          LOG.warn("Failed to fetch application attempt report from "
+              + "ATS v2", ex);
+        }
+      }
+      if (!historyServiceEnabled) {
+        // Just throw it as usual if historyService is not enabled.
         throw e;
       }
       return historyClient.getApplicationAttemptReport(appAttemptId);
@@ -750,13 +785,21 @@ public class YarnClientImpl extends YarnClient {
           .getApplicationAttempts(request);
       return response.getApplicationAttemptList();
     } catch (YarnException e) {
-      if (!historyServiceEnabled) {
-        // Just throw it as usual if historyService is not enabled.
-        throw e;
-      }
       // Even if history-service is enabled, treat all exceptions still the same
       // except the following
       if (e.getClass() != ApplicationNotFoundException.class) {
+        throw e;
+      }
+      if (timelineV2ServiceEnabled) {
+        try {
+          return ahsV2Client.getApplicationAttempts(appId);
+        } catch (Exception ex) {
+          LOG.warn("Failed to fetch application attempts from "
+              + "ATS v2", ex);
+        }
+      }
+      if (!historyServiceEnabled) {
+        // Just throw it as usual if historyService is not enabled.
         throw e;
       }
       return historyClient.getApplicationAttempts(appId);
@@ -774,14 +817,22 @@ public class YarnClientImpl extends YarnClient {
           .getContainerReport(request);
       return response.getContainerReport();
     } catch (YarnException e) {
-      if (!historyServiceEnabled) {
-        // Just throw it as usual if historyService is not enabled.
-        throw e;
-      }
       // Even if history-service is enabled, treat all exceptions still the same
       // except the following
       if (e.getClass() != ApplicationNotFoundException.class
           && e.getClass() != ContainerNotFoundException.class) {
+        throw e;
+      }
+      if (timelineV2ServiceEnabled) {
+        try {
+          return ahsV2Client.getContainerReport(containerId);
+        } catch (Exception ex) {
+          LOG.warn("Failed to fetch container report from "
+              + "ATS v2", ex);
+        }
+      }
+      if (!historyServiceEnabled) {
+        // Just throw it as usual if historyService is not enabled.
         throw e;
       }
       return historyClient.getContainerReport(containerId);
@@ -802,69 +853,86 @@ public class YarnClientImpl extends YarnClient {
       GetContainersResponse response = rmClient.getContainers(request);
       containersForAttempt.addAll(response.getContainerList());
     } catch (YarnException e) {
-      if (e.getClass() != ApplicationNotFoundException.class
-          || !historyServiceEnabled) {
-        // If Application is not in RM and history service is enabled then we
-        // need to check with history service else throw exception.
+      // Even if history-service is enabled, treat all exceptions still the same
+      // except the following
+      if (e.getClass() != ApplicationNotFoundException.class) {
+        throw e;
+      }
+      if (!historyServiceEnabled && !timelineV2ServiceEnabled) {
+        // if both history server and ATSv2 are not enabled throw exception.
         throw e;
       }
       appNotFoundInRM = true;
     }
-
-    if (historyServiceEnabled) {
-      // Check with AHS even if found in RM because to capture info of finished
-      // containers also
-      List<ContainerReport> containersListFromAHS = null;
-      try {
-        containersListFromAHS =
-            historyClient.getContainers(applicationAttemptId);
-      } catch (IOException e) {
-        // History service access might be enabled but system metrics publisher
-        // is disabled hence app not found exception is possible
-        if (appNotFoundInRM) {
-          // app not found in bothM and RM then propagate the exception.
-          throw e;
-        }
+    // Check with AHS even if found in RM because to capture info of finished
+    // containers also
+    List<ContainerReport> containersListFromAHS = null;
+    try {
+      containersListFromAHS =
+          getContainerReportFromHistory(applicationAttemptId);
+    } catch (IOException e) {
+      if (appNotFoundInRM) {
+        throw e;
+      }
+    }
+    if (null != containersListFromAHS && containersListFromAHS.size() > 0) {
+      // remove duplicates
+      Set<ContainerId> containerIdsToBeKeptFromAHS =
+          new HashSet<ContainerId>();
+      Iterator<ContainerReport> tmpItr = containersListFromAHS.iterator();
+      while (tmpItr.hasNext()) {
+        containerIdsToBeKeptFromAHS.add(tmpItr.next().getContainerId());
       }
 
-      if (null != containersListFromAHS && containersListFromAHS.size() > 0) {
-        // remove duplicates
+      Iterator<ContainerReport> rmContainers =
+          containersForAttempt.iterator();
+      while (rmContainers.hasNext()) {
+        ContainerReport tmp = rmContainers.next();
+        containerIdsToBeKeptFromAHS.remove(tmp.getContainerId());
+        // Remove containers from AHS as container from RM will have latest
+        // information
+      }
 
-        Set<ContainerId> containerIdsToBeKeptFromAHS =
-            new HashSet<ContainerId>();
-        Iterator<ContainerReport> tmpItr = containersListFromAHS.iterator();
-        while (tmpItr.hasNext()) {
-          containerIdsToBeKeptFromAHS.add(tmpItr.next().getContainerId());
-        }
-
-        Iterator<ContainerReport> rmContainers =
-            containersForAttempt.iterator();
-        while (rmContainers.hasNext()) {
-          ContainerReport tmp = rmContainers.next();
-          containerIdsToBeKeptFromAHS.remove(tmp.getContainerId());
-          // Remove containers from AHS as container from RM will have latest
-          // information
-        }
-
-        if (containerIdsToBeKeptFromAHS.size() > 0
-            && containersListFromAHS.size() != containerIdsToBeKeptFromAHS
-                .size()) {
-          Iterator<ContainerReport> containersFromHS =
-              containersListFromAHS.iterator();
-          while (containersFromHS.hasNext()) {
-            ContainerReport containerReport = containersFromHS.next();
-            if (containerIdsToBeKeptFromAHS.contains(containerReport
-                .getContainerId())) {
-              containersForAttempt.add(containerReport);
-            }
+      if (containerIdsToBeKeptFromAHS.size() > 0
+          && containersListFromAHS.size() != containerIdsToBeKeptFromAHS
+              .size()) {
+        Iterator<ContainerReport> containersFromHS =
+            containersListFromAHS.iterator();
+        while (containersFromHS.hasNext()) {
+          ContainerReport containerReport = containersFromHS.next();
+          if (containerIdsToBeKeptFromAHS.contains(containerReport
+              .getContainerId())) {
+            containersForAttempt.add(containerReport);
           }
-        } else if (containersListFromAHS.size() == containerIdsToBeKeptFromAHS
-            .size()) {
-          containersForAttempt.addAll(containersListFromAHS);
         }
+      } else if (containersListFromAHS.size() == containerIdsToBeKeptFromAHS
+          .size()) {
+        containersForAttempt.addAll(containersListFromAHS);
       }
     }
     return containersForAttempt;
+  }
+
+  private List<ContainerReport> getContainerReportFromHistory(
+      ApplicationAttemptId applicationAttemptId)
+      throws IOException, YarnException {
+    List<ContainerReport> containersListFromAHS = null;
+    if (timelineV2ServiceEnabled) {
+      try {
+        containersListFromAHS = ahsV2Client.getContainers(applicationAttemptId);
+      } catch (Exception e) {
+        LOG.warn("Got an error while fetching container report from ATSv2", e);
+        if (historyServiceEnabled) {
+          containersListFromAHS = historyClient.getContainers(
+              applicationAttemptId);
+        } else {
+          throw e;
+        }
+      }
+    } else if (historyServiceEnabled) {
+      containersListFromAHS = historyClient.getContainers(applicationAttemptId);
+    }
+    return containersListFromAHS;
   }
 
   @Override

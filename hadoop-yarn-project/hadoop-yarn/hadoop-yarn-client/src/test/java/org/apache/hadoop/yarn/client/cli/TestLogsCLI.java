@@ -246,6 +246,9 @@ public class TestLogsCLI {
     pw.println("                                              --client_max_retries to");
     pw.println("                                              create a retry client. The");
     pw.println("                                              default value is 1000.");
+    pw.println(" -clusterId <Cluster ID>                      ClusterId. By default, it");
+    pw.println("                                              will take default cluster id");
+    pw.println("                                              from the RM");
     pw.println(" -containerId <Container ID>                  ContainerId. By default, it");
     pw.println("                                              will print all available");
     pw.println("                                              logs. Work with -log_files");
