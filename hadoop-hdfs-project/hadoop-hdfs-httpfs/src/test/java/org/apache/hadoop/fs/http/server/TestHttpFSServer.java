@@ -43,6 +43,7 @@ import java.io.OutputStream;
 import java.io.Writer;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,10 +51,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttrCodec;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DataParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.NoRedirectParam;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
@@ -84,6 +88,10 @@ import org.eclipse.jetty.webapp.WebAppContext;
 import com.google.common.collect.Maps;
 import java.util.Properties;
 import java.util.regex.Pattern;
+
+import javax.ws.rs.HttpMethod;
+import javax.ws.rs.core.MediaType;
+
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 
 /**
@@ -1513,5 +1521,119 @@ public class TestHttpFSServer extends HFSTestCase {
     verifyGetSnapshottableDirectoryList(dfs);
     dfs.delete(path1, true);
     verifyGetSnapshottableDirectoryList(dfs);
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testNoRedirect() throws Exception {
+    createHttpFSServer(false, false);
+
+    final String testContent = "Test content";
+    final String path = "/testfile.txt";
+    final String username = HadoopUsersConfTestHelper.getHadoopUsers()[0];
+
+
+    // Trigger the creation of the file which shouldn't redirect
+    URL url = new URL(TestJettyHelper.getJettyURL(), MessageFormat.format(
+        "/webhdfs/v1{0}?user.name={1}&op=CREATE&noredirect=true",
+        path, username));
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(HttpMethod.PUT);
+    conn.connect();
+    // Verify that it returned the final write location
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    JSONObject json = (JSONObject)new JSONParser().parse(
+        new InputStreamReader(conn.getInputStream()));
+    String location = (String)json.get("Location");
+    Assert.assertTrue(location.contains(DataParam.NAME));
+    Assert.assertTrue(location.contains(NoRedirectParam.NAME));
+    Assert.assertTrue(location.contains("CREATE"));
+    Assert.assertTrue("Wrong location: " + location,
+        location.startsWith(TestJettyHelper.getJettyURL().toString()));
+
+    // Use the location to actually write the file
+    url = new URL(location);
+    conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(HttpMethod.PUT);
+    conn.setRequestProperty(
+        "Content-Type", MediaType.APPLICATION_OCTET_STREAM);
+    conn.setDoOutput(true);
+    conn.connect();
+    OutputStream os = conn.getOutputStream();
+    os.write(testContent.getBytes());
+    os.close();
+    // Verify that it created the file and returned the location
+    Assert.assertEquals(
+        HttpURLConnection.HTTP_CREATED, conn.getResponseCode());
+    json = (JSONObject)new JSONParser().parse(
+        new InputStreamReader(conn.getInputStream()));
+    location = (String)json.get("Location");
+    Assert.assertEquals(
+        TestJettyHelper.getJettyURL() + "/webhdfs/v1" + path, location);
+
+
+    // Read the file which shouldn't redirect
+    url = new URL(TestJettyHelper.getJettyURL(), MessageFormat.format(
+        "/webhdfs/v1{0}?user.name={1}&op=OPEN&noredirect=true",
+        path, username));
+    conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(HttpMethod.GET);
+    conn.connect();
+    // Verify that we got the final location to read from
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    json = (JSONObject)new JSONParser().parse(
+        new InputStreamReader(conn.getInputStream()));
+    location = (String)json.get("Location");
+    Assert.assertTrue(!location.contains(NoRedirectParam.NAME));
+    Assert.assertTrue(location.contains("OPEN"));
+    Assert.assertTrue("Wrong location: " + location,
+        location.startsWith(TestJettyHelper.getJettyURL().toString()));
+
+    // Use the location to actually read
+    url = new URL(location);
+    conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(HttpMethod.GET);
+    conn.connect();
+    // Verify that we read what we wrote
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    String content = IOUtils.toString(
+        conn.getInputStream(), Charset.defaultCharset());
+    Assert.assertEquals(testContent, content);
+
+
+    // Get the checksum of the file which shouldn't redirect
+    url = new URL(TestJettyHelper.getJettyURL(), MessageFormat.format(
+        "/webhdfs/v1{0}?user.name={1}&op=GETFILECHECKSUM&noredirect=true",
+        path, username));
+    conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(HttpMethod.GET);
+    conn.connect();
+    // Verify that we got the final location to write to
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    json = (JSONObject)new JSONParser().parse(
+        new InputStreamReader(conn.getInputStream()));
+    location = (String)json.get("Location");
+    Assert.assertTrue(!location.contains(NoRedirectParam.NAME));
+    Assert.assertTrue(location.contains("GETFILECHECKSUM"));
+    Assert.assertTrue("Wrong location: " + location,
+        location.startsWith(TestJettyHelper.getJettyURL().toString()));
+
+    // Use the location to actually get the checksum
+    url = new URL(location);
+    conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(HttpMethod.GET);
+    conn.connect();
+    // Verify that we read what we wrote
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    json = (JSONObject)new JSONParser().parse(
+        new InputStreamReader(conn.getInputStream()));
+    JSONObject checksum = (JSONObject)json.get("FileChecksum");
+    Assert.assertEquals(
+        "0000020000000000000000001b9c0a445fed3c0bf1e1aa7438d96b1500000000",
+        checksum.get("bytes"));
+    Assert.assertEquals(28L, checksum.get("length"));
+    Assert.assertEquals("MD5-of-0MD5-of-512CRC32C", checksum.get("algorithm"));
   }
 }
