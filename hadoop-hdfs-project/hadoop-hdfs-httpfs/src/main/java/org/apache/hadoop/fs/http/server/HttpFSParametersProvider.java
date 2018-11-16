@@ -52,23 +52,25 @@ public class HttpFSParametersProvider extends ParametersProvider {
 
   static {
     PARAMS_DEF.put(Operation.OPEN,
-        new Class[]{OffsetParam.class, LenParam.class});
+        new Class[]{OffsetParam.class, LenParam.class, NoRedirectParam.class});
     PARAMS_DEF.put(Operation.GETFILESTATUS, new Class[]{});
     PARAMS_DEF.put(Operation.LISTSTATUS, new Class[]{FilterParam.class});
     PARAMS_DEF.put(Operation.GETHOMEDIRECTORY, new Class[]{});
     PARAMS_DEF.put(Operation.GETCONTENTSUMMARY, new Class[]{});
-    PARAMS_DEF.put(Operation.GETFILECHECKSUM, new Class[]{});
+    PARAMS_DEF.put(Operation.GETFILECHECKSUM,
+        new Class[]{NoRedirectParam.class});
     PARAMS_DEF.put(Operation.GETFILEBLOCKLOCATIONS, new Class[]{});
     PARAMS_DEF.put(Operation.GETACLSTATUS, new Class[]{});
     PARAMS_DEF.put(Operation.GETTRASHROOT, new Class[]{});
     PARAMS_DEF.put(Operation.INSTRUMENTATION, new Class[]{});
-    PARAMS_DEF.put(Operation.APPEND, new Class[]{DataParam.class});
+    PARAMS_DEF.put(Operation.APPEND,
+        new Class[]{DataParam.class, NoRedirectParam.class});
     PARAMS_DEF.put(Operation.CONCAT, new Class[]{SourcesParam.class});
     PARAMS_DEF.put(Operation.TRUNCATE, new Class[]{NewLengthParam.class});
     PARAMS_DEF.put(Operation.CREATE,
         new Class[]{PermissionParam.class, OverwriteParam.class,
             ReplicationParam.class, BlockSizeParam.class, DataParam.class,
-            UnmaskedPermissionParam.class});
+            UnmaskedPermissionParam.class, NoRedirectParam.class});
     PARAMS_DEF.put(Operation.MKDIRS, new Class[]{PermissionParam.class,
         UnmaskedPermissionParam.class});
     PARAMS_DEF.put(Operation.RENAME, new Class[]{DestinationParam.class});
@@ -173,6 +175,23 @@ public class HttpFSParametersProvider extends ParametersProvider {
      * Constructor.
      */
     public DataParam() {
+      super(NAME, false);
+    }
+  }
+
+  /**
+   * Class for noredirect parameter.
+   */
+  @InterfaceAudience.Private
+  public static class NoRedirectParam extends BooleanParam {
+    /**
+     * Parameter name.
+     */
+    public static final String NAME = "noredirect";
+    /**
+     * Constructor.
+     */
+    public NoRedirectParam() {
       super(NAME, false);
     }
   }
