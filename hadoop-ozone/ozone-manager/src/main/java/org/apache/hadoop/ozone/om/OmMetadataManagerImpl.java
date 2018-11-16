@@ -22,7 +22,6 @@ import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -117,7 +116,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   public OmMetadataManagerImpl(OzoneConfiguration conf) throws IOException {
     File metaDir = OmUtils.getOmDbDir(conf);
     this.lock = new OzoneManagerLock(conf);
-    this.openKeyExpireThresholdMS = 1000 * conf.getInt(
+    this.openKeyExpireThresholdMS = 1000L * conf.getInt(
         OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS,
         OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS_DEFAULT);
 

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.ozone.om;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -48,6 +47,8 @@ import org.rocksdb.DBOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.Statistics;
 import org.rocksdb.StatsLevel;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Test class for @{@link KeyManagerImpl}.
@@ -93,11 +94,11 @@ public class TestKeyManagerImpl {
     Mockito.when(metadataManager.getLock())
         .thenReturn(new OzoneManagerLock(conf));
     Mockito.when(metadataManager.getVolumeKey(VOLUME_NAME))
-        .thenReturn(VOLUME_NAME.getBytes());
+        .thenReturn(VOLUME_NAME.getBytes(UTF_8));
     Mockito.when(metadataManager.getBucketKey(VOLUME_NAME, BUCKET_NAME))
-        .thenReturn(BUCKET_NAME.getBytes());
+        .thenReturn(BUCKET_NAME.getBytes(UTF_8));
     Mockito.when(metadataManager.getOpenKeyBytes(VOLUME_NAME, BUCKET_NAME,
-        KEY_NAME, 1)).thenReturn(KEY_NAME.getBytes());
+        KEY_NAME, 1)).thenReturn(KEY_NAME.getBytes(UTF_8));
   }
 
   private void setupRocksDb() throws Exception {
@@ -129,11 +130,11 @@ public class TestKeyManagerImpl {
 
     rdbStore = new RDBStore(folder.newFolder(), options, configSet);
     rdbTable = rdbStore.getTable("testTable");
-    rdbTable.put(VOLUME_NAME.getBytes(),
-        RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8));
-    rdbTable.put(BUCKET_NAME.getBytes(),
-        RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8));
-    rdbTable.put(KEY_NAME.getBytes(), keyData.toByteArray());
+    rdbTable.put(VOLUME_NAME.getBytes(UTF_8),
+        RandomStringUtils.random(10).getBytes(UTF_8));
+    rdbTable.put(BUCKET_NAME.getBytes(UTF_8),
+        RandomStringUtils.random(10).getBytes(UTF_8));
+    rdbTable.put(KEY_NAME.getBytes(UTF_8), keyData.toByteArray());
   }
 
   @Test

@@ -226,9 +226,10 @@ public class TestKeyValueHandler {
       VolumeSet volumeSet = new VolumeSet(UUID.randomUUID().toString(), conf);
       KeyValueHandler keyValueHandler = new KeyValueHandler(conf, cset,
           volumeSet, metrics);
-      assertEquals(keyValueHandler.getVolumeChoosingPolicyForTesting()
-          .getClass().getName(), "org.apache.hadoop.ozone.container.common" +
-          ".volume.RoundRobinVolumeChoosingPolicy");
+      assertEquals("org.apache.hadoop.ozone.container.common" +
+          ".volume.RoundRobinVolumeChoosingPolicy",
+          keyValueHandler.getVolumeChoosingPolicyForTesting()
+              .getClass().getName());
 
       //Set a class which is not of sub class of VolumeChoosingPolicy
       conf.set(HDDS_DATANODE_VOLUME_CHOOSING_POLICY,

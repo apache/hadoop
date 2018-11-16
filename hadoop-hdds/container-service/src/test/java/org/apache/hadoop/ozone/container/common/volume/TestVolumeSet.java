@@ -22,7 +22,6 @@ import java.io.IOException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -69,7 +68,7 @@ public class TestVolumeSet {
   }
 
   @Rule
-  public Timeout testTimeout = new Timeout(300_000);
+  public Timeout testTimeout = new Timeout(300000);
 
   @Before
   public void setup() throws Exception {
@@ -153,8 +152,7 @@ public class TestVolumeSet {
     assertTrue(volumeSet.getFailedVolumesList().get(0).isFailed());
 
     // Failed volume should not exist in VolumeMap
-    Path volume1Path = new Path(volume1);
-    assertFalse(volumeSet.getVolumeMap().containsKey(volume1Path));
+    assertFalse(volumeSet.getVolumeMap().containsKey(volume1));
   }
 
   @Test

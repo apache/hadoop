@@ -49,6 +49,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_DATANODE_DIR_KEY;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -160,7 +161,7 @@ public class TestHddsDispatcher {
       String datanodeId, Long containerId, Long localId) {
 
     ByteString data = ByteString.copyFrom(
-        UUID.randomUUID().toString().getBytes());
+        UUID.randomUUID().toString().getBytes(UTF_8));
     ContainerProtos.ChunkInfo chunk = ContainerProtos.ChunkInfo
         .newBuilder()
         .setChunkName(

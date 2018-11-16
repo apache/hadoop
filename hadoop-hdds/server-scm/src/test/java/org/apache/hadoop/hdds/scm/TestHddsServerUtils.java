@@ -42,7 +42,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Unit tests for {@link HddsServerUtil}
+ * Unit tests for {@link HddsServerUtil}.
  */
 public class TestHddsServerUtils {
   public static final Logger LOG = LoggerFactory.getLogger(
@@ -58,6 +58,7 @@ public class TestHddsServerUtils {
    * Test getting OZONE_SCM_DATANODE_ADDRESS_KEY with port.
    */
   @Test
+  @SuppressWarnings("StringSplitter")
   public void testGetDatanodeAddressWithPort() {
     final String scmHost = "host123:100";
     final Configuration conf = new OzoneConfiguration();
@@ -78,8 +79,8 @@ public class TestHddsServerUtils {
     conf.set(OZONE_SCM_DATANODE_ADDRESS_KEY, scmHost);
     final InetSocketAddress address =
         HddsServerUtil.getScmAddressForDataNodes(conf);
-    assertEquals(address.getHostName(), scmHost);
-    assertEquals(address.getPort(), OZONE_SCM_DATANODE_PORT_DEFAULT);
+    assertEquals(scmHost, address.getHostName());
+    assertEquals(OZONE_SCM_DATANODE_PORT_DEFAULT, address.getPort());
   }
 
   /**
@@ -93,8 +94,8 @@ public class TestHddsServerUtils {
     conf.set(OZONE_SCM_CLIENT_ADDRESS_KEY, scmHost);
     final InetSocketAddress address =
         HddsServerUtil.getScmAddressForDataNodes(conf);
-    assertEquals(address.getHostName(), scmHost);
-    assertEquals(address.getPort(), OZONE_SCM_DATANODE_PORT_DEFAULT);
+    assertEquals(scmHost, address.getHostName());
+    assertEquals(OZONE_SCM_DATANODE_PORT_DEFAULT, address.getPort());
   }
 
   /**
@@ -103,6 +104,7 @@ public class TestHddsServerUtils {
    * OZONE_SCM_CLIENT_ADDRESS_KEY should be ignored.
    */
   @Test
+  @SuppressWarnings("StringSplitter")
   public void testDatanodeAddressFallbackToClientWithPort() {
     final String scmHost = "host123:100";
     final Configuration conf = new OzoneConfiguration();
@@ -124,8 +126,8 @@ public class TestHddsServerUtils {
     conf.set(OZONE_SCM_NAMES, scmHost);
     final InetSocketAddress address =
         HddsServerUtil.getScmAddressForDataNodes(conf);
-    assertEquals(address.getHostName(), scmHost);
-    assertEquals(address.getPort(), OZONE_SCM_DATANODE_PORT_DEFAULT);
+    assertEquals(scmHost, address.getHostName());
+    assertEquals(OZONE_SCM_DATANODE_PORT_DEFAULT, address.getPort());
   }
 
   /**
@@ -134,6 +136,7 @@ public class TestHddsServerUtils {
    * defined by OZONE_SCM_NAMES should be ignored.
    */
   @Test
+  @SuppressWarnings("StringSplitter")
   public void testDatanodeAddressFallbackToScmNamesWithPort() {
     final String scmHost = "host123:100";
     final Configuration conf = new OzoneConfiguration();
@@ -141,7 +144,7 @@ public class TestHddsServerUtils {
     final InetSocketAddress address =
         HddsServerUtil.getScmAddressForDataNodes(conf);
     assertEquals(address.getHostName(), scmHost.split(":")[0]);
-    assertEquals(address.getPort(), OZONE_SCM_DATANODE_PORT_DEFAULT);
+    assertEquals(OZONE_SCM_DATANODE_PORT_DEFAULT, address.getPort());
   }
 
   /**

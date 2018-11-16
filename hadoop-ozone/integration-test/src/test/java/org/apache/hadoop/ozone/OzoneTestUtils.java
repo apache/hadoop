@@ -29,7 +29,15 @@ import java.io.IOException;
 import java.util.List;
 import java.util.function.Consumer;
 
-public class OzoneTestUtils {
+/**
+ * Helper class for Tests.
+ */
+public final class OzoneTestUtils {
+  /**
+   * Never Constructed.
+   */
+  private OzoneTestUtils() {
+  }
 
   /**
    * Close containers which contain the blocks listed in
@@ -55,7 +63,7 @@ public class OzoneTestUtils {
             .getContainer(ContainerID.valueof(
                 blockID.getContainerID())).isOpen());
       } catch (IOException e) {
-        e.printStackTrace();
+        throw new AssertionError("Failed to close the container", e);
       }
     }, omKeyLocationInfoGroups);
   }

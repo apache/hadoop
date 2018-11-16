@@ -989,6 +989,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    * @param bucket - Name of the bucket.
    * @throws IOException
    */
+  @Override
   public void deleteBucket(String volume, String bucket) throws IOException {
     Map<String, String> auditMap = buildAuditMap(volume);
     auditMap.put(OzoneConsts.BUCKET, bucket);

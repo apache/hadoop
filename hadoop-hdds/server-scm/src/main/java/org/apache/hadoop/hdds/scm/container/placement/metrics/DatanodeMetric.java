@@ -23,7 +23,7 @@ import org.apache.hadoop.hdds.scm.exceptions.SCMException;
  * DatanodeMetric acts as the basis for all the metric that is used in
  * comparing 2 datanodes.
  */
-public interface DatanodeMetric<T, S> extends Comparable<T> {
+public interface DatanodeMetric<T, S>  {
 
   /**
    * Some syntactic sugar over Comparable interface. This makes code easier to
@@ -86,6 +86,5 @@ public interface DatanodeMetric<T, S> extends Comparable<T> {
    * @param value value
    */
   void subtract(T value);
-
 
 }

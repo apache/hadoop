@@ -43,6 +43,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.UUID;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -88,7 +89,7 @@ public class TestChunkManagerImpl {
 
     keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
 
-    data = "testing write chunks".getBytes();
+    data = "testing write chunks".getBytes(UTF_8);
     // Creating BlockData
     blockID = new BlockID(1L, 1L);
     chunkInfo = new ChunkInfo(String.format("%d.data.%d", blockID

@@ -100,6 +100,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   /**
    * {@inheritDoc}
    */
+  @Override
   public void createPipeline() throws IOException {
     final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
     LOG.debug("creating pipeline:{} with {}", pipeline.getId(), group);
@@ -110,6 +111,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   /**
    * {@inheritDoc}
    */
+  @Override
   public void destroyPipeline() throws IOException {
     final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
     LOG.debug("destroying pipeline:{} with {}", pipeline.getId(), group);

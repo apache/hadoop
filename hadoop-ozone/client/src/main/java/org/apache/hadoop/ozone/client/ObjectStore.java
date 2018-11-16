@@ -124,6 +124,7 @@ public class ObjectStore {
    * @return String - Ozone Volume name.
    * @throws IOException - Throws if the s3Bucket does not exist.
    */
+  @SuppressWarnings("StringSplitter")
   public String getOzoneVolumeName(String s3BucketName) throws IOException {
     String mapping = getOzoneBucketMapping(s3BucketName);
     return mapping.split("/")[0];
@@ -136,6 +137,7 @@ public class ObjectStore {
    * @return String - Ozone bucket Name.
    * @throws IOException - Throws if the s3bucket does not exist.
    */
+  @SuppressWarnings("StringSplitter")
   public String getOzoneBucketName(String s3BucketName) throws IOException {
     String mapping = getOzoneBucketMapping(s3BucketName);
     return mapping.split("/")[1];

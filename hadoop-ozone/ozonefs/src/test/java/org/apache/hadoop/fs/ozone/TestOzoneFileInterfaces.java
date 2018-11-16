@@ -51,6 +51,7 @@ import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.fs.ozone.Constants.OZONE_DEFAULT_USER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -176,7 +177,7 @@ public class TestOzoneFileInterfaces {
       byte[] buffer = new byte[stringLen];
       // This read will not change the offset inside the file
       int readBytes = inputStream.read(0, buffer, 0, buffer.length);
-      String out = new String(buffer, 0, buffer.length);
+      String out = new String(buffer, 0, buffer.length, UTF_8);
       assertEquals(data, out);
       assertEquals(readBytes, buffer.length);
       assertEquals(0, inputStream.getPos());

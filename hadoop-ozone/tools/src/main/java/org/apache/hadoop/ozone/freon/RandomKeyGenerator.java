@@ -286,7 +286,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
     long maxValue;
 
     currentValue = () -> numberOfKeysAdded.get();
-    maxValue = numOfVolumes *
+    maxValue = (long) numOfVolumes *
         numOfBuckets *
         numOfKeys;
 

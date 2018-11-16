@@ -144,6 +144,8 @@ public class NodeStateManager implements Runnable, Closeable {
     executorService = HadoopExecutors.newScheduledThreadPool(1,
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("SCM Heartbeat Processing Thread - %d").build());
+    //BUG:BUG TODO: The return value is ignored, if an exception is thrown in
+    // the executing funtion, it will be ignored.
     executorService.schedule(this, heartbeatCheckerIntervalMs,
         TimeUnit.MILLISECONDS);
   }
@@ -331,7 +333,7 @@ public class NodeStateManager implements Runnable, Closeable {
    * @return list of nodes
    */
   public List<DatanodeDetails> getNodes(NodeState state) {
-    List<DatanodeDetails> nodes = new LinkedList<>();
+    List<DatanodeDetails> nodes = new ArrayList<>();
     nodeStateMap.getNodes(state).forEach(
         uuid -> {
           try {
@@ -352,7 +354,7 @@ public class NodeStateManager implements Runnable, Closeable {
    * @return all the managed nodes
    */
   public List<DatanodeDetails> getAllNodes() {
-    List<DatanodeDetails> nodes = new LinkedList<>();
+    List<DatanodeDetails> nodes = new ArrayList<>();
     nodeStateMap.getAllNodes().forEach(
         uuid -> {
           try {
@@ -613,6 +615,8 @@ public class NodeStateManager implements Runnable, Closeable {
 
     if (!Thread.currentThread().isInterrupted() &&
         !executorService.isShutdown()) {
+      //BUGBUG: The return future needs to checked here to make sure the
+      // exceptions are handled correctly.
       executorService.schedule(this, heartbeatCheckerIntervalMs,
           TimeUnit.MILLISECONDS);
     } else {
