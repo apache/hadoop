@@ -99,6 +99,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
   private long containerStartedTime = 0;
   // This container object is used for rest API query
   private org.apache.hadoop.yarn.service.api.records.Container containerSpec;
+  private String serviceVersion;
 
 
   private static final StateMachineFactory<ComponentInstance,
@@ -196,6 +197,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       compInstance.getCompSpec().addContainer(container);
       compInstance.containerStartedTime = containerStartTime;
       compInstance.component.incRunningContainers();
+      compInstance.serviceVersion = compInstance.scheduler.getApp()
+          .getVersion();
 
       if (compInstance.timelineServiceEnabled) {
         compInstance.serviceTimelinePublisher
@@ -212,6 +215,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       if (compInstance.getState().equals(ComponentInstanceState.UPGRADING)) {
         compInstance.component.incContainersReady(false);
         compInstance.component.decContainersThatNeedUpgrade();
+        compInstance.serviceVersion = compInstance.component.getUpgradeEvent()
+            .getUpgradeVersion();
         ComponentEvent checkState = new ComponentEvent(
             compInstance.component.getName(), ComponentEventType.CHECK_STABLE);
         compInstance.scheduler.getDispatcher().getEventHandler().handle(
@@ -392,6 +397,30 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
 
     try {
       return this.stateMachine.getCurrentState();
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  /**
+   * Returns the version of service at which the instance is at.
+   */
+  public String getServiceVersion() {
+    this.readLock.lock();
+    try {
+      return this.serviceVersion;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  /**
+   * Returns the state of the container in the container spec.
+   */
+  public ContainerState getContainerState() {
+    this.readLock.lock();
+    try {
+      return this.containerSpec.getState();
     } finally {
       this.readLock.unlock();
     }
@@ -682,8 +711,16 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     return result;
   }
 
-  @VisibleForTesting public org.apache.hadoop.yarn.service.api.records
+  /**
+   * Returns container spec.
+   */
+  public org.apache.hadoop.yarn.service.api.records
       .Container getContainerSpec() {
-    return containerSpec;
+    readLock.lock();
+    try {
+      return containerSpec;
+    } finally {
+      readLock.unlock();
+    }
   }
 }

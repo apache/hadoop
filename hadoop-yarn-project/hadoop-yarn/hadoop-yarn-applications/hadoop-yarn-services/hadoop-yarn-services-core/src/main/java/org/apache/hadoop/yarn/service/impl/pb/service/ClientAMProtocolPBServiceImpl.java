@@ -25,6 +25,8 @@ import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeRequest
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsResponseProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetCompInstancesRequestProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetCompInstancesResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetStatusRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetStatusResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.RestartServiceRequestProto;
@@ -99,6 +101,17 @@ public class ClientAMProtocolPBServiceImpl implements ClientAMProtocolPB {
       CompInstancesUpgradeRequestProto request) throws ServiceException {
     try {
       return real.upgrade(request);
+    } catch (IOException | YarnException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GetCompInstancesResponseProto getCompInstances(
+      RpcController controller, GetCompInstancesRequestProto request)
+      throws ServiceException {
+    try {
+      return real.getCompInstances(request);
     } catch (IOException | YarnException e) {
       throw new ServiceException(e);
     }

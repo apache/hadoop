@@ -44,14 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -61,13 +54,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.yarn.service.api.records.ServiceState.ACCEPTED;
@@ -582,6 +569,40 @@ public class ApiServer {
     return Response.status(Status.NO_CONTENT).build();
   }
 
+  @GET
+  @Path(COMP_INSTANCES_PATH)
+  @Produces({RestApiConstants.MEDIA_TYPE_JSON_UTF8})
+  public Response getComponentInstances(@Context HttpServletRequest request,
+      @PathParam(SERVICE_NAME) String serviceName,
+      @QueryParam(PARAM_COMP_NAME) List<String> componentNames,
+      @QueryParam(PARAM_VERSION) String version,
+      @QueryParam(PARAM_CONTAINER_STATE) List<String> containerStates) {
+    try {
+      UserGroupInformation ugi = getProxyUser(request);
+      LOG.info("GET: component instances for service = {}, compNames in {}, " +
+          "version = {}, containerStates in {}, user = {}", serviceName,
+          Objects.toString(componentNames, "[]"), Objects.toString(version, ""),
+          Objects.toString(containerStates, "[]"), ugi);
+
+        List<ContainerState> containerStatesDe = containerStates.stream().map(
+            ContainerState::valueOf).collect(Collectors.toList());
+
+        return Response.ok(getContainers(ugi, serviceName, componentNames,
+            version, containerStatesDe)).build();
+    } catch (IllegalArgumentException iae) {
+      return formatResponse(Status.BAD_REQUEST, "valid container states are: " +
+          Arrays.toString(ContainerState.values()));
+    } catch (AccessControlException e) {
+      return formatResponse(Response.Status.FORBIDDEN, e.getMessage());
+    } catch (IOException | InterruptedException e) {
+      return formatResponse(Response.Status.INTERNAL_SERVER_ERROR,
+          e.getMessage());
+    } catch (UndeclaredThrowableException e) {
+      return formatResponse(Response.Status.INTERNAL_SERVER_ERROR,
+          e.getCause().getMessage());
+    }
+  }
+
   private Response flexService(Service service, UserGroupInformation ugi)
       throws IOException, InterruptedException {
     String appName = service.getName();
@@ -749,6 +770,22 @@ public class ApiServer {
       Service app1 = sc.getStatus(serviceName);
       sc.close();
       return app1;
+    });
+  }
+
+  private Container[] getContainers(UserGroupInformation ugi,
+      String serviceName, List<String> componentNames, String version,
+      List<ContainerState> containerStates) throws IOException,
+      InterruptedException {
+    return ugi.doAs((PrivilegedExceptionAction<Container[]>) () -> {
+      Container[] result;
+      ServiceClient sc = getServiceClient();
+      sc.init(YARN_CONFIG);
+      sc.start();
+      result = sc.getContainers(serviceName, componentNames, version,
+          containerStates);
+      sc.close();
+      return result;
     });
   }
 

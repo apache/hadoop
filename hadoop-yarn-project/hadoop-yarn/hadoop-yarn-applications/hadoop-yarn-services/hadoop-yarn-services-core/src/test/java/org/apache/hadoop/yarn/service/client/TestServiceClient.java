@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.service.client;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -32,8 +33,12 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.ClientAMProtocol;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeResponseProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetCompInstancesRequestProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetCompInstancesResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.UpgradeServiceRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.UpgradeServiceResponseProto;
+import org.apache.hadoop.yarn.service.MockRunningServiceContext;
+import org.apache.hadoop.yarn.service.ServiceContext;
 import org.apache.hadoop.yarn.service.ServiceTestUtils;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Container;
@@ -41,6 +46,7 @@ import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.apache.hadoop.yarn.service.exceptions.ErrorStrings;
+import org.apache.hadoop.yarn.service.utils.FilterUtils;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -52,6 +58,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -122,6 +129,26 @@ public class TestServiceClient {
     client.stop();
   }
 
+  @Test
+  public void testGetCompInstances() throws Exception {
+    Service service = createService();
+    MockServiceClient client = MockServiceClient.create(rule, service, true);
+
+    //upgrade the service
+    service.setVersion("v2");
+    client.initiateUpgrade(service);
+
+    //add containers to the component that needs to be upgraded.
+    Component comp = service.getComponents().iterator().next();
+    ContainerId containerId = ContainerId.newContainerId(client.attemptId, 1L);
+    comp.addContainer(new Container().id(containerId.toString()));
+
+    Container[] containers = client.getContainers(service.getName(),
+        Lists.newArrayList("compa"), "v1", null);
+    Assert.assertEquals("num containers", 2, containers.length);
+    client.stop();
+  }
+
   private Service createService() throws IOException,
       YarnException {
     Service service = ServiceTestUtils.createExampleApplication();
@@ -137,6 +164,7 @@ public class TestServiceClient {
     private final ClientAMProtocol amProxy;
     private Object proxyResponse;
     private Service service;
+    private ServiceContext context;
 
     private MockServiceClient()  {
       amProxy = mock(ClientAMProtocol.class);
@@ -147,8 +175,12 @@ public class TestServiceClient {
 
     static MockServiceClient create(ServiceTestUtils.ServiceFSWatcher rule,
         Service service, boolean enableUpgrade)
-        throws IOException, YarnException {
+        throws Exception {
       MockServiceClient client = new MockServiceClient();
+      ApplicationId applicationId = ApplicationId.newInstance(
+          System.currentTimeMillis(), 1);
+      service.setId(applicationId.toString());
+      client.context = new MockRunningServiceContext(rule, service);
 
       YarnClient yarnClient = createMockYarnClient();
       ApplicationReport appReport = mock(ApplicationReport.class);
@@ -175,10 +207,28 @@ public class TestServiceClient {
           CompInstancesUpgradeRequestProto.class))).thenAnswer(
           (Answer<CompInstancesUpgradeResponseProto>) invocation -> {
               CompInstancesUpgradeResponseProto response =
-                CompInstancesUpgradeResponseProto.newBuilder().build();
+                  CompInstancesUpgradeResponseProto.newBuilder().build();
               client.proxyResponse = response;
               return response;
             });
+
+      when(client.amProxy.getCompInstances(Matchers.any(
+          GetCompInstancesRequestProto.class))).thenAnswer(
+          (Answer<GetCompInstancesResponseProto>) invocation -> {
+
+            GetCompInstancesRequestProto req = (GetCompInstancesRequestProto)
+                invocation.getArguments()[0];
+            List<Container> containers = FilterUtils.filterInstances(
+                client.context, req);
+            GetCompInstancesResponseProto response =
+                GetCompInstancesResponseProto.newBuilder().setCompInstances(
+                    ServiceApiUtil.CONTAINER_JSON_SERDE.toJson(
+                        containers.toArray(new Container[containers.size()])))
+                    .build();
+            client.proxyResponse = response;
+            return response;
+          });
+
       client.setFileSystem(rule.getFs());
       client.setYarnClient(yarnClient);
       client.service = service;

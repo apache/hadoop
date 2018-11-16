@@ -35,6 +35,8 @@ import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeRespons
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.ComponentCountProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsResponseProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetCompInstancesRequestProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetCompInstancesResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetStatusRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetStatusResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.RestartServiceRequestProto;
@@ -43,15 +45,18 @@ import org.apache.hadoop.yarn.proto.ClientAMProtocol.StopRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.StopResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.UpgradeServiceRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.UpgradeServiceResponseProto;
+import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.component.ComponentEvent;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEvent;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType;
+import org.apache.hadoop.yarn.service.utils.FilterUtils;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.List;
 
 import static org.apache.hadoop.yarn.service.component.ComponentEventType.FLEX;
 
@@ -193,5 +198,14 @@ public class ClientAMService extends AbstractService
       }
     }
     return CompInstancesUpgradeResponseProto.newBuilder().build();
+  }
+
+  @Override
+  public GetCompInstancesResponseProto getCompInstances(
+      GetCompInstancesRequestProto request) throws IOException {
+    List<Container> containers = FilterUtils.filterInstances(context, request);
+    return GetCompInstancesResponseProto.newBuilder().setCompInstances(
+        ServiceApiUtil.CONTAINER_JSON_SERDE.toJson(containers.toArray(
+            new Container[containers.size()]))).build();
   }
 }

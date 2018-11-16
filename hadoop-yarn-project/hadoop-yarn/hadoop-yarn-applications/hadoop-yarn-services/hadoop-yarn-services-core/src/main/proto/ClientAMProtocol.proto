@@ -32,6 +32,8 @@ service ClientAMProtocolService {
     returns (RestartServiceResponseProto);
   rpc upgrade(CompInstancesUpgradeRequestProto) returns
     (CompInstancesUpgradeResponseProto);
+  rpc getCompInstances(GetCompInstancesRequestProto) returns
+    (GetCompInstancesResponseProto);
 }
 
 message FlexComponentsRequestProto {
@@ -81,4 +83,14 @@ message CompInstancesUpgradeRequestProto {
 }
 
 message CompInstancesUpgradeResponseProto {
+}
+
+message GetCompInstancesRequestProto {
+  repeated string componentNames = 1;
+  optional string version = 2;
+  repeated string containerStates = 3;
+}
+
+message GetCompInstancesResponseProto {
+  optional string compInstances = 1;
 }

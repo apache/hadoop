@@ -29,6 +29,7 @@ import java.util.Map;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.UriBuilder;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.codec.binary.Base64;
@@ -55,10 +56,8 @@ import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.api.records.ServiceStatus;
 import org.apache.hadoop.yarn.service.conf.RestApiConstants;
-import org.apache.hadoop.yarn.service.utils.JsonSerDeser;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.util.RMHAUtils;
-import org.codehaus.jackson.map.PropertyNamingStrategy;
 import org.eclipse.jetty.util.UrlEncoded;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSException;
@@ -216,11 +215,7 @@ public class ApiServiceClient extends AppAdminClient {
       api.append("/");
       api.append(appName);
     }
-    Configuration conf = getConfig();
-    if (conf.get("hadoop.http.authentication.type").equalsIgnoreCase("simple")) {
-      api.append("?user.name=" + UrlEncoded
-          .encodeString(System.getProperty("user.name")));
-    }
+    appendUserNameIfRequired(api);
     return api.toString();
   }
 
@@ -231,13 +226,25 @@ public class ApiServiceClient extends AppAdminClient {
     api.append(url);
     api.append("/app/v1/services/").append(appName).append("/")
         .append(RestApiConstants.COMP_INSTANCES);
-    Configuration conf = getConfig();
-    if (conf.get("hadoop.http.authentication.type").equalsIgnoreCase(
-        "simple")) {
-      api.append("?user.name=" + UrlEncoded
-          .encodeString(System.getProperty("user.name")));
-    }
+    appendUserNameIfRequired(api);
     return api.toString();
+  }
+
+  private String getInstancePath(String appName, List<String> components,
+      String version, List<String> containerStates) throws IOException {
+    UriBuilder builder = UriBuilder.fromUri(getInstancesPath(appName));
+    if (components != null && !components.isEmpty()) {
+      components.forEach(compName ->
+        builder.queryParam(RestApiConstants.PARAM_COMP_NAME, compName));
+    }
+    if (!Strings.isNullOrEmpty(version)){
+      builder.queryParam(RestApiConstants.PARAM_VERSION, version);
+    }
+    if (containerStates != null && !containerStates.isEmpty()){
+      containerStates.forEach(state ->
+          builder.queryParam(RestApiConstants.PARAM_CONTAINER_STATE, state));
+    }
+    return builder.build().toString();
   }
 
   private String getComponentsPath(String appName) throws IOException {
@@ -247,13 +254,17 @@ public class ApiServiceClient extends AppAdminClient {
     api.append(url);
     api.append("/app/v1/services/").append(appName).append("/")
         .append(RestApiConstants.COMPONENTS);
+    appendUserNameIfRequired(api);
+    return api.toString();
+  }
+
+  private void appendUserNameIfRequired(StringBuilder builder) {
     Configuration conf = getConfig();
     if (conf.get("hadoop.http.authentication.type").equalsIgnoreCase(
         "simple")) {
-      api.append("?user.name=" + UrlEncoded
+      builder.append("?user.name=").append(UrlEncoded
           .encodeString(System.getProperty("user.name")));
     }
-    return api.toString();
   }
 
   private Builder getApiClient() throws IOException {
@@ -627,7 +638,7 @@ public class ApiServiceClient extends AppAdminClient {
         container.setState(ContainerState.UPGRADING);
         toUpgrade[idx++] = container;
       }
-      String buffer = CONTAINER_JSON_SERDE.toJson(toUpgrade);
+      String buffer = ServiceApiUtil.CONTAINER_JSON_SERDE.toJson(toUpgrade);
       ClientResponse response = getApiClient(getInstancesPath(appName))
           .put(ClientResponse.class, buffer);
       result = processResponse(response);
@@ -651,7 +662,7 @@ public class ApiServiceClient extends AppAdminClient {
         component.setState(ComponentState.UPGRADING);
         toUpgrade[idx++] = component;
       }
-      String buffer = COMP_JSON_SERDE.toJson(toUpgrade);
+      String buffer = ServiceApiUtil.COMP_JSON_SERDE.toJson(toUpgrade);
       ClientResponse response = getApiClient(getComponentsPath(appName))
           .put(ClientResponse.class, buffer);
       result = processResponse(response);
@@ -673,11 +684,25 @@ public class ApiServiceClient extends AppAdminClient {
     return result;
   }
 
-  private static final JsonSerDeser<Container[]> CONTAINER_JSON_SERDE =
-      new JsonSerDeser<>(Container[].class,
-          PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
-
-  private static final JsonSerDeser<Component[]> COMP_JSON_SERDE =
-      new JsonSerDeser<>(Component[].class,
-          PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+  @Override
+  public String getInstances(String appName, List<String> components,
+      String version, List<String> containerStates) throws IOException,
+      YarnException {
+    try {
+      String uri = getInstancePath(appName, components, version,
+          containerStates);
+      ClientResponse response = getApiClient(uri).get(ClientResponse.class);
+      if (response.getStatus() != 200) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Failed: HTTP error code: ");
+        sb.append(response.getStatus());
+        sb.append(" ErrorMsg: ").append(response.getEntity(String.class));
+        return sb.toString();
+      }
+      return response.getEntity(String.class);
+    } catch (Exception e) {
+      LOG.error("Fail to get containers {}", e);
+    }
+    return null;
+  }
 }
