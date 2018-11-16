@@ -114,7 +114,7 @@ public class GrpcReplicationClient {
       this.containerId = containerId;
       this.outputPath = outputPath;
       try {
-        outputPath = Preconditions.checkNotNull(outputPath);
+        Preconditions.checkNotNull(outputPath, "Output path cannot be null");
         Path parentPath = Preconditions.checkNotNull(outputPath.getParent());
         Files.createDirectories(parentPath);
         stream =

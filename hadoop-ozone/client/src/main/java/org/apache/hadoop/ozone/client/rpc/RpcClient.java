@@ -610,6 +610,7 @@ public class RpcClient implements ClientProtocol {
   }
 
   @Override
+  @SuppressWarnings("StringSplitter")
   public String getOzoneVolumeName(String s3BucketName) throws IOException {
     String mapping = getOzoneBucketMapping(s3BucketName);
     return mapping.split("/")[0];
@@ -617,6 +618,7 @@ public class RpcClient implements ClientProtocol {
   }
 
   @Override
+  @SuppressWarnings("StringSplitter")
   public String getOzoneBucketName(String s3BucketName) throws IOException {
     String mapping = getOzoneBucketMapping(s3BucketName);
     return mapping.split("/")[1];

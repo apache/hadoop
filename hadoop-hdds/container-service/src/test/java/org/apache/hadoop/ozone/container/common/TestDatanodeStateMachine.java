@@ -50,7 +50,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Paths;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -86,9 +86,9 @@ public class TestDatanodeStateMachine {
     conf.setTimeDuration(OZONE_SCM_HEARTBEAT_RPC_TIMEOUT, 500,
         TimeUnit.MILLISECONDS);
     conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, true);
-    serverAddresses = new LinkedList<>();
-    scmServers = new LinkedList<>();
-    mockServers = new LinkedList<>();
+    serverAddresses = new ArrayList<>();
+    scmServers = new ArrayList<>();
+    mockServers = new ArrayList<>();
     for (int x = 0; x < scmServerCount; x++) {
       int port = SCMTestUtils.getReuseableAddress().getPort();
       String address = "127.0.0.1";
@@ -361,8 +361,8 @@ public class TestDatanodeStateMachine {
   @Test
   public void testDatanodeStateMachineWithInvalidConfiguration()
       throws Exception {
-    LinkedList<Map.Entry<String, String>> confList =
-        new LinkedList<Map.Entry<String, String>>();
+    List<Map.Entry<String, String>> confList =
+        new ArrayList<>();
     confList.add(Maps.immutableEntry(ScmConfigKeys.OZONE_SCM_NAMES, ""));
 
     // Invalid ozone.scm.names

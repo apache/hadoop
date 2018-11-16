@@ -252,6 +252,7 @@ public class OzoneFileSystem extends FileSystem {
       LOG.trace("rename from:{} to:{}", srcKey, dstKey);
     }
 
+    @Override
     boolean processKey(String key) throws IOException {
       String newKeyName = dstKey.concat(key.substring(srcKey.length()));
       bucket.renameKey(key, newKeyName);
@@ -370,6 +371,7 @@ public class OzoneFileSystem extends FileSystem {
       }
     }
 
+    @Override
     boolean processKey(String key) throws IOException {
       if (key.equals("")) {
         LOG.trace("Skipping deleting root directory");
@@ -496,6 +498,7 @@ public class OzoneFileSystem extends FileSystem {
      * @return always returns true
      * @throws IOException
      */
+    @Override
     boolean processKey(String key) throws IOException {
       Path keyPath = new Path(OZONE_URI_DELIMITER + key);
       if (key.equals(getPathKey())) {

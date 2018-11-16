@@ -40,11 +40,12 @@ import static org.junit.Assert.assertThat;
 
 /**
  * This test class verifies the parsing of SCM endpoint config settings. The
- * parsing logic is in {@link org.apache.hadoop.hdds.scm.client.HddsClientUtils}.
+ * parsing logic is in
+ * {@link org.apache.hadoop.hdds.scm.client.HddsClientUtils}.
  */
 public class TestHddsClientUtils {
   @Rule
-  public Timeout timeout = new Timeout(300_000);
+  public Timeout timeout = new Timeout(300000);
 
   @Rule
   public ExpectedException thrown= ExpectedException.none();
@@ -114,13 +115,14 @@ public class TestHddsClientUtils {
     final String scmHost = "host123";
     final Configuration conf = new OzoneConfiguration();
     conf.set(OZONE_SCM_CLIENT_ADDRESS_KEY, scmHost);
-    final InetSocketAddress address =HddsUtils.getScmAddressForBlockClients(
+    final InetSocketAddress address = HddsUtils.getScmAddressForBlockClients(
         conf);
-    assertEquals(address.getHostName(), scmHost);
-    assertEquals(address.getPort(), OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT);
+    assertEquals(scmHost, address.getHostName());
+    assertEquals(OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT, address.getPort());
   }
 
   @Test
+  @SuppressWarnings("StringSplitter")
   public void testBlockClientFallbackToClientWithPort() {
     // When OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY is undefined it should
     // fallback to OZONE_SCM_CLIENT_ADDRESS_KEY.
@@ -132,8 +134,8 @@ public class TestHddsClientUtils {
     conf.set(OZONE_SCM_CLIENT_ADDRESS_KEY, scmHost);
     final InetSocketAddress address =HddsUtils.getScmAddressForBlockClients(
         conf);
-    assertEquals(address.getHostName(), scmHost.split(":")[0]);
-    assertEquals(address.getPort(), OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT);
+    assertEquals(scmHost.split(":")[0], address.getHostName());
+    assertEquals(OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT, address.getPort());
   }
 
   @Test
@@ -143,13 +145,14 @@ public class TestHddsClientUtils {
     final String scmHost = "host456";
     final Configuration conf = new OzoneConfiguration();
     conf.set(OZONE_SCM_NAMES, scmHost);
-    final InetSocketAddress address =HddsUtils.getScmAddressForBlockClients(
+    final InetSocketAddress address = HddsUtils.getScmAddressForBlockClients(
         conf);
-    assertEquals(address.getHostName(), scmHost);
-    assertEquals(address.getPort(), OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT);
+    assertEquals(scmHost, address.getHostName());
+    assertEquals(OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT, address.getPort());
   }
 
   @Test
+  @SuppressWarnings("StringSplitter")
   public void testBlockClientFallbackToScmNamesWithPort() {
     // When OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY and OZONE_SCM_CLIENT_ADDRESS_KEY
     // are undefined it should fallback to OZONE_SCM_NAMES.
@@ -159,10 +162,10 @@ public class TestHddsClientUtils {
     final String scmHost = "host456:200";
     final Configuration conf = new OzoneConfiguration();
     conf.set(OZONE_SCM_NAMES, scmHost);
-    final InetSocketAddress address =HddsUtils.getScmAddressForBlockClients(
+    final InetSocketAddress address = HddsUtils.getScmAddressForBlockClients(
         conf);
-    assertEquals(address.getHostName(), scmHost.split(":")[0]);
-    assertEquals(address.getPort(), OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT);
+    assertEquals(scmHost.split(":")[0], address.getHostName());
+    assertEquals(OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT, address.getPort());
   }
 
   @Test
@@ -172,12 +175,13 @@ public class TestHddsClientUtils {
     final String scmHost = "host456";
     final Configuration conf = new OzoneConfiguration();
     conf.set(OZONE_SCM_NAMES, scmHost);
-    final InetSocketAddress address =HddsUtils.getScmAddressForClients(conf);
-    assertEquals(address.getHostName(), scmHost);
-    assertEquals(address.getPort(), OZONE_SCM_CLIENT_PORT_DEFAULT);
+    final InetSocketAddress address = HddsUtils.getScmAddressForClients(conf);
+    assertEquals(scmHost, address.getHostName());
+    assertEquals(OZONE_SCM_CLIENT_PORT_DEFAULT, address.getPort());
   }
 
   @Test
+  @SuppressWarnings("StringSplitter")
   public void testClientFallbackToScmNamesWithPort() {
     // When OZONE_SCM_CLIENT_ADDRESS_KEY is undefined, it should fallback
     // to OZONE_SCM_NAMES.
@@ -187,9 +191,9 @@ public class TestHddsClientUtils {
     final String scmHost = "host456:300";
     final Configuration conf = new OzoneConfiguration();
     conf.set(OZONE_SCM_NAMES, scmHost);
-    final InetSocketAddress address =HddsUtils.getScmAddressForClients(conf);
-    assertEquals(address.getHostName(), scmHost.split(":")[0]);
-    assertEquals(address.getPort(), OZONE_SCM_CLIENT_PORT_DEFAULT);
+    final InetSocketAddress address = HddsUtils.getScmAddressForClients(conf);
+    assertEquals(scmHost.split(":")[0], address.getHostName());
+    assertEquals(OZONE_SCM_CLIENT_PORT_DEFAULT, address.getPort());
   }
 
   @Test

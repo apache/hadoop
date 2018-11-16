@@ -22,8 +22,8 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.util.Time;
 
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -39,7 +39,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class CommandQueue {
   // This list is used as default return value.
-  private static final List<SCMCommand> DEFAULT_LIST = new LinkedList<>();
+  private static final List<SCMCommand> DEFAULT_LIST = new ArrayList<>();
   private final Map<UUID, Commands> commandMap;
   private final Lock lock;
   private long commandsInQueue;
@@ -136,7 +136,7 @@ public class CommandQueue {
      * Constructs a Commands class.
      */
     Commands() {
-      commands = new LinkedList<>();
+      commands = new ArrayList<>();
       updateTime = 0;
       readTime = 0;
     }
@@ -182,7 +182,7 @@ public class CommandQueue {
      */
     public List<SCMCommand> getCommands() {
       List<SCMCommand> temp = this.commands;
-      this.commands = new LinkedList<>();
+      this.commands = new ArrayList<>();
       readTime = Time.monotonicNow();
       return temp;
     }

@@ -209,6 +209,7 @@ public class ObjectStoreStub extends ObjectStore {
   }
 
   @Override
+  @SuppressWarnings("StringSplitter")
   public String getOzoneVolumeName(String s3BucketName) throws IOException {
     if (bucketVolumeMap.get(s3BucketName) == null) {
       throw new IOException("S3_BUCKET_NOT_FOUND");
@@ -217,6 +218,7 @@ public class ObjectStoreStub extends ObjectStore {
   }
 
   @Override
+  @SuppressWarnings("StringSplitter")
   public String getOzoneBucketName(String s3BucketName) throws IOException {
     if (bucketVolumeMap.get(s3BucketName) == null) {
       throw new IOException("S3_BUCKET_NOT_FOUND");

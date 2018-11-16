@@ -131,7 +131,7 @@ public class TestDBStoreBuilder {
             RandomStringUtils.random(9).getBytes(StandardCharsets.UTF_8);
         firstTable.put(key, value);
         byte[] temp = firstTable.get(key);
-        Arrays.equals(value, temp);
+        Assert.assertTrue(Arrays.equals(value, temp));
       }
 
       try (Table secondTable = dbStore.getTable("Second")) {
@@ -161,7 +161,7 @@ public class TestDBStoreBuilder {
             RandomStringUtils.random(9).getBytes(StandardCharsets.UTF_8);
         firstTable.put(key, value);
         byte[] temp = firstTable.get(key);
-        Arrays.equals(value, temp);
+        Assert.assertTrue(Arrays.equals(value, temp));
       }
 
       try (Table secondTable = dbStore.getTable("Second")) {

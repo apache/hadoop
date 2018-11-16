@@ -59,6 +59,7 @@ public class Node2ContainerMap extends Node2ObjectsMap<ContainerID> {
    * @param datanodeID   -- Datanode UUID
    * @param containerIDs - List of ContainerIDs.
    */
+  @Override
   public void insertNewDatanode(UUID datanodeID, Set<ContainerID> containerIDs)
       throws SCMException {
     super.insertNewDatanode(datanodeID, containerIDs);
@@ -84,6 +85,7 @@ public class Node2ContainerMap extends Node2ObjectsMap<ContainerID> {
   }
 
   @VisibleForTesting
+  @Override
   public int size() {
     return dn2ObjectMap.size();
   }

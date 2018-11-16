@@ -19,9 +19,12 @@ package org.apache.hadoop.hdds.scm.block;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Pending Deletes in the block space.
+ */
 public class PendingDeleteStatusList {
 
   private List<PendingDeleteStatus> pendingDeleteStatuses;
@@ -29,7 +32,7 @@ public class PendingDeleteStatusList {
 
   public PendingDeleteStatusList(DatanodeDetails datanodeDetails) {
     this.datanodeDetails = datanodeDetails;
-    pendingDeleteStatuses = new LinkedList<>();
+    pendingDeleteStatuses = new ArrayList<>();
   }
 
   public void addPendingDeleteStatus(long dnDeleteTransactionId,
@@ -39,6 +42,9 @@ public class PendingDeleteStatusList {
             containerId));
   }
 
+  /**
+   * Status of pending deletes.
+   */
   public static class PendingDeleteStatus {
     private long dnDeleteTransactionId;
     private long scmDeleteTransactionId;

@@ -35,9 +35,9 @@ import org.rocksdb.StatsLevel;
 import org.rocksdb.WriteBatch;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
@@ -112,8 +112,8 @@ public class TestRDBTableStore {
 
   @Test
   public void delete() throws Exception {
-    List<byte[]> deletedKeys = new LinkedList<>();
-    List<byte[]> validKeys = new LinkedList<>();
+    List<byte[]> deletedKeys = new ArrayList<>();
+    List<byte[]> validKeys = new ArrayList<>();
     byte[] value =
         RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
     for (int x = 0; x < 100; x++) {

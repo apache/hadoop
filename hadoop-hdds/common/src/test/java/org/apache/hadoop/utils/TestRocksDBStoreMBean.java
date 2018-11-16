@@ -29,12 +29,14 @@ import javax.management.MBeanServer;
 import java.io.File;
 import java.lang.management.ManagementFactory;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 /**
  * Test the JMX interface for the rocksdb metastore implementation.
  */
 public class TestRocksDBStoreMBean {
   
-  Configuration conf;
+  private Configuration conf;
   
   @Before
   public void init() throws Exception {
@@ -57,7 +59,7 @@ public class TestRocksDBStoreMBean {
             .setCreateIfMissing(true).setDbFile(testDir).build();
 
     for (int i = 0; i < 10; i++) {
-      metadataStore.put("key".getBytes(), "value".getBytes());
+      metadataStore.put("key".getBytes(UTF_8), "value".getBytes(UTF_8));
     }
 
     MBeanServer platformMBeanServer =

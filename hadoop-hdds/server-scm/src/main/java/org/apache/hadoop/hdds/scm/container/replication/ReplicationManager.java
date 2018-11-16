@@ -98,6 +98,7 @@ public class ReplicationManager implements Runnable {
     threadFactory.newThread(this).start();
   }
 
+  @Override
   public void run() {
 
     while (running) {
@@ -168,6 +169,7 @@ public class ReplicationManager implements Runnable {
 
         } else if (deficit < 0) {
           //TODO: too many replicas. Not handled yet.
+          LOG.debug("Too many replicas is not handled yet.");
         }
 
       } catch (Exception e) {

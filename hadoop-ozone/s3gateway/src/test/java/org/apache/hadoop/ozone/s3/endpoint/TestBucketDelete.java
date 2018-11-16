@@ -63,7 +63,7 @@ public class TestBucketDelete {
   @Test
   public void testBucketEndpoint() throws Exception {
     Response response = bucketEndpoint.delete(bucketName);
-    assertEquals(response.getStatus(), HttpStatus.SC_NO_CONTENT);
+    assertEquals(HttpStatus.SC_NO_CONTENT, response.getStatus());
 
   }
 

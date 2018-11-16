@@ -141,8 +141,8 @@ public class BlockManagerImpl implements BlockManager {
     long bcsId = blockID.getBlockCommitSequenceId();
     Preconditions.checkNotNull(blockID,
         "BlockID cannot be null in GetBlock request");
-    Preconditions.checkNotNull(blockID.getContainerID(),
-        "Container name cannot be null");
+    Preconditions.checkNotNull(container,
+        "Container cannot be null");
 
     KeyValueContainerData containerData = (KeyValueContainerData) container
         .getContainerData();

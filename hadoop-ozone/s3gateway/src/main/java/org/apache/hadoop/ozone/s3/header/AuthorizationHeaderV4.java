@@ -60,6 +60,7 @@ public class AuthorizationHeaderV4 {
    * Signature=db81b057718d7c1b3b8dffa29933099551c51d787b3b13b9e0f9ebed45982bf2
    * @throws OS3Exception
    */
+  @SuppressWarnings("StringSplitter")
   public void parseAuthHeader() throws OS3Exception {
     String[] split = authHeader.split(" ");
 

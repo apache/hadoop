@@ -44,6 +44,7 @@ public class ChillModePrecheck implements Precheck<ScmOps> {
     }
   }
 
+  @Override
   public boolean check(ScmOps op) throws SCMException {
     if (inChillMode.get() && ChillModeRestrictedOps
         .isRestrictedInChillMode(op)) {

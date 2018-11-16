@@ -42,9 +42,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -252,7 +252,7 @@ public class TestKeyValueBlockIterator {
         .randomUUID().toString());
     MetadataStore metadataStore = BlockUtils.getDB(containerData, conf);
 
-    List<ContainerProtos.ChunkInfo> chunkList = new LinkedList<>();
+    List<ContainerProtos.ChunkInfo> chunkList = new ArrayList<>();
     ChunkInfo info = new ChunkInfo("chunkfile", 0, 1024);
     chunkList.add(info.getProtoBufMessage());
 

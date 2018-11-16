@@ -23,6 +23,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.TestOzoneHelper;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.BeforeClass;
 import org.junit.AfterClass;
@@ -158,6 +159,7 @@ public class TestOzoneVolumes extends TestOzoneHelper {
    *
    * @throws IOException
    */
+  @Ignore("Test is ignored for time being, to be enabled after security.")
   public void testGetVolumesByUser() throws IOException {
     testGetVolumesByUser(port);
   }
@@ -167,6 +169,7 @@ public class TestOzoneVolumes extends TestOzoneHelper {
    *
    * @throws IOException
    */
+  @Ignore("Test is ignored for time being, to be enabled after security.")
   public void testGetVolumesOfAnotherUser() throws IOException {
     super.testGetVolumesOfAnotherUser(port);
   }
@@ -177,6 +180,7 @@ public class TestOzoneVolumes extends TestOzoneHelper {
    *
    * @throws IOException
    */
+  @Ignore("Test is ignored for time being, to be enabled after security.")
   public void testGetVolumesOfAnotherUserShouldFail() throws IOException {
     super.testGetVolumesOfAnotherUserShouldFail(port);
   }

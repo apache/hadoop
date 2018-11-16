@@ -134,6 +134,16 @@ public final class ContainerReplica implements Comparable<ContainerReplica> {
     return new ContainerReplicaBuilder();
   }
 
+  @Override
+  public String toString() {
+    return "ContainerReplica{" +
+        "containerID=" + containerID +
+        ", datanodeDetails=" + datanodeDetails +
+        ", placeOfBirth=" + placeOfBirth +
+        ", sequenceId=" + sequenceId +
+        '}';
+  }
+
   /**
    * Used for building ContainerReplica instance.
    */
@@ -148,12 +158,12 @@ public final class ContainerReplica implements Comparable<ContainerReplica> {
     /**
      * Set Container Id.
      *
-     * @param containerId ContainerID
+     * @param cID ContainerID
      * @return ContainerReplicaBuilder
      */
     public ContainerReplicaBuilder setContainerID(
-        final ContainerID containerId) {
-      containerID = containerId;
+        final ContainerID cID) {
+      this.containerID = cID;
       return this;
     }
 

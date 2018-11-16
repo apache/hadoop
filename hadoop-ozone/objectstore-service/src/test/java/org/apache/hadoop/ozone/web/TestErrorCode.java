@@ -37,9 +37,9 @@ public class TestErrorCode {
     OzoneException e = ErrorTable
         .newError(ErrorTable.ACCESS_DENIED, getRequestID(), "/test/path",
                   "localhost");
-    assertEquals(e.getHostID(), "localhost");
-    assertEquals(e.getShortMessage(),
-                 ErrorTable.ACCESS_DENIED.getShortMessage());
+    assertEquals("localhost", e.getHostID());
+    assertEquals(ErrorTable.ACCESS_DENIED.getShortMessage(),
+        e.getShortMessage());
   }
 
   @Test

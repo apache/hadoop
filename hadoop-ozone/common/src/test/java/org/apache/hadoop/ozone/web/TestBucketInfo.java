@@ -18,16 +18,18 @@
 
 package org.apache.hadoop.ozone.web;
 
-
-import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.hdds.protocol.StorageType;
-import org.apache.hadoop.ozone.web.response.BucketInfo;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Test Ozone Bucket Info operation.
@@ -38,7 +40,7 @@ public class TestBucketInfo {
     BucketInfo bucketInfo = new BucketInfo("volumeName", "bucketName");
     String bucketInfoString = bucketInfo.toJsonString();
     BucketInfo newBucketInfo = BucketInfo.parse(bucketInfoString);
-    assert(bucketInfo.equals(newBucketInfo));
+    assertEquals(bucketInfo, newBucketInfo);
   }
 
   @Test
@@ -46,7 +48,7 @@ public class TestBucketInfo {
     BucketInfo bucketInfo = new BucketInfo("volumeName", "bucketName");
     String bucketInfoString = bucketInfo.toDBString();
     BucketInfo newBucketInfo = BucketInfo.parse(bucketInfoString);
-    assert(bucketInfo.equals(newBucketInfo));
+    assertEquals(bucketInfo, newBucketInfo);
   }
 
   @Test
@@ -54,17 +56,16 @@ public class TestBucketInfo {
     BucketInfo bucketInfo = new BucketInfo("volumeName", "bucketName");
     String bucketInfoString = bucketInfo.toDBString();
     BucketInfo newBucketInfo = BucketInfo.parse(bucketInfoString);
-    assert(bucketInfo.equals(newBucketInfo));
-    List<OzoneAcl> aclList = new LinkedList<>();
+    assertEquals(bucketInfo, newBucketInfo);
+    List<OzoneAcl> aclList = new ArrayList<>();
 
     aclList.add(OzoneAcl.parseAcl("user:bilbo:r"));
     aclList.add(OzoneAcl.parseAcl("user:samwise:rw"));
     newBucketInfo.setAcls(aclList);
 
-    assert(newBucketInfo.getAcls() != null);
-    assert(newBucketInfo.getAcls().size() == 2);
+    assertNotNull(newBucketInfo.getAcls());
+    assertEquals(2, newBucketInfo.getAcls().size());
   }
-
 
   @Test
   public void testBucketInfoVersionAndType() throws IOException {
@@ -75,7 +76,7 @@ public class TestBucketInfo {
     String bucketInfoString = bucketInfo.toDBString();
 
     BucketInfo newBucketInfo = BucketInfo.parse(bucketInfoString);
-    assert(bucketInfo.equals(newBucketInfo));
+    assertEquals(bucketInfo, newBucketInfo);
   }
 
 }

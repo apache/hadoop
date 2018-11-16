@@ -68,7 +68,6 @@ public class StorageInfo {
       throws IOException {
     Preconditions.checkNotNull(type);
     Preconditions.checkNotNull(cid);
-    Preconditions.checkNotNull(cT);
     properties.setProperty(NODE_TYPE, type.name());
     properties.setProperty(CLUSTER_ID, cid);
     properties.setProperty(CREATION_TIME, String.valueOf(cT));

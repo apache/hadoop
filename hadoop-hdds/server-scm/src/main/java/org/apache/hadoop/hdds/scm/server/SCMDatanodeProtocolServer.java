@@ -89,7 +89,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -225,7 +225,7 @@ public class SCMDatanodeProtocolServer implements
   @Override
   public SCMHeartbeatResponseProto sendHeartbeat(
       SCMHeartbeatRequestProto heartbeat) throws IOException {
-    List<SCMCommandProto> cmdResponses = new LinkedList<>();
+    List<SCMCommandProto> cmdResponses = new ArrayList<>();
     for (SCMCommand cmd : heartbeatDispatcher.dispatch(heartbeat)) {
       cmdResponses.add(getCommandResponse(cmd));
     }

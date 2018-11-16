@@ -66,6 +66,7 @@ public class ServiceListJSONServlet  extends HttpServlet  {
 
   private transient OzoneManager om;
 
+  @Override
   public void init() throws ServletException {
     this.om = (OzoneManager) getServletContext()
         .getAttribute(OzoneConsts.OM_CONTEXT_ATTRIBUTE);

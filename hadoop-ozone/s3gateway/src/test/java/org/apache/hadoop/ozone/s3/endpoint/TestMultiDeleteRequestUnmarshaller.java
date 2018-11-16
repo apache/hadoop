@@ -23,6 +23,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
 import org.junit.Assert;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.*;
 import org.junit.Test;
 
@@ -40,7 +42,7 @@ public class TestMultiDeleteRequestUnmarshaller {
                 + ".com/doc/2006-03-01/\"><Object>key1</Object><Object>key2"
                 + "</Object><Object>key3"
                 + "</Object></Delete>")
-                .getBytes());
+                .getBytes(UTF_8));
 
     //WHEN
     MultiDeleteRequest multiDeleteRequest =
@@ -58,7 +60,7 @@ public class TestMultiDeleteRequestUnmarshaller {
             ("<Delete><Object>key1</Object><Object>key2"
                 + "</Object><Object>key3"
                 + "</Object></Delete>")
-                .getBytes());
+                .getBytes(UTF_8));
 
     //WHEN
     MultiDeleteRequest multiDeleteRequest =

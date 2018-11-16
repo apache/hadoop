@@ -1,19 +1,18 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership.  The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 
 package org.apache.hadoop.ozone.container.common.volume;
@@ -23,7 +22,6 @@ import org.apache.hadoop.fs.GetSpaceUsed;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ozone.container.common.helpers.DatanodeVersionFile;
 import org.apache.hadoop.ozone.container.common.utils.HddsVolumeUtil;
-import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -35,19 +33,22 @@ import java.io.IOException;
 import java.util.Properties;
 import java.util.UUID;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 /**
  * Unit tests for {@link HddsVolume}.
  */
 public class TestHddsVolume {
 
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
-
   private static final String DATANODE_UUID = UUID.randomUUID().toString();
   private static final String CLUSTER_ID = UUID.randomUUID().toString();
   private static final Configuration CONF = new Configuration();
   private static final String DU_CACHE_FILE = "scmUsed";
-
+  @Rule
+  public TemporaryFolder folder = new TemporaryFolder();
   private File rootDir;
   private HddsVolume volume;
   private File versionFile;
@@ -69,9 +70,9 @@ public class TestHddsVolume {
     // clusterID is not specified and the version file should not be written
     // to disk.
     assertTrue(volume.getClusterID() == null);
-    assertEquals(volume.getStorageType(), StorageType.DEFAULT);
-    assertEquals(volume.getStorageState(),
-        HddsVolume.VolumeState.NOT_FORMATTED);
+    assertEquals(StorageType.DEFAULT, volume.getStorageType());
+    assertEquals(HddsVolume.VolumeState.NOT_FORMATTED,
+        volume.getStorageState());
     assertFalse("Version file should not be created when clusterID is not " +
         "known.", versionFile.exists());
 
@@ -84,7 +85,7 @@ public class TestHddsVolume {
     assertTrue("Volume format should create Version file",
         versionFile.exists());
     assertEquals(volume.getClusterID(), CLUSTER_ID);
-    assertEquals(volume.getStorageState(), HddsVolume.VolumeState.NORMAL);
+    assertEquals(HddsVolume.VolumeState.NORMAL, volume.getStorageState());
   }
 
   @Test
@@ -111,7 +112,7 @@ public class TestHddsVolume {
   }
 
   @Test
-  public void testShutdown() throws Exception{
+  public void testShutdown() throws Exception {
     // Return dummy value > 0 for scmUsage so that scm cache file is written
     // during shutdown.
     GetSpaceUsed scmUsageMock = Mockito.mock(GetSpaceUsed.class);
@@ -125,8 +126,7 @@ public class TestHddsVolume {
     volume.shutdown();
 
     // Volume state should be "NON_EXISTENT" when volume is shutdown.
-    assertEquals(volume.getStorageState(),
-        HddsVolume.VolumeState.NON_EXISTENT);
+    assertEquals(HddsVolume.VolumeState.NON_EXISTENT, volume.getStorageState());
 
     // Volume should save scmUsed cache file once volume is shutdown
     File scmUsedFile = new File(folder.getRoot(), DU_CACHE_FILE);
@@ -139,7 +139,7 @@ public class TestHddsVolume {
       // as usage thread is shutdown.
       volume.getAvailable();
       fail("HddsVolume#shutdown test failed");
-    } catch (Exception ex){
+    } catch (Exception ex) {
       assertTrue(ex instanceof IOException);
       assertTrue(ex.getMessage().contains(
           "Volume Usage thread is not running."));

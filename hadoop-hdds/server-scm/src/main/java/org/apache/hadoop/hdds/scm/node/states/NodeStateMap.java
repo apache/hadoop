@@ -172,7 +172,7 @@ public class NodeStateMap {
   public List<UUID> getNodes(NodeState state) {
     lock.readLock().lock();
     try {
-      return new LinkedList<>(stateMap.get(state));
+      return new ArrayList<>(stateMap.get(state));
     } finally {
       lock.readLock().unlock();
     }
@@ -186,7 +186,7 @@ public class NodeStateMap {
   public List<UUID> getAllNodes() {
     lock.readLock().lock();
     try {
-      return new LinkedList<>(nodeMap.keySet());
+      return new ArrayList<>(nodeMap.keySet());
     } finally {
       lock.readLock().unlock();
     }

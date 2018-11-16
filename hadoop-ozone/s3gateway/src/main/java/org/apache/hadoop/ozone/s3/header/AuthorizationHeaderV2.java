@@ -49,6 +49,7 @@ public class AuthorizationHeaderV2 {
    *
    * @throws OS3Exception
    */
+  @SuppressWarnings("StringSplitter")
   public void parseHeader() throws OS3Exception {
     String[] split = authHeader.split(" ");
     if (split.length != 2) {

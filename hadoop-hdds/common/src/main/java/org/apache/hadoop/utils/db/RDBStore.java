@@ -24,11 +24,9 @@ import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.utils.RocksDBStoreMBean;
-import org.apache.ratis.thirdparty.com.google.common.annotations.
-    VisibleForTesting;
+import org.apache.ratis.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyHandle;
-
 import org.rocksdb.DBOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
@@ -192,7 +190,6 @@ public class RDBStore implements DBStore {
     }
   }
 
-
   @Override
   public void move(byte[] key, byte[] value, Table source,
       Table dest) throws IOException {
@@ -226,7 +223,7 @@ public class RDBStore implements DBStore {
     } catch (RocksDBException rockdbException) {
       LOG.error("Move of key failed. Key:{}", DFSUtil.bytes2String(sourceKey));
       throw toIOException("Unable to move key: " +
-              DFSUtil.bytes2String(sourceKey), rockdbException);
+          DFSUtil.bytes2String(sourceKey), rockdbException);
     }
   }
 

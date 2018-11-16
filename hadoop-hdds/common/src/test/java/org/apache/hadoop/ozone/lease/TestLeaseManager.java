@@ -41,7 +41,7 @@ public class TestLeaseManager {
   /**
    * Dummy resource on which leases can be acquired.
    */
-  private final class DummyResource {
+  private static final class DummyResource {
 
     private final String name;
 
@@ -60,6 +60,21 @@ public class TestLeaseManager {
         return name.equals(((DummyResource) obj).name);
       }
       return false;
+    }
+
+    /**
+     * Adding to String method to fix the ErrorProne warning that this method
+     * is later used in String functions, which would print out (e.g.
+     * `org.apache.hadoop.ozone.lease.TestLeaseManager.DummyResource@
+     * 4488aabb`) instead of useful information.
+     *
+     * @return Name of the Dummy object.
+     */
+    @Override
+    public String toString() {
+      return "DummyResource{" +
+          "name='" + name + '\'' +
+          '}';
     }
   }
 

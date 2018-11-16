@@ -37,7 +37,7 @@ public enum DummyAction implements AuditAction {
   SET_OWNER("SET_OWNER"),
   SET_QUOTA("SET_QUOTA");
 
-  private String action;
+  private final String action;
 
   DummyAction(String action) {
     this.action = action;

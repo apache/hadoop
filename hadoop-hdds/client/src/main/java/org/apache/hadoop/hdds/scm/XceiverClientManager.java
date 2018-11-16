@@ -170,6 +170,7 @@ public class XceiverClientManager implements Closeable {
   /**
    * Close and remove all the cached clients.
    */
+  @Override
   public void close() {
     //closing is done through RemovalListener
     clientCache.invalidateAll();

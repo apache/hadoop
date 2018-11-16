@@ -26,7 +26,7 @@ import java.io.IOException;
 import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.NoSuchFileException;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hdds.protocol.StorageType;
@@ -211,7 +211,7 @@ public abstract class BucketProcessTemplate {
         args.getHeaders().getRequestHeader(Header.OZONE_ACLS);
     List<String> filteredSet = null;
     if (aclStrings != null) {
-      filteredSet = new LinkedList<>();
+      filteredSet = new ArrayList<>();
       for (String s : aclStrings) {
         if (s.startsWith(tag)) {
           filteredSet.add(s.replaceFirst(tag, ""));

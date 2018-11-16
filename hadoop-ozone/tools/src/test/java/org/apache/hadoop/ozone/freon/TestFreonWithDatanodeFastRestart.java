@@ -88,8 +88,8 @@ public class TestFreonWithDatanodeFastRestart {
     String expectedSnapFile =
         storage.getSnapshotFile(termIndexBeforeRestart.getTerm(),
             termIndexBeforeRestart.getIndex()).getAbsolutePath();
-    Assert.assertEquals(snapshotInfo.getFile().getPath().toString(),
-        expectedSnapFile);
+    Assert.assertEquals(expectedSnapFile,
+        snapshotInfo.getFile().getPath().toString());
     Assert.assertEquals(termInSnapshot, termIndexBeforeRestart);
 
     // After restart the term index might have progressed to apply pending
