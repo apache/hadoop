@@ -635,7 +635,8 @@ public class Component implements EventHandler<ComponentEvent> {
             version);
     launchContext.setArtifact(compSpec.getArtifact())
         .setConfiguration(compSpec.getConfiguration())
-        .setLaunchCommand(compSpec.getLaunchCommand());
+        .setLaunchCommand(compSpec.getLaunchCommand())
+        .setRunPrivilegedContainer(compSpec.getRunPrivilegedContainer());
     return launchContext;
   }
 

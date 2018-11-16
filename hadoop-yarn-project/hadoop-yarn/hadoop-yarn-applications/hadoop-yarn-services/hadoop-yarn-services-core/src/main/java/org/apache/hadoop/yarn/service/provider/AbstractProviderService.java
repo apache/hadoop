@@ -56,7 +56,8 @@ public abstract class AbstractProviderService implements ProviderService,
 
   public abstract void processArtifact(AbstractLauncher launcher,
       ComponentInstance compInstance, SliderFileSystem fileSystem,
-      Service service)
+      Service service,
+      ContainerLaunchService.ComponentLaunchContext compLaunchCtx)
       throws IOException;
 
   public Map<String, String> buildContainerTokens(ComponentInstance instance,
@@ -140,7 +141,7 @@ public abstract class AbstractProviderService implements ProviderService,
       SliderFileSystem fileSystem, Configuration yarnConf, Container container,
       ContainerLaunchService.ComponentLaunchContext compLaunchContext)
       throws IOException, SliderException {
-    processArtifact(launcher, instance, fileSystem, service);
+    processArtifact(launcher, instance, fileSystem, service, compLaunchContext);
 
     ServiceContext context =
         instance.getComponent().getScheduler().getContext();
