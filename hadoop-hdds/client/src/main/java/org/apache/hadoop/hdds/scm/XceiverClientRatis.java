@@ -97,9 +97,6 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     this.retryPolicy = retryPolicy;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public void createPipeline() throws IOException {
     final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
@@ -108,9 +105,6 @@ public final class XceiverClientRatis extends XceiverClientSpi {
         (raftClient, peer) -> raftClient.groupAdd(group, peer.getId()));
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public void destroyPipeline() throws IOException {
     final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
@@ -219,7 +213,6 @@ public final class XceiverClientRatis extends XceiverClientSpi {
    *
    * @param request Request
    * @return Response to the command
-   * @throws IOException
    */
   @Override
   public XceiverClientAsyncReply sendCommandAsync(
