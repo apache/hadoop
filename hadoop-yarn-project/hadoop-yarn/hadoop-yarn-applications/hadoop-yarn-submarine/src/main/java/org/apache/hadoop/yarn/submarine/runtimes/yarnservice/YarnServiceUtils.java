@@ -16,8 +16,8 @@ package org.apache.hadoop.yarn.submarine.runtimes.yarnservice;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.client.api.AppAdminClient;
 import org.apache.hadoop.yarn.service.api.records.Service;
-import org.apache.hadoop.yarn.service.client.ServiceClient;
 import org.apache.hadoop.yarn.submarine.common.Envs;
 import org.apache.hadoop.yarn.submarine.common.conf.SubmarineLogs;
 import org.slf4j.Logger;
@@ -26,27 +26,28 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.apache.hadoop.yarn.client.api.AppAdminClient.DEFAULT_TYPE;
+
 public class YarnServiceUtils {
   private static final Logger LOG =
       LoggerFactory.getLogger(YarnServiceUtils.class);
 
   // This will be true only in UT.
-  private static ServiceClient stubServiceClient = null;
+  private static AppAdminClient stubServiceClient = null;
 
-  public static ServiceClient createServiceClient(
+  public static AppAdminClient createServiceClient(
       Configuration yarnConfiguration) {
     if (stubServiceClient != null) {
       return stubServiceClient;
     }
 
-    ServiceClient serviceClient = new ServiceClient();
-    serviceClient.init(yarnConfiguration);
-    serviceClient.start();
+    AppAdminClient serviceClient = AppAdminClient.createAppAdminClient(
+        DEFAULT_TYPE, yarnConfiguration);
     return serviceClient;
   }
 
   @VisibleForTesting
-  public static void setStubServiceClient(ServiceClient stubServiceClient) {
+  public static void setStubServiceClient(AppAdminClient stubServiceClient) {
     YarnServiceUtils.stubServiceClient = stubServiceClient;
   }
 
