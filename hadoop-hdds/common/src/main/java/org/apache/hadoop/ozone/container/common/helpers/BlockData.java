@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.ozone.container.common.helpers;
 
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.client.BlockID;
 import com.google.common.base.Preconditions;
@@ -259,5 +261,13 @@ public class BlockData {
    */
   public long getSize() {
     return size;
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this, ToStringStyle.NO_CLASS_NAME_STYLE)
+        .append("blockId", blockID.toString())
+        .append("size", this.size)
+        .toString();
   }
 }
