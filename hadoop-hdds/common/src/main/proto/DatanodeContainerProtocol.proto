@@ -229,8 +229,8 @@ message ContainerDataProto {
   enum State {
     OPEN = 1;
     CLOSING = 2;
-    CLOSED = 3;
-    QUASI_CLOSED = 4;
+    QUASI_CLOSED =3;
+    CLOSED = 4;
     UNHEALTHY = 5;
     INVALID = 6;
   }

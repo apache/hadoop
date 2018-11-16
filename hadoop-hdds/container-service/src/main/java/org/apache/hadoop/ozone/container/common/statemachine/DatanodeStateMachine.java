@@ -99,7 +99,7 @@ public class DatanodeStateMachine implements Closeable {
 
     ContainerReplicator replicator =
         new DownloadAndImportReplicator(container.getContainerSet(),
-            container.getDispatcher(),
+            container.getController(),
             new SimpleContainerDownloader(conf), new TarContainerPacker());
 
     supervisor =

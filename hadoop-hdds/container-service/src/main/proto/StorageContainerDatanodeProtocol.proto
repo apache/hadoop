@@ -140,8 +140,8 @@ message ContainerReplicaProto {
   enum State {
     OPEN = 1;
     CLOSING = 2;
-    CLOSED = 3;
-    QUASI_CLOSED = 4;
+    QUASI_CLOSED = 3;
+    CLOSED = 4;
     UNHEALTHY = 5;
     INVALID = 6;
   }
@@ -289,9 +289,9 @@ This command asks the datanode to close a specific container.
 */
 message CloseContainerCommandProto {
   required int64 containerID = 1;
-  required hadoop.hdds.ReplicationType replicationType = 2;
+  required PipelineID pipelineID = 2;
+  // cmdId will be removed
   required int64 cmdId = 3;
-  required PipelineID pipelineID = 4;
 }
 
 /**

@@ -237,8 +237,23 @@ public abstract class ContainerData {
    * checks if the container is closed.
    * @return - boolean
    */
-  public synchronized  boolean isClosed() {
+  public synchronized boolean isClosed() {
     return ContainerDataProto.State.CLOSED == state;
+  }
+
+  /**
+   * checks if the container is quasi closed.
+   * @return - boolean
+   */
+  public synchronized boolean isQuasiClosed() {
+    return ContainerDataProto.State.QUASI_CLOSED == state;
+  }
+
+  /**
+   * Marks this container as quasi closed.
+   */
+  public synchronized void quasiCloseContainer() {
+    setState(ContainerDataProto.State.QUASI_CLOSED);
   }
 
   /**

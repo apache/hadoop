@@ -172,7 +172,7 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
           LOG.warn("Unable to allocate container.");
         }
       } catch (IOException ex) {
-        LOG.warn("Unable to allocate container: {}", ex);
+        LOG.warn("Unable to allocate container.", ex);
       }
     }
   }

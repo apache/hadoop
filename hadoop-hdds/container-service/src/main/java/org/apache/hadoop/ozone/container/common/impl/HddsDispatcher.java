@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.container.common.impl;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
@@ -76,18 +75,14 @@ public class HddsDispatcher implements ContainerDispatcher {
    * XceiverServerHandler.
    */
   public HddsDispatcher(Configuration config, ContainerSet contSet,
-      VolumeSet volumes, StateContext context) {
+      VolumeSet volumes, Map<ContainerType, Handler> handlers,
+      StateContext context, ContainerMetrics metrics) {
     this.conf = config;
     this.containerSet = contSet;
     this.volumeSet = volumes;
     this.context = context;
-    this.handlers = Maps.newHashMap();
-    this.metrics = ContainerMetrics.create(conf);
-    for (ContainerType containerType : ContainerType.values()) {
-      handlers.put(containerType,
-          Handler.getHandlerForContainerType(
-              containerType, conf, containerSet, volumeSet, metrics));
-    }
+    this.handlers = handlers;
+    this.metrics = metrics;
     this.containerCloseThreshold = conf.getFloat(
         HddsConfigKeys.HDDS_CONTAINER_CLOSE_THRESHOLD,
         HddsConfigKeys.HDDS_CONTAINER_CLOSE_THRESHOLD_DEFAULT);
@@ -347,6 +342,7 @@ public class HddsDispatcher implements ContainerDispatcher {
     }
   }
 
+  @VisibleForTesting
   public Container getContainer(long containerID) {
     return containerSet.getContainer(containerID);
   }

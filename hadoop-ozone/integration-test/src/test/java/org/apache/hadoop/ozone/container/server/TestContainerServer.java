@@ -18,11 +18,14 @@
 
 package org.apache.hadoop.ozone.container.server;
 
+import com.google.common.collect.Maps;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
+import org.apache.hadoop.ozone.container.ozoneimpl.ContainerController;
 import org.apache.hadoop.ozone.container.replication.GrpcReplicationService;
 import org.apache.hadoop.ozone.container.replication.OnDemandContainerReplicationSource;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -57,6 +60,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.ratis.rpc.SupportedRpcType.GRPC;
 import static org.apache.ratis.rpc.SupportedRpcType.NETTY;
@@ -71,15 +75,17 @@ public class TestContainerServer {
       = GenericTestUtils.getTestDir("dfs").getAbsolutePath() + File.separator;
 
   private GrpcReplicationService createReplicationService(
-      ContainerSet containerSet) {
+      ContainerController containerController) {
     return new GrpcReplicationService(
-        new OnDemandContainerReplicationSource(containerSet));
+        new OnDemandContainerReplicationSource(containerController));
   }
 
   @Test
   public void testClientServer() throws Exception {
     DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
     ContainerSet containerSet = new ContainerSet();
+    ContainerController controller = new ContainerController(
+        containerSet, null);
     runTestClientServer(1, (pipeline, conf) -> conf
             .setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
                 pipeline.getFirstNode()
@@ -87,7 +93,7 @@ public class TestContainerServer {
         XceiverClientGrpc::new,
         (dn, conf) -> new XceiverServerGrpc(datanodeDetails, conf,
             new TestContainerDispatcher(),
-            createReplicationService(containerSet)), (dn, p) -> {
+            createReplicationService(controller)), (dn, p) -> {
         });
   }
 
@@ -185,12 +191,22 @@ public class TestContainerServer {
               .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue());
 
       ContainerSet containerSet = new ContainerSet();
+      VolumeSet volumeSet = mock(VolumeSet.class);
+      ContainerMetrics metrics = ContainerMetrics.create(conf);
+      Map<ContainerProtos.ContainerType, Handler> handlers = Maps.newHashMap();
+      for (ContainerProtos.ContainerType containerType :
+          ContainerProtos.ContainerType.values()) {
+        handlers.put(containerType,
+            Handler.getHandlerForContainerType(
+                containerType, conf, null, containerSet, volumeSet, metrics));
+      }
       HddsDispatcher dispatcher = new HddsDispatcher(
-          conf, mock(ContainerSet.class), mock(VolumeSet.class), null);
+          conf, containerSet, volumeSet, handlers, null, metrics);
       dispatcher.init();
       DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
       server = new XceiverServerGrpc(datanodeDetails, conf, dispatcher,
-          createReplicationService(containerSet));
+          createReplicationService(
+              new ContainerController(containerSet, null)));
       client = new XceiverClientGrpc(pipeline, conf);
 
       server.start();

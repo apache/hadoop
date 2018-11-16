@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.ozone.container.common.interfaces;
 
+import com.google.common.collect.Maps;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
@@ -31,6 +33,8 @@ import org.junit.Test;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
+
+import java.util.Map;
 
 /**
  * Tests Handler interface.
@@ -50,8 +54,16 @@ public class TestHandler {
     this.conf = new Configuration();
     this.containerSet = Mockito.mock(ContainerSet.class);
     this.volumeSet = Mockito.mock(VolumeSet.class);
-
-    this.dispatcher = new HddsDispatcher(conf, containerSet, volumeSet, null);
+    ContainerMetrics metrics = ContainerMetrics.create(conf);
+    Map<ContainerProtos.ContainerType, Handler> handlers = Maps.newHashMap();
+    for (ContainerProtos.ContainerType containerType :
+        ContainerProtos.ContainerType.values()) {
+      handlers.put(containerType,
+          Handler.getHandlerForContainerType(
+              containerType, conf, null, containerSet, volumeSet, metrics));
+    }
+    this.dispatcher = new HddsDispatcher(
+        conf, containerSet, volumeSet, handlers, null, metrics);
   }
 
   @Test

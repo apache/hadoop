@@ -111,7 +111,7 @@ public final class RegisterEndpointTask implements
     try {
 
       ContainerReportsProto containerReport = datanodeContainerManager
-          .getContainerReport();
+          .getController().getContainerReport();
       NodeReportProto nodeReport = datanodeContainerManager.getNodeReport();
       PipelineReportsProto pipelineReportsProto =
               datanodeContainerManager.getPipelineReport();

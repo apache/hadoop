@@ -54,6 +54,7 @@ import static org.mockito.Mockito.times;
 
 
 import java.io.File;
+import java.io.IOException;
 import java.util.UUID;
 
 /**
@@ -224,7 +225,7 @@ public class TestKeyValueHandler {
       interval[0] = 2;
       ContainerMetrics metrics = new ContainerMetrics(interval);
       VolumeSet volumeSet = new VolumeSet(UUID.randomUUID().toString(), conf);
-      KeyValueHandler keyValueHandler = new KeyValueHandler(conf, cset,
+      KeyValueHandler keyValueHandler = new KeyValueHandler(conf, null, cset,
           volumeSet, metrics);
       assertEquals("org.apache.hadoop.ozone.container.common" +
           ".volume.RoundRobinVolumeChoosingPolicy",
@@ -235,7 +236,7 @@ public class TestKeyValueHandler {
       conf.set(HDDS_DATANODE_VOLUME_CHOOSING_POLICY,
           "org.apache.hadoop.ozone.container.common.impl.HddsDispatcher");
       try {
-        new KeyValueHandler(conf, cset, volumeSet, metrics);
+        new KeyValueHandler(conf, null, cset, volumeSet, metrics);
       } catch (RuntimeException ex) {
         GenericTestUtils.assertExceptionContains("class org.apache.hadoop" +
             ".ozone.container.common.impl.HddsDispatcher not org.apache" +
@@ -261,7 +262,7 @@ public class TestKeyValueHandler {
 
 
   @Test
-  public void testCloseInvalidContainer() {
+  public void testCloseInvalidContainer() throws IOException {
     long containerID = 1234L;
     Configuration conf = new Configuration();
     KeyValueContainerData kvData = new KeyValueContainerData(containerID,
@@ -282,6 +283,7 @@ public class TestKeyValueHandler {
 
     Mockito.when(handler.handleCloseContainer(any(), any()))
         .thenCallRealMethod();
+    doCallRealMethod().when(handler).closeContainer(any());
     // Closing invalid container should return error response.
     ContainerProtos.ContainerCommandResponseProto response =
         handler.handleCloseContainer(closeContainerRequest, container);

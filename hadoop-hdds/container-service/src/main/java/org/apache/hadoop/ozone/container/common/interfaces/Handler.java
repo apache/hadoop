@@ -29,8 +29,12 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerType;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.IncrementalContainerReportProto;
+import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
+import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueHandler;
 import org.apache.hadoop.ozone.container.keyvalue.TarContainerPacker;
@@ -47,24 +51,45 @@ public abstract class Handler {
   protected String scmID;
   protected final ContainerMetrics metrics;
 
-  protected Handler(Configuration config, ContainerSet contSet,
-      VolumeSet volumeSet, ContainerMetrics containerMetrics) {
-    conf = config;
-    containerSet = contSet;
+  private final StateContext context;
+
+  protected Handler(Configuration config, StateContext context,
+      ContainerSet contSet, VolumeSet volumeSet,
+      ContainerMetrics containerMetrics) {
+    this.conf = config;
+    this.context = context;
+    this.containerSet = contSet;
     this.volumeSet = volumeSet;
     this.metrics = containerMetrics;
   }
 
-  public static Handler getHandlerForContainerType(ContainerType containerType,
-      Configuration config, ContainerSet contSet, VolumeSet volumeSet,
-                                                   ContainerMetrics metrics) {
+  public static Handler getHandlerForContainerType(
+      final ContainerType containerType, final Configuration config,
+      final StateContext context, final ContainerSet contSet,
+      final VolumeSet volumeSet, final ContainerMetrics metrics) {
     switch (containerType) {
     case KeyValueContainer:
-      return new KeyValueHandler(config, contSet, volumeSet, metrics);
+      return new KeyValueHandler(config, context, contSet, volumeSet, metrics);
     default:
       throw new IllegalArgumentException("Handler for ContainerType: " +
         containerType + "doesn't exist.");
     }
+  }
+
+  /**
+   * This should be called whenever there is state change. It will trigger
+   * an ICR to SCM.
+   *
+   * @param container Container for which ICR has to be sent
+   */
+  protected void sendICR(final Container container)
+      throws StorageContainerException {
+    IncrementalContainerReportProto icr = IncrementalContainerReportProto
+        .newBuilder()
+        .addReport(container.getContainerReport())
+        .build();
+    context.addReport(icr);
+    context.getParent().triggerHeartbeat();
   }
 
   public abstract ContainerCommandResponseProto handle(
@@ -78,6 +103,33 @@ public abstract class Handler {
       long maxSize,
       FileInputStream rawContainerStream,
       TarContainerPacker packer)
+      throws IOException;
+
+  /**
+   * Marks the container for closing. Moves the container to CLOSING state.
+   *
+   * @param container container to update
+   * @throws IOException in case of exception
+   */
+  public abstract void markContainerForClose(Container container)
+      throws IOException;
+
+  /**
+   * Moves the Container to QUASI_CLOSED state.
+   *
+   * @param container container to be quasi closed
+   * @throws IOException
+   */
+  public abstract void quasiCloseContainer(Container container)
+      throws IOException;
+
+  /**
+   * Moves the Container to CLOSED state.
+   *
+   * @param container container to be closed
+   * @throws IOException
+   */
+  public abstract void closeContainer(Container container)
       throws IOException;
 
   public void setScmID(String scmId) {

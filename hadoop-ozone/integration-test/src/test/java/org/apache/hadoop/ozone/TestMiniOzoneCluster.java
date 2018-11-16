@@ -176,14 +176,14 @@ public class TestMiniOzoneCluster {
             TestUtils.randomDatanodeDetails(), ozoneConf)
     ) {
       HashSet<Integer> ports = new HashSet<Integer>();
-      assertTrue(ports.add(sm1.getContainer().getContainerServerPort()));
-      assertTrue(ports.add(sm2.getContainer().getContainerServerPort()));
-      assertTrue(ports.add(sm3.getContainer().getContainerServerPort()));
+      assertTrue(ports.add(sm1.getContainer().getReadChannel().getIPCPort()));
+      assertTrue(ports.add(sm2.getContainer().getReadChannel().getIPCPort()));
+      assertTrue(ports.add(sm3.getContainer().getReadChannel().getIPCPort()));
 
       // Assert that ratis is also on a different port.
-      assertTrue(ports.add(sm1.getContainer().getRatisContainerServerPort()));
-      assertTrue(ports.add(sm2.getContainer().getRatisContainerServerPort()));
-      assertTrue(ports.add(sm3.getContainer().getRatisContainerServerPort()));
+      assertTrue(ports.add(sm1.getContainer().getWriteChannel().getIPCPort()));
+      assertTrue(ports.add(sm2.getContainer().getWriteChannel().getIPCPort()));
+      assertTrue(ports.add(sm3.getContainer().getWriteChannel().getIPCPort()));
 
 
     }
@@ -199,9 +199,9 @@ public class TestMiniOzoneCluster {
             TestUtils.randomDatanodeDetails(), ozoneConf)
     ) {
       HashSet<Integer> ports = new HashSet<Integer>();
-      assertTrue(ports.add(sm1.getContainer().getContainerServerPort()));
-      assertFalse(ports.add(sm2.getContainer().getContainerServerPort()));
-      assertFalse(ports.add(sm3.getContainer().getContainerServerPort()));
+      assertTrue(ports.add(sm1.getContainer().getReadChannel().getIPCPort()));
+      assertFalse(ports.add(sm2.getContainer().getReadChannel().getIPCPort()));
+      assertFalse(ports.add(sm3.getContainer().getReadChannel().getIPCPort()));
       assertEquals(ports.iterator().next().intValue(),
           conf.getInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
               OzoneConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT));

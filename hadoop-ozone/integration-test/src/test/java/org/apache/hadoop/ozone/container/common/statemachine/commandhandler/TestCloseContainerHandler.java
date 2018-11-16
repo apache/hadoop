@@ -95,8 +95,7 @@ public class TestCloseContainerHandler {
     //send the order to close the container
     cluster.getStorageContainerManager().getScmNodeManager()
         .addDatanodeCommand(datanodeDetails.getUuid(),
-            new CloseContainerCommand(containerId.getId(),
-                HddsProtos.ReplicationType.STAND_ALONE, pipeline.getId()));
+            new CloseContainerCommand(containerId.getId(), pipeline.getId()));
 
     GenericTestUtils.waitFor(() ->
             isContainerClosed(cluster, containerId.getId()),

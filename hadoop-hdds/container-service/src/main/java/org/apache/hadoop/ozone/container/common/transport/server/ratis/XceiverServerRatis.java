@@ -86,7 +86,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * Ozone containers.
  */
 public final class XceiverServerRatis implements XceiverServerSpi {
-  static final Logger LOG = LoggerFactory.getLogger(XceiverServerRatis.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(XceiverServerRatis.class);
   private static final AtomicLong CALL_ID_COUNTER = new AtomicLong();
 
   private static long nextCallId() {
@@ -455,6 +456,21 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     LOG.debug(
         "pipeline Action " + action.getAction() + "  on pipeline " + pipelineID
             + ".Reason : " + action.getClosePipeline().getDetailedReason());
+  }
+
+  @Override
+  public boolean isExist(HddsProtos.PipelineID pipelineId) {
+    try {
+      for (RaftGroupId groupId : server.getGroupIds()) {
+        if (PipelineID.valueOf(
+            groupId.getUuid()).getProtobuf().equals(pipelineId)) {
+          return true;
+        }
+      }
+      return false;
+    } catch (IOException e) {
+      return false;
+    }
   }
 
   @Override

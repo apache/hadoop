@@ -54,6 +54,13 @@ public interface XceiverServerSpi {
       throws IOException;
 
   /**
+   * Returns true if the given pipeline exist.
+   *
+   * @return true if pipeline present, else false
+   */
+  boolean isExist(HddsProtos.PipelineID pipelineId);
+
+  /**
    * Get pipeline report for the XceiverServer instance.
    * @return list of report for each pipeline.
    */

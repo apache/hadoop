@@ -19,18 +19,20 @@
 package org.apache.hadoop.ozone.container.ozoneimpl;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.PipelineID;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto
+    .ContainerProtos.ContainerType;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
+import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerGrpc;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerSpi;
@@ -47,11 +49,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-
-import static org.apache.hadoop.ozone.OzoneConsts.INVALID_PORT;
 
 /**
  * Ozone main class sets up the network servers and initializes the container
@@ -59,15 +58,17 @@ import static org.apache.hadoop.ozone.OzoneConsts.INVALID_PORT;
  */
 public class OzoneContainer {
 
-  public static final Logger LOG = LoggerFactory.getLogger(
+  private static final Logger LOG = LoggerFactory.getLogger(
       OzoneContainer.class);
 
   private final HddsDispatcher hddsDispatcher;
-  private final DatanodeDetails dnDetails;
+  private final Map<ContainerType, Handler> handlers;
   private final OzoneConfiguration config;
   private final VolumeSet volumeSet;
   private final ContainerSet containerSet;
-  private final Map<ReplicationType, XceiverServerSpi> servers;
+  private final XceiverServerSpi writeChannel;
+  private final XceiverServerSpi readChannel;
+  private final ContainerController controller;
 
   /**
    * Construct OzoneContainer object.
@@ -78,31 +79,42 @@ public class OzoneContainer {
    */
   public OzoneContainer(DatanodeDetails datanodeDetails, OzoneConfiguration
       conf, StateContext context) throws IOException {
-    this.dnDetails = datanodeDetails;
     this.config = conf;
     this.volumeSet = new VolumeSet(datanodeDetails.getUuidString(), conf);
     this.containerSet = new ContainerSet();
     buildContainerSet();
-    hddsDispatcher = new HddsDispatcher(config, containerSet, volumeSet,
-        context);
-    servers = new HashMap<>();
-    servers.put(ReplicationType.STAND_ALONE,
-        new XceiverServerGrpc(datanodeDetails, config, hddsDispatcher,
-            createReplicationService()));
-    servers.put(ReplicationType.RATIS, XceiverServerRatis
-        .newXceiverServerRatis(datanodeDetails, config, hddsDispatcher,
-            context));
+    final ContainerMetrics metrics = ContainerMetrics.create(conf);
+    this.handlers = Maps.newHashMap();
+    for (ContainerType containerType : ContainerType.values()) {
+      handlers.put(containerType,
+          Handler.getHandlerForContainerType(
+              containerType, conf, context, containerSet, volumeSet, metrics));
+    }
+    this.hddsDispatcher = new HddsDispatcher(config, containerSet, volumeSet,
+        handlers, context, metrics);
+
+    /*
+     * ContainerController is the control plane
+     * XceiverServerRatis is the write channel
+     * XceiverServerGrpc is the read channel
+     */
+    this.controller = new ContainerController(containerSet, handlers);
+    this.writeChannel = XceiverServerRatis.newXceiverServerRatis(
+        datanodeDetails, config, hddsDispatcher, context);
+    this.readChannel = new XceiverServerGrpc(
+        datanodeDetails, config, hddsDispatcher, createReplicationService());
+
   }
 
   private GrpcReplicationService createReplicationService() {
     return new GrpcReplicationService(
-        new OnDemandContainerReplicationSource(containerSet));
+        new OnDemandContainerReplicationSource(controller));
   }
 
   /**
    * Build's container map.
    */
-  public void buildContainerSet() {
+  private void buildContainerSet() {
     Iterator<HddsVolume> volumeSetIterator = volumeSet.getVolumesList()
         .iterator();
     ArrayList<Thread> volumeThreads = new ArrayList<Thread>();
@@ -111,7 +123,6 @@ public class OzoneContainer {
     // And also handle disk failure tolerance need to be added
     while (volumeSetIterator.hasNext()) {
       HddsVolume volume = volumeSetIterator.next();
-      File hddsVolumeRootDir = volume.getHddsRootDir();
       Thread thread = new Thread(new ContainerReader(volumeSet, volume,
           containerSet, config));
       thread.start();
@@ -135,9 +146,8 @@ public class OzoneContainer {
    */
   public void start() throws IOException {
     LOG.info("Attempting to start container services.");
-    for (XceiverServerSpi serverinstance : servers.values()) {
-      serverinstance.start();
-    }
+    writeChannel.start();
+    readChannel.start();
     hddsDispatcher.init();
   }
 
@@ -147,9 +157,8 @@ public class OzoneContainer {
   public void stop() {
     //TODO: at end of container IO integration work.
     LOG.info("Attempting to stop container services.");
-    for(XceiverServerSpi serverinstance: servers.values()) {
-      serverinstance.stop();
-    }
+    writeChannel.stop();
+    readChannel.stop();
     hddsDispatcher.shutdown();
   }
 
@@ -163,58 +172,24 @@ public class OzoneContainer {
    * @return - container report.
    * @throws IOException
    */
-  public StorageContainerDatanodeProtocolProtos.ContainerReportsProto
-      getContainerReport() throws IOException {
-    return this.containerSet.getContainerReport();
-  }
 
   public PipelineReportsProto getPipelineReport() {
     PipelineReportsProto.Builder pipelineReportsProto =
-            PipelineReportsProto.newBuilder();
-    for (XceiverServerSpi serverInstance : servers.values()) {
-      pipelineReportsProto
-              .addAllPipelineReport(serverInstance.getPipelineReport());
-    }
+        PipelineReportsProto.newBuilder();
+    pipelineReportsProto.addAllPipelineReport(writeChannel.getPipelineReport());
     return pipelineReportsProto.build();
   }
 
-  /**
-   * Submit ContainerRequest.
-   * @param request
-   * @param replicationType
-   * @param pipelineID
-   */
-  public void submitContainerRequest(
-      ContainerProtos.ContainerCommandRequestProto request,
-      ReplicationType replicationType,
-      PipelineID pipelineID) throws IOException {
-    LOG.info("submitting {} request over {} server for container {}",
-        request.getCmdType(), replicationType, request.getContainerID());
-    Preconditions.checkState(servers.containsKey(replicationType));
-    servers.get(replicationType).submitRequest(request, pipelineID);
+  public XceiverServerSpi getWriteChannel() {
+    return writeChannel;
   }
 
-  private int getPortByType(ReplicationType replicationType) {
-    return servers.containsKey(replicationType) ?
-        servers.get(replicationType).getIPCPort() : INVALID_PORT;
+  public XceiverServerSpi getReadChannel() {
+    return readChannel;
   }
 
-  /**
-   * Returns the container servers IPC port.
-   *
-   * @return Container servers IPC port.
-   */
-  public int getContainerServerPort() {
-    return getPortByType(ReplicationType.STAND_ALONE);
-  }
-
-  /**
-   * Returns the Ratis container Server IPC port.
-   *
-   * @return Ratis port.
-   */
-  public int getRatisContainerServerPort() {
-    return getPortByType(ReplicationType.RATIS);
+  public ContainerController getController() {
+    return controller;
   }
 
   /**
@@ -228,11 +203,6 @@ public class OzoneContainer {
   @VisibleForTesting
   public ContainerDispatcher getDispatcher() {
     return this.hddsDispatcher;
-  }
-
-  @VisibleForTesting
-  public XceiverServerSpi getServer(ReplicationType replicationType) {
-    return servers.get(replicationType);
   }
 
   public VolumeSet getVolumeSet() {

@@ -33,7 +33,7 @@ import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerDataProto;
+    .ContainerDataProto.State;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -57,6 +57,7 @@ import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.apache.hadoop.ozone.container.common.interfaces.VolumeChoosingPolicy;
+import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume
     .RoundRobinVolumeChoosingPolicy;
@@ -109,9 +110,9 @@ public class KeyValueHandler extends Handler {
   private final long maxContainerSize;
   private final AutoCloseableLock handlerLock;
 
-  public KeyValueHandler(Configuration config, ContainerSet contSet,
-      VolumeSet volSet, ContainerMetrics metrics) {
-    super(config, contSet, volSet, metrics);
+  public KeyValueHandler(Configuration config, StateContext context,
+      ContainerSet contSet, VolumeSet volSet, ContainerMetrics metrics) {
+    super(config, context, contSet, volSet, metrics);
     containerType = ContainerType.KeyValueContainer;
     blockManager = new BlockManagerImpl(config);
     chunkManager = new ChunkManagerImpl();
@@ -372,20 +373,10 @@ public class KeyValueHandler extends Handler {
           request.getTraceID());
       return ContainerUtils.malformedRequest(request);
     }
-
-    long containerID = kvContainer.getContainerData().getContainerID();
     try {
-      checkContainerOpen(kvContainer);
-      // TODO : The close command should move the container to either quasi
-      // closed/closed depending upon how the closeContainer gets executed.
-      // If it arrives by Standalone, it will be moved to Quasi Closed or
-      // otherwise moved to Closed state if it gets executed via Ratis.
-      kvContainer.close();
+      markContainerForClose(kvContainer);
+      closeContainer(kvContainer);
     } catch (StorageContainerException ex) {
-      if (ex.getResult() == CLOSED_CONTAINER_IO) {
-        LOG.debug("Container {} is already closed.", containerID);
-        return ContainerUtils.getSuccessResponse(request);
-      }
       return ContainerUtils.logAndReturnError(LOG, ex, request);
     } catch (IOException ex) {
       return ContainerUtils.logAndReturnError(LOG,
@@ -745,38 +736,39 @@ public class KeyValueHandler extends Handler {
   private void checkContainerOpen(KeyValueContainer kvContainer)
       throws StorageContainerException {
 
-    ContainerDataProto.State containerState = kvContainer.getContainerState();
+    final State containerState = kvContainer.getContainerState();
 
-    /**
+    /*
      * In a closing state, follower will receive transactions from leader.
      * Once the leader is put to closing state, it will reject further requests
      * from clients. Only the transactions which happened before the container
      * in the leader goes to closing state, will arrive here even the container
      * might already be in closing state here.
      */
-    if (containerState == ContainerDataProto.State.OPEN
-        || containerState == ContainerDataProto.State.CLOSING) {
+    if (containerState == State.OPEN || containerState == State.CLOSING) {
       return;
-    } else {
-      String msg = "Requested operation not allowed as ContainerState is " +
-          containerState;
-      ContainerProtos.Result result = null;
-      switch (containerState) {
-      case CLOSED:
-        result = CLOSED_CONTAINER_IO;
-        break;
-      case UNHEALTHY:
-        result = CONTAINER_UNHEALTHY;
-        break;
-      case INVALID:
-        result = INVALID_CONTAINER_STATE;
-        break;
-      default:
-        result = CONTAINER_INTERNAL_ERROR;
-      }
-
-      throw new StorageContainerException(msg, result);
     }
+
+    final ContainerProtos.Result result;
+    switch (containerState) {
+    case QUASI_CLOSED:
+      result = CLOSED_CONTAINER_IO;
+      break;
+    case CLOSED:
+      result = CLOSED_CONTAINER_IO;
+      break;
+    case UNHEALTHY:
+      result = CONTAINER_UNHEALTHY;
+      break;
+    case INVALID:
+      result = INVALID_CONTAINER_STATE;
+      break;
+    default:
+      result = CONTAINER_INTERNAL_ERROR;
+    }
+    String msg = "Requested operation not allowed as ContainerState is " +
+        containerState;
+    throw new StorageContainerException(msg, result);
   }
 
   public Container importContainer(long containerID, long maxSize,
@@ -795,5 +787,56 @@ public class KeyValueHandler extends Handler {
     container.importContainerData(rawContainerStream, packer);
     return container;
 
+  }
+
+  @Override
+  public void markContainerForClose(Container container)
+      throws IOException {
+    State currentState = container.getContainerState();
+    // Move the container to CLOSING state only if it's OPEN
+    if (currentState == State.OPEN) {
+      container.markContainerForClose();
+      sendICR(container);
+    }
+  }
+
+  @Override
+  public void quasiCloseContainer(Container container)
+      throws IOException {
+    final State state = container.getContainerState();
+    // Quasi close call is idempotent.
+    if (state == State.QUASI_CLOSED) {
+      return;
+    }
+    // The container has to be in CLOSING state.
+    if (state != State.CLOSING) {
+      ContainerProtos.Result error = state == State.INVALID ?
+          INVALID_CONTAINER_STATE : CONTAINER_INTERNAL_ERROR;
+      throw new StorageContainerException("Cannot quasi close container #" +
+          container.getContainerData().getContainerID() + " while in " +
+          state + " state.", error);
+    }
+    container.quasiClose();
+    sendICR(container);
+  }
+
+  @Override
+  public void closeContainer(Container container)
+      throws IOException {
+    final State state = container.getContainerState();
+    // Close call is idempotent.
+    if (state == State.CLOSED) {
+      return;
+    }
+    // The container has to be either in CLOSING or in QUASI_CLOSED state.
+    if (state != State.CLOSING && state != State.QUASI_CLOSED) {
+      ContainerProtos.Result error = state == State.INVALID ?
+          INVALID_CONTAINER_STATE : CONTAINER_INTERNAL_ERROR;
+      throw new StorageContainerException("Cannot close container #" +
+          container.getContainerData().getContainerID() + " while in " +
+          state + " state.", error);
+    }
+    container.close();
+    sendICR(container);
   }
 }

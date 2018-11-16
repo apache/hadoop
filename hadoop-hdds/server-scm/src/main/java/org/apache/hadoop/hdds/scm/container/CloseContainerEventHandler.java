@@ -74,8 +74,8 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
       if (container.getState() == LifeCycleState.CLOSING) {
 
         final CloseContainerCommand closeContainerCommand =
-            new CloseContainerCommand(containerID.getId(),
-                container.getReplicationType(), container.getPipelineID());
+            new CloseContainerCommand(
+                containerID.getId(), container.getPipelineID());
 
         getNodes(container).forEach(node -> publisher.fireEvent(
             DATANODE_COMMAND,

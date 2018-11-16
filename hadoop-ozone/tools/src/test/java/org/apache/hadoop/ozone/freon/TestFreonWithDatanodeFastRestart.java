@@ -21,7 +21,6 @@ package org.apache.hadoop.ozone.freon;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.container.common.transport
     .server.XceiverServerSpi;
@@ -128,7 +127,7 @@ public class TestFreonWithDatanodeFastRestart {
   private StateMachine getStateMachine() throws Exception {
     XceiverServerSpi server =
         cluster.getHddsDatanodes().get(0).getDatanodeStateMachine().
-            getContainer().getServer(HddsProtos.ReplicationType.RATIS);
+            getContainer().getWriteChannel();
     RaftServerProxy proxy =
         (RaftServerProxy)(((XceiverServerRatis)server).getServer());
     RaftGroupId groupId = proxy.getGroupIds().iterator().next();
