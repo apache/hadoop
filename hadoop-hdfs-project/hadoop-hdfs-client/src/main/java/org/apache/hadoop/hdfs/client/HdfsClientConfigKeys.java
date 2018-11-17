@@ -192,6 +192,9 @@ public interface HdfsClientConfigKeys {
   String DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS =
       "dfs.provided.aliasmap.inmemory.dnrpc-address";
 
+  String DFS_CLIENT_FAILOVER_IPFAILOVER_VIRTUAL_ADDRESS =
+      Failover.PREFIX + "ipfailover.virtual-address";
+
   /**
    * These are deprecated config keys to client code.
    */
