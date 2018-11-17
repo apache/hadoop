@@ -21,7 +21,6 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.
     StorageContainerDatanodeProtocolProtos.CloseContainerCommandProto;
@@ -66,6 +65,7 @@ import org.apache.hadoop.ozone.container.common.states.endpoint
 import org.apache.hadoop.ozone.container.common.states.endpoint
     .VersionEndpointTask;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
+import org.apache.hadoop.ozone.container.ozoneimpl.ContainerController;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.protocol.commands.CommandStatus;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -75,6 +75,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
 import static org.mockito.Mockito.mock;
@@ -196,6 +197,7 @@ public class TestEndPoint {
       // different from SCM server response scmId
       String newScmId = UUID.randomUUID().toString();
       scmServerImpl.setScmId(newScmId);
+      rpcEndPoint.setState(EndpointStateMachine.EndPointStates.GETVERSION);
       newState = versionTask.call();
       Assert.assertEquals(EndpointStateMachine.EndPointStates.SHUTDOWN,
             newState);
@@ -308,8 +310,10 @@ public class TestEndPoint {
     OzoneContainer ozoneContainer = mock(OzoneContainer.class);
     when(ozoneContainer.getNodeReport()).thenReturn(TestUtils
         .createNodeReport(getStorageReports(UUID.randomUUID())));
-    when(ozoneContainer.getContainerReport()).thenReturn(
+    ContainerController controller = Mockito.mock(ContainerController.class);
+    when(controller.getContainerReport()).thenReturn(
         TestUtils.getRandomContainerReports(10));
+    when(ozoneContainer.getController()).thenReturn(controller);
     when(ozoneContainer.getPipelineReport()).thenReturn(
             TestUtils.getRandomPipelineReports());
     RegisterEndpointTask endpointTask =
@@ -413,17 +417,13 @@ public class TestEndPoint {
           serverAddress, 3000);
       Map<Long, CommandStatus> map = stateContext.getCommandStatusMap();
       assertNotNull(map);
-      assertEquals("Should have 3 objects", 3, map.size());
-      assertTrue(map.containsKey(Long.valueOf(1)));
+      assertEquals("Should have 2 objects", 2, map.size());
       assertTrue(map.containsKey(Long.valueOf(2)));
       assertTrue(map.containsKey(Long.valueOf(3)));
-      assertTrue(map.get(Long.valueOf(1)).getType()
-          .equals(Type.closeContainerCommand));
       assertTrue(map.get(Long.valueOf(2)).getType()
           .equals(Type.replicateContainerCommand));
       assertTrue(
           map.get(Long.valueOf(3)).getType().equals(Type.deleteBlocksCommand));
-      assertTrue(map.get(Long.valueOf(1)).getStatus().equals(Status.PENDING));
       assertTrue(map.get(Long.valueOf(2)).getStatus().equals(Status.PENDING));
       assertTrue(map.get(Long.valueOf(3)).getStatus().equals(Status.PENDING));
 
@@ -436,7 +436,6 @@ public class TestEndPoint {
         .setCloseContainerCommandProto(
             CloseContainerCommandProto.newBuilder().setCmdId(1)
         .setContainerID(1)
-        .setReplicationType(ReplicationType.RATIS)
         .setPipelineID(PipelineID.randomId().getProtobuf())
         .build())
         .setCommandType(Type.closeContainerCommand)

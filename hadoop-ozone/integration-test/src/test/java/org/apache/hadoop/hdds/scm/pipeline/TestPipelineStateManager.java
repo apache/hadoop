@@ -157,8 +157,8 @@ public class TestPipelineStateManager {
             stateManager.getPipelines(type, factor);
         Assert.assertEquals(15, pipelines1.size());
         pipelines1.stream().forEach(p -> {
-          Assert.assertEquals(p.getType(), type);
-          Assert.assertEquals(p.getFactor(), factor);
+          Assert.assertEquals(type, p.getType());
+          Assert.assertEquals(factor, p.getFactor());
         });
       }
     }
@@ -203,14 +203,67 @@ public class TestPipelineStateManager {
           .getPipelines(type, Pipeline.PipelineState.OPEN);
       Assert.assertEquals(5, pipelines1.size());
       pipelines1.forEach(p -> {
-        Assert.assertEquals(p.getType(), type);
-        Assert.assertEquals(p.getPipelineState(), Pipeline.PipelineState.OPEN);
+        Assert.assertEquals(type, p.getType());
+        Assert.assertEquals(Pipeline.PipelineState.OPEN, p.getPipelineState());
       });
 
       pipelines1 = stateManager
           .getPipelines(type, Pipeline.PipelineState.OPEN,
               Pipeline.PipelineState.CLOSED, Pipeline.PipelineState.ALLOCATED);
       Assert.assertEquals(15, pipelines1.size());
+    }
+
+    //clean up
+    for (Pipeline pipeline : pipelines) {
+      removePipeline(pipeline);
+    }
+  }
+
+  @Test
+  public void testGetPipelinesByTypeFactorAndState() throws IOException {
+    Set<Pipeline> pipelines = new HashSet<>();
+    for (HddsProtos.ReplicationType type : HddsProtos.ReplicationType
+        .values()) {
+      for (HddsProtos.ReplicationFactor factor : HddsProtos.ReplicationFactor
+          .values()) {
+        for (int i = 0; i < 5; i++) {
+          // 5 pipelines in allocated state for each type and factor
+          Pipeline pipeline =
+              createDummyPipeline(type, factor, factor.getNumber());
+          stateManager.addPipeline(pipeline);
+          pipelines.add(pipeline);
+
+          // 5 pipelines in open state for each type and factor
+          pipeline = createDummyPipeline(type, factor, factor.getNumber());
+          stateManager.addPipeline(pipeline);
+          stateManager.openPipeline(pipeline.getId());
+          pipelines.add(pipeline);
+
+          // 5 pipelines in closed state for each type and factor
+          pipeline = createDummyPipeline(type, factor, factor.getNumber());
+          stateManager.addPipeline(pipeline);
+          stateManager.finalizePipeline(pipeline.getId());
+          pipelines.add(pipeline);
+        }
+      }
+    }
+
+    for (HddsProtos.ReplicationType type : HddsProtos.ReplicationType
+        .values()) {
+      for (HddsProtos.ReplicationFactor factor : HddsProtos.ReplicationFactor
+          .values()) {
+        for (Pipeline.PipelineState state : Pipeline.PipelineState.values()) {
+          // verify pipelines received
+          List<Pipeline> pipelines1 =
+              stateManager.getPipelines(type, factor, state);
+          Assert.assertEquals(5, pipelines1.size());
+          pipelines1.forEach(p -> {
+            Assert.assertEquals(type, p.getType());
+            Assert.assertEquals(factor, p.getFactor());
+            Assert.assertEquals(state, p.getPipelineState());
+          });
+        }
+      }
     }
 
     //clean up

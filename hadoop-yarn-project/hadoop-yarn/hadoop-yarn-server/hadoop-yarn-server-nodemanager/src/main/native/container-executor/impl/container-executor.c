@@ -1485,8 +1485,13 @@ int run_docker_with_pty(const char *command_file) {
                   }
                 } else {
                   if (rc < 0) {
-                    fprintf(stderr, "Error %d on read master PTY\n", errno);
-                    exit(DOCKER_EXEC_FAILED);
+                    if (errno==5) {
+                      fprintf(stderr, "Remote Connection Closed.\n");
+                      exit(0);
+                    } else {
+                      fprintf(stderr, "Error %d on read master PTY\n", errno);
+                      exit(DOCKER_EXEC_FAILED);
+                    }
                   }
                 }
               }

@@ -60,6 +60,8 @@ public class OMMetrics {
   private @Metric MutableCounterLong numKeyCommits;
   private @Metric MutableCounterLong numAllocateBlockCalls;
   private @Metric MutableCounterLong numGetServiceLists;
+  private @Metric MutableCounterLong numListS3Buckets;
+
 
   // Failure Metrics
   private @Metric MutableCounterLong numVolumeCreateFails;
@@ -81,6 +83,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numKeyCommitFails;
   private @Metric MutableCounterLong numBlockAllocateCallFails;
   private @Metric MutableCounterLong numGetServiceListFails;
+  private @Metric MutableCounterLong numListS3BucketsFails;
 
   public OMMetrics() {
   }
@@ -150,6 +153,16 @@ public class OMMetrics {
   public void incNumVolumeLists() {
     numVolumeOps.incr();
     numVolumeLists.incr();
+  }
+
+  public void incNumListS3Buckets() {
+    numBucketOps.incr();
+    numListS3Buckets.incr();
+  }
+
+  public void incNumListS3BucketsFails() {
+    numBucketOps.incr();
+    numListS3BucketsFails.incr();
   }
 
   public void incNumGetServiceLists() {
@@ -450,6 +463,16 @@ public class OMMetrics {
   @VisibleForTesting
   public long getNumGetServiceListFails() {
     return numGetServiceListFails.value();
+  }
+
+  @VisibleForTesting
+  public long getNumListS3Buckets() {
+    return numListS3Buckets.value();
+  }
+
+  @VisibleForTesting
+  public long getNumListS3BucketsFails() {
+    return numListS3BucketsFails.value();
   }
 
   public void unRegister() {

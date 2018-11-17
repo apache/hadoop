@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -80,9 +81,9 @@ public class TestHomeAMRMProxyPolicy extends BaseFederationPoliciesTest {
         hosts, 2 * 1024, 2, 1, 3, null, false);
 
     HomeAMRMProxyPolicy federationPolicy =
-        (HomeAMRMProxyPolicy)getPolicy();
-    Map<SubClusterId, List<ResourceRequest>> response =
-        federationPolicy.splitResourceRequests(resourceRequests);
+        (HomeAMRMProxyPolicy) getPolicy();
+    Map<SubClusterId, List<ResourceRequest>> response = federationPolicy
+        .splitResourceRequests(resourceRequests, new HashSet<SubClusterId>());
     assertEquals(1, response.size());
     assertNotNull(response.get(HOME_SC_ID));
     assertEquals(9, response.get(HOME_SC_ID).size());
@@ -101,7 +102,8 @@ public class TestHomeAMRMProxyPolicy extends BaseFederationPoliciesTest {
       List<ResourceRequest> resourceRequests = createResourceRequests(
           hosts, 2 * 1024, 2, 1, 3, null, false);
       HomeAMRMProxyPolicy federationPolicy = (HomeAMRMProxyPolicy)getPolicy();
-      federationPolicy.splitResourceRequests(resourceRequests);
+      federationPolicy.splitResourceRequests(resourceRequests,
+          new HashSet<SubClusterId>());
       fail("It should fail when the home subcluster is not active");
     } catch(FederationPolicyException e) {
       GenericTestUtils.assertExceptionContains("is not active", e);

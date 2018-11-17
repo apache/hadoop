@@ -28,8 +28,8 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -98,7 +98,10 @@ public abstract class XceiverClientSpi implements Closeable {
   public ContainerCommandResponseProto sendCommand(
       ContainerCommandRequestProto request) throws IOException {
     try {
-      return sendCommandAsync(request).get();
+      XceiverClientAsyncReply reply;
+      reply = sendCommandAsync(request);
+      ContainerCommandResponseProto responseProto = reply.getResponse().get();
+      return responseProto;
     } catch (ExecutionException | InterruptedException e) {
       throw new IOException("Failed to command " + request, e);
     }
@@ -111,7 +114,7 @@ public abstract class XceiverClientSpi implements Closeable {
    * @return Response to the command
    * @throws IOException
    */
-  public abstract CompletableFuture<ContainerCommandResponseProto>
+  public abstract XceiverClientAsyncReply
       sendCommandAsync(ContainerCommandRequestProto request)
       throws IOException, ExecutionException, InterruptedException;
 
@@ -132,4 +135,7 @@ public abstract class XceiverClientSpi implements Closeable {
    * @return - {Stand_Alone, Ratis or Chained}
    */
   public abstract HddsProtos.ReplicationType getPipelineType();
+
+  public abstract void watchForCommit(long index, long timeout)
+      throws InterruptedException, ExecutionException, TimeoutException;
 }

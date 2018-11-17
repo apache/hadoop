@@ -228,6 +228,7 @@ One or more components of the service. If the service is HBase say, then the com
 |launch_command|The custom launch command of this component (optional for DOCKER component, required otherwise). When specified at the component level, it overrides the value specified at the global level (if any). If docker image supports ENTRYPOINT, launch_command is delimited by comma(,) instead of space.|false|string||
 |resource|Resource of this component (optional). If not specified, the service level global resource takes effect.|false|Resource||
 |number_of_containers|Number of containers for this component (optional). If not specified, the service level global number_of_containers takes effect.|false|integer (int64)||
+|decommissioned_instances|List of decommissioned component instances.|false|string array||
 |containers|Containers of a started component. Specifying a value for this attribute for the POST payload raises a validation error. This blob is available only in the GET response of a started service.|false|Container array||
 |run_privileged_container|Run all containers of this component in privileged mode (YARN-4262).|false|boolean||
 |placement_policy|Advanced scheduling and placement policies for all containers of this component.|false|PlacementPolicy||
@@ -371,7 +372,7 @@ Resource determines the amount of resources (vcores, memory, network, etc.) usab
 |profile|Each resource profile has a unique id which is associated with a cluster-level predefined memory, cpus, etc.|false|string||
 |cpus|Amount of vcores allocated to each container (optional but overrides cpus in profile if specified).|false|integer (int32)||
 |memory|Amount of memory allocated to each container (optional but overrides memory in profile if specified). Currently accepts only an integer value and default unit is in MB.|false|string||
-|additional|A map of resource type name to resource type information. Including value (integer), and unit (string). This will be used to specify resource other than cpu and memory. Please refer to example below.|false|object||
+|additional|A map of resource type name to resource type information. Including value (integer), unit (string) and optional attributes (map). This will be used to specify resource other than cpu and memory. Please refer to example below.|false|object||
 
 
 ### ResourceInformation

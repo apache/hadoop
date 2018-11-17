@@ -62,7 +62,7 @@ public class TestDatanodeRegister {
     BPOfferService mockBPOS = mock(BPOfferService.class);
     doReturn(mockDN).when(mockBPOS).getDataNode();
     
-    actor = new BPServiceActor(INVALID_ADDR, null, mockBPOS);
+    actor = new BPServiceActor("test", "test", INVALID_ADDR, null, mockBPOS);
 
     fakeNsInfo = mock(NamespaceInfo.class);
     // Return a a good software version.

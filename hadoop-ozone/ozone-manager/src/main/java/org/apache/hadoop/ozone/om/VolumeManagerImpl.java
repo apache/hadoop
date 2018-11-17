@@ -35,7 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -73,7 +73,7 @@ public class VolumeManagerImpl implements VolumeManager {
     // Get the volume list
     byte[] dbUserKey = metadataManager.getUserKey(owner);
     byte[] volumeList  = metadataManager.getUserTable().get(dbUserKey);
-    List<String> prevVolList = new LinkedList<>();
+    List<String> prevVolList = new ArrayList<>();
     if (volumeList != null) {
       VolumeList vlist = VolumeList.parseFrom(volumeList);
       prevVolList.addAll(vlist.getVolumeNamesList());
@@ -98,7 +98,7 @@ public class VolumeManagerImpl implements VolumeManager {
     // Get the volume list
     byte[] dbUserKey = metadataManager.getUserKey(owner);
     byte[] volumeList  = metadataManager.getUserTable().get(dbUserKey);
-    List<String> prevVolList = new LinkedList<>();
+    List<String> prevVolList = new ArrayList<>();
     if (volumeList != null) {
       VolumeList vlist = VolumeList.parseFrom(volumeList);
       prevVolList.addAll(vlist.getVolumeNamesList());
@@ -140,7 +140,7 @@ public class VolumeManagerImpl implements VolumeManager {
 
       try(WriteBatch batch = new WriteBatch()) {
         // Write the vol info
-        List<HddsProtos.KeyValue> metadataList = new LinkedList<>();
+        List<HddsProtos.KeyValue> metadataList = new ArrayList<>();
         for (Map.Entry<String, String> entry :
             args.getKeyValueMap().entrySet()) {
           metadataList.add(HddsProtos.KeyValue.newBuilder()
@@ -250,6 +250,7 @@ public class VolumeManagerImpl implements VolumeManager {
    * @param quota - Quota in bytes.
    * @throws IOException
    */
+  @Override
   public void setQuota(String volume, long quota) throws IOException {
     Preconditions.checkNotNull(volume);
     metadataManager.getLock().acquireVolumeLock(volume);
@@ -293,6 +294,7 @@ public class VolumeManagerImpl implements VolumeManager {
    * @return VolumeArgs or exception is thrown.
    * @throws IOException
    */
+  @Override
   public OmVolumeArgs getVolumeInfo(String volume) throws IOException {
     Preconditions.checkNotNull(volume);
     metadataManager.getLock().acquireVolumeLock(volume);
@@ -384,6 +386,7 @@ public class VolumeManagerImpl implements VolumeManager {
    * @return true if the user has access for the volume, false otherwise
    * @throws IOException
    */
+  @Override
   public boolean checkVolumeAccess(String volume, OzoneAclInfo userAcl)
       throws IOException {
     Preconditions.checkNotNull(volume);

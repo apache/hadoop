@@ -27,7 +27,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -102,7 +102,7 @@ public abstract class SCMCommonPolicy implements ContainerPlacementPolicy {
    * @return list of datanodes chosen.
    * @throws SCMException SCM exception.
    */
-
+  @Override
   public List<DatanodeDetails> chooseDatanodes(
       List<DatanodeDetails> excludedNodes,
       int nodesRequired, final long sizeRequired) throws SCMException {
@@ -167,7 +167,7 @@ public abstract class SCMCommonPolicy implements ContainerPlacementPolicy {
   public List<DatanodeDetails> getResultSet(
       int nodesRequired, List<DatanodeDetails> healthyNodes)
       throws SCMException {
-    List<DatanodeDetails> results = new LinkedList<>();
+    List<DatanodeDetails> results = new ArrayList<>();
     for (int x = 0; x < nodesRequired; x++) {
       // invoke the choose function defined in the derived classes.
       DatanodeDetails nodeId = chooseNode(healthyNodes);

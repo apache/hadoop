@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -55,8 +56,8 @@ public class HomeAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
 
   @Override
   public Map<SubClusterId, List<ResourceRequest>> splitResourceRequests(
-      List<ResourceRequest> resourceRequests) throws YarnException {
-
+      List<ResourceRequest> resourceRequests,
+      Set<SubClusterId> timedOutSubClusters) throws YarnException {
     if (homeSubcluster == null) {
       throw new FederationPolicyException("No home subcluster available");
     }

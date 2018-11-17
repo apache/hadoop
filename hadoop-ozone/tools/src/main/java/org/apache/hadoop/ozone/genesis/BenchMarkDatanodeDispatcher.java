@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.ozone.genesis;
 
+import com.google.common.collect.Maps;
 import org.apache.hadoop.hdds.HddsUtils;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
+import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.apache.hadoop.ozone.container.common.statemachine
     .DatanodeStateMachine.DatanodeStates;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
@@ -44,6 +47,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -100,9 +104,18 @@ public class BenchMarkDatanodeDispatcher {
 
     ContainerSet containerSet = new ContainerSet();
     VolumeSet volumeSet = new VolumeSet(datanodeUuid, conf);
-
-    dispatcher = new HddsDispatcher(conf, containerSet, volumeSet,
-        new StateContext(conf, DatanodeStates.RUNNING, null));
+    StateContext context = new StateContext(
+        conf, DatanodeStates.RUNNING, null);
+    ContainerMetrics metrics = ContainerMetrics.create(conf);
+    Map<ContainerProtos.ContainerType, Handler> handlers = Maps.newHashMap();
+    for (ContainerProtos.ContainerType containerType :
+        ContainerProtos.ContainerType.values()) {
+      handlers.put(containerType,
+          Handler.getHandlerForContainerType(
+              containerType, conf, context, containerSet, volumeSet, metrics));
+    }
+    dispatcher = new HddsDispatcher(conf, containerSet, volumeSet, handlers,
+        context, metrics);
     dispatcher.init();
 
     containerCount = new AtomicInteger();

@@ -57,6 +57,9 @@ public interface MRJobConfig {
   // negative values disable the limit
   public static final long DEFAULT_JOB_SINGLE_DISK_LIMIT_BYTES = -1;
 
+  public static final String JOB_DFS_STORAGE_CAPACITY_KILL_LIMIT_EXCEED =
+      "mapreduce.job.dfs.storage.capacity.kill-limit-exceed";
+  public static final boolean DEFAULT_JOB_DFS_STORAGE_CAPACITY_KILL_LIMIT_EXCEED = false;
   public static final String JOB_SINGLE_DISK_LIMIT_KILL_LIMIT_EXCEED =
       "mapreduce.job.local-fs.single-disk-limit.check.kill-limit-exceed";
   // setting to false only logs the kill

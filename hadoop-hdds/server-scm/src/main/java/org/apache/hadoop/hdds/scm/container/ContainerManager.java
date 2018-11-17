@@ -16,15 +16,10 @@
  */
 package org.apache.hadoop.hdds.scm.container;
 
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -66,16 +61,6 @@ public interface ContainerManager extends Closeable {
       throws ContainerNotFoundException;
 
   /**
-   * Returns the ContainerInfo from the container ID.
-   *
-   * @param containerID - ID of container.
-   * @return - ContainerWithPipeline such as creation state and the pipeline.
-   * @throws IOException
-   */
-  ContainerWithPipeline getContainerWithPipeline(ContainerID containerID)
-      throws ContainerNotFoundException, PipelineNotFoundException;
-
-  /**
    * Returns containers under certain conditions.
    * Search container IDs from start ID(exclusive),
    * The max size of the searching range cannot exceed the
@@ -97,10 +82,10 @@ public interface ContainerManager extends Closeable {
    *
    * @param replicationFactor - replication factor of the container.
    * @param owner
-   * @return - ContainerWithPipeline.
+   * @return - ContainerInfo.
    * @throws IOException
    */
-  ContainerWithPipeline allocateContainer(HddsProtos.ReplicationType type,
+  ContainerInfo allocateContainer(HddsProtos.ReplicationType type,
       HddsProtos.ReplicationFactor replicationFactor, String owner)
       throws IOException;
 
@@ -121,14 +106,6 @@ public interface ContainerManager extends Closeable {
    */
   HddsProtos.LifeCycleState updateContainerState(ContainerID containerID,
       HddsProtos.LifeCycleEvent event) throws IOException;
-
-  /**
-   * Process container report from Datanode.
-   *
-   * @param reports Container report
-   */
-  void processContainerReports(DatanodeDetails datanodeDetails,
-      ContainerReportsProto reports) throws IOException;
 
   /**
    * Returns the latest list of replicas for given containerId.
@@ -169,10 +146,10 @@ public interface ContainerManager extends Closeable {
       throws IOException;
 
   /**
-   * Returns the ContainerWithPipeline.
+   * Returns the ContainerInfo.
    * @return NodeManager
    */
-  ContainerWithPipeline getMatchingContainerWithPipeline(long size,
+  ContainerInfo getMatchingContainer(long size,
       String owner, ReplicationType type, ReplicationFactor factor,
       LifeCycleState state) throws IOException;
 }

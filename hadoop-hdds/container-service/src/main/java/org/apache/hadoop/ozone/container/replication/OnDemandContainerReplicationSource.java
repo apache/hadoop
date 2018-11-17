@@ -20,12 +20,12 @@ package org.apache.hadoop.ozone.container.replication;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerPacker;
 import org.apache.hadoop.ozone.container.keyvalue.TarContainerPacker;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.container.ozoneimpl.ContainerController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,13 +39,13 @@ public class OnDemandContainerReplicationSource
   private static final Logger LOG =
       LoggerFactory.getLogger(ContainerReplicationSource.class);
 
-  private ContainerSet containerSet;
+  private ContainerController controller;
 
   private ContainerPacker packer = new TarContainerPacker();
 
   public OnDemandContainerReplicationSource(
-      ContainerSet containerSet) {
-    this.containerSet = containerSet;
+      ContainerController controller) {
+    this.controller = controller;
   }
 
   @Override
@@ -57,7 +57,7 @@ public class OnDemandContainerReplicationSource
   public void copyData(long containerId, OutputStream destination)
       throws IOException {
 
-    Container container = containerSet.getContainer(containerId);
+    Container container = controller.getContainer(containerId);
 
     Preconditions
         .checkNotNull(container, "Container is not found " + containerId);

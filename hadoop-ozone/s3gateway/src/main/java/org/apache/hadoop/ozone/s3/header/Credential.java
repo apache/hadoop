@@ -54,6 +54,7 @@ public class Credential {
    *
    * @throws OS3Exception
    */
+  @SuppressWarnings("StringSplitter")
   public void parseCredential() throws OS3Exception {
     String[] split = credential.split("/");
     if (split.length == 5) {

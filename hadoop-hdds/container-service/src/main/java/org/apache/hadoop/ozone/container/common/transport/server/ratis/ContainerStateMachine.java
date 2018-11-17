@@ -22,7 +22,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
-import org.apache.ratis.proto.RaftProtos.StateMachineEntryProto;
+import org.apache.ratis.proto.RaftProtos.RaftPeerRole;
 import org.apache.ratis.protocol.RaftGroup;
 import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.server.RaftServer;
@@ -55,7 +55,6 @@ import org.apache.ratis.statemachine.StateMachineStorage;
 import org.apache.ratis.statemachine.TransactionContext;
 import org.apache.ratis.statemachine.impl.BaseStateMachine;
 import org.apache.ratis.statemachine.impl.SimpleStateMachineStorage;
-import org.apache.ratis.statemachine.impl.TransactionContextImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -121,7 +120,8 @@ public class ContainerStateMachine extends BaseStateMachine {
       createContainerFutureMap;
   private ExecutorService[] executors;
   private final int numExecutors;
-  private final Map<Long, Long> containerCommandCompletionMap;
+  private final Map<Long, Long> applyTransactionCompletionMap;
+  private long lastIndex;
   /**
    * CSM metrics.
    */
@@ -139,7 +139,8 @@ public class ContainerStateMachine extends BaseStateMachine {
     this.executors = executors.toArray(new ExecutorService[numExecutors]);
     this.writeChunkFutureMap = new ConcurrentHashMap<>();
     this.createContainerFutureMap = new ConcurrentHashMap<>();
-    containerCommandCompletionMap = new ConcurrentHashMap<>();
+    applyTransactionCompletionMap = new ConcurrentHashMap<>();
+    this.lastIndex = RaftServerConstants.INVALID_LOG_INDEX;
   }
 
   @Override
@@ -163,10 +164,12 @@ public class ContainerStateMachine extends BaseStateMachine {
 
   private long loadSnapshot(SingleFileSnapshotInfo snapshot) {
     if (snapshot == null) {
-      TermIndex empty = TermIndex.newTermIndex(0, 0);
+      TermIndex empty = TermIndex.newTermIndex(0,
+          RaftServerConstants.INVALID_LOG_INDEX);
       LOG.info("The snapshot info is null." +
           "Setting the last applied index to:" + empty);
       setLastAppliedTermIndex(empty);
+      lastIndex = RaftServerConstants.INVALID_LOG_INDEX;
       return RaftServerConstants.INVALID_LOG_INDEX;
     }
 
@@ -175,6 +178,7 @@ public class ContainerStateMachine extends BaseStateMachine {
             snapshot.getFile().getPath().toFile());
     LOG.info("Setting the last applied index to " + last);
     setLastAppliedTermIndex(last);
+    lastIndex = last.getIndex();
     return last.getIndex();
   }
 
@@ -206,7 +210,17 @@ public class ContainerStateMachine extends BaseStateMachine {
     final ContainerCommandRequestProto proto =
         getRequestProto(request.getMessage().getContent());
     Preconditions.checkArgument(request.getRaftGroupId().equals(gid));
-    final StateMachineLogEntryProto log;
+    try {
+      dispatcher.validateContainerCommand(proto);
+    } catch (IOException ioe) {
+      TransactionContext ctxt = TransactionContext.newBuilder()
+          .setClientRequest(request)
+          .setStateMachine(this)
+          .setServerRole(RaftPeerRole.LEADER)
+          .build();
+      ctxt.setException(ioe);
+      return ctxt;
+    }
     if (proto.getCmdType() == Type.WriteChunk) {
       final WriteChunkRequestProto write = proto.getWriteChunk();
       // create the state machine data proto
@@ -236,33 +250,29 @@ public class ContainerStateMachine extends BaseStateMachine {
               .setWriteChunk(commitWriteChunkProto)
               .build();
 
-      log = createSMLogEntryProto(request,
-          commitContainerCommandProto.toByteString(),
-          dataContainerCommandProto.toByteString());
+      return TransactionContext.newBuilder()
+          .setClientRequest(request)
+          .setStateMachine(this)
+          .setServerRole(RaftPeerRole.LEADER)
+          .setStateMachineData(dataContainerCommandProto.toByteString())
+          .setLogData(commitContainerCommandProto.toByteString())
+          .build();
     } else if (proto.getCmdType() == Type.CreateContainer) {
-      log = createSMLogEntryProto(request,
-          request.getMessage().getContent(), request.getMessage().getContent());
+      return TransactionContext.newBuilder()
+          .setClientRequest(request)
+          .setStateMachine(this)
+          .setServerRole(RaftPeerRole.LEADER)
+          .setStateMachineData(request.getMessage().getContent())
+          .setLogData(request.getMessage().getContent())
+          .build();
     } else {
-      log = createSMLogEntryProto(request, request.getMessage().getContent(),
-          null);
+      return TransactionContext.newBuilder()
+          .setClientRequest(request)
+          .setStateMachine(this)
+          .setServerRole(RaftPeerRole.LEADER)
+          .setLogData(request.getMessage().getContent())
+          .build();
     }
-    return new TransactionContextImpl(this, request, log);
-  }
-
-  private StateMachineLogEntryProto createSMLogEntryProto(RaftClientRequest r,
-      ByteString logData, ByteString smData) {
-    StateMachineLogEntryProto.Builder builder =
-        StateMachineLogEntryProto.newBuilder();
-
-    builder.setCallId(r.getCallId())
-        .setClientId(r.getClientId().toByteString())
-        .setLogData(logData);
-
-    if (smData != null) {
-      builder.setStateMachineEntry(StateMachineEntryProto.newBuilder()
-          .setStateMachineData(smData).build());
-    }
-    return builder.build();
   }
 
   private ByteString getStateMachineData(StateMachineLogEntryProto entryProto) {
@@ -466,7 +476,7 @@ public class ContainerStateMachine extends BaseStateMachine {
     Long appliedTerm = null;
     long appliedIndex = -1;
     for(long i = getLastAppliedTermIndex().getIndex() + 1;; i++) {
-      final Long removed = containerCommandCompletionMap.remove(i);
+      final Long removed = applyTransactionCompletionMap.remove(i);
       if (removed == null) {
         break;
       }
@@ -474,7 +484,7 @@ public class ContainerStateMachine extends BaseStateMachine {
       appliedIndex = i;
     }
     if (appliedTerm != null) {
-      updateLastAppliedTermIndex(appliedIndex, appliedTerm);
+      updateLastAppliedTermIndex(appliedTerm, appliedIndex);
     }
   }
 
@@ -484,6 +494,15 @@ public class ContainerStateMachine extends BaseStateMachine {
   @Override
   public CompletableFuture<Message> applyTransaction(TransactionContext trx) {
     long index = trx.getLogEntry().getIndex();
+
+    // ApplyTransaction call can come with an entryIndex much greater than
+    // lastIndex updated because in between entries in the raft log can be
+    // appended because raft config persistence. Just add a dummy entry
+    // for those.
+    for (long i = lastIndex + 1; i < index; i++) {
+      LOG.info("Gap in indexes at:{} detected, adding dummy entries ", i);
+      applyTransactionCompletionMap.put(i, trx.getLogEntry().getTerm());
+    }
     try {
       metrics.incNumApplyTransactionsOps();
       ContainerCommandRequestProto requestProto =
@@ -548,9 +567,10 @@ public class ContainerStateMachine extends BaseStateMachine {
             });
       }
 
+      lastIndex = index;
       future.thenAccept(m -> {
         final Long previous =
-            containerCommandCompletionMap
+            applyTransactionCompletionMap
                 .put(index, trx.getLogEntry().getTerm());
         Preconditions.checkState(previous == null);
         updateLastApplied();

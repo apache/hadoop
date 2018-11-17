@@ -105,7 +105,7 @@ public class ObjectEndpoint extends EndpointBase {
       ReplicationType replicationType;
       ReplicationFactor replicationFactor;
       boolean storageTypeDefault;
-      if (storageType == null) {
+      if (storageType == null || storageType.equals("")) {
         replicationType = S3StorageType.getDefault().getType();
         replicationFactor = S3StorageType.getDefault().getFactor();
         storageTypeDefault = true;

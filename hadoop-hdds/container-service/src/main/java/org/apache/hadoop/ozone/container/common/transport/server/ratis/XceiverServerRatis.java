@@ -86,7 +86,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * Ozone containers.
  */
 public final class XceiverServerRatis implements XceiverServerSpi {
-  static final Logger LOG = LoggerFactory.getLogger(XceiverServerRatis.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(XceiverServerRatis.class);
   private static final AtomicLong CALL_ID_COUNTER = new AtomicLong();
 
   private static long nextCallId() {
@@ -287,6 +288,17 @@ public final class XceiverServerRatis implements XceiverServerSpi {
       setAutoTriggerEnabled(properties, true);
     RaftServerConfigKeys.Snapshot.
       setAutoTriggerThreshold(properties, snapshotThreshold);
+    int logQueueSize =
+        conf.getInt(OzoneConfigKeys.DFS_CONTAINER_RATIS_LOG_QUEUE_SIZE,
+            OzoneConfigKeys.DFS_CONTAINER_RATIS_LOG_QUEUE_SIZE_DEFAULT);
+    RaftServerConfigKeys.Log.setQueueSize(properties, logQueueSize);
+
+    int numSyncRetries = conf.getInt(
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_RETRIES,
+        OzoneConfigKeys.
+            DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_RETRIES_DEFAULT);
+    RaftServerConfigKeys.Log.StateMachineData.setSyncTimeoutRetry(properties,
+        numSyncRetries);
 
     return properties;
   }
@@ -444,6 +456,21 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     LOG.debug(
         "pipeline Action " + action.getAction() + "  on pipeline " + pipelineID
             + ".Reason : " + action.getClosePipeline().getDetailedReason());
+  }
+
+  @Override
+  public boolean isExist(HddsProtos.PipelineID pipelineId) {
+    try {
+      for (RaftGroupId groupId : server.getGroupIds()) {
+        if (PipelineID.valueOf(
+            groupId.getUuid()).getProtobuf().equals(pipelineId)) {
+          return true;
+        }
+      }
+      return false;
+    } catch (IOException e) {
+      return false;
+    }
   }
 
   @Override

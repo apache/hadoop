@@ -312,5 +312,6 @@ public interface StorageHandler extends Closeable{
   /**
    * Closes all the opened resources.
    */
+  @Override
   void close();
 }

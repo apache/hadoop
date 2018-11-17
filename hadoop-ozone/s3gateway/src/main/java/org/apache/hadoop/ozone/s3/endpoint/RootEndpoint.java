@@ -18,7 +18,6 @@
 package org.apache.hadoop.ozone.s3.endpoint;
 
 import javax.ws.rs.GET;
-import javax.ws.rs.NotFoundException;
 import javax.ws.rs.Path;
 import java.io.IOException;
 import java.time.Instant;
@@ -53,25 +52,16 @@ public class RootEndpoint extends EndpointBase {
     OzoneVolume volume;
     ListBucketResponse response = new ListBucketResponse();
 
-    String volumeName = "s3" + getAuthenticationHeaderParser().getAccessKeyID();
-    try {
-      //TODO: we need a specific s3bucketlist endpoint instead
-      // of reimplement the naming convention here
-      volume = getVolume(volumeName);
-    } catch (NotFoundException ex) {
-      return response;
-    } catch (IOException e) {
-      throw e;
-    }
+    String userName = getAuthenticationHeaderParser().getAccessKeyID();
+    Iterator<? extends OzoneBucket> bucketIterator = listS3Buckets(userName,
+        null);
 
-    Iterator<? extends OzoneBucket> volABucketIter = volume.listBuckets(null);
-
-    while (volABucketIter.hasNext()) {
-      OzoneBucket next = volABucketIter.next();
+    while (bucketIterator.hasNext()) {
+      OzoneBucket next = bucketIterator.next();
       BucketMetadata bucketMetadata = new BucketMetadata();
       bucketMetadata.setName(next.getName());
-      bucketMetadata.setCreationDate(
-          Instant.ofEpochMilli(next.getCreationTime()));
+      bucketMetadata.setCreationDate(Instant.ofEpochMilli(next
+          .getCreationTime()));
       response.addBucket(bucketMetadata);
     }
 

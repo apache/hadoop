@@ -20,7 +20,7 @@ Resource            ../commonlib.robot
 
 *** Variables ***
 ${COMMON_REST_HEADER}   -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H  "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE root"
-${DATANODE_HOST}        localhost
+${DATANODE_HOST}        datanode
 
 
 *** Test Cases ***
@@ -42,6 +42,6 @@ Check webui static resources
                        Should contain         ${result}    200
 
 Start freon testing
-    ${result} =        Execute              ozone freon randomkeys --numOfVolumes 5 --numOfBuckets 5 --numOfKeys 5 --numOfThreads 10
+    ${result} =        Execute              ozone freon randomkeys --numOfVolumes 5 --numOfBuckets 5 --numOfKeys 5 --numOfThreads 1
                        Wait Until Keyword Succeeds      3min       10sec     Should contain   ${result}   Number of Keys added: 125
                        Should Not Contain               ${result}  ERROR

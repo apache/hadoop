@@ -21,32 +21,17 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ContainerInfoProto;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
-import org.apache.hadoop.hdds.scm.block.PendingDeleteStatusList;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.lease.Lease;
-import org.apache.hadoop.ozone.lease.LeaseException;
-import org.apache.hadoop.ozone.lease.LeaseManager;
 import org.apache.hadoop.utils.BatchOperation;
 import org.apache.hadoop.utils.MetadataStore;
 import org.apache.hadoop.utils.MetadataStoreBuilder;
@@ -61,7 +46,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -89,7 +73,6 @@ public class SCMContainerManager implements ContainerManager {
   private final MetadataStore containerStore;
   private final PipelineManager pipelineManager;
   private final ContainerStateManager containerStateManager;
-  private final LeaseManager<ContainerInfo> containerLeaseManager;
   private final EventPublisher eventPublisher;
   private final long size;
 
@@ -128,14 +111,6 @@ public class SCMContainerManager implements ContainerManager {
     this.pipelineManager = pipelineManager;
     this.containerStateManager = new ContainerStateManager(conf);
     this.eventPublisher = eventPublisher;
-
-    final long containerCreationLeaseTimeout = conf.getTimeDuration(
-        ScmConfigKeys.OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT,
-        ScmConfigKeys.OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT_DEFAULT,
-        TimeUnit.MILLISECONDS);
-    this.containerLeaseManager = new LeaseManager<>("ContainerCreation",
-        containerCreationLeaseTimeout);
-    this.containerLeaseManager.start();
 
     loadExistingContainers();
   }
@@ -206,42 +181,6 @@ public class SCMContainerManager implements ContainerManager {
   }
 
   /**
-   * Returns the ContainerInfo and pipeline from the containerID. If container
-   * has no available replicas in datanodes it returns pipeline with no
-   * datanodes and empty leaderID . Pipeline#isEmpty can be used to check for
-   * an empty pipeline.
-   *
-   * @param containerID - ID of container.
-   * @return - ContainerWithPipeline such as creation state and the pipeline.
-   * @throws IOException
-   */
-  @Override
-  public ContainerWithPipeline getContainerWithPipeline(ContainerID containerID)
-      throws ContainerNotFoundException, PipelineNotFoundException {
-    lock.lock();
-    try {
-      final ContainerInfo contInfo = getContainer(containerID);
-      Pipeline pipeline;
-      if (contInfo.isOpen()) {
-        // If pipeline with given pipeline Id already exist return it
-        pipeline = pipelineManager.getPipeline(contInfo.getPipelineID());
-      } else {
-        // For close containers create pipeline from datanodes with replicas
-        Set<ContainerReplica> dnWithReplicas = containerStateManager
-            .getContainerReplicas(contInfo.containerID());
-        List<DatanodeDetails> dns =
-            dnWithReplicas.stream().map(ContainerReplica::getDatanodeDetails)
-                .collect(Collectors.toList());
-        pipeline = pipelineManager.createPipeline(ReplicationType.STAND_ALONE,
-            contInfo.getReplicationFactor(), dns);
-      }
-      return new ContainerWithPipeline(contInfo, pipeline);
-    } finally {
-      lock.unlock();
-    }
-  }
-
-  /**
    * {@inheritDoc}
    */
   @Override
@@ -282,16 +221,13 @@ public class SCMContainerManager implements ContainerManager {
    * @throws IOException - Exception
    */
   @Override
-  public ContainerWithPipeline allocateContainer(final ReplicationType type,
+  public ContainerInfo allocateContainer(final ReplicationType type,
       final ReplicationFactor replicationFactor, final String owner)
       throws IOException {
     lock.lock();
     try {
       final ContainerInfo containerInfo; containerInfo = containerStateManager
           .allocateContainer(pipelineManager, type, replicationFactor, owner);
-      final Pipeline pipeline = pipelineManager.getPipeline(
-          containerInfo.getPipelineID());
-
       try {
         final byte[] containerIDBytes = Longs.toByteArray(
             containerInfo.getContainerID());
@@ -307,7 +243,7 @@ public class SCMContainerManager implements ContainerManager {
         }
         throw ex;
       }
-      return new ContainerWithPipeline(containerInfo, pipeline);
+      return containerInfo;
     } finally {
       lock.unlock();
     }
@@ -378,51 +314,27 @@ public class SCMContainerManager implements ContainerManager {
   private ContainerInfo updateContainerStateInternal(ContainerID containerID,
       HddsProtos.LifeCycleEvent event) throws IOException {
     // Refactor the below code for better clarity.
-    try {
-      final ContainerInfo info =
-          containerStateManager.getContainer(containerID);
-      switch (event) {
-      case CREATE:
-        // Acquire lease on container
-        Lease<ContainerInfo> containerLease =
-            containerLeaseManager.acquire(info);
-        // Register callback to be executed in case of timeout
-        containerLease.registerCallBack(() -> {
-          updateContainerState(containerID,
-              HddsProtos.LifeCycleEvent.TIMEOUT);
-          return null; });
-        break;
-      case CREATED:
-        // Release the lease on container
-        containerLeaseManager.release(info);
-        break;
-      case FINALIZE:
-        // TODO: we don't need a lease manager here for closing as the
-        // container report will include the container state after HDFS-13008
-        // If a client failed to update the container close state, DN container
-        // report from 3 DNs will be used to close the container eventually.
-        break;
-      case CLOSE:
-        break;
-      case UPDATE:
-        break;
-      case DELETE:
-        break;
-      case TIMEOUT:
-        break;
-      case CLEANUP:
-        break;
-      default:
-        throw new SCMException("Unsupported container LifeCycleEvent.",
-            FAILED_TO_CHANGE_CONTAINER_STATE);
-      }
-      // If the below updateContainerState call fails, we should revert the
-      // changes made in switch case.
-      // Like releasing the lease in case of BEGIN_CREATE.
-      return containerStateManager.updateContainerState(containerID, event);
-    } catch (LeaseException e) {
-      throw new IOException("Lease Exception.", e);
+    switch (event) {
+    case FINALIZE:
+      // TODO: we don't need a lease manager here for closing as the
+      // container report will include the container state after HDFS-13008
+      // If a client failed to update the container close state, DN container
+      // report from 3 DNs will be used to close the container eventually.
+      break;
+    case CLOSE:
+      break;
+    case DELETE:
+      break;
+    case CLEANUP:
+      break;
+    default:
+      throw new SCMException("Unsupported container LifeCycleEvent.",
+          FAILED_TO_CHANGE_CONTAINER_STATE);
     }
+    // If the below updateContainerState call fails, we should revert the
+    // changes made in switch case.
+    // Like releasing the lease in case of BEGIN_CREATE.
+    return containerStateManager.updateContainerState(containerID, event);
   }
 
 
@@ -475,117 +387,11 @@ public class SCMContainerManager implements ContainerManager {
    * @param state - State of the Container-- {Open, Allocated etc.}
    * @return ContainerInfo, null if there is no match found.
    */
-  public ContainerWithPipeline getMatchingContainerWithPipeline(
+  public ContainerInfo getMatchingContainer(
       final long sizeRequired, String owner, ReplicationType type,
       ReplicationFactor factor, LifeCycleState state) throws IOException {
-    ContainerInfo containerInfo = containerStateManager
-        .getMatchingContainer(sizeRequired, owner, type, factor, state);
-    if (containerInfo == null) {
-      return null;
-    }
-    Pipeline pipeline = pipelineManager
-        .getPipeline(containerInfo.getPipelineID());
-    return new ContainerWithPipeline(containerInfo, pipeline);
-  }
-
-  /**
-   * Process container report from Datanode.
-   * <p>
-   * Processing follows a very simple logic for time being.
-   * <p>
-   * 1. Datanodes report the current State -- denoted by the datanodeState
-   * <p>
-   * 2. We are the older SCM state from the Database -- denoted by
-   * the knownState.
-   * <p>
-   * 3. We copy the usage etc. from currentState to newState and log that
-   * newState to the DB. This allows us SCM to bootup again and read the
-   * state of the world from the DB, and then reconcile the state from
-   * container reports, when they arrive.
-   *
-   * @param reports Container report
-   */
-  @Override
-  public void processContainerReports(DatanodeDetails datanodeDetails,
-      ContainerReportsProto reports) throws IOException {
-    List<ContainerReplicaProto>
-        containerInfos = reports.getReportsList();
-    PendingDeleteStatusList pendingDeleteStatusList =
-        new PendingDeleteStatusList(datanodeDetails);
-    for (ContainerReplicaProto newInfo :
-        containerInfos) {
-      ContainerID id = ContainerID.valueof(newInfo.getContainerID());
-      ContainerReplica replica = ContainerReplica.newBuilder()
-          .setContainerID(id)
-          .setDatanodeDetails(datanodeDetails)
-          .setOriginNodeId(datanodeDetails.getUuid())
-          .build();
-      lock.lock();
-      try {
-        containerStateManager.updateContainerReplica(id, replica);
-        ContainerInfo currentInfo = containerStateManager.getContainer(id);
-        if (newInfo.getState() == ContainerReplicaProto.State.CLOSED
-            && currentInfo.getState() == LifeCycleState.CLOSING) {
-          currentInfo = updateContainerStateInternal(id, LifeCycleEvent.CLOSE);
-          if (!currentInfo.isOpen()) {
-            pipelineManager.removeContainerFromPipeline(
-                currentInfo.getPipelineID(), id);
-          }
-        }
-
-        ContainerInfoProto newState =
-            reconcileState(newInfo, currentInfo);
-
-        if (currentInfo.getDeleteTransactionId() >
-            newInfo.getDeleteTransactionId()) {
-          pendingDeleteStatusList
-                .addPendingDeleteStatus(newInfo.getDeleteTransactionId(),
-                    currentInfo.getDeleteTransactionId(),
-                    currentInfo.getContainerID());
-        }
-        containerStateManager.updateContainerInfo(
-            ContainerInfo.fromProtobuf(newState));
-        containerStore.put(id.getBytes(), newState.toByteArray());
-      } catch (ContainerNotFoundException e) {
-        LOG.error("Error while processing container report from datanode :" +
-                " {}, for container: {}, reason: container doesn't exist in" +
-                "container database.", datanodeDetails, id);
-      } finally {
-        lock.unlock();
-      }
-    }
-    if (pendingDeleteStatusList.getNumPendingDeletes() > 0) {
-      eventPublisher.fireEvent(SCMEvents.PENDING_DELETE_STATUS,
-          pendingDeleteStatusList);
-    }
-
-  }
-
-  /**
-   * Reconciles the state from Datanode with the state in SCM.
-   *
-   * @param datanodeState - State from the Datanode.
-   * @param knownState - State inside SCM.
-   * @return new SCM State for this container.
-   */
-  private HddsProtos.ContainerInfoProto reconcileState(
-      ContainerReplicaProto datanodeState,
-      ContainerInfo knownState) {
-    HddsProtos.ContainerInfoProto.Builder builder =
-        HddsProtos.ContainerInfoProto.newBuilder();
-    builder.setContainerID(knownState.getContainerID())
-        .setPipelineID(knownState.getPipelineID().getProtobuf())
-        .setState(knownState.getState())
-        .setReplicationType(knownState.getReplicationType())
-        .setReplicationFactor(knownState.getReplicationFactor())
-        .setUsedBytes(datanodeState.getUsed())
-        .setNumberOfKeys(datanodeState.getKeyCount())
-        .setStateEnterTime(knownState.getStateEnterTime())
-        .setDeleteTransactionId(knownState.getDeleteTransactionId());
-    if (knownState.getOwner() != null) {
-      builder.setOwner(knownState.getOwner());
-    }
-    return builder.build();
+    return containerStateManager.getMatchingContainer(
+        sizeRequired, owner, type, factor, state);
   }
 
   /**
@@ -640,9 +446,6 @@ public class SCMContainerManager implements ContainerManager {
    */
   @Override
   public void close() throws IOException {
-    if (containerLeaseManager != null) {
-      containerLeaseManager.shutdown();
-    }
     if (containerStateManager != null) {
       containerStateManager.close();
     }

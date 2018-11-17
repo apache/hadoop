@@ -37,6 +37,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 /**
  * Test get object.
  */
@@ -51,19 +53,19 @@ public class TestObjectGet {
     client.getObjectStore().createS3Bucket("bilbo", "b1");
     String volumeName = client.getObjectStore().getOzoneVolumeName("b1");
     OzoneVolume volume = client.getObjectStore().getVolume(volumeName);
-    volume.createBucket("b1");
     OzoneBucket bucket =
         volume.getBucket("b1");
     OzoneOutputStream keyStream =
-        bucket.createKey("key1", CONTENT.getBytes().length);
-    keyStream.write(CONTENT.getBytes());
+        bucket.createKey("key1", CONTENT.getBytes(UTF_8).length);
+    keyStream.write(CONTENT.getBytes(UTF_8));
     keyStream.close();
 
     ObjectEndpoint rest = new ObjectEndpoint();
     rest.setClient(client);
     HttpHeaders headers = Mockito.mock(HttpHeaders.class);
     rest.setHeaders(headers);
-    ByteArrayInputStream body = new ByteArrayInputStream(CONTENT.getBytes());
+    ByteArrayInputStream body =
+        new ByteArrayInputStream(CONTENT.getBytes(UTF_8));
 
     //WHEN
     rest.get("b1", "key1", body);

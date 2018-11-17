@@ -104,7 +104,7 @@ public interface ScmClient extends Closeable {
    * Lists a range of containers and get their info.
    *
    * @param startContainerID start containerID.
-   * @param count count must be > 0.
+   * @param count count must be {@literal >} 0.
    *
    * @return a list of pipeline.
    * @throws IOException
@@ -171,4 +171,20 @@ public interface ScmClient extends Closeable {
   Pipeline createReplicationPipeline(HddsProtos.ReplicationType type,
       HddsProtos.ReplicationFactor factor, HddsProtos.NodePool nodePool)
       throws IOException;
+
+  /**
+   * Check if SCM is in chill mode.
+   *
+   * @return Returns true if SCM is in chill mode else returns false.
+   * @throws IOException
+   */
+  boolean inChillMode() throws IOException;
+
+  /**
+   * Force SCM out of chill mode.
+   *
+   * @return returns true if operation is successful.
+   * @throws IOException
+   */
+  boolean forceExitChillMode() throws IOException;
 }

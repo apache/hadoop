@@ -77,6 +77,7 @@ public class NameNodeHttpServer {
   }
 
   public static void initWebHdfs(Configuration conf, String hostname,
+      String httpKeytab,
       HttpServer2 httpServer2, String jerseyResourcePackage)
       throws IOException {
     // set user pattern based on configuration file
@@ -94,7 +95,8 @@ public class NameNodeHttpServer {
     final String name = className;
 
     final String pathSpec = WebHdfsFileSystem.PATH_PREFIX + "/*";
-    Map<String, String> params = getAuthFilterParams(conf, hostname);
+    Map<String, String> params = getAuthFilterParams(conf, hostname,
+        httpKeytab);
     HttpServer2.defineFilter(httpServer2.getWebAppContext(), name, className,
         params, new String[] { pathSpec });
     HttpServer2.LOG.info("Added filter '" + name + "' (class=" + className
@@ -167,8 +169,9 @@ public class NameNodeHttpServer {
       httpServer.setAttribute(DFSConfigKeys.DFS_DATANODE_HTTPS_PORT_KEY,
           datanodeSslPort.getPort());
     }
-
-    initWebHdfs(conf, bindAddress.getHostName(), httpServer,
+    String httpKeytab = conf.get(DFSUtil.getSpnegoKeytabKey(conf,
+        DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY));
+    initWebHdfs(conf, bindAddress.getHostName(), httpKeytab, httpServer,
         NamenodeWebHdfsMethods.class.getPackage().getName());
 
     httpServer.setAttribute(NAMENODE_ATTRIBUTE_KEY, nn);
@@ -191,7 +194,7 @@ public class NameNodeHttpServer {
   }
   
   private static Map<String, String> getAuthFilterParams(Configuration conf,
-      String hostname) throws IOException {
+      String hostname, String httpKeytab) throws IOException {
     Map<String, String> params = new HashMap<String, String>();
     // Select configs beginning with 'dfs.web.authentication.'
     Iterator<Map.Entry<String, String>> iterator = conf.iterator();
@@ -214,8 +217,6 @@ public class NameNodeHttpServer {
           DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY +
           "' is not set.");
     }
-    String httpKeytab = conf.get(DFSUtil.getSpnegoKeytabKey(conf,
-        DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY));
     if (httpKeytab != null && !httpKeytab.isEmpty()) {
       params.put(
           DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,

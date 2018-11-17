@@ -19,7 +19,6 @@ package org.apache.hadoop.hdds.scm.node;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
@@ -48,7 +47,7 @@ import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -378,12 +377,9 @@ public class TestNodeManager {
    * Check for NPE when datanodeDetails is passed null for sendHeartbeat.
    *
    * @throws IOException
-   * @throws InterruptedException
-   * @throws TimeoutException
    */
   @Test
-  public void testScmCheckForErrorOnNullDatanodeDetails() throws IOException,
-      InterruptedException, TimeoutException {
+  public void testScmCheckForErrorOnNullDatanodeDetails() throws IOException {
     try (SCMNodeManager nodeManager = createNodeManager(getConf())) {
       nodeManager.processHeartbeat(null);
     } catch (NullPointerException npe) {
@@ -588,7 +584,7 @@ public class TestNodeManager {
    */
   private List<DatanodeDetails> createNodeSet(SCMNodeManager nodeManager, int
       count) {
-    List<DatanodeDetails> list = new LinkedList<>();
+    List<DatanodeDetails> list = new ArrayList<>();
     for (int x = 0; x < count; x++) {
       DatanodeDetails datanodeDetails = TestUtils
           .createRandomDatanodeAndRegister(nodeManager);
@@ -943,7 +939,7 @@ public class TestNodeManager {
   }
 
   @Test
-  public void testHandlingSCMCommandEvent() {
+  public void testHandlingSCMCommandEvent() throws IOException {
     OzoneConfiguration conf = getConf();
     conf.getTimeDuration(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
         100, TimeUnit.MILLISECONDS);
@@ -963,7 +959,7 @@ public class TestNodeManager {
                   TestUtils.getRandomPipelineReports());
       eq.fireEvent(DATANODE_COMMAND,
           new CommandForDatanode<>(datanodeDetails.getUuid(),
-              new CloseContainerCommand(1L, ReplicationType.STAND_ALONE,
+              new CloseContainerCommand(1L,
                   PipelineID.randomId())));
 
       eq.processAll(1000L);
@@ -974,6 +970,7 @@ public class TestNodeManager {
           .assertEquals(command.get(0).getClass(), CloseContainerCommand.class);
     } catch (IOException e) {
       e.printStackTrace();
+      throw  e;
     }
   }
 

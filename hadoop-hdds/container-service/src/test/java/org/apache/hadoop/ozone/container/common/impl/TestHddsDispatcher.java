@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.container.common.impl;
 
+import com.google.common.collect.Maps;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.StorageUnit;
@@ -26,6 +27,8 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto
+    .ContainerProtos.ContainerType;
+import org.apache.hadoop.hdds.protocol.datanode.proto
     .ContainerProtos.ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
@@ -33,7 +36,9 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .WriteChunkRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerAction;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
+import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.volume.RoundRobinVolumeChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
@@ -47,8 +52,10 @@ import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Map;
 import java.util.UUID;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_DATANODE_DIR_KEY;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -76,8 +83,15 @@ public class TestHddsDispatcher {
       container.create(volumeSet, new RoundRobinVolumeChoosingPolicy(),
           scmId.toString());
       containerSet.addContainer(container);
+      ContainerMetrics metrics = ContainerMetrics.create(conf);
+      Map<ContainerType, Handler> handlers = Maps.newHashMap();
+      for (ContainerType containerType : ContainerType.values()) {
+        handlers.put(containerType,
+            Handler.getHandlerForContainerType(
+                containerType, conf, null, containerSet, volumeSet, metrics));
+      }
       HddsDispatcher hddsDispatcher = new HddsDispatcher(
-          conf, containerSet, volumeSet, context);
+          conf, containerSet, volumeSet, handlers, context, metrics);
       hddsDispatcher.setScmId(scmId.toString());
       ContainerCommandResponseProto responseOne = hddsDispatcher.dispatch(
           getWriteChunkRequest(dd.getUuidString(), 1L, 1L));
@@ -98,6 +112,50 @@ public class TestHddsDispatcher {
       FileUtils.deleteDirectory(new File(testDir));
     }
 
+  }
+
+  @Test
+  public void testCreateContainerWithWriteChunk() throws IOException {
+    String testDir =
+        GenericTestUtils.getTempPath(TestHddsDispatcher.class.getSimpleName());
+    try {
+      UUID scmId = UUID.randomUUID();
+      OzoneConfiguration conf = new OzoneConfiguration();
+      conf.set(HDDS_DATANODE_DIR_KEY, testDir);
+      DatanodeDetails dd = randomDatanodeDetails();
+      ContainerSet containerSet = new ContainerSet();
+      VolumeSet volumeSet = new VolumeSet(dd.getUuidString(), conf);
+      StateContext context = Mockito.mock(StateContext.class);
+      ContainerMetrics metrics = ContainerMetrics.create(conf);
+      Map<ContainerType, Handler> handlers = Maps.newHashMap();
+      for (ContainerType containerType : ContainerType.values()) {
+        handlers.put(containerType,
+            Handler.getHandlerForContainerType(
+                containerType, conf, null, containerSet, volumeSet, metrics));
+      }
+      HddsDispatcher hddsDispatcher = new HddsDispatcher(
+          conf, containerSet, volumeSet, handlers, context, metrics);
+      hddsDispatcher.setScmId(scmId.toString());
+      ContainerCommandRequestProto writeChunkRequest =
+          getWriteChunkRequest(dd.getUuidString(), 1L, 1L);
+      // send read chunk request and make sure container does not exist
+      ContainerCommandResponseProto response =
+          hddsDispatcher.dispatch(getReadChunkRequest(writeChunkRequest));
+      Assert.assertEquals(response.getResult(),
+          ContainerProtos.Result.CONTAINER_NOT_FOUND);
+      // send write chunk request without sending create container
+      response = hddsDispatcher.dispatch(writeChunkRequest);
+      // container should be created as part of write chunk request
+      Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
+      // send read chunk request to read the chunk written above
+      response =
+          hddsDispatcher.dispatch(getReadChunkRequest(writeChunkRequest));
+      Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
+      Assert.assertEquals(response.getReadChunk().getData(),
+          writeChunkRequest.getWriteChunk().getData());
+    } finally {
+      FileUtils.deleteDirectory(new File(testDir));
+    }
   }
 
   // This method has to be removed once we move scm/TestUtils.java
@@ -123,7 +181,7 @@ public class TestHddsDispatcher {
       String datanodeId, Long containerId, Long localId) {
 
     ByteString data = ByteString.copyFrom(
-        UUID.randomUUID().toString().getBytes());
+        UUID.randomUUID().toString().getBytes(UTF_8));
     ContainerProtos.ChunkInfo chunk = ContainerProtos.ChunkInfo
         .newBuilder()
         .setChunkName(
@@ -147,6 +205,29 @@ public class TestHddsDispatcher {
         .setTraceID(UUID.randomUUID().toString())
         .setDatanodeUuid(datanodeId)
         .setWriteChunk(writeChunkRequest)
+        .build();
+  }
+
+  /**
+   * Creates container read chunk request using input container write chunk
+   * request.
+   *
+   * @param writeChunkRequest - Input container write chunk request
+   * @return container read chunk request
+   */
+  private ContainerCommandRequestProto getReadChunkRequest(
+      ContainerCommandRequestProto writeChunkRequest) {
+    WriteChunkRequestProto writeChunk = writeChunkRequest.getWriteChunk();
+    ContainerProtos.ReadChunkRequestProto.Builder readChunkRequest =
+        ContainerProtos.ReadChunkRequestProto.newBuilder()
+            .setBlockID(writeChunk.getBlockID())
+            .setChunkData(writeChunk.getChunkData());
+    return ContainerCommandRequestProto.newBuilder()
+        .setCmdType(ContainerProtos.Type.ReadChunk)
+        .setContainerID(writeChunk.getBlockID().getContainerID())
+        .setTraceID(writeChunkRequest.getTraceID())
+        .setDatanodeUuid(writeChunkRequest.getDatanodeUuid())
+        .setReadChunk(readChunkRequest)
         .build();
   }
 

@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ProxyCAManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
+import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.VolumeManager;
 
 /**
  * Context of the ResourceManager.
@@ -193,4 +194,8 @@ public interface RMContext extends ApplicationMasterServiceContext {
   ProxyCAManager getProxyCAManager();
 
   void setProxyCAManager(ProxyCAManager proxyCAManager);
+
+  VolumeManager getVolumeManager();
+
+  void setVolumeManager(VolumeManager volumeManager);
 }

@@ -51,7 +51,7 @@ public class TestNode2ContainerMap {
     for (int dnIndex = 1; dnIndex <= DATANODE_COUNT; dnIndex++) {
       TreeSet<ContainerID> currentSet = new TreeSet<>();
       for (int cnIndex = 1; cnIndex <= CONTAINER_COUNT; cnIndex++) {
-        long currentCnIndex = (dnIndex * CONTAINER_COUNT) + cnIndex;
+        long currentCnIndex = (long) (dnIndex * CONTAINER_COUNT) + cnIndex;
         currentSet.add(new ContainerID(currentCnIndex));
       }
       testData.put(UUID.randomUUID(), currentSet);
@@ -115,8 +115,8 @@ public class TestNode2ContainerMap {
     map.insertNewDatanode(key, values);
     Assert.assertTrue(map.isKnownDatanode(key));
     ReportResult result = map.processReport(key, values);
-    Assert.assertEquals(result.getStatus(),
-        ReportResult.ReportStatus.ALL_IS_WELL);
+    Assert.assertEquals(ReportResult.ReportStatus.ALL_IS_WELL,
+        result.getStatus());
   }
 
   @Test

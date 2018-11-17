@@ -32,6 +32,8 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerDataProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerType;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
@@ -267,29 +269,47 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
   }
 
   @Override
-  public void close() throws StorageContainerException {
+  public void markContainerForClose() throws StorageContainerException {
+    updateContainerData(() ->
+        containerData.setState(ContainerDataProto.State.CLOSING));
+  }
 
-    //TODO: writing .container file and compaction can be done
-    // asynchronously, otherwise rpc call for this will take a lot of time to
-    // complete this action
+  @Override
+  public void quasiClose() throws StorageContainerException {
+    updateContainerData(containerData::quasiCloseContainer);
+  }
+
+  @Override
+  public void close() throws StorageContainerException {
+    updateContainerData(containerData::closeContainer);
+    // It is ok if this operation takes a bit of time.
+    // Close container is not expected to be instantaneous.
+    compactDB();
+  }
+
+  private void updateContainerData(Runnable update)
+      throws StorageContainerException {
+    ContainerDataProto.State oldState = null;
     try {
       writeLock();
-
-      containerData.closeContainer();
+      oldState = containerData.getState();
+      update.run();
       File containerFile = getContainerFile();
       // update the new container data to .container File
       updateContainerFile(containerFile);
 
     } catch (StorageContainerException ex) {
-      // Failed to update .container file. Reset the state to CLOSING
-      containerData.setState(ContainerProtos.ContainerDataProto.State.CLOSING);
+      if (oldState != null) {
+        // Failed to update .container file. Reset the state to CLOSING
+        containerData.setState(oldState);
+      }
       throw ex;
     } finally {
       writeUnlock();
     }
+  }
 
-    // It is ok if this operation takes a bit of time.
-    // Close container is not expected to be instantaneous.
+  private void compactDB() throws StorageContainerException {
     try {
       MetadataStore db = BlockUtils.getDB(containerData, config);
       db.compactDB();
@@ -548,6 +568,9 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
       break;
     case CLOSING:
       state = ContainerReplicaProto.State.CLOSING;
+      break;
+    case QUASI_CLOSED:
+      state = ContainerReplicaProto.State.QUASI_CLOSED;
       break;
     case CLOSED:
       state = ContainerReplicaProto.State.CLOSED;

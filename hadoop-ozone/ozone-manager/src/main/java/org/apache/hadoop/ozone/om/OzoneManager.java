@@ -989,6 +989,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    * @param bucket - Name of the bucket.
    * @throws IOException
    */
+  @Override
   public void deleteBucket(String volume, String bucket) throws IOException {
     Map<String, String> auditMap = buildAuditMap(volume);
     auditMap.put(OzoneConsts.BUCKET, bucket);
@@ -1155,6 +1156,36 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       throws IOException {
     return s3BucketManager.getOzoneBucketMapping(s3BucketName);
   }
+
+  @Override
+  public List<OmBucketInfo> listS3Buckets(String userName, String startKey,
+                                          String prefix, int maxNumOfBuckets)
+      throws IOException {
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = buildAuditMap(userName);
+    auditMap.put(OzoneConsts.START_KEY, startKey);
+    auditMap.put(OzoneConsts.PREFIX, prefix);
+    auditMap.put(OzoneConsts.MAX_NUM_OF_BUCKETS,
+        String.valueOf(maxNumOfBuckets));
+    try {
+      metrics.incNumListS3Buckets();
+      String volumeName = s3BucketManager.getOzoneVolumeNameForUser(userName);
+      return bucketManager.listBuckets(volumeName, startKey, prefix,
+          maxNumOfBuckets);
+    } catch (IOException ex) {
+      metrics.incNumListS3BucketsFails();
+      auditSuccess = false;
+      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_S3BUCKETS,
+          auditMap, ex));
+      throw ex;
+    } finally {
+      if(auditSuccess){
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction
+                .LIST_S3BUCKETS, auditMap));
+      }
+    }
+  }
+
 
 
 

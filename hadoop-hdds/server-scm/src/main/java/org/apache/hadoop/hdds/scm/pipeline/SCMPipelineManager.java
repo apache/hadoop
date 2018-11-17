@@ -30,6 +30,7 @@ import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.utils.MetadataKeyFilters;
 import org.apache.hadoop.utils.MetadataStore;
 import org.apache.hadoop.utils.MetadataStoreBuilder;
 import org.slf4j.Logger;
@@ -94,7 +95,8 @@ public class SCMPipelineManager implements PipelineManager {
       return;
     }
     List<Map.Entry<byte[], byte[]>> pipelines =
-        pipelineStore.getSequentialRangeKVs(null, Integer.MAX_VALUE, null);
+        pipelineStore.getSequentialRangeKVs(null, Integer.MAX_VALUE,
+            (MetadataKeyFilters.MetadataKeyFilter[])null);
 
     for (Map.Entry<byte[], byte[]> entry : pipelines) {
       Pipeline pipeline = Pipeline.getFromProtobuf(
@@ -160,6 +162,17 @@ public class SCMPipelineManager implements PipelineManager {
     lock.readLock().lock();
     try {
       return stateManager.getPipelines(type, factor);
+    } finally {
+      lock.readLock().unlock();
+    }
+  }
+
+  @Override
+  public List<Pipeline> getPipelines(ReplicationType type,
+      ReplicationFactor factor, Pipeline.PipelineState state) {
+    lock.readLock().lock();
+    try {
+      return stateManager.getPipelines(type, factor, state);
     } finally {
       lock.readLock().unlock();
     }

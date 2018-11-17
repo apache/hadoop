@@ -46,6 +46,9 @@ public interface PipelineManager extends Closeable {
   List<Pipeline> getPipelines(ReplicationType type,
       ReplicationFactor factor);
 
+  List<Pipeline> getPipelines(ReplicationType type,
+      ReplicationFactor factor, Pipeline.PipelineState state);
+
   void addContainerToPipeline(PipelineID pipelineID, ContainerID containerID)
       throws IOException;
 

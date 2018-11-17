@@ -119,7 +119,8 @@ public class TestXceiverClientMetrics {
             smallFileRequest = ContainerTestHelper.getWriteSmallFileRequest(
                 client.getPipeline(), blockID, 1024);
             CompletableFuture<ContainerProtos.ContainerCommandResponseProto>
-                response = client.sendCommandAsync(smallFileRequest);
+                response =
+                client.sendCommandAsync(smallFileRequest).getResponse();
             computeResults.add(response);
           }
 

@@ -30,6 +30,7 @@ import java.io.OutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -62,7 +63,7 @@ public class TestChunkStreams {
       assertEquals(0, groupOutputStream.getByteOffset());
 
       String dataString = RandomStringUtils.randomAscii(500);
-      byte[] data = dataString.getBytes();
+      byte[] data = dataString.getBytes(UTF_8);
       groupOutputStream.write(data, 0, data.length);
       assertEquals(500, groupOutputStream.getByteOffset());
 
@@ -95,7 +96,8 @@ public class TestChunkStreams {
       assertEquals(0, groupOutputStream.getByteOffset());
 
       // first writes of 100 bytes should succeed
-      groupOutputStream.write(RandomStringUtils.randomAscii(100).getBytes());
+      groupOutputStream.write(RandomStringUtils.randomAscii(100)
+          .getBytes(UTF_8));
       assertEquals(100, groupOutputStream.getByteOffset());
 
       // second writes of 500 bytes should fail, as there should be only 400
@@ -104,7 +106,8 @@ public class TestChunkStreams {
       // other add more informative error code rather than exception, need to
       // change this part.
       exception.expect(Exception.class);
-      groupOutputStream.write(RandomStringUtils.randomAscii(500).getBytes());
+      groupOutputStream.write(RandomStringUtils.randomAscii(500)
+          .getBytes(UTF_8));
       assertEquals(100, groupOutputStream.getByteOffset());
     }
   }
@@ -115,7 +118,7 @@ public class TestChunkStreams {
       ArrayList<ChunkInputStream> inputStreams = new ArrayList<>();
 
       String dataString = RandomStringUtils.randomAscii(500);
-      byte[] buf = dataString.getBytes();
+      byte[] buf = dataString.getBytes(UTF_8);
       int offset = 0;
       for (int i = 0; i < 5; i++) {
         int tempOffset = offset;
@@ -126,12 +129,12 @@ public class TestChunkStreams {
                   new ByteArrayInputStream(buf, tempOffset, 100);
 
               @Override
-              public void seek(long pos) throws IOException {
+              public synchronized void seek(long pos) throws IOException {
                 throw new UnsupportedOperationException();
               }
 
               @Override
-              public long getPos() throws IOException {
+              public synchronized long getPos() throws IOException {
                 return pos;
               }
 
@@ -142,12 +145,13 @@ public class TestChunkStreams {
               }
 
               @Override
-              public int read() throws IOException {
+              public synchronized int read() throws IOException {
                 return in.read();
               }
 
               @Override
-              public int read(byte[] b, int off, int len) throws IOException {
+              public synchronized  int read(byte[] b, int off, int len)
+                  throws IOException {
                 int readLen = in.read(b, off, len);
                 pos += readLen;
                 return readLen;
@@ -162,7 +166,7 @@ public class TestChunkStreams {
       int len = groupInputStream.read(resBuf, 0, 500);
 
       assertEquals(500, len);
-      assertEquals(dataString, new String(resBuf));
+      assertEquals(dataString, new String(resBuf, UTF_8));
     }
   }
 
@@ -172,7 +176,7 @@ public class TestChunkStreams {
       ArrayList<ChunkInputStream> inputStreams = new ArrayList<>();
 
       String dataString = RandomStringUtils.randomAscii(500);
-      byte[] buf = dataString.getBytes();
+      byte[] buf = dataString.getBytes(UTF_8);
       int offset = 0;
       for (int i = 0; i < 5; i++) {
         int tempOffset = offset;
@@ -183,28 +187,29 @@ public class TestChunkStreams {
                   new ByteArrayInputStream(buf, tempOffset, 100);
 
               @Override
-              public void seek(long pos) throws IOException {
+              public synchronized void seek(long pos) throws IOException {
                 throw new UnsupportedOperationException();
               }
 
               @Override
-              public long getPos() throws IOException {
+              public synchronized long getPos() throws IOException {
                 return pos;
               }
 
               @Override
-              public boolean seekToNewSource(long targetPos)
+              public synchronized boolean seekToNewSource(long targetPos)
                   throws IOException {
                 throw new UnsupportedOperationException();
               }
 
               @Override
-              public int read() throws IOException {
+              public synchronized int read() throws IOException {
                 return in.read();
               }
 
               @Override
-              public int read(byte[] b, int off, int len) throws IOException {
+              public synchronized int read(byte[] b, int off, int len)
+                  throws IOException {
                 int readLen = in.read(b, off, len);
                 pos += readLen;
                 return readLen;
@@ -222,14 +227,14 @@ public class TestChunkStreams {
       assertEquals(60, groupInputStream.getRemainingOfIndex(3));
       assertEquals(340, len);
       assertEquals(dataString.substring(0, 340),
-          new String(resBuf).substring(0, 340));
+          new String(resBuf, UTF_8).substring(0, 340));
 
       // read following 300 bytes, but only 200 left
       len = groupInputStream.read(resBuf, 340, 260);
       assertEquals(4, groupInputStream.getCurrentStreamIndex());
       assertEquals(0, groupInputStream.getRemainingOfIndex(4));
       assertEquals(160, len);
-      assertEquals(dataString, new String(resBuf).substring(0, 500));
+      assertEquals(dataString, new String(resBuf, UTF_8).substring(0, 500));
 
       // further read should get EOF
       len = groupInputStream.read(resBuf, 0, 1);

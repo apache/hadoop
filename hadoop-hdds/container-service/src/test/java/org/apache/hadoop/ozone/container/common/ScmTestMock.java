@@ -71,8 +71,8 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
       new HashMap<>();
   private Map<DatanodeDetails, NodeReportProto> nodeReports = new HashMap<>();
   private AtomicInteger commandStatusReport = new AtomicInteger(0);
-  private List<CommandStatus> cmdStatusList = new LinkedList<>();
-  private List<SCMCommandProto> scmCommandRequests = new LinkedList<>();
+  private List<CommandStatus> cmdStatusList = new ArrayList<>();
+  private List<SCMCommandProto> scmCommandRequests = new ArrayList<>();
   /**
    * Returns the number of heartbeats made to this class.
    *

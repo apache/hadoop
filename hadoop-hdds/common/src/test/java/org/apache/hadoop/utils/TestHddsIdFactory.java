@@ -55,7 +55,7 @@ public class TestHddsIdFactory {
     List<Future<Integer>> result = executor.invokeAll(tasks);
     assertEquals(IDS_PER_THREAD * NUM_OF_THREADS, ID_SET.size());
     for (Future<Integer> r : result) {
-      assertEquals(r.get().intValue(), IDS_PER_THREAD);
+      assertEquals(IDS_PER_THREAD, r.get().intValue());
     }
   }
 

@@ -191,5 +191,9 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-ozone-datanode</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdds-docs</artifactId>
+    </dependency>
   </dependencies>
 </project>

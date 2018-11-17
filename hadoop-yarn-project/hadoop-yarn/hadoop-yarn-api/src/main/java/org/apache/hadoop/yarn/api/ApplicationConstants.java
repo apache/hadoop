@@ -39,12 +39,12 @@ public interface ApplicationConstants {
    * The environment variable for APP_SUBMIT_TIME. Set in AppMaster environment
    * only
    */
-  public static final String APP_SUBMIT_TIME_ENV = "APP_SUBMIT_TIME_ENV";
+  String APP_SUBMIT_TIME_ENV = "APP_SUBMIT_TIME_ENV";
 
   /**
    * The cache file into which container token is written
    */
-  public static final String CONTAINER_TOKEN_FILE_ENV_NAME =
+  String CONTAINER_TOKEN_FILE_ENV_NAME =
       UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION;
 
   /**
@@ -74,14 +74,14 @@ public interface ApplicationConstants {
    * ApplicationMaster's environment only. This states that for all non-relative
    * web URLs in the app masters web UI what base should they have.
    */
-  public static final String APPLICATION_WEB_PROXY_BASE_ENV =
+  String APPLICATION_WEB_PROXY_BASE_ENV =
     "APPLICATION_WEB_PROXY_BASE";
 
   /**
    * The temporary environmental variable for container log directory. This
    * should be replaced by real container log directory on container launch.
    */
-  public static final String LOG_DIR_EXPANSION_VAR = "<LOG_DIR>";
+  String LOG_DIR_EXPANSION_VAR = "<LOG_DIR>";
 
   /**
    * This constant is used to construct class path and it will be replaced with
@@ -92,7 +92,7 @@ public interface ApplicationConstants {
    */
   @Public
   @Unstable
-  public static final String CLASS_PATH_SEPARATOR= "<CPS>";
+  String CLASS_PATH_SEPARATOR= "<CPS>";
 
   /**
    * The following two constants are used to expand parameter and it will be
@@ -105,7 +105,7 @@ public interface ApplicationConstants {
    */
   @Public
   @Unstable
-  public static final String PARAMETER_EXPANSION_LEFT="{{";
+  String PARAMETER_EXPANSION_LEFT="{{";
 
   /**
    * User has to use this constant to construct class path if user wants
@@ -114,11 +114,11 @@ public interface ApplicationConstants {
    */
   @Public
   @Unstable
-  public static final String PARAMETER_EXPANSION_RIGHT="}}";
+  String PARAMETER_EXPANSION_RIGHT="}}";
 
-  public static final String STDERR = "stderr";
+  String STDERR = "stderr";
 
-  public static final String STDOUT = "stdout";
+  String STDOUT = "stdout";
 
   /**
    * The type of launch for the container.
@@ -136,7 +136,7 @@ public interface ApplicationConstants {
    * Some of the environment variables for applications are <em>final</em>
    * i.e. they cannot be modified by the applications.
    */
-  public enum Environment {
+  enum Environment {
     /**
      * $USER
      * Final, non-modifiable.
@@ -283,7 +283,7 @@ public interface ApplicationConstants {
         "YARN_CONTAINER_RUNTIME_YARN_SYSFS_ENABLE");
 
     private final String variable;
-    private Environment(String variable) {
+    Environment(String variable) {
       this.variable = variable;
     }
 

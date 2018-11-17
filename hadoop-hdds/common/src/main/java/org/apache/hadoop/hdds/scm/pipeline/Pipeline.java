@@ -196,6 +196,17 @@ public final class Pipeline {
     return new Builder(pipeline);
   }
 
+  @Override
+  public String toString() {
+    return "Pipeline{" +
+        "id=" + id +
+        ", type=" + type +
+        ", factor=" + factor +
+        ", state=" + state +
+        ", nodeStatus=" + nodeStatus +
+        '}';
+  }
+
   /**
    * Builder class for Pipeline.
    */

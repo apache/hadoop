@@ -111,24 +111,18 @@ message NodePool {
  */
 
 enum LifeCycleState {
-    ALLOCATED = 1;
-    CREATING = 2; // Used for container allocated/created by different client.
-    OPEN =3; // Mostly an update to SCM via HB or client call.
-    CLOSING = 4;
-    CLOSED = 5; // !!State after this has not been used yet.
-    DELETING = 6;
-    DELETED = 7; // object is deleted.
+    OPEN = 1;
+    CLOSING = 2;
+    CLOSED = 3;
+    DELETING = 4;
+    DELETED = 5; // object is deleted.
 }
 
 enum LifeCycleEvent {
-    CREATE = 1; // A request to client to create this object
-    CREATED = 2;
-    FINALIZE = 3;
-    CLOSE = 4; // !!Event after this has not been used yet.
-    UPDATE = 5;
-    TIMEOUT = 6; // creation has timed out from SCM's View.
-    DELETE = 7;
-    CLEANUP = 8;
+    FINALIZE = 1;
+    CLOSE = 2; // !!Event after this has not been used yet.
+    DELETE = 3;
+    CLEANUP = 4;
 }
 
 message ContainerInfoProto {

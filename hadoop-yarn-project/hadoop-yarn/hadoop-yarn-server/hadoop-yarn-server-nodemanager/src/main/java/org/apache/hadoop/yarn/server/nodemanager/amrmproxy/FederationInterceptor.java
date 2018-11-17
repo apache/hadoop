@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -60,6 +61,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.PreemptionContract;
 import org.apache.hadoop.yarn.api.records.PreemptionMessage;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.StrictPreemptionContract;
@@ -163,10 +165,22 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
   /**
    * Stores the AllocateResponses that are received asynchronously from all the
-   * sub-cluster resource managers, including home RM.
+   * sub-cluster resource managers, including home RM, but not merged and
+   * returned back to AM yet.
    */
   private Map<SubClusterId, List<AllocateResponse>> asyncResponseSink;
 
+  /**
+   * Remembers the last allocate response from all known sub-clusters. This is
+   * used together with sub-cluster timeout to assemble entries about
+   * cluster-wide info (e.g. AvailableResource, NumClusterNodes) in the allocate
+   * response back to AM.
+   */
+  private Map<SubClusterId, AllocateResponse> lastSCResponse;
+
+  /**
+   * The async UAM registration result that is not consumed yet.
+   */
   private Map<SubClusterId, RegisterApplicationMasterResponse> uamRegistrations;
 
   // For unit test synchronization
@@ -216,6 +230,16 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
   private SubClusterResolver subClusterResolver;
 
+  /**
+   * Records the last time a successful heartbeat response received from a known
+   * sub-cluster. lastHeartbeatTimeStamp.keySet() should be in sync with
+   * uamPool.getAllUAMIds().
+   */
+  private Map<SubClusterId, Long> lastSCResponseTime;
+  private long subClusterTimeOut;
+
+  private long lastAMHeartbeatTime;
+
   /** The policy used to split requests among sub-clusters. */
   private FederationAMRMProxyPolicy policyInterpreter;
 
@@ -232,6 +256,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
   public FederationInterceptor() {
     this.containerIdToSubClusterIdMap = new ConcurrentHashMap<>();
     this.asyncResponseSink = new ConcurrentHashMap<>();
+    this.lastSCResponse = new ConcurrentHashMap<>();
     this.uamRegistrations = new ConcurrentHashMap<>();
     this.uamRegisterFutures = new ConcurrentHashMap<>();
     this.threadpool = Executors.newCachedThreadPool();
@@ -241,6 +266,8 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     this.amRegistrationResponse = null;
     this.justRecovered = false;
     this.finishAMCalled = false;
+    this.lastSCResponseTime = new ConcurrentHashMap<>();
+    this.lastAMHeartbeatTime = this.clock.getTime();
   }
 
   /**
@@ -310,6 +337,19 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     this.heartbeatMaxWaitTimeMs =
         conf.getLong(YarnConfiguration.FEDERATION_AMRMPROXY_HB_MAX_WAIT_MS,
             YarnConfiguration.DEFAULT_FEDERATION_AMRMPROXY_HB_MAX_WAIT_MS);
+
+    this.subClusterTimeOut =
+        conf.getLong(YarnConfiguration.FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT,
+            YarnConfiguration.DEFAULT_FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT);
+    if (this.subClusterTimeOut <= 0) {
+      LOG.info(
+          "{} configured to be {}, should be positive. Using default of {}.",
+          YarnConfiguration.FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT,
+          this.subClusterTimeOut,
+          YarnConfiguration.DEFAULT_FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT);
+      this.subClusterTimeOut =
+          YarnConfiguration.DEFAULT_FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT;
+    }
   }
 
   @Override
@@ -393,6 +433,10 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
           RegisterApplicationMasterResponse response =
               this.uamPool.registerApplicationMaster(subClusterId.getId(),
                   this.amRegistrationRequest);
+
+          // Set sub-cluster to be timed out initially
+          lastSCResponseTime.put(subClusterId,
+              clock.getTime() - subClusterTimeOut);
 
           // Running containers from secondary RMs
           for (Container container : response
@@ -580,6 +624,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       throws YarnException, IOException {
     Preconditions.checkArgument(this.policyInterpreter != null,
         "Allocate should be called after registerApplicationMaster");
+    this.lastAMHeartbeatTime = this.clock.getTime();
 
     if (this.justRecovered) {
       throw new ApplicationMasterNotRegisteredException(
@@ -644,8 +689,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       }
 
       // Prepare the response to AM
-      AllocateResponse response =
-          RECORD_FACTORY.newRecordInstance(AllocateResponse.class);
+      AllocateResponse response = generateBaseAllocationResponse();
 
       // Merge all responses from response sink
       mergeAllocateResponses(response);
@@ -970,6 +1014,10 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
                 response = uamPool.registerApplicationMaster(
                     subClusterId.getId(), amRegistrationRequest);
 
+                // Set sub-cluster to be timed out initially
+                lastSCResponseTime.put(subClusterId,
+                    clock.getTime() - subClusterTimeOut);
+
                 if (response != null
                     && response.getContainersFromPreviousAttempts() != null) {
                   cacheAllocatedContainers(
@@ -1172,6 +1220,10 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       if (!subClusterId.equals(this.homeSubClusterId)
           && !this.uamPool.hasUAMId(subClusterId.getId())) {
         newSubClusters.add(subClusterId);
+
+        // Set sub-cluster to be timed out initially
+        lastSCResponseTime.put(subClusterId,
+            clock.getTime() - subClusterTimeOut);
       }
     }
 
@@ -1242,6 +1294,38 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       this.uamRegisterFutures.put(scId, future);
     }
     return newSubClusters;
+  }
+
+  /**
+   * Prepare the base allocation response. Use lastSCResponse and
+   * lastHeartbeatTimeStamp to assemble entries about cluster-wide info, e.g.
+   * AvailableResource, NumClusterNodes.
+   */
+  protected AllocateResponse generateBaseAllocationResponse() {
+    AllocateResponse baseResponse =
+        RECORD_FACTORY.newRecordInstance(AllocateResponse.class);
+
+    baseResponse.setAvailableResources(Resource.newInstance(0, 0));
+    baseResponse.setNumClusterNodes(0);
+
+    Set<SubClusterId> expiredSC = getTimedOutSCs(false);
+    for (Entry<SubClusterId, AllocateResponse> entry : lastSCResponse
+        .entrySet()) {
+      if (expiredSC.contains(entry.getKey())) {
+        // Skip expired sub-clusters
+        continue;
+      }
+      AllocateResponse response = entry.getValue();
+
+      if (response.getAvailableResources() != null) {
+        baseResponse.setAvailableResources(
+            Resources.add(baseResponse.getAvailableResources(),
+                response.getAvailableResources()));
+      }
+      baseResponse.setNumClusterNodes(
+          baseResponse.getNumClusterNodes() + response.getNumClusterNodes());
+    }
+    return baseResponse;
   }
 
   /**
@@ -1342,17 +1426,6 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       } else {
         homeResponse
             .setAllocatedContainers(otherResponse.getAllocatedContainers());
-      }
-    }
-
-    if (otherResponse.getAvailableResources() != null) {
-      if (homeResponse.getAvailableResources() != null) {
-        homeResponse.setAvailableResources(
-            Resources.add(homeResponse.getAvailableResources(),
-                otherResponse.getAvailableResources()));
-      } else {
-        homeResponse
-            .setAvailableResources(otherResponse.getAvailableResources());
       }
     }
 
@@ -1520,6 +1593,29 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     return request;
   }
 
+  protected Set<SubClusterId> getTimedOutSCs(boolean verbose) {
+    Set<SubClusterId> timedOutSCs = new HashSet<>();
+    for (Map.Entry<SubClusterId, Long> entry : this.lastSCResponseTime
+        .entrySet()) {
+      if (entry.getValue() > this.lastAMHeartbeatTime) {
+        // AM haven't heartbeat to us (and thus we to all SCs) for a long time,
+        // should not consider the SC as timed out
+        continue;
+      }
+      long duration = this.clock.getTime() - entry.getValue();
+      if (duration > this.subClusterTimeOut) {
+        if (verbose) {
+          LOG.warn(
+              "Subcluster {} doesn't have a successful heartbeat"
+                  + " for {} seconds for {}",
+              entry.getKey(), (double) duration / 1000, this.attemptId);
+        }
+        timedOutSCs.add(entry.getKey());
+      }
+    }
+    return timedOutSCs;
+  }
+
   /**
    * Check to see if the specified containerId exists in the cache and log an
    * error if not found.
@@ -1553,7 +1649,8 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
    */
   protected Map<SubClusterId, List<ResourceRequest>> splitResourceRequests(
       List<ResourceRequest> askList) throws YarnException {
-    return this.policyInterpreter.splitResourceRequests(askList);
+    return policyInterpreter.splitResourceRequests(askList,
+        getTimedOutSCs(true));
   }
 
   @VisibleForTesting
@@ -1602,6 +1699,8 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
         // Notify main thread about the response arrival
         asyncResponseSink.notifyAll();
       }
+      lastSCResponse.put(subClusterId, response);
+      lastSCResponseTime.put(subClusterId, clock.getTime());
 
       // Notify policy of allocate response
       try {

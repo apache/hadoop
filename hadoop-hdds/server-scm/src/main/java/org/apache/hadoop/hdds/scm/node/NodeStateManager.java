@@ -29,7 +29,6 @@ import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
-import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.states.*;
 import org.apache.hadoop.hdds.scm.node.states.Node2PipelineMap;
 import org.apache.hadoop.hdds.server.events.Event;
@@ -94,11 +93,6 @@ public class NodeStateManager implements Runnable, Closeable {
    */
   private final Node2PipelineMap node2PipelineMap;
   /**
-   * Maintains the map from node to ContainerIDs for the containers
-   * available on the node.
-   */
-  private final Node2ContainerMap node2ContainerMap;
-  /**
    * Used for publishing node state change events.
    */
   private final EventPublisher eventPublisher;
@@ -131,7 +125,6 @@ public class NodeStateManager implements Runnable, Closeable {
   public NodeStateManager(Configuration conf, EventPublisher eventPublisher) {
     this.nodeStateMap = new NodeStateMap();
     this.node2PipelineMap = new Node2PipelineMap();
-    this.node2ContainerMap = new Node2ContainerMap();
     this.eventPublisher = eventPublisher;
     this.state2EventMap = new HashMap<>();
     initialiseState2EventMap();
@@ -151,6 +144,8 @@ public class NodeStateManager implements Runnable, Closeable {
     executorService = HadoopExecutors.newScheduledThreadPool(1,
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("SCM Heartbeat Processing Thread - %d").build());
+    //BUG:BUG TODO: The return value is ignored, if an exception is thrown in
+    // the executing funtion, it will be ignored.
     executorService.schedule(this, heartbeatCheckerIntervalMs,
         TimeUnit.MILLISECONDS);
   }
@@ -338,7 +333,7 @@ public class NodeStateManager implements Runnable, Closeable {
    * @return list of nodes
    */
   public List<DatanodeDetails> getNodes(NodeState state) {
-    List<DatanodeDetails> nodes = new LinkedList<>();
+    List<DatanodeDetails> nodes = new ArrayList<>();
     nodeStateMap.getNodes(state).forEach(
         uuid -> {
           try {
@@ -359,7 +354,7 @@ public class NodeStateManager implements Runnable, Closeable {
    * @return all the managed nodes
    */
   public List<DatanodeDetails> getAllNodes() {
-    List<DatanodeDetails> nodes = new LinkedList<>();
+    List<DatanodeDetails> nodes = new ArrayList<>();
     nodeStateMap.getAllNodes().forEach(
         uuid -> {
           try {
@@ -431,18 +426,6 @@ public class NodeStateManager implements Runnable, Closeable {
   }
 
   /**
-   * Removes a node from NodeStateManager.
-   *
-   * @param datanodeDetails DatanodeDetails
-   *
-   * @throws NodeNotFoundException if the node is not present
-   */
-  public void removeNode(DatanodeDetails datanodeDetails)
-      throws NodeNotFoundException {
-    nodeStateMap.removeNode(datanodeDetails.getUuid());
-  }
-
-  /**
    * Returns the current stats of the node.
    *
    * @param uuid node id
@@ -475,19 +458,6 @@ public class NodeStateManager implements Runnable, Closeable {
   }
 
   /**
-   * Remove the current stats of the specify node.
-   *
-   * @param uuid node id
-   *
-   * @return SCMNodeStat the stat removed from the node.
-   *
-   * @throws NodeNotFoundException if the node is not present.
-   */
-  public SCMNodeStat removeNodeStat(UUID uuid) throws NodeNotFoundException {
-    return nodeStateMap.removeNodeStat(uuid);
-  }
-
-  /**
    * Removes a pipeline from the node2PipelineMap.
    * @param pipeline - Pipeline to be removed
    */
@@ -498,23 +468,11 @@ public class NodeStateManager implements Runnable, Closeable {
    * Update set of containers available on a datanode.
    * @param uuid - DatanodeID
    * @param containerIds - Set of containerIDs
-   * @throws SCMException - if datanode is not known. For new datanode use
-   *                        addDatanodeInContainerMap call.
+   * @throws NodeNotFoundException - if datanode is not known.
    */
-  public void setContainersForDatanode(UUID uuid, Set<ContainerID> containerIds)
-      throws SCMException {
-    node2ContainerMap.setContainersForDatanode(uuid, containerIds);
-  }
-
-  /**
-   * Process containerReport received from datanode.
-   * @param uuid - DataonodeID
-   * @param containerIds - Set of containerIDs
-   * @return The result after processing containerReport
-   */
-  public ReportResult<ContainerID> processContainerReport(UUID uuid,
-      Set<ContainerID> containerIds) {
-    return node2ContainerMap.processReport(uuid, containerIds);
+  public void setContainers(UUID uuid, Set<ContainerID> containerIds)
+      throws NodeNotFoundException {
+    nodeStateMap.setContainers(uuid, containerIds);
   }
 
   /**
@@ -522,20 +480,9 @@ public class NodeStateManager implements Runnable, Closeable {
    * @param uuid - DatanodeID
    * @return - set of containerIDs
    */
-  public Set<ContainerID> getContainers(UUID uuid) {
-    return node2ContainerMap.getContainers(uuid);
-  }
-
-  /**
-   * Insert a new datanode with set of containerIDs for containers available
-   * on it.
-   * @param uuid - DatanodeID
-   * @param containerIDs - Set of ContainerIDs
-   * @throws SCMException - if datanode already exists
-   */
-  public void addDatanodeInContainerMap(UUID uuid,
-      Set<ContainerID> containerIDs) throws SCMException {
-    node2ContainerMap.insertNewDatanode(uuid, containerIDs);
+  public Set<ContainerID> getContainers(UUID uuid)
+      throws NodeNotFoundException {
+    return nodeStateMap.getContainers(uuid);
   }
 
   /**
@@ -668,6 +615,8 @@ public class NodeStateManager implements Runnable, Closeable {
 
     if (!Thread.currentThread().isInterrupted() &&
         !executorService.isShutdown()) {
+      //BUGBUG: The return future needs to checked here to make sure the
+      // exceptions are handled correctly.
       executorService.schedule(this, heartbeatCheckerIntervalMs,
           TimeUnit.MILLISECONDS);
     } else {

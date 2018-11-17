@@ -72,7 +72,7 @@ public class CliUtils {
       resourcesStr = resourcesStr.substring(1);
     }
     if (resourcesStr.endsWith("]")) {
-      resourcesStr = resourcesStr.substring(0, resourcesStr.length());
+      resourcesStr = resourcesStr.substring(0, resourcesStr.length() - 1);
     }
 
     for (String resource : resourcesStr.trim().split(",")) {
@@ -156,9 +156,7 @@ public class CliUtils {
       return true;
 
     if (args.length == 1) {
-      if (args[0].equals("-h") || args[0].equals("--help")) {
-        return true;
-      }
+      return args[0].equals("-h") || args[0].equals("--help");
     }
 
     return false;

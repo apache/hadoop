@@ -44,7 +44,7 @@ execute_tests(){
      TITLE="Ozone $TEST tests with $COMPOSE_DIR cluster"
      set +e
      OUTPUT_NAME="$COMPOSE_DIR-${TEST//\//_}"
-	  docker-compose -f "$COMPOSE_FILE" exec datanode python -m robot --log NONE --report NONE "${OZONE_ROBOT_OPTS[@]}" --output "smoketest/$RESULT_DIR/robot-$OUTPUT_NAME.xml" --logtitle "$TITLE" --reporttitle "$TITLE" "smoketest/$TEST"
+	  docker-compose -f "$COMPOSE_FILE" exec ozoneManager python -m robot --log NONE --report NONE "${OZONE_ROBOT_OPTS[@]}" --output "smoketest/$RESULT_DIR/robot-$OUTPUT_NAME.xml" --logtitle "$TITLE" --reporttitle "$TITLE" "smoketest/$TEST"
      set -e
      docker-compose -f "$COMPOSE_FILE" logs > "$DIR/$RESULT_DIR/docker-$OUTPUT_NAME.log"
   done
@@ -111,6 +111,8 @@ if [ "$RUN_ALL" = true ]; then
    execute_tests ozone "${DEFAULT_TESTS[@]}"
    TESTS=("ozonefs")
    execute_tests ozonefs "${TESTS[@]}"
+   TESTS=("ozone-hdfs")
+   execute_tests ozone-hdfs "${DEFAULT_TESTS[@]}"
    TESTS=("s3")
    execute_tests ozones3 "${TESTS[@]}"
 else

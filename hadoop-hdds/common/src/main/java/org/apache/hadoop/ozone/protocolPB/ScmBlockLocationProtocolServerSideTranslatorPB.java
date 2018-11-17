@@ -78,7 +78,6 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
             AllocateScmBlockResponseProto.newBuilder()
                 .setContainerBlockID(allocatedBlock.getBlockID().getProtobuf())
                 .setPipeline(allocatedBlock.getPipeline().getProtobufMessage())
-                .setCreateContainer(allocatedBlock.getCreateContainer())
                 .setErrorCode(AllocateScmBlockResponseProto.Error.success)
                 .build();
       } else {

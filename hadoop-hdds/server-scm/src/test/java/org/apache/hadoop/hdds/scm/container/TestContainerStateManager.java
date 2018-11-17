@@ -24,6 +24,8 @@ import java.util.Set;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
 import org.apache.hadoop.hdds.scm.TestUtils;
 
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
@@ -96,6 +98,7 @@ public class TestContainerStateManager {
       throws ContainerNotFoundException {
     ContainerReplica replica = ContainerReplica.newBuilder()
         .setContainerID(cont.containerID())
+        .setContainerState(ContainerReplicaProto.State.CLOSED)
         .setDatanodeDetails(node)
         .build();
     containerStateManager

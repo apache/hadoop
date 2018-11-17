@@ -83,7 +83,7 @@ public class ChunkInputStream extends InputStream implements Seekable {
   }
 
   private void initializeChunkOffset() {
-    int tempOffset = 0;
+    long tempOffset = 0;
     for (int i = 0; i < chunks.size(); i++) {
       chunkOffset[i] = tempOffset;
       tempOffset += chunks.get(i).getLen();

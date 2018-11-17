@@ -59,8 +59,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
-import static org.apache.hadoop.ozone.OzoneConsts.INVALID_PORT;
-
 /**
  * Current Context of State Machine.
  */
@@ -113,24 +111,6 @@ public class StateContext {
    */
   public DatanodeStateMachine getParent() {
     return parent;
-  }
-
-  /**
-   * Get the container server port.
-   * @return The container server port if available, return -1 if otherwise
-   */
-  public int getContainerPort() {
-    return parent == null ?
-        INVALID_PORT : parent.getContainer().getContainerServerPort();
-  }
-
-  /**
-   * Gets the Ratis Port.
-   * @return int , return -1 if not valid.
-   */
-  public int getRatisPort() {
-    return parent == null ?
-        INVALID_PORT : parent.getContainer().getRatisContainerServerPort();
   }
 
   /**
@@ -447,6 +427,11 @@ public class StateContext {
    * @param cmd - {@link SCMCommand}.
    */
   public void addCmdStatus(SCMCommand cmd) {
+    if (cmd.getType().equals(Type.closeContainerCommand)) {
+      // We will be removing CommandStatus completely.
+      // As a first step, removed it for CloseContainerCommand.
+      return;
+    }
     CommandStatusBuilder statusBuilder;
     if (cmd.getType() == Type.deleteBlocksCommand) {
       statusBuilder = new DeleteBlockCommandStatusBuilder();
@@ -466,14 +451,6 @@ public class StateContext {
    */
   public Map<Long, CommandStatus> getCommandStatusMap() {
     return cmdStatusMap;
-  }
-
-  /**
-   * Remove object from cache in StateContext#cmdStatusMap.
-   *
-   */
-  public void removeCommandStatus(Long cmdId) {
-    cmdStatusMap.remove(cmdId);
   }
 
   /**

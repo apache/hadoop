@@ -171,7 +171,6 @@ public class KeyManagerImpl implements KeyManager {
     }
     OmKeyLocationInfo info = new OmKeyLocationInfo.Builder()
         .setBlockID(new BlockID(allocatedBlock.getBlockID()))
-        .setShouldCreateContainer(allocatedBlock.getCreateContainer())
         .setLength(scmBlockSize)
         .setOffset(0)
         .build();
@@ -235,7 +234,6 @@ public class KeyManagerImpl implements KeyManager {
         }
         OmKeyLocationInfo subKeyInfo = new OmKeyLocationInfo.Builder()
             .setBlockID(new BlockID(allocatedBlock.getBlockID()))
-            .setShouldCreateContainer(allocatedBlock.getCreateContainer())
             .setLength(allocateSize)
             .setOffset(0)
             .build();

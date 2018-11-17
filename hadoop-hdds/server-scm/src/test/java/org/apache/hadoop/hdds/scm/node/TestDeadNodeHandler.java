@@ -29,9 +29,12 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.NodeReportProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.StorageReportProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
@@ -42,10 +45,11 @@ import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
-import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
-import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.NodeReportFromDatanode;
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
+    .NodeReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
 import org.apache.hadoop.hdds.server.events.EventQueue;
@@ -93,7 +97,7 @@ public class TestDeadNodeHandler {
   }
 
   @Test
-  public void testOnMessage() throws IOException {
+  public void testOnMessage() throws IOException, NodeNotFoundException {
     //GIVEN
     DatanodeDetails datanode1 = TestUtils.randomDatanodeDetails();
     DatanodeDetails datanode2 = TestUtils.randomDatanodeDetails();
@@ -136,21 +140,6 @@ public class TestDeadNodeHandler {
         TestUtils.allocateContainer(containerManager);
     ContainerInfo container3 =
         TestUtils.allocateContainer(containerManager);
-
-    containerManager.updateContainerState(
-        container1.containerID(), HddsProtos.LifeCycleEvent.CREATE);
-    containerManager.updateContainerState(
-        container1.containerID(), HddsProtos.LifeCycleEvent.CREATED);
-
-    containerManager.updateContainerState(
-        container2.containerID(), HddsProtos.LifeCycleEvent.CREATE);
-    containerManager.updateContainerState(
-        container2.containerID(), HddsProtos.LifeCycleEvent.CREATED);
-
-    containerManager.updateContainerState(
-        container3.containerID(), HddsProtos.LifeCycleEvent.CREATE);
-    containerManager.updateContainerState(
-        container3.containerID(), HddsProtos.LifeCycleEvent.CREATED);
 
     registerReplicas(datanode1, container1, container2);
     registerReplicas(datanode2, container1, container3);
@@ -263,17 +252,11 @@ public class TestDeadNodeHandler {
 
     ContainerInfo container1 =
         TestUtils.allocateContainer(containerManager);
-    containerManager.updateContainerState(
-        container1.containerID(), HddsProtos.LifeCycleEvent.CREATE);
-    containerManager.updateContainerState(
-        container1.containerID(), HddsProtos.LifeCycleEvent.CREATED);
     TestUtils.closeContainer(containerManager, container1.containerID());
-
-    registerReplicas(dn1, container1);
 
     deadNodeHandler.onMessage(dn1, eventQueue);
     Assert.assertTrue(logCapturer.getOutput().contains(
-        "Exception while removing container replica "));
+        "DeadNode event for a unregistered node"));
   }
 
   private void registerReplicas(ContainerManager containerManager,
@@ -283,6 +266,7 @@ public class TestDeadNodeHandler {
       containerManager.updateContainerReplica(
           new ContainerID(container.getContainerID()),
           ContainerReplica.newBuilder()
+              .setContainerState(ContainerReplicaProto.State.OPEN)
               .setContainerID(container.containerID())
               .setDatanodeDetails(datanode).build());
     }
@@ -290,9 +274,9 @@ public class TestDeadNodeHandler {
 
   private void registerReplicas(DatanodeDetails datanode,
       ContainerInfo... containers)
-      throws SCMException {
+      throws NodeNotFoundException {
     nodeManager
-        .addDatanodeInContainerMap(datanode.getUuid(),
+        .setContainers(datanode,
             Arrays.stream(containers)
                 .map(container -> new ContainerID(container.getContainerID()))
                 .collect(Collectors.toSet()));

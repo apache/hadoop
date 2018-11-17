@@ -44,12 +44,17 @@ public final class AbfsAclHelper {
     // not called
   }
 
-  public static Map<String, String> deserializeAclSpec(final String aclSpecString) {
+  public static Map<String, String> deserializeAclSpec(final String aclSpecString) throws AzureBlobFileSystemException {
     final Map<String, String> aclEntries  = new HashMap<>();
-    final String[] aclArray = aclSpecString.split(AbfsHttpConstants.COMMA);
-    for (String acl : aclArray) {
-      int idx = acl.lastIndexOf(AbfsHttpConstants.COLON);
-      aclEntries.put(acl.substring(0, idx), acl.substring(idx + 1));
+    final String[] aceArray = aclSpecString.split(AbfsHttpConstants.COMMA);
+    for (String ace : aceArray) {
+      int idx = ace.lastIndexOf(AbfsHttpConstants.COLON);
+      final String key = ace.substring(0, idx);
+      final String val = ace.substring(idx + 1);
+      if (aclEntries.containsKey(key)) {
+        throw new InvalidAclOperationException("Duplicate acl entries are not allowed.");
+      }
+      aclEntries.put(key, val);
     }
     return aclEntries;
   }
@@ -104,12 +109,22 @@ public final class AbfsAclHelper {
         }
       }
     }
+
+    if (removeIndicationSet.contains(AbfsHttpConstants.ACCESS_MASK) && containsNamedAce(aclEntries, false)) {
+      throw new InvalidAclOperationException("Access mask is required when a named access acl is present.");
+    }
+
     if (accessAclTouched) {
       if (removeIndicationSet.contains(AbfsHttpConstants.ACCESS_MASK)) {
         aclEntries.remove(AbfsHttpConstants.ACCESS_MASK);
       }
       recalculateMask(aclEntries, false);
     }
+
+    if (removeIndicationSet.contains(AbfsHttpConstants.DEFAULT_MASK) && containsNamedAce(aclEntries, true)) {
+      throw new InvalidAclOperationException("Default mask is required when a named default acl is present.");
+    }
+
     if (defaultAclTouched) {
       if (removeIndicationSet.contains(AbfsHttpConstants.DEFAULT_MASK)) {
         aclEntries.remove(AbfsHttpConstants.DEFAULT_MASK);
@@ -127,6 +142,50 @@ public final class AbfsAclHelper {
     }
   }
 
+  public static void modifyAclEntriesInternal(Map<String, String> aclEntries, Map<String, String> toModifyEntries)
+      throws AzureBlobFileSystemException {
+    boolean namedAccessAclTouched = false;
+    boolean namedDefaultAclTouched = false;
+
+    for (Map.Entry<String, String> toModifyEntry : toModifyEntries.entrySet()) {
+      aclEntries.put(toModifyEntry.getKey(), toModifyEntry.getValue());
+      if (isNamedAce(toModifyEntry.getKey())) {
+        if (isDefaultAce(toModifyEntry.getKey())) {
+          namedDefaultAclTouched = true;
+        } else {
+          namedAccessAclTouched = true;
+        }
+      }
+    }
+
+    if (!toModifyEntries.containsKey(AbfsHttpConstants.ACCESS_MASK) && namedAccessAclTouched) {
+      aclEntries.remove(AbfsHttpConstants.ACCESS_MASK);
+    }
+
+    if (!toModifyEntries.containsKey(AbfsHttpConstants.DEFAULT_MASK) && namedDefaultAclTouched) {
+      aclEntries.remove(AbfsHttpConstants.DEFAULT_MASK);
+    }
+  }
+
+  public static void setAclEntriesInternal(Map<String, String> aclEntries, Map<String, String> getAclEntries)
+      throws AzureBlobFileSystemException {
+    boolean defaultAclTouched = false;
+
+    for (String entryKey : aclEntries.keySet()) {
+      if (isDefaultAce(entryKey)) {
+        defaultAclTouched = true;
+        break;
+      }
+    }
+
+    for (Map.Entry<String, String> ace : getAclEntries.entrySet()) {
+      if (AbfsAclHelper.isDefaultAce(ace.getKey()) && (ace.getKey() != AbfsHttpConstants.DEFAULT_MASK || !defaultAclTouched)
+          && !aclEntries.containsKey(ace.getKey())) {
+        aclEntries.put(ace.getKey(), ace.getValue());
+      }
+    }
+  }
+
   private static boolean removeNamedAceAndUpdateSet(String entry, boolean isDefaultAcl, Set<String> removeIndicationSet,
                                                     Map<String, String> aclEntries)
       throws AzureBlobFileSystemException {
@@ -136,8 +195,7 @@ public final class AbfsAclHelper {
         : entryParts[startIndex] + AbfsHttpConstants.COLON;
 
     if ((entry.equals(AbfsHttpConstants.ACCESS_USER) || entry.equals(AbfsHttpConstants.ACCESS_GROUP)
-        || entry.equals(AbfsHttpConstants.ACCESS_OTHER))
-        && !isNamedAce(entry)) {
+        || entry.equals(AbfsHttpConstants.ACCESS_OTHER))) {
       throw new InvalidAclOperationException("Cannot remove user, group or other entry from access ACL.");
     }
 
@@ -154,7 +212,7 @@ public final class AbfsAclHelper {
   }
 
   private static void recalculateMask(Map<String, String> aclEntries, boolean isDefaultMask) {
-    FsAction umask = FsAction.NONE;
+    FsAction mask = FsAction.NONE;
     if (!isExtendAcl(aclEntries, isDefaultMask)) {
       return;
     }
@@ -163,17 +221,17 @@ public final class AbfsAclHelper {
       if (isDefaultMask) {
         if ((isDefaultAce(aclEntry.getKey()) && isNamedAce(aclEntry.getKey()))
             || aclEntry.getKey().equals(AbfsHttpConstants.DEFAULT_GROUP)) {
-          umask = umask.or(FsAction.getFsAction(aclEntry.getValue()));
+          mask = mask.or(FsAction.getFsAction(aclEntry.getValue()));
         }
       } else {
         if ((!isDefaultAce(aclEntry.getKey()) && isNamedAce(aclEntry.getKey()))
             || aclEntry.getKey().equals(AbfsHttpConstants.ACCESS_GROUP)) {
-          umask = umask.or(FsAction.getFsAction(aclEntry.getValue()));
+          mask = mask.or(FsAction.getFsAction(aclEntry.getValue()));
         }
       }
     }
 
-    aclEntries.put(isDefaultMask ? AbfsHttpConstants.DEFAULT_MASK : AbfsHttpConstants.ACCESS_MASK, umask.SYMBOL);
+    aclEntries.put(isDefaultMask ? AbfsHttpConstants.DEFAULT_MASK : AbfsHttpConstants.ACCESS_MASK, mask.SYMBOL);
   }
 
   private static boolean isExtendAcl(Map<String, String> aclEntries, boolean checkDefault) {
@@ -186,6 +244,15 @@ public final class AbfsAclHelper {
       if (!checkDefault && !(entryKey.equals(AbfsHttpConstants.ACCESS_USER)
           || entryKey.equals(AbfsHttpConstants.ACCESS_GROUP)
           || entryKey.equals(AbfsHttpConstants.ACCESS_OTHER) || isDefaultAce(entryKey))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean containsNamedAce(Map<String, String> aclEntries, boolean checkDefault) {
+    for (String entryKey : aclEntries.keySet()) {
+      if (isNamedAce(entryKey) && (checkDefault == isDefaultAce(entryKey))) {
         return true;
       }
     }

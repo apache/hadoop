@@ -28,7 +28,6 @@ import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientRatis;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.*;
@@ -68,6 +67,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
+
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.either;
+import static org.junit.Assert.assertThat;
 
 /**
  * This class is to test all the public facing APIs of Ozone Client.
@@ -221,6 +224,36 @@ public class TestOzoneRpcClient {
     Assert.assertEquals(bucketName, bucket.getName());
     Assert.assertTrue(bucket.getCreationTime() >= currentTime);
     Assert.assertTrue(volume.getCreationTime() >= currentTime);
+  }
+
+
+  @Test
+  public void testListS3Buckets()
+      throws IOException, OzoneException {
+    String userName = "ozone100";
+    String bucketName1 = UUID.randomUUID().toString();
+    String bucketName2 = UUID.randomUUID().toString();
+    store.createS3Bucket(userName, bucketName1);
+    store.createS3Bucket(userName, bucketName2);
+    Iterator<? extends OzoneBucket> iterator = store.listS3Buckets(userName,
+        null);
+
+    while (iterator.hasNext()) {
+      assertThat(iterator.next().getName(), either(containsString(bucketName1))
+          .or(containsString(bucketName2)));
+    }
+
+  }
+
+  @Test
+  public void testListS3BucketsFail()
+      throws IOException, OzoneException {
+    String userName = "randomUser";
+    Iterator<? extends OzoneBucket> iterator = store.listS3Buckets(userName,
+        null);
+
+    Assert.assertFalse(iterator.hasNext());
+
   }
 
   @Test
@@ -645,10 +678,10 @@ public class TestOzoneRpcClient {
     Assert
         .assertEquals(value.getBytes().length, keyLocations.get(0).getLength());
 
-    ContainerWithPipeline container =
-        cluster.getStorageContainerManager().getContainerManager()
-            .getContainerWithPipeline(new ContainerID(containerID));
-    Pipeline pipeline = container.getPipeline();
+    ContainerInfo container = cluster.getStorageContainerManager()
+        .getContainerManager().getContainer(ContainerID.valueof(containerID));
+    Pipeline pipeline = cluster.getStorageContainerManager()
+        .getPipelineManager().getPipeline(container.getPipelineID());
     List<DatanodeDetails> datanodes = pipeline.getNodes();
 
     DatanodeDetails datanodeDetails = datanodes.get(0);
@@ -662,17 +695,17 @@ public class TestOzoneRpcClient {
     // shutdown the datanode
     cluster.shutdownHddsDatanode(datanodeDetails);
 
-    Assert.assertTrue(container.getContainerInfo().getState()
+    Assert.assertTrue(container.getState()
         == HddsProtos.LifeCycleState.OPEN);
     // try to read, this shouls be successful
     readKey(bucket, keyName, value);
 
-    Assert.assertTrue(container.getContainerInfo().getState()
+    Assert.assertTrue(container.getState()
         == HddsProtos.LifeCycleState.OPEN);
     // shutdown the second datanode
     datanodeDetails = datanodes.get(1);
     cluster.shutdownHddsDatanode(datanodeDetails);
-    Assert.assertTrue(container.getContainerInfo().getState()
+    Assert.assertTrue(container.getState()
         == HddsProtos.LifeCycleState.OPEN);
 
     // the container is open and with loss of 2 nodes we still should be able
@@ -750,10 +783,10 @@ public class TestOzoneRpcClient {
 
     // Second, sum the data size from chunks in Container via containerID
     // and localID, make sure the size equals to the size from keyDetails.
+    ContainerInfo container = cluster.getStorageContainerManager()
+        .getContainerManager().getContainer(ContainerID.valueof(containerID));
     Pipeline pipeline = cluster.getStorageContainerManager()
-        .getContainerManager().getContainerWithPipeline(
-            ContainerID.valueof(containerID))
-        .getPipeline();
+        .getPipelineManager().getPipeline(container.getPipelineID());
     List<DatanodeDetails> datanodes = pipeline.getNodes();
     Assert.assertEquals(datanodes.size(), 1);
 

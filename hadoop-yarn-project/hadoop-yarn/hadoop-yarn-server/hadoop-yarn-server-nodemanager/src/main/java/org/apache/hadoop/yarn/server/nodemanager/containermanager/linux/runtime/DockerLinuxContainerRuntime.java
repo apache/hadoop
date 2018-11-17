@@ -21,12 +21,14 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommandExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerExecCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerKillCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerRmCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerStartCommand;
@@ -62,6 +64,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.Contai
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
 
 import java.io.File;
 import java.io.IOException;
@@ -1142,6 +1145,48 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         }
       }
     }
+  }
+
+  /**
+   * Perform docker exec command into running container
+   *
+   * @param ctx container exec context
+   * @return IOStreams of docker exec
+   * @throws ContainerExecutionException
+   */
+  @Override
+  public IOStreamPair execContainer(ContainerExecContext ctx)
+      throws ContainerExecutionException {
+    String containerId = ctx.getContainer().getContainerId().toString();
+    DockerExecCommand dockerExecCommand = new DockerExecCommand(containerId);
+    dockerExecCommand.setInteractive();
+    dockerExecCommand.setTTY();
+    List<String> command = new ArrayList<String>();
+    command.add("bash");
+    dockerExecCommand.setOverrideCommandWithArgs(command);
+    String commandFile = dockerClient.writeCommandToTempFile(dockerExecCommand,
+        ContainerId.fromString(containerId), nmContext);
+    PrivilegedOperation privOp = new PrivilegedOperation(
+        PrivilegedOperation.OperationType.EXEC_CONTAINER);
+    privOp.appendArgs(commandFile);
+    privOp.disableFailureLogging();
+
+    IOStreamPair output;
+    try {
+      output =
+          privilegedOperationExecutor.executePrivilegedInteractiveOperation(
+              null, privOp);
+      LOG.info("ContainerId=" + containerId + ", docker exec output for "
+          + dockerExecCommand + ": " + output);
+    } catch (PrivilegedOperationException e) {
+      throw new ContainerExecutionException(
+          "Execute container interactive shell failed", e.getExitCode(),
+          e.getOutput(), e.getErrorOutput());
+    } catch (InterruptedException ie) {
+      LOG.warn("InterruptedException executing command: ", ie);
+      throw new ContainerExecutionException(ie.getMessage());
+    }
+    return output;
   }
 
 

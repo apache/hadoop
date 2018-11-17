@@ -93,7 +93,7 @@ public class OzoneBucketStub extends OzoneBucket {
                 size,
                 System.currentTimeMillis(),
                 System.currentTimeMillis(),
-                new ArrayList<>()
+                new ArrayList<>(), type
             ));
             super.close();
           }

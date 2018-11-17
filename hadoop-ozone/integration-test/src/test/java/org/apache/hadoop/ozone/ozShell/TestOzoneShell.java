@@ -266,7 +266,7 @@ public class TestOzoneShell {
    */
   @Test
   public void testCreateVolumeWithoutUser() throws Exception {
-    String volumeName = "volume" + RandomStringUtils.randomNumeric(1);
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
     String[] args = new String[] {"volume", "create", url + "/" + volumeName,
         "--root"};
 

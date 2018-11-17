@@ -230,7 +230,10 @@ public interface MiniOzoneCluster {
 
     protected Boolean ozoneEnabled = true;
     protected Boolean randomContainerPort = true;
-
+    protected Optional<Integer> chunkSize = Optional.empty();
+    protected Optional<Long> streamBufferFlushSize = Optional.empty();
+    protected Optional<Long> streamBufferMaxSize = Optional.empty();
+    protected Optional<Long> blockSize = Optional.empty();
     // Use relative smaller number of handlers for testing
     protected int numOfOmHandlers = 20;
     protected int numOfScmHandlers = 20;
@@ -355,6 +358,46 @@ public interface MiniOzoneCluster {
      */
     public Builder disableOzone() {
       ozoneEnabled = false;
+      return this;
+    }
+
+    /**
+     * Sets the chunk size.
+     *
+     * @return MiniOzoneCluster.Builder
+     */
+    public Builder setChunkSize(int size) {
+      chunkSize = Optional.of(size);
+      return this;
+    }
+
+    /**
+     * Sets the flush size for stream buffer.
+     *
+     * @return MiniOzoneCluster.Builder
+     */
+    public Builder setStreamBufferFlushSize(long size) {
+      streamBufferFlushSize = Optional.of(size);
+      return this;
+    }
+
+    /**
+     * Sets the max size for stream buffer.
+     *
+     * @return MiniOzoneCluster.Builder
+     */
+    public Builder setStreamBufferMaxSize(long size) {
+      streamBufferMaxSize = Optional.of(size);
+      return this;
+    }
+
+    /**
+     * Sets the block size for stream buffer.
+     *
+     * @return MiniOzoneCluster.Builder
+     */
+    public Builder setBlockSize(long size) {
+      blockSize = Optional.of(size);
       return this;
     }
 

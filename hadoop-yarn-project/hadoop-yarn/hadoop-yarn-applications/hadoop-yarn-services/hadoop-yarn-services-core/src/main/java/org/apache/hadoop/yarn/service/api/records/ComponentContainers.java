@@ -24,6 +24,7 @@ import io.swagger.annotations.ApiModelProperty;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -33,7 +34,7 @@ import java.util.List;
 @InterfaceStability.Unstable
 @ApiModel(description = "Containers of a component.")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ComponentContainers {
+public class ComponentContainers implements Serializable {
 
   private static final long serialVersionUID = -1456748479118874991L;
 

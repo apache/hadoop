@@ -20,6 +20,8 @@ package org.apache.hadoop.ozone.om;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.server.ServerUtils;
+import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -72,6 +74,29 @@ public class TestS3BucketManager {
     // recreating the same bucket should throw.
     thrown.expect(IOException.class);
     s3BucketManager.createS3Bucket("bilbo", "bucket");
+
+  }
+
+  @Test
+  public void testOzoneVolumeNameForUser() throws IOException {
+    S3BucketManager s3BucketManager = new S3BucketManagerImpl(conf, metaMgr,
+        volumeManager, bucketManager);
+    String userName = "ozone";
+    String volumeName = s3BucketManager.getOzoneVolumeNameForUser(userName);
+    assertEquals(OzoneConsts.OM_S3_VOLUME_PREFIX + userName, volumeName);
+  }
+
+  @Test
+  public void testOzoneVolumeNameForUserFails() throws IOException {
+    S3BucketManager s3BucketManager = new S3BucketManagerImpl(conf, metaMgr,
+        volumeManager, bucketManager);
+    String userName = null;
+    try {
+      String volumeName = s3BucketManager.getOzoneVolumeNameForUser(userName);
+      fail("testOzoneVolumeNameForUserFails failed");
+    } catch (NullPointerException ex) {
+      GenericTestUtils.assertExceptionContains("UserName cannot be null", ex);
+    }
 
   }
 

@@ -777,7 +777,8 @@ public class RestClient implements ClientProtocol {
           LOG.warn("Parse exception in getting creation time for volume", e);
         }
         return new OzoneKey(volumeName, bucketName, keyInfo.getKeyName(),
-            keyInfo.getSize(), creationTime, modificationTime);
+            keyInfo.getSize(), creationTime, modificationTime,
+            ReplicationType.valueOf(keyInfo.getType().toString()));
       }).collect(Collectors.toList());
     } catch (URISyntaxException e) {
       throw new IOException(e);
@@ -812,7 +813,8 @@ public class RestClient implements ClientProtocol {
           keyInfo.getSize(),
           HddsClientUtils.formatDateTime(keyInfo.getCreatedOn()),
           HddsClientUtils.formatDateTime(keyInfo.getModifiedOn()),
-          ozoneKeyLocations);
+          ozoneKeyLocations, ReplicationType.valueOf(
+              keyInfo.getType().toString()));
       EntityUtils.consume(response);
       return key;
     } catch (URISyntaxException | ParseException e) {
@@ -848,6 +850,14 @@ public class RestClient implements ClientProtocol {
 
   @Override
   public String getOzoneBucketName(String s3BucketName) throws IOException {
+    throw new UnsupportedOperationException("Ozone REST protocol does not " +
+        "support this operation.");
+  }
+
+  @Override
+  public List<OzoneBucket> listS3Buckets(String userName, String bucketPrefix,
+                                  String prevBucket, int maxListResult)
+      throws IOException {
     throw new UnsupportedOperationException("Ozone REST protocol does not " +
         "support this operation.");
   }

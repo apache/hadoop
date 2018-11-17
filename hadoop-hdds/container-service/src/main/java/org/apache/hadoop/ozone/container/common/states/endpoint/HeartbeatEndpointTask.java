@@ -141,7 +141,9 @@ public class HeartbeatEndpointTask
       rpcEndpoint.zeroMissedCount();
     } catch (IOException ex) {
       // put back the reports which failed to be sent
-      putBackReports(requestBuilder);
+      if (requestBuilder != null) {
+        putBackReports(requestBuilder);
+      }
       rpcEndpoint.logIfNeeded(ex);
     } finally {
       rpcEndpoint.unlock();
@@ -159,10 +161,10 @@ public class HeartbeatEndpointTask
       reports.add(requestBuilder.getNodeReport());
     }
     if (requestBuilder.getCommandStatusReportsCount() != 0) {
-      for (GeneratedMessage msg : requestBuilder
-          .getCommandStatusReportsList()) {
-        reports.add(msg);
-      }
+      reports.addAll(requestBuilder.getCommandStatusReportsList());
+    }
+    if (requestBuilder.getIncrementalContainerReportCount() != 0) {
+      reports.addAll(requestBuilder.getIncrementalContainerReportList());
     }
     context.putBackReports(reports);
   }

@@ -257,6 +257,7 @@ public class BucketManagerImpl implements BucketManager {
    * @param bucketName - Name of the bucket.
    * @throws IOException - on Failure.
    */
+  @Override
   public void deleteBucket(String volumeName, String bucketName)
       throws IOException {
     Preconditions.checkNotNull(volumeName);

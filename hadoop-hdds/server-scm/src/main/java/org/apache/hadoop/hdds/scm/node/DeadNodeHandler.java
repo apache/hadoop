@@ -29,6 +29,7 @@ import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
 import org.apache.hadoop.hdds.scm.container.ContainerReplica;
 import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
+import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
@@ -61,7 +62,14 @@ public class DeadNodeHandler implements EventHandler<DatanodeDetails> {
     // TODO: check if there are any pipeline on this node and fire close
     // pipeline event
     Set<ContainerID> ids =
-        nodeManager.getContainers(datanodeDetails.getUuid());
+        null;
+    try {
+      ids = nodeManager.getContainers(datanodeDetails);
+    } catch (NodeNotFoundException e) {
+      // This should not happen, we cannot get a dead node event for an
+      // unregistered node!
+      LOG.error("DeadNode event for a unregistered node: {}!", datanodeDetails);
+    }
     if (ids == null) {
       LOG.info("There's no containers in dead datanode {}, no replica will be"
           + " removed from the in-memory state.", datanodeDetails.getUuid());
@@ -72,18 +80,23 @@ public class DeadNodeHandler implements EventHandler<DatanodeDetails> {
     for (ContainerID id : ids) {
       try {
         final ContainerInfo container = containerManager.getContainer(id);
+        // TODO: For open containers, trigger close on other nodes
+        // TODO: Check replica count and call replication manager
+        // on these containers.
         if (!container.isOpen()) {
-          final ContainerReplica replica = ContainerReplica.newBuilder()
-              .setContainerID(id)
-              .setDatanodeDetails(datanodeDetails)
-              .build();
-          try {
-            containerManager.removeContainerReplica(id, replica);
-            replicateIfNeeded(container, publisher);
-          } catch (ContainerException ex) {
-            LOG.warn("Exception while removing container replica #{} for " +
-                "container #{}.", replica, container, ex);
-          }
+          Set<ContainerReplica> replicas = containerManager
+              .getContainerReplicas(id);
+          replicas.stream()
+              .filter(r -> r.getDatanodeDetails().equals(datanodeDetails))
+              .findFirst()
+              .ifPresent(replica -> {
+                try {
+                  containerManager.removeContainerReplica(id, replica);
+                } catch (ContainerException ex) {
+                  LOG.warn("Exception while removing container replica #{} " +
+                      "for container #{}.", replica, container, ex);
+                }
+              });
         }
       } catch (ContainerNotFoundException cnfe) {
         LOG.warn("Container Not found!", cnfe);

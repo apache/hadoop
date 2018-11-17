@@ -243,8 +243,10 @@ public class TestBlockDeletion {
     ContainerReportsProto dummyReport = dummyReportsBuilder.build();
 
     logCapturer.clearOutput();
-    scm.getContainerManager().processContainerReports(
-        cluster.getHddsDatanodes().get(0).getDatanodeDetails(), dummyReport);
+    cluster.getHddsDatanodes().get(0)
+        .getDatanodeStateMachine().getContext().addReport(dummyReport);
+    cluster.getHddsDatanodes().get(0)
+        .getDatanodeStateMachine().triggerHeartbeat();
     // wait for event to be handled by event handler
     Thread.sleep(1000);
     String output = logCapturer.getOutput();

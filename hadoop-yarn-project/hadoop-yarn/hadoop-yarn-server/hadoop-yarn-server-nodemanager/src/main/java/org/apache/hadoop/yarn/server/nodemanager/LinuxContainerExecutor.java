@@ -62,15 +62,10 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.CgroupsLCEResourcesHandler;
 import org.apache.hadoop.yarn.server.nodemanager.util.DefaultLCEResourcesHandler;
 import org.apache.hadoop.yarn.server.nodemanager.util.LCEResourcesHandler;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -395,8 +390,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
     List<String> localizerArgs = new ArrayList<>();
 
-    buildMainArgs(localizerArgs, user, appId, locId, nmAddr, localDirs);
-
+    buildMainArgs(localizerArgs, user, appId, locId, nmAddr,
+        nmPrivateContainerTokensPath.getName(), localDirs);
     Path containerLogDir = getContainerLogDir(dirsHandler, appId, locId);
     localizerArgs = replaceWithContainerLogDir(localizerArgs, containerLogDir);
 
@@ -454,9 +449,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
    */
   @VisibleForTesting
   public void buildMainArgs(List<String> command, String user, String appId,
-      String locId, InetSocketAddress nmAddr, List<String> localDirs) {
+      String locId, InetSocketAddress nmAddr, String tokenFileName,
+      List<String> localDirs) {
     ContainerLocalizer.buildMainArgs(command, user, appId, locId, nmAddr,
-        localDirs, super.getConf());
+        tokenFileName, localDirs, super.getConf());
   }
 
   @Override
@@ -801,20 +797,22 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   @Override
   public IOStreamPair execContainer(ContainerExecContext ctx)
       throws ContainerExecutionException {
-    // TODO: calls PrivilegedOperationExecutor and return IOStream pairs
-    InputStream in = null;
-    OutputStream out = null;
-    int byteSize = 4000;
+    IOStreamPair res;
     try {
-      in = new ByteArrayInputStream(
-          "This is input command".getBytes(Charset.forName("UTF-8")));
-      out = new ByteArrayOutputStream(byteSize);
-    } catch (IllegalArgumentException e) {
-      LOG.error("Failed to execute command to container runtime", e);
+      res = linuxContainerRuntime.execContainer(ctx);
+    } catch (ContainerExecutionException e) {
+      int retCode = e.getExitCode();
+      if (retCode != 0) {
+        return new IOStreamPair(null, null);
+      }
+      LOG.warn("Error in executing container interactive shell"
+          + ctx + " exit = " + retCode, e);
+      logOutput(e.getOutput());
+      throw new ContainerExecutionException(
+          "Error in executing container interactive shel" + ctx.getContainer()
+          .getContainerId().toString() + " exit = " + retCode);
     }
-    IOStreamPair pair = new IOStreamPair(in, out);
-    System.out.println(pair);
-    return new IOStreamPair(in, out);
+    return res;
   }
 
   @Override

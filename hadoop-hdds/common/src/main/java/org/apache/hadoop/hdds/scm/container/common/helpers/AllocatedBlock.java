@@ -28,8 +28,6 @@ import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 public final class AllocatedBlock {
   private Pipeline pipeline;
   private ContainerBlockID containerBlockID;
-  // Indicates whether the client should create container before writing block.
-  private boolean shouldCreateContainer;
 
   /**
    * Builder for AllocatedBlock.
@@ -37,7 +35,6 @@ public final class AllocatedBlock {
   public static class Builder {
     private Pipeline pipeline;
     private ContainerBlockID containerBlockID;
-    private boolean shouldCreateContainer;
 
     public Builder setPipeline(Pipeline p) {
       this.pipeline = p;
@@ -49,22 +46,14 @@ public final class AllocatedBlock {
       return this;
     }
 
-    public Builder setShouldCreateContainer(boolean shouldCreate) {
-      this.shouldCreateContainer = shouldCreate;
-      return this;
-    }
-
     public AllocatedBlock build() {
-      return new AllocatedBlock(pipeline, containerBlockID,
-          shouldCreateContainer);
+      return new AllocatedBlock(pipeline, containerBlockID);
     }
   }
 
-  private AllocatedBlock(Pipeline pipeline, ContainerBlockID containerBlockID,
-      boolean shouldCreateContainer) {
+  private AllocatedBlock(Pipeline pipeline, ContainerBlockID containerBlockID) {
     this.pipeline = pipeline;
     this.containerBlockID = containerBlockID;
-    this.shouldCreateContainer = shouldCreateContainer;
   }
 
   public Pipeline getPipeline() {
@@ -73,9 +62,5 @@ public final class AllocatedBlock {
 
   public ContainerBlockID getBlockID() {
     return containerBlockID;
-  }
-
-  public boolean getCreateContainer() {
-    return shouldCreateContainer;
   }
 }
