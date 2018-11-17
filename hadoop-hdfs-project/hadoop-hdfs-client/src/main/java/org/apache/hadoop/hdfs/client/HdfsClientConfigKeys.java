@@ -181,6 +181,9 @@ public interface HdfsClientConfigKeys {
   String DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES =
       "dfs.namenode.snapshot.capture.openfiles";
   boolean DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES_DEFAULT = false;
+  
+  String DFS_CLIENT_FAILOVER_IPFAILOVER_VIRTUAL_ADDRESS =
+      Failover.PREFIX + "ipfailover.virtual-address";
 
   /**
    * These are deprecated config keys to client code.
