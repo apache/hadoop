@@ -19,7 +19,10 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 
 import org.junit.Assert;
@@ -204,5 +207,19 @@ public class TestComputeFairShares {
     for (int i = 0; i < shares.length; i++) {
       Assert.assertEquals(shares[i], scheds.get(i).getFairShare().getVirtualCores());
     }
+  }
+
+  /**
+   * Test computeShares will not enter into infinite loop.
+   */
+  @Test(timeout = 10000)
+  public void testResourceUsedWithWeightToResourceRatio() {
+    Collection<Schedulable> schedulables = new ArrayList<>();
+    schedulables.add(new FakeSchedulable(Integer.MAX_VALUE));
+    schedulables.add(new FakeSchedulable(Integer.MAX_VALUE));
+
+    Resource totalResource = Resource.newInstance(Integer.MAX_VALUE, 0);
+    ComputeFairShares.computeShares(
+        schedulables, totalResource, ResourceInformation.MEMORY_URI);
   }
 }
