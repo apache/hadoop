@@ -239,7 +239,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     assertTrue("Premature EOF", instream.read() != -1);
     assertTrue("The available should be positive integer",instream.available() > 0);
     assertTrue("Premature EOF", instream.read() != -1);
-    assertTrue("The available should be positive integer",instream.available() > 0);
+    assertEquals("The available should be zero",0,instream.available());
     assertMinusOne("read past end of file", instream.read());
   }
 
@@ -605,7 +605,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     instream = getFileSystem().open(smallSeekFile);
     instream.seek(TEST_FILE_LEN -1);
     assertTrue("read at last byte", instream.read() > 0);
-    assertTrue("The available should be positive integer",instream.available() > 0);
+    assertEquals("The available should be positive integer",0,instream.available());
     assertEquals("read just past EOF", -1, instream.read());
   }
 }
