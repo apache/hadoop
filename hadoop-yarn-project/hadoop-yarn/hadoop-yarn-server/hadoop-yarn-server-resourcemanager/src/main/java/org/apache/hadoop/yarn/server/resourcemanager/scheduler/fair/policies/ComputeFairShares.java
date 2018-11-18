@@ -145,7 +145,7 @@ public class ComputeFairShares {
     double right = rMax;
     for (int i = 0; i < COMPUTE_FAIR_SHARES_ITERATIONS; i++) {
       double mid = (left + right) / 2.0;
-      int plannedResourceUsed = resourceUsedWithWeightToResourceRatio(
+      long plannedResourceUsed = resourceUsedWithWeightToResourceRatio(
           mid, schedulables, type);
       if (plannedResourceUsed == totalResource) {
         right = mid;
@@ -174,11 +174,14 @@ public class ComputeFairShares {
    * Compute the resources that would be used given a weight-to-resource ratio
    * w2rRatio, for use in the computeFairShares algorithm as described in #
    */
-  private static int resourceUsedWithWeightToResourceRatio(double w2rRatio,
+  private static long resourceUsedWithWeightToResourceRatio(double w2rRatio,
       Collection<? extends Schedulable> schedulables, String type) {
-    int resourcesTaken = 0;
+    long resourcesTaken = 0;
     for (Schedulable sched : schedulables) {
-      int share = computeShare(sched, w2rRatio, type);
+      long share = computeShare(sched, w2rRatio, type);
+      if (Long.MAX_VALUE - resourcesTaken < share) {
+        return Long.MAX_VALUE;
+      }
       resourcesTaken += share;
     }
     return resourcesTaken;
@@ -188,12 +191,12 @@ public class ComputeFairShares {
    * Compute the resources assigned to a Schedulable given a particular
    * weight-to-resource ratio w2rRatio.
    */
-  private static int computeShare(Schedulable sched, double w2rRatio,
+  private static long computeShare(Schedulable sched, double w2rRatio,
       String type) {
     double share = sched.getWeight() * w2rRatio;
     share = Math.max(share, sched.getMinShare().getResourceValue(type));
     share = Math.min(share, sched.getMaxShare().getResourceValue(type));
-    return (int) share;
+    return (long) share;
   }
 
   /**
