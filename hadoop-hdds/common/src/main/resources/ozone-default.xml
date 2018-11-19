@@ -821,6 +821,8 @@
       OM/SCM eventually. So a 30 second HB seems to work. This assumes that
       replication strategy used is Ratis if not, this value should be set to
       something smaller like 3 seconds.
+      ozone.scm.pipeline.close.timeout should also be adjusted accordingly,
+      if the default value for this config is not used.
     </description>
   </property>
   <property>
@@ -1183,15 +1185,12 @@
       postfix (ns,ms,s,m,h,d)</description>
   </property>
   <property>
-    <name>ozone.scm.pipeline.creation.lease.timeout</name>
-    <value>60s</value>
+    <name>ozone.scm.pipeline.destroy.timeout</name>
+    <value>300s</value>
     <tag>OZONE, SCM, PIPELINE</tag>
     <description>
-      Pipeline creation timeout in milliseconds to be used by SCM. When
-      BEGIN_CREATE event happens the pipeline is moved from ALLOCATED to
-      CREATING state, SCM will now wait for the configured amount of time
-      to get COMPLETE_CREATE event if it doesn't receive it will move the
-      pipeline to DELETING.
+      Once a pipeline is closed, SCM should wait for the above configured time
+      before destroying a pipeline.
     </description>
   </property>
 

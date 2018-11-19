@@ -223,7 +223,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
 
     NewNodeHandler newNodeHandler = new NewNodeHandler();
     StaleNodeHandler staleNodeHandler =
-        new StaleNodeHandler(scmNodeManager, pipelineManager);
+        new StaleNodeHandler(scmNodeManager, pipelineManager, conf);
     DeadNodeHandler deadNodeHandler = new DeadNodeHandler(scmNodeManager,
         containerManager);
     ContainerActionsHandler actionsHandler = new ContainerActionsHandler();
@@ -239,7 +239,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
             pipelineManager, containerManager);
 
     PipelineActionHandler pipelineActionHandler =
-        new PipelineActionHandler(pipelineManager);
+        new PipelineActionHandler(pipelineManager, conf);
 
     long watcherTimeout =
         conf.getTimeDuration(ScmConfigKeys.HDDS_SCM_WATCHER_TIMEOUT,

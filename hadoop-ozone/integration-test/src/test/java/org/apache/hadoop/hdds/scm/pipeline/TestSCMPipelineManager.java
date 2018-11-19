@@ -148,7 +148,7 @@ public class TestSCMPipelineManager {
         new PipelineReportHandler(pipelineManager, conf);
     for (DatanodeDetails dn: pipeline.getNodes()) {
       PipelineReportFromDatanode pipelineReportFromDatanode =
-          TestUtils.getRandomPipelineReportFromDatanode(dn, pipeline.getId());
+          TestUtils.getPipelineReportFromDatanode(dn, pipeline.getId());
       // pipeline is not healthy until all dns report
       Assert.assertFalse(
           pipelineManager.getPipeline(pipeline.getId()).isHealthy());
@@ -168,7 +168,7 @@ public class TestSCMPipelineManager {
 
     for (DatanodeDetails dn: pipeline.getNodes()) {
       PipelineReportFromDatanode pipelineReportFromDatanode =
-          TestUtils.getRandomPipelineReportFromDatanode(dn, pipeline.getId());
+          TestUtils.getPipelineReportFromDatanode(dn, pipeline.getId());
       // pipeline report for a closed pipeline should destroy the pipeline
       // and remove it from the pipeline manager
       pipelineReportHandler

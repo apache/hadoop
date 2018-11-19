@@ -289,11 +289,11 @@ public final class ScmConfigKeys {
   public static final String
       OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT_DEFAULT = "60s";
 
-  public static final String OZONE_SCM_PIPELINE_CREATION_LEASE_TIMEOUT =
-      "ozone.scm.pipeline.creation.lease.timeout";
+  public static final String OZONE_SCM_PIPELINE_DESTROY_TIMEOUT =
+      "ozone.scm.pipeline.destroy.timeout";
 
-  public static final String
-      OZONE_SCM_PIPELINE_CREATION_LEASE_TIMEOUT_DEFAULT = "60s";
+  public static final String OZONE_SCM_PIPELINE_DESTROY_TIMEOUT_DEFAULT =
+      "300s";
 
   public static final String OZONE_SCM_BLOCK_DELETION_MAX_RETRY =
       "ozone.scm.block.deletion.max.retry";

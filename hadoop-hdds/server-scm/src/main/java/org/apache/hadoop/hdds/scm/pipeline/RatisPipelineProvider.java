@@ -24,7 +24,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdds.scm.XceiverClientRatis;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRandom;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
@@ -133,12 +132,7 @@ public class RatisPipelineProvider implements PipelineProvider {
         .build();
   }
 
-  private void initializePipeline(Pipeline pipeline)
-      throws IOException {
-    // TODO: remove old code in XceiverClientRatis#newXceiverClientRatis
-    try (XceiverClientRatis client =
-        XceiverClientRatis.newXceiverClientRatis(pipeline, conf)) {
-      client.createPipeline();
-    }
+  private void initializePipeline(Pipeline pipeline) throws IOException {
+    RatisPipelineUtils.createPipeline(pipeline, conf);
   }
 }

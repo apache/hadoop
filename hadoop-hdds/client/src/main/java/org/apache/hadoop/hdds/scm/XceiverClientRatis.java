@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdds.scm;
 
 import org.apache.hadoop.hdds.HddsUtils;
-import org.apache.hadoop.io.MultipleIOException;
 import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.retry.RetryPolicy;
 import org.apache.ratis.thirdparty.com.google.protobuf
@@ -27,7 +26,6 @@ import org.apache.ratis.thirdparty.com.google.protobuf
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -36,19 +34,14 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.ratis.RatisHelper;
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.protocol.RaftClientReply;
-import org.apache.ratis.protocol.RaftGroup;
-import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
-import org.apache.ratis.util.CheckedBiConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
@@ -97,22 +90,6 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     this.retryPolicy = retryPolicy;
   }
 
-  @Override
-  public void createPipeline() throws IOException {
-    final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
-    LOG.debug("creating pipeline:{} with {}", pipeline.getId(), group);
-    callRatisRpc(pipeline.getNodes(),
-        (raftClient, peer) -> raftClient.groupAdd(group, peer.getId()));
-  }
-
-  @Override
-  public void destroyPipeline() throws IOException {
-    final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
-    LOG.debug("destroying pipeline:{} with {}", pipeline.getId(), group);
-    callRatisRpc(pipeline.getNodes(), (raftClient, peer) -> raftClient
-        .groupRemove(group.getGroupId(), true, peer.getId()));
-  }
-
   /**
    * Returns Ratis as pipeline Type.
    *
@@ -121,31 +98,6 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   @Override
   public HddsProtos.ReplicationType getPipelineType() {
     return HddsProtos.ReplicationType.RATIS;
-  }
-
-  private void callRatisRpc(List<DatanodeDetails> datanodes,
-      CheckedBiConsumer<RaftClient, RaftPeer, IOException> rpc)
-      throws IOException {
-    if (datanodes.isEmpty()) {
-      return;
-    }
-
-    final List<IOException> exceptions =
-        Collections.synchronizedList(new ArrayList<>());
-    datanodes.parallelStream().forEach(d -> {
-      final RaftPeer p = RatisHelper.toRaftPeer(d);
-      try (RaftClient client = RatisHelper
-          .newRaftClient(rpcType, p, retryPolicy)) {
-        rpc.accept(client, p);
-      } catch (IOException ioe) {
-        exceptions.add(
-            new IOException("Failed invoke Ratis rpc " + rpc + " for " + d,
-                ioe));
-      }
-    });
-    if (!exceptions.isEmpty()) {
-      throw MultipleIOException.createIOException(exceptions);
-    }
   }
 
   @Override

@@ -17,12 +17,17 @@
 package org.apache.hadoop.hdds.scm;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineAction;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ClosePipelineInfo;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineActionsProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineReport;
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.PipelineActionsFromDatanode;
 import org.apache.hadoop.hdds.scm.server
     .SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
@@ -305,17 +310,32 @@ public final class TestUtils {
     return PipelineReportsProto.newBuilder().build();
   }
 
-  public static PipelineReportFromDatanode getRandomPipelineReportFromDatanode(
-      DatanodeDetails dn,
-      org.apache.hadoop.hdds.scm.pipeline.PipelineID... pipelineIDs) {
+  public static PipelineReportFromDatanode getPipelineReportFromDatanode(
+      DatanodeDetails dn, PipelineID... pipelineIDs) {
     PipelineReportsProto.Builder reportBuilder =
         PipelineReportsProto.newBuilder();
-    for (org.apache.hadoop.hdds.scm.pipeline.PipelineID pipelineID :
-        pipelineIDs) {
+    for (PipelineID pipelineID : pipelineIDs) {
       reportBuilder.addPipelineReport(
           PipelineReport.newBuilder().setPipelineID(pipelineID.getProtobuf()));
     }
     return new PipelineReportFromDatanode(dn, reportBuilder.build());
+  }
+
+  public static PipelineActionsFromDatanode getPipelineActionFromDatanode(
+      DatanodeDetails dn, PipelineID... pipelineIDs) {
+    PipelineActionsProto.Builder actionsProtoBuilder =
+        PipelineActionsProto.newBuilder();
+    for (PipelineID pipelineID : pipelineIDs) {
+      ClosePipelineInfo closePipelineInfo =
+          ClosePipelineInfo.newBuilder().setPipelineID(pipelineID.getProtobuf())
+              .setReason(ClosePipelineInfo.Reason.PIPELINE_FAILED)
+              .setDetailedReason("").build();
+      actionsProtoBuilder.addPipelineActions(PipelineAction.newBuilder()
+          .setClosePipeline(closePipelineInfo)
+          .setAction(PipelineAction.Action.CLOSE)
+          .build());
+    }
+    return new PipelineActionsFromDatanode(dn, actionsProtoBuilder.build());
   }
 
   /**

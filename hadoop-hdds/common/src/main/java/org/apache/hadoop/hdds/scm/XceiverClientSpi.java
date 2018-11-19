@@ -119,17 +119,6 @@ public abstract class XceiverClientSpi implements Closeable {
       throws IOException, ExecutionException, InterruptedException;
 
   /**
-   * Create a pipeline.
-   */
-  public abstract void createPipeline() throws IOException;
-
-  /**
-   * Destroy a pipeline.
-   * @throws IOException
-   */
-  public abstract void destroyPipeline() throws IOException;
-
-  /**
    * Returns pipeline Type.
    *
    * @return - {Stand_Alone, Ratis or Chained}
