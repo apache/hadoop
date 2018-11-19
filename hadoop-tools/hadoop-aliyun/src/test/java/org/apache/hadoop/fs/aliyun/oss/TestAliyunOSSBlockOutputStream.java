@@ -75,6 +75,7 @@ public class TestAliyunOSSBlockOutputStream {
 
   @Test
   public void testRegularUpload() throws IOException {
+    FileSystem.clearStatistics();
     long size = 1024 * 1024;
     FileSystem.Statistics statistics =
         FileSystem.getStatistics("oss", AliyunOSSFileSystem.class);
@@ -111,6 +112,7 @@ public class TestAliyunOSSBlockOutputStream {
   @Test
   public void testMultiPartUpload() throws IOException {
     long size = 6 * 1024 * 1024;
+    FileSystem.clearStatistics();
     FileSystem.Statistics statistics =
         FileSystem.getStatistics("oss", AliyunOSSFileSystem.class);
     ContractTestUtils.createAndVerifyFile(fs, getTestPath(), size - 1);
@@ -134,6 +136,7 @@ public class TestAliyunOSSBlockOutputStream {
 
   @Test
   public void testMultiPartUploadConcurrent() throws IOException {
+    FileSystem.clearStatistics();
     long size = 50 * 1024 * 1024 - 1;
     ContractTestUtils.createAndVerifyFile(fs, getTestPath(), size);
     FileSystem.Statistics statistics =
