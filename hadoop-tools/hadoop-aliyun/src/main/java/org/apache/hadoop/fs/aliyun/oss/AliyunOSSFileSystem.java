@@ -136,7 +136,7 @@ public class AliyunOSSFileSystem extends FileSystem {
             key,
             uploadPartSize,
             new SemaphoredDelegatingExecutor(boundedThreadPool,
-                blockOutputActiveBlocks, true)), (Statistics)(null));
+                blockOutputActiveBlocks, true)), statistics);
   }
 
   /**
@@ -295,6 +295,11 @@ public class AliyunOSSFileSystem extends FileSystem {
   @Override
   public URI getUri() {
     return uri;
+  }
+
+  @Override
+  public int getDefaultPort() {
+    return Constants.OSS_DEFAULT_PORT;
   }
 
   @Override
