@@ -168,31 +168,32 @@ message ContainerCommandRequestProto {
 
   required   int64 containerID = 3;
   required   string datanodeUuid = 4;
+  optional   string pipelineID = 5;
 
   // One of the following command is available when the corresponding
   // cmdType is set. At the protocol level we allow only
   // one command in each packet.
   // TODO : Upgrade to Protobuf 2.6 or later.
-  optional   CreateContainerRequestProto createContainer = 5;
-  optional   ReadContainerRequestProto readContainer = 6;
-  optional   UpdateContainerRequestProto updateContainer = 7;
-  optional   DeleteContainerRequestProto deleteContainer = 8;
-  optional   ListContainerRequestProto listContainer = 9;
-  optional   CloseContainerRequestProto closeContainer = 10;
+  optional   CreateContainerRequestProto createContainer = 6;
+  optional   ReadContainerRequestProto readContainer = 7;
+  optional   UpdateContainerRequestProto updateContainer = 8;
+  optional   DeleteContainerRequestProto deleteContainer = 9;
+  optional   ListContainerRequestProto listContainer = 10;
+  optional   CloseContainerRequestProto closeContainer = 11;
 
-  optional   PutBlockRequestProto putBlock = 11;
-  optional   GetBlockRequestProto getBlock = 12;
-  optional   DeleteBlockRequestProto deleteBlock = 13;
-  optional   ListBlockRequestProto listBlock = 14;
+  optional   PutBlockRequestProto putBlock = 12;
+  optional   GetBlockRequestProto getBlock = 13;
+  optional   DeleteBlockRequestProto deleteBlock = 14;
+  optional   ListBlockRequestProto listBlock = 15;
 
-  optional   ReadChunkRequestProto readChunk = 15;
-  optional   WriteChunkRequestProto writeChunk = 16;
-  optional   DeleteChunkRequestProto deleteChunk = 17;
-  optional   ListChunkRequestProto listChunk = 18;
+  optional   ReadChunkRequestProto readChunk = 16;
+  optional   WriteChunkRequestProto writeChunk = 17;
+  optional   DeleteChunkRequestProto deleteChunk = 18;
+  optional   ListChunkRequestProto listChunk = 19;
 
-  optional   PutSmallFileRequestProto putSmallFile = 19;
-  optional   GetSmallFileRequestProto getSmallFile = 20;
-  optional   GetCommittedBlockLengthRequestProto getCommittedBlockLength = 21;
+  optional   PutSmallFileRequestProto putSmallFile = 20;
+  optional   GetSmallFileRequestProto getSmallFile = 21;
+  optional   GetCommittedBlockLengthRequestProto getCommittedBlockLength = 22;
 }
 
 message ContainerCommandResponseProto {

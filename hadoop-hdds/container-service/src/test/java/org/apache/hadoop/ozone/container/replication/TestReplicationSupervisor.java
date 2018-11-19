@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.container.replication;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -118,7 +119,8 @@ public class TestReplicationSupervisor {
     @Override
     public void replicate(ReplicationTask task) {
       KeyValueContainerData kvcd =
-          new KeyValueContainerData(task.getContainerId(), 100L);
+          new KeyValueContainerData(task.getContainerId(), 100L,
+              UUID.randomUUID().toString(), UUID.randomUUID().toString());
       KeyValueContainer kvc =
           new KeyValueContainer(kvcd, conf);
       try {

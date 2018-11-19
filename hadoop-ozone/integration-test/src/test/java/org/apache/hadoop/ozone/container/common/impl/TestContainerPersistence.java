@@ -157,7 +157,8 @@ public class TestContainerPersistence {
   private Container addContainer(ContainerSet cSet, long cID)
       throws IOException {
     KeyValueContainerData data = new KeyValueContainerData(cID,
-        ContainerTestHelper.CONTAINER_MAX_SIZE);
+        ContainerTestHelper.CONTAINER_MAX_SIZE, UUID.randomUUID().toString(),
+        UUID.randomUUID().toString());
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner)", "bilbo");
     KeyValueContainer container = new KeyValueContainer(data, conf);

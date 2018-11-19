@@ -42,6 +42,8 @@ import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_TYPE;
 import static org.apache.hadoop.ozone.OzoneConsts.LAYOUTVERSION;
 import static org.apache.hadoop.ozone.OzoneConsts.MAX_SIZE;
 import static org.apache.hadoop.ozone.OzoneConsts.METADATA;
+import static org.apache.hadoop.ozone.OzoneConsts.ORIGIN_NODE_ID;
+import static org.apache.hadoop.ozone.OzoneConsts.ORIGIN_PIPELINE_ID;
 import static org.apache.hadoop.ozone.OzoneConsts.STATE;
 
 /**
@@ -69,6 +71,11 @@ public abstract class ContainerData {
 
   private final long maxSize;
 
+  //ID of the pipeline where this container is created
+  private String originPipelineId;
+  //ID of the datanode where this container is created
+  private String originNodeId;
+
   /** parameters for read/write statistics on the container. **/
   private final AtomicLong readBytes;
   private final AtomicLong writeBytes;
@@ -93,17 +100,22 @@ public abstract class ContainerData {
       STATE,
       METADATA,
       MAX_SIZE,
-      CHECKSUM));
+      CHECKSUM,
+      ORIGIN_PIPELINE_ID,
+      ORIGIN_NODE_ID));
 
   /**
    * Creates a ContainerData Object, which holds metadata of the container.
    * @param type - ContainerType
    * @param containerId - ContainerId
    * @param size - container maximum size in bytes
+   * @param originPipelineId - Pipeline Id where this container is/was created
+   * @param originNodeId - Node Id where this container is/was created
    */
-  protected ContainerData(ContainerType type, long containerId, long size) {
-    this(type, containerId,
-        ChunkLayOutVersion.getLatestVersion().getVersion(), size);
+  protected ContainerData(ContainerType type, long containerId, long size,
+                          String originPipelineId, String originNodeId) {
+    this(type, containerId, ChunkLayOutVersion.getLatestVersion().getVersion(),
+        size, originPipelineId, originNodeId);
   }
 
   /**
@@ -112,9 +124,12 @@ public abstract class ContainerData {
    * @param containerId - ContainerId
    * @param layOutVersion - Container layOutVersion
    * @param size - Container maximum size in bytes
+   * @param originPipelineId - Pipeline Id where this container is/was created
+   * @param originNodeId - Node Id where this container is/was created
    */
   protected ContainerData(ContainerType type, long containerId,
-      int layOutVersion, long size) {
+      int layOutVersion, long size, String originPipelineId,
+      String originNodeId) {
     Preconditions.checkNotNull(type);
 
     this.containerType = type;
@@ -129,6 +144,8 @@ public abstract class ContainerData {
     this.bytesUsed = new AtomicLong(0L);
     this.keyCount = new AtomicLong(0L);
     this.maxSize = size;
+    this.originPipelineId = originPipelineId;
+    this.originNodeId = originNodeId;
     setChecksumTo0ByteArray();
   }
 
@@ -416,6 +433,23 @@ public abstract class ContainerData {
 
   public String getChecksum() {
     return this.checksum;
+  }
+
+
+  /**
+   * Returns the origin pipeline Id of this container.
+   * @return origin node Id
+   */
+  public String getOriginPipelineId() {
+    return originPipelineId;
+  }
+
+  /**
+   * Returns the origin node Id of this container.
+   * @return origin node Id
+   */
+  public String getOriginNodeId() {
+    return originNodeId;
   }
 
   /**

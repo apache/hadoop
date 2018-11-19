@@ -23,6 +23,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -52,6 +53,7 @@ public abstract class Handler {
   protected final ContainerMetrics metrics;
 
   private final StateContext context;
+  private final DatanodeDetails datanodeDetails;
 
   protected Handler(Configuration config, StateContext context,
       ContainerSet contSet, VolumeSet volumeSet,
@@ -61,6 +63,7 @@ public abstract class Handler {
     this.containerSet = contSet;
     this.volumeSet = volumeSet;
     this.metrics = containerMetrics;
+    this.datanodeDetails = context.getParent().getDatanodeDetails();
   }
 
   public static Handler getHandlerForContainerType(
@@ -76,6 +79,13 @@ public abstract class Handler {
     }
   }
 
+  /**
+   * Returns the Id of this datanode.
+   * @return datanode Id
+   */
+  protected DatanodeDetails getDatanodeDetails() {
+    return datanodeDetails;
+  }
   /**
    * This should be called whenever there is state change. It will trigger
    * an ICR to SCM.
@@ -101,6 +111,8 @@ public abstract class Handler {
   public abstract Container importContainer(
       long containerID,
       long maxSize,
+      String originPipelineId,
+      String originNodeId,
       FileInputStream rawContainerStream,
       TarContainerPacker packer)
       throws IOException;

@@ -6,7 +6,9 @@ containerType: KeyValueContainer
 metadataPath: /hdds/current/aed-fg4-hji-jkl/containerDir0/1
 layOutVersion: 1
 maxSize: 5368709120
+originPipelineId: 1297e8a9-2850-4ced-b96c-5ae31d2c73ad
+originNodeId: 7f541a06-6c26-476d-9994-c6e1947e11cb
 metadata: {OWNER: ozone, VOLUME: hdfs}
 state: CLOSED
 aclEnabled: true
-checksum: c5b5373b8755c4e7199478dcaded9d996f9aca089704e08950259cdb0f290680
+checksum: 61db56da7d50798561b5365c123c5fbf7faf99fbbbd571a746af79020b7f79ba

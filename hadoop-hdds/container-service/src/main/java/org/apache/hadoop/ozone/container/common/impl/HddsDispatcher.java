@@ -262,6 +262,7 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
             .setCmdType(ContainerProtos.Type.CreateContainer)
             .setContainerID(containerRequest.getContainerID())
             .setCreateContainer(createRequest.build())
+            .setPipelineID(containerRequest.getPipelineID())
             .setDatanodeUuid(containerRequest.getDatanodeUuid())
             .setTraceID(containerRequest.getTraceID());
 

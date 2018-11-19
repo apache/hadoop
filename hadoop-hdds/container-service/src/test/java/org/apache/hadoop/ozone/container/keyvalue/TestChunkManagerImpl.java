@@ -72,8 +72,9 @@ public class TestChunkManagerImpl {
   @Before
   public void setUp() throws Exception {
     config = new OzoneConfiguration();
+    UUID datanodeId = UUID.randomUUID();
     hddsVolume = new HddsVolume.Builder(folder.getRoot()
-        .getAbsolutePath()).conf(config).datanodeUuid(UUID.randomUUID()
+        .getAbsolutePath()).conf(config).datanodeUuid(datanodeId
         .toString()).build();
 
     volumeSet = mock(VolumeSet.class);
@@ -83,7 +84,8 @@ public class TestChunkManagerImpl {
         .thenReturn(hddsVolume);
 
     keyValueContainerData = new KeyValueContainerData(1L,
-        (long) StorageUnit.GB.toBytes(5));
+        (long) StorageUnit.GB.toBytes(5), UUID.randomUUID().toString(),
+        datanodeId.toString());
 
     keyValueContainer = new KeyValueContainer(keyValueContainerData, config);
 

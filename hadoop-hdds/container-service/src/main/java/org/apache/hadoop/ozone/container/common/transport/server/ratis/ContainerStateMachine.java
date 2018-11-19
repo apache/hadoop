@@ -281,7 +281,12 @@ public class ContainerStateMachine extends BaseStateMachine {
 
   private ContainerCommandRequestProto getRequestProto(ByteString request)
       throws InvalidProtocolBufferException {
-    return ContainerCommandRequestProto.parseFrom(request);
+    // TODO: We can avoid creating new builder and set pipeline Id if
+    // the client is already sending the pipeline id, then we just have to
+    // validate the pipeline Id.
+    return ContainerCommandRequestProto.newBuilder(
+        ContainerCommandRequestProto.parseFrom(request))
+        .setPipelineID(gid.getUuid().toString()).build();
   }
 
   private ContainerCommandResponseProto dispatchCommand(

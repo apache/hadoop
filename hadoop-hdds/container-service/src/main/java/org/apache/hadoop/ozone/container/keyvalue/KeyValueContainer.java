@@ -550,7 +550,8 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
         .setUsed(containerData.getBytesUsed())
         .setState(getHddsState())
         .setDeleteTransactionId(containerData.getDeleteTransactionId())
-        .setBlockCommitSequenceId(containerData.getBlockCommitSequenceId());
+        .setBlockCommitSequenceId(containerData.getBlockCommitSequenceId())
+        .setOriginNodeId(containerData.getOriginNodeId());
     return ciBuilder.build();
   }
 

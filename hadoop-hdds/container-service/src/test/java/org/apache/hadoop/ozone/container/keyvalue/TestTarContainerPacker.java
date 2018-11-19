@@ -29,6 +29,7 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerPacker;
@@ -91,7 +92,8 @@ public class TestTarContainerPacker {
     Files.createDirectories(dbDir);
     Files.createDirectories(dataDir);
 
-    KeyValueContainerData containerData = new KeyValueContainerData(id, -1);
+    KeyValueContainerData containerData = new KeyValueContainerData(
+        id, -1, UUID.randomUUID().toString(), UUID.randomUUID().toString());
     containerData.setChunksPath(dataDir.toString());
     containerData.setMetadataPath(dbDir.getParent().toString());
     containerData.setDbFile(dbDir.toFile());

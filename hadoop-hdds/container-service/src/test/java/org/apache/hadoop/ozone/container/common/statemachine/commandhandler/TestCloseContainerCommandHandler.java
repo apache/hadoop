@@ -51,7 +51,7 @@ import java.util.UUID;
  */
 public class TestCloseContainerCommandHandler {
 
-  private static final StateContext CONTEXT = Mockito.mock(StateContext.class);
+  private final StateContext context = Mockito.mock(StateContext.class);
   private static File testDir;
 
 
@@ -62,7 +62,12 @@ public class TestCloseContainerCommandHandler {
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, testDir.getPath());
     conf.set(ScmConfigKeys.HDDS_DATANODE_DIR_KEY, testDir.getPath());
 
-    return new OzoneContainer(datanodeDetails, conf, CONTEXT);
+    final DatanodeStateMachine datanodeStateMachine = Mockito.mock(
+        DatanodeStateMachine.class);
+    Mockito.when(datanodeStateMachine.getDatanodeDetails())
+        .thenReturn(datanodeDetails);
+    Mockito.when(context.getParent()).thenReturn(datanodeStateMachine);
+    return new OzoneContainer(datanodeDetails, conf, context);
   }
 
 
@@ -106,20 +111,14 @@ public class TestCloseContainerCommandHandler {
         new CloseContainerCommandHandler();
     final CloseContainerCommand command = new CloseContainerCommand(
         containerId.getId(), pipelineID);
-    final DatanodeStateMachine datanodeStateMachine = Mockito.mock(
-        DatanodeStateMachine.class);
 
-    Mockito.when(datanodeStateMachine.getDatanodeDetails())
-        .thenReturn(datanodeDetails);
-    Mockito.when(CONTEXT.getParent()).thenReturn(datanodeStateMachine);
-
-    closeHandler.handle(command, container, CONTEXT, null);
+    closeHandler.handle(command, container, context, null);
 
     Assert.assertEquals(ContainerProtos.ContainerDataProto.State.CLOSED,
         container.getContainerSet().getContainer(
             containerId.getId()).getContainerState());
 
-    Mockito.verify(datanodeStateMachine, Mockito.times(2)).triggerHeartbeat();
+    Mockito.verify(context.getParent(), Mockito.times(2)).triggerHeartbeat();
     container.stop();
   }
 
@@ -164,20 +163,14 @@ public class TestCloseContainerCommandHandler {
     // Specify a pipeline which doesn't exist in the datanode.
     final CloseContainerCommand command = new CloseContainerCommand(
         containerId.getId(), PipelineID.randomId());
-    final DatanodeStateMachine datanodeStateMachine = Mockito.mock(
-        DatanodeStateMachine.class);
 
-    Mockito.when(datanodeStateMachine.getDatanodeDetails())
-        .thenReturn(datanodeDetails);
-    Mockito.when(CONTEXT.getParent()).thenReturn(datanodeStateMachine);
-
-    closeHandler.handle(command, container, CONTEXT, null);
+    closeHandler.handle(command, container, context, null);
 
     Assert.assertEquals(ContainerProtos.ContainerDataProto.State.QUASI_CLOSED,
         container.getContainerSet().getContainer(
             containerId.getId()).getContainerState());
 
-    Mockito.verify(datanodeStateMachine, Mockito.times(2)).triggerHeartbeat();
+    Mockito.verify(context.getParent(), Mockito.times(2)).triggerHeartbeat();
     container.stop();
   }
 
