@@ -111,6 +111,16 @@ please raise your issues with them.
 ### Other properties
 
     <property>
+      <name>fs.AbstractFileSystem.oss.impl</name>
+      <value>org.apache.hadoop.fs.aliyun.oss.OSS</value>
+      <description>The implementation class of the OSS AbstractFileSystem.
+        If you want to use OSS as YARN’s resource storage dir via the
+        fs.defaultFS configuration property in Hadoop’s core-site.xml,
+        you should add this configuration to Hadoop's core-site.xml
+      </description>
+    </property>
+
+    <property>
       <name>fs.oss.endpoint</name>
       <description>Aliyun OSS endpoint to connect to. An up-to-date list is
         provided in the Aliyun OSS Documentation.

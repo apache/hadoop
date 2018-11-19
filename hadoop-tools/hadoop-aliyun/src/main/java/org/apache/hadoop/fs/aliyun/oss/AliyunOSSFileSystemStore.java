@@ -416,7 +416,6 @@ public class AliyunOSSFileSystemStore {
       PutObjectResult result = ossClient.putObject(bucketName, key, fis, meta);
       LOG.debug(result.getETag());
       statistics.incrementWriteOps(1);
-      statistics.incrementBytesWritten(file.length());
     } finally {
       fis.close();
     }
@@ -617,7 +616,6 @@ public class AliyunOSSFileSystemStore {
         uploadRequest.setPartNumber(idx);
         UploadPartResult uploadResult = ossClient.uploadPart(uploadRequest);
         statistics.incrementWriteOps(1);
-        statistics.incrementBytesWritten(file.length());
         return uploadResult.getPartETag();
       } catch (Exception e) {
         LOG.debug("Failed to upload "+ file.getPath() +", " +
