@@ -18,13 +18,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.submarine.common.conf.SubmarineConfiguration;
+import org.apache.hadoop.yarn.submarine.common.fs.DefaultRemoteDirectoryManager;
 import org.apache.hadoop.yarn.submarine.common.fs.RemoteDirectoryManager;
 import org.apache.hadoop.yarn.submarine.runtimes.RuntimeFactory;
 
 public class ClientContext {
   private Configuration yarnConf = new YarnConfiguration();
 
-  private RemoteDirectoryManager remoteDirectoryManager;
+  private volatile RemoteDirectoryManager remoteDirectoryManager;
   private YarnClient yarnClient;
   private Configuration submarineConfig;
   private RuntimeFactory runtimeFactory;
@@ -51,12 +52,14 @@ public class ClientContext {
   }
 
   public RemoteDirectoryManager getRemoteDirectoryManager() {
+    if(remoteDirectoryManager == null) {
+      synchronized (this) {
+        if(remoteDirectoryManager == null) {
+          remoteDirectoryManager = new DefaultRemoteDirectoryManager(this);
+        }
+      }
+    }
     return remoteDirectoryManager;
-  }
-
-  public void setRemoteDirectoryManager(
-      RemoteDirectoryManager remoteDirectoryManager) {
-    this.remoteDirectoryManager = remoteDirectoryManager;
   }
 
   public Configuration getSubmarineConfig() {

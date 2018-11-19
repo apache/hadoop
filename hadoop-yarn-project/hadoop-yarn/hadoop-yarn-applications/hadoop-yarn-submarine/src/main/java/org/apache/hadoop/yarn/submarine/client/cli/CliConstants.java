@@ -52,4 +52,7 @@ public class CliConstants {
   public static final String QUICKLINK = "quicklink";
   public static final String TENSORBOARD_DOCKER_IMAGE =
       "tensorboard_docker_image";
+  public static final String KEYTAB = "keytab";
+  public static final String PRINCIPAL = "principal";
+  public static final String DISTRIBUTE_KEYTAB = "distribute_keytab";
 }

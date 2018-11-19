@@ -92,7 +92,9 @@ public class TestRunJobCliParsing {
             "--num_workers", "3", "--num_ps", "2", "--worker_launch_cmd",
             "python run-job.py", "--worker_resources", "memory=2048M,vcores=2",
             "--ps_resources", "memory=4G,vcores=4", "--tensorboard", "true",
-            "--ps_launch_cmd", "python run-ps.py", "--verbose" });
+            "--ps_launch_cmd", "python run-ps.py", "--keytab", "/keytab/path",
+            "--principal", "user/_HOST@domain.com", "--distribute_keytab",
+            "--verbose" });
 
     RunJobParameters jobRunParameters = runJobCli.getRunJobParameters();
 
@@ -108,6 +110,11 @@ public class TestRunJobCliParsing {
         jobRunParameters.getWorkerResource());
     Assert.assertEquals(jobRunParameters.getDockerImageName(),
         "tf-docker:1.1.0");
+    Assert.assertEquals(jobRunParameters.getKeytab(),
+        "/keytab/path");
+    Assert.assertEquals(jobRunParameters.getPrincipal(),
+        "user/_HOST@domain.com");
+    Assert.assertTrue(jobRunParameters.isDistributeKeytab());
     Assert.assertTrue(SubmarineLogs.isVerbose());
   }
 
