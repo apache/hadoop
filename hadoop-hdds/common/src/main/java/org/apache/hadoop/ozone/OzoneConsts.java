@@ -188,6 +188,8 @@ public final class OzoneConsts {
   public static final String CHUNKS_PATH = "chunksPath";
   public static final String CONTAINER_DB_TYPE = "containerDBType";
   public static final String CHECKSUM = "checksum";
+  public static final String ORIGIN_PIPELINE_ID = "originPipelineId";
+  public static final String ORIGIN_NODE_ID = "originNodeId";
 
   // For OM Audit usage
   public static final String VOLUME = "volume";

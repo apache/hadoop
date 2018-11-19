@@ -25,6 +25,8 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
+import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume.RoundRobinVolumeChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
@@ -34,6 +36,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.Mockito;
+
 import java.util.Random;
 import java.util.UUID;
 
@@ -79,16 +83,22 @@ public class TestOzoneContainer {
     // Add containers to disk
     for (int i=0; i<10; i++) {
       keyValueContainerData = new KeyValueContainerData(i,
-          (long) StorageUnit.GB.toBytes(1));
+          (long) StorageUnit.GB.toBytes(1), UUID.randomUUID().toString(),
+          datanodeDetails.getUuidString());
       keyValueContainer = new KeyValueContainer(
           keyValueContainerData, conf);
       keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
     }
 
+    DatanodeStateMachine stateMachine = Mockito.mock(
+        DatanodeStateMachine.class);
+    StateContext context = Mockito.mock(StateContext.class);
+    Mockito.when(stateMachine.getDatanodeDetails()).thenReturn(datanodeDetails);
+    Mockito.when(context.getParent()).thenReturn(stateMachine);
     // When OzoneContainer is started, the containers from disk should be
     // loaded into the containerSet.
     OzoneContainer ozoneContainer = new
-        OzoneContainer(datanodeDetails, conf, null);
+        OzoneContainer(datanodeDetails, conf, context);
     ContainerSet containerset = ozoneContainer.getContainerSet();
     assertEquals(10, containerset.containerCount());
   }

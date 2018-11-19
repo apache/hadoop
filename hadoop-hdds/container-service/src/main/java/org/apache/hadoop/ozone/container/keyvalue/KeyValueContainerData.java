@@ -18,22 +18,17 @@
 
 package org.apache.hadoop.ozone.container.keyvalue;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import java.util.Collections;
 
-import org.apache.hadoop.conf.StorageSize;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerDataProto;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.yaml.snakeyaml.nodes.Tag;
 
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -90,8 +85,10 @@ public class KeyValueContainerData extends ContainerData {
    * @param id - ContainerId
    * @param size - maximum size of the container in bytes
    */
-  public KeyValueContainerData(long id, long size) {
-    super(ContainerProtos.ContainerType.KeyValueContainer, id, size);
+  public KeyValueContainerData(long id, long size,
+      String originPipelineId, String originNodeId) {
+    super(ContainerProtos.ContainerType.KeyValueContainer, id, size,
+        originPipelineId, originNodeId);
     this.numPendingDeletionBlocks = new AtomicInteger(0);
     this.deleteTransactionId = 0;
   }
@@ -102,9 +99,10 @@ public class KeyValueContainerData extends ContainerData {
    * @param layOutVersion
    * @param size - maximum size of the container in bytes
    */
-  public KeyValueContainerData(long id, int layOutVersion, long size) {
+  public KeyValueContainerData(long id, int layOutVersion, long size,
+      String originPipelineId, String originNodeId) {
     super(ContainerProtos.ContainerType.KeyValueContainer, id, layOutVersion,
-        size);
+        size, originPipelineId, originNodeId);
     this.numPendingDeletionBlocks = new AtomicInteger(0);
     this.deleteTransactionId = 0;
   }
@@ -275,40 +273,4 @@ public class KeyValueContainerData extends ContainerData {
     return Collections.unmodifiableList(KV_YAML_FIELDS);
   }
 
-  /**
-   * Constructs a KeyValueContainerData object from ProtoBuf classes.
-   *
-   * @param protoData - ProtoBuf Message
-   * @throws IOException
-   */
-  @VisibleForTesting
-  public static KeyValueContainerData getFromProtoBuf(
-      ContainerDataProto protoData) throws IOException {
-    // TODO: Add containerMaxSize to ContainerProtos.ContainerData
-    StorageSize storageSize = StorageSize.parse(
-        ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT);
-    KeyValueContainerData data = new KeyValueContainerData(
-        protoData.getContainerID(),
-        (long)storageSize.getUnit().toBytes(storageSize.getValue()));
-    for (int x = 0; x < protoData.getMetadataCount(); x++) {
-      data.addMetadata(protoData.getMetadata(x).getKey(),
-          protoData.getMetadata(x).getValue());
-    }
-
-    if (protoData.hasContainerPath()) {
-      String metadataPath = protoData.getContainerPath()+ File.separator +
-          OzoneConsts.CONTAINER_META_PATH;
-      data.setMetadataPath(metadataPath);
-    }
-
-    if (protoData.hasState()) {
-      data.setState(protoData.getState());
-    }
-
-    if (protoData.hasBytesUsed()) {
-      data.setBytesUsed(protoData.getBytesUsed());
-    }
-
-    return data;
-  }
 }

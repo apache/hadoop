@@ -39,6 +39,7 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
+import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.volume.RoundRobinVolumeChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
@@ -76,9 +77,14 @@ public class TestHddsDispatcher {
       DatanodeDetails dd = randomDatanodeDetails();
       ContainerSet containerSet = new ContainerSet();
       VolumeSet volumeSet = new VolumeSet(dd.getUuidString(), conf);
+      DatanodeStateMachine stateMachine = Mockito.mock(
+          DatanodeStateMachine.class);
       StateContext context = Mockito.mock(StateContext.class);
+      Mockito.when(stateMachine.getDatanodeDetails()).thenReturn(dd);
+      Mockito.when(context.getParent()).thenReturn(stateMachine);
       KeyValueContainerData containerData = new KeyValueContainerData(1L,
-          (long) StorageUnit.GB.toBytes(1));
+          (long) StorageUnit.GB.toBytes(1), UUID.randomUUID().toString(),
+          dd.getUuidString());
       Container container = new KeyValueContainer(containerData, conf);
       container.create(volumeSet, new RoundRobinVolumeChoosingPolicy(),
           scmId.toString());
@@ -87,8 +93,8 @@ public class TestHddsDispatcher {
       Map<ContainerType, Handler> handlers = Maps.newHashMap();
       for (ContainerType containerType : ContainerType.values()) {
         handlers.put(containerType,
-            Handler.getHandlerForContainerType(
-                containerType, conf, null, containerSet, volumeSet, metrics));
+            Handler.getHandlerForContainerType(containerType, conf, context,
+                containerSet, volumeSet, metrics));
       }
       HddsDispatcher hddsDispatcher = new HddsDispatcher(
           conf, containerSet, volumeSet, handlers, context, metrics);
@@ -125,13 +131,17 @@ public class TestHddsDispatcher {
       DatanodeDetails dd = randomDatanodeDetails();
       ContainerSet containerSet = new ContainerSet();
       VolumeSet volumeSet = new VolumeSet(dd.getUuidString(), conf);
+      DatanodeStateMachine stateMachine = Mockito.mock(
+          DatanodeStateMachine.class);
       StateContext context = Mockito.mock(StateContext.class);
+      Mockito.when(stateMachine.getDatanodeDetails()).thenReturn(dd);
+      Mockito.when(context.getParent()).thenReturn(stateMachine);
       ContainerMetrics metrics = ContainerMetrics.create(conf);
       Map<ContainerType, Handler> handlers = Maps.newHashMap();
       for (ContainerType containerType : ContainerType.values()) {
         handlers.put(containerType,
-            Handler.getHandlerForContainerType(
-                containerType, conf, null, containerSet, volumeSet, metrics));
+            Handler.getHandlerForContainerType(containerType, conf, context,
+                containerSet, volumeSet, metrics));
       }
       HddsDispatcher hddsDispatcher = new HddsDispatcher(
           conf, containerSet, volumeSet, handlers, context, metrics);
