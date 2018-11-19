@@ -84,7 +84,8 @@ public class DefaultRemoteDirectoryManager implements RemoteDirectoryManager {
   }
 
   private Path getJobRootFolder(String jobName) throws IOException {
-    Path jobRootPath = getUserRootFolder();
+    Path userRoot = getUserRootFolder();
+    Path jobRootPath = new Path(userRoot, jobName);
     createFolderIfNotExist(jobRootPath);
     // Get a file status to make sure it is a absolute path.
     FileStatus fStatus = fs.getFileStatus(jobRootPath);
