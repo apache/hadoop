@@ -147,6 +147,16 @@ public class SCMPipelineManager implements PipelineManager {
   }
 
   @Override
+  public List<Pipeline> getPipelines() {
+    lock.readLock().lock();
+    try {
+      return stateManager.getPipelines();
+    } finally {
+      lock.readLock().unlock();
+    }
+  }
+
+  @Override
   public List<Pipeline> getPipelines(ReplicationType type) {
     lock.readLock().lock();
     try {

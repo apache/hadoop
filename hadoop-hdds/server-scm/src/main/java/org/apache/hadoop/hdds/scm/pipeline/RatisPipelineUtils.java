@@ -77,7 +77,7 @@ public final class RatisPipelineUtils {
    * @param ozoneConf - Ozone configuration
    * @throws IOException
    */
-  static void destroyPipeline(PipelineManager pipelineManager,
+  public static void destroyPipeline(PipelineManager pipelineManager,
       Pipeline pipeline, Configuration ozoneConf) throws IOException {
     final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
     LOG.debug("destroying pipeline:{} with {}", pipeline.getId(), group);

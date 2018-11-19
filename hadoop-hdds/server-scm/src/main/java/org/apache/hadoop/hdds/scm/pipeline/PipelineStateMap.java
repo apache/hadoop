@@ -115,6 +115,14 @@ class PipelineStateMap {
   }
 
   /**
+   * Get list of pipelines in SCM.
+   * @return List of pipelines
+   */
+  public List<Pipeline> getPipelines() {
+    return new ArrayList<>(pipelineMap.values());
+  }
+
+  /**
    * Get pipeline corresponding to specified replication type.
    *
    * @param type - ReplicationType
