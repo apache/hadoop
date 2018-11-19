@@ -56,6 +56,10 @@ class PipelineStateManager {
     return pipelineStateMap.getPipeline(pipelineID);
   }
 
+  public List<Pipeline> getPipelines() {
+    return pipelineStateMap.getPipelines();
+  }
+
   List<Pipeline> getPipelines(ReplicationType type) {
     return pipelineStateMap.getPipelines(type);
   }

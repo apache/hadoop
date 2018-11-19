@@ -100,6 +100,9 @@ public class TestPipelineStateManager {
 
   @Test
   public void testGetPipelines() throws IOException {
+    // In start there should be no pipelines
+    Assert.assertTrue(stateManager.getPipelines().isEmpty());
+
     Set<Pipeline> pipelines = new HashSet<>();
     Pipeline pipeline = createDummyPipeline(1);
     stateManager.addPipeline(pipeline);
@@ -113,6 +116,10 @@ public class TestPipelineStateManager {
     Set<Pipeline> pipelines1 = new HashSet<>(stateManager.getPipelines(
         HddsProtos.ReplicationType.RATIS));
     Assert.assertEquals(pipelines1.size(), pipelines.size());
+
+    pipelines1 = new HashSet<>(stateManager.getPipelines());
+    Assert.assertEquals(pipelines1.size(), pipelines.size());
+
     // clean up
     for (Pipeline pipeline1 : pipelines) {
       removePipeline(pipeline1);

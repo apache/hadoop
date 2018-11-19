@@ -41,6 +41,8 @@ public interface PipelineManager extends Closeable {
 
   Pipeline getPipeline(PipelineID pipelineID) throws PipelineNotFoundException;
 
+  List<Pipeline> getPipelines();
+
   List<Pipeline> getPipelines(ReplicationType type);
 
   List<Pipeline> getPipelines(ReplicationType type,

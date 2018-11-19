@@ -173,6 +173,22 @@ public interface ScmClient extends Closeable {
       throws IOException;
 
   /**
+   * Returns the list of active Pipelines.
+   *
+   * @return list of Pipeline
+   * @throws IOException in case of any exception
+   */
+  List<Pipeline> listPipelines() throws IOException;
+
+  /**
+   * Closes the pipeline given a pipeline ID.
+   *
+   * @param pipelineID PipelineID to close.
+   * @throws IOException In case of exception while closing the pipeline
+   */
+  void closePipeline(HddsProtos.PipelineID pipelineID) throws IOException;
+
+  /**
    * Check if SCM is in chill mode.
    *
    * @return Returns true if SCM is in chill mode else returns false.

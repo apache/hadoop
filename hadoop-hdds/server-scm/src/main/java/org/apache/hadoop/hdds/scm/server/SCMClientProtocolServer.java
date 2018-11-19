@@ -42,6 +42,9 @@ import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.RatisPipelineUtils;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.hdds.server.events.EventHandler;
@@ -304,6 +307,21 @@ public class SCMClientProtocolServer implements
     // This is needed only for debugging purposes to make sure cluster is
     // working correctly.
     return null;
+  }
+
+  @Override
+  public List<Pipeline> listPipelines() {
+    return scm.getPipelineManager().getPipelines();
+  }
+
+  @Override
+  public void closePipeline(HddsProtos.PipelineID pipelineID)
+      throws IOException {
+    PipelineManager pipelineManager = scm.getPipelineManager();
+    Pipeline pipeline =
+        pipelineManager.getPipeline(PipelineID.getFromProtobuf(pipelineID));
+    RatisPipelineUtils
+        .finalizeAndDestroyPipeline(pipelineManager, pipeline, conf, false);
   }
 
   @Override
