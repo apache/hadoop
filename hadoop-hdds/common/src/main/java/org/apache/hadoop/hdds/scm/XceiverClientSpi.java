@@ -126,5 +126,6 @@ public abstract class XceiverClientSpi implements Closeable {
   public abstract HddsProtos.ReplicationType getPipelineType();
 
   public abstract void watchForCommit(long index, long timeout)
-      throws InterruptedException, ExecutionException, TimeoutException;
+      throws InterruptedException, ExecutionException, TimeoutException,
+      IOException;
 }
