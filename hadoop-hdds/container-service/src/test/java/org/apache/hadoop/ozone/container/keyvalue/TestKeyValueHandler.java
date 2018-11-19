@@ -90,6 +90,10 @@ public class TestKeyValueHandler {
     Mockito.when(handler.handle(any(), any())).thenCallRealMethod();
     doCallRealMethod().when(dispatcher).setMetricsForTesting(any());
     dispatcher.setMetricsForTesting(Mockito.mock(ContainerMetrics.class));
+    Mockito.when(dispatcher.buildAuditMessageForFailure(any(), any(), any()))
+        .thenCallRealMethod();
+    Mockito.when(dispatcher.buildAuditMessageForSuccess(any(), any()))
+        .thenCallRealMethod();
   }
 
   @Test
