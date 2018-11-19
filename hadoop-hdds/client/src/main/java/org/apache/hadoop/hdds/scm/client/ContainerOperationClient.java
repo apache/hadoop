@@ -157,7 +157,8 @@ public class ContainerOperationClient implements ScmClient {
     //    ObjectStageChangeRequestProto.Op.create,
     //    ObjectStageChangeRequestProto.Stage.begin);
 
-    client.createPipeline();
+    // client.createPipeline();
+    // TODO: Use PipelineManager to createPipeline
 
     //storageContainerLocationClient.notifyObjectStageChange(
     //    ObjectStageChangeRequestProto.Type.pipeline,

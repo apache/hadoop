@@ -323,15 +323,6 @@ public class TestPipelineStateManager {
 
     // close the pipeline
     stateManager.finalizePipeline(pipeline.getId());
-
-    try {
-      stateManager.removePipeline(pipeline.getId());
-      Assert.fail("Pipeline should not have been removed");
-    } catch (IOException e) {
-      // can not remove a pipeline which already has containers
-      Assert.assertTrue(e.getMessage().contains("not empty"));
-    }
-
     // remove containers and then remove the pipeline
     removePipeline(pipeline);
   }
@@ -423,11 +414,6 @@ public class TestPipelineStateManager {
 
   private void removePipeline(Pipeline pipeline) throws IOException {
     stateManager.finalizePipeline(pipeline.getId());
-    Set<ContainerID> containerIDs =
-        stateManager.getContainers(pipeline.getId());
-    for (ContainerID containerID : containerIDs) {
-      stateManager.removeContainerFromPipeline(pipeline.getId(), containerID);
-    }
     stateManager.removePipeline(pipeline.getId());
   }
 }

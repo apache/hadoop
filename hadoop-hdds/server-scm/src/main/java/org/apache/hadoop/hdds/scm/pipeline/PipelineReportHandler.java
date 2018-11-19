@@ -25,7 +25,6 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineReport;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
-import org.apache.hadoop.hdds.scm.XceiverClientRatis;
 import org.apache.hadoop.hdds.scm.server
     .SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventHandler;
@@ -76,11 +75,11 @@ public class PipelineReportHandler implements
   private void processPipelineReport(PipelineReport report, DatanodeDetails dn)
       throws IOException {
     PipelineID pipelineID = PipelineID.getFromProtobuf(report.getPipelineID());
-    Pipeline pipeline = null;
+    Pipeline pipeline;
     try {
       pipeline = pipelineManager.getPipeline(pipelineID);
     } catch (PipelineNotFoundException e) {
-      //TODO: introduce per datanode command for pipeline destroy
+      RatisPipelineUtils.destroyPipeline(dn, pipelineID, conf);
       return;
     }
 
@@ -93,14 +92,9 @@ public class PipelineReportHandler implements
     } else if (pipeline.isClosed()) {
       int numContainers = pipelineManager.getNumberOfContainers(pipelineID);
       if (numContainers == 0) {
-        // remove the pipeline from the pipeline manager
-        pipelineManager.removePipeline(pipelineID);
         // since all the containers have been closed the pipeline can be
         // destroyed
-        try (XceiverClientRatis client =
-            XceiverClientRatis.newXceiverClientRatis(pipeline, conf)) {
-          client.destroyPipeline();
-        }
+        RatisPipelineUtils.destroyPipeline(pipelineManager, pipeline, conf);
       }
     } else {
       // In OPEN state case just report the datanode
