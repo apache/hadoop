@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -35,6 +37,8 @@ import org.eclipse.jetty.websocket.api.annotations.OnWebSocketConnect;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketMessage;
 import org.eclipse.jetty.websocket.api.annotations.WebSocket;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
+import org.apache.hadoop.security.HadoopKerberosName;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,14 +96,16 @@ public class ContainerShellWebSocket {
 
   @OnWebSocketConnect
   public void onConnect(Session session) {
-    LOG.info(session.getRemoteAddress().getHostString() + " connected!");
-
     try {
       URI containerURI = session.getUpgradeRequest().getRequestURI();
       String[] containerPath = containerURI.getPath().split("/");
       String cId = containerPath[2];
       Container container = nmContext.getContainers().get(ContainerId
           .fromString(cId));
+      if (!checkAuthorization(session, container)) {
+        session.close(1008, "Forbidden");
+      }
+      LOG.info(session.getRemoteAddress().getHostString() + " connected!");
       LOG.info(
           "Making interactive connection to running docker container with ID: "
               + cId);
@@ -126,4 +132,37 @@ public class ContainerShellWebSocket {
     }
   }
 
+  /**
+   * Check if user is authorized to access container.
+   * @param session websocket session
+   * @param container instance of container to access
+   * @return true if user is allowed to access container.
+   * @throws IOException
+   */
+  protected boolean checkAuthorization(Session session, Container container)
+      throws IOException {
+    boolean authorized = true;
+    String user = "";
+    if (UserGroupInformation.isSecurityEnabled()) {
+      user = new HadoopKerberosName(session.getUpgradeRequest()
+          .getUserPrincipal().getName()).getShortName();
+    } else {
+      Map<String, List<String>> parameters = session.getUpgradeRequest()
+          .getParameterMap();
+      if (parameters.containsKey("user.name")) {
+        List<String> users = parameters.get("user.name");
+        user = users.get(0);
+      }
+    }
+    boolean isAdmin = false;
+    if (nmContext.getApplicationACLsManager().areACLsEnabled()) {
+      UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
+      isAdmin = nmContext.getApplicationACLsManager().isAdmin(ugi);
+    }
+    String containerUser = container.getUser();
+    if (!user.equals(containerUser) && !isAdmin) {
+      authorized = false;
+    }
+    return authorized;
+  }
 }
