@@ -729,6 +729,8 @@
                         <exclude>objenesis-license.txt</exclude>
                         <exclude>org/hamcrest/**/*.class</exclude>
                         <exclude>org/hamcrest/*.class</exclude>
+                        <exclude>org/objenesis/**/*.class</exclude>
+                        <exclude>org/objenesis/*.class</exclude>
                       </excludes>
                     </filter>
                     <!-- skip grizzly internals we don't need to run. -->
