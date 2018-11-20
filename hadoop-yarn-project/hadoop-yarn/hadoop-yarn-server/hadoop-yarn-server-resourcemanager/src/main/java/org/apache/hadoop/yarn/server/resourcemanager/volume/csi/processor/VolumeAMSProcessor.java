@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.volume.csi.processor;
 
 import org.apache.hadoop.yarn.ams.ApplicationMasterServiceContext;
 import org.apache.hadoop.yarn.ams.ApplicationMasterServiceProcessor;
+import org.apache.hadoop.yarn.api.CsiAdaptorProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -29,6 +30,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.VolumeManager;
@@ -142,8 +144,21 @@ public class VolumeAMSProcessor implements ApplicationMasterServiceProcessor {
    * @param metaData
    * @return volume
    */
-  private Volume checkAndGetVolume(VolumeMetaData metaData) {
+  private Volume checkAndGetVolume(VolumeMetaData metaData)
+      throws InvalidVolumeException {
     Volume toAdd = new VolumeImpl(metaData);
+    CsiAdaptorProtocol adaptor = volumeManager
+        .getAdaptorByDriverName(metaData.getDriverName());
+    if (adaptor == null) {
+      throw new InvalidVolumeException("It seems for the driver name"
+          + " specified in the volume " + metaData.getDriverName()
+          + " ,there is no matched driver-adaptor can be found. "
+          + "Is the driver probably registered? Please check if"
+          + " adaptors service addresses defined in "
+          + YarnConfiguration.NM_CSI_ADAPTOR_ADDRESSES
+          + " are correct and services are started.");
+    }
+    toAdd.setClient(adaptor);
     return this.volumeManager.addOrGetVolume(toAdd);
   }
 

@@ -19,9 +19,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.volume.csi.lifecycle;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.CsiAdaptorProtocol;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.event.VolumeEvent;
 import org.apache.hadoop.yarn.server.volume.csi.VolumeId;
+import org.apache.hadoop.yarn.server.volume.csi.VolumeMetaData;
 
 /**
  * Major volume interface at RM's view, it maintains the volume states and
@@ -34,4 +36,10 @@ public interface Volume extends EventHandler<VolumeEvent> {
   VolumeState getVolumeState();
 
   VolumeId getVolumeId();
+
+  VolumeMetaData getVolumeMeta();
+
+  CsiAdaptorProtocol getClient();
+
+  void setClient(CsiAdaptorProtocol client);
 }

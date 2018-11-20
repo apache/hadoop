@@ -18,10 +18,15 @@
 package org.apache.hadoop.yarn.server.resourcemanager.volume.csi.lifecycle;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.CsiAdaptorClient;
-import org.apache.hadoop.yarn.server.volume.csi.CsiAdaptorClientProtocol;
+import org.apache.hadoop.yarn.api.CsiAdaptorProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesRequest.VolumeCapability;
+import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesResponse;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.event.VolumeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.event.VolumeEventType;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
@@ -30,12 +35,15 @@ import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.server.volume.csi.VolumeId;
 import org.apache.hadoop.yarn.server.volume.csi.VolumeMetaData;
-import org.apache.hadoop.yarn.server.volume.csi.exception.VolumeException;
 
+import java.io.IOException;
 import java.util.EnumSet;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import static org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesRequest.AccessMode.SINGLE_NODE_READER_ONLY;
+import static org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesRequest.VolumeType.FILE_SYSTEM;
 
 /**
  * This class maintains the volume states and state transition
@@ -54,7 +62,7 @@ public class VolumeImpl implements Volume {
 
   private final VolumeId volumeId;
   private final VolumeMetaData volumeMeta;
-  private CsiAdaptorClientProtocol client;
+  private CsiAdaptorProtocol adaptorClient;
 
   public VolumeImpl(VolumeMetaData volumeMeta) {
     ReadWriteLock lock = new ReentrantReadWriteLock();
@@ -63,16 +71,21 @@ public class VolumeImpl implements Volume {
     this.volumeId = volumeMeta.getVolumeId();
     this.volumeMeta = volumeMeta;
     this.stateMachine = createVolumeStateFactory().make(this);
-    this.client = new CsiAdaptorClient();
   }
 
   @VisibleForTesting
-  public void setClient(CsiAdaptorClientProtocol client) {
-    this.client = client;
+  public void setClient(CsiAdaptorProtocol csiAdaptorClient) {
+    this.adaptorClient = csiAdaptorClient;
   }
 
-  public CsiAdaptorClientProtocol getClient() {
-    return this.client;
+  @Override
+  public CsiAdaptorProtocol getClient() {
+    return this.adaptorClient;
+  }
+
+  @Override
+  public VolumeMetaData getVolumeMeta() {
+    return this.volumeMeta;
   }
 
   private StateMachineFactory<VolumeImpl, VolumeState,
@@ -135,9 +148,20 @@ public class VolumeImpl implements Volume {
         VolumeEvent volumeEvent) {
       try {
         // this call could cross node, we should keep the message tight
-        volume.getClient().validateVolume();
-        return VolumeState.VALIDATED;
-      } catch (VolumeException e) {
+        // TODO we should parse the capability from volume resource spec
+        VolumeCapability capability = new VolumeCapability(
+            SINGLE_NODE_READER_ONLY, FILE_SYSTEM,
+            ImmutableList.of());
+        ValidateVolumeCapabilitiesRequest request =
+            ValidateVolumeCapabilitiesRequest
+                .newInstance(volume.getVolumeId().getId(),
+                    ImmutableList.of(capability),
+                    ImmutableMap.of());
+        ValidateVolumeCapabilitiesResponse response = volume.getClient()
+            .validateVolumeCapacity(request);
+        return response.isSupported() ? VolumeState.VALIDATED
+            : VolumeState.UNAVAILABLE;
+      } catch (YarnException | IOException e) {
         LOG.warn("Got exception while calling the CSI adaptor", e);
         return VolumeState.UNAVAILABLE;
       }
@@ -150,14 +174,8 @@ public class VolumeImpl implements Volume {
     @Override
     public VolumeState transition(VolumeImpl volume,
         VolumeEvent volumeEvent) {
-      try {
-        // this call could cross node, we should keep the message tight
-        volume.getClient().controllerPublishVolume();
-        return VolumeState.NODE_READY;
-      } catch (VolumeException e) {
-        LOG.warn("Got exception while calling the CSI adaptor", e);
-        return volume.getVolumeState();
-      }
+      // this call could cross node, we should keep the message tight
+      return VolumeState.NODE_READY;
     }
   }
 

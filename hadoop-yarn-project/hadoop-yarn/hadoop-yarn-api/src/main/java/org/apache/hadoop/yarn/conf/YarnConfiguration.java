@@ -3428,6 +3428,18 @@ public class YarnConfiguration extends Configuration {
       false;
 
   ////////////////////////////////
+  // CSI Volume configs
+  ////////////////////////////////
+  /**
+   * One or more socket addresses for csi-adaptor.
+   * Multiple addresses are delimited by ",".
+   */
+  public static final String NM_CSI_ADAPTOR_PREFIX =
+      NM_PREFIX + "csi-driver-adaptor.";
+  public static final String NM_CSI_ADAPTOR_ADDRESSES =
+      NM_CSI_ADAPTOR_PREFIX + "addresses";
+
+  ////////////////////////////////
   // Other Configs
   ////////////////////////////////
 

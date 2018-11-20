@@ -4037,4 +4037,17 @@
     <name>yarn.node-attribute.fs-store.impl.class</name>
     <value>org.apache.hadoop.yarn.server.resourcemanager.nodelabels.FileSystemNodeAttributeStore</value>
   </property>
+
+  <!-- CSI configuration -->
+  <property>
+    <description>
+      CSI driver adaptor addresses on a node manager.
+      This configuration will be loaded by the resource manager to initiate
+      a client for each adaptor in order to communicate with CSI drivers.
+      Note, these addresses should be mapped to the adaptor addresses which
+      runs the controller plugin.
+    </description>
+    <name>yarn.nodemanager.csi-driver-adaptor.addresses</name>
+    <value></value>
+  </property>
 </configuration>

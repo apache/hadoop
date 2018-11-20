@@ -15,29 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.api.protocolrecords;
 
-package org.apache.hadoop.yarn.csi.client;
-
-import csi.v0.Csi;
-import csi.v0.Csi.GetPluginInfoResponse;
-
-import java.io.IOException;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
- * General interface for a CSI client. This interface defines all APIs
- * that CSI spec supports, including both identity/controller/node service
- * APIs.
+ * Get plugin info response.
  */
-public interface CsiClient {
+public abstract class GetPluginInfoResponse {
 
-  /**
-   * Gets some basic info about the CSI plugin, including the driver name,
-   * version and optionally some manifest info.
-   * @return {@link GetPluginInfoResponse}
-   * @throws IOException when unable to get plugin info from the driver.
-   */
-  GetPluginInfoResponse getPluginInfo() throws IOException;
+  public static GetPluginInfoResponse newInstance(
+      String driverName, String version) {
+    GetPluginInfoResponse response =
+        Records.newRecord(GetPluginInfoResponse.class);
+    response.setDriverName(driverName);
+    response.setVersion(version);
+    return response;
+  }
 
-  Csi.ValidateVolumeCapabilitiesResponse validateVolumeCapabilities(
-      Csi.ValidateVolumeCapabilitiesRequest request) throws IOException;
+  public abstract void setDriverName(String driverName);
+
+  public abstract String getDriverName();
+
+  public abstract void setVersion(String version);
+
+  public abstract String getVersion();
 }
