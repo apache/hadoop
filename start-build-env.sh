@@ -21,9 +21,14 @@ cd "$(dirname "$0")" # connect to root
 
 docker build -t hadoop-build dev-support/docker
 
+USER_NAME=${SUDO_USER:=$USER}
+USER_ID=$(id -u "${USER_NAME}")
+
+if [ "$(uname -s)" = "Darwin" ]; then
+  GROUP_ID=100
+fi
+
 if [ "$(uname -s)" = "Linux" ]; then
-  USER_NAME=${SUDO_USER:=$USER}
-  USER_ID=$(id -u "${USER_NAME}")
   GROUP_ID=$(id -g "${USER_NAME}")
   # man docker-run
   # When using SELinux, mounted directories may not be accessible
@@ -51,10 +56,6 @@ if [ "$(uname -s)" = "Linux" ]; then
       done
     fi
   fi
-else # boot2docker uid and gid
-  USER_NAME=$USER
-  USER_ID=1000
-  GROUP_ID=50
 fi
 
 docker build -t "hadoop-build-${USER_ID}" - <<UserSpecificDocker
