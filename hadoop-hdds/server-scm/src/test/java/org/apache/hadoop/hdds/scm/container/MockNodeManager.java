@@ -396,6 +396,15 @@ public class MockNodeManager implements NodeManager {
     return nodeCountMap;
   }
 
+  @Override
+  public Map<String, Long> getNodeInfo() {
+    Map<String, Long> nodeInfo = new HashMap<>();
+    nodeInfo.put("Capacity", aggregateStat.getCapacity().get());
+    nodeInfo.put("Used", aggregateStat.getScmUsed().get());
+    nodeInfo.put("Remaining", aggregateStat.getRemaining().get());
+    return nodeInfo;
+  }
+
   /**
    * Makes it easy to add a container.
    *
