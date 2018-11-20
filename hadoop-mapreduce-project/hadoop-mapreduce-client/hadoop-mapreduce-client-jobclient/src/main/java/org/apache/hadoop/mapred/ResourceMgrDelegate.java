@@ -70,6 +70,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
+import org.apache.hadoop.yarn.api.records.ShellContainerCommand;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
@@ -559,5 +560,11 @@ public class ResourceMgrDelegate extends YarnClient {
   public Map<String, Set<NodeAttribute>> getNodeToAttributes(
       Set<String> hostNames) throws YarnException, IOException {
     return client.getNodeToAttributes(hostNames);
+  }
+
+  @Override
+  public void shellToContainer(ContainerId containerId,
+      ShellContainerCommand command) throws IOException {
+    throw new IOException("Operation is not supported.");
   }
 }

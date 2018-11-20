@@ -41,6 +41,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.SaslRpcServer.QualityOfProtection;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.hadoop.yarn.client.util.YarnClientUtils;
 import org.apache.log4j.Logger;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
@@ -169,8 +170,7 @@ public class TestSecureApiServiceClient extends KerberosSecurityTestcase {
   public void testHttpSpnegoChallenge() throws Exception {
     UserGroupInformation.loginUserFromKeytab(clientPrincipal, keytabFile
         .getCanonicalPath());
-    asc = new ApiServiceClient();
-    String challenge = asc.generateToken("localhost");
+    String challenge = YarnClientUtils.generateToken("localhost");
     assertNotNull(challenge);
   }
 

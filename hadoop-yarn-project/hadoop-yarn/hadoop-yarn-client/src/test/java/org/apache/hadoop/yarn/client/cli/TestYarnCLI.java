@@ -2317,6 +2317,7 @@ public class TestYarnCLI {
     pw.println(" -components <arg>                Works with -list to filter instances based on input comma-separated list of component names.");
     pw.println(" -help                            Displays help for all commands.");
     pw.println(" -list <Application Name or Attempt ID>   List containers for application attempt  when application attempt ID is provided. When application name is provided, then it finds the instances of the application based on app's own implementation, and -appTypes option must be specified unless it is the default yarn-service type. With app name, it supports optional use of -version to filter instances based on app version, -components to filter instances based on component names, -states to filter instances based on instance state.");
+    pw.println(" -shell <Container ID> Run a shell in the container.");
     pw.println(" -signal <container ID [signal command]> Signal the container.");
     pw.println("The available signal commands are ");
     pw.println(java.util.Arrays.asList(SignalContainerCommand.values()));

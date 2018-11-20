@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.ShellContainerCommand;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.AppAdminClient;
@@ -111,6 +112,7 @@ public class ApplicationCLI extends YarnCLI {
   public static final String COMPONENTS = "components";
   public static final String VERSION = "version";
   public static final String STATES = "states";
+  public static final String SHELL_CMD = "shell";
 
   private static String firstArg = null;
 
@@ -311,6 +313,8 @@ public class ApplicationCLI extends YarnCLI {
       opts.getOption(LIST_CMD).setArgName("Application ID");
       opts.getOption(FAIL_CMD).setArgName("Application Attempt ID");
     } else if (title != null && title.equalsIgnoreCase(CONTAINER)) {
+      opts.addOption(SHELL_CMD, true,
+          "Run a shell in the container.");
       opts.addOption(STATUS_CMD, true,
           "Prints the status of the container.");
       opts.addOption(LIST_CMD, true,
@@ -323,6 +327,7 @@ public class ApplicationCLI extends YarnCLI {
           "app version, -components to filter instances based on component " +
           "names, -states to filter instances based on instance state.");
       opts.addOption(HELP_CMD, false, "Displays help for all commands.");
+      opts.getOption(SHELL_CMD).setArgName("Container ID");
       opts.getOption(STATUS_CMD).setArgName("Container ID");
       opts.getOption(LIST_CMD).setArgName("Application Name or Attempt ID");
       opts.addOption(APP_TYPE_CMD, true, "Works with -list to " +
@@ -552,6 +557,19 @@ public class ApplicationCLI extends YarnCLI {
         command = SignalContainerCommand.valueOf(signalArgs[1]);
       }
       signalToContainer(containerId, command);
+    } else if (cliParser.hasOption(SHELL_CMD)) {
+      if (hasAnyOtherCLIOptions(cliParser, opts, SHELL_CMD)) {
+        printUsage(title, opts);
+        return exitCode;
+      }
+      final String[] shellArgs = cliParser.getOptionValues(SHELL_CMD);
+      final String containerId = shellArgs[0];
+      ShellContainerCommand command =
+          ShellContainerCommand.BASH;
+      if (shellArgs.length == 2) {
+        command = ShellContainerCommand.valueOf(shellArgs[1]);
+      }
+      shellToContainer(containerId, command);
     } else if (cliParser.hasOption(LAUNCH_CMD)) {
       if (hasAnyOtherCLIOptions(cliParser, opts, LAUNCH_CMD, APP_TYPE_CMD,
           UPDATE_LIFETIME, CHANGE_APPLICATION_QUEUE)) {
@@ -806,7 +824,7 @@ public class ApplicationCLI extends YarnCLI {
   }
 
   /**
-   * Signals the containerId
+   * Signals the containerId.
    *
    * @param containerIdStr the container id
    * @param command the signal command
@@ -817,6 +835,20 @@ public class ApplicationCLI extends YarnCLI {
     ContainerId containerId = ContainerId.fromString(containerIdStr);
     sysout.println("Signalling container " + containerIdStr);
     client.signalToContainer(containerId, command);
+  }
+
+  /**
+   * Shell to the containerId.
+   *
+   * @param containerIdStr the container id
+   * @param command the shell command
+   * @throws YarnException
+   */
+  private void shellToContainer(String containerIdStr,
+      ShellContainerCommand command) throws YarnException, IOException {
+    ContainerId containerId = ContainerId.fromString(containerIdStr);
+    sysout.println("Shelling to container " + containerIdStr);
+    client.shellToContainer(containerId, command);
   }
 
   /**

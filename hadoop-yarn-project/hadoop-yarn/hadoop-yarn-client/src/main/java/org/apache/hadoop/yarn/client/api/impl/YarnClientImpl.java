@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -27,6 +28,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Future;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -111,15 +113,18 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
+import org.apache.hadoop.yarn.api.records.ShellContainerCommand;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.api.AHSClient;
+import org.apache.hadoop.yarn.client.api.ContainerShellWebSocket;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
+import org.apache.hadoop.yarn.client.util.YarnClientUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationIdNotProvidedException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
@@ -132,6 +137,10 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
+import org.eclipse.jetty.websocket.api.Session;
+import org.eclipse.jetty.websocket.api.WebSocketException;
+import org.eclipse.jetty.websocket.client.ClientUpgradeRequest;
+import org.eclipse.jetty.websocket.client.WebSocketClient;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
@@ -1073,5 +1082,54 @@ public class YarnClientImpl extends YarnClient {
     GetNodesToAttributesRequest request =
         GetNodesToAttributesRequest.newInstance(hostNames);
     return rmClient.getNodesToAttributes(request).getNodeToAttributes();
+  }
+
+  @Override
+  public void shellToContainer(ContainerId containerId,
+      ShellContainerCommand command) throws IOException {
+    try {
+      GetContainerReportRequest request = Records
+          .newRecord(GetContainerReportRequest.class);
+      request.setContainerId(containerId);
+      GetContainerReportResponse response = rmClient
+          .getContainerReport(request);
+      URI nodeHttpAddress = new URI(response.getContainerReport()
+          .getNodeHttpAddress());
+      String host = nodeHttpAddress.getHost();
+      int port = nodeHttpAddress.getPort();
+      String scheme = nodeHttpAddress.getScheme();
+      String protocol = "ws://";
+      if (scheme.equals("https")) {
+        protocol = "wss://";
+      }
+      WebSocketClient client = new WebSocketClient();
+      URI uri = URI.create(protocol + host + ":" + port + "/container/" +
+          containerId);
+      try {
+        client.start();
+        // The socket that receives events
+        ContainerShellWebSocket socket = new ContainerShellWebSocket();
+        ClientUpgradeRequest upgradeRequest = new ClientUpgradeRequest();
+        if (UserGroupInformation.isSecurityEnabled()) {
+          String challenge = YarnClientUtils.generateToken(host);
+          upgradeRequest.setHeader("Authorization", "Negotiate " + challenge);
+        }
+        // Attempt Connect
+        Future<Session> fut = client.connect(socket, uri, upgradeRequest);
+        // Wait for Connect
+        Session session = fut.get();
+        // Send a message
+        session.getRemote().sendString("stty -echo");
+        session.getRemote().sendString("\r");
+        session.getRemote().flush();
+        socket.run();
+      } finally {
+        client.stop();
+      }
+    } catch (WebSocketException e) {
+      LOG.debug("Websocket exception: " + e.getMessage());
+    } catch (Throwable t) {
+      LOG.error("Fail to shell to container: " + t.getMessage());
+    }
   }
 }
