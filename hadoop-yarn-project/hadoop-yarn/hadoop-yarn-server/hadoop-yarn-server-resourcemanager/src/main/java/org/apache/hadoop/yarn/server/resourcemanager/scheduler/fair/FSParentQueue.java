@@ -264,6 +264,21 @@ public class FSParentQueue extends FSQueue {
   }
 
   @Override
+  public boolean isEmpty() {
+    readLock.lock();
+    try {
+      for (FSQueue queue: childQueues) {
+        if (!queue.isEmpty()) {
+          return false;
+        }
+      }
+    } finally {
+      readLock.unlock();
+    }
+    return true;
+  }
+
+  @Override
   public void collectSchedulerApplications(
       Collection<ApplicationAttemptId> apps) {
     readLock.lock();
