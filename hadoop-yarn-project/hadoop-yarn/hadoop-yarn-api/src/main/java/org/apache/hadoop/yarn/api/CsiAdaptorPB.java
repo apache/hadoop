@@ -15,20 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.volume.csi;
+package org.apache.hadoop.yarn.api;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.server.volume.csi.exception.VolumeException;
+import org.apache.hadoop.ipc.ProtocolInfo;
+import org.apache.hadoop.yarn.proto.CsiAdaptorProtocol;
 
 /**
- * Protocol for the CSI adaptor.
+ * Interface for the CSI adaptor protocol.
  */
-@Private
-@Unstable
-public interface CsiAdaptorClientProtocol {
-
-  void validateVolume() throws VolumeException;
-
-  void controllerPublishVolume() throws VolumeException;
+@ProtocolInfo(
+    protocolName = "CsiAdaptorPB",
+    protocolVersion = 1)
+public interface CsiAdaptorPB extends
+    CsiAdaptorProtocol.CsiAdaptorProtocolService.BlockingInterface {
 }

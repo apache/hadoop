@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,29 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.yarn.csi.client;
-
-import csi.v0.Csi;
-import csi.v0.Csi.GetPluginInfoResponse;
-
-import java.io.IOException;
-
 /**
- * General interface for a CSI client. This interface defines all APIs
- * that CSI spec supports, including both identity/controller/node service
- * APIs.
+ * This package contains classes for protocol translation between YARN and CSI.
  */
-public interface CsiClient {
-
-  /**
-   * Gets some basic info about the CSI plugin, including the driver name,
-   * version and optionally some manifest info.
-   * @return {@link GetPluginInfoResponse}
-   * @throws IOException when unable to get plugin info from the driver.
-   */
-  GetPluginInfoResponse getPluginInfo() throws IOException;
-
-  Csi.ValidateVolumeCapabilitiesResponse validateVolumeCapabilities(
-      Csi.ValidateVolumeCapabilitiesRequest request) throws IOException;
-}
+package org.apache.hadoop.yarn.csi.translator;

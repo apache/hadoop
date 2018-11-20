@@ -16,28 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.csi.client;
+option java_package = "org.apache.hadoop.yarn.proto";
+option java_outer_classname = "CsiAdaptorProtocol";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.yarn;
 
-import csi.v0.Csi;
-import csi.v0.Csi.GetPluginInfoResponse;
+import "yarn_csi_adaptor.proto";
 
-import java.io.IOException;
+service CsiAdaptorProtocolService {
 
-/**
- * General interface for a CSI client. This interface defines all APIs
- * that CSI spec supports, including both identity/controller/node service
- * APIs.
- */
-public interface CsiClient {
+    rpc getPluginInfo (GetPluginInfoRequest)
+    returns (GetPluginInfoResponse);
 
-  /**
-   * Gets some basic info about the CSI plugin, including the driver name,
-   * version and optionally some manifest info.
-   * @return {@link GetPluginInfoResponse}
-   * @throws IOException when unable to get plugin info from the driver.
-   */
-  GetPluginInfoResponse getPluginInfo() throws IOException;
-
-  Csi.ValidateVolumeCapabilitiesResponse validateVolumeCapabilities(
-      Csi.ValidateVolumeCapabilitiesRequest request) throws IOException;
+    rpc validateVolumeCapacity (ValidateVolumeCapabilitiesRequest)
+    returns (ValidateVolumeCapabilitiesResponse);
 }

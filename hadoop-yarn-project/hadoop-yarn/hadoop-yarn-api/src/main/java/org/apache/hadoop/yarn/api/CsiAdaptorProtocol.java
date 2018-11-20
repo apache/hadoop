@@ -15,22 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.resourcemanager.volume.csi;
+package org.apache.hadoop.yarn.api;
 
-import org.apache.hadoop.yarn.server.volume.csi.exception.VolumeException;
-import org.apache.hadoop.yarn.server.volume.csi.CsiAdaptorClientProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetPluginInfoRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetPluginInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesResponse;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+
+import java.io.IOException;
 
 /**
- * Client talks to CSI adaptor.
+ * CSI adaptor delegates all the calls from YARN to a CSI driver.
  */
-public class CsiAdaptorClient implements CsiAdaptorClientProtocol {
+public interface CsiAdaptorProtocol {
 
-  @Override
-  public void validateVolume() throws VolumeException {
-    // TODO
-  }
+  GetPluginInfoResponse getPluginInfo(GetPluginInfoRequest request)
+      throws YarnException, IOException;
 
-  @Override public void controllerPublishVolume() throws VolumeException {
-    // TODO
-  }
+  ValidateVolumeCapabilitiesResponse validateVolumeCapacity(
+      ValidateVolumeCapabilitiesRequest request) throws YarnException,
+      IOException;
 }

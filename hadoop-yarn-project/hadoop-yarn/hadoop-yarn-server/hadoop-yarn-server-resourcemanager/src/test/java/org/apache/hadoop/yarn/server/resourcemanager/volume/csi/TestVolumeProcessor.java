@@ -20,8 +20,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.volume.csi;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.CsiAdaptorProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
+import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesResponse;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceSizing;
@@ -40,7 +43,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.lifecycle.Volume;
 import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.lifecycle.VolumeState;
 import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.processor.VolumeAMSProcessor;
-import org.apache.hadoop.yarn.server.volume.csi.CsiAdaptorClientProtocol;
 import org.apache.hadoop.yarn.server.volume.csi.CsiConstants;
 import org.apache.hadoop.yarn.server.volume.csi.VolumeId;
 import org.apache.hadoop.yarn.server.volume.csi.exception.InvalidVolumeException;
@@ -56,6 +58,10 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Arrays;
+
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 
 /**
  * Test cases for volume processor.
@@ -91,6 +97,7 @@ public class TestVolumeProcessor {
     conf.set(CapacitySchedulerConfiguration.PREFIX
         + CapacitySchedulerConfiguration.ROOT + ".default.ordering-policy",
         "fair");
+    // this is required to enable volume processor
     conf.set(YarnConfiguration.RM_APPLICATION_MASTER_SERVICE_PROCESSORS,
         VolumeAMSProcessor.class.getName());
     mgr = new NullRMNodeLabelsManager();
@@ -155,6 +162,17 @@ public class TestVolumeProcessor {
         .schedulingRequests(Arrays.asList(sc))
         .build();
 
+    // inject adaptor client for testing
+    CsiAdaptorProtocol mockedClient = Mockito
+        .mock(CsiAdaptorProtocol.class);
+    rm.getRMContext().getVolumeManager()
+        .registerCsiDriverAdaptor("hostpath", mockedClient);
+
+    // simulate validation succeed
+    doReturn(ValidateVolumeCapabilitiesResponse.newInstance(true, ""))
+        .when(mockedClient)
+        .validateVolumeCapacity(any(ValidateVolumeCapabilitiesRequest.class));
+
     am1.allocate(ar);
     VolumeStates volumeStates =
         rm.getRMContext().getVolumeManager().getVolumeStates();
@@ -212,12 +230,14 @@ public class TestVolumeProcessor {
     RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, mockNMS[0]);
 
-    CsiAdaptorClientProtocol mockedClient = Mockito
-        .mock(CsiAdaptorClientProtocol.class);
+    CsiAdaptorProtocol mockedClient = Mockito
+        .mock(CsiAdaptorProtocol.class);
     // inject adaptor client
-    rm.getRMContext().getVolumeManager().setClient(mockedClient);
-    Mockito.doThrow(new VolumeException("failed")).when(mockedClient)
-        .validateVolume();
+    rm.getRMContext().getVolumeManager()
+        .registerCsiDriverAdaptor("hostpath", mockedClient);
+    doThrow(new VolumeException("failed"))
+        .when(mockedClient)
+        .validateVolumeCapacity(any(ValidateVolumeCapabilitiesRequest.class));
 
     Resource resource = Resource.newInstance(1024, 1);
     ResourceInformation volumeResource = ResourceInformation
