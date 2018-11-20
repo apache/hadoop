@@ -1105,6 +1105,10 @@ public class YarnClientImpl extends YarnClient {
       WebSocketClient client = new WebSocketClient();
       URI uri = URI.create(protocol + host + ":" + port + "/container/" +
           containerId);
+      if (!UserGroupInformation.isSecurityEnabled()) {
+        uri = URI.create(protocol + host + ":" + port + "/container/" +
+            containerId + "?user.name=" + System.getProperty("user.name"));
+      }
       try {
         client.start();
         // The socket that receives events
