@@ -601,4 +601,6 @@ public abstract class FSQueue implements Queue, Schedulable {
   public void setDynamic(boolean dynamic) {
     this.isDynamic = dynamic;
   }
+
+  public abstract boolean isEmpty();
 }

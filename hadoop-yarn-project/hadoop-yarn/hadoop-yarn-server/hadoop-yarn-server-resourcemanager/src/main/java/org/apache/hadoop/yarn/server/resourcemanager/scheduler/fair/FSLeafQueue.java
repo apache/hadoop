@@ -457,6 +457,20 @@ public class FSLeafQueue extends FSQueue {
     }
   }
 
+  @Override
+  public boolean isEmpty() {
+    readLock.lock();
+    try {
+      if (runnableApps.size() > 0 || nonRunnableApps.size() > 0 ||
+          assignedApps.size() > 0) {
+        return false;
+      }
+    } finally {
+      readLock.unlock();
+    }
+    return true;
+  }
+
   /**
    * TODO: Based on how frequently this is called, we might want to club
    * counting pending and active apps in the same method.
