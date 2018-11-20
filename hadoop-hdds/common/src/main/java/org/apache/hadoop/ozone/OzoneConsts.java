@@ -146,11 +146,6 @@ public final class OzoneConsts {
   public static final String OM_S3_PREFIX ="S3:";
   public static final String OM_S3_VOLUME_PREFIX = "s3";
 
-  /**
-   *   Max chunk size limit.
-   */
-  public static final int OZONE_SCM_CHUNK_MAX_SIZE = 32 * 1024 * 1024;
-
 
   /**
    * Max OM Quota size of 1024 PB.
