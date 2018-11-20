@@ -26,17 +26,9 @@ The easiest way to get an environment with all the appropriate tools is by means
 of the provided Docker config.
 This requires a recent version of docker (1.4.1 and higher are known to work).
 
-On Linux:
+On Linux / Mac:
     Install Docker and run this command:
 
-    $ ./start-build-env.sh
-
-On Mac:
-    First make sure Virtualbox and docker toolbox are installed.
-    You can use docker toolbox as described in http://docs.docker.com/mac/step_one/.
-    $ docker-machine create --driver virtualbox \
-                            --virtualbox-memory "4096" hadoopdev
-    $ eval $(docker-machine env hadoopdev)
     $ ./start-build-env.sh
 
 The prompt which is then presented is located at a mounted version of the source tree
