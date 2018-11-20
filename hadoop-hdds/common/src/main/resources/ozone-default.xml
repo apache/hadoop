@@ -623,11 +623,11 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.block.size.in.mb</name>
-    <value>256</value>
+    <name>ozone.scm.block.size</name>
+    <value>256MB</value>
     <tag>OZONE, SCM</tag>
     <description>
-      The default size of a scm block in bytes. This is maps to the default
+      The default size of a scm block. This is maps to the default
       Ozone block size.
     </description>
   </property>
