@@ -22,12 +22,15 @@ import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.io.PrintStream;
-import java.util.function.Function;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
-import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 
 import static org.mockito.Mockito.*;
 
+/**
+ * Using Mockito runner.
+ */
 @RunWith(MockitoJUnitRunner.class)
 /**
  * Tests for the Progressbar class for Freon.
@@ -35,78 +38,36 @@ import static org.mockito.Mockito.*;
 public class TestProgressBar {
 
   private PrintStream stream;
+  private AtomicLong numberOfKeysAdded;
+  private Supplier<Long> currentValue;
 
   @Before
   public void setupMock() {
+    numberOfKeysAdded = new AtomicLong(0L);
+    currentValue = () -> numberOfKeysAdded.get();
     stream = mock(PrintStream.class);
   }
 
   @Test
   public void testWithRunnable() {
 
-    int maxValue = 10;
+    Long maxValue = 10L;
 
-    ProgressBar progressbar = new ProgressBar(stream, maxValue);
+    ProgressBar progressbar = new ProgressBar(stream, maxValue, currentValue);
 
     Runnable task = () -> {
-      IntStream.range(0, maxValue).forEach(
+      LongStream.range(0, maxValue).forEach(
           counter -> {
-            progressbar.incrementProgress();
+            numberOfKeysAdded.getAndIncrement();
           }
       );
     };
 
-    progressbar.start(task);
+    progressbar.start();
+    task.run();
+    progressbar.shutdown();
 
     verify(stream, atLeastOnce()).print(anyChar());
     verify(stream, atLeastOnce()).print(anyString());
   }
-
-  @Test
-  public void testWithSupplier() {
-
-    int maxValue = 10;
-
-    ProgressBar progressbar = new ProgressBar(stream, maxValue);
-
-    Supplier<Long> tasks = () -> {
-      IntStream.range(0, maxValue).forEach(
-          counter -> {
-            progressbar.incrementProgress();
-          }
-      );
-
-      return 1L; //return the result of the dummy task
-    };
-
-    progressbar.start(tasks);
-
-    verify(stream, atLeastOnce()).print(anyChar());
-    verify(stream, atLeastOnce()).print(anyString());
-  }
-
-  @Test
-  public void testWithFunction() {
-
-    int maxValue = 10;
-    Long result;
-
-    ProgressBar progressbar = new ProgressBar(stream, maxValue);
-
-    Function<Long, String> task = (Long l) -> {
-      IntStream.range(0, maxValue).forEach(
-          counter -> {
-            progressbar.incrementProgress();
-          }
-      );
-
-      return "dummy result"; //return the result of the dummy task
-    };
-
-    progressbar.start(1L, task);
-
-    verify(stream, atLeastOnce()).print(anyChar());
-    verify(stream, atLeastOnce()).print(anyString());
-  }
-
 }
