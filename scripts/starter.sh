@@ -24,7 +24,6 @@ sudo chmod o+rwx /data
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 $DIR/envtoconf.py --destination /opt/hadoop/etc/hadoop
-echo "Setting up environment!"
 
 if [ -n "$SLEEP_SECONDS" ]; then
    echo "Sleeping for $SLEEP_SECONDS seconds"
