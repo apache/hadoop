@@ -24,7 +24,6 @@ import java.io.FileOutputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.client.OzoneBucket;
@@ -95,10 +94,8 @@ public class GetKeyHandler extends Handler {
     OzoneInputStream keyInputStream = bucket.readKey(keyName);
     if (dataFilePath != null) {
       FileOutputStream outputStream = new FileOutputStream(dataFile);
-      IOUtils.copyBytes(keyInputStream, outputStream,
-          (int) new OzoneConfiguration()
-              .getStorageSize(OZONE_SCM_CHUNK_SIZE_KEY,
-                  OZONE_SCM_CHUNK_SIZE_DEFAULT, StorageUnit.BYTES));
+      IOUtils.copyBytes(keyInputStream, outputStream, new OzoneConfiguration()
+          .getInt(OZONE_SCM_CHUNK_SIZE_KEY, OZONE_SCM_CHUNK_SIZE_DEFAULT));
       outputStream.close();
     } else {
       throw new OzoneClientException(
