@@ -72,9 +72,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Test the Node Manager class.
+ * Test the SCM Node Manager class.
  */
-public class TestNodeManager {
+public class TestSCMNodeManager {
 
   private File testDir;
 
@@ -88,7 +88,7 @@ public class TestNodeManager {
   @Before
   public void setup() {
     testDir = PathUtils.getTestDir(
-        TestNodeManager.class);
+        TestSCMNodeManager.class);
   }
 
   @After
