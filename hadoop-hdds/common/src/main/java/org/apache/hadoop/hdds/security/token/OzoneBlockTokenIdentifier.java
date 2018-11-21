@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.security;
+package org.apache.hadoop.hdds.security.token;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.builder.EqualsBuilder;
@@ -49,16 +49,22 @@ public class OzoneBlockTokenIdentifier extends TokenIdentifier {
   private long expiryDate;
   private String ownerId;
   private String blockId;
-  private final EnumSet<AccessModeProto> modes;
-  private final String omCertSerialId;
+  private EnumSet<AccessModeProto> modes;
+  private String omCertSerialId;
+  private long maxLength;
+
+  public OzoneBlockTokenIdentifier() {
+  }
 
   public OzoneBlockTokenIdentifier(String ownerId, String blockId,
-      EnumSet<AccessModeProto> modes, long expiryDate, String omCertSerialId) {
+      EnumSet<AccessModeProto> modes, long expiryDate, String omCertSerialId,
+      long maxLength) {
     this.ownerId = ownerId;
     this.blockId = blockId;
     this.expiryDate = expiryDate;
     this.modes = modes == null ? EnumSet.noneOf(AccessModeProto.class) : modes;
     this.omCertSerialId = omCertSerialId;
+    this.maxLength = maxLength;
   }
 
   @Override
@@ -89,6 +95,10 @@ public class OzoneBlockTokenIdentifier extends TokenIdentifier {
     return omCertSerialId;
   }
 
+  public long getMaxLength() {
+    return maxLength;
+  }
+
   @Override
   public Text getKind() {
     return KIND_NAME;
@@ -100,7 +110,7 @@ public class OzoneBlockTokenIdentifier extends TokenIdentifier {
         + ", ownerId=" + this.getOwnerId()
         + ", omCertSerialId=" + this.getOmCertSerialId()
         + ", blockId=" + this.getBlockId() + ", access modes="
-        + this.getAccessModes() + ")";
+        + this.getAccessModes() + ", maxLength=" + this.getMaxLength() + ")";
   }
 
   static boolean isEqual(Object a, Object b) {
@@ -121,6 +131,7 @@ public class OzoneBlockTokenIdentifier extends TokenIdentifier {
           .append(this.blockId, that.blockId)
           .append(this.modes, that.modes)
           .append(this.omCertSerialId, that.omCertSerialId)
+          .append(this.maxLength, that.maxLength)
           .build();
     }
     return false;
@@ -134,6 +145,7 @@ public class OzoneBlockTokenIdentifier extends TokenIdentifier {
         .append(this.ownerId)
         .append(this.modes)
         .append(this.omCertSerialId)
+        .append(this.maxLength)
         .build();
   }
 
@@ -143,7 +155,14 @@ public class OzoneBlockTokenIdentifier extends TokenIdentifier {
     if (!dis.markSupported()) {
       throw new IOException("Could not peek first byte.");
     }
-    readFieldsProtobuf(dis);
+    BlockTokenSecretProto tokenPtoto =
+        BlockTokenSecretProto.parseFrom((DataInputStream) in);
+    this.ownerId = tokenPtoto.getOwnerId();
+    this.blockId = tokenPtoto.getBlockId();
+    this.modes = EnumSet.copyOf(tokenPtoto.getModesList());
+    this.expiryDate = tokenPtoto.getExpiryDate();
+    this.omCertSerialId = tokenPtoto.getOmCertSerialId();
+    this.maxLength = tokenPtoto.getMaxLength();
   }
 
   @VisibleForTesting
@@ -153,7 +172,8 @@ public class OzoneBlockTokenIdentifier extends TokenIdentifier {
         BlockTokenSecretProto.parseFrom((DataInputStream) in);
     return new OzoneBlockTokenIdentifier(tokenPtoto.getOwnerId(),
         tokenPtoto.getBlockId(), EnumSet.copyOf(tokenPtoto.getModesList()),
-        tokenPtoto.getExpiryDate(), tokenPtoto.getOmCertSerialId());
+        tokenPtoto.getExpiryDate(), tokenPtoto.getOmCertSerialId(),
+        tokenPtoto.getMaxLength());
   }
 
   @Override
@@ -167,7 +187,8 @@ public class OzoneBlockTokenIdentifier extends TokenIdentifier {
         .setBlockId(this.getBlockId())
         .setOwnerId(this.getOwnerId())
         .setOmCertSerialId(this.getOmCertSerialId())
-        .setExpiryDate(this.getExpiryDate());
+        .setExpiryDate(this.getExpiryDate())
+        .setMaxLength(this.getMaxLength());
     // Add access mode allowed
     for (AccessModeProto mode : this.getAccessModes()) {
       builder.addModes(AccessModeProto.valueOf(mode.name()));

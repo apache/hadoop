@@ -17,20 +17,20 @@
  *
  */
 
-package org.apache.hadoop.hdds.security.x509.exceptions;
+package org.apache.hadoop.hdds.security.token;
 
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 
 /**
- * Certificate Exceptions from the SCM Security layer.
+ * Block Token Exceptions from the SCM Security layer.
  */
-public class CertificateException extends SCMSecurityException {
+public class BlockTokenException extends SCMSecurityException {
 
   /**
    * Ctor.
    * @param message - Error Message.
    */
-  public CertificateException(String message) {
+  public BlockTokenException(String message) {
     super(message);
   }
 
@@ -39,7 +39,7 @@ public class CertificateException extends SCMSecurityException {
    * @param message - Message.
    * @param cause  - Actual cause.
    */
-  public CertificateException(String message, Throwable cause) {
+  public BlockTokenException(String message, Throwable cause) {
     super(message, cause);
   }
 
@@ -47,7 +47,7 @@ public class CertificateException extends SCMSecurityException {
    * Ctor.
    * @param cause - Base Exception.
    */
-  public CertificateException(Throwable cause) {
+  public BlockTokenException(Throwable cause) {
     super(cause);
   }
 }

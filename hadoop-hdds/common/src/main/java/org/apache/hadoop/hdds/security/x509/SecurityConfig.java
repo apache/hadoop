@@ -34,6 +34,8 @@ import java.time.Duration;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_DEFAULT_KEY_ALGORITHM;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_DEFAULT_KEY_LEN;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_DEFAULT_SECURITY_PROVIDER;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_BLOCK_TOKEN_ENABLED;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_BLOCK_TOKEN_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_KEY_ALGORITHM;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_KEY_DIR_NAME;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_KEY_DIR_NAME_DEFAULT;
@@ -70,6 +72,7 @@ public class SecurityConfig {
   private final String publicKeyFileName;
   private final Duration certDuration;
   private final String x509SignatureAlgo;
+  private final Boolean grpcBlockTokenEnabled;
 
   /**
    * Constructs a SecurityConfig.
@@ -105,6 +108,10 @@ public class SecurityConfig {
     this.certDuration = Duration.parse(durationString);
     this.x509SignatureAlgo = this.configuration.get(HDDS_X509_SIGNATURE_ALGO,
         HDDS_X509_SIGNATURE_ALGO_DEFAULT);
+
+    this.grpcBlockTokenEnabled = this.configuration.getBoolean(
+        HDDS_GRPC_BLOCK_TOKEN_ENABLED,
+        HDDS_GRPC_BLOCK_TOKEN_ENABLED_DEFAULT);
 
     // First Startup -- if the provider is null, check for the provider.
     if (SecurityConfig.provider == null) {
@@ -211,6 +218,10 @@ public class SecurityConfig {
    */
   public Duration getMaxCertificateDuration() {
     return this.certDuration;
+  }
+
+  public Boolean isGrpcBlockTokenEnabled() {
+    return this.grpcBlockTokenEnabled;
   }
 
   /**

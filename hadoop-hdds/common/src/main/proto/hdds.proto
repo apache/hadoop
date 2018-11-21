@@ -216,7 +216,7 @@ message BlockTokenSecretProto {
     required uint64 expiryDate = 3;
     required string omCertSerialId = 4;
     repeated AccessModeProto modes = 5;
-
+    required uint64 maxLength = 6;
 }
 
 message BlockID {
