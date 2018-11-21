@@ -269,7 +269,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
 
     processor.shutdown();
     processor.awaitTermination(Integer.MAX_VALUE, TimeUnit.MILLISECONDS);
-
+    completed = true;
     progressbar.shutdown();
 
     if (validateWrites) {
