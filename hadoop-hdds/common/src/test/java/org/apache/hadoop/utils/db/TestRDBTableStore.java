@@ -19,8 +19,16 @@
 
 package org.apache.hadoop.utils.db;
 
-import org.apache.commons.lang3.RandomStringUtils;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.apache.hadoop.hdfs.DFSUtil;
+
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -32,14 +40,6 @@ import org.rocksdb.DBOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.Statistics;
 import org.rocksdb.StatsLevel;
-import org.rocksdb.WriteBatch;
-
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 /**
  * Tests for RocksDBTable Store.
@@ -89,7 +89,7 @@ public class TestRDBTableStore {
   public void getHandle() throws Exception {
     try (Table testTable = rdbStore.getTable("First")) {
       Assert.assertNotNull(testTable);
-      Assert.assertNotNull(testTable.getHandle());
+      Assert.assertNotNull(((RDBTable) testTable).getHandle());
     }
   }
 
@@ -149,18 +149,46 @@ public class TestRDBTableStore {
   }
 
   @Test
-  public void writeBatch() throws Exception {
-    WriteBatch batch = new WriteBatch();
-    try (Table testTable = rdbStore.getTable("Fifth")) {
+  public void batchPut() throws Exception {
+    try (Table testTable = rdbStore.getTable("Fifth");
+        BatchOperation batch = rdbStore.initBatchOperation()) {
+      //given
       byte[] key =
           RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
       byte[] value =
           RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
-      batch.put(testTable.getHandle(), key, value);
-      testTable.writeBatch(batch);
+      Assert.assertNull(testTable.get(key));
+
+      //when
+      testTable.putWithBatch(batch, key, value);
+      rdbStore.commitBatchOperation(batch);
+
+      //then
       Assert.assertNotNull(testTable.get(key));
     }
-    batch.close();
+  }
+
+  @Test
+  public void batchDelete() throws Exception {
+    try (Table testTable = rdbStore.getTable("Fifth");
+        BatchOperation batch = rdbStore.initBatchOperation()) {
+
+      //given
+      byte[] key =
+          RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
+      byte[] value =
+          RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
+      testTable.put(key, value);
+      Assert.assertNotNull(testTable.get(key));
+
+
+      //when
+      testTable.deleteWithBatch(batch, key);
+      rdbStore.commitBatchOperation(batch);
+
+      //then
+      Assert.assertNull(testTable.get(key));
+    }
   }
 
   private static boolean consume(Table.KeyValue keyValue) {

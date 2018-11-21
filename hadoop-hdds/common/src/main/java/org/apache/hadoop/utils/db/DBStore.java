@@ -19,11 +19,10 @@
 
 package org.apache.hadoop.utils.db;
 
-import org.apache.hadoop.classification.InterfaceStability;
-import org.rocksdb.WriteBatch;
-
 import java.io.IOException;
 import java.util.ArrayList;
+
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * The DBStore interface provides the ability to create Tables, which store
@@ -107,9 +106,21 @@ public interface DBStore extends AutoCloseable {
   long getEstimatedKeyCount() throws IOException;
 
   /**
-   * Writes a transaction into the DB using the default write Options.
-   * @param batch - Batch to write.
+   * Initialize an atomic batch operation which can hold multiple PUT/DELETE
+   * operations and committed later in one step.
+   *
+   * @return BatchOperation holder which can be used to add or commit batch
+   * operations.
    */
-  void write(WriteBatch batch) throws IOException;
+  BatchOperation initBatchOperation();
+
+  /**
+   * Commit the batch operations.
+   *
+   * @param operation which contains all the required batch operation.
+   * @throws IOException on Failure.
+   */
+  void commitBatchOperation(BatchOperation operation) throws IOException;
+
 
 }

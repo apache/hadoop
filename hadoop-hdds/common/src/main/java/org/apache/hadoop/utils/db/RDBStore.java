@@ -237,13 +237,16 @@ public class RDBStore implements DBStore {
   }
 
   @Override
-  public void write(WriteBatch batch) throws IOException {
-    try {
-      db.write(writeOptions, batch);
-    } catch (RocksDBException e) {
-      throw toIOException("Unable to write the batch.", e);
-    }
+  public BatchOperation initBatchOperation() {
+    return new RDBBatchOperation();
   }
+
+  @Override
+  public void commitBatchOperation(BatchOperation operation)
+      throws IOException {
+    ((RDBBatchOperation) operation).commit(db, writeOptions);
+  }
+
 
   @VisibleForTesting
   protected ObjectName getStatMBeanName() {

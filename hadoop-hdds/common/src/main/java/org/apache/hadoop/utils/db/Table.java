@@ -19,11 +19,9 @@
 
 package org.apache.hadoop.utils.db;
 
-import org.apache.hadoop.classification.InterfaceStability;
-import org.rocksdb.ColumnFamilyHandle;
-import org.rocksdb.WriteBatch;
-
 import java.io.IOException;
+
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Interface for key-value store that stores ozone metadata. Ozone metadata is
@@ -41,6 +39,16 @@ public interface Table extends AutoCloseable {
    * @param value metadata value
    */
   void put(byte[] key, byte[] value) throws IOException;
+
+  /**
+   * Puts a key-value pair into the store as part of a bath operation.
+   *
+   * @param batch the batch operation
+   * @param key metadata key
+   * @param value metadata value
+   */
+  void putWithBatch(BatchOperation batch, byte[] key, byte[] value)
+      throws IOException;
 
   /**
    * @return true if the metadata store is empty.
@@ -67,19 +75,13 @@ public interface Table extends AutoCloseable {
   void delete(byte[] key) throws IOException;
 
   /**
-   * Return the Column Family handle. TODO: This leaks an RockDB abstraction
-   * into Ozone code, cleanup later.
+   * Deletes a key from the metadata store as part of a batch operation.
    *
-   * @return ColumnFamilyHandle
+   * @param batch the batch operation
+   * @param key metadata key
+   * @throws IOException on Failure
    */
-  ColumnFamilyHandle getHandle();
-
-  /**
-   * A batch of PUT, DELETE operations handled as a single atomic write.
-   *
-   * @throws IOException write fails
-   */
-  void writeBatch(WriteBatch operation) throws IOException;
+  void deleteWithBatch(BatchOperation batch, byte[] key) throws IOException;
 
   /**
    * Returns the iterator for this metadata store.
