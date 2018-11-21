@@ -154,8 +154,8 @@
 
     <swagger-annotations-version>1.5.4</swagger-annotations-version>
     <snakeyaml.version>1.16</snakeyaml.version>
-    <hbase.one.version>1.2.6</hbase.one.version>
-    <hbase.two.version>2.0.0-beta-1</hbase.two.version>
+    <hbase.one.version>1.4.8</hbase.one.version>
+    <hbase.two.version>2.0.2</hbase.two.version>
     <junit.version>4.12</junit.version>
     <junit.jupiter.version>5.3.1</junit.jupiter.version>
     <junit.vintage.version>5.3.1</junit.vintage.version>
