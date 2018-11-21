@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.om;
 
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
@@ -33,8 +34,11 @@ public interface KeyManager {
 
   /**
    * Start key manager.
+   *
+   * @param configuration
+   * @throws IOException
    */
-  void start();
+  void start(OzoneConfiguration configuration);
 
   /**
    * Stop key manager.

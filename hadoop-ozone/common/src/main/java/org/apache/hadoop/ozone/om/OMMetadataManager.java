@@ -17,6 +17,7 @@
 package org.apache.hadoop.ozone.om;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
@@ -33,8 +34,11 @@ import java.util.List;
 public interface OMMetadataManager {
   /**
    * Start metadata manager.
+   *
+   * @param configuration
+   * @throws IOException
    */
-  void start();
+  void start(OzoneConfiguration configuration) throws IOException;
 
   /**
    * Stop metadata manager.
@@ -242,4 +246,13 @@ public interface OMMetadataManager {
    * @return Table.
    */
   Table getS3Table();
+
+  /**
+   * Returns number of rows in a table.  This should not be used for very
+   * large tables.
+   * @param table
+   * @return long
+   * @throws IOException
+   */
+  long countRowsInTable(Table table) throws IOException;
 }

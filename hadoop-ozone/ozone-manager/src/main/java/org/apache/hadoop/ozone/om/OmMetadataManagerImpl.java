@@ -100,59 +100,25 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   private static final String OPEN_KEY_TABLE = "openKeyTable";
   private static final String S3_TABLE = "s3Table";
 
-  private final DBStore store;
+  private DBStore store;
 
   private final OzoneManagerLock lock;
   private final long openKeyExpireThresholdMS;
 
-  private final Table userTable;
-  private final Table volumeTable;
-  private final Table bucketTable;
-  private final Table keyTable;
-  private final Table deletedTable;
-  private final Table openKeyTable;
-  private final Table s3Table;
+  private Table userTable;
+  private Table volumeTable;
+  private Table bucketTable;
+  private Table keyTable;
+  private Table deletedTable;
+  private Table openKeyTable;
+  private Table s3Table;
 
   public OmMetadataManagerImpl(OzoneConfiguration conf) throws IOException {
-    File metaDir = OmUtils.getOmDbDir(conf);
     this.lock = new OzoneManagerLock(conf);
     this.openKeyExpireThresholdMS = 1000L * conf.getInt(
         OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS,
         OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS_DEFAULT);
-
-    this.store = DBStoreBuilder.newBuilder(conf)
-        .setName(OM_DB_NAME)
-        .setPath(Paths.get(metaDir.getPath()))
-        .addTable(USER_TABLE)
-        .addTable(VOLUME_TABLE)
-        .addTable(BUCKET_TABLE)
-        .addTable(KEY_TABLE)
-        .addTable(DELETED_TABLE)
-        .addTable(OPEN_KEY_TABLE)
-        .addTable(S3_TABLE)
-        .build();
-
-    userTable = this.store.getTable(USER_TABLE);
-    checkTableStatus(userTable, USER_TABLE);
-
-    volumeTable = this.store.getTable(VOLUME_TABLE);
-    checkTableStatus(volumeTable, VOLUME_TABLE);
-
-    bucketTable = this.store.getTable(BUCKET_TABLE);
-    checkTableStatus(bucketTable, BUCKET_TABLE);
-
-    keyTable = this.store.getTable(KEY_TABLE);
-    checkTableStatus(keyTable, KEY_TABLE);
-
-    deletedTable = this.store.getTable(DELETED_TABLE);
-    checkTableStatus(deletedTable, DELETED_TABLE);
-
-    openKeyTable = this.store.getTable(OPEN_KEY_TABLE);
-    checkTableStatus(openKeyTable, OPEN_KEY_TABLE);
-
-    s3Table = this.store.getTable(S3_TABLE);
-    checkTableStatus(s3Table, S3_TABLE);
-
+    start(conf);
   }
 
   @Override
@@ -206,8 +172,44 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
    * Start metadata manager.
    */
   @Override
-  public void start() {
+  public void start(OzoneConfiguration configuration) throws IOException {
+    // We need to create the DB here, as when during restart, stop closes the
+    // db, so we need to create the store object and initialize DB.
+    if (store == null) {
+      File metaDir = OmUtils.getOmDbDir(configuration);
+      this.store = DBStoreBuilder.newBuilder(configuration)
+          .setName(OM_DB_NAME)
+          .setPath(Paths.get(metaDir.getPath()))
+          .addTable(USER_TABLE)
+          .addTable(VOLUME_TABLE)
+          .addTable(BUCKET_TABLE)
+          .addTable(KEY_TABLE)
+          .addTable(DELETED_TABLE)
+          .addTable(OPEN_KEY_TABLE)
+          .addTable(S3_TABLE)
+          .build();
 
+      userTable = this.store.getTable(USER_TABLE);
+      checkTableStatus(userTable, USER_TABLE);
+
+      volumeTable = this.store.getTable(VOLUME_TABLE);
+      checkTableStatus(volumeTable, VOLUME_TABLE);
+
+      bucketTable = this.store.getTable(BUCKET_TABLE);
+      checkTableStatus(bucketTable, BUCKET_TABLE);
+
+      keyTable = this.store.getTable(KEY_TABLE);
+      checkTableStatus(keyTable, KEY_TABLE);
+
+      deletedTable = this.store.getTable(DELETED_TABLE);
+      checkTableStatus(deletedTable, DELETED_TABLE);
+
+      openKeyTable = this.store.getTable(OPEN_KEY_TABLE);
+      checkTableStatus(openKeyTable, OPEN_KEY_TABLE);
+
+      s3Table = this.store.getTable(S3_TABLE);
+      checkTableStatus(s3Table, S3_TABLE);
+    }
   }
 
   /**
@@ -217,6 +219,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   public void stop() throws Exception {
     if (store != null) {
       store.close();
+      store = null;
     }
   }
 
@@ -626,5 +629,20 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
       keyBlocksList.add(keyBlocks);
     }
     return keyBlocksList;
+  }
+
+  @Override
+  public long countRowsInTable(Table table) throws IOException {
+    long count = 0;
+    if (table != null) {
+      try (TableIterator<Table.KeyValue> keyValueTableIterator =
+               table.iterator()) {
+        while (keyValueTableIterator.hasNext()) {
+          keyValueTableIterator.next();
+          count++;
+        }
+      }
+    }
+    return count;
   }
 }
