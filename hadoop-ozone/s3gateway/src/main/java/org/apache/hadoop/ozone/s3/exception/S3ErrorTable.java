@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.s3.exception;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static org.apache.hadoop.ozone.s3.util.S3Consts.RANGE_NOT_SATISFIABLE;
 
 /**
  * This class represents errors from Ozone S3 service.
@@ -57,6 +58,10 @@ public final class S3ErrorTable {
 
   public static final OS3Exception INVALID_REQUEST = new OS3Exception(
       "InvalidRequest", "Invalid Request", HTTP_BAD_REQUEST);
+
+  public static final OS3Exception INVALID_RANGE = new OS3Exception(
+      "InvalidRange", "The requested range is not satisfiable",
+      RANGE_NOT_SATISFIABLE);
 
   /**
    * Create a new instance of Error.

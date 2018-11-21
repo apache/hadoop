@@ -20,6 +20,8 @@ package org.apache.hadoop.ozone.s3.util;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
+import java.util.regex.Pattern;
+
 /**
  * Set of constants used for S3 implementation.
  */
@@ -34,5 +36,18 @@ public final class S3Consts {
   public static final String COPY_SOURCE_HEADER = "x-amz-copy-source";
   public static final String STORAGE_CLASS_HEADER = "x-amz-storage-class";
   public static final String ENCODING_TYPE = "url";
+
+  // Constants related to Range Header
+  public static final String RANGE_HEADER_SUPPORTED_UNIT = "bytes";
+  public static final String RANGE_HEADER = "Range";
+  public static final String ACCEPT_RANGE_HEADER = "Accept-Ranges";
+  public static final String CONTENT_RANGE_HEADER = "Content-Range";
+
+
+  public static final Pattern RANGE_HEADER_MATCH_PATTERN =
+      Pattern.compile("bytes=(?<start>[0-9]*)-(?<end>[0-9]*)");
+
+  //Error code 416 is Range Not Satisfiable
+  public static final int RANGE_NOT_SATISFIABLE = 416;
 
 }
