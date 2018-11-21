@@ -79,8 +79,6 @@ public class CloseContainerCommandHandler implements CommandHandler {
       final ContainerController controller = ozoneContainer.getController();
       final long containerId = closeCommand.getContainerID();
       try {
-        // TODO: Closing of QUASI_CLOSED container.
-
         final Container container = controller.getContainer(containerId);
 
         if (container == null) {
@@ -95,6 +93,11 @@ public class CloseContainerCommandHandler implements CommandHandler {
         // If the container is part of open pipeline, close it via write channel
         if (ozoneContainer.getWriteChannel()
             .isExist(closeCommand.getPipelineID())) {
+          if (closeCommand.getForce()) {
+            LOG.warn("Cannot force close a container when the container is" +
+                " part of an active pipeline.");
+            return;
+          }
           ContainerCommandRequestProto request =
               getContainerCommandRequestProto(datanodeDetails,
                   closeCommand.getContainerID());
@@ -102,10 +105,14 @@ public class CloseContainerCommandHandler implements CommandHandler {
               request, closeCommand.getPipelineID());
           return;
         }
-
-        // The container is not part of any open pipeline.
-        // QUASI_CLOSE the container using ContainerController.
-        controller.quasiCloseContainer(containerId);
+        // If we reach here, there is no active pipeline for this container.
+        if (!closeCommand.getForce()) {
+          // QUASI_CLOSE the container.
+          controller.quasiCloseContainer(containerId);
+        } else {
+          // SCM told us to force close the container.
+          controller.closeContainer(containerId);
+        }
       } catch (NotLeaderException e) {
         LOG.debug("Follower cannot close container #{}.", containerId);
       } catch (IOException e) {
