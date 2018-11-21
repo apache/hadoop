@@ -79,7 +79,7 @@ public class KeyManagerImpl implements KeyManager {
   private final long preallocateMax;
   private final String omId;
 
-  private final BackgroundService keyDeletingService;
+  private BackgroundService keyDeletingService;
 
   public KeyManagerImpl(ScmBlockLocationProtocol scmBlockClient,
       OMMetadataManager metadataManager,
@@ -95,28 +95,33 @@ public class KeyManagerImpl implements KeyManager {
     this.preallocateMax = conf.getLong(
         OZONE_KEY_PREALLOCATION_MAXSIZE,
         OZONE_KEY_PREALLOCATION_MAXSIZE_DEFAULT);
-    long blockDeleteInterval = conf.getTimeDuration(
-        OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
-        OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT,
-        TimeUnit.MILLISECONDS);
-    long serviceTimeout = conf.getTimeDuration(
-        OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
-        OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT,
-        TimeUnit.MILLISECONDS);
-    keyDeletingService = new KeyDeletingService(
-        scmBlockClient, this, blockDeleteInterval, serviceTimeout, conf);
-
     this.omId = omId;
+    start(conf);
   }
 
   @Override
-  public void start() {
-    keyDeletingService.start();
+  public void start(OzoneConfiguration configuration) {
+    if (keyDeletingService == null) {
+      long blockDeleteInterval = configuration.getTimeDuration(
+          OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
+          OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT,
+          TimeUnit.MILLISECONDS);
+      long serviceTimeout = configuration.getTimeDuration(
+          OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
+          OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT,
+          TimeUnit.MILLISECONDS);
+      keyDeletingService = new KeyDeletingService(scmBlockClient, this,
+          blockDeleteInterval, serviceTimeout, configuration);
+      keyDeletingService.start();
+    }
   }
 
   @Override
   public void stop() throws IOException {
-    keyDeletingService.shutdown();
+    if (keyDeletingService != null) {
+      keyDeletingService.shutdown();
+      keyDeletingService = null;
+    }
   }
 
   private void validateBucket(String volumeName, String bucketName)

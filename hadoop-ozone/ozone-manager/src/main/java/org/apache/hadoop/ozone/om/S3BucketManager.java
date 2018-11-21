@@ -69,4 +69,13 @@ public interface S3BucketManager {
    * @param userName
    */
   String getOzoneVolumeNameForUser(String userName) throws IOException;
+
+  /**
+   * Create ozone volume if required, this will be needed during creates3Bucket.
+   * @param userName
+   * @return true - if volume is successfully created. false - if volume
+   * already exists or volume creation failure.
+   * @throws IOException - incase of volume creation failure.
+   */
+  boolean createOzoneVolumeIfNeeded(String userName) throws IOException;
 }

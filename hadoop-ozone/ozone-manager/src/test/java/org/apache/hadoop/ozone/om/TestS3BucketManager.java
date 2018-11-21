@@ -64,6 +64,7 @@ public class TestS3BucketManager {
   public void testCreateS3Bucket() throws IOException {
     S3BucketManager s3BucketManager = new S3BucketManagerImpl(conf, metaMgr,
         volumeManager, bucketManager);
+    s3BucketManager.createOzoneVolumeIfNeeded("bilbo");
     s3BucketManager.createS3Bucket("bilbo", "bucket");
 
     // This call should have created a ozone volume called s3bilbo and bucket
@@ -104,6 +105,7 @@ public class TestS3BucketManager {
   public void testDeleteS3Bucket() throws IOException {
     S3BucketManager s3BucketManager = new S3BucketManagerImpl(conf, metaMgr,
         volumeManager, bucketManager);
+    s3BucketManager.createOzoneVolumeIfNeeded("ozone");
     s3BucketManager.createS3Bucket("ozone", "s3bucket");
 
     // This call should have created a ozone volume called s3ozone and bucket
@@ -122,6 +124,7 @@ public class TestS3BucketManager {
   public void testGetS3BucketMapping() throws IOException {
     S3BucketManager s3BucketManager = new S3BucketManagerImpl(conf, metaMgr,
         volumeManager, bucketManager);
+    s3BucketManager.createOzoneVolumeIfNeeded("bilbo");
     s3BucketManager.createS3Bucket("bilbo", "newBucket");
     String mapping = s3BucketManager.getOzoneBucketMapping("newBucket");
     Assert.assertTrue(mapping.startsWith("s3bilbo/"));
@@ -132,6 +135,7 @@ public class TestS3BucketManager {
   public void testGetOzoneNames() throws IOException {
     S3BucketManager s3BucketManager = new S3BucketManagerImpl(conf, metaMgr,
         volumeManager, bucketManager);
+    s3BucketManager.createOzoneVolumeIfNeeded("batman");
     s3BucketManager.createS3Bucket("batman", "gotham");
     String volumeName = s3BucketManager.getOzoneVolumeName("gotham");
     Assert.assertTrue(volumeName.equalsIgnoreCase("s3batman"));
@@ -150,6 +154,7 @@ public class TestS3BucketManager {
   public void testBucketNameAreUnique() throws IOException {
     S3BucketManager s3BucketManager = new S3BucketManagerImpl(conf, metaMgr,
         volumeManager, bucketManager);
+    s3BucketManager.createOzoneVolumeIfNeeded("superman");
     s3BucketManager.createS3Bucket("superman", "metropolis");
     // recreating the same bucket  even with a different user will throw.
     thrown.expectMessage("Unable to create S3 bucket.");

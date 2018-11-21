@@ -226,5 +226,8 @@ public final class OzoneConsts {
   public static final String KEY_LOCATION_INFO = "keyLocationInfo";
 
 
+  // For OM metrics saving to a file
+  public static final String OM_METRICS_FILE = "omMetrics";
+  public static final String OM_METRICS_TEMP_FILE = OM_METRICS_FILE + ".tmp";
 
 }
