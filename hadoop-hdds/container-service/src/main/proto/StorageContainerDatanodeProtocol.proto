@@ -293,6 +293,8 @@ message CloseContainerCommandProto {
   required PipelineID pipelineID = 2;
   // cmdId will be removed
   required int64 cmdId = 3;
+  // Force will be used when closing a container out side of ratis.
+  optional bool force = 4 [default = false];
 }
 
 /**
