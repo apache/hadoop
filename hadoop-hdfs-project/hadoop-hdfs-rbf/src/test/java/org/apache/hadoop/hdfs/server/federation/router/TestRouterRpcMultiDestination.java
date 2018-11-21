@@ -20,6 +20,13 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createFile;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.verifyFileExists;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.internal.util.reflection.Whitebox.getInternalState;
+import static org.mockito.internal.util.reflection.Whitebox.setInternalState;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -44,6 +51,13 @@ import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterConte
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.PathLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.StandbyException;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.Test;
 
 /**
  * The the RPC interface of the {@link getRouter()} implemented by
@@ -213,5 +227,50 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
     String filename1 = testDir1 + "/testrename";
     testRename(getRouterContext(), filename1, renamedFile, false);
     testRename2(getRouterContext(), filename1, renamedFile, false);
+  }
+
+  @Test
+  public void testSubclusterDown() throws Exception {
+    final int totalFiles = 6;
+
+    List<RouterContext> routers = getCluster().getRouters();
+
+    // Test the behavior when everything is fine
+    FileSystem fs = getRouterFileSystem();
+    FileStatus[] files = fs.listStatus(new Path("/"));
+    assertEquals(totalFiles, files.length);
+
+    // Simulate one of the subclusters is in standby
+    NameNode nn0 = getCluster().getNamenode("ns0", null).getNamenode();
+    FSNamesystem ns0 = nn0.getNamesystem();
+    HAContext nn0haCtx = (HAContext)getInternalState(ns0, "haContext");
+    HAContext mockCtx = mock(HAContext.class);
+    doThrow(new StandbyException("Mock")).when(mockCtx).checkOperation(any());
+    setInternalState(ns0, "haContext", mockCtx);
+
+    // router0 should throw an exception
+    RouterContext router0 = routers.get(0);
+    RouterRpcServer router0RPCServer = router0.getRouter().getRpcServer();
+    RouterClientProtocol router0ClientProtocol =
+        router0RPCServer.getClientProtocolModule();
+    setInternalState(router0ClientProtocol, "allowPartialList", false);
+    try {
+      router0.getFileSystem().listStatus(new Path("/"));
+      fail("I should throw an exception");
+    } catch (RemoteException re) {
+      GenericTestUtils.assertExceptionContains(
+          "No namenode available to invoke getListing", re);
+    }
+
+    // router1 should report partial results
+    RouterContext router1 = routers.get(1);
+    files = router1.getFileSystem().listStatus(new Path("/"));
+    assertTrue("Found " + files.length + " items, we should have less",
+        files.length < totalFiles);
+
+
+    // Restore the HA context and the Router
+    setInternalState(ns0, "haContext", nn0haCtx);
+    setInternalState(router0ClientProtocol, "allowPartialList", true);
   }
 }

@@ -1484,6 +1484,15 @@ public class RouterRpcServer extends AbstractService
   }
 
   /**
+   * Get ClientProtocol module implementation.
+   * @return ClientProtocol implementation
+   */
+  @VisibleForTesting
+  public RouterClientProtocol getClientProtocolModule() {
+    return this.clientProto;
+  }
+
+  /**
    * Get RPC metrics info.
    * @return The instance of FederationRPCMetrics.
    */

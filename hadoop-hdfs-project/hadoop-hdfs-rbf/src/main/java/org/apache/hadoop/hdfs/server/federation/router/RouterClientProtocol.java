@@ -112,6 +112,9 @@ public class RouterClientProtocol implements ClientProtocol {
   private final FileSubclusterResolver subclusterResolver;
   private final ActiveNamenodeResolver namenodeResolver;
 
+  /** If it requires response from all subclusters. */
+  private final boolean allowPartialList;
+
   /** Identifier for the super user. */
   private String superUser;
   /** Identifier for the super group. */
@@ -124,6 +127,10 @@ public class RouterClientProtocol implements ClientProtocol {
     this.rpcClient = rpcServer.getRPCClient();
     this.subclusterResolver = rpcServer.getSubclusterResolver();
     this.namenodeResolver = rpcServer.getNamenodeResolver();
+
+    this.allowPartialList = conf.getBoolean(
+        RBFConfigKeys.DFS_ROUTER_ALLOW_PARTIAL_LIST,
+        RBFConfigKeys.DFS_ROUTER_ALLOW_PARTIAL_LIST_DEFAULT);
 
     // User and group for reporting
     try {
@@ -614,8 +621,8 @@ public class RouterClientProtocol implements ClientProtocol {
         new Class<?>[] {String.class, startAfter.getClass(), boolean.class},
         new RemoteParam(), startAfter, needLocation);
     Map<RemoteLocation, DirectoryListing> listings =
-        rpcClient.invokeConcurrent(
-            locations, method, false, false, DirectoryListing.class);
+        rpcClient.invokeConcurrent(locations, method,
+            !this.allowPartialList, false, DirectoryListing.class);
 
     Map<String, HdfsFileStatus> nnListing = new TreeMap<>();
     int totalRemainingEntries = 0;
@@ -1004,8 +1011,8 @@ public class RouterClientProtocol implements ClientProtocol {
       RemoteMethod method = new RemoteMethod("getContentSummary",
           new Class<?>[] {String.class}, new RemoteParam());
       Map<RemoteLocation, ContentSummary> results =
-          rpcClient.invokeConcurrent(
-              locations, method, false, false, ContentSummary.class);
+          rpcClient.invokeConcurrent(locations, method,
+              !this.allowPartialList, false, ContentSummary.class);
       summaries.addAll(results.values());
     } catch (FileNotFoundException e) {
       notFoundException = e;
