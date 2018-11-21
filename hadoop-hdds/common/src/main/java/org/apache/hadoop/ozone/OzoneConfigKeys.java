@@ -95,9 +95,9 @@ public final class OzoneConfigKeys {
       "ozone.container.cache.size";
   public static final int OZONE_CONTAINER_CACHE_DEFAULT = 1024;
 
-  public static final String OZONE_SCM_BLOCK_SIZE_IN_MB =
-      "ozone.scm.block.size.in.mb";
-  public static final long OZONE_SCM_BLOCK_SIZE_DEFAULT = 256;
+  public static final String OZONE_SCM_BLOCK_SIZE =
+      "ozone.scm.block.size";
+  public static final String OZONE_SCM_BLOCK_SIZE_DEFAULT = "256MB";
 
   /**
    * Ozone administrator users delimited by comma.
@@ -115,12 +115,14 @@ public final class OzoneConfigKeys {
   public static final String OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE =
       "ozone.client.stream.buffer.flush.size";
 
-  public static final long OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE_DEFAULT = 64;
+  public static final String OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE_DEFAULT =
+      "64MB";
 
   public static final String OZONE_CLIENT_STREAM_BUFFER_MAX_SIZE =
       "ozone.client.stream.buffer.max.size";
 
-  public static final long OZONE_CLIENT_STREAM_BUFFER_MAX_SIZE_DEFAULT = 128;
+  public static final String OZONE_CLIENT_STREAM_BUFFER_MAX_SIZE_DEFAULT =
+      "128MB";
 
   public static final String OZONE_CLIENT_WATCH_REQUEST_TIMEOUT =
       "ozone.client.watch.request.timeout";
@@ -231,12 +233,13 @@ public final class OzoneConfigKeys {
       = ScmConfigKeys.DFS_CONTAINER_RATIS_NUM_CONTAINER_OP_EXECUTORS_DEFAULT;
   public static final String DFS_CONTAINER_RATIS_SEGMENT_SIZE_KEY
       = ScmConfigKeys.DFS_CONTAINER_RATIS_SEGMENT_SIZE_KEY;
-  public static final int DFS_CONTAINER_RATIS_SEGMENT_SIZE_DEFAULT
+  public static final String DFS_CONTAINER_RATIS_SEGMENT_SIZE_DEFAULT
       = ScmConfigKeys.DFS_CONTAINER_RATIS_SEGMENT_SIZE_DEFAULT;
   public static final String DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_KEY
       = ScmConfigKeys.DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_KEY;
-  public static final int DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_DEFAULT
-      = ScmConfigKeys.DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_DEFAULT;
+  public static final String
+      DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_DEFAULT =
+      ScmConfigKeys.DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_DEFAULT;
 
   // config settings to enable stateMachineData write timeout
   public static final String
@@ -246,8 +249,6 @@ public final class OzoneConfigKeys {
       DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_TIMEOUT_DEFAULT =
       ScmConfigKeys.DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_TIMEOUT_DEFAULT;
 
-  public static final int DFS_CONTAINER_CHUNK_MAX_SIZE
-      = ScmConfigKeys.OZONE_SCM_CHUNK_MAX_SIZE;
   public static final String DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR =
       "dfs.container.ratis.datanode.storage.dir";
   public static final String DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_KEY =
