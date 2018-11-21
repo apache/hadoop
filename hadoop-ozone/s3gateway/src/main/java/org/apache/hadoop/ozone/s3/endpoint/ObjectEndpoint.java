@@ -51,15 +51,18 @@ import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.IOUtils;
+
+import org.apache.hadoop.ozone.s3.io.S3WrapperInputStream;
+import org.apache.hadoop.ozone.s3.util.RangeHeader;
 import org.apache.hadoop.ozone.s3.util.S3StorageType;
+import org.apache.hadoop.ozone.s3.util.S3utils;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.ozone.s3.util.S3Consts.COPY_SOURCE_HEADER;
-import static org.apache.hadoop.ozone.s3.util.S3Consts.STORAGE_CLASS_HEADER;
+import static org.apache.hadoop.ozone.s3.util.S3Consts.*;
 
 /**
  * Key level rest endpoints.
@@ -165,16 +168,73 @@ public class ObjectEndpoint extends EndpointBase {
       @PathParam("bucket") String bucketName,
       @PathParam("path") String keyPath,
       InputStream body) throws IOException, OS3Exception {
-
     try {
       OzoneBucket bucket = getBucket(bucketName);
 
-      OzoneInputStream key = bucket
-          .readKey(keyPath);
+      OzoneKeyDetails keyDetails = bucket.getKey(keyPath);
 
-      StreamingOutput output = dest -> IOUtils.copy(key, dest);
-      ResponseBuilder responseBuilder = Response.ok(output);
+      long length = keyDetails.getDataSize();
 
+      LOG.debug("Data length of the key {} is {}", keyPath, length);
+
+      String rangeHeaderVal = headers.getHeaderString(RANGE_HEADER);
+      RangeHeader rangeHeader = null;
+
+      LOG.debug("range Header provided value is {}", rangeHeaderVal);
+
+      if (rangeHeaderVal != null) {
+        rangeHeader = S3utils.parseRangeHeader(rangeHeaderVal,
+            length);
+        LOG.debug("range Header provided value is {}", rangeHeader);
+        if (rangeHeader.isInValidRange()) {
+          OS3Exception exception = S3ErrorTable.newError(S3ErrorTable
+              .INVALID_RANGE, rangeHeaderVal);
+          throw exception;
+        }
+      }
+      ResponseBuilder responseBuilder;
+
+      if (rangeHeaderVal == null || rangeHeader.isReadFull()) {
+        StreamingOutput output = dest -> {
+          try (OzoneInputStream key = bucket.readKey(keyPath)) {
+            IOUtils.copy(key, dest);
+          }
+        };
+        responseBuilder = Response.ok(output);
+
+      } else {
+        LOG.info("range Header provided value is {}", rangeHeader);
+        OzoneInputStream key = bucket.readKey(keyPath);
+
+        long startOffset = rangeHeader.getStartOffset();
+        long endOffset = rangeHeader.getEndOffset();
+        long copyLength;
+        if (startOffset == endOffset) {
+          // if range header is given as bytes=0-0, then we should return 1
+          // byte from start offset
+          copyLength = 1;
+        } else {
+          copyLength = rangeHeader.getEndOffset() - rangeHeader
+              .getStartOffset() + 1;
+        }
+        StreamingOutput output = dest -> {
+          try (S3WrapperInputStream s3WrapperInputStream =
+              new S3WrapperInputStream(
+                  key.getInputStream())) {
+            IOUtils.copyLarge(s3WrapperInputStream, dest, startOffset,
+                copyLength);
+          }
+        };
+        responseBuilder = Response.ok(output);
+
+        String contentRangeVal = RANGE_HEADER_SUPPORTED_UNIT + " " +
+            rangeHeader.getStartOffset() + "-" + rangeHeader.getEndOffset() +
+            "/" + length;
+
+        responseBuilder.header(CONTENT_RANGE_HEADER, contentRangeVal);
+      }
+      responseBuilder.header(ACCEPT_RANGE_HEADER,
+          RANGE_HEADER_SUPPORTED_UNIT);
       for (String responseHeader : customizableGetHeaders) {
         String headerValue = headers.getHeaderString(responseHeader);
         if (headerValue != null) {
