@@ -203,7 +203,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
       //bad seek -expected, but not as preferred as an EOFException
       handleRelaxedException("a negative seek", "EOFException", e);
     }
-    assertTrue("The available should be positive integer",instream.available() > 0);
+    assertEquals("The available should be zero",0,instream.available());
     assertEquals(0, instream.getPos());
   }
 

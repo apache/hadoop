@@ -38,6 +38,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 
+import static java.lang.Math.min;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 /**
@@ -253,7 +254,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
       // then choose whichever comes first: the range or the EOF
       long remainingInCurrentRequest = remainingInCurrentRequest();
 
-      long forwardSeekLimit = Math.min(remainingInCurrentRequest,
+      long forwardSeekLimit = min(remainingInCurrentRequest,
           forwardSeekRange);
       boolean skipForward = remainingInCurrentRequest > 0
           && diff <= forwardSeekLimit;
@@ -593,12 +594,13 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
   @Override
   public synchronized int available() throws IOException {
     checkNotClosed();
-
+    int availableSize = this.wrappedStream == null ? 0 : this.wrappedStream.available();
     long remaining = remainingInFile();
     if (remaining > Integer.MAX_VALUE) {
       return Integer.MAX_VALUE;
     }
-    return (int)remaining;
+    long validatedSize = min(availableSize, remaining);
+    return (int)validatedSize;
   }
 
   /**
@@ -776,7 +778,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
 
     }
     // cannot read past the end of the object
-    rangeLimit = Math.min(contentLength, rangeLimit);
+    rangeLimit = min(contentLength, rangeLimit);
     return rangeLimit;
   }
 
