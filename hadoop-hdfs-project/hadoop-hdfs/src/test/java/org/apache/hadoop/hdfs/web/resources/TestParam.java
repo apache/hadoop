@@ -506,6 +506,14 @@ public class TestParam {
   }
 
   @Test
+  public void testECPolicyParam() {
+    ECPolicyParam p = new ECPolicyParam(ECPolicyParam.DEFAULT);
+    Assert.assertEquals(null, p.getValue());
+    p = new ECPolicyParam("RS-6-3-1024k");
+    Assert.assertEquals("RS-6-3-1024k", p.getValue());
+  }
+
+  @Test
   public void testHttpOpParams() {
     try {
       new PostOpParam("TEST");

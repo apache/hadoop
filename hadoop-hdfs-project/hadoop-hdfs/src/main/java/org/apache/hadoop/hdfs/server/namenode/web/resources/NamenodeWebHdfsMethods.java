@@ -500,14 +500,16 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(NoRedirectParam.NAME) @DefaultValue(NoRedirectParam.DEFAULT)
           final NoRedirectParam noredirect,
       @QueryParam(StoragePolicyParam.NAME) @DefaultValue(StoragePolicyParam
-          .DEFAULT) final StoragePolicyParam policyName
+          .DEFAULT) final StoragePolicyParam policyName,
+      @QueryParam(ECPolicyParam.NAME) @DefaultValue(ECPolicyParam
+              .DEFAULT) final ECPolicyParam ecpolicy
       ) throws IOException, InterruptedException {
     return put(ugi, delegation, username, doAsUser, ROOT, op, destination,
         owner, group, permission, unmaskedPermission, overwrite, bufferSize,
         replication, blockSize, modificationTime, accessTime, renameOptions,
         createParent, delegationTokenArgument, aclPermission, xattrName,
         xattrValue, xattrSetFlag, snapshotName, oldSnapshotName,
-        excludeDatanodes, createFlagParam, noredirect, policyName);
+        excludeDatanodes, createFlagParam, noredirect, policyName, ecpolicy);
   }
 
   /** Validate all required params. */
@@ -587,7 +589,9 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(NoRedirectParam.NAME) @DefaultValue(NoRedirectParam.DEFAULT)
           final NoRedirectParam noredirect,
       @QueryParam(StoragePolicyParam.NAME) @DefaultValue(StoragePolicyParam
-          .DEFAULT) final StoragePolicyParam policyName
+          .DEFAULT) final StoragePolicyParam policyName,
+      @QueryParam(ECPolicyParam.NAME) @DefaultValue(ECPolicyParam.DEFAULT)
+      final ECPolicyParam ecpolicy
       ) throws IOException, InterruptedException {
 
     init(ugi, delegation, username, doAsUser, path, op, destination, owner,
@@ -607,7 +611,7 @@ public class NamenodeWebHdfsMethods {
               renameOptions, createParent, delegationTokenArgument,
               aclPermission, xattrName, xattrValue, xattrSetFlag,
               snapshotName, oldSnapshotName, excludeDatanodes,
-              createFlagParam, noredirect, policyName);
+              createFlagParam, noredirect, policyName, ecpolicy);
       }
     });
   }
@@ -642,7 +646,8 @@ public class NamenodeWebHdfsMethods {
       final ExcludeDatanodesParam exclDatanodes,
       final CreateFlagParam createFlagParam,
       final NoRedirectParam noredirectParam,
-      final StoragePolicyParam policyName
+      final StoragePolicyParam policyName,
+      final ECPolicyParam ecpolicy
       ) throws IOException, URISyntaxException {
     final Configuration conf = (Configuration)context.getAttribute(JspHelper.CURRENT_CONF);
     final ClientProtocol cp = getRpcClientProtocol();
@@ -803,6 +808,16 @@ public class NamenodeWebHdfsMethods {
       cp.setStoragePolicy(fullpath, policyName.getValue());
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
+    case ENABLEECPOLICY:
+      validateOpParams(op, ecpolicy);
+      cp.enableErasureCodingPolicy(ecpolicy.getValue());
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
+
+    case DISABLEECPOLICY:
+      validateOpParams(op, ecpolicy);
+      cp.disableErasureCodingPolicy(ecpolicy.getValue());
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
+
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
