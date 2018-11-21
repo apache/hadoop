@@ -72,6 +72,7 @@ import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -767,6 +768,62 @@ public class TestRouterRpc {
     String badPath = "/unknownlocation/unknowndir";
     compareResponses(routerProtocol, nnProtocol,
         m, new Object[] {badPath, "badpolicy"});
+  }
+
+  @Test
+  public void testProxyGetAndUnsetStoragePolicy() throws Exception {
+    String file = "/testGetStoragePolicy";
+    String nnFilePath = cluster.getNamenodeTestDirectoryForNS(ns) + file;
+    String routerFilePath = cluster.getFederatedTestDirectoryForNS(ns) + file;
+
+    createFile(routerFS, routerFilePath, 32);
+
+    // Get storage policy via router
+    BlockStoragePolicy policy = routerProtocol.getStoragePolicy(routerFilePath);
+    // Verify default policy is HOT
+    assertEquals(HdfsConstants.HOT_STORAGE_POLICY_NAME, policy.getName());
+    assertEquals(HdfsConstants.HOT_STORAGE_POLICY_ID, policy.getId());
+
+    // Get storage policies via router
+    BlockStoragePolicy[] policies = routerProtocol.getStoragePolicies();
+    BlockStoragePolicy[] nnPolicies = namenode.getClient().getStoragePolicies();
+    // Verify policie returned by router is same as policies returned by NN
+    assertArrayEquals(nnPolicies, policies);
+
+    BlockStoragePolicy newPolicy = policies[0];
+    while (newPolicy.isCopyOnCreateFile()) {
+      // Pick a non copy on create policy. Beacuse if copyOnCreateFile is set
+      // then the policy cannot be changed after file creation.
+      Random rand = new Random();
+      int randIndex = rand.nextInt(policies.length);
+      newPolicy = policies[randIndex];
+    }
+    routerProtocol.setStoragePolicy(routerFilePath, newPolicy.getName());
+
+    // Get storage policy via router
+    policy = routerProtocol.getStoragePolicy(routerFilePath);
+    // Verify default policy
+    assertEquals(newPolicy.getName(), policy.getName());
+    assertEquals(newPolicy.getId(), policy.getId());
+
+    // Verify policy via NN
+    BlockStoragePolicy nnPolicy =
+        namenode.getClient().getStoragePolicy(nnFilePath);
+    assertEquals(nnPolicy.getName(), policy.getName());
+    assertEquals(nnPolicy.getId(), policy.getId());
+
+    // Unset storage policy via router
+    routerProtocol.unsetStoragePolicy(routerFilePath);
+
+    // Get storage policy
+    policy = routerProtocol.getStoragePolicy(routerFilePath);
+    assertEquals(HdfsConstants.HOT_STORAGE_POLICY_NAME, policy.getName());
+    assertEquals(HdfsConstants.HOT_STORAGE_POLICY_ID, policy.getId());
+
+    // Verify policy via NN
+    nnPolicy = namenode.getClient().getStoragePolicy(nnFilePath);
+    assertEquals(nnPolicy.getName(), policy.getName());
+    assertEquals(nnPolicy.getId(), policy.getId());
   }
 
   @Test
