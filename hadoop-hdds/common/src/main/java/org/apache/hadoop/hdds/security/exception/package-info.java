@@ -17,37 +17,7 @@
  *
  */
 
-package org.apache.hadoop.hdds.security.x509.exceptions;
-
-import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
-
 /**
- * Certificate Exceptions from the SCM Security layer.
+ * Exceptions thrown by SCM security classes.
  */
-public class CertificateException extends SCMSecurityException {
-
-  /**
-   * Ctor.
-   * @param message - Error Message.
-   */
-  public CertificateException(String message) {
-    super(message);
-  }
-
-  /**
-   * Ctor.
-   * @param message - Message.
-   * @param cause  - Actual cause.
-   */
-  public CertificateException(String message, Throwable cause) {
-    super(message, cause);
-  }
-
-  /**
-   * Ctor.
-   * @param cause - Base Exception.
-   */
-  public CertificateException(Throwable cause) {
-    super(cause);
-  }
-}
+package org.apache.hadoop.hdds.security.exception;

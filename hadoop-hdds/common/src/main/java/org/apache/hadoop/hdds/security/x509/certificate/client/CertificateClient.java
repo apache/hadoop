@@ -91,6 +91,17 @@ public interface CertificateClient {
       X509Certificate cert);
 
   /**
+   * Verifies a digital Signature, given the signature and the certificate of
+   * the signer.
+   * @param data - Data in byte array.
+   * @param signature - Byte Array containing the signature.
+   * @param cert - Certificate of the Signer.
+   * @return true if verified, false if not.
+   */
+  boolean verifySignature(byte[] data, byte[] signature,
+      X509Certificate cert);
+
+  /**
    * Returns a CSR builder that can be used to creates a Certificate sigining
    * request.
    *

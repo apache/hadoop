@@ -9,20 +9,21 @@
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 
-package org.apache.hadoop.hdds.security.x509.exceptions;
+package org.apache.hadoop.hdds.security.exception;
+
+import java.io.IOException;
 
 /**
  * Root Security Exception call for all Certificate related Execptions.
  */
-public class SCMSecurityException extends Exception {
+public class SCMSecurityException extends IOException {
 
   /**
    * Ctor.
@@ -47,18 +48,5 @@ public class SCMSecurityException extends Exception {
    */
   public SCMSecurityException(Throwable cause) {
     super(cause);
-  }
-
-
-  /**
-   * Ctor.
-   * @param message - Error Message
-   * @param cause  - Cause
-   * @param enableSuppression - Enable suppression.
-   * @param writableStackTrace - Writable stack trace.
-   */
-  public SCMSecurityException(String message, Throwable cause,
-      boolean enableSuppression, boolean writableStackTrace) {
-    super(message, cause, enableSuppression, writableStackTrace);
   }
 }

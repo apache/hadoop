@@ -15,8 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.ozone.security;
+package org.apache.hadoop.hdds.security.token;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -38,14 +40,19 @@ import java.util.Map;
 import javax.crypto.KeyGenerator;
 import javax.crypto.Mac;
 import javax.crypto.SecretKey;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -109,7 +116,7 @@ public class TestOzoneBlockTokenIdentifier {
     OzoneBlockTokenIdentifier tokenId = new OzoneBlockTokenIdentifier(
         "testUser", "84940",
         EnumSet.allOf(HddsProtos.BlockTokenSecretProto.AccessModeProto.class),
-        expiryTime, cert.getSerialNumber().toString());
+        expiryTime, cert.getSerialNumber().toString(), 128L);
     byte[] signedToken = signTokenAsymmetric(tokenId, privateKey);
 
     // Verify a valid signed OzoneMaster Token with Ozone Master
@@ -121,11 +128,62 @@ public class TestOzoneBlockTokenIdentifier {
     // public key(certificate)
     tokenId = new OzoneBlockTokenIdentifier("", "",
         EnumSet.allOf(HddsProtos.BlockTokenSecretProto.AccessModeProto.class),
-        expiryTime, cert.getSerialNumber().toString());
+        expiryTime, cert.getSerialNumber().toString(), 128L);
     LOG.info("Unsigned token {} is {}", tokenId,
         verifyTokenAsymmetric(tokenId, RandomUtils.nextBytes(128), cert));
 
   }
+
+  @Test
+  public void testTokenSerialization() throws GeneralSecurityException,
+      IOException {
+    String keystore = new File(KEYSTORES_DIR, "keystore.jks")
+        .getAbsolutePath();
+    String truststore = new File(KEYSTORES_DIR, "truststore.jks")
+        .getAbsolutePath();
+    String trustPassword = "trustPass";
+    String keyStorePassword = "keyStorePass";
+    String keyPassword = "keyPass";
+    long maxLength = 128L;
+
+    KeyStoreTestUtil.createKeyStore(keystore, keyStorePassword, keyPassword,
+        "OzoneMaster", keyPair.getPrivate(), cert);
+
+    // Create trust store and put the certificate in the trust store
+    Map<String, X509Certificate> certs = Collections.singletonMap("server",
+        cert);
+    KeyStoreTestUtil.createTrustStore(truststore, trustPassword, certs);
+
+    // Sign the OzoneMaster Token with Ozone Master private key
+    PrivateKey privateKey = keyPair.getPrivate();
+    OzoneBlockTokenIdentifier tokenId = new OzoneBlockTokenIdentifier(
+        "testUser", "84940",
+        EnumSet.allOf(HddsProtos.BlockTokenSecretProto.AccessModeProto.class),
+        expiryTime, cert.getSerialNumber().toString(), maxLength);
+    byte[] signedToken = signTokenAsymmetric(tokenId, privateKey);
+
+
+    Token<BlockTokenIdentifier> token = new Token(tokenId.getBytes(),
+        signedToken, tokenId.getKind(), new Text("host:port"));
+
+    String encodeToUrlString = token.encodeToUrlString();
+
+    Token<BlockTokenIdentifier>decodedToken = new Token();
+    decodedToken.decodeFromUrlString(encodeToUrlString);
+
+    OzoneBlockTokenIdentifier decodedTokenId = new OzoneBlockTokenIdentifier();
+    decodedTokenId.readFields(new DataInputStream(
+        new ByteArrayInputStream(decodedToken.getIdentifier())));
+
+    Assert.assertEquals(decodedTokenId, tokenId);
+    Assert.assertEquals(decodedTokenId.getMaxLength(), maxLength);
+
+    // Verify a decoded signed Token with public key(certificate)
+    boolean isValidToken = verifyTokenAsymmetric(decodedTokenId, decodedToken
+        .getPassword(), cert);
+    LOG.info("{} is {}", tokenId, isValidToken ? "valid." : "invalid.");
+  }
+
 
   public byte[] signTokenAsymmetric(OzoneBlockTokenIdentifier tokenId,
       PrivateKey privateKey) throws NoSuchAlgorithmException,
@@ -162,7 +220,7 @@ public class TestOzoneBlockTokenIdentifier {
     return new OzoneBlockTokenIdentifier(RandomStringUtils.randomAlphabetic(6),
         RandomStringUtils.randomAlphabetic(5),
         EnumSet.allOf(HddsProtos.BlockTokenSecretProto.AccessModeProto.class),
-        expiryTime, cert.getSerialNumber().toString());
+        expiryTime, cert.getSerialNumber().toString(), 1024768L);
   }
 
   @Test

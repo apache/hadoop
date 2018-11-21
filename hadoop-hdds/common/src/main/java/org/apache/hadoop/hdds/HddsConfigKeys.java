@@ -145,6 +145,7 @@ public final class HddsConfigKeys {
       "hdds.x509.signature.algorithm";
   public static final String HDDS_X509_SIGNATURE_ALGO_DEFAULT = "SHA256withRSA";
 
-
-
+  public static final String HDDS_GRPC_BLOCK_TOKEN_ENABLED = "hdds.grpc.block" +
+      ".token.enabled";
+  public static final boolean HDDS_GRPC_BLOCK_TOKEN_ENABLED_DEFAULT = false;
 }

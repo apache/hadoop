@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.container.common.transport.server;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -30,6 +31,9 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.
     StorageContainerException;
+import org.apache.hadoop.hdds.security.token.BlockTokenVerifier;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
@@ -37,6 +41,7 @@ import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.ratis.thirdparty.io.grpc.BindableService;
 import org.apache.ratis.thirdparty.io.grpc.Server;
 import org.apache.ratis.thirdparty.io.grpc.ServerBuilder;
+import org.apache.ratis.thirdparty.io.grpc.ServerInterceptors;
 import org.apache.ratis.thirdparty.io.grpc.netty.NettyServerBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,13 +97,27 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
         DatanodeDetails.newPort(DatanodeDetails.Port.Name.STANDALONE, port));
     NettyServerBuilder nettyServerBuilder =
         ((NettyServerBuilder) ServerBuilder.forPort(port))
-            .maxInboundMessageSize(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE)
-            .addService(new GrpcXceiverService(dispatcher));
+            .maxInboundMessageSize(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE);
+
+    // Populate UGI context via ServerCredentialInterceptor
+    SecurityConfig secConfig = new SecurityConfig(conf);
+    ServerCredentialInterceptor credInterceptor =
+        new ServerCredentialInterceptor(
+            new BlockTokenVerifier(secConfig, getCaClient()));
+    nettyServerBuilder.addService(ServerInterceptors.intercept(
+          new GrpcXceiverService(dispatcher), credInterceptor));
+
     for (BindableService service : additionalServices) {
       nettyServerBuilder.addService(service);
     }
     server = nettyServerBuilder.build();
     storageContainer = dispatcher;
+  }
+
+  @VisibleForTesting
+  public CertificateClient getCaClient() {
+    // TODO: instantiate CertificateClient
+    return null;
   }
 
   @Override

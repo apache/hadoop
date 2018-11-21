@@ -31,22 +31,32 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.XceiverClientProtocolServi
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
+import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
+import org.apache.hadoop.hdds.security.token.OzoneBlockTokenSelector;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Time;
 import org.apache.ratis.thirdparty.io.grpc.ManagedChannel;
+import org.apache.ratis.thirdparty.io.grpc.Status;
 import org.apache.ratis.thirdparty.io.grpc.netty.NettyChannelBuilder;
 import org.apache.ratis.thirdparty.io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.UUID;
-import java.util.Map;
-import java.util.HashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -93,7 +103,9 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     connectToDatanode(dn);
   }
 
-  private void connectToDatanode(DatanodeDetails dn) {
+
+  private void connectToDatanode(DatanodeDetails dn) throws IOException,
+      SCMSecurityException {
     // read port from the data node, on failure use default configured
     // port.
     int port = dn.getPort(DatanodeDetails.Port.Name.STANDALONE).getValue();
@@ -101,16 +113,49 @@ public class XceiverClientGrpc extends XceiverClientSpi {
       port = config.getInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
           OzoneConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT);
     }
+
+    // Add credential context to the client call
+    String userName = UserGroupInformation.getCurrentUser()
+        .getShortUserName();
+
+    // Add block token if block token (mutual auth) is required but the client
+    // does not have a mTLS (private key and ca signed certificate)
+    String encodedToken = null;
+    SecurityConfig secConfig = new SecurityConfig(config);
+    if (secConfig.isGrpcBlockTokenEnabled()) {
+      InetSocketAddress addr = new InetSocketAddress(dn.getIpAddress(), port);
+      encodedToken = getEncodedBlockToken(addr);
+      if (encodedToken == null) {
+        throw new SCMSecurityException("No Block token available to access " +
+            "service at : " + addr.toString());
+      }
+    }
     LOG.debug("Connecting to server Port : " + dn.getIpAddress());
-    ManagedChannel channel =
-        NettyChannelBuilder.forAddress(dn.getIpAddress(), port).usePlaintext()
+    NettyChannelBuilder channelBuilder = NettyChannelBuilder.forAddress(dn
+            .getIpAddress(), port).usePlaintext()
             .maxInboundMessageSize(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE)
-            .build();
+            .intercept(new ClientCredentialInterceptor(userName, encodedToken));
+    ManagedChannel channel = channelBuilder.build();
     XceiverClientProtocolServiceStub asyncStub =
         XceiverClientProtocolServiceGrpc.newStub(channel);
     asyncStubs.put(dn.getUuid(), asyncStub);
     channels.put(dn.getUuid(), channel);
   }
+
+  private String getEncodedBlockToken(InetSocketAddress addr)
+      throws IOException{
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    OzoneBlockTokenSelector tokenSelector = new OzoneBlockTokenSelector();
+    Text service = SecurityUtil.buildTokenService(addr);
+    Token<OzoneBlockTokenIdentifier> token = tokenSelector.selectToken(
+        service, ugi.getTokens());
+    if (token != null) {
+      token.setService(service);
+      return token.encodeToUrlString();
+    }
+    return null;
+  }
+
   /**
    * Returns if the xceiver client connects to all servers in the pipeline.
    *
@@ -173,6 +218,11 @@ public class XceiverClientGrpc extends XceiverClientSpi {
       } catch (ExecutionException | InterruptedException e) {
         LOG.warn("Failed to execute command " + request + " on datanode " + dn
             .getUuidString(), e);
+        if (Status.fromThrowable(e.getCause()).getCode()
+            == Status.UNAUTHENTICATED.getCode()) {
+          throw new SCMSecurityException("Failed to authenticate with " +
+              "GRPC XceiverServer with Ozone block token.");
+        }
       }
     }
 

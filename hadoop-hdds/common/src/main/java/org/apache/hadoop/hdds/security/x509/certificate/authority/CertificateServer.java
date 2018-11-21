@@ -19,8 +19,8 @@
 
 package org.apache.hadoop.hdds.security.x509.certificate.authority;
 
+import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificates.CertificateSignRequest;
-import org.apache.hadoop.hdds.security.x509.exceptions.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.bouncycastle.cert.X509CertificateHolder;
 
