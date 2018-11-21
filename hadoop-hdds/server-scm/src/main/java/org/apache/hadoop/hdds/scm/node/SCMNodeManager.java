@@ -192,7 +192,9 @@ public class SCMNodeManager
       // registration we call this, after adding to nodeStateMap. And also
       // from eventhandler it is called only if it has node Report.
       DatanodeInfo datanodeInfo = nodeStateManager.getNode(dnId);
-      datanodeInfo.updateStorageReports(nodeReport.getStorageReportList());
+      if (nodeReport != null) {
+        datanodeInfo.updateStorageReports(nodeReport.getStorageReportList());
+      }
 
     } catch (NodeNotFoundException e) {
       LOG.debug("SCM updateNodeStat based on heartbeat from previous " +
