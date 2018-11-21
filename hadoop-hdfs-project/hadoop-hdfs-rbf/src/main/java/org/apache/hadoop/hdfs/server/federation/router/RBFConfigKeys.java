@@ -125,6 +125,10 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final String DFS_ROUTER_CLIENT_REJECT_OVERLOAD =
       FEDERATION_ROUTER_PREFIX + "client.reject.overload";
   public static final boolean DFS_ROUTER_CLIENT_REJECT_OVERLOAD_DEFAULT = false;
+  public static final String DFS_ROUTER_ALLOW_PARTIAL_LIST =
+      FEDERATION_ROUTER_PREFIX + "client.allow-partial-listing";
+  public static final boolean DFS_ROUTER_ALLOW_PARTIAL_LIST_DEFAULT = true;
+
 
   // HDFS Router State Store connection
   public static final String FEDERATION_FILE_RESOLVER_CLIENT_CLASS =
