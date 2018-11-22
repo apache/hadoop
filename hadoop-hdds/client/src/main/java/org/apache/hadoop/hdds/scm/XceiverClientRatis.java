@@ -196,9 +196,11 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     Collection<XceiverClientAsyncReply.CommitInfo> commitInfos =
         new ArrayList<>();
     CompletableFuture<ContainerCommandResponseProto> containerCommandResponse =
-        raftClientReply.whenComplete((reply, e) -> LOG
-            .info("received reply {} for request: {} exception: {}", request,
-                reply, e))
+        raftClientReply.whenComplete((reply, e) -> LOG.debug(
+            "received reply {} for request: cmdType={} containerID={}"
+                + " pipelineID={} traceID={} exception: {}", reply,
+            request.getCmdType(), request.getContainerID(),
+            request.getPipelineID(), request.getTraceID(), e))
             .thenApply(reply -> {
               try {
                 // we need to handle RaftRetryFailure Exception
