@@ -110,10 +110,6 @@ public class TestFailureHandlingByClient {
     }
   }
 
-  // TODO: currently, shutting down 2 datanodes in Ratis leads to
-  // watchForCommit Api in RaftClient to hand=g forever. Once that gets
-  // fixed, we need to execute the tets with 2 node failures.
-
   @Test
   public void testBlockWritesWithDnFailures() throws Exception {
     String keyName = "ratis3";
@@ -139,7 +135,7 @@ public class TestFailureHandlingByClient {
             .getPipeline(container.getPipelineID());
     List<DatanodeDetails> datanodes = pipeline.getNodes();
     cluster.shutdownHddsDatanode(datanodes.get(0));
-    // cluster.shutdownHddsDatanode(datanodes.get(1));
+    cluster.shutdownHddsDatanode(datanodes.get(1));
     // The write will fail but exception will be handled and length will be
     // updated correctly in OzoneManager once the steam is closed
     key.close();
@@ -151,7 +147,6 @@ public class TestFailureHandlingByClient {
     OmKeyInfo keyInfo = cluster.getOzoneManager().lookupKey(keyArgs);
     Assert.assertEquals(data.length, keyInfo.getDataSize());
     validateData(keyName, data);
-    cluster.restartHddsDatanode(datanodes.get(0), true);
   }
 
   @Test
@@ -179,8 +174,8 @@ public class TestFailureHandlingByClient {
             .getPipeline(container.getPipelineID());
     List<DatanodeDetails> datanodes = pipeline.getNodes();
     cluster.shutdownHddsDatanode(datanodes.get(0));
+    cluster.shutdownHddsDatanode(datanodes.get(1));
 
-    //  cluster.shutdownHddsDatanode(datanodes.get(1));
     // The write will fail but exception will be handled and length will be
     // updated correctly in OzoneManager once the steam is closed
     key.write(data.getBytes());
@@ -192,7 +187,6 @@ public class TestFailureHandlingByClient {
     OmKeyInfo keyInfo = cluster.getOzoneManager().lookupKey(keyArgs);
     Assert.assertEquals(2 * data.getBytes().length, keyInfo.getDataSize());
     validateData(keyName, data.concat(data).getBytes());
-    cluster.restartHddsDatanode(datanodes.get(0), true);
   }
 
   private OzoneOutputStream createKey(String keyName, ReplicationType type,

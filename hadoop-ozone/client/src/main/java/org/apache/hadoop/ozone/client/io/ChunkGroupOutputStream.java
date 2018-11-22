@@ -39,6 +39,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.storage.ChunkOutputStream;
+import org.apache.ratis.protocol.RaftRetryFailureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -393,7 +394,7 @@ public class ChunkGroupOutputStream extends OutputStream {
 
   private boolean checkIfContainerIsClosed(IOException ioe) {
     if (ioe.getCause() != null) {
-      return checkIfContainerNotOpenException(ioe) || Optional
+      return checkIfContainerNotOpenOrRaftRetryFailureException(ioe) || Optional
           .of(ioe.getCause())
           .filter(e -> e instanceof StorageContainerException)
           .map(e -> (StorageContainerException) e)
@@ -403,10 +404,12 @@ public class ChunkGroupOutputStream extends OutputStream {
     return false;
   }
 
-  private boolean checkIfContainerNotOpenException(IOException ioe) {
+  private boolean checkIfContainerNotOpenOrRaftRetryFailureException(
+      IOException ioe) {
     Throwable t = ioe.getCause();
     while (t != null) {
-      if (t instanceof ContainerNotOpenException) {
+      if (t instanceof ContainerNotOpenException
+          || t instanceof RaftRetryFailureException) {
         return true;
       }
       t = t.getCause();

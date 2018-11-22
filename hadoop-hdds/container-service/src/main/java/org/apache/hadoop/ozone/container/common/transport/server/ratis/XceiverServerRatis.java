@@ -464,17 +464,13 @@ public final class XceiverServerRatis implements XceiverServerSpi {
 
   @Override
   public boolean isExist(HddsProtos.PipelineID pipelineId) {
-    try {
-      for (RaftGroupId groupId : server.getGroupIds()) {
-        if (PipelineID.valueOf(
-            groupId.getUuid()).getProtobuf().equals(pipelineId)) {
-          return true;
-        }
+    for (RaftGroupId groupId : server.getGroupIds()) {
+      if (PipelineID.valueOf(groupId.getUuid()).getProtobuf()
+          .equals(pipelineId)) {
+        return true;
       }
-      return false;
-    } catch (IOException e) {
-      return false;
     }
+    return false;
   }
 
   @Override
