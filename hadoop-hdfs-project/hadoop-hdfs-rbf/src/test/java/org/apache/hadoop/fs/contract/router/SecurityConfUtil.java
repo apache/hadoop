@@ -14,8 +14,6 @@
 
 package org.apache.hadoop.fs.contract.router;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_SERVICE_USER_NAME_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY;
@@ -108,10 +106,6 @@ public final class SecurityConfUtil {
         ROUTER_USER_NAME + "/" + krbInstance + "@" + kdc.getRealm();
     spnegoPrincipal =
         SPNEGO_USER_NAME + "/" + krbInstance + "@" + kdc.getRealm();
-
-    // Set auth configuration for mini DFS
-    conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
-    conf.set(HADOOP_SECURITY_SERVICE_USER_NAME_KEY, routerPrincipal);
 
     // Setup principles and keytabs for dfs
     conf.set(DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, routerPrincipal);
