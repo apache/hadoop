@@ -49,32 +49,62 @@ public class TestSignedChunksInputStream {
 
   @Test
   public void singlechunk() throws IOException {
+    //test simple read()
     InputStream is = fileContent("0A;chunk-signature"
         +
         "=23abb2bd920ddeeaac78a63ed808bc59fa6e7d3ef0e356474b82cdc2f8c93c40\r"
         + "\n1234567890\r\n");
     String result = IOUtils.toString(is, Charset.forName("UTF-8"));
     Assert.assertEquals("1234567890", result);
+
+    //test read(byte[],int,int)
+    is = fileContent("0A;chunk-signature"
+        +
+        "=23abb2bd920ddeeaac78a63ed808bc59fa6e7d3ef0e356474b82cdc2f8c93c40\r"
+        + "\n1234567890\r\n");
+    byte[] bytes = new byte[10];
+    IOUtils.read(is, bytes, 0, 10);
+    Assert.assertEquals("1234567890", new String(bytes));
   }
 
   @Test
   public void singlechunkwithoutend() throws IOException {
+    //test simple read()
     InputStream is = fileContent("0A;chunk-signature"
         +
         "=23abb2bd920ddeeaac78a63ed808bc59fa6e7d3ef0e356474b82cdc2f8c93c40\r"
         + "\n1234567890");
     String result = IOUtils.toString(is, Charset.forName("UTF-8"));
     Assert.assertEquals("1234567890", result);
+
+    //test read(byte[],int,int)
+    is = fileContent("0A;chunk-signature"
+        +
+        "=23abb2bd920ddeeaac78a63ed808bc59fa6e7d3ef0e356474b82cdc2f8c93c40\r"
+        + "\n1234567890");
+    byte[] bytes = new byte[10];
+    IOUtils.read(is, bytes, 0, 10);
+    Assert.assertEquals("1234567890", new String(bytes));
   }
 
   @Test
   public void multichunks() throws IOException {
+    //test simple read()
     InputStream is = fileContent("0a;chunk-signature=signature\r\n"
         + "1234567890\r\n"
         + "05;chunk-signature=signature\r\n"
         + "abcde\r\n");
     String result = IOUtils.toString(is, Charset.forName("UTF-8"));
     Assert.assertEquals("1234567890abcde", result);
+
+    //test read(byte[],int,int)
+    is = fileContent("0a;chunk-signature=signature\r\n"
+        + "1234567890\r\n"
+        + "05;chunk-signature=signature\r\n"
+        + "abcde\r\n");
+    byte[] bytes = new byte[15];
+    IOUtils.read(is, bytes, 0, 15);
+    Assert.assertEquals("1234567890abcde", new String(bytes));
   }
 
   private InputStream fileContent(String content) {

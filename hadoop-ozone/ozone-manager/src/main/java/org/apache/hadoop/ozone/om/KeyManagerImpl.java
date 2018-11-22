@@ -16,7 +16,13 @@
  */
 package org.apache.hadoop.ozone.om;
 
-import com.google.common.base.Preconditions;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
@@ -25,7 +31,6 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
@@ -34,22 +39,14 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.KeyLocationList;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyLocationList;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.BackgroundService;
-import org.rocksdb.RocksDBException;
-import org.rocksdb.WriteBatch;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.utils.db.DBStore;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
+import com.google.common.base.Preconditions;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
@@ -58,8 +55,10 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVI
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_KEY_PREALLOCATION_MAXSIZE;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_KEY_PREALLOCATION_MAXSIZE_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_IN_MB;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of keyManager.
@@ -79,7 +78,7 @@ public class KeyManagerImpl implements KeyManager {
   private final long preallocateMax;
   private final String omId;
 
-  private final BackgroundService keyDeletingService;
+  private BackgroundService keyDeletingService;
 
   public KeyManagerImpl(ScmBlockLocationProtocol scmBlockClient,
       OMMetadataManager metadataManager,
@@ -87,35 +86,41 @@ public class KeyManagerImpl implements KeyManager {
       String omId) {
     this.scmBlockClient = scmBlockClient;
     this.metadataManager = metadataManager;
-    this.scmBlockSize = conf.getLong(OZONE_SCM_BLOCK_SIZE_IN_MB,
-        OZONE_SCM_BLOCK_SIZE_DEFAULT) * OzoneConsts.MB;
+    this.scmBlockSize = (long) conf
+        .getStorageSize(OZONE_SCM_BLOCK_SIZE, OZONE_SCM_BLOCK_SIZE_DEFAULT,
+            StorageUnit.BYTES);
     this.useRatis = conf.getBoolean(DFS_CONTAINER_RATIS_ENABLED_KEY,
         DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
     this.preallocateMax = conf.getLong(
         OZONE_KEY_PREALLOCATION_MAXSIZE,
         OZONE_KEY_PREALLOCATION_MAXSIZE_DEFAULT);
-    long blockDeleteInterval = conf.getTimeDuration(
-        OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
-        OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT,
-        TimeUnit.MILLISECONDS);
-    long serviceTimeout = conf.getTimeDuration(
-        OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
-        OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT,
-        TimeUnit.MILLISECONDS);
-    keyDeletingService = new KeyDeletingService(
-        scmBlockClient, this, blockDeleteInterval, serviceTimeout, conf);
-
     this.omId = omId;
+    start(conf);
   }
 
   @Override
-  public void start() {
-    keyDeletingService.start();
+  public void start(OzoneConfiguration configuration) {
+    if (keyDeletingService == null) {
+      long blockDeleteInterval = configuration.getTimeDuration(
+          OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
+          OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT,
+          TimeUnit.MILLISECONDS);
+      long serviceTimeout = configuration.getTimeDuration(
+          OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
+          OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT,
+          TimeUnit.MILLISECONDS);
+      keyDeletingService = new KeyDeletingService(scmBlockClient, this,
+          blockDeleteInterval, serviceTimeout, configuration);
+      keyDeletingService.start();
+    }
   }
 
   @Override
   public void stop() throws IOException {
-    keyDeletingService.shutdown();
+    if (keyDeletingService != null) {
+      keyDeletingService.shutdown();
+      keyDeletingService = null;
+    }
   }
 
   private void validateBucket(String volumeName, String bucketName)
@@ -430,13 +435,14 @@ public class KeyManagerImpl implements KeyManager {
           OmKeyInfo.getFromProtobuf(KeyInfo.parseFrom(fromKeyValue));
       newKeyInfo.setKeyName(toKeyName);
       newKeyInfo.updateModifcationTime();
-      try (WriteBatch batch = new WriteBatch()) {
-        batch.delete(metadataManager.getKeyTable().getHandle(), fromKey);
-        batch.put(metadataManager.getKeyTable().getHandle(), toKey,
+      DBStore store = metadataManager.getStore();
+      try (BatchOperation batch = store.initBatchOperation()) {
+        metadataManager.getKeyTable().deleteWithBatch(batch, fromKey);
+        metadataManager.getKeyTable().putWithBatch(batch, toKey,
             newKeyInfo.getProtobuf().toByteArray());
-        metadataManager.getStore().write(batch);
+        store.commitBatchOperation(batch);
       }
-    } catch (RocksDBException | IOException ex) {
+    } catch (IOException ex) {
       LOG.error("Rename key failed for volume:{} bucket:{} fromKey:{} toKey:{}",
           volumeName, bucketName, fromKeyName, toKeyName, ex);
       throw new OMException(ex.getMessage(),

@@ -175,7 +175,7 @@
   </property>
   <property>
     <name>dfs.container.ratis.segment.size</name>
-    <value>16384</value>
+    <value>16KB</value>
     <tag>OZONE, RATIS, PERFORMANCE</tag>
     <description>The size of the raft segment used by Apache Ratis on datanodes.
       (16 KB by default)
@@ -183,7 +183,7 @@
   </property>
   <property>
     <name>dfs.container.ratis.segment.preallocated.size</name>
-    <value>134217728</value>
+    <value>128MB</value>
     <tag>OZONE, RATIS, PERFORMANCE</tag>
     <description>The size of the buffer which is preallocated for raft segment
       used by Apache Ratis on datanodes.(128 MB by default)
@@ -336,7 +336,7 @@
   </property>
   <property>
     <name>ozone.client.stream.buffer.flush.size</name>
-    <value>64</value>
+    <value>64MB</value>
     <tag>OZONE, CLIENT</tag>
     <description>Size in mb which determines at what buffer position , a partial
       flush will be initiated during write. It should be ideally a mutiple
@@ -345,7 +345,7 @@
   </property>
   <property>
     <name>ozone.client.stream.buffer.max.size</name>
-    <value>128</value>
+    <value>128MB</value>
     <tag>OZONE, CLIENT</tag>
     <description>Size in mb which determines at what buffer position ,
       write call be blocked till acknowledgement of the fisrt partial flush
@@ -623,17 +623,17 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.block.size.in.mb</name>
-    <value>256</value>
+    <name>ozone.scm.block.size</name>
+    <value>256MB</value>
     <tag>OZONE, SCM</tag>
     <description>
-      The default size of a scm block in bytes. This is maps to the default
+      The default size of a scm block. This is maps to the default
       Ozone block size.
     </description>
   </property>
   <property>
     <name>ozone.scm.chunk.size</name>
-    <value>16777216</value>
+    <value>16MB</value>
     <tag>OZONE, SCM, CONTAINER, PERFORMANCE</tag>
     <description>
       The chunk size for reading/writing chunk operations in bytes.
@@ -1349,6 +1349,16 @@
     <tag>OZONE, S3GATEWAY</tag>
     <description>The keytab file used by the S3Gateway server to login as its
       service principal. </description>
+  </property>
+
+  <property>
+    <name>ozone.om.save.metrics.interval</name>
+    <value>5m</value>
+    <tag>OZONE, OM</tag>
+    <description>Time interval used to store the omMetrics in to a
+      file. Background thread perodically stores the OM metrics in to a
+      file. Unit could be defined with postfix (ns,ms,s,m,h,d)
+    </description>
   </property>
 
 

@@ -65,6 +65,46 @@ public class SignedChunksInputStream extends InputStream {
     }
   }
 
+  @Override
+  public int read(byte b[], int off, int len) throws IOException {
+    if (b == null) {
+      throw new NullPointerException();
+    } else if (off < 0 || len < 0 || len > b.length - off) {
+      throw new IndexOutOfBoundsException();
+    } else if (len == 0) {
+      return 0;
+    }
+    int currentOff = off;
+    int currentLen = len;
+    int totalReadBytes = 0;
+    int realReadLen = 0;
+    int maxReadLen = 0;
+    do {
+      if (remainingData > 0) {
+        maxReadLen = Math.min(remainingData, currentLen);
+        realReadLen = originalStream.read(b, currentOff, maxReadLen);
+        if (realReadLen == -1) {
+          break;
+        }
+        currentOff += realReadLen;
+        currentLen -= realReadLen;
+        totalReadBytes += realReadLen;
+        remainingData -= realReadLen;
+        if (remainingData == 0) {
+          //read the "\r\n" at the end of the data section
+          originalStream.read();
+          originalStream.read();
+        }
+      } else {
+        remainingData = readHeader();
+        if (remainingData == -1) {
+          break;
+        }
+      }
+    } while (currentLen > 0);
+    return totalReadBytes > 0 ? totalReadBytes : -1;
+  }
+
   private int readHeader() throws IOException {
     int prev = -1;
     int curr = 0;
