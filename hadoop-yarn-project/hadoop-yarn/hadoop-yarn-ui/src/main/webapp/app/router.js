@@ -49,8 +49,10 @@ Router.map(function() {
       { path: '/yarn-node-containers/:node_id/:node_addr' });
   this.route('yarn-node-container',
       { path: '/yarn-node-container/:node_id/:node_addr/:container_id' });
-  this.route('yarn-container-log', { path:
-      '/yarn-container-log/:node_id/:node_addr/:container_id/:filename' });
+  this.route('yarn-container-log',
+    { path: '/yarn-container-log/:node_id/:node_addr/:container_id/:filename' });
+  this.route('yarn-log-service',
+    { path: '/yarn-log-service/:cluster_id/:container_id/:filename' });
 
   this.route('yarn-deploy-service');
   this.route('cluster-overview');
