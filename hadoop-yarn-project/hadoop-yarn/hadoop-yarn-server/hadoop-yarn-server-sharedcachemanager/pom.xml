@@ -17,10 +17,10 @@
   <parent>
     <artifactId>hadoop-yarn-server</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>ozone-0.3.0-alpha</version>
+    <version>3.3.0-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-yarn-server-sharedcachemanager</artifactId>
-  <version>ozone-0.3.0-alpha</version>
+  <version>3.3.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN SharedCacheManager</name>
 
   <properties>
