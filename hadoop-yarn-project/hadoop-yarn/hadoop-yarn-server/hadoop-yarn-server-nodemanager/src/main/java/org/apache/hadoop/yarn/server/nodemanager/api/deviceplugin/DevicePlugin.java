@@ -27,6 +27,7 @@ public interface DevicePlugin {
   /**
    * Called first when device plugin framework wants to register.
    * @return DeviceRegisterRequest {@link DeviceRegisterRequest}
+   * @throws Exception
    * */
   DeviceRegisterRequest getRegisterRequestInfo()
       throws Exception;
@@ -34,6 +35,7 @@ public interface DevicePlugin {
   /**
    * Called when update node resource.
    * @return a set of {@link Device}, {@link java.util.TreeSet} recommended
+   * @throws Exception
    * */
   Set<Device> getDevices() throws Exception;
 
@@ -52,6 +54,7 @@ public interface DevicePlugin {
    *        docker container runtime is used.
    * @return a {@link DeviceRuntimeSpec} description about environment,
    * {@link         VolumeSpec}, {@link MountVolumeSpec}. etc
+   * @throws Exception
    * */
   DeviceRuntimeSpec onDevicesAllocated(Set<Device> allocatedDevices,
       YarnRuntimeType yarnRuntime) throws Exception;
@@ -59,6 +62,7 @@ public interface DevicePlugin {
   /**
    * Called after device released.
    * @param releasedDevices A set of released devices
+   * @throws Exception
    * */
   void onDevicesReleased(Set<Device> releasedDevices)
       throws Exception;
