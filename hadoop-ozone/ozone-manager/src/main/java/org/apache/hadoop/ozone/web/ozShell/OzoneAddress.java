@@ -179,6 +179,12 @@ public class OzoneAddress {
     // but any occurrence of them will be quoted by the URI ctor.
     String path = pathString.substring(start, pathString.length());
 
+    // add leading slash to the path, if it does not exist
+    int firstSlash = path.indexOf('/');
+    if(firstSlash != 0) {
+      path = "/" + path;
+    }
+
     if (authority == null || authority.equals("")) {
       authority = EMPTY_HOST;
     }
