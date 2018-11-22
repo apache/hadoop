@@ -45,7 +45,8 @@ public class TestOzoneAddress {
         {"http://localhost:9878/"},
         {"http://localhost/"},
         {"http:///"},
-        {"/"}
+        {"/"},
+        {""}
     });
   }
 
