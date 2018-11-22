@@ -53,7 +53,8 @@ public final class Device implements Serializable, Comparable {
   private final int minorNumber;
 
   /**
-   * PCI Bus ID in format [[[[<domain>]:]<bus>]:][<slot>][.[<func>]].
+   * PCI Bus ID in format.
+   * [[[[&lt;domain&gt;]:]&lt;bus&gt;]:][&lt;slot&gt;][.[&lt;func&gt;]].
    * Optional. Can get from "lspci -D" in Linux
    * */
   private final String busID;

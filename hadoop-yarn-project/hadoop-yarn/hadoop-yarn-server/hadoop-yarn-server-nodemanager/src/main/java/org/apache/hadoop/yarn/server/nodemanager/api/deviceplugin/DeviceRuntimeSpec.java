@@ -26,13 +26,13 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * This is a spec used to prepare & run container.
+ * This is a spec used to prepare and run container.
  * It's return value of onDeviceAllocated invoked by the framework.
  * For preparation, if volumeSpecs is populated then the framework will
  * create the volume before using the device
  * When running container, the envs indicates environment variable needed.
  * The containerRuntime indicates what Docker runtime to use.
- * The volume & device mounts describes key isolation requirements
+ * The volume and device mounts describes key isolation requirements
  * */
 public final class DeviceRuntimeSpec implements Serializable {
 
