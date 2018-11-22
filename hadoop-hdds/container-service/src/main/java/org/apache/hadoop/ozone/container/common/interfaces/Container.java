@@ -69,7 +69,6 @@ public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
    * Get metadata about the container.
    *
    * @return ContainerData - Container Data.
-   * @throws StorageContainerException
    */
   CONTAINERDATA getContainerData();
 
@@ -77,7 +76,6 @@ public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
    * Get the Container Lifecycle state.
    *
    * @return ContainerLifeCycleState - Container State.
-   * @throws StorageContainerException
    */
   ContainerProtos.ContainerDataProto.State getContainerState();
 

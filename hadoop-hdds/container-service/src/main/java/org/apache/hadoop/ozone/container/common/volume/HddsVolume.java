@@ -40,15 +40,17 @@ import java.util.Properties;
 import java.util.UUID;
 
 /**
- * HddsVolume represents volume in a datanode. {@link VolumeSet} maitains a
+ * HddsVolume represents volume in a datanode. {@link VolumeSet} maintains a
  * list of HddsVolumes, one for each volume in the Datanode.
  * {@link VolumeInfo} in encompassed by this class.
- *
+ * <p>
  * The disk layout per volume is as follows:
- * ../hdds/VERSION
- * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID>>/metadata
- * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID>>/<<dataDir>>
- *
+ * <p>../hdds/VERSION
+ * <p>{@literal ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID
+ * >>/metadata}
+ * <p>{@literal ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID
+ * >>/<<dataDir>>}
+ * <p>
  * Each hdds volume has its own VERSION file. The hdds volume will have one
  * scmUuid directory for each SCM it is a part of (currently only one SCM is
  * supported).
@@ -377,14 +379,14 @@ public final class HddsVolume {
 
   /**
    * VolumeState represents the different states a HddsVolume can be in.
-   * NORMAL          => Volume can be used for storage
-   * FAILED          => Volume has failed due and can no longer be used for
+   * NORMAL          =&gt; Volume can be used for storage
+   * FAILED          =&gt; Volume has failed due and can no longer be used for
    *                    storing containers.
-   * NON_EXISTENT    => Volume Root dir does not exist
-   * INCONSISTENT    => Volume Root dir is not empty but VERSION file is
+   * NON_EXISTENT    =&gt; Volume Root dir does not exist
+   * INCONSISTENT    =&gt; Volume Root dir is not empty but VERSION file is
    *                    missing or Volume Root dir is not a directory
-   * NOT_FORMATTED   => Volume Root exists but not formatted (no VERSION file)
-   * NOT_INITIALIZED => VERSION file exists but has not been verified for
+   * NOT_FORMATTED   =&gt; Volume Root exists but not formatted(no VERSION file)
+   * NOT_INITIALIZED =&gt; VERSION file exists but has not been verified for
    *                    correctness.
    */
   public enum VolumeState {

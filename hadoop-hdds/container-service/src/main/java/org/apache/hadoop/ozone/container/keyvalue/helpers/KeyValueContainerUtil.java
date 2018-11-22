@@ -96,9 +96,9 @@ public final class KeyValueContainerUtil {
 
   /**
    * remove Container if it is empty.
-   * <p/>
+   * <p>
    * There are three things we need to delete.
-   * <p/>
+   * <p>
    * 1. Container file and metadata file. 2. The Level DB file 3. The path that
    * we created on the data location.
    *
