@@ -170,7 +170,6 @@ public class OzoneContainer {
   /**
    * Returns container report.
    * @return - container report.
-   * @throws IOException
    */
 
   public PipelineReportsProto getPipelineReport() {

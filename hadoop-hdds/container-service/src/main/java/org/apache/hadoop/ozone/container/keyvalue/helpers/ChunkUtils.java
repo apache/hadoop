@@ -235,7 +235,7 @@ public final class ChunkUtils {
    *
    * @param chunkFile - chunkFile to write data into.
    * @param info - chunk info.
-   * @return true if the chunkFile exists and chunkOffset < chunkFile length,
+   * @return true if the chunkFile exists and chunkOffset &lt; chunkFile length,
    *         false otherwise.
    */
   public static boolean validateChunkForOverwrite(File chunkFile,
