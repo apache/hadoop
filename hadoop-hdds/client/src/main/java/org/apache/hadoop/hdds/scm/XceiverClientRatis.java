@@ -20,6 +20,7 @@ package org.apache.hadoop.hdds.scm;
 
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.ratis.proto.RaftProtos;
+import org.apache.ratis.protocol.RaftRetryFailureException;
 import org.apache.ratis.retry.RetryPolicy;
 import org.apache.ratis.thirdparty.com.google.protobuf
     .InvalidProtocolBufferException;
@@ -196,10 +197,16 @@ public final class XceiverClientRatis extends XceiverClientSpi {
         new ArrayList<>();
     CompletableFuture<ContainerCommandResponseProto> containerCommandResponse =
         raftClientReply.whenComplete((reply, e) -> LOG
-            .debug("received reply {} for request: {} exception: {}", request,
+            .info("received reply {} for request: {} exception: {}", request,
                 reply, e))
             .thenApply(reply -> {
               try {
+                // we need to handle RaftRetryFailure Exception
+                RaftRetryFailureException raftRetryFailureException =
+                    reply.getRetryFailureException();
+                if (raftRetryFailureException != null) {
+                  throw new CompletionException(raftRetryFailureException);
+                }
                 ContainerCommandResponseProto response =
                     ContainerCommandResponseProto
                         .parseFrom(reply.getMessage().getContent());

@@ -284,7 +284,12 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
   @Override
   public void validateContainerCommand(
       ContainerCommandRequestProto msg) throws StorageContainerException {
-    ContainerType containerType = msg.getCreateContainer().getContainerType();
+    long containerID = msg.getContainerID();
+    Container container = getContainer(containerID);
+    if (container == null) {
+      return;
+    }
+    ContainerType containerType = container.getContainerType();
     ContainerProtos.Type cmdType = msg.getCmdType();
     AuditAction action =
         ContainerCommandRequestPBHelper.getAuditAction(cmdType);
@@ -299,35 +304,30 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
       audit(action, eventType, params, AuditEventStatus.FAILURE, ex);
       throw ex;
     }
-    long containerID = msg.getContainerID();
-    Container container;
-    container = getContainer(containerID);
 
-    if (container != null) {
-      State containerState = container.getContainerState();
-      if (!HddsUtils.isReadOnly(msg) && containerState != State.OPEN) {
-        switch (cmdType) {
-        case CreateContainer:
-          // Create Container is idempotent. There is nothing to validate.
-          break;
-        case CloseContainer:
-          // If the container is unhealthy, closeContainer will be rejected
-          // while execution. Nothing to validate here.
-          break;
-        default:
-          // if the container is not open, no updates can happen. Just throw
-          // an exception
-          ContainerNotOpenException cex = new ContainerNotOpenException(
-              "Container " + containerID + " in " + containerState + " state");
-          audit(action, eventType, params, AuditEventStatus.FAILURE, cex);
-          throw cex;
-        }
-      } else if (HddsUtils.isReadOnly(msg) && containerState == State.INVALID) {
-        InvalidContainerStateException iex = new InvalidContainerStateException(
+    State containerState = container.getContainerState();
+    if (!HddsUtils.isReadOnly(msg) && containerState != State.OPEN) {
+      switch (cmdType) {
+      case CreateContainer:
+        // Create Container is idempotent. There is nothing to validate.
+        break;
+      case CloseContainer:
+        // If the container is unhealthy, closeContainer will be rejected
+        // while execution. Nothing to validate here.
+        break;
+      default:
+        // if the container is not open, no updates can happen. Just throw
+        // an exception
+        ContainerNotOpenException cex = new ContainerNotOpenException(
             "Container " + containerID + " in " + containerState + " state");
-        audit(action, eventType, params, AuditEventStatus.FAILURE, iex);
-        throw iex;
+        audit(action, eventType, params, AuditEventStatus.FAILURE, cex);
+        throw cex;
       }
+    } else if (HddsUtils.isReadOnly(msg) && containerState == State.INVALID) {
+      InvalidContainerStateException iex = new InvalidContainerStateException(
+          "Container " + containerID + " in " + containerState + " state");
+      audit(action, eventType, params, AuditEventStatus.FAILURE, iex);
+      throw iex;
     }
   }
 
