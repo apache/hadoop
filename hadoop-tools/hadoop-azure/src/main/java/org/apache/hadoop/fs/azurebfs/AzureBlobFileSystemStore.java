@@ -87,8 +87,8 @@ import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SUPER_USER;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ABFS_ENDPOINT;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
 import static org.apache.hadoop.util.Time.now;
 
 /**
@@ -114,6 +114,7 @@ public class AzureBlobFileSystemStore {
   private final Set<String> azureAtomicRenameDirSet;
   private boolean isNamespaceEnabledSet;
   private boolean isNamespaceEnabled;
+  private final AuthType authType;
 
   public AzureBlobFileSystemStore(URI uri, boolean isSecureScheme, Configuration configuration, UserGroupInformation userGroupInformation)
           throws AzureBlobFileSystemException, IOException {
@@ -142,11 +143,11 @@ public class AzureBlobFileSystemStore {
     this.azureAtomicRenameDirSet = new HashSet<>(Arrays.asList(
         abfsConfiguration.getAzureAtomicRenameDirs().split(AbfsHttpConstants.COMMA)));
 
-    boolean usingOauth = (AuthType.OAuth == abfsConfiguration.getEnum(
-            FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey));
-
+    this.authType = abfsConfiguration.getAuthType(accountName);
+    boolean usingOauth = (authType == AuthType.OAuth);
     boolean useHttps = (usingOauth || abfsConfiguration.isHttpsAlwaysUsed()) ? true : isSecureScheme;
     initializeClient(uri, fileSystemName, accountName, useHttps);
+
   }
 
   private String[] authorityParts(URI uri) throws InvalidUriAuthorityException, InvalidUriException {
@@ -262,7 +263,7 @@ public class AzureBlobFileSystemStore {
            path);
 
     final Hashtable<String, String> parsedXmsProperties;
-    final AbfsRestOperation op = client.getPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
+    final AbfsRestOperation op = client.getPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), isNamespaceEnabled);
 
     final String xMsProperties = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES);
 
@@ -344,7 +345,7 @@ public class AzureBlobFileSystemStore {
             client.getFileSystem(),
             path);
 
-    final AbfsRestOperation op = client.getPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
+    final AbfsRestOperation op = client.getPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), isNamespaceEnabled);
 
     final String resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
     final long contentLength = Long.parseLong(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
@@ -371,7 +372,7 @@ public class AzureBlobFileSystemStore {
             path,
             overwrite);
 
-    final AbfsRestOperation op = client.getPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
+    final AbfsRestOperation op = client.getPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), isNamespaceEnabled);
 
     final String resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
     final Long contentLength = Long.valueOf(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
@@ -471,8 +472,8 @@ public class AzureBlobFileSystemStore {
       final boolean hasAcl = AbfsPermission.isExtendedAcl(permissions);
 
       return new VersionedFileStatus(
-              owner == null ? userName : owner,
-              group == null ? primaryUserGroup : group,
+              isSuperUserOrEmpty(owner) ? userName : owner,
+              isSuperUserOrEmpty(group) ? primaryUserGroup : group,
               permissions == null ? new AbfsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL)
                       : AbfsPermission.valueOf(permissions),
               hasAcl,
@@ -484,7 +485,7 @@ public class AzureBlobFileSystemStore {
               path,
               eTag);
     } else {
-      AbfsRestOperation op = client.getPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
+      AbfsRestOperation op = client.getPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), isNamespaceEnabled);
 
       final long blockSize = abfsConfiguration.getAzureBlockSize();
       final AbfsHttpOperation result = op.getResult();
@@ -498,8 +499,8 @@ public class AzureBlobFileSystemStore {
       final boolean hasAcl = AbfsPermission.isExtendedAcl(permissions);
 
       return new VersionedFileStatus(
-              owner == null ? userName : owner,
-              group == null ? primaryUserGroup : group,
+              isSuperUserOrEmpty(owner) ? userName : owner,
+              isSuperUserOrEmpty(group) ? primaryUserGroup : group,
               permissions == null ? new AbfsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL)
                       : AbfsPermission.valueOf(permissions),
               hasAcl,
@@ -537,8 +538,8 @@ public class AzureBlobFileSystemStore {
       long blockSize = abfsConfiguration.getAzureBlockSize();
 
       for (ListResultEntrySchema entry : retrievedSchema.paths()) {
-        final String owner = entry.owner() == null ? userName : entry.owner();
-        final String group = entry.group() == null ? primaryUserGroup : entry.group();
+        final String owner = isSuperUserOrEmpty(entry.owner()) ? userName : entry.owner();
+        final String group = isSuperUserOrEmpty(entry.group()) ? primaryUserGroup : entry.group();
         final FsPermission fsPermission = entry.permissions() == null
                 ? new AbfsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL)
                 : AbfsPermission.valueOf(entry.permissions());
@@ -581,13 +582,20 @@ public class AzureBlobFileSystemStore {
           "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
 
+    String effectiveOwner = owner;
+    String effectiveGroup = group;
+    if (authType == AuthType.SharedKey && owner.equals(userName)) {
+      effectiveOwner = SUPER_USER;
+      effectiveGroup = SUPER_USER;
+    }
+
     LOG.debug(
             "setOwner filesystem: {} path: {} owner: {} group: {}",
             client.getFileSystem(),
             path.toString(),
-            owner,
-            group);
-    client.setOwner(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true), owner, group);
+            effectiveOwner,
+            effectiveGroup);
+    client.setOwner(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true), effectiveOwner, effectiveGroup);
   }
 
   public void setPermission(final Path path, final FsPermission permission) throws
@@ -618,10 +626,10 @@ public class AzureBlobFileSystemStore {
             client.getFileSystem(),
             path.toString(),
             AclEntry.aclSpecToString(aclSpec));
-
     final Map<String, String> modifyAclEntries = AbfsAclHelper.deserializeAclSpec(AclEntry.aclSpecToString(aclSpec));
+    boolean useUpn = AbfsAclHelper.isUpnFormatAclEntries(modifyAclEntries);
 
-    final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true));
+    final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true), useUpn);
     final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
 
     final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
@@ -643,9 +651,10 @@ public class AzureBlobFileSystemStore {
             client.getFileSystem(),
             path.toString(),
             AclEntry.aclSpecToString(aclSpec));
-
     final Map<String, String> removeAclEntries = AbfsAclHelper.deserializeAclSpec(AclEntry.aclSpecToString(aclSpec));
-    final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true));
+    boolean isUpnFormat = AbfsAclHelper.isUpnFormatAclEntries(removeAclEntries);
+
+    final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true), isUpnFormat);
     final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
 
     final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
@@ -720,7 +729,9 @@ public class AzureBlobFileSystemStore {
             path.toString(),
             AclEntry.aclSpecToString(aclSpec));
     final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(AclEntry.aclSpecToString(aclSpec));
-    final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true));
+    final boolean isUpnFormat = AbfsAclHelper.isUpnFormatAclEntries(aclEntries);
+
+    final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true), isUpnFormat);
     final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
 
     final Map<String, String> getAclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
@@ -754,8 +765,8 @@ public class AzureBlobFileSystemStore {
             : AbfsPermission.valueOf(permissions);
 
     final AclStatus.Builder aclStatusBuilder = new AclStatus.Builder();
-    aclStatusBuilder.owner(owner == null ? userName : owner);
-    aclStatusBuilder.group(group == null ? primaryUserGroup : group);
+    aclStatusBuilder.owner(isSuperUserOrEmpty(owner)? userName : owner);
+    aclStatusBuilder.group(isSuperUserOrEmpty(group) ? primaryUserGroup : group);
 
     aclStatusBuilder.setPermission(fsPermission);
     aclStatusBuilder.stickyBit(fsPermission.getStickyBit());
@@ -938,6 +949,11 @@ public class AzureBlobFileSystemStore {
 
     return false;
   }
+
+  private boolean isSuperUserOrEmpty(final String name) {
+      return name == null || name.equals(SUPER_USER);
+  }
+
 
   private static class VersionedFileStatus extends FileStatus {
     private final String version;
