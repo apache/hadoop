@@ -166,6 +166,10 @@ public class AbfsConfiguration{
           DefaultValue = DEFAULT_ENABLE_HTTPS)
   private boolean alwaysUseHttps;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_USE_UPN,
+      DefaultValue = DEFAULT_USE_UPN)
+  private boolean useUpn;
+
   private Map<String, String> storageAccountKeys;
 
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
@@ -439,6 +443,10 @@ public class AbfsConfiguration{
 
   public boolean isHttpsAlwaysUsed() {
     return this.alwaysUseHttps;
+  }
+
+  public boolean isUpnUsed() {
+    return this.useUpn;
   }
 
   public AccessTokenProvider getTokenProvider() throws TokenAccessProviderException {
