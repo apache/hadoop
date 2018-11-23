@@ -35,7 +35,6 @@ import java.io.InputStream;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,21 +47,26 @@ import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.s3.SignedChunksInputStream;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
-
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.io.IOUtils;
-
 import org.apache.hadoop.ozone.s3.io.S3WrapperInputStream;
+import org.apache.hadoop.ozone.s3.util.RFC1123Util;
 import org.apache.hadoop.ozone.s3.util.RangeHeader;
 import org.apache.hadoop.ozone.s3.util.S3StorageType;
 import org.apache.hadoop.ozone.s3.util.S3utils;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.util.Time;
+
+import com.google.common.annotations.VisibleForTesting;
+import static javax.ws.rs.core.HttpHeaders.LAST_MODIFIED;
+import org.apache.commons.io.IOUtils;
+import static org.apache.hadoop.ozone.s3.util.S3Consts.ACCEPT_RANGE_HEADER;
+import static org.apache.hadoop.ozone.s3.util.S3Consts.CONTENT_RANGE_HEADER;
+import static org.apache.hadoop.ozone.s3.util.S3Consts.COPY_SOURCE_HEADER;
+import static org.apache.hadoop.ozone.s3.util.S3Consts.RANGE_HEADER;
+import static org.apache.hadoop.ozone.s3.util.S3Consts.RANGE_HEADER_SUPPORTED_UNIT;
+import static org.apache.hadoop.ozone.s3.util.S3Consts.STORAGE_CLASS_HEADER;
 import org.apache.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static org.apache.hadoop.ozone.s3.util.S3Consts.*;
 
 /**
  * Key level rest endpoints.
@@ -241,7 +245,7 @@ public class ObjectEndpoint extends EndpointBase {
           responseBuilder.header(responseHeader, headerValue);
         }
       }
-
+      addLastModifiedDate(responseBuilder, keyDetails);
       return responseBuilder.build();
     } catch (IOException ex) {
       if (ex.getMessage().contains("NOT_FOUND")) {
@@ -252,6 +256,18 @@ public class ObjectEndpoint extends EndpointBase {
         throw ex;
       }
     }
+  }
+
+  private void addLastModifiedDate(
+      ResponseBuilder responseBuilder, OzoneKeyDetails key) {
+
+    ZonedDateTime lastModificationTime =
+        Instant.ofEpochMilli(key.getModificationTime())
+            .atZone(ZoneId.of("GMT"));
+
+    responseBuilder
+        .header(LAST_MODIFIED,
+            RFC1123Util.FORMAT.format(lastModificationTime));
   }
 
   /**
@@ -279,16 +295,12 @@ public class ObjectEndpoint extends EndpointBase {
       }
     }
 
-    ZonedDateTime lastModificationTime =
-        Instant.ofEpochMilli(key.getModificationTime())
-            .atZone(ZoneId.of("GMT"));
-
-    return Response.ok().status(HttpStatus.SC_OK)
-        .header("Last-Modified",
-            DateTimeFormatter.RFC_1123_DATE_TIME.format(lastModificationTime))
+    ResponseBuilder response = Response.ok().status(HttpStatus.SC_OK)
         .header("ETag", "" + key.getModificationTime())
         .header("Content-Length", key.getDataSize())
-        .header("Content-Type", "binary/octet-stream")
+        .header("Content-Type", "binary/octet-stream");
+    addLastModifiedDate(response, key);
+    return response
         .build();
   }
 

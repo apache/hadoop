@@ -21,9 +21,11 @@
 package org.apache.hadoop.ozone.s3.endpoint;
 
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.time.format.DateTimeFormatter;
 
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClientStub;
@@ -68,7 +70,7 @@ public class TestObjectGet {
         new ByteArrayInputStream(CONTENT.getBytes(UTF_8));
 
     //WHEN
-    rest.get("b1", "key1", body);
+    Response response = rest.get("b1", "key1", body);
 
     //THEN
     OzoneInputStream ozoneInputStream =
@@ -78,5 +80,9 @@ public class TestObjectGet {
         IOUtils.toString(ozoneInputStream, Charset.forName("UTF-8"));
 
     Assert.assertEquals(CONTENT, keyContent);
+
+    DateTimeFormatter.RFC_1123_DATE_TIME
+        .parse(response.getHeaderString("Last-Modified"));
+
   }
 }
