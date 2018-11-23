@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.Progressable;
 
@@ -70,6 +71,7 @@ public class AliyunOSSFileSystem extends FileSystem {
       LoggerFactory.getLogger(AliyunOSSFileSystem.class);
   private URI uri;
   private String bucket;
+  private String username;
   private Path workingDir;
   private int blockOutputActiveBlocks;
   private AliyunOSSFileSystemStore store;
@@ -259,7 +261,7 @@ public class AliyunOSSFileSystem extends FileSystem {
 
     // Root always exists
     if (key.length() == 0) {
-      return new FileStatus(0, true, 1, 0, 0, qualifiedPath);
+      return new OSSFileStatus(0, true, 1, 0, 0, qualifiedPath, username);
     }
 
     ObjectMetadata meta = store.getObjectMetadata(key);
@@ -273,17 +275,17 @@ public class AliyunOSSFileSystem extends FileSystem {
       ObjectListing listing = store.listObjects(key, 1, null, false);
       if (CollectionUtils.isNotEmpty(listing.getObjectSummaries()) ||
           CollectionUtils.isNotEmpty(listing.getCommonPrefixes())) {
-        return new FileStatus(0, true, 1, 0, 0, qualifiedPath);
+        return new OSSFileStatus(0, true, 1, 0, 0, qualifiedPath, username);
       } else {
         throw new FileNotFoundException(path + ": No such file or directory!");
       }
     } else if (objectRepresentsDirectory(key, meta.getContentLength())) {
-      return new FileStatus(0, true, 1, 0, meta.getLastModified().getTime(),
-          qualifiedPath);
+      return new OSSFileStatus(0, true, 1, 0, meta.getLastModified().getTime(),
+          qualifiedPath, username);
     } else {
-      return new FileStatus(meta.getContentLength(), false, 1,
+      return new OSSFileStatus(meta.getContentLength(), false, 1,
           getDefaultBlockSize(path), meta.getLastModified().getTime(),
-          qualifiedPath);
+          qualifiedPath, username);
     }
   }
 
@@ -330,15 +332,16 @@ public class AliyunOSSFileSystem extends FileSystem {
 
     bucket = name.getHost();
     uri = java.net.URI.create(name.getScheme() + "://" + name.getAuthority());
-    workingDir = new Path("/user",
-        System.getProperty("user.name")).makeQualified(uri, null);
+    // Username is the current user at the time the FS was instantiated.
+    username = UserGroupInformation.getCurrentUser().getShortUserName();
+    workingDir = new Path("/user", username).makeQualified(uri, null);
     long keepAliveTime = longOption(conf,
         KEEPALIVE_TIME_KEY, KEEPALIVE_TIME_DEFAULT, 0);
     blockOutputActiveBlocks = intOption(conf,
         UPLOAD_ACTIVE_BLOCKS_KEY, UPLOAD_ACTIVE_BLOCKS_DEFAULT, 1);
 
     store = new AliyunOSSFileSystemStore();
-    store.initialize(name, conf, statistics);
+    store.initialize(name, conf, username, statistics);
     maxKeys = conf.getInt(MAX_PAGING_KEYS_KEY, MAX_PAGING_KEYS_DEFAULT);
 
     int threadNum = AliyunOSSUtils.intPositiveOption(conf,
@@ -423,9 +426,9 @@ public class AliyunOSSFileSystem extends FileSystem {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Adding: fi: " + keyPath);
             }
-            result.add(new FileStatus(objectSummary.getSize(), false, 1,
+            result.add(new OSSFileStatus(objectSummary.getSize(), false, 1,
                 getDefaultBlockSize(keyPath),
-                objectSummary.getLastModified().getTime(), keyPath));
+                objectSummary.getLastModified().getTime(), keyPath, username));
           }
         }
 
