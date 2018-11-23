@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.ChannelSftp.LsEntry;
 import com.jcraft.jsch.SftpATTRS;
@@ -219,7 +220,7 @@ public class SFTPFileSystem extends FileSystem {
       Path root = new Path("/");
       return new FileStatus(length, isDir, blockReplication, blockSize,
           modTime,
-          root.makeQualified(this.getUri(), this.getWorkingDirectory()));
+          root.makeQualified(this.getUri(), this.getWorkingDirectory(client)));
     }
     String pathName = parentPath.toUri().getPath();
     Vector<LsEntry> sftpFiles;
@@ -289,7 +290,7 @@ public class SFTPFileSystem extends FileSystem {
 
     return new FileStatus(length, isDir, blockReplication, blockSize, modTime,
         accessTime, permission, user, group, filePath.makeQualified(
-            this.getUri(), this.getWorkingDirectory()));
+            this.getUri(), this.getWorkingDirectory(channel)));
   }
 
   /**
@@ -524,10 +525,13 @@ public class SFTPFileSystem extends FileSystem {
     } catch (SftpException e) {
       throw new IOException(e);
     }
-
-    FSDataInputStream fis =
-        new FSDataInputStream(new SFTPInputStream(is, channel, statistics));
-    return fis;
+    return new FSDataInputStream(new SFTPInputStream(is, statistics)){
+      @Override
+      public void close() throws IOException {
+        super.close();
+        disconnect(channel);
+      }
+    };
   }
 
   /**
@@ -636,6 +640,16 @@ public class SFTPFileSystem extends FileSystem {
     return getHomeDirectory();
   }
 
+  /**
+   * Convenience method, so that we don't open a new connection when using this
+   * method from within another method. Otherwise every API invocation incurs
+   * the overhead of opening/closing a TCP connection.
+   */
+  private Path getWorkingDirectory(ChannelSftp client) {
+    // Return home directory always since we do not maintain state.
+    return getHomeDirectory(client);
+  }
+
   @Override
   public Path getHomeDirectory() {
     ChannelSftp channel = null;
@@ -651,6 +665,19 @@ public class SFTPFileSystem extends FileSystem {
       } catch (IOException ioe) {
         return null;
       }
+    }
+  }
+
+  /**
+   * Convenience method, so that we don't open a new connection when using this
+   * method from within another method. Otherwise every API invocation incurs
+   * the overhead of opening/closing a TCP connection.
+   */
+  private Path getHomeDirectory(ChannelSftp channel) {
+    try {
+      return new Path(channel.pwd());
+    } catch (Exception ioe) {
+      return null;
     }
   }
 
@@ -674,5 +701,10 @@ public class SFTPFileSystem extends FileSystem {
     } finally {
       disconnect(channel);
     }
+  }
+
+  @VisibleForTesting
+  SFTPConnectionPool getConnectionPool() {
+    return connectionPool;
   }
 }
