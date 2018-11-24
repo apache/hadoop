@@ -476,6 +476,7 @@ public abstract class HAAdmin extends Configured implements Tool {
     // Mutative commands take FORCEMANUAL option
     if ("-transitionToActive".equals(cmd) ||
         "-transitionToStandby".equals(cmd) ||
+        "-transitionToObserver".equals(cmd) ||
         "-failover".equals(cmd)) {
       opts.addOption(FORCEMANUAL, false,
           "force manual control even if auto-failover is enabled");
