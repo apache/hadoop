@@ -302,7 +302,7 @@ public class ObserverReadProxyProvider<T extends ClientProtocol>
         // If we get here, it means all observers have failed.
         LOG.warn("{} observers have failed for read request {}; also found " +
             "{} standby and {} active. Falling back to active.",
-            failedObserverCount, standbyCount, activeCount, method.getName());
+            failedObserverCount, method.getName(), standbyCount, activeCount);
       }
 
       // Either all observers have failed, or that it is a write request.
