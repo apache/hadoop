@@ -1826,16 +1826,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    */
   private boolean rejectRootDirectoryDelete(S3AFileStatus status,
       boolean recursive) throws IOException {
-    LOG.info("s3a delete the {} root directory of {}", bucket, recursive);
+    LOG.info("s3a delete the {} root directory. Path: {}. Recursive: {}",
+        bucket, status.getPath(), recursive);
     boolean emptyRoot = status.isEmptyDirectory() == Tristate.TRUE;
     if (emptyRoot) {
       return true;
     }
     if (recursive) {
+      LOG.error("Cannot delete root path: {}", status.getPath());
       return false;
     } else {
       // reject
-      throw new PathIOException(bucket, "Cannot delete root path");
+      String msg = "Cannot delete root path: " + status.getPath();
+      LOG.error(msg);
+      throw new PathIOException(bucket, msg);
     }
   }
 
