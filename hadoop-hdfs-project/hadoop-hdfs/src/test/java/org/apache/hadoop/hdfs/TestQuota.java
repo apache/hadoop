@@ -28,6 +28,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -332,6 +333,13 @@ public class TestQuota {
     // 14a: set quota on a non-existent directory
     Path nonExistentPath = new Path(dir, "test1");
     assertFalse(dfs.exists(nonExistentPath));
+    try {
+      compareQuotaUsage(null, dfs, nonExistentPath);
+      fail("Expected FileNotFoundException");
+    } catch (FileNotFoundException fnfe) {
+      GenericTestUtils.assertExceptionContains(
+          "File/Directory does not exist: " + nonExistentPath, fnfe);
+    }
     args = new String[]{"-setQuota", "1", nonExistentPath.toString()};
     runCommand(admin, args, true);
     runCommand(admin, true, "-setSpaceQuota", "1g", // for space quota
