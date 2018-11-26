@@ -80,6 +80,11 @@ import static org.apache.hadoop.test.LambdaTestUtils.*;
  * A table will be created and shared between the tests,
  */
 public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
+
+  public ITestDynamoDBMetadataStore() {
+    super();
+  }
+
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestDynamoDBMetadataStore.class);
   public static final PrimaryKey
@@ -574,8 +579,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   }
 
   @Test
-  public void testProvisionTable() throws IOException {
-    final String tableName = "testProvisionTable";
+  public void testProvisionTable() throws Exception {
+    final String tableName =  "testProvisionTable-" + UUID.randomUUID();
     Configuration conf = getFileSystem().getConf();
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
 
@@ -587,13 +592,18 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       ddbms.provisionTable(oldProvision.getReadCapacityUnits() * 2,
           oldProvision.getWriteCapacityUnits() * 2);
       ddbms.initTable();
+      // we have to wait until the provisioning settings are applied,
+      // so until the table is ACTIVE again and not in UPDATING
+      ddbms.getTable().waitForActive();
       final ProvisionedThroughputDescription newProvision =
           dynamoDB.getTable(tableName).describe().getProvisionedThroughput();
       LOG.info("Old provision = {}, new provision = {}", oldProvision,
           newProvision);
-      assertEquals(oldProvision.getReadCapacityUnits() * 2,
+      assertEquals("Check newly provisioned table read capacity units.",
+          oldProvision.getReadCapacityUnits() * 2,
           newProvision.getReadCapacityUnits().longValue());
-      assertEquals(oldProvision.getWriteCapacityUnits() * 2,
+      assertEquals("Check newly provisioned table write capacity units.",
+          oldProvision.getWriteCapacityUnits() * 2,
           newProvision.getWriteCapacityUnits().longValue());
       ddbms.destroy();
     }
