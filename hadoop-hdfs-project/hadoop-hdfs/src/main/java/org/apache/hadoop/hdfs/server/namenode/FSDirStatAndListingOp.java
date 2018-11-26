@@ -565,6 +565,10 @@ class FSDirStatAndListingOp {
     fsd.readLock();
     try {
       INode targetNode = iip.getLastINode();
+      if (targetNode == null) {
+        throw new FileNotFoundException(
+            "File/Directory does not exist: " + iip.getPath());
+      }
       QuotaUsage usage = null;
       if (targetNode.isDirectory()) {
         DirectoryWithQuotaFeature feature =
