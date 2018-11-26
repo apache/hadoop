@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.client.cli;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
@@ -100,6 +101,7 @@ public class ApplicationCLI extends YarnCLI {
   public static final String COMPONENT = "component";
   public static final String ENABLE_FAST_LAUNCH = "enableFastLaunch";
   public static final String UPGRADE_CMD = "upgrade";
+  public static final String UPGRADE_EXPRESS = "express";
   public static final String UPGRADE_INITIATE = "initiate";
   public static final String UPGRADE_AUTO_FINALIZE = "autoFinalize";
   public static final String UPGRADE_FINALIZE = "finalize";
@@ -247,6 +249,9 @@ public class ApplicationCLI extends YarnCLI {
       opts.addOption(UPGRADE_CMD, true, "Upgrades an application/long-" +
           "running service. It requires either -initiate, -instances, or " +
           "-finalize options.");
+      opts.addOption(UPGRADE_EXPRESS, true, "Works with -upgrade option to " +
+          "perform express upgrade.  It requires the upgraded application " +
+          "specification file.");
       opts.addOption(UPGRADE_INITIATE, true, "Works with -upgrade option to " +
           "initiate the application upgrade. It requires the upgraded " +
           "application specification file.");
@@ -639,9 +644,9 @@ public class ApplicationCLI extends YarnCLI {
       moveApplicationAcrossQueues(cliParser.getOptionValue(APP_ID),
           cliParser.getOptionValue(CHANGE_APPLICATION_QUEUE));
     } else if (cliParser.hasOption(UPGRADE_CMD)) {
-      if (hasAnyOtherCLIOptions(cliParser, opts, UPGRADE_CMD, UPGRADE_INITIATE,
-          UPGRADE_AUTO_FINALIZE, UPGRADE_FINALIZE, COMPONENT_INSTS, COMPONENTS,
-          APP_TYPE_CMD)) {
+      if (hasAnyOtherCLIOptions(cliParser, opts, UPGRADE_CMD, UPGRADE_EXPRESS,
+          UPGRADE_INITIATE, UPGRADE_AUTO_FINALIZE, UPGRADE_FINALIZE,
+          COMPONENT_INSTS, COMPONENTS, APP_TYPE_CMD)) {
         printUsage(title, opts);
         return exitCode;
       }
@@ -649,7 +654,14 @@ public class ApplicationCLI extends YarnCLI {
       AppAdminClient client =  AppAdminClient.createAppAdminClient(appType,
           getConf());
       String appName = cliParser.getOptionValue(UPGRADE_CMD);
-      if (cliParser.hasOption(UPGRADE_INITIATE)) {
+      if (cliParser.hasOption(UPGRADE_EXPRESS)) {
+        File file = new File(cliParser.getOptionValue(UPGRADE_EXPRESS));
+        if (!file.exists()) {
+          System.err.println(file.getAbsolutePath() + " does not exist.");
+          return exitCode;
+        }
+        return client.actionUpgradeExpress(appName, file);
+      } else if (cliParser.hasOption(UPGRADE_INITIATE)) {
         if (hasAnyOtherCLIOptions(cliParser, opts, UPGRADE_CMD,
             UPGRADE_INITIATE, UPGRADE_AUTO_FINALIZE, APP_TYPE_CMD)) {
           printUsage(title, opts);

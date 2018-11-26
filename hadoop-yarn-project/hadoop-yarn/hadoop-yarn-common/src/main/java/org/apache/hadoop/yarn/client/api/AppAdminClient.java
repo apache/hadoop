@@ -26,6 +26,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -288,4 +289,15 @@ public abstract class AppAdminClient extends CompositeService {
       List<String> components, String version, List<String> containerStates)
       throws IOException, YarnException;
 
+  /**
+   * Express upgrade a long running service.
+   *
+   * @param appName  the name of the application
+   * @param fileName specification of application upgrade to save.
+   * @return exit code
+   */
+  @Public
+  @Unstable
+  public abstract int actionUpgradeExpress(String appName, File fileName)
+      throws IOException, YarnException;
 }
