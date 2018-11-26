@@ -51,6 +51,7 @@ import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.security.Principal;
 import java.util.Enumeration;
@@ -230,7 +231,12 @@ public class DelegationTokenAuthenticationFilter
       for (NameValuePair nv : list) {
         if (DelegationTokenAuthenticatedURL.DO_AS.
             equalsIgnoreCase(nv.getName())) {
-          return nv.getValue();
+          String doAsUser = nv.getValue();
+          try {
+            doAsUser = URLDecoder.decode(nv.getValue(), UTF8_CHARSET.name());
+          } finally {
+            return doAsUser;
+          }
         }
       }
     }
