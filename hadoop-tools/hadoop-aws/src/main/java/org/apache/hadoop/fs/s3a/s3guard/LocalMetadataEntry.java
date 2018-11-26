@@ -31,6 +31,9 @@ public final class LocalMetadataEntry {
   @Nullable
   private DirListingMetadata dirListingMetadata;
 
+  LocalMetadataEntry() {
+  }
+
   LocalMetadataEntry(PathMetadata pmd){
     pathMetadata = pmd;
     dirListingMetadata = null;
