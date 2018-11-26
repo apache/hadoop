@@ -124,6 +124,8 @@
                   <include>server/application_history_server.proto</include>
                   <include>client_SCM_protocol.proto</include>
                   <include>server/SCM_Admin_protocol.proto</include>
+                  <include>yarn_csi_adaptor.proto</include>
+                  <include>YarnCsiAdaptor.proto</include>
                 </includes>
               </source>
             </configuration>

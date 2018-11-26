@@ -83,6 +83,8 @@ public class DownloadAndImportReplicator implements ContainerReplicator {
             originalContainerData.getContainerType(),
             containerID,
             originalContainerData.getMaxSize(),
+            originalContainerData.getOriginPipelineId(),
+            originalContainerData.getOriginNodeId(),
             tempContainerTarStream,
             packer);
 

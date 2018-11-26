@@ -18,9 +18,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager.volume.csi;
 
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.yarn.api.CsiAdaptorProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesResponse;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.event.ControllerPublishVolumeEvent;
-import org.apache.hadoop.yarn.server.volume.csi.CsiAdaptorClientProtocol;
-import org.apache.hadoop.yarn.server.volume.csi.exception.InvalidVolumeException;
 import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.event.ValidateVolumeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.lifecycle.VolumeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.lifecycle.VolumeState;
@@ -29,8 +31,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.io.IOException;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.mockito.Mockito.*;
 
@@ -40,7 +42,13 @@ import static org.mockito.Mockito.*;
 public class TestVolumeLifecycle {
 
   @Test
-  public void testValidation() throws InvalidVolumeException {
+  public void testValidation() throws YarnException, IOException {
+    CsiAdaptorProtocol mockedClient = Mockito
+        .mock(CsiAdaptorProtocol.class);
+    doReturn(ValidateVolumeCapabilitiesResponse.newInstance(true, ""))
+        .when(mockedClient)
+       .validateVolumeCapacity(any(ValidateVolumeCapabilitiesRequest.class));
+
     VolumeImpl volume = (VolumeImpl) VolumeBuilder.newBuilder()
         .volumeId("test_vol_00000001")
         .maxCapability(5L)
@@ -48,6 +56,7 @@ public class TestVolumeLifecycle {
         .mountPoint("/path/to/mount")
         .driverName("test-driver-name")
         .build();
+    volume.setClient(mockedClient);
     Assert.assertEquals(VolumeState.NEW, volume.getVolumeState());
 
     volume.handle(new ValidateVolumeEvent(volume));
@@ -55,16 +64,19 @@ public class TestVolumeLifecycle {
   }
 
   @Test
-  public void testValidationFailure() throws VolumeException {
+  public void testVolumeCapacityNotSupported() throws Exception {
+    CsiAdaptorProtocol mockedClient = Mockito
+        .mock(CsiAdaptorProtocol.class);
+
     VolumeImpl volume = (VolumeImpl) VolumeBuilder
         .newBuilder().volumeId("test_vol_00000001").build();
-    CsiAdaptorClientProtocol mockedClient = Mockito
-        .mock(CsiAdaptorClientProtocol.class);
     volume.setClient(mockedClient);
 
     // NEW -> UNAVAILABLE
     // Simulate a failed API call to the adaptor
-    doThrow(new VolumeException("failed")).when(mockedClient).validateVolume();
+    doReturn(ValidateVolumeCapabilitiesResponse.newInstance(false, ""))
+        .when(mockedClient)
+        .validateVolumeCapacity(any(ValidateVolumeCapabilitiesRequest.class));
     volume.handle(new ValidateVolumeEvent(volume));
 
     try {
@@ -80,47 +92,62 @@ public class TestVolumeLifecycle {
   }
 
   @Test
-  public void testValidated() throws InvalidVolumeException {
-    AtomicInteger validatedTimes = new AtomicInteger(0);
+  public void testValidationFailure() throws YarnException, IOException {
+    CsiAdaptorProtocol mockedClient = Mockito
+        .mock(CsiAdaptorProtocol.class);
+    doThrow(new VolumeException("fail"))
+        .when(mockedClient)
+        .validateVolumeCapacity(any(ValidateVolumeCapabilitiesRequest.class));
+
     VolumeImpl volume = (VolumeImpl) VolumeBuilder
         .newBuilder().volumeId("test_vol_00000001").build();
-    CsiAdaptorClientProtocol mockedClient = new CsiAdaptorClientProtocol() {
-      @Override
-      public void validateVolume() {
-        validatedTimes.incrementAndGet();
-      }
+    volume.setClient(mockedClient);
 
-      @Override
-      public void controllerPublishVolume() {
-        // do nothing
-      }
-    };
+    // NEW -> UNAVAILABLE
+    // Simulate a failed API call to the adaptor
+    doThrow(new VolumeException("failed"))
+        .when(mockedClient)
+        .validateVolumeCapacity(any(ValidateVolumeCapabilitiesRequest.class));
+    volume.handle(new ValidateVolumeEvent(volume));
+  }
+
+  @Test
+  public void testValidated() throws YarnException, IOException {
+    VolumeImpl volume = (VolumeImpl) VolumeBuilder
+        .newBuilder().volumeId("test_vol_00000001").build();
+    CsiAdaptorProtocol mockedClient = Mockito.mock(CsiAdaptorProtocol.class);
     // The client has a count to memorize how many times being called
     volume.setClient(mockedClient);
 
     // NEW -> VALIDATED
+    doReturn(ValidateVolumeCapabilitiesResponse.newInstance(true, ""))
+        .when(mockedClient)
+        .validateVolumeCapacity(any(ValidateVolumeCapabilitiesRequest.class));
     Assert.assertEquals(VolumeState.NEW, volume.getVolumeState());
     volume.handle(new ValidateVolumeEvent(volume));
     Assert.assertEquals(VolumeState.VALIDATED, volume.getVolumeState());
-    Assert.assertEquals(1, validatedTimes.get());
+    verify(mockedClient, times(1))
+        .validateVolumeCapacity(any(ValidateVolumeCapabilitiesRequest.class));
 
     // VALIDATED -> VALIDATED
     volume.handle(new ValidateVolumeEvent(volume));
     Assert.assertEquals(VolumeState.VALIDATED, volume.getVolumeState());
-    Assert.assertEquals(1, validatedTimes.get());
+    verify(mockedClient, times(1))
+        .validateVolumeCapacity(any(ValidateVolumeCapabilitiesRequest.class));
   }
 
   @Test
-  public void testUnavailableState() throws VolumeException {
+  public void testUnavailableState() throws YarnException, IOException {
     VolumeImpl volume = (VolumeImpl) VolumeBuilder
         .newBuilder().volumeId("test_vol_00000001").build();
-    CsiAdaptorClientProtocol mockedClient = Mockito
-        .mock(CsiAdaptorClientProtocol.class);
+    CsiAdaptorProtocol mockedClient = Mockito
+        .mock(CsiAdaptorProtocol.class);
     volume.setClient(mockedClient);
 
     // NEW -> UNAVAILABLE
-    doThrow(new VolumeException("failed")).when(mockedClient)
-        .validateVolume();
+    doThrow(new VolumeException("failed"))
+        .when(mockedClient)
+        .validateVolumeCapacity(any(ValidateVolumeCapabilitiesRequest.class));
     Assert.assertEquals(VolumeState.NEW, volume.getVolumeState());
     volume.handle(new ValidateVolumeEvent(volume));
     Assert.assertEquals(VolumeState.UNAVAILABLE, volume.getVolumeState());
@@ -130,23 +157,26 @@ public class TestVolumeLifecycle {
     Assert.assertEquals(VolumeState.UNAVAILABLE, volume.getVolumeState());
 
     // UNAVAILABLE -> VALIDATED
-    doNothing().when(mockedClient).validateVolume();
+    doReturn(ValidateVolumeCapabilitiesResponse.newInstance(true, ""))
+        .when(mockedClient)
+        .validateVolumeCapacity(any(ValidateVolumeCapabilitiesRequest.class));
     volume.setClient(mockedClient);
     volume.handle(new ValidateVolumeEvent(volume));
     Assert.assertEquals(VolumeState.VALIDATED, volume.getVolumeState());
   }
 
   @Test
-  public void testPublishUnavailableVolume() throws VolumeException {
+  public void testPublishUnavailableVolume() throws YarnException, IOException {
     VolumeImpl volume = (VolumeImpl) VolumeBuilder
         .newBuilder().volumeId("test_vol_00000001").build();
-    CsiAdaptorClientProtocol mockedClient = Mockito
-        .mock(CsiAdaptorClientProtocol.class);
+    CsiAdaptorProtocol mockedClient = Mockito
+        .mock(CsiAdaptorProtocol.class);
     volume.setClient(mockedClient);
 
     // NEW -> UNAVAILABLE (on validateVolume)
-    doThrow(new VolumeException("failed")).when(mockedClient)
-        .validateVolume();
+    doThrow(new VolumeException("failed"))
+        .when(mockedClient)
+        .validateVolumeCapacity(any(ValidateVolumeCapabilitiesRequest.class));
     Assert.assertEquals(VolumeState.NEW, volume.getVolumeState());
     volume.handle(new ValidateVolumeEvent(volume));
     Assert.assertEquals(VolumeState.UNAVAILABLE, volume.getVolumeState());
@@ -154,7 +184,7 @@ public class TestVolumeLifecycle {
     // UNAVAILABLE -> UNAVAILABLE (on publishVolume)
     volume.handle(new ControllerPublishVolumeEvent(volume));
     // controller publish is not called since the state is UNAVAILABLE
-    verify(mockedClient, times(0)).controllerPublishVolume();
+    // verify(mockedClient, times(0)).controllerPublishVolume();
     // state remains to UNAVAILABLE
     Assert.assertEquals(VolumeState.UNAVAILABLE, volume.getVolumeState());
   }

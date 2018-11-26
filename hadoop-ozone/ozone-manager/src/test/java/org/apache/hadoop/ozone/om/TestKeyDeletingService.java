@@ -95,9 +95,6 @@ public class TestKeyDeletingService {
     createAndDeleteKeys(keyManager, keyCount, 1);
     KeyDeletingService keyDeletingService =
         (KeyDeletingService) keyManager.getDeletingService();
-    keyManager.start();
-    Assert.assertEquals(
-        keyManager.getPendingDeletionKeys(Integer.MAX_VALUE).size(), keyCount);
     GenericTestUtils.waitFor(
         () -> keyDeletingService.getDeletedKeyCount().get() >= keyCount,
         1000, 10000);
@@ -120,7 +117,7 @@ public class TestKeyDeletingService {
     createAndDeleteKeys(keyManager, keyCount, 1);
     KeyDeletingService keyDeletingService =
         (KeyDeletingService) keyManager.getDeletingService();
-    keyManager.start();
+    keyManager.start(conf);
     Assert.assertEquals(
         keyManager.getPendingDeletionKeys(Integer.MAX_VALUE).size(), keyCount);
     // Make sure that we have run the background thread 5 times more
@@ -147,7 +144,7 @@ public class TestKeyDeletingService {
     createAndDeleteKeys(keyManager, keyCount, 0);
     KeyDeletingService keyDeletingService =
         (KeyDeletingService) keyManager.getDeletingService();
-    keyManager.start();
+    keyManager.start(conf);
 
     // Since empty keys are directly deleted from db there should be no
     // pending deletion keys. Also deletedKeyCount should be zero.

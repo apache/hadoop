@@ -32,6 +32,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.util.Time;
 import org.apache.ratis.thirdparty.io.grpc.ManagedChannel;
 import org.apache.ratis.thirdparty.io.grpc.netty.NettyChannelBuilder;
@@ -103,7 +104,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     LOG.debug("Connecting to server Port : " + dn.getIpAddress());
     ManagedChannel channel =
         NettyChannelBuilder.forAddress(dn.getIpAddress(), port).usePlaintext()
-            .maxInboundMessageSize(OzoneConfigKeys.DFS_CONTAINER_CHUNK_MAX_SIZE)
+            .maxInboundMessageSize(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE)
             .build();
     XceiverClientProtocolServiceStub asyncStub =
         XceiverClientProtocolServiceGrpc.newStub(channel);
@@ -288,22 +289,10 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     }
   }
 
-  /**
-   * Create a pipeline.
-   */
-  @Override
-  public void createPipeline() {
-    // For stand alone pipeline, there is no notion called setup pipeline.
-  }
-
-  @Override
-  public void destroyPipeline() {
-    // For stand alone pipeline, there is no notion called destroy pipeline.
-  }
-
   @Override
   public void watchForCommit(long index, long timeout)
-      throws InterruptedException, ExecutionException, TimeoutException {
+      throws InterruptedException, ExecutionException, TimeoutException,
+      IOException {
     // there is no notion of watch for commit index in standalone pipeline
   };
 

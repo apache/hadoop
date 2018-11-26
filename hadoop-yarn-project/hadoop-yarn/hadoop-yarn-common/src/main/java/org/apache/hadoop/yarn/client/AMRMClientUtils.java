@@ -197,8 +197,7 @@ public final class AMRMClientUtils {
       return;
     }
     for (Container container : containers) {
-      if (container.getAllocationTags() != null
-          && !container.getAllocationTags().isEmpty()) {
+      if (container.getAllocationTags() != null) {
         List<SchedulingRequest> schedReqs =
             outstandingSchedRequests.get(container.getAllocationTags());
         if (schedReqs != null && !schedReqs.isEmpty()) {

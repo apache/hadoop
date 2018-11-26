@@ -24,6 +24,7 @@ import java.util.Optional;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -392,6 +393,7 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
       Files.createDirectories(metaDir);
       conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, metaDir.toString());
       if (!chunkSize.isPresent()) {
+        //set it to 1MB by default in tests
         chunkSize = Optional.of(1);
       }
       if (!streamBufferFlushSize.isPresent()) {
@@ -403,13 +405,14 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
       if (!blockSize.isPresent()) {
         blockSize = Optional.of(2 * streamBufferMaxSize.get());
       }
-      conf.setInt(ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY,
-          (int) (chunkSize.get() * OzoneConsts.MB));
-      conf.setLong(OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE,
-          streamBufferFlushSize.get());
-      conf.setLong(OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_MAX_SIZE,
-          streamBufferMaxSize.get());
-      conf.setLong(OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_IN_MB, blockSize.get());
+      conf.setStorageSize(ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY,
+          chunkSize.get(), StorageUnit.MB);
+      conf.setStorageSize(OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE,
+          streamBufferFlushSize.get(), StorageUnit.MB);
+      conf.setStorageSize(OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_MAX_SIZE,
+          streamBufferMaxSize.get(), StorageUnit.MB);
+      conf.setStorageSize(OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE, blockSize.get(),
+          StorageUnit.MB);
       configureTrace();
     }
 

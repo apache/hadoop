@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.csi.client;
 
+import csi.v0.Csi;
 import csi.v0.Csi.GetPluginInfoRequest;
 import csi.v0.Csi.GetPluginInfoResponse;
 import org.apache.hadoop.yarn.csi.utils.GrpcHelper;
@@ -46,6 +47,16 @@ public class CsiClientImpl implements CsiClient {
         .setDomainSocketAddress(address).build()) {
       GetPluginInfoRequest request = GetPluginInfoRequest.getDefaultInstance();
       return client.createIdentityBlockingStub().getPluginInfo(request);
+    }
+  }
+
+  @Override
+  public Csi.ValidateVolumeCapabilitiesResponse validateVolumeCapabilities(
+      Csi.ValidateVolumeCapabilitiesRequest request) throws IOException {
+    try (CsiGrpcClient client = CsiGrpcClient.newBuilder()
+        .setDomainSocketAddress(address).build()) {
+      return client.createControllerBlockingStub()
+          .validateVolumeCapabilities(request);
     }
   }
 }

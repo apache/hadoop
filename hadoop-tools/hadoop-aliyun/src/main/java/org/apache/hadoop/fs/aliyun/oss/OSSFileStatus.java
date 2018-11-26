@@ -15,20 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.volume.csi;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.server.volume.csi.exception.VolumeException;
+package org.apache.hadoop.fs.aliyun.oss;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 
 /**
- * Protocol for the CSI adaptor.
+ * This class is used by listStatus for oss files.
  */
-@Private
-@Unstable
-public interface CsiAdaptorClientProtocol {
-
-  void validateVolume() throws VolumeException;
-
-  void controllerPublishVolume() throws VolumeException;
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
+public class OSSFileStatus extends FileStatus {
+  public OSSFileStatus(long length, boolean isdir, int blockReplication,
+      long blocksize, long modTime, Path path, String user) {
+    super(length, isdir, blockReplication, blocksize, modTime, path);
+    setOwner(user);
+    setGroup(user);
+  }
 }

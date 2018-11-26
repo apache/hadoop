@@ -24,7 +24,6 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
@@ -40,6 +39,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.storage.ChunkOutputStream;
+import org.apache.ratis.protocol.RaftRetryFailureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -159,9 +159,9 @@ public class ChunkGroupOutputStream extends OutputStream {
     this.xceiverClientManager = xceiverClientManager;
     this.chunkSize = chunkSize;
     this.requestID = requestId;
-    this.streamBufferFlushSize = bufferFlushSize * OzoneConsts.MB;
-    this.streamBufferMaxSize = bufferMaxSize * OzoneConsts.MB;
-    this.blockSize = size * OzoneConsts.MB;
+    this.streamBufferFlushSize = bufferFlushSize;
+    this.streamBufferMaxSize = bufferMaxSize;
+    this.blockSize = size;
     this.watchTimeout = watchTimeout;
 
     Preconditions.checkState(chunkSize > 0);
@@ -394,7 +394,7 @@ public class ChunkGroupOutputStream extends OutputStream {
 
   private boolean checkIfContainerIsClosed(IOException ioe) {
     if (ioe.getCause() != null) {
-      return checkIfContainerNotOpenException(ioe) || Optional
+      return checkIfContainerNotOpenOrRaftRetryFailureException(ioe) || Optional
           .of(ioe.getCause())
           .filter(e -> e instanceof StorageContainerException)
           .map(e -> (StorageContainerException) e)
@@ -404,10 +404,12 @@ public class ChunkGroupOutputStream extends OutputStream {
     return false;
   }
 
-  private boolean checkIfContainerNotOpenException(IOException ioe) {
+  private boolean checkIfContainerNotOpenOrRaftRetryFailureException(
+      IOException ioe) {
     Throwable t = ioe.getCause();
     while (t != null) {
-      if (t instanceof ContainerNotOpenException) {
+      if (t instanceof ContainerNotOpenException
+          || t instanceof RaftRetryFailureException) {
         return true;
       }
       t = t.getCause();

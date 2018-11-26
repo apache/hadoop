@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
@@ -32,6 +33,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
+import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
@@ -87,6 +90,10 @@ public class TestKeyValueHandler {
     Mockito.when(handler.handle(any(), any())).thenCallRealMethod();
     doCallRealMethod().when(dispatcher).setMetricsForTesting(any());
     dispatcher.setMetricsForTesting(Mockito.mock(ContainerMetrics.class));
+    Mockito.when(dispatcher.buildAuditMessageForFailure(any(), any(), any()))
+        .thenCallRealMethod();
+    Mockito.when(dispatcher.buildAuditMessageForSuccess(any(), any()))
+        .thenCallRealMethod();
   }
 
   @Test
@@ -225,7 +232,14 @@ public class TestKeyValueHandler {
       interval[0] = 2;
       ContainerMetrics metrics = new ContainerMetrics(interval);
       VolumeSet volumeSet = new VolumeSet(UUID.randomUUID().toString(), conf);
-      KeyValueHandler keyValueHandler = new KeyValueHandler(conf, null, cset,
+      DatanodeDetails datanodeDetails = Mockito.mock(DatanodeDetails.class);
+      DatanodeStateMachine stateMachine = Mockito.mock(
+          DatanodeStateMachine.class);
+      StateContext context = Mockito.mock(StateContext.class);
+      Mockito.when(stateMachine.getDatanodeDetails())
+          .thenReturn(datanodeDetails);
+      Mockito.when(context.getParent()).thenReturn(stateMachine);
+      KeyValueHandler keyValueHandler = new KeyValueHandler(conf, context, cset,
           volumeSet, metrics);
       assertEquals("org.apache.hadoop.ozone.container.common" +
           ".volume.RoundRobinVolumeChoosingPolicy",
@@ -236,7 +250,7 @@ public class TestKeyValueHandler {
       conf.set(HDDS_DATANODE_VOLUME_CHOOSING_POLICY,
           "org.apache.hadoop.ozone.container.common.impl.HddsDispatcher");
       try {
-        new KeyValueHandler(conf, null, cset, volumeSet, metrics);
+        new KeyValueHandler(conf, context, cset, volumeSet, metrics);
       } catch (RuntimeException ex) {
         GenericTestUtils.assertExceptionContains("class org.apache.hadoop" +
             ".ozone.container.common.impl.HddsDispatcher not org.apache" +
@@ -266,7 +280,8 @@ public class TestKeyValueHandler {
     long containerID = 1234L;
     Configuration conf = new Configuration();
     KeyValueContainerData kvData = new KeyValueContainerData(containerID,
-        (long) StorageUnit.GB.toBytes(1));
+        (long) StorageUnit.GB.toBytes(1), UUID.randomUUID().toString(),
+        UUID.randomUUID().toString());
     KeyValueContainer container = new KeyValueContainer(kvData, conf);
     kvData.setState(ContainerProtos.ContainerDataProto.State.INVALID);
 

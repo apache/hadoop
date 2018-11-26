@@ -729,6 +729,8 @@
                         <exclude>objenesis-license.txt</exclude>
                         <exclude>org/hamcrest/**/*.class</exclude>
                         <exclude>org/hamcrest/*.class</exclude>
+                        <exclude>org/objenesis/**/*.class</exclude>
+                        <exclude>org/objenesis/*.class</exclude>
                       </excludes>
                     </filter>
                     <!-- skip grizzly internals we don't need to run. -->
@@ -786,7 +788,19 @@
                     <filter>
                       <artifact>org.eclipse.jetty.websocket:javax-websocket-server-impl</artifact>
                       <excludes>
-                        <exclude>*</exclude>
+                        <exclude>*/**</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <artifact>org.eclipse.jetty.websocket:websocket-client</artifact>
+                      <excludes>
+                        <exclude>*/**</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <artifact>org.eclipse.jetty:jetty-io</artifact>
+                      <excludes>
+                        <exclude>*/**</exclude>
                       </excludes>
                     </filter>
                   </filters>

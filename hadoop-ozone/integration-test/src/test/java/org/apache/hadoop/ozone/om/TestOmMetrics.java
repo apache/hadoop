@@ -18,13 +18,23 @@ package org.apache.hadoop.ozone.om;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.client.ContainerBlockID;
 import org.apache.hadoop.hdds.scm.HddsWhiteboxTestUtils;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
+import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
+import org.apache.hadoop.test.MetricsAsserts;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -51,6 +61,8 @@ public class TestOmMetrics {
   @Before
   public void setup() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
+    conf.setTimeDuration(OMConfigKeys.OZONE_OM_METRICS_SAVE_INTERVAL,
+        1000, TimeUnit.MILLISECONDS);
     cluster = MiniOzoneCluster.newBuilder(conf).build();
     cluster.waitForClusterToBeReady();
     ozoneManager = cluster.getOzoneManager();
@@ -65,6 +77,8 @@ public class TestOmMetrics {
       cluster.shutdown();
     }
   }
+
+
 
   @Test
   public void testVolumeOps() throws IOException {
@@ -92,6 +106,16 @@ public class TestOmMetrics {
     assertCounter("NumVolumeCheckAccesses", 1L, omMetrics);
     assertCounter("NumVolumeDeletes", 1L, omMetrics);
     assertCounter("NumVolumeLists", 1L, omMetrics);
+    assertCounter("NumVolumes", 0L, omMetrics);
+
+    ozoneManager.createVolume(null);
+    ozoneManager.createVolume(null);
+    ozoneManager.createVolume(null);
+    ozoneManager.deleteVolume(null);
+
+    omMetrics = getMetrics("OMMetrics");
+    assertCounter("NumVolumes", 2L, omMetrics);
+
 
     // inject exception to test for Failure Metrics
     Mockito.doThrow(exception).when(mockVm).createVolume(null);
@@ -106,12 +130,12 @@ public class TestOmMetrics {
     doVolumeOps();
 
     omMetrics = getMetrics("OMMetrics");
-    assertCounter("NumVolumeOps", 12L, omMetrics);
-    assertCounter("NumVolumeCreates", 2L, omMetrics);
+    assertCounter("NumVolumeOps", 16L, omMetrics);
+    assertCounter("NumVolumeCreates", 5L, omMetrics);
     assertCounter("NumVolumeUpdates", 2L, omMetrics);
     assertCounter("NumVolumeInfos", 2L, omMetrics);
     assertCounter("NumVolumeCheckAccesses", 2L, omMetrics);
-    assertCounter("NumVolumeDeletes", 2L, omMetrics);
+    assertCounter("NumVolumeDeletes", 3L, omMetrics);
     assertCounter("NumVolumeLists", 2L, omMetrics);
 
     assertCounter("NumVolumeCreateFails", 1L, omMetrics);
@@ -120,6 +144,15 @@ public class TestOmMetrics {
     assertCounter("NumVolumeCheckAccessFails", 1L, omMetrics);
     assertCounter("NumVolumeDeleteFails", 1L, omMetrics);
     assertCounter("NumVolumeListFails", 1L, omMetrics);
+
+    // As last call for volumesOps does not increment numVolumes as those are
+    // failed.
+    assertCounter("NumVolumes", 2L, omMetrics);
+
+    cluster.restartOzoneManager();
+    assertCounter("NumVolumes", 2L, omMetrics);
+
+
   }
 
   @Test
@@ -129,6 +162,16 @@ public class TestOmMetrics {
             ozoneManager, "bucketManager");
     BucketManager mockBm = Mockito.spy(bucketManager);
 
+    S3BucketManager s3BucketManager =
+        (S3BucketManager) HddsWhiteboxTestUtils.getInternalState(
+            ozoneManager, "s3BucketManager");
+    S3BucketManager mockS3Bm = Mockito.spy(s3BucketManager);
+
+    Mockito.doNothing().when(mockS3Bm).createS3Bucket("random", "random");
+    Mockito.doNothing().when(mockS3Bm).deleteS3Bucket("random");
+    Mockito.doReturn(true).when(mockS3Bm).createOzoneVolumeIfNeeded(null);
+
+    Mockito.doNothing().when(mockBm).createBucket(null);
     Mockito.doNothing().when(mockBm).createBucket(null);
     Mockito.doNothing().when(mockBm).deleteBucket(null, null);
     Mockito.doReturn(null).when(mockBm).getBucketInfo(null, null);
@@ -146,6 +189,35 @@ public class TestOmMetrics {
     assertCounter("NumBucketInfos", 1L, omMetrics);
     assertCounter("NumBucketDeletes", 1L, omMetrics);
     assertCounter("NumBucketLists", 1L, omMetrics);
+    assertCounter("NumBuckets", 0L, omMetrics);
+
+    ozoneManager.createBucket(null);
+    ozoneManager.createBucket(null);
+    ozoneManager.createBucket(null);
+    ozoneManager.deleteBucket(null, null);
+
+    //Taking already existing value, as the same metrics is used over all the
+    // test cases.
+    long numVolumesOps = MetricsAsserts.getLongCounter("NumVolumeOps",
+        omMetrics);
+    long numVolumes = MetricsAsserts.getLongCounter("NumVolumes",
+        omMetrics);
+    long numVolumeCreates = MetricsAsserts.getLongCounter("NumVolumeCreates",
+        omMetrics);
+
+    ozoneManager.createS3Bucket("random", "random");
+    ozoneManager.createS3Bucket("random1", "random1");
+    ozoneManager.createS3Bucket("random2", "random2");
+    ozoneManager.deleteS3Bucket("random");
+
+    omMetrics = getMetrics("OMMetrics");
+    assertCounter("NumBuckets", 4L, omMetrics);
+
+    assertCounter("NumVolumeOps", numVolumesOps + 3, omMetrics);
+    assertCounter("NumVolumeCreates", numVolumeCreates + 3, omMetrics);
+    assertCounter("NumVolumes", numVolumes + 3, omMetrics);
+
+
 
     // inject exception to test for Failure Metrics
     Mockito.doThrow(exception).when(mockBm).createBucket(null);
@@ -159,11 +231,11 @@ public class TestOmMetrics {
     doBucketOps();
 
     omMetrics = getMetrics("OMMetrics");
-    assertCounter("NumBucketOps", 10L, omMetrics);
-    assertCounter("NumBucketCreates", 2L, omMetrics);
+    assertCounter("NumBucketOps", 18L, omMetrics);
+    assertCounter("NumBucketCreates", 8L, omMetrics);
     assertCounter("NumBucketUpdates", 2L, omMetrics);
     assertCounter("NumBucketInfos", 2L, omMetrics);
-    assertCounter("NumBucketDeletes", 2L, omMetrics);
+    assertCounter("NumBucketDeletes", 4L, omMetrics);
     assertCounter("NumBucketLists", 2L, omMetrics);
 
     assertCounter("NumBucketCreateFails", 1L, omMetrics);
@@ -171,29 +243,49 @@ public class TestOmMetrics {
     assertCounter("NumBucketInfoFails", 1L, omMetrics);
     assertCounter("NumBucketDeleteFails", 1L, omMetrics);
     assertCounter("NumBucketListFails", 1L, omMetrics);
+
+    assertCounter("NumBuckets", 4L, omMetrics);
+
+    cluster.restartOzoneManager();
+    assertCounter("NumBuckets", 4L, omMetrics);
   }
 
   @Test
   public void testKeyOps() throws IOException {
-    KeyManager bucketManager = (KeyManager) HddsWhiteboxTestUtils
+    KeyManager keyManager = (KeyManager) HddsWhiteboxTestUtils
         .getInternalState(ozoneManager, "keyManager");
-    KeyManager mockKm = Mockito.spy(bucketManager);
+    KeyManager mockKm = Mockito.spy(keyManager);
 
     Mockito.doReturn(null).when(mockKm).openKey(null);
     Mockito.doNothing().when(mockKm).deleteKey(null);
     Mockito.doReturn(null).when(mockKm).lookupKey(null);
     Mockito.doReturn(null).when(mockKm).listKeys(null, null, null, null, 0);
+    Mockito.doNothing().when(mockKm).commitKey(any(OmKeyArgs.class), anyLong());
 
     HddsWhiteboxTestUtils.setInternalState(
         ozoneManager, "keyManager", mockKm);
     doKeyOps();
 
     MetricsRecordBuilder omMetrics = getMetrics("OMMetrics");
-    assertCounter("NumKeyOps", 4L, omMetrics);
+    assertCounter("NumKeyOps", 5L, omMetrics);
     assertCounter("NumKeyAllocate", 1L, omMetrics);
     assertCounter("NumKeyLookup", 1L, omMetrics);
     assertCounter("NumKeyDeletes", 1L, omMetrics);
     assertCounter("NumKeyLists", 1L, omMetrics);
+    assertCounter("NumKeys", 0L, omMetrics);
+
+
+    ozoneManager.openKey(null);
+    ozoneManager.commitKey(createKeyArgs(), 0);
+    ozoneManager.openKey(null);
+    ozoneManager.commitKey(createKeyArgs(), 0);
+    ozoneManager.openKey(null);
+    ozoneManager.commitKey(createKeyArgs(), 0);
+    ozoneManager.deleteKey(null);
+
+
+    omMetrics = getMetrics("OMMetrics");
+    assertCounter("NumKeys", 2L, omMetrics);
 
     // inject exception to test for Failure Metrics
     Mockito.doThrow(exception).when(mockKm).openKey(null);
@@ -201,22 +293,30 @@ public class TestOmMetrics {
     Mockito.doThrow(exception).when(mockKm).lookupKey(null);
     Mockito.doThrow(exception).when(mockKm).listKeys(
         null, null, null, null, 0);
+    Mockito.doThrow(exception).when(mockKm).commitKey(any(OmKeyArgs.class),
+        anyLong());
 
     HddsWhiteboxTestUtils.setInternalState(
         ozoneManager, "keyManager", mockKm);
     doKeyOps();
 
     omMetrics = getMetrics("OMMetrics");
-    assertCounter("NumKeyOps", 8L, omMetrics);
-    assertCounter("NumKeyAllocate", 2L, omMetrics);
+    assertCounter("NumKeyOps", 17L, omMetrics);
+    assertCounter("NumKeyAllocate", 5L, omMetrics);
     assertCounter("NumKeyLookup", 2L, omMetrics);
-    assertCounter("NumKeyDeletes", 2L, omMetrics);
+    assertCounter("NumKeyDeletes", 3L, omMetrics);
     assertCounter("NumKeyLists", 2L, omMetrics);
 
     assertCounter("NumKeyAllocateFails", 1L, omMetrics);
     assertCounter("NumKeyLookupFails", 1L, omMetrics);
     assertCounter("NumKeyDeleteFails", 1L, omMetrics);
     assertCounter("NumKeyListFails", 1L, omMetrics);
+
+    assertCounter("NumKeys", 2L, omMetrics);
+
+    cluster.restartOzoneManager();
+    assertCounter("NumKeys", 2L, omMetrics);
+
   }
 
   /**
@@ -307,5 +407,21 @@ public class TestOmMetrics {
       ozoneManager.listKeys(null, null, null, null, 0);
     } catch (IOException ignored) {
     }
+
+    try {
+      ozoneManager.commitKey(createKeyArgs(), 0);
+    } catch (IOException ignored) {
+    }
+  }
+
+  private OmKeyArgs createKeyArgs() {
+    OmKeyLocationInfo keyLocationInfo = new OmKeyLocationInfo.Builder()
+        .setBlockID(new BlockID(new ContainerBlockID(1, 1))).build();
+    keyLocationInfo.setCreateVersion(0);
+    List<OmKeyLocationInfo> omKeyLocationInfoList = new ArrayList<>();
+    omKeyLocationInfoList.add(keyLocationInfo);
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder().setLocationInfoList(
+        omKeyLocationInfoList).build();
+    return keyArgs;
   }
 }

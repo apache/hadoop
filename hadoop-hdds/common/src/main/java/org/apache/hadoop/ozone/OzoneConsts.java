@@ -146,6 +146,11 @@ public final class OzoneConsts {
   public static final String OM_S3_PREFIX ="S3:";
   public static final String OM_S3_VOLUME_PREFIX = "s3";
 
+  /**
+   *   Max chunk size limit.
+   */
+  public static final int OZONE_SCM_CHUNK_MAX_SIZE = 32 * 1024 * 1024;
+
 
   /**
    * Max OM Quota size of 1024 PB.
@@ -188,6 +193,8 @@ public final class OzoneConsts {
   public static final String CHUNKS_PATH = "chunksPath";
   public static final String CONTAINER_DB_TYPE = "containerDBType";
   public static final String CHECKSUM = "checksum";
+  public static final String ORIGIN_PIPELINE_ID = "originPipelineId";
+  public static final String ORIGIN_NODE_ID = "originNodeId";
 
   // For OM Audit usage
   public static final String VOLUME = "volume";
@@ -219,5 +226,8 @@ public final class OzoneConsts {
   public static final String KEY_LOCATION_INFO = "keyLocationInfo";
 
 
+  // For OM metrics saving to a file
+  public static final String OM_METRICS_FILE = "omMetrics";
+  public static final String OM_METRICS_TEMP_FILE = OM_METRICS_FILE + ".tmp";
 
 }

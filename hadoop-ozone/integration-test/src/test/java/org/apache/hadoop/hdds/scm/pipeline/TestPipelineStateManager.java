@@ -100,6 +100,9 @@ public class TestPipelineStateManager {
 
   @Test
   public void testGetPipelines() throws IOException {
+    // In start there should be no pipelines
+    Assert.assertTrue(stateManager.getPipelines().isEmpty());
+
     Set<Pipeline> pipelines = new HashSet<>();
     Pipeline pipeline = createDummyPipeline(1);
     stateManager.addPipeline(pipeline);
@@ -113,6 +116,10 @@ public class TestPipelineStateManager {
     Set<Pipeline> pipelines1 = new HashSet<>(stateManager.getPipelines(
         HddsProtos.ReplicationType.RATIS));
     Assert.assertEquals(pipelines1.size(), pipelines.size());
+
+    pipelines1 = new HashSet<>(stateManager.getPipelines());
+    Assert.assertEquals(pipelines1.size(), pipelines.size());
+
     // clean up
     for (Pipeline pipeline1 : pipelines) {
       removePipeline(pipeline1);
@@ -323,15 +330,6 @@ public class TestPipelineStateManager {
 
     // close the pipeline
     stateManager.finalizePipeline(pipeline.getId());
-
-    try {
-      stateManager.removePipeline(pipeline.getId());
-      Assert.fail("Pipeline should not have been removed");
-    } catch (IOException e) {
-      // can not remove a pipeline which already has containers
-      Assert.assertTrue(e.getMessage().contains("not empty"));
-    }
-
     // remove containers and then remove the pipeline
     removePipeline(pipeline);
   }
@@ -423,11 +421,6 @@ public class TestPipelineStateManager {
 
   private void removePipeline(Pipeline pipeline) throws IOException {
     stateManager.finalizePipeline(pipeline.getId());
-    Set<ContainerID> containerIDs =
-        stateManager.getContainers(pipeline.getId());
-    for (ContainerID containerID : containerIDs) {
-      stateManager.removeContainerFromPipeline(pipeline.getId(), containerID);
-    }
     stateManager.removePipeline(pipeline.getId());
   }
 }

@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.volume.csi;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.CsiAdaptorProtocol;
 import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.lifecycle.Volume;
 import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.provisioner.VolumeProvisioningResults;
 import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.provisioner.VolumeProvisioningTask;
-import org.apache.hadoop.yarn.server.volume.csi.CsiAdaptorClientProtocol;
 
 import java.util.concurrent.ScheduledFuture;
 
@@ -40,11 +39,7 @@ public interface VolumeManager {
   /**
    * @return all known volumes and their states.
    */
-  @VisibleForTesting
   VolumeStates getVolumeStates();
-
-  @VisibleForTesting
-  void setClient(CsiAdaptorClientProtocol client);
 
   /**
    * Start to supervise on a volume.
@@ -60,4 +55,20 @@ public interface VolumeManager {
    */
   ScheduledFuture<VolumeProvisioningResults> schedule(
       VolumeProvisioningTask volumeProvisioningTask, int delaySecond);
+
+  /**
+   * Register a csi-driver-adaptor to the volume manager.
+   * @param driverName
+   * @param client
+   */
+  void registerCsiDriverAdaptor(String driverName, CsiAdaptorProtocol client);
+
+  /**
+   * Returns the csi-driver-adaptor client from cache by the given driver name.
+   * If the client is not found, null is returned.
+   * @param driverName
+   * @return a csi-driver-adaptor client working for given driver or null
+   * if the adaptor could not be found.
+   */
+  CsiAdaptorProtocol getAdaptorByDriverName(String driverName);
 }

@@ -81,12 +81,14 @@ public class TestKeyValueContainer {
   private RoundRobinVolumeChoosingPolicy volumeChoosingPolicy;
   private KeyValueContainerData keyValueContainerData;
   private KeyValueContainer keyValueContainer;
+  private UUID datanodeId;
 
   @Before
   public void setUp() throws Exception {
     conf = new OzoneConfiguration();
+    datanodeId = UUID.randomUUID();
     HddsVolume hddsVolume = new HddsVolume.Builder(folder.getRoot()
-        .getAbsolutePath()).conf(conf).datanodeUuid(UUID.randomUUID()
+        .getAbsolutePath()).conf(conf).datanodeUuid(datanodeId
         .toString()).build();
 
     volumeSet = mock(VolumeSet.class);
@@ -95,7 +97,8 @@ public class TestKeyValueContainer {
         .thenReturn(hddsVolume);
 
     keyValueContainerData = new KeyValueContainerData(1L,
-        (long) StorageUnit.GB.toBytes(5));
+        (long) StorageUnit.GB.toBytes(5), UUID.randomUUID().toString(),
+        datanodeId.toString());
 
     keyValueContainer = new KeyValueContainer(
         keyValueContainerData, conf);
@@ -105,7 +108,8 @@ public class TestKeyValueContainer {
   @Test
   public void testBlockIterator() throws Exception{
     keyValueContainerData = new KeyValueContainerData(100L,
-        (long) StorageUnit.GB.toBytes(1));
+        (long) StorageUnit.GB.toBytes(1), UUID.randomUUID().toString(),
+        datanodeId.toString());
     keyValueContainer = new KeyValueContainer(
         keyValueContainerData, conf);
     keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
@@ -214,7 +218,8 @@ public class TestKeyValueContainer {
     //create a new one
     KeyValueContainerData containerData =
         new KeyValueContainerData(containerId, 1,
-            keyValueContainerData.getMaxSize());
+            keyValueContainerData.getMaxSize(), UUID.randomUUID().toString(),
+            datanodeId.toString());
     KeyValueContainer container = new KeyValueContainer(containerData, conf);
 
     HddsVolume containerVolume = volumeChoosingPolicy.chooseVolume(volumeSet

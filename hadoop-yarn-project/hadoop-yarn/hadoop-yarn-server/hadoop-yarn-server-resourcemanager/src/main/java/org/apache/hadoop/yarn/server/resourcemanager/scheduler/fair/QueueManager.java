@@ -498,7 +498,7 @@ public class QueueManager {
       }
       while (!parentQueuesToCheck.isEmpty()) {
         FSParentQueue queue = parentQueuesToCheck.iterator().next();
-        if (queue.getChildQueues().isEmpty()) {
+        if (queue.isEmpty()) {
           removeQueue(queue);
           if (queue.getParent().isDynamic()) {
             parentQueuesToCheck.add(queue.getParent());
@@ -528,7 +528,7 @@ public class QueueManager {
    * @return true if removed, false otherwise
    */
   private boolean removeQueueIfEmpty(FSQueue queue) {
-    if (isEmpty(queue)) {
+    if (queue.isEmpty()) {
       removeQueue(queue);
       return true;
     }
@@ -553,26 +553,6 @@ public class QueueManager {
     }
   }
   
-  /**
-   * Returns true if there are no applications, running or not, in the given
-   * queue or any of its descendents.
-   */
-  protected boolean isEmpty(FSQueue queue) {
-    if (queue instanceof FSLeafQueue) {
-      FSLeafQueue leafQueue = (FSLeafQueue)queue;
-      return queue.getNumRunnableApps() == 0 &&
-          leafQueue.getNumNonRunnableApps() == 0 &&
-          leafQueue.getNumAssignedApps() == 0;
-    } else {
-      for (FSQueue child : queue.getChildQueues()) {
-        if (!isEmpty(child)) {
-          return false;
-        }
-      }
-      return true;
-    }
-  }
-
   /**
    * Gets a queue by name.
    */

@@ -313,6 +313,9 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
     try {
       MetadataStore db = BlockUtils.getDB(containerData, config);
       db.compactDB();
+      LOG.info("Container {} is closed with bcsId {}.",
+          containerData.getContainerID(),
+          containerData.getBlockCommitSequenceId());
     } catch (StorageContainerException ex) {
       throw ex;
     } catch (IOException ex) {
@@ -550,7 +553,8 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
         .setUsed(containerData.getBytesUsed())
         .setState(getHddsState())
         .setDeleteTransactionId(containerData.getDeleteTransactionId())
-        .setBlockCommitSequenceId(containerData.getBlockCommitSequenceId());
+        .setBlockCommitSequenceId(containerData.getBlockCommitSequenceId())
+        .setOriginNodeId(containerData.getOriginNodeId());
     return ciBuilder.build();
   }
 

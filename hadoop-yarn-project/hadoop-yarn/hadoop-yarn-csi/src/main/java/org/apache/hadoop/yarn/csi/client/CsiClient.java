@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.csi.client;
 
+import csi.v0.Csi;
 import csi.v0.Csi.GetPluginInfoResponse;
 
 import java.io.IOException;
@@ -36,4 +37,7 @@ public interface CsiClient {
    * @throws IOException when unable to get plugin info from the driver.
    */
   GetPluginInfoResponse getPluginInfo() throws IOException;
+
+  Csi.ValidateVolumeCapabilitiesResponse validateVolumeCapabilities(
+      Csi.ValidateVolumeCapabilitiesRequest request) throws IOException;
 }

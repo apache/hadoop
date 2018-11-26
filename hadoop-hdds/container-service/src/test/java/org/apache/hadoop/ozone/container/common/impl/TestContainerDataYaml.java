@@ -29,6 +29,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -55,7 +56,8 @@ public class TestContainerDataYaml {
     String containerPath = containerID + ".container";
 
     KeyValueContainerData keyValueContainerData = new KeyValueContainerData(
-        containerID, MAXSIZE);
+        containerID, MAXSIZE, UUID.randomUUID().toString(),
+        UUID.randomUUID().toString());
     keyValueContainerData.setContainerDBType("RocksDB");
     keyValueContainerData.setMetadataPath(testRoot);
     keyValueContainerData.setChunksPath(testRoot);

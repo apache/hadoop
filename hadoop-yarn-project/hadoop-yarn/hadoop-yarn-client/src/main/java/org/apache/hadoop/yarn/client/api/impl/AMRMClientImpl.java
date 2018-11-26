@@ -1037,6 +1037,11 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     return remoteRequests.get(Long.valueOf(allocationRequestId));
   }
 
+  @VisibleForTesting
+  Map<Set<String>, List<SchedulingRequest>> getOutstandingSchedRequests() {
+    return outstandingSchedRequests;
+  }
+
   RemoteRequestsTable<T> putTable(long allocationRequestId,
       RemoteRequestsTable<T> table) {
     return remoteRequests.put(Long.valueOf(allocationRequestId), table);

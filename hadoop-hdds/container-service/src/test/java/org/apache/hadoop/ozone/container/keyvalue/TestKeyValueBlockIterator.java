@@ -246,7 +246,8 @@ public class TestKeyValueBlockIterator {
       normalBlocks, int deletedBlocks) throws
       Exception {
     containerData = new KeyValueContainerData(containerId,
-        (long) StorageUnit.GB.toBytes(1));
+        (long) StorageUnit.GB.toBytes(1), UUID.randomUUID().toString(),
+        UUID.randomUUID().toString());
     container = new KeyValueContainer(containerData, conf);
     container.create(volumeSet, new RoundRobinVolumeChoosingPolicy(), UUID
         .randomUUID().toString());

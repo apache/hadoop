@@ -105,11 +105,12 @@ public class ContainerController {
   }
 
   public Container importContainer(final ContainerType type,
-      final long containerId, final long maxSize,
-      final FileInputStream rawContainerStream, final TarContainerPacker packer)
+      final long containerId, final long maxSize, final String originPipelineId,
+      final String originNodeId, final FileInputStream rawContainerStream,
+      final TarContainerPacker packer)
       throws IOException {
-    return handlers.get(type).importContainer(
-        containerId, maxSize, rawContainerStream, packer);
+    return handlers.get(type).importContainer(containerId, maxSize,
+        originPipelineId, originNodeId, rawContainerStream, packer);
   }
 
   /**

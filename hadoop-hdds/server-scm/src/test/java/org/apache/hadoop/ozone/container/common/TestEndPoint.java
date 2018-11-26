@@ -154,8 +154,9 @@ public class TestEndPoint {
     OzoneConfiguration conf = SCMTestUtils.getConf();
     try (EndpointStateMachine rpcEndPoint = createEndpoint(conf,
         serverAddress, 1000)) {
+      DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
       OzoneContainer ozoneContainer = new OzoneContainer(
-          TestUtils.randomDatanodeDetails(), conf, null);
+          datanodeDetails, conf, getContext(datanodeDetails));
       rpcEndPoint.setState(EndpointStateMachine.EndPointStates.GETVERSION);
       VersionEndpointTask versionTask = new VersionEndpointTask(rpcEndPoint,
           conf, ozoneContainer);
@@ -178,8 +179,9 @@ public class TestEndPoint {
         serverAddress, 1000)) {
       GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
           .captureLogs(VersionEndpointTask.LOG);
-      OzoneContainer ozoneContainer = new OzoneContainer(TestUtils
-          .randomDatanodeDetails(), conf, null);
+      DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
+      OzoneContainer ozoneContainer = new OzoneContainer(
+          datanodeDetails, conf, getContext(datanodeDetails));
       rpcEndPoint.setState(EndpointStateMachine.EndPointStates.GETVERSION);
       VersionEndpointTask versionTask = new VersionEndpointTask(rpcEndPoint,
           conf, ozoneContainer);
@@ -231,8 +233,9 @@ public class TestEndPoint {
     try (EndpointStateMachine rpcEndPoint = createEndpoint(conf,
         nonExistentServerAddress, 1000)) {
       rpcEndPoint.setState(EndpointStateMachine.EndPointStates.GETVERSION);
+      DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
       OzoneContainer ozoneContainer = new OzoneContainer(
-          TestUtils.randomDatanodeDetails(), conf, null);
+          datanodeDetails, conf, getContext(datanodeDetails));
       VersionEndpointTask versionTask = new VersionEndpointTask(rpcEndPoint,
           conf, ozoneContainer);
       EndpointStateMachine.EndPointStates newState = versionTask.call();
@@ -258,8 +261,9 @@ public class TestEndPoint {
     try (EndpointStateMachine rpcEndPoint = createEndpoint(conf,
         serverAddress, (int) rpcTimeout)) {
       rpcEndPoint.setState(EndpointStateMachine.EndPointStates.GETVERSION);
+      DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
       OzoneContainer ozoneContainer = new OzoneContainer(
-          TestUtils.randomDatanodeDetails(), conf, null);
+          datanodeDetails, conf, getContext(datanodeDetails));
       VersionEndpointTask versionTask = new VersionEndpointTask(rpcEndPoint,
           conf, ozoneContainer);
 
@@ -525,6 +529,15 @@ public class TestEndPoint {
     scmServerImpl.setRpcResponseDelay(0);
     Assert.assertThat(end - start,
         lessThanOrEqualTo(rpcTimeout + tolerance));
+  }
+
+  private StateContext getContext(DatanodeDetails datanodeDetails) {
+    DatanodeStateMachine stateMachine = Mockito.mock(
+        DatanodeStateMachine.class);
+    StateContext context = Mockito.mock(StateContext.class);
+    Mockito.when(stateMachine.getDatanodeDetails()).thenReturn(datanodeDetails);
+    Mockito.when(context.getParent()).thenReturn(stateMachine);
+    return context;
   }
 
 }

@@ -238,9 +238,14 @@ public final class ContainerDataYaml {
 
         long size = (long) nodes.get(OzoneConsts.MAX_SIZE);
 
+        String originPipelineId = (String) nodes.get(
+            OzoneConsts.ORIGIN_PIPELINE_ID);
+        String originNodeId = (String) nodes.get(OzoneConsts.ORIGIN_NODE_ID);
+
         //When a new field is added, it needs to be added here.
         KeyValueContainerData kvData = new KeyValueContainerData(
-            (long) nodes.get(OzoneConsts.CONTAINER_ID), lv, size);
+            (long) nodes.get(OzoneConsts.CONTAINER_ID), lv, size,
+            originPipelineId, originNodeId);
 
         kvData.setContainerDBType((String)nodes.get(
             OzoneConsts.CONTAINER_DB_TYPE));

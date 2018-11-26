@@ -25,6 +25,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -43,9 +44,11 @@ public class TestKeyValueContainerData {
     ContainerProtos.ContainerDataProto.State state =
         ContainerProtos.ContainerDataProto.State.CLOSED;
     AtomicLong val = new AtomicLong(0);
+    UUID pipelineId = UUID.randomUUID();
+    UUID datanodeId = UUID.randomUUID();
 
     KeyValueContainerData kvData = new KeyValueContainerData(containerId,
-        MAXSIZE);
+        MAXSIZE, pipelineId.toString(), datanodeId.toString());
 
     assertEquals(containerType, kvData.getContainerType());
     assertEquals(containerId, kvData.getContainerID());
@@ -83,6 +86,8 @@ public class TestKeyValueContainerData {
     assertEquals(1, kvData.getWriteCount());
     assertEquals(1, kvData.getKeyCount());
     assertEquals(1, kvData.getNumPendingDeletionBlocks());
+    assertEquals(pipelineId.toString(), kvData.getOriginPipelineId());
+    assertEquals(datanodeId.toString(), kvData.getOriginNodeId());
   }
 
 }

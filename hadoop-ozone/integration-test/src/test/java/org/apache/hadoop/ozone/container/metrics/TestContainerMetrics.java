@@ -41,6 +41,8 @@ import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
+import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerGrpc;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.hdds.scm.TestUtils;
@@ -51,6 +53,7 @@ import org.apache.hadoop.ozone.container.replication.OnDemandContainerReplicatio
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.util.Map;
@@ -90,16 +93,22 @@ public class TestContainerMetrics {
       VolumeSet volumeSet = new VolumeSet(
           datanodeDetails.getUuidString(), conf);
       ContainerSet containerSet = new ContainerSet();
+      DatanodeStateMachine stateMachine = Mockito.mock(
+          DatanodeStateMachine.class);
+      StateContext context = Mockito.mock(StateContext.class);
+      Mockito.when(stateMachine.getDatanodeDetails())
+          .thenReturn(datanodeDetails);
+      Mockito.when(context.getParent()).thenReturn(stateMachine);
       ContainerMetrics metrics = ContainerMetrics.create(conf);
       Map<ContainerProtos.ContainerType, Handler> handlers = Maps.newHashMap();
       for (ContainerProtos.ContainerType containerType :
           ContainerProtos.ContainerType.values()) {
         handlers.put(containerType,
-            Handler.getHandlerForContainerType(
-                containerType, conf, null, containerSet, volumeSet, metrics));
+            Handler.getHandlerForContainerType(containerType, conf, context,
+                containerSet, volumeSet, metrics));
       }
       HddsDispatcher dispatcher = new HddsDispatcher(conf, containerSet,
-          volumeSet, handlers, null, metrics);
+          volumeSet, handlers, context, metrics);
       dispatcher.setScmId(UUID.randomUUID().toString());
 
       server = new XceiverServerGrpc(datanodeDetails, conf, dispatcher,

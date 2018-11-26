@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
 
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -80,6 +81,18 @@ public class TestAliyunOSSFileSystemContract
     rename(super.path("/"),
            super.path("/test/newRootDir"),
            false, true, false);
+  }
+
+  @Test
+  public void testListStatus() throws IOException {
+    Path file = this.path("/test/hadoop/file");
+    this.createFile(file);
+    assertTrue("File exists", this.fs.exists(file));
+    FileStatus fs = this.fs.getFileStatus(file);
+    assertEquals(fs.getOwner(),
+        UserGroupInformation.getCurrentUser().getShortUserName());
+    assertEquals(fs.getGroup(),
+        UserGroupInformation.getCurrentUser().getShortUserName());
   }
 
   @Test

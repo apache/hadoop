@@ -115,6 +115,14 @@ class PipelineStateMap {
   }
 
   /**
+   * Get list of pipelines in SCM.
+   * @return List of pipelines
+   */
+  public List<Pipeline> getPipelines() {
+    return new ArrayList<>(pipelineMap.values());
+  }
+
+  /**
    * Get pipeline corresponding to specified replication type.
    *
    * @param type - ReplicationType
@@ -240,12 +248,6 @@ class PipelineStateMap {
     if (!pipeline.isClosed()) {
       throw new IOException(
           String.format("Pipeline with %s is not yet closed", pipelineID));
-    }
-
-    Set<ContainerID> containerIDs = pipeline2container.get(pipelineID);
-    if (containerIDs.size() != 0) {
-      throw new IOException(
-          String.format("Pipeline with %s is not empty", pipelineID));
     }
 
     pipelineMap.remove(pipelineID);

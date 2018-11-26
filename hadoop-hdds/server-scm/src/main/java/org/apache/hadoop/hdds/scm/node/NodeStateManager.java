@@ -274,6 +274,20 @@ public class NodeStateManager implements Runnable, Closeable {
   }
 
   /**
+   * Get information about the node.
+   *
+   * @param datanodeUUID datanode UUID
+   *
+   * @return DatanodeInfo
+   *
+   * @throws NodeNotFoundException if the node is not present
+   */
+  public DatanodeInfo getNode(UUID datanodeUUID)
+      throws NodeNotFoundException {
+    return nodeStateMap.getNodeInfo(datanodeUUID);
+  }
+
+  /**
    * Updates the last heartbeat time of the node.
    *
    * @throws NodeNotFoundException if the node is not present

@@ -220,7 +220,8 @@ public class KeyValueHandler extends Handler {
     long containerID = request.getContainerID();
 
     KeyValueContainerData newContainerData = new KeyValueContainerData(
-        containerID, maxContainerSize);
+        containerID, maxContainerSize, request.getPipelineID(),
+        getDatanodeDetails().getUuidString());
     // TODO: Add support to add metadataList to ContainerData. Add metadata
     // to container during creation.
     KeyValueContainer newContainer = new KeyValueContainer(
@@ -772,13 +773,15 @@ public class KeyValueHandler extends Handler {
   }
 
   public Container importContainer(long containerID, long maxSize,
+      String originPipelineId,
+      String originNodeId,
       FileInputStream rawContainerStream,
       TarContainerPacker packer)
       throws IOException {
 
     KeyValueContainerData containerData =
         new KeyValueContainerData(containerID,
-            maxSize);
+            maxSize, originPipelineId, originNodeId);
 
     KeyValueContainer container = new KeyValueContainer(containerData,
         conf);

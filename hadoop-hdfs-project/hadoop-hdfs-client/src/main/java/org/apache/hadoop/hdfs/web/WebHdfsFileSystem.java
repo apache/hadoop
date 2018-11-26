@@ -1310,6 +1310,16 @@ public class WebHdfsFileSystem extends FileSystem
     new FsPathRunner(op, p).run();
   }
 
+  public void enableECPolicy(String policyName) throws IOException {
+    final HttpOpParam.Op op = PutOpParam.Op.ENABLEECPOLICY;
+    new FsPathRunner(op, null, new ECPolicyParam(policyName)).run();
+  }
+
+  public void disableECPolicy(String policyName) throws IOException {
+    final HttpOpParam.Op op = PutOpParam.Op.DISABLEECPOLICY;
+    new FsPathRunner(op, null, new ECPolicyParam(policyName)).run();
+  }
+
   @Override
   public Path createSnapshot(final Path path, final String snapshotName)
       throws IOException {

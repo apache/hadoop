@@ -19,15 +19,14 @@
 package org.apache.hadoop.hdds.scm;
 
 import org.apache.hadoop.hdds.HddsUtils;
-import org.apache.hadoop.io.MultipleIOException;
 import org.apache.ratis.proto.RaftProtos;
+import org.apache.ratis.protocol.RaftRetryFailureException;
 import org.apache.ratis.retry.RetryPolicy;
 import org.apache.ratis.thirdparty.com.google.protobuf
     .InvalidProtocolBufferException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -36,19 +35,14 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.ratis.RatisHelper;
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.protocol.RaftClientReply;
-import org.apache.ratis.protocol.RaftGroup;
-import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
-import org.apache.ratis.util.CheckedBiConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
@@ -97,22 +91,6 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     this.retryPolicy = retryPolicy;
   }
 
-  @Override
-  public void createPipeline() throws IOException {
-    final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
-    LOG.debug("creating pipeline:{} with {}", pipeline.getId(), group);
-    callRatisRpc(pipeline.getNodes(),
-        (raftClient, peer) -> raftClient.groupAdd(group, peer.getId()));
-  }
-
-  @Override
-  public void destroyPipeline() throws IOException {
-    final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
-    LOG.debug("destroying pipeline:{} with {}", pipeline.getId(), group);
-    callRatisRpc(pipeline.getNodes(), (raftClient, peer) -> raftClient
-        .groupRemove(group.getGroupId(), true, peer.getId()));
-  }
-
   /**
    * Returns Ratis as pipeline Type.
    *
@@ -121,31 +99,6 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   @Override
   public HddsProtos.ReplicationType getPipelineType() {
     return HddsProtos.ReplicationType.RATIS;
-  }
-
-  private void callRatisRpc(List<DatanodeDetails> datanodes,
-      CheckedBiConsumer<RaftClient, RaftPeer, IOException> rpc)
-      throws IOException {
-    if (datanodes.isEmpty()) {
-      return;
-    }
-
-    final List<IOException> exceptions =
-        Collections.synchronizedList(new ArrayList<>());
-    datanodes.parallelStream().forEach(d -> {
-      final RaftPeer p = RatisHelper.toRaftPeer(d);
-      try (RaftClient client = RatisHelper
-          .newRaftClient(rpcType, p, retryPolicy)) {
-        rpc.accept(client, p);
-      } catch (IOException ioe) {
-        exceptions.add(
-            new IOException("Failed invoke Ratis rpc " + rpc + " for " + d,
-                ioe));
-      }
-    });
-    if (!exceptions.isEmpty()) {
-      throw MultipleIOException.createIOException(exceptions);
-    }
   }
 
   @Override
@@ -170,11 +123,15 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   public void close() {
     final RaftClient c = client.getAndSet(null);
     if (c != null) {
-      try {
-        c.close();
-      } catch (IOException e) {
-        throw new IllegalStateException(e);
-      }
+      closeRaftClient(c);
+    }
+  }
+
+  private void closeRaftClient(RaftClient raftClient) {
+    try {
+      raftClient.close();
+    } catch (IOException e) {
+      throw new IllegalStateException(e);
     }
   }
 
@@ -193,19 +150,35 @@ public final class XceiverClientRatis extends XceiverClientSpi {
 
   @Override
   public void watchForCommit(long index, long timeout)
-      throws InterruptedException, ExecutionException, TimeoutException {
-    // TODO: Create a new Raft client instance to watch
-    CompletableFuture<RaftClientReply> replyFuture = getClient()
+      throws InterruptedException, ExecutionException, TimeoutException,
+      IOException {
+    LOG.debug("commit index : {} watch timeout : {}", index, timeout);
+    // create a new RaftClient instance for watch request
+    RaftClient raftClient =
+        RatisHelper.newRaftClient(rpcType, getPipeline(), retryPolicy);
+    CompletableFuture<RaftClientReply> replyFuture = raftClient
         .sendWatchAsync(index, RaftProtos.ReplicationLevel.ALL_COMMITTED);
     try {
       replyFuture.get(timeout, TimeUnit.MILLISECONDS);
     } catch (TimeoutException toe) {
       LOG.warn("3 way commit failed ", toe);
-      getClient()
+
+      closeRaftClient(raftClient);
+      // generate a new raft client instance again so that next watch request
+      // does not get blocked for the previous one
+
+      // TODO : need to remove the code to create the new RaftClient instance
+      // here once the watch request bypassing sliding window in Raft Client
+      // gets fixed.
+      raftClient =
+          RatisHelper.newRaftClient(rpcType, getPipeline(), retryPolicy);
+      raftClient
           .sendWatchAsync(index, RaftProtos.ReplicationLevel.MAJORITY_COMMITTED)
           .get(timeout, TimeUnit.MILLISECONDS);
       LOG.info("Could not commit " + index + " to all the nodes."
           + "Committed by majority.");
+    } finally {
+      closeRaftClient(raftClient);
     }
   }
   /**
@@ -223,11 +196,19 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     Collection<XceiverClientAsyncReply.CommitInfo> commitInfos =
         new ArrayList<>();
     CompletableFuture<ContainerCommandResponseProto> containerCommandResponse =
-        raftClientReply.whenComplete((reply, e) -> LOG
-            .debug("received reply {} for request: {} exception: {}", request,
-                reply, e))
+        raftClientReply.whenComplete((reply, e) -> LOG.debug(
+            "received reply {} for request: cmdType={} containerID={}"
+                + " pipelineID={} traceID={} exception: {}", reply,
+            request.getCmdType(), request.getContainerID(),
+            request.getPipelineID(), request.getTraceID(), e))
             .thenApply(reply -> {
               try {
+                // we need to handle RaftRetryFailure Exception
+                RaftRetryFailureException raftRetryFailureException =
+                    reply.getRetryFailureException();
+                if (raftRetryFailureException != null) {
+                  throw new CompletionException(raftRetryFailureException);
+                }
                 ContainerCommandResponseProto response =
                     ContainerCommandResponseProto
                         .parseFrom(reply.getMessage().getContent());

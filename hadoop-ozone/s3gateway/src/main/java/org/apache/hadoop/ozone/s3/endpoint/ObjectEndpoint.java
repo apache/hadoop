@@ -35,7 +35,6 @@ import java.io.InputStream;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,18 +47,26 @@ import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.s3.SignedChunksInputStream;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
-
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.ozone.s3.io.S3WrapperInputStream;
+import org.apache.hadoop.ozone.s3.util.RFC1123Util;
+import org.apache.hadoop.ozone.s3.util.RangeHeader;
 import org.apache.hadoop.ozone.s3.util.S3StorageType;
+import org.apache.hadoop.ozone.s3.util.S3utils;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.util.Time;
+
+import com.google.common.annotations.VisibleForTesting;
+import static javax.ws.rs.core.HttpHeaders.LAST_MODIFIED;
+import org.apache.commons.io.IOUtils;
+import static org.apache.hadoop.ozone.s3.util.S3Consts.ACCEPT_RANGE_HEADER;
+import static org.apache.hadoop.ozone.s3.util.S3Consts.CONTENT_RANGE_HEADER;
+import static org.apache.hadoop.ozone.s3.util.S3Consts.COPY_SOURCE_HEADER;
+import static org.apache.hadoop.ozone.s3.util.S3Consts.RANGE_HEADER;
+import static org.apache.hadoop.ozone.s3.util.S3Consts.RANGE_HEADER_SUPPORTED_UNIT;
+import static org.apache.hadoop.ozone.s3.util.S3Consts.STORAGE_CLASS_HEADER;
 import org.apache.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static org.apache.hadoop.ozone.s3.util.S3Consts.COPY_SOURCE_HEADER;
-import static org.apache.hadoop.ozone.s3.util.S3Consts.STORAGE_CLASS_HEADER;
 
 /**
  * Key level rest endpoints.
@@ -165,23 +172,80 @@ public class ObjectEndpoint extends EndpointBase {
       @PathParam("bucket") String bucketName,
       @PathParam("path") String keyPath,
       InputStream body) throws IOException, OS3Exception {
-
     try {
       OzoneBucket bucket = getBucket(bucketName);
 
-      OzoneInputStream key = bucket
-          .readKey(keyPath);
+      OzoneKeyDetails keyDetails = bucket.getKey(keyPath);
 
-      StreamingOutput output = dest -> IOUtils.copy(key, dest);
-      ResponseBuilder responseBuilder = Response.ok(output);
+      long length = keyDetails.getDataSize();
 
+      LOG.debug("Data length of the key {} is {}", keyPath, length);
+
+      String rangeHeaderVal = headers.getHeaderString(RANGE_HEADER);
+      RangeHeader rangeHeader = null;
+
+      LOG.debug("range Header provided value is {}", rangeHeaderVal);
+
+      if (rangeHeaderVal != null) {
+        rangeHeader = S3utils.parseRangeHeader(rangeHeaderVal,
+            length);
+        LOG.debug("range Header provided value is {}", rangeHeader);
+        if (rangeHeader.isInValidRange()) {
+          OS3Exception exception = S3ErrorTable.newError(S3ErrorTable
+              .INVALID_RANGE, rangeHeaderVal);
+          throw exception;
+        }
+      }
+      ResponseBuilder responseBuilder;
+
+      if (rangeHeaderVal == null || rangeHeader.isReadFull()) {
+        StreamingOutput output = dest -> {
+          try (OzoneInputStream key = bucket.readKey(keyPath)) {
+            IOUtils.copy(key, dest);
+          }
+        };
+        responseBuilder = Response.ok(output);
+
+      } else {
+        LOG.info("range Header provided value is {}", rangeHeader);
+        OzoneInputStream key = bucket.readKey(keyPath);
+
+        long startOffset = rangeHeader.getStartOffset();
+        long endOffset = rangeHeader.getEndOffset();
+        long copyLength;
+        if (startOffset == endOffset) {
+          // if range header is given as bytes=0-0, then we should return 1
+          // byte from start offset
+          copyLength = 1;
+        } else {
+          copyLength = rangeHeader.getEndOffset() - rangeHeader
+              .getStartOffset() + 1;
+        }
+        StreamingOutput output = dest -> {
+          try (S3WrapperInputStream s3WrapperInputStream =
+              new S3WrapperInputStream(
+                  key.getInputStream())) {
+            IOUtils.copyLarge(s3WrapperInputStream, dest, startOffset,
+                copyLength);
+          }
+        };
+        responseBuilder = Response.ok(output);
+
+        String contentRangeVal = RANGE_HEADER_SUPPORTED_UNIT + " " +
+            rangeHeader.getStartOffset() + "-" + rangeHeader.getEndOffset() +
+            "/" + length;
+
+        responseBuilder.header(CONTENT_RANGE_HEADER, contentRangeVal);
+      }
+      responseBuilder.header(ACCEPT_RANGE_HEADER,
+          RANGE_HEADER_SUPPORTED_UNIT);
       for (String responseHeader : customizableGetHeaders) {
         String headerValue = headers.getHeaderString(responseHeader);
         if (headerValue != null) {
           responseBuilder.header(responseHeader, headerValue);
         }
       }
-
+      addLastModifiedDate(responseBuilder, keyDetails);
       return responseBuilder.build();
     } catch (IOException ex) {
       if (ex.getMessage().contains("NOT_FOUND")) {
@@ -192,6 +256,18 @@ public class ObjectEndpoint extends EndpointBase {
         throw ex;
       }
     }
+  }
+
+  private void addLastModifiedDate(
+      ResponseBuilder responseBuilder, OzoneKeyDetails key) {
+
+    ZonedDateTime lastModificationTime =
+        Instant.ofEpochMilli(key.getModificationTime())
+            .atZone(ZoneId.of("GMT"));
+
+    responseBuilder
+        .header(LAST_MODIFIED,
+            RFC1123Util.FORMAT.format(lastModificationTime));
   }
 
   /**
@@ -219,16 +295,12 @@ public class ObjectEndpoint extends EndpointBase {
       }
     }
 
-    ZonedDateTime lastModificationTime =
-        Instant.ofEpochMilli(key.getModificationTime())
-            .atZone(ZoneId.of("GMT"));
-
-    return Response.ok().status(HttpStatus.SC_OK)
-        .header("Last-Modified",
-            DateTimeFormatter.RFC_1123_DATE_TIME.format(lastModificationTime))
+    ResponseBuilder response = Response.ok().status(HttpStatus.SC_OK)
         .header("ETag", "" + key.getModificationTime())
         .header("Content-Length", key.getDataSize())
-        .header("Content-Type", "binary/octet-stream")
+        .header("Content-Type", "binary/octet-stream");
+    addLastModifiedDate(response, key);
+    return response
         .build();
   }
 

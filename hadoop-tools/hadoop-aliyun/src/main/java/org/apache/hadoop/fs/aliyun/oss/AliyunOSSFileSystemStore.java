@@ -82,6 +82,7 @@ import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 public class AliyunOSSFileSystemStore {
   public static final Logger LOG =
       LoggerFactory.getLogger(AliyunOSSFileSystemStore.class);
+  private String username;
   private FileSystem.Statistics statistics;
   private OSSClient ossClient;
   private String bucketName;
@@ -90,8 +91,9 @@ public class AliyunOSSFileSystemStore {
   private int maxKeys;
   private String serverSideEncryptionAlgorithm;
 
-  public void initialize(URI uri, Configuration conf,
+  public void initialize(URI uri, Configuration conf, String user,
                          FileSystem.Statistics stat) throws IOException {
+    this.username = user;
     statistics = stat;
     ClientConfiguration clientConf = new ClientConfiguration();
     clientConf.setMaxConnections(conf.getInt(MAXIMUM_CONNECTIONS_KEY,
@@ -416,7 +418,6 @@ public class AliyunOSSFileSystemStore {
       PutObjectResult result = ossClient.putObject(bucketName, key, fis, meta);
       LOG.debug(result.getETag());
       statistics.incrementWriteOps(1);
-      statistics.incrementBytesWritten(file.length());
     } finally {
       fis.close();
     }
@@ -573,9 +574,9 @@ public class AliyunOSSFileSystemStore {
           String key = summary.getKey();
           Path path = fs.makeQualified(new Path("/" + key));
           if (filter.accept(path) && acceptor.accept(path, summary)) {
-            FileStatus status = new FileStatus(summary.getSize(),
+            FileStatus status = new OSSFileStatus(summary.getSize(),
                 key.endsWith("/"), 1, fs.getDefaultBlockSize(path),
-                summary.getLastModified().getTime(), path);
+                summary.getLastModified().getTime(), path, username);
             stats.add(status);
           }
         }
@@ -583,7 +584,8 @@ public class AliyunOSSFileSystemStore {
         for (String commonPrefix : listing.getCommonPrefixes()) {
           Path path = fs.makeQualified(new Path("/" + commonPrefix));
           if (filter.accept(path) && acceptor.accept(path, commonPrefix)) {
-            FileStatus status = new FileStatus(0, true, 1, 0, 0, path);
+            FileStatus status = new OSSFileStatus(0, true, 1, 0, 0,
+                path, username);
             stats.add(status);
           }
         }
@@ -617,7 +619,6 @@ public class AliyunOSSFileSystemStore {
         uploadRequest.setPartNumber(idx);
         UploadPartResult uploadResult = ossClient.uploadPart(uploadRequest);
         statistics.incrementWriteOps(1);
-        statistics.incrementBytesWritten(file.length());
         return uploadResult.getPartETag();
       } catch (Exception e) {
         LOG.debug("Failed to upload "+ file.getPath() +", " +

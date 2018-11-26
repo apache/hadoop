@@ -47,6 +47,8 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 
@@ -83,6 +85,7 @@ import org.apache.hadoop.hdfs.TestDFSClientRetries;
 import org.apache.hadoop.hdfs.TestFileCreation;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -1596,6 +1599,49 @@ public class TestWebHDFS {
           "Failed to set storage policy since"));
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  private void checkECPolicyState(Collection<ErasureCodingPolicyInfo> policies,
+      String ecpolicy, String state) {
+    Iterator<ErasureCodingPolicyInfo> itr = policies.iterator();
+    boolean found = false;
+    while (policies.iterator().hasNext()) {
+      ErasureCodingPolicyInfo policy = itr.next();
+      if (policy.getPolicy().getName().equals(ecpolicy)) {
+        found = true;
+        if (state.equals("disable")) {
+          Assert.assertTrue(policy.isDisabled());
+        } else if (state.equals("enable")) {
+          Assert.assertTrue(policy.isEnabled());
+        }
+        break;
+      }
+    }
+    Assert.assertTrue(found);
+  }
+
+  // Test For Enable/Disable EC Policy in DFS.
+  @Test
+  public void testEnableDisableECPolicy() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    try (MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(0).build()) {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final WebHdfsFileSystem webHdfs = WebHdfsTestUtil
+          .getWebHdfsFileSystem(conf, WebHdfsConstants.WEBHDFS_SCHEME);
+      String policy = "RS-10-4-1024k";
+
+      // Check for Enable EC policy via WEBHDFS.
+      dfs.disableErasureCodingPolicy(policy);
+      checkECPolicyState(dfs.getAllErasureCodingPolicies(), policy, "disable");
+      webHdfs.enableECPolicy("RS-10-4-1024k");
+      checkECPolicyState(dfs.getAllErasureCodingPolicies(), policy, "enable");
+
+      // Check for Disable EC policy via WEBHDFS.
+      webHdfs.disableECPolicy(policy);
+      checkECPolicyState(dfs.getAllErasureCodingPolicies(), policy, "disable");
     }
   }
 

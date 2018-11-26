@@ -614,10 +614,17 @@ which has the following notices:
    Expert Group and released to the public domain, as explained at
    http://creativecommons.org/publicdomain/zero/1.0/
 
-
 The source and binary distribution of this product bundles modified version of
   github.com/awslabs/aws-js-s3-explorer licensed under Apache 2.0 license
   with the following notice:
 
 AWS JavaScript S3 Explorer
 Copyright 2014-2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+The binary distribution of this product bundles binaries of
+jline 3.9.0 (https://github.com/jline/jline3)
+
+  * LICENSE:
+    * license/LICENSE.jline3.txt (BSD License)
+  * HOMEPAGE:
+    * https://github.com/jline/jline3

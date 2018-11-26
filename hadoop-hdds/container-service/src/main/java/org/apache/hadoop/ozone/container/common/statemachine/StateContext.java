@@ -184,7 +184,7 @@ public class StateContext {
    * Returns all the available reports from the report queue, or empty list if
    * the queue is empty.
    *
-   * @return List<reports>
+   * @return List of reports
    */
   public List<GeneratedMessage> getAllAvailableReports() {
     return getReports(Integer.MAX_VALUE);
@@ -194,7 +194,7 @@ public class StateContext {
    * Returns available reports from the report queue with a max limit on
    * list size, or empty list if the queue is empty.
    *
-   * @return List<reports>
+   * @return List of reports
    */
   public List<GeneratedMessage> getReports(int maxLimit) {
     List<GeneratedMessage> reportsToReturn = new LinkedList<>();
@@ -236,7 +236,7 @@ public class StateContext {
    * Returns all the pending ContainerActions from the ContainerAction queue,
    * or empty list if the queue is empty.
    *
-   * @return List<ContainerAction>
+   * @return {@literal List<ContainerAction>}
    */
   public List<ContainerAction> getAllPendingContainerActions() {
     return getPendingContainerAction(Integer.MAX_VALUE);
@@ -246,7 +246,7 @@ public class StateContext {
    * Returns pending ContainerActions from the ContainerAction queue with a
    * max limit on list size, or empty list if the queue is empty.
    *
-   * @return List<ContainerAction>
+   * @return {@literal List<ContainerAction>}
    */
   public List<ContainerAction> getPendingContainerAction(int maxLimit) {
     List<ContainerAction> containerActionList = new ArrayList<>();
@@ -298,7 +298,7 @@ public class StateContext {
    * Returns pending PipelineActions from the PipelineAction queue with a
    * max limit on list size, or empty list if the queue is empty.
    *
-   * @return List<ContainerAction>
+   * @return {@literal List<ContainerAction>}
    */
   public List<PipelineAction> getPendingPipelineAction(int maxLimit) {
     List<PipelineAction> pipelineActionList = new ArrayList<>();

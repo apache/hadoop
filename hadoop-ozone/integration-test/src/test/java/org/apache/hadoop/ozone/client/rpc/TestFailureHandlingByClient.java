@@ -22,7 +22,6 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -83,15 +82,11 @@ public class TestFailureHandlingByClient {
     maxRetries = 100;
     chunkSize = (int) OzoneConsts.MB;
     blockSize = 4 * chunkSize;
-    conf.setInt(ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY, chunkSize);
-    conf.setInt(OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE, 1);
-    conf.setInt(OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_MAX_SIZE, 2);
     conf.setTimeDuration(OzoneConfigKeys.OZONE_CLIENT_WATCH_REQUEST_TIMEOUT, 5,
         TimeUnit.SECONDS);
     conf.setTimeDuration(HDDS_SCM_WATCHER_TIMEOUT, 1000, TimeUnit.MILLISECONDS);
     conf.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL, 3, TimeUnit.SECONDS);
     conf.setQuietMode(false);
-    conf.setLong(OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_IN_MB, (4));
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(6).build();
     cluster.waitForClusterToBeReady();
@@ -114,10 +109,6 @@ public class TestFailureHandlingByClient {
       cluster.shutdown();
     }
   }
-
-  // TODO: currently, shutting down 2 datanodes in Ratis leads to
-  // watchForCommit Api in RaftClient to hand=g forever. Once that gets
-  // fixed, we need to execute the tets with 2 node failures.
 
   @Test
   public void testBlockWritesWithDnFailures() throws Exception {
@@ -144,7 +135,7 @@ public class TestFailureHandlingByClient {
             .getPipeline(container.getPipelineID());
     List<DatanodeDetails> datanodes = pipeline.getNodes();
     cluster.shutdownHddsDatanode(datanodes.get(0));
-    // cluster.shutdownHddsDatanode(datanodes.get(1));
+    cluster.shutdownHddsDatanode(datanodes.get(1));
     // The write will fail but exception will be handled and length will be
     // updated correctly in OzoneManager once the steam is closed
     key.close();
@@ -156,7 +147,6 @@ public class TestFailureHandlingByClient {
     OmKeyInfo keyInfo = cluster.getOzoneManager().lookupKey(keyArgs);
     Assert.assertEquals(data.length, keyInfo.getDataSize());
     validateData(keyName, data);
-    cluster.restartHddsDatanode(datanodes.get(0), true);
   }
 
   @Test
@@ -184,8 +174,8 @@ public class TestFailureHandlingByClient {
             .getPipeline(container.getPipelineID());
     List<DatanodeDetails> datanodes = pipeline.getNodes();
     cluster.shutdownHddsDatanode(datanodes.get(0));
+    cluster.shutdownHddsDatanode(datanodes.get(1));
 
-    //  cluster.shutdownHddsDatanode(datanodes.get(1));
     // The write will fail but exception will be handled and length will be
     // updated correctly in OzoneManager once the steam is closed
     key.write(data.getBytes());
@@ -197,7 +187,6 @@ public class TestFailureHandlingByClient {
     OmKeyInfo keyInfo = cluster.getOzoneManager().lookupKey(keyArgs);
     Assert.assertEquals(2 * data.getBytes().length, keyInfo.getDataSize());
     validateData(keyName, data.concat(data).getBytes());
-    cluster.restartHddsDatanode(datanodes.get(0), true);
   }
 
   private OzoneOutputStream createKey(String keyName, ReplicationType type,

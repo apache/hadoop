@@ -154,12 +154,13 @@
 
     <swagger-annotations-version>1.5.4</swagger-annotations-version>
     <snakeyaml.version>1.16</snakeyaml.version>
-    <hbase.one.version>1.2.6</hbase.one.version>
-    <hbase.two.version>2.0.0-beta-1</hbase.two.version>
+    <hbase.one.version>1.4.8</hbase.one.version>
+    <hbase.two.version>2.0.2</hbase.two.version>
     <junit.version>4.12</junit.version>
     <junit.jupiter.version>5.3.1</junit.jupiter.version>
     <junit.vintage.version>5.3.1</junit.vintage.version>
     <junit.platform.version>1.3.1</junit.platform.version>
+    <jline.version>3.9.0</jline.version>
   </properties>
 
   <dependencyManagement>
@@ -697,6 +698,11 @@
         </exclusions>
       </dependency>
       <dependency>
+        <groupId>org.eclipse.jetty.websocket</groupId>
+        <artifactId>websocket-client</artifactId>
+        <version>${jetty.version}</version>
+      </dependency>
+      <dependency>
         <groupId>javax.servlet.jsp</groupId>
         <artifactId>jsp-api</artifactId>
         <version>2.1</version>
@@ -1176,6 +1182,11 @@
             <artifactId>jline</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.jline</groupId>
+        <artifactId>jline</artifactId>
+        <version>${jline.version}</version>
       </dependency>
       <dependency>
         <groupId>org.hsqldb</groupId>
