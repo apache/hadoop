@@ -269,19 +269,28 @@ public class LocalMetadataStore implements MetadataStore {
       Path parentPath = path.getParent();
       if (parentPath != null) {
         LocalMetadataEntry parentMeta = localCache.getIfPresent(parentPath);
-        DirListingMetadata parentDirMeta =
-            new DirListingMetadata(parentPath, DirListingMetadata.EMPTY_DIR,
-                false);
-        parentDirMeta.put(status);
 
-        getDirListingMeta(parentPath);
-
+        // Create empty parent LocalMetadataEntry if it doesn't exist
         if (parentMeta == null){
-          localCache.put(parentPath, new LocalMetadataEntry(parentDirMeta));
-        } else if (!parentMeta.hasDirMeta()) {
+          parentMeta = new LocalMetadataEntry();
+          localCache.put(parentPath, parentMeta);
+        }
+
+        // If there is no directory metadata on the parent entry, create
+        // an empty one
+        if (!parentMeta.hasDirMeta()) {
+          DirListingMetadata parentDirMeta =
+              new DirListingMetadata(parentPath, DirListingMetadata.EMPTY_DIR,
+                  false);
           parentMeta.setDirListingMetadata(parentDirMeta);
-        } else {
-          parentMeta.getDirListingMeta().put(status);
+        }
+
+        // Add the child status to the listing
+        parentMeta.getDirListingMeta().put(status);
+
+        // Mark the listing entry as deleted if the meta is set to deleted
+        if(meta.isDeleted()) {
+          parentMeta.getDirListingMeta().markDeleted(path);
         }
       }
     }

@@ -178,7 +178,8 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
   public void testConsistentListAfterDelete() throws Exception {
     S3AFileSystem fs = getFileSystem();
     // test will fail if NullMetadataStore (the default) is configured: skip it.
-    Assume.assumeTrue(fs.hasMetadataStore());
+    Assume.assumeTrue("FS needs to have a metadatastore.",
+        fs.hasMetadataStore());
 
     // Any S3 keys that contain DELAY_KEY_SUBSTRING will be delayed
     // in listObjects() results via InconsistentS3Client
@@ -190,11 +191,11 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
         inconsistentPath};
 
     for (Path path : testDirs) {
-      assertTrue(fs.mkdirs(path));
+      assertTrue("Can't create directory: " + path, fs.mkdirs(path));
     }
     clearInconsistency(fs);
     for (Path path : testDirs) {
-      assertTrue(fs.delete(path, false));
+      assertTrue("Can't delete path: " + path, fs.delete(path, false));
     }
 
     FileStatus[] paths = fs.listStatus(path("a/b/"));
@@ -202,10 +203,13 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     for (FileStatus fileState : paths) {
       list.add(fileState.getPath());
     }
-    assertFalse(list.contains(path("a/b/dir1")));
-    assertFalse(list.contains(path("a/b/dir2")));
-    // This should fail without S3Guard, and succeed with it.
-    assertFalse(list.contains(inconsistentPath));
+
+    assertFalse("This path should be deleted.",
+        list.contains(path("a/b/dir1")));
+    assertFalse("This path should be deleted.",
+        list.contains(path("a/b/dir2")));
+    assertFalse("This should fail without S3Guard, and succeed with it.",
+        list.contains(inconsistentPath));
   }
 
   /**
