@@ -633,7 +633,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
           LOG.trace("Listing table {} in region {} for {} returning {}",
               tableName, region, path, metas);
 
-          return (metas.isEmpty() || dirPathMeta == null)
+          return (metas.isEmpty() && dirPathMeta == null)
               ? null
               : new DirListingMetadata(path, metas, isAuthoritative,
               dirPathMeta.getLastUpdated());
