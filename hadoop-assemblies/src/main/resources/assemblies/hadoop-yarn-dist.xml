@@ -266,9 +266,20 @@
       </binaries>
     </moduleSet>
     <moduleSet>
+      <includes>
+        <include>org.apache.hadoop:hadoop-yarn-csi</include>
+      </includes>
+      <binaries>
+        <outputDirectory>share/hadoop/${hadoop.component}/csi</outputDirectory>
+        <includeDependencies>false</includeDependencies>
+        <unpack>false</unpack>
+      </binaries>
+    </moduleSet>
+    <moduleSet>
       <excludes>
         <exclude>org.apache.hadoop:hadoop-yarn-server-timelineservice*</exclude>
         <exclude>org.apache.hadoop:hadoop-yarn-ui</exclude>
+        <exclude>org.apache.hadoop:hadoop-yarn-csi</exclude>
       </excludes>
       <binaries>
         <outputDirectory>share/hadoop/${hadoop.component}</outputDirectory>
