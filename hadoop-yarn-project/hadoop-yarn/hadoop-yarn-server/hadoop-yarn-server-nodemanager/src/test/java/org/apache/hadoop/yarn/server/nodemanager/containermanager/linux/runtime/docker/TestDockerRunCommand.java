@@ -59,6 +59,10 @@ public class TestDockerRunCommand {
     dockerRunCommand.setOverrideCommandWithArgs(commands);
     dockerRunCommand.removeContainerOnExit();
     dockerRunCommand.addTmpfsMount("/run");
+    String portsMapping = "127.0.0.1:8080:80,1234:1234,:2222";
+    for (String mapping:portsMapping.split(",")) {
+      dockerRunCommand.addPortsMapping(mapping);
+    }
 
     assertEquals("run", StringUtils.join(",",
         dockerRunCommand.getDockerCommandWithArguments()
@@ -79,7 +83,10 @@ public class TestDockerRunCommand {
             .get("launch-command")));
     assertEquals("/run", StringUtils.join(",",
         dockerRunCommand.getDockerCommandWithArguments().get("tmpfs")));
-    assertEquals(8, dockerRunCommand.getDockerCommandWithArguments().size());
+    assertEquals("127.0.0.1:8080:80,1234:1234,:2222", StringUtils.join(",",
+        dockerRunCommand.getDockerCommandWithArguments()
+            .get("ports-mapping")));
+    assertEquals(9, dockerRunCommand.getDockerCommandWithArguments().size());
   }
 
   @Test

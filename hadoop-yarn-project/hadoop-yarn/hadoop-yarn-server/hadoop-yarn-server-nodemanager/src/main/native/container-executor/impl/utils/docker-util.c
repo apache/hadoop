@@ -167,6 +167,13 @@ static int is_volume_name(const char *volume_name) {
   return execute_regex_match(regex_str, volume_name) == 0;
 }
 
+static int is_valid_ports_mapping(const char *ports_mapping) {
+  const char *regex_str = "^:[0-9]+|^[0-9]+:[0-9]+|^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.)"
+                          "{3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]):[0-9]+:[0-9]+$";
+  // execute_regex_match return 0 is matched success
+  return execute_regex_match(regex_str, ports_mapping) == 0;
+}
+
 static int is_volume_name_matched_by_regex(const char* requested, const char* pattern) {
   // execute_regex_match return 0 is matched success
   return is_volume_name(requested) && (execute_regex_match(pattern + sizeof("regex:"), requested) == 0);
@@ -314,6 +321,8 @@ const char *get_docker_error_message(const int error_code) {
       return "Unknown docker command";
     case INVALID_DOCKER_NETWORK:
       return "Invalid docker network";
+    case INVALID_DOCKER_PORTS_MAPPING:
+      return "Invalid docker ports mapping";
     case INVALID_DOCKER_CAPABILITY:
       return "Invalid docker capability";
     case PRIVILEGED_CONTAINERS_DISABLED:
@@ -880,6 +889,64 @@ static int set_network(const struct configuration *command_config,
     ret = INVALID_DOCKER_NETWORK;
   }
 
+  return ret;
+}
+
+static int add_ports_mapping_to_command(const struct configuration *command_config, args *args) {
+  int i = 0, ret = 0;
+  char *network_type = (char*) malloc(128);
+  char *docker_network_command = NULL;
+  char *docker_binary = get_docker_binary(command_config);
+  char *network_name = get_configuration_value("net", DOCKER_COMMAND_FILE_SECTION, command_config);
+  char **ports_mapping_values = get_configuration_values_delimiter("ports-mapping", DOCKER_COMMAND_FILE_SECTION, command_config, ",");
+  if (network_name != NULL) {
+    docker_network_command = make_string("%s network inspect %s --format='{{.Driver}}'", docker_binary, network_name);
+    FILE* docker_network = popen(docker_network_command, "r");
+    ret = fscanf(docker_network, "%s", network_type);
+    if (pclose (docker_network) != 0 || ret <= 0) {
+      fprintf (ERRORFILE, "Could not inspect docker network to get type %s.\n", docker_network_command);
+      goto cleanup;
+    }
+    // other network type exit successfully without ports mapping
+    if (strcasecmp(network_type, "bridge") != 0) {
+      ret = 0;
+      goto cleanup;
+    }
+    // add -P when not configure ports mapping
+    if (ports_mapping_values == NULL) {
+      ret = add_to_args(args, "-P");
+      if (ret != 0) {
+        ret = BUFFER_TOO_SMALL;
+      }
+    }
+  }
+  // add -p when configure ports mapping
+  if (ports_mapping_values != NULL) {
+    for (i = 0; ports_mapping_values[i] != NULL; i++) {
+      if (!is_valid_ports_mapping(ports_mapping_values[i])) {
+         fprintf (ERRORFILE, "Invalid port mappings:  %s.\n", ports_mapping_values[i]);
+         ret = INVALID_DOCKER_PORTS_MAPPING;
+         break;
+      }
+      ret = add_to_args(args, "-p");
+      if (ret != 0) {
+        ret = BUFFER_TOO_SMALL;
+        break;
+      }
+      ret = add_to_args(args, ports_mapping_values[i]);
+      if (ret != 0) {
+        ret = BUFFER_TOO_SMALL;
+        break;
+      }
+    }
+  }
+
+cleanup:
+  free(network_type);
+  free(docker_binary);
+  free(network_name);
+  free(docker_network_command);
+  free_values(ports_mapping_values);
   return ret;
 }
 
@@ -1493,6 +1560,11 @@ int get_docker_run_command(const char *command_file, const struct configuration 
   }
 
   ret = set_network(&command_config, conf, args);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  ret = add_ports_mapping_to_command(&command_config, args);
   if (ret != 0) {
     goto free_and_exit;
   }
