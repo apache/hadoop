@@ -271,22 +271,44 @@ public class AzureBlobFileSystem extends FileSystem {
     if (parentFolder == null) {
       return false;
     }
+    Path qualifiedSrcPath = makeQualified(src);
+    Path qualifiedDstPath = makeQualified(dst);
 
-    final FileStatus dstFileStatus = tryGetFileStatus(dst);
+    // rename under same folder;
+    if(makeQualified(parentFolder).equals(qualifiedDstPath)) {
+      return tryGetFileStatus(qualifiedSrcPath) != null;
+    }
+
+    FileStatus dstFileStatus = null;
+    if (qualifiedSrcPath.equals(qualifiedDstPath)) {
+      // rename to itself
+      // - if it doesn't exist, return false
+      // - if it is file, return true
+      // - if it is dir, return false.
+      dstFileStatus = tryGetFileStatus(qualifiedDstPath);
+      if (dstFileStatus == null) {
+        return false;
+      }
+      return dstFileStatus.isDirectory() ? false : true;
+    }
+
+    // Non-HNS account need to check dst status on driver side.
+    if (!abfsStore.getIsNamespaceEnabled() && dstFileStatus == null) {
+      dstFileStatus = tryGetFileStatus(qualifiedDstPath);
+    }
+
     try {
       String sourceFileName = src.getName();
       Path adjustedDst = dst;
 
       if (dstFileStatus != null) {
         if (!dstFileStatus.isDirectory()) {
-          return src.equals(dst);
+          return qualifiedSrcPath.equals(qualifiedDstPath);
         }
-
         adjustedDst = new Path(dst, sourceFileName);
       }
 
-      Path qualifiedSrcPath = makeQualified(src);
-      Path qualifiedDstPath = makeQualified(adjustedDst);
+      qualifiedDstPath = makeQualified(adjustedDst);
       performAbfsAuthCheck(FsAction.READ_WRITE, qualifiedSrcPath, qualifiedDstPath);
 
       abfsStore.rename(qualifiedSrcPath, qualifiedDstPath);
