@@ -502,6 +502,65 @@ namespace ContainerExecutor {
     free_configuration(&container_cfg);
   }
 
+  TEST_F(TestDockerUtil, test_add_ports_mapping_to_command) {
+    struct args buff = ARGS_INITIAL_VALUE;
+    int ret = 0;
+    std::vector<std::pair<std::string, std::string> > file_cmd_vec;
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n  docker-command=run\n  ports-mapping=127.0.0.1:8080:80,1234:1234,:2222",
+        "-p 127.0.0.1:8080:80 -p 1234:1234 -p :2222"));
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n  docker-command=run\n  ports-mapping=1234:1234,:2222",
+        "-p 1234:1234 -p :2222"));
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n  docker-command=run\n  ports-mapping=:2222", "-p :2222"));
+
+    std::vector<std::pair<std::string, std::string> >::const_iterator itr;
+    for (itr = file_cmd_vec.begin(); itr != file_cmd_vec.end(); ++itr) {
+      struct configuration cmd_cfg;
+      write_command_file(itr->first);
+      ret = read_config(docker_command_file.c_str(), &cmd_cfg);
+      if (ret != 0) {
+        FAIL();
+      }
+      ret = add_ports_mapping_to_command(&cmd_cfg, &buff);
+      char *actual = flatten(&buff);
+      ASSERT_EQ(0, ret) << "error message: " << get_docker_error_message(ret) << " for input " << itr->first;
+      ASSERT_STREQ(itr->second.c_str(), actual);
+      reset_args(&buff);
+      free(actual);
+      free_configuration(&cmd_cfg);
+    }
+    struct configuration cmd_cfg_1;
+    write_command_file("[docker-command-execution]\n  docker-command=run\n  ports-mapping=327.0.0.1:8080:80,1234:1234,:2222");
+    ret = read_config(docker_command_file.c_str(), &cmd_cfg_1);
+    if (ret != 0) {
+      FAIL();
+    }
+    ret = add_ports_mapping_to_command(&cmd_cfg_1, &buff);
+    ASSERT_EQ(INVALID_DOCKER_PORTS_MAPPING, ret);
+    reset_args(&buff);
+
+    write_command_file("[docker-command-execution]\n  docker-command=run\n  ports-mapping=127.0.0.1:8080:80,12s4:1234,:2222");
+    ret = read_config(docker_command_file.c_str(), &cmd_cfg_1);
+    if (ret != 0) {
+      FAIL();
+    }
+    ret = add_ports_mapping_to_command(&cmd_cfg_1, &buff);
+    ASSERT_EQ(INVALID_DOCKER_PORTS_MAPPING, ret);
+    reset_args(&buff);
+
+    write_command_file("[docker-command-execution]\n  docker-command=run\n  ports-mapping=127.0.0.1:8080:80,1234:1234,:s2s2");
+    ret = read_config(docker_command_file.c_str(), &cmd_cfg_1);
+    if (ret != 0) {
+      FAIL();
+    }
+    ret = add_ports_mapping_to_command(&cmd_cfg_1, &buff);
+    ASSERT_EQ(INVALID_DOCKER_PORTS_MAPPING, ret);
+    reset_args(&buff);
+    free_configuration(&cmd_cfg_1);
+  }
+
   TEST_F(TestDockerUtil, test_set_pid_namespace) {
     struct configuration container_cfg, cmd_cfg;
     struct args buff = ARGS_INITIAL_VALUE;
@@ -1305,10 +1364,10 @@ namespace ContainerExecutor {
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=nobody\n  hostname=host-id\n"
             "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
-            "  network=bridge\n  devices=/dev/test:/dev/test\n  net=bridge\n"
+            "  network=bridge\n  devices=/dev/test:/dev/test\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
-        "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
+        "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
             " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp:rw --cgroup-parent=ctr-cgroup --cap-drop=ALL --cap-add=CHOWN "
             "--cap-add=SETUID --hostname=host-id --device=/dev/test:/dev/test hadoop/docker-image bash"
             " test_script.sh arg1 arg2"));
@@ -1316,10 +1375,9 @@ namespace ContainerExecutor {
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n image=nothadoop/docker-image\n  user=nobody\n  hostname=host-id\n"
             "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
-            "  network=bridge\n  net=bridge\n"
-            "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
+            "  network=bridge\n  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
-        "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge"
+        "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm"
             " --cgroup-parent=ctr-cgroup --cap-drop=ALL --hostname=host-id nothadoop/docker-image bash test_script.sh arg1 arg2"));
 
     // Test privileged container
@@ -1327,10 +1385,10 @@ namespace ContainerExecutor {
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=root\n  hostname=host-id\n"
             "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
-            "  network=bridge\n  devices=/dev/test:/dev/test\n  net=bridge\n  privileged=true\n"
+            "  network=bridge\n  devices=/dev/test:/dev/test\n  privileged=true\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
-        "run --name=container_e1_12312_11111_02_000001 -d --rm --net=bridge -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
+        "run --name=container_e1_12312_11111_02_000001 -d --rm -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
             " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp:rw --cgroup-parent=ctr-cgroup --privileged --cap-drop=ALL "
             "--cap-add=CHOWN --cap-add=SETUID --hostname=host-id --device=/dev/test:/dev/test hadoop/docker-image "
             "bash test_script.sh arg1 arg2"));
@@ -1339,10 +1397,10 @@ namespace ContainerExecutor {
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=root\n  hostname=host-id\n"
             "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
-            "  network=bridge\n  devices=/dev/test:/dev/test\n  net=bridge\n  privileged=true\n"
+            "  network=bridge\n  devices=/dev/test:/dev/test\n  privileged=true\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n  group-add=1000,1001\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
-        "run --name=container_e1_12312_11111_02_000001 -d --rm --net=bridge -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
+        "run --name=container_e1_12312_11111_02_000001 -d --rm -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
             " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp:rw --cgroup-parent=ctr-cgroup --privileged --cap-drop=ALL "
             "--cap-add=CHOWN --cap-add=SETUID --hostname=host-id "
             "--device=/dev/test:/dev/test hadoop/docker-image bash test_script.sh arg1 arg2"));
@@ -1350,10 +1408,9 @@ namespace ContainerExecutor {
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=docker-image\n  user=nobody\n  hostname=host-id\n"
-            "  network=bridge\n  net=bridge\n"
-            "  detach=true\n  rm=true\n  group-add=1000,1001\n"
+            "  network=bridge\n  detach=true\n  rm=true\n  group-add=1000,1001\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
-        "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge --cap-drop=ALL "
+        "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --cap-drop=ALL "
             "--hostname=host-id --group-add 1000 --group-add 1001 "
             "docker-image bash test_script.sh arg1 arg2"));
 
@@ -1372,7 +1429,7 @@ namespace ContainerExecutor {
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n image=nothadoop/docker-image\n  user=nobody\n  hostname=host-id\n"
             "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
-            "  network=bridge\n  net=bridge\n  privileged=true\n"
+            "  network=bridge\n  privileged=true\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n  group-add=1000,1001\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
         PRIVILEGED_CONTAINERS_DISABLED));
@@ -1533,10 +1590,10 @@ namespace ContainerExecutor {
           "[docker-command-execution]\n"
               "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=nobody\n  hostname=host-id\n"
               "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
-              "  network=bridge\n  devices=/dev/test:/dev/test\n  net=bridge\n"
+              "  network=bridge\n  devices=/dev/test:/dev/test\n"
               "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
               "  launch-command=bash,test_script.sh,arg1,arg2",
-          "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
+          "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
               " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp:rw --cgroup-parent=ctr-cgroup --cap-drop=ALL --cap-add=CHOWN "
               "--cap-add=SETUID --hostname=host-id --device=/dev/test:/dev/test hadoop/docker-image bash"
               " test_script.sh arg1 arg2"));
@@ -1544,10 +1601,9 @@ namespace ContainerExecutor {
           "[docker-command-execution]\n"
               "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n image=nothadoop/docker-image\n  user=nobody\n  hostname=host-id\n"
               "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
-              "  network=bridge\n  net=bridge\n"
-              "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
+              "  network=bridge\n  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
               "  launch-command=bash,test_script.sh,arg1,arg2",
-          "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge"
+          "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm"
               " --cgroup-parent=ctr-cgroup --cap-drop=ALL --hostname=host-id nothadoop/docker-image bash test_script.sh arg1 arg2"));
 
       std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
@@ -1555,7 +1611,7 @@ namespace ContainerExecutor {
           "[docker-command-execution]\n"
               "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=nobody\n  hostname=host-id\n"
               "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
-              "  network=bridge\n  devices=/dev/test:/dev/test\n  net=bridge\n  privileged=true\n"
+              "  network=bridge\n  devices=/dev/test:/dev/test\n  privileged=true\n"
               "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
               "  launch-command=bash,test_script.sh,arg1,arg2",
           static_cast<int>(PRIVILEGED_CONTAINERS_DISABLED)));
