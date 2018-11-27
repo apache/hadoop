@@ -71,8 +71,8 @@ RUN mkdir -p /opt/hadoop-$HADOOP_VERSION/logs
 
 # https://docs.oracle.com/javase/7/docs/technotes/guides/net/properties.html
 # Java caches dns results forever, don't cache dns results forever:
-RUN echo 'networkaddress.cache.ttl = 0' >> $JAVA_HOME/lib/security/java.security
-RUN echo 'networkaddress.cache.negative.ttl = 0' >> $JAVA_HOME/lib/security/java.security
+RUN echo 'networkaddress.cache.ttl=0' >> $JAVA_HOME/lib/security/java.security
+RUN echo 'networkaddress.cache.negative.ttl=0' >> $JAVA_HOME/lib/security/java.security
 
 RUN useradd hadoop -m -u 1002 -d $HADOOP_HOME
 
