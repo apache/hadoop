@@ -31,7 +31,6 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 /**
  * Tests RDBStore creation.
@@ -131,7 +130,7 @@ public class TestDBStoreBuilder {
             RandomStringUtils.random(9).getBytes(StandardCharsets.UTF_8);
         firstTable.put(key, value);
         byte[] temp = firstTable.get(key);
-        Assert.assertTrue(Arrays.equals(value, temp));
+        Assert.assertArrayEquals(value, temp);
       }
 
       try (Table secondTable = dbStore.getTable("Second")) {
@@ -161,7 +160,7 @@ public class TestDBStoreBuilder {
             RandomStringUtils.random(9).getBytes(StandardCharsets.UTF_8);
         firstTable.put(key, value);
         byte[] temp = firstTable.get(key);
-        Assert.assertTrue(Arrays.equals(value, temp));
+        Assert.assertArrayEquals(value, temp);
       }
 
       try (Table secondTable = dbStore.getTable("Second")) {

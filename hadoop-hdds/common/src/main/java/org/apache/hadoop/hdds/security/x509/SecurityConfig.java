@@ -46,6 +46,10 @@ import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_PRIVATE_KEY_FILE_NAME_D
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_PUBLIC_KEY_FILE_NAME;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_PUBLIC_KEY_FILE_NAME_DEFAULT;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_SECURITY_PROVIDER;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_DIR_NAME;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_DIR_NAME_DEFAULT;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_FILE_NAME;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_FILE_NAME_DEFAULT;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_MAX_DURATION;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_MAX_DURATION_DEFAULT;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_SIGNATURE_ALGO;
@@ -54,7 +58,7 @@ import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
 
 /**
  * A class that deals with all Security related configs in HDDS.
- *
+ * <p>
  * This class allows security configs to be read and used consistently across
  * all of security related code base.
  */
@@ -73,6 +77,8 @@ public class SecurityConfig {
   private final Duration certDuration;
   private final String x509SignatureAlgo;
   private final Boolean grpcBlockTokenEnabled;
+  private final String certificateDir;
+  private final String certificateFileName;
 
   /**
    * Constructs a SecurityConfig.
@@ -108,6 +114,10 @@ public class SecurityConfig {
     this.certDuration = Duration.parse(durationString);
     this.x509SignatureAlgo = this.configuration.get(HDDS_X509_SIGNATURE_ALGO,
         HDDS_X509_SIGNATURE_ALGO_DEFAULT);
+    this.certificateDir = this.configuration.get(HDDS_X509_DIR_NAME,
+        HDDS_X509_DIR_NAME_DEFAULT);
+    this.certificateFileName = this.configuration.get(HDDS_X509_FILE_NAME,
+        HDDS_X509_FILE_NAME_DEFAULT);
 
     this.grpcBlockTokenEnabled = this.configuration.getBoolean(
         HDDS_GRPC_BLOCK_TOKEN_ENABLED,
@@ -127,8 +137,17 @@ public class SecurityConfig {
   }
 
   /**
-   * Returns the public key file name, This is used for storing the public
-   * keys on disk.
+   * Returns the Standard Certificate file name.
+   *
+   * @return String - Name of the Certificate File.
+   */
+  public String getCertificateFileName() {
+    return certificateFileName;
+  }
+
+  /**
+   * Returns the public key file name, This is used for storing the public keys
+   * on disk.
    *
    * @return String, File name used for public keys.
    */
@@ -137,8 +156,8 @@ public class SecurityConfig {
   }
 
   /**
-   * Returns the private key file name.This is used for storing the private
-   * keys on disk.
+   * Returns the private key file name.This is used for storing the private keys
+   * on disk.
    *
    * @return String, File name used for private keys.
    */
@@ -149,16 +168,47 @@ public class SecurityConfig {
   /**
    * Returns the File path to where keys are stored.
    *
-   * @return String Key location.
+   * @return path Key location.
    */
   public Path getKeyLocation() {
     return Paths.get(metadatDir, keyDir);
   }
 
   /**
+   * Returns the File path to where keys are stored with an additional component
+   * name inserted in between.
+   *
+   * @param component - Component Name - String.
+   * @return Path location.
+   */
+  public Path getKeyLocation(String component) {
+    return Paths.get(metadatDir, component, keyDir);
+  }
+
+  /**
+   * Returns the File path to where keys are stored.
+   *
+   * @return path Key location.
+   */
+  public Path getCertificateLocation() {
+    return Paths.get(metadatDir, certificateDir);
+  }
+
+  /**
+   * Returns the File path to where keys are stored with an addition component
+   * name inserted in between.
+   *
+   * @param component - Component Name - String.
+   * @return Path location.
+   */
+  public Path getCertificateLocation(String component) {
+    return Paths.get(metadatDir, component, certificateDir);
+  }
+
+  /**
    * Gets the Key Size, The default key size is 2048, since the default
-   * algorithm used is RSA. User can change this by setting the "hdds.key
-   * .len" in configuration.
+   * algorithm used is RSA. User can change this by setting the "hdds.key.len"
+   * in configuration.
    *
    * @return key size.
    */
@@ -177,8 +227,8 @@ public class SecurityConfig {
   }
 
   /**
-   * Returns the Key generation Algorithm used.  User can change this by
-   * setting the "hdds.key.algo" in configuration.
+   * Returns the Key generation Algorithm used.  User can change this by setting
+   * the "hdds.key.algo" in configuration.
    *
    * @return String Algo.
    */
@@ -188,8 +238,8 @@ public class SecurityConfig {
 
   /**
    * Returns the X.509 Signature Algorithm used. This can be changed by setting
-   * "hdds.x509.signature.algorithm" to the new name. The default algorithm
-   * is SHA256withRSA.
+   * "hdds.x509.signature.algorithm" to the new name. The default algorithm is
+   * SHA256withRSA.
    *
    * @return String
    */
@@ -207,11 +257,11 @@ public class SecurityConfig {
   }
 
   /**
-   * Returns the maximum length a certificate can be valid in SCM. The
-   * default value is 5 years. This can be changed by setting
-   * "hdds.x509.max.duration" in configuration. The formats accepted are
-   * based on the ISO-8601 duration format PnDTnHnMn.nS
-   *
+   * Returns the maximum length a certificate can be valid in SCM. The default
+   * value is 5 years. This can be changed by setting "hdds.x509.max.duration"
+   * in configuration. The formats accepted are based on the ISO-8601 duration
+   * format PnDTnHnMn.nS
+   * <p>
    * Default value is 5 years and written as P1865D.
    *
    * @return Duration.

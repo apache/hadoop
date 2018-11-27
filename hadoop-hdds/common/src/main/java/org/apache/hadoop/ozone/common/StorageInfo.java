@@ -62,7 +62,7 @@ public class StorageInfo {
    * @param cT
    *          Cluster creation Time
 
-   * @throws IOException
+   * @throws IOException - on Error.
    */
   public StorageInfo(NodeType type, String cid, long cT)
       throws IOException {

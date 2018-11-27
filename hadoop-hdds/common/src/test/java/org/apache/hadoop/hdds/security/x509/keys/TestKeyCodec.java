@@ -51,7 +51,7 @@ import org.junit.rules.TemporaryFolder;
 /**
  * Test class for HDDS pem writer.
  */
-public class TestHDDSKeyPEMWriter {
+public class TestKeyCodec {
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -82,7 +82,7 @@ public class TestHDDSKeyPEMWriter {
       throws NoSuchProviderException, NoSuchAlgorithmException,
       IOException, InvalidKeySpecException {
     KeyPair keys = keyGenerator.generateKey();
-    HDDSKeyPEMWriter pemWriter = new HDDSKeyPEMWriter(configuration);
+    KeyCodec pemWriter = new KeyCodec(configuration);
     pemWriter.writeKey(keys);
 
     // Assert that locations have been created.
@@ -171,7 +171,7 @@ public class TestHDDSKeyPEMWriter {
   public void testReWriteKey()
       throws Exception {
     KeyPair kp = keyGenerator.generateKey();
-    HDDSKeyPEMWriter pemWriter = new HDDSKeyPEMWriter(configuration);
+    KeyCodec pemWriter = new KeyCodec(configuration);
     SecurityConfig secConfig = pemWriter.getSecurityConfig();
     pemWriter.writeKey(kp);
 
@@ -205,7 +205,7 @@ public class TestHDDSKeyPEMWriter {
   public void testWriteKeyInNonPosixFS()
       throws Exception {
     KeyPair kp = keyGenerator.generateKey();
-    HDDSKeyPEMWriter pemWriter = new HDDSKeyPEMWriter(configuration);
+    KeyCodec pemWriter = new KeyCodec(configuration);
     pemWriter.setIsPosixFileSystem(() -> false);
 
     // Assert key rewrite fails in non Posix file system.

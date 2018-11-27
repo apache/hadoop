@@ -20,10 +20,12 @@
 package org.apache.hadoop.hdds.security.x509.certificate.authority;
 
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
-import org.apache.hadoop.hdds.security.x509.certificates.CertificateSignRequest;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest;
 import org.bouncycastle.cert.X509CertificateHolder;
 
+import java.io.IOException;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.Future;
 
@@ -47,16 +49,19 @@ public interface CertificateServer {
    * Returns the CA Certificate for this CA.
    *
    * @return X509CertificateHolder - Certificate for this CA.
-   * @throws SCMSecurityException -- usually thrown if this CA is not
+   * @throws CertificateException - usually thrown if this CA is not
    *                              initialized.
+   * @throws IOException - on Error.
    */
   X509CertificateHolder getCACertificate()
-      throws SCMSecurityException;
+      throws CertificateException, IOException;
 
   /**
    * Request a Certificate based on Certificate Signing Request.
    *
    * @param csr - Certificate Signing Request.
+   * @param approver - An Enum which says what kind of approval process to
+   * follow.
    * @return A future that will have this certificate when this request is
    * approved.
    * @throws SCMSecurityException - on Error.

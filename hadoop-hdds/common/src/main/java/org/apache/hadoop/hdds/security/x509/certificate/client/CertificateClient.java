@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.hdds.security.x509.certificate.client;
 
-import org.apache.hadoop.hdds.security.x509.certificates.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.security.x509.exceptions.CertificateException;
 
 import java.io.InputStream;
@@ -64,7 +64,7 @@ public interface CertificateClient {
 
   /**
    * Verifies if this certificate is part of a trusted chain.
-   *
+   * @param certificate - certificate.
    * @return true if it trusted, false otherwise.
    */
   boolean verifyCertificate(X509Certificate certificate);
@@ -74,7 +74,9 @@ public interface CertificateClient {
    * key.
    *
    * @param stream - Data stream to sign.
+   * @param component - name of the component.
    * @return byte array - containing the signature.
+   * @throws CertificateException - on Error.
    */
   byte[] signDataStream(InputStream stream, String component)
       throws CertificateException;
@@ -82,6 +84,7 @@ public interface CertificateClient {
   /**
    * Verifies a digital Signature, given the signature and the certificate of
    * the signer.
+   *
    * @param stream - Data Stream.
    * @param signature - Byte Array containing the signature.
    * @param cert - Certificate of the Signer.
@@ -123,7 +126,7 @@ public interface CertificateClient {
    *
    * @param key - private key
    * @param component - name of the component.
-   * @throws CertificateException
+   * @throws CertificateException - on Error.
    */
   void storePrivateKey(PrivateKey key, String component)
       throws CertificateException;
@@ -132,7 +135,8 @@ public interface CertificateClient {
    * Stores the public key of a specified component.
    *
    * @param key - public key
-   * @throws CertificateException
+   * @param component - name of the component.
+   * @throws CertificateException - on Error.
    */
   void storePublicKey(PublicKey key, String component)
       throws CertificateException;
@@ -142,7 +146,7 @@ public interface CertificateClient {
    *
    * @param certificate - X509 Certificate
    * @param component - Name of the component.
-   * @throws CertificateException
+   * @throws CertificateException - on Error.
    */
   void storeCertificate(X509Certificate certificate, String component)
       throws CertificateException;
@@ -152,7 +156,7 @@ public interface CertificateClient {
    *
    * @param certStore - Cert Store.
    * @param component - Trust Chain.
-   * @throws CertificateException
+   * @throws CertificateException - on Error.
    */
   void storeTrustChain(CertStore certStore,
       String component) throws CertificateException;
@@ -162,7 +166,7 @@ public interface CertificateClient {
    *
    * @param certificates - List of Certificates.
    * @param component - String component.
-   * @throws CertificateException
+   * @throws CertificateException - on Error.
    */
   void storeTrustChain(List<X509Certificate> certificates,
       String component) throws CertificateException;

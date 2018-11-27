@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,20 +6,22 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
-package org.apache.hadoop.hdds.security.x509.certificates;
+package org.apache.hadoop.hdds.security.x509.certificate.utils;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.SecurityUtil;
 import org.bouncycastle.asn1.ASN1Sequence;
@@ -45,12 +47,15 @@ import java.util.UUID;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
 
+/**
+ * Certificate Signing Request.
+ */
 public class TestCertificateSignRequest {
 
-  private SecurityConfig securityConfig;
   private static OzoneConfiguration conf = new OzoneConfiguration();
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  private SecurityConfig securityConfig;
 
   @Before
   public void init() throws IOException {
@@ -257,7 +262,7 @@ public class TestCertificateSignRequest {
     // Verify CSR with attribute for extensions
     Assert.assertEquals(1, csr.getAttributes().length);
   }
-  
+
   @Test
   public void testCsrSerialization() throws NoSuchProviderException,
       NoSuchAlgorithmException, SCMSecurityException, IOException {
