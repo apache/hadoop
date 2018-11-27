@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEvent;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType;
 import org.apache.hadoop.yarn.service.containerlaunch.ContainerLaunchService;
 import org.apache.hadoop.yarn.service.registry.YarnRegistryViewForProviders;
+import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.mockito.stubbing.Answer;
 
 import java.io.IOException;
@@ -92,7 +93,18 @@ public class MockRunningServiceContext extends ServiceContext {
       public ContainerLaunchService getContainerLaunchService() {
         return mockLaunchService;
       }
+
+      @Override public ServiceUtils.ProcessTerminationHandler
+      getTerminationHandler() {
+        return new
+        ServiceUtils.ProcessTerminationHandler() {
+          public void terminate(int exitCode) {
+          }
+        };
+      }
     };
+
+
     this.scheduler.init(fsWatcher.getConf());
 
     ServiceTestUtils.createServiceManager(this);
@@ -116,8 +128,10 @@ public class MockRunningServiceContext extends ServiceContext {
       Component component = new org.apache.hadoop.yarn.service.component.
           Component(componentSpec, 1L, context);
       componentState.put(component.getName(), component);
-      component.handle(new ComponentEvent(component.getName(),
-          ComponentEventType.FLEX));
+      component.handle(
+          new ComponentEvent(component.getName(), ComponentEventType.FLEX)
+              .setDesired(
+                  component.getComponentSpec().getNumberOfContainers()));
 
       for (int i = 0; i < componentSpec.getNumberOfContainers(); i++) {
         counter++;

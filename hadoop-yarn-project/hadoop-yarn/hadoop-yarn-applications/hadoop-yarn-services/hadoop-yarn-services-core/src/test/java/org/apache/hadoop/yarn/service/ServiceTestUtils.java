@@ -63,7 +63,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
@@ -119,14 +118,10 @@ public class ServiceTestUtils {
             Component.RestartPolicyEnum.NEVER, null));
     exampleApp.addComponent(
         createComponent("terminating-comp2", 2, "sleep 1000",
-            Component.RestartPolicyEnum.ON_FAILURE, new ArrayList<String>() {{
-                add("terminating-comp1");
-            }}));
+            Component.RestartPolicyEnum.ON_FAILURE, null));
     exampleApp.addComponent(
         createComponent("terminating-comp3", 2, "sleep 1000",
-            Component.RestartPolicyEnum.ON_FAILURE, new ArrayList<String>() {{
-                add("terminating-comp2");
-            }}));
+            Component.RestartPolicyEnum.ON_FAILURE, null));
 
     return exampleApp;
   }
