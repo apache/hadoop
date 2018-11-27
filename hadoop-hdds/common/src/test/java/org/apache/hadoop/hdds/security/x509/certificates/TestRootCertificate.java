@@ -5,7 +5,7 @@
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -17,11 +17,12 @@
  *
  */
 
-package org.apache.hadoop.hdds.security.x509.certificates;
+package org.apache.hadoop.hdds.security.x509.certificate.utils;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificates.utils.SelfSignedCertificate;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.cert.X509CertificateHolder;
@@ -41,8 +42,8 @@ import java.security.NoSuchProviderException;
 import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.time.Duration;
-import java.time.Instant;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.UUID;
 
@@ -52,10 +53,10 @@ import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
  * Test Class for Root Certificate generation.
  */
 public class TestRootCertificate {
-  private SecurityConfig securityConfig;
   private static OzoneConfiguration conf = new OzoneConfiguration();
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  private SecurityConfig securityConfig;
 
   @Before
   public void init() throws IOException {
@@ -67,10 +68,9 @@ public class TestRootCertificate {
   public void testAllFieldsAreExpected()
       throws SCMSecurityException, NoSuchProviderException,
       NoSuchAlgorithmException, CertificateException,
-      SignatureException, InvalidKeyException {
-    Instant now = Instant.now();
-    Date notBefore = Date.from(now);
-    Date notAfter = Date.from(now.plus(Duration.ofDays(365)));
+      SignatureException, InvalidKeyException, IOException {
+    LocalDate notBefore = LocalDate.now();
+    LocalDate notAfter = notBefore.plus(365, ChronoUnit.DAYS);
     String clusterID = UUID.randomUUID().toString();
     String scmID = UUID.randomUUID().toString();
     String subject = "testRootCert";
@@ -96,13 +96,15 @@ public class TestRootCertificate {
 
 
     // Make sure that NotBefore is before the current Date
-    Date invalidDate = Date.from(now.minus(Duration.ofDays(1)));
+    Date invalidDate = java.sql.Date.valueOf(
+        notBefore.minus(1, ChronoUnit.DAYS));
     Assert.assertFalse(
         certificateHolder.getNotBefore()
             .before(invalidDate));
 
     //Make sure the end date is honored.
-    invalidDate = Date.from(now.plus(Duration.ofDays(366)));
+    invalidDate = java.sql.Date.valueOf(
+        notAfter.plus(1, ChronoUnit.DAYS));
     Assert.assertFalse(
         certificateHolder.getNotAfter()
             .after(invalidDate));
@@ -113,7 +115,8 @@ public class TestRootCertificate {
     Assert.assertEquals(certificateHolder.getIssuer().toString(), dnName);
     Assert.assertEquals(certificateHolder.getSubject().toString(), dnName);
 
-    // We did not ask for this Certificate to be a CA certificate, hence that
+    // We did not ask for this Certificate to be a CertificateServer
+    // certificate, hence that
     // extension should be null.
     Assert.assertNull(
         certificateHolder.getExtension(Extension.basicConstraints));
@@ -128,10 +131,9 @@ public class TestRootCertificate {
   @Test
   public void testCACert()
       throws SCMSecurityException, NoSuchProviderException,
-      NoSuchAlgorithmException {
-    Instant now = Instant.now();
-    Date notBefore = Date.from(now);
-    Date notAfter = Date.from(now.plus(Duration.ofDays(365)));
+      NoSuchAlgorithmException, IOException {
+    LocalDate notBefore = LocalDate.now();
+    LocalDate notAfter = notBefore.plus(365, ChronoUnit.DAYS);
     String clusterID = UUID.randomUUID().toString();
     String scmID = UUID.randomUUID().toString();
     String subject = "testRootCert";
@@ -151,7 +153,8 @@ public class TestRootCertificate {
             .makeCA();
 
     X509CertificateHolder certificateHolder = builder.build();
-    // This time we asked for a CA Certificate, make sure that extension is
+    // This time we asked for a CertificateServer Certificate, make sure that
+    // extension is
     // present and valid.
     Extension basicExt =
         certificateHolder.getExtension(Extension.basicConstraints);
@@ -167,10 +170,9 @@ public class TestRootCertificate {
   @Test
   public void testInvalidParamFails()
       throws SCMSecurityException, NoSuchProviderException,
-      NoSuchAlgorithmException {
-    Instant now = Instant.now();
-    Date notBefore = Date.from(now);
-    Date notAfter = Date.from(now.plus(Duration.ofDays(365)));
+      NoSuchAlgorithmException, IOException {
+    LocalDate notBefore = LocalDate.now();
+    LocalDate notAfter = notBefore.plus(365, ChronoUnit.DAYS);
     String clusterID = UUID.randomUUID().toString();
     String scmID = UUID.randomUUID().toString();
     String subject = "testRootCert";
@@ -253,6 +255,4 @@ public class TestRootCertificate {
     // Assert that we can create a certificate with all sane params.
     Assert.assertNotNull(builder.build());
   }
-
-
 }

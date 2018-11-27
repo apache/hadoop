@@ -17,6 +17,6 @@
  *
  */
 /**
- * Test classes for Certificate utilities.
+ * Utils for Certificates.
  */
-package org.apache.hadoop.hdds.security.x509.certificate.utils;
+package org.apache.hadoop.hdds.security.x509.certificates.utils;

@@ -28,7 +28,9 @@ import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 
-/** A class to generate Key Pair for use with Certificates. */
+/**
+ * A class to generate Key Pair for use with Certificates.
+ */
 public class HDDSKeyGenerator {
   private static final Logger LOG =
       LoggerFactory.getLogger(HDDSKeyGenerator.class);
@@ -44,7 +46,17 @@ public class HDDSKeyGenerator {
   }
 
   /**
+   * Constructor that takes a SecurityConfig as the Argument.
+   *
+   * @param config - SecurityConfig
+   */
+  public HDDSKeyGenerator(SecurityConfig config) {
+    this.securityConfig = config;
+  }
+
+  /**
    * Returns the Security config used for this object.
+   *
    * @return SecurityConfig
    */
   public SecurityConfig getSecurityConfig() {
@@ -55,10 +67,10 @@ public class HDDSKeyGenerator {
    * Use Config to generate key.
    *
    * @return KeyPair
-   * @throws NoSuchProviderException - On Error, due to missing Java
-   * dependencies.
+   * @throws NoSuchProviderException  - On Error, due to missing Java
+   *                                  dependencies.
    * @throws NoSuchAlgorithmException - On Error,  due to missing Java
-   * dependencies.
+   *                                  dependencies.
    */
   public KeyPair generateKey() throws NoSuchProviderException,
       NoSuchAlgorithmException {
@@ -71,10 +83,10 @@ public class HDDSKeyGenerator {
    *
    * @param size - int, valid key sizes.
    * @return KeyPair
-   * @throws NoSuchProviderException - On Error, due to missing Java
-   * dependencies.
+   * @throws NoSuchProviderException  - On Error, due to missing Java
+   *                                  dependencies.
    * @throws NoSuchAlgorithmException - On Error,  due to missing Java
-   * dependencies.
+   *                                  dependencies.
    */
   public KeyPair generateKey(int size) throws
       NoSuchProviderException, NoSuchAlgorithmException {
@@ -89,10 +101,10 @@ public class HDDSKeyGenerator {
    * @param algorithm - Algorithm to use
    * @param provider - Security provider.
    * @return KeyPair.
-   * @throws NoSuchProviderException - On Error, due to missing Java
-   * dependencies.
+   * @throws NoSuchProviderException  - On Error, due to missing Java
+   *                                  dependencies.
    * @throws NoSuchAlgorithmException - On Error,  due to missing Java
-   * dependencies.
+   *                                  dependencies.
    */
   public KeyPair generateKey(int size, String algorithm, String provider)
       throws NoSuchProviderException, NoSuchAlgorithmException {

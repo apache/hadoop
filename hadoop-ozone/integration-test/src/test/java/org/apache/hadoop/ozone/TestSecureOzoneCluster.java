@@ -46,7 +46,7 @@ import org.apache.hadoop.hdds.scm.server.SCMStorage;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
-import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyPEMWriter;
+import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.RPC;
@@ -88,7 +88,7 @@ public final class TestSecureOzoneCluster {
 
   private static final String TEST_USER = "testUgiUser";
   private static final int CLIENT_TIMEOUT = 2 * 1000;
-  private Logger LOGGER = LoggerFactory
+  private Logger logger = LoggerFactory
       .getLogger(TestSecureOzoneCluster.class);
 
   @Rule
@@ -127,9 +127,9 @@ public final class TestSecureOzoneCluster {
       createCredentialsInKDC(conf, miniKdc);
       generateKeyPair(conf);
     } catch (IOException e) {
-      LOGGER.error("Failed to initialize TestSecureOzoneCluster", e);
+      logger.error("Failed to initialize TestSecureOzoneCluster", e);
     } catch (Exception e) {
-      LOGGER.error("Failed to initialize TestSecureOzoneCluster", e);
+      logger.error("Failed to initialize TestSecureOzoneCluster", e);
     }
   }
 
@@ -148,7 +148,7 @@ public final class TestSecureOzoneCluster {
       }
       FileUtils.deleteQuietly(metaDirPath.toFile());
     } catch (Exception e) {
-      LOGGER.error("Failed to stop TestSecureOzoneCluster", e);
+      logger.error("Failed to stop TestSecureOzoneCluster", e);
     }
   }
 
@@ -452,7 +452,7 @@ public final class TestSecureOzoneCluster {
   private void generateKeyPair(OzoneConfiguration config) throws Exception {
     HDDSKeyGenerator keyGenerator = new HDDSKeyGenerator(conf);
     keyPair = keyGenerator.generateKey();
-    HDDSKeyPEMWriter pemWriter = new HDDSKeyPEMWriter(config);
+    KeyCodec pemWriter = new KeyCodec(config);
     pemWriter.writeKey(keyPair, true);
   }
 
@@ -463,8 +463,6 @@ public final class TestSecureOzoneCluster {
    */
   @Test
   public void testDelegationTokenRenewal() throws Exception {
-    // Capture logs for assertions.
-    LogCapturer logs = LogCapturer.captureLogs(Server.AUDITLOG);
     GenericTestUtils
         .setLogLevel(LoggerFactory.getLogger(Server.class.getName()), INFO);
 
@@ -480,7 +478,6 @@ public final class TestSecureOzoneCluster {
     om.start();
 
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    String username = ugi.getUserName();
 
     // Get first OM client which will authenticate via Kerberos
     omClient = new OzoneManagerProtocolClientSideTranslatorPB(

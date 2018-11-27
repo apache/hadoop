@@ -5,7 +5,7 @@
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -17,7 +17,7 @@
  *
  */
 
-package org.apache.hadoop.hdds.security.x509.certificates;
+package org.apache.hadoop.hdds.security.x509.certificates.utils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -27,9 +27,11 @@ import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.exceptions.CertificateException;
 import org.apache.hadoop.util.Time;
 import org.apache.logging.log4j.util.Strings;
+import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.KeyUsage;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.cert.CertIOException;
 import org.bouncycastle.cert.X509CertificateHolder;
@@ -38,28 +40,33 @@ import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 
+import java.io.IOException;
 import java.math.BigInteger;
 import java.security.KeyPair;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.util.Date;
 
 /**
- * A Self Signed Certificate with CA basic constraint can be used to boot-strap
- * a certificate infra-structure, if no external certificate is provided.
+ * A Self Signed Certificate with CertificateServer basic constraint can be used
+ * to bootstrap a certificate infrastructure, if no external certificate is
+ * provided.
  */
 public final class SelfSignedCertificate {
   private static final String NAME_FORMAT = "CN=%s,OU=%s,O=%s";
   private String subject;
   private String clusterID;
   private String scmID;
-  private Date beginDate;
-  private Date endDate;
+  private LocalDate beginDate;
+  private LocalDate endDate;
   private KeyPair key;
   private SecurityConfig config;
-  private boolean isCA;
 
   /**
    * Private Ctor invoked only via Builder Interface.
+   *
    * @param subject - Subject
    * @param scmID - SCM ID
    * @param clusterID - Cluster ID
@@ -67,11 +74,10 @@ public final class SelfSignedCertificate {
    * @param endDate - Not After
    * @param configuration - SCM Config
    * @param keyPair - KeyPair
-   * @param ca - isCA?
    */
   private SelfSignedCertificate(String subject, String scmID, String clusterID,
-      Date beginDate, Date endDate, SecurityConfig configuration,
-      KeyPair keyPair, boolean ca) {
+      LocalDate beginDate, LocalDate endDate, SecurityConfig configuration,
+      KeyPair keyPair) {
     this.subject = subject;
     this.clusterID = clusterID;
     this.scmID = scmID;
@@ -79,7 +85,6 @@ public final class SelfSignedCertificate {
     this.endDate = endDate;
     config = configuration;
     this.key = keyPair;
-    this.isCA = ca;
   }
 
   @VisibleForTesting
@@ -91,8 +96,8 @@ public final class SelfSignedCertificate {
     return new Builder();
   }
 
-  private X509CertificateHolder generateCertificate()
-      throws OperatorCreationException, CertIOException {
+  private X509CertificateHolder generateCertificate(boolean isCA)
+      throws OperatorCreationException, IOException {
     // For the Root Certificate we form the name from Subject, SCM ID and
     // Cluster ID.
     String dnName = String.format(getNameFormat(), subject, scmID, clusterID);
@@ -115,12 +120,27 @@ public final class SelfSignedCertificate {
       serial = new BigInteger(Long.toString(Time.monotonicNow()));
     }
 
+    ZoneOffset zoneOffset =
+        beginDate.atStartOfDay(ZoneOffset.systemDefault()).getOffset();
+
+    // Valid from the Start of the day when we generate this Certificate.
+    Date validFrom =
+        Date.from(beginDate.atTime(LocalTime.MIN).toInstant(zoneOffset));
+
+    // Valid till end day finishes.
+    Date validTill =
+        Date.from(endDate.atTime(LocalTime.MAX).toInstant(zoneOffset));
+
     X509v3CertificateBuilder builder = new X509v3CertificateBuilder(name,
-        serial, beginDate, endDate, name, publicKeyInfo);
+        serial, validFrom, validTill, name, publicKeyInfo);
 
     if (isCA) {
       builder.addExtension(Extension.basicConstraints, true,
           new BasicConstraints(true));
+      int keyUsageFlag = KeyUsage.keyCertSign | KeyUsage.cRLSign;
+      KeyUsage keyUsage = new KeyUsage(keyUsageFlag);
+      builder.addExtension(Extension.keyUsage, false,
+          new DEROctetString(keyUsage));
     }
     return builder.build(contentSigner);
   }
@@ -132,8 +152,8 @@ public final class SelfSignedCertificate {
     private String subject;
     private String clusterID;
     private String scmID;
-    private Date beginDate;
-    private Date endDate;
+    private LocalDate beginDate;
+    private LocalDate endDate;
     private KeyPair key;
     private SecurityConfig config;
     private boolean isCA;
@@ -163,13 +183,13 @@ public final class SelfSignedCertificate {
       return this;
     }
 
-    public Builder setBeginDate(Date date) {
-      this.beginDate = new Date(date.toInstant().toEpochMilli());
+    public Builder setBeginDate(LocalDate date) {
+      this.beginDate = date;
       return this;
     }
 
-    public Builder setEndDate(Date date) {
-      this.endDate = new Date(date.toInstant().toEpochMilli());
+    public Builder setEndDate(LocalDate date) {
+      this.endDate = date;
       return this;
     }
 
@@ -178,7 +198,8 @@ public final class SelfSignedCertificate {
       return this;
     }
 
-    public X509CertificateHolder build() throws SCMSecurityException {
+    public X509CertificateHolder build()
+        throws SCMSecurityException, IOException {
       Preconditions.checkNotNull(key, "Key cannot be null");
       Preconditions.checkArgument(Strings.isNotBlank(subject), "Subject " +
           "cannot be blank");
@@ -187,22 +208,27 @@ public final class SelfSignedCertificate {
       Preconditions.checkArgument(Strings.isNotBlank(scmID), "SCM ID cannot " +
           "be blank");
 
-      Preconditions.checkArgument(beginDate.before(endDate), "Certificate " +
+      Preconditions.checkArgument(beginDate.isBefore(endDate), "Certificate " +
           "begin date should be before end date");
 
-      Duration certDuration = Duration.between(beginDate.toInstant(),
-          endDate.toInstant());
-      Preconditions.checkArgument(
-          certDuration.compareTo(config.getMaxCertificateDuration()) < 0,
-          "Certificate life time cannot be greater than max configured value.");
-
+      // We just read the beginDate and EndDate as Start of the Day and
+      // confirm that we do not violate the maxDuration Config.
+      Duration certDuration = Duration.between(beginDate.atStartOfDay(),
+          endDate.atStartOfDay());
+      Duration maxDuration = config.getMaxCertificateDuration();
+      if (certDuration.compareTo(maxDuration) > 0) {
+        throw new SCMSecurityException("The cert duration violates the " +
+            "maximum configured value. Please check the hdds.x509.max" +
+            ".duration config key. Current Value: " + certDuration +
+            " config: " + maxDuration);
+      }
 
       SelfSignedCertificate rootCertificate =
           new SelfSignedCertificate(this.subject,
-          this.scmID, this.clusterID, this.beginDate, this.endDate,
-          this.config, key, isCA);
+              this.scmID, this.clusterID, this.beginDate, this.endDate,
+              this.config, key);
       try {
-        return rootCertificate.generateCertificate();
+        return rootCertificate.generateCertificate(isCA);
       } catch (OperatorCreationException | CertIOException e) {
         throw new CertificateException("Unable to create root certificate.",
             e.getCause());

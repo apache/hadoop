@@ -5,7 +5,7 @@
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  */
-package org.apache.hadoop.hdds.security.x509.certificates;
+package org.apache.hadoop.hdds.security.x509.certificates.utils;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
@@ -49,7 +49,7 @@ import java.util.Optional;
 
 /**
  * A certificate sign request object that wraps operations to build a
- * PKCS10CertificationRequest to CA.
+ * PKCS10CertificationRequest to CertificateServer.
  */
 public final class CertificateSignRequest {
   private final KeyPair keyPair;
