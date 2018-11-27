@@ -94,6 +94,7 @@ public class MockNodeManager implements NodeManager {
     if (initializeFakeNodes) {
       for (int x = 0; x < nodeCount; x++) {
         DatanodeDetails dd = TestUtils.randomDatanodeDetails();
+        register(dd, null, null);
         populateNodeMetric(dd, x);
       }
     }

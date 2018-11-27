@@ -113,16 +113,19 @@ message NodePool {
 enum LifeCycleState {
     OPEN = 1;
     CLOSING = 2;
-    CLOSED = 3;
-    DELETING = 4;
-    DELETED = 5; // object is deleted.
+    QUASI_CLOSED = 3;
+    CLOSED = 4;
+    DELETING = 5;
+    DELETED = 6; // object is deleted.
 }
 
 enum LifeCycleEvent {
     FINALIZE = 1;
-    CLOSE = 2; // !!Event after this has not been used yet.
-    DELETE = 3;
-    CLEANUP = 4;
+    QUASI_CLOSE = 2;
+    CLOSE = 3; // !!Event after this has not been used yet.
+    FORCE_CLOSE = 4;
+    DELETE = 5;
+    CLEANUP = 6;
 }
 
 message ContainerInfoProto {
@@ -134,8 +137,9 @@ message ContainerInfoProto {
     optional int64 stateEnterTime = 6;
     required string owner = 7;
     optional int64 deleteTransactionId = 8;
-    required ReplicationFactor replicationFactor  = 9;
-    required ReplicationType replicationType  = 10;
+    optional int64 sequenceId = 9;
+    required ReplicationFactor replicationFactor  = 10;
+    required ReplicationType replicationType  = 11;
 }
 
 message ContainerWithPipeline {

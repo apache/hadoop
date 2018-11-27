@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdds.scm.container;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -154,10 +155,13 @@ public class ContainerReportHandler implements
       try {
         final ContainerID containerID = ContainerID.valueof(
             replicaProto.getContainerID());
+
+        ReportHandlerHelper.processContainerReplica(containerManager,
+            containerID, replicaProto, datanodeDetails, publisher, LOG);
+
         final ContainerInfo containerInfo = containerManager
             .getContainer(containerID);
-        updateContainerState(datanodeDetails, containerInfo,
-            replicaProto, publisher);
+
         if (containerInfo.getDeleteTransactionId() >
             replicaProto.getDeleteTransactionId()) {
           pendingDeleteStatusList
@@ -166,47 +170,17 @@ public class ContainerReportHandler implements
                   containerInfo.getContainerID());
         }
       } catch (ContainerNotFoundException e) {
-        LOG.error("Received container report for an unknown container {}",
-            replicaProto.getContainerID());
+        LOG.error("Received container report for an unknown container {} from" +
+                " datanode {}", replicaProto.getContainerID(), datanodeDetails);
+      } catch (IOException e) {
+        LOG.error("Exception while processing container report for container" +
+                " {} from datanode {}",
+            replicaProto.getContainerID(), datanodeDetails);
       }
     }
     if (pendingDeleteStatusList.getNumPendingDeletes() > 0) {
       publisher.fireEvent(SCMEvents.PENDING_DELETE_STATUS,
           pendingDeleteStatusList);
-    }
-  }
-
-  private void updateContainerState(final DatanodeDetails datanodeDetails,
-      final ContainerInfo containerInfo,
-      final ContainerReplicaProto replicaProto,
-      final EventPublisher publisher)
-      throws ContainerNotFoundException {
-
-    final ContainerID id = containerInfo.containerID();
-    final ContainerReplica datanodeContainerReplica = ContainerReplica
-        .newBuilder()
-        .setContainerID(id)
-        .setContainerState(replicaProto.getState())
-        .setDatanodeDetails(datanodeDetails)
-        .build();
-    // TODO: Add bcsid and origin datanode to replica.
-
-    final ContainerReplica scmContainerReplica = containerManager
-        .getContainerReplicas(id)
-        .stream()
-        .filter(replica ->
-            replica.getDatanodeDetails().equals(datanodeDetails))
-        .findFirst().orElse(null);
-
-    // This is an in-memory update.
-    containerManager.updateContainerReplica(id, datanodeContainerReplica);
-    containerInfo.setUsedBytes(replicaProto.getUsed());
-    containerInfo.setNumberOfKeys(replicaProto.getKeyCount());
-
-    // Check if there is state change in container replica.
-    if (scmContainerReplica == null ||
-        scmContainerReplica.getState() != datanodeContainerReplica.getState()) {
-      //TODO: Handler replica state change.
     }
   }
 

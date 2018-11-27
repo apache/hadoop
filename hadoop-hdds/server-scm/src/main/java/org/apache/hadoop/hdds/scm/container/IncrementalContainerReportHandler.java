@@ -20,7 +20,6 @@ package org.apache.hadoop.hdds.scm.container;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
@@ -66,26 +65,8 @@ public class IncrementalContainerReportHandler implements
             .getDatanodeDetails();
         final ContainerID containerID = ContainerID
             .valueof(replicaProto.getContainerID());
-        final ContainerInfo containerInfo = containerManager
-            .getContainer(containerID);
-
-        ContainerReplica replica = ContainerReplica.newBuilder()
-            .setContainerID(ContainerID.valueof(replicaProto.getContainerID()))
-            .setContainerState(replicaProto.getState())
-            .setDatanodeDetails(datanodeDetails)
-            .build();
-
-        containerManager.updateContainerReplica(containerID, replica);
-
-        // Check if the state of the container is changed.
-        if (replicaProto.getState() == ContainerReplicaProto.State.CLOSED &&
-            containerInfo.getState() == HddsProtos.LifeCycleState.CLOSING) {
-          containerManager.updateContainerState(containerID,
-              HddsProtos.LifeCycleEvent.CLOSE);
-        }
-
-        // TODO: Handler replica state change
-
+        ReportHandlerHelper.processContainerReplica(containerManager,
+            containerID, replicaProto, datanodeDetails, publisher, LOG);
       } catch (ContainerNotFoundException e) {
         LOG.warn("Container {} not found!", replicaProto.getContainerID());
       } catch (IOException e) {
@@ -95,4 +76,5 @@ public class IncrementalContainerReportHandler implements
     }
 
   }
+
 }
