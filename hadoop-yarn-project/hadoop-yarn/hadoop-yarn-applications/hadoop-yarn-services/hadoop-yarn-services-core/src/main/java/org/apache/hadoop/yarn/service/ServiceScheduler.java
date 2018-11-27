@@ -109,6 +109,7 @@ import static org.apache.hadoop.yarn.api.records.ContainerExitStatus
     .KILLED_AFTER_APP_COMPLETION;
 import static org.apache.hadoop.yarn.service.api.ServiceApiConstants.*;
 import static org.apache.hadoop.yarn.service.component.ComponentEventType.*;
+import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.START;
 import static org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes
     .EXIT_FALSE;
 import static org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes
@@ -827,9 +828,8 @@ public class ServiceScheduler extends CompositeService {
         LOG.error("No component instance exists for {}", containerId);
         return;
       }
-      ComponentInstanceEvent becomeReadyEvent = new ComponentInstanceEvent(
-          containerId, ComponentInstanceEventType.BECOME_READY);
-      dispatcher.getEventHandler().handle(becomeReadyEvent);
+      dispatcher.getEventHandler().handle(
+          new ComponentInstanceEvent(containerId, START));
     }
 
     @Override
