@@ -102,6 +102,7 @@ public class ApplicationCLI extends YarnCLI {
   public static final String ENABLE_FAST_LAUNCH = "enableFastLaunch";
   public static final String UPGRADE_CMD = "upgrade";
   public static final String UPGRADE_EXPRESS = "express";
+  public static final String UPGRADE_CANCEL = "cancel";
   public static final String UPGRADE_INITIATE = "initiate";
   public static final String UPGRADE_AUTO_FINALIZE = "autoFinalize";
   public static final String UPGRADE_FINALIZE = "finalize";
@@ -265,6 +266,8 @@ public class ApplicationCLI extends YarnCLI {
       opts.addOption(UPGRADE_AUTO_FINALIZE, false, "Works with -upgrade and " +
           "-initiate options to initiate the upgrade of the application with " +
           "the ability to finalize the upgrade automatically.");
+      opts.addOption(UPGRADE_CANCEL, false, "Works with -upgrade option to " +
+          "cancel current upgrade.");
       opts.getOption(LAUNCH_CMD).setArgName("Application Name> <File Name");
       opts.getOption(LAUNCH_CMD).setArgs(2);
       opts.getOption(START_CMD).setArgName("Application Name");
@@ -646,7 +649,7 @@ public class ApplicationCLI extends YarnCLI {
     } else if (cliParser.hasOption(UPGRADE_CMD)) {
       if (hasAnyOtherCLIOptions(cliParser, opts, UPGRADE_CMD, UPGRADE_EXPRESS,
           UPGRADE_INITIATE, UPGRADE_AUTO_FINALIZE, UPGRADE_FINALIZE,
-          COMPONENT_INSTS, COMPONENTS, APP_TYPE_CMD)) {
+          UPGRADE_CANCEL, COMPONENT_INSTS, COMPONENTS, APP_TYPE_CMD)) {
         printUsage(title, opts);
         return exitCode;
       }
@@ -697,6 +700,13 @@ public class ApplicationCLI extends YarnCLI {
           return exitCode;
         }
         return client.actionStart(appName);
+      } else if (cliParser.hasOption(UPGRADE_CANCEL)) {
+        if (hasAnyOtherCLIOptions(cliParser, opts, UPGRADE_CMD,
+            UPGRADE_CANCEL, APP_TYPE_CMD)) {
+          printUsage(title, opts);
+          return exitCode;
+        }
+        return client.actionCancelUpgrade(appName);
       }
     } else {
       syserr.println("Invalid Command Usage : ");

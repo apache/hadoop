@@ -221,6 +221,17 @@ public class TestServiceCLI {
     Assert.assertEquals(result, 0);
   }
 
+  @Test
+  public void testCancelUpgrade() throws Exception {
+    conf.set(YARN_APP_ADMIN_CLIENT_PREFIX + DUMMY_APP_TYPE,
+        DummyServiceClient.class.getName());
+    cli.setConf(conf);
+    String[] args = {"app", "-upgrade", "app-1",
+        "-cancel", "-appTypes", DUMMY_APP_TYPE};
+    int result = cli.run(ApplicationCLI.preProcessArgs(args));
+    Assert.assertEquals(result, 0);
+  }
+
   @Test (timeout = 180000)
   public void testEnableFastLaunch() throws Exception {
     fs.getFileSystem().create(new Path(basedir.getAbsolutePath(), "test.jar"))
@@ -331,6 +342,12 @@ public class TestServiceCLI {
         String version, List<String> containerStates)
         throws IOException, YarnException {
       return "";
+    }
+
+    @Override
+    public int actionCancelUpgrade(String appName) throws IOException,
+        YarnException {
+      return 0;
     }
   }
 }

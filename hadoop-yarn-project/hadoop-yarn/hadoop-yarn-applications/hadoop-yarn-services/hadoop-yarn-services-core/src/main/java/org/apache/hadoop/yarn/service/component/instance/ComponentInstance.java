@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.service.registry.YarnRegistryViewForProviders;
 import org.apache.hadoop.yarn.service.timelineservice.ServiceTimelinePublisher;
 import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
+import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
@@ -64,8 +65,10 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -84,8 +87,9 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       LoggerFactory.getLogger(ComponentInstance.class);
   private static final String FAILED_BEFORE_LAUNCH_DIAG =
       "failed before launch";
+  private static final String UPGRADE_FAILED = "upgrade failed";
 
-  private  StateMachine<ComponentInstanceState, ComponentInstanceEventType,
+  private StateMachine<ComponentInstanceState, ComponentInstanceEventType,
       ComponentInstanceEvent> stateMachine;
   private Component component;
   private final ReadLock readLock;
@@ -106,7 +110,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
   // This container object is used for rest API query
   private org.apache.hadoop.yarn.service.api.records.Container containerSpec;
   private String serviceVersion;
-
+  private AtomicBoolean upgradeInProgress = new AtomicBoolean(false);
+  private boolean pendingCancelUpgrade = false;
 
   private static final StateMachineFactory<ComponentInstance,
       ComponentInstanceState, ComponentInstanceEventType,
@@ -132,13 +137,23 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       .addTransition(READY, STARTED, BECOME_NOT_READY,
           new ContainerBecomeNotReadyTransition())
       .addTransition(READY, INIT, STOP, new ContainerStoppedTransition())
-      .addTransition(READY, UPGRADING, UPGRADE,
-          new ContainerUpgradeTransition())
-      .addTransition(UPGRADING, UPGRADING, UPGRADE,
-          new ContainerUpgradeTransition())
-      .addTransition(UPGRADING, READY, BECOME_READY,
-          new ContainerBecomeReadyTransition())
-      .addTransition(UPGRADING, INIT, STOP, new ContainerStoppedTransition())
+      .addTransition(READY, UPGRADING, UPGRADE, new UpgradeTransition())
+      .addTransition(READY, EnumSet.of(READY, CANCEL_UPGRADING), CANCEL_UPGRADE,
+          new CancelUpgradeTransition())
+
+      // FROM UPGRADING
+      .addTransition(UPGRADING, EnumSet.of(READY, CANCEL_UPGRADING),
+          CANCEL_UPGRADE, new CancelUpgradeTransition())
+      .addTransition(UPGRADING, EnumSet.of(READY), BECOME_READY,
+          new ReadyAfterUpgradeTransition())
+      .addTransition(UPGRADING, UPGRADING, STOP,
+          new StoppedAfterUpgradeTransition())
+
+      // FROM CANCEL_UPGRADING
+      .addTransition(CANCEL_UPGRADING, EnumSet.of(CANCEL_UPGRADING, READY),
+          BECOME_READY, new ReadyAfterUpgradeTransition())
+      .addTransition(CANCEL_UPGRADING, EnumSet.of(CANCEL_UPGRADING, INIT),
+          STOP, new StoppedAfterCancelUpgradeTransition())
       .installTopology();
 
   public ComponentInstance(Component component,
@@ -217,24 +232,53 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     @Override
     public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
-      compInstance.containerSpec.setState(ContainerState.READY);
-      if (compInstance.getState().equals(ComponentInstanceState.UPGRADING)) {
-        compInstance.component.incContainersReady(false);
-        compInstance.component.decContainersThatNeedUpgrade();
-        compInstance.serviceVersion = compInstance.component.getUpgradeEvent()
-            .getUpgradeVersion();
-        ComponentEvent checkState = new ComponentEvent(
-            compInstance.component.getName(), ComponentEventType.CHECK_STABLE);
-        compInstance.scheduler.getDispatcher().getEventHandler().handle(
-            checkState);
+      compInstance.setContainerState(ContainerState.READY);
+      compInstance.component.incContainersReady(true);
+      compInstance.postContainerReady();
+    }
+  }
 
-      } else {
-        compInstance.component.incContainersReady(true);
+  private static class ReadyAfterUpgradeTransition implements
+      MultipleArcTransition<ComponentInstance, ComponentInstanceEvent,
+          ComponentInstanceState> {
+
+    @Override
+    public ComponentInstanceState transition(ComponentInstance instance,
+        ComponentInstanceEvent event) {
+
+      if (instance.pendingCancelUpgrade) {
+        // cancellation of upgrade was triggered before the upgrade was
+        // finished.
+        LOG.info("{} received ready but cancellation pending",
+            event.getContainerId());
+        instance.upgradeInProgress.set(true);
+        instance.cancelUpgrade();
+        instance.pendingCancelUpgrade = false;
+        return instance.getState();
       }
-      if (compInstance.timelineServiceEnabled) {
-        compInstance.serviceTimelinePublisher
-            .componentInstanceBecomeReady(compInstance.containerSpec);
-      }
+
+      instance.upgradeInProgress.set(false);
+      instance.setContainerState(ContainerState.READY);
+      instance.component.incContainersReady(false);
+
+      Component.UpgradeStatus status = instance.getState().equals(UPGRADING) ?
+          instance.component.getUpgradeStatus() :
+          instance.component.getCancelUpgradeStatus();
+      status.decContainersThatNeedUpgrade();
+
+      instance.serviceVersion = status.getTargetVersion();
+      ComponentEvent checkState = new ComponentEvent(
+          instance.component.getName(),
+          ComponentEventType.CHECK_STABLE);
+      instance.scheduler.getDispatcher().getEventHandler().handle(checkState);
+      instance.postContainerReady();
+      return ComponentInstanceState.READY;
+    }
+  }
+
+  private void postContainerReady() {
+    if (timelineServiceEnabled) {
+      serviceTimelinePublisher.componentInstanceBecomeReady(containerSpec);
     }
   }
 
@@ -242,7 +286,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     @Override
     public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
-      compInstance.containerSpec.setState(ContainerState.RUNNING_BUT_UNREADY);
+      compInstance.setContainerState(ContainerState.RUNNING_BUT_UNREADY);
       compInstance.component.decContainersReady(true);
     }
   }
@@ -276,11 +320,13 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
           " completed. Reinsert back to pending list and requested ");
       builder.append("a new container.").append(System.lineSeparator());
       builder.append(" exitStatus=").append(
-          failureBeforeLaunch ? null : event.getStatus().getExitStatus());
+          failureBeforeLaunch || event.getStatus() == null ? null :
+              event.getStatus().getExitStatus());
       builder.append(", diagnostics=");
       builder.append(failureBeforeLaunch ?
           FAILED_BEFORE_LAUNCH_DIAG :
-          event.getStatus().getDiagnostics());
+          (event.getStatus() != null ? event.getStatus().getDiagnostics() :
+              UPGRADE_FAILED));
 
       if (event.getStatus() != null && event.getStatus().getExitStatus() != 0) {
         LOG.error(builder.toString());
@@ -342,15 +388,14 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
         ComponentInstanceEvent event) {
 
       Component comp = compInstance.component;
+      ContainerStatus status = event.getStatus();
+      // status is not available when upgrade fails
       String containerDiag = compInstance.getCompInstanceId() + ": " + (
-          failedBeforeLaunching ?
-              FAILED_BEFORE_LAUNCH_DIAG :
-              event.getStatus().getDiagnostics());
+          failedBeforeLaunching ? FAILED_BEFORE_LAUNCH_DIAG :
+              (status != null ? status.getDiagnostics() : UPGRADE_FAILED));
       compInstance.diagnostics.append(containerDiag + System.lineSeparator());
       compInstance.cancelContainerStatusRetriever();
-      if (compInstance.getState().equals(ComponentInstanceState.UPGRADING)) {
-        compInstance.component.decContainersThatNeedUpgrade();
-      }
+
       if (compInstance.getState().equals(READY)) {
         compInstance.component.decContainersReady(true);
       }
@@ -387,10 +432,9 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
           // record in ATS
           compInstance.scheduler.getServiceTimelinePublisher()
               .componentInstanceFinished(compInstance.getContainer().getId(),
-                  failedBeforeLaunching ?
-                      -1 :
-                      event.getStatus().getExitStatus(), ContainerState.FAILED,
-                  containerDiag);
+                  failedBeforeLaunching || status == null ? -1 :
+                      status.getExitStatus(),
+                  ContainerState.FAILED, containerDiag);
 
           // mark other component-instances/containers as STOPPED
           for (ContainerId containerId : scheduler.getLiveInstances()
@@ -449,26 +493,127 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
         .equals(state) || ContainerState.SUCCEEDED.equals(state);
   }
 
-  private static class ContainerUpgradeTransition extends BaseTransition {
+  private static class StoppedAfterUpgradeTransition extends
+      BaseTransition {
 
     @Override
-    public void transition(ComponentInstance compInstance,
+    public void transition(ComponentInstance instance,
         ComponentInstanceEvent event) {
-      if (!compInstance.containerSpec.getState().equals(
-          ContainerState.NEEDS_UPGRADE)) {
-        //nothing to upgrade. this may happen with express upgrade.
+      instance.component.getUpgradeStatus().decContainersThatNeedUpgrade();
+      instance.component.decRunningContainers();
+
+      final ServiceScheduler scheduler = instance.component.getScheduler();
+      scheduler.getAmRMClient().releaseAssignedContainer(
+          event.getContainerId());
+      instance.scheduler.executorService.submit(
+          () -> instance.cleanupRegistry(event.getContainerId()));
+      scheduler.removeLiveCompInstance(event.getContainerId());
+      instance.component.getUpgradeStatus().containerFailedUpgrade();
+      instance.setContainerState(ContainerState.FAILED_UPGRADE);
+      instance.upgradeInProgress.set(false);
+    }
+  }
+
+  private static class StoppedAfterCancelUpgradeTransition implements
+      MultipleArcTransition<ComponentInstance, ComponentInstanceEvent,
+          ComponentInstanceState> {
+
+    private ContainerStoppedTransition stoppedTransition =
+        new ContainerStoppedTransition();
+
+    @Override
+    public ComponentInstanceState transition(ComponentInstance instance,
+        ComponentInstanceEvent event) {
+      if (instance.pendingCancelUpgrade) {
+        // cancellation of upgrade was triggered before the upgrade was
+        // finished.
+        LOG.info("{} received stopped but cancellation pending",
+            event.getContainerId());
+        instance.upgradeInProgress.set(true);
+        instance.cancelUpgrade();
+        instance.pendingCancelUpgrade = false;
+        return instance.getState();
+      }
+
+      // When upgrade is cancelled, and container re-init fails
+      instance.component.getCancelUpgradeStatus()
+          .decContainersThatNeedUpgrade();
+      instance.upgradeInProgress.set(false);
+      stoppedTransition.transition(instance, event);
+      return ComponentInstanceState.INIT;
+    }
+  }
+
+  private static class UpgradeTransition extends BaseTransition {
+
+    @Override
+    public void transition(ComponentInstance instance,
+        ComponentInstanceEvent event) {
+      if (!instance.component.getCancelUpgradeStatus().isCompleted()) {
+        // last check to see if cancellation was triggered. The component may
+        // have processed the cancel upgrade event but the instance doesn't know
+        // it yet. If cancellation has been triggered then no point in
+        // upgrading.
         return;
       }
-      compInstance.containerSpec.setState(ContainerState.UPGRADING);
-      compInstance.component.decContainersReady(false);
-      ComponentEvent upgradeEvent = compInstance.component.getUpgradeEvent();
-      compInstance.scheduler.getContainerLaunchService()
-          .reInitCompInstance(compInstance.scheduler.getApp(), compInstance,
-              compInstance.container,
-              compInstance.component.createLaunchContext(
-                  upgradeEvent.getTargetSpec(),
-                  upgradeEvent.getUpgradeVersion()));
+      instance.upgradeInProgress.set(true);
+      instance.setContainerState(ContainerState.UPGRADING);
+      instance.component.decContainersReady(false);
+
+      Component.UpgradeStatus status = instance.component.getUpgradeStatus();
+      instance.scheduler.getContainerLaunchService()
+          .reInitCompInstance(instance.scheduler.getApp(), instance,
+              instance.container,
+              instance.component.createLaunchContext(
+                  status.getTargetSpec(),
+                  status.getTargetVersion()));
     }
+  }
+
+  private static class CancelUpgradeTransition implements
+      MultipleArcTransition<ComponentInstance, ComponentInstanceEvent,
+          ComponentInstanceState> {
+
+    @Override
+    public ComponentInstanceState transition(ComponentInstance instance,
+        ComponentInstanceEvent event) {
+      if (instance.upgradeInProgress.compareAndSet(false, true)) {
+
+        Component.UpgradeStatus cancelStatus = instance.component
+            .getCancelUpgradeStatus();
+
+        if (instance.getServiceVersion().equals(
+            cancelStatus.getTargetVersion())) {
+          // previous upgrade didn't happen so just go back to READY
+          LOG.info("{} nothing to cancel", event.getContainerId());
+          cancelStatus.decContainersThatNeedUpgrade();
+          instance.setContainerState(ContainerState.READY);
+          ComponentEvent checkState = new ComponentEvent(
+              instance.component.getName(), ComponentEventType.CHECK_STABLE);
+          instance.scheduler.getDispatcher().getEventHandler()
+              .handle(checkState);
+          return ComponentInstanceState.READY;
+        } else {
+          instance.component.decContainersReady(false);
+          instance.cancelUpgrade();
+        }
+      } else {
+        LOG.info("{} pending cancellation", event.getContainerId());
+        instance.pendingCancelUpgrade = true;
+      }
+      return ComponentInstanceState.CANCEL_UPGRADING;
+    }
+  }
+
+  private void cancelUpgrade() {
+    LOG.info("{} cancelling upgrade", container.getId());
+    setContainerState(ContainerState.UPGRADING);
+    Component.UpgradeStatus cancelStatus = component.getCancelUpgradeStatus();
+    scheduler.getContainerLaunchService()
+        .reInitCompInstance(scheduler.getApp(), this,
+            this.container, this.component.createLaunchContext(
+                cancelStatus.getTargetSpec(),
+                cancelStatus.getTargetVersion()));
   }
 
   public ComponentInstanceState getState() {
@@ -502,6 +647,26 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       return this.containerSpec.getState();
     } finally {
       this.readLock.unlock();
+    }
+  }
+
+  /**
+   * Sets the state of the container in the container spec. It is write
+   * protected.
+   *
+   * @param state container state
+   */
+  public void setContainerState(ContainerState state) {
+    this.writeLock.lock();
+    try {
+      ContainerState curState = containerSpec.getState();
+      if (!curState.equals(state)) {
+        containerSpec.setState(state);
+        LOG.info("{} spec state state changed from {} -> {}",
+            getCompInstanceId(), curState, state);
+      }
+    } finally {
+      this.writeLock.unlock();
     }
   }
 

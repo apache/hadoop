@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.client.util.YarnClientUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.CancelUpgradeRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.ComponentCountProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsRequestProto;
@@ -350,6 +351,26 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     List<Container> containersToUpgrade = ServiceApiUtil
         .validateAndResolveCompsUpgrade(persistedService, components);
     return actionUpgrade(persistedService, containersToUpgrade);
+  }
+
+  @Override
+  public int actionCancelUpgrade(String appName) throws IOException,
+      YarnException {
+    Service liveService = getStatus(appName);
+    if (liveService == null ||
+        !ServiceState.isUpgrading(liveService.getState())) {
+      throw new YarnException("Service " + appName + " is not upgrading, " +
+          "so nothing to cancel.");
+    }
+
+    ApplicationReport appReport = yarnClient.getApplicationReport(
+        getAppId(appName));
+    if (StringUtils.isEmpty(appReport.getHost())) {
+      throw new YarnException(appName + " AM hostname is empty");
+    }
+    ClientAMProtocol proxy = createAMProxy(appName, appReport);
+    proxy.cancelUpgrade(CancelUpgradeRequestProto.newBuilder().build());
+    return EXIT_SUCCESS;
   }
 
   @Override

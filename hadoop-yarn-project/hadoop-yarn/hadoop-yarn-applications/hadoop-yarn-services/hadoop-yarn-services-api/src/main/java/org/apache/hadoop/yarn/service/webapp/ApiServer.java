@@ -58,6 +58,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.yarn.service.api.records.ServiceState.ACCEPTED;
+import static org.apache.hadoop.yarn.service.api.records.ServiceState.CANCEL_UPGRADING;
 import static org.apache.hadoop.yarn.service.conf.RestApiConstants.*;
 import static org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes.*;
 
@@ -445,6 +446,12 @@ public class ApiServer {
         return upgradeService(updateServiceData, ugi);
       }
 
+      // If CANCEL_UPGRADING is requested
+      if (updateServiceData.getState() != null &&
+          updateServiceData.getState() == CANCEL_UPGRADING) {
+        return cancelUpgradeService(appName, ugi);
+      }
+
       // If new lifetime value specified then update it
       if (updateServiceData.getLifetime() != null
           && updateServiceData.getLifetime() > 0) {
@@ -460,8 +467,7 @@ public class ApiServer {
       LOG.error(message, e);
       return formatResponse(Status.NOT_FOUND, e.getMessage());
     } catch (YarnException e) {
-      String message = "Service is not found in hdfs: " + appName;
-      LOG.error(message, e);
+      LOG.error(e.getMessage(), e);
       return formatResponse(Status.NOT_FOUND, e.getMessage());
     } catch (Exception e) {
       String message = "Error while performing operation for app: " + appName;
@@ -707,6 +713,27 @@ public class ApiServer {
     return formatResponse(Status.ACCEPTED, status);
   }
 
+  private Response cancelUpgradeService(String serviceName,
+      final UserGroupInformation ugi) throws IOException, InterruptedException {
+    int result = ugi.doAs((PrivilegedExceptionAction<Integer>) () -> {
+      ServiceClient sc = getServiceClient();
+      sc.init(YARN_CONFIG);
+      sc.start();
+      int exitCode = sc.actionCancelUpgrade(serviceName);
+      sc.close();
+      return exitCode;
+    });
+    if (result == EXIT_SUCCESS) {
+      ServiceStatus status = new ServiceStatus();
+      LOG.info("Service {} cancelling upgrade", serviceName);
+      status.setDiagnostics("Service " + serviceName +
+          " cancelling upgrade.");
+      status.setState(ServiceState.ACCEPTED);
+      return formatResponse(Status.ACCEPTED, status);
+    }
+    return Response.status(Status.BAD_REQUEST).build();
+  }
+
   private Response processComponentsUpgrade(UserGroupInformation ugi,
       String serviceName, Set<String> compNames) throws YarnException,
       IOException, InterruptedException {
@@ -734,7 +761,8 @@ public class ApiServer {
       Service service, List<Container> containers) throws YarnException,
       IOException, InterruptedException {
 
-    if (service.getState() != ServiceState.UPGRADING) {
+    if (!service.getState().equals(ServiceState.UPGRADING) &&
+        !service.getState().equals(ServiceState.UPGRADING_AUTO_FINALIZE)) {
       throw new YarnException(
           String.format("The upgrade of service %s has not been initiated.",
               service.getName()));

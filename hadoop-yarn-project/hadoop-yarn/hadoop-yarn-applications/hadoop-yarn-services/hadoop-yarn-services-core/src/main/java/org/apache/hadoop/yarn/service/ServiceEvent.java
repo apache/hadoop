@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.service;
 import org.apache.hadoop.yarn.event.AbstractEvent;
 import org.apache.hadoop.yarn.service.api.records.Component;
 
-import java.util.Queue;
+import java.util.List;
 
 /**
  * Events are handled by {@link ServiceManager} to manage the service
@@ -33,7 +33,8 @@ public class ServiceEvent extends AbstractEvent<ServiceEventType> {
   private String version;
   private boolean autoFinalize;
   private boolean expressUpgrade;
-  private Queue<Component> compsToUpgradeInOrder;
+  // For express upgrade they should be in order.
+  private List<Component> compsToUpgrade;
 
   public ServiceEvent(ServiceEventType serviceEventType) {
     super(serviceEventType);
@@ -71,13 +72,12 @@ public class ServiceEvent extends AbstractEvent<ServiceEventType> {
     return this;
   }
 
-  public Queue<Component> getCompsToUpgradeInOrder() {
-    return compsToUpgradeInOrder;
+  public List<Component> getCompsToUpgrade() {
+    return compsToUpgrade;
   }
 
-  public ServiceEvent setCompsToUpgradeInOrder(
-      Queue<Component> compsToUpgradeInOrder) {
-    this.compsToUpgradeInOrder = compsToUpgradeInOrder;
+  public ServiceEvent setCompsToUpgrade(List<Component> compsToUpgrade) {
+    this.compsToUpgrade = compsToUpgrade;
     return this;
   }
 
