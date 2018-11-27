@@ -154,6 +154,7 @@ public class RMAppImpl implements RMApp, Recoverable {
   private final Set<String> applicationTags;
   private Map<String, String> applicationSchedulingEnvs = new HashMap<>();
 
+  private final int zkMaxBuffer;
   private final long attemptFailuresValidityInterval;
   private boolean amBlacklistingEnabled = false;
   private float blacklistDisableThreshold;
@@ -490,6 +491,8 @@ public class RMAppImpl implements RMApp, Recoverable {
           + this.applicationId + " is " + this.attemptFailuresValidityInterval
           + ".");
     }
+
+    zkMaxBuffer = conf.getInt(YarnConfiguration.RM_ZK_MAX_BUFFER, YarnConfiguration.DEFAULT_ZK_MAX_BUFFER);
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
@@ -1325,6 +1328,11 @@ public class RMAppImpl implements RMApp, Recoverable {
       break;
     default:
       break;
+    }
+
+    if (diags.length() > zkMaxBuffer) {
+      diags = diags.substring(0, zkMaxBuffer);
+      LOG.warn("The diags is too long, so it needs to be intercepted : " + diags);
     }
 
     ApplicationStateData appState =

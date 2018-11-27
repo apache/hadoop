@@ -720,6 +720,9 @@ public class YarnConfiguration extends Configuration {
   /** Zookeeper interaction configs */
   public static final String RM_ZK_PREFIX = RM_PREFIX + "zk-";
 
+  public static final String RM_ZK_MAX_BUFFER = RM_ZK_PREFIX + "jute-maxbuffer";
+  public static final int DEFAULT_ZK_MAX_BUFFER = 1000000;
+
   public static final String RM_ZK_ADDRESS = RM_ZK_PREFIX + "address";
 
   public static final String RM_ZK_NUM_RETRIES = RM_ZK_PREFIX + "num-retries";
