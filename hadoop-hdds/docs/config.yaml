@@ -39,3 +39,8 @@ menu:
     title: Tools
     url: dozone.html
     weight: 3
+  - identifier: Recipes
+    name: Recipes
+    title: Recipes
+    url: prometheus.html
+    weight: 4

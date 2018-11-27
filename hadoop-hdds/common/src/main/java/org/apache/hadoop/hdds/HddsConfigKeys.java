@@ -104,4 +104,7 @@ public final class HddsConfigKeys {
   // In any real cluster where performance matters, the SCM, OM and DN
   // metadata locations must be configured explicitly.
   public static final String OZONE_METADATA_DIRS = "ozone.metadata.dirs";
+
+  public static final String HDDS_PROMETHEUS_ENABLED =
+      "hdds.prometheus.endpoint.enabled";
 }
