@@ -497,7 +497,8 @@ public class TestYarnNativeServices extends ServiceTestUtils {
   }
 
   // Test to verify ANTI_AFFINITY placement policy
-  // 1. Start mini cluster with 3 NMs and scheduler placement-constraint handler
+  // 1. Start mini cluster
+  // with 3 NMs and scheduler placement-constraint handler
   // 2. Create an example service with 3 containers
   // 3. Verify no more than 1 container comes up in each of the 3 NMs
   // 4. Flex the component to 4 containers

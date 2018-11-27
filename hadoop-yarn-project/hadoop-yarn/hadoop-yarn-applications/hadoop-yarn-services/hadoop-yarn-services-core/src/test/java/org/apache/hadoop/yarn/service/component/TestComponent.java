@@ -38,6 +38,7 @@ import org.junit.Test;
 import java.util.Iterator;
 
 import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.BECOME_READY;
+import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.START;
 import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.STOP;
 
 /**
@@ -160,6 +161,8 @@ public class TestComponent {
     // reinitialization of a container done
     for(ComponentInstance instance : comp.getAllComponentInstances()) {
       instance.handle(new ComponentInstanceEvent(
+          instance.getContainer().getId(), START));
+      instance.handle(new ComponentInstanceEvent(
           instance.getContainer().getId(), BECOME_READY));
     }
 
@@ -200,6 +203,8 @@ public class TestComponent {
     // second instance finished upgrading
     ComponentInstance instance2 = iter.next();
     instance2.handle(new ComponentInstanceEvent(
+        instance2.getContainer().getId(), ComponentInstanceEventType.START));
+    instance2.handle(new ComponentInstanceEvent(
         instance2.getContainer().getId(),
         ComponentInstanceEventType.BECOME_READY));
 
@@ -230,6 +235,9 @@ public class TestComponent {
 
     // cancel upgrade successful for both instances
     for(ComponentInstance instance : comp.getAllComponentInstances()) {
+      instance.handle(new ComponentInstanceEvent(
+          instance.getContainer().getId(),
+          ComponentInstanceEventType.START));
       instance.handle(new ComponentInstanceEvent(
           instance.getContainer().getId(),
           ComponentInstanceEventType.BECOME_READY));
