@@ -2036,12 +2036,9 @@ public class S3AFileSystem extends FileSystem {
   @Override
   public void copyFromLocalFile(boolean delSrc, boolean overwrite, Path src,
       Path dst) throws IOException {
-    try {
-      innerCopyFromLocalFile(delSrc, overwrite, src, dst);
-    } catch (AmazonClientException e) {
-      throw translateException("copyFromLocalFile(" + src + ", " + dst + ")",
-          src, e);
-    }
+    LOG.debug("Copying local file from {} to {}", src, dst);
+//    innerCopyFromLocalFile(delSrc, overwrite, src, dst);
+    super.copyFromLocalFile(delSrc, overwrite, src, dst);
   }
 
   /**
@@ -2051,6 +2048,9 @@ public class S3AFileSystem extends FileSystem {
    * This version doesn't need to create a temporary file to calculate the md5.
    * Sadly this doesn't seem to be used by the shell cp :(
    *
+   * <i>HADOOP-15932:</i> this method has been unwired from
+   * {@link #copyFromLocalFile(boolean, boolean, Path, Path)} until
+   * it is extended to list and copy whole directories.
    * delSrc indicates if the source should be removed
    * @param delSrc whether to delete the src
    * @param overwrite whether to overwrite an existing file
