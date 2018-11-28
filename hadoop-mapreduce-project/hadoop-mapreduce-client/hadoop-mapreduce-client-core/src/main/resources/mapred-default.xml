@@ -277,6 +277,15 @@
 </property>
 
 <property>
+  <name>mapreduce.task.stuck.timeout-ms</name>
+  <value>600000</value>
+  <description>The max timeout before receiving remote task's first heartbeat.
+    This parameter is in order to avoid waiting for the container
+    to start indefinitely, which made task stuck in the NEW state.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.map.memory.mb</name>
   <value>-1</value>
   <description>The amount of memory to request from the scheduler for each
