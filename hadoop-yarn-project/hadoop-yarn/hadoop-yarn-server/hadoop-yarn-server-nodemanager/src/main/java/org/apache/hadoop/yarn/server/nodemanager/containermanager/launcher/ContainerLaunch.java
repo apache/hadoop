@@ -1246,7 +1246,7 @@ public class ContainerLaunch implements Callable<Integer> {
 
     @Override
     protected void link(Path src, Path dst) throws IOException {
-      line("ln -sf \"", src.toUri().getPath(), "\" \"", dst.toString(), "\"");
+      line("ln -sf -- \"", src.toUri().getPath(), "\" \"", dst.toString(), "\"");
     }
 
     @Override

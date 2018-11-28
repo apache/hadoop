@@ -159,7 +159,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     File shellFile = null;
     File tempFile = null;
     String badSymlink = Shell.WINDOWS ? "foo@zz_#!-+bar.cmd" :
-      "foo@zz%_#*&!-+= bar()";
+      "-foo@zz%_#*&!-+= bar()";
     File symLinkFile = null;
 
     try {
