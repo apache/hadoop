@@ -18,9 +18,6 @@
 ##
 set -e
 
-#To avoid docker volume permission problems
-sudo chmod o+rwx /data
-
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 $DIR/envtoconf.py --destination /opt/hadoop/etc/hadoop
@@ -29,6 +26,38 @@ if [ -n "$SLEEP_SECONDS" ]; then
    echo "Sleeping for $SLEEP_SECONDS seconds"
    sleep $SLEEP_SECONDS
 fi
+
+#
+# You can wait for an other TCP port with these settings.
+#
+# Example:
+#
+# export WAITFOR=localhost:9878
+#
+# With an optional parameter, you can also set the maximum 
+# time of waiting with (in seconds) with WAITFOR_TIMEOUT.
+# (The default is 300 seconds / 5 minutes.)
+if [ ! -z "$WAITFOR" ]; then
+  echo "Waiting for the service $WAITFOR"
+  WAITFOR_HOST=$(printf "%s\n" "$WAITFOR"| cut -d : -f 1)
+  WAITFOR_PORT=$(printf "%s\n" "$WAITFOR"| cut -d : -f 2)
+  for i in `seq ${WAITFOR_TIMEOUT:-300} -1 0` ; do
+    set +e
+    nc -z "$WAITFOR_HOST" "$WAITFOR_PORT" > /dev/null 2>&1
+    result=$?
+    set -e
+    if [ $result -eq 0 ] ; then
+      break
+    fi
+    sleep 1
+  done
+  if [ "$i" -eq 0 ]; then
+     echo "Waiting for service $WAITFOR is timed out." >&2
+     exit 1
+  f
+  fi
+fi
+
 
 if [ -n "$KERBEROS_ENABLED" ]; then
 	echo "Setting up kerberos!!"
@@ -87,10 +116,6 @@ fi
 
 if [ -n "$ENSURE_OM_INITIALIZED" ]; then
    if [ ! -f "$ENSURE_OM_INITIALIZED" ]; then
-      # To make sure SCM is running in dockerized environment we will sleep
-      # Could be removed after HDFS-13203
-      echo "Waiting 15 seconds for SCM startup"
-      sleep 15
       # Improve om and scm start up options
       /opt/hadoop/bin/ozone om --init || /opt/hadoop/bin/ozone om -createObjectStore
    fi
