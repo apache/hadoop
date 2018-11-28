@@ -218,6 +218,27 @@ public abstract class S3GuardTool extends Configured implements Tool {
     format.addOptionWithValue(SECONDS_FLAG);
   }
 
+  protected void checkMetadataStoreUri(List<String> paths) throws IOException {
+    // be sure that path is provided in params, so there's no IOoBE
+    String s3Path = "";
+    if(!paths.isEmpty()) {
+      s3Path = paths.get(0);
+    }
+
+    // Check if DynamoDB url is set from arguments.
+    String metadataStoreUri = getCommandFormat().getOptValue(META_FLAG);
+    if(metadataStoreUri == null || metadataStoreUri.isEmpty()) {
+      // If not set, check if filesystem is guarded by creating an
+      // S3AFileSystem and check if hasMetadataStore is true
+      try (S3AFileSystem s3AFileSystem = (S3AFileSystem)
+          S3AFileSystem.newInstance(toUri(s3Path), getConf())){
+        Preconditions.checkState(s3AFileSystem.hasMetadataStore(),
+            "The S3 bucket is unguarded. " + getName()
+                + " can not be used on an unguarded bucket.");
+      }
+    }
+  }
+
   /**
    * Parse metadata store from command line option or HDFS configuration.
    *
@@ -500,20 +521,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
     public int run(String[] args, PrintStream out) throws Exception {
       List<String> paths = parseArgs(args);
       Map<String, String> options = new HashMap<>();
-      String s3Path = paths.get(0);
-
-      // Check if DynamoDB url is set from arguments.
-      String metadataStoreUri = getCommandFormat().getOptValue(META_FLAG);
-      if(metadataStoreUri == null || metadataStoreUri.isEmpty()) {
-        // If not set, check if filesystem is guarded by creating an
-        // S3AFileSystem and check if hasMetadataStore is true
-        try (S3AFileSystem s3AFileSystem = (S3AFileSystem)
-            S3AFileSystem.newInstance(toUri(s3Path), getConf())){
-          Preconditions.checkState(s3AFileSystem.hasMetadataStore(),
-              "The S3 bucket is unguarded. " + getName()
-                  + " can not be used on an unguarded bucket.");
-        }
-      }
+      checkMetadataStoreUri(paths);
 
       String readCap = getCommandFormat().getOptValue(READ_FLAG);
       if (StringUtils.isNotEmpty(readCap)) {
@@ -589,6 +597,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
         errorln(USAGE);
         throw e;
       }
+
+      checkMetadataStoreUri(paths);
 
       try {
         initMetadataStore(false);
