@@ -237,6 +237,7 @@
             <exclude>src/main/resources/webapps/test/.keep</exclude>
             <exclude>src/main/resources/webapps/proxy/.keep</exclude>
             <exclude>src/main/resources/webapps/node/.keep</exclude>
+            <exclude>src/main/resources/webapps/gpg/.keep</exclude>
             <exclude>src/main/resources/webapps/static/dt-1.10.18/css/jquery.dataTables.css</exclude>
             <exclude>src/main/resources/webapps/static/dt-1.10.18/css/custom_datatable.css</exclude>
             <exclude>src/main/resources/webapps/static/dt-1.10.18/css/jui-dt.css</exclude>

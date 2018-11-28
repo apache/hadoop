@@ -3706,6 +3706,34 @@
   </property>
 
   <property>
+    <description>Flag to enable cross-origin (CORS) support in the GPG. This flag
+    requires the CORS filter initializer to be added to the filter initializers
+    list in core-site.xml.</description>
+    <name>yarn.federation.gpg.webapp.cross-origin.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      The http address of the GPG web application.
+      If only a host is provided as the value,
+      the webapp will be served on a random port.
+    </description>
+    <name>yarn.federation.gpg.webapp.address</name>
+    <value>0.0.0.0:8069</value>
+  </property>
+
+  <property>
+    <description>
+      The https address of the GPG web application.
+      If only a host is provided as the value,
+      the webapp will be served on a random port.
+    </description>
+    <name> yarn.federation.gpg.webapp.https.address</name>
+    <value>0.0.0.0:8070</value>
+  </property>
+
+  <property>
     <description>
       The configured policy generator class, runs NoOpGlobalPolicy by default
     </description>

@@ -3430,6 +3430,14 @@ public class YarnConfiguration extends Configuration {
   public static final String FEDERATION_GPG_PREFIX =
       FEDERATION_PREFIX + "gpg.";
 
+  public static final String GPG_WEBAPP_PREFIX = FEDERATION_GPG_PREFIX
+      + "webapp.";
+
+  /** Enable/disable CORS filter. */
+  public static final String GPG_WEBAPP_ENABLE_CORS_FILTER =
+      GPG_WEBAPP_PREFIX + "cross-origin.enabled";
+  public static final boolean DEFAULT_GPG_WEBAPP_ENABLE_CORS_FILTER = false;
+
   // The number of threads to use for the GPG scheduled executor service
   public static final String GPG_SCHEDULED_EXECUTOR_THREADS =
       FEDERATION_GPG_PREFIX + "scheduled.executor.threads";
@@ -3456,6 +3464,22 @@ public class YarnConfiguration extends Configuration {
   public static final String GPG_APPCLEANER_INTERVAL_MS =
       FEDERATION_GPG_PREFIX + "application.cleaner.interval-ms";
   public static final long DEFAULT_GPG_APPCLEANER_INTERVAL_MS = -1;
+
+  /** The address of the GPG web application. */
+  public static final String GPG_WEBAPP_ADDRESS =
+      GPG_WEBAPP_PREFIX + "address";
+
+  public static final int DEFAULT_GPG_WEBAPP_PORT = 8069;
+  public static final String DEFAULT_GPG_WEBAPP_ADDRESS =
+      "0.0.0.0:" + DEFAULT_GPG_WEBAPP_PORT;
+
+  /** The https address of the GPG web application. */
+  public static final String GPG_WEBAPP_HTTPS_ADDRESS =
+      GPG_WEBAPP_PREFIX + "https.address";
+
+  public static final int DEFAULT_GPG_WEBAPP_HTTPS_PORT = 8070;
+  public static final String DEFAULT_GPG_WEBAPP_HTTPS_ADDRESS =
+      "0.0.0.0:" + DEFAULT_GPG_WEBAPP_HTTPS_PORT;
 
   /**
    * Specifications on how (many times) to contact Router for apps. We need to
