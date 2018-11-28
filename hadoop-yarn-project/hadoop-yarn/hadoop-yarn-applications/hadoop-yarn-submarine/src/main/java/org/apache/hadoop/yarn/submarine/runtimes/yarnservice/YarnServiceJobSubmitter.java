@@ -49,6 +49,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -218,7 +219,8 @@ public class YarnServiceJobSubmitter implements JobSubmitter {
   private String generateCommandLaunchScript(RunJobParameters parameters,
       TaskType taskType, Component comp) throws IOException {
     File file = File.createTempFile(taskType.name() + "-launch-script", ".sh");
-    Writer w = new OutputStreamWriter(new FileOutputStream(file), "UTF-8");
+    Writer w = new OutputStreamWriter(new FileOutputStream(file),
+        StandardCharsets.UTF_8);
     PrintWriter pw = new PrintWriter(w);
 
     try {
