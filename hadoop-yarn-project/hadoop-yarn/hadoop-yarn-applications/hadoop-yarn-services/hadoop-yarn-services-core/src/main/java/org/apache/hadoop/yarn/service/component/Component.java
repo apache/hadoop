@@ -177,13 +177,13 @@ public class Component implements EventHandler<ComponentEvent> {
               new NeedsUpgradeTransition())
           .addTransition(STABLE, CANCEL_UPGRADING, CANCEL_UPGRADE,
               new NeedsUpgradeTransition())
-          .addTransition(STABLE, EnumSet.of(STABLE), CHECK_STABLE,
+          .addTransition(STABLE, EnumSet.of(STABLE, FLEXING), CHECK_STABLE,
               new CheckStableTransition())
 
           // Cancel upgrade while previous upgrade is still in progress
           .addTransition(UPGRADING, CANCEL_UPGRADING,
               CANCEL_UPGRADE, new NeedsUpgradeTransition())
-          .addTransition(UPGRADING, EnumSet.of(UPGRADING, STABLE),
+          .addTransition(UPGRADING, EnumSet.of(UPGRADING, FLEXING, STABLE),
               CHECK_STABLE, new CheckStableTransition())
           .addTransition(UPGRADING, UPGRADING, CONTAINER_COMPLETED,
               new CompletedAfterUpgradeTransition())
