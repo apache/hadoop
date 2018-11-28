@@ -94,6 +94,8 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
         conf, timelineReaderWebAppAddress, RESOURCE_URI_STR_V2);
     clusterId = conf.get(YarnConfiguration.RM_CLUSTER_ID,
         YarnConfiguration.DEFAULT_RM_CLUSTER_ID);
+    LOG.info("Initialized TimelineReader URI=" + baseUri + ", clusterId="
+        + clusterId);
     super.serviceInit(conf);
   }
 
