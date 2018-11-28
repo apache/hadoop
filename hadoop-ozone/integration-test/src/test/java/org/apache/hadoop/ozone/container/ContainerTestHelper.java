@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.container;
 
 import com.google.common.base.Preconditions;
+import java.security.MessageDigest;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.client.ReplicationType;
@@ -26,13 +27,15 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.common.Checksum;
+import org.apache.hadoop.ozone.common.OzoneChecksumException;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
-import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
@@ -42,7 +45,6 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.KeyValue;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
@@ -52,7 +54,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
@@ -180,10 +181,9 @@ public final class ContainerTestHelper {
    * @throws NoSuchAlgorithmException
    */
   public static void setDataChecksum(ChunkInfo info, byte[] data)
-      throws NoSuchAlgorithmException {
-    MessageDigest sha = MessageDigest.getInstance(OzoneConsts.FILE_HASH);
-    sha.update(data);
-    info.setChecksum(Hex.encodeHexString(sha.digest()));
+      throws OzoneChecksumException {
+    Checksum checksum = new Checksum();
+    info.setChecksumData(checksum.computeChecksum(data));
   }
 
   /**
@@ -197,8 +197,7 @@ public final class ContainerTestHelper {
    * @throws NoSuchAlgorithmException
    */
   public static ContainerCommandRequestProto getWriteChunkRequest(
-      Pipeline pipeline, BlockID blockID, int datalen)
-      throws IOException, NoSuchAlgorithmException {
+      Pipeline pipeline, BlockID blockID, int datalen) throws IOException {
     LOG.trace("writeChunk {} (blockID={}) to pipeline=",
         datalen, blockID, pipeline);
     ContainerProtos.WriteChunkRequestProto.Builder writeRequest =

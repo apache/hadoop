@@ -222,22 +222,6 @@ public class TestChunkManagerImpl {
   }
 
   @Test
-  public void testWriteChunkChecksumMismatch() throws Exception {
-    try {
-      chunkInfo = new ChunkInfo(String.format("%d.data.%d", blockID
-          .getLocalID(), 0), 0, data.length);
-      //Setting checksum to some value.
-      chunkInfo.setChecksum("some garbage");
-      chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo,
-          ByteBuffer.wrap(data), ContainerProtos.Stage.COMBINED);
-      fail("testWriteChunkChecksumMismatch failed");
-    } catch (StorageContainerException ex) {
-      GenericTestUtils.assertExceptionContains("Checksum mismatch.", ex);
-      assertEquals(ContainerProtos.Result.CHECKSUM_MISMATCH, ex.getResult());
-    }
-  }
-
-  @Test
   public void testReadChunkFileNotExists() throws Exception {
     try {
       // trying to read a chunk, where chunk file does not exist

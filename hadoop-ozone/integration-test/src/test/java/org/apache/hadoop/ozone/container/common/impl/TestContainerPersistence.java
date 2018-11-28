@@ -28,6 +28,8 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.common.Checksum;
+import org.apache.hadoop.ozone.common.ChecksumData;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
@@ -320,8 +322,7 @@ public class TestContainerPersistence {
     Assert.assertTrue(testMap.isEmpty());
   }
 
-  private ChunkInfo writeChunkHelper(BlockID blockID)
-      throws IOException, NoSuchAlgorithmException {
+  private ChunkInfo writeChunkHelper(BlockID blockID) throws IOException {
     final int datalen = 1024;
     long testContainerID = blockID.getContainerID();
     Container container = containerSet.getContainer(testContainerID);
@@ -360,8 +361,7 @@ public class TestContainerPersistence {
    * @throws NoSuchAlgorithmException
    */
   @Test
-  public void testWritReadManyChunks() throws IOException,
-      NoSuchAlgorithmException {
+  public void testWritReadManyChunks() throws IOException {
     final int datalen = 1024;
     final int chunkCount = 1024;
 
@@ -386,32 +386,29 @@ public class TestContainerPersistence {
     Path dataDir = Paths.get(cNewData.getChunksPath());
 
     String globFormat = String.format("%s.data.*", blockID.getLocalID());
-    MessageDigest sha = MessageDigest.getInstance(OzoneConsts.FILE_HASH);
 
     // Read chunk via file system and verify.
     int count = 0;
     try (DirectoryStream<Path> stream =
              Files.newDirectoryStream(dataDir, globFormat)) {
+      Checksum checksum = new Checksum();
+
       for (Path fname : stream) {
-        sha.update(FileUtils.readFileToByteArray(fname.toFile()));
-        String val = Hex.encodeHexString(sha.digest());
+        ChecksumData checksumData = checksum
+            .computeChecksum(FileUtils.readFileToByteArray(fname.toFile()));
         Assert.assertEquals(fileHashMap.get(fname.getFileName().toString())
-            .getChecksum(), val);
+            .getChecksumData(), checksumData);
         count++;
-        sha.reset();
       }
       Assert.assertEquals(chunkCount, count);
 
       // Read chunk via ReadChunk call.
-      sha.reset();
       for (int x = 0; x < chunkCount; x++) {
         String fileName = String.format("%s.data.%d", blockID.getLocalID(), x);
         ChunkInfo info = fileHashMap.get(fileName);
         byte[] data = chunkManager.readChunk(container, blockID, info);
-        sha.update(data);
-        Assert.assertEquals(Hex.encodeHexString(sha.digest()),
-            info.getChecksum());
-        sha.reset();
+        ChecksumData checksumData = checksum.computeChecksum(data);
+        Assert.assertEquals(info.getChecksumData(), checksumData);
       }
     }
   }
@@ -571,7 +568,7 @@ public class TestContainerPersistence {
         getBlock(container, blockData.getBlockID());
     ChunkInfo readChunk =
         ChunkInfo.getFromProtoBuf(readBlockData.getChunks().get(0));
-    Assert.assertEquals(info.getChecksum(), readChunk.getChecksum());
+    Assert.assertEquals(info.getChecksumData(), readChunk.getChecksumData());
   }
 
   /**
@@ -629,7 +626,7 @@ public class TestContainerPersistence {
         getBlock(container, blockData.getBlockID());
     ChunkInfo readChunk =
         ChunkInfo.getFromProtoBuf(readBlockData.getChunks().get(0));
-    Assert.assertEquals(info.getChecksum(), readChunk.getChecksum());
+    Assert.assertEquals(info.getChecksumData(), readChunk.getChecksumData());
   }
 
   /**
@@ -684,7 +681,8 @@ public class TestContainerPersistence {
     ChunkInfo readChunk =
         ChunkInfo.getFromProtoBuf(readBlockData.getChunks().get(readBlockData
             .getChunks().size() - 1));
-    Assert.assertEquals(lastChunk.getChecksum(), readChunk.getChecksum());
+    Assert.assertEquals(
+        lastChunk.getChecksumData(), readChunk.getChecksumData());
   }
 
   /**

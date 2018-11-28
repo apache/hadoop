@@ -21,6 +21,9 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.XceiverClientAsyncReply;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.ozone.common.Checksum;
+import org.apache.hadoop.ozone.common.ChecksumData;
+import org.apache.hadoop.ozone.common.OzoneChecksumException;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
@@ -74,6 +77,7 @@ public class ChunkOutputStream extends OutputStream {
   private final BlockData.Builder containerBlockData;
   private XceiverClientManager xceiverClientManager;
   private XceiverClientSpi xceiverClient;
+  private final Checksum checksum;
   private final String streamId;
   private int chunkIndex;
   private int chunkSize;
@@ -113,7 +117,8 @@ public class ChunkOutputStream extends OutputStream {
   public ChunkOutputStream(BlockID blockID, String key,
       XceiverClientManager xceiverClientManager, XceiverClientSpi xceiverClient,
       String traceID, int chunkSize, long streamBufferFlushSize,
-      long streamBufferMaxSize, long watchTimeout, ByteBuffer buffer) {
+      long streamBufferMaxSize, long watchTimeout, ByteBuffer buffer,
+      Checksum checksum) {
     this.blockID = blockID;
     this.key = key;
     this.traceID = traceID;
@@ -132,6 +137,7 @@ public class ChunkOutputStream extends OutputStream {
     this.watchTimeout = watchTimeout;
     this.buffer = buffer;
     this.ioException = null;
+    this.checksum = checksum;
 
     // A single thread executor handle the responses of async requests
     responseExecutor = Executors.newSingleThreadExecutor();
@@ -474,13 +480,20 @@ public class ChunkOutputStream extends OutputStream {
    * information to be used later in putKey call.
    *
    * @throws IOException if there is an I/O error while performing the call
+   * @throws OzoneChecksumException if there is an error while computing
+   * checksum
    */
   private void writeChunkToContainer(ByteBuffer chunk) throws IOException {
     int effectiveChunkSize = chunk.remaining();
     ByteString data = ByteString.copyFrom(chunk);
-    ChunkInfo chunkInfo = ChunkInfo.newBuilder().setChunkName(
-        DigestUtils.md5Hex(key) + "_stream_" + streamId + "_chunk_"
-            + ++chunkIndex).setOffset(0).setLen(effectiveChunkSize).build();
+    ChecksumData checksumData = checksum.computeChecksum(data);
+    ChunkInfo chunkInfo = ChunkInfo.newBuilder()
+        .setChunkName(DigestUtils.md5Hex(key) + "_stream_" + streamId +
+            "_chunk_" + ++chunkIndex)
+        .setOffset(0)
+        .setLen(effectiveChunkSize)
+        .setChecksumData(checksumData.getProtoBufMessage())
+        .build();
     // generate a unique requestId
     String requestId =
         traceID + ContainerProtos.Type.WriteChunk + chunkIndex + chunkInfo

@@ -140,7 +140,8 @@ public class TestBlockDeletingService {
                   .setChunkName(chunk.getAbsolutePath())
                   .setLen(0)
                   .setOffset(0)
-                  .setChecksum("")
+                  .setChecksumData(
+                      ContainerProtos.ChecksumData.getDefaultInstance())
                   .build();
           chunks.add(info);
         }

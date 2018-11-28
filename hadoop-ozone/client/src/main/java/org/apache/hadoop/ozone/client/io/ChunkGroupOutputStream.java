@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
+import org.apache.hadoop.ozone.common.Checksum;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
@@ -83,6 +84,7 @@ public class ChunkGroupOutputStream extends OutputStream {
   private final long watchTimeout;
   private final long blockSize;
   private ByteBuffer buffer;
+  private final Checksum checksum;
   /**
    * A constructor for testing purpose only.
    */
@@ -102,6 +104,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     buffer = ByteBuffer.allocate(1);
     watchTimeout = 0;
     blockSize = 0;
+    this.checksum = new Checksum();
   }
 
   /**
@@ -113,7 +116,8 @@ public class ChunkGroupOutputStream extends OutputStream {
    */
   @VisibleForTesting
   public void addStream(OutputStream outputStream, long length) {
-    streamEntries.add(new ChunkOutputStreamEntry(outputStream, length));
+    streamEntries.add(
+        new ChunkOutputStreamEntry(outputStream, length, checksum));
   }
 
   @VisibleForTesting
@@ -145,7 +149,8 @@ public class ChunkGroupOutputStream extends OutputStream {
       StorageContainerLocationProtocolClientSideTranslatorPB scmClient,
       OzoneManagerProtocolClientSideTranslatorPB omClient, int chunkSize,
       String requestId, ReplicationFactor factor, ReplicationType type,
-      long bufferFlushSize, long bufferMaxSize, long size, long watchTimeout) {
+      long bufferFlushSize, long bufferMaxSize, long size, long watchTimeout,
+      Checksum checksum) {
     this.streamEntries = new ArrayList<>();
     this.currentStreamIndex = 0;
     this.omClient = omClient;
@@ -163,6 +168,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     this.streamBufferMaxSize = bufferMaxSize;
     this.blockSize = size;
     this.watchTimeout = watchTimeout;
+    this.checksum = checksum;
 
     Preconditions.checkState(chunkSize > 0);
     Preconditions.checkState(streamBufferFlushSize > 0);
@@ -216,7 +222,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     streamEntries.add(new ChunkOutputStreamEntry(subKeyInfo.getBlockID(),
         keyArgs.getKeyName(), xceiverClientManager, xceiverClient, requestID,
         chunkSize, subKeyInfo.getLength(), streamBufferFlushSize,
-        streamBufferMaxSize, watchTimeout, buffer));
+        streamBufferMaxSize, watchTimeout, buffer, checksum));
   }
 
   @VisibleForTesting
@@ -534,6 +540,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     private long streamBufferMaxSize;
     private long blockSize;
     private long watchTimeout;
+    private Checksum checksum;
 
     public Builder setHandler(OpenKeySession handler) {
       this.openHandler = handler;
@@ -597,10 +604,15 @@ public class ChunkGroupOutputStream extends OutputStream {
       return this;
     }
 
+    public Builder setChecksum(Checksum checksumObj){
+      this.checksum = checksumObj;
+      return this;
+    }
+
     public ChunkGroupOutputStream build() throws IOException {
       return new ChunkGroupOutputStream(openHandler, xceiverManager, scmClient,
           omClient, chunkSize, requestID, factor, type, streamBufferFlushSize,
-          streamBufferMaxSize, blockSize, watchTimeout);
+          streamBufferMaxSize, blockSize, watchTimeout, checksum);
     }
   }
 
@@ -610,6 +622,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     private final String key;
     private final XceiverClientManager xceiverClientManager;
     private final XceiverClientSpi xceiverClient;
+    private final Checksum checksum;
     private final String requestId;
     private final int chunkSize;
     // total number of bytes that should be written to this stream
@@ -626,7 +639,7 @@ public class ChunkGroupOutputStream extends OutputStream {
         XceiverClientManager xceiverClientManager,
         XceiverClientSpi xceiverClient, String requestId, int chunkSize,
         long length, long streamBufferFlushSize, long streamBufferMaxSize,
-        long watchTimeout, ByteBuffer buffer) {
+        long watchTimeout, ByteBuffer buffer, Checksum checksum) {
       this.outputStream = null;
       this.blockID = blockID;
       this.key = key;
@@ -641,6 +654,7 @@ public class ChunkGroupOutputStream extends OutputStream {
       this.streamBufferMaxSize = streamBufferMaxSize;
       this.watchTimeout = watchTimeout;
       this.buffer = buffer;
+      this.checksum = checksum;
     }
 
     /**
@@ -648,7 +662,8 @@ public class ChunkGroupOutputStream extends OutputStream {
      * @param  outputStream a existing writable output stream
      * @param  length the length of data to write to the stream
      */
-    ChunkOutputStreamEntry(OutputStream outputStream, long length) {
+    ChunkOutputStreamEntry(OutputStream outputStream, long length,
+        Checksum checksum) {
       this.outputStream = outputStream;
       this.blockID = null;
       this.key = null;
@@ -663,6 +678,7 @@ public class ChunkGroupOutputStream extends OutputStream {
       streamBufferMaxSize = 0;
       buffer = null;
       watchTimeout = 0;
+      this.checksum = checksum;
     }
 
     long getLength() {
@@ -678,7 +694,7 @@ public class ChunkGroupOutputStream extends OutputStream {
         this.outputStream =
             new ChunkOutputStream(blockID, key, xceiverClientManager,
                 xceiverClient, requestId, chunkSize, streamBufferFlushSize,
-                streamBufferMaxSize, watchTimeout, buffer);
+                streamBufferMaxSize, watchTimeout, buffer, checksum);
       }
     }
 

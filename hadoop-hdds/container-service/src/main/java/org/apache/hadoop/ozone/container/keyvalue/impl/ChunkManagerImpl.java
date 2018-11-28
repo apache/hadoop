@@ -200,10 +200,6 @@ public class ChunkManagerImpl implements ChunkManager {
         containerData.incrReadBytes(length);
         return data.array();
       }
-    } catch(NoSuchAlgorithmException ex) {
-      LOG.error("read data failed. error: {}", ex);
-      throw new StorageContainerException("Internal error: ",
-          ex, NO_SUCH_ALGORITHM);
     } catch (ExecutionException ex) {
       LOG.error("read data failed. error: {}", ex);
       throw new StorageContainerException("Internal error: ",
