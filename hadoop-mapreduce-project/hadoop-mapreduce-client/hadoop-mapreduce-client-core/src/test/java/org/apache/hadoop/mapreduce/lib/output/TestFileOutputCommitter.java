@@ -58,6 +58,10 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+
 @SuppressWarnings("unchecked")
 public class TestFileOutputCommitter {
   private static final Path outDir = new Path(
@@ -432,6 +436,35 @@ public class TestFileOutputCommitter {
     }
 
     FileUtil.fullyDelete(new File(outDir.toString()));
+  }
+
+  @Test
+  public void testProgressDuringMerge() throws Exception {
+    Job job = Job.getInstance();
+    FileOutputFormat.setOutputPath(job, outDir);
+    Configuration conf = job.getConfiguration();
+    conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
+    conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
+        2);
+    JobContext jContext = new JobContextImpl(conf, taskID.getJobID());
+    TaskAttemptContext tContext = spy(new TaskAttemptContextImpl(conf, taskID));
+    FileOutputCommitter committer = new FileOutputCommitter(outDir, tContext);
+
+    // setup
+    committer.setupJob(jContext);
+    committer.setupTask(tContext);
+
+    // write output
+    MapFileOutputFormat theOutputFormat = new MapFileOutputFormat();
+    RecordWriter theRecordWriter = theOutputFormat.getRecordWriter(tContext);
+    writeMapFileOutput(theRecordWriter, tContext);
+
+    // do commit
+    committer.commitTask(tContext);
+    //make sure progress flag was set.
+    // The first time it is set is during commit but ensure that
+    // mergePaths call makes it go again.
+    verify(tContext, atLeast(2)).progress();
   }
 
   @Test
