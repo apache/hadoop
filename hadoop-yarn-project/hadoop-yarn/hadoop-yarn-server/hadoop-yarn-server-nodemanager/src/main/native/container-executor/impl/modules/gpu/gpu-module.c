@@ -141,7 +141,7 @@ void reload_gpu_configuration() {
 /*
  * Format of GPU request commandline:
  *
- * c-e gpu --excluded_gpus 0,1,3 --container_id container_x_y
+ * c-e --module-gpu --excluded_gpus 0,1,3 --container_id container_x_y
  */
 int handle_gpu_request(update_cgroups_parameters_func func,
     const char* module_name, int module_argc, char** module_argv) {
@@ -213,7 +213,8 @@ int handle_gpu_request(update_cgroups_parameters_func func,
 
   if (!minor_devices) {
      // Minor devices is null, skip following call.
-     fprintf(ERRORFILE, "is not specified, skip cgroups call.\n");
+     fprintf(ERRORFILE,
+     "--excluded_gpus is not specified, skip cgroups call.\n");
      goto cleanup;
   }
 
