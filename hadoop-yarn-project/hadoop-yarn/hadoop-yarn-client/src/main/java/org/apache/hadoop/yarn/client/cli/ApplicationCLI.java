@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.api.records.ShellContainerCommand;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.AppAdminClient;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
@@ -113,6 +114,7 @@ public class ApplicationCLI extends YarnCLI {
   public static final String VERSION = "version";
   public static final String STATES = "states";
   public static final String SHELL_CMD = "shell";
+  public static final String CLUSTER_ID_OPTION = "clusterId";
 
   private static String firstArg = null;
 
@@ -278,6 +280,8 @@ public class ApplicationCLI extends YarnCLI {
           "the ability to finalize the upgrade automatically.");
       opts.addOption(UPGRADE_CANCEL, false, "Works with -upgrade option to " +
           "cancel current upgrade.");
+      opts.addOption(CLUSTER_ID_OPTION, true, "ClusterId. "
+          + "By default, it will take default cluster id from the RM");
       opts.getOption(LAUNCH_CMD).setArgName("Application Name> <File Name");
       opts.getOption(LAUNCH_CMD).setArgs(2);
       opts.getOption(START_CMD).setArgName("Application Name");
@@ -302,6 +306,7 @@ public class ApplicationCLI extends YarnCLI {
       opts.getOption(COMPONENTS).setArgs(Option.UNLIMITED_VALUES);
       opts.getOption(DECOMMISSION).setArgName("Application Name");
       opts.getOption(DECOMMISSION).setArgs(1);
+      opts.getOption(CLUSTER_ID_OPTION).setArgName("Cluster ID");
     } else if (title != null && title.equalsIgnoreCase(APPLICATION_ATTEMPT)) {
       opts.addOption(STATUS_CMD, true,
           "Prints the status of the application attempt.");
@@ -309,9 +314,12 @@ public class ApplicationCLI extends YarnCLI {
           "List application attempts for application.");
       opts.addOption(FAIL_CMD, true, "Fails application attempt.");
       opts.addOption(HELP_CMD, false, "Displays help for all commands.");
+      opts.addOption(CLUSTER_ID_OPTION, true, "ClusterId. "
+          + "By default, it will take default cluster id from the RM");
       opts.getOption(STATUS_CMD).setArgName("Application Attempt ID");
       opts.getOption(LIST_CMD).setArgName("Application ID");
       opts.getOption(FAIL_CMD).setArgName("Application Attempt ID");
+      opts.getOption(CLUSTER_ID_OPTION).setArgName("Cluster ID");
     } else if (title != null && title.equalsIgnoreCase(CONTAINER)) {
       opts.addOption(SHELL_CMD, true,
           "Run a shell in the container.");
@@ -358,6 +366,9 @@ public class ApplicationCLI extends YarnCLI {
           " Default command is OUTPUT_THREAD_DUMP.");
       opts.getOption(SIGNAL_CMD).setArgName("container ID [signal command]");
       opts.getOption(SIGNAL_CMD).setArgs(3);
+      opts.addOption(CLUSTER_ID_OPTION, true, "ClusterId. "
+          + "By default, it will take default cluster id from the RM");
+      opts.getOption(CLUSTER_ID_OPTION).setArgName("Cluster ID");
     }
 
     int exitCode = -1;
@@ -381,6 +392,12 @@ public class ApplicationCLI extends YarnCLI {
         return exitCode;
       }
     }
+
+    if (cliParser.hasOption(CLUSTER_ID_OPTION)) {
+      String clusterIdStr = cliParser.getOptionValue(CLUSTER_ID_OPTION);
+      getConf().set(YarnConfiguration.RM_CLUSTER_ID, clusterIdStr);
+    }
+    createAndStartYarnClient();
 
     if (cliParser.hasOption(STATUS_CMD)) {
       if (hasAnyOtherCLIOptions(cliParser, opts, STATUS_CMD, APP_TYPE_CMD)) {
