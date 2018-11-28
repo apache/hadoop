@@ -456,32 +456,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   @Override
   public void prepareContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
-    Container container = ctx.getContainer();
-
-    // Create volumes when needed.
-    if (nmContext != null
-        && nmContext.getResourcePluginManager().getNameToPlugins() != null) {
-      for (ResourcePlugin plugin : nmContext.getResourcePluginManager()
-          .getNameToPlugins().values()) {
-        DockerCommandPlugin dockerCommandPlugin =
-            plugin.getDockerCommandPluginInstance();
-        if (dockerCommandPlugin != null) {
-          DockerVolumeCommand dockerVolumeCommand =
-              dockerCommandPlugin.getCreateDockerVolumeCommand(
-                  ctx.getContainer());
-          if (dockerVolumeCommand != null) {
-            runDockerVolumeCommand(dockerVolumeCommand, container);
-
-            // After volume created, run inspect to make sure volume properly
-            // created.
-            if (dockerVolumeCommand.getSubCommand().equals(
-                DockerVolumeCommand.VOLUME_CREATE_SUB_COMMAND)) {
-              checkDockerVolumeCreated(dockerVolumeCommand, container);
-            }
-          }
-        }
-      }
-    }
   }
 
   private void checkDockerVolumeCreated(
@@ -1034,14 +1008,30 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       }
     }
 
-    // use plugins to update docker run command.
+    // use plugins to create volume and update docker run command.
     if (nmContext != null
         && nmContext.getResourcePluginManager().getNameToPlugins() != null) {
       for (ResourcePlugin plugin : nmContext.getResourcePluginManager()
           .getNameToPlugins().values()) {
         DockerCommandPlugin dockerCommandPlugin =
             plugin.getDockerCommandPluginInstance();
+
         if (dockerCommandPlugin != null) {
+          // Create volumes when needed.
+          DockerVolumeCommand dockerVolumeCommand =
+              dockerCommandPlugin.getCreateDockerVolumeCommand(
+                  ctx.getContainer());
+          if (dockerVolumeCommand != null) {
+            runDockerVolumeCommand(dockerVolumeCommand, container);
+
+            // After volume created, run inspect to make sure volume properly
+            // created.
+            if (dockerVolumeCommand.getSubCommand().equals(
+                DockerVolumeCommand.VOLUME_CREATE_SUB_COMMAND)) {
+              checkDockerVolumeCreated(dockerVolumeCommand, container);
+            }
+          }
+          // Update cmd
           dockerCommandPlugin.updateDockerRunCommand(runCommand, container);
         }
       }
