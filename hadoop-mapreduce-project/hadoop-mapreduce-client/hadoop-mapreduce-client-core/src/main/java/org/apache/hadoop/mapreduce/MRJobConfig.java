@@ -353,6 +353,14 @@ public interface MRJobConfig {
   public static final String TASK_TIMEOUT = "mapreduce.task.timeout";
   long DEFAULT_TASK_TIMEOUT_MILLIS = 5 * 60 * 1000L;
 
+  /**
+   * The max timeout before receiving remote task's first heartbeat.
+   * This parameter is in order to avoid waiting for the container
+   * to start indefinitely, which made task stuck in the NEW state.
+   */
+  String TASK_STUCK_TIMEOUT_MS = "mapreduce.task.stuck.timeout-ms";
+  long DEFAULT_TASK_STUCK_TIMEOUT_MS = 10 * 60 * 1000L;
+
   String TASK_PROGRESS_REPORT_INTERVAL =
       "mapreduce.task.progress-report.interval";
 
