@@ -787,6 +787,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     keyManager.start(configuration);
     omRpcServer.start();
     try {
+      httpServer = new OzoneManagerHttpServer(configuration, this);
       httpServer.start();
     } catch (Exception ex) {
       // Allow OM to start as Http Server failure is not fatal.
