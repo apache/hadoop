@@ -22,6 +22,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.Timer;
@@ -80,7 +81,7 @@ class QuorumCall<KEY, RESULT> {
         public void onSuccess(RESULT res) {
           qr.addResult(e.getKey(), res);
         }
-      });
+      }, MoreExecutors.directExecutor());
     }
     return qr;
   }
