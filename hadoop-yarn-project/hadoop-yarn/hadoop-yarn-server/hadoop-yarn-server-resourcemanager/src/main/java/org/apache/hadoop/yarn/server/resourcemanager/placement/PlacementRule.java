@@ -22,7 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerContext;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 
 public abstract class PlacementRule {
 
@@ -31,7 +31,7 @@ public abstract class PlacementRule {
   }
 
   public abstract boolean initialize(
-      CapacitySchedulerContext schedulerContext) throws IOException;
+      ResourceScheduler scheduler) throws IOException;
 
   /**
    * Get queue for a given application

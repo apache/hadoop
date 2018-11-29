@@ -34,8 +34,10 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.QueueMapping.MappingType;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
@@ -230,8 +232,15 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
 
   @VisibleForTesting
   @Override
-  public boolean initialize(CapacitySchedulerContext schedulerContext)
+  public boolean initialize(ResourceScheduler scheduler)
       throws IOException {
+    if (!(scheduler instanceof CapacityScheduler)) {
+      throw new IOException(
+          "UserGroupMappingPlacementRule can be configured only for "
+              + "CapacityScheduler");
+    }
+    CapacitySchedulerContext schedulerContext =
+        (CapacitySchedulerContext) scheduler;
     CapacitySchedulerConfiguration conf = schedulerContext.getConfiguration();
     boolean overrideWithQueueMappings = conf.getOverrideWithQueueMappings();
     LOG.info(
