@@ -93,6 +93,14 @@ public final class ScmConfigKeys {
   public static final String DFS_CONTAINER_RATIS_LOG_QUEUE_SIZE =
       "dfs.container.ratis.log.queue.size";
   public static final int DFS_CONTAINER_RATIS_LOG_QUEUE_SIZE_DEFAULT = 128;
+
+  // expiry interval stateMachineData cache entry inside containerStateMachine
+  public static final String
+      DFS_CONTAINER_RATIS_STATEMACHINEDATA_CACHE_EXPIRY_INTERVAL =
+      "dfs.container.ratis.statemachine.cache.expiry.interval";
+  public static final String
+      DFS_CONTAINER_RATIS_STATEMACHINEDATA_CACHE_EXPIRY_INTERVAL_DEFAULT =
+      "10s";
   public static final String DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_KEY =
       "dfs.ratis.client.request.timeout.duration";
   public static final TimeDuration

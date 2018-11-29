@@ -406,7 +406,7 @@ public class TestContainerPersistence {
       for (int x = 0; x < chunkCount; x++) {
         String fileName = String.format("%s.data.%d", blockID.getLocalID(), x);
         ChunkInfo info = fileHashMap.get(fileName);
-        byte[] data = chunkManager.readChunk(container, blockID, info);
+        byte[] data = chunkManager.readChunk(container, blockID, info, false);
         ChecksumData checksumData = checksum.computeChecksum(data);
         Assert.assertEquals(info.getChecksumData(), checksumData);
       }
@@ -435,11 +435,11 @@ public class TestContainerPersistence {
     chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
         COMBINED);
 
-    byte[] readData = chunkManager.readChunk(container, blockID, info);
+    byte[] readData = chunkManager.readChunk(container, blockID, info, false);
     assertTrue(Arrays.equals(data, readData));
 
     ChunkInfo info2 = getChunk(blockID.getLocalID(), 0, start, length);
-    byte[] readData2 = chunkManager.readChunk(container, blockID, info2);
+    byte[] readData2 = chunkManager.readChunk(container, blockID, info2, false);
     assertEquals(length, readData2.length);
     assertTrue(Arrays.equals(
         Arrays.copyOfRange(data, start, start + length), readData2));
@@ -513,7 +513,8 @@ public class TestContainerPersistence {
     // Request to read the whole data in a single go.
     ChunkInfo largeChunk = getChunk(blockID.getLocalID(), 0, 0,
         datalen * chunkCount);
-    byte[] newdata = chunkManager.readChunk(container, blockID, largeChunk);
+    byte[] newdata =
+        chunkManager.readChunk(container, blockID, largeChunk, false);
     MessageDigest newSha = MessageDigest.getInstance(OzoneConsts.FILE_HASH);
     newSha.update(newdata);
     Assert.assertEquals(Hex.encodeHexString(oldSha.digest()),
@@ -543,7 +544,7 @@ public class TestContainerPersistence {
     chunkManager.deleteChunk(container, blockID, info);
     exception.expect(StorageContainerException.class);
     exception.expectMessage("Unable to find the chunk file.");
-    chunkManager.readChunk(container, blockID, info);
+    chunkManager.readChunk(container, blockID, info, false);
   }
 
   /**

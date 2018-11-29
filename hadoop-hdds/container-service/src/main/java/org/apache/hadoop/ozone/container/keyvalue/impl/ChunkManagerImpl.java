@@ -173,13 +173,14 @@ public class ChunkManagerImpl implements ChunkManager {
    * @param container - Container for the chunk
    * @param blockID - ID of the block.
    * @param info - ChunkInfo.
+   * @param readFromTmpFile whether to read from tmp chunk file or not.
    * @return byte array
    * @throws StorageContainerException
    * TODO: Right now we do not support partial reads and writes of chunks.
    * TODO: Explore if we need to do that for ozone.
    */
-  public byte[] readChunk(Container container, BlockID blockID, ChunkInfo info)
-      throws StorageContainerException {
+  public byte[] readChunk(Container container, BlockID blockID, ChunkInfo info,
+      boolean readFromTmpFile) throws StorageContainerException {
     try {
       KeyValueContainerData containerData = (KeyValueContainerData) container
           .getContainerData();
@@ -194,6 +195,12 @@ public class ChunkManagerImpl implements ChunkManager {
       if (containerData.getLayOutVersion() == ChunkLayOutVersion
           .getLatestVersion().getVersion()) {
         File chunkFile = ChunkUtils.getChunkFile(containerData, info);
+
+        // In case the chunk file does not exist but tmp chunk file exist,
+        // read from tmp chunk file if readFromTmpFile is set to true
+        if (!chunkFile.exists() && readFromTmpFile) {
+          chunkFile = getTmpChunkFile(chunkFile, info);
+        }
         data = ChunkUtils.readData(chunkFile, info, volumeIOStats);
         containerData.incrReadCount();
         long length = chunkFile.length();
