@@ -163,6 +163,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     if (registryClient != null) {
       registryClient.stop();
     }
+    fs.getFileSystem().close();
     super.serviceStop();
   }
 
