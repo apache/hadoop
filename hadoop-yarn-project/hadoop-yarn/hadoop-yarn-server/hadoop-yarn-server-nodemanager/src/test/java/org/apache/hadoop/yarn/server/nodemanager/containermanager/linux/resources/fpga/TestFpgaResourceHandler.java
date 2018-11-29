@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.google.common.io.FileWriteMode;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -127,7 +128,8 @@ public class TestFpgaResourceHandler {
     dummyAocx = new File(aocxPath);
     Files.createParentDirs(dummyAocx);
     Files.touch(dummyAocx);
-    Files.append(HASHABLE_STRING, dummyAocx, StandardCharsets.UTF_8);
+    Files.asCharSink(dummyAocx, StandardCharsets.UTF_8, FileWriteMode.APPEND)
+        .write(HASHABLE_STRING);
   }
 
   @After
@@ -349,7 +351,8 @@ public class TestFpgaResourceHandler {
 
     // Case 2. id-2 container request preStart, with 1 plugin.configureIP called
     // Add some characters to the dummy file to have its hash changed
-    Files.append("12345", dummyAocx, StandardCharsets.UTF_8);
+    Files.asCharSink(dummyAocx, StandardCharsets.UTF_8, FileWriteMode.APPEND)
+        .write("12345");
     fpgaResourceHandler.preStart(mockContainer(1, 1, "GZIP"));
     // we should have 4 times invocation
     verify(mockVendorPlugin, times(4)).configureIP(anyString(),

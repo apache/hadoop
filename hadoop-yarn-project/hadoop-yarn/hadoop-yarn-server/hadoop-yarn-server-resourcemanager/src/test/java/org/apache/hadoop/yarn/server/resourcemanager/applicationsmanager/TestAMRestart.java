@@ -1158,7 +1158,8 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
           return true;
         }
       } catch (Exception e) {
-        Throwables.propagate(e);
+        Throwables.throwIfUnchecked(e);
+        throw new RuntimeException(e);
       }
       return false;
     }, 2000, 200000);
