@@ -531,7 +531,8 @@ public class KeyValueHandler extends Handler {
           .getChunkData());
       Preconditions.checkNotNull(chunkInfo);
 
-      data = chunkManager.readChunk(kvContainer, blockID, chunkInfo);
+      data = chunkManager.readChunk(kvContainer, blockID, chunkInfo,
+          request.getReadChunk().getReadFromTmpFile());
       metrics.incContainerBytesStats(Type.ReadChunk, data.length);
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);
@@ -702,8 +703,10 @@ public class KeyValueHandler extends Handler {
       ContainerProtos.ChunkInfo chunkInfo = null;
       ByteString dataBuf = ByteString.EMPTY;
       for (ContainerProtos.ChunkInfo chunk : responseData.getChunks()) {
+        // if the block is committed, all chunks must have been committed.
+        // Tmp chunk files won't exist here.
         byte[] data = chunkManager.readChunk(kvContainer, blockID,
-            ChunkInfo.getFromProtoBuf(chunk));
+            ChunkInfo.getFromProtoBuf(chunk), false);
         ByteString current = ByteString.copyFrom(data);
         dataBuf = dataBuf.concat(current);
         chunkInfo = chunk;

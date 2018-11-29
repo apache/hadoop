@@ -105,6 +105,8 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   private final StateContext context;
   private final ReplicationLevel replicationLevel;
   private long nodeFailureTimeoutMs;
+  private final long cacheEntryExpiryInteval;
+
 
   private XceiverServerRatis(DatanodeDetails dd, int port,
       ContainerDispatcher dispatcher, Configuration conf, StateContext context)
@@ -128,6 +130,11 @@ public final class XceiverServerRatis implements XceiverServerSpi {
         conf.getEnum(OzoneConfigKeys.DFS_CONTAINER_RATIS_REPLICATION_LEVEL_KEY,
             OzoneConfigKeys.DFS_CONTAINER_RATIS_REPLICATION_LEVEL_DEFAULT);
     this.executors = new ArrayList<>();
+    cacheEntryExpiryInteval = conf.getTimeDuration(OzoneConfigKeys.
+            DFS_CONTAINER_RATIS_STATEMACHINEDATA_CACHE_EXPIRY_INTERVAL,
+        OzoneConfigKeys.
+            DFS_CONTAINER_RATIS_STATEMACHINEDATA_CACHE_EXPIRY_INTERVAL_DEFAULT,
+        TimeUnit.MILLISECONDS);
     this.dispatcher = dispatcher;
     for (int i = 0; i < numContainerOpExecutors; i++) {
       executors.add(Executors.newSingleThreadExecutor());
@@ -141,8 +148,8 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   }
 
   private ContainerStateMachine getStateMachine(RaftGroupId gid) {
-    return new ContainerStateMachine(gid, dispatcher, chunkExecutor,
-            this, Collections.unmodifiableList(executors));
+    return new ContainerStateMachine(gid, dispatcher, chunkExecutor, this,
+        Collections.unmodifiableList(executors), cacheEntryExpiryInteval);
   }
 
   private RaftProperties newRaftProperties(Configuration conf) {
@@ -304,6 +311,9 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     RaftServerConfigKeys.Log.StateMachineData.setSyncTimeoutRetry(properties,
         numSyncRetries);
 
+    // Enable the StateMachineCaching
+    RaftServerConfigKeys.Log.StateMachineData
+        .setCachingEnabled(properties, true);
     return properties;
   }
 

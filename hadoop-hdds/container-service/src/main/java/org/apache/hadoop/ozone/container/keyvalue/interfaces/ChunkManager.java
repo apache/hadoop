@@ -51,14 +51,15 @@ public interface ChunkManager {
    * @param container - Container for the chunk
    * @param blockID - ID of the block.
    * @param info - ChunkInfo.
+   * @param readFromTmpFile whether to read from tmp chunk file or not
    * @return  byte array
    * @throws StorageContainerException
    *
    * TODO: Right now we do not support partial reads and writes of chunks.
    * TODO: Explore if we need to do that for ozone.
    */
-  byte[] readChunk(Container container, BlockID blockID, ChunkInfo info) throws
-      StorageContainerException;
+  byte[] readChunk(Container container, BlockID blockID, ChunkInfo info,
+      boolean readFromTmpFile) throws StorageContainerException;
 
   /**
    * Deletes a given chunk.

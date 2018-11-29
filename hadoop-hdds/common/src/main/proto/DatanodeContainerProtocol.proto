@@ -392,6 +392,7 @@ message  WriteChunkResponseProto {
 message  ReadChunkRequestProto  {
   required DatanodeBlockID blockID = 1;
   required ChunkInfo chunkData = 2;
+  optional bool readFromTmpFile = 3 [default = false];
 }
 
 message  ReadChunkResponseProto {

@@ -189,7 +189,7 @@ public class TestChunkManagerImpl {
     checkWriteIOStats(data.length, 1);
     checkReadIOStats(0, 0);
     byte[] expectedData = chunkManager.readChunk(keyValueContainer, blockID,
-        chunkInfo);
+        chunkInfo, false);
     assertEquals(expectedData.length, data.length);
     assertTrue(Arrays.equals(expectedData, data));
     checkReadIOStats(data.length, 1);
@@ -226,7 +226,7 @@ public class TestChunkManagerImpl {
     try {
       // trying to read a chunk, where chunk file does not exist
       byte[] expectedData = chunkManager.readChunk(keyValueContainer, blockID,
-          chunkInfo);
+          chunkInfo, false);
       fail("testReadChunkFileNotExists failed");
     } catch (StorageContainerException ex) {
       GenericTestUtils.assertExceptionContains("Unable to find the chunk " +
@@ -249,7 +249,7 @@ public class TestChunkManagerImpl {
     for (int i=0; i<100; i++) {
       chunkInfo = new ChunkInfo(String.format("%d.data.%d", blockID
           .getLocalID(), i), 0, data.length);
-      chunkManager.readChunk(keyValueContainer, blockID, chunkInfo);
+      chunkManager.readChunk(keyValueContainer, blockID, chunkInfo, false);
     }
     checkReadIOStats(data.length*100, 100);
     assertTrue(hddsVolume.getVolumeIOStats().getReadTime() > 0);
