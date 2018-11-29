@@ -92,7 +92,7 @@
     <spotbugs.version>3.1.0-RC1</spotbugs.version>
     <dnsjava.version>2.1.7</dnsjava.version>
 
-    <guava.version>11.0.2</guava.version>
+    <guava.version>27.0-jre</guava.version>
     <guice.version>4.0</guice.version>
     <joda-time.version>2.9.9</joda-time.version>
 

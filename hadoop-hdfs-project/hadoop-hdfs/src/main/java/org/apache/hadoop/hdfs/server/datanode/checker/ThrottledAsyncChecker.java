@@ -182,7 +182,7 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
               t, timer.monotonicNow()));
         }
       }
-    });
+    }, MoreExecutors.directExecutor());
   }
 
   /**
