@@ -47,9 +47,9 @@ import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
+import org.apache.hadoop.ozone.security.OzoneSecretManager;
 import org.apache.hadoop.ozone.security.OzoneSecurityException;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
-import org.apache.hadoop.ozone.security.OzoneSecretManager;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
@@ -95,6 +95,7 @@ import org.apache.hadoop.ozone.security.acl.OzoneObj.StoreType;
 import org.apache.hadoop.ozone.security.acl.OzoneObj.ResourceType;
 import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import org.apache.hadoop.ozone.security.acl.RequestContext;
+import org.apache.hadoop.ozone.security.OzoneDelegationTokenSecretManager;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -111,6 +112,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.management.ObjectName;
+import javax.ws.rs.HEAD;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -128,7 +130,6 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import static org.apache.hadoop.ozone.security.OzoneSecurityException.ResultCodes.*;
 import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForBlockClients;
 import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForClients;
 import static org.apache.hadoop.hdds.HddsUtils.isHddsEnabled;
@@ -178,8 +179,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
           + StartupOption.HELP.getName() + " ]\n";
   private static final String OM_DAEMON = "om";
   private static boolean securityEnabled = false;
-  private static OzoneSecretManager secretManager;
-  // TO DO: For testing purpose only, remove before commiting
+  private static OzoneDelegationTokenSecretManager<OzoneTokenIdentifier>
+      secretManager;
   private KeyPair keyPair;
   private CertificateClient certClient;
   private static boolean testSecureOmFlag = false;
@@ -367,9 +368,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   }
 
 
-  private OzoneSecretManager createSecretManager(
-      OzoneConfiguration conf)
-      throws IOException {
+  private OzoneDelegationTokenSecretManager createSecretManager(
+      OzoneConfiguration conf) throws IOException {
     long tokenRemoverScanInterval =
         conf.getTimeDuration(OMConfigKeys.DELEGATION_REMOVER_SCAN_INTERVAL_KEY,
             OMConfigKeys.DELEGATION_REMOVER_SCAN_INTERVAL_DEFAULT,
@@ -383,9 +383,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
             OMConfigKeys.DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT,
             TimeUnit.MILLISECONDS);
     Text omRpcAddressTxt = new Text(OmUtils.getOmRpcAddress(configuration));
-
-    return new OzoneSecretManager(conf, tokenMaxLifetime, tokenRenewInterval,
-        tokenRemoverScanInterval, omRpcAddressTxt);
+    return new OzoneDelegationTokenSecretManager<>(conf, tokenMaxLifetime,
+        tokenRenewInterval, tokenRemoverScanInterval, omRpcAddressTxt);
   }
 
   private void stopSecretManager() throws IOException {
@@ -400,7 +399,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       try {
         readKeyPair();
         LOG.info("Starting OM secret manager");
-        secretManager.startThreads(keyPair);
+        secretManager.start(keyPair);
       } catch (IOException e) {
         // Inability to start secret manager
         // can't be recovered from.
@@ -424,7 +423,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
           certClient.getPrivateKey(OM_DAEMON));
     } catch (Exception e) {
       throw new OzoneSecurityException("Error reading private file for "
-          + "OzoneManager", e, OM_PUBLIC_PRIVATE_KEY_FILE_NOT_EXIST);
+          + "OzoneManager", e, OzoneSecurityException
+          .ResultCodes.OM_PUBLIC_PRIVATE_KEY_FILE_NOT_EXIST);
     }
   }
 

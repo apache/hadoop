@@ -18,10 +18,6 @@
 
 package org.apache.hadoop.ozone.security;
 
-import java.io.File;
-import java.io.IOException;
-import java.security.KeyPair;
-import java.security.Signature;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -38,19 +34,25 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-/**
- * Test class for {@link OzoneSecretManager}.
- */
-public class TestOzoneSecretManager {
+import java.io.File;
+import java.io.IOException;
+import java.security.KeyPair;
+import java.security.Signature;
 
-  private OzoneSecretManager<OzoneTokenIdentifier> secretManager;
+/**
+ * Test class for {@link OzoneDelegationTokenSecretManager}.
+ */
+public class TestOzoneDelegationTokenSecretManager {
+
+  private OzoneDelegationTokenSecretManager<OzoneTokenIdentifier>
+      secretManager;
   private SecurityConfig securityConfig;
   private KeyPair keyPair;
   private long expiryTime;
   private Text serviceRpcAdd;
   private OzoneConfiguration conf;
-  private static final String BASEDIR = GenericTestUtils
-      .getTempPath(TestOzoneSecretManager.class.getSimpleName());
+  private static final String BASEDIR = GenericTestUtils.getTempPath(
+      TestOzoneDelegationTokenSecretManager.class.getSimpleName());
   private final static Text TEST_USER = new Text("testUser");
   private long tokenMaxLifetime = 1000 * 20;
   private long tokenRemoverScanInterval = 1000 * 20;
@@ -76,7 +78,7 @@ public class TestOzoneSecretManager {
   public void testCreateToken() throws Exception {
     secretManager = createSecretManager(conf, tokenMaxLifetime,
         expiryTime, tokenRemoverScanInterval);
-    secretManager.startThreads(keyPair);
+    secretManager.start(keyPair);
     Token<OzoneTokenIdentifier> token = secretManager.createToken(TEST_USER,
         TEST_USER,
         TEST_USER);
@@ -94,7 +96,7 @@ public class TestOzoneSecretManager {
   public void testRenewTokenSuccess() throws Exception {
     secretManager = createSecretManager(conf, tokenMaxLifetime,
         expiryTime, tokenRemoverScanInterval);
-    secretManager.startThreads(keyPair);
+    secretManager.start(keyPair);
     Token<OzoneTokenIdentifier> token = secretManager.createToken(TEST_USER,
         TEST_USER,
         TEST_USER);
@@ -110,7 +112,7 @@ public class TestOzoneSecretManager {
   public void testRenewTokenFailure() throws Exception {
     secretManager = createSecretManager(conf, tokenMaxLifetime,
         expiryTime, tokenRemoverScanInterval);
-    secretManager.startThreads(keyPair);
+    secretManager.start(keyPair);
     Token<OzoneTokenIdentifier> token = secretManager.createToken(TEST_USER,
         TEST_USER,
         TEST_USER);
@@ -127,7 +129,7 @@ public class TestOzoneSecretManager {
   public void testRenewTokenFailureMaxTime() throws Exception {
     secretManager = createSecretManager(conf, 100,
         100, tokenRemoverScanInterval);
-    secretManager.startThreads(keyPair);
+    secretManager.start(keyPair);
     Token<OzoneTokenIdentifier> token = secretManager.createToken(TEST_USER,
         TEST_USER,
         TEST_USER);
@@ -145,7 +147,7 @@ public class TestOzoneSecretManager {
   public void testRenewTokenFailureRenewalTime() throws Exception {
     secretManager = createSecretManager(conf, 1000 * 10,
         10, tokenRemoverScanInterval);
-    secretManager.startThreads(keyPair);
+    secretManager.start(keyPair);
     Token<OzoneTokenIdentifier> token = secretManager.createToken(TEST_USER,
         TEST_USER,
         TEST_USER);
@@ -159,7 +161,7 @@ public class TestOzoneSecretManager {
   public void testCreateIdentifier() throws Exception {
     secretManager = createSecretManager(conf, tokenMaxLifetime,
         expiryTime, tokenRemoverScanInterval);
-    secretManager.startThreads(keyPair);
+    secretManager.start(keyPair);
     OzoneTokenIdentifier identifier = secretManager.createIdentifier();
     // Check basic details.
     Assert.assertTrue(identifier.getOwner().equals(new Text("")));
@@ -171,7 +173,7 @@ public class TestOzoneSecretManager {
   public void testCancelTokenSuccess() throws Exception {
     secretManager = createSecretManager(conf, tokenMaxLifetime,
         expiryTime, tokenRemoverScanInterval);
-    secretManager.startThreads(keyPair);
+    secretManager.start(keyPair);
     Token<OzoneTokenIdentifier> token = secretManager.createToken(TEST_USER,
         TEST_USER,
         TEST_USER);
@@ -182,7 +184,7 @@ public class TestOzoneSecretManager {
   public void testCancelTokenFailure() throws Exception {
     secretManager = createSecretManager(conf, tokenMaxLifetime,
         expiryTime, tokenRemoverScanInterval);
-    secretManager.startThreads(keyPair);
+    secretManager.start(keyPair);
     Token<OzoneTokenIdentifier> token = secretManager.createToken(TEST_USER,
         TEST_USER,
         TEST_USER);
@@ -205,12 +207,12 @@ public class TestOzoneSecretManager {
   }
 
   /**
-   * Create instance of {@link OzoneSecretManager}.
+   * Create instance of {@link OzoneDelegationTokenSecretManager}.
    */
-  private OzoneSecretManager<OzoneTokenIdentifier> createSecretManager(
-      OzoneConfiguration config, long tokenMaxLife, long expiry, long
-      tokenRemoverScanTime) throws IOException {
-    return new OzoneSecretManager<>(config, tokenMaxLife,
+  private OzoneDelegationTokenSecretManager<OzoneTokenIdentifier>
+      createSecretManager(OzoneConfiguration config, long tokenMaxLife,
+      long expiry, long tokenRemoverScanTime) throws IOException {
+    return new OzoneDelegationTokenSecretManager<>(config, tokenMaxLife,
         expiry, tokenRemoverScanTime, serviceRpcAdd);
   }
 }
