@@ -37,8 +37,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <bouncycastle.version>1.60</bouncycastle.version>
     <ozone.release>Badlands</ozone.release>
     <declared.ozone.version>${ozone.version}</declared.ozone.version>
-
-
+    <maven-surefire-plugin.version>3.0.0-M1</maven-surefire-plugin.version>
   </properties>
   <modules>
     <module>common</module>
