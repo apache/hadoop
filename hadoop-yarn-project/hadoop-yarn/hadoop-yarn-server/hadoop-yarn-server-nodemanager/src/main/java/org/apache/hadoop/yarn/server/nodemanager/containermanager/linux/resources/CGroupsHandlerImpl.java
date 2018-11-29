@@ -87,9 +87,10 @@ class CGroupsHandlerImpl implements CGroupsHandler {
   CGroupsHandlerImpl(Configuration conf, PrivilegedOperationExecutor
       privilegedOperationExecutor, String mtab)
       throws ResourceHandlerException {
+    // Remove leading and trialing slash(es)
     this.cGroupPrefix = conf.get(YarnConfiguration.
         NM_LINUX_CONTAINER_CGROUPS_HIERARCHY, "/hadoop-yarn")
-        .replaceAll("^/", "").replaceAll("$/", "");
+        .replaceAll("^/+", "").replaceAll("/+$", "");
     this.enableCGroupMount = conf.getBoolean(YarnConfiguration.
         NM_LINUX_CONTAINER_CGROUPS_MOUNT, false);
     this.cGroupMountPath = conf.get(YarnConfiguration.
