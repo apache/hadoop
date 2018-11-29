@@ -1232,6 +1232,15 @@
   </property>
 
   <property>
+    <name>hdds.scm.chillmode.pipeline-availability.check</name>
+    <value>false</value>
+    <tag>HDDS,SCM,OPERATION</tag>
+    <description>
+      Boolean value to enable pipeline availability check during SCM chill mode.
+    </description>
+  </property>
+
+  <property>
     <name>hdds.container.action.max.limit</name>
     <value>20</value>
     <tag>DATANODE</tag>
