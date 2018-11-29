@@ -40,4 +40,14 @@ public class TestLocalFSContractMultipartUploader
   protected int partSizeInBytes() {
     return 1024;
   }
+
+  @Override
+  protected boolean finalizeConsumesUploadIdImmediately() {
+    return true;
+  }
+
+  @Override
+  protected boolean supportsConcurrentUploadsToSamePath() {
+    return true;
+  }
 }

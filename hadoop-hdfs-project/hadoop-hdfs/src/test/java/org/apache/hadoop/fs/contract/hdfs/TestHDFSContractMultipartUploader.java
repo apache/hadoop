@@ -21,6 +21,8 @@ import java.io.IOException;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractMultipartUploaderTest;
@@ -31,6 +33,9 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
  */
 public class TestHDFSContractMultipartUploader extends
     AbstractContractMultipartUploaderTest {
+
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(AbstractContractMultipartUploaderTest.class);
 
   @BeforeClass
   public static void createCluster() throws IOException {
@@ -54,5 +59,15 @@ public class TestHDFSContractMultipartUploader extends
   @Override
   protected int partSizeInBytes() {
     return 1024;
+  }
+
+  @Override
+  protected boolean finalizeConsumesUploadIdImmediately() {
+    return true;
+  }
+
+  @Override
+  protected boolean supportsConcurrentUploadsToSamePath() {
+    return true;
   }
 }
