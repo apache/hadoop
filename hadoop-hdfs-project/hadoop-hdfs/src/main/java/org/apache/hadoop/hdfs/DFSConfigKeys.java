@@ -284,6 +284,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       HdfsClientConfigKeys.DFS_WEBHDFS_USER_PATTERN_DEFAULT;
   public static final String  DFS_PERMISSIONS_ENABLED_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_PERMISSIONS_ENABLED_KEY;
+  public static final String  DFS_PERMISSIONS_CONTENT_SUMMARY_SUBACCESS_KEY
+      = "dfs.permissions.ContentSummary.subAccess";
+  public static final boolean DFS_PERMISSIONS_CONTENT_SUMMARY_SUBACCESS_DEFAULT
+      = false;
   public static final boolean DFS_PERMISSIONS_ENABLED_DEFAULT = true;
   public static final String  DFS_PERMISSIONS_SUPERUSERGROUP_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY;

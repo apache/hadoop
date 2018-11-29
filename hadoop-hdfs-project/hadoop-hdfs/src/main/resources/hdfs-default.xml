@@ -470,6 +470,16 @@
 </property>
 
 <property>
+  <name>dfs.permissions.ContentSummary.subAccess</name>
+  <value>false</value>
+  <description>
+    If "true", the ContentSummary permission checking will use subAccess.
+    If "false", the ContentSummary permission checking will NOT use subAccess.
+    subAccess means using recursion to check the access of all descendants.
+  </description>
+</property>
+
+<property>
   <name>dfs.permissions.superusergroup</name>
   <value>supergroup</value>
   <description>The name of the group of super-users.

@@ -128,6 +128,11 @@ class FSDirStatAndListingOp {
   static ContentSummary getContentSummary(
       FSDirectory fsd, FSPermissionChecker pc, String src) throws IOException {
     final INodesInPath iip = fsd.resolvePath(pc, src, DirOp.READ_LINK);
+    if (fsd.isPermissionEnabled() && fsd.isPermissionContentSummarySubAccess()) {
+      fsd.checkPermission(pc, iip, false, null, null, null,
+          FsAction.READ_EXECUTE);
+      pc = null;
+    }
     // getContentSummaryInt() call will check access (if enabled) when
     // traversing all sub directories.
     return getContentSummaryInt(fsd, pc, iip);
