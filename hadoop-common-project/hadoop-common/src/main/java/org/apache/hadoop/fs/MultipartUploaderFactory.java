@@ -52,6 +52,13 @@ public abstract class MultipartUploaderFactory {
     }
   }
 
+  /**
+   * Get the multipart loader for a specific filesystem.
+   * @param fs filesystem
+   * @param conf configuration
+   * @return an uploader, or null if one was found.
+   * @throws IOException failure during the creation process.
+   */
   public static MultipartUploader get(FileSystem fs, Configuration conf)
       throws IOException {
     MultipartUploader mpu = null;
