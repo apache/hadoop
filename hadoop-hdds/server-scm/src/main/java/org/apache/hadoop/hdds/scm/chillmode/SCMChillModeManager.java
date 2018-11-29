@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeProtocolServer
     .NodeRegistrationContainerReport;
 import org.apache.hadoop.hdds.server.events.EventHandler;
@@ -53,14 +54,18 @@ public class SCMChillModeManager implements
       LoggerFactory.getLogger(SCMChillModeManager.class);
   private final boolean isChillModeEnabled;
   private AtomicBoolean inChillMode = new AtomicBoolean(true);
+
   private Map<String, ChillModeExitRule> exitRules = new HashMap(1);
   private Configuration config;
   private static final String CONT_EXIT_RULE = "ContainerChillModeRule";
   private static final String DN_EXIT_RULE = "DataNodeChillModeRule";
+  private static final String PIPELINE_EXIT_RULE = "PipelineChillModeRule";
+
   private final EventQueue eventPublisher;
 
   public SCMChillModeManager(Configuration conf,
-      List<ContainerInfo> allContainers, EventQueue eventQueue) {
+      List<ContainerInfo> allContainers, PipelineManager pipelineManager,
+      EventQueue eventQueue) {
     this.config = conf;
     this.eventPublisher = eventQueue;
     this.isChillModeEnabled = conf.getBoolean(
@@ -70,6 +75,16 @@ public class SCMChillModeManager implements
       exitRules.put(CONT_EXIT_RULE,
           new ContainerChillModeRule(config, allContainers, this));
       exitRules.put(DN_EXIT_RULE, new DataNodeChillModeRule(config, this));
+
+      if (conf.getBoolean(
+          HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK,
+          HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK_DEFAULT)
+          && pipelineManager != null) {
+        PipelineChillModeRule rule = new PipelineChillModeRule(pipelineManager,
+            this);
+        exitRules.put(PIPELINE_EXIT_RULE, rule);
+        eventPublisher.addHandler(SCMEvents.PIPELINE_REPORT, rule);
+      }
       emitChillModeStatus();
     } else {
       exitChillMode(eventQueue);
@@ -84,7 +99,7 @@ public class SCMChillModeManager implements
     eventPublisher.fireEvent(SCMEvents.CHILL_MODE_STATUS, getInChillMode());
   }
 
-  private void validateChillModeExitRules(EventPublisher eventQueue) {
+  public void validateChillModeExitRules(EventPublisher eventQueue) {
     for (ChillModeExitRule exitRule : exitRules.values()) {
       if (!exitRule.validate()) {
         return;
