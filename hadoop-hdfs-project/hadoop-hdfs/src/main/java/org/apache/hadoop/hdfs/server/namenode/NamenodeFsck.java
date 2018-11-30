@@ -1091,28 +1091,33 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         deadNodes.add(chosenNode);
       }
     }
-    byte[] buf = new byte[1024];
-    int cnt = 0;
-    boolean success = true;
-    long bytesRead = 0;
+
+    long bytesRead = 0L;
     try {
-      while ((cnt = blockReader.read(buf, 0, buf.length)) > 0) {
-        fos.write(buf, 0, cnt);
-        bytesRead += cnt;
-      }
-      if ( bytesRead != block.getNumBytes() ) {
-        throw new IOException("Recorded block size is " + block.getNumBytes() +
-                              ", but datanode returned " +bytesRead+" bytes");
-      }
+      bytesRead = copyBock(blockReader, fos);
     } catch (Exception e) {
-      LOG.error("Error reading block", e);
-      success = false;
+      throw new Exception("Could not copy block data for " + lblock.getBlock(),
+          e);
     } finally {
       blockReader.close();
     }
-    if (!success) {
-      throw new Exception("Could not copy block data for " + lblock.getBlock());
+
+    if (bytesRead != block.getNumBytes()) {
+      throw new IOException("Recorded block size is " + block.getNumBytes()
+          + ", but datanode returned " + bytesRead + " bytes");
     }
+  }
+
+  private long copyBock(BlockReader blockReader, OutputStream os)
+      throws IOException {
+    final byte[] buf = new byte[8192];
+    int cnt = 0;
+    long bytesRead = 0L;
+    while ((cnt = blockReader.read(buf, 0, buf.length)) > 0) {
+      os.write(buf, 0, cnt);
+      bytesRead += cnt;
+    }
+    return bytesRead;
   }
 
   @Override
