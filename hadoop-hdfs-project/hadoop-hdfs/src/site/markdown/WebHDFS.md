@@ -64,6 +64,8 @@ The HTTP REST API supports the complete [FileSystem](../../api/org/apache/hadoop
     * [`SETTIMES`](#Set_Access_or_Modification_Time) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).setTimes)
     * [`RENEWDELEGATIONTOKEN`](#Renew_Delegation_Token) (see [DelegationTokenAuthenticator](../../api/org/apache/hadoop/security/token/delegation/web/DelegationTokenAuthenticator.html).renewDelegationToken)
     * [`CANCELDELEGATIONTOKEN`](#Cancel_Delegation_Token) (see [DelegationTokenAuthenticator](../../api/org/apache/hadoop/security/token/delegation/web/DelegationTokenAuthenticator.html).cancelDelegationToken)
+    * [`ALLOWSNAPSHOT`](#Allow_Snapshot)
+    * [`DISALLOWSNAPSHOT`](#Disallow_Snapshot)
     * [`CREATESNAPSHOT`](#Create_Snapshot) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).createSnapshot)
     * [`RENAMESNAPSHOT`](#Rename_Snapshot) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).renameSnapshot)
     * [`SETXATTR`](#Set_XAttr) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).setXAttr)
@@ -1301,6 +1303,28 @@ See also: [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).
 
 Snapshot Operations
 -------------------
+
+### Allow Snapshot
+
+* Submit a HTTP PUT request.
+
+        curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=ALLOWSNAPSHOT"
+
+    The client receives a response with zero content length on success:
+
+        HTTP/1.1 200 OK
+        Content-Length: 0
+
+### Disallow Snapshot
+
+* Submit a HTTP PUT request.
+
+        curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=DISALLOWSNAPSHOT"
+
+    The client receives a response with zero content length on success:
+
+        HTTP/1.1 200 OK
+        Content-Length: 0
 
 ### Create Snapshot
 
