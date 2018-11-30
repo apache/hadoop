@@ -30,10 +30,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeSet;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.io.IOUtils;
@@ -1021,10 +1022,10 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
    * around.
    */
   private void copyBlock(final DFSClient dfs, LocatedBlock lblock,
-                         OutputStream fos) throws Exception {
+      OutputStream fos) throws Exception {
     int failures = 0;
     InetSocketAddress targetAddr = null;
-    TreeSet<DatanodeInfo> deadNodes = new TreeSet<DatanodeInfo>();
+    Set<DatanodeInfo> deadNodes = new HashSet<DatanodeInfo>();
     BlockReader blockReader = null;
     ExtendedBlock block = lblock.getBlock();
 
@@ -1132,9 +1133,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
    * That's the local one, if available.
    */
   private DatanodeInfo bestNode(DFSClient dfs, DatanodeInfo[] nodes,
-                                TreeSet<DatanodeInfo> deadNodes) throws IOException {
-    if ((nodes == null) ||
-        (nodes.length - deadNodes.size() < 1)) {
+      Set<DatanodeInfo> deadNodes) throws IOException {
+    if ((nodes == null) || (nodes.length - deadNodes.size() < 1)) {
       throw new IOException("No live nodes contain current block");
     }
     DatanodeInfo chosenNode;
