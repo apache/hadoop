@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import com.google.inject.Inject;
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -203,8 +204,9 @@ class NodesPage extends RmView {
             nodeTableData.length() - 1);
       }
       nodeTableData.append("]");
+      String nodeTableDataEscaped = StringEscapeUtils.escapeJava(nodeTableData.toString());
       html.script().$type("text/javascript")
-          .__("var nodeTableData=" + nodeTableData).__();
+          .__("var nodeTableData=" + nodeTableDataEscaped).__();
       tbody.__().__();
     }
   }
