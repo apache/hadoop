@@ -134,9 +134,9 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
   @Override
   public ContainerCommandResponseProto dispatch(
       ContainerCommandRequestProto msg) {
+    Preconditions.checkNotNull(msg);
     LOG.trace("Command {}, trace ID: {} ", msg.getCmdType().toString(),
         msg.getTraceID());
-    Preconditions.checkNotNull(msg.toString());
 
     AuditAction action = ContainerCommandRequestPBHelper.getAuditAction(
         msg.getCmdType());
