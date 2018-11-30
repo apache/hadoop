@@ -44,6 +44,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.StorageInterface.CloudBlobContainerWrapper;
 import org.apache.hadoop.fs.azure.StorageInterface.CloudBlobDirectoryWrapper;
 import org.apache.hadoop.fs.azure.StorageInterface.CloudBlobWrapper;
@@ -241,6 +242,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private static final String HTTP_SCHEME = "http";
   private static final String HTTPS_SCHEME = "https";
   private static final String WASB_AUTHORITY_DELIMITER = "@";
+  private static final char ASTERISK_SYMBOL = '*';
   private static final String AZURE_ROOT_CONTAINER = "$root";
 
   private static final int DEFAULT_CONCURRENT_WRITES = 8;
@@ -1169,7 +1171,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     for (String currentDir : rawDirs) {
       String myDir;
       try {
-        myDir = verifyAndConvertToStandardFormat(currentDir);
+        myDir = verifyAndConvertToStandardFormat(currentDir.trim());
       } catch (URISyntaxException ex) {
         throw new AzureException(String.format(
             "The directory %s specified in the configuration entry %s is not"
@@ -1214,7 +1216,12 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   public boolean isKeyForDirectorySet(String key, Set<String> dirSet) {
     String defaultFS = FileSystem.getDefaultUri(sessionConfiguration).toString();
     for (String dir : dirSet) {
-      if (dir.isEmpty() || key.startsWith(dir + "/")) {
+      if (dir.isEmpty()) {
+        // dir is root
+        return true;
+      }
+
+      if (matchAsteriskPattern(key, dir)) {
         return true;
       }
 
@@ -1227,7 +1234,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           // Concatenate the default file system prefix with the relative
           // page blob directory path.
           //
-          if (key.startsWith(trim(defaultFS, "/") + "/" + dir + "/")){
+          String dirWithPrefix = trim(defaultFS, "/") + "/" + dir;
+          if (matchAsteriskPattern(key, dirWithPrefix)) {
             return true;
           }
         }
@@ -1236,6 +1244,54 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       }
     }
     return false;
+  }
+
+  private boolean matchAsteriskPattern(String pathName, String pattern) {
+    if (pathName == null || pathName.length() == 0) {
+      return false;
+    }
+
+    int pathIndex = 0;
+    int patternIndex = 0;
+
+    while (pathIndex < pathName.length() && patternIndex < pattern.length()) {
+      char charToMatch = pattern.charAt(patternIndex);
+
+      // normal char:
+      if (charToMatch != ASTERISK_SYMBOL) {
+        if (charToMatch != pathName.charAt(pathIndex)) {
+          return false;
+        }
+        pathIndex++;
+        patternIndex++;
+        continue;
+      }
+
+      // ASTERISK_SYMBOL
+      // 1. * is used in path name: *a/b,a*/b, a/*b, a/b*
+      if (patternIndex > 0 && pattern.charAt(patternIndex - 1) != Path.SEPARATOR_CHAR
+              || patternIndex + 1 < pattern.length() && pattern.charAt(patternIndex + 1) != Path.SEPARATOR_CHAR) {
+        if (ASTERISK_SYMBOL != pathName.charAt(pathIndex)) {
+          return false;
+        }
+
+        pathIndex++;
+        patternIndex++;
+        continue;
+      }
+
+      // 2. * is used as wildcard: */a, a/*/b, a/*
+      patternIndex++;
+      // find next path separator
+      while (pathIndex < pathName.length() && pathName.charAt(pathIndex) != Path.SEPARATOR_CHAR) {
+        pathIndex++;
+      }
+    }
+
+    // Ensure it is not a file/dir which shares same prefix as pattern
+    // Eg: pattern: /A/B, pathName: /A/BBB should not match
+    return patternIndex == pattern.length()
+            && (pathIndex == pathName.length() || pathName.charAt(pathIndex) == Path.SEPARATOR_CHAR);
   }
 
   /**
