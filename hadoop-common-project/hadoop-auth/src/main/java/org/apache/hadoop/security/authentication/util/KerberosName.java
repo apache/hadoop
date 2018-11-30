@@ -324,8 +324,8 @@ public class KerberosName {
         }
       }
       if (result != null && nonSimplePattern.matcher(result).find()) {
-        LOG.info("Non-simple name {} after auth_to_local rule {}",
-            result, this);
+        throw new NoMatchingRule("Non-simple name " + result +
+                                 " after auth_to_local rule " + this);
       }
       if (toLowerCase && result != null) {
         result = result.toLowerCase(Locale.ENGLISH);
@@ -378,7 +378,7 @@ public class KerberosName {
   /**
    * Get the translation of the principal name into an operating system
    * user name.
-   * @return the user name
+   * @return the short name
    * @throws IOException throws if something is wrong with the rules
    */
   public String getShortName() throws IOException {
@@ -398,8 +398,7 @@ public class KerberosName {
         return result;
       }
     }
-    LOG.info("No auth_to_local rules applied to {}", this);
-    return toString();
+    throw new NoMatchingRule("No rules applied to " + toString());
   }
 
   /**
