@@ -230,7 +230,7 @@ public class ITestNativeAzureFileSystemLive extends
 
     // negative tests
     String[] negativeKeys = { "", "/", "bar", "bar/", "bar/pageBlobs", "bar/pageBlobs/foo",
-        "bar/pageBlobs/foo/", "/pageBlobs/", "/pageBlobs", "pageBlobs", "pageBlobsxyz/" };
+        "bar/pageBlobs/foo/", "/pageBlobs/", "/pageBlobs", "pageBlobsxyz/" };
     for (String s : negativeKeys) {
       assertFalse(store.isPageBlobKey(s));
       assertFalse(store.isPageBlobKey(uriPrefix + s));
@@ -262,7 +262,7 @@ public class ITestNativeAzureFileSystemLive extends
 
     // negative tests
     String[] negativeKeys = { "", "/", "bar", "bar/", "bar/hbase",
-        "bar/hbase/foo", "bar/hbase/foo/", "/hbase/", "/hbase", "hbase",
+        "bar/hbase/foo", "bar/hbase/foo/", "/hbase/", "/hbase",
         "hbasexyz/", "foo/atomicRenameDir1/"};
     for (String s : negativeKeys) {
       assertFalse(store.isAtomicRenameKey(s));
