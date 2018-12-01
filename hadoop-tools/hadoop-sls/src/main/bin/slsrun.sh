@@ -86,7 +86,8 @@ calculateClasspath() {
   HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
   . $HADOOP_LIBEXEC_DIR/hadoop-config.sh
   SLS_HTML="${HADOOP_PREFIX}/share/hadoop/tools/sls/html"
-  export HADOOP_CLASSPATH="${HADOOP_CLASSPATH}:${TOOL_PATH}:${SLS_HTML}"
+  TIMELINE_SERVICE="${HADOOP_YARN_HOME}/${YARN_DIR}/timelineservice/*"
+  export HADOOP_CLASSPATH="${HADOOP_CLASSPATH}:${TOOL_PATH}:${SLS_HTML}:${TIMELINE_SERVICE}"
 }
 ###############################################################################
 runSimulation() {
