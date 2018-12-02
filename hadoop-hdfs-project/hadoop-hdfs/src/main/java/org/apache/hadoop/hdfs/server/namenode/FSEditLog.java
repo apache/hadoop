@@ -1382,10 +1382,15 @@ public class FSEditLog implements LogsPurgeable {
     try {
       editLogStream = journalSet.startLogSegment(segmentTxId, layoutVersion);
     } catch (IOException ex) {
-      throw new IOException("Unable to start log segment " +
-          segmentTxId + ": too few journals successfully started.", ex);
+      final String msg = "Unable to start log segment " + segmentTxId
+          + ": too few journals successfully started.";
+      LOG.error(msg, ex);
+      synchronized (journalSetLock) {
+        IOUtils.cleanupWithLogger(LOG, journalSet);
+      }
+      terminate(1, msg);
     }
-    
+
     curSegmentTxId = segmentTxId;
     state = State.IN_SEGMENT;
   }
