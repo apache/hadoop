@@ -54,6 +54,11 @@ import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Res
  */
 public class ChunkManagerImpl implements ChunkManager {
   static final Logger LOG = LoggerFactory.getLogger(ChunkManagerImpl.class);
+  private final boolean doSyncWrite;
+
+  public ChunkManagerImpl(boolean sync) {
+    doSyncWrite = sync;
+  }
 
   /**
    * writes a given chunk.
@@ -115,7 +120,8 @@ public class ChunkManagerImpl implements ChunkManager {
               "tmpChunkFile already exists" + tmpChunkFile + "Overwriting it.");
         }
         // Initially writes to temporary chunk file.
-        ChunkUtils.writeData(tmpChunkFile, info, data, volumeIOStats);
+        ChunkUtils
+            .writeData(tmpChunkFile, info, data, volumeIOStats, doSyncWrite);
         // No need to increment container stats here, as still data is not
         // committed here.
         break;
@@ -139,7 +145,7 @@ public class ChunkManagerImpl implements ChunkManager {
         break;
       case COMBINED:
         // directly write to the chunk file
-        ChunkUtils.writeData(chunkFile, info, data, volumeIOStats);
+        ChunkUtils.writeData(chunkFile, info, data, volumeIOStats, doSyncWrite);
         if (!isOverwrite) {
           containerData.incrBytesUsed(info.getLen());
         }

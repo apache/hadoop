@@ -67,10 +67,11 @@ public final class ChunkUtils {
    * @param chunkInfo - Data stream to write.
    * @param data - The data buffer.
    * @param volumeIOStats
+   * @param sync whether to do fsync or not
    * @throws StorageContainerException
    */
   public static void writeData(File chunkFile, ChunkInfo chunkInfo,
-                               ByteBuffer data, VolumeIOStats volumeIOStats)
+      ByteBuffer data, VolumeIOStats volumeIOStats, boolean sync)
       throws StorageContainerException, ExecutionException,
       InterruptedException, NoSuchAlgorithmException {
     int bufferSize = data.capacity();
@@ -88,12 +89,16 @@ public final class ChunkUtils {
 
     try {
       long writeTimeStart = Time.monotonicNow();
-      file =
+      file = sync ?
           AsynchronousFileChannel.open(chunkFile.toPath(),
               StandardOpenOption.CREATE,
               StandardOpenOption.WRITE,
               StandardOpenOption.SPARSE,
-              StandardOpenOption.SYNC);
+              StandardOpenOption.SYNC) :
+          AsynchronousFileChannel.open(chunkFile.toPath(),
+              StandardOpenOption.CREATE,
+              StandardOpenOption.WRITE,
+              StandardOpenOption.SPARSE);
       lock = file.lock().get();
       int size = file.write(data, chunkInfo.getOffset()).get();
       // Increment volumeIO stats here.
