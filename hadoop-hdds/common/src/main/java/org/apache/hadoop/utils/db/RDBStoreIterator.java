@@ -19,17 +19,17 @@
 
 package org.apache.hadoop.utils.db;
 
-import org.apache.hadoop.utils.db.Table.KeyValue;
-import org.rocksdb.RocksIterator;
-
 import java.io.IOException;
 import java.util.NoSuchElementException;
 import java.util.function.Consumer;
 
+import org.rocksdb.RocksIterator;
+
 /**
  * RocksDB store iterator.
  */
-public class RDBStoreIterator implements TableIterator<KeyValue> {
+public class RDBStoreIterator
+    implements TableIterator<byte[], ByteArrayKeyValue> {
 
   private RocksIterator rocksDBIterator;
 
@@ -39,7 +39,8 @@ public class RDBStoreIterator implements TableIterator<KeyValue> {
   }
 
   @Override
-  public void forEachRemaining(Consumer<? super KeyValue> action) {
+  public void forEachRemaining(
+      Consumer<? super ByteArrayKeyValue> action) {
     while(hasNext()) {
       action.accept(next());
     }
@@ -51,9 +52,10 @@ public class RDBStoreIterator implements TableIterator<KeyValue> {
   }
 
   @Override
-  public Table.KeyValue next() {
+  public ByteArrayKeyValue next() {
     if (rocksDBIterator.isValid()) {
-      KeyValue value = KeyValue.create(rocksDBIterator.key(), rocksDBIterator
+      ByteArrayKeyValue value =
+          ByteArrayKeyValue.create(rocksDBIterator.key(), rocksDBIterator
           .value());
       rocksDBIterator.next();
       return value;
@@ -72,10 +74,10 @@ public class RDBStoreIterator implements TableIterator<KeyValue> {
   }
 
   @Override
-  public KeyValue seek(byte[] key) {
+  public ByteArrayKeyValue seek(byte[] key) {
     rocksDBIterator.seek(key);
     if (rocksDBIterator.isValid()) {
-      return KeyValue.create(rocksDBIterator.key(),
+      return ByteArrayKeyValue.create(rocksDBIterator.key(),
           rocksDBIterator.value());
     }
     return null;

@@ -55,6 +55,7 @@ public class RDBStore implements DBStore {
   private final File dbLocation;
   private final WriteOptions writeOptions;
   private final DBOptions dbOptions;
+  private final CodecRegistry codecRegistry;
   private final Hashtable<String, ColumnFamilyHandle> handleTable;
   private ObjectName statMBeanName;
 
@@ -64,7 +65,7 @@ public class RDBStore implements DBStore {
     Preconditions.checkNotNull(families);
     Preconditions.checkArgument(families.size() > 0);
     handleTable = new Hashtable<>();
-
+    codecRegistry = new CodecRegistry();
     final List<ColumnFamilyDescriptor> columnFamilyDescriptors =
         new ArrayList<>();
     final List<ColumnFamilyHandle> columnFamilyHandles = new ArrayList<>();
@@ -254,12 +255,19 @@ public class RDBStore implements DBStore {
   }
 
   @Override
-  public Table getTable(String name) throws IOException {
+  public Table<byte[], byte[]> getTable(String name) throws IOException {
     ColumnFamilyHandle handle = handleTable.get(name);
     if (handle == null) {
       throw new IOException("No such table in this DB. TableName : " + name);
     }
     return new RDBTable(this.db, handle, this.writeOptions);
+  }
+
+  @Override
+  public <KEY, VALUE> Table<KEY, VALUE> getTable(String name,
+      Class<KEY> keyType, Class<VALUE> valueType) throws IOException {
+    return new TypedTable<KEY, VALUE>(getTable(name), codecRegistry, keyType,
+        valueType);
   }
 
   @Override

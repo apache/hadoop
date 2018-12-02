@@ -16,35 +16,30 @@
  * limitations under the License.
  *
  */
-
 package org.apache.hadoop.utils.db;
 
-import java.io.Closeable;
-import java.util.Iterator;
+import org.apache.hadoop.hdfs.DFSUtil;
 
 /**
- * Iterator for MetaDataStore DB.
- *
- * @param <T>
+ * Codec to convert String to/from byte array.
  */
-public interface TableIterator<KEY, T> extends Iterator<T>, Closeable {
+public class StringCodec implements Codec<String> {
 
-  /**
-   * seek to first entry.
-   */
-  void seekToFirst();
+  @Override
+  public byte[] toPersistedFormat(String object) {
+    if (object != null) {
+      return DFSUtil.string2Bytes(object);
+    } else {
+      return null;
+    }
+  }
 
-  /**
-   * seek to last entry.
-   */
-  void seekToLast();
-
-  /**
-   * Seek to the specific key.
-   *
-   * @param key - Bytes that represent the key.
-   * @return VALUE.
-   */
-  T seek(KEY key);
-
+  @Override
+  public String fromPersistedFormat(byte[] rawData) {
+    if (rawData != null) {
+      return DFSUtil.bytes2String(rawData);
+    } else {
+      return null;
+    }
+  }
 }

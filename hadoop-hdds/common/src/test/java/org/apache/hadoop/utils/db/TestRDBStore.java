@@ -19,8 +19,20 @@
 
 package org.apache.hadoop.utils.db;
 
-import org.apache.commons.lang3.RandomStringUtils;
+import javax.management.MBeanServer;
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.hadoop.hdfs.DFSUtil;
+
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -33,17 +45,6 @@ import org.rocksdb.DBOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.Statistics;
 import org.rocksdb.StatsLevel;
-
-import javax.management.MBeanServer;
-import java.io.IOException;
-import java.lang.management.ManagementFactory;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * RDBStore Tests.
@@ -126,7 +127,8 @@ public class TestRDBStore {
 
     try (Table firstTable = rdbStore.getTable(families.get(1))) {
       firstTable.put(key, value);
-      try (Table secondTable = rdbStore.getTable(families.get(2))) {
+      try (Table<byte[], byte[]> secondTable = rdbStore
+          .getTable(families.get(2))) {
         rdbStore.move(key, firstTable, secondTable);
         byte[] newvalue = secondTable.get(key);
         // Make sure we have value in the second table
@@ -150,7 +152,8 @@ public class TestRDBStore {
         RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
     try (Table firstTable = rdbStore.getTable(families.get(1))) {
       firstTable.put(key, value);
-      try (Table secondTable = rdbStore.getTable(families.get(2))) {
+      try (Table<byte[], byte[]> secondTable = rdbStore
+          .getTable(families.get(2))) {
         rdbStore.move(key, nextValue, firstTable, secondTable);
         byte[] newvalue = secondTable.get(key);
         // Make sure we have value in the second table
