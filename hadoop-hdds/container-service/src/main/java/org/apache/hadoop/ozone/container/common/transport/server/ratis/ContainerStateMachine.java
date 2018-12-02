@@ -22,8 +22,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.hdds.HddsUtils;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.ratis.proto.RaftProtos.RaftPeerRole;
 import org.apache.ratis.protocol.RaftGroup;
 import org.apache.ratis.protocol.RaftGroupId;
@@ -35,7 +33,6 @@ import org.apache.ratis.statemachine.impl.SingleFileSnapshotInfo;
 import org.apache.ratis.thirdparty.com.google.protobuf
     .InvalidProtocolBufferException;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Type;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Stage;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -237,7 +234,6 @@ public class ContainerStateMachine extends BaseStateMachine {
       final WriteChunkRequestProto dataWriteChunkProto =
           WriteChunkRequestProto
               .newBuilder(write)
-              .setStage(Stage.WRITE_DATA)
               .build();
       ContainerCommandRequestProto dataContainerCommandProto =
           ContainerCommandRequestProto
@@ -252,7 +248,6 @@ public class ContainerStateMachine extends BaseStateMachine {
               .setChunkData(write.getChunkData())
               // skipping the data field as it is
               // already set in statemachine data proto
-              .setStage(Stage.COMMIT_DATA)
               .build();
       ContainerCommandRequestProto commitContainerCommandProto =
           ContainerCommandRequestProto
@@ -292,15 +287,18 @@ public class ContainerStateMachine extends BaseStateMachine {
   }
 
   private ContainerCommandResponseProto dispatchCommand(
-      ContainerCommandRequestProto requestProto) {
+      ContainerCommandRequestProto requestProto,
+      DispatcherContext context) {
     LOG.trace("dispatch {}", requestProto);
-    ContainerCommandResponseProto response = dispatcher.dispatch(requestProto);
+    ContainerCommandResponseProto response =
+        dispatcher.dispatch(requestProto, context);
     LOG.trace("response {}", response);
     return response;
   }
 
-  private Message runCommand(ContainerCommandRequestProto requestProto) {
-    return dispatchCommand(requestProto)::toByteString;
+  private Message runCommand(ContainerCommandRequestProto requestProto,
+      DispatcherContext context) {
+    return dispatchCommand(requestProto, context)::toByteString;
   }
 
   private ExecutorService getCommandExecutor(
@@ -310,7 +308,7 @@ public class ContainerStateMachine extends BaseStateMachine {
   }
 
   private CompletableFuture<Message> handleWriteChunk(
-      ContainerCommandRequestProto requestProto, long entryIndex) {
+      ContainerCommandRequestProto requestProto, long entryIndex, long term) {
     final WriteChunkRequestProto write = requestProto.getWriteChunk();
     RaftServer server = ratisServer.getServer();
     Preconditions.checkState(server instanceof RaftServerProxy);
@@ -321,8 +319,14 @@ public class ContainerStateMachine extends BaseStateMachine {
     } catch (IOException ioe) {
       return completeExceptionally(ioe);
     }
+    DispatcherContext context =
+        new DispatcherContext.Builder()
+            .setTerm(term)
+            .setLogIndex(entryIndex)
+            .setStage(DispatcherContext.WriteChunkStage.WRITE_DATA)
+            .build();
     CompletableFuture<Message> writeChunkFuture = CompletableFuture
-        .supplyAsync(() -> runCommand(requestProto), chunkExecutor);
+        .supplyAsync(() -> runCommand(requestProto, context), chunkExecutor);
     writeChunkFutureMap.put(entryIndex, writeChunkFuture);
     LOG.debug("writeChunk writeStateMachineData : blockId " + write.getBlockID()
         + " logIndex " + entryIndex + " chunkName " + write.getChunkData()
@@ -355,7 +359,8 @@ public class ContainerStateMachine extends BaseStateMachine {
       // CreateContainer will happen as a part of writeChunk only.
       switch (cmdType) {
       case WriteChunk:
-        return handleWriteChunk(requestProto, entry.getIndex());
+        return handleWriteChunk(requestProto, entry.getIndex(),
+            entry.getTerm());
       default:
         throw new IllegalStateException("Cmd Type:" + cmdType
             + " should not have state machine data");
@@ -372,39 +377,36 @@ public class ContainerStateMachine extends BaseStateMachine {
       metrics.incNumReadStateMachineOps();
       final ContainerCommandRequestProto requestProto =
           getRequestProto(request.getContent());
-      return CompletableFuture.completedFuture(runCommand(requestProto));
+      return CompletableFuture.completedFuture(runCommand(requestProto, null));
     } catch (IOException e) {
       metrics.incNumReadStateMachineFails();
       return completeExceptionally(e);
     }
   }
 
-  private ByteString readStateMachineData(ContainerCommandRequestProto
-                                              requestProto) {
+  private ByteString readStateMachineData(
+      ContainerCommandRequestProto requestProto, long term, long index) {
     WriteChunkRequestProto writeChunkRequestProto =
         requestProto.getWriteChunk();
-    // Assert that store log entry is for COMMIT_DATA, the WRITE_DATA is
-    // written through writeStateMachineData.
-    Preconditions
-        .checkArgument(writeChunkRequestProto.getStage() == Stage.COMMIT_DATA);
-
     // prepare the chunk to be read
     ReadChunkRequestProto.Builder readChunkRequestProto =
         ReadChunkRequestProto.newBuilder()
             .setBlockID(writeChunkRequestProto.getBlockID())
-            .setChunkData(writeChunkRequestProto.getChunkData())
-            // set readFromTempFile to true in case, the chunkFile does
-            // not exist as applyTransaction is not executed for this entry yet.
-            .setReadFromTmpFile(true);
+            .setChunkData(writeChunkRequestProto.getChunkData());
     ContainerCommandRequestProto dataContainerCommandProto =
         ContainerCommandRequestProto.newBuilder(requestProto)
             .setCmdType(Type.ReadChunk)
             .setReadChunk(readChunkRequestProto)
             .build();
-
+    DispatcherContext context =
+        new DispatcherContext.Builder()
+            .setTerm(term)
+            .setLogIndex(index)
+            .setReadFromTmpFile(true)
+            .build();
     // read the chunk
     ContainerCommandResponseProto response =
-        dispatchCommand(dataContainerCommandProto);
+        dispatchCommand(dataContainerCommandProto, context);
     ReadChunkResponseProto responseProto = response.getReadChunk();
 
     ByteString data = responseProto.getData();
@@ -416,14 +418,14 @@ public class ContainerStateMachine extends BaseStateMachine {
   /**
    * Reads the Entry from the Cache or loads it back by reading from disk.
    */
-  private ByteString getCachedStateMachineData(Long logIndex,
+  private ByteString getCachedStateMachineData(Long logIndex, long term,
       ContainerCommandRequestProto requestProto) throws ExecutionException {
     try {
       return reconstructWriteChunkRequest(
           stateMachineDataCache.get(logIndex, new Callable<ByteString>() {
             @Override
             public ByteString call() throws Exception {
-              return readStateMachineData(requestProto);
+              return readStateMachineData(requestProto, term, logIndex);
             }
           }), requestProto);
     } catch (ExecutionException e) {
@@ -439,7 +441,7 @@ public class ContainerStateMachine extends BaseStateMachine {
     final WriteChunkRequestProto.Builder dataWriteChunkProto =
         WriteChunkRequestProto.newBuilder(writeChunkRequestProto)
             // adding the state machine data
-            .setData(data).setStage(Stage.WRITE_DATA);
+            .setData(data);
 
     ContainerCommandRequestProto.Builder newStateMachineProto =
         ContainerCommandRequestProto.newBuilder(requestProto)
@@ -486,7 +488,8 @@ public class ContainerStateMachine extends BaseStateMachine {
         CompletableFuture<ByteString> future = new CompletableFuture<>();
         return future.supplyAsync(() -> {
           try {
-            return getCachedStateMachineData(entry.getIndex(), requestProto);
+            return getCachedStateMachineData(entry.getIndex(), entry.getTerm(),
+                requestProto);
           } catch (ExecutionException e) {
             future.completeExceptionally(e);
             return null;
@@ -524,6 +527,10 @@ public class ContainerStateMachine extends BaseStateMachine {
   @Override
   public CompletableFuture<Message> applyTransaction(TransactionContext trx) {
     long index = trx.getLogEntry().getIndex();
+    DispatcherContext.Builder builder =
+        new DispatcherContext.Builder()
+            .setTerm(trx.getLogEntry().getTerm())
+            .setLogIndex(index);
 
     // ApplyTransaction call can come with an entryIndex much greater than
     // lastIndex updated because in between entries in the raft log can be
@@ -539,51 +546,16 @@ public class ContainerStateMachine extends BaseStateMachine {
           getRequestProto(trx.getStateMachineLogEntry().getLogData());
       Type cmdType = requestProto.getCmdType();
       CompletableFuture<Message> future;
-      if (cmdType == Type.PutBlock || cmdType == Type.PutSmallFile) {
-        BlockData blockData;
-        ContainerProtos.BlockData blockDataProto = cmdType == Type.PutBlock ?
-            requestProto.getPutBlock().getBlockData() :
-            requestProto.getPutSmallFile().getBlock().getBlockData();
-
-        // set the blockCommitSequenceId
-        try {
-          blockData = BlockData.getFromProtoBuf(blockDataProto);
-        } catch (IOException ioe) {
-          LOG.error("unable to retrieve blockData info for Block {}",
-              blockDataProto.getBlockID());
-          return completeExceptionally(ioe);
-        }
-        blockData.setBlockCommitSequenceId(index);
-        final ContainerProtos.PutBlockRequestProto putBlockRequestProto =
-            ContainerProtos.PutBlockRequestProto
-                .newBuilder(requestProto.getPutBlock())
-                .setBlockData(blockData.getProtoBufMessage()).build();
-        ContainerCommandRequestProto containerCommandRequestProto;
-        if (cmdType == Type.PutSmallFile) {
-          ContainerProtos.PutSmallFileRequestProto smallFileRequestProto =
-              ContainerProtos.PutSmallFileRequestProto
-                  .newBuilder(requestProto.getPutSmallFile())
-                  .setBlock(putBlockRequestProto).build();
-          containerCommandRequestProto =
-              ContainerCommandRequestProto.newBuilder(requestProto)
-                  .setPutSmallFile(smallFileRequestProto).build();
-        } else {
-          containerCommandRequestProto =
-              ContainerCommandRequestProto.newBuilder(requestProto)
-                  .setPutBlock(putBlockRequestProto).build();
-        }
-        future = CompletableFuture
-            .supplyAsync(() -> runCommand(containerCommandRequestProto),
-                getCommandExecutor(requestProto));
-      } else {
-        // Make sure that in write chunk, the user data is not set
-        if (cmdType == Type.WriteChunk) {
-          Preconditions.checkArgument(requestProto
-              .getWriteChunk().getData().isEmpty());
-        }
-        future = CompletableFuture.supplyAsync(() -> runCommand(requestProto),
-            getCommandExecutor(requestProto));
+      // Make sure that in write chunk, the user data is not set
+      if (cmdType == Type.WriteChunk) {
+        Preconditions
+            .checkArgument(requestProto.getWriteChunk().getData().isEmpty());
+        builder
+            .setStage(DispatcherContext.WriteChunkStage.COMMIT_DATA);
       }
+      future = CompletableFuture
+          .supplyAsync(() -> runCommand(requestProto, builder.build()),
+              getCommandExecutor(requestProto));
       lastIndex = index;
       future.thenAccept(m -> {
         final Long previous =

@@ -373,17 +373,10 @@ enum ChecksumType {
     MD5 = 5;
 }
 
-enum Stage {
-    WRITE_DATA = 1;
-    COMMIT_DATA = 2;
-    COMBINED = 3;
-}
-
 message  WriteChunkRequestProto  {
   required DatanodeBlockID blockID = 1;
   required ChunkInfo chunkData = 2;
   optional bytes data = 3;
-  optional Stage stage = 4 [default = COMBINED];
 }
 
 message  WriteChunkResponseProto {
@@ -392,7 +385,6 @@ message  WriteChunkResponseProto {
 message  ReadChunkRequestProto  {
   required DatanodeBlockID blockID = 1;
   required ChunkInfo chunkData = 2;
-  optional bool readFromTmpFile = 3 [default = false];
 }
 
 message  ReadChunkResponseProto {

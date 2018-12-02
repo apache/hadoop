@@ -24,6 +24,7 @@ import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
+import org.apache.hadoop.ozone.container.common.transport.server.ratis.DispatcherContext;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.ozoneimpl.ContainerController;
 import org.apache.hadoop.ozone.container.replication.GrpcReplicationService;
@@ -236,8 +237,9 @@ public class TestContainerServer {
      * @return Command Response
      */
     @Override
-    public ContainerCommandResponseProto
-        dispatch(ContainerCommandRequestProto msg)  {
+    public ContainerCommandResponseProto dispatch(
+        ContainerCommandRequestProto msg,
+        DispatcherContext context) {
       return ContainerTestHelper.getCreateContainerResponse(msg);
     }
 

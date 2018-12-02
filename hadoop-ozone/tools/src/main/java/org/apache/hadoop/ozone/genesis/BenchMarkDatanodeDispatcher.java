@@ -130,7 +130,7 @@ public class BenchMarkDatanodeDispatcher {
     for (int x = 0; x < INIT_CONTAINERS; x++) {
       long containerID = HddsUtils.getUtcTime() + x;
       ContainerCommandRequestProto req = getCreateContainerCommand(containerID);
-      dispatcher.dispatch(req);
+      dispatcher.dispatch(req, null);
       containers.add(containerID);
       containerCount.getAndIncrement();
     }
@@ -153,8 +153,8 @@ public class BenchMarkDatanodeDispatcher {
         long containerID = containers.get(y);
         BlockID  blockID = new BlockID(containerID, key);
         dispatcher
-            .dispatch(getPutBlockCommand(blockID, chunkName));
-        dispatcher.dispatch(getWriteChunkCommand(blockID, chunkName));
+            .dispatch(getPutBlockCommand(blockID, chunkName), null);
+        dispatcher.dispatch(getWriteChunkCommand(blockID, chunkName), null);
       }
     }
   }
@@ -268,7 +268,7 @@ public class BenchMarkDatanodeDispatcher {
   public void createContainer(BenchMarkDatanodeDispatcher bmdd) {
     long containerID = RandomUtils.nextLong();
     ContainerCommandRequestProto req = getCreateContainerCommand(containerID);
-    bmdd.dispatcher.dispatch(req);
+    bmdd.dispatcher.dispatch(req, null);
     bmdd.containers.add(containerID);
     bmdd.containerCount.getAndIncrement();
   }
@@ -277,27 +277,27 @@ public class BenchMarkDatanodeDispatcher {
   @Benchmark
   public void writeChunk(BenchMarkDatanodeDispatcher bmdd) {
     bmdd.dispatcher.dispatch(getWriteChunkCommand(
-        getRandomBlockID(), getNewChunkToWrite()));
+        getRandomBlockID(), getNewChunkToWrite()), null);
   }
 
   @Benchmark
   public void readChunk(BenchMarkDatanodeDispatcher bmdd) {
     BlockID blockID = getRandomBlockID();
     String chunkKey = getRandomChunkToRead();
-    bmdd.dispatcher.dispatch(getReadChunkCommand(blockID, chunkKey));
+    bmdd.dispatcher.dispatch(getReadChunkCommand(blockID, chunkKey), null);
   }
 
   @Benchmark
   public void putBlock(BenchMarkDatanodeDispatcher bmdd) {
     BlockID blockID = getRandomBlockID();
     String chunkKey = getNewChunkToWrite();
-    bmdd.dispatcher.dispatch(getPutBlockCommand(blockID, chunkKey));
+    bmdd.dispatcher.dispatch(getPutBlockCommand(blockID, chunkKey), null);
   }
 
   @Benchmark
   public void getBlock(BenchMarkDatanodeDispatcher bmdd) {
     BlockID blockID = getRandomBlockID();
-    bmdd.dispatcher.dispatch(getGetBlockCommand(blockID));
+    bmdd.dispatcher.dispatch(getGetBlockCommand(blockID), null);
   }
 
   // Chunks writes from benchmark only reaches certain containers
