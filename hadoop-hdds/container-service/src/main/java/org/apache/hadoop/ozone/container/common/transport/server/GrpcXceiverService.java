@@ -53,7 +53,8 @@ public class GrpcXceiverService extends
       @Override
       public void onNext(ContainerCommandRequestProto request) {
         try {
-          ContainerCommandResponseProto resp = dispatcher.dispatch(request);
+          ContainerCommandResponseProto resp =
+              dispatcher.dispatch(request, null);
           responseObserver.onNext(resp);
         } catch (Throwable e) {
           LOG.error("{} got exception when processing"

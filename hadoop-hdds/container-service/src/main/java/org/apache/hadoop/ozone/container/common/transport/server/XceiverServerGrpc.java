@@ -130,7 +130,7 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
   public void submitRequest(ContainerCommandRequestProto request,
       HddsProtos.PipelineID pipelineID) throws IOException {
     ContainerProtos.ContainerCommandResponseProto response =
-        storageContainer.dispatch(request);
+        storageContainer.dispatch(request, null);
     if (response.getResult() != ContainerProtos.Result.SUCCESS) {
       throw new StorageContainerException(response.getMessage(),
           response.getResult());

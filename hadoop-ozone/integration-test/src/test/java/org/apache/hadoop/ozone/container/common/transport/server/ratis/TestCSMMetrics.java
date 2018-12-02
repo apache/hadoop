@@ -169,7 +169,8 @@ public class TestCSMMetrics {
      */
     @Override
     public ContainerCommandResponseProto dispatch(
-        ContainerCommandRequestProto msg) {
+        ContainerCommandRequestProto msg,
+        DispatcherContext context) {
       return ContainerTestHelper.getCreateContainerResponse(msg);
     }
 

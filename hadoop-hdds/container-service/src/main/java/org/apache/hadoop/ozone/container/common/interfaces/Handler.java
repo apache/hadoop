@@ -36,6 +36,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerExcep
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
+import org.apache.hadoop.ozone.container.common.transport.server.ratis.DispatcherContext;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueHandler;
 import org.apache.hadoop.ozone.container.keyvalue.TarContainerPacker;
@@ -103,7 +104,8 @@ public abstract class Handler {
   }
 
   public abstract ContainerCommandResponseProto handle(
-      ContainerCommandRequestProto msg, Container container);
+      ContainerCommandRequestProto msg, Container container,
+      DispatcherContext dispatcherContext);
 
   /**
    * Import container data from a raw input stream.

@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.container.keyvalue.helpers;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
@@ -44,15 +45,14 @@ public final class SmallFileUtils {
    * @return - ContainerCommandResponseProto
    */
   public static ContainerCommandResponseProto getPutFileResponseSuccess(
-      ContainerCommandRequestProto msg) {
+      ContainerCommandRequestProto msg, BlockData blockData) {
     ContainerProtos.PutSmallFileResponseProto.Builder getResponse =
         ContainerProtos.PutSmallFileResponseProto.newBuilder();
-    ContainerProtos.BlockData blockData =
-        msg.getPutSmallFile().getBlock().getBlockData();
+    ContainerProtos.BlockData blockDataProto = blockData.getProtoBufMessage();
     ContainerProtos.GetCommittedBlockLengthResponseProto.Builder
         committedBlockLengthResponseBuilder = BlockUtils
-        .getCommittedBlockLengthResponseBuilder(blockData.getSize(),
-            blockData.getBlockID());
+        .getCommittedBlockLengthResponseBuilder(blockDataProto.getSize(),
+            blockDataProto.getBlockID());
     getResponse.setCommittedBlockLength(committedBlockLengthResponseBuilder);
     ContainerCommandResponseProto.Builder builder =
         ContainerUtils.getSuccessResponseBuilder(msg);
