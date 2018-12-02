@@ -16,10 +16,16 @@
  */
 package org.apache.hadoop.ozone.om;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
-import org.apache.commons.lang3.StringUtils;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -40,25 +46,20 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.db.DBStore;
 import org.apache.hadoop.utils.db.DBStoreBuilder;
 import org.apache.hadoop.utils.db.Table;
+import org.apache.hadoop.utils.db.Table.KeyValue;
 import org.apache.hadoop.utils.db.TableIterator;
-import org.eclipse.jetty.util.StringUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
+import org.apache.commons.lang3.StringUtils;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
+import org.eclipse.jetty.util.StringUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Ozone metadata manager interface.
@@ -122,37 +123,37 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   }
 
   @Override
-  public Table getUserTable() {
+  public Table<byte[], byte[]> getUserTable() {
     return userTable;
   }
 
   @Override
-  public Table getVolumeTable() {
+  public Table<byte[], byte[]> getVolumeTable() {
     return volumeTable;
   }
 
   @Override
-  public Table getBucketTable() {
+  public Table<byte[], byte[]> getBucketTable() {
     return bucketTable;
   }
 
   @Override
-  public Table getKeyTable() {
+  public Table<byte[], byte[]> getKeyTable() {
     return keyTable;
   }
 
   @Override
-  public Table getDeletedTable() {
+  public Table<byte[], byte[]> getDeletedTable() {
     return deletedTable;
   }
 
   @Override
-  public Table getOpenKeyTable() {
+  public Table<byte[], byte[]> getOpenKeyTable() {
     return openKeyTable;
   }
 
   @Override
-  public Table getS3Table() {
+  public Table<byte[], byte[]> getS3Table() {
     return s3Table;
   }
 
@@ -349,8 +350,9 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   @Override
   public boolean isVolumeEmpty(String volume) throws IOException {
     byte[] volumePrefix = getVolumeKey(volume + OM_KEY_PREFIX);
-    try (TableIterator<Table.KeyValue> bucketIter = bucketTable.iterator()) {
-      Table.KeyValue kv = bucketIter.seek(volumePrefix);
+    try (TableIterator<byte[], Table.KeyValue> bucketIter = bucketTable
+        .iterator()) {
+      Table.KeyValue<byte[], byte[]> kv = bucketIter.seek(volumePrefix);
       if (kv != null && startsWith(kv.getKey(), volumePrefix)) {
         return false; // we found at least one bucket with this volume prefix.
       }
@@ -370,8 +372,8 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   public boolean isBucketEmpty(String volume, String bucket)
       throws IOException {
     byte[] keyPrefix = getBucketKey(volume, bucket + OM_KEY_PREFIX);
-    try (TableIterator<Table.KeyValue> keyIter = keyTable.iterator()) {
-      Table.KeyValue kv = keyIter.seek(keyPrefix);
+    try (TableIterator<byte[], Table.KeyValue> keyIter = keyTable.iterator()) {
+      Table.KeyValue<byte[], byte[]> kv = keyIter.seek(keyPrefix);
       if (kv != null && startsWith(kv.getKey(), keyPrefix)) {
         return false; // we found at least one key with this vol/bucket prefix.
       }
@@ -422,8 +424,9 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
       seekPrefix = getVolumeKey(volumeName + OM_KEY_PREFIX);
     }
     int currentCount = 0;
-    try (TableIterator<Table.KeyValue> bucketIter = bucketTable.iterator()) {
-      Table.KeyValue kv = bucketIter.seek(startKey);
+    try (TableIterator<byte[], Table.KeyValue> bucketIter = bucketTable
+        .iterator()) {
+      Table.KeyValue<byte[], byte[]> kv = bucketIter.seek(startKey);
       while (currentCount < maxNumOfBuckets && bucketIter.hasNext()) {
         kv = bucketIter.next();
         // Skip the Start Bucket if needed.
@@ -483,8 +486,10 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
       seekPrefix = getBucketKey(volumeName, bucketName + OM_KEY_PREFIX);
     }
     int currentCount = 0;
-    try (TableIterator<Table.KeyValue> keyIter = getKeyTable().iterator()) {
-      Table.KeyValue kv = keyIter.seek(seekKey);
+    try (TableIterator<byte[], ? extends KeyValue<byte[], byte[]>> keyIter =
+        getKeyTable()
+            .iterator()) {
+      Table.KeyValue<byte[], byte[]> kv = keyIter.seek(seekKey);
       while (currentCount < maxKeys && keyIter.hasNext()) {
         kv = keyIter.next();
         // Skip the Start key if needed.
@@ -578,10 +583,12 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   public List<BlockGroup> getPendingDeletionKeys(final int keyCount)
       throws IOException {
     List<BlockGroup> keyBlocksList = Lists.newArrayList();
-    try (TableIterator<Table.KeyValue> keyIter = getDeletedTable().iterator()) {
+    try (TableIterator<byte[], ? extends KeyValue<byte[], byte[]>> keyIter =
+        getDeletedTable()
+            .iterator()) {
       int currentCount = 0;
       while (keyIter.hasNext() && currentCount < keyCount) {
-        Table.KeyValue kv = keyIter.next();
+        KeyValue<byte[], byte[]> kv = keyIter.next();
         if (kv != null) {
           OmKeyInfo info =
               OmKeyInfo.getFromProtobuf(KeyInfo.parseFrom(kv.getValue()));
@@ -632,11 +639,12 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   }
 
   @Override
-  public long countRowsInTable(Table table) throws IOException {
+  public <KEY, VALUE> long countRowsInTable(Table<KEY, VALUE> table)
+      throws IOException {
     long count = 0;
     if (table != null) {
-      try (TableIterator<Table.KeyValue> keyValueTableIterator =
-               table.iterator()) {
+      try (TableIterator<KEY, ? extends KeyValue<KEY, VALUE>>
+          keyValueTableIterator = table.iterator()) {
         while (keyValueTableIterator.hasNext()) {
           keyValueTableIterator.next();
           count++;

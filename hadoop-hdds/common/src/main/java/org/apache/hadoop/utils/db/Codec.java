@@ -16,35 +16,23 @@
  * limitations under the License.
  *
  */
-
 package org.apache.hadoop.utils.db;
 
-import java.io.Closeable;
-import java.util.Iterator;
-
 /**
- * Iterator for MetaDataStore DB.
+ * Codec interface to marshall/unmarshall data to/from a byte[] based
+ * key/value store.
  *
- * @param <T>
+ * @param <T> Unserialized type
  */
-public interface TableIterator<KEY, T> extends Iterator<T>, Closeable {
+public interface Codec<T> {
 
   /**
-   * seek to first entry.
+   * Convert object to raw persisted format.
    */
-  void seekToFirst();
+  byte[] toPersistedFormat(T object);
 
   /**
-   * seek to last entry.
+   * Convert object from raw persisted format.
    */
-  void seekToLast();
-
-  /**
-   * Seek to the specific key.
-   *
-   * @param key - Bytes that represent the key.
-   * @return VALUE.
-   */
-  T seek(KEY key);
-
+  T fromPersistedFormat(byte[] rawData);
 }

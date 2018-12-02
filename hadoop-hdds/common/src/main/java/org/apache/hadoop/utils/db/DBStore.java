@@ -41,7 +41,17 @@ public interface DBStore extends AutoCloseable {
    * @return - TableStore.
    * @throws IOException on Failure
    */
-  Table getTable(String name) throws IOException;
+  Table<byte[], byte[]> getTable(String name) throws IOException;
+
+  /**
+   * Gets an existing TableStore with implicit key/value conversion.
+   *
+   * @param name - Name of the TableStore to get
+   * @return - TableStore.
+   * @throws IOException on Failure
+   */
+  <KEY, VALUE> Table<KEY, VALUE> getTable(String name,
+      Class<KEY> keyType, Class<VALUE> valueType) throws IOException;
 
   /**
    * Lists the Known list of Tables in a DB.

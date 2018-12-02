@@ -124,7 +124,7 @@ public class TestDBStoreBuilder {
         .addTable("First")
         .addTable("Second")
         .build()) {
-      try (Table firstTable = dbStore.getTable("First")) {
+      try (Table<byte[], byte[]> firstTable = dbStore.getTable("First")) {
         byte[] key =
             RandomStringUtils.random(9).getBytes(StandardCharsets.UTF_8);
         byte[] value =
@@ -154,7 +154,7 @@ public class TestDBStoreBuilder {
         .addTable("Second")
         .setProfile(DBProfile.DISK)
         .build()) {
-      try (Table firstTable = dbStore.getTable("First")) {
+      try (Table<byte[], byte[]> firstTable = dbStore.getTable("First")) {
         byte[] key =
             RandomStringUtils.random(9).getBytes(StandardCharsets.UTF_8);
         byte[] value =

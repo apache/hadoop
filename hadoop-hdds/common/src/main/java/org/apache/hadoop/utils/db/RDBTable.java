@@ -35,7 +35,8 @@ import org.slf4j.LoggerFactory;
 /**
  * RocksDB implementation of ozone metadata store.
  */
-public class RDBTable implements Table {
+public class RDBTable implements Table<byte[], byte[]> {
+
 
   private static final Logger LOG =
       LoggerFactory.getLogger(RDBTable.class);
@@ -108,7 +109,7 @@ public class RDBTable implements Table {
 
   @Override
   public boolean isEmpty() throws IOException {
-    try (TableIterator<KeyValue> keyIter = iterator()) {
+    try (TableIterator<byte[], ByteArrayKeyValue> keyIter = iterator()) {
       keyIter.seekToFirst();
       return !keyIter.hasNext();
     }
@@ -145,7 +146,7 @@ public class RDBTable implements Table {
   }
 
   @Override
-  public TableIterator<KeyValue> iterator() {
+  public TableIterator<byte[], ByteArrayKeyValue> iterator() {
     ReadOptions readOptions = new ReadOptions();
     return new RDBStoreIterator(db.newIterator(handle, readOptions));
   }
