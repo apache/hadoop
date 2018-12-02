@@ -99,7 +99,7 @@ public class TestChunkManagerImpl {
         .getLocalID(), 0), 0, data.length);
 
     // Create a ChunkManager object.
-    chunkManager = new ChunkManagerImpl();
+    chunkManager = new ChunkManagerImpl(true);
 
   }
 
