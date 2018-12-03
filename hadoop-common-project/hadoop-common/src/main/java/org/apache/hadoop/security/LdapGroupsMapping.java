@@ -25,7 +25,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.List;
 import java.util.HashSet;
 import java.util.Collection;
@@ -41,10 +40,7 @@ import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapName;
 import javax.naming.ldap.Rdn;
-import javax.naming.spi.InitialContextFactory;
 
-import com.google.common.collect.Iterators;
-import com.sun.jndi.ldap.LdapCtxFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
@@ -87,7 +83,7 @@ public class LdapGroupsMapping
   public static final String LDAP_CONFIG_PREFIX = "hadoop.security.group.mapping.ldap";
 
   /*
-   * URL of the LDAP server(s)
+   * URL of the LDAP server
    */
   public static final String LDAP_URL_KEY = LDAP_CONFIG_PREFIX + ".url";
   public static final String LDAP_URL_DEFAULT = "";
@@ -236,20 +232,6 @@ public class LdapGroupsMapping
       LDAP_CONFIG_PREFIX + ".read.timeout.ms";
   public static final int READ_TIMEOUT_DEFAULT = 60 * 1000; // 60 seconds
 
-  public static final String LDAP_NUM_ATTEMPTS_KEY =
-      LDAP_CONFIG_PREFIX + ".num.attempts";
-  public static final int LDAP_NUM_ATTEMPTS_DEFAULT = 3;
-
-  public static final String LDAP_NUM_ATTEMPTS_BEFORE_FAILOVER_KEY =
-      LDAP_CONFIG_PREFIX + ".num.attempts.before.failover";
-  public static final int LDAP_NUM_ATTEMPTS_BEFORE_FAILOVER_DEFAULT =
-      LDAP_NUM_ATTEMPTS_DEFAULT;
-
-  public static final String LDAP_CTX_FACTORY_CLASS_KEY =
-      LDAP_CONFIG_PREFIX + ".ctx.factory.class";
-  public static final Class<? extends LdapCtxFactory>
-      LDAP_CTX_FACTORY_CLASS_DEFAULT = LdapCtxFactory.class;
-
   private static final Logger LOG =
       LoggerFactory.getLogger(LdapGroupsMapping.class);
 
@@ -260,10 +242,8 @@ public class LdapGroupsMapping
 
   private DirContext ctx;
   private Configuration conf;
-
-  private Iterator<String> ldapUrls;
-  private String currentLdapUrl;
-
+  
+  private String ldapUrl;
   private boolean useSsl;
   private String keystore;
   private String keystorePass;
@@ -278,15 +258,14 @@ public class LdapGroupsMapping
   private String memberOfAttr;
   private String groupMemberAttr;
   private String groupNameAttr;
-  private int groupHierarchyLevels;
+  private int    groupHierarchyLevels;
   private String posixUidAttr;
   private String posixGidAttr;
   private boolean isPosix;
   private boolean useOneQuery;
-  private int numAttempts;
-  private int numAttemptsBeforeFailover;
-  private Class<? extends InitialContextFactory> ldapCxtFactoryClass;
 
+  public static final int RECONNECT_RETRY_COUNT = 3;
+  
   /**
    * Returns list of groups for a user.
    * 
@@ -300,31 +279,20 @@ public class LdapGroupsMapping
   @Override
   public synchronized List<String> getGroups(String user) {
     /*
-     * Normal garbage collection takes care of removing Context instances when
-     * they are no longer in use. Connections used by Context instances being
-     * garbage collected will be closed automatically. So in case connection is
-     * closed and gets CommunicationException, retry some times with new new
-     * DirContext/connection.
+     * Normal garbage collection takes care of removing Context instances when they are no longer in use. 
+     * Connections used by Context instances being garbage collected will be closed automatically.
+     * So in case connection is closed and gets CommunicationException, retry some times with new new DirContext/connection. 
      */
-
-    // Tracks the number of attempts made using the same LDAP server
-    int atemptsBeforeFailover = 1;
-
-    for (int attempt = 1; attempt <= numAttempts; attempt++,
-        atemptsBeforeFailover++) {
+    for(int retry = 0; retry < RECONNECT_RETRY_COUNT; retry++) {
       try {
         return doGetGroups(user, groupHierarchyLevels);
       } catch (NamingException e) {
-        LOG.warn("Failed to get groups for user {} (attempt={}/{}) using {}. " +
-            "Exception: ", user, attempt, numAttempts, currentLdapUrl, e);
+        LOG.warn("Failed to get groups for user " + user + " (retry=" + retry
+            + ") by " + e);
         LOG.trace("TRACE", e);
-
-        if (failover(atemptsBeforeFailover, numAttemptsBeforeFailover)) {
-          atemptsBeforeFailover = 0;
-        }
       }
 
-      // Reset ctx so that new DirContext can be created with new connection
+      //reset ctx so that new DirContext can be created with new connection
       this.ctx = null;
     }
     
@@ -410,10 +378,10 @@ public class LdapGroupsMapping
   private List<String> lookupGroup(SearchResult result, DirContext c,
       int goUpHierarchy)
       throws NamingException {
-    List<String> groups = new ArrayList<>();
-    Set<String> groupDNs = new HashSet<>();
+    List<String> groups = new ArrayList<String>();
+    Set<String> groupDNs = new HashSet<String>();
 
-    NamingEnumeration<SearchResult> groupResults;
+    NamingEnumeration<SearchResult> groupResults = null;
     // perform the second LDAP query
     if (isPosix) {
       groupResults = lookupPosixGroup(result, c);
@@ -434,10 +402,10 @@ public class LdapGroupsMapping
       }
       if (goUpHierarchy > 0 && !isPosix) {
         // convert groups to a set to ensure uniqueness
-        Set<String> groupset = new HashSet<>(groups);
+        Set<String> groupset = new HashSet<String>(groups);
         goUpGroupHierarchy(groupDNs, goUpHierarchy, groupset);
         // convert set back to list for compatibility
-        groups = new ArrayList<>(groupset);
+        groups = new ArrayList<String>(groupset);
       }
     }
     return groups;
@@ -465,9 +433,11 @@ public class LdapGroupsMapping
         userSearchFilter, new Object[]{user}, SEARCH_CONTROLS);
     // return empty list if the user can not be found.
     if (!results.hasMoreElements()) {
-      LOG.debug("doGetGroups({}) returned no groups because the " +
-          "user is not found.", user);
-      return new ArrayList<>();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("doGetGroups(" + user + ") returned no groups because the " +
+            "user is not found.");
+      }
+      return new ArrayList<String>();
     }
     SearchResult result = results.nextElement();
 
@@ -485,7 +455,7 @@ public class LdapGroupsMapping
               memberOfAttr + "' attribute." +
               "Returned user object: " + result.toString());
         }
-        groups = new ArrayList<>();
+        groups = new ArrayList<String>();
         NamingEnumeration groupEnumeration = groupDNAttr.getAll();
         while (groupEnumeration.hasMore()) {
           String groupDN = groupEnumeration.next().toString();
@@ -500,7 +470,9 @@ public class LdapGroupsMapping
     if (groups == null || groups.isEmpty() || goUpHierarchy > 0) {
       groups = lookupGroup(result, c, goUpHierarchy);
     }
-    LOG.debug("doGetGroups({}) returned {}", user, groups);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("doGetGroups(" + user + ") returned " + groups);
+    }
     return groups;
   }
 
@@ -508,7 +480,7 @@ public class LdapGroupsMapping
   */
   void getGroupNames(SearchResult groupResult, Collection<String> groups,
                      Collection<String> groupDNs, boolean doGetDNs)
-                     throws NamingException {
+                     throws NamingException  {
     Attribute groupName = groupResult.getAttributes().get(groupNameAttr);
     if (groupName == null) {
       throw new NamingException("The group object does not have " +
@@ -545,7 +517,7 @@ public class LdapGroupsMapping
       return;
     }
     DirContext context = getDirContext();
-    Set<String> nextLevelGroups = new HashSet<>();
+    Set<String> nextLevelGroups = new HashSet<String>();
     StringBuilder filter = new StringBuilder();
     filter.append("(&").append(groupSearchFilter).append("(|");
     for (String dn : groupDNs) {
@@ -565,32 +537,13 @@ public class LdapGroupsMapping
     goUpGroupHierarchy(nextLevelGroups, goUpHierarchy - 1, groups);
   }
 
-  /**
-   * Check whether we should fail over to the next LDAP server.
-   * @param attemptsMadeWithSameLdap current number of attempts made
-   *                                 with using same LDAP instance
-   * @param maxAttemptsBeforeFailover maximum number of attempts
-   *                                  before failing over
-   * @return true if we should fail over to the next LDAP server
-   */
-  protected boolean failover(
-      int attemptsMadeWithSameLdap, int maxAttemptsBeforeFailover) {
-    if (attemptsMadeWithSameLdap >= maxAttemptsBeforeFailover) {
-      String previousLdapUrl = currentLdapUrl;
-      currentLdapUrl = ldapUrls.next();
-      LOG.info("Reached {} attempts on {}, failing over to {}",
-          attemptsMadeWithSameLdap, previousLdapUrl, currentLdapUrl);
-      return true;
-    }
-    return false;
-  }
-
-  private DirContext getDirContext() throws NamingException {
+  DirContext getDirContext() throws NamingException {
     if (ctx == null) {
       // Set up the initial environment for LDAP connectivity
-      Hashtable<String, String> env = new Hashtable<>();
-      env.put(Context.INITIAL_CONTEXT_FACTORY, ldapCxtFactoryClass.getName());
-      env.put(Context.PROVIDER_URL, currentLdapUrl);
+      Hashtable<String, String> env = new Hashtable<String, String>();
+      env.put(Context.INITIAL_CONTEXT_FACTORY,
+          com.sun.jndi.ldap.LdapCtxFactory.class.getName());
+      env.put(Context.PROVIDER_URL, ldapUrl);
       env.put(Context.SECURITY_AUTHENTICATION, "simple");
 
       // Set up SSL security, if necessary
@@ -628,7 +581,7 @@ public class LdapGroupsMapping
    * Caches groups, no need to do that for this provider
    */
   @Override
-  public void cacheGroupsRefresh() {
+  public void cacheGroupsRefresh() throws IOException {
     // does nothing in this provider of user to groups mapping
   }
 
@@ -638,7 +591,7 @@ public class LdapGroupsMapping
    * @param groups unused
    */
   @Override
-  public void cacheGroupsAdd(List<String> groups) {
+  public void cacheGroupsAdd(List<String> groups) throws IOException {
     // does nothing in this provider of user to groups mapping
   }
 
@@ -649,12 +602,10 @@ public class LdapGroupsMapping
 
   @Override
   public synchronized void setConf(Configuration conf) {
-    String[] urls = conf.getStrings(LDAP_URL_KEY, LDAP_URL_DEFAULT);
-    if (urls == null || urls.length == 0) {
-      throw new RuntimeException("LDAP URL(s) are not configured");
+    ldapUrl = conf.get(LDAP_URL_KEY, LDAP_URL_DEFAULT);
+    if (ldapUrl == null || ldapUrl.isEmpty()) {
+      throw new RuntimeException("LDAP URL is not configured");
     }
-    ldapUrls = Iterators.cycle(urls);
-    currentLdapUrl = ldapUrls.next();
 
     useSsl = conf.getBoolean(LDAP_USE_SSL_KEY, LDAP_USE_SSL_DEFAULT);
     if (useSsl) {
@@ -670,13 +621,17 @@ public class LdapGroupsMapping
     
     String baseDN = conf.getTrimmed(BASE_DN_KEY, BASE_DN_DEFAULT);
 
-    // User search base which defaults to base dn.
+    //User search base which defaults to base dn.
     userbaseDN = conf.getTrimmed(USER_BASE_DN_KEY, baseDN);
-    LOG.debug("Usersearch baseDN: {}", userbaseDN);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Usersearch baseDN: " + userbaseDN);
+    }
 
-    // Group search base which defaults to base dn.
+    //Group search base which defaults to base dn.
     groupbaseDN = conf.getTrimmed(GROUP_BASE_DN_KEY, baseDN);
-    LOG.debug("Groupsearch baseDN: {}", groupbaseDN);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Groupsearch baseDN: " + userbaseDN);
+    }
 
     groupSearchFilter =
         conf.get(GROUP_SEARCH_FILTER_KEY, GROUP_SEARCH_FILTER_DEFAULT);
@@ -700,8 +655,7 @@ public class LdapGroupsMapping
     posixGidAttr =
         conf.get(POSIX_GID_ATTR_KEY, POSIX_GID_ATTR_DEFAULT);
 
-    int dirSearchTimeout = conf.getInt(DIRECTORY_SEARCH_TIMEOUT,
-        DIRECTORY_SEARCH_TIMEOUT_DEFAULT);
+    int dirSearchTimeout = conf.getInt(DIRECTORY_SEARCH_TIMEOUT, DIRECTORY_SEARCH_TIMEOUT_DEFAULT);
     SEARCH_CONTROLS.setTimeLimit(dirSearchTimeout);
     // Limit the attributes returned to only those required to speed up the search.
     // See HADOOP-10626 and HADOOP-12001 for more details.
@@ -715,24 +669,7 @@ public class LdapGroupsMapping
     }
     SEARCH_CONTROLS.setReturningAttributes(returningAttributes);
 
-    ldapCxtFactoryClass = conf.getClass(LDAP_CTX_FACTORY_CLASS_KEY,
-        LDAP_CTX_FACTORY_CLASS_DEFAULT, InitialContextFactory.class);
-
-    this.numAttempts = conf.getInt(LDAP_NUM_ATTEMPTS_KEY,
-        LDAP_NUM_ATTEMPTS_DEFAULT);
-    this.numAttemptsBeforeFailover = conf.getInt(
-        LDAP_NUM_ATTEMPTS_BEFORE_FAILOVER_KEY,
-        LDAP_NUM_ATTEMPTS_BEFORE_FAILOVER_DEFAULT);
-
     this.conf = conf;
-  }
-
-  /**
-   * Get URLs of configured LDAP servers.
-   * @return URLs of LDAP servers being used.
-   */
-  public Iterator<String> getLdapUrls() {
-    return ldapUrls;
   }
 
   private void loadSslConf(Configuration sslConf) {
@@ -784,8 +721,8 @@ public class LdapGroupsMapping
         password = new String(passchars);
       }
     } catch (IOException ioe) {
-      LOG.warn("Exception while trying to get password for alias {}:",
-          alias, ioe);
+      LOG.warn("Exception while trying to get password for alias " + alias
+              + ": ", ioe);
     }
     return password;
   }
