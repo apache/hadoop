@@ -1008,6 +1008,7 @@ public class TestNameNodeMXBean {
         expectedTotalReplicatedBlocks, totalReplicaBlocks.longValue());
     assertEquals("Unexpected total ec block groups!",
         expectedTotalECBlockGroups, totalECBlockGroups.longValue());
+    verifyEcClusterSetupVerifyResult(mbs);
   }
 
   private String getEnabledEcPoliciesMetric() throws Exception {
@@ -1016,5 +1017,23 @@ public class TestNameNodeMXBean {
         "Hadoop:service=NameNode,name=ECBlockGroupsState");
     return (String) (mbs.getAttribute(mxbeanName,
         "EnabledEcPolicies"));
+  }
+
+  private void verifyEcClusterSetupVerifyResult(MBeanServer mbs)
+      throws Exception{
+    ObjectName namenodeMXBeanName = new ObjectName(
+        "Hadoop:service=NameNode,name=NameNodeInfo");
+    String result = (String) mbs.getAttribute(namenodeMXBeanName,
+        "VerifyECWithTopologyResult");
+    ObjectMapper mapper = new ObjectMapper();
+    Map<String, String> resultMap = mapper.readValue(result, Map.class);
+    Boolean isSupported = Boolean.parseBoolean(resultMap.get("isSupported"));
+    String resultMessage = resultMap.get("resultMessage");
+
+    assertFalse("Test cluster does not support all enabled " +
+        "erasure coding policies.", isSupported);
+    assertTrue(resultMessage.contains("The number of racks"));
+    assertTrue(resultMessage.contains("is less than the minimum required " +
+        "number of racks"));
   }
 }

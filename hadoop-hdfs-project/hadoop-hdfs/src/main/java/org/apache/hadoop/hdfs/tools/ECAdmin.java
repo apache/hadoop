@@ -24,9 +24,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.NoECPolicySetException;
+import org.apache.hadoop.hdfs.server.common.ECTopologyVerifier;
+import org.apache.hadoop.hdfs.server.namenode.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.util.ECPolicyLoader;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.tools.TableListing;
@@ -588,6 +592,50 @@ public class ECAdmin extends Configured implements Tool {
     }
   }
 
+  /**
+   * Command to verify the cluster setup can support all enabled EC policies.
+   */
+  private static class VerifyClusterSetupCommand
+      implements AdminHelper.Command {
+    @Override
+    public String getName() {
+      return "-verifyClusterSetup";
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + getName() + "]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      return getShortUsage() + "\n"
+          + "Verify the cluster setup can support all enabled erasure coding"
+          + " policies.\n";
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      if (args.size() > 0) {
+        System.err.println(getName() + ": Too many arguments");
+        return 1;
+      }
+      final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
+      final ErasureCodingPolicyInfo[] policies =
+          dfs.getClient().getNamenode().getErasureCodingPolicies();
+      final DatanodeInfo[] report = dfs.getClient().getNamenode()
+          .getDatanodeReport(HdfsConstants.DatanodeReportType.ALL);
+
+      ECTopologyVerifierResult result = ECTopologyVerifier
+          .getECTopologyVerifierResult(report, policies);
+      System.out.println(result.getResultMessage());
+      if (result.isSupported()) {
+        return 0;
+      }
+      return 2;
+    }
+  }
+
   private static final AdminHelper.Command[] COMMANDS = {
       new ListECPoliciesCommand(),
       new AddECPoliciesCommand(),
@@ -597,6 +645,7 @@ public class ECAdmin extends Configured implements Tool {
       new UnsetECPolicyCommand(),
       new ListECCodecsCommand(),
       new EnableECPolicyCommand(),
-      new DisableECPolicyCommand()
+      new DisableECPolicyCommand(),
+      new VerifyClusterSetupCommand()
   };
 }

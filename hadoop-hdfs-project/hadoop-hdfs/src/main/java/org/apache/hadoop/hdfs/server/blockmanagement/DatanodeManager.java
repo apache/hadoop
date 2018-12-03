@@ -1253,6 +1253,13 @@ public class DatanodeManager {
     return getDatanodeListForReport(DatanodeReportType.DEAD).size();
   }
 
+  /** @return the number of datanodes. */
+  public int getNumOfDataNodes() {
+    synchronized (this) {
+      return datanodeMap.size();
+    }
+  }
+
   /** @return list of datanodes where decommissioning is in progress. */
   public List<DatanodeDescriptor> getDecommissioningNodes() {
     // There is no need to take namesystem reader lock as
