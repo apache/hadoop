@@ -24,7 +24,9 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ChecksumType;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ChecksumType;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -67,7 +69,7 @@ public class Checksum {
     this.checksumType = ChecksumType.valueOf(
         OzoneConfigKeys.OZONE_CLIENT_CHECKSUM_TYPE_DEFAULT);
     this.bytesPerChecksum = OzoneConfigKeys
-        .OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT;
+        .OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT_BYTES; // Default is 1MB
   }
 
   /**
@@ -235,5 +237,13 @@ public class Checksum {
     ChecksumData computedChecksumData = checksum.computeChecksum(data);
 
     return checksumData.verifyChecksumDataMatches(computedChecksumData);
+  }
+
+  /**
+   * Returns a ChecksumData with type NONE for testing.
+   */
+  @VisibleForTesting
+  public static ContainerProtos.ChecksumData getNoChecksumDataProto() {
+    return new ChecksumData(ChecksumType.NONE, 0).getProtoBufMessage();
   }
 }

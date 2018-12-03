@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import java.io.IOException;
 import java.util.Map;
 import java.util.TreeMap;
+import org.apache.hadoop.ozone.common.Checksum;
 import org.apache.hadoop.ozone.common.ChecksumData;
 
 /**
@@ -105,7 +106,13 @@ public class ChunkInfo {
     builder.setChunkName(this.getChunkName());
     builder.setOffset(this.getOffset());
     builder.setLen(this.getLen());
-    builder.setChecksumData(this.checksumData.getProtoBufMessage());
+    if (checksumData == null) {
+      // ChecksumData cannot be null while computing the protobufMessage.
+      // Set it to NONE type (equivalent to non checksum).
+      builder.setChecksumData(Checksum.getNoChecksumDataProto());
+    } else {
+      builder.setChecksumData(this.checksumData.getProtoBufMessage());
+    }
 
     for (Map.Entry<String, String> entry : metadata.entrySet()) {
       ContainerProtos.KeyValue.Builder keyValBuilder =

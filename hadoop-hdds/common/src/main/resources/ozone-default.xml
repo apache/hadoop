@@ -1397,5 +1397,23 @@
     </description>
   </property>
 
+  <property>
+    <name>ozone.client.checksum.type</name>
+    <value>SHA256</value>
+    <tag>OZONE, CLIENT, MANAGEMENT</tag>
+    <description>The checksum type [NONE/ CRC32/ CRC32C/ SHA256/ MD5] determines
+      which algorithm would be used to compute checksum for chunk data.
+      Default checksum type is SHA256.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.client.bytes.per.checksum</name>
+    <value>1MB</value>
+    <tag>OZONE, CLIENT, MANAGEMENT</tag>
+    <description>Checksum will be computed for every bytes per checksum number
+      of bytes and stored sequentially.
+    </description>
+  </property>
 
 </configuration>

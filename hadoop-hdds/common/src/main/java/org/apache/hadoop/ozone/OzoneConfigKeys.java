@@ -342,8 +342,9 @@ public final class OzoneConfigKeys {
   public static final String OZONE_CLIENT_CHECKSUM_TYPE_DEFAULT = "SHA256";
   public static final String OZONE_CLIENT_BYTES_PER_CHECKSUM =
       "ozone.client.bytes.per.checksum";
-  public static final int OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT =
-      1024 * 1024; // 1 MB
+  public static final String OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT = "1MB";
+  public static final int OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT_BYTES =
+      1024 * 1024;
   public static final int OZONE_CLIENT_BYTES_PER_CHECKSUM_MIN_SIZE = 256 * 1024;
 
   /**
