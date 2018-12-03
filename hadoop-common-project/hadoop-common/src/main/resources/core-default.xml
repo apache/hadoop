@@ -225,11 +225,35 @@
 </property>
 
 <property>
+  <name>hadoop.security.group.mapping.ldap.num.attempts</name>
+  <value>3</value>
+  <description>
+    This property is the number of attempts to be made for LDAP operations.
+    If this limit is exceeded, LdapGroupsMapping will return an empty
+    group list.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.num.attempts.before.failover</name>
+  <value>3</value>
+  <description>
+    This property is the number of attempts to be made for LDAP operations
+    using a single LDAP instance. If multiple LDAP servers are configured
+    and this number of failed operations is reached, we will switch to the
+    next LDAP server. The configuration for the overall number of attempts
+    will still be respected, failover will thus be performed only if this
+    property is less than hadoop.security.group.mapping.ldap.num.attempts.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.group.mapping.ldap.url</name>
   <value></value>
   <description>
-    The URL of the LDAP server to use for resolving user groups when using
-    the LdapGroupsMapping user to group mapping.
+    The URL of the LDAP server(s) to use for resolving user groups when using
+    the LdapGroupsMapping user to group mapping. Supports configuring multiple
+    LDAP servers via a comma-separated list.
   </description>
 </property>
 
