@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.common.Checksum;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
@@ -140,8 +141,7 @@ public class TestBlockDeletingService {
                   .setChunkName(chunk.getAbsolutePath())
                   .setLen(0)
                   .setOffset(0)
-                  .setChecksumData(
-                      ContainerProtos.ChecksumData.getDefaultInstance())
+                  .setChecksumData(Checksum.getNoChecksumDataProto())
                   .build();
           chunks.add(info);
         }

@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.container.common.helpers;
 
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.ozone.common.Checksum;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -41,7 +42,11 @@ public class TestBlockData {
   static ContainerProtos.ChunkInfo buildChunkInfo(String name, long offset,
       long len) {
     return ContainerProtos.ChunkInfo.newBuilder()
-        .setChunkName(name).setOffset(offset).setLen(len).build();
+        .setChunkName(name)
+        .setOffset(offset)
+        .setLen(len)
+        .setChecksumData(Checksum.getNoChecksumDataProto())
+        .build();
   }
 
   @Test

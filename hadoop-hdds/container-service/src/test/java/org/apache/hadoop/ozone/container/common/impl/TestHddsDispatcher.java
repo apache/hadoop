@@ -36,6 +36,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .WriteChunkRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerAction;
+import org.apache.hadoop.ozone.common.Checksum;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
@@ -199,6 +200,7 @@ public class TestHddsDispatcher {
                 + containerId + "_chunk_" + localId)
         .setOffset(0)
         .setLen(data.size())
+        .setChecksumData(Checksum.getNoChecksumDataProto())
         .build();
 
     WriteChunkRequestProto.Builder writeChunkRequest = WriteChunkRequestProto
