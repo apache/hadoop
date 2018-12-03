@@ -30,6 +30,7 @@ import com.google.protobuf.BlockingService;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.block.BlockManager;
@@ -923,6 +924,16 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   @VisibleForTesting
   public double getCurrentContainerThreshold() {
     return scmChillModeManager.getCurrentContainerThreshold();
+  }
+
+  @Override
+  public Map<String, Integer> getContainerStateCount() {
+    Map<String, Integer> nodeStateCount = new HashMap<>();
+    for (HddsProtos.LifeCycleState state: HddsProtos.LifeCycleState.values()) {
+      nodeStateCount.put(state.toString(), containerManager.getContainers(
+          state).size());
+    }
+    return nodeStateCount;
   }
 
   /**
