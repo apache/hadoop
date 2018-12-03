@@ -56,6 +56,7 @@ import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
+import static javax.ws.rs.core.HttpHeaders.CONTENT_LENGTH;
 import static javax.ws.rs.core.HttpHeaders.LAST_MODIFIED;
 import org.apache.commons.io.IOUtils;
 import static org.apache.hadoop.ozone.s3.util.S3Consts.ACCEPT_RANGE_HEADER;
@@ -204,10 +205,12 @@ public class ObjectEndpoint extends EndpointBase {
             IOUtils.copy(key, dest);
           }
         };
-        responseBuilder = Response.ok(output);
+        responseBuilder = Response
+            .ok(output)
+            .header(CONTENT_LENGTH, keyDetails.getDataSize());
 
       } else {
-        LOG.info("range Header provided value is {}", rangeHeader);
+        LOG.debug("range Header provided value is {}", rangeHeader);
         OzoneInputStream key = bucket.readKey(keyPath);
 
         long startOffset = rangeHeader.getStartOffset();
@@ -229,7 +232,9 @@ public class ObjectEndpoint extends EndpointBase {
                 copyLength);
           }
         };
-        responseBuilder = Response.ok(output);
+        responseBuilder = Response
+            .ok(output)
+            .header(CONTENT_LENGTH, copyLength);
 
         String contentRangeVal = RANGE_HEADER_SUPPORTED_UNIT + " " +
             rangeHeader.getStartOffset() + "-" + rangeHeader.getEndOffset() +

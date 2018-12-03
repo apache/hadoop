@@ -80,6 +80,8 @@ public class TestObjectGet {
         IOUtils.toString(ozoneInputStream, Charset.forName("UTF-8"));
 
     Assert.assertEquals(CONTENT, keyContent);
+    Assert.assertEquals("" + keyContent.length(),
+        response.getHeaderString("Content-Length"));
 
     DateTimeFormatter.RFC_1123_DATE_TIME
         .parse(response.getHeaderString("Last-Modified"));
