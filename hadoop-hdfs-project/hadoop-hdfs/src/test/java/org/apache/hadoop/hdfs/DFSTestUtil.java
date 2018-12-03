@@ -2413,6 +2413,41 @@ public class DFSTestUtil {
   }
 
   /**
+   * Setup cluster with desired number of DN, racks, and specified number of
+   * rack that only has 1 DN. Other racks will be evenly setup with the number
+   * of DNs.
+   *
+   * @param conf the conf object to start the cluster.
+   * @param numDatanodes number of total Datanodes.
+   * @param numRacks number of total racks
+   * @param numSingleDnRacks number of racks that only has 1 DN
+   * @throws Exception
+   */
+  public static MiniDFSCluster setupCluster(final Configuration conf,
+                                            final int numDatanodes,
+                                            final int numRacks,
+                                            final int numSingleDnRacks)
+      throws Exception {
+    assert numDatanodes > numRacks;
+    assert numRacks > numSingleDnRacks;
+    assert numSingleDnRacks >= 0;
+    final String[] racks = new String[numDatanodes];
+    for (int i = 0; i < numSingleDnRacks; i++) {
+      racks[i] = "/rack" + i;
+    }
+    for (int i = numSingleDnRacks; i < numDatanodes; i++) {
+      racks[i] =
+          "/rack" + (numSingleDnRacks + (i % (numRacks - numSingleDnRacks)));
+    }
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(numDatanodes)
+        .racks(racks)
+        .build();
+    cluster.waitActive();
+    return cluster;
+  }
+
+  /**
    * Check the correctness of the snapshotDiff report.
    * Make sure all items in the passed entries are in the snapshotDiff
    * report.

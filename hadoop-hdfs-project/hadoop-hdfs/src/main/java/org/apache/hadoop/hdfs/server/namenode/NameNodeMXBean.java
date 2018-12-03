@@ -303,4 +303,11 @@ public interface NameNodeMXBean {
    */
   String getNameDirSize();
 
+  /**
+   * Verifies whether the cluster setup can support all enabled EC policies.
+   *
+   * @return the result of the verification
+   */
+  String getVerifyECWithTopologyResult();
+
 }

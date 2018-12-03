@@ -92,23 +92,9 @@ public class TestErasureCodingMultipleRacks {
    */
   public void setupCluster(final int numDatanodes, final int numRacks,
       final int numSingleDnRacks) throws Exception {
-    assert numDatanodes > numRacks;
-    assert numRacks > numSingleDnRacks;
-    assert numSingleDnRacks >= 0;
-    final String[] racks = new String[numDatanodes];
-    for (int i = 0; i < numSingleDnRacks; i++) {
-      racks[i] = "/rack" + i;
-    }
-    for (int i = numSingleDnRacks; i < numDatanodes; i++) {
-      racks[i] =
-          "/rack" + (numSingleDnRacks + (i % (numRacks - numSingleDnRacks)));
-    }
-    cluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(numDatanodes)
-        .racks(racks)
-        .build();
+    cluster = DFSTestUtil
+        .setupCluster(conf, numDatanodes, numRacks, numSingleDnRacks);
     dfs = cluster.getFileSystem();
-    cluster.waitActive();
     dfs.setErasureCodingPolicy(new Path("/"), ecPolicy.getName());
   }
 
