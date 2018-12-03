@@ -40,14 +40,12 @@ public class QuotaUsage {
   /** Builder class for QuotaUsage. */
   public static class Builder {
     public Builder() {
-      this.quota = -1;
-      this.spaceQuota = -1;
+      this.quota = -1L;
+      this.spaceQuota = -1L;
 
       typeConsumed = new long[StorageType.values().length];
       typeQuota = new long[StorageType.values().length];
-      for (int i = 0; i < typeQuota.length; i++) {
-        typeQuota[i] = -1;
-      }
+      Arrays.fill(typeQuota, -1L);
     }
 
     public Builder fileAndDirectoryCount(long count) {
@@ -71,9 +69,8 @@ public class QuotaUsage {
     }
 
     public Builder typeConsumed(long[] typeConsumed) {
-      for (int i = 0; i < typeConsumed.length; i++) {
-        this.typeConsumed[i] = typeConsumed[i];
-      }
+      System.arraycopy(typeConsumed, 0, this.typeConsumed, 0,
+          typeConsumed.length);
       return this;
     }
 
@@ -88,9 +85,8 @@ public class QuotaUsage {
     }
 
     public Builder typeQuota(long[] typeQuota) {
-      for (int i = 0; i < typeQuota.length; i++) {
-        this.typeQuota[i] = typeQuota[i];
-      }
+      System.arraycopy(typeQuota, 0, this.typeQuota, 0,
+          typeQuota.length);
       return this;
     }
 
@@ -153,22 +149,12 @@ public class QuotaUsage {
 
   /** Return storage type quota. */
   public long getTypeQuota(StorageType type) {
-    return (typeQuota != null) ? typeQuota[type.ordinal()] : -1;
+    return (typeQuota != null) ? typeQuota[type.ordinal()] : -1L;
   }
 
   /** Return storage type consumed. */
   public long getTypeConsumed(StorageType type) {
-    return (typeConsumed != null) ? typeConsumed[type.ordinal()] : 0;
-  }
-
-  /** Return storage type quota. */
-  private long[] getTypesQuota() {
-    return typeQuota;
-  }
-
-  /** Return storage type quota. */
-  private long[] getTypesConsumed() {
-    return typeConsumed;
+    return (typeConsumed != null) ? typeConsumed[type.ordinal()] : 0L;
   }
 
   /** Return true if any storage type quota has been set. */
@@ -177,7 +163,7 @@ public class QuotaUsage {
       return false;
     }
     for (StorageType t : StorageType.getTypesSupportingQuota()) {
-      if (typeQuota[t.ordinal()] > 0) {
+      if (typeQuota[t.ordinal()] > 0L) {
         return true;
       }
     }
@@ -190,7 +176,7 @@ public class QuotaUsage {
       return false;
     }
     for (StorageType t : StorageType.getTypesSupportingQuota()) {
-      if (typeConsumed[t.ordinal()] > 0) {
+      if (typeConsumed[t.ordinal()] > 0L) {
         return true;
       }
     }
@@ -198,33 +184,50 @@ public class QuotaUsage {
   }
 
   @Override
-  public boolean equals(Object to) {
-    return (this == to || (to instanceof QuotaUsage &&
-        getFileAndDirectoryCount() ==
-        ((QuotaUsage) to).getFileAndDirectoryCount() &&
-        getQuota() == ((QuotaUsage) to).getQuota() &&
-        getSpaceConsumed() == ((QuotaUsage) to).getSpaceConsumed() &&
-        getSpaceQuota() == ((QuotaUsage) to).getSpaceQuota() &&
-        Arrays.equals(getTypesQuota(), ((QuotaUsage) to).getTypesQuota()) &&
-        Arrays.equals(getTypesConsumed(),
-        ((QuotaUsage) to).getTypesConsumed())));
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result
+        + (int) (fileAndDirectoryCount ^ (fileAndDirectoryCount >>> 32));
+    result = prime * result + (int) (quota ^ (quota >>> 32));
+    result = prime * result + (int) (spaceConsumed ^ (spaceConsumed >>> 32));
+    result = prime * result + (int) (spaceQuota ^ (spaceQuota >>> 32));
+    result = prime * result + Arrays.hashCode(typeConsumed);
+    result = prime * result + Arrays.hashCode(typeQuota);
+    return result;
   }
 
   @Override
-  public int hashCode() {
-    long result = (getFileAndDirectoryCount() ^ getQuota() ^
-        getSpaceConsumed() ^ getSpaceQuota());
-    if (getTypesQuota() != null) {
-      for (long quota : getTypesQuota()) {
-        result ^= quota;
-      }
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
     }
-    if (getTypesConsumed() != null) {
-      for (long consumed : getTypesConsumed()) {
-        result ^= consumed;
-      }
+    if (obj == null) {
+      return false;
     }
-    return (int)result;
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    QuotaUsage other = (QuotaUsage) obj;
+    if (fileAndDirectoryCount != other.fileAndDirectoryCount) {
+      return false;
+    }
+    if (quota != other.quota) {
+      return false;
+    }
+    if (spaceConsumed != other.spaceConsumed) {
+      return false;
+    }
+    if (spaceQuota != other.spaceQuota) {
+      return false;
+    }
+    if (!Arrays.equals(typeConsumed, other.typeConsumed)) {
+      return false;
+    }
+    if (!Arrays.equals(typeQuota, other.typeQuota)) {
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -292,11 +295,11 @@ public class QuotaUsage {
     String spaceQuotaStr = QUOTA_NONE;
     String spaceQuotaRem = QUOTA_INF;
 
-    if (quota > 0) {
+    if (quota > 0L) {
       quotaStr = formatSize(quota, hOption);
       quotaRem = formatSize(quota-fileAndDirectoryCount, hOption);
     }
-    if (spaceQuota >= 0) {
+    if (spaceQuota >= 0L) {
       spaceQuotaStr = formatSize(spaceQuota, hOption);
       spaceQuotaRem = formatSize(spaceQuota - spaceConsumed, hOption);
     }
@@ -307,7 +310,7 @@ public class QuotaUsage {
 
   protected String getTypesQuotaUsage(boolean hOption,
       List<StorageType> types) {
-    StringBuffer content = new StringBuffer();
+    StringBuilder content = new StringBuilder();
     for (StorageType st : types) {
       long typeQuota = getTypeQuota(st);
       long typeConsumed = getTypeConsumed(st);
@@ -332,13 +335,12 @@ public class QuotaUsage {
    * @return storage header string
    */
   public static String getStorageTypeHeader(List<StorageType> storageTypes) {
-    StringBuffer header = new StringBuffer();
-
+    StringBuilder header = new StringBuilder();
     for (StorageType st : storageTypes) {
       /* the field length is 13/17 for quota and remain quota
        * as the max length for quota name is ARCHIVE_QUOTA
         * and remain quota name REM_ARCHIVE_QUOTA */
-      String storageName = st.toString();
+      final String storageName = st.toString();
       header.append(String.format(STORAGE_TYPE_SUMMARY_FORMAT,
           storageName + "_QUOTA", "REM_" + storageName + "_QUOTA"));
     }
