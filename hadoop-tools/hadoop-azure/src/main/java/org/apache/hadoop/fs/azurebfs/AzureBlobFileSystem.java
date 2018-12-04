@@ -121,7 +121,12 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     if (!abfsConfiguration.getSkipUserGroupMetadataDuringInitialization()) {
-      this.primaryUserGroup = userGroupInformation.getPrimaryGroupName();
+      try {
+        this.primaryUserGroup = userGroupInformation.getPrimaryGroupName();
+      } catch (IOException ex) {
+        LOG.error("Failed to get primary group for {}, using user name as primary group name", user);
+        this.primaryUserGroup = this.user;
+      }
     } else {
       //Provide a default group name
       this.primaryUserGroup = this.user;
