@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.updateMountPointStatus;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.BatchedRemoteIterator;
@@ -675,7 +676,6 @@ public class RouterClientProtocol implements ClientProtocol {
         if (dates != null && dates.containsKey(child)) {
           date = dates.get(child);
         }
-        // TODO add number of children
         HdfsFileStatus dirStatus = getMountPointStatus(child, 0, date);
 
         // This may overwrite existing listing entries with the mount point
@@ -1669,12 +1669,13 @@ public class RouterClientProtocol implements ClientProtocol {
     // Get the file info from everybody
     Map<RemoteLocation, HdfsFileStatus> results =
         rpcClient.invokeConcurrent(locations, method, HdfsFileStatus.class);
-
+    int children=0;
     // We return the first file
     HdfsFileStatus dirStatus = null;
     for (RemoteLocation loc : locations) {
       HdfsFileStatus fileStatus = results.get(loc);
       if (fileStatus != null) {
+        children += fileStatus.getChildrenNum();
         if (!fileStatus.isDirectory()) {
           return fileStatus;
         } else if (dirStatus == null) {
@@ -1682,7 +1683,10 @@ public class RouterClientProtocol implements ClientProtocol {
         }
       }
     }
-    return dirStatus;
+    if (dirStatus != null) {
+      return updateMountPointStatus(dirStatus, children);
+    }
+    return null;
   }
 
   /**
@@ -1738,12 +1742,23 @@ public class RouterClientProtocol implements ClientProtocol {
     String group = this.superGroup;
     if (subclusterResolver instanceof MountTableResolver) {
       try {
+        String mName = name.startsWith("/") ? name : "/" + name;
         MountTableResolver mountTable = (MountTableResolver) subclusterResolver;
-        MountTable entry = mountTable.getMountPoint(name);
+        MountTable entry = mountTable.getMountPoint(mName);
         if (entry != null) {
-          permission = entry.getMode();
-          owner = entry.getOwnerName();
-          group = entry.getGroupName();
+          HdfsFileStatus fInfo = getFileInfoAll(entry.getDestinations(),
+              new RemoteMethod("getFileInfo", new Class<?>[] {String.class},
+                  new RemoteParam()));
+          if (fInfo != null) {
+            permission = fInfo.getPermission();
+            owner = fInfo.getOwner();
+            group = fInfo.getGroup();
+            childrenNum = fInfo.getChildrenNum();
+          } else {
+            permission = entry.getMode();
+            owner = entry.getOwnerName();
+            group = entry.getGroupName();
+          }
         }
       } catch (IOException e) {
         LOG.error("Cannot get mount point: {}", e.getMessage());
