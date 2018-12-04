@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 
+import java.util.Collections;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.HAUtilClient;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,7 +61,8 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_FAIL
  * dfs.ha.namenodes.mycluster = ha1,ha2
  * dfs.namenode.rpc-address.mycluster.ha1 = nn01-ha1.com:8020
  * dfs.namenode.rpc-address.mycluster.ha2 = nn01-ha2.com:8020
- * dfs.client.failover.ipfailover.virtual-address.mycluster = nn01.com:8020
+ * dfs.client.failover.ipfailover.virtual-address.mycluster =
+ *     hdfs://nn01.com:8020
  * dfs.client.failover.proxy.provider.mycluster =
  *     org.apache...ObserverReadProxyProviderWithIPFailover
  * }</pre>
@@ -97,6 +101,24 @@ public class ObserverReadProxyProviderWithIPFailover<T extends ClientProtocol>
       Configuration conf, URI uri, Class<T> xface, HAProxyFactory<T> factory,
       AbstractNNFailoverProxyProvider<T> failoverProxy) {
     super(conf, uri, xface, factory, failoverProxy);
+    cloneDelegationTokenForVirtualIP(conf, uri);
+  }
+
+  /**
+   * Clone delegation token for the virtual IP. Specifically
+   * clone the dt that corresponds to the name service uri,
+   * to the configured corresponding virtual IP.
+   *
+   * @param conf configuration
+   * @param haURI the ha uri, a name service id in this case.
+   */
+  private void cloneDelegationTokenForVirtualIP(
+      Configuration conf, URI haURI) {
+    URI virtualIPURI = getFailoverVirtualIP(conf, haURI.getHost());
+    InetSocketAddress vipAddress = new InetSocketAddress(
+        virtualIPURI.getHost(), virtualIPURI.getPort());
+    HAUtilClient.cloneDelegationTokenForLogicalUri(
+        ugi, haURI, Collections.singleton(vipAddress));
   }
 
   private static URI getFailoverVirtualIP(
