@@ -96,19 +96,6 @@
 # section as to why....
 export HADOOP_OS_TYPE=${HADOOP_OS_TYPE:-$(uname -s)}
 
-
-# Under certain conditions, Java on OS X will throw SCDynamicStore errors
-# in the system logs.
-# See HADOOP-8719 for more information.  If one needs Kerberos
-# support on OS X, one will want to change/remove this extra bit.
-case ${HADOOP_OS_TYPE} in
-  Darwin*)
-    export HADOOP_OPTS="${HADOOP_OPTS} -Djava.security.krb5.realm= "
-    export HADOOP_OPTS="${HADOOP_OPTS} -Djava.security.krb5.kdc= "
-    export HADOOP_OPTS="${HADOOP_OPTS} -Djava.security.krb5.conf= "
-  ;;
-esac
-
 # Extra Java runtime options for some Hadoop commands
 # and clients (i.e., hdfs dfs -blah).  These get appended to HADOOP_OPTS for
 # such commands.  In most cases, # this should be left empty and
