@@ -27,6 +27,7 @@ import java.net.URLConnection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
@@ -204,5 +205,25 @@ public final class FederationUtil {
 
     return path.charAt(parent.length()) == Path.SEPARATOR_CHAR
         || parent.equals(Path.SEPARATOR);
+  }
+
+  /**
+   * Add the the number of children for an existing HdfsFileStatus object.
+   * @param dirStatus HdfsfileStatus object.
+   * @param children number of children to be added.
+   * @return HdfsFileStatus with the number of children specified.
+   */
+  public static HdfsFileStatus updateMountPointStatus(HdfsFileStatus dirStatus,
+      int children) {
+    return new HdfsFileStatus.Builder().atime(dirStatus.getAccessTime())
+        .blocksize(dirStatus.getBlockSize()).children(children)
+        .ecPolicy(dirStatus.getErasureCodingPolicy())
+        .feInfo(dirStatus.getFileEncryptionInfo()).fileId(dirStatus.getFileId())
+        .group(dirStatus.getGroup()).isdir(dirStatus.isDir())
+        .length(dirStatus.getLen()).mtime(dirStatus.getModificationTime())
+        .owner(dirStatus.getOwner()).path(dirStatus.getLocalNameInBytes())
+        .perm(dirStatus.getPermission()).replication(dirStatus.getReplication())
+        .storagePolicy(dirStatus.getStoragePolicy())
+        .symlink(dirStatus.getSymlinkInBytes()).build();
   }
 }
