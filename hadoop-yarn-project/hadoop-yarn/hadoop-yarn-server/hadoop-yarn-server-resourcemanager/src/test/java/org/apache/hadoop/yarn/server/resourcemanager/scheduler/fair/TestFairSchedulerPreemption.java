@@ -387,13 +387,6 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     }
   }
 
-  private void setAllAMContainersOnNode(NodeId nodeId) {
-    SchedulerNode node = scheduler.getNodeTracker().getNode(nodeId);
-    for (RMContainer container: node.getCopiedListOfRunningContainers()) {
-      ((RMContainerImpl) container).setAMContainer(true);
-    }
-  }
-
   @Test
   public void testPreemptionSelectNonAMContainer() throws Exception {
     takeAllResources("root.preemptable.child-1");
@@ -410,51 +403,6 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     // the preemption happens on both nodes.
     assertTrue("Preempted containers should come from two different "
         + "nodes.", !host0.equals(host1));
-  }
-
-  @Test
-  public void testRelaxLocalityToNotPreemptAM() throws Exception {
-    takeAllResources("root.preemptable.child-1");
-    RMNode node1 = rmNodes.get(0);
-    setAllAMContainersOnNode(node1.getNodeID());
-    SchedulerNode node = scheduler.getNodeTracker().getNode(node1.getNodeID());
-    ApplicationAttemptId greedyAppAttemptId =
-            node.getCopiedListOfRunningContainers().get(0)
-                    .getApplicationAttemptId();
-
-    // Make the RACK_LOCAL and OFF_SWITCH requests big enough that they can't be
-    // satisfied. This forces the RR that we consider for preemption to be the
-    // NODE_LOCAL one.
-    ResourceRequest nodeRequest =
-            createResourceRequest(GB, node1.getHostName(), 1, 4, true);
-    ResourceRequest rackRequest =
-            createResourceRequest(GB * 10, node1.getRackName(), 1, 1, true);
-    ResourceRequest anyRequest =
-            createResourceRequest(GB * 10, ResourceRequest.ANY, 1, 1, true);
-
-    List<ResourceRequest> resourceRequests =
-            Arrays.asList(nodeRequest, rackRequest, anyRequest);
-
-    ApplicationAttemptId starvedAppAttemptId = createSchedulingRequest(
-            "root.preemptable.child-2", "default", resourceRequests);
-    starvingApp = scheduler.getSchedulerApp(starvedAppAttemptId);
-
-    // Move clock enough to identify starvation
-    clock.tickSec(1);
-    scheduler.update();
-
-    // Make sure 4 containers were preempted from the greedy app, but also that
-    // none were preempted on our all-AM node, even though the NODE_LOCAL RR
-    // asked for resources on it.
-
-    // TODO (YARN-7655) The starved app should be allocated 4 containers.
-    // It should be possible to modify the RRs such that this is true
-    // after YARN-7903.
-    verifyPreemption(0, 4);
-    for (RMContainer container : node.getCopiedListOfRunningContainers()) {
-      assert (container.isAMContainer());
-      assert (container.getApplicationAttemptId().equals(greedyAppAttemptId));
-    }
   }
 
   @Test
@@ -492,4 +440,107 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     preemptHalfResources("root.preemptable.child-2");
     verifyPreemption(1, 2);
   }
+
+  /* It tests the case that there is less-AM-container solution in the
+   * remaining nodes.
+   */
+  @Test
+  public void testRelaxLocalityPreemptionWithLessAMInRemainingNodes()
+      throws Exception {
+    takeAllResources("root.preemptable.child-1");
+    RMNode node1 = rmNodes.get(0);
+    setAllAMContainersOnNode(node1.getNodeID());
+    ApplicationAttemptId greedyAppAttemptId =
+        getGreedyAppAttemptIdOnNode(node1.getNodeID());
+    updateRelaxLocalityRequestSchedule(node1, GB, 4);
+    verifyRelaxLocalityPreemption(node1.getNodeID(), greedyAppAttemptId, 4);
+  }
+
+  /* It tests the case that there is no less-AM-container solution in the
+   * remaining nodes.
+   */
+  @Test
+  public void testRelaxLocalityPreemptionWithNoLessAMInRemainingNodes()
+      throws Exception {
+    takeAllResources("root.preemptable.child-1");
+    RMNode node1 = rmNodes.get(0);
+    setNumAMContainersOnNode(3, node1.getNodeID());
+    RMNode node2 = rmNodes.get(1);
+    setAllAMContainersOnNode(node2.getNodeID());
+    ApplicationAttemptId greedyAppAttemptId =
+        getGreedyAppAttemptIdOnNode(node2.getNodeID());
+    updateRelaxLocalityRequestSchedule(node1, GB * 2, 1);
+    verifyRelaxLocalityPreemption(node2.getNodeID(), greedyAppAttemptId, 6);
+  }
+
+  private void setAllAMContainersOnNode(NodeId nodeId) {
+    setNumAMContainersOnNode(Integer.MAX_VALUE, nodeId);
+  }
+
+  private void setNumAMContainersOnNode(int num, NodeId nodeId) {
+    int count = 0;
+    SchedulerNode node = scheduler.getNodeTracker().getNode(nodeId);
+    for (RMContainer container: node.getCopiedListOfRunningContainers()) {
+      count++;
+      if (count <= num) {
+        ((RMContainerImpl) container).setAMContainer(true);
+      } else {
+        break;
+      }
+    }
+  }
+
+  private ApplicationAttemptId getGreedyAppAttemptIdOnNode(NodeId nodeId) {
+    SchedulerNode node = scheduler.getNodeTracker().getNode(nodeId);
+    return node.getCopiedListOfRunningContainers().get(0)
+        .getApplicationAttemptId();
+  }
+
+  /*
+   * Send the resource requests allowed relax locality to scheduler. The
+   * params node/nodeMemory/numNodeContainers used for NODE_LOCAL request.
+   */
+  private void updateRelaxLocalityRequestSchedule(RMNode node, int nodeMemory,
+      int numNodeContainers) {
+    // Make the RACK_LOCAL and OFF_SWITCH requests big enough that they can't be
+    // satisfied. This forces the RR that we consider for preemption to be the
+    // NODE_LOCAL one.
+    ResourceRequest nodeRequest = createResourceRequest(nodeMemory,
+        node.getHostName(), 1, numNodeContainers, true);
+    ResourceRequest rackRequest =
+        createResourceRequest(GB * 10, node.getRackName(), 1, 1, true);
+    ResourceRequest anyRequest =
+        createResourceRequest(GB * 10, ResourceRequest.ANY, 1, 1, true);
+
+    List<ResourceRequest> resourceRequests =
+        Arrays.asList(nodeRequest, rackRequest, anyRequest);
+
+    ApplicationAttemptId starvedAppAttemptId = createSchedulingRequest(
+        "root.preemptable.child-2", "default", resourceRequests);
+    starvingApp = scheduler.getSchedulerApp(starvedAppAttemptId);
+
+    // Move clock enough to identify starvation
+    clock.tickSec(1);
+    scheduler.update();
+  }
+
+  private void verifyRelaxLocalityPreemption(NodeId notBePreemptedNodeId,
+      ApplicationAttemptId greedyAttemptId, int numGreedyAppContainers)
+      throws Exception {
+    // Make sure 4 containers were preempted from the greedy app, but also that
+    // none were preempted on our all-AM node, even though the NODE_LOCAL RR
+    // asked for resources on it.
+
+    // TODO (YARN-7655) The starved app should be allocated 4 containers.
+    // It should be possible to modify the RRs such that this is true
+    // after YARN-7903.
+    verifyPreemption(0, numGreedyAppContainers);
+    SchedulerNode node = scheduler.getNodeTracker()
+        .getNode(notBePreemptedNodeId);
+    for (RMContainer container : node.getCopiedListOfRunningContainers()) {
+      assert(container.isAMContainer());
+      assert(container.getApplicationAttemptId().equals(greedyAttemptId));
+    }
+  }
+
 }
