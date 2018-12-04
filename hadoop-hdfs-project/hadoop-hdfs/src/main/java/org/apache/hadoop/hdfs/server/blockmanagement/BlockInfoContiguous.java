@@ -369,6 +369,12 @@ public class BlockInfoContiguous extends Block
     return getBlockUCState().equals(BlockUCState.COMPLETE);
   }
 
+  public final boolean isCompleteOrCommitted() {
+    final BlockUCState state = getBlockUCState();
+    return state.equals(BlockUCState.COMPLETE) ||
+        state.equals(BlockUCState.COMMITTED);
+  }
+
   /**
    * Convert a complete block to an under construction block.
    * @return BlockInfoUnderConstruction -  an under construction block.

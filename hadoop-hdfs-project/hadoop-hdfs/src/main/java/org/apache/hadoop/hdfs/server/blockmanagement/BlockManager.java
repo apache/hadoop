@@ -2594,8 +2594,8 @@ public class BlockManager {
       namesystem.incrementSafeBlockCount(numCurrentReplica);
     }
     
-    // if file is under construction, then done for now
-    if (bc.isUnderConstruction()) {
+    // if block is still under construction, then done for now
+    if (!storedBlock.isCompleteOrCommitted()) {
       return storedBlock;
     }
 
