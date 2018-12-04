@@ -39,11 +39,11 @@ public interface ChunkManager {
    * @param container - Container for the chunk
    * @param blockID - ID of the block.
    * @param info - ChunkInfo.
-   * @param stage - Chunk Stage write.
+   * @param dispatcherContext - dispatcher context info.
    * @throws StorageContainerException
    */
   void writeChunk(Container container, BlockID blockID, ChunkInfo info,
-      ByteBuffer data, DispatcherContext.WriteChunkStage stage)
+      ByteBuffer data, DispatcherContext dispatcherContext)
       throws StorageContainerException;
 
   /**
@@ -52,7 +52,7 @@ public interface ChunkManager {
    * @param container - Container for the chunk
    * @param blockID - ID of the block.
    * @param info - ChunkInfo.
-   * @param readFromTmpFile whether to read from tmp chunk file or not
+   * @param dispatcherContext - dispatcher context info.
    * @return  byte array
    * @throws StorageContainerException
    *
@@ -60,7 +60,7 @@ public interface ChunkManager {
    * TODO: Explore if we need to do that for ozone.
    */
   byte[] readChunk(Container container, BlockID blockID, ChunkInfo info,
-      boolean readFromTmpFile) throws StorageContainerException;
+      DispatcherContext dispatcherContext) throws StorageContainerException;
 
   /**
    * Deletes a given chunk.
