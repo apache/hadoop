@@ -118,14 +118,6 @@
   </property>
 
   <property>
-    <name>dfs.federation.router.connection.min-active-ratio</name>
-    <value>0.5f</value>
-    <description>
-      Minimum active ratio of connections from the router to namenodes.
-    </description>
-  </property>
-
-  <property>
     <name>dfs.federation.router.connection.clean.ms</name>
     <value>10000</value>
     <description>
