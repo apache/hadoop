@@ -545,10 +545,12 @@ public class KeyValueHandler extends Handler {
           .getChunkData());
       Preconditions.checkNotNull(chunkInfo);
 
-      boolean isReadFromTmpFile = dispatcherContext == null ? false :
-          dispatcherContext.isReadFromTmpFile();
+      if (dispatcherContext == null) {
+        dispatcherContext = new DispatcherContext.Builder().build();
+      }
+
       data = chunkManager
-          .readChunk(kvContainer, blockID, chunkInfo, isReadFromTmpFile);
+          .readChunk(kvContainer, blockID, chunkInfo, dispatcherContext);
       metrics.incContainerBytesStats(Type.ReadChunk, data.length);
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);
@@ -619,15 +621,17 @@ public class KeyValueHandler extends Handler {
       Preconditions.checkNotNull(chunkInfo);
 
       ByteBuffer data = null;
-      WriteChunkStage stage =
-          dispatcherContext == null ? WriteChunkStage.COMBINED :
-              dispatcherContext.getStage();
+      if (dispatcherContext == null) {
+        dispatcherContext = new DispatcherContext.Builder().build();
+      }
+      WriteChunkStage stage = dispatcherContext.getStage();
       if (stage == WriteChunkStage.WRITE_DATA ||
           stage == WriteChunkStage.COMBINED) {
         data = request.getWriteChunk().getData().asReadOnlyByteBuffer();
       }
 
-      chunkManager.writeChunk(kvContainer, blockID, chunkInfo, data, stage);
+      chunkManager
+          .writeChunk(kvContainer, blockID, chunkInfo, data, dispatcherContext);
 
       // We should increment stats after writeChunk
       if (stage == WriteChunkStage.WRITE_DATA||
@@ -677,19 +681,19 @@ public class KeyValueHandler extends Handler {
           putSmallFileReq.getChunkInfo());
       Preconditions.checkNotNull(chunkInfo);
       ByteBuffer data = putSmallFileReq.getData().asReadOnlyByteBuffer();
-      WriteChunkStage stage =
-          dispatcherContext == null ? WriteChunkStage.COMBINED :
-              dispatcherContext.getStage();
+      if (dispatcherContext == null) {
+        dispatcherContext = new DispatcherContext.Builder().build();
+      }
+
       // chunks will be committed as a part of handling putSmallFile
       // here. There is no need to maintain this info in openContainerBlockMap.
-      chunkManager.writeChunk(kvContainer, blockID, chunkInfo, data, stage);
+      chunkManager
+          .writeChunk(kvContainer, blockID, chunkInfo, data, dispatcherContext);
 
       List<ContainerProtos.ChunkInfo> chunks = new LinkedList<>();
       chunks.add(chunkInfo.getProtoBufMessage());
       blockData.setChunks(chunks);
-      long bcsId =
-          dispatcherContext == null ? 0 : dispatcherContext.getLogIndex();
-      blockData.setBlockCommitSequenceId(bcsId);
+      blockData.setBlockCommitSequenceId(dispatcherContext.getLogIndex());
 
       blockManager.putBlock(kvContainer, blockData);
       metrics.incContainerBytesStats(Type.PutSmallFile, data.capacity());
@@ -728,11 +732,13 @@ public class KeyValueHandler extends Handler {
 
       ContainerProtos.ChunkInfo chunkInfo = null;
       ByteString dataBuf = ByteString.EMPTY;
+      DispatcherContext dispatcherContext =
+          new DispatcherContext.Builder().build();
       for (ContainerProtos.ChunkInfo chunk : responseData.getChunks()) {
         // if the block is committed, all chunks must have been committed.
         // Tmp chunk files won't exist here.
         byte[] data = chunkManager.readChunk(kvContainer, blockID,
-            ChunkInfo.getFromProtoBuf(chunk), false);
+            ChunkInfo.getFromProtoBuf(chunk), dispatcherContext);
         ByteString current = ByteString.copyFrom(data);
         dataBuf = dataBuf.concat(current);
         chunkInfo = chunk;
