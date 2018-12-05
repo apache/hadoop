@@ -86,14 +86,17 @@
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-yarn-common</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-yarn-api</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>javax.annotation</groupId>
@@ -114,6 +117,18 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <includeScope>runtime</includeScope>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -143,69 +158,6 @@
                         <goals>
                             <goal>compile</goal>
                             <goal>compile-custom</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>${maven-shade-plugin.version}</version>
-                <configuration>
-                    <createDependencyReducedPom>false</createDependencyReducedPom>
-                </configuration>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <relocations>
-                                <relocation>
-                                    <pattern>io.grpc</pattern>
-                                    <shadedPattern>csi.io.grpc</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <!-- this includes protobuf-java and guava libraries -->
-                                    <pattern>com.google</pattern>
-                                    <shadedPattern>csi.com.google</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>io.netty</pattern>
-                                    <shadedPattern>csi.io.netty</shadedPattern>
-                                </relocation>
-                            </relocations>
-                            <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer" />
-                            </transformers>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <!-- We need to rename the native library file in order to let shaded classes to load them -->
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>unpack</id>
-                        <phase>package</phase>
-                        <configuration>
-                            <target>
-                                <echo message="Unpack hadoop-yarn-csi jar file"/>
-                                <unzip src="${project.build.directory}/${project.artifactId}-${project.version}.jar"
-                                       dest="${project.build.directory}/unpacked/"/>
-                                <echo message="Append the shaded prefix to netty's native file in META-INF"/>
-                                <move file="${project.build.directory}/unpacked/META-INF/native/libnetty_transport_native_epoll_x86_64.so"
-                                      tofile="${project.build.directory}/unpacked/META-INF/native/libcsi_netty_transport_native_epoll_x86_64.so" />
-                                <echo message="Re-pack the jar"/>
-                                <jar destfile="${project.build.directory}/${project.artifactId}-${project.version}.jar"
-                                     basedir="${project.build.directory}/unpacked"/>
-                            </target>
-                        </configuration>
-                        <goals>
-                            <goal>run</goal>
                         </goals>
                     </execution>
                 </executions>
