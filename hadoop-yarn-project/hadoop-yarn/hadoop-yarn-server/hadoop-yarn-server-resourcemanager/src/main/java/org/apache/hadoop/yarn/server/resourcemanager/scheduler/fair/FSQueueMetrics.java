@@ -27,6 +27,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 
@@ -189,6 +190,23 @@ public class FSQueueMetrics extends QueueMetrics {
       boolean enableUserMetrics, Configuration conf) {
     MetricsSystem ms = DefaultMetricsSystem.instance();
     return forQueue(ms, queueName, parent, enableUserMetrics, conf);
+  }
+
+  // All resource metrics should update the default partition
+  @Override
+  public void allocateResources(String partition, String user, int containers, Resource res,
+      boolean decrPending) {
+    super.allocateResources(RMNodeLabelsManager.NO_LABEL, user, containers, res, decrPending);
+  }
+
+  @Override
+  public void allocateResources(String partition, String user, Resource res) {
+    super.allocateResources(RMNodeLabelsManager.NO_LABEL, user, res);
+  }
+
+  @Override
+  public void releaseResources(String partition, String user, int containers, Resource res) {
+    super.releaseResources(RMNodeLabelsManager.NO_LABEL, user, containers, res);
   }
 
   /**

@@ -21,6 +21,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -91,6 +92,7 @@ public class TestFairSchedulerWithMultiResourceTypes
         YarnConfiguration.RESOURCE_TYPES + "."
             + ResourceInformation.MEMORY_MB.getName() + MAXIMUM_ALLOCATION,
         512);
+    scheduler.setRMContext(new RMContextImpl());
     scheduler.init(conf);
     scheduler.reinitialize(conf, null);
 

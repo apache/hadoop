@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -40,6 +41,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppUtils;
@@ -74,6 +76,7 @@ public class FSLeafQueue extends FSQueue {
   // Track the AM resource usage for this queue
   private Resource amResourceUsage;
 
+  private final RMNodeLabelsManager labelsManager;
   private final ActiveUsersManager activeUsersManager;
 
   public FSLeafQueue(String name, FairScheduler scheduler,
@@ -81,6 +84,7 @@ public class FSLeafQueue extends FSQueue {
     super(name, scheduler, parent);
     this.context = scheduler.getContext();
     this.lastTimeAtMinShare = scheduler.getClock().getTime();
+    this.labelsManager = scheduler.getLabelsManager();
     activeUsersManager = new ActiveUsersManager(getMetrics());
     amResourceUsage = Resource.newInstance(0, 0);
     getMetrics().setAMResourceUsage(amResourceUsage);
@@ -282,7 +286,7 @@ public class FSLeafQueue extends FSQueue {
    */
   void updateStarvedApps() {
     // Fetch apps with pending demand
-    TreeSet<FSAppAttempt> appsWithDemand = fetchAppsWithDemand(false);
+    TreeSet<FSAppAttempt> appsWithDemand = fetchAppsWithPreemptionDemand();
 
     // Process apps with fairshare starvation
     Resource fairShareStarvation = updateStarvedAppsFairshare(appsWithDemand);
@@ -346,7 +350,7 @@ public class FSLeafQueue extends FSQueue {
       return assigned;
     }
 
-    for (FSAppAttempt sched : fetchAppsWithDemand(true)) {
+    for (FSAppAttempt sched : fetchAppsWithDemandForNode(node)) {
       if (SchedulerAppUtils.isPlaceBlacklisted(sched, node, LOG)) {
         continue;
       }
@@ -362,23 +366,49 @@ public class FSLeafQueue extends FSQueue {
     return assigned;
   }
 
-  /**
-   * Fetch the subset of apps that have unmet demand. When used for
-   * preemption-related code (as opposed to allocation), omits apps that
-   * should not be checked for starvation.
-   *
-   * @param assignment whether the apps are for allocation containers, as
-   *                   opposed to preemption calculations
-   * @return Set of apps with unmet demand
-   */
-  private TreeSet<FSAppAttempt> fetchAppsWithDemand(boolean assignment) {
+  private TreeSet<FSAppAttempt> fetchAppsWithDemandForNode(FSSchedulerNode node) {
     TreeSet<FSAppAttempt> pendingForResourceApps =
         new TreeSet<>(policy.getComparator());
     readLock.lock();
     try {
       for (FSAppAttempt app : runnableApps) {
-        if (!Resources.isNone(app.getPendingDemand()) &&
-            (assignment || app.shouldCheckForStarvation())) {
+        Resource pending;
+        if (node.getPartition().isEmpty()) {
+          pending = app.getAppAttemptResourceUsage().getPending();
+        } else {
+          pending = app.getAppAttemptResourceUsage().getPending(node.getPartition());
+          if (pending.equals(Resources.none())
+              && !labelsManager.isExclusiveNodeLabel(node.getPartition())) {
+            pending = app.getAppAttemptResourceUsage().getPending();
+          }
+        }
+        if (!Resources.isNone(pending)) {
+          pendingForResourceApps.add(app);
+        }
+      }
+    } catch (IOException e) {
+      LOG.warn("Exception when trying to get exclusivity of node label=" +
+            node.getPartition(), e);
+      return pendingForResourceApps;
+    } finally {
+      readLock.unlock();
+    }
+    return pendingForResourceApps;
+  }
+
+  /**
+   * Fetch the subset of apps that have unmet demand. Omits apps that
+   * should not be checked for starvation.
+   *
+   * @return Set of apps with unmet demand
+   */
+  private TreeSet<FSAppAttempt> fetchAppsWithPreemptionDemand() {
+    TreeSet<FSAppAttempt> pendingForResourceApps =
+        new TreeSet<>(policy.getComparator());
+    readLock.lock();
+    try {
+      for (FSAppAttempt app : runnableApps) {
+        if (!Resources.isNone(app.getPendingDemand()) && app.shouldCheckForStarvation()) {
           pendingForResourceApps.add(app);
         }
       }

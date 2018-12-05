@@ -116,12 +116,19 @@ public class FairSchedulerTestBase {
       int memory, String host, int priority, int numContainers,
       boolean relaxLocality) {
     return createResourceRequest(memory, 1, host, priority, numContainers,
-        relaxLocality);
+        relaxLocality, null);
   }
 
   protected ResourceRequest createResourceRequest(
       int memory, int vcores, String host, int priority, int numContainers,
       boolean relaxLocality) {
+    return createResourceRequest(memory, vcores, host, priority, numContainers,
+        relaxLocality, null);
+  }
+
+  protected ResourceRequest createResourceRequest(
+      int memory, int vcores, String host, int priority, int numContainers,
+      boolean relaxLocality, String label) {
     ResourceRequest request = recordFactory.newRecordInstance(ResourceRequest.class);
     request.setCapability(BuilderUtils.newResource(memory, vcores));
     request.setResourceName(host);
@@ -130,7 +137,7 @@ public class FairSchedulerTestBase {
     prio.setPriority(priority);
     request.setPriority(prio);
     request.setRelaxLocality(relaxLocality);
-    request.setNodeLabelExpression(RMNodeLabelsManager.NO_LABEL);
+    request.setNodeLabelExpression(label != null ? label : RMNodeLabelsManager.NO_LABEL);
     return request;
   }
 
@@ -155,20 +162,27 @@ public class FairSchedulerTestBase {
 
   protected ApplicationAttemptId createSchedulingRequest(
       int memory, int vcores, String queueId, String userId, int numContainers) {
-    return createSchedulingRequest(memory, vcores, queueId, userId, numContainers, 1);
+    return createSchedulingRequest(memory, vcores, queueId, userId, numContainers, 1, null);
   }
 
   protected ApplicationAttemptId createSchedulingRequest(
       int memory, String queueId, String userId, int numContainers, int priority) {
     return createSchedulingRequest(memory, 1, queueId, userId, numContainers,
-        priority);
+        priority, null);
   }
 
   protected ApplicationAttemptId createSchedulingRequest(
       int memory, int vcores, String queueId, String userId, int numContainers,
       int priority) {
+    return createSchedulingRequest(memory, vcores, queueId, userId, numContainers,
+        priority, null);
+  }
+
+  protected ApplicationAttemptId createSchedulingRequest(
+      int memory, int vcores, String queueId, String userId, int numContainers,
+      int priority, String label) {
     ResourceRequest request = createResourceRequest(memory, vcores,
-            ResourceRequest.ANY, priority, numContainers, true);
+            ResourceRequest.ANY, priority, numContainers, true, label);
     return createSchedulingRequest(Lists.newArrayList(request), queueId,
             userId);
   }
@@ -247,7 +261,7 @@ public class FairSchedulerTestBase {
   protected void createSchedulingRequestExistingApplication(
       int memory, int vcores, int priority, ApplicationAttemptId attId) {
     ResourceRequest request = createResourceRequest(memory, vcores, ResourceRequest.ANY,
-        priority, 1, true);
+        priority, 1, true, null);
     createSchedulingRequestExistingApplication(request, attId);
   }
 
