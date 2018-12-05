@@ -196,7 +196,8 @@ public class FSParentQueue extends FSQueue {
     // If this queue is over its limit, reject
     if (!assignContainerPreCheck(node)) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Assign container precheck on node " + node + " failed");
+        LOG.debug("Assign container precheck for queue " + getName() +
+            " on node " + node.getNodeName() + " failed");
       }
       return assigned;
     }
@@ -212,6 +213,10 @@ public class FSParentQueue extends FSQueue {
     TreeSet<FSQueue> sortedChildQueues = new TreeSet<>(policy.getComparator());
     readLock.lock();
     try {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Node " + node.getNodeName() + " offered to parent queue: " +
+            getName() + " visiting " + childQueues.size() + " children");
+      }
       sortedChildQueues.addAll(childQueues);
       for (FSQueue child : sortedChildQueues) {
         assigned = child.assignContainer(node);
