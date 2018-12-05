@@ -929,10 +929,21 @@ public class ContainerImpl implements Container {
     this.workDir = workDir;
   }
 
+  private void clearIpAndHost() {
+    LOG.info("{} clearing ip and host", containerId);
+    this.ips = null;
+    this.host = null;
+  }
+
   @Override
   public void setIpAndHost(String[] ipAndHost) {
-    this.ips = ipAndHost[0];
-    this.host = ipAndHost[1];
+    try {
+      this.writeLock.lock();
+      this.ips = ipAndHost[0];
+      this.host = ipAndHost[1];
+    } finally {
+      this.writeLock.unlock();
+    }
   }
 
   @Override
@@ -1722,7 +1733,11 @@ public class ContainerImpl implements Container {
           + "] for re-initialization !!");
       container.wasLaunched  = false;
       container.metrics.endRunningContainer();
-
+      container.clearIpAndHost();
+      // Remove the container from the resource-monitor. When container
+      // is launched again, it is added back to monitoring service.
+      container.dispatcher.getEventHandler().handle(
+          new ContainerStopMonitoringEvent(container.containerId, true));
       container.launchContext = container.reInitContext.newLaunchContext;
 
       // Re configure the Retry Context
@@ -1886,7 +1901,7 @@ public class ContainerImpl implements Container {
       if (container.containerMetrics != null) {
         container.containerMetrics
             .recordFinishTimeAndExitCode(clock.getTime(), container.exitCode);
-        container.containerMetrics.finished();
+        container.containerMetrics.finished(false);
       }
       container.sendFinishedEvents();
 

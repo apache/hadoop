@@ -487,7 +487,7 @@ public class ContainersMonitorImpl extends AbstractService implements
           } catch (Exception e) {
             // Log the exception and proceed to the next container.
             LOG.warn("Uncaught exception in ContainersMonitorImpl "
-                + "while monitoring resource of " + containerId, e);
+                + "while monitoring resource of {}", containerId, e);
           }
         }
         if (LOG.isDebugEnabled()) {
@@ -805,10 +805,12 @@ public class ContainersMonitorImpl extends AbstractService implements
           vmemLimitMBs, pmemLimitMBs, cpuVcores);
       break;
     case STOP_MONITORING_CONTAINER:
+      ContainerStopMonitoringEvent stopEvent =
+          (ContainerStopMonitoringEvent) monitoringEvent;
       usageMetrics = ContainerMetrics.getContainerMetrics(
           containerId);
       if (usageMetrics != null) {
-        usageMetrics.finished();
+        usageMetrics.finished(stopEvent.isForReInit());
       }
       break;
     case CHANGE_MONITORING_CONTAINER_RESOURCE:
