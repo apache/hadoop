@@ -57,7 +57,7 @@ public class DefaultResourceCalculator extends ResourceCalculator {
 
   @Override
   public float ratio(Resource a, Resource b) {
-    return (float)a.getMemorySize() / b.getMemorySize();
+    return divideSafelyAsFloat(a.getMemorySize(), b.getMemorySize());
   }
 
   @Override
