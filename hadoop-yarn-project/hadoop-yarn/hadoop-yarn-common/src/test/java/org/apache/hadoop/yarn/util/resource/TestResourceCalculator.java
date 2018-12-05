@@ -38,11 +38,11 @@ public class TestResourceCalculator {
 
   private final ResourceCalculator resourceCalculator;
 
-  @Parameterized.Parameters
-  public static Collection<ResourceCalculator[]> getParameters() {
-    return Arrays.asList(new ResourceCalculator[][] {
-        { new DefaultResourceCalculator() },
-        { new DominantResourceCalculator() } });
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<Object[]> getParameters() {
+    return Arrays.asList(new Object[][] {
+        { "DefaultResourceCalculator", new DefaultResourceCalculator() },
+        { "DominantResourceCalculator", new DominantResourceCalculator() } });
   }
 
   @Before
@@ -59,7 +59,7 @@ public class TestResourceCalculator {
     ResourceUtils.resetResourceTypes(conf);
   }
 
-  public TestResourceCalculator(ResourceCalculator rs) {
+  public TestResourceCalculator(String name, ResourceCalculator rs) {
     this.resourceCalculator = rs;
   }
   
@@ -455,5 +455,19 @@ public class TestResourceCalculator {
       double ratioOfExtraResources = 2.0;
       assertEquals(ratioOfExtraResources, ratio, 0.00001);
     }
+  }
+
+  @Test
+  public void testDivisionByZeroRatioDenominatorIsZero() {
+    float ratio = resourceCalculator.ratio(newResource(1, 1), newResource(0,
+        0));
+    assertEquals(Float.POSITIVE_INFINITY, ratio, 0.00001);
+  }
+
+  @Test
+  public void testDivisionByZeroRatioNumeratorAndDenominatorIsZero() {
+    float ratio = resourceCalculator.ratio(newResource(0, 0), newResource(0,
+        0));
+    assertEquals(0.0, ratio, 0.00001);
   }
 }
