@@ -87,6 +87,24 @@ public abstract class ResourceCalculator {
     return (long) Math.ceil(a/b);
   }
 
+  /**
+   * Divides lhs by rhs.
+   * If both lhs and rhs are having a value of 0, then we return 0.
+   * This is to avoid division by zero and return NaN as a result.
+   * If lhs is zero but rhs is not, Float.infinity will be returned
+   * as the result.
+   * @param lhs
+   * @param rhs
+   * @return
+   */
+  public static float divideSafelyAsFloat(long lhs, long rhs) {
+    if (lhs == 0 && rhs == 0) {
+      return 0;
+    } else {
+      return (float) lhs / (float) rhs;
+    }
+  }
+
   public static int roundUp(int a, int b) {
     return divideAndCeil(a, b) * b;
   }
