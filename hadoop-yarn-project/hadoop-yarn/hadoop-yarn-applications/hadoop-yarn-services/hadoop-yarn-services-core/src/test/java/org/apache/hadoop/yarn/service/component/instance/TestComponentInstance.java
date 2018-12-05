@@ -141,6 +141,42 @@ public class TestComponentInstance {
   }
 
   @Test
+  public void testFailureAfterReinit() throws Exception {
+    ServiceContext context = TestComponent.createTestContext(rule,
+        "testContainerUpgradeFailed");
+    Component component = context.scheduler.getAllComponents().entrySet()
+        .iterator().next().getValue();
+    upgradeComponent(component);
+
+    ComponentInstance instance = component.getAllComponentInstances().iterator()
+        .next();
+
+    ComponentInstanceEvent upgradeEvent = new ComponentInstanceEvent(
+        instance.getContainer().getId(), ComponentInstanceEventType.UPGRADE);
+    instance.handle(upgradeEvent);
+
+    // NM finished updgrae
+    instance.handle(new ComponentInstanceEvent(instance.getContainer().getId(),
+        ComponentInstanceEventType.START));
+    Assert.assertEquals("instance not running",
+        ContainerState.RUNNING_BUT_UNREADY,
+        component.getComponentSpec().getContainer(instance.getContainer()
+            .getId().toString()).getState());
+
+    ContainerStatus containerStatus = mock(ContainerStatus.class);
+    when(containerStatus.getExitStatus()).thenReturn(
+        ContainerExitStatus.ABORTED);
+    ComponentInstanceEvent stopEvent = new ComponentInstanceEvent(
+        instance.getContainer().getId(), ComponentInstanceEventType.STOP)
+        .setStatus(containerStatus);
+    // this is the call back from NM for the upgrade
+    instance.handle(stopEvent);
+    Assert.assertEquals("instance did not fail", ContainerState.FAILED_UPGRADE,
+        component.getComponentSpec().getContainer(instance.getContainer()
+            .getId().toString()).getState());
+  }
+
+  @Test
   public void testCancelNothingToUpgrade() throws Exception {
     ServiceContext context = TestComponent.createTestContext(rule,
         "testCancelUpgradeWhenContainerReady");
