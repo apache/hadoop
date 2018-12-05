@@ -80,14 +80,14 @@ public class TestConnectionManager {
     Map<ConnectionPoolId, ConnectionPool> poolMap = connManager.getPools();
 
     ConnectionPool pool1 = new ConnectionPool(
-        conf, TEST_NN_ADDRESS, TEST_USER1, 0, 10, ClientProtocol.class);
+        conf, TEST_NN_ADDRESS, TEST_USER1, 0, 10, 0.5f, ClientProtocol.class);
     addConnectionsToPool(pool1, 9, 4);
     poolMap.put(
         new ConnectionPoolId(TEST_USER1, TEST_NN_ADDRESS, ClientProtocol.class),
         pool1);
 
     ConnectionPool pool2 = new ConnectionPool(
-        conf, TEST_NN_ADDRESS, TEST_USER2, 0, 10, ClientProtocol.class);
+        conf, TEST_NN_ADDRESS, TEST_USER2, 0, 10, 0.5f, ClientProtocol.class);
     addConnectionsToPool(pool2, 10, 10);
     poolMap.put(
         new ConnectionPoolId(TEST_USER2, TEST_NN_ADDRESS, ClientProtocol.class),
@@ -110,7 +110,7 @@ public class TestConnectionManager {
 
     // Make sure the number of connections doesn't go below minSize
     ConnectionPool pool3 = new ConnectionPool(
-        conf, TEST_NN_ADDRESS, TEST_USER3, 2, 10, ClientProtocol.class);
+        conf, TEST_NN_ADDRESS, TEST_USER3, 2, 10, 0.5f, ClientProtocol.class);
     addConnectionsToPool(pool3, 8, 0);
     poolMap.put(
         new ConnectionPoolId(TEST_USER3, TEST_NN_ADDRESS, ClientProtocol.class),
@@ -134,7 +134,7 @@ public class TestConnectionManager {
   public void testConnectionCreatorWithException() throws Exception {
     // Create a bad connection pool pointing to unresolvable namenode address.
     ConnectionPool badPool = new ConnectionPool(
-            conf, UNRESOLVED_TEST_NN_ADDRESS, TEST_USER1, 0, 10,
+            conf, UNRESOLVED_TEST_NN_ADDRESS, TEST_USER1, 0, 10, 0.5f,
             ClientProtocol.class);
     BlockingQueue<ConnectionPool> queue = new ArrayBlockingQueue<>(1);
     queue.add(badPool);
@@ -160,7 +160,7 @@ public class TestConnectionManager {
 
     // Create a bad connection pool pointing to unresolvable namenode address.
     ConnectionPool badPool = new ConnectionPool(
-        conf, UNRESOLVED_TEST_NN_ADDRESS, TEST_USER1, 1, 10,
+        conf, UNRESOLVED_TEST_NN_ADDRESS, TEST_USER1, 1, 10, 0.5f,
         ClientProtocol.class);
   }
 
@@ -171,7 +171,7 @@ public class TestConnectionManager {
     int activeConns = 5;
 
     ConnectionPool pool = new ConnectionPool(
-        conf, TEST_NN_ADDRESS, TEST_USER1, 0, 10, ClientProtocol.class);
+        conf, TEST_NN_ADDRESS, TEST_USER1, 0, 10, 0.5f, ClientProtocol.class);
     addConnectionsToPool(pool, totalConns, activeConns);
     poolMap.put(
         new ConnectionPoolId(TEST_USER1, TEST_NN_ADDRESS, ClientProtocol.class),
@@ -196,7 +196,7 @@ public class TestConnectionManager {
   @Test
   public void testValidClientIndex() throws Exception {
     ConnectionPool pool = new ConnectionPool(
-        conf, TEST_NN_ADDRESS, TEST_USER1, 2, 2, ClientProtocol.class);
+        conf, TEST_NN_ADDRESS, TEST_USER1, 2, 2, 0.5f, ClientProtocol.class);
     for(int i = -3; i <= 3; i++) {
       pool.getClientIndex().set(i);
       ConnectionContext conn = pool.getConnection();
@@ -212,7 +212,7 @@ public class TestConnectionManager {
     int activeConns = 5;
 
     ConnectionPool pool = new ConnectionPool(
-        conf, TEST_NN_ADDRESS, TEST_USER1, 0, 10, NamenodeProtocol.class);
+        conf, TEST_NN_ADDRESS, TEST_USER1, 0, 10, 0.5f, NamenodeProtocol.class);
     addConnectionsToPool(pool, totalConns, activeConns);
     poolMap.put(
         new ConnectionPoolId(
@@ -262,4 +262,43 @@ public class TestConnectionManager {
     }
   }
 
+  @Test
+  public void testConfigureConnectionActiveRatio() throws IOException {
+    final int totalConns = 10;
+    int activeConns = 7;
+
+    Configuration tmpConf = new Configuration();
+    // Set dfs.federation.router.connection.min-active-ratio 0.8f
+    tmpConf.setFloat(
+        RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_MIN_ACTIVE_RATIO, 0.8f);
+    ConnectionManager tmpConnManager = new ConnectionManager(tmpConf);
+    tmpConnManager.start();
+
+    // Create one new connection pool
+    tmpConnManager.getConnection(TEST_USER1, TEST_NN_ADDRESS,
+        NamenodeProtocol.class);
+
+    Map<ConnectionPoolId, ConnectionPool> poolMap = tmpConnManager.getPools();
+    ConnectionPoolId connectionPoolId = new ConnectionPoolId(TEST_USER1,
+        TEST_NN_ADDRESS, NamenodeProtocol.class);
+    ConnectionPool pool = poolMap.get(connectionPoolId);
+
+    // Test min active ratio is 0.8f
+    assertEquals(0.8f, pool.getMinActiveRatio(), 0.001f);
+
+    pool.getConnection().getClient();
+    // Test there is one active connection in pool
+    assertEquals(1, pool.getNumActiveConnections());
+
+    // Add other 6 active/9 total connections to pool
+    addConnectionsToPool(pool, totalConns - 1, activeConns - 1);
+
+    // There are 7 active connections.
+    // The active number is less than totalConns(10) * minActiveRatio(0.8f).
+    // We can cleanup the pool
+    tmpConnManager.cleanup(pool);
+    assertEquals(totalConns - 1, pool.getNumConnections());
+
+    tmpConnManager.close();
+  }
 }
