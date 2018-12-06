@@ -698,6 +698,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String  DFS_NAMENODE_EC_POLICIES_MAX_CELLSIZE_KEY = "dfs.namenode.ec.policies.max.cellsize";
   public static final int     DFS_NAMENODE_EC_POLICIES_MAX_CELLSIZE_DEFAULT = 4 * 1024 * 1024;
+  public static final String DFS_NAMENODE_EC_POLICIES_USERPOLICIES_ALLOWED_KEY =
+      "dfs.namenode.ec.userdefined.policy.allowed";
+  public static final boolean
+      DFS_NAMENODE_EC_POLICIES_USERPOLICIES_ALLOWED_KEY_DEFAULT = true;
   public static final String  DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY =
       "dfs.namenode.ec.system.default.policy";
   public static final String  DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY_DEFAULT =
