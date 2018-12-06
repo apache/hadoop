@@ -95,6 +95,10 @@ public abstract class ApplicationCleaner implements Runnable {
     return this.gpgContext;
   }
 
+  public FederationRegistryClient getRegistryClient() {
+    return this.registryClient;
+  }
+
   /**
    * Query router for applications.
    *

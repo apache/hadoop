@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
@@ -45,26 +46,32 @@ public class DefaultApplicationCleaner extends ApplicationCleaner {
     LOG.info("Application cleaner run at time {}", now);
 
     FederationStateStoreFacade facade = getGPGContext().getStateStoreFacade();
-    Set<ApplicationId> candidates = new HashSet<>();
     try {
+      // Get the candidate list from StateStore before calling router
+      Set<ApplicationId> allStateStoreApps = new HashSet<>();
       List<ApplicationHomeSubCluster> response =
           facade.getApplicationsHomeSubCluster();
       for (ApplicationHomeSubCluster app : response) {
-        candidates.add(app.getApplicationId());
+        allStateStoreApps.add(app.getApplicationId());
       }
-      LOG.info("{} app entries in FederationStateStore", candidates.size());
+      LOG.info("{} app entries in FederationStateStore", allStateStoreApps.size());
 
+      // Get the list of known apps from Router
       Set<ApplicationId> routerApps = getRouterKnownApplications();
       LOG.info("{} known applications from Router", routerApps.size());
 
-      candidates.removeAll(routerApps);
-      LOG.info("Deleting {} applications from statestore", candidates.size());
+      // Clean up StateStore entries
+      Set<ApplicationId> toDelete =
+          Sets.difference(allStateStoreApps, routerApps);
+
+      LOG.info("Deleting {} applications from statestore", toDelete.size());
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Apps to delete: {}.", candidates.stream().map(Object::toString)
+        LOG.debug("Apps to delete: {}.", toDelete.stream().map(Object::toString)
             .collect(Collectors.joining(",")));
       }
-      for (ApplicationId appId : candidates) {
+      for (ApplicationId appId : toDelete) {
         try {
+          LOG.debug("Deleting {} from statestore ", appId);
           facade.deleteApplicationHomeSubCluster(appId);
         } catch (Exception e) {
           LOG.error("deleteApplicationHomeSubCluster failed at application {}.", appId, e);
