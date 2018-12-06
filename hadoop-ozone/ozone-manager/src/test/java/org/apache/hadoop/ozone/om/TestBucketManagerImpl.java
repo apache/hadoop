@@ -16,15 +16,24 @@
  */
 package org.apache.hadoop.ozone.om;
 
-import org.apache.hadoop.hdds.protocol.StorageType;
+import java.io.File;
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.StorageType;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.server.ServerUtils;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -32,11 +41,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
 
 /**
  * Tests BucketManagerImpl, mocks OMMetadataManager for testing.
@@ -62,10 +66,16 @@ public class TestBucketManagerImpl {
   private OmMetadataManagerImpl createSampleVol() throws IOException {
     OzoneConfiguration conf = createNewTestPath();
     OmMetadataManagerImpl metaMgr = new OmMetadataManagerImpl(conf);
-    byte[] volumeKey = metaMgr.getVolumeKey("sampleVol");
+    String volumeKey = metaMgr.getVolumeKey("sampleVol");
     // This is a simple hack for testing, we just test if the volume via a
     // null check, do not parse the value part. So just write some dummy value.
-    metaMgr.getVolumeTable().put(volumeKey, volumeKey);
+    OmVolumeArgs args =
+        OmVolumeArgs.newBuilder()
+            .setVolume("sampleVol")
+            .setAdminName("bilbo")
+            .setOwnerName("bilbo")
+            .build();
+    metaMgr.getVolumeTable().put(volumeKey, args);
     return metaMgr;
   }
 
@@ -344,12 +354,22 @@ public class TestBucketManagerImpl {
         .build();
     bucketManager.createBucket(bucketInfo);
     //Create keys in bucket
-    metaMgr.getKeyTable().put(DFSUtil.string2Bytes("/sampleVol/bucketOne" +
-            "/key_one"),
-        DFSUtil.string2Bytes("value_one"));
-    metaMgr.getKeyTable().put(DFSUtil.string2Bytes("/sampleVol/bucketOne" +
-            "/key_two"),
-        DFSUtil.string2Bytes("value_two"));
+    metaMgr.getKeyTable().put("/sampleVol/bucketOne/key_one",
+        new OmKeyInfo.Builder()
+            .setBucketName("bucketOne")
+            .setVolumeName("sampleVol")
+            .setKeyName("key_one")
+            .setReplicationFactor(ReplicationFactor.ONE)
+            .setReplicationType(ReplicationType.STAND_ALONE)
+            .build());
+    metaMgr.getKeyTable().put("/sampleVol/bucketOne/key_two",
+        new OmKeyInfo.Builder()
+            .setBucketName("bucketOne")
+            .setVolumeName("sampleVol")
+            .setKeyName("key_two")
+            .setReplicationFactor(ReplicationFactor.ONE)
+            .setReplicationType(ReplicationType.STAND_ALONE)
+            .build());
     try {
       bucketManager.deleteBucket("sampleVol", "bucketOne");
     } catch (OMException omEx) {

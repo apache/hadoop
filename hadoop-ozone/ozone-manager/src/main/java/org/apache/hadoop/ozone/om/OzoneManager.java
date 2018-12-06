@@ -66,6 +66,7 @@ import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
+import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.ozone.protocolPB.OzoneManagerProtocolServerSideTranslatorPB;
@@ -73,6 +74,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.ratis.util.LifeCycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -136,6 +138,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private final OzoneConfiguration configuration;
   private RPC.Server omRpcServer;
   private InetSocketAddress omRpcAddress;
+  private OzoneManagerRatisServer omRatisServer;
   private final OMMetadataManager metadataManager;
   private final VolumeManager volumeManager;
   private final BucketManager bucketManager;
@@ -509,6 +512,15 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     return omStorage;
   }
 
+  @VisibleForTesting
+  public LifeCycle.State getOmRatisServerState() {
+    if (omRatisServer == null) {
+      return null;
+    } else {
+      return omRatisServer.getServerState();
+    }
+  }
+
   /**
    * Get metadata manager.
    *
@@ -542,6 +554,22 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     LOG.info(buildRpcServerStartMessage("OzoneManager RPC server",
         omRpcAddress));
 
+    boolean omRatisEnabled = configuration.getBoolean(
+        OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
+        OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
+    // This is a temporary check. Once fully implemented, all OM state change
+    // should go through Ratis, either standalone (for non-HA) or replicated
+    // (for HA).
+    if (omRatisEnabled) {
+      omRatisServer = OzoneManagerRatisServer.newOMRatisServer(
+          omStorage.getOmId(), configuration);
+      omRatisServer.start();
+
+      LOG.info("OzoneManager Ratis server started at port {}",
+          omRatisServer.getServerPort());
+    } else {
+      omRatisServer = null;
+    }
 
     DefaultMetricsSystem.initialize("OzoneManager");
 
@@ -584,6 +612,9 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       metricsTimer = null;
       scheduleOMMetricsWriteTask = null;
       omRpcServer.stop();
+      if (omRatisServer != null) {
+        omRatisServer.stop();
+      }
       keyManager.stop();
       httpServer.stop();
       metadataManager.stop();

@@ -19,18 +19,6 @@
 
 package org.apache.hadoop.ozone.om;
 
-import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.server.ServerUtils;
-import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
-import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.utils.db.DBConfigFromFile;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,10 +26,22 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static org.apache.hadoop.hdds.HddsConfigKeys
-    .HDDS_CONTAINER_REPORT_INTERVAL;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.server.ServerUtils;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
+import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.utils.db.DBConfigFromFile;
+
+import org.apache.commons.lang3.RandomStringUtils;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_REPORT_INTERVAL;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
+import org.junit.Assert;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 /**
  * Test Key Deleting Service.
@@ -166,18 +166,25 @@ public class TestKeyDeletingService {
           RandomStringUtils.randomAlphanumeric(5));
       String keyName = String.format("key%s",
           RandomStringUtils.randomAlphanumeric(5));
-      byte[] volumeBytes =
+      String volumeBytes =
           keyManager.getMetadataManager().getVolumeKey(volumeName);
-      byte[] bucketBytes =
+      String bucketBytes =
           keyManager.getMetadataManager().getBucketKey(volumeName, bucketName);
       // cheat here, just create a volume and bucket entry so that we can
       // create the keys, we put the same data for key and value since the
       // system does not decode the object
       keyManager.getMetadataManager().getVolumeTable().put(volumeBytes,
-          volumeBytes);
+          OmVolumeArgs.newBuilder()
+              .setOwnerName("o")
+              .setAdminName("a")
+              .setVolume(volumeName)
+              .build());
 
       keyManager.getMetadataManager().getBucketTable().put(bucketBytes,
-          bucketBytes);
+          OmBucketInfo.newBuilder()
+              .setVolumeName(volumeName)
+              .setBucketName(bucketName)
+              .build());
 
       OmKeyArgs arg =
           new OmKeyArgs.Builder()

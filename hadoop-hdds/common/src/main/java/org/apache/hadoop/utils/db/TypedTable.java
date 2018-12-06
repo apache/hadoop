@@ -162,6 +162,9 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
     public TypedKeyValue seek(KEY key) {
       byte[] keyBytes = codecRegistry.asRawData(key);
       KeyValue<byte[], byte[]> result = rawIterator.seek(keyBytes);
+      if (result == null) {
+        return null;
+      }
       return new TypedKeyValue(result);
     }
 

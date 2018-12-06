@@ -62,35 +62,37 @@ public class AuthorizationHeaderV4 {
    */
   @SuppressWarnings("StringSplitter")
   public void parseAuthHeader() throws OS3Exception {
-    String[] split = authHeader.split(" ");
-
-    if (split.length != 4) {
+    int firstSep = authHeader.indexOf(' ');
+    if (firstSep < 0) {
       throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, authHeader);
     }
 
-    algorithm = split[0];
-    credential = split[1];
-    signedHeaders = split[2];
-    signature = split[3];
+    //split the value parts of the authorization header
+    String[] split = authHeader.substring(firstSep + 1).trim().split(", *");
 
+    if (split.length != 3) {
+      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, authHeader);
+    }
+
+    algorithm = authHeader.substring(0, firstSep);
+    credential = split[0];
+    signedHeaders = split[1];
+    signature = split[2];
 
     if (credential.startsWith(CREDENTIAL)) {
-      credential = credential.substring(CREDENTIAL.length(), credential
-          .length() - 1);
+      credential = credential.substring(CREDENTIAL.length());
     } else {
       throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, authHeader);
     }
 
     if (signedHeaders.startsWith(SIGNEDHEADERS)) {
-      signedHeaders = signedHeaders.substring(SIGNEDHEADERS.length(),
-          signedHeaders.length() - 1);
+      signedHeaders = signedHeaders.substring(SIGNEDHEADERS.length());
     } else {
       throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, authHeader);
     }
 
     if (signature.startsWith(SIGNATURE)) {
-      signature = signature.substring(SIGNATURE.length(), signature
-          .length());
+      signature = signature.substring(SIGNATURE.length());
     } else {
       throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, authHeader);
     }

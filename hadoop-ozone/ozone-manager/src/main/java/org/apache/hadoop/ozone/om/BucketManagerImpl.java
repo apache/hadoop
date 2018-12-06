@@ -16,20 +16,20 @@
  */
 package org.apache.hadoop.ozone.om;
 
-import com.google.common.base.Preconditions;
+import java.io.IOException;
+import java.util.List;
+
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.BucketInfo;
 import org.apache.hadoop.util.Time;
+
+import com.google.common.base.Preconditions;
 import org.iq80.leveldb.DBException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * OM bucket manager.
@@ -84,8 +84,8 @@ public class BucketManagerImpl implements BucketManager {
     metadataManager.getLock().acquireVolumeLock(volumeName);
     metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
-      byte[] volumeKey = metadataManager.getVolumeKey(volumeName);
-      byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
+      String volumeKey = metadataManager.getVolumeKey(volumeName);
+      String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
 
       //Check if the volume exists
       if (metadataManager.getVolumeTable().get(volumeKey) == null) {
@@ -109,7 +109,7 @@ public class BucketManagerImpl implements BucketManager {
           .setCreationTime(Time.now())
           .build();
       metadataManager.getBucketTable().put(bucketKey,
-          omBucketInfo.getProtobuf().toByteArray());
+          omBucketInfo);
 
       LOG.debug("created bucket: {} in volume: {}", bucketName, volumeName);
     } catch (IOException | DBException ex) {
@@ -137,15 +137,15 @@ public class BucketManagerImpl implements BucketManager {
     Preconditions.checkNotNull(bucketName);
     metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
-      byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
-      byte[] value = metadataManager.getBucketTable().get(bucketKey);
+      String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
+      OmBucketInfo value = metadataManager.getBucketTable().get(bucketKey);
       if (value == null) {
         LOG.debug("bucket: {} not found in volume: {}.", bucketName,
             volumeName);
         throw new OMException("Bucket not found",
             OMException.ResultCodes.FAILED_BUCKET_NOT_FOUND);
       }
-      return OmBucketInfo.getFromProtobuf(BucketInfo.parseFrom(value));
+      return value;
     } catch (IOException | DBException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Exception while getting bucket info for bucket: {}",
@@ -170,16 +170,15 @@ public class BucketManagerImpl implements BucketManager {
     String bucketName = args.getBucketName();
     metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
-      byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
-      byte[] value = metadataManager.getBucketTable().get(bucketKey);
+      String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
+      OmBucketInfo oldBucketInfo =
+          metadataManager.getBucketTable().get(bucketKey);
       //Check if bucket exist
-      if (value == null) {
+      if (oldBucketInfo == null) {
         LOG.debug("bucket: {} not found ", bucketName);
         throw new OMException("Bucket doesn't exist",
             OMException.ResultCodes.FAILED_BUCKET_NOT_FOUND);
       }
-      OmBucketInfo oldBucketInfo = OmBucketInfo.getFromProtobuf(
-          BucketInfo.parseFrom(value));
       OmBucketInfo.Builder bucketInfoBuilder = OmBucketInfo.newBuilder();
       bucketInfoBuilder.setVolumeName(oldBucketInfo.getVolumeName())
           .setBucketName(oldBucketInfo.getBucketName());
@@ -216,8 +215,8 @@ public class BucketManagerImpl implements BucketManager {
       }
       bucketInfoBuilder.setCreationTime(oldBucketInfo.getCreationTime());
 
-      metadataManager.getBucketTable().put(bucketKey,
-          bucketInfoBuilder.build().getProtobuf().toByteArray());
+      metadataManager.getBucketTable()
+          .put(bucketKey, bucketInfoBuilder.build());
     } catch (IOException | DBException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Setting bucket property failed for bucket:{} in volume:{}",
@@ -265,7 +264,7 @@ public class BucketManagerImpl implements BucketManager {
     metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
       //Check if bucket exists
-      byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
+      String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
       if (metadataManager.getBucketTable().get(bucketKey) == null) {
         LOG.debug("bucket: {} not found ", bucketName);
         throw new OMException("Bucket doesn't exist",

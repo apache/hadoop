@@ -21,7 +21,7 @@ package org.apache.hadoop.ozone.om;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import org.apache.commons.lang3.RandomStringUtils;
+
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
@@ -29,14 +29,22 @@ import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.ozone.om.codec.OmBucketInfoCodec;
+import org.apache.hadoop.ozone.om.codec.OmKeyInfoCodec;
+import org.apache.hadoop.ozone.om.codec.OmVolumeArgsCodec;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyInfo;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.utils.db.CodecRegistry;
 import org.apache.hadoop.utils.db.RDBStore;
 import org.apache.hadoop.utils.db.Table;
 import org.apache.hadoop.utils.db.TableConfig;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -47,8 +55,6 @@ import org.rocksdb.DBOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.Statistics;
 import org.rocksdb.StatsLevel;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Test class for @{@link KeyManagerImpl}.
@@ -64,7 +70,9 @@ public class TestKeyManagerImpl {
   private static final String BUCKET_NAME = "bucket1";
   private static final String VOLUME_NAME = "vol1";
   private static RDBStore rdbStore = null;
-  private static Table rdbTable = null;
+  private static Table<String, OmKeyInfo> keyTable = null;
+  private static Table<String, OmBucketInfo> bucketTable = null;
+  private static Table<String, OmVolumeArgs> volumeTable = null;
   private static DBOptions options = null;
   private KeyInfo keyData;
   @Rule
@@ -88,17 +96,17 @@ public class TestKeyManagerImpl {
             new SCMException("ChillModePrecheck failed for allocateBlock",
                 ResultCodes.CHILL_MODE_EXCEPTION));
     setupRocksDb();
-    Mockito.when(metadataManager.getVolumeTable()).thenReturn(rdbTable);
-    Mockito.when(metadataManager.getBucketTable()).thenReturn(rdbTable);
-    Mockito.when(metadataManager.getOpenKeyTable()).thenReturn(rdbTable);
+    Mockito.when(metadataManager.getVolumeTable()).thenReturn(volumeTable);
+    Mockito.when(metadataManager.getBucketTable()).thenReturn(bucketTable);
+    Mockito.when(metadataManager.getOpenKeyTable()).thenReturn(keyTable);
     Mockito.when(metadataManager.getLock())
         .thenReturn(new OzoneManagerLock(conf));
     Mockito.when(metadataManager.getVolumeKey(VOLUME_NAME))
-        .thenReturn(VOLUME_NAME.getBytes(UTF_8));
+        .thenReturn(VOLUME_NAME);
     Mockito.when(metadataManager.getBucketKey(VOLUME_NAME, BUCKET_NAME))
-        .thenReturn(BUCKET_NAME.getBytes(UTF_8));
-    Mockito.when(metadataManager.getOpenKeyBytes(VOLUME_NAME, BUCKET_NAME,
-        KEY_NAME, 1)).thenReturn(KEY_NAME.getBytes(UTF_8));
+        .thenReturn(BUCKET_NAME);
+    Mockito.when(metadataManager.getOpenKey(VOLUME_NAME, BUCKET_NAME,
+        KEY_NAME, 1)).thenReturn(KEY_NAME);
   }
 
   private void setupRocksDb() throws Exception {
@@ -113,7 +121,7 @@ public class TestKeyManagerImpl {
     Set<TableConfig> configSet = new HashSet<>();
     for (String name : Arrays
         .asList(DFSUtil.bytes2String(RocksDB.DEFAULT_COLUMN_FAMILY),
-            "testTable")) {
+            "testKeyTable", "testBucketTable", "testVolumeTable")) {
       TableConfig newConfig = new TableConfig(name, new ColumnFamilyOptions());
       configSet.add(newConfig);
     }
@@ -128,13 +136,39 @@ public class TestKeyManagerImpl {
         .setModificationTime(Time.now())
         .build();
 
-    rdbStore = new RDBStore(folder.newFolder(), options, configSet);
-    rdbTable = rdbStore.getTable("testTable");
-    rdbTable.put(VOLUME_NAME.getBytes(UTF_8),
-        RandomStringUtils.random(10).getBytes(UTF_8));
-    rdbTable.put(BUCKET_NAME.getBytes(UTF_8),
-        RandomStringUtils.random(10).getBytes(UTF_8));
-    rdbTable.put(KEY_NAME.getBytes(UTF_8), keyData.toByteArray());
+    CodecRegistry registry = new CodecRegistry();
+    registry.addCodec(OmKeyInfo.class, new OmKeyInfoCodec());
+    registry.addCodec(OmVolumeArgs.class, new OmVolumeArgsCodec());
+    registry.addCodec(OmBucketInfo.class, new OmBucketInfoCodec());
+    rdbStore = new RDBStore(folder.newFolder(), options, configSet, registry);
+
+    keyTable =
+        rdbStore.getTable("testKeyTable", String.class, OmKeyInfo.class);
+
+    bucketTable =
+        rdbStore.getTable("testBucketTable", String.class, OmBucketInfo.class);
+
+    volumeTable =
+        rdbStore.getTable("testVolumeTable", String.class, OmVolumeArgs.class);
+
+    volumeTable.put(VOLUME_NAME, OmVolumeArgs.newBuilder()
+        .setAdminName("a")
+        .setOwnerName("o")
+        .setVolume(VOLUME_NAME)
+        .build());
+
+    bucketTable.put(BUCKET_NAME,
+        new OmBucketInfo.Builder().setBucketName(BUCKET_NAME)
+            .setVolumeName(VOLUME_NAME).build());
+
+    keyTable.put(KEY_NAME, new OmKeyInfo.Builder()
+        .setVolumeName(VOLUME_NAME)
+        .setBucketName(BUCKET_NAME)
+        .setKeyName(KEY_NAME)
+        .setReplicationType(ReplicationType.STAND_ALONE)
+        .setReplicationFactor(ReplicationFactor.THREE)
+        .build());
+
   }
 
   @Test
