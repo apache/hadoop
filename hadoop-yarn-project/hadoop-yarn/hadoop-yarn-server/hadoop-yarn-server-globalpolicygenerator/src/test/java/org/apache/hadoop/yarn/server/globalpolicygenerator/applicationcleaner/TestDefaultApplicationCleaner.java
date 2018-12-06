@@ -63,6 +63,8 @@ public class TestDefaultApplicationCleaner {
   // The list of applications returned by mocked router
   private Set<ApplicationId> routerAppIds;
 
+  private ApplicationId appIdToAddConcurrently;
+
   @Before
   public void setup() throws Exception {
     conf = new YarnConfiguration();
@@ -111,6 +113,8 @@ public class TestDefaultApplicationCleaner {
           new Token<AMRMTokenIdentifier>());
     }
     Assert.assertEquals(3, registryClient.getAllApplications().size());
+
+    appIdToAddConcurrently = null;
   }
 
   @After
@@ -149,13 +153,45 @@ public class TestDefaultApplicationCleaner {
     Assert.assertEquals(1, registryClient.getAllApplications().size());
   }
 
+  @Test
+  public void testConcurrentNewApp() throws YarnException {
+    appIdToAddConcurrently = ApplicationId.newInstance(1, 1);
+
+    appCleaner.run();
+
+    // The concurrently added app should be still there
+    Assert.assertEquals(1,
+        stateStore
+            .getApplicationsHomeSubCluster(
+                GetApplicationsHomeSubClusterRequest.newInstance())
+            .getAppsHomeSubClusters().size());
+
+    // The concurrently added app should be still there
+    Assert.assertEquals(1, registryClient.getAllApplications().size());
+  }
+
   /**
    * Testable version of DefaultApplicationCleaner.
    */
   public class TestableDefaultApplicationCleaner
       extends DefaultApplicationCleaner {
+
     @Override
     public Set<ApplicationId> getAppsFromRouter() throws YarnRuntimeException {
+      if (appIdToAddConcurrently != null) {
+        SubClusterId scId = SubClusterId.newInstance("MySubClusterId");
+        try {
+          stateStore
+              .addApplicationHomeSubCluster(AddApplicationHomeSubClusterRequest
+                  .newInstance(ApplicationHomeSubCluster
+                      .newInstance(appIdToAddConcurrently, scId)));
+        } catch (YarnException e) {
+          throw new YarnRuntimeException(e);
+        }
+
+        registryClient.writeAMRMTokenForUAM(appIdToAddConcurrently,
+            scId.toString(), new Token<AMRMTokenIdentifier>());
+      }
       return routerAppIds;
     }
   }

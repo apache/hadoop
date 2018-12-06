@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.globalpolicygenerator.applicationcleaner;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang3.time.DurationFormatUtils;
@@ -96,6 +95,10 @@ public abstract class ApplicationCleaner implements Runnable {
     return this.gpgContext;
   }
 
+  public FederationRegistryClient getRegistryClient() {
+    return this.registryClient;
+  }
+
   /**
    * Query router for applications.
    *
@@ -152,18 +155,6 @@ public abstract class ApplicationCleaner implements Runnable {
     }
     throw new YarnException("Only " + successCount
         + " success Router queries after " + totalAttemptCount + " retries");
-  }
-
-  protected void cleanupAppRecordInRegistry(Set<ApplicationId> knownApps) {
-    List<String> allApps = this.registryClient.getAllApplications();
-    LOG.info("Got " + allApps.size() + " existing apps in registry");
-    for (String app : allApps) {
-      ApplicationId appId = ApplicationId.fromString(app);
-      if (!knownApps.contains(appId)) {
-        LOG.info("removing finished application entry for {}", app);
-        this.registryClient.removeAppFromRegistry(appId, true);
-      }
-    }
   }
 
   @Override
