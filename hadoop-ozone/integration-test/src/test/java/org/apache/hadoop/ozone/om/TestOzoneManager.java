@@ -32,10 +32,12 @@ import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.hdds.scm.server.SCMStorage;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.KeyArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
@@ -293,8 +295,8 @@ public class TestOzoneManager {
     OMMetadataManager metadataManager =
         cluster.getOzoneManager().getMetadataManager();
 
-    byte[] userKey = metadataManager.getUserKey(userName);
-    byte[] volumes = metadataManager.getUserTable().get(userKey);
+    String userKey = metadataManager.getUserKey(userName);
+    VolumeList volumes = metadataManager.getUserTable().get(userKey);
 
     //that was the last volume of the user, shouldn't be any record here
     Assert.assertNull(volumes);
@@ -653,7 +655,7 @@ public class TestOzoneManager {
     // Make sure the deleted key has been moved to the deleted table.
     OMMetadataManager manager = cluster.getOzoneManager().
         getMetadataManager();
-    try (TableIterator<byte[], ? extends KeyValue<byte[], byte[]>> iter =
+    try (TableIterator<String, ? extends KeyValue<String, OmKeyInfo>>  iter =
             manager.getDeletedTable().iterator()) {
       iter.seekToFirst();
       Table.KeyValue kv = iter.next();

@@ -56,11 +56,13 @@ public final class DBStoreBuilder {
   private Path dbPath;
   private List<String> tableNames;
   private Configuration configuration;
+  private CodecRegistry registry;
 
   private DBStoreBuilder(Configuration configuration) {
     tables = new HashSet<>();
     tableNames = new LinkedList<>();
     this.configuration = configuration;
+    this.registry = new CodecRegistry();
   }
 
   public static DBStoreBuilder newBuilder(Configuration configuration) {
@@ -79,6 +81,11 @@ public final class DBStoreBuilder {
 
   public DBStoreBuilder addTable(String tableName) {
     tableNames.add(tableName);
+    return this;
+  }
+
+  public <T> DBStoreBuilder addCodec(Class<T> type, Codec<T> codec) {
+    registry.addCodec(type, codec);
     return this;
   }
 
@@ -124,7 +131,7 @@ public final class DBStoreBuilder {
     if (!dbFile.getParentFile().exists()) {
       throw new IOException("The DB destination directory should exist.");
     }
-    return new RDBStore(dbFile, options, tables);
+    return new RDBStore(dbFile, options, tables, registry);
   }
 
   /**

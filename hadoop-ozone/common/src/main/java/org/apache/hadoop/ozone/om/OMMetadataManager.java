@@ -16,17 +16,19 @@
  */
 package org.apache.hadoop.ozone.om;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.IOException;
+import java.util.List;
+
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.utils.db.DBStore;
 import org.apache.hadoop.utils.db.Table;
 
-import java.io.IOException;
-import java.util.List;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * OM metadata manager interface.
@@ -65,14 +67,14 @@ public interface OMMetadataManager {
    *
    * @param volume - Volume name
    */
-  byte[] getVolumeKey(String volume);
+  String getVolumeKey(String volume);
 
   /**
    * Given a user return the corresponding DB key.
    *
    * @param user - User name
    */
-  byte[] getUserKey(String user);
+  String getUserKey(String user);
 
   /**
    * Given a volume and bucket, return the corresponding DB key.
@@ -80,17 +82,19 @@ public interface OMMetadataManager {
    * @param volume - User name
    * @param bucket - Bucket name
    */
-  byte[] getBucketKey(String volume, String bucket);
+  String getBucketKey(String volume, String bucket);
 
   /**
    * Given a volume, bucket and a key, return the corresponding DB key.
    *
    * @param volume - volume name
    * @param bucket - bucket name
-   * @param key - key name
-   * @return bytes of DB key.
+   * @param key    - key name
+   * @return DB key as String.
    */
-  byte[] getOzoneKeyBytes(String volume, String bucket, String key);
+
+  String getOzoneKey(String volume, String bucket, String key);
+
 
   /**
    * Returns the DB key name of a open key in OM metadata store. Should be
@@ -102,7 +106,7 @@ public interface OMMetadataManager {
    * @param id - the id for this open
    * @return bytes of DB key.
    */
-  byte[] getOpenKeyBytes(String volume, String bucket, String key, long id);
+  String getOpenKey(String volume, String bucket, String key, long id);
 
   /**
    * Given a volume, check if it is empty, i.e there are no buckets inside it.
@@ -203,42 +207,42 @@ public interface OMMetadataManager {
    *
    * @return UserTable.
    */
-  Table<byte[], byte[]> getUserTable();
+  Table<String, VolumeList> getUserTable();
 
   /**
    * Returns the Volume Table.
    *
    * @return VolumeTable.
    */
-  Table<byte[], byte[]> getVolumeTable();
+  Table<String, OmVolumeArgs> getVolumeTable();
 
   /**
    * Returns the BucketTable.
    *
    * @return BucketTable.
    */
-  Table<byte[], byte[]> getBucketTable();
+  Table<String, OmBucketInfo> getBucketTable();
 
   /**
    * Returns the KeyTable.
    *
    * @return KeyTable.
    */
-  Table<byte[], byte[]> getKeyTable();
+  Table<String, OmKeyInfo> getKeyTable();
 
   /**
    * Get Deleted Table.
    *
    * @return Deleted Table.
    */
-  Table<byte[], byte[]> getDeletedTable();
+  Table<String, OmKeyInfo> getDeletedTable();
 
   /**
    * Gets the OpenKeyTable.
    *
    * @return Table.
    */
-  Table<byte[], byte[]> getOpenKeyTable();
+  Table<String, OmKeyInfo> getOpenKeyTable();
 
   /**
    * Gets the S3Bucket to Ozone Volume/bucket mapping table.

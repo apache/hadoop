@@ -21,6 +21,8 @@ package org.apache.hadoop.utils.db;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.google.common.base.Preconditions;
+
 /**
  * Collection of available codecs.
  */
@@ -42,6 +44,9 @@ public class CodecRegistry {
    * @return the object with the parsed field data
    */
   public <T> T asObject(byte[] rawData, Class<T> format) {
+    if (rawData == null) {
+      return null;
+    }
     if (valueCodecs.containsKey(format)) {
       return (T) valueCodecs.get(format).fromPersistedFormat(rawData);
     } else {
@@ -58,6 +63,8 @@ public class CodecRegistry {
    * @return byte array to store it ini the kv store.
    */
   public <T> byte[] asRawData(T object) {
+    Preconditions.checkNotNull(object,
+        "Null value shouldn't be persisted in the database");
     Class<T> format = (Class<T>) object.getClass();
     if (valueCodecs.containsKey(format)) {
       Codec<T> codec = (Codec<T>) valueCodecs.get(format);
@@ -67,4 +74,16 @@ public class CodecRegistry {
           "Codec is not registered for type: " + format);
     }
   }
+
+  /**
+   * Addds codec to the internal collection.
+   *
+   * @param type  Type of the codec source/destination object.
+   * @param codec The codec itself.
+   * @param <T>   The type of the codec
+   */
+  public <T> void addCodec(Class<T> type, Codec<T> codec) {
+    valueCodecs.put(type, codec);
+  }
+
 }
