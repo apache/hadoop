@@ -19,10 +19,11 @@ package org.apache.hadoop.ozone.container.keyvalue.interfaces;
  */
 
 import org.apache.hadoop.hdds.client.BlockID;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
+import org.apache.hadoop.ozone.container.common.transport.server.ratis.DispatcherContext;
+
 import java.nio.ByteBuffer;
 
 /**
@@ -38,11 +39,11 @@ public interface ChunkManager {
    * @param container - Container for the chunk
    * @param blockID - ID of the block.
    * @param info - ChunkInfo.
-   * @param stage - Chunk Stage write.
+   * @param dispatcherContext - dispatcher context info.
    * @throws StorageContainerException
    */
   void writeChunk(Container container, BlockID blockID, ChunkInfo info,
-                  ByteBuffer data, ContainerProtos.Stage stage)
+      ByteBuffer data, DispatcherContext dispatcherContext)
       throws StorageContainerException;
 
   /**
@@ -51,14 +52,15 @@ public interface ChunkManager {
    * @param container - Container for the chunk
    * @param blockID - ID of the block.
    * @param info - ChunkInfo.
+   * @param dispatcherContext - dispatcher context info.
    * @return  byte array
    * @throws StorageContainerException
    *
    * TODO: Right now we do not support partial reads and writes of chunks.
    * TODO: Explore if we need to do that for ozone.
    */
-  byte[] readChunk(Container container, BlockID blockID, ChunkInfo info) throws
-      StorageContainerException;
+  byte[] readChunk(Container container, BlockID blockID, ChunkInfo info,
+      DispatcherContext dispatcherContext) throws StorageContainerException;
 
   /**
    * Deletes a given chunk.

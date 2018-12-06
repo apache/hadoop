@@ -156,30 +156,46 @@ public class ContainerStateManager {
    *
    * Event and State Transition Mapping:
    *
-   * State: OPEN      ---------------> CLOSING
-   * Event:               FINALIZE
+   * State: OPEN         ----------------> CLOSING
+   * Event:                    FINALIZE
    *
-   * State: CLOSING   ---------------> CLOSED
-   * Event:                CLOSE
+   * State: CLOSING      ----------------> QUASI_CLOSED
+   * Event:                  QUASI_CLOSE
    *
-   * State: CLOSED   ----------------> DELETING
-   * Event:                DELETE
+   * State: CLOSING      ----------------> CLOSED
+   * Event:                     CLOSE
    *
-   * State: DELETING ----------------> DELETED
-   * Event:               CLEANUP
+   * State: QUASI_CLOSED ----------------> CLOSED
+   * Event:                  FORCE_CLOSE
+   *
+   * State: CLOSED       ----------------> DELETING
+   * Event:                    DELETE
+   *
+   * State: DELETING     ----------------> DELETED
+   * Event:                    CLEANUP
    *
    *
    * Container State Flow:
    *
-   * [OPEN]-------->[CLOSING]------->[CLOSED]
-   *       (FINALIZE)         (CLOSE)   |
-   *                                    |
-   *                                    |
-   *                            (DELETE)|
-   *                                    |
-   *                                    |
-   *                                [DELETING] ----------> [DELETED]
-   *                                            (CLEANUP)
+   * [OPEN]--------------->[CLOSING]--------------->[QUASI_CLOSED]
+   *          (FINALIZE)      |      (QUASI_CLOSE)        |
+   *                          |                           |
+   *                          |                           |
+   *                  (CLOSE) |             (FORCE_CLOSE) |
+   *                          |                           |
+   *                          |                           |
+   *                          +--------->[CLOSED]<--------+
+   *                                        |
+   *                                (DELETE)|
+   *                                        |
+   *                                        |
+   *                                   [DELETING]
+   *                                        |
+   *                              (CLEANUP) |
+   *                                        |
+   *                                        V
+   *                                    [DELETED]
+   *
    */
   private void initializeStateMachine() {
     stateMachine.addTransition(LifeCycleState.OPEN,
@@ -187,8 +203,16 @@ public class ContainerStateManager {
         LifeCycleEvent.FINALIZE);
 
     stateMachine.addTransition(LifeCycleState.CLOSING,
+        LifeCycleState.QUASI_CLOSED,
+        LifeCycleEvent.QUASI_CLOSE);
+
+    stateMachine.addTransition(LifeCycleState.CLOSING,
         LifeCycleState.CLOSED,
         LifeCycleEvent.CLOSE);
+
+    stateMachine.addTransition(LifeCycleState.QUASI_CLOSED,
+        LifeCycleState.CLOSED,
+        LifeCycleEvent.FORCE_CLOSE);
 
     stateMachine.addTransition(LifeCycleState.CLOSED,
         LifeCycleState.DELETING,

@@ -47,6 +47,8 @@ import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
+import org.apache.hadoop.ozone.container.common.transport.server.ratis
+    .DispatcherContext;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -133,10 +135,10 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
 
   @Override
   public ContainerCommandResponseProto dispatch(
-      ContainerCommandRequestProto msg) {
+      ContainerCommandRequestProto msg, DispatcherContext dispatcherContext) {
+    Preconditions.checkNotNull(msg);
     LOG.trace("Command {}, trace ID: {} ", msg.getCmdType().toString(),
         msg.getTraceID());
-    Preconditions.checkNotNull(msg.toString());
 
     AuditAction action = ContainerCommandRequestPBHelper.getAuditAction(
         msg.getCmdType());
@@ -194,7 +196,7 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
       audit(action, eventType, params, AuditEventStatus.FAILURE, ex);
       return ContainerUtils.logAndReturnError(LOG, ex, msg);
     }
-    responseProto = handler.handle(msg, container);
+    responseProto = handler.handle(msg, container, dispatcherContext);
     if (responseProto != null) {
       metrics.incContainerOpsLatencies(cmdType, System.nanoTime() - startTime);
 
@@ -269,7 +271,7 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
     // TODO: Assuming the container type to be KeyValueContainer for now.
     // We need to get container type from the containerRequest.
     Handler handler = getHandler(containerType);
-    handler.handle(requestBuilder.build(), null);
+    handler.handle(requestBuilder.build(), null, null);
   }
 
   /**

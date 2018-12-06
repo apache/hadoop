@@ -49,6 +49,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Type;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
@@ -58,6 +59,10 @@ import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.apache.hadoop.ozone.container.common.interfaces.VolumeChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
+import org.apache.hadoop.ozone.container.common.transport.server.ratis
+    .DispatcherContext;
+import org.apache.hadoop.ozone.container.common.transport.server.ratis
+    .DispatcherContext.WriteChunkStage;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume
     .RoundRobinVolumeChoosingPolicy;
@@ -81,8 +86,6 @@ import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import static org.apache.hadoop.hdds.HddsConfigKeys
     .HDDS_DATANODE_VOLUME_CHOOSING_POLICY;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.*;
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .Stage;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
@@ -109,13 +112,17 @@ public class KeyValueHandler extends Handler {
   private final VolumeChoosingPolicy volumeChoosingPolicy;
   private final long maxContainerSize;
   private final AutoCloseableLock handlerLock;
+  private final boolean doSyncWrite;
 
   public KeyValueHandler(Configuration config, StateContext context,
       ContainerSet contSet, VolumeSet volSet, ContainerMetrics metrics) {
     super(config, context, contSet, volSet, metrics);
     containerType = ContainerType.KeyValueContainer;
     blockManager = new BlockManagerImpl(config);
-    chunkManager = new ChunkManagerImpl();
+    doSyncWrite =
+        conf.getBoolean(OzoneConfigKeys.DFS_CONTAINER_CHUNK_WRITE_SYNC_KEY,
+            OzoneConfigKeys.DFS_CONTAINER_CHUNK_WRITE_SYNC_DEFAULT);
+    chunkManager = new ChunkManagerImpl(doSyncWrite);
     long svcInterval = config
         .getTimeDuration(OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
             OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT,
@@ -146,7 +153,8 @@ public class KeyValueHandler extends Handler {
 
   @Override
   public ContainerCommandResponseProto handle(
-      ContainerCommandRequestProto request, Container container) {
+      ContainerCommandRequestProto request, Container container,
+      DispatcherContext dispatcherContext) {
 
     Type cmdType = request.getCmdType();
     KeyValueContainer kvContainer = (KeyValueContainer) container;
@@ -164,7 +172,7 @@ public class KeyValueHandler extends Handler {
     case CloseContainer:
       return handleCloseContainer(request, kvContainer);
     case PutBlock:
-      return handlePutBlock(request, kvContainer);
+      return handlePutBlock(request, kvContainer, dispatcherContext);
     case GetBlock:
       return handleGetBlock(request, kvContainer);
     case DeleteBlock:
@@ -172,17 +180,17 @@ public class KeyValueHandler extends Handler {
     case ListBlock:
       return handleUnsupportedOp(request);
     case ReadChunk:
-      return handleReadChunk(request, kvContainer);
+      return handleReadChunk(request, kvContainer, dispatcherContext);
     case DeleteChunk:
       return handleDeleteChunk(request, kvContainer);
     case WriteChunk:
-      return handleWriteChunk(request, kvContainer);
+      return handleWriteChunk(request, kvContainer, dispatcherContext);
     case ListChunk:
       return handleUnsupportedOp(request);
     case CompactChunk:
       return handleUnsupportedOp(request);
     case PutSmallFile:
-      return handlePutSmallFile(request, kvContainer);
+      return handlePutSmallFile(request, kvContainer, dispatcherContext);
     case GetSmallFile:
       return handleGetSmallFile(request, kvContainer);
     case GetCommittedBlockLength:
@@ -392,7 +400,8 @@ public class KeyValueHandler extends Handler {
    * Handle Put Block operation. Calls BlockManager to process the request.
    */
   ContainerCommandResponseProto handlePutBlock(
-      ContainerCommandRequestProto request, KeyValueContainer kvContainer) {
+      ContainerCommandRequestProto request, KeyValueContainer kvContainer,
+      DispatcherContext dispatcherContext) {
 
     long blockLength;
     if (!request.hasPutBlock()) {
@@ -401,14 +410,18 @@ public class KeyValueHandler extends Handler {
       return ContainerUtils.malformedRequest(request);
     }
 
+    BlockData blockData;
     try {
       checkContainerOpen(kvContainer);
 
-      BlockData blockData = BlockData.getFromProtoBuf(
+      blockData = BlockData.getFromProtoBuf(
           request.getPutBlock().getBlockData());
       Preconditions.checkNotNull(blockData);
+      long bcsId =
+          dispatcherContext == null ? 0 : dispatcherContext.getLogIndex();
+      blockData.setBlockCommitSequenceId(bcsId);
       long numBytes = blockData.getProtoBufMessage().toByteArray().length;
-      blockLength = blockManager.putBlock(kvContainer, blockData);
+      blockManager.putBlock(kvContainer, blockData);
       metrics.incContainerBytesStats(Type.PutBlock, numBytes);
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);
@@ -418,7 +431,7 @@ public class KeyValueHandler extends Handler {
           request);
     }
 
-    return BlockUtils.putBlockResponseSuccess(request, blockLength);
+    return BlockUtils.putBlockResponseSuccess(request, blockData);
   }
 
   /**
@@ -514,7 +527,8 @@ public class KeyValueHandler extends Handler {
    * Handle Read Chunk operation. Calls ChunkManager to process the request.
    */
   ContainerCommandResponseProto handleReadChunk(
-      ContainerCommandRequestProto request, KeyValueContainer kvContainer) {
+      ContainerCommandRequestProto request, KeyValueContainer kvContainer,
+      DispatcherContext dispatcherContext) {
 
     if (!request.hasReadChunk()) {
       LOG.debug("Malformed Read Chunk request. trace ID: {}",
@@ -531,7 +545,12 @@ public class KeyValueHandler extends Handler {
           .getChunkData());
       Preconditions.checkNotNull(chunkInfo);
 
-      data = chunkManager.readChunk(kvContainer, blockID, chunkInfo);
+      if (dispatcherContext == null) {
+        dispatcherContext = new DispatcherContext.Builder().build();
+      }
+
+      data = chunkManager
+          .readChunk(kvContainer, blockID, chunkInfo, dispatcherContext);
       metrics.incContainerBytesStats(Type.ReadChunk, data.length);
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);
@@ -582,7 +601,8 @@ public class KeyValueHandler extends Handler {
    * Handle Write Chunk operation. Calls ChunkManager to process the request.
    */
   ContainerCommandResponseProto handleWriteChunk(
-      ContainerCommandRequestProto request, KeyValueContainer kvContainer) {
+      ContainerCommandRequestProto request, KeyValueContainer kvContainer,
+      DispatcherContext dispatcherContext) {
 
     if (!request.hasWriteChunk()) {
       LOG.debug("Malformed Write Chunk request. trace ID: {}",
@@ -601,17 +621,21 @@ public class KeyValueHandler extends Handler {
       Preconditions.checkNotNull(chunkInfo);
 
       ByteBuffer data = null;
-      if (request.getWriteChunk().getStage() == Stage.WRITE_DATA ||
-          request.getWriteChunk().getStage() == Stage.COMBINED) {
+      if (dispatcherContext == null) {
+        dispatcherContext = new DispatcherContext.Builder().build();
+      }
+      WriteChunkStage stage = dispatcherContext.getStage();
+      if (stage == WriteChunkStage.WRITE_DATA ||
+          stage == WriteChunkStage.COMBINED) {
         data = request.getWriteChunk().getData().asReadOnlyByteBuffer();
       }
 
-      chunkManager.writeChunk(kvContainer, blockID, chunkInfo, data,
-          request.getWriteChunk().getStage());
+      chunkManager
+          .writeChunk(kvContainer, blockID, chunkInfo, data, dispatcherContext);
 
       // We should increment stats after writeChunk
-      if (request.getWriteChunk().getStage() == Stage.WRITE_DATA ||
-          request.getWriteChunk().getStage() == Stage.COMBINED) {
+      if (stage == WriteChunkStage.WRITE_DATA||
+          stage == WriteChunkStage.COMBINED) {
         metrics.incContainerBytesStats(Type.WriteChunk, request.getWriteChunk()
             .getChunkData().getLen());
       }
@@ -632,7 +656,8 @@ public class KeyValueHandler extends Handler {
    * request.
    */
   ContainerCommandResponseProto handlePutSmallFile(
-      ContainerCommandRequestProto request, KeyValueContainer kvContainer) {
+      ContainerCommandRequestProto request, KeyValueContainer kvContainer,
+      DispatcherContext dispatcherContext) {
 
     if (!request.hasPutSmallFile()) {
       LOG.debug("Malformed Put Small File request. trace ID: {}",
@@ -641,13 +666,14 @@ public class KeyValueHandler extends Handler {
     }
     PutSmallFileRequestProto putSmallFileReq =
         request.getPutSmallFile();
+    BlockData blockData;
 
     try {
       checkContainerOpen(kvContainer);
 
       BlockID blockID = BlockID.getFromProtobuf(putSmallFileReq.getBlock()
           .getBlockData().getBlockID());
-      BlockData blockData = BlockData.getFromProtoBuf(
+      blockData = BlockData.getFromProtoBuf(
           putSmallFileReq.getBlock().getBlockData());
       Preconditions.checkNotNull(blockData);
 
@@ -655,15 +681,20 @@ public class KeyValueHandler extends Handler {
           putSmallFileReq.getChunkInfo());
       Preconditions.checkNotNull(chunkInfo);
       ByteBuffer data = putSmallFileReq.getData().asReadOnlyByteBuffer();
+      if (dispatcherContext == null) {
+        dispatcherContext = new DispatcherContext.Builder().build();
+      }
+
       // chunks will be committed as a part of handling putSmallFile
       // here. There is no need to maintain this info in openContainerBlockMap.
-      chunkManager.writeChunk(
-          kvContainer, blockID, chunkInfo, data, Stage.COMBINED);
+      chunkManager
+          .writeChunk(kvContainer, blockID, chunkInfo, data, dispatcherContext);
 
       List<ContainerProtos.ChunkInfo> chunks = new LinkedList<>();
       chunks.add(chunkInfo.getProtoBufMessage());
       blockData.setChunks(chunks);
-      // TODO: add bcsId as a part of putSmallFile transaction
+      blockData.setBlockCommitSequenceId(dispatcherContext.getLogIndex());
+
       blockManager.putBlock(kvContainer, blockData);
       metrics.incContainerBytesStats(Type.PutSmallFile, data.capacity());
 
@@ -675,7 +706,7 @@ public class KeyValueHandler extends Handler {
               PUT_SMALL_FILE_ERROR), request);
     }
 
-    return SmallFileUtils.getPutFileResponseSuccess(request);
+    return SmallFileUtils.getPutFileResponseSuccess(request, blockData);
   }
 
   /**
@@ -701,9 +732,13 @@ public class KeyValueHandler extends Handler {
 
       ContainerProtos.ChunkInfo chunkInfo = null;
       ByteString dataBuf = ByteString.EMPTY;
+      DispatcherContext dispatcherContext =
+          new DispatcherContext.Builder().build();
       for (ContainerProtos.ChunkInfo chunk : responseData.getChunks()) {
+        // if the block is committed, all chunks must have been committed.
+        // Tmp chunk files won't exist here.
         byte[] data = chunkManager.readChunk(kvContainer, blockID,
-            ChunkInfo.getFromProtoBuf(chunk));
+            ChunkInfo.getFromProtoBuf(chunk), dispatcherContext);
         ByteString current = ByteString.copyFrom(data);
         dataBuf = dataBuf.concat(current);
         chunkInfo = chunk;

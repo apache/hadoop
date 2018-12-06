@@ -63,7 +63,7 @@ public class TestContainerMetrics {
     assertEquals(ERR, 1, collector.getRecords().size());
     collector.clear();
 
-    metrics.finished();
+    metrics.finished(false);
     metrics.getMetrics(collector, true);
     assertEquals(ERR, 1, collector.getRecords().size());
     collector.clear();
@@ -137,8 +137,8 @@ public class TestContainerMetrics {
     ContainerId containerId3 = ContainerId.newContainerId(appAttemptId, 3);
     ContainerMetrics metrics3 = ContainerMetrics.forContainer(system,
         containerId3, 1, 0);
-    metrics1.finished();
-    metrics2.finished();
+    metrics1.finished(false);
+    metrics2.finished(false);
     system.sampleMetrics();
     system.sampleMetrics();
     Thread.sleep(100);

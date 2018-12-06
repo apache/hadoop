@@ -123,6 +123,13 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  *     property.
  *   </li>
  *   <li>
+ *     {@code YARN_CONTAINER_RUNTIME_DOCKER_PORTS_MAPPING} allows users to
+ *     specify ports mapping for the bridge network Docker container. The value
+ *     of the environment variable should be a comma-separated list of ports
+ *     mapping. It's the same to "-p" option for the Docker run command. If the
+ *     value is empty, "-P" will be added.
+ *   </li>
+ *   <li>
  *     {@code YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_PID_NAMESPACE}
  *     controls which PID namespace will be used by the Docker container. By
  *     default, each Docker container has its own PID namespace. To share the
@@ -210,6 +217,10 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
           "(:(r[ow]|(r[ow][+])?(r?shared|r?slave|r?private)))?(?:,|$)");
   private static final Pattern TMPFS_MOUNT_PATTERN = Pattern.compile(
       "^/[^:\\x00]+$");
+  public static final String PORTS_MAPPING_PATTERN =
+      "^:[0-9]+|^[0-9]+:[0-9]+|^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]" +
+          "|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])" +
+          ":[0-9]+:[0-9]+$";
   private static final int HOST_NAME_LENGTH = 64;
   private static final String DEFAULT_PROCFS = "/proc";
 
@@ -240,6 +251,9 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_DELAYED_REMOVAL =
       "YARN_CONTAINER_RUNTIME_DOCKER_DELAYED_REMOVAL";
+  @InterfaceAudience.Private
+  public static final String ENV_DOCKER_CONTAINER_PORTS_MAPPING =
+          "YARN_CONTAINER_RUNTIME_DOCKER_PORTS_MAPPING";
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_YARN_SYSFS =
       "YARN_CONTAINER_RUNTIME_YARN_SYSFS_ENABLE";
@@ -442,32 +456,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   @Override
   public void prepareContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
-    Container container = ctx.getContainer();
-
-    // Create volumes when needed.
-    if (nmContext != null
-        && nmContext.getResourcePluginManager().getNameToPlugins() != null) {
-      for (ResourcePlugin plugin : nmContext.getResourcePluginManager()
-          .getNameToPlugins().values()) {
-        DockerCommandPlugin dockerCommandPlugin =
-            plugin.getDockerCommandPluginInstance();
-        if (dockerCommandPlugin != null) {
-          DockerVolumeCommand dockerVolumeCommand =
-              dockerCommandPlugin.getCreateDockerVolumeCommand(
-                  ctx.getContainer());
-          if (dockerVolumeCommand != null) {
-            runDockerVolumeCommand(dockerVolumeCommand, container);
-
-            // After volume created, run inspect to make sure volume properly
-            // created.
-            if (dockerVolumeCommand.getSubCommand().equals(
-                DockerVolumeCommand.VOLUME_CREATE_SUB_COMMAND)) {
-              checkDockerVolumeCreated(dockerVolumeCommand, container);
-            }
-          }
-        }
-      }
-    }
   }
 
   private void checkDockerVolumeCreated(
@@ -873,6 +861,18 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
     setHostname(runCommand, containerIdStr, network, hostname);
 
+    // Add ports mapping value.
+    if (environment.containsKey(ENV_DOCKER_CONTAINER_PORTS_MAPPING)) {
+      String portsMapping = environment.get(ENV_DOCKER_CONTAINER_PORTS_MAPPING);
+      for (String mapping:portsMapping.split(",")) {
+        if (!Pattern.matches(PORTS_MAPPING_PATTERN, mapping)) {
+          throw new ContainerExecutionException(
+              "Invalid port mappings: " + mapping);
+        }
+        runCommand.addPortsMapping(mapping);
+      }
+    }
+
     runCommand.setCapabilities(capabilities);
 
     runCommand.addAllReadWriteMountLocations(containerLogDirs);
@@ -1008,14 +1008,30 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       }
     }
 
-    // use plugins to update docker run command.
+    // use plugins to create volume and update docker run command.
     if (nmContext != null
         && nmContext.getResourcePluginManager().getNameToPlugins() != null) {
       for (ResourcePlugin plugin : nmContext.getResourcePluginManager()
           .getNameToPlugins().values()) {
         DockerCommandPlugin dockerCommandPlugin =
             plugin.getDockerCommandPluginInstance();
+
         if (dockerCommandPlugin != null) {
+          // Create volumes when needed.
+          DockerVolumeCommand dockerVolumeCommand =
+              dockerCommandPlugin.getCreateDockerVolumeCommand(
+                  ctx.getContainer());
+          if (dockerVolumeCommand != null) {
+            runDockerVolumeCommand(dockerVolumeCommand, container);
+
+            // After volume created, run inspect to make sure volume properly
+            // created.
+            if (dockerVolumeCommand.getSubCommand().equals(
+                DockerVolumeCommand.VOLUME_CREATE_SUB_COMMAND)) {
+              checkDockerVolumeCreated(dockerVolumeCommand, container);
+            }
+          }
+          // Update cmd
           dockerCommandPlugin.updateDockerRunCommand(runCommand, container);
         }
       }

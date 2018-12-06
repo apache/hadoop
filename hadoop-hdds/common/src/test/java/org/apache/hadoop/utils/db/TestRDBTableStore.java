@@ -95,7 +95,7 @@ public class TestRDBTableStore {
 
   @Test
   public void putGetAndEmpty() throws Exception {
-    try (Table testTable = rdbStore.getTable("First")) {
+    try (Table<byte[], byte[]> testTable = rdbStore.getTable("First")) {
       byte[] key =
           RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
       byte[] value =
@@ -209,7 +209,7 @@ public class TestRDBTableStore {
         testTable.put(key, value);
       }
       int localCount = 0;
-      try (TableIterator<Table.KeyValue> iter = testTable.iterator()) {
+      try (TableIterator<byte[], Table.KeyValue> iter = testTable.iterator()) {
         while (iter.hasNext()) {
           Table.KeyValue keyValue = iter.next();
           localCount++;

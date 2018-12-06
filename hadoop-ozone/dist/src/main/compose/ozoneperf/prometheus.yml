@@ -17,8 +17,9 @@ global:
   scrape_interval:     15s # By default, scrape targets every 15 seconds.
 
 scrape_configs:
-  - job_name: jmxexporter
-    consul_sd_configs:
-        - server: consul:8500
-          services:
-           - jmxexporter
+  - job_name: ozone
+    metrics_path: /prom
+    static_configs:
+     - targets:
+        - "scm:9876"
+        - "ozoneManager:9874"

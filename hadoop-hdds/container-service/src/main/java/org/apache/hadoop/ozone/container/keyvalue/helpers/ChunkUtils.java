@@ -19,8 +19,6 @@
 package org.apache.hadoop.ozone.container.keyvalue.helpers;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -47,7 +45,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.FileLock;
 import java.nio.file.StandardOpenOption;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ExecutionException;
 
@@ -70,10 +67,11 @@ public final class ChunkUtils {
    * @param chunkInfo - Data stream to write.
    * @param data - The data buffer.
    * @param volumeIOStats
+   * @param sync whether to do fsync or not
    * @throws StorageContainerException
    */
   public static void writeData(File chunkFile, ChunkInfo chunkInfo,
-                               ByteBuffer data, VolumeIOStats volumeIOStats)
+      ByteBuffer data, VolumeIOStats volumeIOStats, boolean sync)
       throws StorageContainerException, ExecutionException,
       InterruptedException, NoSuchAlgorithmException {
     int bufferSize = data.capacity();
@@ -90,18 +88,17 @@ public final class ChunkUtils {
     FileLock lock = null;
 
     try {
-      if (chunkInfo.getChecksum() != null &&
-          !chunkInfo.getChecksum().isEmpty()) {
-        verifyChecksum(chunkInfo, data, log);
-      }
-
       long writeTimeStart = Time.monotonicNow();
-      file =
+      file = sync ?
           AsynchronousFileChannel.open(chunkFile.toPath(),
               StandardOpenOption.CREATE,
               StandardOpenOption.WRITE,
               StandardOpenOption.SPARSE,
-              StandardOpenOption.SYNC);
+              StandardOpenOption.SYNC) :
+          AsynchronousFileChannel.open(chunkFile.toPath(),
+              StandardOpenOption.CREATE,
+              StandardOpenOption.WRITE,
+              StandardOpenOption.SPARSE);
       lock = file.lock().get();
       int size = file.write(data, chunkInfo.getOffset()).get();
       // Increment volumeIO stats here.
@@ -154,10 +151,8 @@ public final class ChunkUtils {
    * @throws InterruptedException
    */
   public static ByteBuffer readData(File chunkFile, ChunkInfo data,
-                                    VolumeIOStats volumeIOStats)
-      throws
-      StorageContainerException, ExecutionException, InterruptedException,
-      NoSuchAlgorithmException {
+      VolumeIOStats volumeIOStats) throws StorageContainerException,
+      ExecutionException, InterruptedException {
     Logger log = LoggerFactory.getLogger(ChunkManagerImpl.class);
 
     if (!chunkFile.exists()) {
@@ -184,10 +179,7 @@ public final class ChunkUtils {
       volumeIOStats.incReadTime(Time.monotonicNow() - readStartTime);
       volumeIOStats.incReadOpCount();
       volumeIOStats.incReadBytes(data.getLen());
-      if (data.getChecksum() != null && !data.getChecksum().isEmpty()) {
-        buf.rewind();
-        verifyChecksum(data, buf, log);
-      }
+
       return buf;
     } catch (IOException e) {
       throw new StorageContainerException(e, IO_EXCEPTION);
@@ -202,30 +194,6 @@ public final class ChunkUtils {
       if (file != null) {
         IOUtils.closeStream(file);
       }
-    }
-  }
-
-  /**
-   * Verifies the checksum of a chunk against the data buffer.
-   *
-   * @param chunkInfo - Chunk Info.
-   * @param data - data buffer
-   * @param log - log
-   * @throws NoSuchAlgorithmException
-   * @throws StorageContainerException
-   */
-  private static void verifyChecksum(ChunkInfo chunkInfo, ByteBuffer data,
-      Logger log) throws NoSuchAlgorithmException, StorageContainerException {
-    MessageDigest sha = MessageDigest.getInstance(OzoneConsts.FILE_HASH);
-    sha.update(data);
-    data.rewind();
-    if (!Hex.encodeHexString(sha.digest()).equals(
-        chunkInfo.getChecksum())) {
-      log.error("Checksum mismatch. Provided: {} , computed: {}",
-          chunkInfo.getChecksum(), DigestUtils.sha256Hex(sha.digest()));
-      throw new StorageContainerException("Checksum mismatch. Provided: " +
-          chunkInfo.getChecksum() + " , computed: " +
-          DigestUtils.sha256Hex(sha.digest()), CHECKSUM_MISMATCH);
     }
   }
 

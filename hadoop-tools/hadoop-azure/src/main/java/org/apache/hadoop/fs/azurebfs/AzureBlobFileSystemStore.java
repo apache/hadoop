@@ -102,8 +102,8 @@ public class AzureBlobFileSystemStore {
   private AbfsClient client;
   private URI uri;
   private final UserGroupInformation userGroupInformation;
-  private final String userName;
-  private final String primaryUserGroup;
+  private String userName;
+  private String primaryUserGroup;
   private static final String DATE_TIME_PATTERN = "E, dd MMM yyyy HH:mm:ss 'GMT'";
   private static final String XMS_PROPERTIES_ENCODING = "ISO-8859-1";
   private static final int LIST_MAX_RESULTS = 5000;
@@ -134,10 +134,15 @@ public class AzureBlobFileSystemStore {
     this.userName = userGroupInformation.getShortUserName();
 
     if (!abfsConfiguration.getSkipUserGroupMetadataDuringInitialization()) {
-      primaryUserGroup = userGroupInformation.getPrimaryGroupName();
+      try {
+        this.primaryUserGroup = userGroupInformation.getPrimaryGroupName();
+      } catch (IOException ex) {
+        LOG.error("Failed to get primary group for {}, using user name as primary group name", userName);
+        this.primaryUserGroup = userName;
+      }
     } else {
       //Provide a default group name
-      primaryUserGroup = userName;
+      this.primaryUserGroup = userName;
     }
 
     this.azureAtomicRenameDirSet = new HashSet<>(Arrays.asList(

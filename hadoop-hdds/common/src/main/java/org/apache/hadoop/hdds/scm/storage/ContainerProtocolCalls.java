@@ -21,6 +21,8 @@ package org.apache.hadoop.hdds.scm.storage;
 import org.apache.hadoop.hdds.scm.XceiverClientAsyncReply;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .BlockNotCommittedException;
+import org.apache.hadoop.ozone.common.Checksum;
+import org.apache.hadoop.ozone.common.ChecksumData;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers
@@ -305,10 +307,16 @@ public final class ContainerProtocolCalls  {
     KeyValue keyValue =
         KeyValue.newBuilder().setKey("OverWriteRequested").setValue("true")
             .build();
+    Checksum checksum = new Checksum();
+    ChecksumData checksumData = checksum.computeChecksum(data);
     ChunkInfo chunk =
-        ChunkInfo.newBuilder().setChunkName(blockID.getLocalID()
-            + "_chunk").setOffset(0).setLen(data.length).
-            addMetadata(keyValue).build();
+        ChunkInfo.newBuilder()
+            .setChunkName(blockID.getLocalID() + "_chunk")
+            .setOffset(0)
+            .setLen(data.length)
+            .addMetadata(keyValue)
+            .setChecksumData(checksumData.getProtoBufMessage())
+            .build();
 
     PutSmallFileRequestProto putSmallFileRequest =
         PutSmallFileRequestProto.newBuilder().setChunkInfo(chunk)

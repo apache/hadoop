@@ -97,12 +97,7 @@ class FSPreemptionThread extends Thread {
    * Mechanics:
    * 1. Fetch all {@link ResourceRequest}s corresponding to the amount of
    * starvation.
-   * 2. For each {@link ResourceRequest}, iterate through matching
-   * nodes and identify containers to preempt all on one node, also
-   * optimizing for least number of AM container preemptions. Only nodes
-   * that match the locality level specified in the {@link ResourceRequest}
-   * are considered. However, if this would lead to AM preemption, and locality
-   * relaxation is allowed, then the search space is expanded to all nodes.
+   * 2. For each {@link ResourceRequest}, get the best preemptable containers.
    *
    * @param starvedApp starved application for which we are identifying
    *                   preemption targets
@@ -118,18 +113,7 @@ class FSPreemptionThread extends Thread {
               .getNodesByResourceName(rr.getResourceName());
       for (int i = 0; i < rr.getNumContainers(); i++) {
         PreemptableContainers bestContainers =
-                identifyContainersToPreemptForOneContainer(potentialNodes, rr);
-
-        // Don't preempt AM containers just to satisfy local requests if relax
-        // locality is enabled.
-        if (bestContainers != null
-                && bestContainers.numAMContainers > 0
-                && !ResourceRequest.isAnyLocation(rr.getResourceName())
-                && rr.getRelaxLocality()) {
-          bestContainers = identifyContainersToPreemptForOneContainer(
-                  scheduler.getNodeTracker().getAllNodes(), rr);
-        }
-
+            getBestPreemptableContainers(rr, potentialNodes);
         if (bestContainers != null) {
           List<RMContainer> containers = bestContainers.getAllContainers();
           if (containers.size() > 0) {
@@ -238,6 +222,41 @@ class FSPreemptionThread extends Thread {
     // Schedule timer task to kill containers
     preemptionTimer.schedule(
         new PreemptContainersTask(containers), warnTimeBeforeKill);
+  }
+
+  /**
+   * Iterate through matching nodes and identify containers to preempt all on
+   * one node, also optimizing for least number of AM container preemptions.
+   * Only nodes that match the locality level specified in the
+   * {@link ResourceRequest} are considered. However, if this would lead to
+   * AM preemption, and locality relaxation is allowed, then the search space
+   * is expanded to the remaining nodes.
+   *
+   * @param rr resource request
+   * @param potentialNodes list of {@link FSSchedulerNode}
+   * @return the list of best preemptable containers for the resource request
+   */
+  private PreemptableContainers getBestPreemptableContainers(ResourceRequest rr,
+      List<FSSchedulerNode> potentialNodes) {
+    PreemptableContainers bestContainers =
+        identifyContainersToPreemptForOneContainer(potentialNodes, rr);
+
+    if (rr.getRelaxLocality()
+        && !ResourceRequest.isAnyLocation(rr.getResourceName())
+        && bestContainers != null
+        && bestContainers.numAMContainers > 0) {
+      List<FSSchedulerNode> remainingNodes =
+          scheduler.getNodeTracker().getAllNodes();
+      remainingNodes.removeAll(potentialNodes);
+      PreemptableContainers spareContainers =
+          identifyContainersToPreemptForOneContainer(remainingNodes, rr);
+      if (spareContainers != null && spareContainers.numAMContainers
+          < bestContainers.numAMContainers) {
+        bestContainers = spareContainers;
+      }
+    }
+
+    return bestContainers;
   }
 
   private class PreemptContainersTask extends TimerTask {

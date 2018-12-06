@@ -30,6 +30,7 @@ import com.google.protobuf.BlockingService;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.block.BlockManager;
@@ -217,7 +218,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     NodeReportHandler nodeReportHandler =
         new NodeReportHandler(scmNodeManager);
     PipelineReportHandler pipelineReportHandler =
-            new PipelineReportHandler(pipelineManager, conf);
+        new PipelineReportHandler(pipelineManager, conf);
     CommandStatusReportHandler cmdStatusReportHandler =
         new CommandStatusReportHandler();
 
@@ -302,8 +303,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS,
         (BlockManagerImpl) scmBlockManager);
     scmChillModeManager = new SCMChillModeManager(conf,
-        containerManager.getContainers(),
-        eventQueue);
+        containerManager.getContainers(), pipelineManager, eventQueue);
 
     eventQueue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
         scmChillModeManager);
@@ -924,6 +924,16 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   @VisibleForTesting
   public double getCurrentContainerThreshold() {
     return scmChillModeManager.getCurrentContainerThreshold();
+  }
+
+  @Override
+  public Map<String, Integer> getContainerStateCount() {
+    Map<String, Integer> nodeStateCount = new HashMap<>();
+    for (HddsProtos.LifeCycleState state: HddsProtos.LifeCycleState.values()) {
+      nodeStateCount.put(state.toString(), containerManager.getContainers(
+          state).size());
+    }
+    return nodeStateCount;
   }
 
   /**

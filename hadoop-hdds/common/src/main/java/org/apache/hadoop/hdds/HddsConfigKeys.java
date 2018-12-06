@@ -87,6 +87,11 @@ public final class HddsConfigKeys {
       "hdds.scm.chillmode.min.datanode";
   public static final int HDDS_SCM_CHILLMODE_MIN_DATANODE_DEFAULT = 1;
 
+  public static final String HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK =
+      "hdds.scm.chillmode.pipeline-availability.check";
+  public static final boolean
+      HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK_DEFAULT = false;
+
   // % of containers which should have at least one reported replica
   // before SCM comes out of chill mode.
   public static final String HDDS_SCM_CHILLMODE_THRESHOLD_PCT =
@@ -104,4 +109,7 @@ public final class HddsConfigKeys {
   // In any real cluster where performance matters, the SCM, OM and DN
   // metadata locations must be configured explicitly.
   public static final String OZONE_METADATA_DIRS = "ozone.metadata.dirs";
+
+  public static final String HDDS_PROMETHEUS_ENABLED =
+      "hdds.prometheus.endpoint.enabled";
 }

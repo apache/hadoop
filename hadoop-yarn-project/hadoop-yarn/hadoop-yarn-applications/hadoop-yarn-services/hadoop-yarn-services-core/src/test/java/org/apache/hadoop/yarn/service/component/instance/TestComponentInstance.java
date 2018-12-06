@@ -98,7 +98,12 @@ public class TestComponentInstance {
     ComponentInstanceEvent instanceEvent = new ComponentInstanceEvent(
         instance.getContainer().getId(), ComponentInstanceEventType.UPGRADE);
     instance.handle(instanceEvent);
-
+    instance.handle(new ComponentInstanceEvent(instance.getContainer().getId(),
+        ComponentInstanceEventType.START));
+    Assert.assertEquals("instance not running",
+        ContainerState.RUNNING_BUT_UNREADY,
+        component.getComponentSpec().getContainer(instance.getContainer()
+            .getId().toString()).getState());
     instance.handle(new ComponentInstanceEvent(instance.getContainer().getId(),
         ComponentInstanceEventType.BECOME_READY));
     Assert.assertEquals("instance not ready", ContainerState.READY,
@@ -121,6 +126,42 @@ public class TestComponentInstance {
     ComponentInstanceEvent upgradeEvent = new ComponentInstanceEvent(
         instance.getContainer().getId(), ComponentInstanceEventType.UPGRADE);
     instance.handle(upgradeEvent);
+
+    ContainerStatus containerStatus = mock(ContainerStatus.class);
+    when(containerStatus.getExitStatus()).thenReturn(
+        ContainerExitStatus.ABORTED);
+    ComponentInstanceEvent stopEvent = new ComponentInstanceEvent(
+        instance.getContainer().getId(), ComponentInstanceEventType.STOP)
+        .setStatus(containerStatus);
+    // this is the call back from NM for the upgrade
+    instance.handle(stopEvent);
+    Assert.assertEquals("instance did not fail", ContainerState.FAILED_UPGRADE,
+        component.getComponentSpec().getContainer(instance.getContainer()
+            .getId().toString()).getState());
+  }
+
+  @Test
+  public void testFailureAfterReinit() throws Exception {
+    ServiceContext context = TestComponent.createTestContext(rule,
+        "testContainerUpgradeFailed");
+    Component component = context.scheduler.getAllComponents().entrySet()
+        .iterator().next().getValue();
+    upgradeComponent(component);
+
+    ComponentInstance instance = component.getAllComponentInstances().iterator()
+        .next();
+
+    ComponentInstanceEvent upgradeEvent = new ComponentInstanceEvent(
+        instance.getContainer().getId(), ComponentInstanceEventType.UPGRADE);
+    instance.handle(upgradeEvent);
+
+    // NM finished updgrae
+    instance.handle(new ComponentInstanceEvent(instance.getContainer().getId(),
+        ComponentInstanceEventType.START));
+    Assert.assertEquals("instance not running",
+        ContainerState.RUNNING_BUT_UNREADY,
+        component.getComponentSpec().getContainer(instance.getContainer()
+            .getId().toString()).getState());
 
     ContainerStatus containerStatus = mock(ContainerStatus.class);
     when(containerStatus.getExitStatus()).thenReturn(
@@ -246,23 +287,33 @@ public class TestComponentInstance {
     instance.handle(cancelEvent);
 
     // either upgrade failed or successful
-    ComponentInstanceEvent readyOrStopEvent = new ComponentInstanceEvent(
-        instance.getContainer().getId(),
-        upgradeSuccessful ? ComponentInstanceEventType.BECOME_READY :
-            ComponentInstanceEventType.STOP);
+    if (upgradeSuccessful) {
+      instance.handle(new ComponentInstanceEvent(
+          instance.getContainer().getId(), ComponentInstanceEventType.START));
+      instance.handle(new ComponentInstanceEvent(
+          instance.getContainer().getId(),
+          ComponentInstanceEventType.BECOME_READY));
+    } else {
+      instance.handle(new ComponentInstanceEvent(
+          instance.getContainer().getId(),
+          ComponentInstanceEventType.STOP));
+    }
 
-    instance.handle(readyOrStopEvent);
     Assert.assertEquals("instance not upgrading", ContainerState.UPGRADING,
         component.getComponentSpec().getContainer(instance.getContainer()
             .getId().toString()).getState());
 
     // response for cancel received
-    ComponentInstanceEvent readyOrStopCancel = new ComponentInstanceEvent(
-        instance.getContainer().getId(),
-        cancelUpgradeSuccessful ? ComponentInstanceEventType.BECOME_READY :
-            ComponentInstanceEventType.STOP);
-
-    instance.handle(readyOrStopCancel);
+    if (cancelUpgradeSuccessful) {
+      instance.handle(new ComponentInstanceEvent(
+          instance.getContainer().getId(), ComponentInstanceEventType.START));
+      instance.handle(new ComponentInstanceEvent(
+          instance.getContainer().getId(),
+          ComponentInstanceEventType.BECOME_READY));
+    } else {
+      instance.handle(new ComponentInstanceEvent(
+          instance.getContainer().getId(), ComponentInstanceEventType.STOP));
+    }
     if (cancelUpgradeSuccessful) {
       Assert.assertEquals("instance not ready", ContainerState.READY,
           component.getComponentSpec().getContainer(instance.getContainer()

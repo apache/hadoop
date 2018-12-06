@@ -94,6 +94,7 @@ public class EventWriter {
     wrapper.setEvent(event.getDatum());
     writer.write(wrapper, encoder);
     if (this.jsonOutput) {
+      encoder.flush();
       out.writeBytes("\n");
     }
   }

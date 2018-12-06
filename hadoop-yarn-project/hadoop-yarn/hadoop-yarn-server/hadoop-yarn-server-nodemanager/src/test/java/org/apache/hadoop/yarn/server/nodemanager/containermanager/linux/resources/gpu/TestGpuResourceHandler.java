@@ -465,7 +465,7 @@ public class TestGpuResourceHandler {
       caughtException = true;
     }
     Assert.assertTrue(
-        "Should fail since requested device Id is not in allowed list",
+        "Should fail since requested device Id is already assigned",
         caughtException);
 
     // Make sure internal state not changed.

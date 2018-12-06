@@ -203,50 +203,50 @@ public interface OMMetadataManager {
    *
    * @return UserTable.
    */
-  Table getUserTable();
+  Table<byte[], byte[]> getUserTable();
 
   /**
    * Returns the Volume Table.
    *
    * @return VolumeTable.
    */
-  Table getVolumeTable();
+  Table<byte[], byte[]> getVolumeTable();
 
   /**
    * Returns the BucketTable.
    *
    * @return BucketTable.
    */
-  Table getBucketTable();
+  Table<byte[], byte[]> getBucketTable();
 
   /**
    * Returns the KeyTable.
    *
    * @return KeyTable.
    */
-  Table getKeyTable();
+  Table<byte[], byte[]> getKeyTable();
 
   /**
    * Get Deleted Table.
    *
    * @return Deleted Table.
    */
-  Table getDeletedTable();
+  Table<byte[], byte[]> getDeletedTable();
 
   /**
    * Gets the OpenKeyTable.
    *
    * @return Table.
    */
-  Table getOpenKeyTable();
+  Table<byte[], byte[]> getOpenKeyTable();
 
   /**
    * Gets the S3Bucket to Ozone Volume/bucket mapping table.
    *
    * @return Table.
    */
-  Table getS3Table();
 
+  Table<byte[], byte[]> getS3Table();
   /**
    * Returns number of rows in a table.  This should not be used for very
    * large tables.
@@ -254,5 +254,6 @@ public interface OMMetadataManager {
    * @return long
    * @throws IOException
    */
-  long countRowsInTable(Table table) throws IOException;
+  <KEY, VALUE> long countRowsInTable(Table<KEY, VALUE> table)
+      throws IOException;
 }

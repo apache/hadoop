@@ -64,7 +64,7 @@ public class GreedyPlanner implements Planner {
    */
   @Override
   public NodePlan plan(DiskBalancerDataNode node) throws Exception {
-    long startTime = Time.monotonicNow();
+    final long startTime = Time.monotonicNow();
     NodePlan plan = new NodePlan(node.getDataNodeName(),
         node.getDataNodePort());
     LOG.info("Starting plan for Node : {}:{}",
@@ -75,12 +75,10 @@ public class GreedyPlanner implements Planner {
       }
     }
 
-    long endTime = Time.monotonicNow();
-    String message = String
-        .format("Compute Plan for Node : %s:%d took %d ms ",
-            node.getDataNodeName(), node.getDataNodePort(),
-            endTime - startTime);
-    LOG.info(message);
+    final long endTime = Time.monotonicNow();
+    LOG.info("Compute Plan for Node : {}:{} took {} ms",
+        node.getDataNodeName(), node.getDataNodePort(), endTime - startTime);
+
     return plan;
   }
 
@@ -117,21 +115,19 @@ public class GreedyPlanner implements Planner {
 
       applyStep(nextStep, currentSet, lowVolume, highVolume);
       if (nextStep != null) {
-        LOG.debug("Step : {} ",  nextStep.toString());
+        LOG.debug("Step : {} ", nextStep);
         plan.addStep(nextStep);
       }
     }
 
-    String message = String
-        .format("Disk Volume set %s Type : %s plan completed.",
-            currentSet.getSetID(),
-            currentSet.getVolumes().get(0).getStorageType());
+    LOG.info("Disk Volume set {} - Type : {} plan completed.",
+        currentSet.getSetID(),
+        currentSet.getVolumes().get(0).getStorageType());
 
     plan.setNodeName(node.getDataNodeName());
     plan.setNodeUUID(node.getDataNodeUUID());
     plan.setTimeStamp(Time.now());
     plan.setPort(node.getDataNodePort());
-    LOG.info(message);
   }
 
   /**
@@ -207,7 +203,7 @@ public class GreedyPlanner implements Planner {
       // Create a new step
       nextStep = new MoveStep(highVolume, currentSet.getIdealUsed(), lowVolume,
           bytesToMove, currentSet.getSetID());
-      LOG.debug(nextStep.toString());
+      LOG.debug("Next Step: {}", nextStep);
     }
     return nextStep;
   }

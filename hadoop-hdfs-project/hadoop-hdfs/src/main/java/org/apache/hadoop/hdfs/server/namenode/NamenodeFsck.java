@@ -30,10 +30,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeSet;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.io.IOUtils;
@@ -1021,10 +1022,10 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
    * around.
    */
   private void copyBlock(final DFSClient dfs, LocatedBlock lblock,
-                         OutputStream fos) throws Exception {
+      OutputStream fos) throws Exception {
     int failures = 0;
     InetSocketAddress targetAddr = null;
-    TreeSet<DatanodeInfo> deadNodes = new TreeSet<DatanodeInfo>();
+    Set<DatanodeInfo> deadNodes = new HashSet<DatanodeInfo>();
     BlockReader blockReader = null;
     ExtendedBlock block = lblock.getBlock();
 
@@ -1091,28 +1092,33 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         deadNodes.add(chosenNode);
       }
     }
-    byte[] buf = new byte[1024];
-    int cnt = 0;
-    boolean success = true;
-    long bytesRead = 0;
+
+    long bytesRead = 0L;
     try {
-      while ((cnt = blockReader.read(buf, 0, buf.length)) > 0) {
-        fos.write(buf, 0, cnt);
-        bytesRead += cnt;
-      }
-      if ( bytesRead != block.getNumBytes() ) {
-        throw new IOException("Recorded block size is " + block.getNumBytes() +
-                              ", but datanode returned " +bytesRead+" bytes");
-      }
+      bytesRead = copyBock(blockReader, fos);
     } catch (Exception e) {
-      LOG.error("Error reading block", e);
-      success = false;
+      throw new Exception("Could not copy block data for " + lblock.getBlock(),
+          e);
     } finally {
       blockReader.close();
     }
-    if (!success) {
-      throw new Exception("Could not copy block data for " + lblock.getBlock());
+
+    if (bytesRead != block.getNumBytes()) {
+      throw new IOException("Recorded block size is " + block.getNumBytes()
+          + ", but datanode returned " + bytesRead + " bytes");
     }
+  }
+
+  private long copyBock(BlockReader blockReader, OutputStream os)
+      throws IOException {
+    final byte[] buf = new byte[8192];
+    int cnt = 0;
+    long bytesRead = 0L;
+    while ((cnt = blockReader.read(buf, 0, buf.length)) > 0) {
+      os.write(buf, 0, cnt);
+      bytesRead += cnt;
+    }
+    return bytesRead;
   }
 
   @Override
@@ -1127,9 +1133,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
    * That's the local one, if available.
    */
   private DatanodeInfo bestNode(DFSClient dfs, DatanodeInfo[] nodes,
-                                TreeSet<DatanodeInfo> deadNodes) throws IOException {
-    if ((nodes == null) ||
-        (nodes.length - deadNodes.size() < 1)) {
+      Set<DatanodeInfo> deadNodes) throws IOException {
+    if ((nodes == null) || (nodes.length - deadNodes.size() < 1)) {
       throw new IOException("No live nodes contain current block");
     }
     DatanodeInfo chosenNode;

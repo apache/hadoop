@@ -379,8 +379,8 @@ public class DominantResourceCalculator extends ResourceCalculator {
     for (int i = 0; i < maxLength; i++) {
       ResourceInformation aResourceInformation = a.getResourceInformation(i);
       ResourceInformation bResourceInformation = b.getResourceInformation(i);
-      float tmp = (float) aResourceInformation.getValue()
-          / (float) bResourceInformation.getValue();
+      final float tmp = divideSafelyAsFloat(aResourceInformation.getValue(),
+          bResourceInformation.getValue());
       ratio = ratio > tmp ? ratio : tmp;
     }
     return ratio;

@@ -21,10 +21,10 @@ package org.apache.hadoop.ozone.container.keyvalue.impl;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.client.BlockID;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
+import org.apache.hadoop.ozone.container.common.transport.server.ratis.DispatcherContext;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume.VolumeIOStats;
@@ -54,6 +54,11 @@ import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Res
  */
 public class ChunkManagerImpl implements ChunkManager {
   static final Logger LOG = LoggerFactory.getLogger(ChunkManagerImpl.class);
+  private final boolean doSyncWrite;
+
+  public ChunkManagerImpl(boolean sync) {
+    doSyncWrite = sync;
+  }
 
   /**
    * writes a given chunk.
@@ -62,13 +67,14 @@ public class ChunkManagerImpl implements ChunkManager {
    * @param blockID - ID of the block
    * @param info - ChunkInfo
    * @param data - data of the chunk
-   * @param stage - Stage of the Chunk operation
+   * @param dispatcherContext - dispatcherContextInfo
    * @throws StorageContainerException
    */
   public void writeChunk(Container container, BlockID blockID, ChunkInfo info,
-      ByteBuffer data, ContainerProtos.Stage stage)
+      ByteBuffer data, DispatcherContext dispatcherContext)
       throws StorageContainerException {
-
+    Preconditions.checkNotNull(dispatcherContext);
+    DispatcherContext.WriteChunkStage stage = dispatcherContext.getStage();
     try {
 
       KeyValueContainerData containerData = (KeyValueContainerData) container
@@ -80,7 +86,7 @@ public class ChunkManagerImpl implements ChunkManager {
 
       boolean isOverwrite = ChunkUtils.validateChunkForOverwrite(
           chunkFile, info);
-      File tmpChunkFile = getTmpChunkFile(chunkFile, info);
+      File tmpChunkFile = getTmpChunkFile(chunkFile, dispatcherContext);
 
       LOG.debug(
           "writing chunk:{} chunk stage:{} chunk file:{} tmp chunk file:{}",
@@ -115,7 +121,8 @@ public class ChunkManagerImpl implements ChunkManager {
               "tmpChunkFile already exists" + tmpChunkFile + "Overwriting it.");
         }
         // Initially writes to temporary chunk file.
-        ChunkUtils.writeData(tmpChunkFile, info, data, volumeIOStats);
+        ChunkUtils
+            .writeData(tmpChunkFile, info, data, volumeIOStats, doSyncWrite);
         // No need to increment container stats here, as still data is not
         // committed here.
         break;
@@ -131,6 +138,8 @@ public class ChunkManagerImpl implements ChunkManager {
           LOG.warn("ChunkFile already exists" + chunkFile);
           return;
         }
+        // While committing a chunk , just rename the tmp chunk file which has
+        // the same term and log index appended as the current transaction
         commitChunk(tmpChunkFile, chunkFile);
         // Increment container stats here, as we commit the data.
         containerData.incrBytesUsed(info.getLen());
@@ -139,7 +148,7 @@ public class ChunkManagerImpl implements ChunkManager {
         break;
       case COMBINED:
         // directly write to the chunk file
-        ChunkUtils.writeData(chunkFile, info, data, volumeIOStats);
+        ChunkUtils.writeData(chunkFile, info, data, volumeIOStats, doSyncWrite);
         if (!isOverwrite) {
           containerData.incrBytesUsed(info.getLen());
         }
@@ -173,13 +182,14 @@ public class ChunkManagerImpl implements ChunkManager {
    * @param container - Container for the chunk
    * @param blockID - ID of the block.
    * @param info - ChunkInfo.
+   * @param dispatcherContext dispatcher context info.
    * @return byte array
    * @throws StorageContainerException
    * TODO: Right now we do not support partial reads and writes of chunks.
    * TODO: Explore if we need to do that for ozone.
    */
-  public byte[] readChunk(Container container, BlockID blockID, ChunkInfo info)
-      throws StorageContainerException {
+  public byte[] readChunk(Container container, BlockID blockID, ChunkInfo info,
+      DispatcherContext dispatcherContext) throws StorageContainerException {
     try {
       KeyValueContainerData containerData = (KeyValueContainerData) container
           .getContainerData();
@@ -194,16 +204,18 @@ public class ChunkManagerImpl implements ChunkManager {
       if (containerData.getLayOutVersion() == ChunkLayOutVersion
           .getLatestVersion().getVersion()) {
         File chunkFile = ChunkUtils.getChunkFile(containerData, info);
+
+        // In case the chunk file does not exist but tmp chunk file exist,
+        // read from tmp chunk file if readFromTmpFile is set to true
+        if (!chunkFile.exists() && dispatcherContext.isReadFromTmpFile()) {
+          chunkFile = getTmpChunkFile(chunkFile, dispatcherContext);
+        }
         data = ChunkUtils.readData(chunkFile, info, volumeIOStats);
         containerData.incrReadCount();
         long length = chunkFile.length();
         containerData.incrReadBytes(length);
         return data.array();
       }
-    } catch(NoSuchAlgorithmException ex) {
-      LOG.error("read data failed. error: {}", ex);
-      throw new StorageContainerException("Internal error: ",
-          ex, NO_SUCH_ALGORITHM);
     } catch (ExecutionException ex) {
       LOG.error("read data failed. error: {}", ex);
       throw new StorageContainerException("Internal error: ",
@@ -270,17 +282,21 @@ public class ChunkManagerImpl implements ChunkManager {
 
   /**
    * Returns the temporary chunkFile path.
-   * @param chunkFile
-   * @param info
+   * @param chunkFile chunkFileName
+   * @param dispatcherContext dispatcher context info
    * @return temporary chunkFile path
    * @throws StorageContainerException
    */
-  private File getTmpChunkFile(File chunkFile, ChunkInfo info)
-      throws StorageContainerException {
+  private File getTmpChunkFile(File chunkFile,
+      DispatcherContext dispatcherContext)  {
     return new File(chunkFile.getParent(),
         chunkFile.getName() +
             OzoneConsts.CONTAINER_CHUNK_NAME_DELIMITER +
-            OzoneConsts.CONTAINER_TEMPORARY_CHUNK_PREFIX);
+            OzoneConsts.CONTAINER_TEMPORARY_CHUNK_PREFIX +
+            OzoneConsts.CONTAINER_CHUNK_NAME_DELIMITER +
+            dispatcherContext.getTerm() +
+            OzoneConsts.CONTAINER_CHUNK_NAME_DELIMITER +
+            dispatcherContext.getLogIndex());
   }
 
   /**

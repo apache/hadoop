@@ -36,6 +36,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .WriteChunkRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerAction;
+import org.apache.hadoop.ozone.common.Checksum;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
@@ -99,16 +100,16 @@ public class TestHddsDispatcher {
       HddsDispatcher hddsDispatcher = new HddsDispatcher(
           conf, containerSet, volumeSet, handlers, context, metrics);
       hddsDispatcher.setScmId(scmId.toString());
-      ContainerCommandResponseProto responseOne = hddsDispatcher.dispatch(
-          getWriteChunkRequest(dd.getUuidString(), 1L, 1L));
+      ContainerCommandResponseProto responseOne = hddsDispatcher
+          .dispatch(getWriteChunkRequest(dd.getUuidString(), 1L, 1L), null);
       Assert.assertEquals(ContainerProtos.Result.SUCCESS,
           responseOne.getResult());
       verify(context, times(0))
           .addContainerActionIfAbsent(Mockito.any(ContainerAction.class));
       containerData.setBytesUsed(Double.valueOf(
           StorageUnit.MB.toBytes(950)).longValue());
-      ContainerCommandResponseProto responseTwo = hddsDispatcher.dispatch(
-          getWriteChunkRequest(dd.getUuidString(), 1L, 2L));
+      ContainerCommandResponseProto responseTwo = hddsDispatcher
+          .dispatch(getWriteChunkRequest(dd.getUuidString(), 1L, 2L), null);
       Assert.assertEquals(ContainerProtos.Result.SUCCESS,
           responseTwo.getResult());
       verify(context, times(1))
@@ -150,16 +151,16 @@ public class TestHddsDispatcher {
           getWriteChunkRequest(dd.getUuidString(), 1L, 1L);
       // send read chunk request and make sure container does not exist
       ContainerCommandResponseProto response =
-          hddsDispatcher.dispatch(getReadChunkRequest(writeChunkRequest));
+          hddsDispatcher.dispatch(getReadChunkRequest(writeChunkRequest), null);
       Assert.assertEquals(response.getResult(),
           ContainerProtos.Result.CONTAINER_NOT_FOUND);
       // send write chunk request without sending create container
-      response = hddsDispatcher.dispatch(writeChunkRequest);
+      response = hddsDispatcher.dispatch(writeChunkRequest, null);
       // container should be created as part of write chunk request
       Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
       // send read chunk request to read the chunk written above
       response =
-          hddsDispatcher.dispatch(getReadChunkRequest(writeChunkRequest));
+          hddsDispatcher.dispatch(getReadChunkRequest(writeChunkRequest), null);
       Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
       Assert.assertEquals(response.getReadChunk().getData(),
           writeChunkRequest.getWriteChunk().getData());
@@ -199,6 +200,7 @@ public class TestHddsDispatcher {
                 + containerId + "_chunk_" + localId)
         .setOffset(0)
         .setLen(data.size())
+        .setChecksumData(Checksum.getNoChecksumDataProto())
         .build();
 
     WriteChunkRequestProto.Builder writeChunkRequest = WriteChunkRequestProto

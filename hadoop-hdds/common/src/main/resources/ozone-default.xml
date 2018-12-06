@@ -53,6 +53,14 @@
     </description>
   </property>
   <property>
+    <name>dfs.container.chunk.write.sync</name>
+    <value>true</value>
+    <tag>OZONE, CONTAINER, MANAGEMENT</tag>
+    <description>Determines whether the chunk writes in the container happen as
+      sync I/0 or buffered I/O operation.
+    </description>
+  </property>
+  <property>
     <name>dfs.container.ratis.statemachinedata.sync.timeout</name>
     <value>10s</value>
     <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
@@ -190,6 +198,14 @@
     </description>
   </property>
   <property>
+    <name>dfs.container.ratis.statemachine.cache.expiry.interval</name>
+    <value>10s</value>
+    <tag>OZONE, RATIS, PERFORMANCE</tag>
+    <description>The interval till which the stateMachine data in ratis
+      will be cached inside the ContainerStateMachine.
+    </description>
+  </property>
+  <property>
     <name>dfs.ratis.client.request.timeout.duration</name>
     <value>3s</value>
     <tag>OZONE, RATIS, MANAGEMENT</tag>
@@ -270,6 +286,17 @@
       datanode periodically send pipeline report to SCM. Unit could be
       defined with postfix (ns,ms,s,m,h,d)</description>
   </property>
+
+
+  <property>
+    <name>hdds.prometheus.endpoint.enabled</name>
+    <value>false</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>Enable prometheus compatible metric page on the HTTP
+      servers.
+    </description>
+  </property>
+
   <!--Ozone Settings-->
   <property>
     <name>ozone.administrators</name>
@@ -1221,6 +1248,15 @@
   </property>
 
   <property>
+    <name>hdds.scm.chillmode.pipeline-availability.check</name>
+    <value>false</value>
+    <tag>HDDS,SCM,OPERATION</tag>
+    <description>
+      Boolean value to enable pipeline availability check during SCM chill mode.
+    </description>
+  </property>
+
+  <property>
     <name>hdds.container.action.max.limit</name>
     <value>20</value>
     <tag>DATANODE</tag>
@@ -1361,5 +1397,23 @@
     </description>
   </property>
 
+  <property>
+    <name>ozone.client.checksum.type</name>
+    <value>SHA256</value>
+    <tag>OZONE, CLIENT, MANAGEMENT</tag>
+    <description>The checksum type [NONE/ CRC32/ CRC32C/ SHA256/ MD5] determines
+      which algorithm would be used to compute checksum for chunk data.
+      Default checksum type is SHA256.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.client.bytes.per.checksum</name>
+    <value>1MB</value>
+    <tag>OZONE, CLIENT, MANAGEMENT</tag>
+    <description>Checksum will be computed for every bytes per checksum number
+      of bytes and stored sequentially.
+    </description>
+  </property>
 
 </configuration>

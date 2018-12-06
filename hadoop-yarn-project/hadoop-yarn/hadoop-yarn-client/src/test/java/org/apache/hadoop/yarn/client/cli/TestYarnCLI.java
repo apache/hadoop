@@ -993,10 +993,7 @@ public class TestYarnCLI {
 
   @Test (timeout = 5000)
   public void testNodesHelpCommand() throws Exception {
-    NodeCLI nodeCLI = new NodeCLI();
-    nodeCLI.setClient(client);
-    nodeCLI.setSysOutPrintStream(sysOut);
-    nodeCLI.setSysErrPrintStream(sysErr);
+    NodeCLI nodeCLI = createAndGetNodeCLI();
     nodeCLI.run(new String[] {});
     Assert.assertEquals(createNodeCLIHelpMessage(),
         sysOutStream.toString());
@@ -1290,9 +1287,7 @@ public class TestYarnCLI {
     nodeReports.addAll(getNodeReports(1, NodeState.REBOOTED));
     nodeReports.addAll(getNodeReports(1, NodeState.LOST));
 
-    NodeCLI cli = new NodeCLI();
-    cli.setClient(client);
-    cli.setSysOutPrintStream(sysOut);
+    NodeCLI cli = createAndGetNodeCLI();
 
     Set<NodeState> nodeStates = new HashSet<NodeState>();
     nodeStates.add(NodeState.NEW);
@@ -1545,12 +1540,9 @@ public class TestYarnCLI {
   @Test
   public void testNodeStatus() throws Exception {
     NodeId nodeId = NodeId.newInstance("host0", 0);
-    NodeCLI cli = new NodeCLI();
     when(client.getNodeReports())
         .thenReturn(getNodeReports(3, NodeState.RUNNING, false, false, false));
-    cli.setClient(client);
-    cli.setSysOutPrintStream(sysOut);
-    cli.setSysErrPrintStream(sysErr);
+    NodeCLI cli = createAndGetNodeCLI();
     int result = cli.run(new String[] { "-status", nodeId.toString() });
     assertEquals(0, result);
     verify(client).getNodeReports();
@@ -1583,12 +1575,9 @@ public class TestYarnCLI {
   @Test
   public void testNodeStatusWithEmptyNodeLabels() throws Exception {
     NodeId nodeId = NodeId.newInstance("host0", 0);
-    NodeCLI cli = new NodeCLI();
     when(client.getNodeReports()).thenReturn(
                     getNodeReports(3, NodeState.RUNNING));
-    cli.setClient(client);
-    cli.setSysOutPrintStream(sysOut);
-    cli.setSysErrPrintStream(sysErr);
+    NodeCLI cli = createAndGetNodeCLI();
     int result = cli.run(new String[] { "-status", nodeId.toString() });
     assertEquals(0, result);
     verify(client).getNodeReports();
@@ -1620,12 +1609,9 @@ public class TestYarnCLI {
   @Test
   public void testNodeStatusWithEmptyResourceUtilization() throws Exception {
     NodeId nodeId = NodeId.newInstance("host0", 0);
-    NodeCLI cli = new NodeCLI();
     when(client.getNodeReports())
         .thenReturn(getNodeReports(3, NodeState.RUNNING, false, true, true));
-    cli.setClient(client);
-    cli.setSysOutPrintStream(sysOut);
-    cli.setSysErrPrintStream(sysErr);
+    NodeCLI cli = createAndGetNodeCLI();
     int result = cli.run(new String[] { "-status", nodeId.toString() });
     assertEquals(0, result);
     verify(client).getNodeReports();
@@ -1657,12 +1643,10 @@ public class TestYarnCLI {
   @Test
   public void testAbsentNodeStatus() throws Exception {
     NodeId nodeId = NodeId.newInstance("Absenthost0", 0);
-    NodeCLI cli = new NodeCLI();
+
     when(client.getNodeReports()).thenReturn(
                 getNodeReports(0, NodeState.RUNNING));
-    cli.setClient(client);
-    cli.setSysOutPrintStream(sysOut);
-    cli.setSysErrPrintStream(sysErr);
+    NodeCLI cli = createAndGetNodeCLI();
     int result = cli.run(new String[] { "-status", nodeId.toString() });
     assertEquals(0, result);
     verify(client).getNodeReports();
@@ -1702,10 +1686,7 @@ public class TestYarnCLI {
         createContainerCLIHelpMessage()), normalize(sysOutStream.toString()));
 
     sysOutStream.reset();
-    NodeCLI nodeCLI = new NodeCLI();
-    nodeCLI.setClient(client);
-    nodeCLI.setSysOutPrintStream(sysOut);
-    nodeCLI.setSysErrPrintStream(sysErr);
+    NodeCLI nodeCLI = createAndGetNodeCLI();
     result = nodeCLI.run(new String[] { "-status" });
     Assert.assertEquals(result, -1);
     Assert.assertEquals(String.format("Missing argument for options%n%1s",
@@ -1774,10 +1755,7 @@ public class TestYarnCLI {
       yarnClient.init(yarnConf);
       yarnClient.start();
 
-      QueueCLI cli = new QueueCLI();
-      cli.setClient(yarnClient);
-      cli.setSysOutPrintStream(sysOut);
-      cli.setSysErrPrintStream(sysErr);
+      QueueCLI cli = createAndGetQueueCLI(yarnClient);
       sysOutStream.reset();
       // Get status for the root.a queue
       int result = cli.run(new String[] { "-status", "a" });
@@ -1788,10 +1766,7 @@ public class TestYarnCLI {
       // In-queue preemption is disabled at the "root.a" queue level
       Assert.assertTrue(queueStatusOut
           .contains("Intra-queue Preemption : disabled"));
-      cli = new QueueCLI();
-      cli.setClient(yarnClient);
-      cli.setSysOutPrintStream(sysOut);
-      cli.setSysErrPrintStream(sysErr);
+      cli = createAndGetQueueCLI(yarnClient);
       sysOutStream.reset();
       // Get status for the root.a.a1 queue
       result = cli.run(new String[] { "-status", "a1" });
@@ -1836,10 +1811,7 @@ public class TestYarnCLI {
       yarnClient.init(yarnConf);
       yarnClient.start();
 
-      QueueCLI cli = new QueueCLI();
-      cli.setClient(yarnClient);
-      cli.setSysOutPrintStream(sysOut);
-      cli.setSysErrPrintStream(sysErr);
+      QueueCLI cli = createAndGetQueueCLI(yarnClient);
       sysOutStream.reset();
       int result = cli.run(new String[] { "-status", "a1" });
       assertEquals(0, result);
@@ -1880,10 +1852,7 @@ public class TestYarnCLI {
       yarnClient.init(yarnConf);
       yarnClient.start();
 
-      QueueCLI cli = new QueueCLI();
-      cli.setClient(yarnClient);
-      cli.setSysOutPrintStream(sysOut);
-      cli.setSysErrPrintStream(sysErr);
+      QueueCLI cli = createAndGetQueueCLI(yarnClient);
       sysOutStream.reset();
       int result = cli.run(new String[] { "-status", "a1" });
       assertEquals(0, result);
@@ -2101,14 +2070,36 @@ public class TestYarnCLI {
   }
 
   private ApplicationCLI createAndGetAppCLI() {
-    ApplicationCLI cli = new ApplicationCLI();
+    ApplicationCLI cli = new ApplicationCLI() {
+      @Override protected void createAndStartYarnClient() {
+      }
+    };
     cli.setClient(client);
     cli.setSysOutPrintStream(sysOut);
+    cli.setSysErrPrintStream(sysErr);
     return cli;
   }
-  
+
   private QueueCLI createAndGetQueueCLI() {
-    QueueCLI cli = new QueueCLI();
+    return createAndGetQueueCLI(client);
+  }
+
+  private QueueCLI createAndGetQueueCLI(YarnClient client) {
+    QueueCLI cli = new QueueCLI() {
+      @Override protected void createAndStartYarnClient() {
+      }
+    };
+    cli.setClient(client);
+    cli.setSysOutPrintStream(sysOut);
+    cli.setSysErrPrintStream(sysErr);
+    return cli;
+  }
+
+  private NodeCLI createAndGetNodeCLI() {
+    NodeCLI cli = new NodeCLI() {
+      @Override protected void createAndStartYarnClient() {
+      }
+    };
     cli.setClient(client);
     cli.setSysOutPrintStream(sysOut);
     cli.setSysErrPrintStream(sysErr);
@@ -2152,6 +2143,9 @@ public class TestYarnCLI {
     pw.println("                                          deprecated, this new command");
     pw.println("                                          'changeQueue' performs same");
     pw.println("                                          functionality.");
+    pw.println(" -clusterId <Cluster ID>                  ClusterId. By default, it will");
+    pw.println("                                          take default cluster id from the");
+    pw.println("                                          RM");
     pw.println(" -component <Component Name> <Count>      Works with -flex option to");
     pw.println("                                          change the number of");
     pw.println("                                          components/containers running");
@@ -2298,6 +2292,8 @@ public class TestYarnCLI {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter pw = new PrintWriter(baos);
     pw.println("usage: applicationattempt");
+    pw.println(" -clusterId <Cluster ID>            ClusterId. By default, it will take");
+    pw.println("                                    default cluster id from the RM");
     pw.println(" -fail <Application Attempt ID>     Fails application attempt.");
     pw.println(" -help                              Displays help for all commands.");
     pw.println(" -list <Application ID>             List application attempts for");
@@ -2314,6 +2310,7 @@ public class TestYarnCLI {
     PrintWriter pw = new PrintWriter(baos);
     pw.println("usage: container");
     pw.println(" -appTypes <Types>                Works with -list to specify the app type when application name is provided.");
+    pw.println(" -clusterId <Cluster ID>          ClusterId. By default, it will take default cluster id from the RM ");
     pw.println(" -components <arg>                Works with -list to filter instances based on input comma-separated list of component names.");
     pw.println(" -help                            Displays help for all commands.");
     pw.println(" -list <Application Name or Attempt ID>   List containers for application attempt  when application attempt ID is provided. When application name is provided, then it finds the instances of the application based on app's own implementation, and -appTypes option must be specified unless it is the default yarn-service type. With app name, it supports optional use of -version to filter instances based on app version, -components to filter instances based on component names, -states to filter instances based on instance state.");

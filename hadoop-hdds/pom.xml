@@ -53,6 +53,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <protobuf-maven-plugin.version>0.5.1</protobuf-maven-plugin.version>
     <os-maven-plugin.version>1.5.0.Final</os-maven-plugin.version>
 
+    <maven-surefire-plugin.version>3.0.0-M1</maven-surefire-plugin.version>
 
   </properties>
   <repositories>

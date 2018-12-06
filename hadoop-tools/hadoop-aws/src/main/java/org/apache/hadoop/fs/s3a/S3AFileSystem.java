@@ -1826,16 +1826,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    */
   private boolean rejectRootDirectoryDelete(S3AFileStatus status,
       boolean recursive) throws IOException {
-    LOG.info("s3a delete the {} root directory of {}", bucket, recursive);
+    LOG.info("s3a delete the {} root directory. Path: {}. Recursive: {}",
+        bucket, status.getPath(), recursive);
     boolean emptyRoot = status.isEmptyDirectory() == Tristate.TRUE;
     if (emptyRoot) {
       return true;
     }
     if (recursive) {
+      LOG.error("Cannot delete root path: {}", status.getPath());
       return false;
     } else {
       // reject
-      throw new PathIOException(bucket, "Cannot delete root path");
+      String msg = "Cannot delete root path: " + status.getPath();
+      LOG.error(msg);
+      throw new PathIOException(bucket, msg);
     }
   }
 
@@ -2357,7 +2361,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   @Override
   public void copyFromLocalFile(boolean delSrc, boolean overwrite, Path src,
       Path dst) throws IOException {
-    innerCopyFromLocalFile(delSrc, overwrite, src, dst);
+    entryPoint(INVOCATION_COPY_FROM_LOCAL_FILE);
+    LOG.debug("Copying local file from {} to {}", src, dst);
+//    innerCopyFromLocalFile(delSrc, overwrite, src, dst);
+    super.copyFromLocalFile(delSrc, overwrite, src, dst);
   }
 
   /**
@@ -2367,6 +2374,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * This version doesn't need to create a temporary file to calculate the md5.
    * Sadly this doesn't seem to be used by the shell cp :(
    *
+   * <i>HADOOP-15932:</i> this method has been unwired from
+   * {@link #copyFromLocalFile(boolean, boolean, Path, Path)} until
+   * it is extended to list and copy whole directories.
    * delSrc indicates if the source should be removed
    * @param delSrc whether to delete the src
    * @param overwrite whether to overwrite an existing file

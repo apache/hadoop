@@ -24,7 +24,9 @@ import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.ozone.client.io.LengthInputStream;
+import org.apache.hadoop.ozone.common.Checksum;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
@@ -84,6 +86,7 @@ public final class DistributedStorageHandler implements StorageHandler {
   private final long streamBufferMaxSize;
   private final long watchTimeout;
   private final long blockSize;
+  private final Checksum checksum;
 
   /**
    * Creates a new DistributedStorageHandler.
@@ -128,6 +131,28 @@ public final class DistributedStorageHandler implements StorageHandler {
         conf.getTimeDuration(OzoneConfigKeys.OZONE_CLIENT_WATCH_REQUEST_TIMEOUT,
             OzoneConfigKeys.OZONE_CLIENT_WATCH_REQUEST_TIMEOUT_DEFAULT,
             TimeUnit.MILLISECONDS);
+
+    int configuredChecksumSize = (int) conf.getStorageSize(
+        OzoneConfigKeys.OZONE_CLIENT_BYTES_PER_CHECKSUM,
+        OzoneConfigKeys.OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT,
+        StorageUnit.BYTES);
+    int checksumSize;
+    if(configuredChecksumSize <
+        OzoneConfigKeys.OZONE_CLIENT_BYTES_PER_CHECKSUM_MIN_SIZE) {
+      LOG.warn("The checksum size ({}) is not allowed to be less than the " +
+              "minimum size ({}), resetting to the minimum size.",
+          configuredChecksumSize,
+          OzoneConfigKeys.OZONE_CLIENT_BYTES_PER_CHECKSUM_MIN_SIZE);
+      checksumSize = OzoneConfigKeys.OZONE_CLIENT_BYTES_PER_CHECKSUM_MIN_SIZE;
+    } else {
+      checksumSize = configuredChecksumSize;
+    }
+    String checksumTypeStr = conf.get(
+        OzoneConfigKeys.OZONE_CLIENT_CHECKSUM_TYPE,
+        OzoneConfigKeys.OZONE_CLIENT_CHECKSUM_TYPE_DEFAULT);
+    ContainerProtos.ChecksumType checksumType = ContainerProtos.ChecksumType
+        .valueOf(checksumTypeStr);
+    this.checksum = new Checksum(checksumType, checksumSize);
   }
 
   @Override
@@ -426,6 +451,7 @@ public final class DistributedStorageHandler implements StorageHandler {
             .setStreamBufferMaxSize(streamBufferMaxSize)
             .setBlockSize(blockSize)
             .setWatchTimeout(watchTimeout)
+            .setChecksum(checksum)
             .build();
     groupOutputStream.addPreallocateBlocks(
         openKey.getKeyInfo().getLatestVersionLocations(),

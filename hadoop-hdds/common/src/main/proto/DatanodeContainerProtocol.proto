@@ -355,21 +355,28 @@ message ChunkInfo {
   required string chunkName = 1;
   required uint64 offset = 2;
   required uint64 len = 3;
-  optional string checksum = 4;
-  repeated KeyValue metadata = 5;
+  repeated KeyValue metadata = 4;
+  required ChecksumData checksumData =5;
 }
 
-enum Stage {
-    WRITE_DATA = 1;
-    COMMIT_DATA = 2;
-    COMBINED = 3;
+message ChecksumData {
+  required ChecksumType type = 1;
+  required uint32 bytesPerChecksum = 2;
+  repeated bytes checksums = 3;
+}
+
+enum ChecksumType {
+    NONE = 1;
+    CRC32 = 2;
+    CRC32C = 3;
+    SHA256 = 4;
+    MD5 = 5;
 }
 
 message  WriteChunkRequestProto  {
   required DatanodeBlockID blockID = 1;
   required ChunkInfo chunkData = 2;
   optional bytes data = 3;
-  optional Stage stage = 4 [default = COMBINED];
 }
 
 message  WriteChunkResponseProto {
