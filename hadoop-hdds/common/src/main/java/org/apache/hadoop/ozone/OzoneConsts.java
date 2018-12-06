@@ -47,11 +47,20 @@ public final class OzoneConsts {
   public static final String OZONE_ACL_USER_TYPE = "user";
   public static final String OZONE_ACL_GROUP_TYPE = "group";
   public static final String OZONE_ACL_WORLD_TYPE = "world";
+  public static final String OZONE_ACL_IP_TYPE = "ip";
 
   public static final String OZONE_ACL_READ = "r";
   public static final String OZONE_ACL_WRITE = "w";
   public static final String OZONE_ACL_READ_WRITE = "rw";
   public static final String OZONE_ACL_WRITE_READ = "wr";
+  public static final String OZONE_ACL_DELETE = "d";
+  public static final String OZONE_ACL_LIST = "l";
+  public static final String OZONE_ACL_ALL = "a";
+  public static final String OZONE_ACL_NONE = "n";
+  public static final String OZONE_ACL_CREATE = "c";
+  public static final String OZONE_ACL_READ_ACL = "x";
+  public static final String OZONE_ACL_WRITE_ACL = "y";
+
 
   public static final String OZONE_DATE_FORMAT =
       "EEE, dd MMM yyyy HH:mm:ss zzz";
@@ -195,6 +204,10 @@ public final class OzoneConsts {
   public static final String CHECKSUM = "checksum";
   public static final String ORIGIN_PIPELINE_ID = "originPipelineId";
   public static final String ORIGIN_NODE_ID = "originNodeId";
+
+  // Supported store types.
+  public static final String OZONE = "ozone";
+  public static final String S3 = "s3";
 
   // For OM Audit usage
   public static final String VOLUME = "volume";
