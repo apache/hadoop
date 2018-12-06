@@ -1412,7 +1412,103 @@
     <value>1MB</value>
     <tag>OZONE, CLIENT, MANAGEMENT</tag>
     <description>Checksum will be computed for every bytes per checksum number
-      of bytes and stored sequentially.
+      of bytes and stored sequentially. The minimum value for this config is
+      256KB.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.enable</name>
+    <value>false</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>Property to enable or disable Ratis server on OM.
+    Please note - this is a temporary property to disable OM Ratis server.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.port</name>
+    <value>9872</value>
+    <tag>OZONE, OM, RATIS</tag>
+    <description>
+      The port number of the OzoneManager's Ratis server.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.random.port</name>
+    <value>false</value>
+    <tag>OZONE, OM, RATIS, DEBUG</tag>
+    <description>Allocates a random free port for OM's Ratis server. This is
+      used only while running unit tests.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.rpc.type</name>
+    <value>GRPC</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>Ratis supports different kinds of transports like netty, GRPC,
+      Hadoop RPC etc. This picks one of those for this cluster.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.storage.dir</name>
+    <value/>
+    <tag>OZONE, OM, STORAGE, MANAGEMENT, RATIS</tag>
+    <description>This directory is used for storing OM's Ratis metadata like
+      logs. If this is not set then default metadata dirs is used. A warning
+      will be logged if this not set. Ideally, this should be mapped to a
+      fast disk like an SSD.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.segment.size</name>
+    <value>16KB</value>
+    <tag>OZONE, OM, RATIS, PERFORMANCE</tag>
+    <description>The size of the raft segment used by Apache Ratis on OM.
+      (16 KB by default)
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.segment.preallocated.size</name>
+    <value>128MB</value>
+    <tag>OZONE, OM, RATIS, PERFORMANCE</tag>
+    <description>The size of the buffer which is preallocated for raft segment
+      used by Apache Ratis on OM.(128 MB by default)
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.server.request.timeout</name>
+    <value>3s</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>The timeout duration for OM's ratis server request .</description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.server.retry.cache.timeout</name>
+    <value>600000ms</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>Retry Cache entry timeout for OM's ratis server.</description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.minimum.timeout</name>
+    <value>1s</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>The minimum timeout duration for OM's Ratis server rpc.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.client.request.timeout</name>
+    <value>3s</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>The timeout duration for OM Ratis client request.
     </description>
   </property>
 
