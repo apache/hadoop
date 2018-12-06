@@ -219,7 +219,8 @@ public final class OmVolumeArgs implements Auditable{
         .setQuotaInBytes(quotaInBytes)
         .addAllMetadata(metadataList)
         .addAllVolumeAcls(aclList)
-        .setCreationTime(creationTime)
+        .setCreationTime(
+            creationTime == 0 ? System.currentTimeMillis() : creationTime)
         .build();
   }
 

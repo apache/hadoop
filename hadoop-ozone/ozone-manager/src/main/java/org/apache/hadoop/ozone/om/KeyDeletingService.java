@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
 import org.apache.hadoop.util.Time;
@@ -162,7 +161,7 @@ public class KeyDeletingService extends BackgroundService {
           if (result.isSuccess()) {
             // Purge key from OM DB.
             deletedTable.deleteWithBatch(writeBatch,
-                DFSUtil.string2Bytes(result.getObjectKey()));
+                result.getObjectKey());
             LOG.debug("Key {} deleted from OM DB", result.getObjectKey());
             deletedCount++;
           }

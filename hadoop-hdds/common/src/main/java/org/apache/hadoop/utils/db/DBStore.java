@@ -77,7 +77,8 @@ public interface DBStore extends AutoCloseable {
    * @param dest - Destination Table.
    * @throws IOException on Failure
    */
-  void move(byte[] key, Table source, Table dest) throws IOException;
+  <KEY, VALUE> void move(KEY key, Table<KEY, VALUE> source,
+                         Table<KEY, VALUE> dest) throws IOException;
 
   /**
    * Moves a key from the Source Table to the destination Table and updates the
@@ -89,7 +90,8 @@ public interface DBStore extends AutoCloseable {
    * @param dest - Destination Table.
    * @throws IOException on Failure
    */
-  void move(byte[] key, byte[] value, Table source, Table dest)
+  <KEY, VALUE> void move(KEY key, VALUE value, Table<KEY, VALUE> source,
+                         Table<KEY, VALUE> dest)
       throws IOException;
 
   /**
@@ -105,8 +107,9 @@ public interface DBStore extends AutoCloseable {
    * @param dest - Destination Table.
    * @throws IOException on Failure
    */
-  void move(byte[] sourceKey, byte[] destKey, byte[] value,
-            Table source, Table dest) throws IOException;
+  <KEY, VALUE> void move(KEY sourceKey, KEY destKey, VALUE value,
+                         Table<KEY, VALUE> source, Table<KEY, VALUE> dest)
+      throws IOException;
 
   /**
    * Returns an estimated count of keys in this DB.
