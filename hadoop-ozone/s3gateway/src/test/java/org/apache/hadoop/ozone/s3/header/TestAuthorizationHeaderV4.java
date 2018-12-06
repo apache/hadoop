@@ -31,51 +31,67 @@ import static org.junit.Assert.fail;
 public class TestAuthorizationHeaderV4 {
 
   @Test
-  public void testV4Header1() {
-    try {
-      String auth = "AWS4-HMAC-SHA256 " +
-          "Credential=ozone/20130524/us-east-1/s3/aws4_request, " +
-          "SignedHeaders=host;range;x-amz-date, " +
-          "Signature=fe5f80f77d5fa3beca038a248ff027";
-      AuthorizationHeaderV4 v4 = new AuthorizationHeaderV4(auth);
-      assertEquals("AWS4-HMAC-SHA256", v4.getAlgorithm());
-      assertEquals("ozone", v4.getAccessKeyID());
-      assertEquals("20130524", v4.getDate());
-      assertEquals("us-east-1", v4.getAwsRegion());
-      assertEquals("aws4_request", v4.getAwsRequest());
-      assertEquals("host;range;x-amz-date", v4.getSignedHeaders());
-      assertEquals("fe5f80f77d5fa3beca038a248ff027", v4.getSignature());
-    } catch (OS3Exception ex) {
-      fail("testV4Header");
-    }
-
+  public void testV4HeaderWellFormed() throws Exception {
+    String auth = "AWS4-HMAC-SHA256 " +
+        "Credential=ozone/20130524/us-east-1/s3/aws4_request, " +
+        "SignedHeaders=host;range;x-amz-date, " +
+        "Signature=fe5f80f77d5fa3beca038a248ff027";
+    AuthorizationHeaderV4 v4 = new AuthorizationHeaderV4(auth);
+    assertEquals("AWS4-HMAC-SHA256", v4.getAlgorithm());
+    assertEquals("ozone", v4.getAccessKeyID());
+    assertEquals("20130524", v4.getDate());
+    assertEquals("us-east-1", v4.getAwsRegion());
+    assertEquals("aws4_request", v4.getAwsRequest());
+    assertEquals("host;range;x-amz-date", v4.getSignedHeaders());
+    assertEquals("fe5f80f77d5fa3beca038a248ff027", v4.getSignature());
   }
 
   @Test
-  public void testV4Header2() {
+  public void testV4HeaderMissingParts() {
     try {
       String auth = "AWS4-HMAC-SHA256 " +
           "Credential=ozone/20130524/us-east-1/s3/aws4_request, " +
           "SignedHeaders=host;range;x-amz-date,";
       AuthorizationHeaderV4 v4 = new AuthorizationHeaderV4(auth);
-      fail("testV4Header2");
+      fail("Exception is expected in case of malformed header");
     } catch (OS3Exception ex) {
       assertEquals("AuthorizationHeaderMalformed", ex.getCode());
     }
   }
 
-
   @Test
-  public void testV4Header3() {
+  public void testV4HeaderInvalidCredential() {
     try {
       String auth = "AWS4-HMAC-SHA256 " +
           "Credential=20130524/us-east-1/s3/aws4_request, " +
           "SignedHeaders=host;range;x-amz-date, " +
           "Signature=fe5f80f77d5fa3beca038a248ff027";
       AuthorizationHeaderV4 v4 = new AuthorizationHeaderV4(auth);
+      fail("Exception is expected in case of malformed header");
     } catch (OS3Exception ex) {
       assertEquals("AuthorizationHeaderMalformed", ex.getCode());
     }
+  }
+
+  @Test
+  public void testV4HeaderWithoutSpace() throws OS3Exception {
+
+    String auth =
+        "AWS4-HMAC-SHA256 Credential=ozone/20130524/us-east-1/s3/aws4_request,"
+            + "SignedHeaders=host;x-amz-content-sha256;x-amz-date,"
+            + "Signature"
+            + "=fe5f80f77d5fa3beca038a248ff027";
+    AuthorizationHeaderV4 v4 = new AuthorizationHeaderV4(auth);
+
+    assertEquals("AWS4-HMAC-SHA256", v4.getAlgorithm());
+    assertEquals("ozone", v4.getAccessKeyID());
+    assertEquals("20130524", v4.getDate());
+    assertEquals("us-east-1", v4.getAwsRegion());
+    assertEquals("aws4_request", v4.getAwsRequest());
+    assertEquals("host;x-amz-content-sha256;x-amz-date",
+        v4.getSignedHeaders());
+    assertEquals("fe5f80f77d5fa3beca038a248ff027", v4.getSignature());
+
   }
 
 }
