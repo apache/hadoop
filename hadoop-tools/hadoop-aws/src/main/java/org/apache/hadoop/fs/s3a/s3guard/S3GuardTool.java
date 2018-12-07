@@ -1061,7 +1061,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
         + "\t" + PURPOSE + "\n\n"
         + "Common options:\n"
         + "  -" + GUARDED_FLAG + " - Require S3Guard\n"
-        + "  -" + UNGUARDED_FLAG + " - Require S3Guard to be disabled\n"
+        + "  -" + UNGUARDED_FLAG + " - Force S3Guard to be disabled\n"
         + "  -" + AUTH_FLAG + " - Require the S3Guard mode to be \"authoritative\"\n"
         + "  -" + NONAUTH_FLAG + " - Require the S3Guard mode to be \"non-authoritative\"\n"
         + "  -" + MAGIC_FLAG + " - Require the S3 filesystem to be support the \"magic\" committer\n"
@@ -1092,6 +1092,15 @@ public abstract class S3GuardTool extends Configured implements Tool {
         throw invalidArgs("No bucket specified");
       }
       String s3Path = paths.get(0);
+      CommandFormat commands = getCommandFormat();
+
+      // check if UNGUARDED_FLAG is passed and use NullMetadataStore in
+      // config to avoid side effects like creating the table if not exists
+      if (commands.getOpt(UNGUARDED_FLAG)) {
+        LOG.debug("Unguarded flag is passed to command :" + this.getName());
+        getConf().set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
+      }
+
       S3AFileSystem fs = (S3AFileSystem) FileSystem.newInstance(
           toUri(s3Path), getConf());
       setFilesystem(fs);
@@ -1128,7 +1137,6 @@ public abstract class S3GuardTool extends Configured implements Tool {
               "none");
       printOption(out, "\tInput seek policy", INPUT_FADVISE, INPUT_FADV_NORMAL);
 
-      CommandFormat commands = getCommandFormat();
       if (usingS3Guard) {
         if (commands.getOpt(UNGUARDED_FLAG)) {
           throw badState("S3Guard is enabled for %s", fsUri);
