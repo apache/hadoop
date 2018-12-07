@@ -295,4 +295,21 @@ class CSQueueUtils {
     childQueue.getMetrics().setAvailableResourcesToQueue(nodePartition,
         getMaxAvailableResourceToQueue(rc, nlm, childQueue, cluster));
    }
+
+  /**
+   * Updated configured capacity/max-capacity for queue.
+   * @param rc resource calculator
+   * @param partitionResource total cluster resources for this partition
+   * @param partition partition being updated
+   * @param queue queue
+   */
+   public static void updateConfiguredCapacityMetrics(ResourceCalculator rc,
+       Resource partitionResource, String partition, AbstractCSQueue queue) {
+     queue.getMetrics().setGuaranteedResources(partition, rc.multiplyAndNormalizeDown(
+         partitionResource, queue.getQueueCapacities().getAbsoluteCapacity(partition),
+         queue.getMinimumAllocation()));
+     queue.getMetrics().setMaxCapacityResources(partition, rc.multiplyAndNormalizeDown(
+         partitionResource, queue.getQueueCapacities().getAbsoluteMaximumCapacity(partition),
+         queue.getMinimumAllocation()));
+   }
 }
