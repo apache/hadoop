@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.service.utils;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ArrayListMultimap;
@@ -51,7 +52,6 @@ import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
 import org.apache.hadoop.yarn.service.monitor.probe.MonitorUtils;
 import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
 import org.apache.hadoop.yarn.service.provider.ProviderFactory;
-import org.codehaus.jackson.map.PropertyNamingStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,20 +73,20 @@ public class ServiceApiUtil {
       LoggerFactory.getLogger(ServiceApiUtil.class);
   public static JsonSerDeser<Service> jsonSerDeser =
       new JsonSerDeser<>(Service.class,
-          PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+          PropertyNamingStrategy.SNAKE_CASE);
 
   public static final JsonSerDeser<Container[]> CONTAINER_JSON_SERDE =
       new JsonSerDeser<>(Container[].class,
-          PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+          PropertyNamingStrategy.SNAKE_CASE);
 
   public static final JsonSerDeser<ComponentContainers[]>
       COMP_CONTAINERS_JSON_SERDE = new JsonSerDeser<>(
           ComponentContainers[].class,
-          PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+          PropertyNamingStrategy.SNAKE_CASE);
 
   public static final JsonSerDeser<Component[]> COMP_JSON_SERDE =
       new JsonSerDeser<>(Component[].class,
-          PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+          PropertyNamingStrategy.SNAKE_CASE);
 
   private static final PatternValidator namePattern
       = new PatternValidator("[a-z][a-z0-9-]*");

@@ -18,19 +18,19 @@
 
 package org.apache.hadoop.yarn.service.utils;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.map.DeserializationConfig;
-import org.codehaus.jackson.map.JsonMappingException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.PropertyNamingStrategy;
-import org.codehaus.jackson.map.SerializationConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +41,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Support for marshalling objects to and from JSON.
@@ -51,7 +52,6 @@ import java.io.OutputStream;
 public class JsonSerDeser<T> {
 
   private static final Logger log = LoggerFactory.getLogger(JsonSerDeser.class);
-  private static final String UTF_8 = "UTF-8";
 
   private final Class<T> classType;
   private final ObjectMapper mapper;
@@ -64,9 +64,8 @@ public class JsonSerDeser<T> {
   public JsonSerDeser(Class<T> classType) {
     this.classType = classType;
     this.mapper = new ObjectMapper();
-    mapper.configure(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    mapper.configure(SerializationConfig.Feature.WRITE_NULL_MAP_VALUES, false);
-    mapper.configure(SerializationConfig.Feature.WRITE_NULL_PROPERTIES, false);
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    mapper.configure(SerializationFeature.WRITE_NULL_MAP_VALUES, false);
   }
 
   public JsonSerDeser(Class<T> classType, PropertyNamingStrategy namingStrategy) {
@@ -164,7 +163,7 @@ public class JsonSerDeser<T> {
    * @throws IOException parse problems
    */
   public T fromBytes(byte[] b) throws IOException {
-    String json = new String(b, 0, b.length, UTF_8);
+    String json = new String(b, 0, b.length, StandardCharsets.UTF_8);
     return fromJson(json);
   }
   
@@ -226,7 +225,7 @@ public class JsonSerDeser<T> {
       OutputStream dataOutputStream) throws IOException {
     try {
       String json = toJson(instance);
-      byte[] b = json.getBytes(UTF_8);
+      byte[] b = json.getBytes(StandardCharsets.UTF_8);
       dataOutputStream.write(b);
       dataOutputStream.flush();
       dataOutputStream.close();
@@ -239,13 +238,10 @@ public class JsonSerDeser<T> {
    * Convert an object to a JSON string
    * @param instance instance to convert
    * @return a JSON string description
-   * @throws JsonParseException parse problems
-   * @throws JsonMappingException O/J mapping problems
+   * @throws JsonProcessingException parse problems
    */
-  public String toJson(T instance) throws IOException,
-                                               JsonGenerationException,
-                                               JsonMappingException {
-    mapper.configure(SerializationConfig.Feature.INDENT_OUTPUT, true);
+  public String toJson(T instance) throws JsonProcessingException {
+    mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
     return mapper.writeValueAsString(instance);
   }
 
