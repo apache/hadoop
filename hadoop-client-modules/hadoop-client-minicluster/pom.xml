@@ -719,6 +719,14 @@
                         <exclude>testdata/*</exclude>
                       </excludes>
                     </filter>
+                    <!-- Skip terminal html and javascript -->
+                    <filter>
+                      <artifact>org.apache.hadoop:hadoop-yarn-server-nodemanager:*</artifact>
+                      <excludes>
+                        <exclude>TERMINAL/**/*</exclude>
+                      </excludes>
+                    </filter>
+
                     <!-- Mockito tries to include its own unrelocated copy of hamcrest. :( -->
                     <filter>
                       <artifact>org.mockito:mockito-all</artifact>

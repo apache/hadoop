@@ -66,5 +66,5 @@ export default DS.Model.extend({
   masterNodeURL: function() {
     var addr = encodeURIComponent(this.get("nodeHttpAddress"));
     return `#/yarn-node/${this.get("nodeId")}/${addr}/info/`;
-  }.property("nodeId", "nodeHttpAddress"),
+  }.property("nodeId", "nodeHttpAddress")
 });

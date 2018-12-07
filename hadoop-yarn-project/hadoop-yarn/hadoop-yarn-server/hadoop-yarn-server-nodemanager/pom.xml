@@ -350,6 +350,7 @@
             <exclude>src/main/native/container-executor/impl/compat/fstatat.h</exclude>
             <exclude>src/main/native/container-executor/impl/compat/openat.h</exclude>
             <exclude>src/main/native/container-executor/impl/compat/unlinkat.h</exclude>
+            <exclude>src/main/resources/TERMINAL/xterm/**/*</exclude>
           </excludes>
         </configuration>
       </plugin>

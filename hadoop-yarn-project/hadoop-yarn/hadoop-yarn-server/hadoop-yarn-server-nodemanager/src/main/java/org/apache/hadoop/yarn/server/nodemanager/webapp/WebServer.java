@@ -67,6 +67,11 @@ public class WebServer extends AbstractService {
   protected void serviceStart() throws Exception {
     Configuration conf = getConfig();
     Map<String, String> params = new HashMap<String, String>();
+    Map<String, String> terminalParams = new HashMap<String, String>();
+    terminalParams.put("resourceBase", WebServer.class
+        .getClassLoader().getResource("TERMINAL").toExternalForm());
+    terminalParams.put("dirAllowed", "false");
+    terminalParams.put("pathInfoOnly", "true");
     String bindAddress = WebAppUtils.getWebAppBindURL(conf,
                           YarnConfiguration.NM_BIND_HOST,
                           WebAppUtils.getNMWebAppURLWithoutScheme(conf));
@@ -107,7 +112,9 @@ public class WebServer extends AbstractService {
             .$for("node", Context.class, this.nmContext, "ws")
             .at(bindAddress)
             .withServlet("ContainerShellWebSocket", "/container/*",
-              ContainerShellWebSocketServlet.class, params, false)
+                ContainerShellWebSocketServlet.class, params, false)
+            .withServlet("Terminal", "/terminal/*",
+                TerminalServlet.class, terminalParams, false)
             .with(conf)
             .withHttpSpnegoPrincipalKey(
               YarnConfiguration.NM_WEBAPP_SPNEGO_USER_NAME_KEY)
