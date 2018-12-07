@@ -24,6 +24,7 @@ import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableGaugeFloat;
+import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -46,6 +47,14 @@ public class CSQueueMetrics extends QueueMetrics {
   MutableGaugeFloat usedCapacity;
   @Metric("Percent of Absolute Capacity Used")
   MutableGaugeFloat absoluteUsedCapacity;
+  @Metric("Guaranteed memory in MB")
+  MutableGaugeLong guaranteedMB;
+  @Metric("Guaranteed CPU in virtual cores")
+  MutableGaugeInt guaranteedVCores;
+  @Metric("Maximum memory in MB")
+  MutableGaugeLong maxCapacityMB;
+  @Metric("Maximum CPU in virtual cores")
+  MutableGaugeInt maxCapacityVCores;
 
   CSQueueMetrics(MetricsSystem ms, String queueName, Queue parent,
       boolean enableUserMetrics, Configuration conf) {
@@ -123,6 +132,36 @@ public class CSQueueMetrics extends QueueMetrics {
       Float absoluteUsedCap) {
     if(partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
       this.absoluteUsedCapacity.set(absoluteUsedCap);
+    }
+  }
+
+  public long getGuaranteedMB() {
+    return guaranteedMB.value();
+  }
+
+  public int getGuaranteedVCores() {
+    return guaranteedVCores.value();
+  }
+
+  public void setGuaranteedResources(String partition, Resource res) {
+    if (partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
+      guaranteedMB.set(res.getMemorySize());
+      guaranteedVCores.set(res.getVirtualCores());
+    }
+  }
+
+  public long getMaxCapacityMB() {
+    return maxCapacityMB.value();
+  }
+
+  public int getMaxCapacityVCores() {
+    return maxCapacityVCores.value();
+  }
+
+  public void setMaxCapacityResources(String partition, Resource res) {
+    if (partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
+      maxCapacityMB.set(res.getMemorySize());
+      maxCapacityVCores.set(res.getVirtualCores());
     }
   }
 
