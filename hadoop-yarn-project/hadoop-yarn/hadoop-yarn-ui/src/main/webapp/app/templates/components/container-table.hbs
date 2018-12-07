@@ -60,5 +60,11 @@
       <td><a href="{{prepend-protocol container.logUrl}}" target="_blank">Link</a></td>
     </tr>
     {{/if}}
+    {{#if container.nodeHttpAddress}}
+    <tr>
+      <td>Terminal</td>
+      <td><a href="{{container.nodeHttpAddress}}/terminal/terminal.template?container={{container.id}}&user.name={{requestedUser}}" target="_blank">Link</a></td>
+    </tr>
+    {{/if}}
   </tbody>
 </table>

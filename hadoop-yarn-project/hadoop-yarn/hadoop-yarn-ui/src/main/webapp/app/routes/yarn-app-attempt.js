@@ -37,6 +37,11 @@ export default AbstractRoute.extend(AppAttemptMixin, {
     });
   },
 
+  afterModel(model) {
+    const appContrl = this.controllerFor('application');
+    model.userInfo = appContrl.get('userInfo');
+  },
+
   unloadAll() {
     this.store.unloadAll('yarn-app-attempt');
     this.store.unloadAll('yarn-timeline-appattempt');
