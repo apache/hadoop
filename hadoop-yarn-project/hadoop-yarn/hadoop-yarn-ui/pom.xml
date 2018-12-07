@@ -118,7 +118,48 @@
                         <exclude>bower_components/**/*</exclude>
                         <exclude>tmp/**/*</exclude>
                         <exclude>dist/**/*</exclude>
+                        <exclude>terminal/**/*</exclude>
                       </excludes>
+                    </resource>
+                  </resources>
+                </configuration>
+              </execution>
+              <execution>
+                <id>copy-terminal</id>
+                <!-- here the phase you need -->
+                <phase>compile</phase>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <configuration>
+                  <outputDirectory>${webappDir}/dist</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>${basedir}/src/main/webapp</directory>
+                      <filtering>true</filtering>
+                      <includes>
+                        <include>terminal/**/*</include>
+                      </includes>
+                    </resource>
+                  </resources>
+                </configuration>
+              </execution>
+              <execution>
+                <id>copy-xterm</id>
+                <!-- here the phase you need -->
+                <phase>compile</phase>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <configuration>
+                  <outputDirectory>${webappDir}/dist/terminal/xterm</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>${basedir}/target/webapp/node_modules/xterm</directory>
+                      <filtering>true</filtering>
+                      <includes>
+                        <include>dist/**/*</include>
+                      </includes>
                     </resource>
                   </resources>
                 </configuration>
