@@ -146,6 +146,14 @@ public class InMemoryLevelDBAliasMapServer implements InMemoryAliasMapProtocol,
     return conf;
   }
 
+  /**
+   * Get the {@link InMemoryAliasMap} used by this server.
+   * @return the inmemoryaliasmap used.
+   */
+  public InMemoryAliasMap getAliasMap() {
+    return aliasMap;
+  }
+
   @Override
   public void close() {
     LOG.info("Stopping InMemoryLevelDBAliasMapServer");

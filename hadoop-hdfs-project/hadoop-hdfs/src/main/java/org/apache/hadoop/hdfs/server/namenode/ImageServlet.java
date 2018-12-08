@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap;
 import org.apache.hadoop.hdfs.server.common.Util;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
@@ -140,6 +141,16 @@ public class ImageServlet extends HttpServlet {
               long elapsed = monotonicNow() - start;
               metrics.addGetEdit(elapsed);
             }
+          } else if (parsedParams.isGetAliasMap()) {
+            InMemoryAliasMap aliasMap =
+                NameNodeHttpServer.getAliasMapFromContext(context);
+            long start = monotonicNow();
+            InMemoryAliasMap.transferForBootstrap(response, conf, aliasMap);
+            // Metrics non-null only when used inside name node
+            if (metrics != null) {
+              long elapsed = monotonicNow() - start;
+              metrics.addGetAliasMap(elapsed);
+            }
           }
           return null;
         }
@@ -230,7 +241,7 @@ public class ImageServlet extends HttpServlet {
     return throttler;
   }
 
-  private static DataTransferThrottler getThrottlerForBootstrapStandby(
+  public static DataTransferThrottler getThrottlerForBootstrapStandby(
       Configuration conf) {
     long transferBandwidth =
         conf.getLongBytes(
@@ -337,6 +348,11 @@ public class ImageServlet extends HttpServlet {
           remoteStorageInfo.toColonSeparatedString();
   }
 
+  static String getParamStringForAliasMap(
+        boolean isBootstrapStandby) {
+    return "getaliasmap=1&" + IS_BOOTSTRAP_STANDBY + "=" + isBootstrapStandby;
+  }
+
   static class GetImageParams {
     private boolean isGetImage;
     private boolean isGetEdit;
@@ -345,6 +361,7 @@ public class ImageServlet extends HttpServlet {
     private String storageInfoString;
     private boolean fetchLatest;
     private boolean isBootstrapStandby;
+    private boolean isGetAliasMap;
 
     /**
      * @param request the object from which this servlet reads the url contents
@@ -385,10 +402,16 @@ public class ImageServlet extends HttpServlet {
           endTxId = ServletUtil.parseLongParam(request, END_TXID_PARAM);
         } else if (key.equals(STORAGEINFO_PARAM)) {
           storageInfoString = val[0];
+        } else if (key.equals("getaliasmap")) {
+          isGetAliasMap = true;
+          String bootstrapStandby = ServletUtil.getParameter(request,
+              IS_BOOTSTRAP_STANDBY);
+          isBootstrapStandby = bootstrapStandby != null &&
+              Boolean.parseBoolean(bootstrapStandby);
         }
       }
 
-      int numGets = (isGetImage?1:0) + (isGetEdit?1:0);
+      int numGets = (isGetImage?1:0) + (isGetEdit?1:0) + (isGetAliasMap?1:0);
       if ((numGets > 1) || (numGets == 0)) {
         throw new IOException("Illegal parameters to TransferFsImage");
       }
@@ -429,7 +452,10 @@ public class ImageServlet extends HttpServlet {
     boolean shouldFetchLatest() {
       return fetchLatest;
     }
-    
+
+    boolean isGetAliasMap() {
+      return isGetAliasMap;
+    }
   }
 
   /**
