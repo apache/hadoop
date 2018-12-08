@@ -189,7 +189,6 @@ public final class ContainerProtocolCalls  {
             .setContainerID(containerBlockData.getBlockID().getContainerID())
             .setTraceID(traceID).setDatanodeUuid(id)
             .setPutBlock(createBlockRequest).build();
-    xceiverClient.sendCommand(request);
     return xceiverClient.sendCommandAsync(request);
   }
 

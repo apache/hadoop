@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.hdds.scm;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.HddsUtils;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.protocol.RaftRetryFailureException;
 import org.apache.ratis.retry.RetryPolicy;
@@ -42,15 +44,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Objects;
-import java.util.Collection;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * An abstract implementation of {@link XceiverClientSpi} using Ratis.
@@ -79,6 +80,12 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   private final int maxOutstandingRequests;
   private final RetryPolicy retryPolicy;
 
+  // Map to track commit index at every server
+  private final ConcurrentHashMap<String, Long> commitInfoMap;
+
+  // create a separate RaftClient for watchForCommit API
+  private RaftClient watchClient;
+
   /**
    * Constructs a client.
    */
@@ -89,6 +96,30 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     this.rpcType = rpcType;
     this.maxOutstandingRequests = maxOutStandingChunks;
     this.retryPolicy = retryPolicy;
+    commitInfoMap = new ConcurrentHashMap<>();
+    watchClient = null;
+  }
+
+  private void updateCommitInfosMap(
+      Collection<RaftProtos.CommitInfoProto> commitInfoProtos) {
+    // if the commitInfo map is empty, just update the commit indexes for each
+    // of the servers
+    if (commitInfoMap.isEmpty()) {
+      commitInfoProtos.forEach(proto -> commitInfoMap
+          .put(proto.getServer().getAddress(), proto.getCommitIndex()));
+      // In case the commit is happening 2 way, just update the commitIndex
+      // for the servers which have been successfully updating the commit
+      // indexes. This is important because getReplicatedMinCommitIndex()
+      // should always return the min commit index out of the nodes which have
+      // been replicating data successfully.
+    } else {
+      commitInfoProtos.forEach(proto -> commitInfoMap
+          .computeIfPresent(proto.getServer().getAddress(),
+              (address, index) -> {
+                index = proto.getCommitIndex();
+                return index;
+              }));
+    }
   }
 
   /**
@@ -125,6 +156,9 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     if (c != null) {
       closeRaftClient(c);
     }
+    if (watchClient != null) {
+      closeRaftClient(watchClient);
+    }
   }
 
   private void closeRaftClient(RaftClient raftClient) {
@@ -148,39 +182,73 @@ public final class XceiverClientRatis extends XceiverClientSpi {
         getClient().sendAsync(() -> byteString);
   }
 
+  // gets the minimum log index replicated to all servers
   @Override
-  public void watchForCommit(long index, long timeout)
+  public long getReplicatedMinCommitIndex() {
+    OptionalLong minIndex =
+        commitInfoMap.values().parallelStream().mapToLong(v -> v).min();
+    return minIndex.isPresent() ? minIndex.getAsLong() : 0;
+  }
+
+  private void getFailedServer(
+      Collection<RaftProtos.CommitInfoProto> commitInfos) {
+    for (RaftProtos.CommitInfoProto proto : commitInfos) {
+
+    }
+  }
+
+  @Override
+  public long watchForCommit(long index, long timeout)
       throws InterruptedException, ExecutionException, TimeoutException,
       IOException {
+    long commitIndex = getReplicatedMinCommitIndex();
+    if (commitIndex >= index) {
+      // return the min commit index till which the log has been replicated to
+      // all servers
+      return commitIndex;
+    }
     LOG.debug("commit index : {} watch timeout : {}", index, timeout);
     // create a new RaftClient instance for watch request
-    RaftClient raftClient =
-        RatisHelper.newRaftClient(rpcType, getPipeline(), retryPolicy);
-    CompletableFuture<RaftClientReply> replyFuture = raftClient
+    if (watchClient == null) {
+      watchClient =
+          RatisHelper.newRaftClient(rpcType, getPipeline(), retryPolicy);
+    }
+    CompletableFuture<RaftClientReply> replyFuture = watchClient
         .sendWatchAsync(index, RaftProtos.ReplicationLevel.ALL_COMMITTED);
+    RaftClientReply reply;
     try {
-      replyFuture.get(timeout, TimeUnit.MILLISECONDS);
+      reply = replyFuture.get(timeout, TimeUnit.MILLISECONDS);
     } catch (TimeoutException toe) {
       LOG.warn("3 way commit failed ", toe);
 
-      closeRaftClient(raftClient);
+      closeRaftClient(watchClient);
       // generate a new raft client instance again so that next watch request
       // does not get blocked for the previous one
 
       // TODO : need to remove the code to create the new RaftClient instance
       // here once the watch request bypassing sliding window in Raft Client
       // gets fixed.
-      raftClient =
+      watchClient =
           RatisHelper.newRaftClient(rpcType, getPipeline(), retryPolicy);
-      raftClient
+      reply = watchClient
           .sendWatchAsync(index, RaftProtos.ReplicationLevel.MAJORITY_COMMITTED)
           .get(timeout, TimeUnit.MILLISECONDS);
-      LOG.info("Could not commit " + index + " to all the nodes."
-          + "Committed by majority.");
-    } finally {
-      closeRaftClient(raftClient);
+      Optional<RaftProtos.CommitInfoProto>
+          proto = reply.getCommitInfos().stream().min(Comparator.comparing(
+          RaftProtos.CommitInfoProto :: getCommitIndex));
+      Preconditions.checkState(proto.isPresent());
+      String address = proto.get().getServer().getAddress();
+      // since 3 way commit has failed, the updated map from now on  will
+      // only store entries for those datanodes which have had successful
+      // replication.
+      commitInfoMap.remove(address);
+      LOG.info(
+          "Could not commit " + index + " to all the nodes. Server " + address
+              + " has failed" + "Committed by majority.");
     }
+    return index;
   }
+
   /**
    * Sends a given command to server gets a waitable future back.
    *
@@ -193,8 +261,6 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     XceiverClientAsyncReply asyncReply = new XceiverClientAsyncReply(null);
     CompletableFuture<RaftClientReply> raftClientReply =
         sendRequestAsync(request);
-    Collection<XceiverClientAsyncReply.CommitInfo> commitInfos =
-        new ArrayList<>();
     CompletableFuture<ContainerCommandResponseProto> containerCommandResponse =
         raftClientReply.whenComplete((reply, e) -> LOG.debug(
             "received reply {} for request: cmdType={} containerID={}"
@@ -212,14 +278,10 @@ public final class XceiverClientRatis extends XceiverClientSpi {
                 ContainerCommandResponseProto response =
                     ContainerCommandResponseProto
                         .parseFrom(reply.getMessage().getContent());
-                reply.getCommitInfos().forEach(e -> {
-                  XceiverClientAsyncReply.CommitInfo commitInfo =
-                      new XceiverClientAsyncReply.CommitInfo(
-                          e.getServer().getAddress(), e.getCommitIndex());
-                  commitInfos.add(commitInfo);
-                  asyncReply.setCommitInfos(commitInfos);
+                if (response.getResult() == ContainerProtos.Result.SUCCESS) {
+                  updateCommitInfosMap(reply.getCommitInfos());
                   asyncReply.setLogIndex(reply.getLogIndex());
-                });
+                }
                 return response;
               } catch (InvalidProtocolBufferException e) {
                 throw new CompletionException(e);

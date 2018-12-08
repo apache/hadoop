@@ -125,7 +125,24 @@ public abstract class XceiverClientSpi implements Closeable {
    */
   public abstract HddsProtos.ReplicationType getPipelineType();
 
-  public abstract void watchForCommit(long index, long timeout)
+  /**
+   * Check if an specfic commitIndex is replicated to majority/all servers.
+   * @param index index to watch for
+   * @param timeout timeout provided for the watch ipeartion to complete
+   * @return the min commit index replicated to all or majority servers
+   *         in case of a failure
+   * @throws InterruptedException
+   * @throws ExecutionException
+   * @throws TimeoutException
+   * @throws IOException
+   */
+  public abstract long watchForCommit(long index, long timeout)
       throws InterruptedException, ExecutionException, TimeoutException,
       IOException;
+
+  /**
+   * returns the min commit index replicated to all servers.
+   * @return min commit index replicated to all servers.
+   */
+  public abstract long getReplicatedMinCommitIndex();
 }
