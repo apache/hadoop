@@ -25,6 +25,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -32,6 +33,7 @@ import java.util.Map.Entry;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -192,7 +194,24 @@ public class TransferFsImage {
       }
     }
   }
- 
+
+  /**
+   * Download the InMemoryAliasMap from the remote NN.
+   * @param fsName http address of remote NN.
+   * @param aliasMap location of the alias map.
+   * @param isBootstrapStandby flag to indicate if for bootstrap of standby.
+   * @throws IOException
+   */
+  public static void downloadAliasMap(URL fsName, File aliasMap,
+        boolean isBootstrapStandby) throws IOException {
+    String paramString = ImageServlet.getParamStringForAliasMap(
+        isBootstrapStandby);
+    getFileClient(fsName, paramString, Arrays.asList(aliasMap), null, false);
+    LOG.info("Downloaded file " + aliasMap.getName() + " size " +
+        aliasMap.length() + " bytes.");
+    InMemoryAliasMap.completeBootstrapTransfer(aliasMap);
+  }
+
   /**
    * Requests that the NameNode download an image from this node.
    *
