@@ -28,20 +28,26 @@ public abstract class OzoneObj implements IOzoneObj {
   private final ResourceType resType;
 
   private final StoreType storeType;
-  // Full path of resource.
-  private final String path;
 
-  OzoneObj(ResourceType resType, StoreType storeType, String path) {
-    Preconditions.checkNotNull(path);
+  OzoneObj(ResourceType resType, StoreType storeType) {
+
     Preconditions.checkNotNull(resType);
     Preconditions.checkNotNull(storeType);
     this.resType = resType;
     this.storeType = storeType;
-    this.path = path;
   }
 
   public ResourceType getResourceType() {
     return resType;
+  }
+
+  @Override
+  public String toString() {
+    return "OzoneObj{" +
+        "resType=" + resType +
+        ", storeType=" + storeType +
+        ", path='" + getPath() + '\'' +
+        '}';
   }
 
   public StoreType getStoreType() {
@@ -54,14 +60,12 @@ public abstract class OzoneObj implements IOzoneObj {
 
   public abstract String getKeyName();
 
-  public String getPath() {
-    return path;
-  }
+  public abstract String getPath();
 
   /**
    * Ozone Objects supported for ACL.
    */
-  enum ResourceType {
+  public enum ResourceType {
     VOLUME(OzoneConsts.VOLUME),
     BUCKET(OzoneConsts.BUCKET),
     KEY(OzoneConsts.KEY);
@@ -84,7 +88,7 @@ public abstract class OzoneObj implements IOzoneObj {
   /**
    * Ozone Objects supported for ACL.
    */
-  enum StoreType {
+  public enum StoreType {
     OZONE(OzoneConsts.OZONE),
     S3(OzoneConsts.S3);
 

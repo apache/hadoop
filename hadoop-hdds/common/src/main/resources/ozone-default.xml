@@ -1138,7 +1138,8 @@
 
   <property>
     <name>ozone.tags.system</name>
-    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY</value>
+    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,
+      CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY,ACL</value>
   </property>
 
 
@@ -1510,6 +1511,20 @@
     <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
     <description>The timeout duration for OM Ratis client request.
     </description>
+  </property>
+
+  <property>
+    <name>ozone.acl.authorizer.class</name>
+    <value>org.apache.hadoop.ozone.security.acl.OzoneAccessAuthorizer</value>
+    <tag>OZONE, SECURITY, ACL</tag>
+    <description>Acl authorizer for Ozone.
+    </description>
+  </property>
+  <property>
+    <name>ozone.acl.enabled</name>
+    <value>false</value>
+    <tag>OZONE, SECURITY, ACL</tag>
+    <description>Key to enable/disable ozone acls.</description>
   </property>
 
 </configuration>

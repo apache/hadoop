@@ -33,7 +33,7 @@ public class RequestContext {
   private final ACLIdentityType aclType;
   private final ACLType aclRights;
 
-  RequestContext(String host, InetAddress ip,
+  public RequestContext(String host, InetAddress ip,
       UserGroupInformation clientUgi, String serviceId,
       ACLIdentityType aclType, ACLType aclRights) {
     this.host = host;
@@ -89,6 +89,10 @@ public class RequestContext {
       return new RequestContext(host, ip, clientUgi, serviceId, aclType,
           aclRights);
     }
+  }
+
+  public static Builder newBuilder() {
+    return new Builder();
   }
 
   public String getHost() {
