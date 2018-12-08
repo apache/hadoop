@@ -66,10 +66,6 @@ public class TestFailureHandlingByClient {
   private static int maxRetries;
 
   /**
-   * TODO: we will spawn new MiniOzoneCluster every time for each unit test
-   * invocation. Need to use the same instance for all tests.
-   */
-  /**
    * Create a MiniDFSCluster for testing.
    * <p>
    * Ozone is made active by setting OZONE_ENABLED = true
@@ -86,6 +82,11 @@ public class TestFailureHandlingByClient {
         TimeUnit.SECONDS);
     conf.setTimeDuration(HDDS_SCM_WATCHER_TIMEOUT, 1000, TimeUnit.MILLISECONDS);
     conf.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL, 3, TimeUnit.SECONDS);
+    conf.setInt(OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_MAX_RETRIES_KEY, 5);
+    conf.setTimeDuration(
+        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_RETRY_INTERVAL_KEY,
+        1, TimeUnit.SECONDS);
+
     conf.setQuietMode(false);
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(6).build();
@@ -112,7 +113,7 @@ public class TestFailureHandlingByClient {
 
   @Test
   public void testBlockWritesWithDnFailures() throws Exception {
-    String keyName = "ratis3";
+    String keyName = UUID.randomUUID().toString();
     OzoneOutputStream key = createKey(keyName, ReplicationType.RATIS, 0);
     byte[] data =
         ContainerTestHelper
@@ -188,6 +189,51 @@ public class TestFailureHandlingByClient {
     Assert.assertEquals(2 * data.getBytes().length, keyInfo.getDataSize());
     validateData(keyName, data.concat(data).getBytes());
   }
+
+  @Test
+  public void testMultiBlockWritesWithIntermittentDnFailures()
+      throws Exception {
+    String keyName = UUID.randomUUID().toString();
+    OzoneOutputStream key =
+        createKey(keyName, ReplicationType.RATIS, 6 * blockSize);
+    String data = ContainerTestHelper
+        .getFixedLengthString(keyString, blockSize + chunkSize);
+    key.write(data.getBytes());
+
+    // get the name of a valid container
+    Assert.assertTrue(key.getOutputStream() instanceof ChunkGroupOutputStream);
+    ChunkGroupOutputStream groupOutputStream =
+        (ChunkGroupOutputStream) key.getOutputStream();
+    List<OmKeyLocationInfo> locationInfoList =
+        groupOutputStream.getLocationInfoList();
+    Assert.assertTrue(locationInfoList.size() == 6);
+    long containerId = locationInfoList.get(1).getContainerID();
+    ContainerInfo container =
+        cluster.getStorageContainerManager().getContainerManager()
+            .getContainer(ContainerID.valueof(containerId));
+    Pipeline pipeline =
+        cluster.getStorageContainerManager().getPipelineManager()
+            .getPipeline(container.getPipelineID());
+    List<DatanodeDetails> datanodes = pipeline.getNodes();
+    cluster.shutdownHddsDatanode(datanodes.get(0));
+
+    // The write will fail but exception will be handled and length will be
+    // updated correctly in OzoneManager once the steam is closed
+    key.write(data.getBytes());
+
+    // shutdown the second datanode
+    cluster.shutdownHddsDatanode(datanodes.get(1));
+    key.write(data.getBytes());
+    key.close();
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder().setVolumeName(volumeName)
+        .setBucketName(bucketName).setType(HddsProtos.ReplicationType.RATIS)
+        .setFactor(HddsProtos.ReplicationFactor.THREE).setKeyName(keyName)
+        .build();
+    OmKeyInfo keyInfo = cluster.getOzoneManager().lookupKey(keyArgs);
+    Assert.assertEquals(3 * data.getBytes().length, keyInfo.getDataSize());
+    validateData(keyName, data.concat(data).concat(data).getBytes());
+  }
+
 
   private OzoneOutputStream createKey(String keyName, ReplicationType type,
       long size) throws Exception {

@@ -109,6 +109,10 @@ public class TestCloseContainerHandlingByClient {
     objectStore.getVolume(volumeName).createBucket(bucketName);
   }
 
+  private String getKeyName() {
+    return UUID.randomUUID().toString();
+  }
+
   /**
    * Shutdown MiniDFSCluster.
    */
@@ -121,7 +125,7 @@ public class TestCloseContainerHandlingByClient {
 
   @Test
   public void testBlockWritesWithFlushAndClose() throws Exception {
-    String keyName = "standalone";
+    String keyName = getKeyName();
     OzoneOutputStream key = createKey(keyName, ReplicationType.RATIS, 0);
     // write data more than 1 chunk
     byte[] data = ContainerTestHelper
@@ -153,7 +157,7 @@ public class TestCloseContainerHandlingByClient {
 
   @Test
   public void testBlockWritesCloseConsistency() throws Exception {
-    String keyName = "standalone2";
+    String keyName = getKeyName();
     OzoneOutputStream key = createKey(keyName, ReplicationType.RATIS, 0);
     // write data more than 1 chunk
     byte[] data = ContainerTestHelper
@@ -181,7 +185,7 @@ public class TestCloseContainerHandlingByClient {
   @Test
   public void testMultiBlockWrites() throws Exception {
 
-    String keyName = "standalone3";
+    String keyName = getKeyName();
     OzoneOutputStream key =
         createKey(keyName, ReplicationType.RATIS, (4 * blockSize));
     ChunkGroupOutputStream groupOutputStream =
@@ -227,8 +231,7 @@ public class TestCloseContainerHandlingByClient {
 
   @Test
   public void testMultiBlockWrites2() throws Exception {
-    String keyName = "ratis2";
-    long dataLength;
+    String keyName = getKeyName();
     OzoneOutputStream key =
         createKey(keyName, ReplicationType.RATIS, 4 * blockSize);
     ChunkGroupOutputStream groupOutputStream =
@@ -272,7 +275,7 @@ public class TestCloseContainerHandlingByClient {
   @Test
   public void testMultiBlockWrites3() throws Exception {
 
-    String keyName = "standalone5";
+    String keyName = getKeyName();
     int keyLen = 4 * blockSize;
     OzoneOutputStream key = createKey(keyName, ReplicationType.RATIS, keyLen);
     ChunkGroupOutputStream groupOutputStream =
@@ -391,7 +394,7 @@ public class TestCloseContainerHandlingByClient {
   // on the datanode.
   @Test
   public void testDiscardPreallocatedBlocks() throws Exception {
-    String keyName = "discardpreallocatedblocks";
+    String keyName = getKeyName();
     OzoneOutputStream key =
         createKey(keyName, ReplicationType.RATIS, 2 * blockSize);
     ChunkGroupOutputStream groupOutputStream =
@@ -447,7 +450,7 @@ public class TestCloseContainerHandlingByClient {
 
   @Test
   public void testBlockWriteViaRatis() throws Exception {
-    String keyName = "ratis";
+    String keyName = getKeyName();
     OzoneOutputStream key = createKey(keyName, ReplicationType.RATIS, 0);
     byte[] data = ContainerTestHelper
         .getFixedLengthString(keyString, chunkSize + chunkSize / 2)

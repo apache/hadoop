@@ -21,8 +21,6 @@ package org.apache.hadoop.hdds.scm;
 
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
-
-import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -32,47 +30,11 @@ public class XceiverClientAsyncReply {
 
   private CompletableFuture<ContainerCommandResponseProto> response;
   private Long logIndex;
-  private Collection<CommitInfo> commitInfos;
 
   public XceiverClientAsyncReply(
       CompletableFuture<ContainerCommandResponseProto> response) {
-    this(response, 0, null);
-  }
-
-  public XceiverClientAsyncReply(
-      CompletableFuture<ContainerCommandResponseProto> response, long index,
-      Collection<CommitInfo> commitInfos) {
-    this.commitInfos = commitInfos;
-    this.logIndex = index;
+    this.logIndex = (long)0;
     this.response = response;
-  }
-
-  /**
-   * A class having details about latest commitIndex for each server in the
-   * Ratis pipeline. For Standalone pipeline, commitInfo will be null.
-   */
-  public static class CommitInfo {
-
-    private final String server;
-
-    private final Long commitIndex;
-
-    public CommitInfo(String server, long commitIndex) {
-      this.server = server;
-      this.commitIndex = commitIndex;
-    }
-
-    public String getServer() {
-      return server;
-    }
-
-    public long getCommitIndex() {
-      return commitIndex;
-    }
-  }
-
-  public Collection<CommitInfo> getCommitInfos() {
-    return commitInfos;
   }
 
   public CompletableFuture<ContainerCommandResponseProto> getResponse() {
@@ -81,10 +43,6 @@ public class XceiverClientAsyncReply {
 
   public long getLogIndex() {
     return logIndex;
-  }
-
-  public void setCommitInfos(Collection<CommitInfo> commitInfos) {
-    this.commitInfos = commitInfos;
   }
 
   public void setLogIndex(Long logIndex) {

@@ -21,7 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * DispatcherContext class holds transport protocol specfic context info
+ * DispatcherContext class holds transport protocol specific context info
  * required for execution of container commands over the container dispatcher.
  */
 @InterfaceAudience.Private
@@ -121,7 +121,7 @@ public class DispatcherContext {
     }
 
     /**
-     * Builds and returns DatanodeDetails instance.
+     * Builds and returns DispatcherContext instance.
      *
      * @return DispatcherContext
      */

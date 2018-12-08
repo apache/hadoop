@@ -365,8 +365,8 @@
     <name>ozone.client.stream.buffer.flush.size</name>
     <value>64MB</value>
     <tag>OZONE, CLIENT</tag>
-    <description>Size in mb which determines at what buffer position , a partial
-      flush will be initiated during write. It should be ideally a mutiple
+    <description>Size which determines at what buffer position , a partial
+      flush will be initiated during write. It should be ideally a multiple
       of chunkSize.
     </description>
   </property>
@@ -374,8 +374,8 @@
     <name>ozone.client.stream.buffer.max.size</name>
     <value>128MB</value>
     <tag>OZONE, CLIENT</tag>
-    <description>Size in mb which determines at what buffer position ,
-      write call be blocked till acknowledgement of the fisrt partial flush
+    <description>Size which determines at what buffer position,
+      write call be blocked till acknowledgement of the first partial flush
       happens by all servers.
     </description>
   </property>
