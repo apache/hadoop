@@ -42,6 +42,7 @@ import org.apache.hadoop.ozone.client.rest.response.BucketInfo;
 import org.apache.hadoop.ozone.client.rest.response.KeyInfoDetails;
 import org.apache.hadoop.ozone.client.rest.response.VolumeInfo;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.ozone.web.response.ListBuckets;
@@ -950,5 +951,16 @@ public class RestClient implements ClientProtocol {
     if (!Strings.isNullOrEmpty(value)) {
       builder.addParameter(param, value);
     }
+  }
+
+  @Override
+  public OmMultipartInfo initiateMultipartUpload(String volumeName,
+                                                 String bucketName,
+                                                 String keyName,
+                                                 ReplicationType type,
+                                                 ReplicationFactor factor)
+      throws IOException {
+    throw new UnsupportedOperationException("Ozone REST protocol does not " +
+        "support this operation.");
   }
 }

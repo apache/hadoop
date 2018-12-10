@@ -61,6 +61,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numAllocateBlockCalls;
   private @Metric MutableCounterLong numGetServiceLists;
   private @Metric MutableCounterLong numListS3Buckets;
+  private @Metric MutableCounterLong numInitiateMultipartUploads;
 
 
   // Failure Metrics
@@ -84,6 +85,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numBlockAllocateCallFails;
   private @Metric MutableCounterLong numGetServiceListFails;
   private @Metric MutableCounterLong numListS3BucketsFails;
+  private @Metric MutableCounterLong numInitiateMultipartUploadFails;
 
   // Metrics for total number of volumes, buckets and keys
 
@@ -223,6 +225,15 @@ public class OMMetrics {
   public void incNumListS3BucketsFails() {
     numBucketOps.incr();
     numListS3BucketsFails.incr();
+  }
+
+  public void incNumInitiateMultipartUploads() {
+    numKeyOps.incr();
+    numInitiateMultipartUploads.incr();
+  }
+
+  public void incNumInitiateMultipartUploadFails() {
+    numInitiateMultipartUploadFails.incr();
   }
 
   public void incNumGetServiceLists() {
@@ -533,6 +544,14 @@ public class OMMetrics {
   @VisibleForTesting
   public long getNumListS3BucketsFails() {
     return numListS3BucketsFails.value();
+  }
+
+  public long getNumInitiateMultipartUploads() {
+    return numInitiateMultipartUploads.value();
+  }
+
+  public long getNumInitiateMultipartUploadFails() {
+    return numInitiateMultipartUploadFails.value();
   }
 
   public void unRegister() {
