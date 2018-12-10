@@ -84,6 +84,9 @@ public class ResourceHandlerModule {
         if (cGroupsHandler == null) {
           cGroupsHandler = new CGroupsHandlerImpl(conf,
               PrivilegedOperationExecutor.getInstance(conf));
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Value of CGroupsHandler is: " + cGroupsHandler);
+          }
         }
       }
     }
@@ -306,16 +309,32 @@ public class ResourceHandlerModule {
       List<ResourceHandler> handlerList, Configuration conf,
       Context nmContext) throws ResourceHandlerException {
     ResourcePluginManager pluginManager = nmContext.getResourcePluginManager();
-    if (pluginManager != null) {
-       Map<String, ResourcePlugin> pluginMap = pluginManager.getNameToPlugins();
-       if (pluginMap != null) {
-        for (ResourcePlugin plugin : pluginMap.values()) {
-          addHandlerIfNotNull(handlerList, plugin
-              .createResourceHandler(nmContext,
-                  getInitializedCGroupsHandler(conf),
-                  PrivilegedOperationExecutor.getInstance(conf)));
-        }
+
+    if (pluginManager == null) {
+      LOG.warn("Plugin manager was null while trying to add " +
+          "ResourceHandlers from configuration!");
+      return;
+    }
+
+    Map<String, ResourcePlugin> pluginMap = pluginManager.getNameToPlugins();
+    if (pluginMap == null) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("List of plugins of ResourcePluginManager was empty " +
+            "while trying to add ResourceHandlers from configuration!");
       }
+      return;
+    } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("List of plugins of ResourcePluginManager: " +
+            pluginManager.getNameToPlugins());
+      }
+    }
+
+    for (ResourcePlugin plugin : pluginMap.values()) {
+      addHandlerIfNotNull(handlerList,
+          plugin.createResourceHandler(nmContext,
+              getInitializedCGroupsHandler(conf),
+              PrivilegedOperationExecutor.getInstance(conf)));
     }
   }
 

@@ -99,4 +99,9 @@ public class DevicePluginAdapter implements ResourcePlugin {
   public DeviceResourceHandlerImpl getDeviceResourceHandler() {
     return deviceResourceHandler;
   }
+
+  @Override
+  public String toString() {
+    return DevicePluginAdapter.class.getName();
+  }
 }

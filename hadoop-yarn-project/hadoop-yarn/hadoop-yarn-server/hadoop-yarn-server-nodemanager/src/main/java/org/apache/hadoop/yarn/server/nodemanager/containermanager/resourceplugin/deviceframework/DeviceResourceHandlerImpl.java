@@ -46,12 +46,12 @@ public class DeviceResourceHandlerImpl implements ResourceHandler {
 
   static final Log LOG = LogFactory.getLog(DeviceResourceHandlerImpl.class);
 
-  private String resourceName;
-  private DevicePlugin devicePlugin;
-  private DeviceMappingManager deviceMappingManager;
-  private CGroupsHandler cGroupsHandler;
-  private PrivilegedOperationExecutor privilegedOperationExecutor;
-  private DevicePluginAdapter devicePluginAdapter;
+  private final String resourceName;
+  private final DevicePlugin devicePlugin;
+  private final DeviceMappingManager deviceMappingManager;
+  private final CGroupsHandler cGroupsHandler;
+  private final PrivilegedOperationExecutor privilegedOperationExecutor;
+  private final DevicePluginAdapter devicePluginAdapter;
 
   public DeviceResourceHandlerImpl(String reseName,
       DevicePlugin devPlugin,
@@ -141,5 +141,14 @@ public class DeviceResourceHandlerImpl implements ResourceHandler {
   public List<PrivilegedOperation> teardown()
       throws ResourceHandlerException {
     return null;
+  }
+
+  @Override
+  public String toString() {
+    return DeviceResourceHandlerImpl.class.getName() + "{" +
+        "resourceName='" + resourceName + '\'' +
+        ", devicePlugin=" + devicePlugin +
+        ", devicePluginAdapter=" + devicePluginAdapter +
+        '}';
   }
 }
