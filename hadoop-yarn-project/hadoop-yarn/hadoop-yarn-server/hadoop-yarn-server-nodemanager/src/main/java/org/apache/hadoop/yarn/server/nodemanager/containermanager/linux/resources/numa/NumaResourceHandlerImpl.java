@@ -41,8 +41,8 @@ public class NumaResourceHandlerImpl implements ResourceHandler {
 
   private static final Log LOG = LogFactory
       .getLog(NumaResourceHandlerImpl.class);
-  private NumaResourceAllocator numaResourceAllocator;
-  private String numaCtlCmd;
+  private final NumaResourceAllocator numaResourceAllocator;
+  private final String numaCtlCmd;
 
   public NumaResourceHandlerImpl(Configuration conf, Context nmContext) {
     LOG.info("NUMA resources allocation is enabled, initializing NUMA resources"
@@ -110,5 +110,13 @@ public class NumaResourceHandlerImpl implements ResourceHandler {
   @Override
   public List<PrivilegedOperation> teardown() throws ResourceHandlerException {
     return null;
+  }
+
+  @Override
+  public String toString() {
+    return NumaResourceHandlerImpl.class.getName() + "{" +
+        "numaResourceAllocator=" + numaResourceAllocator +
+        ", numaCtlCmd='" + numaCtlCmd + '\'' +
+        '}';
   }
 }

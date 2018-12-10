@@ -304,4 +304,9 @@ public class GpuResourceAllocator {
     }
     return assigns;
   }
+
+  @Override
+  public String toString() {
+    return GpuResourceAllocator.class.getName();
+  }
 }
