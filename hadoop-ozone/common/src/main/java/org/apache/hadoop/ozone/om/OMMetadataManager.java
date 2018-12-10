@@ -23,6 +23,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.utils.db.DBStore;
@@ -251,6 +252,27 @@ public interface OMMetadataManager {
    */
 
   Table<byte[], byte[]> getS3Table();
+
+  /**
+   * Returns the DB key name of a multipart upload key in OM metadata store.
+   *
+   * @param volume - volume name
+   * @param bucket - bucket name
+   * @param key - key name
+   * @param uploadId - the upload id for this key
+   * @return bytes of DB key.
+   */
+  String getMultipartKey(String volume, String bucket, String key, String
+      uploadId);
+
+
+  /**
+   * Gets the multipart info table which holds the information about
+   * multipart upload information of the keys.
+   * @return Table
+   */
+  Table<String, OmMultipartKeyInfo> getMultipartInfoTable();
+
   /**
    * Returns number of rows in a table.  This should not be used for very
    * large tables.

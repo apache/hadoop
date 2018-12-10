@@ -32,6 +32,8 @@ import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.codec.OmBucketInfoCodec;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
+import org.apache.hadoop.ozone.om.codec.OmMultipartKeyInfoCodec;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.codec.OmKeyInfoCodec;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
@@ -97,6 +99,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   private static final String DELETED_TABLE = "deletedTable";
   private static final String OPEN_KEY_TABLE = "openKeyTable";
   private static final String S3_TABLE = "s3Table";
+  private static final String MULTIPARTINFO_TABLE = "multipartInfoTable";
 
   private DBStore store;
 
@@ -110,6 +113,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   private Table deletedTable;
   private Table openKeyTable;
   private Table s3Table;
+  private Table<String, OmMultipartKeyInfo> multipartInfoTable;
 
   public OmMetadataManagerImpl(OzoneConfiguration conf) throws IOException {
     this.lock = new OzoneManagerLock(conf);
@@ -154,6 +158,11 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     return s3Table;
   }
 
+  @Override
+  public Table<String, OmMultipartKeyInfo> getMultipartInfoTable() {
+    return multipartInfoTable;
+  }
+
 
   private void checkTableStatus(Table table, String name) throws IOException {
     String logMessage = "Unable to get a reference to %s table. Cannot " +
@@ -186,10 +195,12 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
           .addTable(DELETED_TABLE)
           .addTable(OPEN_KEY_TABLE)
           .addTable(S3_TABLE)
+          .addTable(MULTIPARTINFO_TABLE)
           .addCodec(OmKeyInfo.class, new OmKeyInfoCodec())
           .addCodec(OmBucketInfo.class, new OmBucketInfoCodec())
           .addCodec(OmVolumeArgs.class, new OmVolumeArgsCodec())
           .addCodec(VolumeList.class, new VolumeListCodec())
+          .addCodec(OmMultipartKeyInfo.class, new OmMultipartKeyInfoCodec())
           .build();
 
       userTable =
@@ -218,6 +229,10 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
 
       s3Table = this.store.getTable(S3_TABLE);
       checkTableStatus(s3Table, S3_TABLE);
+
+      multipartInfoTable = this.store.getTable(MULTIPARTINFO_TABLE,
+          String.class, OmMultipartKeyInfo.class);
+      checkTableStatus(multipartInfoTable, MULTIPARTINFO_TABLE);
 
     }
   }
@@ -299,6 +314,15 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     String openKey = OM_KEY_PREFIX + volume + OM_KEY_PREFIX + bucket +
         OM_KEY_PREFIX + key + OM_KEY_PREFIX + id;
     return openKey;
+  }
+
+  @Override
+  public String getMultipartKey(String volume, String bucket, String key,
+                                String
+                                    uploadId) {
+    String multipartKey =  OM_KEY_PREFIX + volume + OM_KEY_PREFIX + bucket +
+        OM_KEY_PREFIX + key + OM_KEY_PREFIX + uploadId;
+    return multipartKey;
   }
 
   /**

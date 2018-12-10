@@ -30,6 +30,7 @@ import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -321,6 +322,35 @@ public class OzoneBucket {
   public void renameKey(String fromKeyName, String toKeyName)
       throws IOException {
     proxy.renameKey(volumeName, name, fromKeyName, toKeyName);
+  }
+
+  /**
+   * Initiate multipart upload for a specified key.
+   * @param keyName
+   * @param type
+   * @param factor
+   * @return OmMultipartInfo
+   * @throws IOException
+   */
+  public OmMultipartInfo initiateMultipartUpload(String keyName,
+                                                 ReplicationType type,
+                                                 ReplicationFactor factor)
+      throws IOException {
+    return  proxy.initiateMultipartUpload(volumeName, name, keyName, type,
+        factor);
+  }
+
+  /**
+   * Initiate multipart upload for a specified key, with default replication
+   * type RATIS and with replication factor THREE.
+   * @param key Name of the key to be created.
+   * @return OmMultipartInfo.
+   * @throws IOException
+   */
+  public OmMultipartInfo initiateMultipartUpload(String key)
+      throws IOException {
+    return initiateMultipartUpload(key, defaultReplicationType,
+        defaultReplication);
   }
 
   /**

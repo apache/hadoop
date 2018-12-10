@@ -26,6 +26,7 @@ import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
@@ -85,6 +86,10 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .LocateKeyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .LocateKeyResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .MultipartInfoInitiateRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .MultipartInfoInitiateResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .RenameKeyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -190,6 +195,8 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
         return Status.S3_BUCKET_ALREADY_EXISTS;
       case S3_BUCKET_NOT_FOUND:
         return Status.S3_BUCKET_NOT_FOUND;
+      case INITIATE_MULTIPART_UPLOAD_FAILED:
+        return Status.INITIATE_MULTIPART_UPLOAD_ERROR;
       default:
         return Status.INTERNAL_ERROR;
       }
@@ -648,6 +655,32 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
       resp.setStatus(Status.OK);
     } catch (IOException e) {
       resp.setStatus(exceptionToResponseStatus(e));
+    }
+    return resp.build();
+  }
+
+  @Override
+  public MultipartInfoInitiateResponse initiateMultiPartUpload(
+      RpcController controller, MultipartInfoInitiateRequest request) {
+    MultipartInfoInitiateResponse.Builder resp = MultipartInfoInitiateResponse
+        .newBuilder();
+    try {
+      KeyArgs keyArgs = request.getKeyArgs();
+      OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
+          .setVolumeName(keyArgs.getVolumeName())
+          .setBucketName(keyArgs.getBucketName())
+          .setKeyName(keyArgs.getKeyName())
+          .setType(keyArgs.getType())
+          .setFactor(keyArgs.getFactor())
+          .build();
+      OmMultipartInfo multipartInfo = impl.initiateMultipartUpload(omKeyArgs);
+      resp.setVolumeName(multipartInfo.getVolumeName());
+      resp.setBucketName(multipartInfo.getBucketName());
+      resp.setKeyName(multipartInfo.getKeyName());
+      resp.setMultipartUploadID(multipartInfo.getUploadID());
+      resp.setStatus(Status.OK);
+    } catch (IOException ex) {
+      resp.setStatus(exceptionToResponseStatus(ex));
     }
     return resp.build();
   }

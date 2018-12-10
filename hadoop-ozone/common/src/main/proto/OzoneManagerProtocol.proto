@@ -60,6 +60,7 @@ enum Status {
     SCM_VERSION_MISMATCH_ERROR = 21;
     S3_BUCKET_NOT_FOUND = 22;
     S3_BUCKET_ALREADY_EXISTS = 23;
+    INITIATE_MULTIPART_UPLOAD_ERROR = 24;
 }
 
 
@@ -406,6 +407,31 @@ message S3ListBucketsResponse {
 }
 
 
+message MultipartInfoInitiateRequest {
+    required KeyArgs keyArgs = 1;
+}
+
+message MultipartInfoInitiateResponse {
+    required string volumeName = 1;
+    required string bucketName = 2;
+    required string keyName = 3;
+    required string multipartUploadID = 4;
+    required Status status = 5;
+}
+
+message MultipartKeyInfo {
+    required string uploadID = 4;
+    repeated PartKeyInfo partKeyInfoList = 5;
+}
+
+message PartKeyInfo {
+    required string partName = 1;
+    required uint32 partNumber = 2;
+    required KeyInfo partKeyInfo = 3;
+}
+
+
+
 /**
  The OM service that takes care of Ozone namespace.
 */
@@ -541,4 +567,7 @@ service OzoneManagerService {
 
     rpc listS3Buckets(S3ListBucketsRequest)
     returns(S3ListBucketsResponse);
+
+    rpc initiateMultiPartUpload(MultipartInfoInitiateRequest)
+    returns (MultipartInfoInitiateResponse);
 }

@@ -47,6 +47,8 @@ public interface DBStore extends AutoCloseable {
    * Gets an existing TableStore with implicit key/value conversion.
    *
    * @param name - Name of the TableStore to get
+   * @param keyType
+   * @param valueType
    * @return - TableStore.
    * @throws IOException on Failure
    */
