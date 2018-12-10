@@ -30,6 +30,7 @@ import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
@@ -70,6 +71,10 @@ import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.LocateKeyRequest;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.LocateKeyResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .MultipartInfoInitiateRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .MultipartInfoInitiateResponse;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.RenameKeyRequest;
 import org.apache.hadoop.ozone.protocol.proto
@@ -883,5 +888,35 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
   @Override
   public Object getUnderlyingProxyObject() {
     return null;
+  }
+
+  @Override
+  public OmMultipartInfo initiateMultipartUpload(OmKeyArgs omKeyArgs) throws
+      IOException {
+
+    MultipartInfoInitiateRequest.Builder multipartInfoInitiateRequest =
+        MultipartInfoInitiateRequest.newBuilder();
+
+    KeyArgs.Builder keyArgs = KeyArgs.newBuilder()
+        .setVolumeName(omKeyArgs.getVolumeName())
+        .setBucketName(omKeyArgs.getBucketName())
+        .setKeyName(omKeyArgs.getKeyName())
+        .setFactor(omKeyArgs.getFactor())
+        .setType(omKeyArgs.getType());
+    multipartInfoInitiateRequest.setKeyArgs(keyArgs.build());
+
+    MultipartInfoInitiateResponse resp;
+    try {
+      resp = rpcProxy.initiateMultiPartUpload(NULL_RPC_CONTROLLER,
+          multipartInfoInitiateRequest.build());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+    if (resp.getStatus() != Status.OK) {
+      throw new IOException("Initiate Multipart upload failed, error:" + resp
+          .getStatus());
+    }
+    return new OmMultipartInfo(resp.getVolumeName(), resp.getBucketName(), resp
+        .getKeyName(), resp.getMultipartUploadID());
   }
 }

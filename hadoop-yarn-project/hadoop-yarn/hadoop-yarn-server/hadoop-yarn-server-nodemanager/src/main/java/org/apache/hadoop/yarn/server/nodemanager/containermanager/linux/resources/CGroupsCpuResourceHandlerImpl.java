@@ -256,4 +256,9 @@ public class CGroupsCpuResourceHandlerImpl implements CpuResourceHandler {
       throws ResourceHandlerException {
     return null;
   }
+
+  @Override
+  public String toString() {
+    return CGroupsCpuResourceHandlerImpl.class.getName();
+  }
 }

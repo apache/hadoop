@@ -21,6 +21,7 @@ import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.utils.BackgroundService;
 
@@ -179,5 +180,14 @@ public interface KeyManager {
    * @return Background service.
    */
   BackgroundService getDeletingService();
+
+
+  /**
+   * Initiate multipart upload for the specified key.
+   * @param keyArgs
+   * @return MultipartInfo
+   * @throws IOException
+   */
+  OmMultipartInfo initiateMultipartUpload(OmKeyArgs keyArgs) throws IOException;
 
 }

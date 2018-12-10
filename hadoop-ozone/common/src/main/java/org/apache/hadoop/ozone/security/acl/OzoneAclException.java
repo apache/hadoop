@@ -16,12 +16,14 @@
  */
 package org.apache.hadoop.ozone.security.acl;
 
+import java.io.IOException;
+
 /**
  * Timeout exception thrown by Ozone. Ex: When checking ACLs for an Object if
  * security manager is not able to process the request in configured time than
  * {@link OzoneAclException} should be thrown.
  */
-public class OzoneAclException extends Exception {
+public class OzoneAclException extends IOException {
 
   private ErrorCode errorCode;
 
@@ -44,8 +46,22 @@ public class OzoneAclException extends Exception {
     this.errorCode = code;
   }
 
-  enum ErrorCode {
+  /**
+   * Constructs a new exception with {@code null} as its detail message. The
+   * cause is not initialized, and may subsequently be initialized by a call to
+   * {@link #initCause}.
+   */
+  public OzoneAclException(String errorMsg, ErrorCode code) {
+    super(errorMsg);
+    this.errorCode = code;
+  }
+
+  /**
+   * Error codes for OzoneAclException.
+   */
+  public enum ErrorCode {
     TIMEOUT,
+    PERMISSION_DENIED,
     OTHER
   }
 

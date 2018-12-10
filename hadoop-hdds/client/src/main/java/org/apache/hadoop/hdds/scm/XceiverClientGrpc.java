@@ -290,12 +290,16 @@ public class XceiverClientGrpc extends XceiverClientSpi {
   }
 
   @Override
-  public void watchForCommit(long index, long timeout)
+  public long watchForCommit(long index, long timeout)
       throws InterruptedException, ExecutionException, TimeoutException,
       IOException {
     // there is no notion of watch for commit index in standalone pipeline
+    return 0;
   };
 
+  public long getReplicatedMinCommitIndex() {
+    return 0;
+  }
   /**
    * Returns pipeline Type.
    *

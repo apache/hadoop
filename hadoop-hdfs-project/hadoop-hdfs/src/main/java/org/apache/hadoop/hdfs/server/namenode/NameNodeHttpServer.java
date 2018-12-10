@@ -36,6 +36,7 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
@@ -68,6 +69,7 @@ public class NameNodeHttpServer {
   public static final String FSIMAGE_ATTRIBUTE_KEY = "name.system.image";
   protected static final String NAMENODE_ATTRIBUTE_KEY = "name.node";
   public static final String STARTUP_PROGRESS_ATTRIBUTE_KEY = "startup.progress";
+  public static final String ALIASMAP_ATTRIBUTE_KEY = "name.system.aliasmap";
 
   NameNodeHttpServer(Configuration conf, NameNode nn,
       InetSocketAddress bindAddress) {
@@ -288,6 +290,15 @@ public class NameNodeHttpServer {
     httpServer.setAttribute(STARTUP_PROGRESS_ATTRIBUTE_KEY, prog);
   }
 
+  /**
+   * Sets the aliasmap URI.
+   *
+   * @param aliasMap the alias map used.
+   */
+  void setAliasMap(InMemoryAliasMap aliasMap) {
+    httpServer.setAttribute(ALIASMAP_ATTRIBUTE_KEY, aliasMap);
+  }
+
   private static void setupServlets(HttpServer2 httpServer, Configuration conf) {
     httpServer.addInternalServlet("startupProgress",
         StartupProgressServlet.PATH_SPEC, StartupProgressServlet.class);
@@ -310,6 +321,10 @@ public class NameNodeHttpServer {
 
   static Configuration getConfFromContext(ServletContext context) {
     return (Configuration)context.getAttribute(JspHelper.CURRENT_CONF);
+  }
+
+  static InMemoryAliasMap getAliasMapFromContext(ServletContext context) {
+    return (InMemoryAliasMap) context.getAttribute(ALIASMAP_ATTRIBUTE_KEY);
   }
 
   public static InetSocketAddress getNameNodeAddressFromContext(

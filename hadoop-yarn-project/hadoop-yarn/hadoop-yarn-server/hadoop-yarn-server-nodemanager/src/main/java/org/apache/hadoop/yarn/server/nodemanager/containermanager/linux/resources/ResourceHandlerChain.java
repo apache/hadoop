@@ -159,4 +159,10 @@ public class ResourceHandlerChain implements ResourceHandler {
     return Collections.unmodifiableList(resourceHandlers);
   }
 
+  @Override
+  public String toString() {
+    return ResourceHandlerChain.class.getName() + "{" +
+        "resourceHandlers=" + resourceHandlers +
+        '}';
+  }
 }

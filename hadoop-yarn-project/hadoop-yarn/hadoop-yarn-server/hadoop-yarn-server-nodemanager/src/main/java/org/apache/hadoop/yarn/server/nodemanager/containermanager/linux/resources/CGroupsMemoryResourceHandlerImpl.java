@@ -171,4 +171,9 @@ public class CGroupsMemoryResourceHandlerImpl implements MemoryResourceHandler {
   public List<PrivilegedOperation> teardown() throws ResourceHandlerException {
     return null;
   }
+
+  @Override
+  public String toString() {
+    return CGroupsMemoryResourceHandlerImpl.class.getName();
+  }
 }
