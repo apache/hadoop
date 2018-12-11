@@ -675,6 +675,17 @@ public class JsonUtilClient {
         replicationFallbacks, copyOnCreateFile.booleanValue());
   }
 
+  public static ErasureCodingPolicy toECPolicy(Map<?, ?> m) {
+    byte id = ((Number) m.get("id")).byteValue();
+    String name = (String) m.get("name");
+    String codec = (String) m.get("codecName");
+    int cellsize = ((Number) m.get("cellSize")).intValue();
+    int dataunits = ((Number) m.get("numDataUnits")).intValue();
+    int parityunits = ((Number) m.get("numParityUnits")).intValue();
+    ECSchema ecs = new ECSchema(codec, dataunits, parityunits);
+    return new ErasureCodingPolicy(name, ecs, cellsize, id);
+  }
+
   private static StorageType[] toStorageTypes(List<?> list) {
     if (list == null) {
       return null;
