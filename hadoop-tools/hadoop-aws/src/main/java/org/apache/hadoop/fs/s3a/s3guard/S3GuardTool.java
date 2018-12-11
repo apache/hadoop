@@ -218,7 +218,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
     format.addOptionWithValue(SECONDS_FLAG);
   }
 
-  protected void checkMetadataStoreUri(List<String> paths) throws IOException {
+  protected void checkIfS3BucketIsGuarded(List<String> paths)
+      throws IOException {
     // be sure that path is provided in params, so there's no IOoBE
     String s3Path = "";
     if(!paths.isEmpty()) {
@@ -236,6 +237,23 @@ public abstract class S3GuardTool extends Configured implements Tool {
             "The S3 bucket is unguarded. " + getName()
                 + " can not be used on an unguarded bucket.");
       }
+    }
+  }
+
+  /**
+   * Check if bucket or DDB table name is set.
+   */
+  protected void checkBucketNameOrDDBTableNameProvided(List<String> paths) {
+    String s3Path = null;
+    if(!paths.isEmpty()) {
+      s3Path = paths.get(0);
+    }
+
+    String metadataStoreUri = getCommandFormat().getOptValue(META_FLAG);
+
+    if(metadataStoreUri == null && s3Path == null) {
+      throw invalidArgs("S3 bucket url or DDB table name have to be provided "
+          + "explicitly to use " + getName() + " command.");
     }
   }
 
@@ -433,6 +451,12 @@ public abstract class S3GuardTool extends Configured implements Tool {
     @Override
     public int run(String[] args, PrintStream out) throws Exception {
       List<String> paths = parseArgs(args);
+      try {
+        checkBucketNameOrDDBTableNameProvided(paths);
+      } catch (ExitUtil.ExitException e) {
+        errorln(USAGE);
+        throw e;
+      }
 
       String readCap = getCommandFormat().getOptValue(READ_FLAG);
       if (readCap != null && !readCap.isEmpty()) {
@@ -521,7 +545,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
     public int run(String[] args, PrintStream out) throws Exception {
       List<String> paths = parseArgs(args);
       Map<String, String> options = new HashMap<>();
-      checkMetadataStoreUri(paths);
+      checkIfS3BucketIsGuarded(paths);
 
       String readCap = getCommandFormat().getOptValue(READ_FLAG);
       if (StringUtils.isNotEmpty(readCap)) {
@@ -592,13 +616,13 @@ public abstract class S3GuardTool extends Configured implements Tool {
     public int run(String[] args, PrintStream out) throws Exception {
       List<String> paths = parseArgs(args);
       try {
+        checkBucketNameOrDDBTableNameProvided(paths);
+        checkIfS3BucketIsGuarded(paths);
         parseDynamoDBRegion(paths);
       } catch (ExitUtil.ExitException e) {
         errorln(USAGE);
         throw e;
       }
-
-      checkMetadataStoreUri(paths);
 
       try {
         initMetadataStore(false);
