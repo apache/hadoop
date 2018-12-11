@@ -1623,7 +1623,7 @@ public class TestWebHDFS {
 
   // Test For Enable/Disable EC Policy in DFS.
   @Test
-  public void testEnableDisableECPolicy() throws Exception {
+  public void testECPolicyCommands() throws Exception {
     Configuration conf = new HdfsConfiguration();
     try (MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(0).build()) {
@@ -1632,12 +1632,24 @@ public class TestWebHDFS {
       final WebHdfsFileSystem webHdfs = WebHdfsTestUtil
           .getWebHdfsFileSystem(conf, WebHdfsConstants.WEBHDFS_SCHEME);
       String policy = "RS-10-4-1024k";
-
       // Check for Enable EC policy via WEBHDFS.
       dfs.disableErasureCodingPolicy(policy);
       checkECPolicyState(dfs.getAllErasureCodingPolicies(), policy, "disable");
-      webHdfs.enableECPolicy("RS-10-4-1024k");
+      webHdfs.enableECPolicy(policy);
       checkECPolicyState(dfs.getAllErasureCodingPolicies(), policy, "enable");
+      Path dir = new Path("/tmp");
+      dfs.mkdirs(dir);
+      // Check for Set EC policy via WEBHDFS
+      assertNull(dfs.getErasureCodingPolicy(dir));
+      webHdfs.setErasureCodingPolicy(dir, policy);
+      assertEquals(policy, dfs.getErasureCodingPolicy(dir).getName());
+
+      // Check for Get EC policy via WEBHDFS
+      assertEquals(policy, webHdfs.getErasureCodingPolicy(dir).getName());
+
+      // Check for Unset EC policy via WEBHDFS
+      webHdfs.unsetErasureCodingPolicy(dir);
+      assertNull(dfs.getErasureCodingPolicy(dir));
 
       // Check for Disable EC policy via WEBHDFS.
       webHdfs.disableECPolicy(policy);

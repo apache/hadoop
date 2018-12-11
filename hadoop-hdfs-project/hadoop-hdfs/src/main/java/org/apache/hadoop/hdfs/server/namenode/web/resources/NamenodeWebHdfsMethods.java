@@ -79,6 +79,7 @@ import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -804,12 +805,14 @@ public class NamenodeWebHdfsMethods {
       validateOpParams(op, ecpolicy);
       cp.enableErasureCodingPolicy(ecpolicy.getValue());
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
-
     case DISABLEECPOLICY:
       validateOpParams(op, ecpolicy);
       cp.disableErasureCodingPolicy(ecpolicy.getValue());
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
-
+    case SETECPOLICY:
+      validateOpParams(op, ecpolicy);
+      cp.setErasureCodingPolicy(fullpath, ecpolicy.getValue());
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
@@ -937,6 +940,9 @@ public class NamenodeWebHdfsMethods {
       cp.unsetStoragePolicy(fullpath);
       return Response.ok().build();
     }
+    case UNSETECPOLICY:
+      cp.unsetErasureCodingPolicy(fullpath);
+      return Response.ok().build();
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
@@ -1245,6 +1251,11 @@ public class NamenodeWebHdfsMethods {
     case GETSTORAGEPOLICY: {
       BlockStoragePolicy storagePolicy = cp.getStoragePolicy(fullpath);
       final String js = JsonUtil.toJsonString(storagePolicy);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETECPOLICY: {
+      ErasureCodingPolicy ecpolicy = cp.getErasureCodingPolicy(fullpath);
+      final String js = JsonUtil.toJsonString(ecpolicy);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GETSERVERDEFAULTS: {

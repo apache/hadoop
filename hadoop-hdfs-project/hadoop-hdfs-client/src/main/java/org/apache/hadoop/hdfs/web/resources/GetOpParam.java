@@ -53,6 +53,8 @@ public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
     GETALLSTORAGEPOLICY(false, HttpURLConnection.HTTP_OK),
     GETSTORAGEPOLICY(false, HttpURLConnection.HTTP_OK),
 
+    GETECPOLICY(false, HttpURLConnection.HTTP_OK),
+
     NULL(false, HttpURLConnection.HTTP_NOT_IMPLEMENTED),
 
     CHECKACCESS(false, HttpURLConnection.HTTP_OK),
