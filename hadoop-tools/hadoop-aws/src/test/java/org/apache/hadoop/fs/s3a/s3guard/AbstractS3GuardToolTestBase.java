@@ -381,6 +381,19 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     }
   }
 
+  @Test
+  public void testDestroyFailsIfNoBucketNameOrDDBTableSet()
+      throws Exception {
+    intercept(ExitUtil.ExitException.class,
+        () -> run(S3GuardTool.Destroy.NAME));
+  }
+
+  @Test
+  public void testInitFailsIfNoBucketNameOrDDBTableSet() throws Exception {
+    intercept(ExitUtil.ExitException.class,
+        () -> run(S3GuardTool.Init.NAME));
+  }
+
   /**
    * Get the test CSV file; assume() that it is not modified (i.e. we haven't
    * switched to a new storage infrastructure where the bucket is no longer
