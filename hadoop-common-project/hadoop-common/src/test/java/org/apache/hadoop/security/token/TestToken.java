@@ -85,13 +85,12 @@ public class TestToken {
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLM" +
              "NOPQRSTUVWXYZ01234567890!@#$%^&*()-=_+[]{}|;':,./<>?"};
     Token<AbstractDelegationTokenIdentifier> orig;
-    Token<AbstractDelegationTokenIdentifier> copy = 
-      new Token<AbstractDelegationTokenIdentifier>();
+    Token<AbstractDelegationTokenIdentifier> copy = new Token<>();
     // ensure that for each string the input and output values match
     for(int i=0; i< values.length; ++i) {
       String val = values[i];
-      System.out.println("Input = " + val);
-      orig = new Token<AbstractDelegationTokenIdentifier>(val.getBytes(),
+      Token.LOG.info("Input = {}", val);
+      orig = new Token<>(val.getBytes(),
           val.getBytes(), new Text(val), new Text(val));
       String encode = orig.encodeToUrlString();
       copy.decodeFromUrlString(encode);
@@ -109,7 +108,7 @@ public class TestToken {
         new Text("owner"), new Text("renewer"), new Text("realUser"));
     
     Token<TestDelegationTokenIdentifier> token =
-      new Token<TestDelegationTokenIdentifier>(id, secretManager);
+        new Token<>(id, secretManager);
     TokenIdentifier idCopy = token.decodeIdentifier();
     
     assertNotSame(id, idCopy);

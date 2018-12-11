@@ -34,7 +34,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 import java.util.UUID;
 
@@ -146,14 +148,25 @@ public class Token<T extends TokenIdentifier> implements Writable {
     synchronized (Token.class) {
       if (tokenKindMap == null) {
         tokenKindMap = Maps.newHashMap();
-        for (TokenIdentifier id : ServiceLoader.load(TokenIdentifier.class)) {
-          tokenKindMap.put(id.getKind(), id.getClass());
+        // start the service load process; it's only in the "next()" calls
+        // where implementations are loaded.
+        final Iterator<TokenIdentifier> tokenIdentifiers =
+            ServiceLoader.load(TokenIdentifier.class).iterator();
+        while (tokenIdentifiers.hasNext()) {
+          try {
+            TokenIdentifier id = tokenIdentifiers.next();
+            tokenKindMap.put(id.getKind(), id.getClass());
+          } catch (ServiceConfigurationError e) {
+            // failure to load a token implementation
+            // log at debug and continue.
+            LOG.debug("Failed to load token identifier implementation", e);
+          }
         }
       }
       cls = tokenKindMap.get(kind);
     }
     if (cls == null) {
-      LOG.debug("Cannot find class for token kind " + kind);
+      LOG.debug("Cannot find class for token kind {}", kind);
       return null;
     }
     return cls;
@@ -162,8 +175,9 @@ public class Token<T extends TokenIdentifier> implements Writable {
   /**
    * Get the token identifier object, or null if it could not be constructed
    * (because the class could not be loaded, for example).
-   * @return the token identifier, or null
-   * @throws IOException
+   * @return the token identifier, or null if there was no class found for it
+   * @throws IOException failure to unmarshall the data
+   * @throws RuntimeException if the token class could not be instantiated.
    */
   @SuppressWarnings("unchecked")
   public T decodeIdentifier() throws IOException {
@@ -262,7 +276,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
       assert !publicToken.isPrivate();
       publicService = publicToken.service;
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Cloned private token " + this + " from " + publicToken);
+        LOG.debug("Cloned private token {} from {}", this, publicToken);
       }
     }
 
@@ -460,14 +474,22 @@ public class Token<T extends TokenIdentifier> implements Writable {
     }
     renewer = TRIVIAL_RENEWER;
     synchronized (renewers) {
-      for (TokenRenewer canidate : renewers) {
-        if (canidate.handleKind(this.kind)) {
-          renewer = canidate;
-          return renewer;
+      Iterator<TokenRenewer> it = renewers.iterator();
+      while (it.hasNext()) {
+        try {
+          TokenRenewer candidate = it.next();
+          if (candidate.handleKind(this.kind)) {
+            renewer = candidate;
+            return renewer;
+          }
+        } catch (ServiceConfigurationError e) {
+          // failure to load a token implementation
+          // log at debug and continue.
+          LOG.debug("Failed to load token renewer implementation", e);
         }
       }
     }
-    LOG.warn("No TokenRenewer defined for token kind " + this.kind);
+    LOG.warn("No TokenRenewer defined for token kind {}", kind);
     return renewer;
   }
 
