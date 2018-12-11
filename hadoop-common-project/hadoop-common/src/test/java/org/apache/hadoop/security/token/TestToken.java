@@ -28,6 +28,7 @@ import org.apache.hadoop.security.token.delegation.TestDelegationToken.TestDeleg
 import org.apache.hadoop.security.token.delegation.TestDelegationToken.TestDelegationTokenSecretManager;
 import org.junit.Test;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.*;
 
 /** Unit tests for Token */
@@ -86,13 +87,12 @@ public class TestToken {
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLM" +
              "NOPQRSTUVWXYZ01234567890!@#$%^&*()-=_+[]{}|;':,./<>?"};
     Token<AbstractDelegationTokenIdentifier> orig;
-    Token<AbstractDelegationTokenIdentifier> copy = 
-      new Token<AbstractDelegationTokenIdentifier>();
+    Token<AbstractDelegationTokenIdentifier> copy = new Token<>();
     // ensure that for each string the input and output values match
     for(int i=0; i< values.length; ++i) {
       String val = values[i];
-      System.out.println("Input = " + val);
-      orig = new Token<AbstractDelegationTokenIdentifier>(val.getBytes(),
+      Token.LOG.info("Input = {}", val);
+      orig = new Token<>(val.getBytes(),
           val.getBytes(), new Text(val), new Text(val));
       String encode = orig.encodeToUrlString();
       copy.decodeFromUrlString(encode);
@@ -107,15 +107,9 @@ public class TestToken {
    */
   @Test
   public void testDecodeWritableArgSanityCheck() throws Exception {
-    Token<AbstractDelegationTokenIdentifier> token =
-            new Token<AbstractDelegationTokenIdentifier>();
-    try {
-      token.decodeFromUrlString(null);
-      fail("Should have thrown HadoopIllegalArgumentException");
-    }
-    catch (HadoopIllegalArgumentException e) {
-      Token.LOG.info("Test decodeWritable() sanity check success.");
-    }
+    Token<AbstractDelegationTokenIdentifier> token = new Token<>();
+    intercept(HadoopIllegalArgumentException.class,
+        () -> token.decodeFromUrlString(null));
   }
 
   @Test
@@ -127,7 +121,7 @@ public class TestToken {
         new Text("owner"), new Text("renewer"), new Text("realUser"));
     
     Token<TestDelegationTokenIdentifier> token =
-      new Token<TestDelegationTokenIdentifier>(id, secretManager);
+        new Token<>(id, secretManager);
     TokenIdentifier idCopy = token.decodeIdentifier();
     
     assertNotSame(id, idCopy);
