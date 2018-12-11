@@ -71,6 +71,13 @@ run mkdir -p ./share/hadoop/hdds
 run mkdir -p ./share/hadoop/yarn
 run mkdir -p ./share/hadoop/hdfs
 run mkdir -p ./share/hadoop/common
+
+touch ./share/hadoop/mapreduce/.keep
+touch ./share/hadoop/yarn/.keep
+touch ./share/hadoop/hdfs/.keep
+touch ./share/hadoop/common/.keep
+
+
 run mkdir -p ./share/ozone/web
 run mkdir -p ./bin
 run mkdir -p ./sbin

@@ -1,0 +1,72 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: om
+  labels: {}
+  annotations: {}
+spec:
+  selector:
+    matchLabels:
+      app: ozone
+      component: om
+  serviceName: om
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9874"
+        prometheus.io/path: "/prom"
+      labels:
+        app: ozone
+        component: om
+    spec:
+      initContainers:
+        - name: init
+          image: apache/ozone
+          args:
+            - ozone
+            - om
+            - --init
+          env:
+            - name: "WAITFOR"
+              value: "scm-0.scm:9876"
+          volumeMounts:
+            - name: "data"
+              mountPath: "/data"
+          envFrom:
+            - configMapRef:
+                name: config
+      containers:
+        - name: om
+          image: apache/ozone
+          args:
+            - ozone
+            - om
+          env:
+            - name: "WAITFOR"
+              value: "scm-0.scm:9876"
+          volumeMounts:
+            - name: "data"
+              mountPath: "/data"
+          envFrom:
+            - configMapRef:
+                name: config
+      volumes:
+        - name: "data"
+          emptyDir: {}
