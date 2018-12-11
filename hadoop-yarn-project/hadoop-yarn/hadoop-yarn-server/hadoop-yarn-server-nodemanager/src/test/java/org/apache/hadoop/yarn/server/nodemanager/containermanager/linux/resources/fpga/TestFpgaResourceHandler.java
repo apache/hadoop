@@ -34,7 +34,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.Reso
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.FpgaDiscoverer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.IntelFpgaOpenclPlugin;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
-import org.apache.hadoop.yarn.util.resource.TestResourceUtils;
+import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -61,7 +61,8 @@ public class TestFpgaResourceHandler {
 
   @Before
   public void setup() {
-    TestResourceUtils.addNewTypesToResources(ResourceInformation.FPGA_URI);
+    CustomResourceTypesConfigurationProvider.
+        initResourceTypes(ResourceInformation.FPGA_URI);
     configuration = new YarnConfiguration();
 
     mockCGroupsHandler = mock(CGroupsHandler.class);

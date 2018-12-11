@@ -17,28 +17,17 @@
 */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration.parseResourceConfigValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-
+import com.google.common.collect.ImmutableMap;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.impl.LightWeightResource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
+import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -50,37 +39,20 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration.parseResourceConfigValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 /**
  * Tests fair scheduler configuration.
  */
 public class TestFairSchedulerConfiguration {
 
   private static final String A_CUSTOM_RESOURCE = "a-custom-resource";
-
-  private static class CustomResourceTypesConfigurationProvider
-      extends LocalConfigurationProvider {
-
-    @Override
-    public InputStream getConfigurationInputStream(Configuration bootstrapConf,
-        String name) throws YarnException, IOException {
-      if (YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE.equals(name)) {
-        return new ByteArrayInputStream((
-            "<configuration>\n" +
-            " <property>\n" +
-            "   <name>yarn.resource-types</name>\n" +
-            "   <value>" + A_CUSTOM_RESOURCE + "</value>\n" +
-            " </property>\n" +
-            " <property>\n" +
-            "   <name>yarn.resource-types.a-custom-resource.units</name>\n" +
-            "   <value>k</value>\n" +
-            " </property>\n" +
-            "</configuration>\n")
-                .getBytes());
-      } else {
-        return super.getConfigurationInputStream(bootstrapConf, name);
-      }
-    }
-  }
 
   private static class TestAppender extends AppenderSkeleton {
 
@@ -637,7 +609,7 @@ public class TestFairSchedulerConfiguration {
   }
 
   @Test
-  public void testAllocationIncrementCustomResource() throws Exception {
+  public void testAllocationIncrementCustomResource() {
     try {
       initResourceTypes();
       Configuration conf = new Configuration();
@@ -686,10 +658,10 @@ public class TestFairSchedulerConfiguration {
   }
 
   private void initResourceTypes() {
-    Configuration conf = new Configuration();
-    conf.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
-        CustomResourceTypesConfigurationProvider.class.getName());
-    ResourceUtils.resetResourceTypes(conf);
+    CustomResourceTypesConfigurationProvider.initResourceTypes(
+        ImmutableMap.<String, String>builder()
+            .put(A_CUSTOM_RESOURCE, "k")
+            .build());
   }
 
   @Test
