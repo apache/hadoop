@@ -28,9 +28,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,7 +37,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptFailEvent;
+import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -91,7 +91,6 @@ import org.apache.hadoop.mapreduce.v2.app.rm.ContainerRequestEvent;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -102,7 +101,6 @@ import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.SystemClock;
@@ -125,30 +123,6 @@ public class TestTaskAttempt{
     @Override
     public FileStatus getFileStatus(Path f) throws IOException {
       return new FileStatus(1, false, 1, 1, 1, f);
-    }
-  }
-
-  private static class CustomResourceTypesConfigurationProvider
-      extends LocalConfigurationProvider {
-
-    @Override
-    public InputStream getConfigurationInputStream(Configuration bootstrapConf,
-        String name) throws YarnException, IOException {
-      if (YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE.equals(name)) {
-        return new ByteArrayInputStream(
-            ("<configuration>\n" +
-            " <property>\n" +
-            "   <name>yarn.resource-types</name>\n" +
-            "   <value>a-custom-resource</value>\n" +
-            " </property>\n" +
-            " <property>\n" +
-            "   <name>yarn.resource-types.a-custom-resource.units</name>\n" +
-            "   <value>G</value>\n" +
-            " </property>\n" +
-            "</configuration>\n").getBytes());
-      } else {
-        return super.getConfigurationInputStream(bootstrapConf, name);
-      }
     }
   }
 
@@ -1776,10 +1750,10 @@ public class TestTaskAttempt{
   }
 
   private void initResourceTypes() {
-    Configuration conf = new Configuration();
-    conf.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
-        CustomResourceTypesConfigurationProvider.class.getName());
-    ResourceUtils.resetResourceTypes(conf);
+    CustomResourceTypesConfigurationProvider.initResourceTypes(
+        ImmutableMap.<String, String>builder()
+            .put(CUSTOM_RESOURCE_NAME, "G")
+            .build());
   }
 
   private void setupTaskAttemptFinishingMonitor(

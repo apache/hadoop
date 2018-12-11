@@ -31,7 +31,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.fairscheduler.CustomResourceTypesConfigurationProvider;
+import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.BufferedClientResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.JsonCustomResourceTypeTestcase;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.XmlCustomResourceTypeTestCase;

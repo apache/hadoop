@@ -31,9 +31,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfi
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.util.ControlledClock;
-import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.hadoop.yarn.util.resource.TestResourceUtils;
 import org.junit.Test;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -44,7 +43,6 @@ import java.io.PrintWriter;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -210,7 +208,8 @@ public class TestAllocationFileLoaderService {
   @Test
   public void testAllocationFileParsing() throws Exception {
     Configuration conf = new YarnConfiguration();
-    TestResourceUtils.addNewTypesToResources(A_CUSTOM_RESOURCE);
+    CustomResourceTypesConfigurationProvider.
+        initResourceTypes(A_CUSTOM_RESOURCE);
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
 
