@@ -17,7 +17,7 @@
  */
 
 package org.apache.hadoop.yarn.applications.distributedshell;
-
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -30,6 +30,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.io.UncheckedIOException;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URL;
@@ -1626,6 +1627,69 @@ public class TestDistributedShell {
         "--master_resources",
         "unknown-resource=5"
     };
+    Client client = new Client(new Configuration(yarnCluster.getConfig()));
+    client.init(args);
+    client.run();
+  }
+
+  @Test
+  public void testDistributedShellWithSingleFileLocalization()
+      throws Exception {
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "1",
+        "--shell_command",
+        Shell.WINDOWS ? "type" : "cat",
+        "--localize_files",
+        "./src/test/resources/a.txt",
+        "--shell_args",
+        "a.txt"
+    };
+
+    Client client = new Client(new Configuration(yarnCluster.getConfig()));
+    client.init(args);
+    assertTrue("Client exited with an error", client.run());
+  }
+
+  @Test
+  public void testDistributedShellWithMultiFileLocalization()
+      throws Exception {
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "1",
+        "--shell_command",
+        Shell.WINDOWS ? "type" : "cat",
+        "--localize_files",
+        "./src/test/resources/a.txt,./src/test/resources/b.txt",
+        "--shell_args",
+        "a.txt b.txt"
+    };
+
+    Client client = new Client(new Configuration(yarnCluster.getConfig()));
+    client.init(args);
+    assertTrue("Client exited with an error", client.run());
+  }
+
+  @Test(expected=UncheckedIOException.class)
+  public void testDistributedShellWithNonExistentFileLocalization()
+      throws Exception {
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "1",
+        "--shell_command",
+        Shell.WINDOWS ? "type" : "cat",
+        "--localize_files",
+        "/non/existing/path/file.txt",
+        "--shell_args",
+        "file.txt"
+    };
+
     Client client = new Client(new Configuration(yarnCluster.getConfig()));
     client.init(args);
     client.run();
