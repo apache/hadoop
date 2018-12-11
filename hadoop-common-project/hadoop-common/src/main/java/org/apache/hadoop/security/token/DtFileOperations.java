@@ -24,6 +24,8 @@ import java.io.PrintStream;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Iterator;
+import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 
 import org.apache.commons.lang3.StringUtils;
@@ -130,7 +132,7 @@ public final class DtFileOperations {
    *  @param creds the Credentials object to be printed out.
    *  @param alias print only tokens matching alias (null matches all).
    *  @param out print to this stream.
-   *  @throws IOException
+   *  @throws IOException failure to unmarshall a token identifier.
    */
   public static void printCredentials(
       Credentials creds, Text alias, PrintStream out)
@@ -145,8 +147,13 @@ public final class DtFileOperations {
           out.println(StringUtils.repeat("-", 80));
           tokenHeader = false;
         }
-        AbstractDelegationTokenIdentifier id =
-            (AbstractDelegationTokenIdentifier) token.decodeIdentifier();
+        AbstractDelegationTokenIdentifier id;
+        try {
+          id = (AbstractDelegationTokenIdentifier) token.decodeIdentifier();
+        } catch (IllegalStateException e) {
+          LOG.debug("Failed to decode token identifier", e);
+          id = null;
+        }
         out.printf(fmt, token.getKind(), token.getService(),
                    (id != null) ? id.getRenewer() : NA_STRING,
                    (id != null) ? formatDate(id.getMaxDate()) : NA_STRING,
@@ -172,7 +179,17 @@ public final class DtFileOperations {
     Credentials creds = tokenFile.exists() ?
         Credentials.readTokenStorageFile(tokenFile, conf) : new Credentials();
     ServiceLoader<DtFetcher> loader = ServiceLoader.load(DtFetcher.class);
-    for (DtFetcher fetcher : loader) {
+    Iterator<DtFetcher> iterator = loader.iterator();
+    while (iterator.hasNext()) {
+      DtFetcher fetcher;
+      try {
+        fetcher = iterator.next();
+      } catch (ServiceConfigurationError e) {
+        // failure to load a token implementation
+        // log at debug and continue.
+        LOG.debug("Failed to load token fetcher implementation", e);
+        continue;
+      }
       if (matchService(fetcher, service, url)) {
         if (!fetcher.isTokenRequired()) {
           String message = "DtFetcher for service '" + service +
