@@ -508,6 +508,7 @@ Usage:
 
         hdfs haadmin -transitionToActive <serviceId> [--forceactive]
         hdfs haadmin -transitionToStandby <serviceId>
+        hdfs haadmin -transitionToObserver <serviceId>
         hdfs haadmin -failover [--forcefence] [--forceactive] <serviceId> <serviceId>
         hdfs haadmin -getServiceState <serviceId>
         hdfs haadmin -getAllServiceState
@@ -523,6 +524,7 @@ Usage:
 | `-getAllServiceState` | returns the state of all the NameNodes | |
 | `-transitionToActive` | transition the state of the given NameNode to Active (Warning: No fencing is done) |
 | `-transitionToStandby` | transition the state of the given NameNode to Standby (Warning: No fencing is done) |
+| `-transitionToObserver` | transition the state of the given NameNode to Observer (Warning: No fencing is done) |
 | `-help` [cmd] | Displays help for the given command or all commands if none is specified. |
 
 See [HDFS HA with NFS](./HDFSHighAvailabilityWithNFS.html#Administrative_commands) or [HDFS HA with QJM](./HDFSHighAvailabilityWithQJM.html#Administrative_commands) for more information on this command.
