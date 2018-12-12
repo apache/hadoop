@@ -865,10 +865,26 @@ public class YarnServiceJobSubmitter implements JobSubmitter {
     }
 
     String appStatus=appAdminClient.getStatusString(serviceSpec.getName());
-    Service app=ServiceApiUtil.jsonSerDeser.fromJson(appStatus);
-    if(app.getId() == null) {
-      throw new YarnException("Can't get application id for Service " +
-          serviceSpec.getName());
+    Service app = ServiceApiUtil.jsonSerDeser.fromJson(appStatus);
+
+    // Retry multiple times if applicationId is null
+    int maxRetryTimes = 30;
+    int count = 0;
+    while (app.getId() == null && count < maxRetryTimes) {
+      LOG.info("Waiting for application Id. AppStatusString=\n {}", appStatus);
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+        throw new IOException(e);
+      }
+      appStatus = appAdminClient.getStatusString(serviceSpec.getName());
+      app = ServiceApiUtil.jsonSerDeser.fromJson(appStatus);
+      count++;
+    }
+    // Retry timeout
+    if (app.getId() == null) {
+      throw new YarnException(
+          "Can't get application id for Service " + serviceSpec.getName());
     }
     ApplicationId appid = ApplicationId.fromString(app.getId());
     appAdminClient.stop();
