@@ -14,22 +14,28 @@
 
 package org.apache.hadoop.yarn.submarine.common.fs;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.submarine.client.cli.CliConstants;
 import org.apache.hadoop.yarn.submarine.common.ClientContext;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 
 /**
  * Manages remote directories for staging, log, etc.
  * TODO, need to properly handle permission / name validation, etc.
  */
 public class DefaultRemoteDirectoryManager implements RemoteDirectoryManager {
-  FileSystem fs;
+  private FileSystem fs;
+  private Configuration conf;
 
   public DefaultRemoteDirectoryManager(ClientContext context) {
+    this.conf = context.getYarnConfig();
     try {
       this.fs = FileSystem.get(context.getYarnConfig());
     } catch (IOException e) {
@@ -38,7 +44,8 @@ public class DefaultRemoteDirectoryManager implements RemoteDirectoryManager {
   }
 
   @Override
-  public Path getJobStagingArea(String jobName, boolean create) throws IOException {
+  public Path getJobStagingArea(String jobName, boolean create)
+      throws IOException {
     Path staging = new Path(getJobRootFolder(jobName), "staging");
     if (create) {
       createFolderIfNotExist(staging);
@@ -61,7 +68,8 @@ public class DefaultRemoteDirectoryManager implements RemoteDirectoryManager {
   }
 
   @Override
-  public Path getModelDir(String modelName, boolean create) throws IOException {
+  public Path getModelDir(String modelName, boolean create)
+      throws IOException {
     Path modelDir = new Path(new Path("submarine", "models"), modelName);
     if (create) {
       createFolderIfNotExist(modelDir);
@@ -70,8 +78,13 @@ public class DefaultRemoteDirectoryManager implements RemoteDirectoryManager {
   }
 
   @Override
-  public FileSystem getFileSystem() {
+  public FileSystem getDefaultFileSystem() {
     return fs;
+  }
+
+  @Override
+  public FileSystem getFileSystemByUri(String uri) throws IOException {
+    return FileSystem.get(URI.create(uri), conf);
   }
 
   @Override
@@ -81,6 +94,55 @@ public class DefaultRemoteDirectoryManager implements RemoteDirectoryManager {
     // Get a file status to make sure it is a absolute path.
     FileStatus fStatus = fs.getFileStatus(rootPath);
     return fStatus.getPath();
+  }
+
+  @Override
+  public boolean isDir(String uri) throws IOException {
+    if (isRemote(uri)) {
+      return getFileSystemByUri(uri).getFileStatus(new Path(uri)).isDirectory();
+    }
+    return new File(uri).isDirectory();
+  }
+
+  @Override
+  public boolean isRemote(String uri) {
+    String scheme = new Path(uri).toUri().getScheme();
+    if (null == scheme) {
+      return false;
+    }
+    return !scheme.startsWith("file://");
+  }
+
+  @Override
+  public boolean copyRemoteToLocal(String remoteUri, String localUri)
+      throws IOException {
+    // Delete old to avoid failure in FileUtil.copy
+    File old = new File(localUri);
+    if (old.exists()) {
+      if (!FileUtil.fullyDelete(old)) {
+        throw new IOException("Failed to delete dir:"
+            + old.getAbsolutePath());
+      }
+    }
+    return FileUtil.copy(getFileSystemByUri(remoteUri), new Path(remoteUri),
+        new File(localUri), false,
+        conf);
+  }
+
+  @Override
+  public boolean existsRemoteFile(Path url) throws IOException {
+    return getFileSystemByUri(url.toUri().toString()).exists(url);
+  }
+
+  @Override
+  public FileStatus getRemoteFileStatus(Path url) throws IOException {
+    return getFileSystemByUri(url.toUri().toString()).getFileStatus(url);
+  }
+
+  @Override
+  public long getRemoteFileSize(String uri) throws IOException {
+    return getFileSystemByUri(uri)
+        .getContentSummary(new Path(uri)).getSpaceConsumed();
   }
 
   private Path getJobRootFolder(String jobName) throws IOException {

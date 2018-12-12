@@ -19,6 +19,21 @@ import org.apache.hadoop.conf.Configuration;
 public class SubmarineConfiguration extends Configuration {
   private static final String SUBMARINE_CONFIGURATION_FILE = "submarine.xml";
 
+  public static final String SUBMARINE_CONFIGURATION_PREFIX = "submarine.";
+
+  public static final String SUBMARINE_LOCALIZATION_PREFIX =
+      SUBMARINE_CONFIGURATION_PREFIX + "localization.";
+  /**
+   * Limit the size of directory/file to be localized.
+   * To avoid exhausting local disk space,
+   * this limit both remote and local file to be localized
+   */
+  public static final String LOCALIZATION_MAX_ALLOWED_FILE_SIZE_MB =
+      SUBMARINE_LOCALIZATION_PREFIX + "max-allowed-file-size-mb";
+
+  // Default 2GB
+  public static final long DEFAULT_MAX_ALLOWED_REMOTE_URI_SIZE_MB = 2048;
+
   public SubmarineConfiguration() {
     this(new Configuration(false), true);
   }

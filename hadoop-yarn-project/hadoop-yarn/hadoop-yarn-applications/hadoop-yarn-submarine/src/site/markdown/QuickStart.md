@@ -70,7 +70,33 @@ usage: job run
                               directly used to launch the worker
  -worker_resources <arg>      Resource of each worker, for example
                               memory-mb=2048,vcores=2,yarn.io/gpu=2
+ -localization <arg>          Specify localization to remote/local
+                              file/directory available to all container(Docker).
+                              Argument format is "RemoteUri:LocalFilePath[:rw]"
+                              (ro permission is not supported yet).
+                              The RemoteUri can be a file or directory in local
+                              or HDFS or s3 or abfs or http .etc.
+                              The LocalFilePath can be absolute or relative.
+                              If relative, it'll be under container's implied
+                              working directory.
+                              This option can be set mutiple times.
+                              Examples are
+                              -localization "hdfs:///user/yarn/mydir2:/opt/data"
+                              -localization "s3a:///a/b/myfile1:./"
+                              -localization "https:///a/b/myfile2:./myfile"
+                              -localization "/user/yarn/mydir3:/opt/mydir3"
+                              -localization "./mydir1:."
 ```
+### Submarine Configuration
+
+For submarine internal configuration, please create a `submarine.xml` which should be placed under `$HADOOP_CONF_DIR`.
+
+|Configuration Name | Description |
+|:---- |:---- |
+| `submarine.runtime.class` | Optional. Full qualified class name for your runtime factory. |
+| `submarine.localization.max-allowed-file-size-mb` | Optional. This sets a size limit to the file/directory to be localized in "-localization" CLI option. 2GB by default. |
+
+
 
 ### Launch Standalone Tensorflow Application:
 

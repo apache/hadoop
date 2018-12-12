@@ -42,7 +42,7 @@ public class FSBasedSubmarineStorageImpl extends SubmarineStorage {
   public void addNewJob(String jobName, Map<String, String> jobInfo)
       throws IOException {
     Path jobInfoPath = getJobInfoPath(jobName, true);
-    FSDataOutputStream fos = rdm.getFileSystem().create(jobInfoPath);
+    FSDataOutputStream fos = rdm.getDefaultFileSystem().create(jobInfoPath);
     serializeMap(fos, jobInfo);
   }
 
@@ -50,7 +50,7 @@ public class FSBasedSubmarineStorageImpl extends SubmarineStorage {
   public Map<String, String> getJobInfoByName(String jobName)
       throws IOException {
     Path jobInfoPath = getJobInfoPath(jobName, false);
-    FSDataInputStream fis = rdm.getFileSystem().open(jobInfoPath);
+    FSDataInputStream fis = rdm.getDefaultFileSystem().open(jobInfoPath);
     return deserializeMap(fis);
   }
 
@@ -58,7 +58,7 @@ public class FSBasedSubmarineStorageImpl extends SubmarineStorage {
   public void addNewModel(String modelName, String version,
       Map<String, String> modelInfo) throws IOException {
     Path modelInfoPath = getModelInfoPath(modelName, version, true);
-    FSDataOutputStream fos = rdm.getFileSystem().create(modelInfoPath);
+    FSDataOutputStream fos = rdm.getDefaultFileSystem().create(modelInfoPath);
     serializeMap(fos, modelInfo);
   }
 
@@ -66,7 +66,7 @@ public class FSBasedSubmarineStorageImpl extends SubmarineStorage {
   public Map<String, String> getModelInfoByName(String modelName,
       String version) throws IOException {
     Path modelInfoPath = getModelInfoPath(modelName, version, false);
-    FSDataInputStream fis = rdm.getFileSystem().open(modelInfoPath);
+    FSDataInputStream fis = rdm.getDefaultFileSystem().open(modelInfoPath);
     return deserializeMap(fis);
   }
 
