@@ -20,8 +20,10 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugi
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DevicePlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
@@ -29,7 +31,12 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resource
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.DockerCommandPlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.NodeResourceUpdaterPlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMDeviceResourceInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -93,7 +100,16 @@ public class DevicePluginAdapter implements ResourcePlugin {
 
   @Override
   public NMResourceInfo getNMResourceInfo() throws YarnException {
-    return null;
+    List<Device> allowed = new ArrayList<>(
+        deviceMappingManager.getAllAllowedDevices().get(resourceName));
+    List<AssignedDevice> assigned = new ArrayList<>();
+    Map<Device, ContainerId> assignedMap =
+        deviceMappingManager.getAllUsedDevices().get(resourceName);
+    for (Map.Entry<Device, ContainerId> entry : assignedMap.entrySet()) {
+      assigned.add(new AssignedDevice(entry.getValue(),
+          entry.getKey()));
+    }
+    return new NMDeviceResourceInfo(allowed, assigned);
   }
 
   public DeviceResourceHandlerImpl getDeviceResourceHandler() {
