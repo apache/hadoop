@@ -74,19 +74,10 @@ public class CliUtils {
     return newCli;
   }
 
-  // TODO, this duplicated to Client of distributed shell, should cleanup
   private static Map<String, Long> parseResourcesString(String resourcesStr) {
     Map<String, Long> resources = new HashMap<>();
-
-    // Ignore the grouping "[]"
-    if (resourcesStr.startsWith("[")) {
-      resourcesStr = resourcesStr.substring(1);
-    }
-    if (resourcesStr.endsWith("]")) {
-      resourcesStr = resourcesStr.substring(0, resourcesStr.length() - 1);
-    }
-
-    for (String resource : resourcesStr.trim().split(",")) {
+    String[] pairs = resourcesStr.trim().split(",");
+    for (String resource : pairs) {
       resource = resource.trim();
       if (!resource.matches(RES_PATTERN)) {
         throw new IllegalArgumentException("\"" + resource + "\" is not a "
@@ -97,8 +88,9 @@ public class CliUtils {
       String key = splits[0], value = splits[1];
       String units = ResourceUtils.getUnits(value);
 
-      String valueWithoutUnit = value.substring(0, value.length() - units.length()).trim();
-      Long resourceValue = Long.valueOf(valueWithoutUnit);
+      String valueWithoutUnit = value.substring(0,
+          value.length()- units.length()).trim();
+      long resourceValue = Long.parseLong(valueWithoutUnit);
 
       // Convert commandline unit to standard YARN unit.
       if (units.equals("M") || units.equals("m")) {
@@ -107,7 +99,7 @@ public class CliUtils {
         units = "Gi";
       } else if (units.isEmpty()) {
         // do nothing;
-      } else{
+      } else {
         throw new IllegalArgumentException("Acceptable units are M/G or empty");
       }
 
@@ -121,7 +113,8 @@ public class CliUtils {
 
       if (key.equals("memory")) {
         key = ResourceInformation.MEMORY_URI;
-        resourceValue = UnitsConversionUtil.convert(units, "Mi", resourceValue);
+        resourceValue = UnitsConversionUtil.convert(units, "Mi",
+            resourceValue);
       }
 
       // special handle gpu
