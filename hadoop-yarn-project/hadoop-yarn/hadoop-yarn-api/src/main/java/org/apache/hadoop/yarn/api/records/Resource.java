@@ -66,11 +66,6 @@ public abstract class Resource implements Comparable<Resource> {
 
   protected ResourceInformation[] resources = null;
 
-  // Number of mandatory resources, this is added to avoid invoke
-  // MandatoryResources.values().length, since values() internally will
-  // copy array, etc.
-  protected static final int NUM_MANDATORY_RESOURCES = 2;
-
   @Private
   public static final int MEMORY_INDEX = 0;
   @Private
