@@ -125,6 +125,24 @@ public class RunJobCli extends AbstractCli {
         + "if want to link to first worker's 7070 port, and text of quicklink "
         + "is Notebook_UI, user need to specify --quicklink "
         + "Notebook_UI=https://master-0:7070");
+    options.addOption(CliConstants.LOCALIZATION, true, "Specify"
+        + " localization to make remote/local file/directory available to"
+        + " all container(Docker)."
+        + " Argument format is \"RemoteUri:LocalFilePath[:rw] \" (ro"
+        + " permission is not supported yet)"
+        + " The RemoteUri can be a file or directory in local or"
+        + " HDFS or s3 or abfs or http .etc."
+        + " The LocalFilePath can be absolute or relative."
+        + " If it's a relative path, it'll be"
+        + " under container's implied working directory"
+        + " but sub directory is not supported yet."
+        + " This option can be set mutiple times."
+        + " Examples are \n"
+        + "-localization \"hdfs:///user/yarn/mydir2:/opt/data\"\n"
+        + "-localization \"s3a:///a/b/myfile1:./\"\n"
+        + "-localization \"https:///a/b/myfile2:./myfile\"\n"
+        + "-localization \"/user/yarn/mydir3:/opt/mydir3\"\n"
+        + "-localization \"./mydir1:.\"\n");
     options.addOption(CliConstants.KEYTAB, true, "Specify keytab used by the " +
         "job under security environment");
     options.addOption(CliConstants.PRINCIPAL, true, "Specify principal used " +

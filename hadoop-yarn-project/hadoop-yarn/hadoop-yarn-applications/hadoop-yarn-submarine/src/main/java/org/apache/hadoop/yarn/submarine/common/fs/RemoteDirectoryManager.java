@@ -14,6 +14,7 @@
 
 package org.apache.hadoop.yarn.submarine.common.fs;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -26,7 +27,22 @@ public interface RemoteDirectoryManager {
 
   Path getModelDir(String modelName, boolean create) throws IOException;
 
-  FileSystem getFileSystem() throws IOException;
+  FileSystem getDefaultFileSystem() throws IOException;
+
+  FileSystem getFileSystemByUri(String uri) throws IOException;
 
   Path getUserRootFolder() throws IOException;
+
+  boolean isDir(String uri) throws IOException;
+
+  boolean isRemote(String uri) throws IOException;
+
+  boolean copyRemoteToLocal(String remoteUri, String localUri)
+      throws IOException;
+
+  boolean existsRemoteFile(Path uri) throws IOException;
+
+  FileStatus getRemoteFileStatus(Path uri) throws IOException;
+
+  long getRemoteFileSize(String uri) throws IOException;
 }
