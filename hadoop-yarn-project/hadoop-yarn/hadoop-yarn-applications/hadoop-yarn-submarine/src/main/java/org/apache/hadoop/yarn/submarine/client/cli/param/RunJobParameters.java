@@ -44,6 +44,7 @@ public class RunJobParameters extends RunParameters {
   private String workerLaunchCmd;
   private String psLaunchCmd;
   private List<Quicklink> quicklinks = new ArrayList<>();
+  private List<Localization> localizations = new ArrayList<>();
 
   private String psDockerImage = null;
   private String workerDockerImage = null;
@@ -159,6 +160,16 @@ public class RunJobParameters extends RunParameters {
     String psLaunchCommand = parsedCommandLine.getOptionValue(
         CliConstants.PS_LAUNCH_CMD);
 
+    // Localizations
+    String[] localizationsStr = parsedCommandLine.getOptionValues(
+        CliConstants.LOCALIZATION);
+    if (null != localizationsStr) {
+      for (String loc : localizationsStr) {
+        Localization localization = new Localization();
+        localization.parse(loc);
+        localizations.add(localization);
+      }
+    }
     boolean distributeKerberosKeytab = parsedCommandLine.hasOption(CliConstants
         .DISTRIBUTE_KEYTAB);
 
@@ -286,6 +297,10 @@ public class RunJobParameters extends RunParameters {
 
   public List<Quicklink> getQuicklinks() {
     return quicklinks;
+  }
+
+  public List<Localization> getLocalizations() {
+    return localizations;
   }
 
   public String getKeytab() {

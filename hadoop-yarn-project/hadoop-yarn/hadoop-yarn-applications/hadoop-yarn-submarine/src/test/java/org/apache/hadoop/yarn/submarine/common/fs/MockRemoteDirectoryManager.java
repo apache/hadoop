@@ -19,7 +19,9 @@
 package org.apache.hadoop.yarn.submarine.common.fs;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 
 import java.io.File;
@@ -29,6 +31,7 @@ public class MockRemoteDirectoryManager implements RemoteDirectoryManager {
   private File jobsParentDir = null;
   private File modelParentDir = null;
 
+  private File jobDir = null;
   @Override
   public Path getJobStagingArea(String jobName, boolean create)
       throws IOException {
@@ -41,10 +44,11 @@ public class MockRemoteDirectoryManager implements RemoteDirectoryManager {
       }
     }
 
-    File jobDir = new File(jobsParentDir.getAbsolutePath(), jobName);
+    this.jobDir = new File(jobsParentDir.getAbsolutePath(), jobName);
     if (create && !jobDir.exists()) {
       if (!jobDir.mkdirs()) {
-        throw new IOException("Failed to mkdirs for " + jobDir.getAbsolutePath());
+        throw new IOException("Failed to mkdirs for "
+            + jobDir.getAbsolutePath());
       }
     }
     return new Path(jobDir.getAbsolutePath());
@@ -57,7 +61,8 @@ public class MockRemoteDirectoryManager implements RemoteDirectoryManager {
   }
 
   @Override
-  public Path getModelDir(String modelName, boolean create) throws IOException {
+  public Path getModelDir(String modelName, boolean create)
+      throws IOException {
     if (modelParentDir == null && create) {
       modelParentDir = new File(
           "target/_models_" + System.currentTimeMillis());
@@ -70,19 +75,94 @@ public class MockRemoteDirectoryManager implements RemoteDirectoryManager {
     File modelDir = new File(modelParentDir.getAbsolutePath(), modelName);
     if (create) {
       if (!modelDir.exists() && !modelDir.mkdirs()) {
-        throw new IOException("Failed to mkdirs for " + modelDir.getAbsolutePath());
+        throw new IOException("Failed to mkdirs for "
+            + modelDir.getAbsolutePath());
       }
     }
     return new Path(modelDir.getAbsolutePath());
   }
 
   @Override
-  public FileSystem getFileSystem() throws IOException {
+  public FileSystem getDefaultFileSystem() throws IOException {
     return FileSystem.getLocal(new Configuration());
+  }
+
+  @Override
+  public FileSystem getFileSystemByUri(String uri) throws IOException {
+    return getDefaultFileSystem();
   }
 
   @Override
   public Path getUserRootFolder() throws IOException {
     return new Path("s3://generated_root_dir");
   }
+
+  @Override
+  public boolean isDir(String uri) throws IOException {
+    return getDefaultFileSystem().getFileStatus(
+        new Path(convertToStagingPath(uri))).isDirectory();
+
+  }
+
+  @Override
+  public boolean isRemote(String uri) throws IOException {
+    String scheme = new Path(uri).toUri().getScheme();
+    if (null == scheme) {
+      return false;
+    }
+    return !scheme.startsWith("file://");
+  }
+
+  private String convertToStagingPath(String uri) throws IOException {
+    String ret = uri;
+    if (isRemote(uri)) {
+      String dirName = new Path(uri).getName();
+      ret = this.jobDir.getAbsolutePath()
+          + "/" + dirName;
+    }
+    return ret;
+  }
+
+  /**
+   * We use staging dir as mock HDFS dir.
+   * */
+  @Override
+  public boolean copyRemoteToLocal(String remoteUri, String localUri)
+      throws IOException {
+    // mock the copy from HDFS into a local copy
+    Path remoteToLocalDir = new Path(convertToStagingPath(remoteUri));
+    File old = new File(convertToStagingPath(localUri));
+    if (old.isDirectory() && old.exists()) {
+      if (!FileUtil.fullyDelete(old)) {
+        throw new IOException("Cannot delete temp dir:"
+            + old.getAbsolutePath());
+      }
+    }
+    return FileUtil.copy(getDefaultFileSystem(), remoteToLocalDir,
+        new File(localUri), false,
+        getDefaultFileSystem().getConf());
+  }
+
+  @Override
+  public boolean existsRemoteFile(Path uri) throws IOException {
+    String fakeLocalFilePath = this.jobDir.getAbsolutePath()
+        + "/" + uri.getName();
+    return new File(fakeLocalFilePath).exists();
+  }
+
+  @Override
+  public FileStatus getRemoteFileStatus(Path p) throws IOException {
+    return getDefaultFileSystem().getFileStatus(new Path(
+        convertToStagingPath(p.toUri().toString())));
+  }
+
+  @Override
+  public long getRemoteFileSize(String uri) throws IOException {
+    // 5 byte for this file to test
+    if (uri.equals("https://a/b/1.patch")) {
+      return 5;
+    }
+    return 100 * 1024 * 1024;
+  }
+
 }

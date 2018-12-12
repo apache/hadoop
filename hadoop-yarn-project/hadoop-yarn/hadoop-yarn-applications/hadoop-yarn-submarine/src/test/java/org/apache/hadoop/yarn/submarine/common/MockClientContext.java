@@ -31,12 +31,18 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class MockClientContext extends ClientContext {
-  private MockRemoteDirectoryManager remoteDirectoryMgr =
+
+  private RemoteDirectoryManager remoteDirectoryMgr =
       new MockRemoteDirectoryManager();
 
   @Override
   public RemoteDirectoryManager getRemoteDirectoryManager() {
     return remoteDirectoryMgr;
+  }
+
+  public void setRemoteDirectoryMgr(
+      RemoteDirectoryManager remoteDirectoryMgr) {
+    this.remoteDirectoryMgr = remoteDirectoryMgr;
   }
 
   @Override
