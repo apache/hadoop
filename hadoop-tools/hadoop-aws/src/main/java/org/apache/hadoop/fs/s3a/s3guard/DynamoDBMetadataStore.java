@@ -576,12 +576,16 @@ public class DynamoDBMetadataStore implements MetadataStore {
             path.toString(),
             true,
             () -> table.query(spec).iterator().hasNext());
-        // When this class has support for authoritative
-        // (fully-cached) directory listings, we may also be able to answer
-        // TRUE here.  Until then, we don't know if we have full listing or
-        // not, thus the UNKNOWN here:
-        meta.setIsEmptyDirectory(
-            hasChildren ? Tristate.FALSE : Tristate.UNKNOWN);
+
+        // If directory is authoritative, we can set the empty directory flag
+        // to TRUE or FALSE. Otherwise FALSE, or UNKNOWN.
+        if(meta.isAuthoritativeDir()) {
+          meta.setIsEmptyDirectory(
+              hasChildren ? Tristate.FALSE : Tristate.TRUE);
+        } else {
+          meta.setIsEmptyDirectory(
+              hasChildren ? Tristate.FALSE : Tristate.UNKNOWN);
+        }
       }
     }
 

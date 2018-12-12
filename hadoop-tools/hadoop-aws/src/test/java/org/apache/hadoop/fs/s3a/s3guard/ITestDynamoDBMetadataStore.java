@@ -687,6 +687,53 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     }
   }
 
+  @Test
+  public void testGetEmptyDirFlagCanSetTrue() throws IOException {
+    boolean authoritativeDirectoryListing = true;
+    testGetEmptyDirFlagCanSetTrueOrUnknown(authoritativeDirectoryListing);
+  }
+
+  @Test
+  public void testGetEmptyDirFlagCanSetUnknown() throws IOException {
+    boolean authoritativeDirectoryListing = false;
+    testGetEmptyDirFlagCanSetTrueOrUnknown(authoritativeDirectoryListing);
+  }
+
+  private void testGetEmptyDirFlagCanSetTrueOrUnknown(boolean auth)
+      throws IOException {
+    // setup
+    final DynamoDBMetadataStore ms = getDynamoMetadataStore();
+    String rootPath = "/testAuthoritativeEmptyDirFlag"+ UUID.randomUUID();
+    String filePath = rootPath + "/file1";
+    final Path dirToPut = fileSystem.makeQualified(new Path(rootPath));
+    final Path fileToPut = fileSystem.makeQualified(new Path(filePath));
+
+    // Create non-auth DirListingMetadata
+    DirListingMetadata dlm =
+        new DirListingMetadata(dirToPut, new ArrayList<>(), auth);
+    if(auth){
+      assertEquals(Tristate.TRUE, dlm.isEmpty());
+    } else {
+      assertEquals(Tristate.UNKNOWN, dlm.isEmpty());
+    }
+    assertEquals(auth, dlm.isAuthoritative());
+
+    // Test with non-authoritative listing, empty dir
+    ms.put(dlm);
+    final PathMetadata pmdResultEmpty = ms.get(dirToPut, true);
+    if(auth){
+      assertEquals(Tristate.TRUE, pmdResultEmpty.isEmptyDirectory());
+    } else {
+      assertEquals(Tristate.UNKNOWN, pmdResultEmpty.isEmptyDirectory());
+    }
+
+    // Test with non-authoritative listing, non-empty dir
+    dlm.put(basicFileStatus(fileToPut, 1, false));
+    ms.put(dlm);
+    final PathMetadata pmdResultNotEmpty = ms.get(dirToPut, true);
+    assertEquals(Tristate.FALSE, pmdResultNotEmpty.isEmptyDirectory());
+  }
+
   /**
    * This validates the table is created and ACTIVE in DynamoDB.
    *
