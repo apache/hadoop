@@ -31,12 +31,14 @@ import org.apache.hadoop.hdds.scm.XceiverClientRatis;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.*;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.client.*;
 import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
+import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.ChunkGroupOutputStream;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
@@ -48,15 +50,12 @@ import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.keyvalue.helpers
     .KeyValueContainerLocationUtil;
 import org.apache.hadoop.ozone.om.OzoneManager;
-import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
-import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
-import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
+import org.apache.hadoop.ozone.om.helpers.*;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.protocolPB.
     StorageContainerLocationProtocolClientSideTranslatorPB;
-import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
@@ -79,6 +78,7 @@ import static org.hamcrest.CoreMatchers.either;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 /**
  * This class is to test all the public facing APIs of Ozone Client.
@@ -732,7 +732,7 @@ public class TestOzoneRpcClient {
     try {
       // try to read
       readKey(bucket, keyName, value);
-      Assert.fail("Expected exception not thrown");
+      fail("Expected exception not thrown");
     } catch (IOException e) {
       Assert.assertTrue(e.getMessage().contains("Failed to execute command"));
       Assert.assertTrue(
@@ -914,7 +914,7 @@ public class TestOzoneRpcClient {
     try {
       OzoneInputStream is = bucket.readKey(keyName);
       is.read(new byte[100]);
-      Assert.fail("Reading corrupted data should fail.");
+      fail("Reading corrupted data should fail.");
     } catch (OzoneChecksumException e) {
       GenericTestUtils.assertExceptionContains("Checksum mismatch", e);
     }
@@ -1116,7 +1116,7 @@ public class TestOzoneRpcClient {
     OzoneVolume vol = store.getVolume(volume);
     Iterator<? extends OzoneBucket> buckets = vol.listBuckets("");
     while(buckets.hasNext()) {
-      Assert.fail();
+      fail();
     }
   }
 
@@ -1258,7 +1258,7 @@ public class TestOzoneRpcClient {
     OzoneBucket buc = vol.getBucket(bucket);
     Iterator<? extends OzoneKey> keys = buc.listKeys("");
     while(keys.hasNext()) {
-      Assert.fail();
+      fail();
     }
   }
 
@@ -1296,6 +1296,7 @@ public class TestOzoneRpcClient {
     assertNotNull(multipartInfo.getUploadID());
   }
 
+
   @Test
   public void testInitiateMultipartUploadWithDefaultReplication() throws
       IOException {
@@ -1326,6 +1327,177 @@ public class TestOzoneRpcClient {
     Assert.assertEquals(keyName, multipartInfo.getKeyName());
     assertNotEquals(multipartInfo.getUploadID(), uploadID);
     assertNotNull(multipartInfo.getUploadID());
+  }
+
+
+  @Test
+  public void testUploadPartWithNoOverride() throws IOException {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+    String sampleData = "sample Value";
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    OmMultipartInfo multipartInfo = bucket.initiateMultipartUpload(keyName,
+        ReplicationType.STAND_ALONE, ReplicationFactor.ONE);
+
+    assertNotNull(multipartInfo);
+    String uploadID = multipartInfo.getUploadID();
+    Assert.assertEquals(volumeName, multipartInfo.getVolumeName());
+    Assert.assertEquals(bucketName, multipartInfo.getBucketName());
+    Assert.assertEquals(keyName, multipartInfo.getKeyName());
+    assertNotNull(multipartInfo.getUploadID());
+
+    OzoneOutputStream ozoneOutputStream = bucket.createMultipartKey(keyName,
+        sampleData.length(), 1, uploadID);
+    ozoneOutputStream.write(DFSUtil.string2Bytes(sampleData), 0,
+        sampleData.length());
+    ozoneOutputStream.close();
+
+    OmMultipartCommitUploadPartInfo commitUploadPartInfo = ozoneOutputStream
+        .getCommitUploadPartInfo();
+
+    assertNotNull(commitUploadPartInfo);
+    String partName = commitUploadPartInfo.getPartName();
+    assertNotNull(commitUploadPartInfo.getPartName());
+
+  }
+
+  @Test
+  public void testUploadPartOverrideWithStandAlone() throws IOException {
+
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+    String sampleData = "sample Value";
+    int partNumber = 1;
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    OmMultipartInfo multipartInfo = bucket.initiateMultipartUpload(keyName,
+        ReplicationType.STAND_ALONE, ReplicationFactor.ONE);
+
+    assertNotNull(multipartInfo);
+    String uploadID = multipartInfo.getUploadID();
+    Assert.assertEquals(volumeName, multipartInfo.getVolumeName());
+    Assert.assertEquals(bucketName, multipartInfo.getBucketName());
+    Assert.assertEquals(keyName, multipartInfo.getKeyName());
+    assertNotNull(multipartInfo.getUploadID());
+
+    OzoneOutputStream ozoneOutputStream = bucket.createMultipartKey(keyName,
+        sampleData.length(), partNumber, uploadID);
+    ozoneOutputStream.write(DFSUtil.string2Bytes(sampleData), 0,
+        sampleData.length());
+    ozoneOutputStream.close();
+
+    OmMultipartCommitUploadPartInfo commitUploadPartInfo = ozoneOutputStream
+        .getCommitUploadPartInfo();
+
+    assertNotNull(commitUploadPartInfo);
+    String partName = commitUploadPartInfo.getPartName();
+    assertNotNull(commitUploadPartInfo.getPartName());
+
+    //Overwrite the part by creating part key with same part number.
+    sampleData = "sample Data Changed";
+    ozoneOutputStream = bucket.createMultipartKey(keyName,
+        sampleData.length(), partNumber, uploadID);
+    ozoneOutputStream.write(DFSUtil.string2Bytes(sampleData), 0, "name"
+        .length());
+    ozoneOutputStream.close();
+
+    commitUploadPartInfo = ozoneOutputStream
+        .getCommitUploadPartInfo();
+
+    assertNotNull(commitUploadPartInfo);
+    assertNotNull(commitUploadPartInfo.getPartName());
+
+    // PartName should be different from old part Name.
+    assertNotEquals("Part names should be different", partName,
+        commitUploadPartInfo.getPartName());
+  }
+
+  @Test
+  public void testUploadPartOverrideWithRatis() throws IOException {
+
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+    String sampleData = "sample Value";
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    OmMultipartInfo multipartInfo = bucket.initiateMultipartUpload(keyName,
+        ReplicationType.RATIS, ReplicationFactor.THREE);
+
+    assertNotNull(multipartInfo);
+    String uploadID = multipartInfo.getUploadID();
+    Assert.assertEquals(volumeName, multipartInfo.getVolumeName());
+    Assert.assertEquals(bucketName, multipartInfo.getBucketName());
+    Assert.assertEquals(keyName, multipartInfo.getKeyName());
+    assertNotNull(multipartInfo.getUploadID());
+
+    int partNumber = 1;
+
+    OzoneOutputStream ozoneOutputStream = bucket.createMultipartKey(keyName,
+        sampleData.length(), partNumber, uploadID);
+    ozoneOutputStream.write(DFSUtil.string2Bytes(sampleData), 0,
+        sampleData.length());
+    ozoneOutputStream.close();
+
+    OmMultipartCommitUploadPartInfo commitUploadPartInfo = ozoneOutputStream
+        .getCommitUploadPartInfo();
+
+    assertNotNull(commitUploadPartInfo);
+    String partName = commitUploadPartInfo.getPartName();
+    assertNotNull(commitUploadPartInfo.getPartName());
+
+    //Overwrite the part by creating part key with same part number.
+    sampleData = "sample Data Changed";
+    ozoneOutputStream = bucket.createMultipartKey(keyName,
+        sampleData.length(), partNumber, uploadID);
+    ozoneOutputStream.write(DFSUtil.string2Bytes(sampleData), 0, "name"
+        .length());
+    ozoneOutputStream.close();
+
+    commitUploadPartInfo = ozoneOutputStream
+        .getCommitUploadPartInfo();
+
+    assertNotNull(commitUploadPartInfo);
+    assertNotNull(commitUploadPartInfo.getPartName());
+
+    // PartName should be different from old part Name.
+    assertNotEquals("Part names should be different", partName,
+        commitUploadPartInfo.getPartName());
+  }
+
+  @Test
+  public void testNoSuchUploadError() throws IOException {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+    String sampleData = "sample Value";
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+
+    String uploadID = "random";
+    try {
+      bucket.createMultipartKey(keyName, sampleData.length(), 1, uploadID);
+      fail("testNoSuchUploadError failed");
+    } catch (IOException ex) {
+      GenericTestUtils.assertExceptionContains("NO_SUCH_MULTIPART_UPLOAD_ERROR",
+          ex);
+    }
+
   }
 
 

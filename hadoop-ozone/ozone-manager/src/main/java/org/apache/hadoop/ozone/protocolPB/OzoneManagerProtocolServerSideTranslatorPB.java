@@ -26,6 +26,7 @@ import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
@@ -86,6 +87,10 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .LocateKeyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .LocateKeyResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .MultipartCommitUploadPartRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .MultipartCommitUploadPartResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .MultipartInfoInitiateRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -197,6 +202,11 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
         return Status.S3_BUCKET_NOT_FOUND;
       case INITIATE_MULTIPART_UPLOAD_FAILED:
         return Status.INITIATE_MULTIPART_UPLOAD_ERROR;
+      case NO_SUCH_MULTIPART_UPLOAD:
+        return Status.NO_SUCH_MULTIPART_UPLOAD_ERROR;
+      case UPLOAD_PART_FAILED:
+        return Status.MULTIPART_UPLOAD_PARTFILE_ERROR;
+
       default:
         return Status.INTERNAL_ERROR;
       }
@@ -378,6 +388,9 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
           .setDataSize(keyArgs.getDataSize())
           .setType(type)
           .setFactor(factor)
+          .setIsMultipartKey(keyArgs.getIsMultipartKey())
+          .setMultipartUploadID(keyArgs.getMultipartUploadID())
+          .setMultipartUploadPartNumber(keyArgs.getMultipartNumber())
           .build();
       if (keyArgs.hasDataSize()) {
         omKeyArgs.setDataSize(keyArgs.getDataSize());
@@ -684,4 +697,30 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     }
     return resp.build();
   }
+
+  @Override
+  public MultipartCommitUploadPartResponse commitMultipartUploadPart(
+      RpcController controller, MultipartCommitUploadPartRequest request) {
+    MultipartCommitUploadPartResponse.Builder resp =
+        MultipartCommitUploadPartResponse.newBuilder();
+    try {
+      KeyArgs keyArgs = request.getKeyArgs();
+      OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
+          .setVolumeName(keyArgs.getVolumeName())
+          .setBucketName(keyArgs.getBucketName())
+          .setKeyName(keyArgs.getKeyName())
+          .setMultipartUploadID(keyArgs.getMultipartUploadID())
+          .setIsMultipartKey(keyArgs.getIsMultipartKey())
+          .setMultipartUploadPartNumber(keyArgs.getMultipartNumber())
+          .build();
+      OmMultipartCommitUploadPartInfo commitUploadPartInfo =
+          impl.commitMultipartUploadPart(omKeyArgs, request.getClientID());
+      resp.setPartName(commitUploadPartInfo.getPartName());
+      resp.setStatus(Status.OK);
+    } catch (IOException ex) {
+      resp.setStatus(exceptionToResponseStatus(ex));
+    }
+    return resp.build();
+  }
+
 }

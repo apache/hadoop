@@ -401,5 +401,10 @@ public interface ClientProtocol {
       bucketName, String keyName, ReplicationType type, ReplicationFactor
       factor) throws IOException;
 
+  OzoneOutputStream createMultipartKey(String volumeName, String bucketName,
+                                       String keyName, long size,
+                                       int partNumber, String uploadID)
+      throws IOException;
+
 
 }

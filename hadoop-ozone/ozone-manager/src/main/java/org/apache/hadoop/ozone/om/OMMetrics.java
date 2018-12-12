@@ -86,6 +86,8 @@ public class OMMetrics {
   private @Metric MutableCounterLong numGetServiceListFails;
   private @Metric MutableCounterLong numListS3BucketsFails;
   private @Metric MutableCounterLong numInitiateMultipartUploadFails;
+  private @Metric MutableCounterLong numCommitMultipartUploadParts;
+  private @Metric MutableCounterLong getNumCommitMultipartUploadPartFails;
 
   // Metrics for total number of volumes, buckets and keys
 
@@ -233,6 +235,15 @@ public class OMMetrics {
   }
 
   public void incNumInitiateMultipartUploadFails() {
+    numInitiateMultipartUploadFails.incr();
+  }
+
+  public void incNumCommitMultipartUploadParts() {
+    numKeyOps.incr();
+    numCommitMultipartUploadParts.incr();
+  }
+
+  public void incNumCommitMultipartUploadPartFails() {
     numInitiateMultipartUploadFails.incr();
   }
 

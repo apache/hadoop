@@ -25,13 +25,9 @@ import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.ozone.common.Checksum;
-import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
+import org.apache.hadoop.ozone.om.helpers.*;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
-import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
-import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
-import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
-import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
@@ -85,6 +81,7 @@ public class ChunkGroupOutputStream extends OutputStream {
   private final long blockSize;
   private final Checksum checksum;
   private List<ByteBuffer> bufferList;
+  private OmMultipartCommitUploadPartInfo commitUploadPartInfo;
   /**
    * A constructor for testing purpose only.
    */
@@ -152,7 +149,7 @@ public class ChunkGroupOutputStream extends OutputStream {
       OzoneManagerProtocolClientSideTranslatorPB omClient, int chunkSize,
       String requestId, ReplicationFactor factor, ReplicationType type,
       long bufferFlushSize, long bufferMaxSize, long size, long watchTimeout,
-      Checksum checksum) {
+      Checksum checksum, String uploadID, int partNumber, boolean isMultipart) {
     this.streamEntries = new ArrayList<>();
     this.currentStreamIndex = 0;
     this.omClient = omClient;
@@ -161,6 +158,8 @@ public class ChunkGroupOutputStream extends OutputStream {
     this.keyArgs = new OmKeyArgs.Builder().setVolumeName(info.getVolumeName())
         .setBucketName(info.getBucketName()).setKeyName(info.getKeyName())
         .setType(type).setFactor(factor).setDataSize(info.getDataSize())
+        .setIsMultipartKey(isMultipart).setMultipartUploadID(
+            uploadID).setMultipartUploadPartNumber(partNumber)
         .build();
     this.openID = handler.getId();
     this.xceiverClientManager = xceiverClientManager;
@@ -498,7 +497,15 @@ public class ChunkGroupOutputStream extends OutputStream {
         removeEmptyBlocks();
         keyArgs.setDataSize(getKeyLength());
         keyArgs.setLocationInfoList(getLocationInfoList());
-        omClient.commitKey(keyArgs, openID);
+        // When the key is multipart upload part file upload, we should not
+        // commit the key, as this is not an actual key, this is a just a
+        // partial key of a large file.
+        if (keyArgs.getIsMultipartKey()) {
+          commitUploadPartInfo = omClient.commitMultipartUploadPart(keyArgs,
+              openID);
+        } else {
+          omClient.commitKey(keyArgs, openID);
+        }
       } else {
         LOG.warn("Closing ChunkGroupOutputStream, but key args is null");
       }
@@ -510,6 +517,10 @@ public class ChunkGroupOutputStream extends OutputStream {
       }
       bufferList = null;
     }
+  }
+
+  public OmMultipartCommitUploadPartInfo getCommitUploadPartInfo() {
+    return commitUploadPartInfo;
   }
 
   /**
@@ -529,6 +540,20 @@ public class ChunkGroupOutputStream extends OutputStream {
     private long blockSize;
     private long watchTimeout;
     private Checksum checksum;
+    private String multipartUploadID;
+    private int multipartNumber;
+    private boolean isMultipartKey;
+
+
+    public Builder setMultipartUploadID(String uploadID) {
+      this.multipartUploadID = uploadID;
+      return this;
+    }
+
+    public Builder setMultipartNumber(int partNumber) {
+      this.multipartNumber = partNumber;
+      return this;
+    }
 
     public Builder setHandler(OpenKeySession handler) {
       this.openHandler = handler;
@@ -597,10 +622,16 @@ public class ChunkGroupOutputStream extends OutputStream {
       return this;
     }
 
+    public Builder setIsMultipartKey(boolean isMultipart) {
+      this.isMultipartKey = isMultipart;
+      return this;
+    }
+
     public ChunkGroupOutputStream build() throws IOException {
       return new ChunkGroupOutputStream(openHandler, xceiverManager, scmClient,
           omClient, chunkSize, requestID, factor, type, streamBufferFlushSize,
-          streamBufferMaxSize, blockSize, watchTimeout, checksum);
+          streamBufferMaxSize, blockSize, watchTimeout, checksum,
+          multipartUploadID, multipartNumber, isMultipartKey);
     }
   }
 
