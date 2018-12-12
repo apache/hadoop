@@ -371,6 +371,16 @@
 </property>
 
 <property>
+  <name>hadoop.security.group.mapping.ldap.bind.password.alias</name>
+  <value></value>
+  <description>
+    The alias of the bind user to be used to get the password from credential
+    providers. If the alias is empty, property
+    hadoop.security.group.mapping.ldap.bind.password is used instead.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.group.mapping.ldap.bind.password.file</name>
   <value></value>
   <description>

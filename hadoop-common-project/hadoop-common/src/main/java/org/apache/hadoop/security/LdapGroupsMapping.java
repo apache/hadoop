@@ -149,6 +149,10 @@ public class LdapGroupsMapping
   public static final String BIND_PASSWORD_FILE_KEY = BIND_PASSWORD_KEY + ".file";
   public static final String BIND_PASSWORD_FILE_DEFAULT = "";
 
+  public static final String BIND_PASSWORD_ALIAS_KEY =
+      BIND_PASSWORD_KEY + ".alias";
+  public static final String BIND_PASSWORD_ALIAS_DEFAULT = "";
+
   /*
    * Base distinguished name to use for searches
    */
@@ -662,12 +666,19 @@ public class LdapGroupsMapping
     }
     
     bindUser = conf.get(BIND_USER_KEY, BIND_USER_DEFAULT);
-    bindPassword = getPassword(conf, BIND_PASSWORD_KEY, BIND_PASSWORD_DEFAULT);
+
+    String alias = conf.get(BIND_PASSWORD_ALIAS_KEY,
+        BIND_PASSWORD_ALIAS_DEFAULT);
+    bindPassword = getPasswordFromCredentialProviders(conf, alias, "");
     if (bindPassword.isEmpty()) {
-      bindPassword = extractPassword(
-          conf.get(BIND_PASSWORD_FILE_KEY, BIND_PASSWORD_FILE_DEFAULT));
+      bindPassword = getPassword(conf, BIND_PASSWORD_KEY,
+          BIND_PASSWORD_DEFAULT);
+      if (bindPassword.isEmpty()) {
+        bindPassword = extractPassword(
+            conf.get(BIND_PASSWORD_FILE_KEY, BIND_PASSWORD_FILE_DEFAULT));
+      }
     }
-    
+
     String baseDN = conf.getTrimmed(BASE_DN_KEY, BASE_DN_DEFAULT);
 
     // User search base which defaults to base dn.
@@ -755,10 +766,10 @@ public class LdapGroupsMapping
   }
 
   String getPasswordFromCredentialProviders(
-      Configuration conf, String alias, String defaultPass) {
+      Configuration config, String alias, String defaultPass) {
     String password = defaultPass;
     try {
-      char[] passchars = conf.getPasswordFromCredentialProviders(alias);
+      char[] passchars = config.getPasswordFromCredentialProviders(alias);
       if (passchars != null) {
         password = new String(passchars);
       }
