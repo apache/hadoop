@@ -22,12 +22,11 @@ import java.net.URI;
 
 import java.util.Collections;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.HAUtilClient;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_FAILOVER_IPFAILOVER_VIRTUAL_ADDRESS;
 
 /**
  * Extends {@link ObserverReadProxyProvider} to support NameNode IP failover.
@@ -81,6 +80,9 @@ public class ObserverReadProxyProviderWithIPFailover<T extends ClientProtocol>
   private static final Logger LOG = LoggerFactory.getLogger(
       ObserverReadProxyProviderWithIPFailover.class);
 
+  private static final String IPFAILOVER_CONFIG_PREFIX =
+      HdfsClientConfigKeys.Failover.PREFIX + "ipfailover.virtual-address";
+
   /**
    * By default ObserverReadProxyProviderWithIPFailover
    * uses {@link IPFailoverProxyProvider} for failover.
@@ -123,8 +125,7 @@ public class ObserverReadProxyProviderWithIPFailover<T extends ClientProtocol>
 
   private static URI getFailoverVirtualIP(
       Configuration conf, String nameServiceID) {
-    String configKey = DFS_CLIENT_FAILOVER_IPFAILOVER_VIRTUAL_ADDRESS
-        + "." + nameServiceID;
+    String configKey = IPFAILOVER_CONFIG_PREFIX + "." + nameServiceID;
     String virtualIP = conf.get(configKey);
     LOG.info("Name service ID {} will use virtual IP {} for failover",
         nameServiceID, virtualIP);
