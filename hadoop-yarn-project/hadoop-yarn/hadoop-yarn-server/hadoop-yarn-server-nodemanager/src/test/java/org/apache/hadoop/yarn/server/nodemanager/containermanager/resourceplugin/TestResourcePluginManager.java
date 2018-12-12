@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManagerTestBase;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DevicePlugin;
+import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DevicePluginScheduler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
@@ -492,6 +493,33 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
       actualMessage = e.getMessage();
     }
     Assert.assertEquals(expectedMessage, actualMessage);
+  }
+
+  @Test
+  public void testLoadPluginWithCustomizedScheduler() {
+    ResourcePluginManager rpm = new ResourcePluginManager();
+    DeviceMappingManager dmm = new DeviceMappingManager(mock(Context.class));
+    DeviceMappingManager dmmSpy = spy(dmm);
+
+    ResourcePluginManager rpmSpy = spy(rpm);
+    rpmSpy.setDeviceMappingManager(dmmSpy);
+
+    nm = new MyMockNM(rpmSpy);
+
+    conf.setBoolean(YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED,
+        true);
+    conf.setStrings(
+        YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_DEVICE_CLASSES,
+        FakeTestDevicePlugin1.class.getCanonicalName()
+            + "," + FakeTestDevicePlugin5.class.getCanonicalName());
+    nm.init(conf);
+    nm.start();
+    // only 1 plugin has the customized scheduler
+    verify(rpmSpy, times(1)).checkInterfaceCompatibility(
+        DevicePlugin.class, FakeTestDevicePlugin1.class);
+    verify(dmmSpy, times(1)).addDevicePluginScheduler(
+        any(String.class), any(DevicePluginScheduler.class));
+    Assert.assertEquals(1, dmm.getDevicePluginSchedulers().size());
   }
 
   @Test(timeout = 30000)

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,35 +18,28 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.deviceframework;
 
-import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.*;
+import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
+import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DevicePlugin;
+import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DeviceRegisterRequest;
+import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DeviceRuntimeSpec;
+import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.YarnRuntimeType;
 
 import java.util.Set;
-import java.util.TreeSet;
 
 /**
- * Used only for testing.
- * A fake normal vendor plugin
- * */
-public class FakeTestDevicePlugin1
-    implements DevicePlugin, DevicePluginScheduler{
+ * A normal plugin without customized scheduler.
+ */
+
+public class FakeTestDevicePlugin5 implements DevicePlugin {
   @Override
-  public DeviceRegisterRequest getRegisterRequestInfo() {
+  public DeviceRegisterRequest getRegisterRequestInfo() throws Exception {
     return DeviceRegisterRequest.Builder.newInstance()
-        .setResourceName("cmpA.com/hdwA").build();
+        .setResourceName("cmp.com/cmp").build();
   }
 
   @Override
-  public Set<Device> getDevices() {
-    TreeSet<Device> r = new TreeSet<>();
-    r.add(Device.Builder.newInstance()
-        .setId(0)
-        .setDevPath("/dev/hdwA0")
-        .setMajorNumber(243)
-        .setMinorNumber(0)
-        .setBusID("0000:65:00.0")
-        .setHealthy(true)
-        .build());
-    return r;
+  public Set<Device> getDevices() throws Exception {
+    return null;
   }
 
   @Override
@@ -55,23 +48,9 @@ public class FakeTestDevicePlugin1
     return null;
   }
 
-  @Override
-  public void onDevicesReleased(Set<Device> allocatedDevices) {
-
-  }
 
   @Override
-  public Set<Device> allocateDevices(Set<Device> availableDevices,
-      int count) {
-    Set<Device> allocated = new TreeSet<Device>();
-    int number = 0;
-    for (Device d : availableDevices) {
-      allocated.add(d);
-      number++;
-      if (number == count) {
-        break;
-      }
-    }
-    return allocated;
+  public void onDevicesReleased(Set<Device> releasedDevices) throws Exception {
+
   }
 }

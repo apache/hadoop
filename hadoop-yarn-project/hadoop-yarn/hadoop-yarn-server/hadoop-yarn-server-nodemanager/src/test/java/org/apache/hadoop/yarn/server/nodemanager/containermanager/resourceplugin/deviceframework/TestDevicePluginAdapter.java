@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DevicePlugin;
+import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DevicePluginScheduler;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DeviceRegisterRequest;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DeviceRuntimeSpec;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.YarnRuntimeType;
@@ -63,6 +64,8 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -439,6 +442,56 @@ public class TestDevicePluginAdapter {
 
   }
 
+  @Test
+  public void testPreferPluginScheduler() throws IOException, YarnException {
+    NodeManager.NMContext context = mock(NodeManager.NMContext.class);
+    NMStateStoreService storeService = mock(NMStateStoreService.class);
+    when(context.getNMStateStore()).thenReturn(storeService);
+    doNothing().when(storeService).storeAssignedResources(isA(Container.class),
+        isA(String.class),
+        isA(ArrayList.class));
+
+    // Init scheduler manager
+    DeviceMappingManager dmm = new DeviceMappingManager(context);
+
+    ResourcePluginManager rpm = mock(ResourcePluginManager.class);
+    when(rpm.getDeviceMappingManager()).thenReturn(dmm);
+
+    // Init an plugin
+    MyPlugin plugin = new MyPlugin();
+    MyPlugin spyPlugin = spy(plugin);
+    String resourceName = MyPlugin.RESOURCE_NAME;
+    // Add plugin to DeviceMappingManager
+    dmm.getDevicePluginSchedulers().put(MyPlugin.RESOURCE_NAME, spyPlugin);
+    // Init an adapter for the plugin
+    DevicePluginAdapter adapter = new DevicePluginAdapter(
+        resourceName,
+        spyPlugin, dmm);
+    // Bootstrap, adding device
+    adapter.initialize(context);
+    adapter.createResourceHandler(context,
+        mockCGroupsHandler, mockPrivilegedExecutor);
+    adapter.getDeviceResourceHandler().bootstrap(conf);
+    int size = dmm.getAvailableDevices(resourceName);
+    Assert.assertEquals(3, size);
+
+    // A container c1 requests 1 device
+    Container c1 = mockContainerWithDeviceRequest(0,
+        resourceName,
+        1, false);
+    // preStart
+    adapter.getDeviceResourceHandler().preStart(c1);
+    // Use customized scheduler
+    verify(spyPlugin, times(1)).allocateDevices(
+        any(TreeSet.class), anyInt());
+    Assert.assertEquals(2,
+        dmm.getAvailableDevices(resourceName));
+    Assert.assertEquals(1,
+        dmm.getAllUsedDevices().get(resourceName).size());
+    Assert.assertEquals(3,
+        dmm.getAllAllowedDevices().get(resourceName).size());
+  }
+
   private static Container mockContainerWithDeviceRequest(int id,
       String resourceName,
       int numDeviceRequest,
@@ -469,7 +522,7 @@ public class TestDevicePluginAdapter {
         .newInstance(ApplicationId.newInstance(1234L, 1), 1), id);
   }
 
-  private class MyPlugin implements DevicePlugin {
+  private class MyPlugin implements DevicePlugin, DevicePluginScheduler {
     private final static String RESOURCE_NAME = "cmpA.com/hdwA";
     @Override
     public DeviceRegisterRequest getRegisterRequestInfo() {
@@ -517,6 +570,21 @@ public class TestDevicePluginAdapter {
     @Override
     public void onDevicesReleased(Set<Device> releasedDevices) {
 
+    }
+
+    @Override
+    public Set<Device> allocateDevices(Set<Device> availableDevices,
+        int count) {
+      Set<Device> allocated = new TreeSet<>();
+      int number = 0;
+      for (Device d : availableDevices) {
+        allocated.add(d);
+        number++;
+        if (number == count) {
+          break;
+        }
+      }
+      return allocated;
     }
   } // MyPlugin
 
