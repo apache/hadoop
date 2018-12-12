@@ -2417,9 +2417,10 @@
 
 <property>
   <name>hadoop.ssl.enabled.protocols</name>
-  <value>TLSv1,SSLv2Hello,TLSv1.1,TLSv1.2</value>
+  <value>TLSv1.1,TLSv1.2</value>
   <description>
-    The supported SSL protocols.
+    The supported SSL protocols. The parameter will only used from
+    DatanodeHttpServer.
   </description>
 </property>
 
