@@ -39,10 +39,14 @@ public final class OmKeyArgs implements Auditable {
   private final ReplicationType type;
   private final ReplicationFactor factor;
   private List<OmKeyLocationInfo> locationInfoList;
+  private final boolean isMultipartKey;
+  private final String multipartUploadID;
+  private final int multipartUploadPartNumber;
 
   private OmKeyArgs(String volumeName, String bucketName, String keyName,
       long dataSize, ReplicationType type, ReplicationFactor factor,
-      List<OmKeyLocationInfo> locationInfoList) {
+      List<OmKeyLocationInfo> locationInfoList, boolean isMultipart,
+      String uploadID, int partNumber) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.keyName = keyName;
@@ -50,6 +54,21 @@ public final class OmKeyArgs implements Auditable {
     this.type = type;
     this.factor = factor;
     this.locationInfoList = locationInfoList;
+    this.isMultipartKey = isMultipart;
+    this.multipartUploadID = uploadID;
+    this.multipartUploadPartNumber = partNumber;
+  }
+
+  public boolean getIsMultipartKey() {
+    return isMultipartKey;
+  }
+
+  public String getMultipartUploadID() {
+    return multipartUploadID;
+  }
+
+  public int getMultipartUploadPartNumber() {
+    return multipartUploadPartNumber;
   }
 
   public ReplicationType getType() {
@@ -123,6 +142,9 @@ public final class OmKeyArgs implements Auditable {
     private ReplicationType type;
     private ReplicationFactor factor;
     private List<OmKeyLocationInfo> locationInfoList;
+    private boolean isMultipartKey;
+    private String multipartUploadID;
+    private int multipartUploadPartNumber;
 
     public Builder setVolumeName(String volume) {
       this.volumeName = volume;
@@ -159,9 +181,25 @@ public final class OmKeyArgs implements Auditable {
       return this;
     }
 
+    public Builder setIsMultipartKey(boolean isMultipart) {
+      this.isMultipartKey = isMultipart;
+      return this;
+    }
+
+    public Builder setMultipartUploadID(String uploadID) {
+      this.multipartUploadID = uploadID;
+      return this;
+    }
+
+    public Builder setMultipartUploadPartNumber(int partNumber) {
+      this.multipartUploadPartNumber = partNumber;
+      return this;
+    }
+
     public OmKeyArgs build() {
       return new OmKeyArgs(volumeName, bucketName, keyName, dataSize, type,
-          factor, locationInfoList);
+          factor, locationInfoList, isMultipartKey, multipartUploadID,
+          multipartUploadPartNumber);
     }
   }
 }

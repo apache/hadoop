@@ -353,6 +353,13 @@ public class OzoneBucket {
         defaultReplication);
   }
 
+  public OzoneOutputStream createMultipartKey(String key, long size,
+                                              int partNumber, String uploadID)
+      throws IOException {
+    return proxy.createMultipartKey(volumeName, name, key, size, partNumber,
+        uploadID);
+  }
+
   /**
    * An Iterator to iterate over {@link OzoneKey} list.
    */

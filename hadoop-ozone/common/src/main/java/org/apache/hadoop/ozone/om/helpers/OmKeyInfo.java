@@ -215,6 +215,7 @@ public final class OmKeyInfo {
     private long modificationTime;
     private HddsProtos.ReplicationType type;
     private HddsProtos.ReplicationFactor factor;
+    private boolean isMultipartKey;
 
     public Builder setVolumeName(String volume) {
       this.volumeName = volume;
@@ -259,6 +260,11 @@ public final class OmKeyInfo {
 
     public Builder setReplicationType(HddsProtos.ReplicationType replType) {
       this.type = replType;
+      return this;
+    }
+
+    public Builder setIsMultipartKey(boolean isMultipart) {
+      this.isMultipartKey = isMultipart;
       return this;
     }
 

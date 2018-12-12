@@ -51,6 +51,18 @@ public class OmMultipartKeyInfo {
     return uploadID;
   }
 
+  public Map<Integer, PartKeyInfo> getPartKeyInfoList() {
+    return partKeyInfoList;
+  }
+
+  public void addPartKeyInfo(int partNumber, PartKeyInfo partKeyInfo) {
+    this.partKeyInfoList.put(partNumber, partKeyInfo);
+  }
+
+  public PartKeyInfo getPartKeyInfo(int partNumber) {
+    return partKeyInfoList.get(partNumber);
+  }
+
 
   /**
    * Construct OmMultipartInfo from MultipartKeyInfo proto object.

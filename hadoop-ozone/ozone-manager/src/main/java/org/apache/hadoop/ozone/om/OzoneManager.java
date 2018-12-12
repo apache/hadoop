@@ -61,6 +61,7 @@ import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
@@ -1572,6 +1573,32 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       throw ex;
     }
     return multipartInfo;
+  }
+
+  @Override
+  public OmMultipartCommitUploadPartInfo commitMultipartUploadPart(
+      OmKeyArgs keyArgs, long clientID) throws IOException {
+    boolean auditSuccess = false;
+    OmMultipartCommitUploadPartInfo commitUploadPartInfo;
+    metrics.incNumCommitMultipartUploadParts();
+    try {
+      commitUploadPartInfo = keyManager.commitMultipartUploadPart(keyArgs,
+          clientID);
+      auditSuccess = true;
+    } catch (IOException ex) {
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction
+              .INITIATE_MULTIPART_UPLOAD, (keyArgs == null) ? null : keyArgs
+          .toAuditMap(), ex));
+      metrics.incNumCommitMultipartUploadPartFails();
+      throw ex;
+    } finally {
+      if(auditSuccess) {
+        AUDIT.logWriteSuccess(buildAuditMessageForSuccess(
+            OMAction.COMMIT_MULTIPART_UPLOAD_PARTKEY, (keyArgs == null) ? null :
+                keyArgs.toAuditMap()));
+      }
+    }
+    return commitUploadPartInfo;
   }
 
 

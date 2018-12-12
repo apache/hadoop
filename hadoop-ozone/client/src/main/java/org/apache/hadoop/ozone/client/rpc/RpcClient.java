@@ -701,4 +701,54 @@ public class RpcClient implements ClientProtocol {
     return multipartInfo;
   }
 
+  @Override
+  public OzoneOutputStream createMultipartKey(String volumeName,
+                                              String bucketName,
+                                              String keyName,
+                                              long size,
+                                              int partNumber,
+                                              String uploadID)
+      throws IOException {
+    HddsClientUtils.verifyResourceName(volumeName, bucketName);
+    HddsClientUtils.checkNotNull(keyName, uploadID);
+    Preconditions.checkArgument(partNumber > 0, "Part number should be " +
+        "greater than zero");
+    Preconditions.checkArgument(size >=0, "size should be greater than or " +
+        "equal to zero");
+    String requestId = UUID.randomUUID().toString();
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(keyName)
+        .setDataSize(size)
+        .setIsMultipartKey(true)
+        .setMultipartUploadID(uploadID)
+        .build();
+
+    OpenKeySession openKey = ozoneManagerClient.openKey(keyArgs);
+    ChunkGroupOutputStream groupOutputStream =
+        new ChunkGroupOutputStream.Builder()
+            .setHandler(openKey)
+            .setXceiverClientManager(xceiverClientManager)
+            .setScmClient(storageContainerLocationClient)
+            .setOmClient(ozoneManagerClient)
+            .setChunkSize(chunkSize)
+            .setRequestID(requestId)
+            .setType(openKey.getKeyInfo().getType())
+            .setFactor(openKey.getKeyInfo().getFactor())
+            .setStreamBufferFlushSize(streamBufferFlushSize)
+            .setStreamBufferMaxSize(streamBufferMaxSize)
+            .setWatchTimeout(watchTimeout)
+            .setBlockSize(blockSize)
+            .setChecksum(checksum)
+            .setMultipartNumber(partNumber)
+            .setMultipartUploadID(uploadID)
+            .setIsMultipartKey(true)
+            .build();
+    groupOutputStream.addPreallocateBlocks(
+        openKey.getKeyInfo().getLatestVersionLocations(),
+        openKey.getOpenVersion());
+    return new OzoneOutputStream(groupOutputStream);
+  }
+
 }

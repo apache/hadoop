@@ -963,4 +963,16 @@ public class RestClient implements ClientProtocol {
     throw new UnsupportedOperationException("Ozone REST protocol does not " +
         "support this operation.");
   }
+
+  @Override
+  public OzoneOutputStream createMultipartKey(String volumeName,
+                                              String bucketName,
+                                              String keyName,
+                                              long size,
+                                              int partNumber,
+                                              String uploadID)
+      throws IOException {
+    throw new UnsupportedOperationException("Ozone REST protocol does not " +
+        "support this operation.");
+  }
 }

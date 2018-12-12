@@ -61,6 +61,8 @@ enum Status {
     S3_BUCKET_NOT_FOUND = 22;
     S3_BUCKET_ALREADY_EXISTS = 23;
     INITIATE_MULTIPART_UPLOAD_ERROR = 24;
+    MULTIPART_UPLOAD_PARTFILE_ERROR = 25;
+    NO_SUCH_MULTIPART_UPLOAD_ERROR = 26;
 }
 
 
@@ -244,6 +246,9 @@ message KeyArgs {
     optional hadoop.hdds.ReplicationType type = 5;
     optional hadoop.hdds.ReplicationFactor factor = 6;
     repeated KeyLocation keyLocations = 7;
+    optional bool isMultipartKey = 8;
+    optional string multipartUploadID = 9;
+    optional uint32 multipartNumber = 10;
 }
 
 message KeyLocation {
@@ -430,6 +435,17 @@ message PartKeyInfo {
     required KeyInfo partKeyInfo = 3;
 }
 
+message MultipartCommitUploadPartRequest {
+    required KeyArgs keyArgs = 1;
+    required uint64 clientID = 2;
+}
+
+message MultipartCommitUploadPartResponse {
+    // This one is returned as Etag for S3.
+    optional string partName = 1;
+    required Status status = 2;
+}
+
 
 
 /**
@@ -570,4 +586,7 @@ service OzoneManagerService {
 
     rpc initiateMultiPartUpload(MultipartInfoInitiateRequest)
     returns (MultipartInfoInitiateResponse);
+
+    rpc commitMultipartUploadPart(MultipartCommitUploadPartRequest)
+    returns (MultipartCommitUploadPartResponse);
 }

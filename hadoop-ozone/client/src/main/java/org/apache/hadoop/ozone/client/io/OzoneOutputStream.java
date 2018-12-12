@@ -17,6 +17,8 @@
 
 package org.apache.hadoop.ozone.client.io;
 
+import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
+
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -56,6 +58,14 @@ public class OzoneOutputStream extends OutputStream {
   public synchronized void close() throws IOException {
     //commitKey can be done here, if needed.
     outputStream.close();
+  }
+
+  public OmMultipartCommitUploadPartInfo getCommitUploadPartInfo() {
+    if (outputStream instanceof ChunkGroupOutputStream) {
+      return ((ChunkGroupOutputStream) outputStream).getCommitUploadPartInfo();
+    }
+    // Otherwise return null.
+    return null;
   }
 
   public OutputStream getOutputStream() {
