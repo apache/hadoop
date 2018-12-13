@@ -1374,28 +1374,12 @@ char **construct_docker_command(const char *command_file) {
 }
 
 int run_docker(const char *command_file) {
-  struct configuration command_config = {0, NULL};
-
-  int ret = read_config(command_file, &command_config);
-  if (ret != 0) {
-    free_configuration(&command_config);
-    return INVALID_COMMAND_FILE;
-  }
-  char *value = get_configuration_value("docker-command", DOCKER_COMMAND_FILE_SECTION, &command_config);
-  if (value != NULL && strcasecmp(value, "exec") == 0) {
-    free(value);
-    free_configuration(&command_config);
-    return run_docker_with_pty(command_file);
-  }
-  free_configuration(&command_config);
-  free(value);
-
   char **args = construct_docker_command(command_file);
-  char* docker_binary = get_docker_binary(&CFG);
+  char *docker_binary = get_docker_binary(&CFG);
 
   int exit_code = -1;
   if (execvp(docker_binary, args) != 0) {
-    fprintf(ERRORFILE, "Couldn't execute the container launch with args %s - %s",
+    fprintf(ERRORFILE, "Couldn't execute the container launch with args %s - %s\n",
               docker_binary, strerror(errno));
     fflush(LOGFILE);
     fflush(ERRORFILE);
@@ -1409,12 +1393,55 @@ int run_docker(const char *command_file) {
   return exit_code;
 }
 
-int run_docker_with_pty(const char *command_file) {
+int exec_container(const char *command_file) {
   int exit_code = -1;
-  char **args = construct_docker_command(command_file);
-  char* docker_binary = get_docker_binary(&CFG);
+  struct configuration command_config = {0, NULL};
+  char **args = NULL;
+  char **env = NULL;
+  char *workdir = NULL;
+  char *docker_binary = get_docker_binary(&CFG);
+  char *binary = NULL;
   int fdm, fds, rc;
   char input[4000];
+  int docker = 0;
+  char *user = NULL;
+
+  int ret = read_config(command_file, &command_config);
+  if (ret != 0) {
+    free_configuration(&command_config);
+    return INVALID_COMMAND_FILE;
+  }
+
+  char *value = get_configuration_value("docker-command", DOCKER_COMMAND_FILE_SECTION, &command_config);
+  if (value != NULL && strcasecmp(value, "exec") == 0) {
+    args = construct_docker_command(command_file);
+    binary = docker_binary;
+    docker = 1;
+  } else {
+    value = get_configuration_value("command", COMMAND_FILE_SECTION, &command_config);
+    if (value != NULL && strcasecmp(value, "exec") == 0) {
+      args = get_configuration_values_delimiter("launch-command",
+                                                COMMAND_FILE_SECTION, &command_config, ",");
+      if (args == NULL) {
+        goto cleanup;
+      }
+      binary = strdup(args[0]);
+      workdir = get_configuration_value("workdir", COMMAND_FILE_SECTION, &command_config);
+      if (workdir == NULL) {
+        goto cleanup;
+      }
+      env = (char **) alloc_and_clear_memory(3, sizeof(char *));
+      env[0] = make_string("PWD=%s", workdir);
+      env[1] = make_string("TERM=%s", "xterm-256color");
+      env[2] = NULL;
+      user = get_configuration_value("user", COMMAND_FILE_SECTION, &command_config);
+      if (user == NULL) {
+        goto cleanup;
+      }
+    } else {
+      goto cleanup;
+    }
+  }
 
   fdm = posix_openpt(O_RDWR);
   if (fdm < 0) {
@@ -1513,6 +1540,9 @@ int run_docker_with_pty(const char *command_file) {
     // Set raw mode on the slave side of the PTY
     new_term_settings = slave_orig_term_settings;
     cfmakeraw (&new_term_settings);
+    if (!docker) {
+      new_term_settings.c_lflag |= ECHO;
+    }
     tcsetattr (fds, TCSANOW, &new_term_settings);
 
     // The slave side of the PTY becomes the standard input and outputs of the child process
@@ -1537,24 +1567,48 @@ int run_docker_with_pty(const char *command_file) {
     close(fds);
 
     // Make the current process a new session leader
-    setsid();
+    if (docker) {
+      setsid();
+    } else {
+      exit_code = set_user(user);
+      if (exit_code!=0) {
+        goto cleanup;
+      }
+    }
 
     // As the child is a session leader, set the controlling terminal to be the slave side of the PTY
     // (Mandatory for programs like the shell to make them manage correctly their outputs)
     ioctl(0, TIOCSCTTY, 1);
-
-    if (execvp(docker_binary, args) != 0) {
-      fprintf(ERRORFILE, "Couldn't execute the container launch with args %s - %s",
-              docker_binary, strerror(errno));
-      free(docker_binary);
-      free_values(args);
+    if (docker) {
+      ret = execvp(binary, args);
+    } else {
+      if (change_user(user_detail->pw_uid, user_detail->pw_gid) != 0) {
+        exit_code = DOCKER_EXEC_FAILED;
+        goto cleanup;
+      }
+      ret = chdir(workdir);
+      if (ret != 0) {
+        exit_code = DOCKER_EXEC_FAILED;
+        goto cleanup;
+      }
+      ret = execve(binary, args, env);
+    }
+    if (ret != 0) {
+      fprintf(ERRORFILE, "Couldn't execute the container launch with args %s - %s\n",
+            binary, strerror(errno));
       exit_code = DOCKER_EXEC_FAILED;
     } else {
-      free_values(args);
       exit_code = 0;
     }
   }
 
+cleanup:
+  free(docker_binary);
+  free(binary);
+  free(user);
+  free(workdir);
+  free_values(args);
+  free_configuration(&command_config);
   return exit_code;
 }
 

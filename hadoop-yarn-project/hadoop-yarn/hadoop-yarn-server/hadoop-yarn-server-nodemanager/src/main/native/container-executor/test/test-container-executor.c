@@ -1472,6 +1472,53 @@ void test_cleaning_docker_cgroups() {
   }
 }
 
+void test_exec_container() {
+  int ret = -1;
+  char* filename = TEST_ROOT "/exec_container.cmd";
+  FILE *file = fopen(filename, "w");
+  if (file == NULL) {
+    printf("FAIL: Could not write to command file: %s\n", filename);
+    exit(1);
+  }
+  // Test missing user
+  fprintf(file, "[command-execution]\n");
+  fprintf(file, "workdir=/tmp/container_1541184499854_0001_01_000001\n");
+  fprintf(file, "launch-command=/bin/bash,-ir\n");
+  fprintf(file, "command=exec\n");
+  fclose(file);
+  ret = exec_container(filename);
+  if (ret!=-1) {
+    printf("FAIL: broken command file should not pass.\n");
+    exit(1);
+  }
+
+  // Test missing workdir
+  file = fopen(filename, "w");
+  fprintf(file, "[command-execution]\n");
+  fprintf(file, "launch-command=/bin/bash,-ir\n");
+  fprintf(file, "user=test\n");
+  fprintf(file, "command=exec\n");
+  fclose(file);
+  ret = exec_container(filename);
+  if (ret!=-1) {
+    printf("FAIL: broken command file should not pass.\n");
+    exit(1);
+  }
+
+  // Test missing launch-command
+  file = fopen(filename, "w");
+  fprintf(file, "[command-execution]\n");
+  fprintf(file, "workdir=/tmp/container_1541184499854_0001_01_000001\n");
+  fprintf(file, "user=test\n");
+  fprintf(file, "command=exec\n");
+  fclose(file);
+  ret = exec_container(filename);
+  if (ret!=-1) {
+    printf("FAIL: broken command file should not pass.\n");
+    exit(1);
+  }
+}
+
 // This test is expected to be executed either by a regular
 // user or by root. If executed by a regular user it doesn't
 // test all the functions that would depend on changing the
@@ -1611,6 +1658,9 @@ int main(int argc, char **argv) {
 
   printf("\nTesting yarn sysfs\n");
   test_yarn_sysfs();
+
+  printf("\nTesting exec_container()\n");
+  test_exec_container();
 
   test_check_user(0);
 
