@@ -2531,6 +2531,7 @@ public abstract class Server {
 
       // Save the priority level assignment by the scheduler
       call.setPriorityLevel(callQueue.getPriorityLevel(call));
+      call.markCallCoordinated(false);
       if(alignmentContext != null && call.rpcRequest != null &&
           (call.rpcRequest instanceof ProtobufRpcEngine.RpcProtobufRequest)) {
         // if call.rpcRequest is not RpcProtobufRequest, will skip the following
@@ -2539,23 +2540,21 @@ public abstract class Server {
         // coordinated.
         String methodName;
         String protoName;
+        ProtobufRpcEngine.RpcProtobufRequest req =
+            (ProtobufRpcEngine.RpcProtobufRequest) call.rpcRequest;
         try {
-          ProtobufRpcEngine.RpcProtobufRequest req =
-              (ProtobufRpcEngine.RpcProtobufRequest) call.rpcRequest;
           methodName = req.getRequestHeader().getMethodName();
           protoName = req.getRequestHeader().getDeclaringClassProtocolName();
+          if (alignmentContext.isCoordinatedCall(protoName, methodName)) {
+            call.markCallCoordinated(true);
+            long stateId;
+            stateId = alignmentContext.receiveRequestState(
+                header, getMaxIdleTime());
+            call.setClientStateId(stateId);
+          }
         } catch (IOException ioe) {
-          throw new RpcServerException("Rpc request header check fail", ioe);
+          throw new RpcServerException("Processing RPC request caught ", ioe);
         }
-        if (!alignmentContext.isCoordinatedCall(protoName, methodName)) {
-          call.markCallCoordinated(false);
-        } else {
-          call.markCallCoordinated(true);
-          long stateId = alignmentContext.receiveRequestState(header);
-          call.setClientStateId(stateId);
-        }
-      } else {
-        call.markCallCoordinated(false);
       }
 
       try {
@@ -3606,5 +3605,13 @@ public abstract class Server {
       };
       idleScanTimer.schedule(idleScanTask, idleScanInterval);
     }
+  }
+
+  protected int getMaxIdleTime() {
+    return connectionManager.maxIdleTime;
+  }
+
+  public String getServerName() {
+    return serverName;
   }
 }

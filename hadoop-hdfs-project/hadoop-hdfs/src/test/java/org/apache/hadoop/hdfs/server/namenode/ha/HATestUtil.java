@@ -25,6 +25,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSUtil.createUri;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -34,6 +35,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.LongAccumulator;
 
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
@@ -42,6 +44,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.ClientGSIContext;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -332,5 +335,22 @@ public abstract class HATestUtil {
         }
       }
     }
+  }
+
+  /**
+   * Customize stateId of the client AlignmentContext for testing.
+   */
+  public static long setACStateId(DistributedFileSystem dfs,
+      long stateId) throws Exception {
+    ObserverReadProxyProvider<?> provider = (ObserverReadProxyProvider<?>)
+        ((RetryInvocationHandler<?>) Proxy.getInvocationHandler(
+            dfs.getClient().getNamenode())).getProxyProvider();
+    ClientGSIContext ac = (ClientGSIContext)(provider.getAlignmentContext());
+    Field f = ac.getClass().getDeclaredField("lastSeenStateId");
+    f.setAccessible(true);
+    LongAccumulator lastSeenStateId = (LongAccumulator)f.get(ac);
+    long currentStateId = lastSeenStateId.getThenReset();
+    lastSeenStateId.accumulate(stateId);
+    return currentStateId;
   }
 }
