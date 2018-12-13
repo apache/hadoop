@@ -15,32 +15,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.protocol.datatransfer;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+package org.apache.hadoop.hdfs.protocol;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.io.IOUtils;
 
 /**
- * A little struct class to wrap an InputStream and an OutputStream.
+ * Encapsulates various options related to how fine-grained data checksums are
+ * combined into block-level checksums.
  */
 @InterfaceAudience.Private
-public class IOStreamPair implements Closeable {
-  public final InputStream in;
-  public final OutputStream out;
+public class BlockChecksumOptions {
+  private final BlockChecksumType blockChecksumType;
+  private final long stripeLength;
 
-  public IOStreamPair(InputStream in, OutputStream out) {
-    this.in = in;
-    this.out = out;
+  public BlockChecksumOptions(
+      BlockChecksumType blockChecksumType, long stripeLength) {
+    this.blockChecksumType = blockChecksumType;
+    this.stripeLength = stripeLength;
+  }
+
+  public BlockChecksumOptions(BlockChecksumType blockChecksumType) {
+    this(blockChecksumType, 0);
+  }
+
+  public BlockChecksumType getBlockChecksumType() {
+    return blockChecksumType;
+  }
+
+  public long getStripeLength() {
+    return stripeLength;
   }
 
   @Override
-  public void close() throws IOException {
-    IOUtils.closeStream(in);
-    IOUtils.closeStream(out);
+  public String toString() {
+    return String.format("blockChecksumType=%s, stripedLength=%d",
+        blockChecksumType, stripeLength);
   }
 }

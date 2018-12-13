@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockChecksumType;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
@@ -646,6 +647,19 @@ public class TestPBHelper {
         HdfsProtos.ChecksumTypeProto.CHECKSUM_CRC32);
     assertEquals(PBHelperClient.convert(DataChecksum.Type.CRC32C),
         HdfsProtos.ChecksumTypeProto.CHECKSUM_CRC32C);
+  }
+
+  @Test
+  public void testBlockChecksumTypeProto() {
+    assertEquals(BlockChecksumType.MD5CRC,
+        PBHelperClient.convert(HdfsProtos.BlockChecksumTypeProto.MD5CRC));
+    assertEquals(BlockChecksumType.COMPOSITE_CRC,
+        PBHelperClient.convert(
+            HdfsProtos.BlockChecksumTypeProto.COMPOSITE_CRC));
+    assertEquals(PBHelperClient.convert(BlockChecksumType.MD5CRC),
+        HdfsProtos.BlockChecksumTypeProto.MD5CRC);
+    assertEquals(PBHelperClient.convert(BlockChecksumType.COMPOSITE_CRC),
+        HdfsProtos.BlockChecksumTypeProto.COMPOSITE_CRC);
   }
 
   @Test

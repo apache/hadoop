@@ -950,15 +950,6 @@ public class TestDistributedFileSystem {
           FileSystem.LOG.info("GOOD: getting an exception", ioe);
         }
 
-        // verify none existent file and 0 request length
-        try {
-          final FileChecksum noneExistentChecksumWith0 =
-              hdfs.getFileChecksum(new Path(dir, "none-existent"), 0);
-          fail();
-        } catch (Exception ioe) {
-          FileSystem.LOG.info("GOOD: getting an exception", ioe);
-        }
-
         // verify checksums
         final FileChecksum barcs = hdfs.getFileChecksum(bar);
         final int barhashcode = barcs.hashCode();

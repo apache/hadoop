@@ -26,6 +26,7 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.protocol.BlockChecksumOptions;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.CachingStrategyProto;
@@ -254,9 +255,11 @@ public class Sender implements DataTransferProtocol {
 
   @Override
   public void blockChecksum(final ExtendedBlock blk,
-      final Token<BlockTokenIdentifier> blockToken) throws IOException {
+      final Token<BlockTokenIdentifier> blockToken,
+      BlockChecksumOptions blockChecksumOptions) throws IOException {
     OpBlockChecksumProto proto = OpBlockChecksumProto.newBuilder()
         .setHeader(DataTransferProtoUtil.buildBaseHeader(blk, blockToken))
+        .setBlockChecksumOptions(PBHelperClient.convert(blockChecksumOptions))
         .build();
 
     send(out, Op.BLOCK_CHECKSUM, proto);
