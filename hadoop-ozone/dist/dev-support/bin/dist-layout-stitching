@@ -120,3 +120,4 @@ cp -r "${ROOT}/hadoop-hdds/docs/target/classes/docs" ./
 #Copy docker compose files
 run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/compose" .
 run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/smoketest" .
+run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/blockade" .
