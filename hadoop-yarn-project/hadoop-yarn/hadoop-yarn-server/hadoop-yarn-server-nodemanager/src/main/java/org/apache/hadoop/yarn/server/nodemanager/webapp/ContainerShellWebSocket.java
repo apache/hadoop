@@ -112,6 +112,7 @@ public class ContainerShellWebSocket {
       ContainerExecContext execContext = new ContainerExecContext
           .Builder()
           .setContainer(container)
+          .setNMLocalPath(nmContext.getLocalDirsHandler())
           .build();
       pair = exec.execContainer(execContext);
     } catch (Exception e) {

@@ -54,12 +54,14 @@ static void display_usage(FILE *stream) {
   if(is_docker_support_enabled()) {
     fprintf(stream,
       "       container-executor --run-docker <command-file>\n"
+      "       container-executor --exec-container <command-file>\n"
       "       container-executor --remove-docker-container [hierarchy] "
       "<container_id>\n"
       "       container-executor --inspect-docker-container <container_id>\n");
   } else {
     fprintf(stream,
       "[DISABLED] container-executor --run-docker <command-file>\n"
+      "[DISABLED] container-executor --exec-container <command-file>\n"
       "[DISABLED] container-executor --remove-docker-container [hierarchy] "
       "<container_id>\n"
       "[DISABLED] container-executor --inspect-docker-container "
@@ -247,7 +249,7 @@ static struct {
   const char *target_dir;
   int container_pid;
   int signal;
-  const char *docker_command_file;
+  const char *command_file;
 } cmd_input;
 
 static int validate_run_as_user_commands(int argc, char **argv, int *operation);
@@ -348,6 +350,22 @@ static int validate_arguments(int argc, char **argv , int *operation) {
     }
   }
 
+  if (strcmp("--exec-container", argv[1]) == 0) {
+    if(is_docker_support_enabled()) {
+      if (argc != 3) {
+        display_usage(stdout);
+        return INVALID_ARGUMENT_NUMBER;
+      }
+      optind++;
+      cmd_input.command_file = argv[optind++];
+      *operation = EXEC_CONTAINER;
+      return 0;
+    } else {
+        display_feature_disabled_message("docker");
+        return FEATURE_DISABLED;
+    }
+  }
+
   if (strcmp("--run-docker", argv[1]) == 0) {
     if(is_docker_support_enabled()) {
       if (argc != 3) {
@@ -355,7 +373,7 @@ static int validate_arguments(int argc, char **argv , int *operation) {
         return INVALID_ARGUMENT_NUMBER;
       }
       optind++;
-      cmd_input.docker_command_file = argv[optind++];
+      cmd_input.command_file = argv[optind++];
       *operation = RUN_DOCKER;
       return 0;
     } else {
@@ -469,7 +487,7 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
       cmd_input.local_dirs = argv[optind++];
       // good log dirs as a comma separated list
       cmd_input.log_dirs = argv[optind++];
-      cmd_input.docker_command_file = argv[optind++];
+      cmd_input.command_file = argv[optind++];
       //network isolation through tc
       if ((argc == 15 && !cmd_input.https) || (argc == 17 && cmd_input.https)) {
         if(is_tc_support_enabled()) {
@@ -624,8 +642,11 @@ int main(int argc, char **argv) {
   case TRAFFIC_CONTROL_READ_STATS:
     exit_code = traffic_control_read_stats(cmd_input.traffic_control_command_file);
     break;
+  case EXEC_CONTAINER:
+    exit_code = exec_container(cmd_input.command_file);
+    break;
   case RUN_DOCKER:
-    exit_code = run_docker(cmd_input.docker_command_file);
+    exit_code = run_docker(cmd_input.command_file);
     break;
   case REMOVE_DOCKER_CONTAINER:
     exit_code = remove_docker_container(argv + optind, argc - optind);
@@ -674,7 +695,7 @@ int main(int argc, char **argv) {
                       cmd_input.pid_file,
                       split(cmd_input.local_dirs),
                       split(cmd_input.log_dirs),
-                      cmd_input.docker_command_file);
+                      cmd_input.command_file);
       break;
   case RUN_AS_USER_LAUNCH_CONTAINER:
     if (cmd_input.traffic_control_command_file != NULL) {
