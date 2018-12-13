@@ -61,7 +61,6 @@ public class GrpcReplicationService extends
           new GrpcOutputStream(responseObserver, request.getContainerID());
       containerReplicationSource
           .copyData(request.getContainerID(), outputStream);
-
     } catch (IOException e) {
       LOG.error("Can't stream the container data", e);
       responseObserver.onError(e);

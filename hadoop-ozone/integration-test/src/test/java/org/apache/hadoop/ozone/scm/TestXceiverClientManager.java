@@ -29,6 +29,7 @@ import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.After;
 import org.junit.Before;
@@ -36,7 +37,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import java.io.IOException;
+import java.util.UUID;
 
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_METADATA_DIR_NAME;
 import static org.apache.hadoop.hdds.scm
     .ScmConfigKeys.SCM_CONTAINER_CLIENT_MAX_SIZE_KEY;
 
@@ -75,6 +78,10 @@ public class TestXceiverClientManager {
   @Test
   public void testCaching() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
+    String metaDir = GenericTestUtils.getTempPath(
+        TestXceiverClientManager.class.getName() + UUID.randomUUID());
+    conf.set(HDDS_METADATA_DIR_NAME, metaDir);
+
     XceiverClientManager clientManager = new XceiverClientManager(conf);
 
     ContainerWithPipeline container1 = storageContainerLocationClient
@@ -105,6 +112,9 @@ public class TestXceiverClientManager {
   public void testFreeByReference() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setInt(SCM_CONTAINER_CLIENT_MAX_SIZE_KEY, 1);
+    String metaDir = GenericTestUtils.getTempPath(
+        TestXceiverClientManager.class.getName() + UUID.randomUUID());
+    conf.set(HDDS_METADATA_DIR_NAME, metaDir);
     XceiverClientManager clientManager = new XceiverClientManager(conf);
     Cache<String, XceiverClientSpi> cache =
         clientManager.getClientCache();
@@ -159,6 +169,9 @@ public class TestXceiverClientManager {
   public void testFreeByEviction() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setInt(SCM_CONTAINER_CLIENT_MAX_SIZE_KEY, 1);
+    String metaDir = GenericTestUtils.getTempPath(
+        TestXceiverClientManager.class.getName() + UUID.randomUUID());
+    conf.set(HDDS_METADATA_DIR_NAME, metaDir);
     XceiverClientManager clientManager = new XceiverClientManager(conf);
     Cache<String, XceiverClientSpi> cache =
         clientManager.getClientCache();

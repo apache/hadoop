@@ -44,11 +44,14 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Time;
 import org.apache.ratis.thirdparty.io.grpc.ManagedChannel;
 import org.apache.ratis.thirdparty.io.grpc.Status;
+import org.apache.ratis.thirdparty.io.grpc.netty.GrpcSslContexts;
 import org.apache.ratis.thirdparty.io.grpc.netty.NettyChannelBuilder;
 import org.apache.ratis.thirdparty.io.grpc.stub.StreamObserver;
+import org.apache.ratis.thirdparty.io.netty.handler.ssl.SslContextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
@@ -104,8 +107,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
   }
 
 
-  private void connectToDatanode(DatanodeDetails dn) throws IOException,
-      SCMSecurityException {
+  private void connectToDatanode(DatanodeDetails dn) throws IOException {
     // read port from the data node, on failure use default configured
     // port.
     int port = dn.getPort(DatanodeDetails.Port.Name.STANDALONE).getValue();
@@ -135,6 +137,28 @@ public class XceiverClientGrpc extends XceiverClientSpi {
             .getIpAddress(), port).usePlaintext()
             .maxInboundMessageSize(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE)
             .intercept(new ClientCredentialInterceptor(userName, encodedToken));
+    if (SecurityConfig.isGrpcTlsEnabled(config)) {
+      File trustCertCollectionFile = secConfig.getTrustStoreFile();
+      File privateKeyFile = secConfig.getClientPrivateKeyFile();
+      File clientCertChainFile = secConfig.getClientCertChainFile();
+
+      SslContextBuilder sslContextBuilder = GrpcSslContexts.forClient();
+      if (trustCertCollectionFile != null) {
+        sslContextBuilder.trustManager(trustCertCollectionFile);
+      }
+      if (secConfig.isGrpcMutualTlsRequired() && clientCertChainFile != null &&
+          privateKeyFile != null) {
+        sslContextBuilder.keyManager(clientCertChainFile, privateKeyFile);
+      }
+
+      if (secConfig.useTestCert()) {
+        channelBuilder.overrideAuthority("localhost");
+      }
+      channelBuilder.useTransportSecurity().
+          sslContext(sslContextBuilder.build());
+    } else {
+      channelBuilder.usePlaintext();
+    }
     ManagedChannel channel = channelBuilder.build();
     XceiverClientProtocolServiceStub asyncStub =
         XceiverClientProtocolServiceGrpc.newStub(channel);

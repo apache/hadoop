@@ -282,6 +282,9 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/test/resources/*.tgz</exclude>
             <exclude>src/test/resources/data*</exclude>
             <exclude>src/test/resources/empty-file</exclude>
+            <exclude>src/test/resources/ssl/*</exclude>
+            <exclude>src/main/compose/ozonesecure/docker-image/runner/build/apache-rat-0.12/README-CLI.txt</exclude>
+            <exclude>src/main/compose/ozonesecure/docker-image/runner/build/apache-rat-0.12/README-ANT.txt</exclude>
             <exclude>webapps/static/angular-1.6.4.min.js</exclude>
             <exclude>webapps/static/angular-nvd3-1.0.9.min.js</exclude>
             <exclude>webapps/static/angular-route-1.6.4.min.js</exclude>
