@@ -42,10 +42,14 @@ import org.apache.ratis.thirdparty.io.grpc.BindableService;
 import org.apache.ratis.thirdparty.io.grpc.Server;
 import org.apache.ratis.thirdparty.io.grpc.ServerBuilder;
 import org.apache.ratis.thirdparty.io.grpc.ServerInterceptors;
+import org.apache.ratis.thirdparty.io.grpc.netty.GrpcSslContexts;
 import org.apache.ratis.thirdparty.io.grpc.netty.NettyServerBuilder;
+import org.apache.ratis.thirdparty.io.netty.handler.ssl.ClientAuth;
+import org.apache.ratis.thirdparty.io.netty.handler.ssl.SslContextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -109,6 +113,27 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
 
     for (BindableService service : additionalServices) {
       nettyServerBuilder.addService(service);
+    }
+
+    if (SecurityConfig.isGrpcTlsEnabled(conf)) {
+      File privateKeyFilePath = secConfig.getServerPrivateKeyFile();
+      File serverCertChainFilePath = secConfig.getServerCertChainFile();
+      File clientCertChainFilePath = secConfig.getClientCertChainFile();
+      try {
+        SslContextBuilder sslClientContextBuilder = SslContextBuilder.forServer(
+            serverCertChainFilePath, privateKeyFilePath);
+        if (secConfig.isGrpcMutualTlsRequired() && clientCertChainFilePath
+            != null) {
+          // Only needed for mutual TLS
+          sslClientContextBuilder.clientAuth(ClientAuth.REQUIRE);
+          sslClientContextBuilder.trustManager(clientCertChainFilePath);
+        }
+        SslContextBuilder sslContextBuilder = GrpcSslContexts.configure(
+            sslClientContextBuilder, secConfig.getGrpcSslProvider());
+        nettyServerBuilder.sslContext(sslContextBuilder.build());
+      } catch (Exception ex) {
+        LOG.error("Unable to setup TLS for secure datanode GRPC endpoint.", ex);
+      }
     }
     server = nettyServerBuilder.build();
     storageContainer = dispatcher;

@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.ozone.scm;
 
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_METADATA_DIR_NAME;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 
@@ -77,6 +79,10 @@ public class TestXceiverClientMetrics {
   @Test
   public void testMetrics() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
+    String metaDir = GenericTestUtils.getTempPath(
+        TestXceiverClientManager.class.getName() + UUID.randomUUID());
+    conf.set(HDDS_METADATA_DIR_NAME, metaDir);
+
     XceiverClientManager clientManager = new XceiverClientManager(conf);
 
     ContainerWithPipeline container = storageContainerLocationClient

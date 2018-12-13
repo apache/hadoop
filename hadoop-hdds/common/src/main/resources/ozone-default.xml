@@ -963,14 +963,6 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.keytab.file</name>
-    <value/>
-    <tag>OZONE, SECURITY</tag>
-    <description>
-      The keytab file for Kerberos authentication in SCM.
-    </description>
-  </property>
-  <property>
     <name>ozone.scm.names</name>
     <value/>
     <tag>OZONE, REQUIRED</tag>
@@ -998,20 +990,6 @@
     <description>
       Setting this flag to true dumps the HTTP request/ response in
       the logs. Very useful when debugging REST protocol.
-    </description>
-  </property>
-  <property>
-    <name>ozone.web.authentication.kerberos.principal</name>
-    <value/>
-    <tag>OZONE, SECURITY</tag>
-    <description>
-      The server principal used by the SCM and OM for web UI SPNEGO
-      authentication when Kerberos security is enabled. This is typically set to
-      HTTP/_HOST@REALM.TLD The SPNEGO server principal begins with the prefix
-      HTTP/ by convention.
-
-      If the value is '*', the web server will attempt to login with
-      every principal specified in the keytab file.
     </description>
   </property>
   <property>
@@ -1654,7 +1632,7 @@
     </description>
   </property>
   <property>
-    <name>ozone.om.http.kerberos.keytab</name>
+    <name>ozone.om.http.kerberos.keytab.file</name>
     <value>/etc/security/keytabs/HTTP.keytab</value>
     <description>
       OzoneManager http server kerberos keytab.

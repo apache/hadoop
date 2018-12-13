@@ -125,6 +125,7 @@ public final class HddsConfigKeys {
   public static final String HDDS_GRPC_BLOCK_TOKEN_ENABLED =
       "hdds.grpc.block.token.enabled";
   public static final boolean HDDS_GRPC_BLOCK_TOKEN_ENABLED_DEFAULT = false;
+
   public static final String HDDS_X509_DIR_NAME = "hdds.x509.dir.name";
   public static final String HDDS_X509_DIR_NAME_DEFAULT = "certs";
   public static final String HDDS_X509_FILE_NAME = "hdds.x509.file.name";
@@ -135,4 +136,34 @@ public final class HddsConfigKeys {
    */
   private HddsConfigKeys() {
   }
+
+  public static final String HDDS_GRPC_TLS_ENABLED = "hdds.grpc.tls.enabled";
+  public static final boolean HDDS_GRPC_TLS_ENABLED_DEFAULT = false;
+
+  public static final String HDDS_GRPC_MUTUAL_TLS_REQUIRED =
+      "hdds.grpc.mutual.tls.required";
+  public static final boolean HDDS_GRPC_MUTUAL_TLS_REQUIRED_DEFAULT = false;
+
+  public static final String HDDS_GRPC_TLS_PROVIDER = "hdds.grpc.tls.provider";
+  public static final String HDDS_GRPC_TLS_PROVIDER_DEFAULT = "OPENSSL";
+
+  public static final String HDDS_TRUST_STORE_FILE_NAME =
+      "hdds.trust.cert.collection.file.name";
+  public static final String HDDS_TRUST_STORE_FILE_NAME_DEFAULT = "ca.crt";
+
+  public static final String
+      HDDS_SERVER_CERTIFICATE_CHAIN_FILE_NAME =
+      "hdds.server.cert.chain.file.name";
+  public static final String
+      HDDS_SERVER_CERTIFICATE_CHAIN_FILE_NAME_DEFAULT = "server.crt";
+
+  public static final String
+      HDDS_CLIENT_CERTIFICATE_CHAIN_FILE_NAME =
+      "hdds.client.cert.chain.file.name";
+  public static final String
+      HDDS_CLIENT_CERTIFICATE_CHAIN_FILE_NAME_DEFAULT = "client.crt";
+
+  public static final String HDDS_GRPC_TLS_TEST_CERT = "hdds.grpc.tls" +
+      ".test_cert";
+  public static final boolean HDDS_GRPC_TLS_TEST_CERT_DEFAULT = false;
 }

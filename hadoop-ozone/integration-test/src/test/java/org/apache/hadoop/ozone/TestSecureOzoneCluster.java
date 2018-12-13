@@ -80,6 +80,8 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.HEAD;
+
 /**
  * Test class to for security enabled Ozone cluster.
  */
@@ -350,103 +352,105 @@ public final class TestSecureOzoneCluster {
     setupOm(conf);
     long omVersion =
         RPC.getProtocolVersion(OzoneManagerProtocolPB.class);
-    // Start OM
-    om.start();
-    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    String username = ugi.getUserName();
-    ugi.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
+    try {
+      // Start OM
+      om.start();
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+      String username = ugi.getUserName();
 
-    // Get first OM client which will authenticate via Kerberos
-    omClient = new OzoneManagerProtocolClientSideTranslatorPB(
-        RPC.getProxy(OzoneManagerProtocolPB.class, omVersion,
-            OmUtils.getOmAddress(conf), ugi, conf,
-            NetUtils.getDefaultSocketFactory(conf),
-            CLIENT_TIMEOUT), RandomStringUtils.randomAscii(5));
+      // Get first OM client which will authenticate via Kerberos
+      omClient = new OzoneManagerProtocolClientSideTranslatorPB(
+          RPC.getProxy(OzoneManagerProtocolPB.class, omVersion,
+              OmUtils.getOmAddress(conf), ugi, conf,
+              NetUtils.getDefaultSocketFactory(conf),
+              CLIENT_TIMEOUT), RandomStringUtils.randomAscii(5));
 
-    // Assert if auth was successful via Kerberos
-    Assert.assertFalse(logs.getOutput().contains(
-        "Auth successful for " + username + " (auth:KERBEROS)"));
+      // Assert if auth was successful via Kerberos
+      Assert.assertFalse(logs.getOutput().contains(
+          "Auth successful for " + username + " (auth:KERBEROS)"));
 
-    // Case 1: Test successful delegation token.
-    Token<OzoneTokenIdentifier> token = omClient
-        .getDelegationToken(new Text("om"));
+      // Case 1: Test successful delegation token.
+      Token<OzoneTokenIdentifier> token = omClient
+          .getDelegationToken(new Text("om"));
 
-    // Case 2: Test successful token renewal.
-    long renewalTime = omClient.renewDelegationToken(token);
-    Assert.assertTrue(renewalTime > 0);
+      // Case 2: Test successful token renewal.
+      long renewalTime = omClient.renewDelegationToken(token);
+      Assert.assertTrue(renewalTime > 0);
 
-    // Check if token is of right kind and renewer is running om instance
-    Assert.assertEquals(token.getKind().toString(), "OzoneToken");
-    Assert.assertEquals(token.getService().toString(),
-        OmUtils.getOmRpcAddress(conf));
-    omClient.close();
+      // Check if token is of right kind and renewer is running om instance
+      Assert.assertEquals(token.getKind().toString(), "OzoneToken");
+      Assert.assertEquals(token.getService().toString(),
+          OmUtils.getOmRpcAddress(conf));
+      omClient.close();
 
-    // Create a remote ugi and set its authentication method to Token
-    UserGroupInformation testUser = UserGroupInformation
-        .createRemoteUser(TEST_USER);
-    testUser.addToken(token);
-    testUser.setAuthenticationMethod(AuthMethod.TOKEN);
-    UserGroupInformation.setLoginUser(testUser);
+      // Create a remote ugi and set its authentication method to Token
+      UserGroupInformation testUser = UserGroupInformation
+          .createRemoteUser(TEST_USER);
+      testUser.addToken(token);
+      testUser.setAuthenticationMethod(AuthMethod.TOKEN);
+      UserGroupInformation.setLoginUser(testUser);
 
-    // Get Om client, this time authentication should happen via Token
-    testUser.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override
-      public Void run() throws Exception {
-        omClient = new OzoneManagerProtocolClientSideTranslatorPB(
-            RPC.getProxy(OzoneManagerProtocolPB.class, omVersion,
-                OmUtils.getOmAddress(conf), testUser, conf,
-                NetUtils.getDefaultSocketFactory(conf), CLIENT_TIMEOUT),
-            RandomStringUtils.randomAscii(5));
-        return null;
-      }
-    });
+      // Get Om client, this time authentication should happen via Token
+      testUser.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          omClient = new OzoneManagerProtocolClientSideTranslatorPB(
+              RPC.getProxy(OzoneManagerProtocolPB.class, omVersion,
+                  OmUtils.getOmAddress(conf), testUser, conf,
+                  NetUtils.getDefaultSocketFactory(conf), CLIENT_TIMEOUT),
+              RandomStringUtils.randomAscii(5));
+          return null;
+        }
+      });
 
-    // Case 3: Test Client can authenticate using token.
-    Assert.assertFalse(logs.getOutput().contains(
-        "Auth successful for " + username + " (auth:TOKEN)"));
-    LambdaTestUtils.intercept(IOException.class, "Delete Volume failed," +
-            " error:VOLUME_NOT_FOUND",
-        () -> omClient.deleteVolume("vol1"));
-    Assert.assertTrue(logs.getOutput().contains(
-        "Auth successful for " + username + " (auth:TOKEN)"));
+      // Case 3: Test Client can authenticate using token.
+      Assert.assertFalse(logs.getOutput().contains(
+          "Auth successful for " + username + " (auth:TOKEN)"));
+      LambdaTestUtils.intercept(IOException.class, "Delete Volume failed,"
+              + " error:VOLUME_NOT_FOUND", () -> omClient.deleteVolume("vol1"));
+      Assert.assertTrue(logs.getOutput().contains("Auth successful for "
+          + username + " (auth:TOKEN)"));
 
-    // Case 4: Test failure of token renewal.
-    // Call to renewDelegationToken will fail but it will confirm that
-    // initial connection via DT succeeded
-    LambdaTestUtils.intercept(RemoteException.class, "Delegation "
-            + "Token can be renewed only with kerberos or web authentication",
-        () -> omClient.renewDelegationToken(token));
-    Assert.assertTrue(logs.getOutput().contains(
-        "Auth successful for " + username + " (auth:TOKEN)"));
-    //testUser.setAuthenticationMethod(AuthMethod.KERBEROS);
-    UserGroupInformation.setLoginUser(ugi);
-    omClient = new OzoneManagerProtocolClientSideTranslatorPB(
-        RPC.getProxy(OzoneManagerProtocolPB.class, omVersion,
-            OmUtils.getOmAddress(conf), ugi, conf,
-            NetUtils.getDefaultSocketFactory(conf),
-            Client.getRpcTimeout(conf)), RandomStringUtils.randomAscii(5));
+      // Case 4: Test failure of token renewal.
+      // Call to renewDelegationToken will fail but it will confirm that
+      // initial connection via DT succeeded
+      LambdaTestUtils.intercept(RemoteException.class, "Delegation "
+              + "Token can be renewed only with kerberos or web authentication",
+          () -> omClient.renewDelegationToken(token));
+      Assert.assertTrue(logs.getOutput().contains(
+          "Auth successful for " + username + " (auth:TOKEN)"));
+      //testUser.setAuthenticationMethod(AuthMethod.KERBEROS);
+      UserGroupInformation.setLoginUser(ugi);
+      omClient = new OzoneManagerProtocolClientSideTranslatorPB(
+          RPC.getProxy(OzoneManagerProtocolPB.class, omVersion,
+              OmUtils.getOmAddress(conf), ugi, conf,
+              NetUtils.getDefaultSocketFactory(conf),
+              Client.getRpcTimeout(conf)), RandomStringUtils.randomAscii(5));
 
-    // Case 5: Test success of token cancellation.
-    omClient.cancelDelegationToken(token);
-    omClient.close();
+      // Case 5: Test success of token cancellation.
+      omClient.cancelDelegationToken(token);
+      omClient.close();
 
-    // Wait for client to timeout
-    Thread.sleep(CLIENT_TIMEOUT);
+      // Wait for client to timeout
+      Thread.sleep(CLIENT_TIMEOUT);
 
-    Assert.assertFalse(logs.getOutput().contains("Auth failed for"));
+      Assert.assertFalse(logs.getOutput().contains("Auth failed for"));
 
-    // Case 6: Test failure of token cancellation.
-    // Get Om client, this time authentication using Token will fail as
-    // token is expired
-    omClient = new OzoneManagerProtocolClientSideTranslatorPB(
-        RPC.getProxy(OzoneManagerProtocolPB.class, omVersion,
-            OmUtils.getOmAddress(conf), testUser, conf,
-            NetUtils.getDefaultSocketFactory(conf),
-            Client.getRpcTimeout(conf)), RandomStringUtils.randomAscii(5));
-    LambdaTestUtils.intercept(RemoteException.class, "can't be found in cache",
-        () -> omClient.cancelDelegationToken(token));
-    Assert.assertTrue(logs.getOutput().contains(
-        "Auth failed for"));
+      // Case 6: Test failure of token cancellation.
+      // Get Om client, this time authentication using Token will fail as
+      // token is expired
+      omClient = new OzoneManagerProtocolClientSideTranslatorPB(
+          RPC.getProxy(OzoneManagerProtocolPB.class, omVersion,
+              OmUtils.getOmAddress(conf), testUser, conf,
+              NetUtils.getDefaultSocketFactory(conf),
+              Client.getRpcTimeout(conf)), RandomStringUtils.randomAscii(5));
+      LambdaTestUtils.intercept(RemoteException.class, "can't be found in cache",
+          () -> omClient.cancelDelegationToken(token));
+      Assert.assertTrue(logs.getOutput().contains("Auth failed for"));
+  } finally {
+      om.stop();
+      om.join();
+    }
   }
 
   private void generateKeyPair(OzoneConfiguration config) throws Exception {
@@ -475,55 +479,59 @@ public final class TestSecureOzoneCluster {
     OzoneManager.setTestSecureOmFlag(true);
     // Start OM
 
-    om.start();
+    try {
+      om.start();
 
-    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
 
-    // Get first OM client which will authenticate via Kerberos
-    omClient = new OzoneManagerProtocolClientSideTranslatorPB(
-        RPC.getProxy(OzoneManagerProtocolPB.class, omVersion,
-            OmUtils.getOmAddress(conf), ugi, conf,
-            NetUtils.getDefaultSocketFactory(conf),
-            CLIENT_TIMEOUT), RandomStringUtils.randomAscii(5));
+      // Get first OM client which will authenticate via Kerberos
+      omClient = new OzoneManagerProtocolClientSideTranslatorPB(RPC.getProxy(
+          OzoneManagerProtocolPB.class, omVersion, OmUtils.getOmAddress(conf),
+          ugi, conf, NetUtils.getDefaultSocketFactory(conf),
+          CLIENT_TIMEOUT), RandomStringUtils.randomAscii(5));
 
-    // Since client is already connected get a delegation token
-    Token<OzoneTokenIdentifier> token = omClient
-        .getDelegationToken(new Text("om"));
+      // Since client is already connected get a delegation token
+      Token<OzoneTokenIdentifier> token = omClient.getDelegationToken(
+          new Text("om"));
 
-    // Check if token is of right kind and renewer is running om instance
-    Assert.assertEquals(token.getKind().toString(), "OzoneToken");
-    Assert.assertEquals(token.getService().toString(),
-        OmUtils.getOmRpcAddress(conf));
+      // Check if token is of right kind and renewer is running om instance
+      Assert.assertEquals(token.getKind().toString(), "OzoneToken");
+      Assert.assertEquals(token.getService().toString(), OmUtils
+          .getOmRpcAddress(conf));
 
-    // Renew delegation token
-    long expiryTime = omClient.renewDelegationToken(token);
-    Assert.assertTrue(expiryTime > 0);
+      // Renew delegation token
+      long expiryTime = omClient.renewDelegationToken(token);
+      Assert.assertTrue(expiryTime > 0);
 
-    // Test failure of delegation renewal
-    // 1. When renewer doesn't match (implicitly covers when renewer is
-    // null or empty )
-    Token token2 = omClient.getDelegationToken(new Text("randomService"));
-    LambdaTestUtils.intercept(RemoteException.class,
-        " with non-matching renewer randomService",
-        () -> omClient.renewDelegationToken(token2));
+      // Test failure of delegation renewal
+      // 1. When renewer doesn't match (implicitly covers when renewer is
+      // null or empty )
+      Token token2 = omClient.getDelegationToken(new Text("randomService"));
+      LambdaTestUtils.intercept(RemoteException.class,
+          " with non-matching renewer randomService",
+          () -> omClient.renewDelegationToken(token2));
 
-    // 2. Test tampered token
-    OzoneTokenIdentifier tokenId = OzoneTokenIdentifier
-        .readProtoBuf(token.getIdentifier());
-    tokenId.setRenewer(new Text("om"));
-    tokenId.setMaxDate(System.currentTimeMillis() * 2);
-    Token<OzoneTokenIdentifier> tamperedToken = new Token<>(
-        tokenId.getBytes(), token2.getPassword(), token2.getKind(),
-        token2.getService());
-    LambdaTestUtils
-        .intercept(RemoteException.class, "can't be found in cache",
-            () -> omClient.renewDelegationToken(tamperedToken));
+      // 2. Test tampered token
+      OzoneTokenIdentifier tokenId = OzoneTokenIdentifier.readProtoBuf(
+          token.getIdentifier());
+      tokenId.setRenewer(new Text("om"));
+      tokenId.setMaxDate(System.currentTimeMillis() * 2);
+      Token<OzoneTokenIdentifier> tamperedToken = new Token<>(
+          tokenId.getBytes(), token2.getPassword(), token2.getKind(),
+          token2.getService());
+      LambdaTestUtils.intercept(RemoteException.class,
+          "can't be found in cache",
+          () -> omClient.renewDelegationToken(tamperedToken));
 
-    // 3. When token maxExpiryTime exceeds
-    Thread.sleep(500);
-    LambdaTestUtils
-        .intercept(RemoteException.class, "om tried to renew an expired"
-            + " token", () -> omClient.renewDelegationToken(token));
+      // 3. When token maxExpiryTime exceeds
+      Thread.sleep(500);
+      LambdaTestUtils.intercept(RemoteException.class,
+          "om tried to renew an expired" + " token",
+          () -> omClient.renewDelegationToken(token));
+    } finally {
+      om.stop();
+      om.join();
+    }
   }
 
   private void setupOm(OzoneConfiguration config) throws Exception {

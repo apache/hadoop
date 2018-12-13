@@ -22,10 +22,12 @@ package org.apache.hadoop.hdds.security.x509;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.ratis.thirdparty.io.netty.handler.ssl.SslProvider;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Provider;
@@ -37,6 +39,21 @@ import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_DEFAULT_KEY_LEN;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_DEFAULT_SECURITY_PROVIDER;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_BLOCK_TOKEN_ENABLED;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_BLOCK_TOKEN_ENABLED_DEFAULT;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_TLS_ENABLED;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_TLS_ENABLED_DEFAULT;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_TLS_PROVIDER;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_TLS_PROVIDER_DEFAULT;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_TLS_TEST_CERT;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_TLS_TEST_CERT_DEFAULT;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_MUTUAL_TLS_REQUIRED;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_MUTUAL_TLS_REQUIRED_DEFAULT;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_TRUST_STORE_FILE_NAME;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_TRUST_STORE_FILE_NAME_DEFAULT;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CLIENT_CERTIFICATE_CHAIN_FILE_NAME;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CLIENT_CERTIFICATE_CHAIN_FILE_NAME_DEFAULT;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_SERVER_CERTIFICATE_CHAIN_FILE_NAME;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_SERVER_CERTIFICATE_CHAIN_FILE_NAME_DEFAULT;
+
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_KEY_ALGORITHM;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_KEY_DIR_NAME;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_KEY_DIR_NAME_DEFAULT;
@@ -81,6 +98,11 @@ public class SecurityConfig {
   private final int getMaxKeyLength;
   private final String certificateDir;
   private final String certificateFileName;
+  private final Boolean grpcTlsEnabled;
+  private Boolean grpcTlsUseTestCert;
+  private String trustStoreFileName;
+  private String serverCertChainFileName;
+  private String clientCertChainFileName;
 
   /**
    * Constructs a SecurityConfig.
@@ -127,6 +149,25 @@ public class SecurityConfig {
     this.grpcBlockTokenEnabled = this.configuration.getBoolean(
         HDDS_GRPC_BLOCK_TOKEN_ENABLED,
         HDDS_GRPC_BLOCK_TOKEN_ENABLED_DEFAULT);
+
+    this.grpcTlsEnabled = this.configuration.getBoolean(HDDS_GRPC_TLS_ENABLED,
+        HDDS_GRPC_TLS_ENABLED_DEFAULT);
+    if (grpcTlsEnabled) {
+
+      this.trustStoreFileName = this.configuration.get(
+          HDDS_TRUST_STORE_FILE_NAME, HDDS_TRUST_STORE_FILE_NAME_DEFAULT);
+
+      this.clientCertChainFileName = this.configuration.get(
+          HDDS_CLIENT_CERTIFICATE_CHAIN_FILE_NAME,
+          HDDS_CLIENT_CERTIFICATE_CHAIN_FILE_NAME_DEFAULT);
+
+      this.serverCertChainFileName = this.configuration.get(
+          HDDS_SERVER_CERTIFICATE_CHAIN_FILE_NAME,
+          HDDS_SERVER_CERTIFICATE_CHAIN_FILE_NAME_DEFAULT);
+
+      this.grpcTlsUseTestCert = this.configuration.getBoolean(
+          HDDS_GRPC_TLS_TEST_CERT, HDDS_GRPC_TLS_TEST_CERT_DEFAULT);
+    }
 
     // First Startup -- if the provider is null, check for the provider.
     if (SecurityConfig.provider == null) {
@@ -277,6 +318,92 @@ public class SecurityConfig {
 
   public Boolean isGrpcBlockTokenEnabled() {
     return this.grpcBlockTokenEnabled;
+  }
+
+  /**
+   * Returns true if TLS is enabled for gRPC services.
+   * @param conf configuration
+   * @return true if TLS is enabled for gRPC services.
+   */
+  public static Boolean isGrpcTlsEnabled(Configuration conf) {
+    return conf.getBoolean(HDDS_GRPC_TLS_ENABLED,
+        HDDS_GRPC_TLS_ENABLED_DEFAULT);
+  }
+
+  /**
+   * Returns true if TLS mutual authentication is enabled for gRPC services.
+   * @return true if TLS is enabled for gRPC services.
+   */
+  public Boolean isGrpcMutualTlsRequired() {
+    return configuration.getBoolean(HDDS_GRPC_MUTUAL_TLS_REQUIRED,
+        HDDS_GRPC_MUTUAL_TLS_REQUIRED_DEFAULT);
+  }
+
+  /**
+   * Returns the TLS-enabled gRPC client private key file(Only needed for mutual
+   * authentication).
+   * @return the TLS-enabled gRPC client private key file.
+   */
+  public File getClientPrivateKeyFile() {
+    return Paths.get(getKeyLocation().toString(),
+        "client." + privateKeyFileName).toFile();
+  }
+
+  /**
+   * Returns the TLS-enabled gRPC server private key file.
+   * @return the TLS-enabled gRPC server private key file.
+   */
+  public File getServerPrivateKeyFile() {
+    return Paths.get(getKeyLocation().toString(),
+        "server." + privateKeyFileName).toFile();
+  }
+
+  /**
+   * Get the trusted CA certificate file. (CA certificate)
+   * @return the trusted CA certificate.
+   */
+  public File getTrustStoreFile() {
+    return Paths.get(getKeyLocation().toString(), trustStoreFileName).
+        toFile();
+  }
+
+  /**
+   * Get the TLS-enabled gRPC Client certificate chain file (only needed for
+   * mutual authentication).
+   * @return the TLS-enabled gRPC Server certificate chain file.
+   */
+  public File getClientCertChainFile() {
+    return Paths.get(getKeyLocation().toString(), clientCertChainFileName).
+        toFile();
+  }
+
+  /**
+   * Get the TLS-enabled gRPC Server certificate chain file.
+   * @return the TLS-enabled gRPC Server certificate chain file.
+   */
+  public File getServerCertChainFile() {
+    return Paths.get(getKeyLocation().toString(), serverCertChainFileName).
+        toFile();
+  }
+
+  /**
+   * Get the gRPC TLS provider.
+   * @return the gRPC TLS Provider.
+   */
+  public SslProvider getGrpcSslProvider() {
+    return SslProvider.valueOf(configuration.get(HDDS_GRPC_TLS_PROVIDER,
+        HDDS_GRPC_TLS_PROVIDER_DEFAULT));
+  }
+
+  /**
+   * Return true if using test certificates with authority as localhost.
+   * This should be used only for unit test where certifiates are generated
+   * by openssl with localhost as DN and should never use for production as it
+   * will bypass the hostname/ip matching verification.
+   * @return true if using test certificates.
+   */
+  public boolean useTestCert() {
+    return grpcTlsUseTestCert;
   }
 
   /**
