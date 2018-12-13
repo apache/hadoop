@@ -239,6 +239,7 @@
     <apache-ant.version>1.10.13</apache-ant.version>
     <jmh.version>1.20</jmh.version>
     <gcs.version>1.9.0.3.0.0.0-SNAPSHOT</gcs.version>
+    <knox.version>1.0.0.3.0.100.0-SNAPSHOT</knox.version>
     <t9000-core.version>1.0.0.7.3.1.0-SNAPSHOT</t9000-core.version>
   </properties>
 
@@ -2178,6 +2179,53 @@
           <exclusion>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.flogger</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.knox</groupId>
+        <artifactId>gateway-cloud-bindings</artifactId>
+        <version>${knox.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.fusesource.jansi</groupId>
+            <artifactId>jansi</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>jline</groupId>
+            <artifactId>jline</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.jayway.jsonpath</groupId>
+            <artifactId>json-path</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.directory.server</groupId>
+            <artifactId>apacheds-jdbm</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.cloud.bigdataoss</groupId>
+            <artifactId>gcs-connector</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-bundle</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-digester</groupId>
+            <artifactId>commons-digester</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-beanutils</groupId>
+            <artifactId>*</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
