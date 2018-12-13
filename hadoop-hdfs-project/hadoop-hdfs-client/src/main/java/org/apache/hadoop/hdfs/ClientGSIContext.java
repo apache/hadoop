@@ -25,6 +25,7 @@ import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 
+import java.io.IOException;
 /**
  * Global State Id context for the client.
  * <p/>
@@ -58,7 +59,8 @@ public class ClientGSIContext implements AlignmentContext {
   }
 
   /**
-   * Client side implementation for receiving state alignment info in responses.
+   * Client side implementation for receiving state alignment info
+   * in responses.
    */
   @Override
   public void receiveResponseState(RpcResponseHeaderProto header) {
@@ -78,7 +80,8 @@ public class ClientGSIContext implements AlignmentContext {
    * Client does not receive RPC requests therefore this does nothing.
    */
   @Override
-  public long receiveRequestState(RpcRequestHeaderProto header) {
+  public long receiveRequestState(RpcRequestHeaderProto header, long threshold)
+      throws IOException {
     // Do nothing.
     return 0;
   }

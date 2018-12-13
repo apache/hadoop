@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.ipc;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
@@ -64,9 +66,15 @@ public interface AlignmentContext {
    * client state info during RPC response header processing.
    *
    * @param header The RPC request header.
-   * @return state id of in the request header.
+   * @param threshold a parameter to verify a condition when server
+   *        should reject client request due to its state being too far
+   *        misaligned with the client state.
+   *        See implementation for more details.
+   * @return state id required for the server to execute the call.
+   * @throws IOException
    */
-  long receiveRequestState(RpcRequestHeaderProto header);
+  long receiveRequestState(RpcRequestHeaderProto header, long threshold)
+      throws IOException;
 
   /**
    * Returns the last seen state id of the alignment context instance.

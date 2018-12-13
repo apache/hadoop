@@ -21,12 +21,15 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.HashSet;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.ha.ReadOnly;
 import org.apache.hadoop.ipc.AlignmentContext;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 
@@ -37,8 +40,23 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 @InterfaceAudience.Private
 @InterfaceStability.Stable
 class GlobalStateIdContext implements AlignmentContext {
-  private final FSNamesystem namesystem;
+  /**
+   * Estimated number of journal transactions a typical NameNode can execute
+   * per second. The number is used to estimate how long a client's
+   * RPC request will wait in the call queue before the Observer catches up
+   * with its state id.
+   */
+  private static final long ESTIMATED_TRANSACTIONS_PER_SECOND = 10000L;
 
+  /**
+   * The client wait time on an RPC request is composed of
+   * the server execution time plus the communication time.
+   * This is an expected fraction of the total wait time spent on
+   * server execution.
+   */
+  private static final float ESTIMATED_SERVER_TIME_MULTIPLIER = 0.8f;
+
+  private final FSNamesystem namesystem;
   private final HashSet<String> coordinatedMethods;
 
   /**
@@ -90,17 +108,41 @@ class GlobalStateIdContext implements AlignmentContext {
   }
 
   /**
-   * Server side implementation for processing state alignment info in requests.
+   * Server-side implementation for processing state alignment info in
+   * requests.
+   * For Observer it compares the client and the server states and determines
+   * if it makes sense to wait until the server catches up with the client
+   * state. If not the server throws RetriableException so that the client
+   * could retry the call according to the retry policy with another Observer
+   * or the Active NameNode.
+   *
+   * @param header The RPC request header.
+   * @param clientWaitTime time in milliseconds indicating how long client
+   *    waits for the server response. It is used to verify if the client's
+   *    state is too far ahead of the server's
+   * @return the minimum of the state ids of the client or the server.
+   * @throws RetriableException if Observer is too far behind.
    */
   @Override
-  public long receiveRequestState(RpcRequestHeaderProto header) {
+  public long receiveRequestState(RpcRequestHeaderProto header,
+      long clientWaitTime) throws RetriableException {
     long serverStateId =
         namesystem.getFSImage().getCorrectLastAppliedOrWrittenTxId();
     long clientStateId = header.getStateId();
     if (clientStateId > serverStateId &&
-        HAServiceProtocol.HAServiceState.ACTIVE.equals(namesystem.getState())) {
+        HAServiceState.ACTIVE.equals(namesystem.getState())) {
       FSNamesystem.LOG.warn("A client sent stateId: " + clientStateId +
           ", but server state is: " + serverStateId);
+      return serverStateId;
+    }
+    if (HAServiceState.OBSERVER.equals(namesystem.getState()) &&
+        clientStateId - serverStateId >
+        ESTIMATED_TRANSACTIONS_PER_SECOND
+            * TimeUnit.MILLISECONDS.toSeconds(clientWaitTime)
+            * ESTIMATED_SERVER_TIME_MULTIPLIER) {
+      throw new RetriableException(
+          "Observer Node is too far behind: serverStateId = "
+              + serverStateId + " clientStateId = " + clientStateId);
     }
     return clientStateId;
   }
