@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -136,6 +137,19 @@ public class TestMultiObserverNode {
     dfsCluster.transitionToObserver(2);
     dfsCluster.restartNameNode(3);
     dfsCluster.transitionToObserver(3);
+  }
+
+  @Test
+  public void testObserverFallBehind() throws Exception {
+    dfs.mkdir(testPath, FsPermission.getDefault());
+    assertSentTo(0);
+
+    // Set large state Id on the client
+    long realStateId = HATestUtil.setACStateId(dfs, 500000);
+    dfs.getFileStatus(testPath);
+    // Should end up on ANN
+    assertSentTo(0);
+    HATestUtil.setACStateId(dfs, realStateId);
   }
 
   private void assertSentTo(int... nnIndices) throws IOException {
