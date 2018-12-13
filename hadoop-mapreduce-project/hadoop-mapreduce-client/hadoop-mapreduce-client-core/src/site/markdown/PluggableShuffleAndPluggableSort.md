@@ -85,7 +85,7 @@ The collector class configuration may specify a comma-separated list of collecto
     </property>
 
     <property>
-        <name>yarn.nodemanager.aux-services.AuxServiceFromHDFS.class&lt;/name>
+        <name>yarn.nodemanager.aux-services.AuxServiceFromHDFS.class</name>
         <value>org.apache.auxtest.AuxServiceFromHDFS2</value>
     </property>
 </configuration>
@@ -106,7 +106,7 @@ The collector class configuration may specify a comma-separated list of collecto
     </property>
 
     <property>
-        <name>yarn.nodemanager.aux-services.AuxServiceFromHDFS.class&lt;/name>
+        <name>yarn.nodemanager.aux-services.AuxServiceFromHDFS.class</name>
         <value>org.apache.auxtest.AuxServiceFromHDFS2</value>
     </property>
 </configuration>
