@@ -25,12 +25,16 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.ipc.RpcScheduler;
+import org.apache.hadoop.ipc.Schedulable;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.After;
@@ -82,6 +86,36 @@ public class TestConsistentReadsObserver {
     if (qjmhaCluster != null) {
       qjmhaCluster.shutdown();
     }
+  }
+
+  @Test
+  public void testRequeueCall() throws Exception {
+    setObserverRead(true);
+
+    // Update the configuration just for the observer, by enabling
+    // IPC backoff and using the test scheduler class, which starts to backoff
+    // after certain number of calls.
+    final int observerIdx = 2;
+    NameNode nn = dfsCluster.getNameNode(observerIdx);
+    int port = nn.getNameNodeAddress().getPort();
+    Configuration configuration = dfsCluster.getConfiguration(observerIdx);
+    String prefix = CommonConfigurationKeys.IPC_NAMESPACE + "." + port + ".";
+    configuration.set(prefix + CommonConfigurationKeys.IPC_SCHEDULER_IMPL_KEY,
+        TestRpcScheduler.class.getName());
+    configuration.setBoolean(prefix
+        + CommonConfigurationKeys.IPC_BACKOFF_ENABLE, true);
+
+    dfsCluster.restartNameNode(observerIdx);
+    dfsCluster.transitionToObserver(observerIdx);
+
+    dfs.create(testPath, (short)1).close();
+    assertSentTo(0);
+
+    // Since we haven't tailed edit logs on the observer, it will fall behind
+    // and keep re-queueing the incoming request. Eventually, RPC backoff will
+    // be triggered and client should retry active NN.
+    dfs.getFileStatus(testPath);
+    assertSentTo(0);
   }
 
   @Test
@@ -168,5 +202,34 @@ public class TestConsistentReadsObserver {
   private static void setObserverRead(boolean flag) throws Exception {
     dfs = HATestUtil.configureObserverReadFs(
         dfsCluster, conf, ObserverReadProxyProvider.class, flag);
+  }
+
+  /**
+   * A dummy test scheduler that starts backoff after a fixed number
+   * of requests.
+   */
+  public static class TestRpcScheduler implements RpcScheduler {
+    // Allow a number of RPCs to pass in order for the NN restart to succeed.
+    private int allowed = 10;
+    public TestRpcScheduler() {}
+
+    @Override
+    public int getPriorityLevel(Schedulable obj) {
+      return 0;
+    }
+
+    @Override
+    public boolean shouldBackOff(Schedulable obj) {
+      return --allowed < 0;
+    }
+
+    @Override
+    public void addResponseTime(String name, int priorityLevel, int queueTime,
+        int processingTime) {
+    }
+
+    @Override
+    public void stop() {
+    }
   }
 }
