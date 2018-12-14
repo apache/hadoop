@@ -35,6 +35,7 @@ public final class ContainerExecContext {
   private final String user;
   private final String appId;
   private final Container container;
+  private String command;
   private final LocalDirsHandlerService localDirsHandler;
 
   /**
@@ -44,6 +45,7 @@ public final class ContainerExecContext {
     private String user;
     private String appId;
     private Container container;
+    private String command;
     private LocalDirsHandlerService localDirsHandler;
 
     public Builder() {
@@ -73,12 +75,18 @@ public final class ContainerExecContext {
       this.localDirsHandler = ldhs;
       return this;
     }
+
+    public Builder setShell(String command) {
+      this.command = command;
+      return this;
+    }
   }
 
   private ContainerExecContext(Builder builder) {
-    this.container = builder.container;
     this.user = builder.user;
     this.appId = builder.appId;
+    this.container = builder.container;
+    this.command = builder.command;
     this.localDirsHandler = builder.localDirsHandler;
   }
 
@@ -92,6 +100,10 @@ public final class ContainerExecContext {
 
   public Container getContainer() {
     return this.container;
+  }
+
+  public String getShell() {
+    return this.command;
   }
 
   public LocalDirsHandlerService getLocalDirsHandlerService() {

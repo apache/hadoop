@@ -335,7 +335,8 @@ public class ApplicationCLI extends YarnCLI {
           "app version, -components to filter instances based on component " +
           "names, -states to filter instances based on instance state.");
       opts.addOption(HELP_CMD, false, "Displays help for all commands.");
-      opts.getOption(SHELL_CMD).setArgName("Container ID");
+      opts.getOption(SHELL_CMD).setArgName("Container ID [bash|sh]");
+      opts.getOption(SHELL_CMD).setArgs(3);
       opts.getOption(STATUS_CMD).setArgName("Container ID");
       opts.getOption(LIST_CMD).setArgName("Application Name or Attempt ID");
       opts.addOption(APP_TYPE_CMD, true, "Works with -list to " +
@@ -584,7 +585,7 @@ public class ApplicationCLI extends YarnCLI {
       ShellContainerCommand command =
           ShellContainerCommand.BASH;
       if (shellArgs.length == 2) {
-        command = ShellContainerCommand.valueOf(shellArgs[1]);
+        command = ShellContainerCommand.valueOf(shellArgs[1].toUpperCase());
       }
       shellToContainer(containerId, command);
     } else if (cliParser.hasOption(LAUNCH_CMD)) {
