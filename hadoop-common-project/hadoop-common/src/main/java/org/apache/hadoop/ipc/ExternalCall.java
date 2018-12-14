@@ -24,6 +24,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.ipc.Server.Call;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
 import org.apache.hadoop.security.UserGroupInformation;
 
 public abstract class ExternalCall<T> extends Call {
@@ -78,7 +79,7 @@ public abstract class ExternalCall<T> extends Call {
   }
 
   @Override
-  final void doResponse(Throwable t) {
+  final void doResponse(Throwable t, RpcStatusProto status) {
     synchronized(done) {
       error = t;
       done.set(true);
