@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.io.IOException;
@@ -61,26 +62,37 @@ public final class CombinedHostsFileReader {
   private CombinedHostsFileReader() {
   }
 
+  private static final String REFER_TO_DOC_MSG = " For the correct JSON" +
+          " format please refer to the documentation (https://hadoop.apache" +
+          ".org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsDataNodeAd" +
+          "minGuide.html#JSON-based_configuration)";
+
   /**
    * Deserialize a set of DatanodeAdminProperties from a json file.
-   * @param hostsFile the input json file to read from
+   * @param hostsFilePath the input json file to read from
    * @return the set of DatanodeAdminProperties
    * @throws IOException
    */
   public static DatanodeAdminProperties[]
-      readFile(final String hostsFile) throws IOException {
+      readFile(final String hostsFilePath) throws IOException {
     DatanodeAdminProperties[] allDNs = new DatanodeAdminProperties[0];
     ObjectMapper objectMapper = new ObjectMapper();
+    File hostFile = new File(hostsFilePath);
     boolean tryOldFormat = false;
-    try (Reader input =
-        new InputStreamReader(new FileInputStream(hostsFile), "UTF-8")) {
-      allDNs = objectMapper.readValue(input, DatanodeAdminProperties[].class);
-    } catch (JsonMappingException jme) {
-      // The old format doesn't have json top-level token to enclose the array.
-      // For backward compatibility, try parsing the old format.
-      tryOldFormat = true;
-      LOG.warn("{} has invalid JSON format." +
-          "Try the old format without top-level token defined.", hostsFile);
+
+    if (hostFile.length() > 0) {
+      try (Reader input =
+                   new InputStreamReader(new FileInputStream(hostFile),
+                           "UTF-8")) {
+        allDNs = objectMapper.readValue(input, DatanodeAdminProperties[].class);
+      } catch (JsonMappingException jme) {
+        // The old format doesn't have json top-level token to enclose
+        // the array.
+        // For backward compatibility, try parsing the old format.
+        tryOldFormat = true;
+      }
+    } else {
+      LOG.warn(hostsFilePath + " is empty." + REFER_TO_DOC_MSG);
     }
 
     if (tryOldFormat) {
@@ -89,13 +101,18 @@ public final class CombinedHostsFileReader {
       JsonFactory jsonFactory = new JsonFactory();
       List<DatanodeAdminProperties> all = new ArrayList<>();
       try (Reader input =
-          new InputStreamReader(new FileInputStream(hostsFile), "UTF-8")) {
+          new InputStreamReader(new FileInputStream(hostsFilePath),
+                  "UTF-8")) {
         Iterator<DatanodeAdminProperties> iterator =
             objectReader.readValues(jsonFactory.createParser(input));
         while (iterator.hasNext()) {
           DatanodeAdminProperties properties = iterator.next();
           all.add(properties);
         }
+        LOG.warn(hostsFilePath + " has legacy JSON format." + REFER_TO_DOC_MSG);
+      } catch (Throwable ex) {
+        LOG.warn(hostsFilePath + " has invalid JSON format." + REFER_TO_DOC_MSG,
+                ex);
       }
       allDNs = all.toArray(new DatanodeAdminProperties[all.size()]);
     }
