@@ -105,13 +105,13 @@ public final class DockerClient {
                 "'=' found in entry for docker command file, key = " + entry
                     .getKey() + "; value = " + entry.getValue());
           }
-          if (entry.getValue().contains("\n")) {
+          String value = StringUtils.join(",", entry.getValue());
+          if (value.contains("\n")) {
             throw new ContainerExecutionException(
                 "'\\n' found in entry for docker command file, key = " + entry
-                    .getKey() + "; value = " + entry.getValue());
+                    .getKey() + "; value = " + value);
           }
-          printWriter.println("  " + entry.getKey() + "=" + StringUtils
-              .join(",", entry.getValue()));
+          printWriter.println("  " + entry.getKey() + "=" + value);
         }
         if (cmd instanceof DockerRunCommand) {
           DockerRunCommand runCommand = (DockerRunCommand) cmd;
