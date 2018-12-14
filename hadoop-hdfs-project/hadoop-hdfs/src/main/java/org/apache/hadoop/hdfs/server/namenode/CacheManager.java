@@ -37,7 +37,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.SortedMap;
@@ -91,7 +90,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 
 /**
  * The Cache Manager handles caching on DataNodes.
@@ -125,8 +126,7 @@ public class CacheManager {
    * listCacheDirectives relies on the ordering of elements in this map
    * to track what has already been listed by the client.
    */
-  private final TreeMap<Long, CacheDirective> directivesById =
-      new TreeMap<Long, CacheDirective>();
+  private final TreeMap<Long, CacheDirective> directivesById = new TreeMap<>();
 
   /**
    * The directive ID to use for a new directive.  IDs always increase, and are
@@ -135,10 +135,10 @@ public class CacheManager {
   private long nextDirectiveId;
 
   /**
-   * Cache directives, sorted by path
+   * Cache directives
    */
-  private final TreeMap<String, List<CacheDirective>> directivesByPath =
-      new TreeMap<String, List<CacheDirective>>();
+  private final Multimap<String, CacheDirective> directivesByPath =
+      HashMultimap.create();
 
   /**
    * Cache pools, sorted by name.
@@ -515,12 +515,7 @@ public class CacheManager {
     assert addedDirective;
     directivesById.put(directive.getId(), directive);
     String path = directive.getPath();
-    List<CacheDirective> directives = directivesByPath.get(path);
-    if (directives == null) {
-      directives = new ArrayList<CacheDirective>(1);
-      directivesByPath.put(path, directives);
-    }
-    directives.add(directive);
+    directivesByPath.put(path, directive);
     // Fix up pool stats
     CacheDirectiveStats stats =
         computeNeeded(directive.getPath(), directive.getReplication());
@@ -681,13 +676,9 @@ public class CacheManager {
     assert namesystem.hasWriteLock();
     // Remove the corresponding entry in directivesByPath.
     String path = directive.getPath();
-    List<CacheDirective> directives = directivesByPath.get(path);
-    if (directives == null || !directives.remove(directive)) {
-      throw new InvalidRequestException("Failed to locate entry " +
-          directive.getId() + " by path " + directive.getPath());
-    }
-    if (directives.size() == 0) {
-      directivesByPath.remove(path);
+    if (!directivesByPath.remove(path, directive)) {
+      throw new InvalidRequestException("Failed to locate entry "
+          + directive.getId() + " by path " + directive.getPath());
     }
     // Fix up the stats from removing the pool
     final CachePool pool = directive.getPool();
@@ -906,7 +897,7 @@ public class CacheManager {
       Iterator<CacheDirective> iter = pool.getDirectiveList().iterator();
       while (iter.hasNext()) {
         CacheDirective directive = iter.next();
-        directivesByPath.remove(directive.getPath());
+        directivesByPath.removeAll(directive.getPath());
         directivesById.remove(directive.getId());
         iter.remove();
       }
@@ -1171,12 +1162,7 @@ public class CacheManager {
       throw new IOException("A directive with ID " + directive.getId()
           + " already exists");
     }
-    List<CacheDirective> directives = directivesByPath.get(directive.getPath());
-    if (directives == null) {
-      directives = new LinkedList<CacheDirective>();
-      directivesByPath.put(directive.getPath(), directives);
-    }
-    directives.add(directive);
+    directivesByPath.put(directive.getPath(), directive);
   }
 
   private final class SerializerCompat {
