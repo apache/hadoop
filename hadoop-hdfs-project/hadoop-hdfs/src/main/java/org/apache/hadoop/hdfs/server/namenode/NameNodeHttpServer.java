@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.hdfs.server.common.TokenVerifier;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.web.AuthFilter;
@@ -317,6 +318,11 @@ public class NameNodeHttpServer {
 
   public static NameNode getNameNodeFromContext(ServletContext context) {
     return (NameNode)context.getAttribute(NAMENODE_ATTRIBUTE_KEY);
+  }
+
+  public static TokenVerifier
+      getTokenVerifierFromContext(ServletContext context) {
+    return (TokenVerifier) context.getAttribute(NAMENODE_ATTRIBUTE_KEY);
   }
 
   static Configuration getConfFromContext(ServletContext context) {
