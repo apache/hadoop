@@ -27,6 +27,7 @@ import java.util.Map;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ShellContainerCommand;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -98,8 +99,16 @@ public class ContainerShellWebSocket {
   public void onConnect(Session session) {
     try {
       URI containerURI = session.getUpgradeRequest().getRequestURI();
+      String command = "bash";
       String[] containerPath = containerURI.getPath().split("/");
       String cId = containerPath[2];
+      if (containerPath.length==4) {
+        for (ShellContainerCommand c : ShellContainerCommand.values()) {
+          if (c.name().equalsIgnoreCase(containerPath[3])) {
+            command = containerPath[3].toLowerCase();
+          }
+        }
+      }
       Container container = nmContext.getContainers().get(ContainerId
           .fromString(cId));
       if (!checkAuthorization(session, container)) {
@@ -113,6 +122,7 @@ public class ContainerShellWebSocket {
           .Builder()
           .setContainer(container)
           .setNMLocalPath(nmContext.getLocalDirsHandler())
+          .setShell(command)
           .build();
       pair = exec.execContainer(execContext);
     } catch (Exception e) {

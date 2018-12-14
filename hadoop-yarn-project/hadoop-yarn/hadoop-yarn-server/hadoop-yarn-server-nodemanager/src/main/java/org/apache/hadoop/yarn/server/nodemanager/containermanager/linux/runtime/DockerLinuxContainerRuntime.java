@@ -1178,7 +1178,11 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     dockerExecCommand.setInteractive();
     dockerExecCommand.setTTY();
     List<String> command = new ArrayList<String>();
-    command.add("bash");
+    StringBuilder sb = new StringBuilder();
+    sb.append("/bin/");
+    sb.append(ctx.getShell());
+    command.add(sb.toString());
+    command.add("-i");
     dockerExecCommand.setOverrideCommandWithArgs(command);
     String commandFile = dockerClient.writeCommandToTempFile(dockerExecCommand,
         ContainerId.fromString(containerId), nmContext);
