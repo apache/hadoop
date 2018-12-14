@@ -23,7 +23,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
@@ -176,10 +175,11 @@ public class JspHelper {
     DelegationTokenIdentifier id = new DelegationTokenIdentifier();
     id.readFields(in);
     if (context != null) {
-      final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
-      if (nn != null) {
+      final TokenVerifier<DelegationTokenIdentifier> tokenVerifier =
+          NameNodeHttpServer.getTokenVerifierFromContext(context);
+      if (tokenVerifier != null) {
         // Verify the token.
-        nn.getNamesystem().verifyToken(id, token.getPassword());
+        tokenVerifier.verifyToken(id, token.getPassword());
       }
     }
     UserGroupInformation ugi = id.getUser();
