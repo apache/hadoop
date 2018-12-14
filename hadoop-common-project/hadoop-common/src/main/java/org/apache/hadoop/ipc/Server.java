@@ -800,7 +800,11 @@ public abstract class Server {
       }
     }
 
-    void doResponse(Throwable t) throws IOException {}
+    void doResponse(Throwable t) throws IOException {
+      doResponse(t, RpcStatusProto.FATAL);
+    }
+
+    void doResponse(Throwable t, RpcStatusProto proto) throws IOException {}
 
     // For Schedulable
     @Override
@@ -967,15 +971,17 @@ public abstract class Server {
     }
 
     @Override
-    void doResponse(Throwable t) throws IOException {
+    void doResponse(Throwable t, RpcStatusProto status) throws IOException {
       RpcCall call = this;
       if (t != null) {
+        if (status == null) {
+          status = RpcStatusProto.FATAL;
+        }
         // clone the call to prevent a race with another thread stomping
         // on the response while being sent.  the original call is
         // effectively discarded since the wait count won't hit zero
         call = new RpcCall(this);
-        setupResponse(call,
-            RpcStatusProto.FATAL, RpcErrorCodeProto.ERROR_RPC_SERVER,
+        setupResponse(call, status, RpcErrorCodeProto.ERROR_RPC_SERVER,
             null, t.getClass().getName(), StringUtils.stringifyException(t));
       } else {
         setupResponse(call, call.responseParams.returnStatus,
@@ -2713,8 +2719,18 @@ public abstract class Server {
 
   private void internalQueueCall(Call call)
       throws IOException, InterruptedException {
+    internalQueueCall(call, true);
+  }
+
+  private void internalQueueCall(Call call, boolean blocking)
+      throws IOException, InterruptedException {
     try {
-      callQueue.put(call); // queue the call; maybe blocked here
+      // queue the call, may be blocked if blocking is true.
+      if (blocking) {
+        callQueue.put(call);
+      } else {
+        callQueue.add(call);
+      }
     } catch (CallQueueOverflowException cqe) {
       // If rpc scheduler indicates back off based on performance degradation
       // such as response time or rpc queue is full, we will ask the client
@@ -2757,8 +2773,8 @@ public abstract class Server {
              * In case of Observer, it handles only reads, which are
              * commutative.
              */
-            //Re-queue the call and continue
-            internalQueueCall(call);
+            // Re-queue the call and continue
+            requeueCall(call);
             continue;
           }
           if (LOG.isDebugEnabled()) {
@@ -2798,6 +2814,15 @@ public abstract class Server {
         }
       }
       LOG.debug(Thread.currentThread().getName() + ": exiting");
+    }
+
+    private void requeueCall(Call call)
+        throws IOException, InterruptedException {
+      try {
+        internalQueueCall(call, false);
+      } catch (RpcServerException rse) {
+        call.doResponse(rse.getCause(), rse.getRpcStatusProto());
+      }
     }
 
   }
