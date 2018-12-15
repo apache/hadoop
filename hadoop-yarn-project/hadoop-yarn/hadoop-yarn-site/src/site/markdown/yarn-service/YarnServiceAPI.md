@@ -12,8 +12,11 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-# YARN Service API 
+# YARN Service API
 
+<!-- MACRO{toc|fromDepth=0|toDepth=2} -->
+
+## Introduction
 Bringing a new service on YARN today is not a simple experience. The APIs of existing
 frameworks are either too low level (native YARN), require writing new code (for frameworks with programmatic APIs)
 or writing a complex spec (for declarative frameworks).
@@ -432,9 +435,11 @@ The current status of a submitted service, returned as a response to the GET API
 ## Examples
 
 ### Create a simple single-component service with most attribute values as defaults
+```
 POST URL - http://localhost:8088/app/v1/services
+```
 
-##### POST Request JSON
+#### POST Request JSON
 ```json
 {
   "name": "hello-world",
@@ -459,8 +464,10 @@ POST URL - http://localhost:8088/app/v1/services
 }
 ```
 
-##### GET Response JSON
+#### GET Response JSON
+```
 GET URL - http://localhost:8088/app/v1/services/hello-world
+```
 
 Note, lifetime value of -1 means unlimited lifetime.
 
@@ -521,9 +528,11 @@ Note, lifetime value of -1 means unlimited lifetime.
 
 ```
 ### Update to modify the lifetime of a service
+```
 PUT URL - http://localhost:8088/app/v1/services/hello-world
+```
 
-##### PUT Request JSON
+#### PUT Request JSON
 
 Note, irrespective of what the current lifetime value is, this update request will set the lifetime of the service to be 3600 seconds (1 hour) from the time the request is submitted. Hence, if a a service has remaining lifetime of 5 mins (say) and would like to extend it to an hour OR if an application has remaining lifetime of 5 hours (say) and would like to reduce it down to an hour, then for both scenarios you need to submit the same request below.
 
@@ -533,9 +542,11 @@ Note, irrespective of what the current lifetime value is, this update request wi
 }
 ```
 ### Stop a service
+```
 PUT URL - http://localhost:8088/app/v1/services/hello-world
+```
 
-##### PUT Request JSON
+#### PUT Request JSON
 ```json
 {
   "state": "STOPPED"
@@ -543,9 +554,11 @@ PUT URL - http://localhost:8088/app/v1/services/hello-world
 ```
 
 ### Start a service
+```
 PUT URL - http://localhost:8088/app/v1/services/hello-world
+```
 
-##### PUT Request JSON
+#### PUT Request JSON
 ```json
 {
   "state": "STARTED"
@@ -553,9 +566,11 @@ PUT URL - http://localhost:8088/app/v1/services/hello-world
 ```
 
 ### Update to flex up/down the number of containers (instances) of a component of a service
+```
 PUT URL - http://localhost:8088/app/v1/services/hello-world/components/hello
+```
 
-##### PUT Request JSON
+#### PUT Request JSON
 ```json
 {
   "number_of_containers": 3
@@ -563,9 +578,11 @@ PUT URL - http://localhost:8088/app/v1/services/hello-world/components/hello
 ```
 
 Alternatively, you can specify the entire "components" section instead.
-
+```
 PUT URL - http://localhost:8088/app/v1/services/hello-world
-##### PUT Request JSON
+```
+
+#### PUT Request JSON
 ```json
 {
   "state": "FLEX",
@@ -580,14 +597,18 @@ PUT URL - http://localhost:8088/app/v1/services/hello-world
 ```
 
 ### Destroy a service
+```
 DELETE URL - http://localhost:8088/app/v1/services/hello-world
+```
 
 ***
 
 ### Create a complicated service  - HBase
+```
 POST URL - http://localhost:8088:/app/v1/services/hbase-app-1
+```
 
-##### POST Request JSON
+#### POST Request JSON
 
 ```json
 {
@@ -684,9 +705,11 @@ POST URL - http://localhost:8088:/app/v1/services/hbase-app-1
 ```
 
 ### Create a service requesting GPUs in addition to CPUs and RAM
+```
 POST URL - http://localhost:8088/app/v1/services
+```
 
-##### POST Request JSON
+#### POST Request JSON
 ```json
 {
   "name": "hello-world",
@@ -718,9 +741,11 @@ POST URL - http://localhost:8088/app/v1/services
 ```
 
 ### Create a service with a component requesting anti-affinity placement policy
+```
 POST URL - http://localhost:8088/app/v1/services
+```
 
-##### POST Request JSON
+#### POST Request JSON
 ```json
 {
   "name": "hello-world",
@@ -764,8 +789,10 @@ POST URL - http://localhost:8088/app/v1/services
 }
 ```
 
-##### GET Response JSON
+#### GET Response JSON
+```
 GET URL - http://localhost:8088/app/v1/services/hello-world
+```
 
 Note, for an anti-affinity component no more than 1 container will be allocated
 in a specific node. In this example, 3 containers have been requested by
@@ -860,9 +887,11 @@ non-STABLE state.
 ```
 
 ### Create a service with health threshold monitor enabled for a component
+```
 POST URL - http://localhost:8088/app/v1/services
+```
 
-##### POST Request JSON
+#### POST Request JSON
 ```json
 {
   "name": "hello-world",
