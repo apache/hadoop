@@ -110,6 +110,29 @@ function getClusterIdFromYARN(rmhost, application) {
   return clusterId;
 }
 
+function getNodeManagerPort(rmhost, application) {
+  var httpUrl = window.location.protocol + "//" +
+    (ENV.hosts.localBaseAddress ? ENV.hosts.localBaseAddress + '/' : '') + rmhost
+    + ":" + window.location.port + "/conf?name=yarn.nodemanager.webapp.address";
+  var port = "8042";
+  $.ajax({
+    type: 'GET',
+    dataType: 'json',
+    async: false,
+    context: this,
+    url: httpUrl,
+    success: function(data) {
+      port = data.property.value.split(":")[1];
+      application.advanceReadiness();
+    },
+    error: function() {
+      port = "8042";
+      application.advanceReadiness();
+    }
+  });
+  return port;
+}
+
 function updateConfigs(application) {
   var hostname = window.location.hostname;
   var rmhost = hostname + (window.location.port ? ':' + window.location.port: '') +
@@ -133,6 +156,9 @@ function updateConfigs(application) {
 
   var clusterIdFromYARN = getClusterIdFromYARN(rmhost, application);
   ENV.clusterId = clusterIdFromYARN;
+
+  var nodeManagerPort = getNodeManagerPort(rmhost, application);
+  ENV.nodeManagerPort = nodeManagerPort;
 
   if(!ENV.hosts.timelineWebAddress) {
     var timelinehost = "";

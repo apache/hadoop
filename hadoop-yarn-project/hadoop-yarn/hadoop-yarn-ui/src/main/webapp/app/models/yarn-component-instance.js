@@ -47,5 +47,15 @@ export default DS.Model.extend({
       return Converter.timeStampToDate(timestamp);
     }
     return 'N/A';
+  }),
+
+  termLink: Ember.computed('node', 'containerId', function() {
+    var protocol = window.location.protocol;
+    var node = this.get('node');
+    var port = this.get('env.app.nodeManagerPort');
+    var containerId = this.get('containerId');
+    var url = protocol + "//" + node + ":" + port +
+       "/terminal/terminal.template?container=" + containerId;
+    return url;
   })
 });
