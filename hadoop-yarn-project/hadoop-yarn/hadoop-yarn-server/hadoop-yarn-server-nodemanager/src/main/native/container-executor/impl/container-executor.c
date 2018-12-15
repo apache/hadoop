@@ -73,6 +73,7 @@ static const int DEFAULT_MIN_USERID = 1000;
 
 static const char* DEFAULT_BANNED_USERS[] = {"yarn", "mapred", "hdfs", "bin", 0};
 
+static const int DEFAULT_TERMINAL_SUPPORT_ENABLED = 0;
 static const int DEFAULT_DOCKER_SUPPORT_ENABLED = 0;
 static const int DEFAULT_TC_SUPPORT_ENABLED = 0;
 static const int DEFAULT_MOUNT_CGROUP_SUPPORT_ENABLED = 0;
@@ -488,6 +489,11 @@ int is_feature_enabled(const char* feature_key, int default_value,
     } else {
         return default_value;
     }
+}
+
+int is_terminal_support_enabled() {
+  return is_feature_enabled(TERMINAL_SUPPORT_ENABLED_KEY,
+                         DEFAULT_TERMINAL_SUPPORT_ENABLED, &executor_cfg);
 }
 
 int is_docker_support_enabled() {

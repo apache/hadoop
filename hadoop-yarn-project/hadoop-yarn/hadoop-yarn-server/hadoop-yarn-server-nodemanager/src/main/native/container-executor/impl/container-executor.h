@@ -67,6 +67,7 @@ enum operations {
 #define MIN_USERID_KEY "min.user.id"
 #define BANNED_USERS_KEY "banned.users"
 #define ALLOWED_SYSTEM_USERS_KEY "allowed.system.users"
+#define TERMINAL_SUPPORT_ENABLED_KEY "feature.terminal.enabled"
 #define DOCKER_SUPPORT_ENABLED_KEY "feature.docker.enabled"
 #define TC_SUPPORT_ENABLED_KEY "feature.tc.enabled"
 #define MOUNT_CGROUP_SUPPORT_ENABLED_KEY "feature.mount-cgroup.enabled"
@@ -341,3 +342,8 @@ char* flatten(char **args);
  * Remove docker container
  */
 int remove_docker_container(char **argv, int argc);
+
+/**
+ * Check if terminal feature is enabled
+ */
+int is_terminal_support_enabled();
