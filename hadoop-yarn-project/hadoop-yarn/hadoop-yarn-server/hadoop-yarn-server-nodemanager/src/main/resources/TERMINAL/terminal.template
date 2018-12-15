@@ -87,10 +87,24 @@
         if (user != null) {
           url = url + "?user.name=" + encodeURI(user);
         }
+        document.title = getQueryVariable("container");
         console.log(url);
         var sock = new WebSocket(url);
         sock.addEventListener('open', function () {
           term.attach(sock, true, true);
+        });
+        sock.addEventListener('close', function(event) {
+          switch(event.code) {
+            case 1000:
+              term.write('Remote Connection closed.');
+              break;
+            case 1008:
+              term.write('Remote Connection refused.');
+              break;
+            case 1001:
+              term.write('Remote Connection going away.');
+              break;
+          }
         });
         term.open(container);
         term.winptyCompatInit();
