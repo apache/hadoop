@@ -549,7 +549,7 @@ public class TestRouterAdminCLI {
 
     argv = new String[] {"-Random"};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    String expected = "Usage: hdfs routeradmin :\n"
+    String expected = "Usage: hdfs dfsrouteradmin :\n"
         + "\t[-add <source> <nameservice1, nameservice2, ...> <destination> "
         + "[-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] "
         + "-owner <owner> -group <group> -mode <mode>]\n"

@@ -109,7 +109,7 @@ public class RouterAdmin extends Configured implements Tool {
           {"-add", "-update", "-rm", "-ls", "-setQuota", "-clrQuota",
               "-safemode", "-nameservice", "-getDisabledNameservices"};
       StringBuilder usage = new StringBuilder();
-      usage.append("Usage: hdfs routeradmin :\n");
+      usage.append("Usage: hdfs dfsrouteradmin :\n");
       for (int i = 0; i < commands.length; i++) {
         usage.append(getUsage(commands[i]));
         if (i + 1 < commands.length) {
