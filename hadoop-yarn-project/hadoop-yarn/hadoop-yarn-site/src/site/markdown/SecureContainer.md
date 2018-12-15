@@ -59,7 +59,10 @@ yarn.nodemanager.linux-container-executor.group=#configured value of yarn.nodema
 banned.users=#comma separated list of users who can not run applications
 allowed.system.users=#comma separated list of allowed system users
 min.user.id=1000#Prevent other super-users
+feature.terminal.enabled=1
 ```
+
+Terminal feature (feature.terminal.enabled) allows restricted shell into secure container via YARN UI2.
 
 ###Windows Secure Container Executor (WSCE)
 
