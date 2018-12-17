@@ -2870,11 +2870,7 @@ public class DistributedFileSystem extends FileSystem
   }
 
   /**
-   * Set the source path to satisfy storage policy. This API is non-recursive
-   * in nature, i.e., if the source path is a directory then all the files
-   * immediately under the directory would be considered for satisfying the
-   * policy and the sub-directories if any under this path will be skipped.
-   *
+   * Set the source path to satisfy storage policy.
    * @param path The source path referring to either a directory or a file.
    * @throws IOException
    */

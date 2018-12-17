@@ -450,6 +450,11 @@ class ChRootedFileSystem extends FilterFileSystem {
   }
 
   @Override
+  public void satisfyStoragePolicy(Path src) throws IOException {
+    super.satisfyStoragePolicy(fullPath(src));
+  }
+
+  @Override
   public void setStoragePolicy(Path src, String policyName) throws IOException {
     super.setStoragePolicy(fullPath(src), policyName);
   }

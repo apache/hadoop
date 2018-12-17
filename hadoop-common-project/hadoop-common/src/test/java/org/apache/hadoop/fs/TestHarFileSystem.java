@@ -213,6 +213,8 @@ public class TestHarFileSystem {
 
     public void access(Path path, FsAction mode) throws IOException;
 
+    void satisfyStoragePolicy(Path src) throws IOException;
+
     public void setStoragePolicy(Path src, String policyName)
         throws IOException;
 
