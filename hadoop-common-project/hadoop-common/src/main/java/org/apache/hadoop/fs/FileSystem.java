@@ -3086,6 +3086,16 @@ public abstract class FileSystem extends Configured
   }
 
   /**
+   * Set the source path to satisfy storage policy.
+   * @param path The source path referring to either a directory or a file.
+   * @throws IOException
+   */
+  public void satisfyStoragePolicy(final Path path) throws IOException {
+    throw new UnsupportedOperationException(
+        getClass().getSimpleName() + " doesn't support setStoragePolicy");
+  }
+
+  /**
    * Set the storage policy for a given file or directory.
    *
    * @param src file or directory path.
