@@ -1438,11 +1438,14 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
           .setNodeType(HddsProtos.NodeType.DATANODE)
           .setHostname(datanode.getHostName());
 
-      dnServiceInfoBuilder.addServicePort(ServicePort.newBuilder()
-          .setType(ServicePort.Type.HTTP)
-          .setValue(DatanodeDetails.getFromProtoBuf(datanode)
-              .getPort(DatanodeDetails.Port.Name.REST).getValue())
-          .build());
+      if(DatanodeDetails.getFromProtoBuf(datanode)
+          .getPort(DatanodeDetails.Port.Name.REST) != null) {
+        dnServiceInfoBuilder.addServicePort(ServicePort.newBuilder()
+            .setType(ServicePort.Type.HTTP)
+            .setValue(DatanodeDetails.getFromProtoBuf(datanode)
+                .getPort(DatanodeDetails.Port.Name.REST).getValue())
+            .build());
+      }
 
       services.add(dnServiceInfoBuilder.build());
     }
