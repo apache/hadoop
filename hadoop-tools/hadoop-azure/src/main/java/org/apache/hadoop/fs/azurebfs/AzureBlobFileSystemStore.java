@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -181,12 +182,18 @@ public class AzureBlobFileSystemStore {
 
   public boolean getIsNamespaceEnabled() throws AzureBlobFileSystemException {
     if (!isNamespaceEnabledSet) {
-      LOG.debug("getFilesystemProperties for filesystem: {}",
-          client.getFileSystem());
-
-      final AbfsRestOperation op = client.getFilesystemProperties();
-      isNamespaceEnabled = Boolean.parseBoolean(
-          op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_NAMESPACE_ENABLED));
+      LOG.debug("Get root ACL status");
+      try {
+        client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + AbfsHttpConstants.ROOT_PATH);
+        isNamespaceEnabled = true;
+      } catch (AbfsRestOperationException ex) {
+        // Get ACL status is a HEAD request, its response doesn't contain errorCode
+        // So can only rely on its status code to determine its account type.
+        if (HttpURLConnection.HTTP_BAD_REQUEST != ex.getStatusCode()) {
+          throw ex;
+        }
+        isNamespaceEnabled = false;
+      }
       isNamespaceEnabledSet = true;
     }
 
