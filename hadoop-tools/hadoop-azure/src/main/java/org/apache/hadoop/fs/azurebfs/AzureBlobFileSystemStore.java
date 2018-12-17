@@ -107,7 +107,7 @@ public class AzureBlobFileSystemStore {
   private String primaryUserGroup;
   private static final String DATE_TIME_PATTERN = "E, dd MMM yyyy HH:mm:ss 'GMT'";
   private static final String XMS_PROPERTIES_ENCODING = "ISO-8859-1";
-  private static final int LIST_MAX_RESULTS = 5000;
+  private static final int LIST_MAX_RESULTS = 500;
   private static final int DELETE_DIRECTORY_TIMEOUT_MILISECONDS = 180000;
   private static final int RENAME_TIMEOUT_MILISECONDS = 180000;
 
