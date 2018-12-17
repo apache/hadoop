@@ -406,6 +406,11 @@ public abstract class FilterFs extends AbstractFileSystem {
   }
 
   @Override
+  public void satisfyStoragePolicy(final Path path) throws IOException {
+    myFs.satisfyStoragePolicy(path);
+  }
+
+  @Override
   public void setStoragePolicy(Path path, String policyName)
       throws IOException {
     myFs.setStoragePolicy(path, policyName);

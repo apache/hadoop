@@ -812,6 +812,13 @@ public class ViewFs extends AbstractFileSystem {
   }
 
   @Override
+  public void satisfyStoragePolicy(final Path path) throws IOException {
+    InodeTree.ResolveResult<AbstractFileSystem> res =
+        fsState.resolve(getUriPath(path), true);
+    res.targetFileSystem.satisfyStoragePolicy(res.remainingPath);
+  }
+
+  @Override
   public void setStoragePolicy(final Path path, final String policyName)
       throws IOException {
     InodeTree.ResolveResult<AbstractFileSystem> res =
@@ -1375,6 +1382,11 @@ public class ViewFs extends AbstractFileSystem {
         throws IOException {
       checkPathIsSlash(path);
       throw readOnlyMountTable("deleteSnapshot", path);
+    }
+
+    @Override
+    public void satisfyStoragePolicy(final Path path) throws IOException {
+      throw readOnlyMountTable("satisfyStoragePolicy", path);
     }
 
     @Override

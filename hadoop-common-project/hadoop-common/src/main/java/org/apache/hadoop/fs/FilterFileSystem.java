@@ -650,6 +650,11 @@ public class FilterFileSystem extends FileSystem {
   }
 
   @Override
+  public void satisfyStoragePolicy(Path src) throws IOException {
+    fs.satisfyStoragePolicy(src);
+  }
+
+  @Override
   public void setStoragePolicy(Path src, String policyName)
       throws IOException {
     fs.setStoragePolicy(src, policyName);

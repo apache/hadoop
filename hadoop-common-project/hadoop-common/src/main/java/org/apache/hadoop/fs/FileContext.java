@@ -2778,6 +2778,24 @@ public class FileContext implements PathCapabilities {
   }
 
   /**
+   * Set the source path to satisfy storage policy.
+   * @param path The source path referring to either a directory or a file.
+   * @throws IOException
+   */
+  public void satisfyStoragePolicy(final Path path)
+      throws IOException {
+    final Path absF = fixRelativePart(path);
+    new FSLinkResolver<Void>() {
+      @Override
+      public Void next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        fs.satisfyStoragePolicy(path);
+        return null;
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
    * Set the storage policy for a given file or directory.
    *
    * @param path file or directory path.
