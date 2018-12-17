@@ -203,4 +203,18 @@ public class TestRouter {
     router.stop();
     router.close();
   }
+
+  @Test
+  public void testRouterMetricsWhenDisabled() throws Exception {
+
+    Router router = new Router();
+    router.init(new RouterConfigBuilder(conf).rpc().build());
+    router.start();
+
+    intercept(IOException.class, "Namenode metrics is not initialized",
+        () -> router.getNamenodeMetrics().getCacheCapacity());
+
+    router.stop();
+    router.close();
+  }
 }

@@ -586,11 +586,11 @@ public class Router extends CompositeService {
    *
    * @return Namenode metrics.
    */
-  public NamenodeBeanMetrics getNamenodeMetrics() {
-    if (this.metrics != null) {
-      return this.metrics.getNamenodeMetrics();
+  public NamenodeBeanMetrics getNamenodeMetrics() throws IOException {
+    if (this.metrics == null) {
+      throw new IOException("Namenode metrics is not initialized");
     }
-    return null;
+    return this.metrics.getNamenodeMetrics();
   }
 
   /**
