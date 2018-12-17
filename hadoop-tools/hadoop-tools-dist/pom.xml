@@ -139,6 +139,11 @@
       <scope>compile</scope>
       <classifier>shaded</classifier>
     </dependency>
+    <dependency>
+      <groupId>org.apache.knox</groupId>
+      <artifactId>gateway-cloud-bindings</artifactId>
+      <version>${knox.version}</version>
+    </dependency>
   </dependencies>
 
   <build>
