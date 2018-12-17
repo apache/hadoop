@@ -72,6 +72,14 @@ public final class BlockGroup {
     return new Builder();
   }
 
+  @Override
+  public String toString() {
+    return "BlockGroup[" +
+        "groupID='" + groupID + '\'' +
+        ", blockIDs=" + blockIDs +
+        ']';
+  }
+
   /**
    * BlockGroup instance builder.
    */
