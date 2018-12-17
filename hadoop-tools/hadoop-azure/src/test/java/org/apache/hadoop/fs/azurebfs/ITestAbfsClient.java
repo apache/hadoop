@@ -28,7 +28,7 @@ import org.junit.Test;
  * Test continuation token which has equal sign.
  */
 public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
-  private static final int LIST_MAX_RESULTS = 5000;
+  private static final int LIST_MAX_RESULTS = 500;
 
   public ITestAbfsClient() throws Exception {
     super();
