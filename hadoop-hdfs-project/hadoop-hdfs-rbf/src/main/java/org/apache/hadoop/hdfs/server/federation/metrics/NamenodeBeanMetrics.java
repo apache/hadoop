@@ -168,8 +168,12 @@ public class NamenodeBeanMetrics
     }
   }
 
-  private FederationMetrics getFederationMetrics() {
-    return this.router.getMetrics();
+  private FederationMetrics getFederationMetrics() throws IOException {
+    FederationMetrics metrics = getRouter().getMetrics();
+    if (metrics == null) {
+      throw new IOException("Federated metrics is not initialized");
+    }
+    return metrics;
   }
 
   /////////////////////////////////////////////////////////
@@ -188,22 +192,42 @@ public class NamenodeBeanMetrics
 
   @Override
   public long getUsed() {
-    return getFederationMetrics().getUsedCapacity();
+    try {
+      return getFederationMetrics().getUsedCapacity();
+    } catch (IOException e) {
+      LOG.debug("Failed to get the used capacity", e.getMessage());
+    }
+    return 0;
   }
 
   @Override
   public long getFree() {
-    return getFederationMetrics().getRemainingCapacity();
+    try {
+      return getFederationMetrics().getRemainingCapacity();
+    } catch (IOException e) {
+      LOG.debug("Failed to get remaining capacity", e.getMessage());
+    }
+    return 0;
   }
 
   @Override
   public long getTotal() {
-    return getFederationMetrics().getTotalCapacity();
+    try {
+      return getFederationMetrics().getTotalCapacity();
+    } catch (IOException e) {
+      LOG.debug("Failed to Get total capacity", e.getMessage());
+    }
+    return 0;
   }
 
   @Override
   public long getProvidedCapacity() {
-    return getFederationMetrics().getProvidedSpace();
+    try {
+      return getFederationMetrics().getProvidedSpace();
+    } catch (IOException e) {
+      LOG.debug("Failed to get provided capacity", e.getMessage());
+    }
+    return 0;
   }
 
   @Override
@@ -261,39 +285,79 @@ public class NamenodeBeanMetrics
 
   @Override
   public long getTotalBlocks() {
-    return getFederationMetrics().getNumBlocks();
+    try {
+      return getFederationMetrics().getNumBlocks();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of blocks", e.getMessage());
+    }
+    return 0;
   }
 
   @Override
   public long getNumberOfMissingBlocks() {
-    return getFederationMetrics().getNumOfMissingBlocks();
+    try {
+      return getFederationMetrics().getNumOfMissingBlocks();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of missing blocks", e.getMessage());
+    }
+    return 0;
   }
 
   @Override
   @Deprecated
   public long getPendingReplicationBlocks() {
-    return getFederationMetrics().getNumOfBlocksPendingReplication();
+    try {
+      return getFederationMetrics().getNumOfBlocksPendingReplication();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of blocks pending replica",
+          e.getMessage());
+    }
+    return 0;
   }
 
   @Override
   public long getPendingReconstructionBlocks() {
-    return getFederationMetrics().getNumOfBlocksPendingReplication();
+    try {
+      return getFederationMetrics().getNumOfBlocksPendingReplication();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of blocks pending replica",
+          e.getMessage());
+    }
+    return 0;
   }
 
   @Override
   @Deprecated
   public long getUnderReplicatedBlocks() {
-    return getFederationMetrics().getNumOfBlocksUnderReplicated();
+    try {
+      return getFederationMetrics().getNumOfBlocksUnderReplicated();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of blocks under replicated",
+          e.getMessage());
+    }
+    return 0;
   }
 
   @Override
   public long getLowRedundancyBlocks() {
-    return getFederationMetrics().getNumOfBlocksUnderReplicated();
+    try {
+      return getFederationMetrics().getNumOfBlocksUnderReplicated();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of blocks under replicated",
+          e.getMessage());
+    }
+    return 0;
   }
 
   @Override
   public long getPendingDeletionBlocks() {
-    return getFederationMetrics().getNumOfBlocksPendingDeletion();
+    try {
+      return getFederationMetrics().getNumOfBlocksPendingDeletion();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of blocks pending deletion",
+          e.getMessage());
+    }
+    return 0;
   }
 
   @Override
@@ -471,7 +535,12 @@ public class NamenodeBeanMetrics
 
   @Override
   public long getNNStartedTimeInMillis() {
-    return this.router.getStartTime();
+    try {
+      return getRouter().getStartTime();
+    } catch (IOException e) {
+      LOG.debug("Failed to get the router startup time", e.getMessage());
+    }
+    return 0;
   }
 
   @Override
@@ -527,7 +596,12 @@ public class NamenodeBeanMetrics
 
   @Override
   public long getFilesTotal() {
-    return getFederationMetrics().getNumFiles();
+    try {
+      return getFederationMetrics().getNumFiles();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of files", e.getMessage());
+    }
+    return 0;
   }
 
   @Override
@@ -537,12 +611,22 @@ public class NamenodeBeanMetrics
 
   @Override
   public int getNumLiveDataNodes() {
-    return this.router.getMetrics().getNumLiveNodes();
+    try {
+      return getFederationMetrics().getNumLiveNodes();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of live nodes", e.getMessage());
+    }
+    return 0;
   }
 
   @Override
   public int getNumDeadDataNodes() {
-    return this.router.getMetrics().getNumDeadNodes();
+    try {
+      return getFederationMetrics().getNumDeadNodes();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of dead nodes", e.getMessage());
+    }
+    return 0;
   }
 
   @Override
@@ -552,17 +636,35 @@ public class NamenodeBeanMetrics
 
   @Override
   public int getNumDecomLiveDataNodes() {
-    return this.router.getMetrics().getNumDecomLiveNodes();
+    try {
+      return getFederationMetrics().getNumDecomLiveNodes();
+    } catch (IOException e) {
+      LOG.debug("Failed to get the number of live decommissioned datanodes",
+          e.getMessage());
+    }
+    return 0;
   }
 
   @Override
   public int getNumDecomDeadDataNodes() {
-    return this.router.getMetrics().getNumDecomDeadNodes();
+    try {
+      return getFederationMetrics().getNumDecomDeadNodes();
+    } catch (IOException e) {
+      LOG.debug("Failed to get the number of dead decommissioned datanodes",
+          e.getMessage());
+    }
+    return 0;
   }
 
   @Override
   public int getNumDecommissioningDataNodes() {
-    return this.router.getMetrics().getNumDecommissioningNodes();
+    try {
+      return getFederationMetrics().getNumDecommissioningNodes();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of decommissioning nodes",
+          e.getMessage());
+    }
+    return 0;
   }
 
   @Override
@@ -701,5 +803,12 @@ public class NamenodeBeanMetrics
   @Override
   public String getVerifyECWithTopologyResult() {
     return null;
+  }
+
+  private Router getRouter() throws IOException {
+    if (this.router == null) {
+      throw new IOException("Router is not initialized");
+    }
+    return this.router;
   }
 }
