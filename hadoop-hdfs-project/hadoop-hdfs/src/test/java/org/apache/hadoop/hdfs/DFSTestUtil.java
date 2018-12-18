@@ -71,7 +71,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
@@ -2021,18 +2020,17 @@ public class DFSTestUtil {
    * Get the RefreshUserMappingsProtocol RPC proxy for the NN associated with
    * this DFSClient object
    *
-   * @param nameNodeUri the URI of the NN to get a proxy for.
+   * @param nnAddr the address of the NN to get a proxy for.
    *
    * @return the RefreshUserMappingsProtocol RPC proxy associated with this
    * DFSClient object
    */
   @VisibleForTesting
   public static RefreshUserMappingsProtocol getRefreshUserMappingsProtocolProxy(
-      Configuration conf, URI nameNodeUri) throws IOException {
-    final AtomicBoolean nnFallbackToSimpleAuth = new AtomicBoolean(false);
-    return NameNodeProxies.createProxy(conf,
-        nameNodeUri, RefreshUserMappingsProtocol.class,
-        nnFallbackToSimpleAuth).getProxy();
+      Configuration conf, InetSocketAddress nnAddr) throws IOException {
+    return NameNodeProxies.createNonHAProxy(
+        conf, nnAddr, RefreshUserMappingsProtocol.class,
+        UserGroupInformation.getCurrentUser(), false).getProxy();
   }
 
   /**
