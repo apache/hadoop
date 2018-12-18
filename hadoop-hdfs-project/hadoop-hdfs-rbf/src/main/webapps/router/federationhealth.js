@@ -317,6 +317,7 @@
         for (var i = 0, e = mountTable.length; i < e; ++i) {
           if (mountTable[i].readonly == true) {
             mountTable[i].readonly = "true"
+            mountTable[i].status = "Read only"
           } else {
             mountTable[i].readonly = "false"
           }
