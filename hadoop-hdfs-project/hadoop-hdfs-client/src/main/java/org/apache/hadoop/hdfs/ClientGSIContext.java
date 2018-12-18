@@ -33,7 +33,7 @@ import java.io.IOException;
  * state alignment info from server(s).
  */
 @InterfaceAudience.Private
-@InterfaceStability.Stable
+@InterfaceStability.Evolving
 public class ClientGSIContext implements AlignmentContext {
 
   private final AtomicLong lastSeenStateId = new AtomicLong(Long.MIN_VALUE);

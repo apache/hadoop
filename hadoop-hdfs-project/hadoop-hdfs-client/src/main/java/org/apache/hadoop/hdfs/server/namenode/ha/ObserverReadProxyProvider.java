@@ -26,7 +26,8 @@ import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.util.List;
 
-import java.util.function.Supplier;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.ClientGSIContext;
@@ -59,6 +60,8 @@ import com.google.common.annotations.VisibleForTesting;
  * Read and write requests will still be sent to active NN if reading from
  * observer is turned off.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class ObserverReadProxyProvider<T extends ClientProtocol>
     extends AbstractNNFailoverProxyProvider<T> {
   private static final Logger LOG = LoggerFactory.getLogger(

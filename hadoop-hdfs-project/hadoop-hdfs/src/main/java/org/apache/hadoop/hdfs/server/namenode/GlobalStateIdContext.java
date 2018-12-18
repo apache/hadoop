@@ -38,7 +38,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
  * state alignment info to clients.
  */
 @InterfaceAudience.Private
-@InterfaceStability.Stable
+@InterfaceStability.Evolving
 class GlobalStateIdContext implements AlignmentContext {
   /**
    * Estimated number of journal transactions a typical NameNode can execute
