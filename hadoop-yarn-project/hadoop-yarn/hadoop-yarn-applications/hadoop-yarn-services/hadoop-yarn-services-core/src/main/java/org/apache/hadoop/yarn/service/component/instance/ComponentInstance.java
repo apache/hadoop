@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.service.component.Component;
 import org.apache.hadoop.yarn.service.component.ComponentEvent;
 import org.apache.hadoop.yarn.service.component.ComponentEventType;
 import org.apache.hadoop.yarn.service.component.ComponentRestartPolicy;
+import org.apache.hadoop.yarn.service.monitor.probe.DefaultProbe;
 import org.apache.hadoop.yarn.service.monitor.probe.ProbeStatus;
 import org.apache.hadoop.yarn.service.registry.YarnRegistryViewForProviders;
 import org.apache.hadoop.yarn.service.timelineservice.ServiceTimelinePublisher;
@@ -188,7 +189,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     @Override public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
       // Query container status for ip and host
-      compInstance.initializeStatusRetriever(event);
+      compInstance.initializeStatusRetriever(event, 0);
       long containerStartTime = System.currentTimeMillis();
       try {
         ContainerTokenIdentifier containerTokenIdentifier = BuilderUtils
@@ -268,7 +269,12 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
 
       instance.upgradeInProgress.set(false);
       instance.setContainerState(ContainerState.RUNNING_BUT_UNREADY);
-      instance.initializeStatusRetriever(event);
+      if (instance.component.getProbe() != null &&
+          instance.component.getProbe() instanceof DefaultProbe) {
+        instance.initializeStatusRetriever(event, 30);
+      } else {
+        instance.initializeStatusRetriever(event, 0);
+      }
 
       Component.UpgradeStatus status = instance.getState().equals(UPGRADING) ?
           instance.component.getUpgradeStatus() :
@@ -627,7 +633,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
 
   private void reInitHelper(Component.UpgradeStatus upgradeStatus) {
     cancelContainerStatusRetriever();
-    setContainerStatus(null);
+    setContainerStatus(container.getId(), null);
     scheduler.executorService.submit(() -> cleanupRegistry(container.getId()));
     scheduler.getContainerLaunchService()
         .reInitCompInstance(scheduler.getApp(), this,
@@ -636,7 +642,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
                 upgradeStatus.getTargetVersion()));
   }
 
-  private void initializeStatusRetriever(ComponentInstanceEvent event) {
+  private void initializeStatusRetriever(ComponentInstanceEvent event,
+      long initialDelay) {
     boolean cancelOnSuccess = true;
     if (getCompSpec().getArtifact() != null &&
         getCompSpec().getArtifact().getType() == Artifact.TypeEnum.DOCKER) {
@@ -646,10 +653,11 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       // container relaunch (see YARN-8265).
       cancelOnSuccess = false;
     }
+    LOG.info("{} retrieve status after {}", compInstanceId, initialDelay);
     containerStatusFuture =
         scheduler.executorService.scheduleAtFixedRate(
             new ContainerStatusRetriever(scheduler, event.getContainerId(),
-                this, cancelOnSuccess), 0, 1,
+                this, cancelOnSuccess), initialDelay, 1,
             TimeUnit.SECONDS);
   }
 
@@ -745,32 +753,44 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     }
   }
 
-  private void setContainerStatus(ContainerStatus latestStatus) {
+  private void setContainerStatus(ContainerId containerId,
+      ContainerStatus latestStatus) {
     try {
       writeLock.lock();
       this.status = latestStatus;
+      org.apache.hadoop.yarn.service.api.records.Container containerRec =
+          getCompSpec().getContainer(containerId.toString());
+
+      if (containerRec != null) {
+        if (latestStatus != null) {
+          containerRec.setIp(StringUtils.join(",", latestStatus.getIPs()));
+          containerRec.setHostname(latestStatus.getHost());
+        } else {
+          containerRec.setIp(null);
+          containerRec.setHostname(null);
+        }
+      }
     } finally {
       writeLock.unlock();
     }
   }
 
   public void updateContainerStatus(ContainerStatus status) {
-    setContainerStatus(status);
-    org.apache.hadoop.yarn.service.api.records.Container container =
+    org.apache.hadoop.yarn.service.api.records.Container containerRec =
         getCompSpec().getContainer(status.getContainerId().toString());
     boolean doRegistryUpdate = true;
-    if (container != null) {
-      String existingIP = container.getIp();
+    if (containerRec != null) {
+      String existingIP = containerRec.getIp();
       String newIP = StringUtils.join(",", status.getIPs());
-      container.setIp(newIP);
-      container.setHostname(status.getHost());
       if (existingIP != null && newIP.equals(existingIP)) {
         doRegistryUpdate = false;
       }
-      if (timelineServiceEnabled && doRegistryUpdate) {
-        serviceTimelinePublisher.componentInstanceIPHostUpdated(container);
-      }
     }
+    setContainerStatus(status.getContainerId(), status);
+    if (containerRec != null && timelineServiceEnabled && doRegistryUpdate) {
+      serviceTimelinePublisher.componentInstanceIPHostUpdated(containerRec);
+    }
+
     if (doRegistryUpdate) {
       cleanupRegistry(status.getContainerId());
       LOG.info(
