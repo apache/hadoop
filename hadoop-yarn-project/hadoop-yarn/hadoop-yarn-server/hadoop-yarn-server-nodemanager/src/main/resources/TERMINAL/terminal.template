@@ -104,6 +104,9 @@
             case 1001:
               term.write('Remote Connection going away.');
               break;
+            case 1003:
+              term.write('Nonsecure mode is unsupported.');
+              break;
           }
         });
         term.open(container);
