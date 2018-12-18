@@ -31,6 +31,9 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
@@ -67,6 +70,8 @@ import org.apache.hadoop.util.AutoCloseableLock;
  * cache misses occurred, and how many more transactions would have been
  * needed in the cache to serve the request.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 class JournaledEditsCache {
 
   private static final int INVALID_LAYOUT_VERSION = 0;
