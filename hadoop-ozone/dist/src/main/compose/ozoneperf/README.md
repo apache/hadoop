@@ -34,11 +34,19 @@ Note: The freon test will be started after 30 seconds.
 
 ## How to use
 
-You can check the ozone web ui-s:
+You can check the ozone web ui:
 
-https://localhost:9874
-https://localhost:9876
+OzoneManager: https://localhost:9874
+SCM: https://localhost:9876
 
-You can check the ozone metrics from the prometheus we ui.
+You can check the ozone metrics from the prometheus web ui.
 
 http://localhost:9090/graph
+
+You can view Grafana dashboards at:
+
+http://localhost:3000
+
+Default dashboards available are:
+Ozone - Object Metrics
+Ozone - RPC Metrics
