@@ -121,7 +121,19 @@ public final class OMConfigKeys {
   public static final String OZONE_OM_RATIS_SEGMENT_PREALLOCATED_SIZE_KEY
       = "ozone.om.ratis.segment.preallocated.size";
   public static final String OZONE_OM_RATIS_SEGMENT_PREALLOCATED_SIZE_DEFAULT
-      = "128MB";
+      = "16KB";
+
+  // OM Ratis Log Appender configurations
+  public static final String
+      OZONE_OM_RATIS_LOG_APPENDER_QUEUE_NUM_ELEMENTS =
+      "ozone.om.ratis.log.appender.queue.num-elements";
+  public static final int
+      OZONE_OM_RATIS_LOG_APPENDER_QUEUE_NUM_ELEMENTS_DEFAULT = 1024;
+  public static final String OZONE_OM_RATIS_LOG_APPENDER_QUEUE_BYTE_LIMIT =
+      "ozone.om.ratis.log.appender.queue.byte-limit";
+  public static final String
+      OZONE_OM_RATIS_LOG_APPENDER_QUEUE_BYTE_LIMIT_DEFAULT = "32MB";
+
 
   // OM Ratis server configurations
   public static final String OZONE_OM_RATIS_SERVER_REQUEST_TIMEOUT_KEY

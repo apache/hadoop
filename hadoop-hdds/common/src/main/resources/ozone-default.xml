@@ -76,10 +76,32 @@
     </description>
   </property>
   <property>
-    <name>dfs.container.ratis.log.queue.size</name>
-    <value>128</value>
+    <name>dfs.container.ratis.log.queue.num-elements</name>
+    <value>1024</value>
     <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
-    <description>Number of operation pending with Raft's Log Worker.
+    <description>Limit for the number of operations in Ratis Log Worker.
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.log.queue.byte-limit</name>
+    <value>4GB</value>
+    <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
+    <description>Byte limit for Ratis Log Worker queue.
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.log.appender.queue.num-elements</name>
+    <value>1</value>
+    <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
+    <description>Limit for number of append entries in ratis leader's
+      log appender queue.
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.log.appender.queue.byte-limit</name>
+    <value>32MB</value>
+    <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
+    <description>Byte limit for ratis leader's log appender queue.
     </description>
   </property>
   <property>
@@ -191,10 +213,10 @@
   </property>
   <property>
     <name>dfs.container.ratis.segment.preallocated.size</name>
-    <value>128MB</value>
+    <value>16KB</value>
     <tag>OZONE, RATIS, PERFORMANCE</tag>
     <description>The size of the buffer which is preallocated for raft segment
-      used by Apache Ratis on datanodes.(128 MB by default)
+      used by Apache Ratis on datanodes.(16 KB by default)
     </description>
   </property>
   <property>
@@ -1476,10 +1498,25 @@
 
   <property>
     <name>ozone.om.ratis.segment.preallocated.size</name>
-    <value>128MB</value>
+    <value>16KB</value>
     <tag>OZONE, OM, RATIS, PERFORMANCE</tag>
     <description>The size of the buffer which is preallocated for raft segment
-      used by Apache Ratis on OM.(128 MB by default)
+      used by Apache Ratis on OM.(16 KB by default)
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.log.appender.queue.num-elements</name>
+    <value>1024</value>
+    <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
+    <description>Number of operation pending with Raft's Log Worker.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.ratis.log.appender.queue.byte-limit</name>
+    <value>32MB</value>
+    <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
+    <description>Byte limit for Raft's Log Worker queue.
     </description>
   </property>
 

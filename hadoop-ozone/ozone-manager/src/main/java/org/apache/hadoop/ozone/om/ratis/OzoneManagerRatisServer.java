@@ -156,8 +156,17 @@ public final class OzoneManagerRatisServer {
         OMConfigKeys.OZONE_OM_RATIS_SEGMENT_PREALLOCATED_SIZE_KEY,
         OMConfigKeys.OZONE_OM_RATIS_SEGMENT_PREALLOCATED_SIZE_DEFAULT,
         StorageUnit.BYTES);
-    RaftServerConfigKeys.Log.Appender.setBufferCapacity(properties,
-        SizeInBytes.valueOf(raftSegmentPreallocatedSize));
+    int logAppenderQueueNumElements = conf.getInt(
+        OMConfigKeys.OZONE_OM_RATIS_LOG_APPENDER_QUEUE_NUM_ELEMENTS,
+        OMConfigKeys.OZONE_OM_RATIS_LOG_APPENDER_QUEUE_NUM_ELEMENTS_DEFAULT);
+    final int logAppenderQueueByteLimit = (int) conf.getStorageSize(
+        OMConfigKeys.OZONE_OM_RATIS_LOG_APPENDER_QUEUE_BYTE_LIMIT,
+        OMConfigKeys.OZONE_OM_RATIS_LOG_APPENDER_QUEUE_BYTE_LIMIT_DEFAULT,
+        StorageUnit.BYTES);
+    RaftServerConfigKeys.Log.Appender
+        .setBufferElementLimit(properties, logAppenderQueueNumElements);
+    RaftServerConfigKeys.Log.Appender.setBufferByteLimit(properties,
+        SizeInBytes.valueOf(logAppenderQueueByteLimit));
     RaftServerConfigKeys.Log.setPreallocatedSize(properties,
         SizeInBytes.valueOf(raftSegmentPreallocatedSize));
 
@@ -165,7 +174,7 @@ public final class OzoneManagerRatisServer {
     // TODO: calculate the max message size based on the max size of a
     // PutSmallFileRequest's file size limit
     GrpcConfigKeys.setMessageSizeMax(properties,
-        SizeInBytes.valueOf(raftSegmentPreallocatedSize));
+        SizeInBytes.valueOf(logAppenderQueueByteLimit));
 
     // Set the server request timeout
     TimeUnit serverRequestTimeoutUnit =
@@ -208,9 +217,6 @@ public final class OzoneManagerRatisServer {
         serverMinTimeout);
     RaftServerConfigKeys.Rpc.setTimeoutMax(properties,
         serverMaxTimeout);
-
-    // Enable batch append on raft server
-    RaftServerConfigKeys.Log.Appender.setBatchEnabled(properties, true);
 
     // Set the number of maximum cached segments
     RaftServerConfigKeys.Log.setMaxCachedSegmentNum(properties, 2);
