@@ -63,9 +63,9 @@ import org.apache.hadoop.utils.db.Table;
 import org.apache.hadoop.utils.db.Table.KeyValue;
 import org.apache.hadoop.utils.db.TableIterator;
 import org.apache.ratis.util.LifeCycle;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
@@ -98,14 +98,14 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys
  * Test Ozone Manager operation in distributed handler scenario.
  */
 public class TestOzoneManager {
-  private static MiniOzoneCluster cluster = null;
-  private static StorageHandler storageHandler;
-  private static UserArgs userArgs;
-  private static OMMetrics omMetrics;
-  private static OzoneConfiguration conf;
-  private static String clusterId;
-  private static String scmId;
-  private static String omId;
+  private MiniOzoneCluster cluster = null;
+  private StorageHandler storageHandler;
+  private UserArgs userArgs;
+  private OMMetrics omMetrics;
+  private OzoneConfiguration conf;
+  private String clusterId;
+  private String scmId;
+  private String omId;
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -117,8 +117,8 @@ public class TestOzoneManager {
    *
    * @throws IOException
    */
-  @BeforeClass
-  public static void init() throws Exception {
+  @Before
+  public void init() throws Exception {
     conf = new OzoneConfiguration();
     clusterId = UUID.randomUUID().toString();
     scmId = UUID.randomUUID().toString();
@@ -140,8 +140,8 @@ public class TestOzoneManager {
   /**
    * Shutdown MiniDFSCluster.
    */
-  @AfterClass
-  public static void shutdown() {
+  @After
+  public void shutdown() {
     if (cluster != null) {
       cluster.shutdown();
     }
