@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.hdds.HddsUtils;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.ratis.proto.RaftProtos.RaftPeerRole;
 import org.apache.ratis.protocol.RaftGroup;
 import org.apache.ratis.protocol.RaftGroupId;
@@ -388,11 +389,12 @@ public class ContainerStateMachine extends BaseStateMachine {
       ContainerCommandRequestProto requestProto, long term, long index) {
     WriteChunkRequestProto writeChunkRequestProto =
         requestProto.getWriteChunk();
+    ContainerProtos.ChunkInfo chunkInfo = writeChunkRequestProto.getChunkData();
     // prepare the chunk to be read
     ReadChunkRequestProto.Builder readChunkRequestProto =
         ReadChunkRequestProto.newBuilder()
             .setBlockID(writeChunkRequestProto.getBlockID())
-            .setChunkData(writeChunkRequestProto.getChunkData());
+            .setChunkData(chunkInfo);
     ContainerCommandRequestProto dataContainerCommandProto =
         ContainerCommandRequestProto.newBuilder(requestProto)
             .setCmdType(Type.ReadChunk)
@@ -411,7 +413,11 @@ public class ContainerStateMachine extends BaseStateMachine {
 
     ByteString data = responseProto.getData();
     // assert that the response has data in it.
-    Preconditions.checkNotNull(data);
+    Preconditions
+        .checkNotNull(data, "read chunk data is null for chunk:" + chunkInfo);
+    Preconditions.checkState(data.size() == chunkInfo.getLen(), String.format(
+        "read chunk len=%d does not match chunk expected len=%d for chunk:%s",
+        data.size(), chunkInfo.getLen(), chunkInfo));
     return data;
   }
 
