@@ -132,12 +132,6 @@
 }
 
 .mount-table-read-only-true:before {
-    color: #c7254e;
+    color: #5fa341;
     content: "\e033";
 }
-
-.mount-table-read-only-false:before {
-    color: #5fa341;
-    content: "\e013";
-}
-
