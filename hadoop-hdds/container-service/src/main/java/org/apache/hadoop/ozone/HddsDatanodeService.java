@@ -1,19 +1,19 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * with the License.  You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.ozone;
 
@@ -21,20 +21,20 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.HddsUtils;
+import org.apache.hadoop.hdds.cli.GenericCli;
+import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
-import org.apache.hadoop.ozone.container.common.statemachine
-    .DatanodeStateMachine;
-import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import picocli.CommandLine.Command;
 
 import java.io.File;
 import java.io.IOException;
@@ -48,11 +48,15 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
 /**
  * Datanode service plugin to start the HDDS container services.
  */
-public class HddsDatanodeService implements ServicePlugin {
+
+@Command(name = "ozone datanode",
+    hidden = true, description = "Start the datanode for ozone",
+    versionProvider = HddsVersionProvider.class,
+    mixinStandardHelpOptions = true)
+public class HddsDatanodeService extends GenericCli implements ServicePlugin {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       HddsDatanodeService.class);
-
 
   private OzoneConfiguration conf;
   private DatanodeDetails datanodeDetails;
@@ -80,6 +84,50 @@ public class HddsDatanodeService implements ServicePlugin {
     }
   }
 
+  @VisibleForTesting
+  public static HddsDatanodeService createHddsDatanodeService(
+      String[] args, Configuration conf) {
+    return createHddsDatanodeService(args, conf, true);
+  }
+
+  /**
+   * Create an Datanode instance based on the supplied command-line arguments.
+   * <p>
+   * This method is intended for unit tests only. It suppresses the
+   * startup/shutdown message and skips registering Unix signal handlers.
+   *
+   * @param args        command line arguments.
+   * @param conf        HDDS configuration
+   * @param printBanner if true, then log a verbose startup message.
+   * @return Datanode instance
+   */
+  private static HddsDatanodeService createHddsDatanodeService(
+      String[] args, Configuration conf, boolean printBanner) {
+    if (args.length == 0 && printBanner) {
+      StringUtils
+          .startupShutdownMessage(HddsDatanodeService.class, args, LOG);
+      return new HddsDatanodeService(conf);
+    } else {
+      new HddsDatanodeService().run(args);
+      return null;
+    }
+  }
+
+  public static void main(String[] args) {
+    try {
+      Configuration conf = new OzoneConfiguration();
+      HddsDatanodeService hddsDatanodeService =
+          createHddsDatanodeService(args, conf, true);
+      if (hddsDatanodeService != null) {
+        hddsDatanodeService.start(null);
+        hddsDatanodeService.join();
+      }
+    } catch (Throwable e) {
+      LOG.error("Exception in HddsDatanodeService.", e);
+      terminate(1, e);
+    }
+  }
+
   /**
    * Starts HddsDatanode services.
    *
@@ -87,6 +135,7 @@ public class HddsDatanodeService implements ServicePlugin {
    */
   @Override
   public void start(Object service) {
+    DefaultMetricsSystem.initialize("HddsDatanode");
     OzoneConfiguration.activate();
     if (service instanceof Configurable) {
       conf = new OzoneConfiguration(((Configurable) service).getConf());
@@ -148,7 +197,7 @@ public class HddsDatanodeService implements ServicePlugin {
     } catch (RuntimeException e) {
       String pluginsValue = conf.get(HDDS_DATANODE_PLUGINS_KEY);
       LOG.error("Unable to load HDDS DataNode plugins. " +
-          "Specified list of plugins: {}",
+              "Specified list of plugins: {}",
           pluginsValue, e);
       throw e;
     }
@@ -170,8 +219,8 @@ public class HddsDatanodeService implements ServicePlugin {
   public OzoneConfiguration getConf() {
     return conf;
   }
+
   /**
-   *
    * Return DatanodeDetails if set, return null otherwise.
    *
    * @return DatanodeDetails
@@ -213,7 +262,7 @@ public class HddsDatanodeService implements ServicePlugin {
   }
 
   @Override
-  public void close() throws IOException {
+  public void close() {
     if (plugins != null) {
       for (ServicePlugin plugin : plugins) {
         try {
@@ -222,35 +271,6 @@ public class HddsDatanodeService implements ServicePlugin {
           LOG.warn("ServicePlugin {} could not be closed", plugin, t);
         }
       }
-    }
-  }
-
-  public static HddsDatanodeService createHddsDatanodeService(
-      Configuration conf) {
-    return new HddsDatanodeService(conf);
-  }
-
-  public static void main(String[] args) {
-    try {
-      if (DFSUtil.parseHelpArgument(
-          args, "Starts HDDS Datanode", System.out, false)) {
-        System.exit(0);
-      }
-      Configuration conf = new OzoneConfiguration();
-      GenericOptionsParser hParser = new GenericOptionsParser(conf, args);
-      if (!hParser.isParseSuccessful()) {
-        GenericOptionsParser.printGenericCommandUsage(System.err);
-        System.exit(1);
-      }
-      StringUtils.startupShutdownMessage(HddsDatanodeService.class, args, LOG);
-      DefaultMetricsSystem.initialize("HddsDatanode");
-      HddsDatanodeService hddsDatanodeService =
-          createHddsDatanodeService(conf);
-      hddsDatanodeService.start(null);
-      hddsDatanodeService.join();
-    } catch (Throwable e) {
-      LOG.error("Exception in HddsDatanodeService.", e);
-      terminate(1, e);
     }
   }
 }
