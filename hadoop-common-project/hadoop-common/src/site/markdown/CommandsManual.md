@@ -174,7 +174,7 @@ Commands useful for administrators of a hadoop cluster.
 Usage:
 
     hadoop daemonlog -getlevel <host:port> <classname> [-protocol (http|https)]
-    hdoop daemonlog -setlevel <host:port> <classname> <level> [-protocol (http|https)]
+    hadoop daemonlog -setlevel <host:port> <classname> <level> [-protocol (http|https)]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
