@@ -268,8 +268,9 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
       // wait for node to be removed from SCM healthy node list.
       waitForClusterToBeReady();
     }
+    String[] args = new String[]{};
     HddsDatanodeService service =
-        HddsDatanodeService.createHddsDatanodeService(conf);
+        HddsDatanodeService.createHddsDatanodeService(args, conf);
     hddsDatanodes.add(i, service);
     service.start(null);
     if (waitForDatanode) {
@@ -478,6 +479,7 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
       configureHddsDatanodes();
       String scmAddress =  scm.getDatanodeRpcAddress().getHostString() +
           ":" + scm.getDatanodeRpcAddress().getPort();
+      String[] args = new String[] {};
       conf.setStrings(ScmConfigKeys.OZONE_SCM_NAMES, scmAddress);
       List<HddsDatanodeService> hddsDatanodes = new ArrayList<>();
       for (int i = 0; i < numOfDatanodes; i++) {
@@ -495,7 +497,7 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
             ratisDir.toString());
 
         hddsDatanodes.add(
-            HddsDatanodeService.createHddsDatanodeService(dnConf));
+            HddsDatanodeService.createHddsDatanodeService(args, dnConf));
       }
       return hddsDatanodes;
     }
