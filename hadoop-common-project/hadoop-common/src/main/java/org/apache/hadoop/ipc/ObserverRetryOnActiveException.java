@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ipc;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import java.io.IOException;
@@ -26,6 +27,7 @@ import java.io.IOException;
  * client should retry active namenode directly (instead of retry other
  * ObserverNodes).
  */
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class ObserverRetryOnActiveException extends IOException {
   static final long serialVersionUID = 1L;

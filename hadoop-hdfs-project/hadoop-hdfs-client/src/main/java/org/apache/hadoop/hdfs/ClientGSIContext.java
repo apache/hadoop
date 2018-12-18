@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.LongAccumulator;
  * state alignment info from server(s).
  */
 @InterfaceAudience.Private
-@InterfaceStability.Stable
+@InterfaceStability.Evolving
 public class ClientGSIContext implements AlignmentContext {
 
   private final LongAccumulator lastSeenStateId =

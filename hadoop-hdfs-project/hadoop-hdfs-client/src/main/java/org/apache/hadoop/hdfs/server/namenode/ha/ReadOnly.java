@@ -22,6 +22,8 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
@@ -30,6 +32,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @Inherited
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
 public @interface ReadOnly {
   /**
