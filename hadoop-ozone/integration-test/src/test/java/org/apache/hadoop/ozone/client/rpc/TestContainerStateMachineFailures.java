@@ -27,7 +27,7 @@ import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
-import org.apache.hadoop.ozone.client.io.ChunkGroupOutputStream;
+import org.apache.hadoop.ozone.client.io.KeyOutputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
@@ -126,8 +126,8 @@ public class TestContainerStateMachineFailures {
         setBucketName(bucketName).setType(HddsProtos.ReplicationType.RATIS)
         .setFactor(HddsProtos.ReplicationFactor.ONE).setKeyName("ratis")
         .build();
-    ChunkGroupOutputStream groupOutputStream =
-        (ChunkGroupOutputStream) key.getOutputStream();
+    KeyOutputStream groupOutputStream =
+        (KeyOutputStream) key.getOutputStream();
     List<OmKeyLocationInfo> locationInfoList =
         groupOutputStream.getLocationInfoList();
     Assert.assertEquals(1, locationInfoList.size());
