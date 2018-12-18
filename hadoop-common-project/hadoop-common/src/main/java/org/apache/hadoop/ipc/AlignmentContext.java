@@ -34,7 +34,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
  * to client.
  */
 @InterfaceAudience.Private
-@InterfaceStability.Stable
+@InterfaceStability.Evolving
 public interface AlignmentContext {
 
   /**

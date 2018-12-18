@@ -21,6 +21,9 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 
 import java.util.Collections;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.HAUtilClient;
@@ -74,7 +77,8 @@ import org.slf4j.LoggerFactory;
  * nn01-ha1 and nn01-ha2, used for read/write RPC calls, but for the failover,
  * it relies on the virtual address nn01.com
  */
-
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class ObserverReadProxyProviderWithIPFailover<T extends ClientProtocol>
     extends ObserverReadProxyProvider<T> {
   private static final Logger LOG = LoggerFactory.getLogger(
