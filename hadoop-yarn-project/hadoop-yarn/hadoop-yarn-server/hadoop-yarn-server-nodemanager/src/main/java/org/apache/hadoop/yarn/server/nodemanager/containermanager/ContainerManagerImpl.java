@@ -258,6 +258,7 @@ public class ContainerManagerImpl extends CompositeService implements
     auxiliaryServices = new AuxServices(auxiliaryLocalPathHandler,
         this.context, this.deletionService);
     auxiliaryServices.registerServiceListener(this);
+    context.setAuxServices(auxiliaryServices);
     addService(auxiliaryServices);
 
     // initialize the metrics publisher if the timeline service v.2 is enabled

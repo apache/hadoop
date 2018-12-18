@@ -2222,7 +2222,15 @@ public class YarnConfiguration extends Configuration {
   
   public static final String NM_AUX_SERVICES = 
       NM_PREFIX + "aux-services";
-  
+
+  public static final String NM_AUX_SERVICES_MANIFEST =
+      NM_AUX_SERVICES + ".manifest";
+
+  public static final String NM_AUX_SERVICES_MANIFEST_RELOAD_MS =
+      NM_AUX_SERVICES + ".manifest.reload-ms";
+
+  public static final long DEFAULT_NM_AUX_SERVICES_MANIFEST_RELOAD_MS = 120000;
+
   public static final String NM_AUX_SERVICE_FMT =
       NM_PREFIX + "aux-services.%s.class";
 

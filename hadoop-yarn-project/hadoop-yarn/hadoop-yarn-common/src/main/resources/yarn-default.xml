@@ -1922,6 +1922,21 @@
   </property>
 
   <property>
+    <description>A file containing auxiliary service specifications. If
+      manifest file is specified, yarn.nodemanager.aux-services and other
+      aux services configuration properties will be ignored.</description>
+    <name>yarn.nodemanager.aux-services.manifest</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>Length of time in ms to wait between reloading aux services
+      manifest. If 0 or less, manifest will not be reloaded.</description>
+    <name>yarn.nodemanager.aux-services.manifest.reload-ms</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>No. of ms to wait between sending a SIGTERM and SIGKILL to a container</description>
     <name>yarn.nodemanager.sleep-delay-before-sigkill.ms</name>
     <value>250</value>

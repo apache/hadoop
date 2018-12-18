@@ -24,13 +24,16 @@ import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.security.Principal;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecord;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AuxiliaryServicesInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -556,6 +559,25 @@ public class NMWebServices {
     return new NMResourceInfo();
   }
 
+  @GET
+  @Path("/auxiliaryservices")
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public AuxiliaryServicesInfo getAuxiliaryServices(@javax.ws.rs.core.Context
+      HttpServletRequest hsr) {
+    init();
+    AuxiliaryServicesInfo auxiliaryServices = new AuxiliaryServicesInfo();
+    if (!hasAdminAccess(hsr)) {
+      return auxiliaryServices;
+    }
+    Collection<AuxServiceRecord> loadedServices = nmContext.getAuxServices()
+        .getServiceRecords();
+    if (loadedServices != null) {
+      auxiliaryServices.addAll(loadedServices);
+    }
+    return auxiliaryServices;
+  }
+
   @PUT
   @Path("/yarn/sysfs/{user}/{appId}")
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
@@ -622,6 +644,21 @@ public class NMWebServices {
         .checkAccess(callerUGI, ApplicationAccessType.VIEW_APP, user, appId))) {
       return false;
     }
+    return true;
+  }
+
+  protected Boolean hasAdminAccess(HttpServletRequest hsr) {
+    // Check for the authorization.
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+
+    if (callerUGI == null) {
+      return false;
+    }
+
+    if (!this.nmContext.getApplicationACLsManager().isAdmin(callerUGI)) {
+      return false;
+    }
+
     return true;
   }
 
