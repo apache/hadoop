@@ -363,8 +363,12 @@ public class TestYarnNativeServices extends ServiceTestUtils {
 
     Multimap<String, String> containersAfterFailure = waitForAllCompToBeReady(
         client, exampleApp);
-    Assert.assertEquals("component container affected by restart",
-        containersBeforeFailure, containersAfterFailure);
+    containersBeforeFailure.keys().forEach(compName -> {
+      Assert.assertEquals("num containers after by restart for " + compName,
+          containersBeforeFailure.get(compName).size(),
+          containersAfterFailure.get(compName) == null ? 0 :
+              containersAfterFailure.get(compName).size());
+    });
 
     LOG.info("Stop/destroy service {}", exampleApp);
     client.actionStop(exampleApp.getName(), true);
