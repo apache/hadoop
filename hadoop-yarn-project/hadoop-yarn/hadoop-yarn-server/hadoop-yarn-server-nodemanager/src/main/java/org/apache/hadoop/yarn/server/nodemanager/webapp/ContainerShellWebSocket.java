@@ -113,6 +113,7 @@ public class ContainerShellWebSocket {
           .fromString(cId));
       if (!checkAuthorization(session, container)) {
         session.close(1008, "Forbidden");
+        return;
       }
       LOG.info(session.getRemoteAddress().getHostString() + " connected!");
       LOG.info(
@@ -135,6 +136,9 @@ public class ContainerShellWebSocket {
   public void onClose(Session session, int status, String reason) {
     try {
       LOG.info(session.getRemoteAddress().getHostString() + " closed!");
+      String exit = "exit\r\n";
+      pair.out.write(exit.getBytes(Charset.forName("UTF-8")));
+      pair.out.flush();
       pair.in.close();
       pair.out.close();
     } catch (IOException e) {

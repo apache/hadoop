@@ -48,7 +48,7 @@ import com.sun.jersey.api.client.WebResource.Builder;
 public class TestNMWebTerminal {
   private static final File TESTROOTDIR = new File("target",
       TestNMWebServer.class.getSimpleName());
-  private static File TESTLOGDIR = new File("target",
+  private static final File TESTLOGDIR = new File("target",
       TestNMWebServer.class.getSimpleName() + "LogDir");
   private NodeHealthCheckerService healthChecker;
   private WebServer server;
