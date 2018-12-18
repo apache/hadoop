@@ -65,9 +65,9 @@ import static org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls
  * This class encapsulates all state management for buffering and writing
  * through to the container.
  */
-public class ChunkOutputStream extends OutputStream {
+public class BlockOutputStream extends OutputStream {
   public static final Logger LOG =
-      LoggerFactory.getLogger(ChunkOutputStream.class);
+      LoggerFactory.getLogger(BlockOutputStream.class);
 
   private BlockID blockID;
   private final String key;
@@ -108,7 +108,7 @@ public class ChunkOutputStream extends OutputStream {
   private int currentBufferIndex;
 
   /**
-   * Creates a new ChunkOutputStream.
+   * Creates a new BlockOutputStream.
    *
    * @param blockID              block ID
    * @param key                  chunk key
@@ -122,7 +122,7 @@ public class ChunkOutputStream extends OutputStream {
    * @param watchTimeout          watch timeout
    * @param checksum              checksum
    */
-  public ChunkOutputStream(BlockID blockID, String key,
+  public BlockOutputStream(BlockID blockID, String key,
       XceiverClientManager xceiverClientManager, XceiverClientSpi xceiverClient,
       String traceID, int chunkSize, long streamBufferFlushSize,
       long streamBufferMaxSize, long watchTimeout,
@@ -565,7 +565,7 @@ public class ChunkOutputStream extends OutputStream {
    */
   private void checkOpen() throws IOException {
     if (xceiverClient == null) {
-      throw new IOException("ChunkOutputStream has been closed.");
+      throw new IOException("BlockOutputStream has been closed.");
     } else if (ioException != null) {
       adjustBuffersOnException();
       throw ioException;

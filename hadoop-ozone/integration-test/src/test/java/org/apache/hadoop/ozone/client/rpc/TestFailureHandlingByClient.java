@@ -30,7 +30,7 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
-import org.apache.hadoop.ozone.client.io.ChunkGroupOutputStream;
+import org.apache.hadoop.ozone.client.io.KeyOutputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
@@ -121,9 +121,9 @@ public class TestFailureHandlingByClient {
     key.write(data);
 
     // get the name of a valid container
-    Assert.assertTrue(key.getOutputStream() instanceof ChunkGroupOutputStream);
-    ChunkGroupOutputStream groupOutputStream =
-        (ChunkGroupOutputStream) key.getOutputStream();
+    Assert.assertTrue(key.getOutputStream() instanceof KeyOutputStream);
+    KeyOutputStream groupOutputStream =
+        (KeyOutputStream) key.getOutputStream();
     List<OmKeyLocationInfo> locationInfoList =
         groupOutputStream.getLocationInfoList();
     Assert.assertTrue(locationInfoList.size() == 1);
@@ -160,9 +160,9 @@ public class TestFailureHandlingByClient {
     key.write(data.getBytes());
 
     // get the name of a valid container
-    Assert.assertTrue(key.getOutputStream() instanceof ChunkGroupOutputStream);
-    ChunkGroupOutputStream groupOutputStream =
-        (ChunkGroupOutputStream) key.getOutputStream();
+    Assert.assertTrue(key.getOutputStream() instanceof KeyOutputStream);
+    KeyOutputStream groupOutputStream =
+        (KeyOutputStream) key.getOutputStream();
     List<OmKeyLocationInfo> locationInfoList =
         groupOutputStream.getLocationInfoList();
     Assert.assertTrue(locationInfoList.size() == 2);
@@ -201,9 +201,9 @@ public class TestFailureHandlingByClient {
     key.write(data.getBytes());
 
     // get the name of a valid container
-    Assert.assertTrue(key.getOutputStream() instanceof ChunkGroupOutputStream);
-    ChunkGroupOutputStream groupOutputStream =
-        (ChunkGroupOutputStream) key.getOutputStream();
+    Assert.assertTrue(key.getOutputStream() instanceof KeyOutputStream);
+    KeyOutputStream groupOutputStream =
+        (KeyOutputStream) key.getOutputStream();
     List<OmKeyLocationInfo> locationInfoList =
         groupOutputStream.getLocationInfoList();
     Assert.assertTrue(locationInfoList.size() == 6);

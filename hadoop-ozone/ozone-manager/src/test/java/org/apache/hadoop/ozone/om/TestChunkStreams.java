@@ -31,7 +31,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
 
 /**
- * This class tests ChunkGroupInputStream and ChunkGroupOutStream.
+ * This class tests ChunkGroupInputStream and KeyOutputStream.
  */
 public class TestChunkStreams {
 

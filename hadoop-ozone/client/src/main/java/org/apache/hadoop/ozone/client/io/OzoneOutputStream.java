@@ -24,14 +24,14 @@ import java.io.OutputStream;
 
 /**
  * OzoneOutputStream is used to write data into Ozone.
- * It uses SCM's {@link ChunkGroupOutputStream} for writing the data.
+ * It uses SCM's {@link KeyOutputStream} for writing the data.
  */
 public class OzoneOutputStream extends OutputStream {
 
   private final OutputStream outputStream;
 
   /**
-   * Constructs OzoneOutputStream with ChunkGroupOutputStream.
+   * Constructs OzoneOutputStream with KeyOutputStream.
    *
    * @param outputStream
    */
@@ -61,8 +61,8 @@ public class OzoneOutputStream extends OutputStream {
   }
 
   public OmMultipartCommitUploadPartInfo getCommitUploadPartInfo() {
-    if (outputStream instanceof ChunkGroupOutputStream) {
-      return ((ChunkGroupOutputStream) outputStream).getCommitUploadPartInfo();
+    if (outputStream instanceof KeyOutputStream) {
+      return ((KeyOutputStream) outputStream).getCommitUploadPartInfo();
     }
     // Otherwise return null.
     return null;

@@ -36,7 +36,7 @@ import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
-import org.apache.hadoop.ozone.client.io.ChunkGroupOutputStream;
+import org.apache.hadoop.ozone.client.io.KeyOutputStream;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
@@ -133,7 +133,7 @@ public class TestCloseContainerHandlingByClient {
         .getBytes(UTF_8);
     key.write(data);
 
-    Assert.assertTrue(key.getOutputStream() instanceof ChunkGroupOutputStream);
+    Assert.assertTrue(key.getOutputStream() instanceof KeyOutputStream);
     //get the name of a valid container
     OmKeyArgs keyArgs = new OmKeyArgs.Builder().setVolumeName(volumeName)
         .setBucketName(bucketName).setType(HddsProtos.ReplicationType.RATIS)
@@ -165,7 +165,7 @@ public class TestCloseContainerHandlingByClient {
         .getBytes(UTF_8);
     key.write(data);
 
-    Assert.assertTrue(key.getOutputStream() instanceof ChunkGroupOutputStream);
+    Assert.assertTrue(key.getOutputStream() instanceof KeyOutputStream);
     //get the name of a valid container
     OmKeyArgs keyArgs = new OmKeyArgs.Builder().setVolumeName(volumeName)
         .setBucketName(bucketName)
@@ -188,10 +188,10 @@ public class TestCloseContainerHandlingByClient {
     String keyName = getKeyName();
     OzoneOutputStream key =
         createKey(keyName, ReplicationType.RATIS, (4 * blockSize));
-    ChunkGroupOutputStream groupOutputStream =
-        (ChunkGroupOutputStream) key.getOutputStream();
+    KeyOutputStream keyOutputStream =
+        (KeyOutputStream) key.getOutputStream();
     // With the initial size provided, it should have preallocated 4 blocks
-    Assert.assertEquals(4, groupOutputStream.getStreamEntries().size());
+    Assert.assertEquals(4, keyOutputStream.getStreamEntries().size());
     // write data more than 1 chunk
     byte[] data =
         ContainerTestHelper.getFixedLengthString(keyString, (3 * blockSize))
@@ -199,7 +199,7 @@ public class TestCloseContainerHandlingByClient {
     Assert.assertEquals(data.length, 3 * blockSize);
     key.write(data);
 
-    Assert.assertTrue(key.getOutputStream() instanceof ChunkGroupOutputStream);
+    Assert.assertTrue(key.getOutputStream() instanceof KeyOutputStream);
     //get the name of a valid container
     OmKeyArgs keyArgs = new OmKeyArgs.Builder().setVolumeName(volumeName)
         .setBucketName(bucketName).setType(HddsProtos.ReplicationType.RATIS)
@@ -234,12 +234,12 @@ public class TestCloseContainerHandlingByClient {
     String keyName = getKeyName();
     OzoneOutputStream key =
         createKey(keyName, ReplicationType.RATIS, 4 * blockSize);
-    ChunkGroupOutputStream groupOutputStream =
-        (ChunkGroupOutputStream) key.getOutputStream();
+    KeyOutputStream keyOutputStream =
+        (KeyOutputStream) key.getOutputStream();
 
-    Assert.assertTrue(key.getOutputStream() instanceof ChunkGroupOutputStream);
+    Assert.assertTrue(key.getOutputStream() instanceof KeyOutputStream);
     // With the initial size provided, it should have pre allocated 4 blocks
-    Assert.assertEquals(4, groupOutputStream.getStreamEntries().size());
+    Assert.assertEquals(4, keyOutputStream.getStreamEntries().size());
     String dataString =
         ContainerTestHelper.getFixedLengthString(keyString, (2 * blockSize));
     byte[] data = dataString.getBytes(UTF_8);
@@ -278,10 +278,10 @@ public class TestCloseContainerHandlingByClient {
     String keyName = getKeyName();
     int keyLen = 4 * blockSize;
     OzoneOutputStream key = createKey(keyName, ReplicationType.RATIS, keyLen);
-    ChunkGroupOutputStream groupOutputStream =
-        (ChunkGroupOutputStream) key.getOutputStream();
+    KeyOutputStream keyOutputStream =
+        (KeyOutputStream) key.getOutputStream();
     // With the initial size provided, it should have preallocated 4 blocks
-    Assert.assertEquals(4, groupOutputStream.getStreamEntries().size());
+    Assert.assertEquals(4, keyOutputStream.getStreamEntries().size());
     // write data 3 blocks and one more chunk
     byte[] writtenData =
         ContainerTestHelper.getFixedLengthString(keyString, keyLen)
@@ -290,7 +290,7 @@ public class TestCloseContainerHandlingByClient {
     Assert.assertEquals(data.length, 3 * blockSize + chunkSize);
     key.write(data);
 
-    Assert.assertTrue(key.getOutputStream() instanceof ChunkGroupOutputStream);
+    Assert.assertTrue(key.getOutputStream() instanceof KeyOutputStream);
     //get the name of a valid container
     OmKeyArgs keyArgs = new OmKeyArgs.Builder().setVolumeName(volumeName)
         .setBucketName(bucketName).setType(HddsProtos.ReplicationType.RATIS)
@@ -329,10 +329,10 @@ public class TestCloseContainerHandlingByClient {
   private void waitForContainerClose(String keyName,
       OzoneOutputStream outputStream)
       throws Exception {
-    ChunkGroupOutputStream groupOutputStream =
-        (ChunkGroupOutputStream) outputStream.getOutputStream();
+    KeyOutputStream keyOutputStream =
+        (KeyOutputStream) outputStream.getOutputStream();
     List<OmKeyLocationInfo> locationInfoList =
-        groupOutputStream.getLocationInfoList();
+        keyOutputStream.getLocationInfoList();
     List<Long> containerIdList = new ArrayList<>();
     for (OmKeyLocationInfo info : locationInfoList) {
       containerIdList.add(info.getContainerID());
@@ -397,18 +397,18 @@ public class TestCloseContainerHandlingByClient {
     String keyName = getKeyName();
     OzoneOutputStream key =
         createKey(keyName, ReplicationType.RATIS, 2 * blockSize);
-    ChunkGroupOutputStream groupOutputStream =
-        (ChunkGroupOutputStream) key.getOutputStream();
+    KeyOutputStream keyOutputStream =
+        (KeyOutputStream) key.getOutputStream();
 
-    Assert.assertTrue(key.getOutputStream() instanceof ChunkGroupOutputStream);
+    Assert.assertTrue(key.getOutputStream() instanceof KeyOutputStream);
     // With the initial size provided, it should have pre allocated 4 blocks
-    Assert.assertEquals(2, groupOutputStream.getStreamEntries().size());
+    Assert.assertEquals(2, keyOutputStream.getStreamEntries().size());
     String dataString =
         ContainerTestHelper.getFixedLengthString(keyString, (1 * blockSize));
     byte[] data = dataString.getBytes(UTF_8);
     key.write(data);
     List<OmKeyLocationInfo> locationInfos =
-        new ArrayList<>(groupOutputStream.getLocationInfoList());
+        new ArrayList<>(keyOutputStream.getLocationInfoList());
     long containerID = locationInfos.get(0).getContainerID();
     ContainerInfo container =
         cluster.getStorageContainerManager().getContainerManager()
@@ -423,16 +423,16 @@ public class TestCloseContainerHandlingByClient {
         ContainerTestHelper.getFixedLengthString(keyString, (1 * blockSize));
     data = dataString.getBytes(UTF_8);
     key.write(data);
-    Assert.assertEquals(2, groupOutputStream.getStreamEntries().size());
+    Assert.assertEquals(2, keyOutputStream.getStreamEntries().size());
 
     // the 1st block got written. Now all the containers are closed, so the 2nd
     // pre allocated block will be removed from the list and new block should
     // have been allocated
     Assert.assertTrue(
-        groupOutputStream.getLocationInfoList().get(0).getBlockID()
+        keyOutputStream.getLocationInfoList().get(0).getBlockID()
             .equals(locationInfos.get(0).getBlockID()));
     Assert.assertFalse(
-        groupOutputStream.getLocationInfoList().get(1).getBlockID()
+        keyOutputStream.getLocationInfoList().get(1).getBlockID()
             .equals(locationInfos.get(1).getBlockID()));
     key.close();
   }
@@ -463,7 +463,7 @@ public class TestCloseContainerHandlingByClient {
         .setFactor(HddsProtos.ReplicationFactor.THREE).setKeyName(keyName)
         .build();
 
-    Assert.assertTrue(key.getOutputStream() instanceof ChunkGroupOutputStream);
+    Assert.assertTrue(key.getOutputStream() instanceof KeyOutputStream);
     waitForContainerClose(keyName, key);
     // Again Write the Data. This will throw an exception which will be handled
     // and new blocks will be allocated

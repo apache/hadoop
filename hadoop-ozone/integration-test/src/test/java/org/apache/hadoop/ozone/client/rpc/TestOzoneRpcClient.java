@@ -39,7 +39,7 @@ import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.VolumeArgs;
-import org.apache.hadoop.ozone.client.io.ChunkGroupOutputStream;
+import org.apache.hadoop.ozone.client.io.KeyOutputStream;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.common.OzoneChecksumException;
@@ -666,8 +666,8 @@ public class TestOzoneRpcClient {
     OzoneOutputStream out = bucket
         .createKey(keyName, value.getBytes().length, ReplicationType.RATIS,
             ReplicationFactor.THREE);
-    ChunkGroupOutputStream groupOutputStream =
-        (ChunkGroupOutputStream) out.getOutputStream();
+    KeyOutputStream groupOutputStream =
+        (KeyOutputStream) out.getOutputStream();
     XceiverClientManager manager = groupOutputStream.getXceiverClientManager();
     out.write(value.getBytes());
     out.close();
