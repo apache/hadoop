@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.nodemanager.collectormanager.NMCollectorService;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServices;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -684,6 +685,8 @@ public class NodeManager extends CompositeService
 
     private NMLogAggregationStatusTracker nmLogAggregationStatusTracker;
 
+    private AuxServices auxServices;
+
     public NMContext(NMContainerTokenSecretManager containerTokenSecretManager,
         NMTokenSecretManagerInNM nmTokenSecretManager,
         LocalDirsHandlerService dirsHandler, ApplicationACLsManager aclsManager,
@@ -933,6 +936,16 @@ public class NodeManager extends CompositeService
     @Override
     public NMLogAggregationStatusTracker getNMLogAggregationStatusTracker() {
       return nmLogAggregationStatusTracker;
+    }
+
+    @Override
+    public void setAuxServices(AuxServices auxServices) {
+      this.auxServices = auxServices;
+    }
+
+    @Override
+    public AuxServices getAuxServices() {
+      return this.auxServices;
     }
   }
 
