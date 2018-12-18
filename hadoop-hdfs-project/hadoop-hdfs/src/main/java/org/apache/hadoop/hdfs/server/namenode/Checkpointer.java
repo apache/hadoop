@@ -128,7 +128,7 @@ class Checkpointer extends Daemon {
   public void run() {
     // Check the size of the edit log once every 5 minutes.
     long periodMSec = 5 * 60;   // 5 minutes
-    if(checkpointConf.getPeriod() < periodMSec) {
+    if(checkpointConf.getPeriod() > periodMSec) {
       periodMSec = checkpointConf.getPeriod();
     }
     periodMSec *= 1000;
