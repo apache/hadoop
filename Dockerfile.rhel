@@ -28,7 +28,7 @@ RUN mkdir -p $(dirname $HADOOP_OUT) && \
 
 FROM rhel7:7-released
 
-RUN yum install -y \
+RUN yum install --setopt=skip_missing_names_on_install=False -y \
         java-1.8.0-openjdk \
         java-1.8.0-openjdk-devel \
         curl \

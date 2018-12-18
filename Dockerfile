@@ -3,11 +3,11 @@ FROM centos:7 as build
 RUN yum -y update && yum clean all
 
 # newer maven
-RUN yum -y install centos-release-scl
+RUN yum -y install --setopt=skip_missing_names_on_install=False centos-release-scl
 # cmake3
-RUN yum -y install epel-release
+RUN yum -y install --setopt=skip_missing_names_on_install=False epel-release
 
-RUN yum -y install \
+RUN yum -y install --setopt=skip_missing_names_on_install=False \
     java-1.8.0-openjdk-devel \
     java-1.8.0-openjdk \
     rh-maven33 \
@@ -30,9 +30,9 @@ RUN scl enable rh-maven33 'mvn -B -e -Dtest=false -DskipTests -Dmaven.javadoc.sk
 
 FROM centos:7
 
-RUN \
-    yum install epel-release -y \
-    && yum install -y \
+RUN yum install --setopt=skip_missing_names_on_install=False -y \
+        epel-release \
+    && yum install --setopt=skip_missing_names_on_install=False -y \
         java-1.8.0-openjdk \
         java-1.8.0-openjdk-devel \
         curl \
