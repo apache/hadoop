@@ -315,9 +315,12 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
           .newBuilder().build();
       ListPipelineResponseProto response = rpcProxy.listPipelines(
           NULL_RPC_CONTROLLER, request);
-      return response.getPipelinesList().stream()
-          .map(Pipeline::getFromProtobuf)
-          .collect(Collectors.toList());
+      List<Pipeline> list = new ArrayList<>();
+      for (HddsProtos.Pipeline pipeline : response.getPipelinesList()) {
+        Pipeline fromProtobuf = Pipeline.getFromProtobuf(pipeline);
+        list.add(fromProtobuf);
+      }
+      return list;
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

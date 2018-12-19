@@ -24,6 +24,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.UnknownPipelineStateException;
 
 /**
  * Class wraps ozone container info.
@@ -48,13 +49,15 @@ public class ContainerWithPipeline implements Comparator<ContainerWithPipeline>,
   }
 
   public static ContainerWithPipeline fromProtobuf(
-      HddsProtos.ContainerWithPipeline allocatedContainer) {
+      HddsProtos.ContainerWithPipeline allocatedContainer)
+      throws UnknownPipelineStateException {
     return new ContainerWithPipeline(
         ContainerInfo.fromProtobuf(allocatedContainer.getContainerInfo()),
         Pipeline.getFromProtobuf(allocatedContainer.getPipeline()));
   }
 
-  public HddsProtos.ContainerWithPipeline getProtobuf() {
+  public HddsProtos.ContainerWithPipeline getProtobuf()
+      throws UnknownPipelineStateException {
     HddsProtos.ContainerWithPipeline.Builder builder =
         HddsProtos.ContainerWithPipeline.newBuilder();
     builder.setContainerInfo(getContainerInfo().getProtobuf())

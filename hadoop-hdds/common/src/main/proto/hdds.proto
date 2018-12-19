@@ -44,11 +44,17 @@ message PipelineID {
   required string id = 1;
 }
 
+enum PipelineState {
+    PIPELINE_ALLOCATED = 1;
+    PIPELINE_OPEN = 2;
+    PIPELINE_CLOSED = 3;
+}
+
 message Pipeline {
     required string leaderID = 1;
     repeated DatanodeDetailsProto members = 2;
     // TODO: remove the state and leaderID from this class
-    optional LifeCycleState state = 3 [default = OPEN];
+    optional PipelineState state = 3 [default = PIPELINE_ALLOCATED];
     optional ReplicationType type = 4 [default = STAND_ALONE];
     optional ReplicationFactor factor = 5 [default = ONE];
     required PipelineID id = 6;
