@@ -88,6 +88,10 @@ public abstract class RouterState extends BaseRecord {
 
   public abstract long getDateStarted();
 
+  public abstract void setAdminAddress(String adminAddress);
+
+  public abstract String getAdminAddress();
+
   /**
    * Get the identifier for the Router. It uses the address.
    *

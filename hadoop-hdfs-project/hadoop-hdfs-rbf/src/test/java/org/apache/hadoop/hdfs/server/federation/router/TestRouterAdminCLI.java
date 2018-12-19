@@ -799,6 +799,28 @@ public class TestRouterAdminCLI {
     assertTrue(err.toString().contains("No arguments allowed"));
   }
 
+  @Test
+  public void testRefreshMountTableCache() throws Exception {
+    String src = "/refreshMount";
+
+    // create mount table entry
+    String[] argv = new String[] {"-add", src, "refreshNS0", "/refreshDest"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    // refresh the mount table entry cache
+    System.setOut(new PrintStream(out));
+    argv = new String[] {"-refresh"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    assertTrue(
+        out.toString().startsWith("Successfully updated mount table cache"));
+
+    // Now ls should return that mount table entry
+    out.reset();
+    argv = new String[] {"-ls", src};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    assertTrue(out.toString().contains(src));
+  }
+
   /**
    * Wait for the Router transforming to expected state.
    * @param expectedState Expected Router state.
@@ -836,8 +858,7 @@ public class TestRouterAdminCLI {
   }
 
   @Test
-  public void testUpdateDestinationForExistingMountTable() throws
-  Exception {
+  public void testUpdateDestinationForExistingMountTable() throws Exception {
     // Add a mount table firstly
     String nsId = "ns0";
     String src = "/test-updateDestinationForExistingMountTable";
