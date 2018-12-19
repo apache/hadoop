@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.TestFsck;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -337,6 +338,18 @@ public class TestObserverNode {
     assertSentTo(0);
 
     Mockito.reset(bmSpy);
+  }
+
+  @Test
+  public void testFsckWithObserver() throws Exception {
+    setObserverRead(true);
+
+    dfs.create(testPath, (short)1).close();
+    assertSentTo(0);
+
+    final String result = TestFsck.runFsck(conf, 0, true, "/");
+    LOG.info("result=" + result);
+    assertTrue(result.contains("Status: HEALTHY"));
   }
 
   private void assertSentTo(int nnIdx) throws IOException {
