@@ -1,2 +1,16 @@
-Dockerfile
+# Ignore everything so we can just have a whitelist of things to copy
+**/*
+# Copy directories starting with hadoop-
+!hadoop-*
+# copy dev-support
+!dev-support
+# Copy the root pom.xml
+!pom.xml
+# Copy *.txt files they're used by the build in the distribution step which
+# creates the release tarball
+!*.txt
+# copy the .git directory as a few maven plugins use it
+!.git
+# ignore anything inside a target directory, as that is the output of a maven
+# build and we want a fresh environment
 **/target/*
