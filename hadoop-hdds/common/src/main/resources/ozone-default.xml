@@ -992,15 +992,6 @@
       the logs. Very useful when debugging REST protocol.
     </description>
   </property>
-  <property>
-    <name>ozone.max.key.len</name>
-    <value>1048576</value>
-    <tag>OZONE, SECURITY</tag>
-    <description>
-      Maximum length of private key in Ozone. Used in Ozone delegation and
-      block tokens.
-    </description>
-  </property>
 
   <!--Client Settings-->
   <property>

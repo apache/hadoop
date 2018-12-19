@@ -48,20 +48,12 @@ public class OzoneSecretKey implements Writable {
   private long expiryDate;
   private PrivateKey privateKey;
   private PublicKey publicKey;
-  private int maxKeyLen;
   private SecurityConfig securityConfig;
 
-  public OzoneSecretKey(int keyId, long expiryDate, KeyPair keyPair,
-      int maxKeyLen) {
+  public OzoneSecretKey(int keyId, long expiryDate, KeyPair keyPair) {
     Preconditions.checkNotNull(keyId);
     this.keyId = keyId;
     this.expiryDate = expiryDate;
-    byte[] encodedKey = keyPair.getPrivate().getEncoded();
-    this.maxKeyLen = maxKeyLen;
-    if (encodedKey.length > maxKeyLen) {
-      throw new RuntimeException("can't create " + encodedKey.length +
-          " byte long DelegationKey.");
-    }
     this.privateKey = keyPair.getPrivate();
     this.publicKey = keyPair.getPublic();
   }
@@ -70,18 +62,13 @@ public class OzoneSecretKey implements Writable {
    * Create new instance using default signature algorithm and provider.
    * */
   public OzoneSecretKey(int keyId, long expiryDate, byte[] pvtKey,
-      byte[] publicKey, int maxKeyLen) {
+      byte[] publicKey) {
     Preconditions.checkNotNull(pvtKey);
     Preconditions.checkNotNull(publicKey);
 
     this.securityConfig = new SecurityConfig(new OzoneConfiguration());
     this.keyId = keyId;
     this.expiryDate = expiryDate;
-    this.maxKeyLen = maxKeyLen;
-    if (pvtKey.length > maxKeyLen) {
-      throw new RuntimeException("can't create " + pvtKey.length +
-          " byte long DelegationKey. Max allowed length is " + maxKeyLen);
-    }
     this.privateKey = SecurityUtil.getPrivateKey(pvtKey, securityConfig);
     this.publicKey = SecurityUtil.getPublicKey(publicKey, securityConfig);
   }
@@ -100,10 +87,6 @@ public class OzoneSecretKey implements Writable {
 
   public PublicKey getPublicKey() {
     return publicKey;
-  }
-
-  public int getMaxKeyLen() {
-    return maxKeyLen;
   }
 
   public byte[] getEncodedPrivateKey() {
@@ -125,7 +108,6 @@ public class OzoneSecretKey implements Writable {
         .setExpiryDate(getExpiryDate())
         .setPrivateKeyBytes(ByteString.copyFrom(getEncodedPrivateKey()))
         .setPublicKeyBytes(ByteString.copyFrom(getEncodedPubliceKey()))
-        .setMaxKeyLen(getMaxKeyLen())
         .build();
     out.write(token.toByteArray());
   }
@@ -139,7 +121,6 @@ public class OzoneSecretKey implements Writable {
         .toByteArray(), securityConfig);
     publicKey = SecurityUtil.getPublicKey(secretKey.getPublicKeyBytes()
         .toByteArray(), securityConfig);
-    maxKeyLen = secretKey.getMaxKeyLen();
   }
 
   @Override
@@ -179,7 +160,7 @@ public class OzoneSecretKey implements Writable {
     SecretKeyProto key = SecretKeyProto.parseFrom((DataInputStream) in);
     return new OzoneSecretKey(key.getKeyId(), key.getExpiryDate(),
         key.getPrivateKeyBytes().toByteArray(),
-        key.getPublicKeyBytes().toByteArray(), key.getMaxKeyLen());
+        key.getPublicKeyBytes().toByteArray());
   }
 
   /**

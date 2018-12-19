@@ -497,7 +497,6 @@ message SecretKeyProto {
     required uint64 expiryDate = 2;
     required bytes privateKeyBytes = 3;
     required bytes publicKeyBytes = 4;
-    required uint32 maxKeyLen = 5;
 }
 
 message ListKeysRequest {

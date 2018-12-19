@@ -59,7 +59,6 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
   private final Text service;
   private volatile boolean running;
   private OzoneSecretKey currentKey;
-  private int maxKeyLength;
   private AtomicInteger currentKeyId;
   private AtomicInteger tokenSequenceNumber;
   protected final Map<Integer, OzoneSecretKey> allKeys;
@@ -83,7 +82,6 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
     tokenSequenceNumber = new AtomicInteger();
     allKeys = new ConcurrentHashMap<>();
     this.service = service;
-    this.maxKeyLength = securityConfig.getMaxKeyLength();
     this.logger = logger;
   }
 
@@ -189,7 +187,7 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
     // expire time.
     int newCurrentId = incrementCurrentKeyId();
     OzoneSecretKey newKey = new OzoneSecretKey(newCurrentId, -1,
-        keyPair, maxKeyLength);
+        keyPair);
     currentKey = newKey;
     return currentKey;
   }
