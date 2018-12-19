@@ -175,10 +175,14 @@ public abstract class HATestUtil {
       MiniDFSCluster cluster, Configuration conf,
       Class<P> classFPP, boolean isObserverReadEnabled)
           throws IOException, URISyntaxException {
-    conf = new Configuration(conf);
-    setupHAConfiguration(cluster, conf, 0, classFPP);
+    String logicalName = conf.get(DFSConfigKeys.DFS_NAMESERVICES);
+    URI nnUri = new URI(HdfsConstants.HDFS_URI_SCHEME + "://" + logicalName);
+    conf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX
+        + "." + logicalName, classFPP.getName());
+    conf.set("fs.defaultFS", nnUri.toString());
+
     DistributedFileSystem dfs = (DistributedFileSystem)
-        FileSystem.get(getLogicalUri(cluster), conf);
+        FileSystem.get(nnUri, conf);
     @SuppressWarnings("unchecked")
     P provider = (P) ((RetryInvocationHandler<?>) Proxy.getInvocationHandler(
         dfs.getClient().getNamenode())).getProxyProvider();
