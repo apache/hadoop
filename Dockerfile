@@ -78,10 +78,10 @@ RUN echo 'networkaddress.cache.negative.ttl=0' >> $JAVA_HOME/lib/security/java.s
 
 RUN useradd hadoop -m -u 1002 -d $HADOOP_HOME
 
+# imagebuilder expects the directory to be created before VOLUME
+RUN mkdir -p /hadoop/dfs/data /hadoop/dfs/name
 # to allow running as non-root
-RUN \
-    mkdir -p /hadoop/dfs/data /hadoop/dfs/name && \
-    chown -R 1002:0 /opt /hadoop /hadoop /etc/hadoop && \
+RUN chown -R 1002:0 /opt /hadoop /hadoop /etc/hadoop && \
     chmod -R 774 /opt /hadoop /etc/hadoop /etc/passwd
 
 VOLUME /hadoop/dfs/data /hadoop/dfs/name
