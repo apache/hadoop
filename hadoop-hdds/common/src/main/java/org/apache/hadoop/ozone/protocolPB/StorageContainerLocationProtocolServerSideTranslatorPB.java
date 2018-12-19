@@ -227,9 +227,11 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
     try {
       ListPipelineResponseProto.Builder builder = ListPipelineResponseProto
           .newBuilder();
-      List<Pipeline> pipelineIDs = impl.listPipelines();
-      pipelineIDs.stream().map(Pipeline::getProtobufMessage)
-           .forEach(builder::addPipelines);
+      List<Pipeline> pipelines = impl.listPipelines();
+      for (Pipeline pipeline : pipelines) {
+        HddsProtos.Pipeline protobufMessage = pipeline.getProtobufMessage();
+        builder.addPipelines(protobufMessage);
+      }
       return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
