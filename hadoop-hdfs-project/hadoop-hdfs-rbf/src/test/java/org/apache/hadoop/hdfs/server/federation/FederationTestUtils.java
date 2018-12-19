@@ -56,6 +56,8 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
+import org.apache.hadoop.hdfs.server.federation.store.RouterStore;
+import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -315,5 +317,30 @@ public final class FederationTestUtils {
       }
     }).when(spyHAContext).checkOperation(any(OperationCategory.class));
     Whitebox.setInternalState(namesystem, "haContext", spyHAContext);
+  }
+
+  /**
+   * Wait for a number of routers to be registered in state store.
+   *
+   * @param stateManager number of routers to be registered.
+   * @param routerCount number of routers to be registered.
+   * @param tiemout max wait time in ms
+   */
+  public static void waitRouterRegistered(RouterStore stateManager,
+      long routerCount, int timeout) throws Exception {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        try {
+          List<RouterState> cachedRecords = stateManager.getCachedRecords();
+          if (cachedRecords.size() == routerCount) {
+            return true;
+          }
+        } catch (IOException e) {
+          // Ignore
+        }
+        return false;
+      }
+    }, 100, timeout);
   }
 }

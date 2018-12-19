@@ -33,6 +33,8 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RefreshMountTableEntriesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RefreshMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
@@ -68,6 +70,7 @@ public class MountTableStoreImpl extends MountTableStore {
     AddMountTableEntryResponse response =
         AddMountTableEntryResponse.newInstance();
     response.setStatus(status);
+    updateCacheAllRouters();
     return response;
   }
 
@@ -86,6 +89,7 @@ public class MountTableStoreImpl extends MountTableStore {
     UpdateMountTableEntryResponse response =
         UpdateMountTableEntryResponse.newInstance();
     response.setStatus(status);
+    updateCacheAllRouters();
     return response;
   }
 
@@ -110,6 +114,7 @@ public class MountTableStoreImpl extends MountTableStore {
     RemoveMountTableEntryResponse response =
         RemoveMountTableEntryResponse.newInstance();
     response.setStatus(status);
+    updateCacheAllRouters();
     return response;
   }
 
@@ -151,4 +156,17 @@ public class MountTableStoreImpl extends MountTableStore {
     response.setTimestamp(Time.now());
     return response;
   }
+
+  @Override
+  public RefreshMountTableEntriesResponse refreshMountTableEntries(
+      RefreshMountTableEntriesRequest request) throws IOException {
+    // Because this refresh is done through admin API, it should always be force
+    // refresh.
+    boolean result = loadCache(true);
+    RefreshMountTableEntriesResponse response =
+        RefreshMountTableEntriesResponse.newInstance();
+    response.setResult(result);
+    return response;
+  }
+
 }

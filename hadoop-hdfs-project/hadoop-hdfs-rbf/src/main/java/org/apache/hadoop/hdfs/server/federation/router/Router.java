@@ -254,7 +254,48 @@ public class Router extends CompositeService {
       addService(this.safemodeService);
     }
 
+    /*
+     * Refresh mount table cache immediately after adding, modifying or deleting
+     * the mount table entries. If this service is not enabled mount table cache
+     * are refreshed periodically by StateStoreCacheUpdateService
+     */
+    if (conf.getBoolean(RBFConfigKeys.MOUNT_TABLE_CACHE_UPDATE,
+        RBFConfigKeys.MOUNT_TABLE_CACHE_UPDATE_DEFAULT)) {
+      // There is no use of starting refresh service if state store and admin
+      // servers are not enabled
+      String disabledDependentServices = getDisabledDependentServices();
+      /*
+       * disabledDependentServices null means all dependent services are
+       * enabled.
+       */
+      if (disabledDependentServices == null) {
+
+        MountTableRefresherService refreshService =
+            new MountTableRefresherService(this);
+        addService(refreshService);
+        LOG.info("Service {} is enabled.",
+            MountTableRefresherService.class.getSimpleName());
+      } else {
+        LOG.warn(
+            "Service {} not enabled: depenendent service(s) {} not enabled.",
+            MountTableRefresherService.class.getSimpleName(),
+            disabledDependentServices);
+      }
+    }
+
     super.serviceInit(conf);
+  }
+
+  private String getDisabledDependentServices() {
+    if (this.stateStore == null && this.adminServer == null) {
+      return StateStoreService.class.getSimpleName() + ","
+          + RouterAdminServer.class.getSimpleName();
+    } else if (this.stateStore == null) {
+      return StateStoreService.class.getSimpleName();
+    } else if (this.adminServer == null) {
+      return RouterAdminServer.class.getSimpleName();
+    }
+    return null;
   }
 
   /**
@@ -696,9 +737,19 @@ public class Router extends CompositeService {
   }
 
   /**
-   * Get the Router safe mode service
+   * Get the Router safe mode service.
    */
   RouterSafemodeService getSafemodeService() {
     return this.safemodeService;
   }
+
+  /**
+   * Get router admin server.
+   *
+   * @return Null if admin is not enabled.
+   */
+  public RouterAdminServer getAdminServer() {
+    return adminServer;
+  }
+
 }

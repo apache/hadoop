@@ -193,6 +193,7 @@ message RouterRecordProto {
   optional string version = 6;
   optional string compileInfo = 7;
   optional uint64 dateStarted = 8;
+  optional string adminAddress = 9;
 }
 
 message GetRouterRegistrationRequestProto {
@@ -217,6 +218,13 @@ message RouterHeartbeatRequestProto {
 
 message RouterHeartbeatResponseProto {
   optional bool status = 1;
+}
+
+message RefreshMountTableEntriesRequestProto {
+}
+
+message RefreshMountTableEntriesResponseProto {
+  optional bool result = 1;
 }
 
 /////////////////////////////////////////////////

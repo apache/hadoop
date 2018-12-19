@@ -547,4 +547,38 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.federation.router.mount-table.cache.update</name>
+    <value>false</value>
+    <description>Set true to enable MountTableRefreshService. This service
+      updates mount table cache immediately after adding, modifying or
+      deleting the mount table entries. If this service is not enabled
+      mount table cache are refreshed periodically by
+      StateStoreCacheUpdateService
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.mount-table.cache.update.timeout</name>
+    <value>1m</value>
+    <description>This property defines how long to wait for all the
+      admin servers to finish their mount table cache update. This setting
+      supports multiple time unit suffixes as described in
+      dfs.federation.router.safemode.extension.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.mount-table.cache.update.client.max.time
+    </name>
+    <value>5m</value>
+    <description>Remote router mount table cache is updated through
+      RouterClient(RPC call). To improve performance, RouterClient
+      connections are cached but it should not be kept in cache forever.
+      This property defines the max time a connection can be cached. This
+      setting supports multiple time unit suffixes as described in
+      dfs.federation.router.safemode.extension.
+    </description>
+  </property>
+
 </configuration>
