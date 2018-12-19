@@ -113,6 +113,7 @@ public class ContainerLaunch implements Callable<Integer> {
     Shell.appendScriptExtension("launch_container");
 
   public static final String FINAL_CONTAINER_TOKENS_FILE = "container_tokens";
+  public static final String SYSFS_DIR = "sysfs";
 
   public static final String KEYSTORE_FILE = "yarn_provided.keystore";
   public static final String TRUSTSTORE_FILE = "yarn_provided.truststore";
@@ -1772,6 +1773,8 @@ public class ContainerLaunch implements Callable<Integer> {
     deleteAsUser(new Path(containerWorkDir, CONTAINER_SCRIPT));
     // delete TokensPath
     deleteAsUser(new Path(containerWorkDir, FINAL_CONTAINER_TOKENS_FILE));
+    // delete sysfs dir
+    deleteAsUser(new Path(containerWorkDir, SYSFS_DIR));
 
     // delete symlinks because launch script will create symlinks again
     try {

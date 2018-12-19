@@ -46,7 +46,6 @@ import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -152,25 +151,10 @@ public class ContainersLauncher extends AbstractService
         containerLauncher.submit(launch);
         break;
       case CLEANUP_CONTAINER:
+        cleanup(event, containerId, true);
+        break;
       case CLEANUP_CONTAINER_FOR_REINIT:
-        ContainerLaunch existingLaunch = running.remove(containerId);
-        if (existingLaunch == null) {
-          // Container not launched.
-          // triggering KILLING to CONTAINER_CLEANEDUP_AFTER_KILL transition.
-          dispatcher.getEventHandler().handle(
-              new ContainerExitEvent(containerId,
-                  ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
-                  Shell.WINDOWS ? ContainerExecutor.ExitCode.FORCE_KILLED.getExitCode() :
-                  ContainerExecutor.ExitCode.TERMINATED.getExitCode(),
-                  "Container terminated before launch."));
-          return;
-        }
-
-        // Cleanup a container whether it is running/killed/completed, so that
-        // no sub-processes are alive.
-        ContainerCleanup cleanup = new ContainerCleanup(context, getConfig(),
-            dispatcher, exec, event.getContainer(), existingLaunch);
-        containerLauncher.submit(cleanup);
+        cleanup(event, containerId, false);
         break;
       case SIGNAL_CONTAINER:
         SignalContainersLauncherEvent signalEvent =
@@ -219,6 +203,34 @@ public class ContainersLauncher extends AbstractService
             StringUtils.stringifyException(e));
         }
         break;
+    }
+  }
+
+  @VisibleForTesting
+  void cleanup(ContainersLauncherEvent event, ContainerId containerId,
+      boolean async) {
+    ContainerLaunch existingLaunch = running.remove(containerId);
+    if (existingLaunch == null) {
+      // Container not launched.
+      // triggering KILLING to CONTAINER_CLEANEDUP_AFTER_KILL transition.
+      dispatcher.getEventHandler().handle(
+          new ContainerExitEvent(containerId,
+              ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
+              Shell.WINDOWS ?
+                  ContainerExecutor.ExitCode.FORCE_KILLED.getExitCode() :
+                  ContainerExecutor.ExitCode.TERMINATED.getExitCode(),
+              "Container terminated before launch."));
+      return;
+    }
+
+    // Cleanup a container whether it is running/killed/completed, so that
+    // no sub-processes are alive.
+    ContainerCleanup cleanup = new ContainerCleanup(context, getConfig(),
+        dispatcher, exec, event.getContainer(), existingLaunch);
+    if (async) {
+      containerLauncher.submit(cleanup);
+    } else {
+      cleanup.run();
     }
   }
 }
