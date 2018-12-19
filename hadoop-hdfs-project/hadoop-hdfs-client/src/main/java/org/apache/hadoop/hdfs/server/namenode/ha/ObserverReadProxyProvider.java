@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -39,9 +38,11 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
 import org.apache.hadoop.ipc.AlignmentContext;
+import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.RpcInvocationHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -238,7 +239,7 @@ public class ObserverReadProxyProvider<T extends ClientProtocol>
    *
    * Write requests are always forwarded to the active.
    */
-  private class ObserverReadInvocationHandler implements InvocationHandler {
+  private class ObserverReadInvocationHandler implements RpcInvocationHandler {
 
     @Override
     public Object invoke(Object proxy, final Method method, final Object[] args)
@@ -320,6 +321,14 @@ public class ObserverReadProxyProvider<T extends ClientProtocol>
       }
       lastProxy = activeProxy;
       return retVal;
+    }
+
+    @Override
+    public void close() throws IOException {}
+
+    @Override
+    public ConnectionId getConnectionId() {
+      return RPC.getConnectionIdForProxy(getCurrentProxy().proxy);
     }
   }
 
