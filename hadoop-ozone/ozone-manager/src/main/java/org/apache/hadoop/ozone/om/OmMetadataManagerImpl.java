@@ -637,7 +637,6 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   @Override
   public List<BlockGroup> getExpiredOpenKeys() throws IOException {
     List<BlockGroup> keyBlocksList = Lists.newArrayList();
-    long now = Time.now();
     // TODO: Fix the getExpiredOpenKeys, Not part of this patch.
     return keyBlocksList;
   }
