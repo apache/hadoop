@@ -230,6 +230,12 @@ Ls command will show below information for each mount table entry:
     Source                    Destinations              Owner                     Group                     Mode                      Quota/Usage
     /path                     ns0->/path                root                      supergroup                rwxr-xr-x                 [NsQuota: 50/0, SsQuota: 100 B/0 B]
 
+Mount table cache is refreshed periodically but it can also be refreshed by executing refresh command:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -refresh
+
+The above command will refresh cache of the connected router. This command is redundant when mount table refresh service is enabled as the service will always keep the cache updated.
+
 #### Multiple subclusters
 A mount point also supports mapping multiple subclusters.
 For example, to create a mount point that stores files in subclusters `ns1` and `ns2`.
@@ -380,6 +386,9 @@ The connection to the State Store and the internal caching at the Router.
 | dfs.federation.router.store.connection.test | 60000 | How often to check for the connection to the State Store in milliseconds. |
 | dfs.federation.router.cache.ttl | 60000 | How often to refresh the State Store caches in milliseconds. |
 | dfs.federation.router.store.membership.expiration | 300000 | Expiration time in milliseconds for a membership record. |
+| dfs.federation.router.mount-table.cache.update | false | If true, Mount table cache is updated whenever a mount table entry is added, modified or removed for all the routers. |
+| dfs.federation.router.mount-table.cache.update.timeout | 1m | Max time to wait for all the routers to finish their mount table cache update. |
+| dfs.federation.router.mount-table.cache.update.client.max.time | 5m | Max time a RouterClient connection can be cached. |
 
 ### Routing
 

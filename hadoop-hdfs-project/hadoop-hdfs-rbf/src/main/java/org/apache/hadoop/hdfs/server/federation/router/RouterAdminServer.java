@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.store.DisabledNameserviceStore;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
+import org.apache.hadoop.hdfs.server.federation.store.StateStoreCache;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.DisableNameserviceRequest;
@@ -55,6 +56,8 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetSafeModeReques
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetSafeModeResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.LeaveSafeModeRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.LeaveSafeModeResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RefreshMountTableEntriesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RefreshMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
@@ -102,6 +105,7 @@ public class RouterAdminServer extends AbstractService
   private static String routerOwner;
   private static String superGroup;
   private static boolean isPermissionEnabled;
+  private boolean iStateStoreCache;
 
   public RouterAdminServer(Configuration conf, Router router)
       throws IOException {
@@ -154,6 +158,8 @@ public class RouterAdminServer extends AbstractService
     this.adminAddress = new InetSocketAddress(
         confRpcAddress.getHostName(), listenAddress.getPort());
     router.setAdminServerAddress(this.adminAddress);
+    iStateStoreCache =
+        router.getSubclusterResolver() instanceof StateStoreCache;
   }
 
   /**
@@ -243,7 +249,7 @@ public class RouterAdminServer extends AbstractService
         getMountTableStore().updateMountTableEntry(request);
 
     MountTable mountTable = request.getEntry();
-    if (mountTable != null) {
+    if (mountTable != null && router.isQuotaEnabled()) {
       synchronizeQuota(mountTable);
     }
     return response;
@@ -329,6 +335,26 @@ public class RouterAdminServer extends AbstractService
       LOG.info("Safemode status retrieved successfully.");
     }
     return GetSafeModeResponse.newInstance(isInSafeMode);
+  }
+
+  @Override
+  public RefreshMountTableEntriesResponse refreshMountTableEntries(
+      RefreshMountTableEntriesRequest request) throws IOException {
+    if (iStateStoreCache) {
+      /*
+       * MountTableResolver updates MountTableStore cache also. Expecting other
+       * SubclusterResolver implementations to update MountTableStore cache also
+       * apart from updating its cache.
+       */
+      boolean result = ((StateStoreCache) this.router.getSubclusterResolver())
+          .loadCache(true);
+      RefreshMountTableEntriesResponse response =
+          RefreshMountTableEntriesResponse.newInstance();
+      response.setResult(result);
+      return response;
+    } else {
+      return getMountTableStore().refreshMountTableEntries(request);
+    }
   }
 
   /**
