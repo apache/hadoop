@@ -437,6 +437,7 @@ Usage:
           [-safemode enter | leave | get]
           [-nameservice disable | enable <nameservice>]
           [-getDisabledNameservices]
+          [-refresh]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -449,6 +450,7 @@ Usage:
 | `-safemode` `enter` `leave` `get` | Manually set the Router entering or leaving safe mode. The option *get* will be used for verifying if the Router is in safe mode state. |
 | `-nameservice` `disable` `enable` *nameservice* | Disable/enable  a name service from the federation. If disabled, requests will not go to that name service. |
 | `-getDisabledNameservices` | Get the name services that are disabled in the federation. |
+| `-refresh` | Update mount table cache of the connected router. |
 
 The commands for managing Router-based federation. See [Mount table management](../hadoop-hdfs-rbf/HDFSRouterFederation.html#Mount_table_management) for more info.
 

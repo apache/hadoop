@@ -74,4 +74,9 @@ service RouterAdminProtocolService {
    * Get the list of disabled name services.
    */
   rpc getDisabledNameservices(GetDisabledNameservicesRequestProto) returns (GetDisabledNameservicesResponseProto);
+
+  /**
+   * Refresh mount entries
+   */
+  rpc refreshMountTableEntries(RefreshMountTableEntriesRequestProto) returns(RefreshMountTableEntriesResponseProto);
 }

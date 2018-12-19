@@ -204,6 +204,31 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "mount-table.max-cache-size";
   /** Remove cache entries if we have more than 10k. */
   public static final int FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE_DEFAULT = 10000;
+  /**
+   * If true then cache updated immediately after mount table entry change
+   * otherwise it is updated periodically based configuration.
+   */
+  public static final String MOUNT_TABLE_CACHE_UPDATE =
+      FEDERATION_ROUTER_PREFIX + "mount-table.cache.update";
+  public static final boolean MOUNT_TABLE_CACHE_UPDATE_DEFAULT =
+      false;
+  /**
+   * Timeout to update mount table cache on all the routers.
+   */
+  public static final String MOUNT_TABLE_CACHE_UPDATE_TIMEOUT =
+      FEDERATION_ROUTER_PREFIX + "mount-table.cache.update.timeout";
+  public static final long MOUNT_TABLE_CACHE_UPDATE_TIMEOUT_DEFAULT =
+      TimeUnit.MINUTES.toMillis(1);
+  /**
+   * Remote router mount table cache is updated through RouterClient(RPC call).
+   * To improve performance, RouterClient connections are cached but it should
+   * not be kept in cache forever. This property defines the max time a
+   * connection can be cached.
+   */
+  public static final String MOUNT_TABLE_CACHE_UPDATE_CLIENT_MAX_TIME =
+      FEDERATION_ROUTER_PREFIX + "mount-table.cache.update.client.max.time";
+  public static final long MOUNT_TABLE_CACHE_UPDATE_CLIENT_MAX_TIME_DEFAULT =
+      TimeUnit.MINUTES.toMillis(5);
   public static final String FEDERATION_MOUNT_TABLE_CACHE_ENABLE =
       FEDERATION_ROUTER_PREFIX + "mount-table.cache.enable";
   public static final boolean FEDERATION_MOUNT_TABLE_CACHE_ENABLE_DEFAULT =
