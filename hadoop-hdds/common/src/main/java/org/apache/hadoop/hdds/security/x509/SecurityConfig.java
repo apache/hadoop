@@ -21,7 +21,6 @@ package org.apache.hadoop.hdds.security.x509;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.ratis.thirdparty.io.netty.handler.ssl.SslProvider;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
@@ -95,7 +94,6 @@ public class SecurityConfig {
   private final Duration certDuration;
   private final String x509SignatureAlgo;
   private final Boolean grpcBlockTokenEnabled;
-  private final int getMaxKeyLength;
   private final String certificateDir;
   private final String certificateFileName;
   private final Boolean grpcTlsEnabled;
@@ -112,9 +110,6 @@ public class SecurityConfig {
   public SecurityConfig(Configuration configuration) {
     Preconditions.checkNotNull(configuration, "Configuration cannot be null");
     this.configuration = configuration;
-    this.getMaxKeyLength = configuration.getInt(
-        OzoneConfigKeys.OZONE_MAX_KEY_LEN,
-        OzoneConfigKeys.OZONE_MAX_KEY_LEN_DEFAULT);
     this.size = this.configuration.getInt(HDDS_KEY_LEN, HDDS_DEFAULT_KEY_LEN);
     this.keyAlgo = this.configuration.get(HDDS_KEY_ALGORITHM,
         HDDS_DEFAULT_KEY_ALGORITHM);
@@ -420,9 +415,5 @@ public class SecurityConfig {
       LOG.error("Security Provider:{} is unknown", provider);
       throw new SecurityException("Unknown security provider:" + provider);
     }
-  }
-
-  public int getMaxKeyLength() {
-    return this.getMaxKeyLength;
   }
 }
