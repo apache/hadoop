@@ -41,7 +41,6 @@ import java.io.Writer;
 import java.lang.ref.WeakReference;
 import java.net.InetSocketAddress;
 import java.net.JarURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
@@ -2942,36 +2941,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     try {
       Object resource = wrapper.getResource();
       name = wrapper.getName();
-      XMLStreamReader2 reader = null;
       boolean returnCachedProperties = false;
-      boolean isRestricted = wrapper.isParserRestricted();
 
-      if (resource instanceof URL) {                  // an URL resource
-        reader = (XMLStreamReader2)parse((URL)resource, isRestricted);
-      } else if (resource instanceof String) {        // a CLASSPATH resource
-        URL url = getResource((String)resource);
-        reader = (XMLStreamReader2)parse(url, isRestricted);
-      } else if (resource instanceof Path) {          // a file resource
-        // Can't use FileSystem API or we get an infinite loop
-        // since FileSystem uses Configuration API.  Use java.io.File instead.
-        File file = new File(((Path)resource).toUri().getPath())
-          .getAbsoluteFile();
-        if (file.exists()) {
-          if (!quiet) {
-            LOG.debug("parsing File " + file);
-          }
-          reader = (XMLStreamReader2)parse(new BufferedInputStream(
-              new FileInputStream(file)), ((Path)resource).toString(),
-              isRestricted);
-        }
-      } else if (resource instanceof InputStream) {
-        reader = (XMLStreamReader2)parse((InputStream)resource, null,
-            isRestricted);
+      if (resource instanceof InputStream) {
         returnCachedProperties = true;
       } else if (resource instanceof Properties) {
         overlay(properties, (Properties)resource);
       }
 
+      XMLStreamReader2 reader = getStreamReader(wrapper, quiet);
       if (reader == null) {
         if (quiet) {
           return null;
@@ -3002,6 +2980,36 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       LOG.error("error parsing conf " + name, e);
       throw new RuntimeException(e);
     }
+  }
+
+  private XMLStreamReader2 getStreamReader(Resource wrapper, boolean quiet)
+      throws XMLStreamException, IOException {
+    Object resource = wrapper.getResource();
+    boolean isRestricted = wrapper.isParserRestricted();
+    XMLStreamReader2 reader = null;
+    if (resource instanceof URL) {                  // an URL resource
+      reader  = (XMLStreamReader2)parse((URL)resource, isRestricted);
+    } else if (resource instanceof String) {        // a CLASSPATH resource
+      URL url = getResource((String)resource);
+      reader = (XMLStreamReader2)parse(url, isRestricted);
+    } else if (resource instanceof Path) {          // a file resource
+      // Can't use FileSystem API or we get an infinite loop
+      // since FileSystem uses Configuration API.  Use java.io.File instead.
+      File file = new File(((Path)resource).toUri().getPath())
+        .getAbsoluteFile();
+      if (file.exists()) {
+        if (!quiet) {
+          LOG.debug("parsing File " + file);
+        }
+        reader = (XMLStreamReader2)parse(new BufferedInputStream(
+            new FileInputStream(file)), ((Path)resource).toString(),
+            isRestricted);
+      }
+    } else if (resource instanceof InputStream) {
+      reader = (XMLStreamReader2)parse((InputStream)resource, null,
+          isRestricted);
+    }
+    return reader;
   }
 
   private static class ParsedItem {
@@ -3065,7 +3073,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return results;
     }
 
-    private void handleStartElement() throws MalformedURLException {
+    private void handleStartElement() throws XMLStreamException, IOException {
       switch (reader.getLocalName()) {
       case "property":
         handleStartProperty();
@@ -3121,10 +3129,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       }
     }
 
-    private void handleInclude() throws MalformedURLException {
+    private void handleInclude() throws XMLStreamException, IOException {
       // Determine href for xi:include
       confInclude = null;
       int attrCount = reader.getAttributeCount();
+      List<ParsedItem> items;
       for (int i = 0; i < attrCount; i++) {
         String attrName = reader.getAttributeLocalName(i);
         if ("href".equals(attrName)) {
@@ -3148,7 +3157,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         // This is only called recursively while the lock is already held
         // by this thread, but synchronizing avoids a findbugs warning.
         synchronized (Configuration.this) {
-          loadResource(properties, classpathResource, quiet);
+          XMLStreamReader2 includeReader =
+              getStreamReader(classpathResource, quiet);
+          if (includeReader == null) {
+            throw new RuntimeException(classpathResource + " not found");
+          }
+          items = new Parser(includeReader, classpathResource, quiet).parse();
         }
       } else {
         URL url;
@@ -3174,9 +3188,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         // This is only called recursively while the lock is already held
         // by this thread, but synchronizing avoids a findbugs warning.
         synchronized (Configuration.this) {
-          loadResource(properties, uriResource, quiet);
+          XMLStreamReader2 includeReader =
+              getStreamReader(uriResource, quiet);
+          if (includeReader == null) {
+            throw new RuntimeException(uriResource + " not found");
+          }
+          items = new Parser(includeReader, uriResource, quiet).parse();
         }
       }
+      results.addAll(items);
     }
 
     void handleEndElement() throws IOException {
