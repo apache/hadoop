@@ -52,9 +52,16 @@ public class ContainerShellWebSocket {
   private Session mySession;
   private Terminal terminal;
   private LineReader reader;
+  private boolean sttySet = false;
 
   @OnWebSocketMessage
   public void onText(Session session, String message) throws IOException {
+    if (!sttySet) {
+      session.getRemote().sendString("stty -echo");
+      session.getRemote().sendString("\r");
+      session.getRemote().flush();
+      sttySet = true;
+    }
     terminal.output().write(message.getBytes(Charset.forName("UTF-8")));
     terminal.output().flush();
   }

@@ -550,7 +550,7 @@ void test_yarn_sysfs() {
       exit(1);
     }
     free(user_dir);
-    char *app_dir = make_string("%s/usercache/%s/appcache/%s/%s", *local_dir_ptr, username, app_id);
+    char *app_dir = make_string("%s/usercache/%s/appcache/%s", *local_dir_ptr, username, app_id);
     if (mkdirs(app_dir, 0750) != 0) {
       printf("Can not make app directories: %s\n", app_dir);
       exit(1);
@@ -1154,6 +1154,8 @@ static void test_delete_race_internal() {
       printf("FAIL: return code from delete_as_user is %d\n", ret);
       exit(1);
     }
+    free(app_dir);
+    free(container_dir);
     exit(0);
   } else {
     // delete application directory
