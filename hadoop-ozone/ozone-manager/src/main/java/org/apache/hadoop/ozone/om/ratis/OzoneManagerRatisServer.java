@@ -265,6 +265,9 @@ public final class OzoneManagerRatisServer {
     return server.getLifeCycleState();
   }
 
+  /**
+   * Get the local directory where ratis logs will be stored.
+   */
   public static String getOMRatisDirectory(Configuration conf) {
     String storageDir = conf.get(OMConfigKeys.OZONE_OM_RATIS_STORAGE_DIR);
 

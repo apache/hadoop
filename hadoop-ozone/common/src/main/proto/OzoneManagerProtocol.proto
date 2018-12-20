@@ -22,6 +22,7 @@
  * for what changes are allowed for a *unstable* .proto interface.
  */
 
+syntax = "proto2";
 option java_package = "org.apache.hadoop.ozone.protocol.proto";
 option java_outer_classname = "OzoneManagerProtocolProtos";
 option java_generic_services = true;
@@ -29,12 +30,125 @@ option java_generate_equals_and_hash = true;
 package hadoop.ozone;
 
 /**
-This is file contains the protocol to communicate with
+This file contains the protocol to communicate with
 Ozone Manager. Ozone Manager manages the namespace for ozone.
 This is similar to Namenode for Ozone.
 */
 
 import "hdds.proto";
+
+enum Type {
+  CreateVolume = 11;
+  SetVolumeProperty = 12;
+  CheckVolumeAccess = 13;
+  InfoVolume = 14;
+  DeleteVolume = 15;
+  ListVolume = 16;
+
+  CreateBucket = 21;
+  InfoBucket = 22;
+  SetBucketProperty = 23;
+  DeleteBucket = 24;
+  ListBuckets = 25;
+
+  CreateKey = 31;
+  LookupKey = 32;
+  RenameKey = 33;
+  DeleteKey = 34;
+  ListKeys = 35;
+  CommitKey = 36;
+  AllocateBlock = 37;
+
+  CreateS3Bucket = 41;
+  DeleteS3Bucket = 42;
+  InfoS3Bucket = 43;
+  ListS3Buckets = 44;
+  InitiateMultiPartUpload = 45;
+  CommitMultiPartUpload = 46;
+
+  ServiceList = 51;
+}
+
+message OMRequest {
+  required Type cmdType = 1; // Type of the command
+
+  // A string that identifies this command, we generate  Trace ID in Ozone
+  // frontend and this allows us to trace that command all over ozone.
+  optional string traceID = 2;
+
+  required string clientId = 3;
+
+  optional CreateVolumeRequest              createVolumeRequest            = 11;
+  optional SetVolumePropertyRequest         setVolumePropertyRequest       = 12;
+  optional CheckVolumeAccessRequest         checkVolumeAccessRequest       = 13;
+  optional InfoVolumeRequest                infoVolumeRequest              = 14;
+  optional DeleteVolumeRequest              deleteVolumeRequest            = 15;
+  optional ListVolumeRequest                listVolumeRequest              = 16;
+
+  optional CreateBucketRequest              createBucketRequest            = 21;
+  optional InfoBucketRequest                infoBucketRequest              = 22;
+  optional SetBucketPropertyRequest         setBucketPropertyRequest       = 23;
+  optional DeleteBucketRequest              deleteBucketRequest            = 24;
+  optional ListBucketsRequest               listBucketsRequest             = 25;
+
+  optional CreateKeyRequest                 createKeyRequest               = 31;
+  optional LookupKeyRequest                 lookupKeyRequest               = 32;
+  optional RenameKeyRequest                 renameKeyRequest               = 33;
+  optional DeleteKeyRequest                 deleteKeyRequest               = 34;
+  optional ListKeysRequest                  listKeysRequest                = 35;
+  optional CommitKeyRequest                 commitKeyRequest               = 36;
+  optional AllocateBlockRequest             allocateBlockRequest           = 37;
+
+  optional S3CreateBucketRequest            createS3BucketRequest          = 41;
+  optional S3DeleteBucketRequest            deleteS3BucketRequest          = 42;
+  optional S3BucketInfoRequest              infoS3BucketRequest            = 43;
+  optional S3ListBucketsRequest             listS3BucketsRequest           = 44;
+  optional MultipartInfoInitiateRequest     initiateMultiPartUploadRequest = 45;
+  optional MultipartCommitUploadPartRequest commitMultiPartUploadRequest   = 46;
+
+  optional ServiceListRequest               serviceListRequest             = 51;
+}
+
+message OMResponse {
+  required Type cmdType = 1; // Type of the command
+
+  // A string that identifies this command, we generate  Trace ID in Ozone
+  // frontend and this allows us to trace that command all over ozone.
+  optional string traceID = 2;
+
+  optional bool success = 3 [default=true];
+  optional string message = 4;
+
+  optional CreateVolumeResponse              createVolumeResponse          = 11;
+  optional SetVolumePropertyResponse         setVolumePropertyResponse     = 12;
+  optional CheckVolumeAccessResponse         checkVolumeAccessResponse     = 13;
+  optional InfoVolumeResponse                infoVolumeResponse            = 14;
+  optional DeleteVolumeResponse              deleteVolumeResponse          = 15;
+  optional ListVolumeResponse                listVolumeResponse            = 16;
+
+  optional CreateBucketResponse              createBucketResponse          = 21;
+  optional InfoBucketResponse                infoBucketResponse            = 22;
+  optional SetBucketPropertyResponse         setBucketPropertyResponse     = 23;
+  optional DeleteBucketResponse              deleteBucketResponse          = 24;
+  optional ListBucketsResponse               listBucketsResponse           = 25;
+
+  optional CreateKeyResponse                 createKeyResponse             = 31;
+  optional LookupKeyResponse                 lookupKeyResponse             = 32;
+  optional RenameKeyResponse                 renameKeyResponse             = 33;
+  optional DeleteKeyResponse                 deleteKeyResponse             = 34;
+  optional ListKeysResponse                  listKeysResponse              = 35;
+  optional CommitKeyResponse                 commitKeyResponse             = 36;
+  optional AllocateBlockResponse             allocateBlockResponse         = 37;
+
+  optional S3CreateBucketResponse            createS3BucketResponse        = 41;
+  optional S3DeleteBucketResponse            deleteS3BucketResponse        = 42;
+  optional S3BucketInfoResponse              infoS3BucketResponse          = 43;
+  optional S3ListBucketsResponse             listS3BucketsResponse         = 44;
+  optional MultipartInfoInitiateResponse   initiateMultiPartUploadResponse = 45;
+  optional MultipartCommitUploadPartResponse commitMultiPartUploadResponse = 46;
+
+  optional ServiceListResponse               ServiceListResponse           = 51;
+}
 
 enum Status {
     OK = 1;
@@ -84,7 +198,6 @@ message CreateVolumeRequest {
 }
 
 message CreateVolumeResponse {
-
     required Status status = 1;
 }
 
@@ -130,7 +243,6 @@ message InfoVolumeRequest {
 message InfoVolumeResponse {
     required Status status = 1;
     optional VolumeInfo volumeInfo = 2;
-
 }
 
 /**
@@ -226,6 +338,23 @@ message InfoBucketResponse {
     optional BucketInfo bucketInfo = 2;
 }
 
+message SetBucketPropertyRequest {
+    required BucketArgs bucketArgs = 1;
+}
+
+message SetBucketPropertyResponse {
+    required Status status = 1;
+}
+
+message DeleteBucketRequest {
+    required string volumeName = 1;
+    required string bucketName = 2;
+}
+
+message DeleteBucketResponse {
+    required Status status = 1;
+}
+
 message ListBucketsRequest {
     required string volumeName = 1;
     optional string startKey = 2;
@@ -277,11 +406,24 @@ message KeyInfo {
     optional uint64 latestVersion = 10;
 }
 
-message LocateKeyRequest {
+message CreateKeyRequest {
     required KeyArgs keyArgs = 1;
 }
 
-message LocateKeyResponse {
+message CreateKeyResponse {
+    required Status status = 1;
+    optional KeyInfo keyInfo = 2;
+    // clients' followup request may carry this ID for stateful operations
+    // (similar to a cookie).
+    optional uint64 ID = 3;
+    optional uint64 openVersion = 4;
+}
+
+message LookupKeyRequest {
+    required KeyArgs keyArgs = 1;
+}
+
+message LookupKeyResponse {
     required Status status = 1;
     optional KeyInfo keyInfo = 2;
     // clients' followup request may carry this ID for stateful operations (similar
@@ -289,14 +431,6 @@ message LocateKeyResponse {
     optional uint64 ID = 3;
     // TODO : allow specifiying a particular version to read.
     optional uint64 openVersion = 4;
-}
-
-message SetBucketPropertyRequest {
-    required BucketArgs bucketArgs = 1;
-}
-
-message SetBucketPropertyResponse {
-    required Status status = 1;
 }
 
 message RenameKeyRequest{
@@ -308,13 +442,17 @@ message RenameKeyResponse{
     required Status status = 1;
 }
 
-message DeleteBucketRequest {
-    required string volumeName = 1;
-    required string bucketName = 2;
+message DeleteKeyRequest {
+    required KeyArgs keyArgs = 1;
 }
 
-message DeleteBucketResponse {
+message DeleteKeyResponse {
     required Status status = 1;
+    optional KeyInfo keyInfo = 2;
+    // clients' followup request may carry this ID for stateful operations
+    // (similar to a cookie).
+    optional uint64 ID = 3;
+    optional uint64 openVersion = 4;
 }
 
 message ListKeysRequest {
@@ -330,6 +468,15 @@ message ListKeysResponse {
     repeated KeyInfo keyInfo = 2;
 }
 
+message CommitKeyRequest {
+    required KeyArgs keyArgs = 1;
+    required uint64 clientID = 2;
+}
+
+message CommitKeyResponse {
+    required Status status = 1;
+}
+
 message AllocateBlockRequest {
     required KeyArgs keyArgs = 1;
     required uint64 clientID = 2;
@@ -338,15 +485,6 @@ message AllocateBlockRequest {
 message AllocateBlockResponse {
     required Status status = 1;
     optional KeyLocation keyLocation = 2;
-}
-
-message CommitKeyRequest {
-    required KeyArgs keyArgs = 1;
-    required uint64 clientID = 2;
-}
-
-message CommitKeyResponse {
-    required Status status = 1;
 }
 
 message ServiceListRequest {
@@ -374,12 +512,20 @@ message ServiceInfo {
     repeated ServicePort servicePorts = 3;
 }
 
-message S3BucketRequest {
+message S3CreateBucketRequest {
     required string userName = 1;
     required string s3bucketname = 2;
 }
 
-message S3BucketResponse {
+message S3CreateBucketResponse {
+    required Status status = 1;
+}
+
+message S3DeleteBucketRequest {
+    required string s3bucketName = 1;
+}
+
+message S3DeleteBucketResponse {
     required Status status = 1;
 }
 
@@ -389,14 +535,6 @@ message S3BucketInfoRequest {
 message S3BucketInfoResponse {
     required Status status = 1;
     optional string ozoneMapping = 2;
-}
-
-message S3DeleteBucketRequest {
-    required string s3bucketName = 1;
-}
-
-message S3DeleteBucketResponse {
-    required Status status = 1;
 }
 
 message S3ListBucketsRequest {
@@ -410,7 +548,6 @@ message S3ListBucketsResponse {
     required Status status = 1;
     repeated BucketInfo bucketInfo = 2;
 }
-
 
 message MultipartInfoInitiateRequest {
     required KeyArgs keyArgs = 1;
@@ -446,147 +583,11 @@ message MultipartCommitUploadPartResponse {
     required Status status = 2;
 }
 
-
-
 /**
  The OM service that takes care of Ozone namespace.
 */
 service OzoneManagerService {
-
-    /**
-        Creates a Volume.
-    */
-    rpc createVolume(CreateVolumeRequest)
-        returns(CreateVolumeResponse);
-
-    /**
-        Allows modificiation of volume properties.
-    */
-    rpc setVolumeProperty(SetVolumePropertyRequest)
-        returns (SetVolumePropertyResponse);
-
-    /**
-        Checks if the specified volume is accesible by the specified user.
-    */
-    rpc checkVolumeAccess(CheckVolumeAccessRequest)
-        returns (CheckVolumeAccessResponse);
-
-    /**
-        Gets Volume information.
-    */
-    rpc infoVolume(InfoVolumeRequest)
-        returns(InfoVolumeResponse);
-    /**
-        Deletes a volume if it is empty.
-    */
-    rpc deleteVolume(DeleteVolumeRequest)
-        returns (DeleteVolumeResponse);
-
-    /**
-        Lists Volumes
-    */
-    rpc listVolumes(ListVolumeRequest)
-        returns (ListVolumeResponse);
-
-    /**
-        Creates a Bucket.
-    */
-    rpc createBucket(CreateBucketRequest)
-        returns(CreateBucketResponse);
-
-    /**
-        Get Bucket information.
-    */
-    rpc infoBucket(InfoBucketRequest)
-        returns(InfoBucketResponse);
-
-    /**
-        Sets bucket properties.
-    */
-    rpc setBucketProperty(SetBucketPropertyRequest)
-        returns(SetBucketPropertyResponse);
-
-    /**
-        Get key.
-    */
-    rpc createKey(LocateKeyRequest)
-        returns(LocateKeyResponse);
-
-    /**
-       Look up for an existing key.
-    */
-    rpc lookupKey(LocateKeyRequest)
-        returns(LocateKeyResponse);
-
-    /**
-       Rename an existing key within a bucket.
-    */
-    rpc renameKey(RenameKeyRequest)
-        returns(RenameKeyResponse);
-
-    /**
-       Delete an existing key.
-    */
-    rpc deleteKey(LocateKeyRequest)
-        returns(LocateKeyResponse);
-
-    /**
-       Deletes a bucket from volume if it is empty.
-    */
-    rpc deleteBucket(DeleteBucketRequest)
-        returns (DeleteBucketResponse);
-
-    /**
-       List Buckets.
-    */
-    rpc listBuckets(ListBucketsRequest)
-    returns(ListBucketsResponse);
-
-    /**
-       List Keys.
-    */
-    rpc listKeys(ListKeysRequest)
-    returns(ListKeysResponse);
-
-    /**
-      Commit a key.
-    */
-    rpc commitKey(CommitKeyRequest)
-    returns(CommitKeyResponse);
-
-    /**
-      Allocate a new block for a key.
-    */
-    rpc allocateBlock(AllocateBlockRequest)
-    returns(AllocateBlockResponse);
-
-    /**
-      Returns list of Ozone services with its configuration details.
-    */
-    rpc getServiceList(ServiceListRequest)
-    returns(ServiceListResponse);
-
-    /**
-     Creates an S3 bucket and creates an ozone mapping for that bucket.
-    */
-    rpc createS3Bucket(S3BucketRequest)
-    returns(S3BucketResponse);
-
-    rpc deleteS3Bucket(S3DeleteBucketRequest)
-    returns(S3DeleteBucketResponse);
-
-    /**
-    Gets the Ozone Mapping information for the S3Bucket.
-    */
-    rpc getS3Bucketinfo(S3BucketInfoRequest)
-    returns(S3BucketInfoResponse);
-
-    rpc listS3Buckets(S3ListBucketsRequest)
-    returns(S3ListBucketsResponse);
-
-    rpc initiateMultiPartUpload(MultipartInfoInitiateRequest)
-    returns (MultipartInfoInitiateResponse);
-
-    rpc commitMultipartUploadPart(MultipartCommitUploadPartRequest)
-    returns (MultipartCommitUploadPartResponse);
+    // A client-to-OM RPC to send client requests to OM Ratis server
+    rpc submitRequest(OMRequest)
+          returns(OMResponse);
 }
