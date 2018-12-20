@@ -95,6 +95,7 @@ Step 5.  Auxiliary services.
 
   * A simple example for the above is the auxiliary service 'ShuffleHandler' for MapReduce (MR). ShuffleHandler respects the above two requirements already, so users/admins don't have to do anything for it to support NM restart: (1) The configuration property **mapreduce.shuffle.port** controls which port the ShuffleHandler on a NodeManager host binds to, and it defaults to a non-ephemeral port. (2) The ShuffleHandler service also already supports recovery of previous state after NM restarts.
 
+  * There are two ways to configure auxiliary services, through a manifest file or through the Configuration. If a manifest file is used, auxiliary service configurations are not read from the Configuration. If no manifest file is specified, auxiliary services will be loaded via the prior method of using Configuration properties. One advantage of using the manifest file is that the NMs will detect changes in auxiliary services specified in the manifest file (as determined by the service name and version) and will remove or reload running auxiliary services as needed. To support reloading, AuxiliaryService implementations must perform any cleanup that is needed during the service stop phase for the NM to be able to create a new instance of the auxiliary service.
 
 Auxiliary Service Classpath Isolation
 -------------------------------------
@@ -102,8 +103,51 @@ Auxiliary Service Classpath Isolation
 ### Introduction
 To launch auxiliary services on a NodeManager, users have to add their jar to NodeManager's classpath directly, thus put them on the system classloader. But if multiple versions of the plugin are present on the classpath, there is no control over which version actually gets loaded. Or if there are any conflicts between the dependencies introduced by the auxiliary services and the NodeManager itself, they can break the NodeManager, the auxiliary services, or both. To solve this issue, we can instantiate auxiliary services using a classloader that is different from the system classloader.
 
+### Manifest
+This section describes the auxiliary service manifest for aux-service classpath isolation.
+
+The manifest file should be set in *yarn-site.xml* under the property `yarn.nodemanager.aux-services.manifest`. The NMs will check this file for new modifications at an interval specified by `yarn.nodemanager.aux-services.manifest.reload-ms`.
+
+An example manifest that configures classpath isolation for a CustomAuxService follows. One or more files may be specified to make up the classpath of a service, with jar or archive formats being supported.
+```
+{
+  "services": [
+    {
+      "name": "mapreduce_shuffle",
+      "version": "2",
+      "configuration": {
+        "properties": {
+          "class.name": "org.apache.hadoop.mapred.ShuffleHandler",
+          "mapreduce.shuffle.transfer.buffer.size": "102400",
+          "mapreduce.shuffle.port": "13562"
+        }
+      }
+    },
+    {
+      "name": "CustomAuxService",
+      "version": "1",
+      "configuration": {
+        "properties": {
+          "class.name": "org.aux.CustomAuxService"
+        },
+        "files": [
+          {
+            "src_file": "${remote-dir}/CustomAuxService.jar",
+            "type": "STATIC"
+          },
+          {
+            "src_file": "${remote-dir}/CustomAuxService.tgz",
+            "type": "ARCHIVE"
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
 ### Configuration
-This section describes the configuration variables for aux-service classpath isolation.
+This section describes the configuration variables for aux-service classpath isolation. Aux services will only be loaded from the configuration if a manifest file is not specified.
 
 The following settings need to be set in *yarn-site.xml*.
 
