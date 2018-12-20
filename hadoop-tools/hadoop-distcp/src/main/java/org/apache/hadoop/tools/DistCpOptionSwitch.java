@@ -192,7 +192,7 @@ public enum DistCpOptionSwitch {
       new Option("sizelimit", true, "(Deprecated!) Limit number of files " +
               "copied to <= n bytes")),
 
-  BLOCKS_PER_CHUNK("",
+  BLOCKS_PER_CHUNK(DistCpConstants.CONF_LABEL_BLOCKS_PER_CHUNK,
       new Option("blocksperchunk", true, "If set to a positive value, files"
           + "with more blocks than this value will be split into chunks of "
           + "<blocksperchunk> blocks to be transferred in parallel, and "
