@@ -32,15 +32,10 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
-import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
-import org.apache.hadoop.hdds.security.token.OzoneBlockTokenSelector;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Time;
 import org.apache.ratis.thirdparty.io.grpc.ManagedChannel;
 import org.apache.ratis.thirdparty.io.grpc.Status;
@@ -53,7 +48,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +70,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
   private Map<UUID, ManagedChannel> channels;
   private final Semaphore semaphore;
   private boolean closed = false;
+  private SecurityConfig secConfig;
 
   /**
    * Constructs a client that can communicate with the Container framework on
@@ -90,6 +85,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     Preconditions.checkNotNull(config);
     this.pipeline = pipeline;
     this.config = config;
+    this.secConfig =  new SecurityConfig(config);
     this.semaphore =
         new Semaphore(HddsClientUtils.getMaxOutstandingRequests(config));
     this.metrics = XceiverClientManager.getXceiverClientMetrics();
@@ -97,17 +93,30 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     this.asyncStubs = new HashMap<>();
   }
 
+  /**
+   * To be used when grpc token is not enabled.
+   * */
   @Override
   public void connect() throws Exception {
-
     // leader by default is the 1st datanode in the datanode list of pipleline
     DatanodeDetails dn = this.pipeline.getFirstNode();
     // just make a connection to the 1st datanode at the beginning
-    connectToDatanode(dn);
+    connectToDatanode(dn, null);
   }
 
+  /**
+   * Passed encoded token to GRPC header when security is enabled.
+   * */
+  @Override
+  public void connect(String encodedToken) throws Exception {
+    // leader by default is the 1st datanode in the datanode list of pipleline
+    DatanodeDetails dn = this.pipeline.getFirstNode();
+    // just make a connection to the 1st datanode at the beginning
+    connectToDatanode(dn, encodedToken);
+  }
 
-  private void connectToDatanode(DatanodeDetails dn) throws IOException {
+  private void connectToDatanode(DatanodeDetails dn, String encodedToken)
+      throws IOException {
     // read port from the data node, on failure use default configured
     // port.
     int port = dn.getPort(DatanodeDetails.Port.Name.STANDALONE).getValue();
@@ -119,19 +128,6 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     // Add credential context to the client call
     String userName = UserGroupInformation.getCurrentUser()
         .getShortUserName();
-
-    // Add block token if block token (mutual auth) is required but the client
-    // does not have a mTLS (private key and ca signed certificate)
-    String encodedToken = null;
-    SecurityConfig secConfig = new SecurityConfig(config);
-    if (secConfig.isGrpcBlockTokenEnabled()) {
-      InetSocketAddress addr = new InetSocketAddress(dn.getIpAddress(), port);
-      encodedToken = getEncodedBlockToken(addr);
-      if (encodedToken == null) {
-        throw new SCMSecurityException("No Block token available to access " +
-            "service at : " + addr.toString());
-      }
-    }
     LOG.debug("Connecting to server Port : " + dn.getIpAddress());
     NettyChannelBuilder channelBuilder = NettyChannelBuilder.forAddress(dn
             .getIpAddress(), port).usePlaintext()
@@ -164,20 +160,6 @@ public class XceiverClientGrpc extends XceiverClientSpi {
         XceiverClientProtocolServiceGrpc.newStub(channel);
     asyncStubs.put(dn.getUuid(), asyncStub);
     channels.put(dn.getUuid(), channel);
-  }
-
-  private String getEncodedBlockToken(InetSocketAddress addr)
-      throws IOException{
-    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    OzoneBlockTokenSelector tokenSelector = new OzoneBlockTokenSelector();
-    Text service = SecurityUtil.buildTokenService(addr);
-    Token<OzoneBlockTokenIdentifier> token = tokenSelector.selectToken(
-        service, ugi.getTokens());
-    if (token != null) {
-      token.setService(service);
-      return token.encodeToUrlString();
-    }
-    return null;
   }
 
   /**
@@ -301,8 +283,9 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     ManagedChannel channel = channels.get(dnId);
     // If the channel doesn't exist for this specific datanode or the channel
     // is closed, just reconnect
+    String token = request.getEncodedToken();
     if (!isConnected(channel)) {
-      reconnect(dn);
+      reconnect(dn, token);
     }
 
     final CompletableFuture<ContainerCommandResponseProto> replyFuture =
@@ -347,11 +330,11 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     return new XceiverClientAsyncReply(replyFuture);
   }
 
-  private void reconnect(DatanodeDetails dn)
+  private void reconnect(DatanodeDetails dn, String encodedToken)
       throws IOException {
     ManagedChannel channel;
     try {
-      connectToDatanode(dn);
+      connectToDatanode(dn, encodedToken);
       channel = channels.get(dn.getUuid());
     } catch (Exception e) {
       LOG.error("Error while connecting: ", e);

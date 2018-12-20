@@ -45,7 +45,27 @@ public class OzoneBlockTokenSelector implements
       return null;
     }
     for (Token<? extends TokenIdentifier> token : tokens) {
-      if (OzoneBlockTokenIdentifier.KIND_NAME.equals(token.getKind())) {
+      if (OzoneBlockTokenIdentifier.KIND_NAME.equals(token.getKind())
+          && token.getService().equals(service)) {
+        LOG.trace("Getting token for service:{}", service);
+        return (Token<OzoneBlockTokenIdentifier>) token;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Static method to avoid instantiation.
+   * */
+  @SuppressWarnings("unchecked")
+  public static Token<OzoneBlockTokenIdentifier> selectBlockToken(Text service,
+      Collection<Token<? extends TokenIdentifier>> tokens) {
+    if (service == null) {
+      return null;
+    }
+    for (Token<? extends TokenIdentifier> token : tokens) {
+      if (OzoneBlockTokenIdentifier.KIND_NAME.equals(token.getKind())
+          && token.getService().equals(service)) {
         LOG.trace("Getting token for service:{}", service);
         return (Token<OzoneBlockTokenIdentifier>) token;
       }

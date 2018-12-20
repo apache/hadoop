@@ -22,6 +22,7 @@ import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.BlockTokenSecretProto.AccessModeProto;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -64,7 +65,7 @@ public class TestOzoneBlockTokenSecretManager {
     x509Certificate = KeyStoreTestUtil
         .generateCertificate("CN=OzoneMaster", keyPair, 30, "SHA256withRSA");
     omCertSerialId = x509Certificate.getSerialNumber().toString();
-    secretManager = new OzoneBlockTokenSecretManager(conf,
+    secretManager = new OzoneBlockTokenSecretManager(new SecurityConfig(conf),
         expiryTime, omCertSerialId);
     secretManager.start(keyPair);
   }

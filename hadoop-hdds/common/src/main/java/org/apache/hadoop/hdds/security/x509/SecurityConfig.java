@@ -72,6 +72,9 @@ import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_MAX_DURATION_DEFAU
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_SIGNATURE_ALGO;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_SIGNATURE_ALGO_DEFAULT;
 import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_DATANODE_DIR_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY;
 
 /**
  * A class that deals with all Security related configs in HDDS.
@@ -101,6 +104,7 @@ public class SecurityConfig {
   private String trustStoreFileName;
   private String serverCertChainFileName;
   private String clientCertChainFileName;
+  private final boolean isSecurityEnabled;
 
   /**
    * Constructs a SecurityConfig.
@@ -120,8 +124,8 @@ public class SecurityConfig {
     // HDDS metadata dir and if that is not set, we will use Ozone directory.
     // TODO: We might want to fix this later.
     this.metadatDir = this.configuration.get(HDDS_METADATA_DIR_NAME,
-        configuration.get(OZONE_METADATA_DIRS));
-
+        configuration.get(OZONE_METADATA_DIRS,
+            configuration.get(HDDS_DATANODE_DIR_KEY)));
     Preconditions.checkNotNull(this.metadatDir, "Metadata directory can't be"
         + " null. Please check configs.");
     this.keyDir = this.configuration.get(HDDS_KEY_DIR_NAME,
@@ -164,6 +168,10 @@ public class SecurityConfig {
           HDDS_GRPC_TLS_TEST_CERT, HDDS_GRPC_TLS_TEST_CERT_DEFAULT);
     }
 
+    this.isSecurityEnabled = this.configuration.getBoolean(
+        OZONE_SECURITY_ENABLED_KEY,
+        OZONE_SECURITY_ENABLED_DEFAULT);
+
     // First Startup -- if the provider is null, check for the provider.
     if (SecurityConfig.provider == null) {
       synchronized (SecurityConfig.class) {
@@ -175,6 +183,16 @@ public class SecurityConfig {
         }
       }
     }
+  }
+
+  /**
+   * Returns true if security is enabled for OzoneCluster. This is determined
+   * by value of OZONE_SECURITY_ENABLED_KEY.
+   *
+   * @return true if security is enabled for OzoneCluster.
+   */
+  public boolean isSecurityEnabled() {
+    return isSecurityEnabled;
   }
 
   /**

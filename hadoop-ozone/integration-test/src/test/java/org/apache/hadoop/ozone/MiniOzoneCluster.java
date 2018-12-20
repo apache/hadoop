@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.hdds.scm.protocolPB
@@ -240,6 +241,7 @@ public interface MiniOzoneCluster {
     protected int numOfScmHandlers = 20;
     protected int numOfDatanodes = 1;
     protected boolean  startDataNodes = true;
+    protected CertificateClient certClient;
 
     protected Builder(OzoneConfiguration conf) {
       this.conf = conf;
@@ -262,6 +264,18 @@ public interface MiniOzoneCluster {
 
     public Builder setStartDataNodes(boolean nodes) {
       this.startDataNodes = nodes;
+      return this;
+    }
+
+    /**
+     * Sets the certificate client.
+     *
+     * @param client
+     *
+     * @return MiniOzoneCluster.Builder
+     */
+    public Builder setCertificateClient(CertificateClient client) {
+      this.certClient = client;
       return this;
     }
 

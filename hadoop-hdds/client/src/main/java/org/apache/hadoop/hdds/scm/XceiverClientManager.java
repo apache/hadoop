@@ -27,6 +27,8 @@ import com.google.common.cache.RemovalNotification;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.ozone.OzoneSecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -62,6 +64,7 @@ public class XceiverClientManager implements Closeable {
   private final boolean useRatis;
 
   private static XceiverClientMetrics metrics;
+  private boolean isSecurityEnabled;
   /**
    * Creates a new XceiverClientManager.
    *
@@ -78,6 +81,7 @@ public class XceiverClientManager implements Closeable {
         ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY,
         ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
     this.conf = conf;
+    this.isSecurityEnabled = OzoneSecurityUtil.isSecurityEnabled(conf);
     this.clientCache = CacheBuilder.newBuilder()
         .expireAfterAccess(staleThresholdMs, TimeUnit.MILLISECONDS)
         .maximumSize(maxSize)
@@ -141,14 +145,19 @@ public class XceiverClientManager implements Closeable {
       throws IOException {
     HddsProtos.ReplicationType type = pipeline.getType();
     try {
-      return clientCache.get(pipeline.getId().getId().toString() + type,
-          new Callable<XceiverClientSpi>() {
-          @Override
+      String key = pipeline.getId().getId().toString() + type;
+      // Append user short name to key to prevent a different user
+      // from using same instance of xceiverClient.
+      key = isSecurityEnabled ?
+          key + UserGroupInformation.getCurrentUser().getShortUserName() : key;
+      return clientCache.get(key, new Callable<XceiverClientSpi>() {
+        @Override
           public XceiverClientSpi call() throws Exception {
             XceiverClientSpi client = null;
             switch (type) {
             case RATIS:
               client = XceiverClientRatis.newXceiverClientRatis(pipeline, conf);
+              client.connect();
               break;
             case STAND_ALONE:
               client = new XceiverClientGrpc(pipeline, conf);
@@ -157,7 +166,6 @@ public class XceiverClientManager implements Closeable {
             default:
               throw new IOException("not implemented" + pipeline.getType());
             }
-            client.connect();
             return client;
           }
         });

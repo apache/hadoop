@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.security;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.security.OzoneSecretStore.OzoneManagerSecretState;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier.TokenInfo;
@@ -75,7 +76,8 @@ public class OzoneDelegationTokenSecretManager<T extends OzoneTokenIdentifier>
   public OzoneDelegationTokenSecretManager(OzoneConfiguration conf,
       long tokenMaxLifetime, long tokenRenewInterval,
       long dtRemoverScanInterval, Text service) throws IOException {
-    super(conf, tokenMaxLifetime, tokenRenewInterval, service, LOG);
+    super(new SecurityConfig(conf), tokenMaxLifetime, tokenRenewInterval,
+        service, LOG);
     currentTokens = new ConcurrentHashMap();
     this.tokenRemoverScanInterval = dtRemoverScanInterval;
     this.store = new OzoneSecretStore(conf);

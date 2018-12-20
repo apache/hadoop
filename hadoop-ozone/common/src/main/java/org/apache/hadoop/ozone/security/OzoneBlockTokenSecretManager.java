@@ -19,9 +19,9 @@ package org.apache.hadoop.ozone.security;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.BlockTokenSecretProto.AccessModeProto;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -55,7 +55,7 @@ public class OzoneBlockTokenSecretManager extends
    * @param blockTokenExpirytime token expiry time for expired tokens in
    * milliseconds
    */
-  public OzoneBlockTokenSecretManager(OzoneConfiguration conf,
+  public OzoneBlockTokenSecretManager(SecurityConfig conf,
       long blockTokenExpirytime, String omCertSerialId) {
     super(conf, blockTokenExpirytime, blockTokenExpirytime, SERVICE, LOG);
     this.omCertSerialId = omCertSerialId;
@@ -74,7 +74,8 @@ public class OzoneBlockTokenSecretManager extends
   }
 
   /**
-   * Generate an block token for specified user, blockId.
+   * Generate an block token for specified user, blockId. Service field for
+   * token is set to blockId.
    *
    * @param user
    * @param blockId
@@ -92,8 +93,10 @@ public class OzoneBlockTokenSecretManager extends
       LOG.trace("Issued delegation token -> expiryTime:{},tokenId:{}",
           expiryTime, tokenId);
     }
+    // Pass blockId as service.
     return new Token<>(tokenIdentifier.getBytes(),
-        createPassword(tokenIdentifier), tokenIdentifier.getKind(), SERVICE);
+        createPassword(tokenIdentifier), tokenIdentifier.getKind(),
+        new Text(blockId));
   }
 
   /**

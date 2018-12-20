@@ -88,7 +88,7 @@ public class TestContainerSmallFile {
     XceiverClientSpi client = xceiverClientManager
         .acquireClient(container.getPipeline());
     ContainerProtocolCalls.createContainer(client,
-        container.getContainerInfo().getContainerID(), traceID);
+        container.getContainerInfo().getContainerID(), traceID, null);
 
     BlockID blockID = ContainerTestHelper.getTestBlockID(
         container.getContainerInfo().getContainerID());
@@ -111,7 +111,7 @@ public class TestContainerSmallFile {
     XceiverClientSpi client = xceiverClientManager
         .acquireClient(container.getPipeline());
     ContainerProtocolCalls.createContainer(client,
-        container.getContainerInfo().getContainerID(), traceID);
+        container.getContainerInfo().getContainerID(), traceID, null);
 
     thrown.expect(StorageContainerException.class);
     thrown.expectMessage("Unable to find the block");
@@ -135,7 +135,7 @@ public class TestContainerSmallFile {
     XceiverClientSpi client = xceiverClientManager
         .acquireClient(container.getPipeline());
     ContainerProtocolCalls.createContainer(client,
-        container.getContainerInfo().getContainerID(), traceID);
+        container.getContainerInfo().getContainerID(), traceID, null);
     BlockID blockID = ContainerTestHelper.getTestBlockID(
         container.getContainerInfo().getContainerID());
     ContainerProtocolCalls.writeSmallFile(client, blockID,
@@ -162,7 +162,7 @@ public class TestContainerSmallFile {
     XceiverClientSpi client = xceiverClientManager
         .acquireClient(container.getPipeline());
     ContainerProtocolCalls.createContainer(client,
-        container.getContainerInfo().getContainerID(), traceID);
+        container.getContainerInfo().getContainerID(), traceID, null);
 
     BlockID blockID1 = ContainerTestHelper.getTestBlockID(
         container.getContainerInfo().getContainerID());

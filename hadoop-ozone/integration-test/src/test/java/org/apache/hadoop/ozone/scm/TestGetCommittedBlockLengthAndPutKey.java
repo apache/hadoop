@@ -93,7 +93,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
     Pipeline pipeline = container.getPipeline();
     XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     //create the container
-    ContainerProtocolCalls.createContainer(client, containerID, traceID);
+    ContainerProtocolCalls.createContainer(client, containerID, traceID, null);
 
     BlockID blockID = ContainerTestHelper.getTestBlockID(containerID);
     byte[] data =
@@ -126,11 +126,11 @@ public class TestGetCommittedBlockLengthAndPutKey {
     long containerID = container.getContainerInfo().getContainerID();
     XceiverClientSpi client = xceiverClientManager
         .acquireClient(container.getPipeline());
-    ContainerProtocolCalls.createContainer(client, containerID, traceID);
+    ContainerProtocolCalls.createContainer(client, containerID, traceID, null);
 
     BlockID blockID = ContainerTestHelper.getTestBlockID(containerID);
     // move the container to closed state
-    ContainerProtocolCalls.closeContainer(client, containerID, traceID);
+    ContainerProtocolCalls.closeContainer(client, containerID, traceID, null);
     try {
       // There is no block written inside the container. The request should
       // fail.
@@ -153,7 +153,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
     Pipeline pipeline = container.getPipeline();
     XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     //create the container
-    ContainerProtocolCalls.createContainer(client, containerID, traceID);
+    ContainerProtocolCalls.createContainer(client, containerID, traceID, null);
 
     BlockID blockID = ContainerTestHelper.getTestBlockID(containerID);
     byte[] data =

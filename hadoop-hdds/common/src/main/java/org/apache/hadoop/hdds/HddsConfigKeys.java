@@ -111,6 +111,10 @@ public final class HddsConfigKeys {
   public static final String HDDS_PUBLIC_KEY_FILE_NAME = "hdds.public.key.file"
       + ".name";
   public static final String HDDS_PUBLIC_KEY_FILE_NAME_DEFAULT = "public.pem";
+
+  public static final String HDDS_BLOCK_TOKEN_EXPIRY_TIME =
+      "hdds.block.token.expiry.time";
+  public static final String HDDS_BLOCK_TOKEN_EXPIRY_TIME_DEFAULT = "1d";
   /**
    * Maximum duration of certificates issued by SCM including Self-Signed Roots.
    * The formats accepted are based on the ISO-8601 duration format PnDTnHnMn.nS

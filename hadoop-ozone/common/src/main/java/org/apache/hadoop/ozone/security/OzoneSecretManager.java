@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.security;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
@@ -66,16 +65,16 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
   /**
    * Create a secret manager.
    *
-   * @param conf configuration.
+   * @param secureConf configuration.
    * @param tokenMaxLifetime the maximum lifetime of the delegation tokens in
    * milliseconds
    * @param tokenRenewInterval how often the tokens must be renewed in
    * milliseconds
    * @param service name of service
    */
-  public OzoneSecretManager(OzoneConfiguration conf, long tokenMaxLifetime,
+  public OzoneSecretManager(SecurityConfig secureConf, long tokenMaxLifetime,
       long tokenRenewInterval, Text service, Logger logger) {
-    this.securityConfig = new SecurityConfig(conf);
+    this.securityConfig = secureConf;
     this.tokenMaxLifetime = tokenMaxLifetime;
     this.tokenRenewInterval = tokenRenewInterval;
     currentKeyId = new AtomicInteger();

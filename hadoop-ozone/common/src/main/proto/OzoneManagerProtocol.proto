@@ -411,6 +411,7 @@ message KeyLocation {
     required uint64 length = 4;
     // indicated at which version this block gets created.
     optional uint64 createVersion = 5;
+    optional hadoop.common.TokenProto token = 6;
 }
 
 message KeyLocationList {

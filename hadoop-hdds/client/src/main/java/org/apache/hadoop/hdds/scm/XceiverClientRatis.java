@@ -151,6 +151,12 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   }
 
   @Override
+  public void connect(String encodedToken) throws Exception {
+    throw new UnsupportedOperationException("Block tokens are not " +
+        "implemented for Ratis clients.");
+  }
+
+  @Override
   public void close() {
     final RaftClient c = client.getAndSet(null);
     if (c != null) {

@@ -78,6 +78,12 @@ public abstract class XceiverClientSpi implements Closeable {
    */
   public abstract void connect() throws Exception;
 
+  /**
+   * Connects to the leader in the pipeline using encoded token. To be used
+   * in a secure cluster.
+   */
+  public abstract void connect(String encodedToken) throws Exception;
+
   @Override
   public abstract void close();
 

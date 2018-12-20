@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.hdds.client;
 
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 
 import java.util.Objects;
@@ -43,10 +42,11 @@ public class ContainerBlockID {
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this).
-        append("containerID", containerID).
-        append("localID", localID).
-        toString();
+    return new StringBuffer()
+        .append("conID: ")
+        .append(containerID)
+        .append(" locID: ")
+        .append(localID).toString();
   }
 
   public HddsProtos.ContainerBlockID getProtobuf() {
