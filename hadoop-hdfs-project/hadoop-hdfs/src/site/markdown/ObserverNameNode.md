@@ -23,13 +23,13 @@ Purpose
 This guide provides an overview of the HDFS Observer NameNode feature
 and how to configure/install it in a typical HA-enabled cluster. For a
 detailed technical design overview, please check the doc attached to
-HDFS-12943.
+[HDFS-12943](https://issues.apache.org/jira/browse/HDFS-12943).
 
 Background
 -----------
 
 In a HA-enabled HDFS cluster (for more information, check
-[HDFSHighAvailabilityWithQJM](./HDFSHighAvailabilityWithQJM.md)), there
+[HDFSHighAvailabilityWithQJM](./HDFSHighAvailabilityWithQJM.html)), there
 is a single Active NameNode and one or more Standby NameNode(s). The
 Active NameNode is responsible for serving all client requests, while
 Standby NameNode just keep the up-to-date information regarding the
@@ -102,6 +102,20 @@ few configurations to your **hdfs-site.xml**:
         <property>
           <name>dfs.ha.tail-edits.in-progress</name>
           <value>true</value>
+        </property>
+
+*  **dfs.ha.tail-edits.period** - how often Standby/Observer NameNodes
+   should fetch edits from JournalNodes.
+
+   This determines the staleness of Observer NameNode w.r.t the Active.
+   If too large, RPC time will increase as client requests will wait
+   longer in the RPC queue before Observer tails edit logs and catches
+   up the latest state of Active. The default value is 1min. It is
+   **highly recommend** to configure this to a much lower value.
+
+        <property>
+          <name>dfs.ha.tail-edits.period</name>
+          <value>0ms</value>
         </property>
 
 *  **dfs.journalnode.edit-cache-size.bytes** - the in-memory cache size,
