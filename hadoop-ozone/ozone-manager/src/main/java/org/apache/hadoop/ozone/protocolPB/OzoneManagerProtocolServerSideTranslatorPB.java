@@ -50,6 +50,10 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .CreateBucketResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .CreateKeyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .CreateKeyResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .CreateVolumeRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .CreateVolumeResponse;
@@ -57,6 +61,10 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .DeleteBucketRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .DeleteBucketResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .DeleteKeyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .DeleteKeyResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .DeleteVolumeRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -84,9 +92,9 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .ListVolumeResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .LocateKeyRequest;
+    .LookupKeyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .LocateKeyResponse;
+    .LookupKeyResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .MultipartCommitUploadPartRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -96,6 +104,10 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .MultipartInfoInitiateResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .OMRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .OMResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .RenameKeyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .RenameKeyResponse;
@@ -104,9 +116,9 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .S3BucketInfoResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .S3BucketRequest;
+    .S3CreateBucketRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .S3BucketResponse;
+    .S3CreateBucketResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .S3DeleteBucketRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -129,6 +141,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .SetVolumePropertyResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .Status;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -155,6 +169,154 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
   public OzoneManagerProtocolServerSideTranslatorPB(
       OzoneManagerProtocol impl) {
     this.impl = impl;
+  }
+
+  /**
+   * Submit requests to Ratis server for OM HA implmentation.
+   * TODO: Once HA is implemented fully, we should have only one server side
+   * translator for OM protocol.
+   */
+  @Override
+   public OMResponse submitRequest(RpcController controller,
+      OMRequest request) throws ServiceException {
+    Type cmdType = request.getCmdType();
+
+    OMResponse.Builder responseBuilder = OMResponse.newBuilder()
+        .setCmdType(cmdType);
+    switch (cmdType) {
+    case CreateVolume:
+      CreateVolumeResponse createVolumeResponse = createVolume(
+          request.getCreateVolumeRequest());
+      responseBuilder.setCreateVolumeResponse(createVolumeResponse);
+      break;
+    case SetVolumeProperty:
+      SetVolumePropertyResponse setVolumePropertyResponse = setVolumeProperty(
+          request.getSetVolumePropertyRequest());
+      responseBuilder.setSetVolumePropertyResponse(setVolumePropertyResponse);
+      break;
+    case CheckVolumeAccess:
+      CheckVolumeAccessResponse checkVolumeAccessResponse = checkVolumeAccess(
+          request.getCheckVolumeAccessRequest());
+      responseBuilder.setCheckVolumeAccessResponse(checkVolumeAccessResponse);
+      break;
+    case InfoVolume:
+      InfoVolumeResponse infoVolumeResponse = infoVolume(
+          request.getInfoVolumeRequest());
+      responseBuilder.setInfoVolumeResponse(infoVolumeResponse);
+      break;
+    case DeleteVolume:
+      DeleteVolumeResponse deleteVolumeResponse = deleteVolume(
+          request.getDeleteVolumeRequest());
+      responseBuilder.setDeleteVolumeResponse(deleteVolumeResponse);
+      break;
+    case ListVolume:
+      ListVolumeResponse listVolumeResponse = listVolumes(
+          request.getListVolumeRequest());
+      responseBuilder.setListVolumeResponse(listVolumeResponse);
+      break;
+    case CreateBucket:
+      CreateBucketResponse createBucketResponse = createBucket(
+          request.getCreateBucketRequest());
+      responseBuilder.setCreateBucketResponse(createBucketResponse);
+      break;
+    case InfoBucket:
+      InfoBucketResponse infoBucketResponse = infoBucket(
+          request.getInfoBucketRequest());
+      responseBuilder.setInfoBucketResponse(infoBucketResponse);
+      break;
+    case SetBucketProperty:
+      SetBucketPropertyResponse setBucketPropertyResponse = setBucketProperty(
+          request.getSetBucketPropertyRequest());
+      responseBuilder.setSetBucketPropertyResponse(setBucketPropertyResponse);
+      break;
+    case DeleteBucket:
+      DeleteBucketResponse deleteBucketResponse = deleteBucket(
+          request.getDeleteBucketRequest());
+      responseBuilder.setDeleteBucketResponse(deleteBucketResponse);
+      break;
+    case ListBuckets:
+      ListBucketsResponse listBucketsResponse = listBuckets(
+          request.getListBucketsRequest());
+      responseBuilder.setListBucketsResponse(listBucketsResponse);
+      break;
+    case CreateKey:
+      CreateKeyResponse createKeyResponse = createKey(
+          request.getCreateKeyRequest());
+      responseBuilder.setCreateKeyResponse(createKeyResponse);
+      break;
+    case LookupKey:
+      LookupKeyResponse lookupKeyResponse = lookupKey(
+          request.getLookupKeyRequest());
+      responseBuilder.setLookupKeyResponse(lookupKeyResponse);
+      break;
+    case RenameKey:
+      RenameKeyResponse renameKeyResponse = renameKey(
+          request.getRenameKeyRequest());
+      responseBuilder.setRenameKeyResponse(renameKeyResponse);
+      break;
+    case DeleteKey:
+      DeleteKeyResponse deleteKeyResponse = deleteKey(
+          request.getDeleteKeyRequest());
+      responseBuilder.setDeleteKeyResponse(deleteKeyResponse);
+      break;
+    case ListKeys:
+      ListKeysResponse listKeysResponse = listKeys(
+          request.getListKeysRequest());
+      responseBuilder.setListKeysResponse(listKeysResponse);
+      break;
+    case CommitKey:
+      CommitKeyResponse commitKeyResponse = commitKey(
+          request.getCommitKeyRequest());
+      responseBuilder.setCommitKeyResponse(commitKeyResponse);
+      break;
+    case AllocateBlock:
+      AllocateBlockResponse allocateBlockResponse = allocateBlock(
+          request.getAllocateBlockRequest());
+      responseBuilder.setAllocateBlockResponse(allocateBlockResponse);
+      break;
+    case CreateS3Bucket:
+      S3CreateBucketResponse s3CreateBucketResponse = createS3Bucket(
+          request.getCreateS3BucketRequest());
+      responseBuilder.setCreateS3BucketResponse(s3CreateBucketResponse);
+      break;
+    case DeleteS3Bucket:
+      S3DeleteBucketResponse s3DeleteBucketResponse = deleteS3Bucket(
+          request.getDeleteS3BucketRequest());
+      responseBuilder.setDeleteS3BucketResponse(s3DeleteBucketResponse);
+      break;
+    case InfoS3Bucket:
+      S3BucketInfoResponse s3BucketInfoResponse = getS3Bucketinfo(
+          request.getInfoS3BucketRequest());
+      responseBuilder.setInfoS3BucketResponse(s3BucketInfoResponse);
+      break;
+    case ListS3Buckets:
+      S3ListBucketsResponse s3ListBucketsResponse = listS3Buckets(
+          request.getListS3BucketsRequest());
+      responseBuilder.setListS3BucketsResponse(s3ListBucketsResponse);
+      break;
+    case InitiateMultiPartUpload:
+      MultipartInfoInitiateResponse multipartInfoInitiateResponse =
+          initiateMultiPartUpload(request.getInitiateMultiPartUploadRequest());
+      responseBuilder.setInitiateMultiPartUploadResponse(
+          multipartInfoInitiateResponse);
+      break;
+    case CommitMultiPartUpload:
+      MultipartCommitUploadPartResponse commitUploadPartResponse =
+          commitMultipartUploadPart(request.getCommitMultiPartUploadRequest());
+      responseBuilder.setCommitMultiPartUploadResponse(
+          commitUploadPartResponse);
+      break;
+    case ServiceList:
+      ServiceListResponse serviceListResponse = getServiceList(
+          request.getServiceListRequest());
+      responseBuilder.setServiceListResponse(serviceListResponse);
+      break;
+    default:
+      responseBuilder.setSuccess(false);
+      responseBuilder.setMessage("Unrecognized Command Type: " + cmdType);
+      break;
+    }
+    return responseBuilder.build();
   }
 
   // Convert and exception to corresponding status code
@@ -218,10 +380,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     }
   }
 
-  @Override
-  public CreateVolumeResponse createVolume(
-      RpcController controller, CreateVolumeRequest request)
-      throws ServiceException {
+  private CreateVolumeResponse createVolume(CreateVolumeRequest request) {
     CreateVolumeResponse.Builder resp = CreateVolumeResponse.newBuilder();
     resp.setStatus(Status.OK);
     try {
@@ -232,10 +391,8 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public SetVolumePropertyResponse setVolumeProperty(
-      RpcController controller, SetVolumePropertyRequest request)
-      throws ServiceException {
+  private SetVolumePropertyResponse setVolumeProperty(
+      SetVolumePropertyRequest request) {
     SetVolumePropertyResponse.Builder resp =
         SetVolumePropertyResponse.newBuilder();
     resp.setStatus(Status.OK);
@@ -255,10 +412,8 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public CheckVolumeAccessResponse checkVolumeAccess(
-      RpcController controller, CheckVolumeAccessRequest request)
-      throws ServiceException {
+  private CheckVolumeAccessResponse checkVolumeAccess(
+      CheckVolumeAccessRequest request) {
     CheckVolumeAccessResponse.Builder resp =
         CheckVolumeAccessResponse.newBuilder();
     resp.setStatus(Status.OK);
@@ -276,10 +431,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public InfoVolumeResponse infoVolume(
-      RpcController controller, InfoVolumeRequest request)
-      throws ServiceException {
+  private InfoVolumeResponse infoVolume(InfoVolumeRequest request) {
     InfoVolumeResponse.Builder resp = InfoVolumeResponse.newBuilder();
     resp.setStatus(Status.OK);
     String volume = request.getVolumeName();
@@ -292,10 +444,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public DeleteVolumeResponse deleteVolume(
-      RpcController controller, DeleteVolumeRequest request)
-      throws ServiceException {
+  private DeleteVolumeResponse deleteVolume(DeleteVolumeRequest request) {
     DeleteVolumeResponse.Builder resp = DeleteVolumeResponse.newBuilder();
     resp.setStatus(Status.OK);
     try {
@@ -306,9 +455,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public ListVolumeResponse listVolumes(
-      RpcController controller, ListVolumeRequest request)
+  private ListVolumeResponse listVolumes(ListVolumeRequest request)
       throws ServiceException {
     ListVolumeResponse.Builder resp = ListVolumeResponse.newBuilder();
     List<OmVolumeArgs> result = Lists.newArrayList();
@@ -336,10 +483,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public CreateBucketResponse createBucket(
-      RpcController controller, CreateBucketRequest
-      request) throws ServiceException {
+  private CreateBucketResponse createBucket(CreateBucketRequest request) {
     CreateBucketResponse.Builder resp =
         CreateBucketResponse.newBuilder();
     try {
@@ -352,10 +496,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public InfoBucketResponse infoBucket(
-      RpcController controller, InfoBucketRequest request)
-      throws ServiceException {
+  private InfoBucketResponse infoBucket(InfoBucketRequest request) {
     InfoBucketResponse.Builder resp =
         InfoBucketResponse.newBuilder();
     try {
@@ -369,12 +510,9 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public LocateKeyResponse createKey(
-      RpcController controller, LocateKeyRequest request
-  ) throws ServiceException {
-    LocateKeyResponse.Builder resp =
-        LocateKeyResponse.newBuilder();
+  private CreateKeyResponse createKey(CreateKeyRequest request) {
+    CreateKeyResponse.Builder resp =
+        CreateKeyResponse.newBuilder();
     try {
       KeyArgs keyArgs = request.getKeyArgs();
       HddsProtos.ReplicationType type =
@@ -408,12 +546,9 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public LocateKeyResponse lookupKey(
-      RpcController controller, LocateKeyRequest request
-  ) throws ServiceException {
-    LocateKeyResponse.Builder resp =
-        LocateKeyResponse.newBuilder();
+  private LookupKeyResponse lookupKey(LookupKeyRequest request) {
+    LookupKeyResponse.Builder resp =
+        LookupKeyResponse.newBuilder();
     try {
       KeyArgs keyArgs = request.getKeyArgs();
       OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
@@ -430,10 +565,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public RenameKeyResponse renameKey(
-      RpcController controller, RenameKeyRequest request)
-      throws ServiceException {
+  private RenameKeyResponse renameKey(RenameKeyRequest request) {
     RenameKeyResponse.Builder resp = RenameKeyResponse.newBuilder();
     try {
       KeyArgs keyArgs = request.getKeyArgs();
@@ -450,10 +582,8 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public SetBucketPropertyResponse setBucketProperty(
-      RpcController controller, SetBucketPropertyRequest request)
-      throws ServiceException {
+  private SetBucketPropertyResponse setBucketProperty(
+      SetBucketPropertyRequest request) {
     SetBucketPropertyResponse.Builder resp =
         SetBucketPropertyResponse.newBuilder();
     try {
@@ -466,11 +596,9 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public LocateKeyResponse deleteKey(RpcController controller,
-      LocateKeyRequest request) throws ServiceException {
-    LocateKeyResponse.Builder resp =
-        LocateKeyResponse.newBuilder();
+  private DeleteKeyResponse deleteKey(DeleteKeyRequest request) {
+    DeleteKeyResponse.Builder resp =
+        DeleteKeyResponse.newBuilder();
     try {
       KeyArgs keyArgs = request.getKeyArgs();
       OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
@@ -486,10 +614,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public DeleteBucketResponse deleteBucket(
-      RpcController controller, DeleteBucketRequest request)
-      throws ServiceException {
+  private DeleteBucketResponse deleteBucket(DeleteBucketRequest request) {
     DeleteBucketResponse.Builder resp = DeleteBucketResponse.newBuilder();
     resp.setStatus(Status.OK);
     try {
@@ -500,10 +625,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public ListBucketsResponse listBuckets(
-      RpcController controller, ListBucketsRequest request)
-      throws ServiceException {
+  private ListBucketsResponse listBuckets(ListBucketsRequest request) {
     ListBucketsResponse.Builder resp =
         ListBucketsResponse.newBuilder();
     try {
@@ -522,9 +644,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public ListKeysResponse listKeys(RpcController controller,
-      ListKeysRequest request) throws ServiceException {
+  private ListKeysResponse listKeys(ListKeysRequest request) {
     ListKeysResponse.Builder resp =
         ListKeysResponse.newBuilder();
     try {
@@ -544,9 +664,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public CommitKeyResponse commitKey(RpcController controller,
-      CommitKeyRequest request) throws ServiceException {
+  private CommitKeyResponse commitKey(CommitKeyRequest request) {
     CommitKeyResponse.Builder resp =
         CommitKeyResponse.newBuilder();
     try {
@@ -574,9 +692,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public AllocateBlockResponse allocateBlock(RpcController controller,
-      AllocateBlockRequest request) throws ServiceException {
+  private AllocateBlockResponse allocateBlock(AllocateBlockRequest request) {
     AllocateBlockResponse.Builder resp =
         AllocateBlockResponse.newBuilder();
     try {
@@ -596,9 +712,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public ServiceListResponse getServiceList(RpcController controller,
-      ServiceListRequest request) throws ServiceException {
+  private ServiceListResponse getServiceList(ServiceListRequest request) {
     ServiceListResponse.Builder resp = ServiceListResponse.newBuilder();
     try {
       resp.addAllServiceInfo(impl.getServiceList().stream()
@@ -611,10 +725,8 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public S3BucketResponse createS3Bucket(RpcController controller,
-      S3BucketRequest request) throws ServiceException {
-    S3BucketResponse.Builder resp = S3BucketResponse.newBuilder();
+  private S3CreateBucketResponse createS3Bucket(S3CreateBucketRequest request) {
+    S3CreateBucketResponse.Builder resp = S3CreateBucketResponse.newBuilder();
     try {
       impl.createS3Bucket(request.getUserName(), request.getS3Bucketname());
       resp.setStatus(Status.OK);
@@ -624,10 +736,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public S3DeleteBucketResponse deleteS3Bucket(RpcController controller,
-                                         S3DeleteBucketRequest request) throws
-      ServiceException {
+  private S3DeleteBucketResponse deleteS3Bucket(S3DeleteBucketRequest request) {
     S3DeleteBucketResponse.Builder resp = S3DeleteBucketResponse.newBuilder();
     try {
       impl.deleteS3Bucket(request.getS3BucketName());
@@ -638,9 +747,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public S3BucketInfoResponse getS3Bucketinfo(RpcController controller,
-      S3BucketInfoRequest request) throws ServiceException {
+  private S3BucketInfoResponse getS3Bucketinfo(S3BucketInfoRequest request) {
     S3BucketInfoResponse.Builder resp = S3BucketInfoResponse.newBuilder();
     try {
       resp.setOzoneMapping(
@@ -652,9 +759,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public S3ListBucketsResponse listS3Buckets(RpcController controller,
-                                             S3ListBucketsRequest request) {
+  private S3ListBucketsResponse listS3Buckets(S3ListBucketsRequest request) {
     S3ListBucketsResponse.Builder resp = S3ListBucketsResponse.newBuilder();
     try {
       List<OmBucketInfo> buckets = impl.listS3Buckets(
@@ -672,9 +777,8 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public MultipartInfoInitiateResponse initiateMultiPartUpload(
-      RpcController controller, MultipartInfoInitiateRequest request) {
+  private MultipartInfoInitiateResponse initiateMultiPartUpload(
+      MultipartInfoInitiateRequest request) {
     MultipartInfoInitiateResponse.Builder resp = MultipartInfoInitiateResponse
         .newBuilder();
     try {
@@ -698,9 +802,8 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     return resp.build();
   }
 
-  @Override
-  public MultipartCommitUploadPartResponse commitMultipartUploadPart(
-      RpcController controller, MultipartCommitUploadPartRequest request) {
+  private MultipartCommitUploadPartResponse commitMultipartUploadPart(
+      MultipartCommitUploadPartRequest request) {
     MultipartCommitUploadPartResponse.Builder resp =
         MultipartCommitUploadPartResponse.newBuilder();
     try {
@@ -722,5 +825,4 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     }
     return resp.build();
   }
-
 }

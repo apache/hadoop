@@ -70,6 +70,7 @@ import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolPB;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.logging.log4j.util.Strings;
+import org.apache.ratis.protocol.ClientId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,6 +105,7 @@ public class RpcClient implements ClientProtocol {
   private final long streamBufferMaxSize;
   private final long blockSize;
   private final long watchTimeout;
+  private ClientId clientId = ClientId.randomId();
 
    /**
     * Creates RpcClient instance with the given configuration.
@@ -129,7 +131,7 @@ public class RpcClient implements ClientProtocol {
             RPC.getProxy(OzoneManagerProtocolPB.class, omVersion,
                 omAddress, UserGroupInformation.getCurrentUser(), conf,
                 NetUtils.getDefaultSocketFactory(conf),
-                Client.getRpcTimeout(conf)));
+                Client.getRpcTimeout(conf)), clientId.toString());
 
     long scmVersion =
         RPC.getProtocolVersion(StorageContainerLocationProtocolPB.class);
