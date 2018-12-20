@@ -2157,6 +2157,15 @@
      <value/>
   </property>
 
+  <property>
+    <description>The actual address the web proxy will bind to. If this optional
+     address is set, it overrides only the hostname portion of yarn.web-proxy.address.
+     This is useful for making the web proxy server listen on all interfaces by setting
+     it to 0.0.0.0 </description>
+    <name>yarn.web-proxy.bind-host</name>
+    <value/>
+  </property>
+
   <!-- Applications' Configuration -->
 
   <property>
