@@ -378,6 +378,7 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
         scm = createSCM();
         scm.start();
         om = createOM();
+        om.setCertClient(certClient);
       } catch (AuthenticationException ex) {
         throw new IOException("Unable to build MiniOzoneCluster. ", ex);
       }

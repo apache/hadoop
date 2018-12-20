@@ -109,7 +109,7 @@ public abstract class TestOzoneRpcClientAbstract {
   private static StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
 
-  private static final String SCM_ID = UUID.randomUUID().toString();
+  private static String SCM_ID = UUID.randomUUID().toString();
 
   /**
    * Create a MiniOzoneCluster for testing.
@@ -144,6 +144,33 @@ public abstract class TestOzoneRpcClientAbstract {
     if (cluster != null) {
       cluster.shutdown();
     }
+  }
+
+  public static void setCluster(MiniOzoneCluster cluster) {
+    TestOzoneRpcClientAbstract.cluster = cluster;
+  }
+
+  public static void setOzClient(OzoneClient ozClient) {
+    TestOzoneRpcClientAbstract.ozClient = ozClient;
+  }
+
+  public static void setOzoneManager(OzoneManager ozoneManager){
+    TestOzoneRpcClientAbstract.ozoneManager = ozoneManager;
+  }
+
+  public static void setStorageContainerLocationClient(
+      StorageContainerLocationProtocolClientSideTranslatorPB
+          storageContainerLocationClient) {
+    TestOzoneRpcClientAbstract.storageContainerLocationClient =
+        storageContainerLocationClient;
+  }
+
+  public static void setStore(ObjectStore store) {
+    TestOzoneRpcClientAbstract.store = store;
+  }
+
+  public static void setScmId(String scmId){
+    TestOzoneRpcClientAbstract.SCM_ID = scmId;
   }
 
   @Test

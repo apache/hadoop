@@ -115,7 +115,7 @@ public class ContainerOperationClient implements ScmClient {
   public void createContainer(XceiverClientSpi client,
       long containerId) throws IOException {
     String traceID = UUID.randomUUID().toString();
-    ContainerProtocolCalls.createContainer(client, containerId, traceID);
+    ContainerProtocolCalls.createContainer(client, containerId, traceID, null);
 
     // Let us log this info after we let SCM know that we have completed the
     // creation state.
@@ -260,7 +260,7 @@ public class ContainerOperationClient implements ScmClient {
       client = xceiverClientManager.acquireClient(pipeline);
       String traceID = UUID.randomUUID().toString();
       ContainerProtocolCalls
-          .deleteContainer(client, containerId, force, traceID);
+          .deleteContainer(client, containerId, force, traceID, null);
       storageContainerLocationClient
           .deleteContainer(containerId);
       if (LOG.isDebugEnabled()) {
@@ -310,7 +310,8 @@ public class ContainerOperationClient implements ScmClient {
       client = xceiverClientManager.acquireClient(pipeline);
       String traceID = UUID.randomUUID().toString();
       ReadContainerResponseProto response =
-          ContainerProtocolCalls.readContainer(client, containerID, traceID);
+          ContainerProtocolCalls.readContainer(client, containerID, traceID,
+              null);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Read container {}, machines: {} ", containerID,
             pipeline.getNodes());
@@ -401,7 +402,8 @@ public class ContainerOperationClient implements ScmClient {
           ObjectStageChangeRequestProto.Op.close,
           ObjectStageChangeRequestProto.Stage.begin);
 
-      ContainerProtocolCalls.closeContainer(client, containerId, traceID);
+      ContainerProtocolCalls.closeContainer(client, containerId, traceID,
+          null);
       // Notify SCM to close the container
       storageContainerLocationClient.notifyObjectStageChange(
           ObjectStageChangeRequestProto.Type.container,

@@ -146,7 +146,7 @@ public class TestXceiverClientManager {
     // However container call should succeed because of refcount on the client.
     String traceID1 = "trace" + RandomStringUtils.randomNumeric(4);
     ContainerProtocolCalls.createContainer(client1,
-        container1.getContainerInfo().getContainerID(), traceID1);
+        container1.getContainerInfo().getContainerID(), traceID1, null);
 
     // After releasing the client, this connection should be closed
     // and any container operations should fail
@@ -155,7 +155,7 @@ public class TestXceiverClientManager {
     String expectedMessage = "This channel is not connected.";
     try {
       ContainerProtocolCalls.createContainer(client1,
-          container1.getContainerInfo().getContainerID(), traceID1);
+          container1.getContainerInfo().getContainerID(), traceID1, null);
       Assert.fail("Create container should throw exception on closed"
           + "client");
     } catch (Exception e) {
@@ -206,7 +206,7 @@ public class TestXceiverClientManager {
     String expectedMessage = "This channel is not connected.";
     try {
       ContainerProtocolCalls.createContainer(client1,
-          container1.getContainerInfo().getContainerID(), traceID2);
+          container1.getContainerInfo().getContainerID(), traceID2, null);
       Assert.fail("Create container should throw exception on closed"
           + "client");
     } catch (Exception e) {

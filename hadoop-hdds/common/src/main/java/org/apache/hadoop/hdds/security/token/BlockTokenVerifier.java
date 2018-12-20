@@ -39,6 +39,7 @@ public class BlockTokenVerifier implements TokenVerifier {
 
   private final CertificateClient caClient;
   private final SecurityConfig conf;
+  private static boolean testStub = false;
 
   public BlockTokenVerifier(SecurityConfig conf, CertificateClient caClient) {
     this.conf = conf;
@@ -53,7 +54,7 @@ public class BlockTokenVerifier implements TokenVerifier {
   public UserGroupInformation verify(String user, String tokenStr)
       throws SCMSecurityException {
     if (conf.isGrpcBlockTokenEnabled()) {
-      if (Strings.isNullOrEmpty(tokenStr)) {
+      if (Strings.isNullOrEmpty(tokenStr) || isTestStub()) {
         throw new BlockTokenException("Fail to find any token (empty or " +
             "null.");
       }
@@ -109,5 +110,14 @@ public class BlockTokenVerifier implements TokenVerifier {
     } else {
       return UserGroupInformation.createRemoteUser(user);
     }
+  }
+
+  public static boolean isTestStub() {
+    return testStub;
+  }
+
+  // For testing purpose only.
+  public static void setTestStub(boolean isTestStub) {
+    BlockTokenVerifier.testStub = isTestStub;
   }
 }

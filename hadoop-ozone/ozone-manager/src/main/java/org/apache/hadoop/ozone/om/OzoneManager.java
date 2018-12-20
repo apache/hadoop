@@ -24,8 +24,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.BlockingService;
 import java.security.KeyPair;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -37,6 +39,7 @@ import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolClientSideT
 import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -95,6 +98,7 @@ import org.apache.hadoop.ozone.security.acl.OzoneObj.StoreType;
 import org.apache.hadoop.ozone.security.acl.OzoneObj.ResourceType;
 import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import org.apache.hadoop.ozone.security.acl.RequestContext;
+import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
 import org.apache.hadoop.ozone.security.OzoneDelegationTokenSecretManager;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -180,10 +184,12 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private static final String OM_DAEMON = "om";
   private static boolean securityEnabled = false;
   private static OzoneDelegationTokenSecretManager<OzoneTokenIdentifier>
-      secretManager;
+      delegationTokenMgr;
+  private OzoneBlockTokenSecretManager blockTokenMgr;
   private KeyPair keyPair;
   private CertificateClient certClient;
   private static boolean testSecureOmFlag = false;
+  private final Text omRpcAddressTxt;
   private final OzoneConfiguration configuration;
   private RPC.Server omRpcServer;
   private InetSocketAddress omRpcAddress;
@@ -213,6 +219,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private final boolean isAclEnabled;
   private final IAccessAuthorizer accessAuthorizer;
   private JvmPauseMonitor jvmPauseMonitor;
+  private final SecurityConfig secConfig;
 
   private OzoneManager(OzoneConfiguration conf) throws IOException {
     Preconditions.checkNotNull(conf);
@@ -224,7 +231,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
           ResultCodes.OM_NOT_INITIALIZED);
     }
 
-    if (!testSecureOmFlag) {
+    if (!testSecureOmFlag || !isOzoneSecurityEnabled()) {
       scmContainerClient = getScmContainerClient(configuration);
       // verifies that the SCM info in the OM Version file is correct.
       scmBlockClient = getScmBlockClient(configuration);
@@ -271,7 +278,14 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     BlockingService omService = newReflectiveBlockingService(
         new OzoneManagerProtocolServerSideTranslatorPB(
             this, omRatisClient, omRatisEnabled));
-    secretManager = createSecretManager(configuration);
+    omRpcAddressTxt = new Text(OmUtils.getOmRpcAddress(configuration));
+    secConfig = new SecurityConfig(configuration);
+    if (secConfig.isGrpcBlockTokenEnabled()) {
+      blockTokenMgr = createBlockTokenSecretManager(configuration);
+    }
+    if(secConfig.isSecurityEnabled()){
+      delegationTokenMgr = createDelegationTokenSecretManager(configuration);
+    }
 
     omRpcServer = startRpcServer(configuration, omNodeRpcAddr,
         OzoneManagerProtocolPB.class, omService,
@@ -285,9 +299,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
     s3BucketManager = new S3BucketManagerImpl(configuration, metadataManager,
         volumeManager, bucketManager);
-    keyManager =
-        new KeyManagerImpl(scmBlockClient, metadataManager, configuration,
-            omStorage.getOmId());
+    keyManager = new KeyManagerImpl(scmBlockClient, metadataManager,
+        configuration, omStorage.getOmId(), blockTokenMgr);
 
     shutdownHook = () -> {
       saveOmMetrics();
@@ -368,7 +381,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   }
 
 
-  private OzoneDelegationTokenSecretManager createSecretManager(
+  private OzoneDelegationTokenSecretManager createDelegationTokenSecretManager(
       OzoneConfiguration conf) throws IOException {
     long tokenRemoverScanInterval =
         conf.getTimeDuration(OMConfigKeys.DELEGATION_REMOVER_SCAN_INTERVAL_KEY,
@@ -387,30 +400,78 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         tokenRenewInterval, tokenRemoverScanInterval, omRpcAddressTxt);
   }
 
-  private void stopSecretManager() throws IOException {
-    if (secretManager != null) {
-      LOG.info("Stopping OM secret manager");
-      secretManager.stop();
+  private OzoneBlockTokenSecretManager createBlockTokenSecretManager(
+      OzoneConfiguration conf) {
+
+    long expiryTime = conf.getTimeDuration(
+        HddsConfigKeys.HDDS_BLOCK_TOKEN_EXPIRY_TIME,
+        HddsConfigKeys.HDDS_BLOCK_TOKEN_EXPIRY_TIME_DEFAULT,
+        TimeUnit.MILLISECONDS);
+    // TODO: Pass OM cert serial ID.
+    if (testSecureOmFlag) {
+      return new OzoneBlockTokenSecretManager(secConfig, expiryTime, "1");
+    }
+    Objects.nonNull(certClient);
+    return new OzoneBlockTokenSecretManager(secConfig, expiryTime,
+        certClient.getCertificate(OM_DAEMON).getSerialNumber().toString());
+  }
+
+  private void stopSecretManager() {
+    if (blockTokenMgr != null) {
+      LOG.info("Stopping OM block token manager.");
+      try {
+        blockTokenMgr.stop();
+      } catch (IOException e) {
+        LOG.error("Failed to stop block token manager", e);
+      }
+    }
+
+    if (delegationTokenMgr != null) {
+      LOG.info("Stopping OM delegation token secret manager.");
+      try {
+        delegationTokenMgr.stop();
+      } catch (IOException e) {
+        LOG.error("Failed to stop delegation token manager", e);
+      }
     }
   }
 
-  private void startSecretManager() {
-    if (secretManager != null) {
+  @VisibleForTesting
+  public void startSecretManager() {
+    try {
+      readKeyPair();
+    } catch (OzoneSecurityException e) {
+      LOG.error("Unable to read key pair for OM.", e);
+      throw new RuntimeException(e);
+    }
+    if (secConfig.isGrpcBlockTokenEnabled() && blockTokenMgr != null) {
       try {
-        readKeyPair();
-        LOG.info("Starting OM secret manager");
-        secretManager.start(keyPair);
+        LOG.info("Starting OM block token secret manager");
+        blockTokenMgr.start(keyPair);
       } catch (IOException e) {
-        // Inability to start secret manager
-        // can't be recovered from.
-        LOG.error("Error starting secret manager.", e);
+        // Unable to start secret manager.
+        LOG.error("Error starting block token secret manager.", e);
+        throw new RuntimeException(e);
+      }
+    }
+
+    if (delegationTokenMgr != null) {
+      try {
+        LOG.info("Starting OM delegation token secret manager");
+        delegationTokenMgr.start(keyPair);
+      } catch (IOException e) {
+        // Unable to start secret manager.
+        LOG.error("Error starting delegation token secret manager.", e);
         throw new RuntimeException(e);
       }
     }
   }
 
+  /**
+   * For testing purpose only.
+   * */
   public void setCertClient(CertificateClient certClient) {
-    // TODO: Initialize it in contructor with implementation for certClient.
+    // TODO: Initialize it in constructor with implementation for certClient.
     this.certClient = certClient;
   }
 
@@ -524,7 +585,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         .setPort(addr.getPort())
         .setNumHandlers(handlerCount)
         .setVerbose(false)
-        .setSecretManager(secretManager)
+        .setSecretManager(delegationTokenMgr)
         .build();
 
     DFSUtil.addPBProtocol(conf, protocol, instance, rpcServer);
@@ -844,10 +905,13 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   }
 
   private void startSecretManagerIfNecessary() {
-    boolean shouldRun = shouldUseDelegationTokens() && isOzoneSecurityEnabled();
-    boolean running = secretManager.isRunning();
-    if (shouldRun && !running) {
-      startSecretManager();
+    boolean shouldRun = isOzoneSecurityEnabled();
+    if (shouldRun) {
+      boolean running = delegationTokenMgr.isRunning()
+          && blockTokenMgr.isRunning();
+      if(!running){
+        startSecretManager();
+      }
     }
   }
 
@@ -910,7 +974,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       throw new IOException("Delegation Token can be issued only with "
           + "kerberos or web authentication");
     }
-    if (secretManager == null || !secretManager.isRunning()) {
+    if (delegationTokenMgr == null || !delegationTokenMgr.isRunning()) {
       LOG.warn("trying to get DT with no secret manager running in OM.");
       return null;
     }
@@ -923,7 +987,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       realUser = new Text(ugi.getRealUser().getUserName());
     }
 
-    token = secretManager.createToken(owner, renewer, realUser);
+    token = delegationTokenMgr.createToken(owner, renewer, realUser);
     return token;
   }
 
@@ -946,7 +1010,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
             + "kerberos or web authentication");
       }
       String renewer = getRemoteUser().getShortUserName();
-      expiryTime = secretManager.renewToken(token, renewer);
+      expiryTime = delegationTokenMgr.renewToken(token, renewer);
 
     } catch (AccessControlException ace) {
       final OzoneTokenIdentifier id = OzoneTokenIdentifier.readProtoBuf(
@@ -969,7 +1033,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     OzoneTokenIdentifier id = null;
     try {
       String canceller = getRemoteUser().getUserName();
-      id = secretManager.cancelToken(token, canceller);
+      id = delegationTokenMgr.cancelToken(token, canceller);
       LOG.trace("Delegation token renewed for dt: {}", id);
     } catch (AccessControlException ace) {
       LOG.error("Delegation token renewal failed for dt: {}, cause: {}", id,

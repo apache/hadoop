@@ -172,7 +172,7 @@ public class TestSecureOzoneContainer {
         public Void run() {
           try {
             XceiverClientGrpc client = new XceiverClientGrpc(pipeline, conf);
-            client.connect();
+            client.connect(token.encodeToUrlString());
             createContainerForTesting(client, containerID);
           } catch (Exception e) {
             if (requireBlockToken && hasBlockToken && !blockTokeExpired) {

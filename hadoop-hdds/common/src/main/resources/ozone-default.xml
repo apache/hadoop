@@ -1139,7 +1139,7 @@
   <property>
     <name>ozone.tags.system</name>
     <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,
-      CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY,ACL</value>
+      CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY,ACL,TOKEN</value>
   </property>
 
 
@@ -1645,6 +1645,18 @@
       Directory to store public/private key for SCM CA. This is relative to ozone/hdds meteadata dir.
     </description>
   </property>
+  <property>
+    <name>hdds.block.token.expiry.time</name>
+    <value>1d</value>
+    <tag>OZONE, HDDS, SECURITY, TOKEN</tag>
+    <description>
+      Default value for expiry time of block token. This
+      setting supports multiple time unit suffixes as described in
+      dfs.heartbeat.interval. If no suffix is specified, then milliseconds is
+      assumed.
+    </description>
+  </property>
+
   <property>
     <name>hdds.metadata.dir</name>
     <value/>
