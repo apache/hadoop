@@ -2302,13 +2302,17 @@ public class YarnConfiguration extends Configuration {
   
   /** Keytab for Proxy.*/
   public static final String PROXY_KEYTAB = PROXY_PREFIX + "keytab";
-  
+
   /** The address for the web proxy.*/
   public static final String PROXY_ADDRESS =
     PROXY_PREFIX + "address";
   public static final int DEFAULT_PROXY_PORT = 9099;
   public static final String DEFAULT_PROXY_ADDRESS =
     "0.0.0.0:" + DEFAULT_PROXY_PORT;
+
+  /** Binding address for the web proxy. */
+  public static final String PROXY_BIND_HOST =
+      PROXY_PREFIX + "bind-host";
   
   /**
    * YARN Service Level Authorization
