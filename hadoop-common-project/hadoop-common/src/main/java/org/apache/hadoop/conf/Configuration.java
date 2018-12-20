@@ -2848,10 +2848,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
             // otherwise fallback to a file resource
             // xi:include are treated as inline and retain current source
             URL include = getResource(confInclude);
+            Properties tmpProps = new Properties();
             if (include != null) {
               Resource classpathResource = new Resource(include, name,
                   wrapper.isParserRestricted());
-              loadResource(properties, classpathResource, quiet);
+              loadResource(tmpProps, classpathResource, quiet);
             } else {
               URL url;
               try {
@@ -2873,8 +2874,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
               }
               Resource uriResource = new Resource(url, name,
                   wrapper.isParserRestricted());
-              loadResource(properties, uriResource, quiet);
+              loadResource(tmpProps, uriResource, quiet);
             }
+            toAddTo.putAll(tmpProps);
             break;
           case "fallback":
             fallbackEntered = true;
