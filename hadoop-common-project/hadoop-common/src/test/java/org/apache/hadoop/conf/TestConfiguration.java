@@ -22,6 +22,7 @@ import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -927,6 +928,105 @@ public class TestConfiguration {
     assertEquals("h", conf.get("g"));
     assertEquals("j.fallback", conf.get("i"));
     assertEquals("l.fallback", conf.get("k"));
+    tearDown();
+  }
+
+  // When a resource is parsed as an input stream the first time, included
+  // properties are saved within the config. However, the included properties
+  // are not cached in the resource object. So, if an additional resource is
+  // added after the config is parsed the first time, the config loses the
+  // prperties that were included from the first resource.
+  @Test
+  public void testIncludesFromInputStreamWhenResourceAdded() throws Exception {
+    tearDown();
+
+    // CONFIG includes CONFIG2. CONFIG2 includes CONFIG_FOR_ENUM
+    out=new BufferedWriter(new FileWriter(CONFIG_FOR_ENUM));
+    startConfig();
+    appendProperty("e", "SecondLevelInclude");
+    appendProperty("f", "SecondLevelInclude");
+    endConfig();
+
+    out=new BufferedWriter(new FileWriter(CONFIG2));
+    startConfig();
+    startInclude(CONFIG_FOR_ENUM);
+    endInclude();
+    appendProperty("c","FirstLevelInclude");
+    appendProperty("d","FirstLevelInclude");
+    endConfig();
+
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    startInclude(CONFIG2);
+    endInclude();
+    appendProperty("a", "1");
+    appendProperty("b", "2");
+    endConfig();
+
+    // Add CONFIG as an InputStream resource.
+    File file = new File(CONFIG);
+    BufferedInputStream bis =
+        new BufferedInputStream(new FileInputStream(file));
+    conf.addResource(bis);
+
+    // The first time the conf is parsed, verify that all properties were read
+    // from all levels of includes.
+    assertEquals("1", conf.get("a"));
+    assertEquals("2", conf.get("b"));
+    assertEquals("FirstLevelInclude", conf.get("c"));
+    assertEquals("FirstLevelInclude", conf.get("d"));
+    assertEquals("SecondLevelInclude", conf.get("e"));
+    assertEquals("SecondLevelInclude", conf.get("f"));
+
+    // Add another resource to the conf.
+    out=new BufferedWriter(new FileWriter(CONFIG_MULTI_BYTE));
+    startConfig();
+    appendProperty("g", "3");
+    appendProperty("h", "4");
+    endConfig();
+
+    Path fileResource = new Path(CONFIG_MULTI_BYTE);
+    conf.addResource(fileResource);
+
+    // Verify that all properties were read from all levels of includes the
+    // second time the conf is parsed.
+    assertEquals("1", conf.get("a"));
+    assertEquals("2", conf.get("b"));
+    assertEquals("FirstLevelInclude", conf.get("c"));
+    assertEquals("FirstLevelInclude", conf.get("d"));
+    assertEquals("SecondLevelInclude", conf.get("e"));
+    assertEquals("SecondLevelInclude", conf.get("f"));
+    assertEquals("3", conf.get("g"));
+    assertEquals("4", conf.get("h"));
+
+    tearDown();
+  }
+
+  @Test
+  public void testOrderOfDuplicatePropertiesWithInclude() throws Exception {
+    tearDown();
+
+    // Property "a" is set to different values inside and outside of includes.
+    out=new BufferedWriter(new FileWriter(CONFIG2));
+    startConfig();
+    appendProperty("a", "a-InsideInclude");
+    appendProperty("b", "b-InsideInclude");
+    endConfig();
+
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("a","a-OutsideInclude");
+    startInclude(CONFIG2);
+    endInclude();
+    appendProperty("b","b-OutsideInclude");
+    endConfig();
+
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+
+    assertEquals("a-InsideInclude", conf.get("a"));
+    assertEquals("b-OutsideInclude", conf.get("b"));
+
     tearDown();
   }
 
