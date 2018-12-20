@@ -27,7 +27,12 @@ This document assumes that the reader has a general understanding of general com
 Note: Using the Quorum Journal Manager or Conventional Shared Storage
 ---------------------------------------------------------------------
 
-This guide discusses how to configure and use HDFS HA using the Quorum Journal Manager (QJM) to share edit logs between the Active and Standby NameNodes. For information on how to configure HDFS HA using NFS for shared storage instead of the QJM, please see [this alternative guide.](./HDFSHighAvailabilityWithNFS.html)
+This guide discusses how to configure and use HDFS HA using the Quorum
+Journal Manager (QJM) to share edit logs between the Active and Standby
+NameNodes. For information on how to configure HDFS HA using NFS for
+shared storage instead of the QJM, please see [this alternative
+guide.](./HDFSHighAvailabilityWithNFS.html). For information on how to
+configure HDFS HA with Observer NameNode, please see [this guide](./ObserverNameNode.html)
 
 Background
 ----------
