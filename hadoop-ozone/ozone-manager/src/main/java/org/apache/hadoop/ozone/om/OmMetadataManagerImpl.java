@@ -59,6 +59,8 @@ import org.eclipse.jetty.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.HEAD;
+
 /**
  * Ozone metadata manager interface.
  */
@@ -89,6 +91,8 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
    * |-------------------------------------------------------------------|
    * | s3Table            | s3BucketName -> /volumeName/bucketName       |
    * |-------------------------------------------------------------------|
+   * | s3SecretTable      | s3g_access_key_id -> s3Secret                |
+   * |-------------------------------------------------------------------|
    */
 
   private static final String USER_TABLE = "userTable";
@@ -99,6 +103,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   private static final String OPEN_KEY_TABLE = "openKeyTable";
   private static final String S3_TABLE = "s3Table";
   private static final String MULTIPARTINFO_TABLE = "multipartInfoTable";
+  private static final String S3_SECRET_TABLE = "s3SecretTable";
 
   private DBStore store;
 
@@ -113,6 +118,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   private Table openKeyTable;
   private Table s3Table;
   private Table<String, OmMultipartKeyInfo> multipartInfoTable;
+  private Table s3SecretTable;
 
   public OmMetadataManagerImpl(OzoneConfiguration conf) throws IOException {
     this.lock = new OzoneManagerLock(conf);
@@ -195,6 +201,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
           .addTable(OPEN_KEY_TABLE)
           .addTable(S3_TABLE)
           .addTable(MULTIPARTINFO_TABLE)
+          .addTable(S3_SECRET_TABLE)
           .addCodec(OmKeyInfo.class, new OmKeyInfoCodec())
           .addCodec(OmBucketInfo.class, new OmBucketInfoCodec())
           .addCodec(OmVolumeArgs.class, new OmVolumeArgsCodec())
@@ -233,6 +240,8 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
           String.class, OmMultipartKeyInfo.class);
       checkTableStatus(multipartInfoTable, MULTIPARTINFO_TABLE);
 
+      s3SecretTable = this.store.getTable(S3_SECRET_TABLE);
+      checkTableStatus(s3SecretTable, S3_SECRET_TABLE);
     }
   }
 
@@ -654,5 +663,10 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
       }
     }
     return count;
+  }
+
+  @Override
+  public Table<byte[], byte[]> getS3SecretTable() {
+    return s3SecretTable;
   }
 }
