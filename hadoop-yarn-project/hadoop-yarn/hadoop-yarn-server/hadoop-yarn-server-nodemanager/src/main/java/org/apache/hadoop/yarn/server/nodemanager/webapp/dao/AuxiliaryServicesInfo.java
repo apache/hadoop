@@ -31,7 +31,7 @@ import java.util.Collection;
 @XmlRootElement(name = "services")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class AuxiliaryServicesInfo {
-  private ArrayList<AuxiliaryServiceInfo> services = new
+  private ArrayList<AuxiliaryServiceInfo> service = new
       ArrayList<>();
 
   public AuxiliaryServicesInfo() {
@@ -39,17 +39,17 @@ public class AuxiliaryServicesInfo {
   }
 
   public void add(AuxServiceRecord s) {
-    services.add(new AuxiliaryServiceInfo(s.getName(), s.getVersion(), s
+    service.add(new AuxiliaryServiceInfo(s.getName(), s.getVersion(), s
         .getLaunchTime()));
   }
 
   public void addAll(Collection<AuxServiceRecord> serviceList) {
-    for (AuxServiceRecord service : serviceList) {
-      add(service);
+    for (AuxServiceRecord s : serviceList) {
+      add(s);
     }
   }
 
   public ArrayList<AuxiliaryServiceInfo> getServices() {
-    return services;
+    return service;
   }
 }
