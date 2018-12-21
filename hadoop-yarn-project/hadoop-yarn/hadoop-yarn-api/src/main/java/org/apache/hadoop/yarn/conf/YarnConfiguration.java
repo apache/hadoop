@@ -3669,6 +3669,12 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_NM_NODE_LABELS_RESYNC_INTERVAL =
       2 * 60 * 1000;
 
+  public static final String NM_NODE_ATTRIBUTES_RESYNC_INTERVAL =
+      NM_NODE_ATTRIBUTES_PREFIX + "resync-interval-ms";
+
+  public static final long DEFAULT_NM_NODE_ATTRIBUTES_RESYNC_INTERVAL =
+      2 * 60 * 1000;
+
   // If -1 is configured then no timer task should be created
   public static final String NM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS =
       NM_NODE_LABELS_PROVIDER_PREFIX + "fetch-interval-ms";

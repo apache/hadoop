@@ -3007,6 +3007,15 @@
 
   <property>
     <description>
+      Interval at which NM syncs its node attributes with RM. NM will send its loaded
+      attributes every x intervals configured, along with heartbeat to RM.
+    </description>
+    <name>yarn.nodemanager.node-attributes.resync-interval-ms</name>
+    <value>120000</value>
+  </property>
+
+  <property>
+    <description>
     Timeout in seconds for YARN node graceful decommission.
     This is the maximal time to wait for running containers and applications to complete
     before transition a DECOMMISSIONING node into DECOMMISSIONED.

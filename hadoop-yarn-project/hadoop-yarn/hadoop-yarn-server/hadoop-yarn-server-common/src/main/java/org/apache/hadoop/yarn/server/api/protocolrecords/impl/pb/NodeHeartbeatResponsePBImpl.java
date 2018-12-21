@@ -788,6 +788,21 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
   }
 
   @Override
+  public boolean getAreNodeAttributesAcceptedByRM() {
+    NodeHeartbeatResponseProtoOrBuilder p =
+        this.viaProto ? this.proto : this.builder;
+    return p.getAreNodeAttributesAcceptedByRM();
+  }
+
+  @Override
+  public void setAreNodeAttributesAcceptedByRM(
+      boolean areNodeAttributesAcceptedByRM) {
+    maybeInitBuilder();
+    this.builder
+        .setAreNodeAttributesAcceptedByRM(areNodeAttributesAcceptedByRM);
+  }
+
+  @Override
   public List<SignalContainerRequest> getContainersToSignalList() {
     initContainersToSignal();
     return this.containersToSignal;

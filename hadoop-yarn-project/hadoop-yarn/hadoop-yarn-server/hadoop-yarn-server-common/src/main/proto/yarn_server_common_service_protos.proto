@@ -72,6 +72,7 @@ message RegisterNodeManagerRequestProto {
   optional NodeLabelsProto nodeLabels = 8;
   optional ResourceProto physicalResource = 9;
   repeated LogAggregationReportProto log_aggregation_reports_for_apps = 10;
+  optional NodeAttributesProto nodeAttributes = 11;
 }
 
 message RegisterNodeManagerResponseProto {
@@ -83,6 +84,7 @@ message RegisterNodeManagerResponseProto {
   optional string rm_version = 6;
   optional bool areNodeLabelsAcceptedByRM = 7 [default = false];
   optional ResourceProto resource = 8;
+  optional bool areNodeAttributesAcceptedByRM = 9 [default = false];
 }
 
 message UnRegisterNodeManagerRequestProto {
@@ -128,6 +130,7 @@ message NodeHeartbeatResponseProto {
   repeated AppCollectorDataProto app_collectors = 16;
   // to be used in place of containers_to_decrease
   repeated ContainerProto containers_to_update = 17;
+  optional bool areNodeAttributesAcceptedByRM = 18 [default = false];
 }
 
 message ContainerQueuingLimitProto {

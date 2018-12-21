@@ -30,6 +30,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -377,6 +378,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       throws YarnException, IOException {
     RegisterNodeManagerResponse regNMResponse;
     Set<NodeLabel> nodeLabels = nodeLabelsHandler.getNodeLabelsForRegistration();
+    Set<NodeAttribute> nodeAttributes =
+        nodeAttributesHandler.getNodeAttributesForRegistration();
 
     // Synchronize NM-RM registration with
     // ContainerManagerImpl#increaseContainersResource and
@@ -387,7 +390,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       RegisterNodeManagerRequest request =
           RegisterNodeManagerRequest.newInstance(nodeId, httpPort, totalResource,
               nodeManagerVersionId, containerReports, getRunningApplications(),
-              nodeLabels, physicalResource);
+              nodeLabels, physicalResource, nodeAttributes);
 
       if (containerReports != null) {
         LOG.info("Registering with RM using containers :" + containerReports);
@@ -473,6 +476,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
     successfullRegistrationMsg.append(nodeLabelsHandler
         .verifyRMRegistrationResponseForNodeLabels(regNMResponse));
+    successfullRegistrationMsg.append(nodeAttributesHandler
+        .verifyRMRegistrationResponseForNodeAttributes(regNMResponse));
 
     LOG.info(successfullRegistrationMsg.toString());
   }
@@ -875,34 +880,254 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
    */
   private NMNodeAttributesHandler createNMNodeAttributesHandler(
       NodeAttributesProvider provider) {
-    return provider == null ? null :
-        new NMDistributedNodeAttributesHandler(nodeAttributesProvider);
+    if (provider == null) {
+      return new NMCentralizedNodeAttributesHandler();
+    } else {
+      return new NMDistributedNodeAttributesHandler(provider, this.getConfig());
+    }
+  }
+
+  private static abstract class CachedNodeDescriptorHandler<T> {
+    private final long resyncInterval;
+    private final T defaultValue;
+    private T previousValue;
+    private long lastSendMills = 0L;
+    private boolean isValueSented;
+
+    CachedNodeDescriptorHandler(T defaultValue,
+        long resyncInterval) {
+      this.defaultValue = defaultValue;
+      this.resyncInterval = resyncInterval;
+    }
+
+    public abstract T getValueFromProvider();
+
+    public T getValueForRegistration() {
+      T value = getValueFromProvider();
+      if (defaultValue != null) {
+        value = (null == value) ? defaultValue : value;
+      }
+      previousValue = value;
+      try {
+        validate(value);
+      } catch (IOException e) {
+        value = null;
+      }
+      return value;
+    }
+
+    public T getValueForHeartbeat() {
+      T value = getValueFromProvider();
+      // if the provider returns null then consider default value are set
+      if (defaultValue != null) {
+        value = (null == value) ? defaultValue : value;
+      }
+      // take some action only on modification of value
+      boolean isValueUpdated = isValueUpdated(value);
+
+      isValueSented = false;
+      // When value updated or resync time is elapsed will send again in
+      // heartbeat.
+      if (isValueUpdated || isResyncIntervalElapsed()) {
+        previousValue = value;
+        try {
+          validate(value);
+          isValueSented = true;
+        } catch (IOException e) {
+          // take previous value to replace invalid value, so that invalid
+          // value are not verified for every HB, and send empty set
+          // to RM to have same value which was earlier set.
+          value = null;
+        } finally {
+          // Set last send time in heartbeat
+          lastSendMills = System.currentTimeMillis();
+        }
+      } else {
+        // if value have not changed then no need to send
+        value = null;
+      }
+      return value;
+    }
+
+    /**
+     * This method checks resync interval is elapsed or not.
+     */
+    public boolean isResyncIntervalElapsed() {
+      long elapsedTimeSinceLastSync =
+          System.currentTimeMillis() - lastSendMills;
+      if (elapsedTimeSinceLastSync > resyncInterval) {
+        return true;
+      }
+      return false;
+    }
+
+    protected abstract void validate(T value) throws IOException;
+
+    protected abstract boolean isValueUpdated(T value);
+
+    public long getResyncInterval() {
+      return resyncInterval;
+    }
+
+    public T getDefaultValue() {
+      return defaultValue;
+    }
+
+    public T getPreviousValue() {
+      return previousValue;
+    }
+
+    public long getLastSendMills() {
+      return lastSendMills;
+    }
+
+    public boolean isValueSented() {
+      return isValueSented;
+    }
   }
 
   private interface NMNodeAttributesHandler {
 
     /**
+     * validates nodeAttributes From Provider and returns it to the caller. Also
+     * ensures that if provider returns null then empty set is considered
+     */
+    Set<NodeAttribute> getNodeAttributesForRegistration();
+
+    /**
      * @return the node attributes of this node manager.
      */
     Set<NodeAttribute> getNodeAttributesForHeartbeat();
+
+    /**
+     * @return RMRegistration Success message and on failure will log
+     *         independently and returns empty string
+     */
+    String verifyRMRegistrationResponseForNodeAttributes(
+        RegisterNodeManagerResponse regNMResponse);
+
+    /**
+     * check whether if updated attributes sent to RM was accepted or not.
+     * @param response
+     */
+    void verifyRMHeartbeatResponseForNodeAttributes(
+        NodeHeartbeatResponse response);
+  }
+
+
+  /**
+   * In centralized configuration, NM need not send Node attributes or process
+   * the response.
+   */
+  private static class NMCentralizedNodeAttributesHandler
+      implements NMNodeAttributesHandler {
+    @Override
+    public Set<NodeAttribute> getNodeAttributesForHeartbeat() {
+      return null;
+    }
+
+    @Override
+    public Set<NodeAttribute> getNodeAttributesForRegistration() {
+      return null;
+    }
+
+    @Override
+    public void verifyRMHeartbeatResponseForNodeAttributes(
+        NodeHeartbeatResponse response) {
+    }
+
+    @Override
+    public String verifyRMRegistrationResponseForNodeAttributes(
+        RegisterNodeManagerResponse regNMResponse) {
+      return "";
+    }
   }
 
   private static class NMDistributedNodeAttributesHandler
+      extends CachedNodeDescriptorHandler<Set<NodeAttribute>>
       implements NMNodeAttributesHandler {
 
     private final NodeAttributesProvider attributesProvider;
 
     protected NMDistributedNodeAttributesHandler(
-        NodeAttributesProvider provider) {
+        NodeAttributesProvider provider, Configuration conf) {
+      super(Collections.unmodifiableSet(new HashSet<>(0)),
+          conf.getLong(YarnConfiguration.NM_NODE_ATTRIBUTES_RESYNC_INTERVAL,
+              YarnConfiguration.DEFAULT_NM_NODE_ATTRIBUTES_RESYNC_INTERVAL));
       this.attributesProvider = provider;
     }
 
     @Override
+    public Set<NodeAttribute> getNodeAttributesForRegistration() {
+      return getValueForRegistration();
+    }
+
+    @Override
     public Set<NodeAttribute> getNodeAttributesForHeartbeat() {
+      return getValueForHeartbeat();
+    }
+
+    @Override
+    public Set<NodeAttribute> getValueFromProvider() {
       return attributesProvider.getDescriptors();
     }
-  }
 
+    @Override
+    protected void validate(Set<NodeAttribute> nodeAttributes)
+        throws IOException {
+      try {
+        NodeLabelUtil.validateNodeAttributes(nodeAttributes);
+      } catch (IOException e) {
+        LOG.error(
+            "Invalid node attribute(s) from Provider : " + e.getMessage());
+        throw e;
+      }
+    }
+
+    @Override
+    protected boolean isValueUpdated(Set<NodeAttribute> value) {
+      return !NodeLabelUtil.isNodeAttributesEquals(getPreviousValue(), value);
+    }
+
+    @Override
+    public String verifyRMRegistrationResponseForNodeAttributes(
+        RegisterNodeManagerResponse regNMResponse) {
+      StringBuilder successfulNodeAttributesRegistrationMsg =
+          new StringBuilder();
+      if (regNMResponse.getAreNodeAttributesAcceptedByRM()) {
+        successfulNodeAttributesRegistrationMsg
+            .append(" and with following Node attribute(s) : {")
+            .append(getPreviousValue()).append("}");
+      } else {
+        // case where provider is set but RM did not accept the node attributes
+        String errorMsgFromRM = regNMResponse.getDiagnosticsMessage();
+        LOG.error("Node attributes sent from NM while registration were"
+            + " rejected by RM. " + ((errorMsgFromRM == null) ?
+            "Seems like RM is configured with Centralized Attributes." :
+            "And with message " + regNMResponse.getDiagnosticsMessage()));
+      }
+      return successfulNodeAttributesRegistrationMsg.toString();
+    }
+
+    @Override
+    public void verifyRMHeartbeatResponseForNodeAttributes(
+        NodeHeartbeatResponse response) {
+      if (isValueSented()) {
+        if (response.getAreNodeAttributesAcceptedByRM()) {
+          if(LOG.isDebugEnabled()){
+            LOG.debug("Node attributes {" + getPreviousValue()
+                + "} were Accepted by RM ");
+          }
+        } else {
+          // case where updated node attributes from NodeAttributesProvider
+          // is sent to RM and RM rejected the attributes
+          LOG.error("NM node attributes {" + getPreviousValue()
+              + "} were not accepted by RM and message from RM : " + response
+              .getDiagnosticsMessage());
+        }
+      }
+    }
+  }
 
   private static interface NMNodeLabelsHandler {
     /**
@@ -963,33 +1188,22 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   }
 
   private static class NMDistributedNodeLabelsHandler
+      extends CachedNodeDescriptorHandler<Set<NodeLabel>>
       implements NMNodeLabelsHandler {
+
     private NMDistributedNodeLabelsHandler(
         NodeLabelsProvider nodeLabelsProvider, Configuration conf) {
-      this.nodeLabelsProvider = nodeLabelsProvider;
-      this.resyncInterval =
+      super(CommonNodeLabelsManager.EMPTY_NODELABEL_SET,
           conf.getLong(YarnConfiguration.NM_NODE_LABELS_RESYNC_INTERVAL,
-              YarnConfiguration.DEFAULT_NM_NODE_LABELS_RESYNC_INTERVAL);
+              YarnConfiguration.DEFAULT_NM_NODE_LABELS_RESYNC_INTERVAL));
+      this.nodeLabelsProvider = nodeLabelsProvider;
     }
 
     private final NodeLabelsProvider nodeLabelsProvider;
-    private Set<NodeLabel> previousNodeLabels;
-    private boolean areLabelsSentToRM;
-    private long lastNodeLabelSendMills = 0L;
-    private final long resyncInterval;
 
     @Override
     public Set<NodeLabel> getNodeLabelsForRegistration() {
-      Set<NodeLabel> nodeLabels = nodeLabelsProvider.getDescriptors();
-      nodeLabels = (null == nodeLabels)
-          ? CommonNodeLabelsManager.EMPTY_NODELABEL_SET : nodeLabels;
-      previousNodeLabels = nodeLabels;
-      try {
-        validateNodeLabels(nodeLabels);
-      } catch (IOException e) {
-        nodeLabels = null;
-      }
-      return nodeLabels;
+      return getValueForRegistration();
     }
 
     @Override
@@ -999,7 +1213,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       if (regNMResponse.getAreNodeLabelsAcceptedByRM()) {
         successfulNodeLabelsRegistrationMsg
             .append(" and with following Node label(s) : {")
-            .append(StringUtils.join(",", previousNodeLabels)).append("}");
+            .append(StringUtils.join(",", getPreviousValue())).append("}");
       } else {
         // case where provider is set but RM did not accept the Node Labels
         String errorMsgFromRM = regNMResponse.getDiagnosticsMessage();
@@ -1014,50 +1228,14 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
     @Override
     public Set<NodeLabel> getNodeLabelsForHeartbeat() {
-      Set<NodeLabel> nodeLabelsForHeartbeat =
-          nodeLabelsProvider.getDescriptors();
-      // if the provider returns null then consider empty labels are set
-      nodeLabelsForHeartbeat = (nodeLabelsForHeartbeat == null)
-          ? CommonNodeLabelsManager.EMPTY_NODELABEL_SET
-          : nodeLabelsForHeartbeat;
-      // take some action only on modification of labels
-      boolean areNodeLabelsUpdated =
-          nodeLabelsForHeartbeat.size() != previousNodeLabels.size()
-              || !previousNodeLabels.containsAll(nodeLabelsForHeartbeat);
-
-      areLabelsSentToRM = false;
-      // When nodelabels elapsed or resync time is elapsed will send again in
-      // heartbeat.
-      if (areNodeLabelsUpdated || isResyncIntervalElapsed()) {
-        previousNodeLabels = nodeLabelsForHeartbeat;
-        try {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Labels from provider: "
-                + StringUtils.join(",", previousNodeLabels));
-          }
-          validateNodeLabels(nodeLabelsForHeartbeat);
-          areLabelsSentToRM = true;
-        } catch (IOException e) {
-          // set previous node labels to invalid set, so that invalid
-          // labels are not verified for every HB, and send empty set
-          // to RM to have same nodeLabels which was earlier set.
-          nodeLabelsForHeartbeat = null;
-        } finally {
-          // Set last send time in heartbeat
-          lastNodeLabelSendMills = System.currentTimeMillis();
-        }
-      } else {
-        // if nodelabels have not changed then no need to send
-        nodeLabelsForHeartbeat = null;
-      }
-      return nodeLabelsForHeartbeat;
+      return getValueForHeartbeat();
     }
 
-    private void validateNodeLabels(Set<NodeLabel> nodeLabelsForHeartbeat)
+    protected void validate(Set<NodeLabel> nodeLabels)
         throws IOException {
-      Iterator<NodeLabel> iterator = nodeLabelsForHeartbeat.iterator();
+      Iterator<NodeLabel> iterator = nodeLabels.iterator();
       boolean hasInvalidLabel = false;
-      StringBuilder errorMsg = new StringBuilder("");
+      StringBuilder errorMsg = new StringBuilder();
       while (iterator.hasNext()) {
         try {
           NodeLabelUtil
@@ -1074,33 +1252,31 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       }
     }
 
-    /*
-     * This method checks resync interval is elapsed or not.
-     */
-    public boolean isResyncIntervalElapsed() {
-      long elapsedTimeSinceLastSync =
-          System.currentTimeMillis() - lastNodeLabelSendMills;
-      if (elapsedTimeSinceLastSync > resyncInterval) {
-        return true;
-      }
-      return false;
+    @Override
+    public Set<NodeLabel> getValueFromProvider() {
+      return this.nodeLabelsProvider.getDescriptors();
+    }
+
+    @Override
+    protected boolean isValueUpdated(Set<NodeLabel> value) {
+      return !Objects.equals(value, getPreviousValue());
     }
 
     @Override
     public void verifyRMHeartbeatResponseForNodeLabels(
         NodeHeartbeatResponse response) {
-      if (areLabelsSentToRM) {
+      if (isValueSented()) {
         if (response.getAreNodeLabelsAcceptedByRM()) {
           if(LOG.isDebugEnabled()){
             LOG.debug(
-                "Node Labels {" + StringUtils.join(",", previousNodeLabels)
+                "Node Labels {" + StringUtils.join(",", getPreviousValue())
                     + "} were Accepted by RM ");
           }
         } else {
           // case where updated labels from NodeLabelsProvider is sent to RM and
           // RM rejected the labels
           LOG.error(
-              "NM node labels {" + StringUtils.join(",", previousNodeLabels)
+              "NM node labels {" + StringUtils.join(",", getPreviousValue())
                   + "} were not accepted by RM and message from RM : "
                   + response.getDiagnosticsMessage());
         }
@@ -1120,7 +1296,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           Set<NodeLabel> nodeLabelsForHeartbeat =
               nodeLabelsHandler.getNodeLabelsForHeartbeat();
           Set<NodeAttribute> nodeAttributesForHeartbeat =
-              nodeAttributesHandler == null ? null :
                   nodeAttributesHandler.getNodeAttributesForHeartbeat();
           NodeStatus nodeStatus = getNodeStatus(lastHeartbeatID);
           NodeHeartbeatRequest request =
@@ -1153,6 +1328,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           if (!handleShutdownOrResyncCommand(response)) {
             nodeLabelsHandler.verifyRMHeartbeatResponseForNodeLabels(
                 response);
+            nodeAttributesHandler
+                .verifyRMHeartbeatResponseForNodeAttributes(response);
 
             // Explicitly put this method after checking the resync
             // response. We

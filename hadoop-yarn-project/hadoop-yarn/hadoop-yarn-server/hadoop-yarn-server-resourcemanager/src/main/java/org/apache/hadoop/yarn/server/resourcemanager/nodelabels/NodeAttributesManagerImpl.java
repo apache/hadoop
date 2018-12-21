@@ -221,10 +221,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
 
       // Notify RM
       if (rmContext != null && rmContext.getDispatcher() != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Updated NodeAttribute event to RM:"
-              + newNodeToAttributesMap.values());
-        }
+        LOG.info("Updated NodeAttribute event to RM:"
+            + newNodeToAttributesMap);
         rmContext.getDispatcher().getEventHandler().handle(
             new NodeAttributesUpdateSchedulerEvent(newNodeToAttributesMap));
       }
@@ -306,9 +304,11 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
       for (NodeAttribute attribute : nodeToAttrMappingEntry.getValue()) {
         NodeAttributeKey attributeKey = attribute.getAttributeKey();
         String attributeName = attributeKey.getAttributeName().trim();
-        NodeLabelUtil.checkAndThrowLabelName(attributeName);
+        NodeLabelUtil.checkAndThrowAttributeName(attributeName);
         NodeLabelUtil
             .checkAndThrowAttributePrefix(attributeKey.getAttributePrefix());
+        NodeLabelUtil
+            .checkAndThrowAttributeValue(attribute.getAttributeValue());
 
         // ensure trimmed values are set back
         attributeKey.setAttributeName(attributeName);
@@ -747,8 +747,7 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
 
     // Notify RM
     if (rmContext != null && rmContext.getDispatcher() != null) {
-      LOG.info("Updated NodeAttribute event to RM:" + newNodeToAttributesMap
-          .values());
+      LOG.info("Updated NodeAttribute event to RM:" + newNodeToAttributesMap);
       rmContext.getDispatcher().getEventHandler().handle(
           new NodeAttributesUpdateSchedulerEvent(newNodeToAttributesMap));
     }
