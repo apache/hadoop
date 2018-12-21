@@ -156,7 +156,7 @@ public class ObserverReadProxyProvider<T extends ClientProtocol>
     super(conf, uri, xface, factory);
     this.failoverProxy = failoverProxy;
     this.alignmentContext = new ClientGSIContext();
-    ((ClientHAProxyFactory<T>) factory).setAlignmentContext(alignmentContext);
+    factory.setAlignmentContext(alignmentContext);
 
     // Don't bother configuring the number of retries and such on the retry
     // policy since it is mainly only used for determining whether or not an
