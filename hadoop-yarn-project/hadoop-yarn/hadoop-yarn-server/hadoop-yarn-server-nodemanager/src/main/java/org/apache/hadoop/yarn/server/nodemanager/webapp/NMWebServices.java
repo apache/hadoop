@@ -567,9 +567,6 @@ public class NMWebServices {
       HttpServletRequest hsr) {
     init();
     AuxiliaryServicesInfo auxiliaryServices = new AuxiliaryServicesInfo();
-    if (!hasAdminAccess(hsr)) {
-      return auxiliaryServices;
-    }
     Collection<AuxServiceRecord> loadedServices = nmContext.getAuxServices()
         .getServiceRecords();
     if (loadedServices != null) {
