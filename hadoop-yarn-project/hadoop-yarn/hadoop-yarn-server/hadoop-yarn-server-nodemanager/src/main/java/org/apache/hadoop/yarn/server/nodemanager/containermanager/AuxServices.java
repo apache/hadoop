@@ -41,6 +41,7 @@ import java.util.regex.Pattern;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceFile;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecord;
@@ -481,6 +482,35 @@ public class AuxServices extends AbstractService
     loadManifest(getConfig(), true);
   }
 
+  private boolean checkManifestPermissions(FileStatus status) throws
+      IOException {
+    if ((status.getPermission().toShort() & 0022) != 0) {
+      LOG.error("Manifest file and parents must not be writable by group or " +
+          "others. The current Permission of " + status.getPath() + " is " +
+          status.getPermission());
+      return false;
+    }
+    Path parent = status.getPath().getParent();
+    if (parent == null) {
+      return true;
+    }
+    return checkManifestPermissions(manifestFS.getFileStatus(parent));
+  }
+
+  private boolean checkManifestOwnerAndPermissions(FileStatus status) throws
+      IOException {
+    AccessControlList yarnAdminAcl = new AccessControlList(getConfig().get(
+        YarnConfiguration.YARN_ADMIN_ACL,
+        YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
+    if (!yarnAdminAcl.isUserAllowed(
+        UserGroupInformation.createRemoteUser(status.getOwner()))) {
+      LOG.error("Manifest must be owned by YARN admin: " + manifest);
+      return false;
+    }
+
+    return checkManifestPermissions(status);
+  }
+
   /**
    * Reads the manifest file if it is configured, exists, and has not been
    * modified since the last read.
@@ -494,14 +524,20 @@ public class AuxServices extends AbstractService
       return null;
     }
     if (!manifestFS.exists(manifest)) {
-      LOG.info("Manifest file " + manifest + " doesn't exist");
+      LOG.warn("Manifest file " + manifest + " doesn't exist");
       return null;
     }
     FileStatus status;
     try {
       status = manifestFS.getFileStatus(manifest);
     } catch (FileNotFoundException e) {
-      LOG.info("Manifest file " + manifest + " doesn't exist");
+      LOG.warn("Manifest file " + manifest + " doesn't exist");
+      return null;
+    }
+    if (!status.isFile()) {
+      LOG.warn("Manifest file " + manifest + " is not a file");
+    }
+    if (!checkManifestOwnerAndPermissions(status)) {
       return null;
     }
     if (status.getModificationTime() == manifestModifyTS) {
@@ -721,6 +757,9 @@ public class AuxServices extends AbstractService
       serviceMap.clear();
       serviceRecordMap.clear();
       serviceMetaData.clear();
+      if (manifestFS != null) {
+        manifestFS.close();
+      }
       if (manifestReloadTimer != null) {
         manifestReloadTimer.cancel();
       }

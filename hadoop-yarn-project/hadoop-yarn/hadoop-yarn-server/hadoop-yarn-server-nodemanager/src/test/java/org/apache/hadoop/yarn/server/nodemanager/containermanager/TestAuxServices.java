@@ -34,9 +34,11 @@ import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecord;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecords;
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -833,5 +835,54 @@ public class TestAuxServices {
     }
 
     aux.stop();
+  }
+
+  @Test
+  public void testAuxServicesManifestPermissions() throws IOException {
+    Assume.assumeTrue(useManifest);
+    Configuration conf = getABConf();
+    FileSystem fs = FileSystem.get(conf);
+    fs.setPermission(new Path(manifest.getAbsolutePath()), FsPermission
+        .createImmutable((short) 0777));
+    AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+        MOCK_CONTEXT, MOCK_DEL_SERVICE);
+    aux.init(conf);
+    assertEquals(0, aux.getServices().size());
+
+    fs.setPermission(new Path(manifest.getAbsolutePath()), FsPermission
+        .createImmutable((short) 0775));
+    aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+        MOCK_CONTEXT, MOCK_DEL_SERVICE);
+    aux.init(conf);
+    assertEquals(0, aux.getServices().size());
+
+    fs.setPermission(new Path(manifest.getAbsolutePath()), FsPermission
+        .createImmutable((short) 0755));
+    fs.setPermission(new Path(rootDir.getAbsolutePath()), FsPermission
+        .createImmutable((short) 0775));
+    aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+        MOCK_CONTEXT, MOCK_DEL_SERVICE);
+    aux.init(conf);
+    assertEquals(0, aux.getServices().size());
+
+    fs.setPermission(new Path(rootDir.getAbsolutePath()), FsPermission
+        .createImmutable((short) 0755));
+    aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+        MOCK_CONTEXT, MOCK_DEL_SERVICE);
+    aux.init(conf);
+    assertEquals(2, aux.getServices().size());
+
+    conf.set(YarnConfiguration.YARN_ADMIN_ACL, "");
+    aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+        MOCK_CONTEXT, MOCK_DEL_SERVICE);
+    aux.init(conf);
+    assertEquals(0, aux.getServices().size());
+
+    conf.set(YarnConfiguration.YARN_ADMIN_ACL, UserGroupInformation
+        .getCurrentUser().getShortUserName());
+    aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+        MOCK_CONTEXT, MOCK_DEL_SERVICE);
+    aux.init(conf);
+    assertEquals(2, aux.getServices().size());
   }
 }
