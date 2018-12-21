@@ -118,4 +118,9 @@ public abstract class NodeHeartbeatResponse {
 
   public abstract void addAllContainersToDecrease(
       Collection<Container> containersToDecrease);
+
+  public abstract boolean getAreNodeAttributesAcceptedByRM();
+
+  public abstract void setAreNodeAttributesAcceptedByRM(
+      boolean areNodeAttributesAcceptedByRM);
 }
