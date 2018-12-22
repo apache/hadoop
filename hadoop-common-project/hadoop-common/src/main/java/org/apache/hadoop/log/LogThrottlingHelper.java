@@ -273,6 +273,22 @@ public class LogThrottlingHelper {
   }
 
   /**
+   * Return the summary information for given index.
+   *
+   * @param recorderName The name of the recorder.
+   * @param idx The index value.
+   * @return The summary information.
+   */
+  public SummaryStatistics getCurrentStats(String recorderName, int idx) {
+    LoggingAction currentLog = currentLogs.get(recorderName);
+    if (currentLog != null) {
+      return currentLog.getStats(idx);
+    }
+
+    return null;
+  }
+
+  /**
    * A standard log action which keeps track of all of the values which have
    * been logged. This is also used for internal bookkeeping via its private
    * fields and methods; it will maintain whether or not it is ready to be
