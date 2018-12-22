@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.service.component.instance;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -65,6 +67,8 @@ import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -783,6 +787,15 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       if (existingIP != null && newIP.equals(existingIP)) {
         doRegistryUpdate = false;
       }
+    }
+    ObjectMapper mapper = new ObjectMapper();
+    try {
+      Map<String, List<Map<String, String>>> ports = null;
+      ports = mapper.readValue(status.getExposedPorts(),
+          new TypeReference<Map<String, List<Map<String, String>>>>(){});
+      container.setExposedPorts(ports);
+    } catch (IOException e) {
+      LOG.warn("Unable to process container ports mapping: {}", e);
     }
     setContainerStatus(status.getContainerId(), status);
     if (containerRec != null && timelineServiceEnabled && doRegistryUpdate) {

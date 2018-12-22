@@ -35,6 +35,7 @@ export default DS.JSONAPISerializer.extend({
         host: info.HOSTNAME,
         node: info.BARE_HOST,
         ipAddr: info.IP,
+        exposedPorts: info.EXPOSED_PORTS,
         exitStatusCode: info.EXIT_STATUS_CODE
       }
     };

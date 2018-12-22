@@ -52,6 +52,7 @@ public class ContainerStatusPBImpl extends ContainerStatus {
   private ContainerId containerId = null;
   private static final String HOST = "HOST";
   private static final String IPS = "IPS";
+  private static final String PORTS = "PORTS";
   private Map<String, String> containerAttributes = new HashMap<>();
 
 
@@ -98,6 +99,7 @@ public class ContainerStatusPBImpl extends ContainerStatus {
     sb.append("ExitStatus: ").append(getExitStatus()).append(", ");
     sb.append("IP: ").append(getIPs()).append(", ");
     sb.append("Host: ").append(getHost()).append(", ");
+    sb.append("ExposedPorts: ").append(getExposedPorts()).append(", ");
     sb.append("ContainerSubState: ").append(getContainerSubState());
     sb.append("]");
     return sb.toString();
@@ -316,6 +318,25 @@ public class ContainerStatusPBImpl extends ContainerStatus {
       return;
     }
     containerAttributes.put(IPS, StringUtils.join(",", ips));
+  }
+
+  @Override
+  public synchronized String getExposedPorts() {
+    if (!containerAttributes.containsKey(PORTS)) {
+      initContainerAttributes();
+    }
+    String ports = containerAttributes.get((PORTS));
+    return ports == null ? "" : ports;
+  }
+
+  @Override
+  public synchronized void setExposedPorts(String ports) {
+    maybeInitBuilder();
+    if (ports == null) {
+      containerAttributes.remove(PORTS);
+      return;
+    }
+    containerAttributes.put(PORTS, ports);
   }
 
   @Override

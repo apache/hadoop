@@ -193,6 +193,10 @@ public class MockContainer implements Container {
   }
 
   @Override
+  public void setExposedPorts(String ports) {
+  }
+
+  @Override
   public boolean isRunning() {
     return false;
   }

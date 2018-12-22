@@ -984,6 +984,9 @@ public class ApplicationCLI extends YarnCLI {
       containerReportStr.print("\tNodeHttpAddress : ");
       containerReportStr.println(containerReport.getNodeHttpAddress() == null
           ? "N/A" : containerReport.getNodeHttpAddress());
+      containerReportStr.print("\tExposedPorts : ");
+      containerReportStr.println(containerReport.getExposedPorts() == null
+          ? "N/A" : containerReport.getExposedPorts());
       containerReportStr.print("\tDiagnostics : ");
       containerReportStr.print(containerReport.getDiagnosticsInfo());
     } else {

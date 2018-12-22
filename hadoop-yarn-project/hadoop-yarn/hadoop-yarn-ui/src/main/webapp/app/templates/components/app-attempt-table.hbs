@@ -56,6 +56,12 @@
       <td title="{{attempt.nodeHttpAddress}}"><a href="{{attempt.masterNodeURL}}">{{attempt.nodeHttpAddress}}</a></td>
     </tr>
     {{/if}}
+    {{#if attempt.exposedPorts}}
+    <tr>
+      <td>Exposed Ports</td>
+      <td title="{{attempt.exposedPorts}}">{{attempt.exposedPorts}}</td>
+    </tr>
+    {{/if}}
     {{#if attempt.logsLink}}
     <tr>
       <td>Log</td>

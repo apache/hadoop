@@ -202,6 +202,13 @@ public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
     return runtime.getIpAndHost(container);
   }
 
+  @Override
+  public String getExposedPorts(Container container)
+      throws ContainerExecutionException {
+    LinuxContainerRuntime runtime = pickContainerRuntime(container);
+    return runtime.getExposedPorts(container);
+  }
+
   private boolean isPluggableRuntime(String runtimeType) {
     for (LinuxContainerRuntimeConstants.RuntimeType type :
         LinuxContainerRuntimeConstants.RuntimeType.values()) {

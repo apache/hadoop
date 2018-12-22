@@ -1340,8 +1340,8 @@ public class ContainerManagerImpl extends CompositeService implements
       if (isResourceChange) {
         increasedContainer =
             org.apache.hadoop.yarn.api.records.Container.newInstance(
-                containerId, null, null, targetResource, null, null,
-                currentExecType);
+                containerId, null, null, targetResource, null,
+                null, currentExecType);
         if (context.getIncreasedContainers().putIfAbsent(containerId,
             increasedContainer) != null){
           throw RPCUtil.getRemoteException("Container " + containerId.toString()
@@ -1510,6 +1510,8 @@ public class ContainerManagerImpl extends CompositeService implements
     sb.append(status.getIPs()).append(", ");
     sb.append("Host: ");
     sb.append(status.getHost()).append(", ");
+    sb.append("ExposedPorts: ");
+    sb.append(status.getExposedPorts()).append(", ");
     sb.append("ContainerSubState: ");
     sb.append(status.getContainerSubState());
     sb.append("]");

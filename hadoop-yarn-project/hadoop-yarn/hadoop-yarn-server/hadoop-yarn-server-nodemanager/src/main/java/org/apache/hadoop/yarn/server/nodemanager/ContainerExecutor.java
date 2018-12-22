@@ -930,4 +930,9 @@ public abstract class ContainerExecutor implements Configurable {
     }
     return symLinks;
   }
+
+  public String getExposedPorts(Container container)
+      throws ContainerExecutionException {
+    return null;
+  }
 }

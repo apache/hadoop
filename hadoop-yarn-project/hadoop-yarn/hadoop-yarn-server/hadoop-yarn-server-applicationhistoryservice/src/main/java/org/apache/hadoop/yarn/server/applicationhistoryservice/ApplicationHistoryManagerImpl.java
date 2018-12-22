@@ -209,13 +209,16 @@ public class ApplicationHistoryManagerImpl extends AbstractService implements
         containerHistory.getContainerId().toString(),
         containerHistory.getContainerId().toString(),
         user);
-    return ContainerReport.newInstance(containerHistory.getContainerId(),
-      containerHistory.getAllocatedResource(),
-      containerHistory.getAssignedNode(), containerHistory.getPriority(),
-      containerHistory.getStartTime(), containerHistory.getFinishTime(),
-      containerHistory.getDiagnosticsInfo(), logUrl,
-      containerHistory.getContainerExitStatus(),
-      containerHistory.getContainerState(), null);
+    ContainerReport container = ContainerReport.newInstance(
+        containerHistory.getContainerId(),
+        containerHistory.getAllocatedResource(),
+        containerHistory.getAssignedNode(), containerHistory.getPriority(),
+        containerHistory.getStartTime(), containerHistory.getFinishTime(),
+        containerHistory.getDiagnosticsInfo(), logUrl,
+        containerHistory.getContainerExitStatus(),
+        containerHistory.getContainerState(), null);
+    container.setExposedPorts(containerHistory.getExposedPorts());
+    return container;
   }
 
   @Override

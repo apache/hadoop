@@ -209,6 +209,11 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
   }
 
   @Override
+  public String getExposedPorts(Container container) {
+    return null;
+  }
+
+  @Override
   public IOStreamPair execContainer(ContainerExecContext ctx)
       throws ContainerExecutionException {
     IOStreamPair output;

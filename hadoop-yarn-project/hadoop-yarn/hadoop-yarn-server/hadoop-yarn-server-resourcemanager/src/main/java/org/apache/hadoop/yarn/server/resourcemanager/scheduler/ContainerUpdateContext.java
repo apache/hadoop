@@ -320,6 +320,8 @@ public class ContainerUpdateContext {
         updatedResource,
         existingRMContainer.getContainer().getPriority(), null,
         tempContainer.getExecutionType());
+    newContainer.setExposedPorts(
+        existingRMContainer.getContainer().getExposedPorts());
     newContainer.setAllocationRequestId(
         existingRMContainer.getContainer().getAllocationRequestId());
     newContainer.setVersion(existingRMContainer.getContainer().getVersion());

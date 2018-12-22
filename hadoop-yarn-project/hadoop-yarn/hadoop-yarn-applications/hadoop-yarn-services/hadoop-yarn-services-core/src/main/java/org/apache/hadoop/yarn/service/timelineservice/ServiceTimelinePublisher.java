@@ -208,6 +208,8 @@ public class ServiceTimelinePublisher extends CompositeService {
     // create info keys
     Map<String, Object> entityInfos = new HashMap<String, Object>();
     entityInfos.put(ServiceTimelineMetricsConstants.IP, container.getIp());
+    entityInfos.put(ServiceTimelineMetricsConstants.EXPOSED_PORTS,
+        container.getExposedPorts());
     entityInfos.put(ServiceTimelineMetricsConstants.HOSTNAME,
         container.getHostname());
     entityInfos.put(ServiceTimelineMetricsConstants.STATE,

@@ -1038,4 +1038,9 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     }
   }
 
+  @Override
+  public String getExposedPorts(Container container)
+      throws ContainerExecutionException {
+    return linuxContainerRuntime.getExposedPorts(container);
+  }
 }

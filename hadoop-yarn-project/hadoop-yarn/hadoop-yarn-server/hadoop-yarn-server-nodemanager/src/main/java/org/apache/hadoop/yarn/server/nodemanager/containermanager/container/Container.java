@@ -81,6 +81,8 @@ public interface Container extends EventHandler<ContainerEvent> {
 
   void setIpAndHost(String[] ipAndHost);
 
+  void setExposedPorts(String ports);
+
   String toString();
 
   Priority getPriority();
