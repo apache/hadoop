@@ -1405,7 +1405,8 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     }
   }
 
-  private void mergeAllocateResponse(AllocateResponse homeResponse,
+  @VisibleForTesting
+  protected void mergeAllocateResponse(AllocateResponse homeResponse,
       AllocateResponse otherResponse, SubClusterId otherRMAddress) {
 
     if (otherResponse.getAMRMToken() != null) {
@@ -1467,7 +1468,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
       if (par1 != null && par2 != null) {
         par1.getResourceRequest().addAll(par2.getResourceRequest());
-        par2.getContainers().addAll(par2.getContainers());
+        par1.getContainers().addAll(par2.getContainers());
       }
 
       StrictPreemptionContract spar1 = homePreempMessage.getStrictContract();
