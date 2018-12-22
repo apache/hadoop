@@ -345,7 +345,7 @@ class Ls extends FsCommand {
       int maxEC = 0;
       for (PathData item : items) {
           ContentSummary contentSummary = item.fs.getContentSummary(item.path);
-          maxEC=maxLength(maxEC,contentSummary.getErasureCodingPolicy().length());
+        maxEC = maxLength(maxEC, contentSummary.getErasureCodingPolicy());
       }
       fmt.append((maxEC > 0) ? "%-" + maxEC + "s " : "%s");
     }
