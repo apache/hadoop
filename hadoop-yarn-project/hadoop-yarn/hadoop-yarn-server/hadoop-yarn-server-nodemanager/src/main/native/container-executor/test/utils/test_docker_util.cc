@@ -171,14 +171,20 @@ namespace ContainerExecutor {
             "  format={{range(.NetworkSettings.Networks)}}{{.IPAddress}},{{end}}{{.Config.Hostname}}\n"
             "  name=container_e1_12312_11111_02_000001",
         "inspect --format={{range(.NetworkSettings.Networks)}}{{.IPAddress}},{{end}}{{.Config.Hostname}} container_e1_12312_11111_02_000001"));
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n  docker-command=inspect\n  format={{json .NetworkSettings.Ports}}\n  name=container_e1_12312_11111_02_000001",
+        "inspect --format={{json .NetworkSettings.Ports}} container_e1_12312_11111_02_000001"));
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n  docker-command=inspect\n  format={{.State.Status}},{{.Config.StopSignal}}\n  name=container_e1_12312_11111_02_000001",
+        "inspect --format={{.State.Status}},{{.Config.StopSignal}} container_e1_12312_11111_02_000001"));
 
     std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
         "[docker-command-execution]\n  docker-command=run\n  format='{{.State.Status}}'",
         static_cast<int>(INCORRECT_COMMAND)));
-    bad_file_cmd_vec.push_back(
-        std::make_pair<std::string, int>("docker-command=inspect\n  format='{{.State.Status}}'",
-                                         static_cast<int>(INCORRECT_COMMAND)));
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "docker-command=inspect\n  format='{{.State.Status}}'",
+        static_cast<int>(INCORRECT_COMMAND)));
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
         "[docker-command-execution]\n  docker-command=inspect\n  format={{.State.Status}}\n  name=",
         static_cast<int>(INVALID_DOCKER_CONTAINER_NAME)));
@@ -193,6 +199,12 @@ namespace ContainerExecutor {
         static_cast<int>(INVALID_DOCKER_INSPECT_FORMAT)));
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
         "[docker-command-execution]\n  docker-command=inspect\n format={{.IPAddress}}\n  name=container_e1_12312_11111_02_000001",
+        static_cast<int>(INVALID_DOCKER_INSPECT_FORMAT)));
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=inspect\n format={{.NetworkSettings.Ports}}\n  name=container_e1_12312_11111_02_000001",
+        static_cast<int>(INVALID_DOCKER_INSPECT_FORMAT)));
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=inspect\n format={{.Config.StopSignal}}\n  name=container_e1_12312_11111_02_000001",
         static_cast<int>(INVALID_DOCKER_INSPECT_FORMAT)));
 
     run_docker_command_test(file_cmd_vec, bad_file_cmd_vec, get_docker_inspect_command);

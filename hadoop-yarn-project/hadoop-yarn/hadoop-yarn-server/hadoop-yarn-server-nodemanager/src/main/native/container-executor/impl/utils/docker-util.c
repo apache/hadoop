@@ -568,9 +568,10 @@ cleanup:
 }
 
 int get_docker_inspect_command(const char *command_file, const struct configuration *conf, args *args) {
-  const char *valid_format_strings[] = { "{{.State.Status}}",
+  const char *valid_format_strings[] = {"{{.State.Status}}",
                                 "{{range(.NetworkSettings.Networks)}}{{.IPAddress}},{{end}}{{.Config.Hostname}}",
-                                 "{{.State.Status}},{{.Config.StopSignal}}"};
+                                "{{json .NetworkSettings.Ports}}",
+                                "{{.State.Status}},{{.Config.StopSignal}}"};
   int ret = 0, i = 0, valid_format = 0;
   char *format = NULL, *container_name = NULL, *tmp_buffer = NULL;
   struct configuration command_config = {0, NULL};
@@ -590,7 +591,8 @@ int get_docker_inspect_command(const char *command_file, const struct configurat
     ret = INVALID_DOCKER_INSPECT_FORMAT;
     goto free_and_exit;
   }
-  for (i = 0; i < 3; ++i) {
+
+  for (i = 0; i < 4; ++i) {
     if (strcmp(format, valid_format_strings[i]) == 0) {
       valid_format = 1;
       break;

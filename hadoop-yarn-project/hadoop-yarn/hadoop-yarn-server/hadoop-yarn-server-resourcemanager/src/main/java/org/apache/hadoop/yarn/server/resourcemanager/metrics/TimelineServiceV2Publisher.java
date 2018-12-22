@@ -399,6 +399,9 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
       entityInfo.put(ContainerMetricsConstants.ALLOCATED_PRIORITY_INFO,
           container.getAllocatedPriority().getPriority());
       entityInfo.put(
+          ContainerMetricsConstants.ALLOCATED_EXPOSED_PORTS,
+          container.getExposedPorts());
+      entityInfo.put(
           ContainerMetricsConstants.ALLOCATED_HOST_HTTP_ADDRESS_INFO,
           container.getNodeHttpAddress());
       entity.setInfo(entityInfo);

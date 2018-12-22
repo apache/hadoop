@@ -96,11 +96,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.eclipse.jetty.util.log.Log;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
 public class TestYarnCLI {
-
+  private static final Logger LOG = LoggerFactory.getLogger(TestYarnCLI.class);
   private YarnClient client = mock(YarnClient.class);
   ByteArrayOutputStream sysOutStream;
   private PrintStream sysOut;
@@ -277,10 +280,17 @@ public class TestYarnCLI {
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         applicationId, 1);
     ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
+    Map<String, List<Map<String, String>>> ports = new HashMap<>();
+    ArrayList<Map<String, String>> list = new ArrayList();
+    HashMap<String, String> map = new HashMap();
+    map.put("abc", "123");
+    list.add(map);
+    ports.put("192.168.0.1", list);
     ContainerReport container = ContainerReport.newInstance(containerId, null,
         NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
         "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE,
         "http://" + NodeId.newInstance("host", 2345).toString());
+    container.setExposedPorts(ports);
     when(client.getContainerReport(any(ContainerId.class))).thenReturn(
         container);
     int result = cli.run(new String[] { "container", "-status",
@@ -298,9 +308,11 @@ public class TestYarnCLI {
     pw.println("\tLOG-URL : logURL");
     pw.println("\tHost : host:1234");
     pw.println("\tNodeHttpAddress : http://host:2345");
+    pw.println("\tExposedPorts : {\"192.168.0.1\":[{\"abc\":\"123\"}]}");
     pw.println("\tDiagnostics : diagnosticInfo");
     pw.close();
     String appReportStr = baos.toString("UTF-8");
+
     Assert.assertEquals(appReportStr, sysOutStream.toString());
     verify(sysOut, times(1)).println(isA(String.class));
   }
@@ -315,18 +327,22 @@ public class TestYarnCLI {
     ContainerId containerId1 = ContainerId.newContainerId(attemptId, 2);
     ContainerId containerId2 = ContainerId.newContainerId(attemptId, 3);
     long time1=1234,time2=5678;
+    Map<String, List<Map<String, String>>> ports = new HashMap<>();
     ContainerReport container = ContainerReport.newInstance(containerId, null,
         NodeId.newInstance("host", 1234), Priority.UNDEFINED, time1, time2,
         "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE,
         "http://" + NodeId.newInstance("host", 2345).toString());
+    container.setExposedPorts(ports);
     ContainerReport container1 = ContainerReport.newInstance(containerId1, null,
         NodeId.newInstance("host", 1234), Priority.UNDEFINED, time1, time2,
         "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE,
         "http://" + NodeId.newInstance("host", 2345).toString());
+    container1.setExposedPorts(ports);
     ContainerReport container2 = ContainerReport.newInstance(containerId2, null,
         NodeId.newInstance("host", 1234), Priority.UNDEFINED, time1,0,
         "diagnosticInfo", "", 0, ContainerState.RUNNING,
         "http://" + NodeId.newInstance("host", 2345).toString());
+    container2.setExposedPorts(ports);
     List<ContainerReport> reports = new ArrayList<ContainerReport>();
     reports.add(container);
     reports.add(container1);

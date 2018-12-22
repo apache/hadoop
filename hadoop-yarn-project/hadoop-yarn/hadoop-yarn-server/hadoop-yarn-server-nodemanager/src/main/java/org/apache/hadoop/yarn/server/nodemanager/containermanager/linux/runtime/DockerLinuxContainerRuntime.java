@@ -1268,7 +1268,23 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     return null;
   }
 
-
+  @Override
+  public String getExposedPorts(Container container)
+      throws ContainerExecutionException {
+    ContainerId containerId = container.getContainerId();
+    String containerIdStr = containerId.toString();
+    DockerInspectCommand inspectCommand =
+        new DockerInspectCommand(containerIdStr).getExposedPorts();
+    try {
+      String output = executeDockerInspect(containerId, inspectCommand);
+      return output;
+    } catch (ContainerExecutionException e) {
+      LOG.error("Error when writing command to temp file", e);
+    } catch (PrivilegedOperationException e) {
+      LOG.error("Error when executing command.", e);
+    }
+    return null;
+  }
 
   private PrivilegedOperation buildLaunchOp(ContainerRuntimeContext ctx,
       String commandFile, DockerCommand command) {

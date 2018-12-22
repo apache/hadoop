@@ -3642,7 +3642,7 @@ public class TestRMContainerAllocator {
           : RMContainerAllocator.PRIORITY_MAP;
       Container container = Container.newInstance(containerId,
           NodeId.newInstance(nodeName, 1234), nodeName + ":5678",
-        Resource.newInstance(1024, 1), priority, null);
+          Resource.newInstance(1024, 1), priority, null);
       containersToAllocate.add(container);
       return containerId;
     }

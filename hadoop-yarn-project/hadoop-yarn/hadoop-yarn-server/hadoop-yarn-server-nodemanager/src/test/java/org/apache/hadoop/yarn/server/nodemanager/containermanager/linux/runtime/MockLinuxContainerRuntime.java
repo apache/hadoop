@@ -63,6 +63,11 @@ public class MockLinuxContainerRuntime implements LinuxContainerRuntime {
   }
 
   @Override
+  public String getExposedPorts(Container container) {
+    return "";
+  }
+
+  @Override
   public IOStreamPair execContainer(ContainerExecContext ctx)
       throws ContainerExecutionException {
     return null;
