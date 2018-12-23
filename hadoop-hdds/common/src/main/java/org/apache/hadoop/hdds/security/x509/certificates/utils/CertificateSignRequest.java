@@ -34,14 +34,19 @@ import org.bouncycastle.asn1.x509.Extensions;
 import org.bouncycastle.asn1.x509.GeneralName;
 import org.bouncycastle.asn1.x509.GeneralNames;
 import org.bouncycastle.asn1.x509.KeyUsage;
+import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.bouncycastle.pkcs.PKCS10CertificationRequestBuilder;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder;
+import org.bouncycastle.util.io.pem.PemObject;
+import org.bouncycastle.util.io.pem.PemReader;
 
 import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.List;
@@ -70,7 +75,7 @@ public final class CertificateSignRequest {
    * @param extensions - CSR extensions
    */
   private CertificateSignRequest(String subject, String scmID, String clusterID,
-      KeyPair keyPair, SecurityConfig config, Extensions extensions) {
+                                 KeyPair keyPair, SecurityConfig config, Extensions extensions) {
     this.subject = subject;
     this.clusterID = clusterID;
     this.scmID = scmID;
@@ -96,6 +101,35 @@ public final class CertificateSignRequest {
           PKCSObjectIdentifiers.pkcs_9_at_extensionRequest, extensions);
     }
     return p10Builder.build(contentSigner);
+  }
+  public static String getEncodedString(PKCS10CertificationRequest request)
+      throws IOException {
+    PemObject pemObject =
+        new PemObject("CERTIFICATE REQUEST", request.getEncoded());
+    StringWriter str = new StringWriter();
+    try(JcaPEMWriter pemWriter = new JcaPEMWriter(str)) {
+      pemWriter.writeObject(pemObject);
+    }
+    return str.toString();
+  }
+
+
+  /**
+   * Gets a CertificateRequest Object from PEM encoded CSR.
+   *
+   * @param csr - PEM Encoded Certificate Request String.
+   * @return PKCS10CertificationRequest
+   * @throws IOException - On Error.
+   */
+  public static PKCS10CertificationRequest getCertificationRequest(String csr)
+      throws IOException {
+    try (PemReader reader = new PemReader(new StringReader(csr))) {
+      PemObject pemObject = reader.readPemObject();
+      if(pemObject.getContent() == null) {
+        throw new SCMSecurityException("Invalid Certificate signing request");
+      }
+      return new PKCS10CertificationRequest(pemObject.getContent());
+    }
   }
 
   /**
@@ -144,12 +178,6 @@ public final class CertificateSignRequest {
       return this;
     }
 
-    public CertificateSignRequest.Builder addRfc822Name(String name) {
-      Preconditions.checkNotNull(name, "Rfc822Name cannot be null");
-      this.addAltName(GeneralName.rfc822Name, name);
-      return this;
-    }
-
     // IP address is subject to change which is optional for now.
     public CertificateSignRequest.Builder addIpAddress(String ip) {
       Preconditions.checkNotNull(ip, "Ip address cannot be null");
@@ -186,7 +214,7 @@ public final class CertificateSignRequest {
         IOException {
       if (altNames != null) {
         return Optional.of(new Extension(Extension.subjectAlternativeName,
-            true, new DEROctetString(new GeneralNames(
+            false, new DEROctetString(new GeneralNames(
             altNames.toArray(new GeneralName[altNames.size()])))));
       }
       return Optional.empty();
@@ -202,7 +230,9 @@ public final class CertificateSignRequest {
       List<Extension> extensions = new ArrayList<>();
 
       // Add basic extension
-      extensions.add(getBasicExtension());
+      if(ca) {
+        extensions.add(getBasicExtension());
+      }
 
       // Add key usage extension
       extensions.add(getKeyUsageExtension());

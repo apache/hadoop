@@ -47,6 +47,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -209,10 +210,22 @@ public class KeyCodec {
       throws InvalidKeySpecException, NoSuchAlgorithmException, IOException {
     PKCS8EncodedKeySpec encodedKeySpec = readKey(basePath, privateKeyFileName);
     final KeyFactory keyFactory =
-        KeyFactory.getInstance(securityConfig.getProvider());
-    final PrivateKey privateKey =
+        KeyFactory.getInstance(securityConfig.getKeyAlgo());
+    return
         keyFactory.generatePrivate(encodedKeySpec);
-    return privateKey;
+  }
+
+  /**
+   * Read the Public Key using defaults.
+   * @return PublicKey.
+   * @throws InvalidKeySpecException - On Error.
+   * @throws NoSuchAlgorithmException - On Error.
+   * @throws IOException - On Error.
+   */
+  public PublicKey readPublicKey() throws InvalidKeySpecException,
+      NoSuchAlgorithmException, IOException {
+    return readPublicKey(this.location.toAbsolutePath(),
+        securityConfig.getPublicKeyFileName());
   }
 
   /**
@@ -229,11 +242,27 @@ public class KeyCodec {
       throws NoSuchAlgorithmException, InvalidKeySpecException, IOException {
     PKCS8EncodedKeySpec encodedKeySpec = readKey(basePath, publicKeyFileName);
     final KeyFactory keyFactory =
-        KeyFactory.getInstance(securityConfig.getProvider());
-    final PublicKey publicKey =
-        keyFactory.generatePublic(encodedKeySpec);
-    return publicKey;
+        KeyFactory.getInstance(securityConfig.getKeyAlgo());
+    return
+        keyFactory.generatePublic(
+            new X509EncodedKeySpec(encodedKeySpec.getEncoded()));
+
   }
+
+
+  /**
+   * Returns the private key  using defaults.
+   * @return PrivateKey.
+   * @throws InvalidKeySpecException - On Error.
+   * @throws NoSuchAlgorithmException - On Error.
+   * @throws IOException - On Error.
+   */
+  public PrivateKey readPrivateKey() throws InvalidKeySpecException,
+      NoSuchAlgorithmException, IOException {
+    return readPrivateKey(this.location.toAbsolutePath(),
+        securityConfig.getPrivateKeyFileName());
+  }
+
 
   /**
    * Helper function that actually writes data to the files.
@@ -246,7 +275,7 @@ public class KeyCodec {
    * @throws IOException - On I/O failure.
    */
   private synchronized void writeKey(Path basePath, KeyPair keyPair,
-      String privateKeyFileName, String publicKeyFileName, boolean force)
+                                     String privateKeyFileName, String publicKeyFileName, boolean force)
       throws IOException {
     checkPreconditions(basePath);
 
@@ -282,7 +311,7 @@ public class KeyCodec {
    * @throws IOException - On I/O failure.
    */
   private void checkKeyFile(File privateKeyFile, boolean force,
-      File publicKeyFile) throws IOException {
+                            File publicKeyFile) throws IOException {
     if (privateKeyFile.exists() && force) {
       if (!privateKeyFile.delete()) {
         throw new IOException("Unable to delete private key file.");

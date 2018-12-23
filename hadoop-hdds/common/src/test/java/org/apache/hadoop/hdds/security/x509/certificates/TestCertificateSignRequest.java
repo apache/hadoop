@@ -99,11 +99,6 @@ public class TestCertificateSignRequest {
     Assert.assertEquals(1, csr.getAttributes().length);
     Extensions extensions = SecurityUtil.getPkcs9Extensions(csr);
 
-    // Verify basic constraints extension
-    Extension basicExt = extensions.getExtension(Extension
-        .basicConstraints);
-    Assert.assertEquals(true, basicExt.isCritical());
-
     // Verify key usage extension
     Extension keyUsageExt = extensions.getExtension(Extension.keyUsage);
     Assert.assertEquals(true, keyUsageExt.isCritical());
@@ -144,7 +139,6 @@ public class TestCertificateSignRequest {
     builder.addIpAddress("192.168.2.1");
 
     builder.addDnsName("dn1.abc.com");
-    builder.addRfc822Name("test@abc.com");
 
     PKCS10CertificationRequest csr = builder.build();
 

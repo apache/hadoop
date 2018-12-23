@@ -23,12 +23,15 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificate.authority.PKIProfiles.DefaultProfile;
+import org.apache.hadoop.hdds.security.x509.certificate.authority.PKIProfiles.PKIProfile;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
-import org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.security.x509.certificates.utils.SelfSignedCertificate;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.operator.OperatorCreationException;
+import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,11 +44,15 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.security.spec.InvalidKeySpecException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
+
+import static org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest.*;
 
 /**
  * The default CertificateServer used by SCM. This has no dependencies on any
@@ -103,6 +110,11 @@ public class DefaultCAServer implements CertificateServer {
   private Path caKeysPath;
   private Path caRootX509Path;
   private SecurityConfig config;
+  /**
+   * TODO: We will make these configurable in the future.
+   */
+  private PKIProfile profile;
+  private CertificateApprover approver;
 
   /**
    * Create an Instance of DefaultCAServer.
@@ -124,6 +136,11 @@ public class DefaultCAServer implements CertificateServer {
     caRootX509Path = securityConfig.getCertificateLocation(componentName);
     this.config = securityConfig;
 
+    // TODO: Make these configurable and load different profiles based on
+    // config.
+    profile = new DefaultProfile();
+    this.approver = new DefaultApprover(profile, this.config);
+
     /* In future we will spilt this code to have different kind of CAs.
      * Right now, we have only self-signed CertificateServer.
      */
@@ -141,23 +158,76 @@ public class DefaultCAServer implements CertificateServer {
   }
 
   @Override
-  public X509CertificateHolder getCACertificate() throws
-      CertificateException, IOException {
+  public X509CertificateHolder getCACertificate() throws IOException {
     CertificateCodec certificateCodec =
         new CertificateCodec(config, componentName);
-    return certificateCodec.readCertificate();
+    try {
+      return certificateCodec.readCertificate();
+    } catch (CertificateException e) {
+      throw new IOException(e);
+    }
+  }
+
+  private KeyPair getCAKeys() throws IOException {
+    KeyCodec keyCodec = new KeyCodec(config, componentName);
+    try {
+      return new KeyPair(keyCodec.readPublicKey(), keyCodec.readPrivateKey());
+    } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+      throw new IOException(e);
+    }
   }
 
   @Override
   public Future<X509CertificateHolder> requestCertificate(
-      CertificateSignRequest csr, CertificateApprover approver)
-      throws SCMSecurityException {
-    return null;
+      PKCS10CertificationRequest csr, CertificateApprover.ApprovalType approverType) {
+    LocalDate beginDate = LocalDate.now().atStartOfDay().toLocalDate();
+    LocalDateTime temp = LocalDateTime.of(beginDate, LocalTime.MIDNIGHT);
+    LocalDate endDate =
+        temp.plus(config.getDefaultCertDuration()).toLocalDate();
+
+    CompletableFuture<X509CertificateHolder> xcertHolder =
+        approver.approve(csr);
+
+    if(xcertHolder.isCompletedExceptionally()) {
+      // This means that approver told us there are things which it disagrees
+      // with in this Certificate Request. Since the first set of sanity
+      // checks failed, we just return the future object right here.
+      return xcertHolder;
+    }
+    try {
+      switch (approverType) {
+      case MANUAL:
+        xcertHolder.completeExceptionally(new SCMSecurityException("Manual " +
+            "approval is not yet implemented."));
+        break;
+      case KERBEROS_TRUSTED:
+      case TESTING_AUTOMATIC:
+        X509CertificateHolder xcert = approver.sign(config,
+            getCAKeys().getPrivate(),
+            getCACertificate(), java.sql.Date.valueOf(beginDate),
+            java.sql.Date.valueOf(endDate), csr);
+        xcertHolder.complete(xcert);
+        break;
+      default:
+        return null; // cannot happen, keeping checkstyle happy.
+      }
+    } catch (IOException | OperatorCreationException e) {
+      xcertHolder.completeExceptionally(new SCMSecurityException(e));
+    }
+    return xcertHolder;
+  }
+
+  @Override
+  public Future<X509CertificateHolder> requestCertificate(String csr,
+      CertificateApprover.ApprovalType type) throws IOException {
+    PKCS10CertificationRequest request =
+        getCertificationRequest(csr);
+    return requestCertificate(request, type);
   }
 
   @Override
   public Future<Boolean> revokeCertificate(X509Certificate certificate,
-      CertificateApprover approver) throws SCMSecurityException {
+      CertificateApprover.ApprovalType approverType) throws SCMSecurityException {
     return null;
   }
 
@@ -227,11 +297,8 @@ public class DefaultCAServer implements CertificateServer {
       return false;
     }
 
-    if (!Files.exists(Paths.get(caKeysPath.toString(),
-        this.config.getPrivateKeyFileName()))) {
-      return false;
-    }
-    return true;
+    return Files.exists(Paths.get(caKeysPath.toString(),
+        this.config.getPrivateKeyFileName()));
   }
 
   /**
@@ -243,11 +310,8 @@ public class DefaultCAServer implements CertificateServer {
     if (!Files.exists(caRootX509Path)) {
       return false;
     }
-    if (!Files.exists(Paths.get(caRootX509Path.toString(),
-        this.config.getCertificateFileName()))) {
-      return false;
-    }
-    return true;
+    return Files.exists(Paths.get(caRootX509Path.toString(),
+        this.config.getCertificateFileName()));
   }
 
   /**
