@@ -330,7 +330,7 @@
     <td ng-value="{lastBlockReport}">{lastBlockReport}m</td>
     <td ng-value="{usedPercentage}">
       <div>
-        <div style="display:inline-block; float: left; padding-right: 10px;">{capacity|fmt_bytes}</div>
+        <div style="display:inline-block; float: left; padding-right: 10px; width:80px">{capacity|fmt_bytes}</div>
         <div class="clearfix progress dfshealth-node-capacity-bar" title="Non DFS: {nonDfsUsedSpace|fmt_bytes}, Used: {used|fmt_bytes}">
           <div class="progress-bar {#helper_usage_bar value="{usedPercentage}"/}" style="width: {usedPercentage}%">
           </div>
