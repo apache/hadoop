@@ -21,8 +21,8 @@ package org.apache.hadoop.hdds.security.x509.certificate.authority;
 
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest;
 import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 
 import java.io.IOException;
 import java.security.cert.CertificateException;
@@ -51,7 +51,7 @@ public interface CertificateServer {
    * @return X509CertificateHolder - Certificate for this CA.
    * @throws CertificateException - usually thrown if this CA is not
    *                              initialized.
-   * @throws IOException - on Error.
+   * @throws IOException          - on Error.
    */
   X509CertificateHolder getCACertificate()
       throws CertificateException, IOException;
@@ -59,15 +59,31 @@ public interface CertificateServer {
   /**
    * Request a Certificate based on Certificate Signing Request.
    *
-   * @param csr - Certificate Signing Request.
-   * @param approver - An Enum which says what kind of approval process to
-   * follow.
+   * @param csr  - Certificate Signing Request.
+   * @param type - An Enum which says what kind of approval process to follow.
    * @return A future that will have this certificate when this request is
    * approved.
    * @throws SCMSecurityException - on Error.
    */
-  Future<X509CertificateHolder> requestCertificate(CertificateSignRequest csr,
-      CertificateApprover approver) throws SCMSecurityException;
+  Future<X509CertificateHolder>
+      requestCertificate(PKCS10CertificationRequest csr, CertificateApprover.ApprovalType type)
+      throws SCMSecurityException;
+
+
+  /**
+   * Request a Certificate based on Certificate Signing Request.
+   *
+   * @param csr - Certificate Signing Request as a PEM encoded String.
+   * @param type - An Enum which says what kind of approval process to follow.
+   * @return A future that will have this certificate when this request is
+   * approved.
+   * @throws SCMSecurityException - on Error.
+   */
+  Future<X509CertificateHolder>
+      requestCertificate(String csr, CertificateApprover.ApprovalType type)
+      throws IOException;
+
+
 
   /**
    * Revokes a Certificate issued by this CertificateServer.
@@ -78,21 +94,13 @@ public interface CertificateServer {
    * @throws SCMSecurityException - on Error.
    */
   Future<Boolean> revokeCertificate(X509Certificate certificate,
-      CertificateApprover approver) throws SCMSecurityException;
+      CertificateApprover.ApprovalType approver) throws SCMSecurityException;
 
   /**
    * TODO : CRL, OCSP etc. Later. This is the start of a CertificateServer
    * framework.
    */
 
-  /**
-   * Approval Types for a certificate request.
-   */
-  enum CertificateApprover {
-    KERBEROS_TRUSTED, /* The Request came from a DN using Kerberos Identity*/
-    MANUAL, /* Wait for a Human being to approve this certificate */
-    TESTING_AUTOMATIC /* For testing purpose, Automatic Approval. */
-  }
 
   /**
    * Make it explicit what type of CertificateServer we are creating here.

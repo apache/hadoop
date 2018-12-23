@@ -117,6 +117,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>bcpkix-jdk15on</artifactId>
       <version>1.54</version>
     </dependency>
+    <!-- https://mvnrepository.com/artifact/commons-validator/commons-validator -->
+    <dependency>
+      <groupId>commons-validator</groupId>
+      <artifactId>commons-validator</artifactId>
+      <version>1.6</version>
+    </dependency>
   </dependencies>
 
   <build>

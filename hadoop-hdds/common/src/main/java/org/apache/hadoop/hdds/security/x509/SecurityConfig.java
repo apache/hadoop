@@ -63,6 +63,8 @@ import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_PRIVATE_KEY_FILE_NAME_D
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_PUBLIC_KEY_FILE_NAME;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_PUBLIC_KEY_FILE_NAME_DEFAULT;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_SECURITY_PROVIDER;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_DEFAULT_DURATION_DEFAULT;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_DEFAULT_DURATION;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_DIR_NAME;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_DIR_NAME_DEFAULT;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_FILE_NAME;
@@ -104,6 +106,7 @@ public class SecurityConfig {
   private String trustStoreFileName;
   private String serverCertChainFileName;
   private String clientCertChainFileName;
+  private final Duration defaultCertDuration;
   private final boolean isSecurityEnabled;
 
   /**
@@ -172,6 +175,12 @@ public class SecurityConfig {
         OZONE_SECURITY_ENABLED_KEY,
         OZONE_SECURITY_ENABLED_DEFAULT);
 
+    String certDurationString =
+        this.configuration.get(HDDS_X509_DEFAULT_DURATION,
+            HDDS_X509_DEFAULT_DURATION_DEFAULT);
+    defaultCertDuration = Duration.parse(certDurationString);
+
+
     // First Startup -- if the provider is null, check for the provider.
     if (SecurityConfig.provider == null) {
       synchronized (SecurityConfig.class) {
@@ -193,6 +202,15 @@ public class SecurityConfig {
    */
   public boolean isSecurityEnabled() {
     return isSecurityEnabled;
+  }
+
+  /**
+   * Returns the Default Certificate Duration.
+   *
+   * @return Duration for the default certificate issue.
+   */
+  public Duration getDefaultCertDuration() {
+    return defaultCertDuration;
   }
 
   /**

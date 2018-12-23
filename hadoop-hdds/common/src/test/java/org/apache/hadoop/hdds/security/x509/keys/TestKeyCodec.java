@@ -20,6 +20,7 @@
 package org.apache.hadoop.hdds.security.x509.keys;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_METADATA_DIR_NAME;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -127,7 +128,7 @@ public class TestKeyCodec {
     byte[] keyBytes = Base64.decodeBase64(privateKeydata);
     PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
     PrivateKey privateKeyDecoded = kf.generatePrivate(spec);
-    Assert.assertNotNull("Private Key should not be null",
+    assertNotNull("Private Key should not be null",
         privateKeyDecoded);
 
     // Let us decode the public key and veriy that we can parse it back into
@@ -140,7 +141,7 @@ public class TestKeyCodec {
     keyBytes = Base64.decodeBase64(publicKeydata);
     X509EncodedKeySpec pubKeyspec = new X509EncodedKeySpec(keyBytes);
     PublicKey publicKeyDecoded = kf.generatePublic(pubKeyspec);
-    Assert.assertNotNull("Public Key should not be null",
+    assertNotNull("Public Key should not be null",
         publicKeyDecoded);
 
     // Now let us assert the permissions on the Directories and files are as
@@ -212,5 +213,19 @@ public class TestKeyCodec {
     LambdaTestUtils
         .intercept(IOException.class, "Unsupported File System for pem file.",
             () -> pemWriter.writeKey(kp));
+  }
+
+  @Test
+  public void testReadWritePublicKeywithoutArgs()
+      throws NoSuchProviderException, NoSuchAlgorithmException, IOException,
+      InvalidKeySpecException {
+
+    KeyPair kp = keyGenerator.generateKey();
+    KeyCodec keycodec = new KeyCodec(configuration);
+    keycodec.writeKey(kp);
+
+    PublicKey pubKey = keycodec.readPublicKey();
+    assertNotNull(pubKey);
+
   }
 }

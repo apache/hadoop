@@ -55,7 +55,7 @@ public final class HddsConfigKeys {
   // Configuration to allow volume choosing policy.
   public static final String HDDS_DATANODE_VOLUME_CHOOSING_POLICY =
       "hdds.datanode.volume.choosing.policy";
-  // DB Profiles used by ROCKDB instances.
+  // DB PKIProfile used by ROCKDB instances.
   public static final String HDDS_DB_PROFILE = "hdds.db.profile";
   public static final DBProfile HDDS_DEFAULT_DB_PROFILE = DBProfile.DISK;
   // Once a container usage crosses this threshold, it is eligible for
@@ -134,6 +134,16 @@ public final class HddsConfigKeys {
   public static final String HDDS_X509_DIR_NAME_DEFAULT = "certs";
   public static final String HDDS_X509_FILE_NAME = "hdds.x509.file.name";
   public static final String HDDS_X509_FILE_NAME_DEFAULT = "certificate.crt";
+
+  /**
+   * Default duration of certificates issued by SCM CA.
+   * The formats accepted are based on the ISO-8601 duration format PnDTnHnMn.nS
+   * Default value is 5 years and written as P1865D.
+   */
+  public static final String HDDS_X509_DEFAULT_DURATION = "hdds.x509.default" +
+      ".duration";
+  // Default Certificate duration to one year.
+  public static final String HDDS_X509_DEFAULT_DURATION_DEFAULT = "P365D";
 
   /**
    * Do not instantiate.
