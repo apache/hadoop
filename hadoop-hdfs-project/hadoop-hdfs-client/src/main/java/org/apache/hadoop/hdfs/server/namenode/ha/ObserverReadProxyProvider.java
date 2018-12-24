@@ -110,7 +110,7 @@ public class ObserverReadProxyProvider<T extends ClientProtocol>
   public ObserverReadProxyProvider(
       Configuration conf, URI uri, Class<T> xface, HAProxyFactory<T> factory) {
     this(conf, uri, xface, factory,
-        new ConfiguredFailoverProxyProvider<>(conf, uri, xface,factory));
+        new ConfiguredFailoverProxyProvider<>(conf, uri, xface, factory));
   }
 
   @SuppressWarnings("unchecked")
@@ -144,7 +144,7 @@ public class ObserverReadProxyProvider<T extends ClientProtocol>
     combinedInfo.append(']');
     T wrappedProxy = (T) Proxy.newProxyInstance(
         ObserverReadInvocationHandler.class.getClassLoader(),
-        new Class<?>[] { xface }, new ObserverReadInvocationHandler());
+        new Class<?>[] {xface}, new ObserverReadInvocationHandler());
     combinedProxy = new ProxyInfo<>(wrappedProxy, combinedInfo.toString());
     // TODO : make this configurable or remove this variable
     this.observerReadEnabled = true;
@@ -232,7 +232,7 @@ public class ObserverReadProxyProvider<T extends ClientProtocol>
   /**
    * An InvocationHandler to handle incoming requests. This class's invoke
    * method contains the primary logic for redirecting to observers.
-   * 
+   *
    * If observer reads are enabled, attempt to send read operations to the
    * current proxy. If it is not an observer, or the observer fails, adjust
    * the current proxy and retry on the next one. If all proxies are tried
