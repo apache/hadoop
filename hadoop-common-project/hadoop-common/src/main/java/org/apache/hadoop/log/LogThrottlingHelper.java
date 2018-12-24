@@ -289,6 +289,24 @@ public class LogThrottlingHelper {
   }
 
   /**
+   * Helper function to create a message about how many log statements were
+   * suppressed in the provided log action. If no statements were suppressed,
+   * this returns an empty string. The message has the format (without quotes):
+   *
+   * <p/>' (suppressed logging <i>{suppression_count}</i> times)'
+   *
+   * @param action The log action to produce a message about.
+   * @return A message about suppression within this action.
+   */
+  public static String getLogSupressionMessage(LogAction action) {
+    if (action.getCount() > 1) {
+      return " (suppressed logging " + (action.getCount() - 1) + " times)";
+    } else {
+      return "";
+    }
+  }
+
+  /**
    * A standard log action which keeps track of all of the values which have
    * been logged. This is also used for internal bookkeeping via its private
    * fields and methods; it will maintain whether or not it is ready to be

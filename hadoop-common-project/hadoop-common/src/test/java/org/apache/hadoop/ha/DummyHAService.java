@@ -56,7 +56,8 @@ class DummyHAService extends HAServiceTarget {
   InetSocketAddress address, healthMonitorAddress;
   boolean isHealthy = true;
   boolean actUnreachable = false;
-  boolean failToBecomeActive, failToBecomeStandby, failToFence;
+  boolean failToBecomeActive, failToBecomeStandby, failToBecomeObserver,
+      failToFence;
   
   DummySharedResource sharedResource;
   public int fenceCount = 0;
@@ -217,6 +218,11 @@ class DummyHAService extends HAServiceTarget {
   }
 
   @Override
+  public boolean supportObserver() {
+    return true;
+  }
+
+  @Override
   public String toString() {
     return "DummyHAService #" + index;
   }
@@ -263,6 +269,16 @@ class DummyHAService extends HAServiceTarget {
       state = HAServiceState.STANDBY;
     }
     
+    @Override
+    public void transitionToObserver(StateChangeRequestInfo req)
+        throws ServiceFailedException, AccessControlException, IOException {
+      checkUnreachable();
+      if (failToBecomeObserver) {
+        throw new ServiceFailedException("injected failure");
+      }
+      state = HAServiceState.OBSERVER;
+    }
+
     @Override
     public HAServiceStatus getServiceStatus() throws IOException {
       checkUnreachable();

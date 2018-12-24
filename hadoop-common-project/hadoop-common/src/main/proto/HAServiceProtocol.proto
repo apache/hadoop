@@ -32,6 +32,7 @@ enum HAServiceStateProto {
   INITIALIZING = 0;
   ACTIVE = 1;
   STANDBY = 2;
+  OBSERVER = 3;
 }
 
 enum HARequestSource {
@@ -85,6 +86,19 @@ message TransitionToStandbyResponseProto {
 /**
  * void request
  */
+message TransitionToObserverRequestProto {
+  required HAStateChangeRequestInfoProto reqInfo = 1;
+}
+
+/**
+ * void response
+ */
+message TransitionToObserverResponseProto {
+}
+
+/**
+ * void request
+ */
 message GetServiceStatusRequestProto { 
 }
 
@@ -125,6 +139,12 @@ service HAServiceProtocolService {
    */
   rpc transitionToStandby(TransitionToStandbyRequestProto)
       returns(TransitionToStandbyResponseProto);
+
+  /**
+   * Request service to transition to observer state.
+   */
+  rpc transitionToObserver(TransitionToObserverRequestProto)
+      returns(TransitionToObserverResponseProto);
 
   /**
    * Get the current status of the service.

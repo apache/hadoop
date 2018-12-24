@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HAUtilClient;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -111,6 +112,12 @@ public abstract class AbstractNNFailoverProxyProvider<T> implements
    */
   public static class NNProxyInfo<T> extends ProxyInfo<T> {
     private InetSocketAddress address;
+    /**
+     * The currently known state of the NameNode represented by this ProxyInfo.
+     * This may be out of date if the NameNode has changed state since the last
+     * time the state was checked.
+     */
+    private HAServiceState cachedState;
 
     public NNProxyInfo(InetSocketAddress address) {
       super(null, address.toString());
@@ -119,6 +126,14 @@ public abstract class AbstractNNFailoverProxyProvider<T> implements
 
     public InetSocketAddress getAddress() {
       return address;
+    }
+
+    public void setCachedState(HAServiceState state) {
+      cachedState = state;
+    }
+
+    public HAServiceState getCachedState() {
+      return cachedState;
     }
   }
 
@@ -137,8 +152,8 @@ public abstract class AbstractNNFailoverProxyProvider<T> implements
         pi.proxy = factory.createProxy(conf,
             pi.getAddress(), xface, ugi, false, getFallbackToSimpleAuth());
       } catch (IOException ioe) {
-        LOG.error("{} Failed to create RPC proxy to NameNode",
-            this.getClass().getSimpleName(), ioe);
+        LOG.error("{} Failed to create RPC proxy to NameNode at {}",
+            this.getClass().getSimpleName(), pi.address, ioe);
         throw new RuntimeException(ioe);
       }
     }
