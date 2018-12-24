@@ -124,7 +124,8 @@ public final class DistCpConstants {
       "distcp.copy.buffer.size";
 
   /* DistCp Blocks Per Chunk */
-  public static final String CONF_LABEL_BLOCKS_PER_CHUNK = "distcp.blocks.per.chunk";
+  public static final String CONF_LABEL_BLOCKS_PER_CHUNK =
+      "distcp.blocks.per.chunk";
 
   /**
    * Constants for DistCp return code to shell / consumer of ToolRunner's run
