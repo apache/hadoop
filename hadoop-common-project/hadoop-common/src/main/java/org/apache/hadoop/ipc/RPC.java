@@ -587,7 +587,7 @@ public class RPC {
 
   /**
    * Get a protocol proxy that contains a proxy connection to a remote server
-   * and a set of methods that are supported by the server
+   * and a set of methods that are supported by the server.
    *
    * @param protocol protocol
    * @param clientVersion client's version
