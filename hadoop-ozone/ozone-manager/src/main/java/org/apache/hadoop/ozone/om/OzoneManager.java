@@ -85,6 +85,7 @@ import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import org.apache.hadoop.ozone.security.acl.RequestContext;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
@@ -178,6 +179,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private final File omMetaDir;
   private final boolean isAclEnabled;
   private final IAccessAuthorizer accessAuthorizer;
+  private JvmPauseMonitor jvmPauseMonitor;
 
   private OzoneManager(OzoneConfiguration conf) throws IOException {
     Preconditions.checkNotNull(conf);
@@ -639,6 +641,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     httpServer = new OzoneManagerHttpServer(configuration, this);
     httpServer.start();
     registerMXBean();
+
+    // Start jvm monitor
+    jvmPauseMonitor = new JvmPauseMonitor();
+    jvmPauseMonitor.init(configuration);
+    jvmPauseMonitor.start();
     setStartTime();
   }
 
@@ -660,6 +667,9 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       metadataManager.stop();
       metrics.unRegister();
       unregisterMXBean();
+      if (jvmPauseMonitor != null) {
+        jvmPauseMonitor.stop();
+      }
     } catch (Exception e) {
       LOG.error("OzoneManager stop failed.", e);
     }
