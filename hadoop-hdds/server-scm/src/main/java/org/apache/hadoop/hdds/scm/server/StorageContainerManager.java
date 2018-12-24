@@ -84,6 +84,7 @@ import org.apache.hadoop.ozone.common.StorageInfo;
 import org.apache.hadoop.ozone.lease.LeaseManager;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
@@ -183,6 +184,9 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   private final ReplicationActivityStatus replicationStatus;
   private final SCMChillModeManager scmChillModeManager;
 
+  private JvmPauseMonitor jvmPauseMonitor;
+  private final OzoneConfiguration configuration;
+
   /**
    * Creates a new StorageContainerManager. Configuration will be updated
    * with information on the
@@ -192,6 +196,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
    */
   private StorageContainerManager(OzoneConfiguration conf) throws IOException {
 
+    configuration = conf;
     StorageContainerManager.initMetrics();
     initContainerReportCache(conf);
 
@@ -308,6 +313,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     eventQueue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
         scmChillModeManager);
     registerMXBean();
+
   }
 
   /**
@@ -683,6 +689,12 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     scmBlockManager.start();
     replicationStatus.start();
     replicationManager.start();
+
+    // Start jvm monitor
+    jvmPauseMonitor = new JvmPauseMonitor();
+    jvmPauseMonitor.init(configuration);
+    jvmPauseMonitor.start();
+
     setStartTime();
   }
 
@@ -765,6 +777,10 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       eventQueue.close();
     } catch (Exception ex) {
       LOG.error("SCM Event Queue stop failed", ex);
+    }
+
+    if (jvmPauseMonitor != null) {
+      jvmPauseMonitor.stop();
     }
     IOUtils.cleanupWithLogger(LOG, containerManager);
     IOUtils.cleanupWithLogger(LOG, pipelineManager);
