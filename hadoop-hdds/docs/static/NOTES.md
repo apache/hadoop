@@ -17,4 +17,4 @@
 
 The source of Ozone logo is available here:
 
-https://git-wip-us.apache.org/repos/asf?p=hadoop-ozonesite.git;a=tree;f=static;h=9830788c1fa36c933272cdf87342bb71974c8567;hb=refs/heads/asf-site
+https://gitbox.apache.org/repos/asf?p=hadoop-site.git;a=tree;f=ozone/static;hb=refs/heads/asf-site
