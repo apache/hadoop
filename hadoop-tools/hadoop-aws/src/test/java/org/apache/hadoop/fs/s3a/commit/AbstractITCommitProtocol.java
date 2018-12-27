@@ -153,8 +153,6 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     taskAttempt1 = TaskAttemptID.forName(attempt1);
 
     outDir = path(getMethodName());
-    S3AFileSystem fileSystem = getFileSystem();
-    bindFileSystem(fileSystem, outDir, fileSystem.getConf());
     abortMultipartUploadsUnderPath(outDir);
     cleanupDestDir();
   }
@@ -194,18 +192,6 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     disableFilesystemCaching(conf);
     bindCommitter(conf);
     return conf;
-  }
-
-  /**
-   * Bind a path to the FS in the cache.
-   * @param fs filesystem
-   * @param path s3 path
-   * @param conf configuration
-   * @throws IOException any problem
-   */
-  private void bindFileSystem(FileSystem fs, Path path, Configuration conf)
-      throws IOException {
-    FileSystemTestHelper.addFileSystemForTesting(path.toUri(), conf, fs);
   }
 
   /***
