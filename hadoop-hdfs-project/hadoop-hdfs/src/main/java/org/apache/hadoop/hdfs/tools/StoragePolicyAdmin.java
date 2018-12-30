@@ -257,7 +257,7 @@ public class StoragePolicyAdmin extends Configured implements Tool {
 
     @Override
     public String getShortUsage() {
-      return "[" + getName() + " [-w] -path <path>]\n";
+      return "[" + getName() + " -path <path>]\n";
     }
 
     @Override
@@ -265,17 +265,6 @@ public class StoragePolicyAdmin extends Configured implements Tool {
       TableListing listing = AdminHelper.getOptionDescriptionListing();
       listing.addRow("<path>", "The path of the file/directory to satisfy"
           + " storage policy");
-      listing.addRow("-w",
-          "It requests that the command wait till all the files satisfy"
-              + " the policy in given path. This will print the current"
-              + "status of the path in each 10 sec and status are:\n"
-              + "PENDING : Path is in queue and not processed for satisfying"
-              + " the policy.\n"
-              + "IN_PROGRESS : Satisfying the storage policy for"
-              + " path.\n"
-              + "SUCCESS : Storage policy satisfied for the path.\n"
-              + "FAILURE : Few blocks failed to move.\n"
-              + "NOT_AVAILABLE : Status not available.");
       return getShortUsage() + "\n" +
           "Schedule blocks to move based on file/directory policy.\n\n" +
           listing.toString();
