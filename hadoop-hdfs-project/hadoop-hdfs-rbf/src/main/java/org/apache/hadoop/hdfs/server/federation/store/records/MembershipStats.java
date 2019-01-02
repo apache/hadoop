@@ -81,6 +81,10 @@ public abstract class MembershipStats extends BaseRecord {
 
   public abstract int getNumOfDeadDatanodes();
 
+  public abstract void setNumOfStaleDatanodes(int nodes);
+
+  public abstract int getNumOfStaleDatanodes();
+
   public abstract void setNumOfDecommissioningDatanodes(int nodes);
 
   public abstract int getNumOfDecommissioningDatanodes();

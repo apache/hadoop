@@ -631,7 +631,12 @@ public class NamenodeBeanMetrics
 
   @Override
   public int getNumStaleDataNodes() {
-    return -1;
+    try {
+      return getFederationMetrics().getNumStaleNodes();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of stale nodes", e.getMessage());
+    }
+    return 0;
   }
 
   @Override

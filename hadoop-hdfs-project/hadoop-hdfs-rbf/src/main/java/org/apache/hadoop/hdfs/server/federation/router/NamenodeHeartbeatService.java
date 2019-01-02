@@ -338,6 +338,7 @@ public class NamenodeHeartbeatService extends PeriodicService {
             report.setDatanodeInfo(
                 jsonObject.getInt("NumLiveDataNodes"),
                 jsonObject.getInt("NumDeadDataNodes"),
+                jsonObject.getInt("NumStaleDataNodes"),
                 jsonObject.getInt("NumDecommissioningDataNodes"),
                 jsonObject.getInt("NumDecomLiveDataNodes"),
                 jsonObject.getInt("NumDecomDeadDataNodes"));

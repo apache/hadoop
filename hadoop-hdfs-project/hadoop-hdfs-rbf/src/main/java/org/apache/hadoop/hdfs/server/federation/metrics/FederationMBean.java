@@ -107,6 +107,12 @@ public interface FederationMBean {
   int getNumDeadNodes();
 
   /**
+   * Get the number of stale datanodes.
+   * @return Number of stale datanodes.
+   */
+  int getNumStaleNodes();
+
+  /**
    * Get the number of decommissioning datanodes.
    * @return Number of decommissioning datanodes.
    */

@@ -169,6 +169,16 @@ public class MembershipStatsPBImpl extends MembershipStats
   }
 
   @Override
+  public void setNumOfStaleDatanodes(int nodes) {
+    this.translator.getBuilder().setNumOfStaleDatanodes(nodes);
+  }
+
+  @Override
+  public int getNumOfStaleDatanodes() {
+    return this.translator.getProtoOrBuilder().getNumOfStaleDatanodes();
+  }
+
+  @Override
   public void setNumOfDecommissioningDatanodes(int nodes) {
     this.translator.getBuilder().setNumOfDecommissioningDatanodes(nodes);
   }

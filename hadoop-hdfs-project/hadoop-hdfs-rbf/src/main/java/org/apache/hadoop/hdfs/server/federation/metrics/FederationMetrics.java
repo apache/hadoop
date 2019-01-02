@@ -414,6 +414,12 @@ public class FederationMetrics implements FederationMBean {
   }
 
   @Override
+  public int getNumStaleNodes() {
+    return getNameserviceAggregatedInt(
+        MembershipStats::getNumOfStaleDatanodes);
+  }
+
+  @Override
   public int getNumDecommissioningNodes() {
     return getNameserviceAggregatedInt(
         MembershipStats::getNumOfDecommissioningDatanodes);

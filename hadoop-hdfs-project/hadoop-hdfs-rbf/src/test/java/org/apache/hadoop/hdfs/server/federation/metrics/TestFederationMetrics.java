@@ -137,6 +137,8 @@ public class TestFederationMetrics extends TestMetricsBase {
           stats.getNumOfActiveDatanodes());
       assertEquals(json.getLong("numOfDeadDatanodes"),
           stats.getNumOfDeadDatanodes());
+      assertEquals(json.getLong("numOfStaleDatanodes"),
+          stats.getNumOfStaleDatanodes());
       assertEquals(json.getLong("numOfDecommissioningDatanodes"),
           stats.getNumOfDecommissioningDatanodes());
       assertEquals(json.getLong("numOfDecomActiveDatanodes"),
@@ -187,6 +189,8 @@ public class TestFederationMetrics extends TestMetricsBase {
           json.getLong("numOfActiveDatanodes"));
       assertEquals(stats.getNumOfDeadDatanodes(),
           json.getLong("numOfDeadDatanodes"));
+      assertEquals(stats.getNumOfStaleDatanodes(),
+          json.getLong("numOfStaleDatanodes"));
       assertEquals(stats.getNumOfDecommissioningDatanodes(),
           json.getLong("numOfDecommissioningDatanodes"));
       assertEquals(stats.getNumOfDecomActiveDatanodes(),
@@ -260,6 +264,7 @@ public class TestFederationMetrics extends TestMetricsBase {
     long numBlocks = 0;
     long numLive = 0;
     long numDead = 0;
+    long numStale = 0;
     long numDecom = 0;
     long numDecomLive = 0;
     long numDecomDead = 0;
@@ -269,6 +274,7 @@ public class TestFederationMetrics extends TestMetricsBase {
       numBlocks += stats.getNumOfBlocks();
       numLive += stats.getNumOfActiveDatanodes();
       numDead += stats.getNumOfDeadDatanodes();
+      numStale += stats.getNumOfStaleDatanodes();
       numDecom += stats.getNumOfDecommissioningDatanodes();
       numDecomLive += stats.getNumOfDecomActiveDatanodes();
       numDecomDead += stats.getNumOfDecomDeadDatanodes();
@@ -277,6 +283,7 @@ public class TestFederationMetrics extends TestMetricsBase {
     assertEquals(numBlocks, bean.getNumBlocks());
     assertEquals(numLive, bean.getNumLiveNodes());
     assertEquals(numDead, bean.getNumDeadNodes());
+    assertEquals(numStale, bean.getNumStaleNodes());
     assertEquals(numDecom, bean.getNumDecommissioningNodes());
     assertEquals(numDecomLive, bean.getNumDecomLiveNodes());
     assertEquals(numDecomDead, bean.getNumDecomDeadNodes());

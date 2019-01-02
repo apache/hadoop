@@ -47,6 +47,7 @@ public class TestMembershipState {
   private static final long NUM_BLOCKS = 300;
   private static final long NUM_FILES = 400;
   private static final int NUM_DEAD = 500;
+  private static final int NUM_STALE = 550;
   private static final int NUM_ACTIVE = 600;
   private static final int NUM_DECOM = 700;
   private static final int NUM_DECOM_ACTIVE = 800;
@@ -73,6 +74,7 @@ public class TestMembershipState {
     stats.setNumOfFiles(NUM_FILES);
     stats.setNumOfActiveDatanodes(NUM_ACTIVE);
     stats.setNumOfDeadDatanodes(NUM_DEAD);
+    stats.setNumOfStaleDatanodes(NUM_STALE);
     stats.setNumOfDecommissioningDatanodes(NUM_DECOM);
     stats.setNumOfDecomActiveDatanodes(NUM_DECOM_ACTIVE);
     stats.setNumOfDecomDeadDatanodes(NUM_DECOM_DEAD);
@@ -101,6 +103,7 @@ public class TestMembershipState {
     assertEquals(NUM_FILES, stats.getNumOfFiles());
     assertEquals(NUM_ACTIVE, stats.getNumOfActiveDatanodes());
     assertEquals(NUM_DEAD, stats.getNumOfDeadDatanodes());
+    assertEquals(NUM_STALE, stats.getNumOfStaleDatanodes());
     assertEquals(NUM_DECOM, stats.getNumOfDecommissioningDatanodes());
     assertEquals(NUM_DECOM_ACTIVE, stats.getNumOfDecomActiveDatanodes());
     assertEquals(NUM_DECOM_DEAD, stats.getNumOfDecomDeadDatanodes());

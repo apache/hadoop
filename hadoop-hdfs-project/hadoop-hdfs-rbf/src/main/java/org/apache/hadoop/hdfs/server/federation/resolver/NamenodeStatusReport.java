@@ -42,6 +42,7 @@ public class NamenodeStatusReport {
   /** Datanodes stats. */
   private int liveDatanodes = -1;
   private int deadDatanodes = -1;
+  private int staleDatanodes = -1;
   /** Decommissioning datanodes. */
   private int decomDatanodes = -1;
   /** Live decommissioned datanodes. */
@@ -223,14 +224,16 @@ public class NamenodeStatusReport {
    *
    * @param numLive Number of live nodes.
    * @param numDead Number of dead nodes.
+   * @param numStale Number of stale nodes.
    * @param numDecom Number of decommissioning nodes.
    * @param numLiveDecom Number of decommissioned live nodes.
    * @param numDeadDecom Number of decommissioned dead nodes.
    */
-  public void setDatanodeInfo(int numLive, int numDead, int numDecom,
-      int numLiveDecom, int numDeadDecom) {
+  public void setDatanodeInfo(int numLive, int numDead, int numStale,
+      int numDecom, int numLiveDecom, int numDeadDecom) {
     this.liveDatanodes = numLive;
     this.deadDatanodes = numDead;
+    this.staleDatanodes = numStale;
     this.decomDatanodes = numDecom;
     this.liveDecomDatanodes = numLiveDecom;
     this.deadDecomDatanodes = numDeadDecom;
@@ -247,12 +250,21 @@ public class NamenodeStatusReport {
   }
 
   /**
-   * Get the number of dead blocks.
+   * Get the number of dead nodes.
    *
    * @return The number of dead nodes.
    */
   public int getNumDeadDatanodes() {
     return this.deadDatanodes;
+  }
+
+  /**
+   * Get the number of stale nodes.
+   *
+   * @return The number of stale nodes.
+   */
+  public int getNumStaleDatanodes() {
+    return this.staleDatanodes;
   }
 
   /**
