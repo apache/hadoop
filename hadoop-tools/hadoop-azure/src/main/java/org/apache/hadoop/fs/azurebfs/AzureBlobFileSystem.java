@@ -193,6 +193,8 @@ public class AzureBlobFileSystem extends FileSystem {
         overwrite,
         blockSize);
 
+    trailingPeriodCheck(f);
+
     Path qualifiedPath = makeQualified(f);
     performAbfsAuthCheck(FsAction.WRITE, qualifiedPath);
 
@@ -271,6 +273,8 @@ public class AzureBlobFileSystem extends FileSystem {
   public boolean rename(final Path src, final Path dst) throws IOException {
     LOG.debug(
         "AzureBlobFileSystem.rename src: {} dst: {}", src.toString(), dst.toString());
+
+    trailingPeriodCheck(dst);
 
     Path parentFolder = src.getParent();
     if (parentFolder == null) {
@@ -376,10 +380,37 @@ public class AzureBlobFileSystem extends FileSystem {
     }
   }
 
+  /**
+   * Performs a check for (.) until root in the path to throw an exception.
+   * The purpose is to differentiate between dir/dir1 and dir/dir1.
+   * Without the exception the behavior seen is dir1. will appear
+   * to be present without it's actual creation as dir/dir1 and dir/dir1. are
+   * treated as identical.
+   * @param path the path to be checked for trailing period (.)
+   * @throws IllegalArgumentException if the path has a trailing period (.)
+   */
+  private void trailingPeriodCheck(Path path) throws IllegalArgumentException {
+    while (!path.isRoot()){
+      String pathToString = path.toString();
+      if (pathToString.length() != 0) {
+        if (pathToString.charAt(pathToString.length() - 1) == '.') {
+          throw new IllegalArgumentException(
+              "ABFS does not allow files or directories to end with a dot.");
+        }
+        path = path.getParent();
+      }
+      else {
+        break;
+      }
+    }
+  }
+
   @Override
   public boolean mkdirs(final Path f, final FsPermission permission) throws IOException {
     LOG.debug(
         "AzureBlobFileSystem.mkdirs path: {} permissions: {}", f, permission);
+
+    trailingPeriodCheck(f);
 
     final Path parentFolder = f.getParent();
     if (parentFolder == null) {
