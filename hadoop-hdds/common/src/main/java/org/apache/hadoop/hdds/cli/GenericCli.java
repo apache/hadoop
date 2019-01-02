@@ -51,7 +51,7 @@ public class GenericCli implements Callable<Void>, GenericParentCommand {
     try {
       execute(argv);
     } catch (ExecutionException ex) {
-      printError(ex.getCause());
+      printError(ex.getCause() == null ? ex : ex.getCause());
       System.exit(-1);
     }
   }
