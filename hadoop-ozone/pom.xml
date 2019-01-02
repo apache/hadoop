@@ -278,6 +278,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/site/resources/images/*</exclude>
             <exclude>src/test/all-tests</exclude>
             <exclude>src/test/empty-file</exclude>
+            <exclude>src/test/resources/*.log</exclude>
             <exclude>src/test/resources/*.tgz</exclude>
             <exclude>src/test/resources/data*</exclude>
             <exclude>src/test/resources/empty-file</exclude>
