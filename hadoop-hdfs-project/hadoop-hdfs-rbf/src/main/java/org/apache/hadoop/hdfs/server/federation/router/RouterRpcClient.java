@@ -270,7 +270,8 @@ public class RouterRpcClient {
     }
 
     if (connection == null) {
-      throw new IOException("Cannot get a connection to " + rpcAddress);
+      throw new ConnectionNullException("Cannot get a connection to "
+          + rpcAddress);
     }
     return connection;
   }
@@ -363,9 +364,9 @@ public class RouterRpcClient {
     Map<FederationNamenodeContext, IOException> ioes = new LinkedHashMap<>();
     for (FederationNamenodeContext namenode : namenodes) {
       ConnectionContext connection = null;
+      String nsId = namenode.getNameserviceId();
+      String rpcAddress = namenode.getRpcAddress();
       try {
-        String nsId = namenode.getNameserviceId();
-        String rpcAddress = namenode.getRpcAddress();
         connection = this.getConnection(ugi, nsId, rpcAddress, protocol);
         ProxyAndInfo<?> client = connection.getClient();
         final Object proxy = client.getProxy();
@@ -394,6 +395,16 @@ public class RouterRpcClient {
           }
           // RemoteException returned by NN
           throw (RemoteException) ioe;
+        } else if (ioe instanceof ConnectionNullException) {
+          if (this.rpcMonitor != null) {
+            this.rpcMonitor.proxyOpFailureCommunicate();
+          }
+          LOG.error("Get connection for {} {} error: {}", nsId, rpcAddress,
+              ioe.getMessage());
+          // Throw StandbyException so that client can retry
+          StandbyException se = new StandbyException(ioe.getMessage());
+          se.initCause(ioe);
+          throw se;
         } else {
           // Other communication error, this is a failure
           // Communication retries are handled by the retry policy
@@ -425,7 +436,8 @@ public class RouterRpcClient {
       String addr = namenode.getRpcAddress();
       IOException ioe = entry.getValue();
       if (ioe instanceof StandbyException) {
-        LOG.error("{} {} at {} is in Standby", nsId, nnId, addr);
+        LOG.error("{} {} at {} is in Standby: {}", nsId, nnId, addr,
+            ioe.getMessage());
       } else {
         LOG.error("{} {} at {} error: \"{}\"",
             nsId, nnId, addr, ioe.getMessage());
