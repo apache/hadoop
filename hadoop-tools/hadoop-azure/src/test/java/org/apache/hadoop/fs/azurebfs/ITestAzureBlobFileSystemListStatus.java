@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -33,6 +34,11 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.rename;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -168,5 +174,66 @@ public class ITestAzureBlobFileSystemListStatus extends
   private void assertIsFileReference(FileStatus status) {
     assertFalse("Not a file: " + status, status.isDirectory());
     assertTrue("Not a file: " + status, status.isFile());
+  }
+
+  @Test
+  public void testMkdirTrailingPeriodDirName() throws IOException {
+    boolean exceptionThrown = false;
+    final AzureBlobFileSystem fs = getFileSystem();
+
+    Path nontrailingPeriodDir = path("testTrailingDir/dir");
+    Path trailingPeriodDir = path("testTrailingDir/dir.");
+
+    assertMkdirs(fs, nontrailingPeriodDir);
+
+    try {
+      fs.mkdirs(trailingPeriodDir);
+    }
+    catch(IllegalArgumentException e) {
+      exceptionThrown = true;
+    }
+    assertTrue("Attempt to create file that ended with a dot should"
+        + " throw IllegalArgumentException", exceptionThrown);
+  }
+
+  @Test
+  public void testCreateTrailingPeriodFileName() throws IOException {
+    boolean exceptionThrown = false;
+    final AzureBlobFileSystem fs = getFileSystem();
+
+    Path trailingPeriodFile = path("testTrailingDir/file.");
+    Path nontrailingPeriodFile = path("testTrailingDir/file");
+
+    createFile(fs, nontrailingPeriodFile, false, new byte[0]);
+    assertPathExists(fs, "Trailing period file does not exist",
+        nontrailingPeriodFile);
+
+    try {
+      createFile(fs, trailingPeriodFile, false, new byte[0]);
+    }
+    catch(IllegalArgumentException e) {
+      exceptionThrown = true;
+    }
+    assertTrue("Attempt to create file that ended with a dot should"
+        + " throw IllegalArgumentException", exceptionThrown);
+  }
+
+  @Test
+  public void testRenameTrailingPeriodFile() throws IOException {
+    boolean exceptionThrown = false;
+    final AzureBlobFileSystem fs = getFileSystem();
+
+    Path nonTrailingPeriodFile = path("testTrailingDir/file");
+    Path trailingPeriodFile = path("testTrailingDir/file.");
+
+    createFile(fs, nonTrailingPeriodFile, false, new byte[0]);
+    try {
+    rename(fs, nonTrailingPeriodFile, trailingPeriodFile);
+    }
+    catch(IllegalArgumentException e) {
+      exceptionThrown = true;
+    }
+    assertTrue("Attempt to create file that ended with a dot should"
+        + " throw IllegalArgumentException", exceptionThrown);
   }
 }
