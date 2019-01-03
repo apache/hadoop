@@ -31,6 +31,7 @@ import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
+import org.apache.hadoop.security.UserGroupInformation;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
@@ -76,7 +77,7 @@ public class ListVolumeHandler extends Handler {
     OzoneClient client = address.createClient(createOzoneConfiguration());
 
     if (userName == null) {
-      userName = System.getProperty("user.name");
+      userName = UserGroupInformation.getCurrentUser().getShortUserName();
     }
 
     if (maxVolumes < 1) {
