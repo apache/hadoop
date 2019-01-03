@@ -70,12 +70,16 @@ public class RpcDetailedMetrics {
    * @param processingTime  the processing time
    */
   //@Override // some instrumentation interface
-  public void addProcessingTime(String name, int processingTime) {
-    rates.add(name, processingTime);
+  public void addProcessingTime(String metName, long processingTime) {
+    rates.add(metName, processingTime);
   }
 
-  public void addDeferredProcessingTime(String name, long processingTime) {
-    deferredRpcRates.add(name, processingTime);
+  public void addDeferredProcessingTime(String metName, long processingTime) {
+    deferredRpcRates.add(metName, processingTime);
+  }
+
+  public MutableRatesWithAggregation getMutableRates() {
+    return rates;
   }
 
   /**
