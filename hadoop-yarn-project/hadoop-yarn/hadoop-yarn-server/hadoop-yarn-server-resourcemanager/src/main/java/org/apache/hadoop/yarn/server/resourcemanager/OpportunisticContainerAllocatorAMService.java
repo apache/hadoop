@@ -348,9 +348,11 @@ public class OpportunisticContainerAllocatorAMService
       RMContainer rmContainer =
           SchedulerUtils.createOpportunisticRmContainer(
               rmContext, container, isRemotelyAllocated);
-      rmContainer.handle(
-          new RMContainerEvent(container.getId(),
-              RMContainerEventType.ACQUIRED));
+      if (rmContainer!=null) {
+        rmContainer.handle(
+            new RMContainerEvent(container.getId(),
+                RMContainerEventType.ACQUIRED));
+      }
     }
   }
 
