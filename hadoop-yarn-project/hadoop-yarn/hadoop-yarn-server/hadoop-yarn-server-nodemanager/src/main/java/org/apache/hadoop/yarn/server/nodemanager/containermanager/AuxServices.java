@@ -40,6 +40,7 @@ import java.util.regex.Pattern;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceConfiguration;
@@ -413,6 +414,7 @@ public class AuxServices extends AbstractService
     serviceRecordMap.remove(sName);
     serviceMetaData.remove(sName);
     if (s != null) {
+      LOG.info("Removing aux service " + sName);
       stopAuxService(s);
     }
   }
@@ -557,8 +559,24 @@ public class AuxServices extends AbstractService
    * @param startServices if true starts services, otherwise only inits services
    * @throws IOException
    */
-  private synchronized void loadManifest(Configuration conf, boolean
+  @VisibleForTesting
+  protected synchronized void loadManifest(Configuration conf, boolean
       startServices) throws IOException {
+    if (manifest == null) {
+      return;
+    }
+    if (!manifestFS.exists(manifest)) {
+      if (serviceMap.isEmpty()) {
+        return;
+      }
+      LOG.info("Manifest file " + manifest + " doesn't exist, stopping " +
+          "auxiliary services");
+      Set<String> servicesToRemove = new HashSet<>(serviceMap.keySet());
+      for (String sName : servicesToRemove) {
+        maybeRemoveAuxService(sName);
+      }
+      return;
+    }
     AuxServiceRecords services = maybeReadManifestFile();
     if (services == null) {
       // read did not occur or no changes detected
@@ -596,15 +614,10 @@ public class AuxServices extends AbstractService
     }
 
     // remove aux services that do not appear in the manifest
-    List<String> servicesToRemove = new ArrayList<>();
-    for (String sName : serviceMap.keySet()) {
-      if (!loadedAuxServices.contains(sName)) {
-        foundChanges = true;
-        servicesToRemove.add(sName);
-      }
-    }
+    Set<String> servicesToRemove = new HashSet<>(serviceMap.keySet());
+    servicesToRemove.removeAll(loadedAuxServices);
     for (String sName : servicesToRemove) {
-      LOG.info("Removing aux service " + sName);
+      foundChanges = true;
       maybeRemoveAuxService(sName);
     }
 

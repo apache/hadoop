@@ -885,4 +885,17 @@ public class TestAuxServices {
     aux.init(conf);
     assertEquals(2, aux.getServices().size());
   }
+
+  @Test
+  public void testRemoveManifest() throws IOException {
+    Assume.assumeTrue(useManifest);
+    Configuration conf = getABConf();
+    final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+        MOCK_CONTEXT, MOCK_DEL_SERVICE);
+    aux.init(conf);
+    assertEquals(2, aux.getServices().size());
+    manifest.delete();
+    aux.loadManifest(conf, false);
+    assertEquals(0, aux.getServices().size());
+  }
 }
