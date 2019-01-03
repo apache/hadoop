@@ -79,7 +79,7 @@ public class CreateVolumeHandler extends Handler {
     if (root) {
       rootName = "hdfs";
     } else {
-      rootName = System.getProperty("user.name");
+      rootName = UserGroupInformation.getCurrentUser().getShortUserName();
     }
 
     VolumeArgs.Builder volumeArgsBuilder = VolumeArgs.newBuilder()
