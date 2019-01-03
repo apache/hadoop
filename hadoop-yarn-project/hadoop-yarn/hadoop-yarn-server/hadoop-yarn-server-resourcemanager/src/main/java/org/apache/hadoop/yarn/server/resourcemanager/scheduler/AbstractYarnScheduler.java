@@ -690,8 +690,10 @@ public abstract class AbstractYarnScheduler
         LOG.debug("Completed container: " + rmContainer.getContainerId() +
             " in state: " + rmContainer.getState() + " event:" + event);
       }
-      getSchedulerNode(rmContainer.getNodeId()).releaseContainer(
-          rmContainer.getContainerId(), false);
+      SchedulerNode node = getSchedulerNode(rmContainer.getNodeId());
+      if (node != null) {
+        node.releaseContainer(rmContainer.getContainerId(), false);
+      }
     }
 
     // If the container is getting killed in ACQUIRED state, the requester (AM
@@ -1247,8 +1249,10 @@ public abstract class AbstractYarnScheduler
               uReq.getContainerUpdateType()) {
             RMContainer demotedRMContainer =
                 createDemotedRMContainer(appAttempt, oppCntxt, rmContainer);
-            appAttempt.addToNewlyDemotedContainers(
-                uReq.getContainerId(), demotedRMContainer);
+            if (demotedRMContainer != null) {
+              appAttempt.addToNewlyDemotedContainers(
+                      uReq.getContainerId(), demotedRMContainer);
+            }
           } else {
             RMContainer demotedRMContainer = createDecreasedRMContainer(
                 appAttempt, uReq, rmContainer);
