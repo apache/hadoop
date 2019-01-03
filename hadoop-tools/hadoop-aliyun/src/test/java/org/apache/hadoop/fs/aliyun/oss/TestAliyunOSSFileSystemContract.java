@@ -178,13 +178,13 @@ public class TestAliyunOSSFileSystemContract
     AliyunOSSFileSystemStore store = ((AliyunOSSFileSystem)this.fs).getStore();
     store.storeEmptyFile("test/new/file/");
     AliyunOSSCopyFileTask oneCopyFileTask = new AliyunOSSCopyFileTask(
-        store, srcOne.toUri().getPath().substring(1),
+        store, srcOne.toUri().getPath().substring(1), data.length,
         dstOne.toUri().getPath().substring(1), copyFileContext);
     oneCopyFileTask.run();
     assumeFalse(copyFileContext.isCopyFailure());
 
     AliyunOSSCopyFileTask twoCopyFileTask = new AliyunOSSCopyFileTask(
-        store, srcOne.toUri().getPath().substring(1),
+        store, srcOne.toUri().getPath().substring(1), data.length,
         dstTwo.toUri().getPath().substring(1), copyFileContext);
     twoCopyFileTask.run();
     assumeFalse(copyFileContext.isCopyFailure());
@@ -212,13 +212,13 @@ public class TestAliyunOSSFileSystemContract
     AliyunOSSFileSystemStore store = ((AliyunOSSFileSystem)this.fs).getStore();
     //store.storeEmptyFile("test/new/file/");
     AliyunOSSCopyFileTask oneCopyFileTask = new AliyunOSSCopyFileTask(
-        store, srcOne.toUri().getPath().substring(1),
+        store, srcOne.toUri().getPath().substring(1), data.length,
         dstOne.toUri().getPath().substring(1), copyFileContext);
     oneCopyFileTask.run();
     assumeTrue(copyFileContext.isCopyFailure());
 
     AliyunOSSCopyFileTask twoCopyFileTask = new AliyunOSSCopyFileTask(
-        store, srcOne.toUri().getPath().substring(1),
+        store, srcOne.toUri().getPath().substring(1), data.length,
         dstTwo.toUri().getPath().substring(1), copyFileContext);
     twoCopyFileTask.run();
     assumeTrue(copyFileContext.isCopyFailure());
@@ -247,19 +247,19 @@ public class TestAliyunOSSFileSystemContract
     AliyunOSSFileSystemStore store = ((AliyunOSSFileSystem)this.fs).getStore();
     //store.storeEmptyFile("test/new/file/");
     AliyunOSSCopyFileTask oneCopyFileTask = new AliyunOSSCopyFileTask(
-        store, srcOne.toUri().getPath().substring(1),
+        store, srcOne.toUri().getPath().substring(1), data.length,
         dstOne.toUri().getPath().substring(1), copyFileContext);
     oneCopyFileTask.run();
     assumeTrue(copyFileContext.isCopyFailure());
 
     AliyunOSSCopyFileTask twoCopyFileTask = new AliyunOSSCopyFileTask(
-        store, srcOne.toUri().getPath().substring(1),
+        store, srcOne.toUri().getPath().substring(1), data.length,
         dstTwo.toUri().getPath().substring(1), copyFileContext);
     twoCopyFileTask.run();
     assumeTrue(copyFileContext.isCopyFailure());
 
     AliyunOSSCopyFileTask threeCopyFileTask = new AliyunOSSCopyFileTask(
-        store, srcOne.toUri().getPath().substring(1),
+        store, srcOne.toUri().getPath().substring(1), data.length,
         dstThree.toUri().getPath().substring(1), copyFileContext);
     threeCopyFileTask.run();
     assumeTrue(copyFileContext.isCopyFailure());
