@@ -87,7 +87,6 @@ public class AliyunOSSFileSystemStore {
   private OSSClient ossClient;
   private String bucketName;
   private long uploadPartSize;
-  private long multipartThreshold;
   private int maxKeys;
   private String serverSideEncryptionAlgorithm;
 
@@ -155,20 +154,9 @@ public class AliyunOSSFileSystemStore {
     ossClient = new OSSClient(endPoint, provider, clientConf);
     uploadPartSize = AliyunOSSUtils.getMultipartSizeProperty(conf,
         MULTIPART_UPLOAD_PART_SIZE_KEY, MULTIPART_UPLOAD_PART_SIZE_DEFAULT);
-    multipartThreshold = conf.getLong(MIN_MULTIPART_UPLOAD_THRESHOLD_KEY,
-        MIN_MULTIPART_UPLOAD_THRESHOLD_DEFAULT);
+
     serverSideEncryptionAlgorithm =
         conf.get(SERVER_SIDE_ENCRYPTION_ALGORITHM_KEY, "");
-
-    if (multipartThreshold < 5 * 1024 * 1024) {
-      LOG.warn(MIN_MULTIPART_UPLOAD_THRESHOLD_KEY + " must be at least 5 MB");
-      multipartThreshold = 5 * 1024 * 1024;
-    }
-
-    if (multipartThreshold > 1024 * 1024 * 1024) {
-      LOG.warn(MIN_MULTIPART_UPLOAD_THRESHOLD_KEY + " must be less than 1 GB");
-      multipartThreshold = 1024 * 1024 * 1024;
-    }
 
     bucketName = uri.getHost();
 
@@ -305,18 +293,19 @@ public class AliyunOSSFileSystemStore {
    * Copy an object from source key to destination key.
    *
    * @param srcKey source key.
+   * @param srcLen source file length.
    * @param dstKey destination key.
    * @return true if file is successfully copied.
    */
-  public boolean copyFile(String srcKey, String dstKey) {
-    ObjectMetadata objectMeta =
-        ossClient.getObjectMetadata(bucketName, srcKey);
-    statistics.incrementReadOps(1);
-    long contentLength = objectMeta.getContentLength();
-    if (contentLength <= multipartThreshold) {
+  public boolean copyFile(String srcKey, long srcLen, String dstKey) {
+    try {
+      //1, try single copy first
       return singleCopy(srcKey, dstKey);
-    } else {
-      return multipartCopy(srcKey, contentLength, dstKey);
+    } catch (Exception e) {
+      //2, if failed(shallow copy not supported), then multi part copy
+      LOG.debug("Exception thrown when copy file: " + srcKey
+          + ", exception: " + e + ", use multipartCopy instead");
+      return multipartCopy(srcKey, srcLen, dstKey);
     }
   }
 

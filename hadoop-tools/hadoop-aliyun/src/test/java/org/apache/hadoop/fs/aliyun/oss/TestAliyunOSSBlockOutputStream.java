@@ -49,7 +49,6 @@ public class TestAliyunOSSBlockOutputStream {
   @Before
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
-    conf.setLong(Constants.MIN_MULTIPART_UPLOAD_THRESHOLD_KEY, 5 * 1024 * 1024);
     conf.setInt(Constants.MULTIPART_UPLOAD_PART_SIZE_KEY, 1024 * 1024);
     conf.setInt(IO_CHUNK_BUFFER_SIZE,
         conf.getInt(Constants.MULTIPART_UPLOAD_PART_SIZE_KEY, 0));

@@ -282,7 +282,9 @@ please raise your issues with them.
     <property>
       <name>fs.oss.multipart.upload.threshold</name>
       <value>20971520</value>
-      <description>Minimum size in bytes before we start a multipart uploads or copy.</description>
+      <description>Minimum size in bytes before we start a multipart uploads or copy.
+        Notice: This property is deprecated and will be removed in further version.
+      </description>
     </property>
 
     <property>
