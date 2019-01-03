@@ -653,7 +653,7 @@ public class AliyunOSSFileSystem extends FileSystem {
     if (srcStatus.isDirectory()) {
       copyDirectory(srcPath, dstPath);
     } else {
-      copyFile(srcPath, dstPath);
+      copyFile(srcPath, srcStatus.getLen(), dstPath);
     }
 
     return srcPath.equals(dstPath) || delete(srcPath, true);
@@ -664,13 +664,14 @@ public class AliyunOSSFileSystem extends FileSystem {
    * (the caller should make sure srcPath is a file and dstPath is valid)
    *
    * @param srcPath source path.
+   * @param srcLen source path length if it is a file.
    * @param dstPath destination path.
    * @return true if file is successfully copied.
    */
-  private boolean copyFile(Path srcPath, Path dstPath) {
+  private boolean copyFile(Path srcPath, long srcLen, Path dstPath) {
     String srcKey = pathToKey(srcPath);
     String dstKey = pathToKey(dstPath);
-    return store.copyFile(srcKey, dstKey);
+    return store.copyFile(srcKey, srcLen, dstKey);
   }
 
   /**
@@ -709,7 +710,8 @@ public class AliyunOSSFileSystem extends FileSystem {
 
         //copy operation just copies metadata, oss will support shallow copy
         executorService.execute(new AliyunOSSCopyFileTask(
-            store, objectSummary.getKey(), newKey, copyFileContext));
+            store, objectSummary.getKey(),
+            objectSummary.getSize(), newKey, copyFileContext));
         copiesToFinish++;
         // No need to call lock() here.
         // It's ok to copy one more file if the rename operation failed

@@ -78,8 +78,6 @@ public class TestAliyunOSSFileSystemStore {
 
   protected void writeRenameReadCompare(Path path, long len)
       throws IOException, NoSuchAlgorithmException {
-    // If len > fs.oss.multipart.upload.threshold,
-    // we'll use a multipart upload copy
     MessageDigest digest = MessageDigest.getInstance("MD5");
     OutputStream out = new BufferedOutputStream(
         new DigestOutputStream(fs.create(path, false), digest));
@@ -92,10 +90,12 @@ public class TestAliyunOSSFileSystemStore {
     assertTrue("Exists", fs.exists(path));
 
     Path copyPath = path.suffix(".copy");
+    long start = System.currentTimeMillis();
     fs.rename(path, copyPath);
 
     assertTrue("Copy exists", fs.exists(copyPath));
-
+    // should less than 1 second
+    assertTrue(System.currentTimeMillis() - start < 1000);
     // Download file from Aliyun OSS and compare the digest against the original
     MessageDigest digest2 = MessageDigest.getInstance("MD5");
     InputStream in = new BufferedInputStream(
@@ -119,7 +119,7 @@ public class TestAliyunOSSFileSystemStore {
   @Test
   public void testLargeUpload()
       throws IOException, NoSuchAlgorithmException {
-    // Multipart upload, multipart copy
-    writeRenameReadCompare(new Path("/test/xlarge"), 52428800L); // 50MB byte
+    // Multipart upload, shallow copy
+    writeRenameReadCompare(new Path("/test/xlarge"), 2147483648L); // 2GB
   }
 }
