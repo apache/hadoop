@@ -34,6 +34,7 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
+import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
 import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.Server.AuthProtocol;
 import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.IpcConnectionContextProto;
@@ -86,6 +87,7 @@ import static org.apache.hadoop.ipc.RpcConstants.PING_CALL_ID;
 public class Client implements AutoCloseable {
   
   public static final Logger LOG = LoggerFactory.getLogger(Client.class);
+  private final RpcDetailedMetrics rpcDetailedMetrics;
 
   /** A counter for generating call IDs. */
   private static final AtomicInteger callIdCounter = new AtomicInteger();
@@ -208,6 +210,24 @@ public class Client implements AutoCloseable {
     }
   };
   
+  /**
+   * Update a particular metric by recording the processing
+   * time of the metric.
+   *
+   * @param name Metric name
+   * @param processingTime time spent in processing the metric.
+   */
+  public void updateMetrics(String name, long processingTime) {
+    rpcDetailedMetrics.addProcessingTime(name, processingTime);
+  }
+
+  /**
+   * Get the RpcDetailedMetrics associated with the Client.
+   */
+  public RpcDetailedMetrics getRpcDetailedMetrics() {
+    return rpcDetailedMetrics;
+  }
+
   /**
    * set the ping interval value in configuration
    * 
@@ -1301,6 +1321,11 @@ public class Client implements AutoCloseable {
     this.maxAsyncCalls = conf.getInt(
         CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_KEY,
         CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_DEFAULT);
+    /**
+     * Create with port of -1, dummy port since the function
+     * takes default argument.
+     */
+    this.rpcDetailedMetrics = RpcDetailedMetrics.create(-1);
   }
 
   /**
