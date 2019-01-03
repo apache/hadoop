@@ -109,4 +109,26 @@ public class TestStoragePolicySatisfyAdminCommands {
     DFSTestUtil.waitExpectedStorageType(file, StorageType.ARCHIVE, 1, 30000,
         dfs);
   }
+
+  @Test(timeout = 30000)
+  public void testStoragePolicySatisfierCommandWithURI() throws Exception {
+    final String file = "/testStoragePolicySatisfierCommandURI";
+    DFSTestUtil.createFile(dfs, new Path(file), SIZE, REPL, 0);
+
+    final StoragePolicyAdmin admin = new StoragePolicyAdmin(conf);
+    DFSTestUtil.toolRun(admin, "-getStoragePolicy -path " + file, 0,
+        "The storage policy of " + file + " is unspecified");
+
+    DFSTestUtil.toolRun(admin,
+        "-setStoragePolicy -path " + file + " -policy COLD", 0,
+        "Set storage policy COLD on " + file.toString());
+
+    DFSTestUtil.toolRun(admin,
+        "-satisfyStoragePolicy -path " + dfs.getUri() + file, 0,
+        "Scheduled blocks to move based on the current storage policy on "
+            + dfs.getUri() + file.toString());
+
+    DFSTestUtil.waitExpectedStorageType(file, StorageType.ARCHIVE, 1, 30000,
+        dfs);
+  }
 }

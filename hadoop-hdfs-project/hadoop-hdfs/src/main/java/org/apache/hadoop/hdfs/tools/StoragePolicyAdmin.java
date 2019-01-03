@@ -23,7 +23,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -278,10 +277,10 @@ public class StoragePolicyAdmin extends Configured implements Tool {
             "policy.\nUsage: " + getLongUsage());
         return 1;
       }
-
-      final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
+      Path p = new Path(path);
+      final FileSystem fs = FileSystem.get(p.toUri(), conf);
       try {
-        dfs.satisfyStoragePolicy(new Path(path));
+        fs.satisfyStoragePolicy(p);
         System.out.println("Scheduled blocks to move based on the current"
             + " storage policy on " + path);
       } catch (Exception e) {
