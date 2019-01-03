@@ -51,6 +51,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * This class implements debug operations on the HDFS command-line.
@@ -458,11 +459,14 @@ public class DebugAdmin extends Configured implements Tool {
       if (!command.name.equals("help")) {
         System.out.println(command.usageText);
       }
+      System.out.println();
+      ToolRunner.printGenericCommandUsage(System.out);
     }
   }
 
-  public static void main(String[] argsArray) throws IOException {
+  public static void main(String[] argsArray) throws Exception {
     DebugAdmin debugAdmin = new DebugAdmin(new Configuration());
-    System.exit(debugAdmin.run(argsArray));
+    int res = ToolRunner.run(debugAdmin, argsArray);
+    System.exit(res);
   }
 }
