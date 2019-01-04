@@ -44,8 +44,7 @@ import java.security.Signature;
  */
 public class TestOzoneDelegationTokenSecretManager {
 
-  private OzoneDelegationTokenSecretManager<OzoneTokenIdentifier>
-      secretManager;
+  private OzoneDelegationTokenSecretManager secretManager;
   private SecurityConfig securityConfig;
   private KeyPair keyPair;
   private long expiryTime;
@@ -209,10 +208,10 @@ public class TestOzoneDelegationTokenSecretManager {
   /**
    * Create instance of {@link OzoneDelegationTokenSecretManager}.
    */
-  private OzoneDelegationTokenSecretManager<OzoneTokenIdentifier>
+  private OzoneDelegationTokenSecretManager
       createSecretManager(OzoneConfiguration config, long tokenMaxLife,
       long expiry, long tokenRemoverScanTime) throws IOException {
-    return new OzoneDelegationTokenSecretManager<>(config, tokenMaxLife,
+    return new OzoneDelegationTokenSecretManager(config, tokenMaxLife,
         expiry, tokenRemoverScanTime, serviceRpcAdd);
   }
 }

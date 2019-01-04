@@ -46,8 +46,7 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_DB_CACHE_SIZE_MB;
 /**
  * SecretStore for Ozone Master.
  */
-public class OzoneSecretStore<T extends OzoneTokenIdentifier>
-    implements Closeable {
+public class OzoneSecretStore implements Closeable {
 
   private static final Logger LOG = LoggerFactory
       .getLogger(OzoneSecretStore.class);
@@ -142,7 +141,7 @@ public class OzoneSecretStore<T extends OzoneTokenIdentifier>
     }
   }
 
-  public void storeToken(T tokenId, Long renewDate)
+  public void storeToken(OzoneTokenIdentifier tokenId, Long renewDate)
       throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Storing token " + tokenId.getSequenceNumber());
@@ -168,12 +167,12 @@ public class OzoneSecretStore<T extends OzoneTokenIdentifier>
     }
   }
 
-  public void updateToken(T tokenId, Long renewDate)
+  public void updateToken(OzoneTokenIdentifier tokenId, Long renewDate)
       throws IOException {
     storeToken(tokenId, renewDate);
   }
 
-  public void removeToken(T tokenId)
+  public void removeToken(OzoneTokenIdentifier tokenId)
       throws IOException {
     byte[] dbKey = getTokenDBKey(tokenId);
     try {
@@ -228,7 +227,7 @@ public class OzoneSecretStore<T extends OzoneTokenIdentifier>
       throws IOException {
     long renewDate;
     DataInputStream in = new DataInputStream(new ByteArrayInputStream(data));
-    T tokenId = (T) T.readProtoBuf(in);
+    OzoneTokenIdentifier tokenId = OzoneTokenIdentifier.readProtoBuf(in);
     try {
       tokenId.readFields(in);
       renewDate = in.readLong();
@@ -243,7 +242,7 @@ public class OzoneSecretStore<T extends OzoneTokenIdentifier>
         TOKEN_MASTER_KEY_KEY_PREFIX + masterKey.getKeyId());
   }
 
-  private byte[] getTokenDBKey(T tokenId) {
+  private byte[] getTokenDBKey(OzoneTokenIdentifier tokenId) {
     return DFSUtil.string2Bytes(
         TOKEN_STATE_KEY_PREFIX + tokenId.getSequenceNumber());
   }

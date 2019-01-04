@@ -55,7 +55,7 @@ public class TestOzoneRpcClient extends TestOzoneRpcClientAbstract {
   public static void shutdown() throws IOException {
     shutdownCluster();
   }
-  
+
   @Test
   public void testGetS3Secret() throws IOException {
     //Creates a secret since it does not exist
