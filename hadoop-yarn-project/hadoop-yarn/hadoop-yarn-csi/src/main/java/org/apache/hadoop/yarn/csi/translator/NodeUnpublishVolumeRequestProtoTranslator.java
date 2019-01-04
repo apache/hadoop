@@ -18,27 +18,32 @@
 package org.apache.hadoop.yarn.csi.translator;
 
 import csi.v0.Csi;
-import org.apache.hadoop.yarn.api.protocolrecords.GetPluginInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.NodeUnpublishVolumeRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
 /**
- * Protobuf message translator for GetPluginInfoResponse and
- * Csi.GetPluginInfoResponse.
+ * This class helps to transform a YARN side NodeUnpublishVolumeRequest
+ * to corresponding CSI protocol message.
+ * @param <A> YARN NodeUnpublishVolumeRequest
+ * @param <B> CSI NodeUnpublishVolumeRequest
  */
-public class GetPluginInfoResponseProtoTranslator<A, B> implements
-    ProtoTranslator<GetPluginInfoResponse, Csi.GetPluginInfoResponse> {
+public class NodeUnpublishVolumeRequestProtoTranslator<A, B> implements
+    ProtoTranslator<NodeUnpublishVolumeRequest,
+        Csi.NodeUnpublishVolumeRequest> {
 
-  @Override public Csi.GetPluginInfoResponse convertTo(
-      GetPluginInfoResponse messageA) throws YarnException {
-    return Csi.GetPluginInfoResponse.newBuilder()
-        .setName(messageA.getDriverName())
-        .setVendorVersion(messageA.getVersion())
+  @Override
+  public Csi.NodeUnpublishVolumeRequest convertTo(
+      NodeUnpublishVolumeRequest messageA) throws YarnException {
+    return Csi.NodeUnpublishVolumeRequest.newBuilder()
+        .setVolumeId(messageA.getVolumeId())
+        .setTargetPath(messageA.getTargetPath())
         .build();
   }
 
-  @Override public GetPluginInfoResponse convertFrom(
-      Csi.GetPluginInfoResponse messageB) throws YarnException {
-    return GetPluginInfoResponse.newInstance(messageB.getName(),
-        messageB.getVendorVersion());
+  @Override
+  public NodeUnpublishVolumeRequest convertFrom(
+      Csi.NodeUnpublishVolumeRequest messageB) throws YarnException {
+    return NodeUnpublishVolumeRequest
+        .newInstance(messageB.getVolumeId(), messageB.getTargetPath());
   }
 }

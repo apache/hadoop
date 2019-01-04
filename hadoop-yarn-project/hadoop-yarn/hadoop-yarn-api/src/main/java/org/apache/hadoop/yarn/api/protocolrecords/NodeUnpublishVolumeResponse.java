@@ -15,26 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.api.protocolrecords;
 
-option java_package = "org.apache.hadoop.yarn.proto";
-option java_outer_classname = "CsiAdaptorProtocol";
-option java_generic_services = true;
-option java_generate_equals_and_hash = true;
-package hadoop.yarn;
+import org.apache.hadoop.yarn.util.Records;
 
-import "yarn_csi_adaptor.proto";
+/**
+ * The response sent by a CSI driver adaptor to the node manager
+ * after un-publishing a volume on the node.
+ */
+public class NodeUnpublishVolumeResponse {
 
-service CsiAdaptorProtocolService {
-
-    rpc getPluginInfo (GetPluginInfoRequest)
-    returns (GetPluginInfoResponse);
-
-    rpc validateVolumeCapacity (ValidateVolumeCapabilitiesRequest)
-    returns (ValidateVolumeCapabilitiesResponse);
-
-    rpc nodePublishVolume (NodePublishVolumeRequest)
-    returns (NodePublishVolumeResponse);
-
-    rpc nodeUnpublishVolume (NodeUnpublishVolumeRequest)
-    returns (NodeUnpublishVolumeResponse);
+  public static NodeUnpublishVolumeResponse newInstance() {
+    return Records.newRecord(NodeUnpublishVolumeResponse.class);
+  }
 }

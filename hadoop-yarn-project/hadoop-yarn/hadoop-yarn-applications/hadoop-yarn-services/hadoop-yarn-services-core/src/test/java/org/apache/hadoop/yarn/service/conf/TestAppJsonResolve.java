@@ -231,5 +231,6 @@ public class TestAppJsonResolve extends Assert {
     Assert.assertEquals("yarn.io/csi-volume", volume.getKey());
     Assert.assertEquals(100L, volume.getValue().getValue().longValue());
     Assert.assertEquals(2, volume.getValue().getAttributes().size());
+    Assert.assertEquals(1, volume.getValue().getTags().size());
   }
 }

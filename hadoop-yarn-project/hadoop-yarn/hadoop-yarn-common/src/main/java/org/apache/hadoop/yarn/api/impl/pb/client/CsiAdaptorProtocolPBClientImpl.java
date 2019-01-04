@@ -25,10 +25,18 @@ import org.apache.hadoop.yarn.api.CsiAdaptorPB;
 import org.apache.hadoop.yarn.api.CsiAdaptorProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetPluginInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetPluginInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.NodePublishVolumeRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.NodePublishVolumeResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.NodeUnpublishVolumeRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.NodeUnpublishVolumeResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetPluginInfoRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetPluginInfoResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.NodePublishVolumeRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.NodePublishVolumeResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.NodeUnpublishVolumeRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.NodeUnpublishVolumeResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ValidateVolumeCapabilitiesRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ValidateVolumeCapabilitiesResponsePBImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -76,6 +84,34 @@ public class CsiAdaptorProtocolPBClientImpl
     try {
       return new ValidateVolumeCapabilitiesResponsePBImpl(
           proxy.validateVolumeCapacity(null, requestProto));
+    } catch (ServiceException e) {
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
+    }
+  }
+
+  @Override
+  public NodePublishVolumeResponse nodePublishVolume(
+      NodePublishVolumeRequest request) throws IOException, YarnException {
+    CsiAdaptorProtos.NodePublishVolumeRequest requestProto =
+        ((NodePublishVolumeRequestPBImpl) request).getProto();
+    try {
+      return new NodePublishVolumeResponsePBImpl(
+          proxy.nodePublishVolume(null, requestProto));
+    } catch (ServiceException e) {
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
+    }
+  }
+
+  @Override
+  public NodeUnpublishVolumeResponse nodeUnpublishVolume(
+      NodeUnpublishVolumeRequest request) throws YarnException, IOException {
+    CsiAdaptorProtos.NodeUnpublishVolumeRequest requestProto =
+        ((NodeUnpublishVolumeRequestPBImpl) request).getProto();
+    try {
+      return new NodeUnpublishVolumeResponsePBImpl(
+          proxy.nodeUnpublishVolume(null, requestProto));
     } catch (ServiceException e) {
       RPCUtil.unwrapAndThrowException(e);
       return null;

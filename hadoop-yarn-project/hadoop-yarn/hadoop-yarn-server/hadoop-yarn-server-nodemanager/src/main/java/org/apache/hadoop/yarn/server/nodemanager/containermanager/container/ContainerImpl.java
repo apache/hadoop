@@ -172,6 +172,7 @@ public class ContainerImpl implements Container {
   private SlidingWindowRetryPolicy.RetryContext windowRetryContext;
   private SlidingWindowRetryPolicy retryPolicy;
 
+  private String csiVolumesRootDir;
   private String workDir;
   private String logDir;
   private String host;
@@ -934,6 +935,16 @@ public class ContainerImpl implements Container {
   @Override
   public void setWorkDir(String workDir) {
     this.workDir = workDir;
+  }
+
+  @Override
+  public String getCsiVolumesRootDir() {
+    return csiVolumesRootDir;
+  }
+
+  @Override
+  public void setCsiVolumesRootDir(String volumesRootDir) {
+    this.csiVolumesRootDir = volumesRootDir;
   }
 
   private void clearIpAndHost() {

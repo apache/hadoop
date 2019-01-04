@@ -19,12 +19,14 @@ package org.apache.hadoop.yarn.service.api.records;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.gson.annotations.SerializedName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * ResourceInformation determines unit/name/value of resource types in addition to memory and vcores. It will be part of Resource object
@@ -40,9 +42,23 @@ public class ResourceInformation {
   @SerializedName("attributes")
   private Map<String, String> attributes = null;
 
+  @SerializedName("tags")
+  private Set<String> tags = null;
+
   public ResourceInformation value(Long value) {
     this.value = value;
     return this;
+  }
+
+  public ResourceInformation tags(Set<String> resourceTags) {
+    this.tags = resourceTags;
+    return this;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("tags")
+  public Set<String> getTags() {
+    return tags == null ? ImmutableSet.of() : tags;
   }
 
   @ApiModelProperty(value = "")
@@ -116,6 +132,7 @@ public class ResourceInformation {
     sb.append("    unit: ").append(toIndentedString(unit)).append("\n");
     sb.append("    attributes: ").append(toIndentedString(attributes))
         .append("\n");
+    sb.append("    tags: ").append(toIndentedString(tags)).append("\n");
     sb.append("}");
     return sb.toString();
   }

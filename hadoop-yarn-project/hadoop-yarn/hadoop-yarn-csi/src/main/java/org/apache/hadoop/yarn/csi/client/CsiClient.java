@@ -40,4 +40,10 @@ public interface CsiClient {
 
   Csi.ValidateVolumeCapabilitiesResponse validateVolumeCapabilities(
       Csi.ValidateVolumeCapabilitiesRequest request) throws IOException;
+
+  Csi.NodePublishVolumeResponse nodePublishVolume(
+      Csi.NodePublishVolumeRequest request) throws IOException;
+
+  Csi.NodeUnpublishVolumeResponse nodeUnpublishVolume(
+      Csi.NodeUnpublishVolumeRequest request) throws IOException;
 }

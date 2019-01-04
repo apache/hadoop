@@ -23,9 +23,15 @@ import org.apache.hadoop.yarn.api.CsiAdaptorPB;
 import org.apache.hadoop.yarn.api.CsiAdaptorProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetPluginInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetPluginInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.NodePublishVolumeResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.NodeUnpublishVolumeResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetPluginInfoRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetPluginInfoResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.NodePublishVolumeRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.NodePublishVolumeResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.NodeUnpublishVolumeRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.NodeUnpublishVolumeResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ValidateVolumeCapabilitiesRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ValidateVolumeCapabilitiesResponsePBImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -68,6 +74,36 @@ public class CsiAdaptorProtocolPBServiceImpl implements CsiAdaptorPB {
       ValidateVolumeCapabilitiesResponse response =
           real.validateVolumeCapacity(req);
       return ((ValidateVolumeCapabilitiesResponsePBImpl) response).getProto();
+    } catch (YarnException | IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public CsiAdaptorProtos.NodePublishVolumeResponse nodePublishVolume(
+      RpcController controller,
+      CsiAdaptorProtos.NodePublishVolumeRequest request)
+      throws ServiceException {
+    try {
+      NodePublishVolumeRequestPBImpl req =
+          new NodePublishVolumeRequestPBImpl(request);
+      NodePublishVolumeResponse response = real.nodePublishVolume(req);
+      return ((NodePublishVolumeResponsePBImpl) response).getProto();
+    } catch (YarnException | IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public CsiAdaptorProtos.NodeUnpublishVolumeResponse nodeUnpublishVolume(
+      RpcController controller,
+      CsiAdaptorProtos.NodeUnpublishVolumeRequest request)
+      throws ServiceException {
+    try {
+      NodeUnpublishVolumeRequestPBImpl req =
+          new NodeUnpublishVolumeRequestPBImpl(request);
+      NodeUnpublishVolumeResponse response = real.nodeUnpublishVolume(req);
+      return ((NodeUnpublishVolumeResponsePBImpl) response).getProto();
     } catch (YarnException | IOException e) {
       throw new ServiceException(e);
     }

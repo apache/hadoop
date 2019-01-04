@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,26 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-option java_package = "org.apache.hadoop.yarn.proto";
-option java_outer_classname = "CsiAdaptorProtocol";
-option java_generic_services = true;
-option java_generate_equals_and_hash = true;
-package hadoop.yarn;
-
-import "yarn_csi_adaptor.proto";
-
-service CsiAdaptorProtocolService {
-
-    rpc getPluginInfo (GetPluginInfoRequest)
-    returns (GetPluginInfoResponse);
-
-    rpc validateVolumeCapacity (ValidateVolumeCapabilitiesRequest)
-    returns (ValidateVolumeCapabilitiesResponse);
-
-    rpc nodePublishVolume (NodePublishVolumeRequest)
-    returns (NodePublishVolumeResponse);
-
-    rpc nodeUnpublishVolume (NodeUnpublishVolumeRequest)
-    returns (NodeUnpublishVolumeResponse);
-}
+/**
+ * Package that includes some CSI utility classes.
+ */
+package org.apache.hadoop.yarn.util.csi;

@@ -45,6 +45,7 @@ public final class ContainerStartContext {
   private final String user;
   private final String appId;
   private final Path containerWorkDir;
+  private final Path csiVolumesRootDir;
   private final List<String> localDirs;
   private final List<String> logDirs;
   private final List<String> filecacheDirs;
@@ -64,6 +65,7 @@ public final class ContainerStartContext {
     private String user;
     private String appId;
     private Path containerWorkDir;
+    private Path csiVolumesRoot;
     private List<String> localDirs;
     private List<String> logDirs;
     private List<String> filecacheDirs;
@@ -115,6 +117,11 @@ public final class ContainerStartContext {
 
     public Builder setAppId(String appId) {
       this.appId = appId;
+      return this;
+    }
+
+    public Builder setContainerCsiVolumesRootDir(Path csiVolumesRootDir) {
+      this.csiVolumesRoot = csiVolumesRootDir;
       return this;
     }
 
@@ -188,6 +195,7 @@ public final class ContainerStartContext {
     this.containerLogDirs = builder.containerLogDirs;
     this.userFilecacheDirs = builder.userFilecacheDirs;
     this.applicationLocalDirs = builder.applicationLocalDirs;
+    this.csiVolumesRootDir = builder.csiVolumesRoot;
   }
 
   public Container getContainer() {
@@ -261,5 +269,9 @@ public final class ContainerStartContext {
 
   public List<String> getApplicationLocalDirs() {
     return Collections.unmodifiableList(this.applicationLocalDirs);
+  }
+
+  public Path getCsiVolumesRootDir() {
+    return this.csiVolumesRootDir;
   }
 }

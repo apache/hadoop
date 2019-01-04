@@ -101,6 +101,7 @@ public class ContainerLocalizer {
       new FsPermission((short)0710);
   private static final FsPermission USERCACHE_FOLDER_PERMS =
       new FsPermission((short) 0755);
+  public static final String CSI_VOLIUME_MOUNTS_ROOT = "csivolumes";
 
   private final String user;
   private final String appId;
