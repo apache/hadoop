@@ -165,6 +165,22 @@ public class TestKDiag extends Assert {
   }
 
   @Test
+  public void testKerberosName() throws Throwable {
+    kdiagFailure(ARG_KEYLEN, KEYLEN,
+            ARG_VERIFYSHORTNAME,
+            ARG_PRINCIPAL, "foo/foo/foo@BAR.COM");
+  }
+
+  @Test
+  public void testShortName() throws Throwable {
+    kdiag(ARG_KEYLEN, KEYLEN,
+            ARG_KEYTAB, keytab.getAbsolutePath(),
+            ARG_PRINCIPAL,
+            ARG_VERIFYSHORTNAME,
+            ARG_PRINCIPAL, "foo@EXAMPLE.COM");
+  }
+
+  @Test
   public void testFileOutput() throws Throwable {
     File f = new File("target/kdiag.txt");
     kdiag(ARG_KEYLEN, KEYLEN,
