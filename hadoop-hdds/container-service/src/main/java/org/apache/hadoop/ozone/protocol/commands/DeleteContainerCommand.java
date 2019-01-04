@@ -15,44 +15,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.ozone.protocol.commands;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
-
-import static org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReregisterCommandProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.DeleteContainerCommandProto;
 
 /**
- * Informs a datanode to register itself with SCM again.
+ * SCM command which tells the datanode to delete a container.
  */
-public class ReregisterCommand extends
-    SCMCommand<ReregisterCommandProto>{
+public class DeleteContainerCommand extends
+    SCMCommand<DeleteContainerCommandProto> {
 
-  /**
-   * Returns the type of this command.
-   *
-   * @return Type
-   */
+  private final long containerId;
+
+  public DeleteContainerCommand(long containerId) {
+    this.containerId = containerId;
+  }
+
   @Override
   public SCMCommandProto.Type getType() {
-    return SCMCommandProto.Type.reregisterCommand;
-  }
-
-  /**
-   * Not implemented for ReregisterCommand.
-   *
-   * @return cmdId.
-   */
-  @Override
-  public long getId() {
-    return 0;
+    return SCMCommandProto.Type.deleteContainerCommand;
   }
 
   @Override
-  public ReregisterCommandProto getProto() {
-    return ReregisterCommandProto
-        .newBuilder()
-        .build();
+  public DeleteContainerCommandProto getProto() {
+    DeleteContainerCommandProto.Builder builder =
+        DeleteContainerCommandProto.newBuilder();
+    builder.setCmdId(getId())
+        .setContainerID(getContainerID());
+    return builder.build();
+  }
+
+  public long getContainerID() {
+    return containerId;
+  }
+
+  public static DeleteContainerCommand getFromProtobuf(
+      DeleteContainerCommandProto protoMessage) {
+    Preconditions.checkNotNull(protoMessage);
+    return new DeleteContainerCommand(protoMessage.getContainerID());
   }
 }

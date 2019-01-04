@@ -146,6 +146,15 @@ public abstract class Handler {
   public abstract void closeContainer(Container container)
       throws IOException;
 
+  /**
+   * Deletes the given container.
+   *
+   * @param container container to be deleted
+   * @throws IOException
+   */
+  public abstract void deleteContainer(Container container)
+      throws IOException;
+
   public void setScmID(String scmId) {
     this.scmID = scmId;
   }

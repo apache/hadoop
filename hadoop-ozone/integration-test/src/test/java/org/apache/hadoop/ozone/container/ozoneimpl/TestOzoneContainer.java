@@ -75,13 +75,12 @@ public class TestOzoneContainer {
       conf.setBoolean(
           OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, false);
 
-      DatanodeDetails datanodeDetails = Mockito.mock(DatanodeDetails.class);
+      DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
       StateContext context = Mockito.mock(StateContext.class);
       DatanodeStateMachine dsm = Mockito.mock(DatanodeStateMachine.class);
       Mockito.when(dsm.getDatanodeDetails()).thenReturn(datanodeDetails);
       Mockito.when(context.getParent()).thenReturn(dsm);
-      container = new OzoneContainer(TestUtils.randomDatanodeDetails(),
-          conf, context);
+      container = new OzoneContainer(datanodeDetails, conf, context);
       //Setting scmId, as we start manually ozone container.
       container.getDispatcher().setScmId(UUID.randomUUID().toString());
       container.start();

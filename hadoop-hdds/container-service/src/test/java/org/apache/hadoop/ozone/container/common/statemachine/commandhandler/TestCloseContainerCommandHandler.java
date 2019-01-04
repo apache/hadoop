@@ -70,6 +70,8 @@ public class TestCloseContainerCommandHandler {
     try {
       final Container container =
           createContainer(conf, datanodeDetails, ozoneContainer);
+      Mockito.verify(context.getParent(),
+          Mockito.times(1)).triggerHeartbeat();
       final long containerId = container.getContainerData().getContainerID();
       final PipelineID pipelineId = PipelineID.valueOf(UUID.fromString(
           container.getContainerData().getOriginPipelineId()));
@@ -88,7 +90,7 @@ public class TestCloseContainerCommandHandler {
               .getContainerState());
 
       Mockito.verify(context.getParent(),
-          Mockito.times(2)).triggerHeartbeat();
+          Mockito.times(3)).triggerHeartbeat();
     } finally {
       ozoneContainer.stop();
     }
@@ -105,6 +107,8 @@ public class TestCloseContainerCommandHandler {
     try {
       final Container container =
           createContainer(conf, datanodeDetails, ozoneContainer);
+      Mockito.verify(context.getParent(),
+          Mockito.times(1)).triggerHeartbeat();
       final long containerId = container.getContainerData().getContainerID();
       // To quasi close specify a pipeline which doesn't exist in the datanode.
       final PipelineID pipelineId = PipelineID.randomId();
@@ -122,7 +126,7 @@ public class TestCloseContainerCommandHandler {
               .getContainerState());
 
       Mockito.verify(context.getParent(),
-          Mockito.times(2)).triggerHeartbeat();
+          Mockito.times(3)).triggerHeartbeat();
     } finally {
       ozoneContainer.stop();
     }
@@ -138,6 +142,8 @@ public class TestCloseContainerCommandHandler {
     try {
       final Container container =
           createContainer(conf, datanodeDetails, ozoneContainer);
+      Mockito.verify(context.getParent(),
+          Mockito.times(1)).triggerHeartbeat();
       final long containerId = container.getContainerData().getContainerID();
       // A pipeline which doesn't exist in the datanode.
       final PipelineID pipelineId = PipelineID.randomId();
@@ -155,7 +161,7 @@ public class TestCloseContainerCommandHandler {
               .getContainerState());
 
       Mockito.verify(context.getParent(),
-          Mockito.times(2)).triggerHeartbeat();
+          Mockito.times(3)).triggerHeartbeat();
 
       // The container is quasi closed. Force close the container now.
       final CloseContainerCommand closeCommand = new CloseContainerCommand(
@@ -168,7 +174,7 @@ public class TestCloseContainerCommandHandler {
               .getContainerState());
 
       Mockito.verify(context.getParent(),
-          Mockito.times(3)).triggerHeartbeat();
+          Mockito.times(4)).triggerHeartbeat();
     } finally {
       ozoneContainer.stop();
     }
@@ -184,6 +190,8 @@ public class TestCloseContainerCommandHandler {
     try {
       final Container container =
           createContainer(conf, datanodeDetails, ozoneContainer);
+      Mockito.verify(context.getParent(),
+          Mockito.times(1)).triggerHeartbeat();
       final long containerId = container.getContainerData().getContainerID();
       // A pipeline which doesn't exist in the datanode.
       final PipelineID pipelineId = PipelineID.randomId();
@@ -201,7 +209,7 @@ public class TestCloseContainerCommandHandler {
               .getContainerState());
 
       Mockito.verify(context.getParent(),
-          Mockito.times(2)).triggerHeartbeat();
+          Mockito.times(3)).triggerHeartbeat();
     } finally {
       ozoneContainer.stop();
     }
