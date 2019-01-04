@@ -40,6 +40,7 @@ public class TestKerberosName {
       "RULE:[2:$1;$2](^.*;admin$)s/;admin$//\n" +
       "RULE:[2:$2](root)\n" +
       "DEFAULT";
+    KerberosName.setRuleMechanism(KerberosName.MECHANISM_HADOOP);
     KerberosName.setRules(rules);
     KerberosName.printRules();
   }
@@ -85,10 +86,16 @@ public class TestKerberosName {
 
   @Test
   public void testAntiPatterns() throws Exception {
+    KerberosName.setRuleMechanism(KerberosName.MECHANISM_HADOOP);
     checkBadName("owen/owen/owen@FOO.COM");
     checkBadName("owen@foo/bar.com");
+
     checkBadTranslation("foo@ACME.COM");
     checkBadTranslation("root/joe@FOO.COM");
+
+    KerberosName.setRuleMechanism(KerberosName.MECHANISM_MIT);
+    checkTranslation("foo@ACME.COM", "foo@ACME.COM");
+    checkTranslation("root/joe@FOO.COM", "root/joe@FOO.COM");
   }
 
   @Test
@@ -127,6 +134,11 @@ public class TestKerberosName {
     checkTranslation("Joe/root@FOO.COM", "joe");
     checkTranslation("Joe/admin@FOO.COM", "joe");
     checkTranslation("Joe/guestguest@FOO.COM", "joe");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testInvalidRuleMechanism() throws Exception {
+    KerberosName.setRuleMechanism("INVALID_MECHANISM");
   }
 
   @After
