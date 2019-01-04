@@ -687,6 +687,15 @@
 </property>
 
 <property>
+  <name>hadoop.security.auth_to_local.mechanism</name>
+  <value>hadoop</value>
+  <description>The mechanism by which auth_to_local rules are evaluated.
+    If set to 'hadoop' it will not allow resulting local user names to have
+    either '@' or '/'. If set to 'MIT' it will follow MIT evaluation rules
+    and the restrictions of 'hadoop' do not apply.</description>
+</property>
+
+<property>
   <name>hadoop.token.files</name>
   <value></value>
   <description>List of token cache files that have delegation tokens for hadoop service</description>
