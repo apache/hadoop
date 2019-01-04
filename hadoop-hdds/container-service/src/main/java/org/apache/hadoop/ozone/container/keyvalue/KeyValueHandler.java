@@ -240,6 +240,7 @@ public class KeyValueHandler extends Handler {
       if (containerSet.getContainer(containerID) == null) {
         newContainer.create(volumeSet, volumeChoosingPolicy, scmID);
         containerSet.addContainer(newContainer);
+        sendICR(newContainer);
       } else {
 
         // The create container request for an already existing container can
@@ -335,37 +336,10 @@ public class KeyValueHandler extends Handler {
     }
 
     boolean forceDelete = request.getDeleteContainer().getForceDelete();
-    kvContainer.writeLock();
     try {
-      // Check if container is open
-      if (kvContainer.getContainerData().isOpen()) {
-        kvContainer.writeUnlock();
-        throw new StorageContainerException(
-            "Deletion of Open Container is not allowed.",
-            DELETE_ON_OPEN_CONTAINER);
-      } else if (!forceDelete && kvContainer.getContainerData().getKeyCount()
-          > 0) {
-        // If the container is not empty and cannot be deleted forcibly,
-        // then throw a SCE to stop deleting.
-        kvContainer.writeUnlock();
-        throw new StorageContainerException(
-            "Container cannot be deleted because it is not empty.",
-            ContainerProtos.Result.ERROR_CONTAINER_NOT_EMPTY);
-      } else {
-        long containerId = kvContainer.getContainerData().getContainerID();
-        containerSet.removeContainer(containerId);
-        // Release the lock first.
-        // Avoid holding write locks for disk operations
-        kvContainer.writeUnlock();
-
-        kvContainer.delete(forceDelete);
-      }
+      deleteInternal(kvContainer, forceDelete);
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);
-    } finally {
-      if (kvContainer.hasWriteLock()) {
-        kvContainer.writeUnlock();
-      }
     }
     return ContainerUtils.getSuccessResponse(request);
   }
@@ -823,6 +797,7 @@ public class KeyValueHandler extends Handler {
 
     populateContainerPathFields(container, maxSize);
     container.importContainerData(rawContainerStream, packer);
+    sendICR(container);
     return container;
 
   }
@@ -876,5 +851,36 @@ public class KeyValueHandler extends Handler {
     }
     container.close();
     sendICR(container);
+  }
+
+  @Override
+  public void deleteContainer(Container container) throws IOException {
+    deleteInternal(container, true);
+  }
+
+  private void deleteInternal(Container container, boolean force)
+      throws StorageContainerException {
+    container.writeLock();
+    try {
+      // Check if container is open
+      if (container.getContainerData().isOpen()) {
+        throw new StorageContainerException(
+            "Deletion of Open Container is not allowed.",
+            DELETE_ON_OPEN_CONTAINER);
+      }
+      if (!force && container.getContainerData().getKeyCount() > 0) {
+        // If the container is not empty and cannot be deleted forcibly,
+        // then throw a SCE to stop deleting.
+        throw new StorageContainerException(
+            "Container cannot be deleted because it is not empty.",
+            ContainerProtos.Result.ERROR_CONTAINER_NOT_EMPTY);
+      }
+      long containerId = container.getContainerData().getContainerID();
+      containerSet.removeContainer(containerId);
+    } finally {
+      container.writeUnlock();
+    }
+    // Avoid holding write locks for disk operations
+    container.delete(force);
   }
 }

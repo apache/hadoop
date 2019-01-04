@@ -94,7 +94,7 @@ public class ContainerController {
   }
 
   /**
-   * Closes a container given its id.
+   * Closes a container given its Id.
    *
    * @param containerId Id of the container to close
    * @throws IOException in case of exception
@@ -111,6 +111,16 @@ public class ContainerController {
       throws IOException {
     return handlers.get(type).importContainer(containerId, maxSize,
         originPipelineId, originNodeId, rawContainerStream, packer);
+  }
+
+  /**
+   * Deletes a container given its Id.
+   * @param containerId Id of the container to be deleted
+   * @throws IOException
+   */
+  public void deleteContainer(final long containerId) throws IOException {
+    final Container container = containerSet.getContainer(containerId);
+    getHandler(container).deleteContainer(container);
   }
 
   /**

@@ -20,6 +20,7 @@ package org.apache.hadoop.hdds.scm.command;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.CommandStatus;
+import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .CommandStatusReportFromDatanode;
@@ -57,6 +58,11 @@ public class CommandStatusReportHandler implements
       case replicateContainerCommand:
         publisher.fireEvent(SCMEvents.REPLICATION_STATUS, new
             ReplicationStatus(cmdStatus));
+        if (cmdStatus.getStatus() == CommandStatus.Status.EXECUTED) {
+          publisher.fireEvent(SCMEvents.REPLICATION_COMPLETE,
+              new ReplicationManager.ReplicationCompleted(
+                  cmdStatus.getCmdId()));
+        }
         break;
       case deleteBlocksCommand:
         if (cmdStatus.getStatus() == CommandStatus.Status.EXECUTED) {
@@ -64,6 +70,12 @@ public class CommandStatusReportHandler implements
               new DeleteBlockStatus(cmdStatus));
         }
         break;
+      case deleteContainerCommand:
+        if (cmdStatus.getStatus() == CommandStatus.Status.EXECUTED) {
+          publisher.fireEvent(SCMEvents.DELETE_CONTAINER_COMMAND_COMPLETE,
+              new ReplicationManager.DeleteContainerCommandCompleted(
+                  cmdStatus.getCmdId()));
+        }
       default:
         LOGGER.debug("CommandStatus of type:{} not handled in " +
             "CommandStatusReportHandler.", cmdStatus.getType());
