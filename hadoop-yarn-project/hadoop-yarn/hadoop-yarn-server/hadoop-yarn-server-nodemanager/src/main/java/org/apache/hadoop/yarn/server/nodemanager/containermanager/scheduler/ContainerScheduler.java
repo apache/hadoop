@@ -518,7 +518,7 @@ public class ContainerScheduler extends AbstractService implements
     // Kill the opportunistic containers that were chosen.
     for (Container contToReclaim : extraOppContainersToReclaim) {
       String preemptionAction = usePauseEventForPreemption == true ? "paused" :
-          "resumed";
+          "killed";
       LOG.info(
           "Container {} will be {} to start the "
               + "execution of guaranteed container {}.",
