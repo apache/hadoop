@@ -532,8 +532,13 @@ public class NetworkTopology {
     if (excludedScope == null) {
       availableNodes = countNumOfAvailableNodes(scope, excludedNodes);
     } else {
-      availableNodes =
-          countNumOfAvailableNodes("~" + excludedScope, excludedNodes);
+      netlock.readLock().lock();
+      try {
+        availableNodes = countNumOfAvailableNodes(scope, excludedNodes) -
+            countNumOfAvailableNodes(excludedScope, excludedNodes);
+      } finally {
+        netlock.readLock().unlock();
+      }
     }
     LOG.debug("Choosing random from {} available nodes on node {},"
         + " scope={}, excludedScope={}, excludeNodes={}. numOfDatanodes={}.",
