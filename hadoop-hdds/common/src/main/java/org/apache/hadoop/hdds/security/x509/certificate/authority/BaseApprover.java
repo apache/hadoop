@@ -173,9 +173,9 @@ public abstract class BaseApprover implements CertificateApprover {
    * {@inheritDoc}
    */
   @Override
-  public CompletableFuture<X509CertificateHolder> approve(String csr)
+  public CompletableFuture<X509CertificateHolder> inspectCSR(String csr)
       throws IOException {
-    return approve(CertificateSignRequest.getCertificationRequest(csr));
+    return inspectCSR(CertificateSignRequest.getCertificationRequest(csr));
   }
 
   /**
@@ -183,7 +183,7 @@ public abstract class BaseApprover implements CertificateApprover {
    */
   @Override
   public CompletableFuture<X509CertificateHolder>
-      approve(PKCS10CertificationRequest csr) {
+        inspectCSR(PKCS10CertificationRequest csr) {
     /**
      * The base approver executes the following algorithm to verify that a
      * CSR meets the PKI Profile criteria.

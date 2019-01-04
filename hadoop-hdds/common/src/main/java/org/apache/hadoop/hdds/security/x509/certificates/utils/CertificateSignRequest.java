@@ -75,7 +75,8 @@ public final class CertificateSignRequest {
    * @param extensions - CSR extensions
    */
   private CertificateSignRequest(String subject, String scmID, String clusterID,
-                                 KeyPair keyPair, SecurityConfig config, Extensions extensions) {
+                                 KeyPair keyPair, SecurityConfig config,
+                                 Extensions extensions) {
     this.subject = subject;
     this.clusterID = clusterID;
     this.scmID = scmID;

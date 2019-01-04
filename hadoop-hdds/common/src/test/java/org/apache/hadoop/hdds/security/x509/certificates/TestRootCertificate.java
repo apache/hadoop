@@ -17,7 +17,7 @@
  *
  */
 
-package org.apache.hadoop.hdds.security.x509.certificate.utils;
+package org.apache.hadoop.hdds.security.x509.certificates;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;

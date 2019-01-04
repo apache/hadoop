@@ -179,14 +179,15 @@ public class DefaultCAServer implements CertificateServer {
 
   @Override
   public Future<X509CertificateHolder> requestCertificate(
-      PKCS10CertificationRequest csr, CertificateApprover.ApprovalType approverType) {
+      PKCS10CertificationRequest csr,
+      CertificateApprover.ApprovalType approverType) {
     LocalDate beginDate = LocalDate.now().atStartOfDay().toLocalDate();
     LocalDateTime temp = LocalDateTime.of(beginDate, LocalTime.MIDNIGHT);
     LocalDate endDate =
         temp.plus(config.getDefaultCertDuration()).toLocalDate();
 
     CompletableFuture<X509CertificateHolder> xcertHolder =
-        approver.approve(csr);
+        approver.inspectCSR(csr);
 
     if(xcertHolder.isCompletedExceptionally()) {
       // This means that approver told us there are things which it disagrees
@@ -227,7 +228,8 @@ public class DefaultCAServer implements CertificateServer {
 
   @Override
   public Future<Boolean> revokeCertificate(X509Certificate certificate,
-      CertificateApprover.ApprovalType approverType) throws SCMSecurityException {
+      CertificateApprover.ApprovalType approverType)
+      throws SCMSecurityException {
     return null;
   }
 

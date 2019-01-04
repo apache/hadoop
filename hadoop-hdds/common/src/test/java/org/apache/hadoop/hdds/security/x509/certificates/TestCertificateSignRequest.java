@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  */
-package org.apache.hadoop.hdds.security.x509.certificate.utils;
+package org.apache.hadoop.hdds.security.x509.certificates;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
@@ -274,6 +274,7 @@ public class TestCertificateSignRequest {
             .setClusterID(clusterID)
             .setKey(keyPair)
             .setConfiguration(conf);
+
     PKCS10CertificationRequest csr = builder.build();
     byte[] csrBytes = csr.getEncoded();
 

@@ -41,14 +41,15 @@ public class MockApprover extends BaseApprover {
 
   @Override
   public CompletableFuture<X509CertificateHolder>
-  approve(PKCS10CertificationRequest csr) {
-    return super.approve(csr);
+      inspectCSR(PKCS10CertificationRequest csr) {
+    return super.inspectCSR(csr);
   }
 
   @Override
   public X509CertificateHolder sign(SecurityConfig config, PrivateKey caPrivate,
-                                    X509CertificateHolder caCertificate, Date validFrom,
-                                    Date validTill, PKCS10CertificationRequest certificationRequest)
+                                    X509CertificateHolder caCertificate,
+                                    Date validFrom, Date validTill,
+                                    PKCS10CertificationRequest request)
       throws IOException, OperatorCreationException {
     return null;
   }
