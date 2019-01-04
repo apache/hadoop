@@ -20,6 +20,7 @@ package org.apache.hadoop.net;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Arrays;
 
 import org.apache.commons.math3.stat.inference.ChiSquareTest;
 import org.apache.hadoop.conf.Configuration;
@@ -192,6 +193,40 @@ public class TestClusterTopology extends Assert {
     }
     assertEquals("Random is not selecting the nodes it should",
         2, histogram.size());
+  }
+
+  @Test
+  public void testChooseRandomExcluded() {
+    // create the topology
+    //                        a1
+    //                b1------|--------b2
+    //                 |                |
+    //          c1-----|-----c2         c3
+    //         /  \          |          |
+    //        /    \         |          |
+    //     node1    node2   node3      node4
+
+    NetworkTopology cluster = NetworkTopology.getInstance(new Configuration());
+    NodeElement node1 = getNewNode("node1", "/a1/b1/c1");
+    cluster.add(node1);
+    NodeElement node2 = getNewNode("node2", "/a1/b1/c1");
+    cluster.add(node2);
+    NodeElement node3 = getNewNode("node3", "/a1/b1/c2");
+    cluster.add(node3);
+    NodeElement node4 = getNewNode("node4", "/a1/b2/c3");
+    cluster.add(node4);
+
+    Node node = cluster.chooseRandom("/a1/b1", "/a1/b1/c1", null);
+    assertSame("node3", node.getName());
+
+    node = cluster.chooseRandom("/a1/b1", "/a1/b1/c1", Arrays.asList(node1));
+    assertSame("node3", node.getName());
+
+    node = cluster.chooseRandom("/a1/b1", "/a1/b1/c1", Arrays.asList(node3));
+    assertNull(node);
+
+    node = cluster.chooseRandom("/a1/b1", "/a1/b1/c1", Arrays.asList(node4));
+    assertSame("node3", node.getName());
   }
 
   private NodeElement getNewNode(String name, String rackLocation) {
