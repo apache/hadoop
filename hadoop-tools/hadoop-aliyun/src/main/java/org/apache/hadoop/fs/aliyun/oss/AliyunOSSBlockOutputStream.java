@@ -124,8 +124,7 @@ public class AliyunOSSBlockOutputStream extends OutputStream {
         if (null == partETags) {
           throw new IOException("Failed to multipart upload to oss, abort it.");
         }
-        store.completeMultipartUpload(key, uploadId,
-            new ArrayList<>(partETags));
+        store.completeMultipartUpload(key, uploadId, partETags);
       }
     } finally {
       removePartFiles();
@@ -134,7 +133,7 @@ public class AliyunOSSBlockOutputStream extends OutputStream {
   }
 
   @Override
-  public synchronized void write(int b) throws IOException {
+  public void write(int b) throws IOException {
     singleByte[0] = (byte)b;
     write(singleByte, 0, 1);
   }
