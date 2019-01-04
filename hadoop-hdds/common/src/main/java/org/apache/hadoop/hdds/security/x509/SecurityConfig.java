@@ -129,8 +129,6 @@ public class SecurityConfig {
     this.metadatDir = this.configuration.get(HDDS_METADATA_DIR_NAME,
         configuration.get(OZONE_METADATA_DIRS,
             configuration.get(HDDS_DATANODE_DIR_KEY)));
-    Preconditions.checkNotNull(this.metadatDir, "Metadata directory can't be"
-        + " null. Please check configs.");
     this.keyDir = this.configuration.get(HDDS_KEY_DIR_NAME,
         HDDS_KEY_DIR_NAME_DEFAULT);
     this.privateKeyFileName = this.configuration.get(HDDS_PRIVATE_KEY_FILE_NAME,
@@ -248,6 +246,8 @@ public class SecurityConfig {
    * @return path Key location.
    */
   public Path getKeyLocation() {
+    Preconditions.checkNotNull(this.metadatDir, "Metadata directory can't be"
+        + " null. Please check configs.");
     return Paths.get(metadatDir, keyDir);
   }
 
@@ -259,6 +259,8 @@ public class SecurityConfig {
    * @return Path location.
    */
   public Path getKeyLocation(String component) {
+    Preconditions.checkNotNull(this.metadatDir, "Metadata directory can't be"
+        + " null. Please check configs.");
     return Paths.get(metadatDir, component, keyDir);
   }
 
@@ -268,6 +270,8 @@ public class SecurityConfig {
    * @return path Key location.
    */
   public Path getCertificateLocation() {
+    Preconditions.checkNotNull(this.metadatDir, "Metadata directory can't be"
+        + " null. Please check configs.");
     return Paths.get(metadatDir, certificateDir);
   }
 
@@ -279,6 +283,8 @@ public class SecurityConfig {
    * @return Path location.
    */
   public Path getCertificateLocation(String component) {
+    Preconditions.checkNotNull(this.metadatDir, "Metadata directory can't be"
+        + " null. Please check configs.");
     return Paths.get(metadatDir, component, certificateDir);
   }
 
