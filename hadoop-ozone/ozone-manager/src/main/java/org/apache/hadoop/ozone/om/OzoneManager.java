@@ -23,9 +23,9 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.BlockingService;
+
 import java.security.KeyPair;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.HddsUtils;
@@ -45,18 +45,18 @@ import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
-import org.apache.hadoop.ozone.security.OzoneSecretManager;
+import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.security.OzoneSecurityException;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.AuditAction;
 import org.apache.hadoop.ozone.audit.AuditEventStatus;
@@ -116,7 +116,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.management.ObjectName;
-import javax.ws.rs.HEAD;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -133,6 +132,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForBlockClients;
 import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForClients;
@@ -220,6 +220,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private final IAccessAuthorizer accessAuthorizer;
   private JvmPauseMonitor jvmPauseMonitor;
   private final SecurityConfig secConfig;
+  private final S3SecretManager s3SecretManager;
 
   private OzoneManager(OzoneConfiguration conf) throws IOException {
     Preconditions.checkNotNull(conf);
@@ -301,6 +302,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         volumeManager, bucketManager);
     keyManager = new KeyManagerImpl(scmBlockClient, metadataManager,
         configuration, omStorage.getOmId(), blockTokenMgr);
+    s3SecretManager = new S3SecretManagerImpl(configuration, metadataManager);
 
     shutdownHook = () -> {
       saveOmMetrics();
@@ -1703,7 +1705,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
   @Override
   public AuditMessage buildAuditMessageForSuccess(AuditAction op,
-      Map<String, String> auditMap) {
+                                                  Map<String, String> auditMap) {
     return new AuditMessage.Builder()
         .setUser((Server.getRemoteUser() == null) ? null :
             Server.getRemoteUser().getUserName())
@@ -1874,6 +1876,14 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     } catch (IOException ex) {
       metrics.incNumBucketDeleteFails();
     }
+  }
+
+  @Override
+  /**
+   * {@inheritDoc}
+   */
+  public S3SecretValue getS3Secret(String kerberosID) throws IOException{
+    return s3SecretManager.getS3Secret(kerberosID);
   }
 
   @Override

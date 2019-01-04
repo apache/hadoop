@@ -37,8 +37,10 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.AllocateBlockRequest;
 import org.apache.hadoop.ozone.protocol.proto
@@ -159,6 +161,10 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .S3ListBucketsRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .S3ListBucketsResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .GetS3SecretRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .GetS3SecretResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -963,6 +969,30 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
     }
   }
 
+  @Override
+  public S3SecretValue getS3Secret(String kerberosID) throws IOException {
+    GetS3SecretRequest request = GetS3SecretRequest.newBuilder()
+        .setKerberosID(kerberosID)
+        .build();
+    OMRequest omRequest = createOMRequest(Type.GetS3Secret)
+        .setGetS3SecretRequest(request)
+        .build();
+    final GetS3SecretResponse resp = submitRequest(omRequest)
+        .getGetS3SecretResponse();
+
+    if(resp.getStatus() != Status.OK) {
+      throw new IOException("Fetch S3 Secret failed, error: " +
+          resp.getStatus());
+    } else {
+      return S3SecretValue.fromProtobuf(resp.getS3Secret());
+    }
+  }
+
+  /**
+   * Return the proxy object underlying this protocol translator.
+   *
+   * @return the proxy object underlying this protocol translator.
+   */
   @Override
   public OmMultipartInfo initiateMultipartUpload(OmKeyArgs omKeyArgs) throws
       IOException {

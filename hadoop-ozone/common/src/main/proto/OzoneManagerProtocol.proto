@@ -68,6 +68,7 @@ enum Type {
   CommitMultiPartUpload = 46;
   CompleteMultiPartUpload = 47;
   AbortMultiPartUpload = 48;
+  GetS3Secret = 49;
 
   ServiceList = 51;
 
@@ -114,6 +115,7 @@ message OMRequest {
   optional MultipartCommitUploadPartRequest commitMultiPartUploadRequest   = 46;
   optional MultipartUploadCompleteRequest   completeMultiPartUploadRequest = 47;
   optional MultipartUploadAbortRequest      abortMultiPartUploadRequest    = 48;
+  optional GetS3SecretRequest               getS3SecretRequest             = 49;
 
   optional ServiceListRequest               serviceListRequest             = 51;
 
@@ -162,6 +164,7 @@ message OMResponse {
   optional MultipartCommitUploadPartResponse commitMultiPartUploadResponse = 46;
   optional MultipartUploadCompleteResponse completeMultiPartUploadResponse = 47;
   optional MultipartUploadAbortResponse    abortMultiPartUploadResponse    = 48;
+  optional GetS3SecretResponse               getS3SecretResponse           = 49;
 
   optional ServiceListResponse               ServiceListResponse           = 51;
 
@@ -194,6 +197,7 @@ enum Status {
     SCM_VERSION_MISMATCH_ERROR = 21;
     S3_BUCKET_NOT_FOUND = 22;
     S3_BUCKET_ALREADY_EXISTS = 23;
+
     INITIATE_MULTIPART_UPLOAD_ERROR = 24;
     MULTIPART_UPLOAD_PARTFILE_ERROR = 25;
     NO_SUCH_MULTIPART_UPLOAD_ERROR = 26;
@@ -202,6 +206,8 @@ enum Status {
     COMPLETE_MULTIPART_UPLOAD_ERROR = 29;
     ENTITY_TOO_SMALL = 30;
     ABORT_MULTIPART_UPLOAD_FAILED = 31;
+
+    S3_SECRET_NOT_FOUND = 32;
 }
 
 
@@ -664,9 +670,23 @@ message RenewDelegationTokenResponseProto{
     optional hadoop.common.RenewDelegationTokenResponseProto response = 2;
 }
 
-message CancelDelegationTokenResponseProto{
+message CancelDelegationTokenResponseProto {
     required Status status = 1;
     optional hadoop.common.CancelDelegationTokenResponseProto response = 2;
+}
+
+message S3Secret {
+    required string kerberosID = 1;
+    required string awsSecret = 2;
+}
+
+message GetS3SecretRequest {
+    required string kerberosID = 1;
+}
+
+message GetS3SecretResponse {
+    required Status status = 1;
+    required S3Secret s3Secret = 2;
 }
 
 /**
