@@ -4083,4 +4083,19 @@
     <name>yarn.nodemanager.csi-driver-adaptor.addresses</name>
     <value></value>
   </property>
+
+  <property>
+    <description>
+      CSI driver names running on this node, multiple driver names need to
+      be delimited by comma. The driver name should be same value returned
+      by the getPluginInfo call. For each of the CSI driver name, it must
+      to define following two corresponding properties:
+        "yarn.nodemanager.csi-driver.${NAME}.endpoint"
+        "yarn.nodemanager.csi-driver-adaptor.${NAME}.address"
+      The 1st property defines where the driver's endpoint is;
+      2nd property defines where the mapping csi-driver-adaptor's address is.
+    </description>
+    <name>yarn.nodemanager.csi-driver.names</name>
+    <value></value>
+  </property>
 </configuration>

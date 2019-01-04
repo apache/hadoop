@@ -67,3 +67,27 @@ message GetPluginInfoResponse {
     required string name = 1;
     required string vendor_version = 2;
 }
+
+message NodePublishVolumeRequest {
+    required string volume_id = 1;
+    repeated StringStringMapProto publish_context = 2;
+    optional string staging_target_path = 3;
+    required string target_path = 4;
+    required VolumeCapability volume_capability = 5;
+    required bool readonly = 6;
+    repeated StringStringMapProto secrets = 7;
+    repeated StringStringMapProto volume_context = 8;
+}
+
+message NodePublishVolumeResponse {
+    // Intentionally empty.
+}
+
+message NodeUnpublishVolumeRequest {
+    required string volume_id = 1;
+    required string target_path = 2;
+}
+
+message NodeUnpublishVolumeResponse {
+    // Intentionally empty.
+}

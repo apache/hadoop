@@ -3443,13 +3443,28 @@ public class YarnConfiguration extends Configuration {
   // CSI Volume configs
   ////////////////////////////////
   /**
-   * One or more socket addresses for csi-adaptor.
-   * Multiple addresses are delimited by ",".
+   * TERMS:
+   * csi-driver: a 3rd party CSI driver which implements the CSI protocol.
+   *   It is provided by the storage system.
+   * csi-driver-adaptor: this is an internal RPC service working
+   *   as a bridge between YARN and a csi-driver.
    */
   public static final String NM_CSI_ADAPTOR_PREFIX =
       NM_PREFIX + "csi-driver-adaptor.";
+  public static final String NM_CSI_DRIVER_PREFIX =
+      NM_PREFIX + "csi-driver.";
+  public static final String NM_CSI_DRIVER_ENDPOINT_SUFFIX =
+      ".endpoint";
+  public static final String NM_CSI_ADAPTOR_ADDRESS_SUFFIX =
+      ".address";
+  /**
+   * One or more socket addresses for csi-adaptor.
+   * Multiple addresses are delimited by ",".
+   */
   public static final String NM_CSI_ADAPTOR_ADDRESSES =
       NM_CSI_ADAPTOR_PREFIX + "addresses";
+  public static final String NM_CSI_DRIVER_NAMES =
+      NM_CSI_DRIVER_PREFIX + "names";
 
   ////////////////////////////////
   // Other Configs

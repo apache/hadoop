@@ -59,4 +59,24 @@ public class CsiClientImpl implements CsiClient {
           .validateVolumeCapabilities(request);
     }
   }
+
+  @Override
+  public Csi.NodePublishVolumeResponse nodePublishVolume(
+      Csi.NodePublishVolumeRequest request) throws IOException {
+    try (CsiGrpcClient client = CsiGrpcClient.newBuilder()
+        .setDomainSocketAddress(address).build()) {
+      return client.createNodeBlockingStub()
+          .nodePublishVolume(request);
+    }
+  }
+
+  @Override
+  public Csi.NodeUnpublishVolumeResponse nodeUnpublishVolume(
+      Csi.NodeUnpublishVolumeRequest request) throws IOException {
+    try (CsiGrpcClient client = CsiGrpcClient.newBuilder()
+        .setDomainSocketAddress(address).build()) {
+      return client.createNodeBlockingStub()
+          .nodeUnpublishVolume(request);
+    }
+  }
 }

@@ -174,6 +174,16 @@ public class MockContainer implements Container {
   }
 
   @Override
+  public String getCsiVolumesRootDir() {
+    return null;
+  }
+
+  @Override
+  public void setCsiVolumesRootDir(String volumesRootDir) {
+
+  }
+
+  @Override
   public String getLogDir() {
     return null;
   }

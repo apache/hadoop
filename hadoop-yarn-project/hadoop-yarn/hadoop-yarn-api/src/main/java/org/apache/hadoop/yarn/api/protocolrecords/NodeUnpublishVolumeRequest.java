@@ -15,26 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.api.protocolrecords;
 
-option java_package = "org.apache.hadoop.yarn.proto";
-option java_outer_classname = "CsiAdaptorProtocol";
-option java_generic_services = true;
-option java_generate_equals_and_hash = true;
-package hadoop.yarn;
+import org.apache.hadoop.yarn.util.Records;
 
-import "yarn_csi_adaptor.proto";
+/**
+ * The request sent by node manager to CSI driver adaptor
+ * to un-publish a volume on a node.
+ */
+public abstract class NodeUnpublishVolumeRequest {
 
-service CsiAdaptorProtocolService {
+  public static NodeUnpublishVolumeRequest newInstance(String volumeId,
+      String targetPath) {
+    NodeUnpublishVolumeRequest request =
+        Records.newRecord(NodeUnpublishVolumeRequest.class);
+    request.setVolumeId(volumeId);
+    request.setTargetPath(targetPath);
+    return request;
+  }
 
-    rpc getPluginInfo (GetPluginInfoRequest)
-    returns (GetPluginInfoResponse);
+  public abstract void setVolumeId(String volumeId);
 
-    rpc validateVolumeCapacity (ValidateVolumeCapabilitiesRequest)
-    returns (ValidateVolumeCapabilitiesResponse);
+  public abstract void setTargetPath(String targetPath);
 
-    rpc nodePublishVolume (NodePublishVolumeRequest)
-    returns (NodePublishVolumeResponse);
+  public abstract String getVolumeId();
 
-    rpc nodeUnpublishVolume (NodeUnpublishVolumeRequest)
-    returns (NodeUnpublishVolumeResponse);
+  public abstract String getTargetPath();
 }

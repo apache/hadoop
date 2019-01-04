@@ -755,6 +755,7 @@ public class Component implements EventHandler<ComponentEvent> {
                 entry.getKey(),
                 specInfo.getUnit(),
                 specInfo.getValue(),
+                specInfo.getTags(),
                 specInfo.getAttributes());
         resource.setResourceInformation(resourceName, ri);
       }
