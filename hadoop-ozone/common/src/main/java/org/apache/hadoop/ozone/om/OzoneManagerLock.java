@@ -67,6 +67,7 @@ public final class OzoneManagerLock {
   private static final String VOLUME_LOCK = "volumeLock";
   private static final String BUCKET_LOCK = "bucketLock";
   private static final String S3_BUCKET_LOCK = "s3BucketLock";
+  private static final String S3_SECRET_LOCK = "s3SecretetLock";
 
   private final LockManager<String> manager;
 
@@ -76,7 +77,8 @@ public final class OzoneManagerLock {
           () -> ImmutableMap.of(
               VOLUME_LOCK, new AtomicInteger(0),
               BUCKET_LOCK, new AtomicInteger(0),
-              S3_BUCKET_LOCK, new AtomicInteger(0)
+              S3_BUCKET_LOCK, new AtomicInteger(0),
+              S3_SECRET_LOCK, new AtomicInteger(0)
           )
       );
 
@@ -218,5 +220,25 @@ public final class OzoneManagerLock {
 
   private boolean hasAnyS3Lock() {
     return myLocks.get().get(S3_BUCKET_LOCK).get() != 0;
+  }
+
+  public void acquireS3SecretLock(String awsAccessId) {
+    if (hasAnyS3SecretLock()) {
+      throw new RuntimeException(
+          "Thread '" + Thread.currentThread().getName() +
+              "' cannot acquire S3 Secret lock while holding S3 " +
+              "awsAccessKey lock(s).");
+    }
+    manager.lock(awsAccessId);
+    myLocks.get().get(S3_SECRET_LOCK).incrementAndGet();
+  }
+
+  private boolean hasAnyS3SecretLock() {
+    return myLocks.get().get(S3_SECRET_LOCK).get() != 0;
+  }
+
+  public void releaseS3SecretLock(String awsAccessId) {
+    manager.unlock(awsAccessId);
+    myLocks.get().get(S3_SECRET_LOCK).decrementAndGet();
   }
 }

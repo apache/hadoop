@@ -95,6 +95,7 @@ public final class OzoneConsts {
   public static final String CONTAINER_ROOT_PREFIX = "repository";
 
   public static final String FILE_HASH = "SHA-256";
+  public static final String MD5_HASH = "MD5";
   public final static String CHUNK_OVERWRITE = "OverWriteRequested";
 
   public static final int CHUNK_SIZE = 1 * 1024 * 1024; // 1 MB

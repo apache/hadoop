@@ -34,6 +34,8 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.token.Token;
@@ -479,4 +481,11 @@ public interface ClientProtocol {
   void cancelDelegationToken(Token<OzoneTokenIdentifier> token)
       throws IOException;
 
+  /**
+   * returns S3 Secret given kerberos user.
+   * @param kerberosID
+   * @return S3SecretValue
+   * @throws IOException
+   */
+  S3SecretValue getS3Secret(String kerberosID) throws IOException;
 }

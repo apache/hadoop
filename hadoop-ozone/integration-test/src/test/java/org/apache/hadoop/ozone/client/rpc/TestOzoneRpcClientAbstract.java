@@ -169,6 +169,10 @@ public abstract class TestOzoneRpcClientAbstract {
     TestOzoneRpcClientAbstract.store = store;
   }
 
+  public static ObjectStore getStore() {
+    return TestOzoneRpcClientAbstract.store;
+  }
+
   public static void setScmId(String scmId){
     TestOzoneRpcClientAbstract.SCM_ID = scmId;
   }

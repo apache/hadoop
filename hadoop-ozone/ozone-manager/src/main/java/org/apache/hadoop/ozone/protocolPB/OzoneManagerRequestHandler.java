@@ -39,6 +39,7 @@ import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .AllocateBlockRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -162,6 +163,8 @@ import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequest
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetDelegationTokenResponseProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.RenewDelegationTokenResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetS3SecretRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetS3SecretResponse;
 import org.apache.hadoop.security.token.Token;
 
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status;
@@ -342,6 +345,11 @@ public class OzoneManagerRequestHandler {
       CancelDelegationTokenResponseProto cancelDtResp = cancelDelegationToken(
           request.getCancelDelegationTokenRequest());
       responseBuilder.setCancelDelegationTokenResponse(cancelDtResp);
+      break;
+    case GetS3Secret:
+      GetS3SecretResponse getS3SecretResp = getS3Secret(request
+          .getGetS3SecretRequest());
+      responseBuilder.setGetS3SecretResponse(getS3SecretResp);
       break;
     default:
       responseBuilder.setSuccess(false);
@@ -992,6 +1000,19 @@ public class OzoneManagerRequestHandler {
       }
       rb.setResponse(org.apache.hadoop.security.proto.SecurityProtos
           .CancelDelegationTokenResponseProto.getDefaultInstance());
+      rb.setStatus(Status.OK);
+    } catch (IOException ex) {
+      rb.setStatus(exceptionToResponseStatus(ex));
+    }
+    return rb.build();
+  }
+
+  private OzoneManagerProtocolProtos.GetS3SecretResponse getS3Secret(
+      OzoneManagerProtocolProtos.GetS3SecretRequest request) {
+    OzoneManagerProtocolProtos.GetS3SecretResponse.Builder rb =
+        OzoneManagerProtocolProtos.GetS3SecretResponse.newBuilder();
+    try {
+      rb.setS3Secret(impl.getS3Secret(request.getKerberosID()).getProtobuf());
       rb.setStatus(Status.OK);
     } catch (IOException ex) {
       rb.setStatus(exceptionToResponseStatus(ex));
