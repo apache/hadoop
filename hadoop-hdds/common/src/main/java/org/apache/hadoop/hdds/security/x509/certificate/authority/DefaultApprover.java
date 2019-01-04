@@ -115,14 +115,14 @@ public class DefaultApprover extends BaseApprover {
   }
 
   @Override
-  public CompletableFuture<X509CertificateHolder> approve(String csr)
+  public CompletableFuture<X509CertificateHolder> inspectCSR(String csr)
       throws IOException {
-    return super.approve(csr);
+    return super.inspectCSR(csr);
   }
 
   @Override
   public CompletableFuture<X509CertificateHolder>
-      approve(PKCS10CertificationRequest csr) {
-    return super.approve(csr);
+      inspectCSR(PKCS10CertificationRequest csr) {
+    return super.inspectCSR(csr);
   }
 }

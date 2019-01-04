@@ -30,7 +30,7 @@ import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Certificate Approver interface is used to approve a certificate.
+ * Certificate Approver interface is used to inspectCSR a certificate.
  */
 interface CertificateApprover {
   /**
@@ -40,7 +40,7 @@ interface CertificateApprover {
    * @return - Future that will be contain the certificate or exception.
    */
   CompletableFuture<X509CertificateHolder>
-      approve(PKCS10CertificationRequest csr);
+      inspectCSR(PKCS10CertificationRequest csr);
 
   /**
    * Approves a Certificate Request based on the policies of this approver.
@@ -50,14 +50,14 @@ interface CertificateApprover {
    * @throws IOException - On Error.
    */
   CompletableFuture<X509CertificateHolder>
-      approve(String csr) throws IOException;
+      inspectCSR(String csr) throws IOException;
 
   /**
    * Sign function signs a Certificate.
    * @param config - Security Config.
    * @param caPrivate - CAs private Key.
    * @param caCertificate - CA Certificate.
-   * @param validFrom - Begin Da te
+   * @param validFrom - Begin Date
    * @param validTill - End Date
    * @param certificationRequest - Certification Request.
    * @return Signed Certificate.
@@ -79,7 +79,7 @@ interface CertificateApprover {
    */
   enum ApprovalType {
     KERBEROS_TRUSTED, /* The Request came from a DN using Kerberos Identity*/
-    MANUAL, /* Wait for a Human being to approve this certificate */
+    MANUAL, /* Wait for a Human being to inspect CSR of this certificate */
     TESTING_AUTOMATIC /* For testing purpose, Automatic Approval. */
   }
 

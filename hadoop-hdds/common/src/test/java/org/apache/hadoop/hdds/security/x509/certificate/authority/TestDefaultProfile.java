@@ -92,7 +92,8 @@ public class TestDefaultProfile {
     assertTrue(defaultProfile.isSupportedGeneralName(GeneralName.iPAddress));
     assertTrue(defaultProfile.isSupportedGeneralName(GeneralName.dNSName));
 // Negative Tests
-    assertFalse(defaultProfile.isSupportedGeneralName(GeneralName.directoryName));
+    assertFalse(defaultProfile.isSupportedGeneralName(
+        GeneralName.directoryName));
     assertFalse(defaultProfile.isSupportedGeneralName(GeneralName.rfc822Name));
     assertFalse(defaultProfile.isSupportedGeneralName(GeneralName.otherName));
   }
@@ -207,16 +208,16 @@ public class TestDefaultProfile {
    */
 
   @Test
-  public void testInvalidExtensionsWithEmail() throws IOException,
-      OperatorCreationException {
-    Extensions emailExtension = getSANExtension(GeneralName.rfc822Name,"bilbo" +
-        "@apache.org", false);
+  public void testInvalidExtensionsWithEmail()
+      throws IOException, OperatorCreationException {
+    Extensions emailExtension = getSANExtension(GeneralName.rfc822Name,
+        "bilbo@apache.org", false);
     PKCS10CertificationRequest csr = getInvalidCSR(keyPair, emailExtension);
     assertFalse(testApprover.verfiyExtensions(csr));
 
-    emailExtension = getSANExtension(GeneralName.rfc822Name,"bilbo" +
+    emailExtension = getSANExtension(GeneralName.rfc822Name, "bilbo" +
         "@apache.org", true);
-     csr = getInvalidCSR(keyPair, emailExtension);
+    csr = getInvalidCSR(keyPair, emailExtension);
     assertFalse(testApprover.verfiyExtensions(csr));
 
   }
@@ -230,7 +231,7 @@ public class TestDefaultProfile {
   public void testInvalidExtensionsWithURI() throws IOException,
       OperatorCreationException {
     Extensions oExtension = getSANExtension(
-        GeneralName.uniformResourceIdentifier,"s3g.ozone.org", false);
+        GeneralName.uniformResourceIdentifier, "s3g.ozone.org", false);
     PKCS10CertificationRequest csr = getInvalidCSR(keyPair, oExtension);
     assertFalse(testApprover.verfiyExtensions(csr));
     oExtension = getSANExtension(GeneralName.uniformResourceIdentifier,
@@ -274,7 +275,8 @@ public class TestDefaultProfile {
     PKCS10CertificationRequest csr = getInvalidCSR(keyPair, extendedExtension);
     assertTrue(testApprover.verfiyExtensions(csr));
 
-    extendedExtension = getKeyUsageExtension(KeyPurposeId.id_kp_serverAuth, false);
+    extendedExtension = getKeyUsageExtension(KeyPurposeId.id_kp_serverAuth,
+        false);
     csr = getInvalidCSR(keyPair, extendedExtension);
     assertTrue(testApprover.verfiyExtensions(csr));
   }
@@ -293,7 +295,8 @@ public class TestDefaultProfile {
     PKCS10CertificationRequest csr = getInvalidCSR(keyPair, extendedExtension);
     assertFalse(testApprover.verfiyExtensions(csr));
 
-    extendedExtension = getKeyUsageExtension(KeyPurposeId.id_kp_OCSPSigning, false);
+    extendedExtension = getKeyUsageExtension(KeyPurposeId.id_kp_OCSPSigning,
+        false);
     csr = getInvalidCSR(keyPair, extendedExtension);
     assertFalse(testApprover.verfiyExtensions(csr));
   }
@@ -306,11 +309,11 @@ public class TestDefaultProfile {
    * rejects these invalid extensions, Hence the function name, by itself it
    * is a well formed CSR, but our PKI profile will treat it as invalid CSR.
    *
-   * @param keyPair - Key Pair.
+   * @param kPair - Key Pair.
    * @return CSR  - PKCS10CertificationRequest
    * @throws OperatorCreationException - on Error.
    */
-  private PKCS10CertificationRequest getInvalidCSR(KeyPair keyPair,
+  private PKCS10CertificationRequest getInvalidCSR(KeyPair kPair,
       Extensions extensions) throws OperatorCreationException {
     X500NameBuilder namebuilder =
         new X500NameBuilder(X500Name.getDefaultStyle());
@@ -355,7 +358,7 @@ public class TestDefaultProfile {
     ExtendedKeyUsage extendedKeyUsage = new ExtendedKeyUsage(purposeId);
     ExtensionsGenerator extensionsGenerator = new ExtensionsGenerator();
     extensionsGenerator.addExtension(
-        Extension.extendedKeyUsage,critical, extendedKeyUsage);
-     return extensionsGenerator.generate();
+        Extension.extendedKeyUsage, critical, extendedKeyUsage);
+    return extensionsGenerator.generate();
   }
 }
