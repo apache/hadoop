@@ -101,7 +101,7 @@ This will launch a Tensorboard to monitor *all your jobs*. By access YARN UI (th
 
 See below screenshot:
 
-![alt text](./images/tensorboard-service.png "Tensorboard service")
+![alt text](../resources/images/tensorboard-service.png "Tensorboard service")
 
 ### Launch Distributed Tensorflow Application:
 
@@ -162,13 +162,13 @@ yarn jar /tmp/hadoop-yarn-applications-submarine-3.2.0-SNAPSHOT.jar \
 
 You can view multiple job training history like from the `Tensorboard` link:
 
-![alt text](./images/multiple-tensorboard-jobs.png "Tensorboard for multiple jobs")
+![alt text](../resources/images/multiple-tensorboard-jobs.png "Tensorboard for multiple jobs")
 
 
 ### Get component logs from a training job
 
 There're two ways to get training job logs, one is from YARN UI (new or old):
 
-![alt text](./images/job-logs-ui.png "Job logs UI")
+![alt text](../resources/images/job-logs-ui.png "Job logs UI")
 
 Or you can use `yarn logs -applicationId <applicationId>` to get logs from CLI
