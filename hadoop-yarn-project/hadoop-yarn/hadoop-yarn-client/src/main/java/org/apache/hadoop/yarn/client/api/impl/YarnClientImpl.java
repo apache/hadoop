@@ -879,7 +879,7 @@ public class YarnClientImpl extends YarnClient {
     try {
       containersListFromAHS =
           getContainerReportFromHistory(applicationAttemptId);
-    } catch (IOException e) {
+    } catch (IOException | YarnException e) {
       if (appNotFoundInRM) {
         throw e;
       }
