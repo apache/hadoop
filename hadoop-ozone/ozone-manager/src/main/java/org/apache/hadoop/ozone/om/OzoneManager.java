@@ -68,9 +68,12 @@ import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
+import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisClient;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServicePort;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type;
 import org.apache.hadoop.ozone.protocolPB.OzoneManagerProtocolServerSideTranslatorPB;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
@@ -134,7 +137,9 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys
     .OZONE_OM_METRICS_SAVE_INTERVAL;
 import static org.apache.hadoop.ozone.om.OMConfigKeys
     .OZONE_OM_METRICS_SAVE_INTERVAL_DEFAULT;
-import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneManagerService.newReflectiveBlockingService;
+import static org.apache.hadoop.ozone.protocol.proto
+    .OzoneManagerProtocolProtos.OzoneManagerService
+    .newReflectiveBlockingService;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 /**
@@ -156,7 +161,9 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private final OzoneConfiguration configuration;
   private RPC.Server omRpcServer;
   private InetSocketAddress omRpcAddress;
+  private String omId;
   private OzoneManagerRatisServer omRatisServer;
+  private OzoneManagerRatisClient omRatisClient;
   private final OMMetadataManager metadataManager;
   private final VolumeManager volumeManager;
   private final BucketManager bucketManager;
@@ -185,6 +192,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     Preconditions.checkNotNull(conf);
     configuration = conf;
     omStorage = new OMStorage(conf);
+    omId = omStorage.getOmId();
     scmBlockClient = getScmBlockClient(configuration);
     scmContainerClient = getScmContainerClient(configuration);
     if (omStorage.getState() != StorageState.INITIALIZED) {
@@ -584,8 +592,32 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     InetSocketAddress omNodeRpcAddr = getOmAddress(configuration);
     int handlerCount = configuration.getInt(OZONE_OM_HANDLER_COUNT_KEY,
         OZONE_OM_HANDLER_COUNT_DEFAULT);
+
+    // This is a temporary check. Once fully implemented, all OM state change
+    // should go through Ratis - either standalone (for non-HA) or replicated
+    // (for HA).
+    boolean omRatisEnabled = configuration.getBoolean(
+        OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
+        OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
+    if (omRatisEnabled) {
+      omRatisServer = OzoneManagerRatisServer.newOMRatisServer(
+          omId, omRpcAddress.getAddress(), configuration);
+      omRatisServer.start();
+
+      LOG.info("OzoneManager Ratis server started at port {}",
+          omRatisServer.getServerPort());
+
+      omRatisClient = OzoneManagerRatisClient.newOzoneManagerRatisClient(
+          omId, omRatisServer.getRaftGroup(), configuration);
+      omRatisClient.connect();
+    } else {
+      omRatisServer = null;
+      omRatisClient = null;
+    }
+
     BlockingService omService = newReflectiveBlockingService(
-        new OzoneManagerProtocolServerSideTranslatorPB(this));
+        new OzoneManagerProtocolServerSideTranslatorPB(
+            this, omRatisClient, omRatisEnabled));
     omRpcServer = startRpcServer(configuration, omNodeRpcAddr,
         OzoneManagerProtocolPB.class, omService,
         handlerCount);
@@ -595,23 +627,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
     LOG.info(buildRpcServerStartMessage("OzoneManager RPC server",
         omRpcAddress));
-
-    boolean omRatisEnabled = configuration.getBoolean(
-        OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
-        OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
-    // This is a temporary check. Once fully implemented, all OM state change
-    // should go through Ratis, either standalone (for non-HA) or replicated
-    // (for HA).
-    if (omRatisEnabled) {
-      omRatisServer = OzoneManagerRatisServer.newOMRatisServer(
-          omStorage.getOmId(), configuration);
-      omRatisServer.start();
-
-      LOG.info("OzoneManager Ratis server started at port {}",
-          omRatisServer.getServerPort());
-    } else {
-      omRatisServer = null;
-    }
 
     DefaultMetricsSystem.initialize("OzoneManager");
 
@@ -684,6 +699,22 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       LOG.info("Interrupted during OzoneManager join.", e);
+    }
+  }
+
+  /**
+   * Validates that the incoming OM request has required parameters.
+   * TODO: Add more validation checks before writing the request to Ratis log.
+   * @param omRequest client request to OM
+   * @throws OMException thrown if required parameters are set to null.
+   */
+  public void validateRequest(OMRequest omRequest) throws OMException {
+    Type cmdType = omRequest.getCmdType();
+    if (cmdType == null) {
+      throw new OMException("CmdType is null", ResultCodes.INVALID_REQUEST);
+    }
+    if (omRequest.getClientId() == null) {
+      throw new OMException("ClientId is null", ResultCodes.INVALID_REQUEST);
     }
   }
 

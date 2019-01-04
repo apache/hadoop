@@ -1543,12 +1543,34 @@
   </property>
 
   <property>
-    <name>ozone.om.ratis.client.request.timeout</name>
+    <name>ozone.om.ratis.client.request.timeout.duration</name>
     <value>3s</value>
     <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
     <description>The timeout duration for OM Ratis client request.
     </description>
   </property>
+	<property>
+		<name>ozone.om.ratis.client.request.max.retries</name>
+		<value>180</value>
+		<tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+		<description>Number of retries for OM client request.</description>
+	</property>
+	<property>
+		<name>ozone.om.ratis.client.request.retry.interval</name>
+		<value>100ms</value>
+		<tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+		<description>Interval between successive retries for a OM client request.
+		</description>
+	</property>
+
+	<property>
+		<name>ozone.om.leader.election.minimum.timeout.duration</name>
+		<value>1s</value>
+		<tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+		<description>The minimum timeout duration for OM ratis leader election.
+			Default is 1s.
+		</description>
+	</property>
 
   <property>
     <name>ozone.acl.authorizer.class</name>

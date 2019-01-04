@@ -33,6 +33,7 @@ import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
+import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisClient;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .AllocateBlockRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -160,6 +161,8 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
   private static final Logger LOG = LoggerFactory
       .getLogger(OzoneManagerProtocolServerSideTranslatorPB.class);
   private final OzoneManagerProtocol impl;
+  private final OzoneManagerRatisClient omRatisClient;
+  private final boolean isRatisEnabled;
 
   /**
    * Constructs an instance of the server handler.
@@ -167,8 +170,11 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
    * @param impl OzoneManagerProtocolPB
    */
   public OzoneManagerProtocolServerSideTranslatorPB(
-      OzoneManagerProtocol impl) {
+      OzoneManagerProtocol impl, OzoneManagerRatisClient ratisClient,
+      boolean enableRatis) {
     this.impl = impl;
+    this.omRatisClient = ratisClient;
+    this.isRatisEnabled = enableRatis;
   }
 
   /**
@@ -179,10 +185,29 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
   @Override
    public OMResponse submitRequest(RpcController controller,
       OMRequest request) throws ServiceException {
-    Type cmdType = request.getCmdType();
+    if (isRatisEnabled) {
+      return submitRequestToRatis(request);
+    } else {
+      return submitRequestToOM(request);
+    }
+  }
 
+  /**
+   * Submits request to OM's Ratis server.
+   */
+  private OMResponse submitRequestToRatis(OMRequest request) {
+    return omRatisClient.sendCommand(request);
+  }
+
+  /**
+   * Submits request directly to OM.
+   */
+  private OMResponse submitRequestToOM(OMRequest request)
+      throws ServiceException {
+    Type cmdType = request.getCmdType();
     OMResponse.Builder responseBuilder = OMResponse.newBuilder()
         .setCmdType(cmdType);
+
     switch (cmdType) {
     case CreateVolume:
       CreateVolumeResponse createVolumeResponse = createVolume(
@@ -318,7 +343,6 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     }
     return responseBuilder.build();
   }
-
   // Convert and exception to corresponding status code
   private Status exceptionToResponseStatus(IOException ex) {
     if (ex instanceof OMException) {

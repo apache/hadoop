@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Optional;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.net.NetUtils;
 
 import org.apache.hadoop.ozone.om.OMConfigKeys;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +46,7 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_PORT_DEFAULT;
  * communication.
  */
 public final class OmUtils {
-  private static final Logger LOG = LoggerFactory.getLogger(OmUtils.class);
+  public static final Logger LOG = LoggerFactory.getLogger(OmUtils.class);
 
   private OmUtils() {
   }
@@ -132,5 +134,47 @@ public final class OmUtils {
         "Falling back to {} instead.",
         OMConfigKeys.OZONE_OM_DB_DIRS, HddsConfigKeys.OZONE_METADATA_DIRS);
     return ServerUtils.getOzoneMetaDirPath(conf);
+  }
+
+  /**
+   * Checks if the OM request is read only or not.
+   * @param omRequest OMRequest proto
+   * @return True if its readOnly, false otherwise.
+   */
+  public static boolean isReadOnly(
+      OzoneManagerProtocolProtos.OMRequest omRequest) {
+    OzoneManagerProtocolProtos.Type cmdType = omRequest.getCmdType();
+    switch (cmdType) {
+    case CheckVolumeAccess:
+    case InfoVolume:
+    case ListVolume:
+    case InfoBucket:
+    case ListBuckets:
+    case LookupKey:
+    case ListKeys:
+    case InfoS3Bucket:
+    case ListS3Buckets:
+    case ServiceList:
+      return true;
+    case CreateVolume:
+    case SetVolumeProperty:
+    case DeleteVolume:
+    case CreateBucket:
+    case SetBucketProperty:
+    case DeleteBucket:
+    case CreateKey:
+    case RenameKey:
+    case DeleteKey:
+    case CommitKey:
+    case AllocateBlock:
+    case CreateS3Bucket:
+    case DeleteS3Bucket:
+    case InitiateMultiPartUpload:
+    case CommitMultiPartUpload:
+      return false;
+    default:
+      LOG.error("CmdType {} is not categorized as readOnly or not.", cmdType);
+      return false;
+    }
   }
 }
