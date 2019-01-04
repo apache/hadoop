@@ -60,6 +60,8 @@ public class TestNMTimelineCollectorManager {
     Configuration conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.TIMELINE_SERVICE_WRITER_CLASS,
         FileSystemTimelineWriterImpl.class, TimelineWriter.class);
+    conf.set(YarnConfiguration.TIMELINE_SERVICE_COLLECTOR_BIND_PORT_RANGES,
+        "30000-30100");
     collectorManager.init(conf);
     collectorManager.start();
   }
@@ -83,7 +85,8 @@ public class TestNMTimelineCollectorManager {
     String[] parts = address.split(":");
     assertEquals(2, parts.length);
     assertNotNull(parts[0]);
-    assertTrue(Integer.valueOf(parts[1]) > 0);
+    assertTrue(Integer.valueOf(parts[1]) >= 30000 &&
+        Integer.valueOf(parts[1]) <= 30100);
   }
 
   @Test(timeout=60000)
@@ -153,7 +156,6 @@ public class TestNMTimelineCollectorManager {
   private NodeTimelineCollectorManager createCollectorManager() {
     final NodeTimelineCollectorManager cm =
         spy(new NodeTimelineCollectorManager());
-    doReturn(new Configuration()).when(cm).getConfig();
     CollectorNodemanagerProtocol nmCollectorService =
         mock(CollectorNodemanagerProtocol.class);
     GetTimelineCollectorContextResponse response =

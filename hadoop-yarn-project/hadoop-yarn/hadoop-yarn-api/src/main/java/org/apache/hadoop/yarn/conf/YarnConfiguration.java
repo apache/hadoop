@@ -3869,6 +3869,10 @@ public class YarnConfiguration extends Configuration {
       TIMELINE_SERVICE_COLLECTOR_PREFIX + "bind-host";
 
   @Private
+  public static final String TIMELINE_SERVICE_COLLECTOR_BIND_PORT_RANGES =
+      TIMELINE_SERVICE_COLLECTOR_PREFIX + "bind-port-ranges";
+
+  @Private
   public static final String TIMELINE_SERVICE_COLLECTOR_WEBAPP_ADDRESS =
       TIMELINE_SERVICE_COLLECTOR_PREFIX + "webapp.address";
   public static final String DEFAULT_TIMELINE_SERVICE_COLLECTOR_WEBAPP_ADDRESS =
