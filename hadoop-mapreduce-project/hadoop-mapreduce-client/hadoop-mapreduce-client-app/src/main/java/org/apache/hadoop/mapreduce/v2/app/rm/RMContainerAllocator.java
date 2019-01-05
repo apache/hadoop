@@ -378,6 +378,12 @@ public class RMContainerAllocator extends RMContainerRequestor
       ContainerRequestEvent reqEvent = (ContainerRequestEvent) event;
       boolean isMap = reqEvent.getAttemptID().getTaskId().getTaskType().
           equals(TaskType.MAP);
+
+      if(scheduledRequests.earlierFailedMaps.contains(event.getAttemptID())) {
+        LOG.info("Task Attempt ID : {} exist in earlier failed records, just removed");
+        scheduledRequests.earlierFailedMaps.remove(event.getAttemptID());
+      }
+
       if (isMap) {
         handleMapContainerRequest(reqEvent);
       } else {
