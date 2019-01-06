@@ -87,6 +87,24 @@ usage: job run
                               -localization "/user/yarn/mydir3:/opt/mydir3"
                               -localization "./mydir1:."
 ```
+
+#### Notes:
+When using `localization` option to make a collection of dependency Python 
+scripts available to entry python script in the container, you may also need to
+ set `PYTHONPATH` environment variable as below to avoid module import error 
+reported from `entry_script.py`.
+
+```
+... job run
+  # the entry point
+  --localization entry_script.py:<path>/entry_script.py
+  # the dependency Python scripts of the entry point
+  --localization other_scripts_dir:<path>/other_scripts_dir
+  # the PYTHONPATH env to make dependency available to entry script
+  --env PYTHONPATH="<path>/other_scripts_dir"
+  --worker_launch_cmd "python <path>/entry_script.py ..."
+```
+
 ### Submarine Configuration
 
 For submarine internal configuration, please create a `submarine.xml` which should be placed under `$HADOOP_CONF_DIR`.
