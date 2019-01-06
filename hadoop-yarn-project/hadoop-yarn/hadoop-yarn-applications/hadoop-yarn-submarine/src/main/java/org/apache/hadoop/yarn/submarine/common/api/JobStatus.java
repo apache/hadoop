@@ -18,7 +18,7 @@
 package org.apache.hadoop.yarn.submarine.common.api;
 
 import java.io.PrintStream;
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -34,7 +34,7 @@ public class JobStatus {
   public void nicePrint(PrintStream out) {
     out.println(
         "Job Name=" + this.jobName + ", status=" + state.name() + " time="
-            + Instant.now());
+            + LocalDateTime.now());
     if (JobState.isFinal(this.state)) {
       return;
     }
