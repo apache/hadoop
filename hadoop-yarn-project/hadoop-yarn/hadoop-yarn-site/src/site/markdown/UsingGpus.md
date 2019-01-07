@@ -107,7 +107,7 @@ Following configs can be customized when user needs to run GPU applications insi
 | --- | --- |
 | yarn.nodemanager.resource-plugins.gpu.docker-plugin | nvidia-docker-v1 |
 
-Specify docker command plugin for GPU. By default uses Nvidia docker V1.0.
+Specify docker command plugin for GPU. By default uses Nvidia docker V1.0, `nvidia-docker-v2` is available for V2.x.
 
 | Property | Default value |
 | --- | --- |
@@ -168,6 +168,13 @@ docker.allowed.volume-drivers
 [docker]
 ...
 docker.allowed.ro-mounts=nvidia_driver_375.66
+```
+**4) If use `nvidia-docker-v2` as gpu docker plugin, add `nvidia` to runtimes whitelist.**
+
+```
+[docker]
+...
+docker.allowed.runtimes=nvidia
 ```
 
 # Use it
