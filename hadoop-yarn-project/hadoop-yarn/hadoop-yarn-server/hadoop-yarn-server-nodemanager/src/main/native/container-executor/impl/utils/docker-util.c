@@ -351,6 +351,8 @@ const char *get_docker_error_message(const int error_code) {
       return "Docker image is not trusted";
     case INVALID_DOCKER_TMPFS_MOUNT:
       return "Invalid docker tmpfs mount";
+    case INVALID_DOCKER_RUNTIME:
+      return "Invalid docker runtime";
     default:
       return "Unknown error";
   }
@@ -889,6 +891,19 @@ static int set_network(const struct configuration *command_config,
     ret = INVALID_DOCKER_NETWORK;
   }
 
+  return ret;
+}
+
+static int set_runtime(const struct configuration *command_config,
+                       const struct configuration *conf, args *args) {
+  int ret = 0;
+  ret = add_param_to_command_if_allowed(command_config, conf, "runtime",
+                                        "docker.allowed.runtimes", "--runtime=",
+                                        0, 0, args);
+  if (ret != 0) {
+    fprintf(ERRORFILE, "Could not find requested runtime in allowed runtimes\n");
+    ret = INVALID_DOCKER_RUNTIME;
+  }
   return ret;
 }
 
@@ -1595,6 +1610,11 @@ int get_docker_run_command(const char *command_file, const struct configuration 
   }
 
   ret = set_capabilities(&command_config, conf, args);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  ret = set_runtime(&command_config, conf, args);
   if (ret != 0) {
     goto free_and_exit;
   }
