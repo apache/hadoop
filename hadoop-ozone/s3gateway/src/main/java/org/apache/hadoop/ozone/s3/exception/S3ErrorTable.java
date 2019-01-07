@@ -63,6 +63,11 @@ public final class S3ErrorTable {
       "InvalidRange", "The requested range is not satisfiable",
       RANGE_NOT_SATISFIABLE);
 
+  public static final OS3Exception NO_SUCH_UPLOAD = new OS3Exception(
+      "NoSuchUpload", "The specified multipart upload does not exist. The " +
+      "upload ID might be invalid, or the multipart upload might have " +
+      "been aborted or completed.", HTTP_NOT_FOUND);
+
   /**
    * Create a new instance of Error.
    * @param e Error Template
