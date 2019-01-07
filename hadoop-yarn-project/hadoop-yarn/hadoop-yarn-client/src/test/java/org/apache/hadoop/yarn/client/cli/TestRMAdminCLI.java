@@ -812,7 +812,6 @@ public class TestRMAdminCLI {
               + "([OvercommitTimeout])] "
               + "[-transitionToActive [--forceactive] <serviceId>] "
               + "[-transitionToStandby <serviceId>] "
-              + "[-transitionToObserver <serviceId>] "
               + "[-getServiceState <serviceId>] [-getAllServiceState] "
               + "[-checkHealth <serviceId>] [-help [cmd]]";
       String actualHelpMsg = dataOut.toString();
