@@ -32,6 +32,8 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
@@ -88,6 +90,10 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .MultipartInfoInitiateRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .MultipartInfoInitiateResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .MultipartUploadCompleteRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .MultipartUploadCompleteResponse;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.RenameKeyRequest;
 import org.apache.hadoop.ozone.protocol.proto
@@ -970,6 +976,11 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
   @Override
   public OmMultipartCommitUploadPartInfo commitMultipartUploadPart(
       OmKeyArgs omKeyArgs, long clientId) throws IOException {
+
+    List<OmKeyLocationInfo> locationInfoList = omKeyArgs.getLocationInfoList();
+    Preconditions.checkNotNull(locationInfoList);
+
+
     MultipartCommitUploadPartRequest.Builder multipartCommitUploadPartRequest
         = MultipartCommitUploadPartRequest.newBuilder();
 
@@ -979,7 +990,11 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setKeyName(omKeyArgs.getKeyName())
         .setMultipartUploadID(omKeyArgs.getMultipartUploadID())
         .setIsMultipartKey(omKeyArgs.getIsMultipartKey())
-        .setMultipartNumber(omKeyArgs.getMultipartUploadPartNumber());
+        .setMultipartNumber(omKeyArgs.getMultipartUploadPartNumber())
+        .setDataSize(omKeyArgs.getDataSize())
+        .addAllKeyLocations(
+            locationInfoList.stream().map(OmKeyLocationInfo::getProtobuf)
+                .collect(Collectors.toList()));
     multipartCommitUploadPartRequest.setClientID(clientId);
     multipartCommitUploadPartRequest.setKeyArgs(keyArgs.build());
 
@@ -999,6 +1014,42 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
 
     OmMultipartCommitUploadPartInfo info = new
         OmMultipartCommitUploadPartInfo(response.getPartName());
+    return info;
+  }
+
+  @Override
+  public OmMultipartUploadCompleteInfo completeMultipartUpload(
+      OmKeyArgs omKeyArgs, OmMultipartUploadList multipartUploadList)
+      throws IOException {
+    MultipartUploadCompleteRequest.Builder multipartUploadCompleteRequest =
+        MultipartUploadCompleteRequest.newBuilder();
+
+    KeyArgs.Builder keyArgs = KeyArgs.newBuilder()
+        .setVolumeName(omKeyArgs.getVolumeName())
+        .setBucketName(omKeyArgs.getBucketName())
+        .setKeyName(omKeyArgs.getKeyName())
+        .setMultipartUploadID(omKeyArgs.getMultipartUploadID());
+
+    multipartUploadCompleteRequest.setKeyArgs(keyArgs.build());
+    multipartUploadCompleteRequest.addAllPartsList(multipartUploadList
+        .getPartsList());
+
+    OMRequest omRequest = createOMRequest(
+        Type.CompleteMultiPartUpload)
+        .setCompleteMultiPartUploadRequest(
+            multipartUploadCompleteRequest.build()).build();
+
+    MultipartUploadCompleteResponse response = submitRequest(omRequest)
+        .getCompleteMultiPartUploadResponse();
+
+    if (response.getStatus() != Status.OK) {
+      throw new IOException("Complete multipart upload failed, error:" +
+          response.getStatus());
+    }
+
+    OmMultipartUploadCompleteInfo info = new
+        OmMultipartUploadCompleteInfo(response.getVolume(), response
+        .getBucket(), response.getKey(), response.getHash());
     return info;
   }
 

@@ -23,6 +23,8 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.utils.BackgroundService;
 
@@ -191,8 +193,24 @@ public interface KeyManager {
    */
   OmMultipartInfo initiateMultipartUpload(OmKeyArgs keyArgs) throws IOException;
 
+  /**
+   * Commit Multipart upload part file.
+   * @param omKeyArgs
+   * @param clientID
+   * @return OmMultipartCommitUploadPartInfo
+   * @throws IOException
+   */
 
   OmMultipartCommitUploadPartInfo commitMultipartUploadPart(
-      OmKeyArgs keyArgs, long clientID) throws IOException;
+      OmKeyArgs omKeyArgs, long clientID) throws IOException;
 
+  /**
+   * Complete Multipart upload Request.
+   * @param omKeyArgs
+   * @param multipartUploadList
+   * @return OmMultipartUploadCompleteInfo
+   * @throws IOException
+   */
+  OmMultipartUploadCompleteInfo completeMultipartUpload(OmKeyArgs omKeyArgs,
+      OmMultipartUploadList multipartUploadList) throws IOException;
 }

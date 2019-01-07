@@ -23,6 +23,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * This class represents multipart upload information for a key, which holds
@@ -30,7 +31,7 @@ import java.util.Map;
  */
 public class OmMultipartKeyInfo {
   private String uploadID;
-  private Map<Integer, PartKeyInfo> partKeyInfoList;
+  private TreeMap<Integer, PartKeyInfo> partKeyInfoList;
 
   /**
    * Construct OmMultipartKeyInfo object which holds multipart upload
@@ -40,7 +41,7 @@ public class OmMultipartKeyInfo {
    */
   public OmMultipartKeyInfo(String id, Map<Integer, PartKeyInfo> list) {
     this.uploadID = id;
-    this.partKeyInfoList = new HashMap<>(list);
+    this.partKeyInfoList = new TreeMap<>(list);
   }
 
   /**
@@ -51,7 +52,7 @@ public class OmMultipartKeyInfo {
     return uploadID;
   }
 
-  public Map<Integer, PartKeyInfo> getPartKeyInfoList() {
+  public TreeMap<Integer, PartKeyInfo> getPartKeyInfoList() {
     return partKeyInfoList;
   }
 

@@ -50,6 +50,8 @@ import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
@@ -751,6 +753,31 @@ public class RpcClient implements ClientProtocol {
         openKey.getKeyInfo().getLatestVersionLocations(),
         openKey.getOpenVersion());
     return new OzoneOutputStream(groupOutputStream);
+  }
+
+  @Override
+  public OmMultipartUploadCompleteInfo completeMultipartUpload(
+      String volumeName, String bucketName, String keyName, String uploadID,
+      Map<Integer, String> partsMap) throws IOException {
+    HddsClientUtils.verifyResourceName(volumeName, bucketName);
+    HddsClientUtils.checkNotNull(keyName, uploadID);
+
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(keyName)
+        .setMultipartUploadID(uploadID)
+        .build();
+
+    OmMultipartUploadList omMultipartUploadList = new OmMultipartUploadList(
+        partsMap);
+
+    OmMultipartUploadCompleteInfo omMultipartUploadCompleteInfo =
+        ozoneManagerClient.completeMultipartUpload(keyArgs,
+            omMultipartUploadList);
+
+    return omMultipartUploadCompleteInfo;
+
   }
 
 }

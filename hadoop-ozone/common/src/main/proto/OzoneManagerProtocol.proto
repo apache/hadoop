@@ -65,6 +65,7 @@ enum Type {
   ListS3Buckets = 44;
   InitiateMultiPartUpload = 45;
   CommitMultiPartUpload = 46;
+  CompleteMultiPartUpload = 47;
 
   ServiceList = 51;
 }
@@ -105,6 +106,7 @@ message OMRequest {
   optional S3ListBucketsRequest             listS3BucketsRequest           = 44;
   optional MultipartInfoInitiateRequest     initiateMultiPartUploadRequest = 45;
   optional MultipartCommitUploadPartRequest commitMultiPartUploadRequest   = 46;
+  optional MultipartUploadCompleteRequest   completeMultiPartUploadRequest = 47;
 
   optional ServiceListRequest               serviceListRequest             = 51;
 }
@@ -146,6 +148,7 @@ message OMResponse {
   optional S3ListBucketsResponse             listS3BucketsResponse         = 44;
   optional MultipartInfoInitiateResponse   initiateMultiPartUploadResponse = 45;
   optional MultipartCommitUploadPartResponse commitMultiPartUploadResponse = 46;
+  optional MultipartUploadCompleteResponse completeMultiPartUploadResponse = 47;
 
   optional ServiceListResponse               ServiceListResponse           = 51;
 }
@@ -177,6 +180,10 @@ enum Status {
     INITIATE_MULTIPART_UPLOAD_ERROR = 24;
     MULTIPART_UPLOAD_PARTFILE_ERROR = 25;
     NO_SUCH_MULTIPART_UPLOAD_ERROR = 26;
+    MISMATCH_MULTIPART_LIST = 27;
+    MISSING_UPLOAD_PARTS = 28;
+    COMPLETE_MULTIPART_UPLOAD_ERROR = 29;
+    ENTITY_TOO_SMALL = 30;
 }
 
 
@@ -581,6 +588,24 @@ message MultipartCommitUploadPartResponse {
     // This one is returned as Etag for S3.
     optional string partName = 1;
     required Status status = 2;
+}
+
+message MultipartUploadCompleteRequest {
+    required KeyArgs keyArgs = 1;
+    repeated Part partsList = 2;
+}
+
+message MultipartUploadCompleteResponse {
+    optional string volume = 1;
+    optional string bucket = 2;
+    optional string key = 3;
+    optional string hash = 4; // This will be used as etag for s3
+    required Status status = 5;
+}
+
+message Part {
+    required uint32 partNumber = 1;
+    required string partName = 2;
 }
 
 /**

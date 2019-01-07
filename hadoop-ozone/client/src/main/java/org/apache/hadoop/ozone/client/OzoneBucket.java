@@ -31,10 +31,12 @@ import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 /**
@@ -353,11 +355,35 @@ public class OzoneBucket {
         defaultReplication);
   }
 
+  /**
+   * Create a part key for a multipart upload key.
+   * @param key
+   * @param size
+   * @param partNumber
+   * @param uploadID
+   * @return OzoneOutputStream
+   * @throws IOException
+   */
   public OzoneOutputStream createMultipartKey(String key, long size,
                                               int partNumber, String uploadID)
       throws IOException {
     return proxy.createMultipartKey(volumeName, name, key, size, partNumber,
         uploadID);
+  }
+
+  /**
+   * Complete Multipart upload. This will combine all the parts and make the
+   * key visible in ozone.
+   * @param key
+   * @param uploadID
+   * @param partsMap
+   * @return OmMultipartUploadCompleteInfo
+   * @throws IOException
+   */
+  public OmMultipartUploadCompleteInfo completeMultipartUpload(String key,
+      String uploadID, Map<Integer, String> partsMap) throws IOException {
+    return proxy.completeMultipartUpload(volumeName, name, key, uploadID,
+        partsMap);
   }
 
   /**

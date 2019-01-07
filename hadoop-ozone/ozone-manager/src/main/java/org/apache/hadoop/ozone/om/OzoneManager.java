@@ -63,6 +63,8 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
@@ -1643,6 +1645,31 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       }
     }
     return commitUploadPartInfo;
+  }
+
+  @Override
+  public OmMultipartUploadCompleteInfo completeMultipartUpload(
+      OmKeyArgs omKeyArgs, OmMultipartUploadList multipartUploadList)
+      throws IOException {
+    OmMultipartUploadCompleteInfo omMultipartUploadCompleteInfo;
+    metrics.incNumCompleteMultipartUploads();
+
+    Map<String, String> auditMap = (omKeyArgs == null) ? new LinkedHashMap<>() :
+        omKeyArgs.toAuditMap();
+    auditMap.put(OzoneConsts.MULTIPART_LIST, multipartUploadList
+        .getMultipartMap().toString());
+    try {
+      omMultipartUploadCompleteInfo = keyManager.completeMultipartUpload(
+          omKeyArgs, multipartUploadList);
+      AUDIT.logWriteSuccess(buildAuditMessageForSuccess(OMAction
+          .COMPLETE_MULTIPART_UPLOAD, auditMap));
+      return omMultipartUploadCompleteInfo;
+    } catch (IOException ex) {
+      metrics.incNumCompleteMultipartUploadFails();
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction
+          .COMPLETE_MULTIPART_UPLOAD, auditMap, ex));
+      throw ex;
+    }
   }
 
 

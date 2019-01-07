@@ -237,10 +237,14 @@ public final class OzoneConsts {
   public static final String REPLICATION_TYPE = "replicationType";
   public static final String REPLICATION_FACTOR = "replicationFactor";
   public static final String KEY_LOCATION_INFO = "keyLocationInfo";
+  public static final String MULTIPART_LIST = "multipartList";
 
 
   // For OM metrics saving to a file
   public static final String OM_METRICS_FILE = "omMetrics";
   public static final String OM_METRICS_TEMP_FILE = OM_METRICS_FILE + ".tmp";
+
+  // For Multipart upload
+  public static final int OM_MULTIPART_MIN_SIZE = 5 * 1024 * 1024;
 
 }
