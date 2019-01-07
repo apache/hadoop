@@ -43,6 +43,10 @@ import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.registry.client.impl.zk.RegistrySecurity;
 import org.apache.hadoop.registry.client.impl.zk.ZookeeperConfigOptions;
+
+import static org.apache.hadoop.security.authentication.util.KerberosName.DEFAULT_MECHANISM;
+import static org.apache.hadoop.security.authentication.util.KerberosName.MECHANISM_HADOOP;
+import static org.apache.hadoop.security.authentication.util.KerberosName.MECHANISM_MIT;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
 import org.junit.Test;
@@ -198,12 +202,15 @@ public class TestSecureLogins extends AbstractSecureRegistryTest {
 
   @Test
   public void testValidKerberosName() throws Throwable {
-
+    KerberosName.setRuleMechanism(MECHANISM_HADOOP);
+    new HadoopKerberosName(ZOOKEEPER).getShortName();
+    // MECHANISM_MIT allows '/' and '@' in username
+    KerberosName.setRuleMechanism(MECHANISM_MIT);
     new HadoopKerberosName(ZOOKEEPER).getShortName();
     new HadoopKerberosName(ZOOKEEPER_LOCALHOST).getShortName();
     new HadoopKerberosName(ZOOKEEPER_REALM).getShortName();
-    // standard rules don't pick this up
-    // new HadoopKerberosName(ZOOKEEPER_LOCALHOST_REALM).getShortName();
+    new HadoopKerberosName(ZOOKEEPER_LOCALHOST_REALM).getShortName();
+    KerberosName.setRuleMechanism(DEFAULT_MECHANISM);
   }
 
   @Test
