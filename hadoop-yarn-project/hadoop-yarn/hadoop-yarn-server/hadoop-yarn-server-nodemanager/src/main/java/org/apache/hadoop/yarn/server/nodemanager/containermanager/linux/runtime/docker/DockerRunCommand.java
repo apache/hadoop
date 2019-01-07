@@ -165,6 +165,11 @@ public class DockerRunCommand extends DockerCommand {
     return this;
   }
 
+  public DockerRunCommand addRuntime(String runtime) {
+    super.addCommandArguments("runtime", runtime);
+    return this;
+  }
+
   public DockerRunCommand groupAdd(String[] groups) {
     super.addCommandArguments("group-add", String.join(",", groups));
     return this;
