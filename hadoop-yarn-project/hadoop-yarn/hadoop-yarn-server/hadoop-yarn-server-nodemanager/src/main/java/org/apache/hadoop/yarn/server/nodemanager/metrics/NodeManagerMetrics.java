@@ -54,6 +54,12 @@ public class NodeManagerMetrics {
   @Metric MutableGaugeInt availableVCores;
   @Metric("Container launch duration")
       MutableRate containerLaunchDuration;
+
+  @Metric("Containers queued (Guaranteed)")
+  MutableGaugeInt containersGuaranteedQueued;
+  @Metric("Containers queued (Opportunistic)")
+  MutableGaugeInt containersOpportunisticQueued;
+
   @Metric("# of bad local dirs")
       MutableGaugeInt badLocalDirs;
   @Metric("# of bad log dirs")
@@ -209,6 +215,11 @@ public class NodeManagerMetrics {
     allocatedOpportunisticVCores.decr(res.getVirtualCores());
   }
 
+  public void setQueuedContainers(int opportunisticCount, int guaranteedCount) {
+    containersOpportunisticQueued.set(opportunisticCount);
+    containersGuaranteedQueued.set(guaranteedCount);
+  }
+
   public void addResource(Resource res) {
     availableMB = availableMB + res.getMemorySize();
     availableGB.set((int)Math.floor(availableMB/1024d));
@@ -312,6 +323,16 @@ public class NodeManagerMetrics {
 
   public int getRunningOpportunisticContainers() {
     return runningOpportunisticContainers.value();
+  }
+
+  @VisibleForTesting
+  public int getQueuedOpportunisticContainers() {
+    return containersOpportunisticQueued.value();
+  }
+
+  @VisibleForTesting
+  public int getQueuedGuaranteedContainers() {
+    return containersGuaranteedQueued.value();
   }
 
   public long getCacheSizeBeforeClean() {

@@ -199,6 +199,8 @@ public class ContainerScheduler extends AbstractService implements
       break;
     case RECOVERY_COMPLETED:
       startPendingContainers(maxOppQueueLength <= 0);
+      metrics.setQueuedContainers(queuedOpportunisticContainers.size(),
+          queuedGuaranteedContainers.size());
     default:
       LOG.error("Unknown event arrived at ContainerScheduler: "
           + event.toString());
@@ -252,6 +254,8 @@ public class ContainerScheduler extends AbstractService implements
             "continer update of %s", containerId), ex);
       }
       startPendingContainers(maxOppQueueLength <= 0);
+      metrics.setQueuedContainers(queuedOpportunisticContainers.size(),
+          queuedGuaranteedContainers.size());
     }
   }
 
@@ -277,6 +281,8 @@ public class ContainerScheduler extends AbstractService implements
             "UnKnown execution type received " + container.getContainerId()
                 + ", execType " + execType);
       }
+      metrics.setQueuedContainers(queuedOpportunisticContainers.size(),
+          queuedGuaranteedContainers.size());
     } else if (rcs.getStatus() == RecoveredContainerStatus.LAUNCHED) {
       runningContainers.put(container.getContainerId(), container);
       utilizationTracker.addContainerResources(container);
@@ -378,6 +384,8 @@ public class ContainerScheduler extends AbstractService implements
       boolean forceStartGuaranteedContainers = (maxOppQueueLength <= 0);
       startPendingContainers(forceStartGuaranteedContainers);
     }
+    this.metrics.setQueuedContainers(queuedOpportunisticContainers.size(),
+        queuedGuaranteedContainers.size());
   }
 
   /**
@@ -508,6 +516,8 @@ public class ContainerScheduler extends AbstractService implements
         startPendingContainers(false);
       }
     }
+    metrics.setQueuedContainers(queuedOpportunisticContainers.size(),
+        queuedGuaranteedContainers.size());
   }
 
   @SuppressWarnings("unchecked")
@@ -662,6 +672,8 @@ public class ContainerScheduler extends AbstractService implements
         numAllowed--;
       }
     }
+    this.metrics.setQueuedContainers(queuedOpportunisticContainers.size(),
+        queuedGuaranteedContainers.size());
   }
 
   public ContainersMonitor getContainersMonitor() {
