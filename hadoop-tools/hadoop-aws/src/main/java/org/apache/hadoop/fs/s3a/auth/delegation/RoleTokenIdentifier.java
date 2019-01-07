@@ -16,30 +16,34 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a;
+package org.apache.hadoop.fs.s3a.auth.delegation;
 
-import org.apache.hadoop.conf.Configuration;
+import java.net.URI;
+
+import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.io.Text;
 
 /**
- * Run the encryption tests against the Fast output stream.
- * This verifies that both file writing paths can encrypt their data.
+ * Role token identifier.
+ * Token kind is {@link DelegationConstants#ROLE_TOKEN_KIND}
  */
+public class RoleTokenIdentifier extends SessionTokenIdentifier {
 
-public class ITestS3AEncryptionSSECBlockOutputStream
-    extends AbstractTestS3AEncryption {
-
-  @Override
-  protected Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
-    conf.set(Constants.FAST_UPLOAD_BUFFER,
-        Constants.FAST_UPLOAD_BYTEBUFFER);
-    conf.set(Constants.SERVER_SIDE_ENCRYPTION_KEY,
-        "4niV/jPK5VFRHY+KNb6wtqYd4xXyMgdJ9XQJpcQUVbs=");
-    return conf;
+  public RoleTokenIdentifier() {
+    super(DelegationConstants.ROLE_TOKEN_KIND);
   }
 
-  @Override
-  protected S3AEncryptionMethods getSSEAlgorithm() {
-    return S3AEncryptionMethods.SSE_C;
+  public RoleTokenIdentifier(final URI uri,
+      final Text owner,
+      final MarshalledCredentials marshalledCredentials,
+      final EncryptionSecrets encryptionSecrets,
+      final String origin) {
+    super(DelegationConstants.ROLE_TOKEN_KIND,
+        owner,
+        uri,
+        marshalledCredentials,
+        encryptionSecrets,
+        origin);
   }
+
 }

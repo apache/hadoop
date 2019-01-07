@@ -235,7 +235,23 @@ As an example, the endpoint for S3 Frankfurt is `s3.eu-central-1.amazonaws.com`:
 </property>
 ```
 
-## <a name="access_denied"></a> `AccessDeniedException` "Access Denied"
+## <a name="access_denied"></a> "The security token included in the request is invalid"
+
+You are trying to use session/temporary credentials and the session token
+supplied is considered invalid.
+
+```
+org.apache.hadoop.fs.s3a.AWSBadRequestException: initTable on bucket:
+  com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException:
+  The security token included in the request is invalid
+  (Service: AmazonDynamoDBv2; Status Code: 400; Error Code: UnrecognizedClientException)
+```
+
+This can surface if your configuration is setting the `fs.s3a.secret.key`,
+`fs.s3a.access.key` and `fs.s3a.session.key` correctly, but the
+AWS credential provider list set in `AWS_CREDENTIALS_PROVIDER` does not include
+`org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider`.
+
 
 ### <a name="access_denied_unknown-ID"></a> AccessDeniedException "The AWS Access Key Id you provided does not exist in our records."
 
