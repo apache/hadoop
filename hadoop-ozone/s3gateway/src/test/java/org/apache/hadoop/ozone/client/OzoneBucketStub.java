@@ -49,6 +49,9 @@ public class OzoneBucketStub extends OzoneBucket {
   private Map<String, byte[]> keyContents = new HashMap<>();
 
   private Map<String, String> multipartUploadIdMap = new HashMap<>();
+
+  private Map<String, Map<Integer, Part>> partList = new HashMap<>();
+
   /**
    * Constructs OzoneBucket instance.
    *
@@ -159,5 +162,53 @@ public class OzoneBucketStub extends OzoneBucket {
     String uploadID = UUID.randomUUID().toString();
     multipartUploadIdMap.put(keyName, uploadID);
     return new OmMultipartInfo(getVolumeName(), getName(), keyName, uploadID);
+  }
+
+  @Override
+  public OzoneOutputStream createMultipartKey(String key, long size,
+                                              int partNumber, String uploadID)
+      throws IOException {
+    String multipartUploadID = multipartUploadIdMap.get(key);
+    if (multipartUploadID == null || multipartUploadID != uploadID) {
+      throw new IOException("NO_SUCH_MULTIPART_UPLOAD_ERROR");
+    } else {
+      ByteArrayOutputStream byteArrayOutputStream =
+          new ByteArrayOutputStream((int) size) {
+            @Override
+            public void close() throws IOException {
+              Part part = new Part(key + size,
+                  toByteArray());
+              if (partList.get(key) == null) {
+                Map<Integer, Part> parts = new HashMap<>();
+                parts.put(partNumber, part);
+                partList.put(key, parts);
+              } else {
+                partList.get(key).put(partNumber, part);
+              }
+            }
+          };
+      return new OzoneOutputStreamStub(byteArrayOutputStream, key + size);
+    }
+  }
+
+  /**
+   * Class used to hold part information in a upload part request.
+   */
+  public class Part {
+    private String partName;
+    private byte[] content;
+
+    public Part(String name, byte[] data) {
+      this.partName = name;
+      this.content = data;
+    }
+
+    public String getPartName() {
+      return partName;
+    }
+
+    public byte[] getContent() {
+      return content;
+    }
   }
 }
