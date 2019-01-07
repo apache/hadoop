@@ -109,6 +109,10 @@ public final class DatabaseHelper {
             properties.get(ParserConsts.INSERT_AUDITS))) {
 
       ArrayList<AuditEntry> auditEntries = parseAuditLogs(logs);
+
+      final int batchSize = 1000;
+      int count = 0;
+
       //Insert list to db
       for(AuditEntry audit : auditEntries) {
         preparedStatement.setString(1, audit.getTimestamp());
@@ -121,7 +125,14 @@ public final class DatabaseHelper {
         preparedStatement.setString(8, audit.getResult());
         preparedStatement.setString(9, audit.getException());
 
-        preparedStatement.executeUpdate();
+        preparedStatement.addBatch();
+
+        if(++count % batchSize == 0) {
+          preparedStatement.executeBatch();
+        }
+      }
+      if(auditEntries.size() > 0) {
+        preparedStatement.executeBatch(); // insert remaining records
       }
     } catch (Exception e) {
       LOG.error(e.getMessage());
