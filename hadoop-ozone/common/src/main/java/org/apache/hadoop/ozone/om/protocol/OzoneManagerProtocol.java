@@ -338,5 +338,12 @@ public interface OzoneManagerProtocol {
       OmKeyArgs omKeyArgs, OmMultipartUploadList multipartUploadList)
       throws IOException;
 
+  /**
+   * Abort multipart upload.
+   * @param omKeyArgs
+   * @throws IOException
+   */
+  void abortMultipartUpload(OmKeyArgs omKeyArgs) throws IOException;
+
 }
 

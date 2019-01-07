@@ -1672,6 +1672,25 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
   }
 
+  @Override
+  public void abortMultipartUpload(OmKeyArgs omKeyArgs) throws IOException {
+
+    Map<String, String> auditMap = (omKeyArgs == null) ? new LinkedHashMap<>() :
+        omKeyArgs.toAuditMap();
+    metrics.incNumAbortMultipartUploads();
+    try {
+      keyManager.abortMultipartUpload(omKeyArgs);
+      AUDIT.logWriteSuccess(buildAuditMessageForSuccess(OMAction
+          .COMPLETE_MULTIPART_UPLOAD, auditMap));
+    } catch (IOException ex) {
+      metrics.incNumAbortMultipartUploadFails();
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction
+          .COMPLETE_MULTIPART_UPLOAD, auditMap, ex));
+      throw ex;
+    }
+
+  }
+
 
 
 

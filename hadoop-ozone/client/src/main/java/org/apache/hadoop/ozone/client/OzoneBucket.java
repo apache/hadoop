@@ -387,6 +387,17 @@ public class OzoneBucket {
   }
 
   /**
+   * Abort multipart upload request.
+   * @param keyName
+   * @param uploadID
+   * @throws IOException
+   */
+  public void abortMultipartUpload(String keyName, String uploadID) throws
+      IOException {
+    proxy.abortMultipartUpload(volumeName, name, keyName, uploadID);
+  }
+
+  /**
    * An Iterator to iterate over {@link OzoneKey} list.
    */
   private class KeyIterator implements Iterator<OzoneKey> {

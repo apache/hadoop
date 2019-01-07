@@ -90,6 +90,10 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .MultipartInfoInitiateRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .MultipartInfoInitiateResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.
+    MultipartUploadAbortRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .MultipartUploadAbortResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .MultipartUploadCompleteRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -633,6 +637,10 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
       keyArgs.setMultipartUploadID(args.getMultipartUploadID());
     }
 
+    if (args.getMultipartUploadPartNumber() > 0) {
+      keyArgs.setMultipartNumber(args.getMultipartUploadPartNumber());
+    }
+
     keyArgs.setIsMultipartKey(args.getIsMultipartKey());
 
 
@@ -1051,6 +1059,33 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         OmMultipartUploadCompleteInfo(response.getVolume(), response
         .getBucket(), response.getKey(), response.getHash());
     return info;
+  }
+
+  @Override
+  public void abortMultipartUpload(OmKeyArgs omKeyArgs) throws IOException {
+    KeyArgs.Builder keyArgs = KeyArgs.newBuilder()
+        .setVolumeName(omKeyArgs.getVolumeName())
+        .setBucketName(omKeyArgs.getBucketName())
+        .setKeyName(omKeyArgs.getKeyName())
+        .setMultipartUploadID(omKeyArgs.getMultipartUploadID());
+
+    MultipartUploadAbortRequest.Builder multipartUploadAbortRequest =
+        MultipartUploadAbortRequest.newBuilder();
+    multipartUploadAbortRequest.setKeyArgs(keyArgs);
+
+    OMRequest omRequest = createOMRequest(
+        Type.AbortMultiPartUpload)
+        .setAbortMultiPartUploadRequest(multipartUploadAbortRequest.build())
+        .build();
+
+    MultipartUploadAbortResponse response =
+        submitRequest(omRequest).getAbortMultiPartUploadResponse();
+
+    if (response.getStatus() != Status.OK) {
+      throw new IOException("Abort multipart upload failed, error:" +
+          response.getStatus());
+    }
+
   }
 
   public List<ServiceInfo> getServiceList() throws IOException {

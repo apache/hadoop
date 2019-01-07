@@ -98,6 +98,10 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .LookupKeyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .LookupKeyResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.
+    MultipartUploadAbortRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .MultipartUploadAbortResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .MultipartCommitUploadPartRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -346,6 +350,12 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
       responseBuilder.setCompleteMultiPartUploadResponse(
           completeMultipartUploadResponse);
       break;
+    case AbortMultiPartUpload:
+      MultipartUploadAbortResponse multipartUploadAbortResponse =
+          abortMultipartUpload(request.getAbortMultiPartUploadRequest());
+      responseBuilder.setAbortMultiPartUploadResponse(
+          multipartUploadAbortResponse);
+      break;
     case ServiceList:
       ServiceListResponse serviceListResponse = getServiceList(
           request.getServiceListRequest());
@@ -415,6 +425,8 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
         return Status.MISSING_UPLOAD_PARTS;
       case ENTITY_TOO_SMALL:
         return Status.ENTITY_TOO_SMALL;
+      case ABORT_MULTIPART_UPLOAD_FAILED:
+        return Status.ABORT_MULTIPART_UPLOAD_FAILED;
       default:
         return Status.INTERNAL_ERROR;
       }
@@ -913,4 +925,26 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     }
     return response.build();
   }
+
+  private MultipartUploadAbortResponse abortMultipartUpload(
+      MultipartUploadAbortRequest multipartUploadAbortRequest) {
+    MultipartUploadAbortResponse.Builder response =
+        MultipartUploadAbortResponse.newBuilder();
+
+    try {
+      KeyArgs keyArgs = multipartUploadAbortRequest.getKeyArgs();
+      OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
+          .setVolumeName(keyArgs.getVolumeName())
+          .setBucketName(keyArgs.getBucketName())
+          .setKeyName(keyArgs.getKeyName())
+          .setMultipartUploadID(keyArgs.getMultipartUploadID())
+          .build();
+      impl.abortMultipartUpload(omKeyArgs);
+      response.setStatus(Status.OK);
+    } catch (IOException ex) {
+      response.setStatus(exceptionToResponseStatus(ex));
+    }
+    return response.build();
+  }
+
 }

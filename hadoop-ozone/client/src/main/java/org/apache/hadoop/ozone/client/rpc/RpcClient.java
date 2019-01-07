@@ -727,6 +727,7 @@ public class RpcClient implements ClientProtocol {
         .setDataSize(size)
         .setIsMultipartKey(true)
         .setMultipartUploadID(uploadID)
+        .setMultipartUploadPartNumber(partNumber)
         .build();
 
     OpenKeySession openKey = ozoneManagerClient.openKey(keyArgs);
@@ -778,6 +779,20 @@ public class RpcClient implements ClientProtocol {
 
     return omMultipartUploadCompleteInfo;
 
+  }
+
+  @Override
+  public void abortMultipartUpload(String volumeName,
+       String bucketName, String keyName, String uploadID) throws IOException {
+    HddsClientUtils.verifyResourceName(volumeName, bucketName);
+    HddsClientUtils.checkNotNull(keyName, uploadID);
+    OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(keyName)
+        .setMultipartUploadID(uploadID)
+        .build();
+    ozoneManagerClient.abortMultipartUpload(omKeyArgs);
   }
 
 }

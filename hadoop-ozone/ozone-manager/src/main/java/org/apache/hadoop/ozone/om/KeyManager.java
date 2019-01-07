@@ -213,4 +213,11 @@ public interface KeyManager {
    */
   OmMultipartUploadCompleteInfo completeMultipartUpload(OmKeyArgs omKeyArgs,
       OmMultipartUploadList multipartUploadList) throws IOException;
+
+  /**
+   * Abort multipart upload request.
+   * @param omKeyArgs
+   * @throws IOException
+   */
+  void abortMultipartUpload(OmKeyArgs omKeyArgs) throws IOException;
 }
