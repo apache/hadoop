@@ -66,6 +66,7 @@ enum Type {
   InitiateMultiPartUpload = 45;
   CommitMultiPartUpload = 46;
   CompleteMultiPartUpload = 47;
+  AbortMultiPartUpload = 48;
 
   ServiceList = 51;
 }
@@ -107,6 +108,7 @@ message OMRequest {
   optional MultipartInfoInitiateRequest     initiateMultiPartUploadRequest = 45;
   optional MultipartCommitUploadPartRequest commitMultiPartUploadRequest   = 46;
   optional MultipartUploadCompleteRequest   completeMultiPartUploadRequest = 47;
+  optional MultipartUploadAbortRequest      abortMultiPartUploadRequest    = 48;
 
   optional ServiceListRequest               serviceListRequest             = 51;
 }
@@ -149,6 +151,7 @@ message OMResponse {
   optional MultipartInfoInitiateResponse   initiateMultiPartUploadResponse = 45;
   optional MultipartCommitUploadPartResponse commitMultiPartUploadResponse = 46;
   optional MultipartUploadCompleteResponse completeMultiPartUploadResponse = 47;
+  optional MultipartUploadAbortResponse    abortMultiPartUploadResponse    = 48;
 
   optional ServiceListResponse               ServiceListResponse           = 51;
 }
@@ -184,6 +187,7 @@ enum Status {
     MISSING_UPLOAD_PARTS = 28;
     COMPLETE_MULTIPART_UPLOAD_ERROR = 29;
     ENTITY_TOO_SMALL = 30;
+    ABORT_MULTIPART_UPLOAD_FAILED = 31;
 }
 
 
@@ -606,6 +610,14 @@ message MultipartUploadCompleteResponse {
 message Part {
     required uint32 partNumber = 1;
     required string partName = 2;
+}
+
+message MultipartUploadAbortRequest {
+    required KeyArgs keyArgs = 1;
+}
+
+message MultipartUploadAbortResponse {
+    required Status status = 1;
 }
 
 /**

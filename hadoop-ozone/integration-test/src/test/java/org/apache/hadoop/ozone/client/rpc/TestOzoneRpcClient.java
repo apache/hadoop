@@ -1665,6 +1665,68 @@ public class TestOzoneRpcClient {
     }
   }
 
+  @Test
+  public void testAbortUploadFail() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+
+    try {
+      bucket.abortMultipartUpload(keyName, "random");
+      fail("testAbortUploadFail failed");
+    } catch (IOException ex) {
+      GenericTestUtils.assertExceptionContains(
+          "NO_SUCH_MULTIPART_UPLOAD_ERROR", ex);
+    }
+  }
+
+
+  @Test
+  public void testAbortUploadSuccessWithOutAnyParts() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+
+    try {
+      String uploadID = initiateMultipartUpload(bucket, keyName, ReplicationType
+          .STAND_ALONE, ReplicationFactor.ONE);
+      bucket.abortMultipartUpload(keyName, uploadID);
+    } catch (IOException ex) {
+      fail("testAbortUploadSuccess failed");
+    }
+  }
+
+  @Test
+  public void testAbortUploadSuccessWithParts() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+
+    try {
+      String uploadID = initiateMultipartUpload(bucket, keyName, ReplicationType
+          .STAND_ALONE, ReplicationFactor.ONE);
+      uploadPart(bucket, keyName, uploadID, 1, "data".getBytes("UTF-8"));
+      bucket.abortMultipartUpload(keyName, uploadID);
+    } catch (IOException ex) {
+      fail("testAbortUploadSuccess failed");
+    }
+  }
+
 
   private byte[] generateData(int size, byte val) {
     byte[] chars = new byte[size];

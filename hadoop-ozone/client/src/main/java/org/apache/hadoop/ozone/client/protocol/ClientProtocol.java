@@ -434,4 +434,15 @@ public interface ClientProtocol {
       String bucketName, String keyName, String uploadID,
       Map<Integer, String> partsMap) throws IOException;
 
+  /**
+   * Abort Multipart upload request for the given key with given uploadID.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param uploadID
+   * @throws IOException
+   */
+  void abortMultipartUpload(String volumeName,
+      String bucketName, String keyName, String uploadID) throws IOException;
+
 }
