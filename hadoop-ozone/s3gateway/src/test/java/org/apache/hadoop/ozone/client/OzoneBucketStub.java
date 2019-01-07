@@ -28,6 +28,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.hdds.client.ReplicationFactor;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 
 /**
  * In-memory ozone bucket for testing.
@@ -46,6 +48,7 @@ public class OzoneBucketStub extends OzoneBucket {
 
   private Map<String, byte[]> keyContents = new HashMap<>();
 
+  private Map<String, String> multipartUploadIdMap = new HashMap<>();
   /**
    * Constructs OzoneBucket instance.
    *
@@ -146,5 +149,15 @@ public class OzoneBucketStub extends OzoneBucket {
   public void renameKey(String fromKeyName, String toKeyName)
       throws IOException {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public OmMultipartInfo initiateMultipartUpload(String keyName,
+                                                 ReplicationType type,
+                                                 ReplicationFactor factor)
+      throws IOException {
+    String uploadID = UUID.randomUUID().toString();
+    multipartUploadIdMap.put(keyName, uploadID);
+    return new OmMultipartInfo(getVolumeName(), getName(), keyName, uploadID);
   }
 }
