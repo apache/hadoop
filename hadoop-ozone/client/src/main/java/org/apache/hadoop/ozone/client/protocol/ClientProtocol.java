@@ -27,9 +27,11 @@ import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * An implementer of this interface is capable of connecting to Ozone Cluster
@@ -401,10 +403,35 @@ public interface ClientProtocol {
       bucketName, String keyName, ReplicationType type, ReplicationFactor
       factor) throws IOException;
 
+  /**
+   * Create a part key for a multipart upload key.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param size
+   * @param partNumber
+   * @param uploadID
+   * @return OzoneOutputStream
+   * @throws IOException
+   */
   OzoneOutputStream createMultipartKey(String volumeName, String bucketName,
                                        String keyName, long size,
                                        int partNumber, String uploadID)
       throws IOException;
 
+  /**
+   * Complete Multipart upload. This will combine all the parts and make the
+   * key visible in ozone.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param uploadID
+   * @param partsMap
+   * @return OmMultipartUploadCompleteInfo
+   * @throws IOException
+   */
+  OmMultipartUploadCompleteInfo completeMultipartUpload(String volumeName,
+      String bucketName, String keyName, String uploadID,
+      Map<Integer, String> partsMap) throws IOException;
 
 }
