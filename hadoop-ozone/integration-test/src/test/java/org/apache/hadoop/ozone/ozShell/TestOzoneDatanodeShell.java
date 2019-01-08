@@ -67,7 +67,6 @@ import static org.junit.Assert.fail;
  * This test class specified for testing Ozone datanode shell command.
  */
 @RunWith(value = Parameterized.class)
-
 public class TestOzoneDatanodeShell {
 
   private static final Logger LOG =
@@ -100,6 +99,7 @@ public class TestOzoneDatanodeShell {
   }
 
   @Parameterized.Parameter
+  @SuppressWarnings("visibilitymodifier")
   public Class clientProtocol;
   /**
    * Create a MiniDFSCluster for testing with using distributed Ozone

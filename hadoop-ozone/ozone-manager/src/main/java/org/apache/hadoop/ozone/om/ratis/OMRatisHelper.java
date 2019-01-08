@@ -43,7 +43,8 @@ import org.slf4j.LoggerFactory;
 /**
  * Ratis helper methods for OM Ratis server and client.
  */
-public class OMRatisHelper {
+public final class OMRatisHelper {
+
   private static final Logger LOG = LoggerFactory.getLogger(
       OMRatisHelper.class);
 

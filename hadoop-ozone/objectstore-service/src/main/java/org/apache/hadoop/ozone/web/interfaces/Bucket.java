@@ -164,6 +164,7 @@ public interface Bucket {
           + "04:23:30 GMT", required = true, paramType = "header"),
       @ApiImplicitParam(name = "Authorization", example = "OZONE", required =
           true, paramType = "header")})
+  @SuppressWarnings("parameternumber")
   Response listBucket(@PathParam("volume") String volume,
                       @PathParam("bucket") String bucket,
                       @DefaultValue(Header.OZONE_INFO_QUERY_KEY)

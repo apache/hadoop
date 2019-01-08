@@ -31,7 +31,7 @@ import java.io.IOException;
 /**
  * Stores information about a disk/volume.
  */
-public class VolumeInfo {
+public final class VolumeInfo {
 
   private static final Logger LOG = LoggerFactory.getLogger(VolumeInfo.class);
 

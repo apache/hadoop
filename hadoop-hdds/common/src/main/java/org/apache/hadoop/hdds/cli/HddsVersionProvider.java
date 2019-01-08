@@ -28,7 +28,7 @@ public class HddsVersionProvider implements IVersionProvider {
   @Override
   public String[] getVersion() throws Exception {
     String[] result = new String[] {
-        HddsVersionInfo.getBuildVersion()
+        HddsVersionInfo.HDDS_VERSION_INFO.getBuildVersion()
     };
     return result;
   }

@@ -122,6 +122,7 @@ public class BlockOutputStream extends OutputStream {
    * @param watchTimeout          watch timeout
    * @param checksum              checksum
    */
+  @SuppressWarnings("parameternumber")
   public BlockOutputStream(BlockID blockID, String key,
       XceiverClientManager xceiverClientManager, XceiverClientSpi xceiverClient,
       String traceID, int chunkSize, long streamBufferFlushSize,

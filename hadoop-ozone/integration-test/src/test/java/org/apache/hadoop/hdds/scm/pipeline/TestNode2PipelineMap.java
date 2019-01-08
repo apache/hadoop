@@ -41,6 +41,9 @@ import static org.apache.hadoop.hdds.protocol.proto.HddsProtos
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos
     .ReplicationFactor.THREE;
 
+/**
+ * Test for the Node2Pipeline map.
+ */
 public class TestNode2PipelineMap {
 
   private static MiniOzoneCluster cluster;
@@ -80,7 +83,6 @@ public class TestNode2PipelineMap {
     }
   }
 
-
   @Test
   public void testPipelineMap() throws IOException {
 
@@ -90,7 +92,7 @@ public class TestNode2PipelineMap {
     ContainerID cId = ratisContainer.getContainerInfo().containerID();
     Assert.assertEquals(1, set.size());
     set.forEach(containerID ->
-            Assert.assertEquals(containerID, cId));
+        Assert.assertEquals(containerID, cId));
 
     List<DatanodeDetails> dns = ratisContainer.getPipeline().getNodes();
     Assert.assertEquals(3, dns.size());
@@ -101,7 +103,6 @@ public class TestNode2PipelineMap {
     Assert.assertEquals(1, pipelines.size());
     pipelines.forEach(p -> Assert.assertEquals(p,
         ratisContainer.getPipeline().getId()));
-
 
     // Now close the container and it should not show up while fetching
     // containers by pipeline

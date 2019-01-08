@@ -45,6 +45,7 @@ public final class OmKeyInfo {
   private HddsProtos.ReplicationType type;
   private HddsProtos.ReplicationFactor factor;
 
+  @SuppressWarnings("parameternumber")
   private OmKeyInfo(String volumeName, String bucketName, String keyName,
                     List<OmKeyLocationInfoGroup> versions, long dataSize,
                     long creationTime, long modificationTime,

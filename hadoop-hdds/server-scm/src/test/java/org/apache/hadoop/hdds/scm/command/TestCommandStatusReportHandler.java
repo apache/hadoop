@@ -45,6 +45,9 @@ import java.util.List;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 
+/**
+ * Unit test for command status report handler.
+ */
 public class TestCommandStatusReportHandler implements EventPublisher {
 
   private static final Logger LOG = LoggerFactory
@@ -66,7 +69,6 @@ public class TestCommandStatusReportHandler implements EventPublisher {
     cmdStatusReportHandler.onMessage(report, this);
     assertFalse(logCapturer.getOutput().contains("Delete_Block_Status"));
     assertFalse(logCapturer.getOutput().contains("Replicate_Command_Status"));
-
 
     report = this.getStatusReport(this.getCommandStatusList());
     cmdStatusReportHandler.onMessage(report, this);
@@ -92,8 +94,8 @@ public class TestCommandStatusReportHandler implements EventPublisher {
   }
 
   @Override
-  public <PAYLOAD, EVENT_TYPE extends Event<PAYLOAD>> void fireEvent
-      (EVENT_TYPE event, PAYLOAD payload) {
+  public <PAYLOAD, EVENT_TYPE extends Event<PAYLOAD>> void
+      fireEvent(EVENT_TYPE event, PAYLOAD payload) {
     LOG.info("firing event of type {}, payload {}", event.getName(), payload
         .toString());
   }

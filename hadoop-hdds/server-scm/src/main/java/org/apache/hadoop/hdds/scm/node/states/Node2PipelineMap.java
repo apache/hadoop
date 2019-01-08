@@ -27,10 +27,12 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * This data structure maintains the list of pipelines which the given datanode is a part of. This
- * information will be added whenever a new pipeline allocation happens.
+ * This data structure maintains the list of pipelines which the given
+ * datanode is a part of. This information will be added whenever a new
+ * pipeline allocation happens.
  *
- * <p>TODO: this information needs to be regenerated from pipeline reports on SCM restart
+ * <p>TODO: this information needs to be regenerated from pipeline reports
+ * on SCM restart
  */
 public class Node2PipelineMap extends Node2ObjectsMap<PipelineID> {
 

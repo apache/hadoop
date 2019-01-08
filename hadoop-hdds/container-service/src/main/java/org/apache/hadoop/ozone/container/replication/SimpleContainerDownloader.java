@@ -30,7 +30,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails.Port.Name;
 import org.apache.hadoop.ozone.OzoneConfigKeys;

@@ -81,6 +81,7 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
   @JsonIgnore
   private byte[] data;
 
+  @SuppressWarnings("parameternumber")
   ContainerInfo(
       long containerID,
       HddsProtos.LifeCycleState state,

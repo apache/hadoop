@@ -170,6 +170,7 @@ public interface Volume {
           + "04:23:30 GMT", required = true, paramType = "header"),
       @ApiImplicitParam(name = "Authorization", example = "OZONE", required =
           true, paramType = "header")})
+  @SuppressWarnings("parameternumber")
   Response getVolumeInfo(@PathParam("volume") String volume,
       @DefaultValue(Header.OZONE_INFO_QUERY_BUCKET)
       @QueryParam(Header.OZONE_INFO_QUERY_TAG) String info,

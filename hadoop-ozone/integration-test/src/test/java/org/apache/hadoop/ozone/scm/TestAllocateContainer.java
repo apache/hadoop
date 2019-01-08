@@ -64,10 +64,11 @@ public class TestAllocateContainer {
 
   @Test
   public void testAllocate() throws Exception {
-    ContainerWithPipeline container = storageContainerLocationClient.allocateContainer(
-        xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(),
-        containerOwner);
+    ContainerWithPipeline container =
+        storageContainerLocationClient.allocateContainer(
+            xceiverClientManager.getType(),
+            xceiverClientManager.getFactor(),
+            containerOwner);
     Assert.assertNotNull(container);
     Assert.assertNotNull(container.getPipeline().getFirstNode());
 

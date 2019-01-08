@@ -103,6 +103,7 @@ public class OzoneBucket {
    * @param versioning versioning status of the bucket.
    * @param creationTime creation time of the bucket.
    */
+  @SuppressWarnings("parameternumber")
   public OzoneBucket(Configuration conf, ClientProtocol proxy,
                      String volumeName, String bucketName,
                      List<OzoneAcl> acls, StorageType storageType,
@@ -125,6 +126,7 @@ public class OzoneBucket {
   }
 
   @VisibleForTesting
+  @SuppressWarnings("parameternumber")
   OzoneBucket(String volumeName, String name,
       ReplicationFactor defaultReplication,
       ReplicationType defaultReplicationType,

@@ -84,7 +84,8 @@ public final class OzoneTestUtils {
       CheckedConsumer<BlockID, Exception> consumer,
       List<OmKeyLocationInfoGroup> omKeyLocationInfoGroups) throws Exception {
 
-    for (OmKeyLocationInfoGroup omKeyLocationInfoGroup : omKeyLocationInfoGroups) {
+    for (OmKeyLocationInfoGroup omKeyLocationInfoGroup :
+        omKeyLocationInfoGroups) {
       List<OmKeyLocationInfo> omKeyLocationInfos =
           omKeyLocationInfoGroup.getLocationList();
       for (OmKeyLocationInfo omKeyLocationInfo : omKeyLocationInfos) {

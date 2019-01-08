@@ -38,7 +38,8 @@ public class VolumeListCodec implements Codec<VolumeList> {
   @Override
   public VolumeList fromPersistedFormat(byte[] rawData) {
     Preconditions
-        .checkNotNull("Null byte array can't converted to real object.");
+        .checkNotNull(rawData,
+            "Null byte array can't converted to real object.");
     try {
       return VolumeList.parseFrom(rawData);
     } catch (InvalidProtocolBufferException e) {

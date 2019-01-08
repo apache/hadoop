@@ -145,7 +145,7 @@ public final class DatabaseHelper {
       throws Exception {
     ArrayList<AuditEntry> listResult = new ArrayList<AuditEntry>();
     try(FileInputStream fis = new FileInputStream(filePath);
-        InputStreamReader isr = new InputStreamReader(fis);
+        InputStreamReader isr = new InputStreamReader(fis, "UTF-8");
         BufferedReader bReader = new BufferedReader(isr)) {
       String currentLine = null;
       String[] entry = null;

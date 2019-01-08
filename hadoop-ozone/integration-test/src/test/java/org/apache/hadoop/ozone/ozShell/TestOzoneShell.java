@@ -125,6 +125,7 @@ public class TestOzoneShell {
   }
 
   @Parameterized.Parameter
+  @SuppressWarnings("visibilitymodifier")
   public Class clientProtocol;
   /**
    * Create a MiniDFSCluster for testing with using distributed Ozone

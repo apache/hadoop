@@ -43,6 +43,7 @@ public final class OmKeyArgs implements Auditable {
   private final String multipartUploadID;
   private final int multipartUploadPartNumber;
 
+  @SuppressWarnings("parameternumber")
   private OmKeyArgs(String volumeName, String bucketName, String keyName,
       long dataSize, ReplicationType type, ReplicationFactor factor,
       List<OmKeyLocationInfo> locationInfoList, boolean isMultipart,

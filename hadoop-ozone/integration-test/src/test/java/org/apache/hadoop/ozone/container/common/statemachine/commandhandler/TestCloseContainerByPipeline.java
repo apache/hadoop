@@ -47,6 +47,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
+/**
+ * Test container closing.
+ */
 public class TestCloseContainerByPipeline {
 
   private static MiniOzoneCluster cluster;
@@ -232,10 +235,12 @@ public class TestCloseContainerByPipeline {
     }
   }
 
-  private Boolean isContainerClosed(MiniOzoneCluster cluster, long containerID,
+  private Boolean isContainerClosed(MiniOzoneCluster ozoneCluster,
+      long containerID,
       DatanodeDetails datanode) {
     ContainerData containerData;
-    for (HddsDatanodeService datanodeService : cluster.getHddsDatanodes()) {
+    for (HddsDatanodeService datanodeService : ozoneCluster
+        .getHddsDatanodes()) {
       if (datanode.equals(datanodeService.getDatanodeDetails())) {
         containerData =
             datanodeService.getDatanodeStateMachine().getContainer()

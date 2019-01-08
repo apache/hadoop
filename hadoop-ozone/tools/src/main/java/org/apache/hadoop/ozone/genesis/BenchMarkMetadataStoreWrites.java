@@ -32,9 +32,11 @@ import static org.apache.hadoop.ozone.genesis.GenesisUtil.CACHE_10MB_TYPE;
 import static org.apache.hadoop.ozone.genesis.GenesisUtil.CACHE_1GB_TYPE;
 import static org.apache.hadoop.ozone.genesis.GenesisUtil.DEFAULT_TYPE;
 
+/**
+ * Measure default metadatastore put performance.
+ */
 @State(Scope.Thread)
 public class BenchMarkMetadataStoreWrites {
-
 
   private static final int DATA_LEN = 1024;
   private static final long MAX_KEYS = 1024 * 10;

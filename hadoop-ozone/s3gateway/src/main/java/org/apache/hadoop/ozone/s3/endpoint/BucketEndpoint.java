@@ -74,6 +74,7 @@ public class BucketEndpoint extends EndpointBase {
    */
   @GET
   @SuppressFBWarnings
+  @SuppressWarnings("parameternumber")
   public Response list(
       @PathParam("bucket") String bucketName,
       @QueryParam("delimiter") String delimiter,

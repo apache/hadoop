@@ -34,6 +34,9 @@ import static org.apache.hadoop.ozone.genesis.GenesisUtil.CACHE_1GB_TYPE;
 import static org.apache.hadoop.ozone.genesis.GenesisUtil.CLOSED_TYPE;
 import static org.apache.hadoop.ozone.genesis.GenesisUtil.DEFAULT_TYPE;
 
+/**
+ * Measure metadatastore read performance.
+ */
 @State(Scope.Thread)
 public class BenchMarkMetadataStoreReads {
 

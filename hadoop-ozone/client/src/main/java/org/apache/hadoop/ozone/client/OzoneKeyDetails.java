@@ -35,6 +35,7 @@ public class OzoneKeyDetails extends OzoneKey {
   /**
    * Constructs OzoneKeyDetails from OmKeyInfo.
    */
+  @SuppressWarnings("parameternumber")
   public OzoneKeyDetails(String volumeName, String bucketName, String keyName,
                          long size, long creationTime, long modificationTime,
                          List<OzoneKeyLocation> ozoneKeyLocations,

@@ -43,7 +43,7 @@ public class OmMultipartKeyInfoCodec implements Codec<OmMultipartKeyInfo> {
    * return null.
    */
   public OmMultipartKeyInfo fromPersistedFormat(byte[] rawData) {
-    Preconditions.checkNotNull(
+    Preconditions.checkNotNull(rawData,
         "Null byte array can't converted to real object.");
     try {
       return OmMultipartKeyInfo.getFromProto(OzoneManagerProtocolProtos

@@ -31,6 +31,9 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Paths;
 
+/**
+ * Benchmark rocksdb store.
+ */
 @State(Scope.Thread)
 public class BenchMarkRocksDbStore {
   private static final int DATA_LEN = 1024;
@@ -86,7 +89,8 @@ public class BenchMarkRocksDbStore {
     opts.setLevel0SlowdownWritesTrigger(20);
     opts.setLevel0StopWritesTrigger(40);
     opts.setTargetFileSizeBase(
-        (long) StorageUnit.MB.toBytes(Long.parseLong(maxBytesForLevelBase)) / 10);
+        (long) StorageUnit.MB.toBytes(Long.parseLong(maxBytesForLevelBase))
+            / 10);
     opts.setMaxBackgroundCompactions(8);
     opts.setUseFsync(false);
     opts.setBytesPerSync(8388608);

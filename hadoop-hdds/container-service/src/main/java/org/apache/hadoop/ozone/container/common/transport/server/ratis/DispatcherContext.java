@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class DispatcherContext {
+public final class DispatcherContext {
   /**
    * Determines which stage of writeChunk a write chunk request is for.
    */
@@ -82,8 +82,8 @@ public class DispatcherContext {
      * @param stage WriteChunk Stage
      * @return DispatcherContext.Builder
      */
-    public Builder setStage(WriteChunkStage stage) {
-      this.stage = stage;
+    public Builder setStage(WriteChunkStage writeChunkStage) {
+      this.stage = writeChunkStage;
       return this;
     }
 
@@ -93,8 +93,8 @@ public class DispatcherContext {
      * @param readFromTmpFile whether to read from tmp chunk file or not
      * @return DispatcherContext.Builder
      */
-    public Builder setReadFromTmpFile(boolean readFromTmpFile) {
-      this.readFromTmpFile = readFromTmpFile;
+    public Builder setReadFromTmpFile(boolean setReadFromTmpFile) {
+      this.readFromTmpFile = setReadFromTmpFile;
       return this;
     }
 
@@ -104,8 +104,8 @@ public class DispatcherContext {
      * @param term current term
      * @return DispatcherContext.Builder
      */
-    public Builder setTerm(long term) {
-      this.term = term;
+    public Builder setTerm(long currentTerm) {
+      this.term = currentTerm;
       return this;
     }
 
@@ -115,8 +115,8 @@ public class DispatcherContext {
      * @param logIndex log index
      * @return DispatcherContext.Builder
      */
-    public Builder setLogIndex(long logIndex) {
-      this.logIndex = logIndex;
+    public Builder setLogIndex(long index) {
+      this.logIndex = index;
       return this;
     }
 
