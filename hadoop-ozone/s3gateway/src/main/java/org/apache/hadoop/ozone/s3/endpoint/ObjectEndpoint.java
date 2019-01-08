@@ -42,6 +42,8 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
@@ -51,6 +53,7 @@ import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 import org.apache.hadoop.ozone.s3.SignedChunksInputStream;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
@@ -67,6 +70,7 @@ import static javax.ws.rs.core.HttpHeaders.CONTENT_LENGTH;
 import static javax.ws.rs.core.HttpHeaders.LAST_MODIFIED;
 import org.apache.commons.io.IOUtils;
 
+import static org.apache.hadoop.ozone.s3.exception.S3ErrorTable.ENTITY_TOO_SMALL;
 import static org.apache.hadoop.ozone.s3.exception.S3ErrorTable.NO_SUCH_UPLOAD;
 import static org.apache.hadoop.ozone.s3.util.S3Consts.ACCEPT_RANGE_HEADER;
 import static org.apache.hadoop.ozone.s3.util.S3Consts.CONTENT_RANGE_HEADER;
@@ -360,10 +364,31 @@ public class ObjectEndpoint extends EndpointBase {
 
   @POST
   @Produces(MediaType.APPLICATION_XML)
-  public Response initiateMultipartUpload(
+  public Response multipartUpload(
       @PathParam("bucket") String bucket,
       @PathParam("path") String key,
-      @QueryParam("uploads") String uploads) throws IOException, OS3Exception {
+      @QueryParam("uploads") String uploads,
+      @QueryParam("uploadId") @DefaultValue("") String uploadID,
+      CompleteMultipartUploadRequest request) throws IOException, OS3Exception {
+    if (!uploadID.equals("")) {
+      //Complete Multipart upload request.
+      return completeMultipartUpload(bucket, key, uploadID, request);
+    } else {
+      // Initiate Multipart upload request.
+      return initiateMultipartUpload(bucket, key);
+    }
+  }
+
+  /**
+   * Initiate Multipart upload request.
+   * @param bucket
+   * @param key
+   * @return Response
+   * @throws IOException
+   * @throws OS3Exception
+   */
+  private Response initiateMultipartUpload(String bucket, String key) throws
+      IOException, OS3Exception {
     try {
       OzoneBucket ozoneBucket = getBucket(bucket);
       String storageType = headers.getHeaderString(STORAGE_CLASS_HEADER);
@@ -396,11 +421,73 @@ public class ObjectEndpoint extends EndpointBase {
 
       return Response.status(Status.OK).entity(
           multipartUploadInitiateResponse).build();
-
     } catch (IOException ex) {
+      LOG.error("Error in Initiate Multipart Upload Request for bucket: " +
+          bucket + ", key: " + key, ex);
       throw ex;
     }
+  }
 
+  /**
+   * Complete Multipart upload request.
+   * @param bucket
+   * @param key
+   * @param uploadID
+   * @param multipartUploadRequest
+   * @return Response
+   * @throws IOException
+   * @throws OS3Exception
+   */
+  private Response completeMultipartUpload(String bucket, String key, String
+      uploadID, CompleteMultipartUploadRequest multipartUploadRequest) throws
+      IOException, OS3Exception {
+    OzoneBucket ozoneBucket = getBucket(bucket);
+    Map<Integer, String> partsMap = new TreeMap<>();
+    List<CompleteMultipartUploadRequest.Part> partList =
+        multipartUploadRequest.getPartList();
+
+    for (CompleteMultipartUploadRequest.Part part : partList) {
+      partsMap.put(part.getPartNumber(), part.geteTag());
+    }
+
+    LOG.debug("Parts map {}", partsMap.toString());
+
+    OmMultipartUploadCompleteInfo omMultipartUploadCompleteInfo;
+    try {
+      omMultipartUploadCompleteInfo = ozoneBucket.completeMultipartUpload(
+          key, uploadID, partsMap);
+      CompleteMultipartUploadResponse completeMultipartUploadResponse =
+          new CompleteMultipartUploadResponse();
+      completeMultipartUploadResponse.setBucket(bucket);
+      completeMultipartUploadResponse.setKey(key);
+      completeMultipartUploadResponse.setETag(omMultipartUploadCompleteInfo
+          .getHash());
+      // Location also setting as bucket name.
+      completeMultipartUploadResponse.setLocation(bucket);
+      return Response.status(Status.OK).entity(completeMultipartUploadResponse)
+          .build();
+    } catch (IOException ex) {
+      LOG.error("Error in Complete Multipart Upload Request for bucket: " +
+          bucket + ", key: " + key, ex);
+      if (ex.getMessage().contains("MISMATCH_MULTIPART_LIST")) {
+        OS3Exception oex =
+            S3ErrorTable.newError(S3ErrorTable.INVALID_PART, key);
+        throw oex;
+      } else if (ex.getMessage().contains("MISSING_UPLOAD_PARTS")) {
+        OS3Exception oex =
+            S3ErrorTable.newError(S3ErrorTable.INVALID_PART_ORDER, key);
+        throw oex;
+      } else if (ex.getMessage().contains("NO_SUCH_MULTIPART_UPLOAD_ERROR")) {
+        OS3Exception os3Exception = S3ErrorTable.newError(NO_SUCH_UPLOAD,
+            uploadID);
+        throw os3Exception;
+      } else if (ex.getMessage().contains("ENTITY_TOO_SMALL")) {
+        OS3Exception os3Exception = S3ErrorTable.newError(ENTITY_TOO_SMALL,
+            key);
+        throw os3Exception;
+      }
+      throw ex;
+    }
   }
 
   private Response createMultipartKey(String bucket, String key, long length,

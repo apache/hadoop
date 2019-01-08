@@ -31,6 +31,7 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.protocol.StorageType;
@@ -38,6 +39,7 @@ import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 
 /**
  * In-memory ozone bucket for testing.
@@ -179,7 +181,7 @@ public class OzoneBucketStub extends OzoneBucket {
               Part part = new Part(key + size,
                   toByteArray());
               if (partList.get(key) == null) {
-                Map<Integer, Part> parts = new HashMap<>();
+                Map<Integer, Part> parts = new TreeMap<>();
                 parts.put(partNumber, part);
                 partList.put(key, parts);
               } else {
@@ -189,6 +191,36 @@ public class OzoneBucketStub extends OzoneBucket {
           };
       return new OzoneOutputStreamStub(byteArrayOutputStream, key + size);
     }
+  }
+
+  @Override
+  public OmMultipartUploadCompleteInfo completeMultipartUpload(String key,
+      String uploadID, Map<Integer, String> partsMap) throws IOException {
+
+    if (multipartUploadIdMap.get(key) == null) {
+      throw new IOException("NO_SUCH_MULTIPART_UPLOAD_ERROR");
+    } else {
+      final Map<Integer, Part> partsList = partList.get(key);
+
+      if (partsMap.size() != partsList.size()) {
+        throw new IOException("MISMATCH_MULTIPART_LIST");
+      }
+
+      int count = 1;
+      for (Map.Entry<Integer, String> part: partsMap.entrySet()) {
+        if (part.getKey() != count) {
+          throw new IOException("MISSING_UPLOAD_PARTS");
+        } else if (!part.getValue().equals(
+            partsList.get(part.getKey()).getPartName())) {
+          throw new IOException("MISMATCH_MULTIPART_LIST");
+        } else {
+          count++;
+        }
+      }
+    }
+
+    return new OmMultipartUploadCompleteInfo(getVolumeName(), getName(), key,
+        DigestUtils.sha256Hex(key));
   }
 
   /**

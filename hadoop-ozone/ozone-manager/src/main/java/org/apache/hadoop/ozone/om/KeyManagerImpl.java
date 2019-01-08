@@ -35,6 +35,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
@@ -832,6 +833,10 @@ public class KeyManagerImpl implements KeyManager {
           // than 5 mb.
           if (partsCount != partsMapSize &&
               currentPartKeyInfo.getDataSize() < OM_MULTIPART_MIN_SIZE) {
+            LOG.error("MultipartUpload: " + ozoneKey + "Part number: " +
+                partKeyInfo.getPartNumber() + "size " + currentPartKeyInfo
+                    .getDataSize() + " is less than minimum part size " +
+                OzoneConsts.OM_MULTIPART_MIN_SIZE);
             throw new OMException("Complete Multipart Upload Failed: Entity " +
                 "too small: volume: " + volumeName + "bucket: " + bucketName
                 + "key: " + keyName, ResultCodes.ENTITY_TOO_SMALL);
