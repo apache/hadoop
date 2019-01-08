@@ -126,7 +126,6 @@ public class TestOzoneManagerRatisServer {
   public void testIsReadOnlyCapturesAllCmdTypeEnums() throws Exception {
     GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
         .captureLogs(LoggerFactory.getLogger(OmUtils.class));
-    String clientId = UUID.randomUUID().toString();
     OzoneManagerProtocolProtos.Type[] cmdTypes =
         OzoneManagerProtocolProtos.Type.values();
 

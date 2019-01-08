@@ -171,6 +171,8 @@ public final class OmUtils {
     case DeleteS3Bucket:
     case InitiateMultiPartUpload:
     case CommitMultiPartUpload:
+    case CompleteMultiPartUpload:
+    case AbortMultiPartUpload:
       return false;
     default:
       LOG.error("CmdType {} is not categorized as readOnly or not.", cmdType);
