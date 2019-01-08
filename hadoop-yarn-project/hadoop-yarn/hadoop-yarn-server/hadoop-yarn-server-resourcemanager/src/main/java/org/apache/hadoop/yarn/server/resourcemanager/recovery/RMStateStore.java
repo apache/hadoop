@@ -853,11 +853,8 @@ public abstract class RMStateStore extends AbstractService {
             appAttempt.getAppAttemptId(),
             appAttempt.getMasterContainer(),
             credentials, appAttempt.getStartTime(),
-            resUsage.getMemorySeconds(),
-            resUsage.getVcoreSeconds(),
-            attempMetrics.getPreemptedMemory(),
-            attempMetrics.getPreemptedVcore()
-            );
+            resUsage.getResourceUsageSecondsMap(),
+            attempMetrics.getPreemptedResourceSecondsMap());
 
     getRMStateStoreEventHandler().handle(
       new RMStateStoreAppAttemptEvent(attemptState));

@@ -217,6 +217,11 @@ message LocalResourceProto {
   optional bool should_be_uploaded_to_shared_cache = 7;
 }
 
+message StringLongMapProto {
+  required string key  = 1;
+  required int64 value = 2;
+}
+
 message ApplicationResourceUsageReportProto {
   optional int32 num_used_containers = 1;
   optional int32 num_reserved_containers = 2;
@@ -229,6 +234,8 @@ message ApplicationResourceUsageReportProto {
   optional float cluster_usage_percentage = 9;
   optional int64 preempted_memory_seconds = 10;
   optional int64 preempted_vcore_seconds = 11;
+  repeated StringLongMapProto application_resource_usage_map = 12;
+  repeated StringLongMapProto application_preempted_resource_usage_map = 13;
 }
 
 message ApplicationReportProto {
