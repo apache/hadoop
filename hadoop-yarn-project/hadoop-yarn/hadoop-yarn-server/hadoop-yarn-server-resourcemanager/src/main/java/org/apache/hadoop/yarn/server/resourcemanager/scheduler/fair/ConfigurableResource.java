@@ -63,7 +63,7 @@ public class ConfigurableResource {
 
   private static double[] getOneHundredPercentArray() {
     double[] resourcePercentages =
-        new double[ResourceUtils.getNumberOfKnownResourceTypes()];
+        new double[ResourceUtils.getNumberOfCountableResourceTypes()];
     Arrays.fill(resourcePercentages, 1.0);
 
     return resourcePercentages;
