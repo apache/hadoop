@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,21 +18,21 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import javax.annotation.Nullable;
-import java.io.IOException;
-
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.auth.AWSCredentials;
+import org.apache.commons.lang3.StringUtils;
 
+import java.io.IOException;
 import java.net.URI;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.auth.AbstractSessionCredentialsProvider;
-import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
-import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
-import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
-import org.apache.hadoop.fs.s3a.auth.NoAwsCredentialsException;
+import org.apache.hadoop.security.ProviderUtils;
+
+import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.lookupPassword;
 
 /**
  * Support session credentials for authenticating with AWS.
@@ -40,65 +40,50 @@ import org.apache.hadoop.fs.s3a.auth.NoAwsCredentialsException;
  * Please note that users may reference this class name from configuration
  * property fs.s3a.aws.credentials.provider.  Therefore, changing the class name
  * would be a backward-incompatible change.
- *
- * This credential provider must not fail in creation because that will
- * break a chain of credential providers.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class TemporaryAWSCredentialsProvider extends
-    AbstractSessionCredentialsProvider {
+public class TemporaryAWSCredentialsProvider implements AWSCredentialsProvider {
 
   public static final String NAME
       = "org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider";
+  private String accessKey;
+  private String secretKey;
+  private String sessionToken;
 
-  public static final String COMPONENT
-      = "Session credentials in Hadoop configuration";
-
-  /**
-   * Construct from just a configuration.
-   * @param conf configuration.
-   */
-  public TemporaryAWSCredentialsProvider(final Configuration conf)
+  public TemporaryAWSCredentialsProvider(Configuration conf)
       throws IOException {
     this(null, conf);
   }
 
-  /**
-   * Constructor: the URI will be null if the provider is inited unbonded
-   * to a filesystem.
-   * @param uri binding to a filesystem URI.
-   * @param conf configuration.
-   */
-  public TemporaryAWSCredentialsProvider(
-      @Nullable final URI uri,
-      final Configuration conf)
+  public TemporaryAWSCredentialsProvider(URI uri, Configuration conf)
       throws IOException {
-    super(uri, conf);
+
+      // determine the bucket
+      String bucket = uri != null ? uri.getHost():  "";
+      Configuration c = ProviderUtils.excludeIncompatibleCredentialProviders(
+          conf, S3AFileSystem.class);
+      this.accessKey = lookupPassword(bucket, c, ACCESS_KEY);
+      this.secretKey = lookupPassword(bucket, c, SECRET_KEY);
+      this.sessionToken = lookupPassword(bucket, c, SESSION_TOKEN);
   }
 
-  /**
-   * The credentials here must include a session token, else this operation
-   * will raise an exception.
-   * @param config the configuration
-   * @return temporary credentials.
-   * @throws IOException on any failure to load the credentials.
-   * @throws NoAuthWithAWSException validation failure
-   * @throws NoAwsCredentialsException the credentials are actually empty.
-   */
   @Override
-  protected AWSCredentials createCredentials(Configuration config)
-      throws IOException {
-    MarshalledCredentials creds = MarshalledCredentialBinding.fromFileSystem(
-        getUri(), config);
-    MarshalledCredentials.CredentialTypeRequired sessionOnly
-        = MarshalledCredentials.CredentialTypeRequired.SessionOnly;
-    // treat only having non-session creds as empty.
-    if (!creds.isValid(sessionOnly)) {
-      throw new NoAwsCredentialsException(COMPONENT);
+  public AWSCredentials getCredentials() {
+    if (!StringUtils.isEmpty(accessKey) && !StringUtils.isEmpty(secretKey)
+        && !StringUtils.isEmpty(sessionToken)) {
+      return new BasicSessionCredentials(accessKey, secretKey, sessionToken);
     }
-    return MarshalledCredentialBinding.toAWSCredentials(creds,
-        sessionOnly, COMPONENT);
+    throw new CredentialInitializationException(
+        "Access key, secret key or session token is unset");
+  }
+
+  @Override
+  public void refresh() {}
+
+  @Override
+  public String toString() {
+    return getClass().getSimpleName();
   }
 
 }

@@ -97,16 +97,9 @@ public class StagingTestBase {
 
   public static final String BUCKET = MockS3AFileSystem.BUCKET;
   public static final String OUTPUT_PREFIX = "output/path";
-  /** The raw bucket URI Path before any canonicalization. */
-  public static final Path RAW_BUCKET_PATH =
-      new Path("s3a://" + BUCKET + "/");
-  /** The raw bucket URI Path before any canonicalization. */
-  public static final URI RAW_BUCKET_URI =
-      RAW_BUCKET_PATH.toUri();
-  public static Path outputPath =
+  public static final Path OUTPUT_PATH =
       new Path("s3a://" + BUCKET + "/" + OUTPUT_PREFIX);
-  public static URI outputPathUri = outputPath.toUri();
-  public static Path root;
+  public static final URI OUTPUT_PATH_URI = OUTPUT_PATH.toUri();
 
   protected StagingTestBase() {
   }
@@ -126,11 +119,8 @@ public class StagingTestBase {
       throws IOException {
     S3AFileSystem mockFs = mockS3AFileSystemRobustly();
     MockS3AFileSystem wrapperFS = new MockS3AFileSystem(mockFs, outcome);
-    URI uri = RAW_BUCKET_URI;
+    URI uri = OUTPUT_PATH_URI;
     wrapperFS.initialize(uri, conf);
-    root = wrapperFS.makeQualified(new Path("/"));
-    outputPath = new Path(root, OUTPUT_PREFIX);
-    outputPathUri = outputPath.toUri();
     FileSystemTestHelper.addFileSystemForTesting(uri, conf, wrapperFS);
     return mockFs;
   }
@@ -152,7 +142,7 @@ public class StagingTestBase {
    */
   public static MockS3AFileSystem lookupWrapperFS(Configuration conf)
       throws IOException {
-    return (MockS3AFileSystem) FileSystem.get(outputPathUri, conf);
+    return (MockS3AFileSystem) FileSystem.get(OUTPUT_PATH_URI, conf);
   }
 
   public static void verifyCompletion(FileSystem mockS3) throws IOException {
@@ -167,13 +157,13 @@ public class StagingTestBase {
 
   public static void verifyDeleted(FileSystem mockS3, String child)
       throws IOException {
-    verifyDeleted(mockS3, new Path(outputPath, child));
+    verifyDeleted(mockS3, new Path(OUTPUT_PATH, child));
   }
 
   public static void verifyCleanupTempFiles(FileSystem mockS3)
       throws IOException {
     verifyDeleted(mockS3,
-        new Path(outputPath, CommitConstants.TEMPORARY));
+        new Path(OUTPUT_PATH, CommitConstants.TEMPORARY));
   }
 
   protected static void assertConflictResolution(
@@ -187,7 +177,7 @@ public class StagingTestBase {
   public static void pathsExist(FileSystem mockS3, String... children)
       throws IOException {
     for (String child : children) {
-      pathExists(mockS3, new Path(outputPath, child));
+      pathExists(mockS3, new Path(OUTPUT_PATH, child));
     }
   }
 
@@ -204,7 +194,7 @@ public class StagingTestBase {
   public static void canDelete(FileSystem mockS3, String... children)
       throws IOException {
     for (String child : children) {
-      canDelete(mockS3, new Path(outputPath, child));
+      canDelete(mockS3, new Path(OUTPUT_PATH, child));
     }
   }
 
@@ -216,7 +206,7 @@ public class StagingTestBase {
 
   public static void verifyExistenceChecked(FileSystem mockS3, String child)
       throws IOException {
-    verifyExistenceChecked(mockS3, new Path(outputPath, child));
+    verifyExistenceChecked(mockS3, new Path(OUTPUT_PATH, child));
   }
 
   public static void verifyExistenceChecked(FileSystem mockS3, Path path)

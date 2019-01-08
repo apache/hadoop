@@ -1024,33 +1024,19 @@
 
 <property>
   <name>fs.s3a.aws.credentials.provider</name>
-  <value>
-    org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider,
-    org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider,
-    com.amazonaws.auth.EnvironmentVariableCredentialsProvider,
-    org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider
-  </value>
   <description>
     Comma-separated class names of credential provider classes which implement
     com.amazonaws.auth.AWSCredentialsProvider.
 
-    When S3A delegation tokens are not enabled, this list will be used
-    to directly authenticate with S3 and DynamoDB services.
-    When S3A Delegation tokens are enabled, depending upon the delegation
-    token binding it may be used
-    to communicate wih the STS endpoint to request session/role
-    credentials.
-
     These are loaded and queried in sequence for a valid set of credentials.
     Each listed class must implement one of the following means of
     construction, which are attempted in order:
-    * a public constructor accepting java.net.URI and
+    1. a public constructor accepting java.net.URI and
         org.apache.hadoop.conf.Configuration,
-    * a public constructor accepting org.apache.hadoop.conf.Configuration,
-    * a public static method named getInstance that accepts no
+    2. a public static method named getInstance that accepts no
        arguments and returns an instance of
        com.amazonaws.auth.AWSCredentialsProvider, or
-    * a public default constructor.
+    3. a public default constructor.
 
     Specifying org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider allows
     anonymous access to a publicly accessible S3 bucket without any credentials.
@@ -1060,15 +1046,13 @@
 
     If unspecified, then the default list of credential provider classes,
     queried in sequence, is:
-    * org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider: looks
-       for session login secrets in the Hadoop configuration.
-    * org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider:
+    1. org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider:
        Uses the values of fs.s3a.access.key and fs.s3a.secret.key.
-    * com.amazonaws.auth.EnvironmentVariableCredentialsProvider: supports
+    2. com.amazonaws.auth.EnvironmentVariableCredentialsProvider: supports
         configuration of AWS access key ID and secret access key in
         environment variables named AWS_ACCESS_KEY_ID and
         AWS_SECRET_ACCESS_KEY, as documented in the AWS SDK.
-    * com.amazonaws.auth.InstanceProfileCredentialsProvider: supports use
+    3. com.amazonaws.auth.InstanceProfileCredentialsProvider: supports use
         of instance profile credentials if running in an EC2 VM.
   </description>
 </property>
@@ -1124,7 +1108,7 @@
   <value>30m</value>
   <description>
     Duration of assumed roles before a refresh is attempted.
-    Used when session tokens are requested.
+    Only used if AssumedRoleCredentialProvider is the AWS credential provider.
     Range: 15m to 1h
   </description>
 </property>
@@ -1136,20 +1120,17 @@
     AWS Security Token Service Endpoint.
     If unset, uses the default endpoint.
     Only used if AssumedRoleCredentialProvider is the AWS credential provider.
-    Used by the AssumedRoleCredentialProvider and in Session and Role delegation
-    tokens.
   </description>
 </property>
 
 <property>
   <name>fs.s3a.assumed.role.sts.endpoint.region</name>
-  <value></value>
+  <value>us-west-1</value>
   <description>
     AWS Security Token Service Endpoint's region;
     Needed if fs.s3a.assumed.role.sts.endpoint points to an endpoint
     other than the default one and the v4 signature is used.
-    Used by the AssumedRoleCredentialProvider and in Session and Role delegation
-    tokens.
+    Only used if AssumedRoleCredentialProvider is the AWS credential provider.
   </description>
 </property>
 
@@ -1161,29 +1142,6 @@
     retrieve short-lived role credentials.
     Only used if AssumedRoleCredentialProvider is the AWS credential provider.
     If unset, uses "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider".
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.delegation.tokens.enabled</name>
-  <value>false</value>
-  <description></description>
-</property>
-
-<property>
-  <name>fs.s3a.delegation.token.binding</name>
-  <value></value>
-  <description>
-    The name of a class to provide delegation tokens support in S3A.
-    If unset: delegation token support is disabled.
-
-    Note: for job submission to actually collect these tokens,
-    Kerberos must be enabled.
-
-    Options are:
-    org.apache.hadoop.fs.s3a.auth.delegation.SessionTokenBinding
-    org.apache.hadoop.fs.s3a.auth.delegation.FullCredentialsTokenBinding
-    and org.apache.hadoop.fs.s3a.auth.delegation.RoleTokenBinding
   </description>
 </property>
 

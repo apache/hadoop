@@ -476,7 +476,7 @@ public class Invoker {
   };
 
   /**
-   * Log retries at debug.
+   * Log summary at info, full stack at debug.
    */
   public static final Retried LOG_EVENT = new Retried() {
     @Override

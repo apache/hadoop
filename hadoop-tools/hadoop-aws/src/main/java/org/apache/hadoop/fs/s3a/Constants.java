@@ -51,7 +51,7 @@ public final class Constants {
   // s3 secret key
   public static final String SECRET_KEY = "fs.s3a.secret.key";
 
-  // aws credentials providers
+  // aws credentials provider
   public static final String AWS_CREDENTIALS_PROVIDER =
       "fs.s3a.aws.credentials.provider";
 
@@ -63,20 +63,18 @@ public final class Constants {
   public static final String S3A_SECURITY_CREDENTIAL_PROVIDER_PATH =
       "fs.s3a.security.credential.provider.path";
 
-  /**
-   * session token for when using TemporaryAWSCredentialsProvider: : {@value}.
-   */
+  // session token for when using TemporaryAWSCredentialsProvider
   public static final String SESSION_TOKEN = "fs.s3a.session.token";
 
   /**
-   * ARN of AWS Role to request: {@value}.
+   * AWS Role to request.
    */
   public static final String ASSUMED_ROLE_ARN =
       "fs.s3a.assumed.role.arn";
 
   /**
    * Session name for the assumed role, must be valid characters according
-   * to the AWS APIs: {@value}.
+   * to the AWS APIs.
    * If not set, one is generated from the current Hadoop/Kerberos username.
    */
   public static final String ASSUMED_ROLE_SESSION_NAME =
@@ -88,50 +86,34 @@ public final class Constants {
   public static final String ASSUMED_ROLE_SESSION_DURATION =
       "fs.s3a.assumed.role.session.duration";
 
-  /**
-   * Security Token Service Endpoint: {@value}.
-   * If unset, uses the default endpoint.
-   */
+  /** Security Token Service Endpoint. If unset, uses the default endpoint. */
   public static final String ASSUMED_ROLE_STS_ENDPOINT =
       "fs.s3a.assumed.role.sts.endpoint";
 
   /**
-   * Default endpoint for session tokens: {@value}.
-   * This is the central STS endpoint which, for v3 signing, can
-   * issue STS tokens for any region.
-   */
-  public static final String DEFAULT_ASSUMED_ROLE_STS_ENDPOINT = "";
-
-  /**
-   * Region for the STS endpoint; needed if the endpoint
-   * is set to anything other then the central one.: {@value}.
+   * Region for the STS endpoint; only relevant if the endpoint
+   * is set.
    */
   public static final String ASSUMED_ROLE_STS_ENDPOINT_REGION =
       "fs.s3a.assumed.role.sts.endpoint.region";
 
   /**
    * Default value for the STS endpoint region; needed for
-   * v4 signing: {@value}.
+   * v4 signing.
    */
-  public static final String ASSUMED_ROLE_STS_ENDPOINT_REGION_DEFAULT = "";
+  public static final String ASSUMED_ROLE_STS_ENDPOINT_REGION_DEFAULT =
+      "us-west-1";
 
   /**
-   * Default duration of an assumed role: {@value}.
+   * Default duration of an assumed role.
    */
-  public static final String ASSUMED_ROLE_SESSION_DURATION_DEFAULT = "1h";
+  public static final String ASSUMED_ROLE_SESSION_DURATION_DEFAULT = "30m";
 
-  /**
-   * List of providers to authenticate for the assumed role: {@value}.
-   */
+  /** list of providers to authenticate for the assumed role. */
   public static final String ASSUMED_ROLE_CREDENTIALS_PROVIDER =
       "fs.s3a.assumed.role.credentials.provider";
 
-  /**
-   * JSON policy containing the policy to apply to the role: {@value}.
-   * This is not used for delegation tokens, which generate the policy
-   * automatically, and restrict it to the S3, KMS and S3Guard services
-   * needed.
-   */
+  /** JSON policy containing the policy to apply to the role. */
   public static final String ASSUMED_ROLE_POLICY =
       "fs.s3a.assumed.role.policy";
 
@@ -338,10 +320,7 @@ public final class Constants {
   /** Prefix for S3A bucket-specific properties: {@value}. */
   public static final String FS_S3A_BUCKET_PREFIX = "fs.s3a.bucket.";
 
-  /**
-   * Default port for this is 443: HTTPS.
-   */
-  public static final int S3A_DEFAULT_PORT = 443;
+  public static final int S3A_DEFAULT_PORT = -1;
 
   public static final String USER_AGENT_PREFIX = "fs.s3a.user.agent.prefix";
 

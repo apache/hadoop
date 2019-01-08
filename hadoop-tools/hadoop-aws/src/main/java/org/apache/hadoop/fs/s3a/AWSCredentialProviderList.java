@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -40,7 +39,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
-import org.apache.hadoop.fs.s3a.auth.NoAwsCredentialsException;
 import org.apache.hadoop.io.IOUtils;
 
 /**
@@ -54,8 +52,7 @@ import org.apache.hadoop.io.IOUtils;
  *   an {@link AmazonClientException}, that is rethrown, rather than
  *   swallowed.</li>
  *   <li>Has some more diagnostics.</li>
- *   <li>On failure, the last "relevant" AmazonClientException raised is
- *   rethrown; exceptions other than 'no credentials' have priority.</li>
+ *   <li>On failure, the last AmazonClientException raised is rethrown.</li>
  *   <li>Special handling of {@link AnonymousAWSCredentials}.</li>
  * </ol>
  */
@@ -82,12 +79,6 @@ public class AWSCredentialProviderList implements AWSCredentialsProvider,
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
   /**
-   * The name, which is empty by default.
-   * Uses in the code assume if non empty there's a trailing space.
-   */
-  private String name = "";
-
-  /**
    * Empty instance. This is not ready to be used.
    */
   public AWSCredentialProviderList() {
@@ -103,42 +94,11 @@ public class AWSCredentialProviderList implements AWSCredentialsProvider,
   }
 
   /**
-   * Create with an initial list of providers.
-   * @param name name for error messages, may be ""
-   * @param providerArgs provider list.
-   */
-  public AWSCredentialProviderList(final String name,
-      final AWSCredentialsProvider... providerArgs) {
-    setName(name);
-    Collections.addAll(providers, providerArgs);
-  }
-
-  /**
-   * Set the name; adds a ": " if needed.
-   * @param name name to add, or "" for no name.
-   */
-  public void setName(final String name) {
-    if (!name.isEmpty() && !name.endsWith(": ")) {
-      this.name = name + ": ";
-    } else {
-      this.name = name;
-    }
-  }
-
-  /**
    * Add a new provider.
    * @param p provider
    */
   public void add(AWSCredentialsProvider p) {
     providers.add(p);
-  }
-
-  /**
-   * Add all providers from another list to this one.
-   * @param other the other list.
-   */
-  public void addAll(AWSCredentialProviderList other) {
-    providers.addAll(other.providers);
   }
 
   /**
@@ -163,7 +123,7 @@ public class AWSCredentialProviderList implements AWSCredentialsProvider,
   public AWSCredentials getCredentials() {
     if (isClosed()) {
       LOG.warn(CREDENTIALS_REQUESTED_WHEN_CLOSED);
-      throw new NoAuthWithAWSException(name +
+      throw new NoAuthWithAWSException(
           CREDENTIALS_REQUESTED_WHEN_CLOSED);
     }
     checkNotEmpty();
@@ -175,8 +135,6 @@ public class AWSCredentialProviderList implements AWSCredentialsProvider,
     for (AWSCredentialsProvider provider : providers) {
       try {
         AWSCredentials credentials = provider.getCredentials();
-        Preconditions.checkNotNull(credentials,
-            "Null credentials returned by %s", provider);
         if ((credentials.getAWSAccessKeyId() != null &&
             credentials.getAWSSecretKey() != null)
             || (credentials instanceof AnonymousAWSCredentials)) {
@@ -184,18 +142,6 @@ public class AWSCredentialProviderList implements AWSCredentialsProvider,
           LOG.debug("Using credentials from {}", provider);
           return credentials;
         }
-      } catch (NoAwsCredentialsException e) {
-        // don't bother with the stack trace here as it is usually a
-        // minor detail.
-
-        // only update the last exception if it isn't set.
-        // Why so? Stops delegation token issues being lost on the fallback
-        // values.
-        if (lastException == null) {
-          lastException = e;
-        }
-        LOG.debug("No credentials from {}: {}",
-            provider, e.toString());
       } catch (AmazonClientException e) {
         lastException = e;
         LOG.debug("No credentials provided by {}: {}",
@@ -205,16 +151,12 @@ public class AWSCredentialProviderList implements AWSCredentialsProvider,
 
     // no providers had any credentials. Rethrow the last exception
     // or create a new one.
-    String message =  name +  "No AWS Credentials provided by "
+    String message = "No AWS Credentials provided by "
         + listProviderNames();
     if (lastException != null) {
       message += ": " + lastException;
     }
-    if (lastException instanceof CredentialInitializationException) {
-      throw lastException;
-    } else {
-      throw new NoAuthWithAWSException(message, lastException);
-    }
+    throw new NoAuthWithAWSException(message, lastException);
   }
 
   /**
@@ -233,7 +175,7 @@ public class AWSCredentialProviderList implements AWSCredentialsProvider,
    */
   public void checkNotEmpty() {
     if (providers.isEmpty()) {
-      throw new NoAuthWithAWSException(name + NO_AWS_CREDENTIAL_PROVIDERS);
+      throw new NoAuthWithAWSException(NO_AWS_CREDENTIAL_PROVIDERS);
     }
   }
 
@@ -256,10 +198,8 @@ public class AWSCredentialProviderList implements AWSCredentialsProvider,
   @Override
   public String toString() {
     return "AWSCredentialProviderList[" +
-        name +
         "refcount= " + refCount.get() + ": [" +
-        StringUtils.join(providers, ", ") + ']'
-        + (lastProvider != null ? (" last provider: " + lastProvider) : "");
+        StringUtils.join(providers, ", ") + ']';
   }
 
   /**
@@ -324,13 +264,5 @@ public class AWSCredentialProviderList implements AWSCredentialsProvider,
         S3AUtils.closeAutocloseables(LOG, (AutoCloseable)p);
       }
     }
-  }
-
-  /**
-   * Get the size of this list.
-   * @return the number of providers in the list.
-   */
-  public int size() {
-    return providers.size();
   }
 }

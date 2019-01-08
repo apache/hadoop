@@ -37,8 +37,7 @@ public class MockS3ClientFactory implements S3ClientFactory {
   @Override
   public AmazonS3 createS3Client(URI name,
       final String bucket,
-      final AWSCredentialsProvider credentialSet,
-      final String userAgentSuffix) {
+      final AWSCredentialsProvider credentialSet) {
     AmazonS3 s3 = mock(AmazonS3.class);
     when(s3.doesBucketExist(bucket)).thenReturn(true);
     // this listing is used in startup if purging is enabled, so

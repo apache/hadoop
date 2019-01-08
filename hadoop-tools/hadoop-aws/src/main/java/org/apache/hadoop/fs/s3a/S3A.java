@@ -42,16 +42,6 @@ public class S3A extends DelegateToFileSystem{
 
   @Override
   public int getUriDefaultPort() {
-    // return Constants.S3A_DEFAULT_PORT;
-    return super.getUriDefaultPort();
-  }
-
-  @Override
-  public String toString() {
-    final StringBuilder sb = new StringBuilder("S3A{");
-    sb.append("URI =").append(fsImpl.getUri());
-    sb.append("; fsImpl=").append(fsImpl);
-    sb.append('}');
-    return sb.toString();
+    return Constants.S3A_DEFAULT_PORT;
   }
 }
