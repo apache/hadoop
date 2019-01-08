@@ -118,7 +118,7 @@ public class ObjectEndpoint extends EndpointBase {
 
     OzoneOutputStream output = null;
 
-    if (!uploadID.equals("")) {
+    if (uploadID != null && !uploadID.equals("")) {
       // If uploadID is specified, it is a request for upload part
       return createMultipartKey(bucketName, keyPath, length,
           partNumber, uploadID, body);
