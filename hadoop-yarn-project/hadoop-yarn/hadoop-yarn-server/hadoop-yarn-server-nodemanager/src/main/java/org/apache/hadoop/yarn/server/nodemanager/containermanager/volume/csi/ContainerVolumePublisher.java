@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime;
+import org.apache.hadoop.yarn.server.volume.csi.CsiConstants;
 import org.apache.hadoop.yarn.server.volume.csi.VolumeMetaData;
 import org.apache.hadoop.yarn.server.volume.csi.exception.InvalidVolumeException;
 import org.slf4j.Logger;
@@ -120,7 +121,8 @@ public class ContainerVolumePublisher {
     if (containerResource != null) {
       for (ResourceInformation resourceInformation :
           containerResource.getAllResourcesListCopy()) {
-        if (resourceInformation.getTags().contains("system:csi-volume")) {
+        if (resourceInformation.getTags()
+            .contains(CsiConstants.CSI_VOLUME_RESOURCE_TAG)) {
           volumes.addAll(VolumeMetaData.fromResource(resourceInformation));
         }
       }

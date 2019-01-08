@@ -599,7 +599,7 @@ public class FairSchedulerConfiguration extends Configuration {
   private static double[] getResourcePercentage(
       String val) throws AllocationConfigurationException {
     int numberOfKnownResourceTypes = ResourceUtils
-        .getNumberOfKnownResourceTypes();
+        .getNumberOfCountableResourceTypes();
     double[] resourcePercentage = new double[numberOfKnownResourceTypes];
     String[] strings = val.split(",");
 

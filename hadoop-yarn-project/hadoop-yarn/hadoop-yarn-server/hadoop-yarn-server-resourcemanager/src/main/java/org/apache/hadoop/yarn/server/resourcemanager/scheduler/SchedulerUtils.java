@@ -355,7 +355,7 @@ public class SchedulerUtils {
   private static Map<String, ResourceInformation> getZeroResources(
       Resource resource) {
     Map<String, ResourceInformation> resourceInformations = Maps.newHashMap();
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
 
     for (int i = 0; i < maxLength; i++) {
       ResourceInformation resourceInformation =
@@ -372,7 +372,7 @@ public class SchedulerUtils {
   @VisibleForTesting
   static void checkResourceRequestAgainstAvailableResource(Resource reqResource,
       Resource availableResource) throws InvalidResourceRequestException {
-    for (int i = 0; i < ResourceUtils.getNumberOfKnownResourceTypes(); i++) {
+    for (int i = 0; i < ResourceUtils.getNumberOfCountableResourceTypes(); i++) {
       final ResourceInformation requestedRI =
           reqResource.getResourceInformation(i);
       final String reqResourceName = requestedRI.getName();
@@ -404,7 +404,7 @@ public class SchedulerUtils {
     }
 
     List<ResourceInformation> invalidResources = Lists.newArrayList();
-    for (int i = 0; i < ResourceUtils.getNumberOfKnownResourceTypes(); i++) {
+    for (int i = 0; i < ResourceUtils.getNumberOfCountableResourceTypes(); i++) {
       final ResourceInformation requestedRI =
           reqResource.getResourceInformation(i);
       final String reqResourceName = requestedRI.getName();
