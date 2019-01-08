@@ -68,6 +68,22 @@ public final class S3ErrorTable {
       "upload ID might be invalid, or the multipart upload might have " +
       "been aborted or completed.", HTTP_NOT_FOUND);
 
+  public static final OS3Exception INVALID_PART = new OS3Exception(
+      "InvalidPart", "One or more of the specified parts could not be found." +
+      " The part might not have been uploaded, or the specified entity " +
+      "tag might not have matched the part's entity tag.", HTTP_BAD_REQUEST);
+
+  public static final OS3Exception INVALID_PART_ORDER = new OS3Exception(
+      "InvalidPartOrder", "The list of parts was not in ascending order. The " +
+      "parts list must be specified in order by part number.",
+      HTTP_BAD_REQUEST);
+
+  public static final OS3Exception ENTITY_TOO_SMALL = new OS3Exception(
+      "EntityTooSmall", "Your proposed upload is smaller than the minimum " +
+      "allowed object size. Each part must be at least 5 MB in size, except " +
+      "the last part.", HTTP_BAD_REQUEST);
+
+
   /**
    * Create a new instance of Error.
    * @param e Error Template

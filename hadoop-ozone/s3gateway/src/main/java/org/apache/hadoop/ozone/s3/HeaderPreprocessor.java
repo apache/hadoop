@@ -42,6 +42,14 @@ public class HeaderPreprocessor implements ContainerRequestFilter {
       requestContext.getHeaders()
           .putSingle("Content-Type", MediaType.APPLICATION_XML);
     }
+
+    if (requestContext.getUriInfo().getQueryParameters()
+        .containsKey("uploadId")) {
+      //aws cli doesn't send proper Content-Type and by default POST requests
+      //processed as form-url-encoded. Here we can fix this.
+      requestContext.getHeaders()
+          .putSingle("Content-Type", MediaType.APPLICATION_XML);
+    }
   }
 
 }
