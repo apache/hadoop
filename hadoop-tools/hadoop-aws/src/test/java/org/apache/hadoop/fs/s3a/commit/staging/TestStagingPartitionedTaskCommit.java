@@ -47,13 +47,13 @@ public class TestStagingPartitionedTaskCommit
 
   @Override
   PartitionedStagingCommitter newJobCommitter() throws IOException {
-    return new PartitionedStagingCommitter(outputPath,
+    return new PartitionedStagingCommitter(OUTPUT_PATH,
         createTaskAttemptForJob());
   }
 
   @Override
   PartitionedStagingCommitter newTaskCommitter() throws Exception {
-    return new PartitionedStagingCommitter(outputPath, getTAC());
+    return new PartitionedStagingCommitter(OUTPUT_PATH, getTAC());
   }
 
   // The set of files used by this test
@@ -94,17 +94,12 @@ public class TestStagingPartitionedTaskCommit
 
     // test failure when one partition already exists
     reset(mockS3);
-    Path exists = new Path(outputPath, relativeFiles.get(0)).getParent();
-    pathExists(mockS3, exists);
+    pathExists(mockS3, new Path(OUTPUT_PATH, relativeFiles.get(0)).getParent());
 
     intercept(PathExistsException.class,
         InternalCommitterConstants.E_DEST_EXISTS,
-        "Expected a PathExistsException as a partition"
-            + " already exists:" + exists,
-        () ->  {
-            committer.commitTask(getTAC());
-            mockS3.getFileStatus(exists);
-        });
+        "Expected a PathExistsException as a partition already exists",
+        () -> committer.commitTask(getTAC()));
 
     // test success
     reset(mockS3);
@@ -139,11 +134,10 @@ public class TestStagingPartitionedTaskCommit
 
     // test failure when one partition already exists
     reset(mockS3);
-    Path existsPath = new Path(outputPath, relativeFiles.get(1)).getParent();
-    pathExists(mockS3, existsPath);
+    pathExists(mockS3, new Path(OUTPUT_PATH, relativeFiles.get(1)).getParent());
 
     intercept(PathExistsException.class, "",
-        "Should complain because a partition already exists: " + existsPath,
+        "Should complain because a partition already exists",
         () -> committer.commitTask(getTAC()));
 
     // test success
@@ -179,7 +173,7 @@ public class TestStagingPartitionedTaskCommit
 
     // test success when one partition already exists
     reset(mockS3);
-    pathExists(mockS3, new Path(outputPath, relativeFiles.get(2)).getParent());
+    pathExists(mockS3, new Path(OUTPUT_PATH, relativeFiles.get(2)).getParent());
 
     committer.commitTask(getTAC());
     Set<String> files = Sets.newHashSet();
@@ -213,7 +207,7 @@ public class TestStagingPartitionedTaskCommit
 
     // test success when one partition already exists
     reset(mockS3);
-    pathExists(mockS3, new Path(outputPath, relativeFiles.get(3)).getParent());
+    pathExists(mockS3, new Path(OUTPUT_PATH, relativeFiles.get(3)).getParent());
 
     committer.commitTask(getTAC());
     Set<String> files = Sets.newHashSet();

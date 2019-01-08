@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.contract;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.fs.FileStatus;
@@ -520,8 +519,7 @@ public abstract class AbstractContractGetFileStatusTest extends
       Path path,
       PathFilter filter) throws IOException {
     FileStatus[] result = getFileSystem().listStatus(path, filter);
-    assertEquals("length of listStatus(" + path + ", " + filter + " ) " +
-        Arrays.toString(result),
+    assertEquals("length of listStatus(" + path + ", " + filter + " )",
         expected, result.length);
     return result;
   }

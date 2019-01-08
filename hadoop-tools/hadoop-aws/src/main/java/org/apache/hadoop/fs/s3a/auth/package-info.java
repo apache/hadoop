@@ -18,12 +18,8 @@
 
 /**
  * Authentication and permissions support.
- *
- * Some of the classes in here are expected to be referred to in configuration
- * files, so must not change their name. These will be explicitly identified.
  */
-
-@InterfaceAudience.LimitedPrivate("Authentication services")
+@InterfaceAudience.Private
 @InterfaceStability.Unstable
 package org.apache.hadoop.fs.s3a.auth;
 

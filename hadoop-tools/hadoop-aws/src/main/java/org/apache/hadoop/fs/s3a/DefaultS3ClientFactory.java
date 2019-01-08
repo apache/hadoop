@@ -28,9 +28,6 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.S3ClientOptions;
 import org.slf4j.Logger;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 
@@ -42,8 +39,6 @@ import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
  * This which calls the AWS SDK to configure and create an
  * {@link AmazonS3Client} that communicates with the S3 service.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
 public class DefaultS3ClientFactory extends Configured
     implements S3ClientFactory {
 
@@ -52,13 +47,9 @@ public class DefaultS3ClientFactory extends Configured
   @Override
   public AmazonS3 createS3Client(URI name,
       final String bucket,
-      final AWSCredentialsProvider credentials,
-      final String userAgentSuffix) throws IOException {
+      final AWSCredentialsProvider credentials) throws IOException {
     Configuration conf = getConf();
     final ClientConfiguration awsConf = S3AUtils.createAwsConf(getConf(), bucket);
-    if (!StringUtils.isEmpty(userAgentSuffix)) {
-      awsConf.setUserAgentSuffix(userAgentSuffix);
-    }
     return configureAmazonS3Client(
         newAmazonS3Client(credentials, awsConf), conf);
   }

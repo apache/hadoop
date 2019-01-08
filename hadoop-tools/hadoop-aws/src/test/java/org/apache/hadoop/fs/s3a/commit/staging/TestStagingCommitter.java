@@ -157,7 +157,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     this.tac = new TaskAttemptContextImpl(
         new Configuration(job.getConfiguration()), AID);
 
-    this.jobCommitter = new MockedStagingCommitter(outputPath, tac);
+    this.jobCommitter = new MockedStagingCommitter(OUTPUT_PATH, tac);
     jobCommitter.setupJob(job);
 
     // get the task's configuration copy so modifications take effect
@@ -172,7 +172,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     this.conf.set(BUFFER_DIR,
         String.format("%s/local-0/, %s/local-1 ", tmp, tmp));
 
-    this.committer = new MockedStagingCommitter(outputPath, tac);
+    this.committer = new MockedStagingCommitter(OUTPUT_PATH, tac);
     Paths.resetTempFolderCache();
   }
 
@@ -608,7 +608,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
       TaskAttemptContext attempt = new TaskAttemptContextImpl(
           new Configuration(jobContext.getConfiguration()), attemptID);
       MockedStagingCommitter taskCommitter = new MockedStagingCommitter(
-          outputPath, attempt);
+          OUTPUT_PATH, attempt);
       commitTask(taskCommitter, attempt, numFiles);
     }
 

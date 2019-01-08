@@ -36,7 +36,7 @@ public class TestStagingDirectoryOutputCommitter
 
   @Override
   DirectoryStagingCommitter newJobCommitter() throws Exception {
-    return new DirectoryStagingCommitter(outputPath,
+    return new DirectoryStagingCommitter(OUTPUT_PATH,
         createTaskAttemptForJob());
   }
 
@@ -64,7 +64,7 @@ public class TestStagingDirectoryOutputCommitter
 
   protected void verifyFailureConflictOutcome() throws Exception {
     FileSystem mockS3 = getMockS3A();
-    pathExists(mockS3, outputPath);
+    pathExists(mockS3, OUTPUT_PATH);
     final DirectoryStagingCommitter committer = newJobCommitter();
 
     // this should fail
@@ -77,14 +77,14 @@ public class TestStagingDirectoryOutputCommitter
     committer.commitJob(getJob());
 
     reset(mockS3);
-    pathDoesNotExist(mockS3, outputPath);
+    pathDoesNotExist(mockS3, OUTPUT_PATH);
 
     committer.setupJob(getJob());
-    verifyExistenceChecked(mockS3, outputPath);
+    verifyExistenceChecked(mockS3, OUTPUT_PATH);
     verifyNoMoreInteractions(mockS3);
 
     reset(mockS3);
-    pathDoesNotExist(mockS3, outputPath);
+    pathDoesNotExist(mockS3, OUTPUT_PATH);
     committer.commitJob(getJob());
     verifyCompletion(mockS3);
   }
@@ -93,7 +93,7 @@ public class TestStagingDirectoryOutputCommitter
   public void testAppendConflictResolution() throws Exception {
     FileSystem mockS3 = getMockS3A();
 
-    pathExists(mockS3, outputPath);
+    pathExists(mockS3, OUTPUT_PATH);
 
     getJob().getConfiguration().set(
         FS_S3A_COMMITTER_STAGING_CONFLICT_MODE, CONFLICT_MODE_APPEND);
@@ -104,7 +104,7 @@ public class TestStagingDirectoryOutputCommitter
     verifyNoMoreInteractions(mockS3);
 
     Mockito.reset(mockS3);
-    pathExists(mockS3, outputPath);
+    pathExists(mockS3, OUTPUT_PATH);
 
     committer.commitJob(getJob());
     verifyCompletion(mockS3);
@@ -114,7 +114,7 @@ public class TestStagingDirectoryOutputCommitter
   public void testReplaceConflictResolution() throws Exception {
     FileSystem mockS3 = getMockS3A();
 
-    pathExists(mockS3, outputPath);
+    pathExists(mockS3, OUTPUT_PATH);
 
     getJob().getConfiguration().set(
         FS_S3A_COMMITTER_STAGING_CONFLICT_MODE, CONFLICT_MODE_REPLACE);
@@ -125,11 +125,11 @@ public class TestStagingDirectoryOutputCommitter
     verifyNoMoreInteractions(mockS3);
 
     Mockito.reset(mockS3);
-    pathExists(mockS3, outputPath);
-    canDelete(mockS3, outputPath);
+    pathExists(mockS3, OUTPUT_PATH);
+    canDelete(mockS3, OUTPUT_PATH);
 
     committer.commitJob(getJob());
-    verifyDeleted(mockS3, outputPath);
+    verifyDeleted(mockS3, OUTPUT_PATH);
     verifyCompletion(mockS3);
   }
 
