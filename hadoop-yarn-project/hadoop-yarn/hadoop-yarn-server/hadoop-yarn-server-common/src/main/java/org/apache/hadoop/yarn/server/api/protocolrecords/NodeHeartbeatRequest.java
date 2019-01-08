@@ -102,4 +102,8 @@ public abstract class NodeHeartbeatRequest {
   public abstract Set<NodeAttribute> getNodeAttributes();
 
   public abstract void setNodeAttributes(Set<NodeAttribute> nodeAttributes);
+
+  public abstract void setTokenSequenceNo(long tokenSequenceNo);
+
+  public abstract long getTokenSequenceNo();
 }

@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import static org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils.newNodeHeartbeatResponse;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.EOFException;
@@ -79,6 +78,8 @@ import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.factories.impl.pb.RpcClientFactoryPBImpl;
+import org.apache.hadoop.yarn.factories.impl.pb.RpcServerFactoryPBImpl;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatResponseProto;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
@@ -112,6 +113,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.Server;
 
 @SuppressWarnings("rawtypes")
 public class TestNodeStatusUpdater extends NodeManagerTestBase {
@@ -325,16 +328,28 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
     public MyNodeStatusUpdater2(Context context, Dispatcher dispatcher,
         NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
       super(context, dispatcher, healthChecker, metrics);
-      resourceTracker = new MyResourceTracker4(context);
+      InetSocketAddress address = new InetSocketAddress(0);
+      Configuration configuration = new Configuration();
+      Server server = RpcServerFactoryPBImpl.get().getServer(
+          ResourceTracker.class, new MyResourceTracker4(context), address,
+          configuration, null, 1);
+      server.start();
+      this.resourceTracker = (ResourceTracker) RpcClientFactoryPBImpl.get()
+          .getClient(
+          ResourceTracker.class, 1, NetUtils.getConnectAddress(server),
+              configuration);
     }
 
     @Override
-    protected ResourceTracker getRMClient() {
+    protected ResourceTracker getRMClient() throws IOException {
       return resourceTracker;
     }
 
     @Override
     protected void stopRMProxy() {
+      if (this.resourceTracker != null) {
+        RPC.stopProxy(this.resourceTracker);
+      }
       return;
     }
   }
@@ -780,7 +795,8 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
       ByteBuffer byteBuffer1 =
           ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
       appCredentials.put(ApplicationId.newInstance(1234, 1), byteBuffer1);
-      nhResponse.setSystemCredentialsForApps(appCredentials);
+      nhResponse.setSystemCredentialsForApps(
+          YarnServerBuilderUtils.convertToProtoFormat(appCredentials));
       return nhResponse;
     }
 
@@ -1702,7 +1718,8 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
 
   @Test
   public void testConcurrentAccessToSystemCredentials(){
-    final Map<ApplicationId, ByteBuffer> testCredentials = new HashMap<>();
+    final Map<ApplicationId, ByteBuffer> testCredentials =
+        new HashMap<>();
     ByteBuffer byteBuffer = ByteBuffer.wrap(new byte[300]);
     ApplicationId applicationId = ApplicationId.newInstance(123456, 120);
     testCredentials.put(applicationId, byteBuffer);
@@ -1727,8 +1744,9 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
                 NodeHeartbeatResponse nodeHeartBeatResponse =
                     newNodeHeartbeatResponse(0, NodeAction.NORMAL,
                         null, null, null, null, 0);
-                nodeHeartBeatResponse.setSystemCredentialsForApps(
-                    testCredentials);
+                nodeHeartBeatResponse
+                    .setSystemCredentialsForApps(YarnServerBuilderUtils
+                        .convertToProtoFormat(testCredentials));
                 NodeHeartbeatResponseProto proto =
                     ((NodeHeartbeatResponsePBImpl)nodeHeartBeatResponse)
                         .getProto();

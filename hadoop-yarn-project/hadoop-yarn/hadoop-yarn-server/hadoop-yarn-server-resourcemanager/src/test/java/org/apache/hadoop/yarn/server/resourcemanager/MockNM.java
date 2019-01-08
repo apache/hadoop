@@ -68,6 +68,7 @@ public class MockNM {
   private Map<ApplicationId, AppCollectorData> registeringCollectors
       = new ConcurrentHashMap<>();
   private Set<NodeLabel> nodeLabels;
+  private long tokenSequenceNo;
 
   public MockNM(String nodeIdStr, int memory, ResourceTrackerService resourceTracker) {
     // scale vcores based on the requested memory
@@ -278,6 +279,7 @@ public class MockNM {
     req.setLastKnownNMTokenMasterKey(this.currentNMTokenMasterKey);
 
     req.setRegisteringCollectors(this.registeringCollectors);
+    req.setTokenSequenceNo(this.tokenSequenceNo);
 
     NodeHeartbeatResponse heartbeatResponse =
         resourceTracker.nodeHeartbeat(req);
@@ -302,6 +304,7 @@ public class MockNM {
       capability = Resources.clone(newResource);
     }
 
+    this.tokenSequenceNo = heartbeatResponse.getTokenSequenceNo();
     return heartbeatResponse;
   }
 

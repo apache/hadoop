@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SystemCredentialsForAppsProto;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMDelegatedNodeLabelsUpdater;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
@@ -81,8 +82,8 @@ public class RMActiveServiceContext {
   private final ConcurrentMap<NodeId, RMNode> inactiveNodes =
       new ConcurrentHashMap<NodeId, RMNode>();
 
-  private final ConcurrentMap<ApplicationId, ByteBuffer> systemCredentials =
-      new ConcurrentHashMap<ApplicationId, ByteBuffer>();
+  private final ConcurrentMap<ApplicationId, SystemCredentialsForAppsProto> systemCredentials =
+    new ConcurrentHashMap<ApplicationId, SystemCredentialsForAppsProto>();
 
   private boolean isWorkPreservingRecoveryEnabled;
 
@@ -123,6 +124,8 @@ public class RMActiveServiceContext {
 
   private ProxyCAManager proxyCAManager;
   private VolumeManager volumeManager;
+
+  private AtomicLong tokenSequenceNo = new AtomicLong(1);
 
   public RMActiveServiceContext() {
     queuePlacementManager = new PlacementManager();
@@ -509,7 +512,8 @@ public class RMActiveServiceContext {
 
   @Private
   @Unstable
-  public ConcurrentMap<ApplicationId, ByteBuffer> getSystemCredentialsForApps() {
+  public ConcurrentMap<ApplicationId, SystemCredentialsForAppsProto>
+      getSystemCredentialsForApps() {
     return systemCredentials;
   }
   
@@ -582,5 +586,22 @@ public class RMActiveServiceContext {
   @Unstable
   public void setVolumeManager(VolumeManager volumeManager) {
     this.volumeManager = volumeManager;
+  }
+
+  /**
+   * Get token sequence no.
+   *
+   * @return the tokenSequenceNo
+   */
+  public Long getTokenSequenceNo() {
+    return tokenSequenceNo.get();
+  }
+
+  /**
+   * Increment token sequence no.
+   *
+   */
+  public void incrTokenSequenceNo() {
+    this.tokenSequenceNo.incrementAndGet();
   }
 }

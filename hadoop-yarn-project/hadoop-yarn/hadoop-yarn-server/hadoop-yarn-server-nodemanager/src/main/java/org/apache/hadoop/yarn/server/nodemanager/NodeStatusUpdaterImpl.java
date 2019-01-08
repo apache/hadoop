@@ -91,6 +91,7 @@ import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeAttributesProvid
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
 import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
+import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -158,6 +159,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private NMNodeAttributesHandler nodeAttributesHandler;
   private NodeLabelsProvider nodeLabelsProvider;
   private NodeAttributesProvider nodeAttributesProvider;
+  private long tokenSequenceNo;
 
   public NodeStatusUpdaterImpl(Context context, Dispatcher dispatcher,
       NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
@@ -1320,6 +1322,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             }
           }
 
+          request.setTokenSequenceNo(
+              NodeStatusUpdaterImpl.this.tokenSequenceNo);
           response = resourceTracker.nodeHeartbeat(request);
           //get next heartbeat interval from response
           nextHeartBeatInterval = response.getNextHeartBeatInterval();
@@ -1360,7 +1364,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                       CMgrCompletedAppsEvent.Reason.BY_RESOURCEMANAGER));
             }
             Map<ApplicationId, ByteBuffer> systemCredentials =
-                response.getSystemCredentialsForApps();
+                YarnServerBuilderUtils.convertFromProtoFormat(
+                    response.getSystemCredentialsForApps());
             if (systemCredentials != null && !systemCredentials.isEmpty()) {
               ((NMContext) context).setSystemCrendentialsForApps(
                   parseCredentials(systemCredentials));
@@ -1404,6 +1409,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             updateTimelineCollectorData(response);
           }
 
+          NodeStatusUpdaterImpl.this.tokenSequenceNo =
+              response.getTokenSequenceNo();
         } catch (ConnectException e) {
           //catch and throw the exception if tried MAX wait time to connect RM
           dispatcher.getEventHandler().handle(
