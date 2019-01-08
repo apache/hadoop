@@ -21,13 +21,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
@@ -639,11 +637,7 @@ public class ResourceTrackerService extends AbstractService implements
 
     populateKeys(request, nodeHeartBeatResponse);
 
-    ConcurrentMap<ApplicationId, ByteBuffer> systemCredentials =
-        rmContext.getSystemCredentialsForApps();
-    if (!systemCredentials.isEmpty()) {
-      nodeHeartBeatResponse.setSystemCredentialsForApps(systemCredentials);
-    }
+    populateTokenSequenceNo(request, nodeHeartBeatResponse);
 
     if (timelineV2Enabled) {
       // Return collectors' map that NM needs to know
@@ -951,5 +945,30 @@ public class ResourceTrackerService extends AbstractService implements
   @VisibleForTesting
   public Server getServer() {
     return this.server;
+  }
+
+  private void populateTokenSequenceNo(NodeHeartbeatRequest request,
+      NodeHeartbeatResponse nodeHeartBeatResponse) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Token sequence no received from heartbeat request: "
+          + request.getTokenSequenceNo() + ". Current token sequeunce no: "
+          + this.rmContext.getTokenSequenceNo()
+          + ". System credentials for apps size: "
+          + rmContext.getSystemCredentialsForApps().size());
+    }
+    if(request.getTokenSequenceNo() != this.rmContext.getTokenSequenceNo()) {
+      if (!rmContext.getSystemCredentialsForApps().isEmpty()) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(
+              "Sending System credentials for apps as part of NodeHeartbeat "
+                  + "response.");
+        }
+        nodeHeartBeatResponse
+            .setSystemCredentialsForApps(
+                rmContext.getSystemCredentialsForApps().values());
+      }
+    }
+    nodeHeartBeatResponse.setTokenSequenceNo(
+        this.rmContext.getTokenSequenceNo());
   }
 }
