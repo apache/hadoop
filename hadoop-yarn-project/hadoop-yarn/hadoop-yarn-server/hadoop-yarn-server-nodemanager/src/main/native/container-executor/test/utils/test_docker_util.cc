@@ -432,6 +432,68 @@ namespace ContainerExecutor {
     run_docker_run_helper_function(file_cmd_vec, set_hostname);
   }
 
+  TEST_F(TestDockerUtil, test_set_runtime) {
+    struct configuration container_cfg;
+    struct args buff = ARGS_INITIAL_VALUE;
+    int ret = 0;
+    std::string container_executor_cfg_contents = "[docker]\n"
+        "  docker.trusted.registries=hadoop\n"
+        "  docker.allowed.runtimes=lxc,nvidia";
+    std::vector<std::pair<std::string, std::string> > file_cmd_vec;
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n runtime=lxc", "--runtime=lxc"));
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n runtime=nvidia", "--runtime=nvidia"));
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n  docker-command=run", ""));
+    write_container_executor_cfg(container_executor_cfg_contents);
+    ret = read_config(container_executor_cfg_file.c_str(), &container_cfg);
+
+    std::vector<std::pair<std::string, std::string> >::const_iterator itr;
+    if (ret != 0) {
+      FAIL();
+    }
+    for (itr = file_cmd_vec.begin(); itr != file_cmd_vec.end(); ++itr) {
+      struct configuration cmd_cfg;
+      write_command_file(itr->first);
+      ret = read_config(docker_command_file.c_str(), &cmd_cfg);
+      if (ret != 0) {
+        FAIL();
+      }
+      ret = set_runtime(&cmd_cfg, &container_cfg, &buff);
+      char *actual = flatten(&buff);
+      ASSERT_EQ(0, ret) << "error message: " << get_docker_error_message(ret) << " for input " << itr->first;
+      ASSERT_STREQ(itr->second.c_str(), actual);
+      reset_args(&buff);
+      free(actual);
+      free_configuration(&cmd_cfg);
+    }
+    struct configuration cmd_cfg_1;
+    write_command_file("[docker-command-execution]\n  docker-command=run\n  runtime=nvidia1");
+    ret = read_config(docker_command_file.c_str(), &cmd_cfg_1);
+    if (ret != 0) {
+      FAIL();
+    }
+    ret = set_runtime(&cmd_cfg_1, &container_cfg, &buff);
+    ASSERT_EQ(INVALID_DOCKER_RUNTIME, ret);
+    ASSERT_EQ(0, buff.length);
+    reset_args(&buff);
+    free_configuration(&container_cfg);
+
+    container_executor_cfg_contents = "[docker]\n";
+    write_container_executor_cfg(container_executor_cfg_contents);
+    ret = read_config(container_executor_cfg_file.c_str(), &container_cfg);
+    if (ret != 0) {
+      FAIL();
+    }
+    ret = set_runtime(&cmd_cfg_1, &container_cfg, &buff);
+    ASSERT_EQ(INVALID_DOCKER_RUNTIME, ret);
+    ASSERT_EQ(0, buff.length);
+    reset_args(&buff);
+    free_configuration(&cmd_cfg_1);
+    free_configuration(&container_cfg);
+  }
+
   TEST_F(TestDockerUtil, test_set_group_add) {
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(

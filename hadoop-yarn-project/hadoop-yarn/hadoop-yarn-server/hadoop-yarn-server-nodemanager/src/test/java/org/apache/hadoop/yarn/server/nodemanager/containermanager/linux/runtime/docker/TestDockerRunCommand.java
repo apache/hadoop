@@ -59,6 +59,7 @@ public class TestDockerRunCommand {
     dockerRunCommand.setOverrideCommandWithArgs(commands);
     dockerRunCommand.removeContainerOnExit();
     dockerRunCommand.addTmpfsMount("/run");
+    dockerRunCommand.addRuntime("nvidia");
 
     assertEquals("run", StringUtils.join(",",
         dockerRunCommand.getDockerCommandWithArguments()
@@ -79,7 +80,9 @@ public class TestDockerRunCommand {
             .get("launch-command")));
     assertEquals("/run", StringUtils.join(",",
         dockerRunCommand.getDockerCommandWithArguments().get("tmpfs")));
-    assertEquals(8, dockerRunCommand.getDockerCommandWithArguments().size());
+    assertEquals("nvidia", StringUtils.join(",",
+        dockerRunCommand.getDockerCommandWithArguments().get("runtime")));
+    assertEquals(9, dockerRunCommand.getDockerCommandWithArguments().size());
   }
 
   @Test
