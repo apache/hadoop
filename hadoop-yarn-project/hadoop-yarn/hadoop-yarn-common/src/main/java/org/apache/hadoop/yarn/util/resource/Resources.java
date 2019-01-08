@@ -42,7 +42,7 @@ public class Resources {
   static class FixedValueResource extends Resource {
 
     private Map<String, ResourceInformation> resources;
-    private Long resourceValue;
+    private long resourceValue;
     private String name;
 
     /**
@@ -50,7 +50,7 @@ public class Resources {
      * @param rName the name of the resource
      * @param value the fixed value to be returned for all resource types
      */
-    FixedValueResource(String rName, Long value) {
+    FixedValueResource(String rName, long value) {
       this.resourceValue = value;
       this.name = rName;
       resources = initResourceMap();
@@ -60,7 +60,7 @@ public class Resources {
       if(this.resourceValue > Integer.MAX_VALUE) {
         return Integer.MAX_VALUE;
       }
-      return this.resourceValue.intValue();
+      return Long.valueOf(this.resourceValue).intValue();
     }
 
     @Override
@@ -203,7 +203,7 @@ public class Resources {
       try {
         ResourceInformation rhsValue = rhs.getResourceInformation(name);
         ResourceInformation lhsValue = entry.getValue();
-        Long convertedRhs = UnitsConversionUtil
+        long convertedRhs = UnitsConversionUtil
             .convert(rhsValue.getUnits(), lhsValue.getUnits(),
                 rhsValue.getValue());
         lhs.setResourceValue(name, lhsValue.getValue() + convertedRhs);
@@ -225,7 +225,7 @@ public class Resources {
       try {
         ResourceInformation rhsValue = rhs.getResourceInformation(name);
         ResourceInformation lhsValue = entry.getValue();
-        Long convertedRhs = UnitsConversionUtil
+        long convertedRhs = UnitsConversionUtil
             .convert(rhsValue.getUnits(), lhsValue.getUnits(),
                 rhsValue.getValue());
         lhs.setResourceValue(name, lhsValue.getValue() - convertedRhs);
@@ -288,7 +288,7 @@ public class Resources {
       try {
         ResourceInformation rhsValue = rhs.getResourceInformation(name);
         ResourceInformation lhsValue = entry.getValue();
-        Long convertedRhs = (long) (UnitsConversionUtil
+        long convertedRhs = (long) (UnitsConversionUtil
             .convert(rhsValue.getUnits(), lhsValue.getUnits(),
                 rhsValue.getValue()) * by);
         lhs.setResourceValue(name, lhsValue.getValue() + convertedRhs);
@@ -422,7 +422,7 @@ public class Resources {
       try {
         ResourceInformation rhsValue = bigger.getResourceInformation(name);
         ResourceInformation lhsValue = entry.getValue();
-        Long convertedRhs = UnitsConversionUtil
+        long convertedRhs = UnitsConversionUtil
             .convert(rhsValue.getUnits(), lhsValue.getUnits(),
                 rhsValue.getValue());
         if(lhsValue.getValue() > convertedRhs) {
@@ -448,7 +448,7 @@ public class Resources {
       try {
         ResourceInformation rhsValue = rhs.getResourceInformation(name);
         ResourceInformation lhsValue = entry.getValue();
-        Long convertedRhs = UnitsConversionUtil
+        long convertedRhs = UnitsConversionUtil
             .convert(rhsValue.getUnits(), lhsValue.getUnits(),
                 rhsValue.getValue());
         ResourceInformation outInfo =
@@ -469,7 +469,7 @@ public class Resources {
       try {
         ResourceInformation rhsValue = rhs.getResourceInformation(name);
         ResourceInformation lhsValue = entry.getValue();
-        Long convertedRhs = UnitsConversionUtil
+        long convertedRhs = UnitsConversionUtil
             .convert(rhsValue.getUnits(), lhsValue.getUnits(),
                 rhsValue.getValue());
         ResourceInformation outInfo =

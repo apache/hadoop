@@ -128,23 +128,24 @@ public class UnitsConversionUtil {
    * @param fromValue the value you wish to convert
    * @return the value in toUnit
    */
-  public static Long convert(String fromUnit, String toUnit, Long fromValue) {
-    if (toUnit == null || fromUnit == null || fromValue == null) {
+  public static long convert(String fromUnit, String toUnit, long fromValue) {
+    if (toUnit == null || fromUnit == null) {
       throw new IllegalArgumentException("One or more arguments are null");
     }
-    String overflowMsg =
-        "Converting " + fromValue + " from '" + fromUnit + "' to '" + toUnit
-            + "' will result in an overflow of Long";
+
     if (fromUnit.equals(toUnit)) {
       return fromValue;
     }
     Converter fc = getConverter(fromUnit);
     Converter tc = getConverter(toUnit);
-    Long numerator = fc.numerator * tc.denominator;
-    Long denominator = fc.denominator * tc.numerator;
-    Long numeratorMultiplierLimit = Long.MAX_VALUE / numerator;
+    long numerator = fc.numerator * tc.denominator;
+    long denominator = fc.denominator * tc.numerator;
+    long numeratorMultiplierLimit = Long.MAX_VALUE / numerator;
     if (numerator < denominator) {
       if (numeratorMultiplierLimit < fromValue) {
+        String overflowMsg =
+            "Converting " + fromValue + " from '" + fromUnit + "' to '" + toUnit
+                + "' will result in an overflow of Long";
         throw new IllegalArgumentException(overflowMsg);
       }
       return (fromValue * numerator) / denominator;
@@ -152,8 +153,11 @@ public class UnitsConversionUtil {
     if (numeratorMultiplierLimit > fromValue) {
       return (numerator * fromValue) / denominator;
     }
-    Long tmp = numerator / denominator;
+    long tmp = numerator / denominator;
     if ((Long.MAX_VALUE / tmp) < fromValue) {
+      String overflowMsg =
+          "Converting " + fromValue + " from '" + fromUnit + "' to '" + toUnit
+              + "' will result in an overflow of Long";
       throw new IllegalArgumentException(overflowMsg);
     }
     return fromValue * tmp;
@@ -170,8 +174,8 @@ public class UnitsConversionUtil {
    * @return +1, 0 or -1 depending on whether the relationship is greater than,
    * equal to or lesser than
    */
-  public static int compare(String unitA, Long valueA, String unitB,
-      Long valueB) {
+  public static int compare(String unitA, long valueA, String unitB,
+      long valueB) {
     if (unitA == null || unitB == null || !KNOWN_UNITS.contains(unitA)
         || !KNOWN_UNITS.contains(unitB)) {
       throw new IllegalArgumentException("Units cannot be null");
@@ -185,19 +189,19 @@ public class UnitsConversionUtil {
     Converter unitAC = getConverter(unitA);
     Converter unitBC = getConverter(unitB);
     if (unitA.equals(unitB)) {
-      return valueA.compareTo(valueB);
+      return Long.valueOf(valueA).compareTo(valueB);
     }
     int unitAPos = SORTED_UNITS.indexOf(unitA);
     int unitBPos = SORTED_UNITS.indexOf(unitB);
     try {
-      Long tmpA = valueA;
-      Long tmpB = valueB;
+      long tmpA = valueA;
+      long tmpB = valueB;
       if (unitAPos < unitBPos) {
         tmpB = convert(unitB, unitA, valueB);
       } else {
         tmpA = convert(unitA, unitB, valueA);
       }
-      return tmpA.compareTo(tmpB);
+      return Long.valueOf(tmpA).compareTo(tmpB);
     } catch (IllegalArgumentException ie) {
       BigInteger tmpA = BigInteger.valueOf(valueA);
       BigInteger tmpB = BigInteger.valueOf(valueB);

@@ -42,6 +42,16 @@ import static org.junit.Assert.assertTrue;
 
 public class TestResources {
 
+  static class ExtendedResources extends Resources {
+    public static Resource unbounded() {
+      return new FixedValueResource("UNBOUNDED", Long.MAX_VALUE);
+    }
+
+    public static Resource none() {
+      return new FixedValueResource("NONE", 0L);
+    }
+  }
+
   private static final String EXTRA_RESOURCE_TYPE = "resource2";
   private String resourceTypesFile;
 
@@ -87,7 +97,7 @@ public class TestResources {
   @Test(timeout = 10000)
   public void testCompareToWithUnboundedResource() {
     unsetExtraResourceType();
-    Resource unboundedClone = Resources.clone(Resources.unbounded());
+    Resource unboundedClone = Resources.clone(ExtendedResources.unbounded());
     assertTrue(unboundedClone
         .compareTo(createResource(Long.MAX_VALUE, Integer.MAX_VALUE)) == 0);
     assertTrue(unboundedClone.compareTo(createResource(Long.MAX_VALUE, 0)) > 0);
