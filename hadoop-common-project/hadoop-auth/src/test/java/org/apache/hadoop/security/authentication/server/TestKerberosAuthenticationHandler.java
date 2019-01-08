@@ -65,8 +65,6 @@ public class TestKerberosAuthenticationHandler
             KerberosTestUtils.getKeytabFile());
     props.setProperty(KerberosAuthenticationHandler.NAME_RULES,
             "RULE:[1:$1@$0](.*@" + KerberosTestUtils.getRealm()+")s/@.*//\n");
-    props.setProperty(KerberosAuthenticationHandler.RULE_MECHANISM,
-            KerberosName.MECHANISM_HADOOP);
     return props;
   }
 
@@ -91,18 +89,18 @@ public class TestKerberosAuthenticationHandler
   }
 
   @Test(timeout=60000)
-  public void testNameRulesHadoop() throws Exception {
+  public void testNameRules() throws Exception {
     KerberosName kn = new KerberosName(KerberosTestUtils.getServerPrincipal());
     Assert.assertEquals(KerberosTestUtils.getRealm(), kn.getRealm());
 
     //destroy handler created in setUp()
     handler.destroy();
+
+    KerberosName.setRules("RULE:[1:$1@$0](.*@FOO)s/@.*//\nDEFAULT");
+    
     handler = getNewAuthenticationHandler();
-
     Properties props = getDefaultProperties();
-    props.setProperty(KerberosAuthenticationHandler.NAME_RULES,
-        "RULE:[1:$1@$0](.*@BAR)s/@.*//\nDEFAULT");
-
+    props.setProperty(KerberosAuthenticationHandler.NAME_RULES, "RULE:[1:$1@$0](.*@BAR)s/@.*//\nDEFAULT");
     try {
       handler.init(props);
     } catch (Exception ex) {
@@ -118,55 +116,7 @@ public class TestKerberosAuthenticationHandler
     }
   }
 
-  @Test
-  public void testNameRulesCompat() throws Exception {
-    KerberosName kn = new KerberosName(KerberosTestUtils.getServerPrincipal());
-    Assert.assertEquals(KerberosTestUtils.getRealm(), kn.getRealm());
-
-    //destroy handler created in setUp()
-    handler.destroy();
-    handler = getNewAuthenticationHandler();
-
-    Properties props = getDefaultProperties();
-    props.setProperty(KerberosAuthenticationHandler.NAME_RULES, "RULE:[1:$1@$0](.*@BAR)s/@.*//\nDEFAULT");
-    props.setProperty(KerberosAuthenticationHandler.RULE_MECHANISM, KerberosName.MECHANISM_MIT);
-
-    try {
-      handler.init(props);
-    } catch (Exception ex) {
-    }
-    kn = new KerberosName("bar@BAR");
-    Assert.assertEquals("bar", kn.getShortName());
-    kn = new KerberosName("bar@FOO");
-    Assert.assertEquals("bar@FOO", kn.getShortName());
-  }
-
-  @Test
-  public void testNullProperties() throws Exception {
-    KerberosName kn = new KerberosName(KerberosTestUtils.getServerPrincipal());
-    Assert.assertEquals(KerberosTestUtils.getRealm(), kn.getRealm());
-
-    KerberosName.setRuleMechanism("MIT");
-    KerberosName.setRules("DEFAULT");
-
-    //destroy handler created in setUp()
-    handler.destroy();
-    handler = getNewAuthenticationHandler();
-
-    Properties props = getDefaultProperties();
-    props.remove(KerberosAuthenticationHandler.NAME_RULES);
-    props.remove(KerberosAuthenticationHandler.RULE_MECHANISM);
-
-    try {
-      handler.init(props);
-    } catch (Exception ex) {
-    }
-
-    Assert.assertEquals("MIT", KerberosName.getRuleMechanism());
-    Assert.assertEquals("DEFAULT", KerberosName.getRules());
-  }
-
-  @Test
+  @Test(timeout=60000)
   public void testInit() throws Exception {
     Assert.assertEquals(KerberosTestUtils.getKeytabFile(), handler.getKeytab());
     Set<KerberosPrincipal> principals = handler.getPrincipals();

@@ -607,13 +607,6 @@ public class CommonConfigurationKeysPublic {
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
    * core-default.xml</a>
    */
-  public static final String  HADOOP_SECURITY_AUTH_TO_LOCAL_MECHANISM =
-    "hadoop.security.auth_to_local.mechanism";
-  /**
-   * @see
-   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
-   * core-default.xml</a>
-   */
   public static final String HADOOP_SECURITY_DNS_INTERFACE_KEY =
     "hadoop.security.dns.interface";
   /**

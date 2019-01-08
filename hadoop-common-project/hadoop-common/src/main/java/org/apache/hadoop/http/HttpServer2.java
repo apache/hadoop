@@ -1126,6 +1126,7 @@ public final class HttpServer2 implements FilterContainer {
       params.put("kerberos.keytab", httpKeytab);
     }
     params.put(AuthenticationFilter.AUTH_TYPE, "kerberos");
+
     defineFilter(webAppContext, SPNEGO_FILTER,
                  AuthenticationFilter.class.getName(), params, null);
   }
