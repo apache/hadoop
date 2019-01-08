@@ -214,6 +214,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
   /**
    * Submits request directly to OM.
    */
+  @SuppressWarnings("methodlength")
   private OMResponse submitRequestToOM(OMRequest request)
       throws ServiceException {
     Type cmdType = request.getCmdType();

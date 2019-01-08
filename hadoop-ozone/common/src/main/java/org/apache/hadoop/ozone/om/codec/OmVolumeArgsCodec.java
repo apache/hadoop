@@ -39,7 +39,8 @@ public class OmVolumeArgsCodec implements Codec<OmVolumeArgs> {
   @Override
   public OmVolumeArgs fromPersistedFormat(byte[] rawData) {
     Preconditions
-        .checkNotNull("Null byte array can't converted to real object.");
+        .checkNotNull(rawData,
+            "Null byte array can't converted to real object.");
     try {
       return OmVolumeArgs.getFromProtobuf(VolumeInfo.parseFrom(rawData));
     } catch (InvalidProtocolBufferException e) {

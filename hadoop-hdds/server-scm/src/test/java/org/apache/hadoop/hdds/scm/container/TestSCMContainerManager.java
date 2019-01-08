@@ -212,8 +212,8 @@ public class TestSCMContainerManager {
         HddsProtos.LifeCycleEvent.FINALIZE);
     containerManager.updateContainerState(id,
         HddsProtos.LifeCycleEvent.CLOSE);
-   ContainerInfo closedContainer = containerManager.getContainer(id);
-   Assert.assertEquals(LifeCycleState.CLOSED, closedContainer.getState());
+    ContainerInfo closedContainer = containerManager.getContainer(id);
+    Assert.assertEquals(LifeCycleState.CLOSED, closedContainer.getState());
   }
 
   /**

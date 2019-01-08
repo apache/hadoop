@@ -45,6 +45,7 @@ import org.apache.hadoop.ozone.container.keyvalue.TarContainerPacker;
  * Dispatcher sends ContainerCommandRequests to Handler. Each Container Type
  * should have an implementation for Handler.
  */
+@SuppressWarnings("visibilitymodifier")
 public abstract class Handler {
 
   protected final Configuration conf;

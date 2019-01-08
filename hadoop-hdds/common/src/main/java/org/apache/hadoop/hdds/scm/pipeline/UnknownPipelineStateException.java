@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdds.scm.pipeline;
 
-    import java.io.IOException;
+import java.io.IOException;
 
 /**
  * Signals that a pipeline state is not recognized.

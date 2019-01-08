@@ -259,11 +259,11 @@ public class TestDeadNodeHandler {
         "DeadNode event for a unregistered node"));
   }
 
-  private void registerReplicas(ContainerManager containerManager,
+  private void registerReplicas(ContainerManager contManager,
       ContainerInfo container, DatanodeDetails... datanodes)
       throws ContainerNotFoundException {
     for (DatanodeDetails datanode : datanodes) {
-      containerManager.updateContainerReplica(
+      contManager.updateContainerReplica(
           new ContainerID(container.getContainerID()),
           ContainerReplica.newBuilder()
               .setContainerState(ContainerReplicaProto.State.OPEN)
