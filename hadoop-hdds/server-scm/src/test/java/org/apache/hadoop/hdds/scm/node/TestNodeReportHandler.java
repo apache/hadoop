@@ -35,6 +35,9 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Test for the Node Report Handler.
+ */
 public class TestNodeReportHandler implements EventPublisher {
 
   private static final Logger LOG = LoggerFactory

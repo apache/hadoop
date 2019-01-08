@@ -39,7 +39,8 @@ public class OmKeyInfoCodec implements Codec<OmKeyInfo> {
   @Override
   public OmKeyInfo fromPersistedFormat(byte[] rawData) {
     Preconditions
-        .checkNotNull("Null byte array can't converted to real object.");
+        .checkNotNull(rawData,
+            "Null byte array can't converted to real object.");
     try {
       return OmKeyInfo.getFromProtobuf(KeyInfo.parseFrom(rawData));
     } catch (InvalidProtocolBufferException e) {

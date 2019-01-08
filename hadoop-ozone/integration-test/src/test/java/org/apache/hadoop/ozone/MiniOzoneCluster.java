@@ -211,7 +211,7 @@ public interface MiniOzoneCluster {
   /**
    * Builder class for MiniOzoneCluster.
    */
-  @SuppressWarnings("CheckStyle")
+  @SuppressWarnings("visibilitymodifier")
   abstract class Builder {
 
     protected static final int DEFAULT_HB_INTERVAL_MS = 1000;
@@ -259,8 +259,8 @@ public interface MiniOzoneCluster {
       return this;
     }
 
-    public Builder setStartDataNodes(boolean startDataNodes) {
-      this.startDataNodes = startDataNodes;
+    public Builder setStartDataNodes(boolean nodes) {
+      this.startDataNodes = nodes;
       return this;
     }
 

@@ -136,7 +136,7 @@ public class ChunkGroupInputStream extends InputStream implements Seekable {
       off += numBytesRead;
       len -= numBytesRead;
       if (current.getRemaining() <= 0 &&
-        ((currentStreamIndex + 1) < streamEntries.size())) {
+          ((currentStreamIndex + 1) < streamEntries.size())) {
         currentStreamIndex += 1;
       }
     }

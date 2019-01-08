@@ -74,6 +74,6 @@ public interface BucketManager {
    * @throws IOException
    */
   List<OmBucketInfo> listBuckets(String volumeName,
-                                 String startBucket, String bucketPrefix, int maxNumOfBuckets)
+      String startBucket, String bucketPrefix, int maxNumOfBuckets)
       throws IOException;
 }

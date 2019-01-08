@@ -115,6 +115,8 @@ public class OzoneGetConf extends Configured implements Tool {
    * {@link OzoneGetConf.Command}.
    */
   static class CommandHandler {
+
+    @SuppressWarnings("visibilitymodifier")
     protected String key; // Configuration key to lookup
 
     CommandHandler() {

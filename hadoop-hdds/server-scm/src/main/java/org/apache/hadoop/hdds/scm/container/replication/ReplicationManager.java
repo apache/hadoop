@@ -211,9 +211,7 @@ public class ReplicationManager implements Runnable {
                     .add(replica.getDatanodeDetails());
               });
 
-          for(UUID originId : originIdToDnMap.keySet()) {
-            final List<DatanodeDetails> listOfReplica =
-                originIdToDnMap.get(originId);
+          for (List<DatanodeDetails> listOfReplica : originIdToDnMap.values()) {
             if (listOfReplica.size() > 1) {
               final int toDelete = Math.min(listOfReplica.size() - 1,
                   numberOfReplicasToDelete);
