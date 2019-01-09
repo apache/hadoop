@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.om.ratis;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
@@ -30,7 +31,6 @@ import org.apache.ratis.RaftConfigKeys;
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.grpc.GrpcConfigKeys;
-import org.apache.ratis.protocol.Message;
 import org.apache.ratis.protocol.RaftGroup;
 import org.apache.ratis.protocol.RaftPeerId;
 import org.apache.ratis.retry.RetryPolicy;
@@ -44,6 +44,7 @@ import org.slf4j.LoggerFactory;
  * Ratis helper methods for OM Ratis server and client.
  */
 public final class OMRatisHelper {
+
   private static final Logger LOG = LoggerFactory.getLogger(
       OMRatisHelper.class);
 
@@ -94,9 +95,9 @@ public final class OMRatisHelper {
     return OMRequest.parseFrom(bytes);
   }
 
-  static Message convertResponseToMessage(OMResponse response) {
+  static ByteString convertResponseToByteString(OMResponse response) {
     byte[] requestBytes = response.toByteArray();
-    return Message.valueOf(ByteString.copyFrom(requestBytes));
+    return ByteString.copyFrom(requestBytes);
   }
 
   static OMResponse convertByteStringToOMResponse(ByteString byteString)
@@ -111,5 +112,11 @@ public final class OMRatisHelper {
         .setSuccess(false)
         .setMessage(e.getMessage())
         .build();
+  }
+
+  static <T> CompletableFuture<T> completeExceptionally(Exception e) {
+    final CompletableFuture<T> future = new CompletableFuture<>();
+    future.completeExceptionally(e);
+    return future;
   }
 }
