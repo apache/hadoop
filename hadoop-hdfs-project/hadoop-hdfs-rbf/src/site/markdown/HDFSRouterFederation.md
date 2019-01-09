@@ -143,6 +143,8 @@ For performance reasons, the Router caches the quota usage and updates it period
 will be used for quota-verification during each WRITE RPC call invoked in RouterRPCSever. See [HDFS Quotas Guide](../hadoop-hdfs/HdfsQuotaAdminGuide.html)
 for the quota detail.
 
+Note: When global quota is enabled, setting or clearing sub-cluster's quota directly is not recommended since Router Admin server will override sub-cluster's quota with global quota.
+
 ### State Store
 The (logically centralized, but physically distributed) State Store maintains:
 
@@ -421,7 +423,7 @@ Global quota supported in federation.
 
 | Property | Default | Description|
 |:---- |:---- |:---- |
-| dfs.federation.router.quota.enable | `false` | If `true`, the quota system enabled in the Router. |
+| dfs.federation.router.quota.enable | `false` | If `true`, the quota system enabled in the Router. In that case, setting or clearing sub-cluster's quota directly is not recommended since Router Admin server will override sub-cluster's quota with global quota.|
 | dfs.federation.router.quota-cache.update.interval | 60s | How often the Router updates quota cache. This setting supports multiple time unit suffixes. If no suffix is specified then milliseconds is assumed. |
 
 Metrics

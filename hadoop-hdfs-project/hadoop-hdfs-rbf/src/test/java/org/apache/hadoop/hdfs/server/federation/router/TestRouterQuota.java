@@ -605,7 +605,7 @@ public class TestRouterQuota {
   @Test
   public void testQuotaRefreshWhenDestinationNotPresent() throws Exception {
     long nsQuota = 5;
-    long ssQuota = 3*BLOCK_SIZE;
+    long ssQuota = 3 * BLOCK_SIZE;
     final FileSystem nnFs = nnContext1.getFileSystem();
 
     // Add three mount tables:
@@ -708,5 +708,51 @@ public class TestRouterQuota {
     assertEquals(updatedSpace, quota2.getSpaceConsumed());
     assertEquals(updatedSpace, cacheQuota2.getSpaceConsumed());
     assertEquals(updatedSpace, mountQuota2.getSpaceConsumed());
+  }
+
+  @Test
+  public void testClearQuotaDefAfterRemovingMountTable() throws Exception {
+    long nsQuota = 5;
+    long ssQuota = 3 * BLOCK_SIZE;
+    final FileSystem nnFs = nnContext1.getFileSystem();
+
+    // Add one mount tables:
+    // /setdir --> ns0---testdir15
+    // Create destination directory
+    nnFs.mkdirs(new Path("/testdir15"));
+
+    MountTable mountTable = MountTable.newInstance("/setdir",
+        Collections.singletonMap("ns0", "/testdir15"));
+    mountTable.setQuota(new RouterQuotaUsage.Builder().quota(nsQuota)
+        .spaceQuota(ssQuota).build());
+    addMountTable(mountTable);
+
+    // Update router quota
+    RouterQuotaUpdateService updateService =
+        routerContext.getRouter().getQuotaCacheUpdateService();
+    updateService.periodicInvoke();
+
+    RouterQuotaManager quotaManager =
+        routerContext.getRouter().getQuotaManager();
+    ClientProtocol client = nnContext1.getClient().getNamenode();
+    QuotaUsage routerQuota = quotaManager.getQuotaUsage("/setdir");
+    QuotaUsage subClusterQuota = client.getQuotaUsage("/testdir15");
+
+    // Verify current quota definitions
+    assertEquals(nsQuota, routerQuota.getQuota());
+    assertEquals(ssQuota, routerQuota.getSpaceQuota());
+    assertEquals(nsQuota, subClusterQuota.getQuota());
+    assertEquals(ssQuota, subClusterQuota.getSpaceQuota());
+
+    // Remove mount table
+    removeMountTable("/setdir");
+    updateService.periodicInvoke();
+    routerQuota = quotaManager.getQuotaUsage("/setdir");
+    subClusterQuota = client.getQuotaUsage("/testdir15");
+
+    // Verify quota definitions are cleared after removing the mount table
+    assertNull(routerQuota);
+    assertEquals(HdfsConstants.QUOTA_RESET, subClusterQuota.getQuota());
+    assertEquals(HdfsConstants.QUOTA_RESET, subClusterQuota.getSpaceQuota());
   }
 }

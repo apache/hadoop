@@ -447,7 +447,9 @@
     <name>dfs.federation.router.quota.enable</name>
     <value>false</value>
     <description>
-      Set to true to enable quota system in Router.
+      Set to true to enable quota system in Router. When it's enabled, setting
+      or clearing sub-cluster's quota directly is not recommended since Router
+      Admin server will override sub-cluster's quota with global quota.
     </description>
   </property>
 
