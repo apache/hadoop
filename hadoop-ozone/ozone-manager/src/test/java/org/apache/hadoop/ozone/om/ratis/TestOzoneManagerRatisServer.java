@@ -64,7 +64,7 @@ public class TestOzoneManagerRatisServer {
     conf.setTimeDuration(
         OMConfigKeys.OZONE_OM_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_KEY,
         LEADER_ELECTION_TIMEOUT, TimeUnit.MILLISECONDS);
-    omRatisServer = OzoneManagerRatisServer.newOMRatisServer(null, omID,
+    omRatisServer = OzoneManagerRatisServer.newOMRatisServer(omID,
         InetAddress.getLocalHost(), conf);
     omRatisServer.start();
     omRatisClient = OzoneManagerRatisClient.newOzoneManagerRatisClient(omID,
@@ -101,6 +101,7 @@ public class TestOzoneManagerRatisServer {
   public void testSubmitRatisRequest() throws Exception {
     // Wait for leader election
     Thread.sleep(LEADER_ELECTION_TIMEOUT * 2);
+
     OMRequest request = OMRequest.newBuilder()
         .setCmdType(OzoneManagerProtocolProtos.Type.CreateVolume)
         .setClientId(clientId)
@@ -108,9 +109,12 @@ public class TestOzoneManagerRatisServer {
 
     OMResponse response = omRatisClient.sendCommand(request);
 
-    Assert.assertEquals(OzoneManagerProtocolProtos.Type.CreateVolume,
-        response.getCmdType());
+    // Since the state machine is not implemented yet, we should get the
+    // configured dummy message from Ratis.
     Assert.assertEquals(false, response.getSuccess());
+    Assert.assertTrue(response.getMessage().contains("Dummy response from " +
+        "Ratis server for command type: " +
+        OzoneManagerProtocolProtos.Type.CreateVolume));
     Assert.assertEquals(false, response.hasCreateVolumeResponse());
   }
 

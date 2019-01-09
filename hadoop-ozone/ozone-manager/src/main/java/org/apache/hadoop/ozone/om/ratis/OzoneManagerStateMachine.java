@@ -17,22 +17,14 @@
 
 package org.apache.hadoop.ozone.om.ratis;
 
-import com.google.common.base.Preconditions;
-import com.google.protobuf.ServiceException;
+import com.google.protobuf.InvalidProtocolBufferException;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis
     .ContainerStateMachine;
 import org.apache.hadoop.ozone.om.OzoneManager;
-import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .OMRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .OMResponse;
-import org.apache.hadoop.ozone.protocolPB.OzoneManagerRequestHandler;
-import org.apache.ratis.proto.RaftProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.*;
 import org.apache.ratis.protocol.Message;
-import org.apache.ratis.protocol.RaftClientRequest;
 import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.server.RaftServer;
 import org.apache.ratis.server.storage.RaftStorage;
@@ -54,11 +46,11 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
       LoggerFactory.getLogger(ContainerStateMachine.class);
   private final SimpleStateMachineStorage storage =
       new SimpleStateMachineStorage();
-  private final OzoneManagerRequestHandler handler;
-  private RaftGroupId raftGroupId;
+  private final OzoneManager ozoneManager;
 
-  public OzoneManagerStateMachine(OzoneManagerProtocol om) {
-    this.handler = new OzoneManagerRequestHandler(om);
+  public OzoneManagerStateMachine(OzoneManager om) {
+    // OzoneManager is required when implementing StateMachine
+    this.ozoneManager = om;
   }
 
   /**
@@ -70,88 +62,29 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
       RaftServer server, RaftGroupId id, RaftStorage raftStorage)
       throws IOException {
     super.initialize(server, id, raftStorage);
-    this.raftGroupId = id;
     storage.init(raftStorage);
   }
 
-  /**
-   * Validate/pre-process the incoming update request in the state machine.
-   * @return the content to be written to the log entry. Null means the request
-   * should be rejected.
-   * @throws IOException thrown by the state machine while validating
-   */
-  public TransactionContext startTransaction(
-      RaftClientRequest raftClientRequest) throws IOException {
-    ByteString messageContent = raftClientRequest.getMessage().getContent();
-    OMRequest omRequest = OMRatisHelper.convertByteStringToOMRequest(
-        messageContent);
-
-    Preconditions.checkArgument(raftClientRequest.getRaftGroupId().equals(
-        raftGroupId));
-    try {
-      handler.validateRequest(omRequest);
-    } catch (IOException ioe) {
-      TransactionContext ctxt = TransactionContext.newBuilder()
-          .setClientRequest(raftClientRequest)
-          .setStateMachine(this)
-          .setServerRole(RaftProtos.RaftPeerRole.LEADER)
-          .build();
-      ctxt.setException(ioe);
-      return ctxt;
-    }
-    return TransactionContext.newBuilder()
-        .setClientRequest(raftClientRequest)
-        .setStateMachine(this)
-        .setServerRole(RaftProtos.RaftPeerRole.LEADER)
-        .setLogData(messageContent)
-        .build();
-  }
-
   /*
-   * Apply a committed log entry to the state machine.
+   * Apply a committed log entry to the state machine. This function
+   * currently returns a dummy message.
+   * TODO: Apply transaction to OM state machine
    */
   @Override
   public CompletableFuture<Message> applyTransaction(TransactionContext trx) {
+    String errorMessage;
+    ByteString logData = trx.getStateMachineLogEntry().getLogData();
     try {
-      OMRequest request = OMRatisHelper.convertByteStringToOMRequest(
-          trx.getStateMachineLogEntry().getLogData());
-      CompletableFuture<Message> future = CompletableFuture
-          .supplyAsync(() -> runCommand(request));
-      return future;
-    } catch (IOException e) {
-      return completeExceptionally(e);
+      OMRequest omRequest = OMRatisHelper.convertByteStringToOMRequest(logData);
+      LOG.debug("Received request: cmdType={} traceID={} ",
+          omRequest.getCmdType(), omRequest.getTraceID());
+      errorMessage = "Dummy response from Ratis server for command type: " +
+          omRequest.getCmdType();
+    } catch (InvalidProtocolBufferException e) {
+      errorMessage = e.getMessage();
     }
-  }
 
-  /**
-   * Query the state machine. The request must be read-only.
-   */
-  @Override
-  public CompletableFuture<Message> query(Message request) {
-    try {
-      OMRequest omRequest = OMRatisHelper.convertByteStringToOMRequest(
-          request.getContent());
-      return CompletableFuture.completedFuture(runCommand(omRequest));
-    } catch (IOException e) {
-      return completeExceptionally(e);
-    }
+    // TODO: When State Machine is implemented, send the actual response back
+    return OMRatisHelper.completeExceptionally(new IOException(errorMessage));
   }
-
-  /**
-   * Submits request to OM and returns the response Message.
-   * @param request OMRequest
-   * @return response from OM
-   * @throws ServiceException
-   */
-  private Message runCommand(OMRequest request) {
-    OMResponse response = handler.handle(request);
-    return OMRatisHelper.convertResponseToMessage(response);
-  }
-
-  private static <T> CompletableFuture<T> completeExceptionally(Exception e) {
-    final CompletableFuture<T> future = new CompletableFuture<>();
-    future.completeExceptionally(e);
-    return future;
-  }
-
 }
