@@ -570,9 +570,22 @@ rather than write new tests. When doing this, make sure that the new predicates
 fail with meaningful diagnostics, so any new problems can be easily debugged
 from test logs.
 
+***Effective use of FS instances during S3A integration tests.*** Tests using
+`FileSystem` instances are fastest if they can recycle the existing FS
+instance from the same JVM.
+
+If you do that, you MUST NOT close or do unique configuration on them.
+If you want a guarantee of 100% isolation or an instance with unique config,
+create a new instance which you MUST close in the teardown to avoid leakage
+of resources.
+
+Do NOT add `FileSystem` instances manually
+(with e.g `org.apache.hadoop.fs.FileSystem#addFileSystemForTesting`) to the
+cache that will be modified or closed during the test runs. This can cause
+other tests to fail when using the same modified or closed FS instance.
+For more details see HADOOP-15819.
 
 ## <a name="requirements"></a> Requirements of new Tests
-
 
 This is what we expect from new tests; they're an extension of the normal
 Hadoop requirements, based on the need to work with remote servers whose
