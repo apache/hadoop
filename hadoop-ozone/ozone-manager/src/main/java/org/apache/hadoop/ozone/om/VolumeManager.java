@@ -96,5 +96,5 @@ public interface VolumeManager {
    * @throws IOException
    */
   List<OmVolumeArgs> listVolumes(String userName, String prefix,
-                                 String startKey, int maxKeys) throws IOException;
+      String startKey, int maxKeys) throws IOException;
 }

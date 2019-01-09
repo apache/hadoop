@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -62,6 +63,7 @@ import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TimedPlacementCon
 import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.apache.hadoop.yarn.proto.YarnProtos.AMCommandProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAccessTypeProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationTimeoutTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
@@ -92,12 +94,16 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.ContainerUpdateTypeProto;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
 import com.google.protobuf.ByteString;
 
 @Private
 @Unstable
 public class ProtoUtils {
 
+  public static final Interner<ByteString> BYTE_STRING_INTERNER =
+      Interners.newWeakInterner();
 
   /*
    * ContainerState
@@ -577,6 +583,18 @@ public class ProtoUtils {
   public static TimedPlacementConstraint.DelayUnit convertFromProtoFormat(
           TimedPlacementConstraintProto.DelayUnit u) {
     return TimedPlacementConstraint.DelayUnit.valueOf(u.name());
+  }
+
+  /*
+   * ApplicationId
+   */
+  public static ApplicationIdPBImpl convertFromProtoFormat(
+      ApplicationIdProto p) {
+    return new ApplicationIdPBImpl(p);
+  }
+
+  public static ApplicationIdProto convertToProtoFormat(ApplicationId t) {
+    return ((ApplicationIdPBImpl) t).getProto();
   }
 }
 

@@ -44,6 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
 import org.apache.hadoop.hdfs.qjournal.QJMTestUtil;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
@@ -91,6 +92,10 @@ public class TestQuorumJournalManager {
     conf = new Configuration();
     // Don't retry connections - it just slows down the tests.
     conf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);
+    // Turn off IPC client caching to handle daemon restarts.
+    conf.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY, 0);
+    conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
     
     cluster = new MiniJournalCluster.Builder(conf)
         .baseDir(GenericTestUtils.getRandomizedTestDir().getAbsolutePath())
@@ -958,6 +963,135 @@ public class TestQuorumJournalManager {
     List<EditLogInputStream> streams = new ArrayList<>();
     qjm2.selectInputStreams(streams, 1, true, true);
     verifyEdits(streams, 1, 8);
+  }
+
+  @Test
+  public void testSelectViaRpcWithDurableTransactions() throws Exception {
+    // Two loggers will have up to ID 5, one will have up to ID 6
+    failLoggerAtTxn(spies.get(0), 6);
+    failLoggerAtTxn(spies.get(1), 6);
+    EditLogOutputStream stm =
+        qjm.startLogSegment(1, NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+    writeTxns(stm, 1, 5);
+    try {
+      writeTxns(stm, 6, 1);
+      fail("Did not fail to write when only a minority succeeded");
+    } catch (QuorumException qe) {
+      GenericTestUtils.assertExceptionContains(
+          "too many exceptions to achieve quorum size 2/3", qe);
+    }
+
+    List<EditLogInputStream> streams = new ArrayList<>();
+    qjm.selectInputStreams(streams, 1, true, true);
+    verifyEdits(streams, 1, 5);
+    IOUtils.closeStreams(streams.toArray(new Closeable[0]));
+    for (AsyncLogger logger : spies) {
+      Mockito.verify(logger, Mockito.times(1)).getJournaledEdits(1,
+          QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
+    }
+  }
+
+  @Test
+  public void testSelectViaRpcWithoutDurableTransactions() throws Exception {
+    setupLoggers345();
+    futureThrows(new IOException()).when(spies.get(1)).getJournaledEdits(1,
+        QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
+
+    List<EditLogInputStream> streams = new ArrayList<>();
+    qjm.selectInputStreams(streams, 1, true, false);
+    verifyEdits(streams, 1, 5);
+    IOUtils.closeStreams(streams.toArray(new Closeable[0]));
+    for (AsyncLogger logger : spies) {
+      Mockito.verify(logger, Mockito.times(1)).getJournaledEdits(1,
+          QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
+    }
+  }
+
+  @Test
+  public void testSelectViaRpcOneDeadJN() throws Exception {
+    EditLogOutputStream stm =
+        qjm.startLogSegment(1, NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+    writeTxns(stm, 1, 10);
+
+    cluster.getJournalNode(0).stopAndJoin(0);
+
+    List<EditLogInputStream> streams = new ArrayList<>();
+    qjm.selectInputStreams(streams, 1, true, false);
+    verifyEdits(streams, 1, 10);
+    IOUtils.closeStreams(streams.toArray(new Closeable[0]));
+  }
+
+  @Test
+  public void testSelectViaRpcTwoDeadJNs() throws Exception {
+    EditLogOutputStream stm =
+        qjm.startLogSegment(1, NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+    writeTxns(stm, 1, 10);
+
+    cluster.getJournalNode(0).stopAndJoin(0);
+    cluster.getJournalNode(1).stopAndJoin(0);
+
+    try {
+      qjm.selectInputStreams(new ArrayList<>(), 1, true, false);
+      fail("");
+    } catch (QuorumException qe) {
+      GenericTestUtils.assertExceptionContains(
+          "too many exceptions to achieve quorum size 2/3", qe);
+    }
+  }
+
+  @Test
+  public void testSelectViaRpcTwoJNsError() throws Exception {
+    EditLogOutputStream stm =
+        qjm.startLogSegment(1, NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+    writeTxns(stm, 1, 10);
+    writeTxns(stm, 11, 1);
+    // One last sync whose transactions are not expected to be seen in the
+    // input streams because the JournalNodes have not updated their concept
+    // of the committed transaction ID yet
+    writeTxns(stm, 12, 1);
+
+    futureThrows(new IOException()).when(spies.get(0)).getJournaledEdits(1,
+        QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
+    futureThrows(new IOException()).when(spies.get(1)).getJournaledEdits(1,
+        QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
+
+    List<EditLogInputStream> streams = new ArrayList<>();
+    qjm.selectInputStreams(streams, 1, true, true);
+    // This should still succeed as the QJM should fall back to the streaming
+    // mechanism for fetching edits
+    verifyEdits(streams, 1, 11);
+    IOUtils.closeStreams(streams.toArray(new Closeable[0]));
+
+    for (AsyncLogger logger : spies) {
+      Mockito.verify(logger, Mockito.times(1)).getEditLogManifest(1, true);
+    }
+  }
+
+  @Test
+  public void testSelectViaRpcAfterJNRestart() throws Exception {
+    EditLogOutputStream stm =
+        qjm.startLogSegment(1, NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+    writeTxns(stm, 1, 10);
+    qjm.finalizeLogSegment(1, 10);
+
+    // Close to avoid connections hanging around after the JNs are restarted
+    for (int i = 0; i < cluster.getNumNodes(); i++) {
+      cluster.restartJournalNode(i);
+    }
+    cluster.waitActive();
+
+    qjm = createSpyingQJM();
+    spies = qjm.getLoggerSetForTests().getLoggersForTests();
+    List<EditLogInputStream> streams = new ArrayList<>();
+    qjm.selectInputStreams(streams, 1, true, true);
+    // This should still succeed as the QJM should fall back to the streaming
+    // mechanism for fetching edits
+    verifyEdits(streams, 1, 10);
+    IOUtils.closeStreams(streams.toArray(new Closeable[0]));
+
+    for (AsyncLogger logger : spies) {
+      Mockito.verify(logger, Mockito.times(1)).getEditLogManifest(1, true);
+    }
   }
   
   private QuorumJournalManager createSpyingQJM()

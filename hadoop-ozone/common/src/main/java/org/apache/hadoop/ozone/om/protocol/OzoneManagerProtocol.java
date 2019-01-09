@@ -16,13 +16,15 @@
  * limitations under the License.
  */
 package org.apache.hadoop.ozone.om.protocol;
-
+import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
@@ -313,5 +315,35 @@ public interface OzoneManagerProtocol {
    * @throws IOException
    */
   OmMultipartInfo initiateMultipartUpload(OmKeyArgs keyArgs) throws IOException;
+
+
+  /**
+   * Commit Multipart upload part file.
+   * @param omKeyArgs
+   * @param clientID
+   * @return OmMultipartCommitUploadPartInfo
+   * @throws IOException
+   */
+  OmMultipartCommitUploadPartInfo commitMultipartUploadPart(
+      OmKeyArgs omKeyArgs, long clientID) throws IOException;
+
+  /**
+   * Complete Multipart upload Request.
+   * @param omKeyArgs
+   * @param multipartUploadList
+   * @return OmMultipartUploadCompleteInfo
+   * @throws IOException
+   */
+  OmMultipartUploadCompleteInfo completeMultipartUpload(
+      OmKeyArgs omKeyArgs, OmMultipartUploadList multipartUploadList)
+      throws IOException;
+
+  /**
+   * Abort multipart upload.
+   * @param omKeyArgs
+   * @throws IOException
+   */
+  void abortMultipartUpload(OmKeyArgs omKeyArgs) throws IOException;
+
 }
 

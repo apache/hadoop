@@ -34,6 +34,7 @@ protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
   ${PROTO_HADOOP_DIR}/ProtobufRpcEngine.proto
   ${PROTO_HADOOP_DIR}/RpcHeader.proto
   ${PROTO_HADOOP_DIR}/Security.proto
+  ${PROTO_HADOOP_DIR}/HAServiceProtocol.proto
 )
 
 add_executable(protoc-gen-hrpc protoc_gen_hrpc.cc)

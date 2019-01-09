@@ -30,6 +30,7 @@ export default DS.Model.extend({
   containerExitStatus: DS.attr('number'),
   containerState: DS.attr('string'),
   nodeHttpAddress: DS.attr('string'),
+  exposedPorts: DS.attr('string'),
   nodeId: DS.attr('string'),
 
   startTs: function() {

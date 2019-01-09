@@ -34,6 +34,9 @@ import static org.mockito.Matchers.anyObject;
 import org.mockito.Mockito;
 import static org.mockito.Mockito.when;
 
+/**
+ * Test for the random container placement.
+ */
 public class TestSCMContainerPlacementRandom {
 
   @Test

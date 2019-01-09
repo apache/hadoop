@@ -52,7 +52,7 @@ import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.ratis.rpc.RpcType;
-import org.apache.ratis.util.CheckedBiConsumer;
+import org.apache.ratis.util.function.CheckedBiConsumer;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -149,7 +149,8 @@ public class TestContainerServer {
     XceiverClientSpi client = null;
     String containerName = OzoneUtils.getRequestID();
     try {
-      final Pipeline pipeline = ContainerTestHelper.createPipeline(numDatanodes);
+      final Pipeline pipeline =
+          ContainerTestHelper.createPipeline(numDatanodes);
       final OzoneConfiguration conf = new OzoneConfiguration();
       initConf.accept(pipeline, conf);
 

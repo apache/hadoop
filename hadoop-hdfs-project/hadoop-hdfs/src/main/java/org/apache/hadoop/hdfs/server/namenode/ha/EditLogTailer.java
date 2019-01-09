@@ -145,7 +145,11 @@ public class EditLogTailer {
   private int maxRetries;
 
   /**
-   * Whether the tailer should tail the in-progress edit log segments.
+   * Whether the tailer should tail the in-progress edit log segments. If true,
+   * this will also attempt to optimize for latency when tailing the edit logs
+   * (if using the
+   * {@link org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager}, this
+   * implies using the RPC-based mechanism to tail edits).
    */
   private final boolean inProgressOk;
 
@@ -277,7 +281,7 @@ public class EditLogTailer {
   }
   
   @VisibleForTesting
-  void doTailEdits() throws IOException, InterruptedException {
+  public void doTailEdits() throws IOException, InterruptedException {
     // Write lock needs to be interruptible here because the 
     // transitionToActive RPC takes the write lock before calling
     // tailer.stop() -- so if we're not interruptible, it will

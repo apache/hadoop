@@ -18,17 +18,12 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
-import com.google.common.collect.Interner;
-import com.google.common.collect.Interners;
-import com.google.protobuf.ByteString;
 
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
@@ -39,7 +34,6 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
-import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
@@ -76,7 +70,6 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
   private List<ContainerId> containersToCleanup = null;
   private List<ContainerId> containersToBeRemovedFromNM = null;
   private List<ApplicationId> applicationsToCleanup = null;
-  private Map<ApplicationId, ByteBuffer> systemCredentials = null;
   private Resource resource = null;
   private Map<ApplicationId, AppCollectorData> appCollectorsMap = null;
 
@@ -87,9 +80,6 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
   // NOTE: This is required for backward compatibility.
   private List<Container> containersToDecrease = null;
   private List<SignalContainerRequest> containersToSignal = null;
-
-  private static final Interner<ByteString> BYTE_STRING_INTERNER =
-      Interners.newWeakInterner();
 
   public NodeHeartbeatResponsePBImpl() {
     builder = NodeHeartbeatResponseProto.newBuilder();
@@ -129,9 +119,6 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
       builder.setContainerQueuingLimit(
           convertToProtoFormat(this.containerQueuingLimit));
     }
-    if (this.systemCredentials != null) {
-      addSystemCredentialsToProto();
-    }
     if (this.containersToUpdate != null) {
       addContainersToUpdateToProto();
     }
@@ -149,17 +136,6 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
     }
   }
 
-  private void addSystemCredentialsToProto() {
-    maybeInitBuilder();
-    builder.clearSystemCredentialsForApps();
-    for (Map.Entry<ApplicationId, ByteBuffer> entry : systemCredentials.entrySet()) {
-      builder.addSystemCredentialsForApps(SystemCredentialsForAppsProto.newBuilder()
-        .setAppId(convertToProtoFormat(entry.getKey()))
-        .setCredentialsForApp(BYTE_STRING_INTERNER.intern(
-            ProtoUtils.convertToProtoFormat(entry.getValue().duplicate()))));
-    }
-  }
-
   private void addAppCollectorsMapToProto() {
     maybeInitBuilder();
     builder.clearAppCollectors();
@@ -168,7 +144,7 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
       AppCollectorData data = entry.getValue();
       AppCollectorDataProto.Builder appCollectorDataBuilder =
           AppCollectorDataProto.newBuilder()
-              .setAppId(convertToProtoFormat(entry.getKey()))
+              .setAppId(ProtoUtils.convertToProtoFormat(entry.getKey()))
               .setAppCollectorAddr(data.getCollectorAddr())
               .setRmIdentifier(data.getRMIdentifier())
               .setVersion(data.getVersion());
@@ -477,7 +453,7 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
     this.applicationsToCleanup = new ArrayList<ApplicationId>();
 
     for (ApplicationIdProto c : list) {
-      this.applicationsToCleanup.add(convertFromProtoFormat(c));
+      this.applicationsToCleanup.add(ProtoUtils.convertFromProtoFormat(c));
     }
   }
 
@@ -510,7 +486,7 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
 
           @Override
           public ApplicationIdProto next() {
-            return convertToProtoFormat(iter.next());
+            return ProtoUtils.convertToProtoFormat(iter.next());
           }
 
           @Override
@@ -645,15 +621,6 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
   }
 
   @Override
-  public Map<ApplicationId, ByteBuffer> getSystemCredentialsForApps() {
-    if (this.systemCredentials != null) {
-      return this.systemCredentials;
-    }
-    initSystemCredentials();
-    return systemCredentials;
-  }
-
-  @Override
   public Map<ApplicationId, AppCollectorData> getAppCollectors() {
     if (this.appCollectorsMap != null) {
       return this.appCollectorsMap;
@@ -662,24 +629,13 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
     return appCollectorsMap;
   }
 
-  private void initSystemCredentials() {
-    NodeHeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
-    List<SystemCredentialsForAppsProto> list = p.getSystemCredentialsForAppsList();
-    this.systemCredentials = new HashMap<ApplicationId, ByteBuffer> ();
-    for (SystemCredentialsForAppsProto c : list) {
-      ApplicationId appId = convertFromProtoFormat(c.getAppId());
-      ByteBuffer byteBuffer = ProtoUtils.convertFromProtoFormat(c.getCredentialsForApp());
-      this.systemCredentials.put(appId, byteBuffer);
-    }
-  }
-
   private void initAppCollectorsMap() {
     NodeHeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
     List<AppCollectorDataProto> list = p.getAppCollectorsList();
     if (!list.isEmpty()) {
       this.appCollectorsMap = new HashMap<>();
       for (AppCollectorDataProto c : list) {
-        ApplicationId appId = convertFromProtoFormat(c.getAppId());
+        ApplicationId appId = ProtoUtils.convertFromProtoFormat(c.getAppId());
         Token collectorToken = null;
         if (c.hasAppCollectorToken()){
           collectorToken = convertFromProtoFormat(c.getAppCollectorToken());
@@ -694,13 +650,19 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
 
   @Override
   public void setSystemCredentialsForApps(
-      Map<ApplicationId, ByteBuffer> systemCredentials) {
-    if (systemCredentials == null || systemCredentials.isEmpty()) {
-      return;
-    }
+      Collection<SystemCredentialsForAppsProto> systemCredentialsForAppsProto) {
     maybeInitBuilder();
-    this.systemCredentials = new HashMap<ApplicationId, ByteBuffer>();
-    this.systemCredentials.putAll(systemCredentials);
+    builder.clearSystemCredentialsForApps();
+    if (systemCredentialsForAppsProto != null) {
+      builder.addAllSystemCredentialsForApps(systemCredentialsForAppsProto);
+    }
+  }
+
+  @Override
+  public Collection<SystemCredentialsForAppsProto>
+      getSystemCredentialsForApps() {
+    NodeHeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getSystemCredentialsForAppsList();
   }
 
   @Override
@@ -742,14 +704,6 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
     return ProtoUtils.convertToProtoFormat(t);
   }
 
-  private ApplicationIdPBImpl convertFromProtoFormat(ApplicationIdProto p) {
-    return new ApplicationIdPBImpl(p);
-  }
-
-  private ApplicationIdProto convertToProtoFormat(ApplicationId t) {
-    return ((ApplicationIdPBImpl) t).getProto();
-  }
-
   private NodeAction convertFromProtoFormat(NodeActionProto p) {
     return NodeAction.valueOf(p.name());
   }
@@ -785,6 +739,21 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
   public void setAreNodeLabelsAcceptedByRM(boolean areNodeLabelsAcceptedByRM) {
     maybeInitBuilder();
     this.builder.setAreNodeLabelsAcceptedByRM(areNodeLabelsAcceptedByRM);
+  }
+
+  @Override
+  public boolean getAreNodeAttributesAcceptedByRM() {
+    NodeHeartbeatResponseProtoOrBuilder p =
+        this.viaProto ? this.proto : this.builder;
+    return p.getAreNodeAttributesAcceptedByRM();
+  }
+
+  @Override
+  public void setAreNodeAttributesAcceptedByRM(
+      boolean areNodeAttributesAcceptedByRM) {
+    maybeInitBuilder();
+    this.builder
+        .setAreNodeAttributesAcceptedByRM(areNodeAttributesAcceptedByRM);
   }
 
   @Override
@@ -873,6 +842,19 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
 
   private TokenPBImpl convertFromProtoFormat(TokenProto p) {
     return new TokenPBImpl(p);
+  }
+
+  @Override
+  public void setTokenSequenceNo(long tokenSequenceNo) {
+    maybeInitBuilder();
+    this.builder.setTokenSequenceNo(tokenSequenceNo);
+  }
+
+  @Override
+  public long getTokenSequenceNo() {
+    NodeHeartbeatResponseProtoOrBuilder p =
+        this.viaProto ? this.proto : this.builder;
+    return p.getTokenSequenceNo();
   }
 }
 

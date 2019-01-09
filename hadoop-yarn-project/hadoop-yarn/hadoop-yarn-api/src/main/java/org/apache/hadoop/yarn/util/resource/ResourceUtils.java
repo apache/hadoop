@@ -60,6 +60,7 @@ public class ResourceUtils {
   public static final String TAGS = ".tags";
   public static final String MINIMUM_ALLOCATION = ".minimum-allocation";
   public static final String MAXIMUM_ALLOCATION = ".maximum-allocation";
+  public static final String EXTERNAL_VOLUME_RESOURCE_TAG = "system:csi-volume";
 
   private static final String MEMORY = ResourceInformation.MEMORY_MB.getName();
   private static final String VCORES = ResourceInformation.VCORES.getName();
@@ -74,10 +75,12 @@ public class ResourceUtils {
   private static final Map<String, Integer> RESOURCE_NAME_TO_INDEX =
       new ConcurrentHashMap<String, Integer>();
   private static volatile Map<String, ResourceInformation> resourceTypes;
+  private static volatile Map<String, ResourceInformation> nonCountableResourceTypes;
   private static volatile ResourceInformation[] resourceTypesArray;
   private static volatile boolean initializedNodeResources = false;
   private static volatile Map<String, ResourceInformation> readOnlyNodeResources;
   private static volatile int numKnownResourceTypes = -1;
+  private static volatile int numNonCountableResourceTypes = -1;
 
   static final Logger LOG = LoggerFactory.getLogger(ResourceUtils.class);
 
@@ -290,15 +293,18 @@ public class ResourceUtils {
   public static void initializeResourcesFromResourceInformationMap(
       Map<String, ResourceInformation> resourceInformationMap) {
     resourceTypes = Collections.unmodifiableMap(resourceInformationMap);
+    nonCountableResourceTypes = new HashMap<>();
     updateKnownResources();
     updateResourceTypeIndex();
     initializedResources = true;
     numKnownResourceTypes = resourceTypes.size();
+    numNonCountableResourceTypes = nonCountableResourceTypes.size();
   }
 
   private static void updateKnownResources() {
     // Update resource names.
     resourceTypesArray = new ResourceInformation[resourceTypes.size()];
+    List<ResourceInformation> nonCountableResources = new ArrayList<>();
 
     int index = 2;
     for (ResourceInformation resInfo : resourceTypes.values()) {
@@ -309,9 +315,21 @@ public class ResourceUtils {
         resourceTypesArray[1] = ResourceInformation
             .newInstance(resourceTypes.get(VCORES));
       } else {
+        if (resInfo.getTags() != null && resInfo.getTags()
+            .contains(EXTERNAL_VOLUME_RESOURCE_TAG)) {
+          nonCountableResources.add(resInfo);
+          continue;
+        }
         resourceTypesArray[index] = ResourceInformation.newInstance(resInfo);
         index++;
       }
+    }
+
+    // Add all non-countable resource types to the end of the resource array.
+    for(ResourceInformation resInfo: nonCountableResources) {
+      resourceTypesArray[index] = ResourceInformation.newInstance(resInfo);
+      nonCountableResourceTypes.put(resInfo.getName(), resInfo);
+      index++;
     }
   }
 
@@ -355,6 +373,13 @@ public class ResourceUtils {
     return numKnownResourceTypes;
   }
 
+  public static int getNumberOfCountableResourceTypes() {
+    if (numKnownResourceTypes < 0) {
+      initializeResourceTypesIfNeeded();
+    }
+    return numKnownResourceTypes - numNonCountableResourceTypes;
+  }
+
   private static Map<String, ResourceInformation> getResourceTypes(
       Configuration conf) {
     return getResourceTypes(conf,
@@ -383,6 +408,7 @@ public class ResourceUtils {
       }
     }
     numKnownResourceTypes = resourceTypes.size();
+    numNonCountableResourceTypes = nonCountableResourceTypes.size();
   }
 
   private static Map<String, ResourceInformation> getResourceTypes(

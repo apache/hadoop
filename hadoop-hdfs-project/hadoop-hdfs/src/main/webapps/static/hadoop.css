@@ -240,6 +240,16 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
     content: "\e090";
 }
 
+.dfshealth-node-in-maintenance:before {
+    color: #eea236;
+    content: "\e136";
+}
+
+.dfshealth-node-entering-maintenance:before {
+    color: #eea236;
+    content: "\e136";
+}
+
 .dfshealth-node-down:before {
     color: #c7254e;
     content: "\e101";
@@ -251,7 +261,7 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
 }
 
 .dfshealth-node-down-maintenance:before {
-    color: #eea236;
+    color: #c7254e;
     content: "\e136";
 }
 

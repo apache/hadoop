@@ -28,9 +28,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,7 +37,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptFailEvent;
+import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -91,7 +91,6 @@ import org.apache.hadoop.mapreduce.v2.app.rm.ContainerRequestEvent;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -102,7 +101,6 @@ import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.SystemClock;
@@ -125,30 +123,6 @@ public class TestTaskAttempt{
     @Override
     public FileStatus getFileStatus(Path f) throws IOException {
       return new FileStatus(1, false, 1, 1, 1, f);
-    }
-  }
-
-  private static class CustomResourceTypesConfigurationProvider
-      extends LocalConfigurationProvider {
-
-    @Override
-    public InputStream getConfigurationInputStream(Configuration bootstrapConf,
-        String name) throws YarnException, IOException {
-      if (YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE.equals(name)) {
-        return new ByteArrayInputStream(
-            ("<configuration>\n" +
-            " <property>\n" +
-            "   <name>yarn.resource-types</name>\n" +
-            "   <value>a-custom-resource</value>\n" +
-            " </property>\n" +
-            " <property>\n" +
-            "   <name>yarn.resource-types.a-custom-resource.units</name>\n" +
-            "   <value>G</value>\n" +
-            " </property>\n" +
-            "</configuration>\n").getBytes());
-      } else {
-        return super.getConfigurationInputStream(bootstrapConf, name);
-      }
     }
   }
 
@@ -1349,6 +1323,42 @@ public class TestTaskAttempt{
   }
 
   @Test
+  public void testKillMapOnlyTaskWhileSuccessFinishing() throws Exception {
+    MockEventHandler eventHandler = new MockEventHandler();
+    TaskAttemptImpl taImpl = createMapOnlyTaskAttemptImpl(eventHandler);
+
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_DONE));
+
+    assertEquals("Task attempt is not in SUCCEEDED state",
+        TaskAttemptState.SUCCEEDED, taImpl.getState());
+    assertEquals("Task attempt's internal state is not " +
+            "SUCCESS_FINISHING_CONTAINER",
+        TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
+        taImpl.getInternalState());
+
+    // If the map only task is killed when it is in SUCCESS_FINISHING_CONTAINER
+    // state, the state will move to SUCCESS_CONTAINER_CLEANUP
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_KILL));
+    assertEquals("Task attempt is not in SUCCEEDED state",
+        TaskAttemptState.SUCCEEDED, taImpl.getState());
+    assertEquals("Task attempt's internal state is not " +
+            "SUCCESS_CONTAINER_CLEANUP",
+        TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
+        taImpl.getInternalState());
+
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_CONTAINER_CLEANED));
+    assertEquals("Task attempt is not in SUCCEEDED state",
+        TaskAttemptState.SUCCEEDED, taImpl.getState());
+    assertEquals("Task attempt's internal state is not SUCCEEDED state",
+        TaskAttemptStateInternal.SUCCEEDED, taImpl.getInternalState());
+
+    assertFalse("InternalError occurred", eventHandler.internalError);
+  }
+
+  @Test
   public void testKillMapTaskAfterSuccess() throws Exception {
     MockEventHandler eventHandler = new MockEventHandler();
     TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
@@ -1366,7 +1376,7 @@ public class TestTaskAttempt{
         TaskAttemptEventType.TA_CONTAINER_CLEANED));
     // Send a map task attempt kill event indicating next map attempt has to be
     // reschedule
-    taImpl.handle(new TaskAttemptKillEvent(taImpl.getID(),"", true));
+    taImpl.handle(new TaskAttemptKillEvent(taImpl.getID(), "", true));
     assertEquals("Task attempt is not in KILLED state", taImpl.getState(),
         TaskAttemptState.KILLED);
     assertEquals("Task attempt's internal state is not KILLED",
@@ -1377,6 +1387,34 @@ public class TestTaskAttempt{
     // Send an attempt killed event to TaskImpl forwarding the same reschedule
     // flag we received in task attempt kill event.
     assertTrue(((TaskTAttemptKilledEvent)event).getRescheduleAttempt());
+  }
+
+  @Test
+  public void testKillMapOnlyTaskAfterSuccess() throws Exception {
+    MockEventHandler eventHandler = new MockEventHandler();
+    TaskAttemptImpl taImpl = createMapOnlyTaskAttemptImpl(eventHandler);
+
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_DONE));
+
+    assertEquals("Task attempt is not in SUCCEEDED state",
+        TaskAttemptState.SUCCEEDED, taImpl.getState());
+    assertEquals("Task attempt's internal state is not " +
+            "SUCCESS_FINISHING_CONTAINER",
+        TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
+        taImpl.getInternalState());
+
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_CONTAINER_CLEANED));
+    // Succeeded
+    taImpl.handle(new TaskAttemptKillEvent(taImpl.getID(),"", true));
+    assertEquals("Task attempt is not in SUCCEEDED state",
+        TaskAttemptState.SUCCEEDED, taImpl.getState());
+    assertEquals("Task attempt's internal state is not SUCCEEDED",
+        TaskAttemptStateInternal.SUCCEEDED, taImpl.getInternalState());
+    assertFalse("InternalError occurred", eventHandler.internalError);
+    TaskEvent event = eventHandler.lastTaskEvent;
+    assertEquals(TaskEventType.T_ATTEMPT_SUCCEEDED, event.getType());
   }
 
   @Test
@@ -1776,10 +1814,10 @@ public class TestTaskAttempt{
   }
 
   private void initResourceTypes() {
-    Configuration conf = new Configuration();
-    conf.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
-        CustomResourceTypesConfigurationProvider.class.getName());
-    ResourceUtils.resetResourceTypes(conf);
+    CustomResourceTypesConfigurationProvider.initResourceTypes(
+        ImmutableMap.<String, String>builder()
+            .put(CUSTOM_RESOURCE_NAME, "G")
+            .build());
   }
 
   private void setupTaskAttemptFinishingMonitor(
@@ -1791,8 +1829,8 @@ public class TestTaskAttempt{
         thenReturn(taskAttemptFinishingMonitor);
   }
 
-  private TaskAttemptImpl createTaskAttemptImpl(
-      MockEventHandler eventHandler) {
+  private TaskAttemptImpl createCommonTaskAttemptImpl(
+      MockEventHandler eventHandler, JobConf jobConf) {
     ApplicationId appId = ApplicationId.newInstance(1, 2);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 0);
@@ -1804,7 +1842,6 @@ public class TestTaskAttempt{
     TaskAttemptListener taListener = mock(TaskAttemptListener.class);
     when(taListener.getAddress()).thenReturn(new InetSocketAddress("localhost", 0));
 
-    JobConf jobConf = new JobConf();
     jobConf.setClass("fs.file.impl", StubbedFS.class, FileSystem.class);
     jobConf.setBoolean("fs.file.impl.disable.cache", true);
     jobConf.set(JobConf.MAPRED_MAP_TASK_ENV, "");
@@ -1837,6 +1874,19 @@ public class TestTaskAttempt{
         container, mock(Map.class)));
     taImpl.handle(new TaskAttemptContainerLaunchedEvent(attemptId, 0));
     return taImpl;
+  }
+
+  private TaskAttemptImpl createTaskAttemptImpl(
+      MockEventHandler eventHandler) {
+    JobConf jobConf = new JobConf();
+    return createCommonTaskAttemptImpl(eventHandler, jobConf);
+  }
+
+  private TaskAttemptImpl createMapOnlyTaskAttemptImpl(
+      MockEventHandler eventHandler) {
+    JobConf jobConf = new JobConf();
+    jobConf.setInt(MRJobConfig.NUM_REDUCES, 0);
+    return createCommonTaskAttemptImpl(eventHandler, jobConf);
   }
 
   public static class MockEventHandler implements EventHandler {

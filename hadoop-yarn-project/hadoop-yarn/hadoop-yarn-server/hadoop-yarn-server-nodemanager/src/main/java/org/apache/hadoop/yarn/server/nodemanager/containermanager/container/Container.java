@@ -75,11 +75,17 @@ public interface Container extends EventHandler<ContainerEvent> {
 
   void setWorkDir(String workDir);
 
+  String getCsiVolumesRootDir();
+
+  void setCsiVolumesRootDir(String volumesRootDir);
+
   String getLogDir();
 
   void setLogDir(String logDir);
 
   void setIpAndHost(String[] ipAndHost);
+
+  void setExposedPorts(String ports);
 
   String toString();
 

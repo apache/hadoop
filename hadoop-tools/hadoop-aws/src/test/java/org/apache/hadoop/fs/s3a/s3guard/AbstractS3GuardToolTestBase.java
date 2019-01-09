@@ -317,6 +317,24 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   }
 
   @Test
+  public void testBucketInfoUnguarded() throws Exception {
+    final Configuration conf = getConfiguration();
+    conf.set(S3GUARD_DDB_TABLE_CREATE_KEY, Boolean.FALSE.toString());
+    conf.set(S3GUARD_DDB_TABLE_NAME_KEY,
+        "testBucketInfoUnguarded-" + UUID.randomUUID());
+
+    // run a bucket info command and look for
+    // confirmation that it got the output from DDB diags
+    S3GuardTool.BucketInfo infocmd = new S3GuardTool.BucketInfo(conf);
+    String info = exec(infocmd, S3GuardTool.BucketInfo.NAME,
+        "-" + S3GuardTool.BucketInfo.UNGUARDED_FLAG,
+        getFileSystem().getUri().toString());
+
+    assertTrue("Output should contain information about S3A client " + info,
+        info.contains("S3A Client"));
+  }
+
+  @Test
   public void testSetCapacityFailFastIfNotGuarded() throws Exception{
     Configuration conf = getConfiguration();
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, UUID.randomUUID().toString());
@@ -361,6 +379,19 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
         throw e;
       }
     }
+  }
+
+  @Test
+  public void testDestroyFailsIfNoBucketNameOrDDBTableSet()
+      throws Exception {
+    intercept(ExitUtil.ExitException.class,
+        () -> run(S3GuardTool.Destroy.NAME));
+  }
+
+  @Test
+  public void testInitFailsIfNoBucketNameOrDDBTableSet() throws Exception {
+    intercept(ExitUtil.ExitException.class,
+        () -> run(S3GuardTool.Init.NAME));
   }
 
   /**

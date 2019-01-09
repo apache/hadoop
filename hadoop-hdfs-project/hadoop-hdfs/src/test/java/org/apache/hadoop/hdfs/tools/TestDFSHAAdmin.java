@@ -216,11 +216,16 @@ public class TestDFSHAAdmin {
     assertTrue(errOutput.contains("Refusing to manually manage"));
     assertEquals(-1, runTool("-transitionToStandby", "nn1"));
     assertTrue(errOutput.contains("Refusing to manually manage"));
+    assertEquals(-1, runTool("-transitionToObserver", "nn1"));
+    assertTrue(errOutput.contains("Refusing to manually manage"));
 
     Mockito.verify(mockProtocol, Mockito.never())
       .transitionToActive(anyReqInfo());
     Mockito.verify(mockProtocol, Mockito.never())
-      .transitionToStandby(anyReqInfo());
+        .transitionToStandby(anyReqInfo());
+    Mockito.verify(mockProtocol, Mockito.never())
+        .transitionToObserver(anyReqInfo());
+
 
     // Force flag should bypass the check and change the request source
     // for the RPC
@@ -228,12 +233,16 @@ public class TestDFSHAAdmin {
     assertEquals(0, runTool("-transitionToActive", "-forcemanual", "nn1"));
     setupConfirmationOnSystemIn();
     assertEquals(0, runTool("-transitionToStandby", "-forcemanual", "nn1"));
+    setupConfirmationOnSystemIn();
+    assertEquals(0, runTool("-transitionToObserver", "-forcemanual", "nn1"));
 
     Mockito.verify(mockProtocol, Mockito.times(1)).transitionToActive(
         reqInfoCaptor.capture());
     Mockito.verify(mockProtocol, Mockito.times(1)).transitionToStandby(
         reqInfoCaptor.capture());
-    
+    Mockito.verify(mockProtocol, Mockito.times(1)).transitionToObserver(
+        reqInfoCaptor.capture());
+
     // All of the RPCs should have had the "force" source
     for (StateChangeRequestInfo ri : reqInfoCaptor.getAllValues()) {
       assertEquals(RequestSource.REQUEST_BY_USER_FORCED, ri.getSource());
@@ -273,6 +282,12 @@ public class TestDFSHAAdmin {
   public void testTransitionToStandby() throws Exception {
     assertEquals(0, runTool("-transitionToStandby", "nn1"));
     Mockito.verify(mockProtocol).transitionToStandby(anyReqInfo());
+  }
+
+  @Test
+  public void testTransitionToObserver() throws Exception {
+    assertEquals(0, runTool("-transitionToObserver", "nn1"));
+    Mockito.verify(mockProtocol).transitionToObserver(anyReqInfo());
   }
 
   @Test

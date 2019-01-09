@@ -94,8 +94,8 @@ public class TestHandler {
     Assert.assertEquals("New ContainerType detected. Not an invalid " +
         "containerType", invalidContainerType, null);
 
-    Handler handler = dispatcher.getHandler(invalidContainerType);
+    Handler dispatcherHandler = dispatcher.getHandler(invalidContainerType);
     Assert.assertEquals("Get Handler for Invalid ContainerType should " +
-        "return null.", handler, null);
+        "return null.", dispatcherHandler, null);
   }
 }

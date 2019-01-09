@@ -60,6 +60,7 @@ public class TestVolumeRatis {
   }
 
   @Parameterized.Parameter
+  @SuppressWarnings("visibilitymodifier")
   public Class clientProtocol;
 
   @BeforeClass

@@ -28,7 +28,7 @@ import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
-import org.apache.ratis.util.CheckedBiConsumer;
+import org.apache.ratis.util.function.CheckedBiConsumer;
 import org.apache.ratis.util.CollectionUtils;
 import org.junit.Ignore;
 import org.junit.Rule;

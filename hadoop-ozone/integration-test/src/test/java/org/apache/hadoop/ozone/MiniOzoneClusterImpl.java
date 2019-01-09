@@ -254,22 +254,23 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
     datanodeService.stop();
     datanodeService.join();
     // ensure same ports are used across restarts.
-    Configuration conf = datanodeService.getConf();
+    Configuration config = datanodeService.getConf();
     int currentPort = datanodeService.getDatanodeDetails()
         .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue();
-    conf.setInt(DFS_CONTAINER_IPC_PORT, currentPort);
-    conf.setBoolean(DFS_CONTAINER_IPC_RANDOM_PORT, false);
+    config.setInt(DFS_CONTAINER_IPC_PORT, currentPort);
+    config.setBoolean(DFS_CONTAINER_IPC_RANDOM_PORT, false);
     int ratisPort = datanodeService.getDatanodeDetails()
         .getPort(DatanodeDetails.Port.Name.RATIS).getValue();
-    conf.setInt(DFS_CONTAINER_RATIS_IPC_PORT, ratisPort);
-    conf.setBoolean(DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, false);
+    config.setInt(DFS_CONTAINER_RATIS_IPC_PORT, ratisPort);
+    config.setBoolean(DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, false);
     hddsDatanodes.remove(i);
     if (waitForDatanode) {
       // wait for node to be removed from SCM healthy node list.
       waitForClusterToBeReady();
     }
+    String[] args = new String[]{};
     HddsDatanodeService service =
-        HddsDatanodeService.createHddsDatanodeService(conf);
+        HddsDatanodeService.createHddsDatanodeService(args, config);
     hddsDatanodes.add(i, service);
     service.start(null);
     if (waitForDatanode) {
@@ -478,6 +479,7 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
       configureHddsDatanodes();
       String scmAddress =  scm.getDatanodeRpcAddress().getHostString() +
           ":" + scm.getDatanodeRpcAddress().getPort();
+      String[] args = new String[] {};
       conf.setStrings(ScmConfigKeys.OZONE_SCM_NAMES, scmAddress);
       List<HddsDatanodeService> hddsDatanodes = new ArrayList<>();
       for (int i = 0; i < numOfDatanodes; i++) {
@@ -495,7 +497,7 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
             ratisDir.toString());
 
         hddsDatanodes.add(
-            HddsDatanodeService.createHddsDatanodeService(dnConf));
+            HddsDatanodeService.createHddsDatanodeService(args, dnConf));
       }
       return hddsDatanodes;
     }

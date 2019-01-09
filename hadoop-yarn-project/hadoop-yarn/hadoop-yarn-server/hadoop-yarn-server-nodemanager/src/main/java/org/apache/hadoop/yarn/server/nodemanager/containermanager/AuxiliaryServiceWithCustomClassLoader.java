@@ -30,7 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.ApplicationClassLoader;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
 import org.apache.hadoop.yarn.server.api.AuxiliaryService;
@@ -159,11 +158,8 @@ final class AuxiliaryServiceWithCustomClassLoader extends AuxiliaryService {
   }
 
   public static AuxiliaryServiceWithCustomClassLoader getInstance(
-      Configuration conf, String className, String appClassPath)
-      throws IOException, ClassNotFoundException {
-    String[] systemClasses = conf.getTrimmedStrings(String.format(
-        YarnConfiguration.NM_AUX_SERVICES_SYSTEM_CLASSES,
-        className));
+      Configuration conf, String className, String appClassPath, String[]
+      systemClasses) throws IOException, ClassNotFoundException {
     ClassLoader customClassLoader = createAuxServiceClassLoader(
         appClassPath, systemClasses);
     Class<?> clazz = Class.forName(className, true,

@@ -505,7 +505,7 @@ Options
 | argument | meaning |
 |-----------|-------------|
 | `-guarded` | Require S3Guard to be enabled |
-| `-unguarded` | Require S3Guard to be disabled |
+| `-unguarded` | Force S3Guard to be disabled |
 | `-auth` | Require the S3Guard mode to be "authoritative" |
 | `-nonauth` | Require the S3Guard mode to be "non-authoritative" |
 | `-magic` | Require the S3 filesystem to be support the "magic" committer |

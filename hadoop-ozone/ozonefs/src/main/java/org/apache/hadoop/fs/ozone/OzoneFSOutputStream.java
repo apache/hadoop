@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.ozone;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import org.apache.hadoop.ozone.client.io.ChunkGroupOutputStream;
+import org.apache.hadoop.ozone.client.io.KeyOutputStream;
 
 
 /**
@@ -31,10 +31,10 @@ import org.apache.hadoop.ozone.client.io.ChunkGroupOutputStream;
  */
 public class OzoneFSOutputStream extends OutputStream {
 
-  private final ChunkGroupOutputStream outputStream;
+  private final KeyOutputStream outputStream;
 
   public OzoneFSOutputStream(OutputStream outputStream) {
-    this.outputStream = (ChunkGroupOutputStream)outputStream;
+    this.outputStream = (KeyOutputStream)outputStream;
   }
 
   @Override

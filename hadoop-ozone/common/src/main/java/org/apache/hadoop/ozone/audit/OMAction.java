@@ -47,7 +47,9 @@ public enum OMAction implements AuditAction {
   READ_BUCKET,
   READ_KEY,
   LIST_S3BUCKETS,
-  INITIATE_MULTIPART_UPLOAD;
+  INITIATE_MULTIPART_UPLOAD,
+  COMMIT_MULTIPART_UPLOAD_PARTKEY,
+  COMPLETE_MULTIPART_UPLOAD;
 
   @Override
   public String getAction() {

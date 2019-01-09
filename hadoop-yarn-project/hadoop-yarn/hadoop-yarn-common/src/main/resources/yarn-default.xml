@@ -1922,6 +1922,21 @@
   </property>
 
   <property>
+    <description>A file containing auxiliary service specifications. If
+      manifest file is specified, yarn.nodemanager.aux-services and other
+      aux services configuration properties will be ignored.</description>
+    <name>yarn.nodemanager.aux-services.manifest</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>Length of time in ms to wait between reloading aux services
+      manifest. If 0 or less, manifest will not be reloaded.</description>
+    <name>yarn.nodemanager.aux-services.manifest.reload-ms</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>No. of ms to wait between sending a SIGTERM and SIGKILL to a container</description>
     <name>yarn.nodemanager.sleep-delay-before-sigkill.ms</name>
     <value>250</value>
@@ -2140,6 +2155,15 @@
      given then the proxy will run as part of the RM</description>
      <name>yarn.web-proxy.address</name>
      <value/>
+  </property>
+
+  <property>
+    <description>The actual address the web proxy will bind to. If this optional
+     address is set, it overrides only the hostname portion of yarn.web-proxy.address.
+     This is useful for making the web proxy server listen on all interfaces by setting
+     it to 0.0.0.0 </description>
+    <name>yarn.web-proxy.bind-host</name>
+    <value/>
   </property>
 
   <!-- Applications' Configuration -->
@@ -2979,6 +3003,15 @@
     </description>
     <name>yarn.nodemanager.node-attributes.provider.configured-node-attributes</name>
     <value></value>
+  </property>
+
+  <property>
+    <description>
+      Interval at which NM syncs its node attributes with RM. NM will send its loaded
+      attributes every x intervals configured, along with heartbeat to RM.
+    </description>
+    <name>yarn.nodemanager.node-attributes.resync-interval-ms</name>
+    <value>120000</value>
   </property>
 
   <property>
@@ -4048,6 +4081,21 @@
       runs the controller plugin.
     </description>
     <name>yarn.nodemanager.csi-driver-adaptor.addresses</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      CSI driver names running on this node, multiple driver names need to
+      be delimited by comma. The driver name should be same value returned
+      by the getPluginInfo call. For each of the CSI driver name, it must
+      to define following two corresponding properties:
+        "yarn.nodemanager.csi-driver.${NAME}.endpoint"
+        "yarn.nodemanager.csi-driver-adaptor.${NAME}.address"
+      The 1st property defines where the driver's endpoint is;
+      2nd property defines where the mapping csi-driver-adaptor's address is.
+    </description>
+    <name>yarn.nodemanager.csi-driver.names</name>
     <value></value>
   </property>
 </configuration>

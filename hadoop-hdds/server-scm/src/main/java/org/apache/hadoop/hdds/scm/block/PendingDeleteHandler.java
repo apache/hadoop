@@ -20,6 +20,9 @@ package org.apache.hadoop.hdds.scm.block;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
+/**
+ * Event handler for PedingDeleteStatuList events.
+ */
 public class PendingDeleteHandler implements
     EventHandler<PendingDeleteStatusList> {
 

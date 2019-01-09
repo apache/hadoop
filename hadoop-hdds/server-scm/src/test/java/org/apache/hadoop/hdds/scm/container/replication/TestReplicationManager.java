@@ -21,13 +21,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.IntStream;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -35,21 +32,24 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
+import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
 import org.apache.hadoop.hdds.scm.container.ContainerReplica;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
-import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.replication
     .ReplicationManager.ReplicationRequestToRepeat;
+import org.apache.hadoop.hdds.scm.container.replication
+    .ReplicationManager.DeletionRequestToRepeat;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.ozone.lease.LeaseManager;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 
-import com.google.common.base.Preconditions;
-import static org.apache.hadoop.hdds.scm.events.SCMEvents.TRACK_REPLICATE_COMMAND;
+import static org.apache.hadoop.hdds.scm.events.SCMEvents
+    .TRACK_DELETE_CONTAINER_COMMAND;
+import static org.apache.hadoop.hdds.scm.events.SCMEvents
+    .TRACK_REPLICATE_COMMAND;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -65,6 +65,7 @@ public class TestReplicationManager {
   private EventQueue queue;
 
   private List<ReplicationRequestToRepeat> trackReplicationEvents;
+  private List<DeletionRequestToRepeat> trackDeleteEvents;
 
   private List<CommandForDatanode<ReplicateContainerCommandProto>> copyEvents;
 
@@ -87,6 +88,8 @@ public class TestReplicationManager {
       listOfContainerReplica.add(ContainerReplica.newBuilder()
           .setContainerID(ContainerID.valueof(i))
           .setContainerState(ContainerReplicaProto.State.CLOSED)
+          .setSequenceId(10000L)
+          .setOriginNodeId(dd.getUuid())
           .setDatanodeDetails(dd).build());
     });
 
@@ -119,6 +122,10 @@ public class TestReplicationManager {
     queue.addHandler(TRACK_REPLICATE_COMMAND,
         (event, publisher) -> trackReplicationEvents.add(event));
 
+    trackDeleteEvents = new ArrayList<>();
+    queue.addHandler(TRACK_DELETE_CONTAINER_COMMAND,
+        (event, publisher) -> trackDeleteEvents.add(event));
+
     copyEvents = new ArrayList<>();
     queue.addHandler(SCMEvents.DATANODE_COMMAND,
         (event, publisher) -> copyEvents.add(event));
@@ -127,8 +134,6 @@ public class TestReplicationManager {
 
     replicationManager = new ReplicationManager(containerPlacementPolicy,
         containerManager, queue, leaseManager);
-
-
 
   }
 
@@ -152,6 +157,57 @@ public class TestReplicationManager {
       //THEN
       Assert.assertEquals(0, trackReplicationEvents.size());
       Assert.assertEquals(0, copyEvents.size());
+
+    } finally {
+      if (leaseManager != null) {
+        leaseManager.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testOverReplication() throws ContainerNotFoundException,
+      InterruptedException {
+    try {
+      leaseManager.start();
+      replicationManager.start();
+
+      final ContainerID containerID = ContainerID.valueof(5L);
+
+      final ContainerReplica duplicateReplicaOne = ContainerReplica.newBuilder()
+          .setContainerID(containerID)
+          .setContainerState(ContainerReplicaProto.State.CLOSED)
+          .setSequenceId(10000L)
+          .setOriginNodeId(listOfDatanodeDetails.get(0).getUuid())
+          .setDatanodeDetails(listOfDatanodeDetails.get(3))
+          .build();
+
+      final ContainerReplica duplicateReplicaTwo = ContainerReplica.newBuilder()
+          .setContainerID(containerID)
+          .setContainerState(ContainerReplicaProto.State.CLOSED)
+          .setSequenceId(10000L)
+          .setOriginNodeId(listOfDatanodeDetails.get(1).getUuid())
+          .setDatanodeDetails(listOfDatanodeDetails.get(4))
+          .build();
+
+      when(containerManager.getContainerReplicas(new ContainerID(5L)))
+          .thenReturn(new HashSet<>(Arrays.asList(
+              listOfContainerReplica.get(0),
+              listOfContainerReplica.get(1),
+              listOfContainerReplica.get(2),
+              duplicateReplicaOne,
+              duplicateReplicaTwo
+          )));
+
+      queue.fireEvent(SCMEvents.REPLICATE_CONTAINER,
+          new ReplicationRequest(5L, (short) 5, System.currentTimeMillis(),
+              (short) 3));
+      Thread.sleep(500L);
+      queue.processAll(1000L);
+
+      //THEN
+      Assert.assertEquals(2, trackDeleteEvents.size());
+      Assert.assertEquals(2, copyEvents.size());
 
     } finally {
       if (leaseManager != null) {
@@ -196,6 +252,7 @@ public class TestReplicationManager {
         containerManager, queue, rapidLeaseManager);
 
     try {
+      leaseManager.start();
       rapidLeaseManager.start();
       replicationManager.start();
 
@@ -223,25 +280,11 @@ public class TestReplicationManager {
       Assert.assertEquals(2, copyEvents.size());
 
     } finally {
-      if (rapidLeaseManager != null) {
-        rapidLeaseManager.shutdown();
+      rapidLeaseManager.shutdown();
+      if (leaseManager != null) {
+        leaseManager.shutdown();
       }
     }
-  }
-
-  public static Pipeline createPipeline(Iterable<DatanodeDetails> ids)
-      throws IOException {
-    Objects.requireNonNull(ids, "ids == null");
-    Preconditions.checkArgument(ids.iterator().hasNext());
-    List<DatanodeDetails> dns = new ArrayList<>();
-    ids.forEach(dns::add);
-    return Pipeline.newBuilder()
-        .setState(Pipeline.PipelineState.OPEN)
-        .setId(PipelineID.randomId())
-        .setType(HddsProtos.ReplicationType.STAND_ALONE)
-        .setFactor(ReplicationFactor.ONE)
-        .setNodes(dns)
-        .build();
   }
 
 }

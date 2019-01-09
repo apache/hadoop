@@ -1,0 +1,105 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+node("ubuntu") {
+    docker.image('elek/ozone-build').pull()
+    docker.image('elek/ozone-build').inside {
+
+        stage('Checkout') {
+            checkout scm
+        }
+
+        stage('Clean') {
+            status = sh returnStatus: true, script: 'mvn clean'
+        }
+
+        stageRunner('Author', "author", {})
+
+        stageRunner('Isolation', "isolation", {})
+
+
+        stageRunner('Build', "build", {})
+
+        stageRunner('Licence', "rat", {
+            archiveArtifacts 'target/rat-aggregated.txt'
+        }, 'artifact/target/rat-aggregated.txt/*view*/')
+
+        stageRunner('Unit test', "unit", {
+            junit '**/target/surefire-reports/*.xml'
+        }, 'testReport/')
+
+        stageRunner('Findbugs', "findbugs", {
+            archiveArtifacts 'target/findbugs-all.txt'
+
+        }, 'artifact/target/findbugs-all.txt/*view*/')
+
+        stageRunner('Checkstyle', "checkstyle", {
+            checkstyle canComputeNew: false, canRunOnFailed: true, defaultEncoding: '', healthy: '', pattern: '**/checkstyle-result.xml', unHealthy: ''
+        }, 'checkstyleResult')
+
+    }
+
+}
+
+def stageRunner(name, type, processResult, url = '') {
+    try {
+        stage(name) {
+            prStatusStart(type)
+            status = sh returnStatus: true, script: 'hadoop-ozone/dev-support/checks/' + type + '.sh'
+            processResult()
+            prStatusResult(status, type, url)
+        }
+        return true
+    } catch (RuntimeException ex) {
+        currentBuild.result = "FAILED"
+        return false
+    }
+}
+
+def prStatusStart(name) {
+    if (env.CHANGE_ID) {
+        pullRequest.createStatus(status: "pending",
+                context: 'continuous-integration/jenkins/pr-merge/' + name,
+                description: name + " is started")
+    }
+}
+
+def prStatusResult(responseCode, name, url = '') {
+    status = "error"
+    desc = "failed"
+    if (responseCode == 0) {
+        status = "success"
+        desc = "passed"
+    }
+    message = name + " is " + desc
+    //System.out.println(responseCode)
+    if (env.CHANGE_ID) {
+        if (url) {
+            pullRequest.createStatus(status: status,
+                    context: 'continuous-integration/jenkins/pr-merge/' + name,
+                    description: message,
+                    targetUrl: env.BUILD_URL + url)
+        } else {
+            pullRequest.createStatus(status: status,
+                    context: 'continuous-integration/jenkins/pr-merge/' + name,
+                    description: message)
+        }
+    }
+    if (responseCode != 0) {
+        throw new RuntimeException(message)
+    }
+}

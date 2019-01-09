@@ -377,6 +377,18 @@ export default Ember.Component.extend({
         }
       }
     }, {
+      id: 'exposedPorts',
+      headerTitle: 'Exposed Ports',
+      contentPath: 'exposedPorts',
+      getCellContent: function(row) {
+        var ports = row.get('exposedPorts');
+        if (ports) {
+          return ports;
+        } else {
+          return 'N/A';
+        }
+      }
+    }, {
       id: 'nodeHttpAddress',
       headerTitle: 'NodeManager Web UI',
       contentPath: 'nodeHttpAddress',
@@ -481,6 +493,18 @@ export default Ember.Component.extend({
         var url = self.checkHttpProtocol(row.get('logUrl'));
         if (url) {
           return `<a href="${url}" target="_blank">${url}</a>`;
+        } else {
+          return 'N/A';
+        }
+      }
+    }, {
+      id: 'exposedPorts',
+      headerTitle: 'Exposed Ports',
+      contentPath: 'exposedPorts',
+      getCellContent: function(row) {
+        var ports = row.get('exposedPorts');
+        if (ports) {
+          return ports;
         } else {
           return 'N/A';
         }

@@ -49,6 +49,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.hadoop.metrics2.MetricStringBuilder;
+import org.apache.hadoop.metrics2.lib.MutableRatesWithAggregation;
 
 /**
  * RPC Engine for for protobuf based RPCs.
@@ -86,7 +88,7 @@ public class ProtobufRpcEngine implements RpcEngine {
       SocketFactory factory, int rpcTimeout, RetryPolicy connectionRetryPolicy
       ) throws IOException {
     return getProxy(protocol, clientVersion, addr, ticket, conf, factory,
-      rpcTimeout, connectionRetryPolicy, null);
+      rpcTimeout, connectionRetryPolicy, null, null);
   }
 
   @Override
@@ -94,10 +96,12 @@ public class ProtobufRpcEngine implements RpcEngine {
   public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
       InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
       SocketFactory factory, int rpcTimeout, RetryPolicy connectionRetryPolicy,
-      AtomicBoolean fallbackToSimpleAuth) throws IOException {
+      AtomicBoolean fallbackToSimpleAuth, AlignmentContext alignmentContext)
+      throws IOException {
 
     final Invoker invoker = new Invoker(protocol, addr, ticket, conf, factory,
-        rpcTimeout, connectionRetryPolicy, fallbackToSimpleAuth);
+        rpcTimeout, connectionRetryPolicy, fallbackToSimpleAuth,
+        alignmentContext);
     return new ProtocolProxy<T>(protocol, (T) Proxy.newProxyInstance(
         protocol.getClassLoader(), new Class[]{protocol}, invoker), false);
   }
@@ -122,15 +126,18 @@ public class ProtobufRpcEngine implements RpcEngine {
     private final long clientProtocolVersion;
     private final String protocolName;
     private AtomicBoolean fallbackToSimpleAuth;
+    private AlignmentContext alignmentContext;
 
     private Invoker(Class<?> protocol, InetSocketAddress addr,
         UserGroupInformation ticket, Configuration conf, SocketFactory factory,
         int rpcTimeout, RetryPolicy connectionRetryPolicy,
-        AtomicBoolean fallbackToSimpleAuth) throws IOException {
+        AtomicBoolean fallbackToSimpleAuth, AlignmentContext alignmentContext)
+        throws IOException {
       this(protocol, Client.ConnectionId.getConnectionId(
           addr, protocol, ticket, rpcTimeout, connectionRetryPolicy, conf),
           conf, factory);
       this.fallbackToSimpleAuth = fallbackToSimpleAuth;
+      this.alignmentContext = alignmentContext;
     }
     
     /**
@@ -190,7 +197,7 @@ public class ProtobufRpcEngine implements RpcEngine {
         throws ServiceException {
       long startTime = 0;
       if (LOG.isDebugEnabled()) {
-        startTime = Time.now();
+        startTime = System.currentTimeMillis();
       }
       
       if (args.length != 2) { // RpcController + Message
@@ -227,7 +234,7 @@ public class ProtobufRpcEngine implements RpcEngine {
       try {
         val = (RpcWritable.Buffer) client.call(RPC.RpcKind.RPC_PROTOCOL_BUFFER,
             new RpcProtobufRequest(rpcRequestHeader, theRequest), remoteId,
-            fallbackToSimpleAuth);
+            fallbackToSimpleAuth, alignmentContext);
 
       } catch (Throwable e) {
         if (LOG.isTraceEnabled()) {
@@ -245,8 +252,16 @@ public class ProtobufRpcEngine implements RpcEngine {
       }
 
       if (LOG.isDebugEnabled()) {
-        long callTime = Time.now() - startTime;
-        LOG.debug("Call: " + method.getName() + " took " + callTime + "ms");
+        long callTime = System.currentTimeMillis() - startTime;
+        if (callTime > 0) {
+          MetricStringBuilder rb =
+              new MetricStringBuilder(null, "", " = ", "\n");
+          client.updateMetrics(method.getName(), callTime);
+          MutableRatesWithAggregation rates =
+              client.getRpcDetailedMetrics().getMutableRates();
+          rates.snapshot(rb, true);
+          LOG.debug("RPC Client stats: {}", rb);
+        }
       }
       
       if (Client.isAsynchronousMode()) {
@@ -337,11 +352,11 @@ public class ProtobufRpcEngine implements RpcEngine {
       String bindAddress, int port, int numHandlers, int numReaders,
       int queueSizePerHandler, boolean verbose, Configuration conf,
       SecretManager<? extends TokenIdentifier> secretManager,
-      String portRangeConfig)
+      String portRangeConfig, AlignmentContext alignmentContext)
       throws IOException {
     return new Server(protocol, protocolImpl, conf, bindAddress, port,
         numHandlers, numReaders, queueSizePerHandler, verbose, secretManager,
-        portRangeConfig);
+        portRangeConfig, alignmentContext);
   }
   
   public static class Server extends RPC.Server {
@@ -410,18 +425,19 @@ public class ProtobufRpcEngine implements RpcEngine {
      * @param numHandlers the number of method handler threads to run
      * @param verbose whether each call should be logged
      * @param portRangeConfig A config parameter that can be used to restrict
-     * the range of ports used when port is 0 (an ephemeral port)
+     * @param alignmentContext provides server state info on client responses
      */
     public Server(Class<?> protocolClass, Object protocolImpl,
         Configuration conf, String bindAddress, int port, int numHandlers,
         int numReaders, int queueSizePerHandler, boolean verbose,
         SecretManager<? extends TokenIdentifier> secretManager, 
-        String portRangeConfig)
+        String portRangeConfig, AlignmentContext alignmentContext)
         throws IOException {
       super(bindAddress, port, null, numHandlers,
           numReaders, queueSizePerHandler, conf,
           serverNameFromClass(protocolImpl.getClass()), secretManager,
           portRangeConfig);
+      setAlignmentContext(alignmentContext);
       this.verbose = verbose;  
       registerProtocolAndImpl(RPC.RpcKind.RPC_PROTOCOL_BUFFER, protocolClass,
           protocolImpl);

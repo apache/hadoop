@@ -39,7 +39,7 @@ import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.ChunkGroupInputStream;
-import org.apache.hadoop.ozone.client.io.ChunkGroupOutputStream;
+import org.apache.hadoop.ozone.client.io.KeyOutputStream;
 import org.apache.hadoop.ozone.client.io.LengthInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
@@ -50,6 +50,8 @@ import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
@@ -70,6 +72,7 @@ import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolPB;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.logging.log4j.util.Strings;
+import org.apache.ratis.protocol.ClientId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,6 +107,7 @@ public class RpcClient implements ClientProtocol {
   private final long streamBufferMaxSize;
   private final long blockSize;
   private final long watchTimeout;
+  private ClientId clientId = ClientId.randomId();
 
    /**
     * Creates RpcClient instance with the given configuration.
@@ -129,7 +133,7 @@ public class RpcClient implements ClientProtocol {
             RPC.getProxy(OzoneManagerProtocolPB.class, omVersion,
                 omAddress, UserGroupInformation.getCurrentUser(), conf,
                 NetUtils.getDefaultSocketFactory(conf),
-                Client.getRpcTimeout(conf)));
+                Client.getRpcTimeout(conf)), clientId.toString());
 
     long scmVersion =
         RPC.getProtocolVersion(StorageContainerLocationProtocolPB.class);
@@ -501,8 +505,8 @@ public class RpcClient implements ClientProtocol {
         .build();
 
     OpenKeySession openKey = ozoneManagerClient.openKey(keyArgs);
-    ChunkGroupOutputStream groupOutputStream =
-        new ChunkGroupOutputStream.Builder()
+    KeyOutputStream groupOutputStream =
+        new KeyOutputStream.Builder()
             .setHandler(openKey)
             .setXceiverClientManager(xceiverClientManager)
             .setScmClient(storageContainerLocationClient)
@@ -699,6 +703,96 @@ public class RpcClient implements ClientProtocol {
     OmMultipartInfo multipartInfo = ozoneManagerClient
         .initiateMultipartUpload(keyArgs);
     return multipartInfo;
+  }
+
+  @Override
+  public OzoneOutputStream createMultipartKey(String volumeName,
+                                              String bucketName,
+                                              String keyName,
+                                              long size,
+                                              int partNumber,
+                                              String uploadID)
+      throws IOException {
+    HddsClientUtils.verifyResourceName(volumeName, bucketName);
+    HddsClientUtils.checkNotNull(keyName, uploadID);
+    Preconditions.checkArgument(partNumber > 0, "Part number should be " +
+        "greater than zero");
+    Preconditions.checkArgument(size >=0, "size should be greater than or " +
+        "equal to zero");
+    String requestId = UUID.randomUUID().toString();
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(keyName)
+        .setDataSize(size)
+        .setIsMultipartKey(true)
+        .setMultipartUploadID(uploadID)
+        .setMultipartUploadPartNumber(partNumber)
+        .build();
+
+    OpenKeySession openKey = ozoneManagerClient.openKey(keyArgs);
+    KeyOutputStream groupOutputStream =
+        new KeyOutputStream.Builder()
+            .setHandler(openKey)
+            .setXceiverClientManager(xceiverClientManager)
+            .setScmClient(storageContainerLocationClient)
+            .setOmClient(ozoneManagerClient)
+            .setChunkSize(chunkSize)
+            .setRequestID(requestId)
+            .setType(openKey.getKeyInfo().getType())
+            .setFactor(openKey.getKeyInfo().getFactor())
+            .setStreamBufferFlushSize(streamBufferFlushSize)
+            .setStreamBufferMaxSize(streamBufferMaxSize)
+            .setWatchTimeout(watchTimeout)
+            .setBlockSize(blockSize)
+            .setChecksum(checksum)
+            .setMultipartNumber(partNumber)
+            .setMultipartUploadID(uploadID)
+            .setIsMultipartKey(true)
+            .build();
+    groupOutputStream.addPreallocateBlocks(
+        openKey.getKeyInfo().getLatestVersionLocations(),
+        openKey.getOpenVersion());
+    return new OzoneOutputStream(groupOutputStream);
+  }
+
+  @Override
+  public OmMultipartUploadCompleteInfo completeMultipartUpload(
+      String volumeName, String bucketName, String keyName, String uploadID,
+      Map<Integer, String> partsMap) throws IOException {
+    HddsClientUtils.verifyResourceName(volumeName, bucketName);
+    HddsClientUtils.checkNotNull(keyName, uploadID);
+
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(keyName)
+        .setMultipartUploadID(uploadID)
+        .build();
+
+    OmMultipartUploadList omMultipartUploadList = new OmMultipartUploadList(
+        partsMap);
+
+    OmMultipartUploadCompleteInfo omMultipartUploadCompleteInfo =
+        ozoneManagerClient.completeMultipartUpload(keyArgs,
+            omMultipartUploadList);
+
+    return omMultipartUploadCompleteInfo;
+
+  }
+
+  @Override
+  public void abortMultipartUpload(String volumeName,
+       String bucketName, String keyName, String uploadID) throws IOException {
+    HddsClientUtils.verifyResourceName(volumeName, bucketName);
+    HddsClientUtils.checkNotNull(keyName, uploadID);
+    OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(keyName)
+        .setMultipartUploadID(uploadID)
+        .build();
+    ozoneManagerClient.abortMultipartUpload(omKeyArgs);
   }
 
 }

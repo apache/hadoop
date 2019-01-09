@@ -281,6 +281,7 @@ public class ShuffleHandler extends AuxiliaryService {
     }
   }
 
+  private final MetricsSystem ms;
   final ShuffleMetrics metrics;
 
   class ReduceMapFileCount implements ChannelFutureListener {
@@ -397,6 +398,7 @@ public class ShuffleHandler extends AuxiliaryService {
 
   ShuffleHandler(MetricsSystem ms) {
     super(MAPREDUCE_SHUFFLE_SERVICEID);
+    this.ms = ms;
     metrics = ms.register(new ShuffleMetrics());
   }
 
@@ -579,6 +581,7 @@ public class ShuffleHandler extends AuxiliaryService {
     if (stateDb != null) {
       stateDb.close();
     }
+    ms.unregisterSource(ShuffleMetrics.class.getSimpleName());
     super.serviceStop();
   }
 

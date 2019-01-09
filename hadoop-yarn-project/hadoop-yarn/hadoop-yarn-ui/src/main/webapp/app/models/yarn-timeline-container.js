@@ -32,6 +32,7 @@ export default DS.Model.extend({
   nodeHttpAddress: DS.attr('string'),
   nodeId: DS.attr('string'),
   diagnosticsInfo: DS.attr('string'),
+  exposedPorts: DS.attr('string'),
 
   startTs: function() {
     return Converter.dateToTimeStamp(this.get("startedTime"));

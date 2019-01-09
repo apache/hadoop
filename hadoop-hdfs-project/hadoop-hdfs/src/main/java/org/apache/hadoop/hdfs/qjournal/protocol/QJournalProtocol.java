@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestResponseProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournaledEditsResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
@@ -139,7 +140,28 @@ public interface QJournalProtocol {
                                                      long sinceTxId,
                                                      boolean inProgressOk)
       throws IOException;
-  
+
+  /**
+   * Fetch edit logs present in the Journal's in-memory cache of edits
+   * ({@link org.apache.hadoop.hdfs.qjournal.server.JournaledEditsCache}).
+   * To enable this cache, in-progress edit log tailing must be enabled via the
+   * {@value DFSConfigKeys#DFS_HA_TAILEDITS_INPROGRESS_KEY} configuration key.
+   *
+   * @param jid The ID of the journal from which to fetch edits.
+   * @param nameServiceId The ID of the namespace for which to fetch edits.
+   * @param sinceTxId Fetch edits starting at this transaction ID
+   * @param maxTxns Request at most this many transactions to be returned
+   * @throws IOException If there was an issue encountered while fetching edits
+   *     from the cache, including a cache miss (cache does not contain the
+   *     requested edits). The caller should then attempt to fetch the edits via
+   *     the streaming mechanism (starting with
+   *     {@link #getEditLogManifest(String, String, long, boolean)}).
+   * @return Response containing serialized edits to be loaded
+   * @see org.apache.hadoop.hdfs.qjournal.server.JournaledEditsCache
+   */
+  GetJournaledEditsResponseProto getJournaledEdits(String jid,
+      String nameServiceId, long sinceTxId, int maxTxns) throws IOException;
+
   /**
    * Begin the recovery process for a given segment. See the HDFS-3077
    * design document for details.

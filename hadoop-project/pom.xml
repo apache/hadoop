@@ -31,7 +31,7 @@
 
   <properties>
     <!-- Set the Release year during release -->
-    <release-year>2018</release-year>
+    <release-year>2019</release-year>
 
     <failIfNoTests>false</failIfNoTests>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
@@ -135,7 +135,7 @@
     <maven-compiler-plugin.version>3.1</maven-compiler-plugin.version>
     <maven-install-plugin.version>2.5.1</maven-install-plugin.version>
     <maven-resources-plugin.version>2.6</maven-resources-plugin.version>
-    <maven-shade-plugin.version>3.2.0</maven-shade-plugin.version>
+    <maven-shade-plugin.version>3.2.1</maven-shade-plugin.version>
     <maven-jar-plugin.version>2.5</maven-jar-plugin.version>
     <maven-war-plugin.version>3.1.0</maven-war-plugin.version>
     <maven-source-plugin.version>2.3</maven-source-plugin.version>
@@ -1279,7 +1279,7 @@
       <dependency>
         <groupId>com.aliyun.oss</groupId>
         <artifactId>aliyun-sdk-oss</artifactId>
-        <version>3.0.0</version>
+        <version>2.8.3</version>
         <exclusions>
           <exclusion>
             <groupId>org.apache.httpcomponents</groupId>
@@ -2014,8 +2014,7 @@
       </dependencyManagement>
     </profile>
     <profile>
-      <!-- TODO: remove this profile to generate html5 docs when we stop supporting JDK8 -->
-      <id>javadoc-html-version</id>
+      <id>jdk11</id>
       <activation>
         <jdk>[11,)</jdk>
       </activation>
@@ -2026,7 +2025,10 @@
             <artifactId>maven-javadoc-plugin</artifactId>
             <configuration>
               <additionalOptions>
+                <!-- TODO: remove -html4 option to generate html5 docs when we stop supporting JDK8 -->
                 <additionalOption>-html4</additionalOption>
+                <additionalOption>--add-exports</additionalOption>
+                <additionalOption>java.naming/com.sun.jndi.ldap=ALL-UNNAMED</additionalOption>
               </additionalOptions>
             </configuration>
           </plugin>

@@ -23,6 +23,7 @@ package org.apache.hadoop.hdds.scm.server;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import com.google.protobuf.BlockingService;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -75,6 +76,14 @@ import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.ozone.audit.AuditAction;
+import org.apache.hadoop.ozone.audit.AuditEventStatus;
+import org.apache.hadoop.ozone.audit.AuditLogger;
+import org.apache.hadoop.ozone.audit.AuditLoggerType;
+import org.apache.hadoop.ozone.audit.AuditMessage;
+import org.apache.hadoop.ozone.audit.Auditor;
+import org.apache.hadoop.ozone.audit.SCMAction;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
@@ -91,6 +100,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY;
@@ -106,10 +116,13 @@ import static org.apache.hadoop.hdds.server.ServerUtils.updateRPCListenAddress;
  * Protocol Handler for Datanode Protocol.
  */
 public class SCMDatanodeProtocolServer implements
-    StorageContainerDatanodeProtocol {
+    StorageContainerDatanodeProtocol, Auditor {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       SCMDatanodeProtocolServer.class);
+
+  private static final AuditLogger AUDIT =
+      new AuditLogger(AuditLoggerType.SCMLOGGER);
 
   /**
    * The RPC server that listens to requests from DataNodes.
@@ -179,8 +192,21 @@ public class SCMDatanodeProtocolServer implements
   public SCMVersionResponseProto getVersion(SCMVersionRequestProto
       versionRequest)
       throws IOException {
-    return scm.getScmNodeManager().getVersion(versionRequest)
-        .getProtobufMessage();
+    boolean auditSuccess = true;
+    try {
+      return scm.getScmNodeManager().getVersion(versionRequest)
+              .getProtobufMessage();
+    } catch (Exception ex) {
+      auditSuccess = false;
+      AUDIT.logReadFailure(
+          buildAuditMessageForFailure(SCMAction.GET_VERSION, null, ex));
+      throw ex;
+    } finally {
+      if(auditSuccess) {
+        AUDIT.logReadSuccess(
+            buildAuditMessageForSuccess(SCMAction.GET_VERSION, null));
+      }
+    }
   }
 
   @Override
@@ -192,6 +218,10 @@ public class SCMDatanodeProtocolServer implements
       throws IOException {
     DatanodeDetails datanodeDetails = DatanodeDetails
         .getFromProtoBuf(datanodeDetailsProto);
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = Maps.newHashMap();
+    auditMap.put("datanodeDetails", datanodeDetails.toString());
+
     // TODO : Return the list of Nodes that forms the SCM HA.
     RegisteredCommand registeredCommand = scm.getScmNodeManager()
         .register(datanodeDetails, nodeReport, pipelineReportsProto);
@@ -207,7 +237,19 @@ public class SCMDatanodeProtocolServer implements
               new PipelineReportFromDatanode(datanodeDetails,
                       pipelineReportsProto));
     }
-    return getRegisteredResponse(registeredCommand);
+    try {
+      return getRegisteredResponse(registeredCommand);
+    } catch (Exception ex) {
+      auditSuccess = false;
+      AUDIT.logWriteFailure(
+          buildAuditMessageForFailure(SCMAction.REGISTER, auditMap, ex));
+      throw ex;
+    } finally {
+      if(auditSuccess) {
+        AUDIT.logWriteSuccess(
+            buildAuditMessageForSuccess(SCMAction.REGISTER, auditMap));
+      }
+    }
   }
 
   @VisibleForTesting
@@ -229,9 +271,27 @@ public class SCMDatanodeProtocolServer implements
     for (SCMCommand cmd : heartbeatDispatcher.dispatch(heartbeat)) {
       cmdResponses.add(getCommandResponse(cmd));
     }
-    return SCMHeartbeatResponseProto.newBuilder()
-        .setDatanodeUUID(heartbeat.getDatanodeDetails().getUuid())
-        .addAllCommands(cmdResponses).build();
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = Maps.newHashMap();
+    auditMap.put("datanodeUUID", heartbeat.getDatanodeDetails().getUuid());
+    auditMap.put("command", flatten(cmdResponses.toString()));
+    try {
+      return SCMHeartbeatResponseProto.newBuilder()
+          .setDatanodeUUID(heartbeat.getDatanodeDetails().getUuid())
+          .addAllCommands(cmdResponses).build();
+    } catch (Exception ex) {
+      auditSuccess = false;
+      AUDIT.logWriteFailure(
+          buildAuditMessageForFailure(SCMAction.SEND_HEARTBEAT, auditMap, ex)
+      );
+      throw ex;
+    } finally {
+      if(auditSuccess) {
+        AUDIT.logWriteSuccess(
+            buildAuditMessageForSuccess(SCMAction.SEND_HEARTBEAT, auditMap)
+        );
+      }
+    }
   }
 
   /**
@@ -300,6 +360,43 @@ public class SCMDatanodeProtocolServer implements
       LOG.error(" datanodeRpcServer stop failed.", ex);
     }
     IOUtils.cleanupWithLogger(LOG, scm.getScmNodeManager());
+  }
+
+  @Override
+  public AuditMessage buildAuditMessageForSuccess(
+      AuditAction op, Map<String, String> auditMap) {
+    return new AuditMessage.Builder()
+        .setUser((Server.getRemoteUser() == null) ? null :
+            Server.getRemoteUser().getUserName())
+        .atIp((Server.getRemoteIp() == null) ? null :
+            Server.getRemoteIp().getHostAddress())
+        .forOperation(op.getAction())
+        .withParams(auditMap)
+        .withResult(AuditEventStatus.SUCCESS.toString())
+        .withException(null)
+        .build();
+  }
+
+  @Override
+  public AuditMessage buildAuditMessageForFailure(AuditAction op, Map<String,
+      String> auditMap, Throwable throwable) {
+    return new AuditMessage.Builder()
+        .setUser((Server.getRemoteUser() == null) ? null :
+            Server.getRemoteUser().getUserName())
+        .atIp((Server.getRemoteIp() == null) ? null :
+            Server.getRemoteIp().getHostAddress())
+        .forOperation(op.getAction())
+        .withParams(auditMap)
+        .withResult(AuditEventStatus.FAILURE.toString())
+        .withException(throwable)
+        .build();
+  }
+
+  private static String flatten(String input) {
+    return input
+        .replaceAll(System.lineSeparator(), " ")
+        .trim()
+        .replaceAll(" +", " ");
   }
 
   /**

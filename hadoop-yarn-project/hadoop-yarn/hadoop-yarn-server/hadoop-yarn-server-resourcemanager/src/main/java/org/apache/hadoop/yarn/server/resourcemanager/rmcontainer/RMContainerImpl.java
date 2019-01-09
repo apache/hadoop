@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
 
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
@@ -796,7 +798,8 @@ public class RMContainerImpl implements RMContainer {
           this.getAllocatedSchedulerKey().getPriority(), this.getCreationTime(),
           this.getFinishTime(), this.getDiagnosticsInfo(), this.getLogURL(),
           this.getContainerExitStatus(), this.getContainerState(),
-          this.getNodeHttpAddress(), this.getExecutionType());
+          this.getNodeHttpAddress(),  this.getExecutionType());
+      containerReport.setExposedPorts(this.getExposedPorts());
     } finally {
       this.readLock.unlock();
     }
@@ -819,6 +822,19 @@ public class RMContainerImpl implements RMContainer {
     } finally {
       readLock.unlock();
     }
+  }
+
+  @Override
+  public Map<String, List<Map<String, String>>> getExposedPorts() {
+    if (container.getExposedPorts() == null) {
+      return null;
+    }
+    return container.getExposedPorts();
+  }
+
+  @Override
+  public void setExposedPorts(Map<String, List<Map<String, String>>> ports) {
+    container.setExposedPorts(ports);
   }
 
   @Override

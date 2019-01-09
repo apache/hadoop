@@ -29,18 +29,20 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
+import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DevicePluginScheduler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -53,6 +55,10 @@ public class DeviceMappingManager {
 
   private Context nmContext;
   private static final int WAIT_MS_PER_LOOP = 1000;
+
+  // Holds vendor implemented scheduler
+  private Map<String, DevicePluginScheduler> devicePluginSchedulers =
+      new ConcurrentHashMap<>();
 
   /**
    * Hold all type of devices.
@@ -82,6 +88,11 @@ public class DeviceMappingManager {
   @VisibleForTesting
   public Map<String, Map<Device, ContainerId>> getAllUsedDevices() {
     return allUsedDevices;
+  }
+
+  @VisibleForTesting
+  public Map<String, DevicePluginScheduler> getDevicePluginSchedulers() {
+    return devicePluginSchedulers;
   }
 
   public synchronized void addDeviceSet(String resourceName,
@@ -162,9 +173,10 @@ public class DeviceMappingManager {
       Set<Device> assignedDevices = new TreeSet<>();
       Map<Device, ContainerId> usedDevices = allUsedDevices.get(resourceName);
       Set<Device> allowedDevices = allAllowedDevices.get(resourceName);
-
-      defaultScheduleAction(allowedDevices, usedDevices,
-          assignedDevices, containerId, requestedDeviceCount);
+      DevicePluginScheduler dps = devicePluginSchedulers.get(resourceName);
+      // Prefer DevicePluginScheduler logic
+      pickAndDoSchedule(allowedDevices, usedDevices, assignedDevices,
+          containerId, requestedDeviceCount, resourceName, dps);
 
       // Record in state store if we allocated anything
       if (!assignedDevices.isEmpty()) {
@@ -273,7 +285,46 @@ public class DeviceMappingManager {
     return releasingDevices;
   }
 
-  // default scheduling logic
+  /**
+   * If device plugin has own scheduler, then use it.
+   * Otherwise, pick our default scheduler to do scheduling.
+   * */
+  private void pickAndDoSchedule(Set<Device> allowed,
+      Map<Device, ContainerId> used, Set<Device> assigned,
+      ContainerId containerId, int count, String resourceName,
+      DevicePluginScheduler dps) throws ResourceHandlerException {
+
+    if (null == dps) {
+      LOG.debug("Customized device plugin scheduler is preferred "
+          + "but not implemented, use default logic");
+      defaultScheduleAction(allowed, used,
+          assigned, containerId, count);
+    } else {
+      LOG.debug("Customized device plugin implemented,"
+          + "use customized logic");
+      // Use customized device scheduler
+      LOG.debug("Try to schedule " + count
+          + "(" + resourceName + ") using " + dps.getClass());
+      // Pass in unmodifiable set
+      Set<Device> dpsAllocated = dps.allocateDevices(
+          Sets.difference(allowed, used.keySet()),
+          count);
+      if (dpsAllocated.size() != count) {
+        throw new ResourceHandlerException(dps.getClass()
+            + " should allocate " + count
+            + " of " + resourceName + ", but actual: "
+            + assigned.size());
+      }
+      // copy
+      assigned.addAll(dpsAllocated);
+      // Store assigned devices into usedDevices
+      for (Device device : assigned) {
+        used.put(device, containerId);
+      }
+    }
+  }
+
+  // Default scheduling logic
   private void defaultScheduleAction(Set<Device> allowed,
       Map<Device, ContainerId> used, Set<Device> assigned,
       ContainerId containerId, int count) {
@@ -307,7 +358,6 @@ public class DeviceMappingManager {
       }
     }
 
-
     public Set<Device> getAllowed() {
       return allowed;
     }
@@ -319,6 +369,13 @@ public class DeviceMappingManager {
           + ", Denied Devices: " + denied;
     }
 
+  }
+
+  @VisibleForTesting
+  public synchronized void addDevicePluginScheduler(String resourceName,
+      DevicePluginScheduler s) {
+    this.devicePluginSchedulers.put(resourceName,
+        Objects.requireNonNull(s));
   }
 
 }

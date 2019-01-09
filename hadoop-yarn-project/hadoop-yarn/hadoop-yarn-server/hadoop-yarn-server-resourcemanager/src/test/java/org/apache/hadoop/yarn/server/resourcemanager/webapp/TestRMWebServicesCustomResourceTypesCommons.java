@@ -22,8 +22,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
         .AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.fairscheduler
-        .CustomResourceTypesConfigurationProvider;
+import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.AppInfoJsonVerifications;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.AppInfoXmlVerifications;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.ResourceRequestsJsonVerifications;

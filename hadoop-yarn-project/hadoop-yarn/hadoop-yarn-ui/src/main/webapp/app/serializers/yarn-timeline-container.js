@@ -34,6 +34,7 @@ export default DS.JSONAPISerializer.extend({
         startedTime:  Converter.timeStampToDate(payload.createdtime),
         finishedTime: Converter.timeStampToDate(payload.info.YARN_CONTAINER_FINISHED_TIME),
         nodeHttpAddress: payload.info.YARN_CONTAINER_ALLOCATED_HOST_HTTP_ADDRESS,
+        exposedPorts: payload.info.YARN_CONTAINER_ALLOCATED_EXPOSED_PORTS,
         containerExitStatus: payload.info.YARN_CONTAINER_EXIT_STATUS + '',
         containerState: payload.info.YARN_CONTAINER_STATE,
         nodeId: payload.info.YARN_CONTAINER_ALLOCATED_HOST + ':' + payload.info.YARN_CONTAINER_ALLOCATED_PORT,

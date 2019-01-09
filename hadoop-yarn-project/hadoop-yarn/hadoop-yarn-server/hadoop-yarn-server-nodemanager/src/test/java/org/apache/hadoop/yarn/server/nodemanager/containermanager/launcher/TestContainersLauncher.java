@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManag
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InjectMocks;
@@ -39,8 +40,10 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -212,11 +215,14 @@ public class TestContainersLauncher {
 
     when(event.getType())
         .thenReturn(ContainersLauncherEventType.CLEANUP_CONTAINER_FOR_REINIT);
-    assertEquals(1, dummyMap.size());
+    final List<ContainerId> cleanedContainers = new ArrayList<>();
+    doAnswer(invocation -> {
+      cleanedContainers.add((ContainerId)invocation.getArguments()[1]);
+      return null;
+    }).when(spy).cleanup(any(), any(), anyBoolean());
     spy.handle(event);
-    assertEquals(0, dummyMap.size());
-    Mockito.verify(containerLauncher, Mockito.times(1))
-        .submit(Mockito.any(ContainerCleanup.class));
+    Assert.assertEquals("container not cleaned", containerId,
+        cleanedContainers.get(0));
   }
 
   @Test

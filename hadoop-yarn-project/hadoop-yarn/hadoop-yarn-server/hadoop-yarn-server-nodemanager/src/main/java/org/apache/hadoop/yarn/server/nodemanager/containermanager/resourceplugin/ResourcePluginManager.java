@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DevicePlugin;
+import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DevicePluginScheduler;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DeviceRegisterRequest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.deviceframework.DeviceMappingManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.deviceframework.DevicePluginAdapter;
@@ -129,9 +130,12 @@ public class ResourcePluginManager {
       Configuration configuration,
       Map<String, ResourcePlugin> pluginMap)
       throws YarnRuntimeException, ClassNotFoundException {
-    LOG.info("The pluggable device framework enabled," +
-        "trying to load the vendor plugins");
-    deviceMappingManager = new DeviceMappingManager(context);
+    LOG.info("The pluggable device framework enabled,"
+        + "trying to load the vendor plugins");
+    if (null == deviceMappingManager) {
+      LOG.debug("DeviceMappingManager initialized.");
+      deviceMappingManager = new DeviceMappingManager(context);
+    }
     String[] pluginClassNames = configuration.getStrings(
         YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_DEVICE_CLASSES);
     if (null == pluginClassNames) {
@@ -193,6 +197,19 @@ public class ResourcePluginManager {
       LOG.info("Adapter of {} init success!", pluginClassName);
       // Store plugin as adapter instance
       pluginMap.put(request.getResourceName(), pluginAdapter);
+      // If the device plugin implements DevicePluginScheduler interface
+      if (dpInstance instanceof DevicePluginScheduler) {
+        // check DevicePluginScheduler interface compatibility
+        checkInterfaceCompatibility(DevicePluginScheduler.class, pluginClazz);
+        LOG.info(
+            "{} can schedule {} devices."
+                + "Added as preferred device plugin scheduler",
+            pluginClassName,
+            resourceName);
+        deviceMappingManager.addDevicePluginScheduler(
+            resourceName,
+            (DevicePluginScheduler) dpInstance);
+      }
     } // end for
   }
 
@@ -241,6 +258,12 @@ public class ResourcePluginManager {
       return false;
     }
     return true;
+  }
+
+  @VisibleForTesting
+  public void setDeviceMappingManager(
+      DeviceMappingManager deviceMappingManager) {
+    this.deviceMappingManager = deviceMappingManager;
   }
 
   public DeviceMappingManager getDeviceMappingManager() {

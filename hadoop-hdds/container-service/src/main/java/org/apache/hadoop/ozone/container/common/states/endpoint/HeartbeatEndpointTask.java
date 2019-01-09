@@ -47,6 +47,7 @@ import org.apache.hadoop.ozone.container.common.statemachine
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
+import org.apache.hadoop.ozone.protocol.commands.DeleteContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.ReplicateContainerCommand;
 
 import org.slf4j.Logger;
@@ -293,6 +294,16 @@ public class HeartbeatEndpointTask
               replicateContainerCommand.getContainerID());
         }
         this.context.addCommand(replicateContainerCommand);
+        break;
+      case deleteContainerCommand:
+        DeleteContainerCommand deleteContainerCommand =
+            DeleteContainerCommand.getFromProtobuf(
+                commandResponseProto.getDeleteContainerCommandProto());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Received SCM delete container request for container {}",
+              deleteContainerCommand.getContainerID());
+        }
+        this.context.addCommand(deleteContainerCommand);
         break;
       default:
         throw new IllegalArgumentException("Unknown response : "

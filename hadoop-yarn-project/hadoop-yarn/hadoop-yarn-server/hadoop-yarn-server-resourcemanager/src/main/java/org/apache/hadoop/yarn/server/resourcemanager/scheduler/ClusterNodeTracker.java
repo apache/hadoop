@@ -73,7 +73,7 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
   private boolean reportedMaxAllocation = false;
 
   public ClusterNodeTracker() {
-    maxAllocation = new long[ResourceUtils.getNumberOfKnownResourceTypes()];
+    maxAllocation = new long[ResourceUtils.getNumberOfCountableResourceTypes()];
     Arrays.fill(maxAllocation, -1);
   }
 

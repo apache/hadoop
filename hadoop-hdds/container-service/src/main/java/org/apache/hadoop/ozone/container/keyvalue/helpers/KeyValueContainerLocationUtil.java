@@ -41,10 +41,12 @@ public final class KeyValueContainerLocationUtil {
    * @return containerMetadata Path to container metadata location where
    * .container file will be stored.
    */
-  public static File getContainerMetaDataPath(String hddsVolumeDir, String scmId,
+  public static File getContainerMetaDataPath(String hddsVolumeDir,
+                                              String scmId,
                                               long containerId) {
-    String containerMetaDataPath = getBaseContainerLocation(hddsVolumeDir, scmId,
-        containerId);
+    String containerMetaDataPath =
+        getBaseContainerLocation(hddsVolumeDir, scmId,
+            containerId);
     containerMetaDataPath = containerMetaDataPath + File.separator +
         OzoneConsts.CONTAINER_META_PATH;
     return new File(containerMetaDataPath);
@@ -72,8 +74,9 @@ public final class KeyValueContainerLocationUtil {
    * @param containerId
    * @return base directory for container.
    */
-  private static String getBaseContainerLocation(String hddsVolumeDir, String scmId,
-                                        long containerId) {
+  private static String getBaseContainerLocation(String hddsVolumeDir,
+                                                 String scmId,
+                                                 long containerId) {
     Preconditions.checkNotNull(hddsVolumeDir, "Base Directory cannot be null");
     Preconditions.checkNotNull(scmId, "scmUuid cannot be null");
     Preconditions.checkState(containerId >= 0,

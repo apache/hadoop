@@ -1152,17 +1152,16 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     // Add existing credentials from the UGI, since provider is cached.
     Credentials creds = ugi.getCredentials();
     if (!creds.getAllTokens().isEmpty()) {
-      LOG.debug("Searching for token that matches service: {}", dtService);
-      org.apache.hadoop.security.token.Token<? extends TokenIdentifier>
-          dToken = creds.getToken(dtService);
-      if (dToken != null) {
-        return true;
-      }
+      LOG.debug("Searching for KMS delegation token in user {}'s credentials",
+          ugi);
+      return clientTokenProvider.selectDelegationToken(creds) != null;
     }
+
     return false;
   }
 
-  private UserGroupInformation getActualUgi() throws IOException {
+  @VisibleForTesting
+  UserGroupInformation getActualUgi() throws IOException {
     final UserGroupInformation currentUgi = UserGroupInformation
         .getCurrentUser();
 

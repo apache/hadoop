@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
@@ -68,6 +69,8 @@ public final class TimelineEntityV2Converter {
     int exitStatus = ContainerExitStatus.INVALID;
     ContainerState state = null;
     String nodeHttpAddress = null;
+    Map<String, List<Map<String, String>>> exposedPorts = null;
+
     Map<String, Object> entityInfo = entity.getInfo();
     if (entityInfo != null) {
       if (entityInfo
@@ -103,6 +106,12 @@ public final class TimelineEntityV2Converter {
             (String) entityInfo.get(
                 ContainerMetricsConstants.ALLOCATED_HOST_HTTP_ADDRESS_INFO);
       }
+      if (entityInfo.containsKey(
+          ContainerMetricsConstants.ALLOCATED_EXPOSED_PORTS)) {
+        exposedPorts =
+            (Map<String, List<Map<String, String>>>) entityInfo
+                .get(ContainerMetricsConstants.ALLOCATED_EXPOSED_PORTS);
+      }
       if (entityInfo.containsKey(ContainerMetricsConstants.DIAGNOSTICS_INFO)) {
         diagnosticsInfo =
             entityInfo.get(
@@ -136,12 +145,15 @@ public final class TimelineEntityV2Converter {
     if (allocatedHost != null) {
       allocatedNode = NodeId.newInstance(allocatedHost, allocatedPort);
     }
-    return ContainerReport.newInstance(
+    ContainerReport container = ContainerReport.newInstance(
         ContainerId.fromString(entity.getId()),
         Resource.newInstance(allocatedMem, allocatedVcore), allocatedNode,
         Priority.newInstance(allocatedPriority),
         createdTime, finishedTime, diagnosticsInfo, logUrl, exitStatus, state,
         nodeHttpAddress);
+    container.setExposedPorts(exposedPorts);
+
+    return container;
   }
 
   public static ApplicationAttemptReport convertToApplicationAttemptReport(

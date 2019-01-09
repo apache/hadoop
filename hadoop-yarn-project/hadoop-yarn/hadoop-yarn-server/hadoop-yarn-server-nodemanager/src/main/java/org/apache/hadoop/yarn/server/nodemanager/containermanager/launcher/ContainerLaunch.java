@@ -113,6 +113,7 @@ public class ContainerLaunch implements Callable<Integer> {
     Shell.appendScriptExtension("launch_container");
 
   public static final String FINAL_CONTAINER_TOKENS_FILE = "container_tokens";
+  public static final String SYSFS_DIR = "sysfs";
 
   public static final String KEYSTORE_FILE = "yarn_provided.keystore";
   public static final String TRUSTSTORE_FILE = "yarn_provided.truststore";
@@ -249,6 +250,10 @@ public class ContainerLaunch implements Callable<Integer> {
       Path containerWorkDir = deriveContainerWorkDir();
       recordContainerWorkDir(containerID, containerWorkDir.toString());
 
+      // Select a root dir for all csi volumes for the container
+      Path csiVolumesRoot = deriveCsiVolumesRootDir();
+      recordContainerCsiVolumesRootDir(containerID, csiVolumesRoot.toString());
+
       String pidFileSubpath = getPidFileSubpath(appIdStr, containerIdStr);
       // pid file should be in nm private dir so that it is not
       // accessible by users
@@ -357,6 +362,7 @@ public class ContainerLaunch implements Callable<Integer> {
           .setUser(user)
           .setAppId(appIdStr)
           .setContainerWorkDir(containerWorkDir)
+          .setContainerCsiVolumesRootDir(csiVolumesRoot)
           .setLocalDirs(localDirs)
           .setLogDirs(logDirs)
           .setFilecacheDirs(filecacheDirs)
@@ -385,6 +391,27 @@ public class ContainerLaunch implements Callable<Integer> {
 
     handleContainerExitCode(ret, containerLogDir);
     return ret;
+  }
+
+  /**
+   * Volumes mount point root:
+   *   ${YARN_LOCAL_DIR}/usercache/${user}/filecache/csiVolumes/app/container
+   * CSI volumes may creates the mount point with different permission bits.
+   * If we create the volume mount under container work dir, it may
+   * mess up the existing permission structure, which is restricted by
+   * linux container executor. So we put all volume mounts under a same
+   * root dir so it is easier cleanup.
+   **/
+  private Path deriveCsiVolumesRootDir() throws IOException {
+    final String containerVolumePath =
+        ContainerLocalizer.USERCACHE + Path.SEPARATOR
+            + container.getUser() + Path.SEPARATOR
+            + ContainerLocalizer.FILECACHE + Path.SEPARATOR
+            + ContainerLocalizer.CSI_VOLIUME_MOUNTS_ROOT + Path.SEPARATOR
+            + app.getAppId().toString() + Path.SEPARATOR
+            + container.getContainerId().toString();
+    return dirsHandler.getLocalPathForWrite(containerVolumePath,
+        LocalDirAllocator.SIZE_UNKNOWN, false);
   }
 
   private Path deriveContainerWorkDir() throws IOException {
@@ -1751,6 +1778,12 @@ public class ContainerLaunch implements Callable<Integer> {
     }
   }
 
+  private void recordContainerCsiVolumesRootDir(ContainerId containerId,
+      String volumesRoot) throws IOException {
+    container.setCsiVolumesRootDir(volumesRoot);
+    // TODO persistent to the NM store...
+  }
+
   protected Path getContainerWorkDir() throws IOException {
     String containerWorkDir = container.getWorkDir();
     if (containerWorkDir == null
@@ -1772,6 +1805,8 @@ public class ContainerLaunch implements Callable<Integer> {
     deleteAsUser(new Path(containerWorkDir, CONTAINER_SCRIPT));
     // delete TokensPath
     deleteAsUser(new Path(containerWorkDir, FINAL_CONTAINER_TOKENS_FILE));
+    // delete sysfs dir
+    deleteAsUser(new Path(containerWorkDir, SYSFS_DIR));
 
     // delete symlinks because launch script will create symlinks again
     try {

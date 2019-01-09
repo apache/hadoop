@@ -31,13 +31,15 @@ import org.apache.hadoop.hdds.scm.XceiverClientRatis;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.*;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.client.*;
 import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
-import org.apache.hadoop.ozone.client.io.ChunkGroupOutputStream;
+import org.apache.hadoop.ozone.client.VolumeArgs;
+import org.apache.hadoop.ozone.client.io.KeyOutputStream;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.common.OzoneChecksumException;
@@ -48,15 +50,12 @@ import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.keyvalue.helpers
     .KeyValueContainerLocationUtil;
 import org.apache.hadoop.ozone.om.OzoneManager;
-import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
-import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
-import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
+import org.apache.hadoop.ozone.om.helpers.*;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.protocolPB.
     StorageContainerLocationProtocolClientSideTranslatorPB;
-import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
@@ -70,8 +69,11 @@ import org.junit.rules.ExpectedException;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.UUID;
 
 import static org.hamcrest.CoreMatchers.containsString;
@@ -79,6 +81,7 @@ import static org.hamcrest.CoreMatchers.either;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 /**
  * This class is to test all the public facing APIs of Ozone Client.
@@ -666,8 +669,8 @@ public class TestOzoneRpcClient {
     OzoneOutputStream out = bucket
         .createKey(keyName, value.getBytes().length, ReplicationType.RATIS,
             ReplicationFactor.THREE);
-    ChunkGroupOutputStream groupOutputStream =
-        (ChunkGroupOutputStream) out.getOutputStream();
+    KeyOutputStream groupOutputStream =
+        (KeyOutputStream) out.getOutputStream();
     XceiverClientManager manager = groupOutputStream.getXceiverClientManager();
     out.write(value.getBytes());
     out.close();
@@ -732,7 +735,7 @@ public class TestOzoneRpcClient {
     try {
       // try to read
       readKey(bucket, keyName, value);
-      Assert.fail("Expected exception not thrown");
+      fail("Expected exception not thrown");
     } catch (IOException e) {
       Assert.assertTrue(e.getMessage().contains("Failed to execute command"));
       Assert.assertTrue(
@@ -914,7 +917,7 @@ public class TestOzoneRpcClient {
     try {
       OzoneInputStream is = bucket.readKey(keyName);
       is.read(new byte[100]);
-      Assert.fail("Reading corrupted data should fail.");
+      fail("Reading corrupted data should fail.");
     } catch (OzoneChecksumException e) {
       GenericTestUtils.assertExceptionContains("Checksum mismatch", e);
     }
@@ -1116,7 +1119,7 @@ public class TestOzoneRpcClient {
     OzoneVolume vol = store.getVolume(volume);
     Iterator<? extends OzoneBucket> buckets = vol.listBuckets("");
     while(buckets.hasNext()) {
-      Assert.fail();
+      fail();
     }
   }
 
@@ -1258,7 +1261,7 @@ public class TestOzoneRpcClient {
     OzoneBucket buc = vol.getBucket(bucket);
     Iterator<? extends OzoneKey> keys = buc.listKeys("");
     while(keys.hasNext()) {
-      Assert.fail();
+      fail();
     }
   }
 
@@ -1296,6 +1299,7 @@ public class TestOzoneRpcClient {
     assertNotNull(multipartInfo.getUploadID());
   }
 
+
   @Test
   public void testInitiateMultipartUploadWithDefaultReplication() throws
       IOException {
@@ -1326,6 +1330,506 @@ public class TestOzoneRpcClient {
     Assert.assertEquals(keyName, multipartInfo.getKeyName());
     assertNotEquals(multipartInfo.getUploadID(), uploadID);
     assertNotNull(multipartInfo.getUploadID());
+  }
+
+
+  @Test
+  public void testUploadPartWithNoOverride() throws IOException {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+    String sampleData = "sample Value";
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    OmMultipartInfo multipartInfo = bucket.initiateMultipartUpload(keyName,
+        ReplicationType.STAND_ALONE, ReplicationFactor.ONE);
+
+    assertNotNull(multipartInfo);
+    String uploadID = multipartInfo.getUploadID();
+    Assert.assertEquals(volumeName, multipartInfo.getVolumeName());
+    Assert.assertEquals(bucketName, multipartInfo.getBucketName());
+    Assert.assertEquals(keyName, multipartInfo.getKeyName());
+    assertNotNull(multipartInfo.getUploadID());
+
+    OzoneOutputStream ozoneOutputStream = bucket.createMultipartKey(keyName,
+        sampleData.length(), 1, uploadID);
+    ozoneOutputStream.write(DFSUtil.string2Bytes(sampleData), 0,
+        sampleData.length());
+    ozoneOutputStream.close();
+
+    OmMultipartCommitUploadPartInfo commitUploadPartInfo = ozoneOutputStream
+        .getCommitUploadPartInfo();
+
+    assertNotNull(commitUploadPartInfo);
+    String partName = commitUploadPartInfo.getPartName();
+    assertNotNull(commitUploadPartInfo.getPartName());
+
+  }
+
+  @Test
+  public void testUploadPartOverrideWithStandAlone() throws IOException {
+
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+    String sampleData = "sample Value";
+    int partNumber = 1;
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    OmMultipartInfo multipartInfo = bucket.initiateMultipartUpload(keyName,
+        ReplicationType.STAND_ALONE, ReplicationFactor.ONE);
+
+    assertNotNull(multipartInfo);
+    String uploadID = multipartInfo.getUploadID();
+    Assert.assertEquals(volumeName, multipartInfo.getVolumeName());
+    Assert.assertEquals(bucketName, multipartInfo.getBucketName());
+    Assert.assertEquals(keyName, multipartInfo.getKeyName());
+    assertNotNull(multipartInfo.getUploadID());
+
+    OzoneOutputStream ozoneOutputStream = bucket.createMultipartKey(keyName,
+        sampleData.length(), partNumber, uploadID);
+    ozoneOutputStream.write(DFSUtil.string2Bytes(sampleData), 0,
+        sampleData.length());
+    ozoneOutputStream.close();
+
+    OmMultipartCommitUploadPartInfo commitUploadPartInfo = ozoneOutputStream
+        .getCommitUploadPartInfo();
+
+    assertNotNull(commitUploadPartInfo);
+    String partName = commitUploadPartInfo.getPartName();
+    assertNotNull(commitUploadPartInfo.getPartName());
+
+    //Overwrite the part by creating part key with same part number.
+    sampleData = "sample Data Changed";
+    ozoneOutputStream = bucket.createMultipartKey(keyName,
+        sampleData.length(), partNumber, uploadID);
+    ozoneOutputStream.write(DFSUtil.string2Bytes(sampleData), 0, "name"
+        .length());
+    ozoneOutputStream.close();
+
+    commitUploadPartInfo = ozoneOutputStream
+        .getCommitUploadPartInfo();
+
+    assertNotNull(commitUploadPartInfo);
+    assertNotNull(commitUploadPartInfo.getPartName());
+
+    // PartName should be different from old part Name.
+    assertNotEquals("Part names should be different", partName,
+        commitUploadPartInfo.getPartName());
+  }
+
+  @Test
+  public void testUploadPartOverrideWithRatis() throws IOException {
+
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+    String sampleData = "sample Value";
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    OmMultipartInfo multipartInfo = bucket.initiateMultipartUpload(keyName,
+        ReplicationType.RATIS, ReplicationFactor.THREE);
+
+    assertNotNull(multipartInfo);
+    String uploadID = multipartInfo.getUploadID();
+    Assert.assertEquals(volumeName, multipartInfo.getVolumeName());
+    Assert.assertEquals(bucketName, multipartInfo.getBucketName());
+    Assert.assertEquals(keyName, multipartInfo.getKeyName());
+    assertNotNull(multipartInfo.getUploadID());
+
+    int partNumber = 1;
+
+    OzoneOutputStream ozoneOutputStream = bucket.createMultipartKey(keyName,
+        sampleData.length(), partNumber, uploadID);
+    ozoneOutputStream.write(DFSUtil.string2Bytes(sampleData), 0,
+        sampleData.length());
+    ozoneOutputStream.close();
+
+    OmMultipartCommitUploadPartInfo commitUploadPartInfo = ozoneOutputStream
+        .getCommitUploadPartInfo();
+
+    assertNotNull(commitUploadPartInfo);
+    String partName = commitUploadPartInfo.getPartName();
+    assertNotNull(commitUploadPartInfo.getPartName());
+
+    //Overwrite the part by creating part key with same part number.
+    sampleData = "sample Data Changed";
+    ozoneOutputStream = bucket.createMultipartKey(keyName,
+        sampleData.length(), partNumber, uploadID);
+    ozoneOutputStream.write(DFSUtil.string2Bytes(sampleData), 0, "name"
+        .length());
+    ozoneOutputStream.close();
+
+    commitUploadPartInfo = ozoneOutputStream
+        .getCommitUploadPartInfo();
+
+    assertNotNull(commitUploadPartInfo);
+    assertNotNull(commitUploadPartInfo.getPartName());
+
+    // PartName should be different from old part Name.
+    assertNotEquals("Part names should be different", partName,
+        commitUploadPartInfo.getPartName());
+  }
+
+  @Test
+  public void testNoSuchUploadError() throws IOException {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+    String sampleData = "sample Value";
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+
+    String uploadID = "random";
+    try {
+      bucket.createMultipartKey(keyName, sampleData.length(), 1, uploadID);
+      fail("testNoSuchUploadError failed");
+    } catch (IOException ex) {
+      GenericTestUtils.assertExceptionContains("NO_SUCH_MULTIPART_UPLOAD_ERROR",
+          ex);
+    }
+  }
+
+  @Test
+  public void testMultipartUpload() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+
+    doMultipartUpload(bucket, keyName, (byte)98);
+
+  }
+
+
+  @Test
+  public void testMultipartUploadOverride() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+
+    doMultipartUpload(bucket, keyName, (byte)96);
+
+    // Initiate Multipart upload again, now we should read latest version, as
+    // read always reads latest blocks.
+    doMultipartUpload(bucket, keyName, (byte)97);
+
+  }
+
+
+  @Test
+  public void testMultipartUploadWithPartsLessThanMinSize() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+
+    // Initiate multipart upload
+    String uploadID = initiateMultipartUpload(bucket, keyName, ReplicationType
+        .STAND_ALONE, ReplicationFactor.ONE);
+
+    // Upload Parts
+    Map<Integer, String> partsMap = new TreeMap<>();
+    // Uploading part 1 with less than min size
+    String partName = uploadPart(bucket, keyName, uploadID, 1, "data".getBytes(
+        "UTF-8"));
+    partsMap.put(1, partName);
+
+    partName = uploadPart(bucket, keyName, uploadID, 2, "data".getBytes(
+        "UTF-8"));
+    partsMap.put(2, partName);
+
+
+    // Complete multipart upload
+
+    try {
+      completeMultipartUpload(bucket, keyName, uploadID, partsMap);
+      fail("testMultipartUploadWithPartsLessThanMinSize failed");
+    } catch (IOException ex) {
+      GenericTestUtils.assertExceptionContains("ENTITY_TOO_SMALL", ex);
+    }
+
+  }
+
+
+
+  @Test
+  public void testMultipartUploadWithPartsMisMatchWithListSizeDifferent()
+      throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+
+    String uploadID = initiateMultipartUpload(bucket, keyName, ReplicationType
+        .STAND_ALONE, ReplicationFactor.ONE);
+
+    // We have not uploaded any parts, but passing some list it should throw
+    // error.
+    TreeMap<Integer, String> partsMap = new TreeMap<>();
+    partsMap.put(1, UUID.randomUUID().toString());
+
+    try {
+      completeMultipartUpload(bucket, keyName, uploadID, partsMap);
+      fail("testMultipartUploadWithPartsMisMatch");
+    } catch (IOException ex) {
+      GenericTestUtils.assertExceptionContains("MISMATCH_MULTIPART_LIST", ex);
+    }
+
+  }
+
+  @Test
+  public void testMultipartUploadWithPartsMisMatchWithIncorrectPartName()
+      throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+
+    String uploadID = initiateMultipartUpload(bucket, keyName, ReplicationType
+        .STAND_ALONE, ReplicationFactor.ONE);
+
+    uploadPart(bucket, keyName, uploadID, 1, "data".getBytes("UTF-8"));
+    // We have not uploaded any parts, but passing some list it should throw
+    // error.
+    TreeMap<Integer, String> partsMap = new TreeMap<>();
+    partsMap.put(1, UUID.randomUUID().toString());
+
+    try {
+      completeMultipartUpload(bucket, keyName, uploadID, partsMap);
+      fail("testMultipartUploadWithPartsMisMatch");
+    } catch (IOException ex) {
+      GenericTestUtils.assertExceptionContains("MISMATCH_MULTIPART_LIST", ex);
+    }
+
+  }
+
+  @Test
+  public void testMultipartUploadWithMissingParts() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+
+    String uploadID = initiateMultipartUpload(bucket, keyName, ReplicationType
+        .STAND_ALONE, ReplicationFactor.ONE);
+
+    uploadPart(bucket, keyName, uploadID, 1, "data".getBytes("UTF-8"));
+    // We have not uploaded any parts, but passing some list it should throw
+    // error.
+    TreeMap<Integer, String> partsMap = new TreeMap<>();
+    partsMap.put(3, "random");
+
+    try {
+      completeMultipartUpload(bucket, keyName, uploadID, partsMap);
+      fail("testMultipartUploadWithPartsMisMatch");
+    } catch (IOException ex) {
+      GenericTestUtils.assertExceptionContains("MISSING_UPLOAD_PARTS", ex);
+    }
+  }
+
+  @Test
+  public void testAbortUploadFail() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+
+    try {
+      bucket.abortMultipartUpload(keyName, "random");
+      fail("testAbortUploadFail failed");
+    } catch (IOException ex) {
+      GenericTestUtils.assertExceptionContains(
+          "NO_SUCH_MULTIPART_UPLOAD_ERROR", ex);
+    }
+  }
+
+
+  @Test
+  public void testAbortUploadSuccessWithOutAnyParts() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+
+    try {
+      String uploadID = initiateMultipartUpload(bucket, keyName, ReplicationType
+          .STAND_ALONE, ReplicationFactor.ONE);
+      bucket.abortMultipartUpload(keyName, uploadID);
+    } catch (IOException ex) {
+      fail("testAbortUploadSuccess failed");
+    }
+  }
+
+  @Test
+  public void testAbortUploadSuccessWithParts() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+
+    try {
+      String uploadID = initiateMultipartUpload(bucket, keyName, ReplicationType
+          .STAND_ALONE, ReplicationFactor.ONE);
+      uploadPart(bucket, keyName, uploadID, 1, "data".getBytes("UTF-8"));
+      bucket.abortMultipartUpload(keyName, uploadID);
+    } catch (IOException ex) {
+      fail("testAbortUploadSuccess failed");
+    }
+  }
+
+
+  private byte[] generateData(int size, byte val) {
+    byte[] chars = new byte[size];
+    Arrays.fill(chars, val);
+    return chars;
+  }
+
+
+  private void doMultipartUpload(OzoneBucket bucket, String keyName, byte val)
+      throws Exception {
+    // Initiate Multipart upload request
+    String uploadID = initiateMultipartUpload(bucket, keyName, ReplicationType
+        .RATIS, ReplicationFactor.THREE);
+
+    // Upload parts
+    Map<Integer, String> partsMap = new TreeMap<>();
+
+    // get 5mb data, as each part should be of min 5mb, last part can be less
+    // than 5mb
+    int length = 0;
+    byte[] data = generateData(OzoneConsts.OM_MULTIPART_MIN_SIZE, val);
+    String partName = uploadPart(bucket, keyName, uploadID, 1, data);
+    partsMap.put(1, partName);
+    length += data.length;
+
+
+    partName = uploadPart(bucket, keyName, uploadID, 2, data);
+    partsMap.put(2, partName);
+    length += data.length;
+
+    String part3 = UUID.randomUUID().toString();
+    partName = uploadPart(bucket, keyName, uploadID, 3, part3.getBytes(
+        "UTF-8"));
+    partsMap.put(3, partName);
+    length += part3.getBytes("UTF-8").length;
+
+
+    // Complete multipart upload request
+    completeMultipartUpload(bucket, keyName, uploadID, partsMap);
+
+
+    //Now Read the key which has been completed multipart upload.
+    byte[] fileContent = new byte[data.length + data.length + part3.getBytes(
+        "UTF-8").length];
+    OzoneInputStream inputStream = bucket.readKey(keyName);
+    inputStream.read(fileContent);
+
+    Assert.assertTrue(verifyRatisReplication(bucket.getVolumeName(),
+        bucket.getName(), keyName, ReplicationType.RATIS,
+        ReplicationFactor.THREE));
+
+    StringBuilder sb = new StringBuilder(length);
+
+    // Combine all parts data, and check is it matching with get key data.
+    String part1 = new String(data);
+    String part2 = new String(data);
+    sb.append(part1);
+    sb.append(part2);
+    sb.append(part3);
+    Assert.assertEquals(sb.toString(), new String(fileContent));
+  }
+
+
+  private String initiateMultipartUpload(OzoneBucket bucket, String keyName,
+      ReplicationType replicationType, ReplicationFactor replicationFactor)
+      throws Exception {
+    OmMultipartInfo multipartInfo = bucket.initiateMultipartUpload(keyName,
+        replicationType, replicationFactor);
+
+    String uploadID = multipartInfo.getUploadID();
+    Assert.assertNotNull(uploadID);
+    return uploadID;
+  }
+
+  private String uploadPart(OzoneBucket bucket, String keyName, String
+      uploadID, int partNumber, byte[] data) throws Exception {
+    OzoneOutputStream ozoneOutputStream = bucket.createMultipartKey(keyName,
+        data.length, partNumber, uploadID);
+    ozoneOutputStream.write(data, 0,
+        data.length);
+    ozoneOutputStream.close();
+
+    OmMultipartCommitUploadPartInfo omMultipartCommitUploadPartInfo =
+        ozoneOutputStream.getCommitUploadPartInfo();
+
+    Assert.assertNotNull(omMultipartCommitUploadPartInfo);
+    Assert.assertNotNull(omMultipartCommitUploadPartInfo.getPartName());
+    return omMultipartCommitUploadPartInfo.getPartName();
+
+  }
+
+  private void completeMultipartUpload(OzoneBucket bucket, String keyName,
+      String uploadID, Map<Integer, String> partsMap) throws Exception {
+    OmMultipartUploadCompleteInfo omMultipartUploadCompleteInfo = bucket
+        .completeMultipartUpload(keyName, uploadID, partsMap);
+
+    Assert.assertNotNull(omMultipartUploadCompleteInfo);
+    Assert.assertEquals(omMultipartUploadCompleteInfo.getBucket(), bucket
+        .getName());
+    Assert.assertEquals(omMultipartUploadCompleteInfo.getVolume(), bucket
+        .getVolumeName());
+    Assert.assertEquals(omMultipartUploadCompleteInfo.getKey(), keyName);
+    Assert.assertNotNull(omMultipartUploadCompleteInfo.getHash());
   }
 
 

@@ -27,7 +27,8 @@ import java.util.TreeSet;
  * Used only for testing.
  * A fake normal vendor plugin
  * */
-public class FakeTestDevicePlugin1 implements DevicePlugin {
+public class FakeTestDevicePlugin1
+    implements DevicePlugin, DevicePluginScheduler{
   @Override
   public DeviceRegisterRequest getRegisterRequestInfo() {
     return DeviceRegisterRequest.Builder.newInstance()
@@ -57,5 +58,20 @@ public class FakeTestDevicePlugin1 implements DevicePlugin {
   @Override
   public void onDevicesReleased(Set<Device> allocatedDevices) {
 
+  }
+
+  @Override
+  public Set<Device> allocateDevices(Set<Device> availableDevices,
+      int count) {
+    Set<Device> allocated = new TreeSet<Device>();
+    int number = 0;
+    for (Device d : availableDevices) {
+      allocated.add(d);
+      number++;
+      if (number == count) {
+        break;
+      }
+    }
+    return allocated;
   }
 }

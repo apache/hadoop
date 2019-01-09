@@ -64,10 +64,12 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AbstractEvent;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SystemCredentialsForAppsProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
+import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -637,7 +639,7 @@ public class DelegationTokenRenewer extends AbstractService {
 
   // Request new hdfs token if the token is about to expire, and remove the old
   // token from the tokenToRenew list
-  private void requestNewHdfsDelegationTokenIfNeeded(
+  void requestNewHdfsDelegationTokenIfNeeded(
       final DelegationTokenToRenew dttr) throws IOException,
       InterruptedException {
 
@@ -679,6 +681,7 @@ public class DelegationTokenRenewer extends AbstractService {
       Collection<ApplicationId> referringAppIds,
       String user, boolean shouldCancelAtEnd) throws IOException,
       InterruptedException {
+    boolean incrTokenSequenceNo = false;
     if (!hasProxyUserPrivileges) {
       LOG.info("RM proxy-user privilege is not enabled. Skip requesting hdfs tokens.");
       return;
@@ -703,14 +706,24 @@ public class DelegationTokenRenewer extends AbstractService {
             appTokens.get(applicationId).add(tokenToRenew);
           }
           LOG.info("Received new token " + token);
+          incrTokenSequenceNo = true;
         }
       }
     }
+
+    if(incrTokenSequenceNo) {
+      this.rmContext.incrTokenSequenceNo();
+    }
+
     DataOutputBuffer dob = new DataOutputBuffer();
     credentials.writeTokenStorageToStream(dob);
     ByteBuffer byteBuffer = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
     for (ApplicationId applicationId : referringAppIds) {
-      rmContext.getSystemCredentialsForApps().put(applicationId, byteBuffer);
+      SystemCredentialsForAppsProto systemCredentialsForAppsProto =
+          YarnServerBuilderUtils.newSystemCredentialsForAppsProto(applicationId,
+              byteBuffer);
+      rmContext.getSystemCredentialsForApps().put(applicationId,
+          systemCredentialsForAppsProto);
     }
   }
 

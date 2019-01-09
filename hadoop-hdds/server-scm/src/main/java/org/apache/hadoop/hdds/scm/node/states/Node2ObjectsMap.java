@@ -38,6 +38,8 @@ import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes.DUP
  * This information is built from the DN container reports.
  */
 public class Node2ObjectsMap<T> {
+
+  @SuppressWarnings("visibilitymodifier")
   protected final Map<UUID, Set<T>> dn2ObjectMap;
 
   /**

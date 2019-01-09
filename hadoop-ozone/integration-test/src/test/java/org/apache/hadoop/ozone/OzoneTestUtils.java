@@ -23,7 +23,7 @@ import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
-import org.apache.ratis.util.CheckedConsumer;
+import org.apache.ratis.util.function.CheckedConsumer;
 import org.junit.Assert;
 
 import java.io.IOException;
@@ -84,7 +84,8 @@ public final class OzoneTestUtils {
       CheckedConsumer<BlockID, Exception> consumer,
       List<OmKeyLocationInfoGroup> omKeyLocationInfoGroups) throws Exception {
 
-    for (OmKeyLocationInfoGroup omKeyLocationInfoGroup : omKeyLocationInfoGroups) {
+    for (OmKeyLocationInfoGroup omKeyLocationInfoGroup :
+        omKeyLocationInfoGroups) {
       List<OmKeyLocationInfo> omKeyLocationInfos =
           omKeyLocationInfoGroup.getLocationList();
       for (OmKeyLocationInfo omKeyLocationInfo : omKeyLocationInfos) {

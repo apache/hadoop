@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.NodeResourceMonitor;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServices;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -825,6 +826,15 @@ public abstract class BaseAMRMProxyTest {
 
     @Override
     public NMLogAggregationStatusTracker getNMLogAggregationStatusTracker() {
+      return null;
+    }
+
+    @Override
+    public void setAuxServices(AuxServices auxServices) {
+    }
+
+    @Override
+    public AuxServices getAuxServices() {
       return null;
     }
   }

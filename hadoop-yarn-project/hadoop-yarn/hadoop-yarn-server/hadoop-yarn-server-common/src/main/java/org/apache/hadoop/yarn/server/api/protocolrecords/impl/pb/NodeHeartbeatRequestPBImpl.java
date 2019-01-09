@@ -455,4 +455,17 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
     }
     this.logAggregationReportsForApps = logAggregationStatusForApps;
   }
+
+  @Override
+  public void setTokenSequenceNo(long tokenSequenceNo) {
+    maybeInitBuilder();
+    this.builder.setTokenSequenceNo(tokenSequenceNo);
+  }
+
+  @Override
+  public long getTokenSequenceNo() {
+    NodeHeartbeatRequestProtoOrBuilder p =
+        this.viaProto ? this.proto : this.builder;
+    return p.getTokenSequenceNo();
+  }
 }  

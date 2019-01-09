@@ -42,6 +42,7 @@ public class TestHddsDatanodeService {
   private File testDir;
   private Configuration conf;
   private HddsDatanodeService service;
+  private String[] args = new String[] {};
 
   @Before
   public void setUp() {
@@ -63,7 +64,7 @@ public class TestHddsDatanodeService {
 
   @Test
   public void testStartup() throws IOException {
-    service = HddsDatanodeService.createHddsDatanodeService(conf);
+    service = HddsDatanodeService.createHddsDatanodeService(args, conf);
     service.start(null);
     service.join();
 

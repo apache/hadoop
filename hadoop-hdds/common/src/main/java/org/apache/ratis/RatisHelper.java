@@ -170,7 +170,7 @@ public interface RatisHelper {
     long retryInterval = conf.getTimeDuration(OzoneConfigKeys.
         DFS_RATIS_CLIENT_REQUEST_RETRY_INTERVAL_KEY, OzoneConfigKeys.
         DFS_RATIS_CLIENT_REQUEST_RETRY_INTERVAL_DEFAULT
-        .toInt(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
+        .toIntExact(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
     TimeDuration sleepDuration =
         TimeDuration.valueOf(retryInterval, TimeUnit.MILLISECONDS);
     RetryPolicy retryPolicy = RetryPolicies

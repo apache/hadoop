@@ -918,11 +918,12 @@ public class FileUtil {
     TarArchiveInputStream tis = null;
     try {
       if (gzipped) {
-        inputStream = new BufferedInputStream(new GZIPInputStream(
-            new FileInputStream(inFile)));
+        inputStream = new GZIPInputStream(new FileInputStream(inFile));
       } else {
-        inputStream = new BufferedInputStream(new FileInputStream(inFile));
+        inputStream = new FileInputStream(inFile);
       }
+
+      inputStream = new BufferedInputStream(inputStream);
 
       tis = new TarArchiveInputStream(inputStream);
 
@@ -940,13 +941,9 @@ public class FileUtil {
     TarArchiveInputStream tis = null;
     try {
       if (gzipped) {
-        inputStream = new BufferedInputStream(new GZIPInputStream(
-            inputStream));
-      } else {
-        inputStream =
-            new BufferedInputStream(inputStream);
+        inputStream = new GZIPInputStream(inputStream);
       }
-
+      inputStream = new BufferedInputStream(inputStream);
       tis = new TarArchiveInputStream(inputStream);
 
       for (TarArchiveEntry entry = tis.getNextTarEntry(); entry != null;) {
@@ -1002,17 +999,7 @@ public class FileUtil {
       return;
     }
 
-    int count;
-    byte data[] = new byte[2048];
-    try (BufferedOutputStream outputStream = new BufferedOutputStream(
-        new FileOutputStream(outputFile));) {
-
-      while ((count = tis.read(data)) != -1) {
-        outputStream.write(data, 0, count);
-      }
-
-      outputStream.flush();
-    }
+    org.apache.commons.io.FileUtils.copyToFile(tis, outputFile);
   }
 
   /**

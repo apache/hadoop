@@ -93,6 +93,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LI
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
+import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.ACTIVE;
+import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.OBSERVER;
 
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator.OpenFilesType;
@@ -286,6 +288,7 @@ import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.CallerContext;
+import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.RetryCache;
 import org.apache.hadoop.ipc.Server;
@@ -463,7 +466,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   /** The namespace tree. */
   FSDirectory dir;
-  private final BlockManager blockManager;
+  private BlockManager blockManager;
   private final SnapshotManager snapshotManager;
   private final CacheManager cacheManager;
   private final DatanodeStatistics datanodeStatistics;
@@ -542,7 +545,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private final ReentrantLock cpLock;
 
   /**
-   * Used when this NN is in standby state to read from the shared edit log.
+   * Used when this NN is in standby or observer state to read from the
+   * shared edit log.
    */
   private EditLogTailer editLogTailer = null;
 
@@ -1380,24 +1384,25 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
   
   /**
-   * Start services required in standby state 
+   * Start services required in standby or observer state
    * 
    * @throws IOException
    */
-  void startStandbyServices(final Configuration conf) throws IOException {
-    LOG.info("Starting services required for standby state");
+  void startStandbyServices(final Configuration conf, boolean isObserver)
+      throws IOException {
+    LOG.info("Starting services required for " +
+        (isObserver ? "observer" : "standby") + " state");
     if (!getFSImage().editLog.isOpenForRead()) {
       // During startup, we're already open for read.
       getFSImage().editLog.initSharedJournalsForRead();
     }
-    
     blockManager.setPostponeBlocksFromFuture(true);
 
     // Disable quota checks while in standby.
     dir.disableQuotaChecks();
     editLogTailer = new EditLogTailer(this, conf);
     editLogTailer.start();
-    if (standbyShouldCheckpoint) {
+    if (!isObserver && standbyShouldCheckpoint) {
       standbyCheckpointer = new StandbyCheckpointer(conf, this);
       standbyCheckpointer.start();
     }
@@ -1731,7 +1736,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       return haEnabled;
     }
 
-    return HAServiceState.STANDBY == haContext.getState().getServiceState();
+    return HAServiceState.STANDBY == haContext.getState().getServiceState() ||
+        HAServiceState.OBSERVER == haContext.getState().getServiceState();
   }
 
   /**
@@ -1963,11 +1969,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             SafeModeException se = newSafemodeException(
                 "Zero blocklocations for " + srcArg);
             if (haEnabled && haContext != null &&
-                haContext.getState().getServiceState() == HAServiceState.ACTIVE) {
+                (haContext.getState().getServiceState() == ACTIVE ||
+                    haContext.getState().getServiceState() == OBSERVER)) {
               throw new RetriableException(se);
             } else {
               throw se;
             }
+          }
+        }
+      } else if (haEnabled && haContext != null &&
+          haContext.getState().getServiceState() == OBSERVER) {
+        for (LocatedBlock b : res.blocks.getLocatedBlocks()) {
+          if (b.getLocations() == null || b.getLocations().length == 0) {
+            throw new ObserverRetryOnActiveException("Zero blocklocations for "
+                + srcArg);
           }
         }
       }
@@ -6296,6 +6311,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /** @return the block manager. */
   public BlockManager getBlockManager() {
     return blockManager;
+  }
+
+  @VisibleForTesting
+  public void setBlockManagerForTesting(BlockManager bm) {
+    this.blockManager = bm;
   }
 
   /** @return the FSDirectory. */

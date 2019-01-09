@@ -62,7 +62,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.annotations.VisibleForTesting;
 import static java.lang.Math.min;
-import org.apache.commons.cli.CommandLine;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.time.DurationFormatUtils;
@@ -270,21 +269,18 @@ public final class RandomKeyGenerator implements Callable<Void> {
     processor.shutdown();
     processor.awaitTermination(Integer.MAX_VALUE, TimeUnit.MILLISECONDS);
     completed = true;
-    progressbar.shutdown();
 
-    if (validateWrites) {
+    if (exception) {
+      progressbar.terminate();
+    } else {
+      progressbar.shutdown();
+    }
+
+    if (validator != null) {
       validator.join();
     }
     ozoneClient.close();
     return null;
-  }
-
-  private void parseOptions(CommandLine cmdLine) {
-    if (keySize < 1024) {
-      throw new IllegalArgumentException(
-          "keySize can not be less than 1024 bytes");
-    }
-
   }
 
   /**

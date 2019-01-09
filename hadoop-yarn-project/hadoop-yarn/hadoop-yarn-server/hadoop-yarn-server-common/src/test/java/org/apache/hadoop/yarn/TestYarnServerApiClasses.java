@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,6 +30,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.io.DataInputByteBuffer;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -37,7 +44,6 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
@@ -56,6 +62,7 @@ import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.NodeStatusPBImpl;
+import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -153,10 +160,12 @@ public class TestYarnServerApiClasses {
 
   /**
    * Test NodeHeartbeatResponsePBImpl.
+   *
+   * @throws IOException
    */
 
   @Test
-  public void testNodeHeartbeatResponsePBImpl() {
+  public void testNodeHeartbeatResponsePBImpl() throws IOException {
     NodeHeartbeatResponsePBImpl original = new NodeHeartbeatResponsePBImpl();
 
     original.setDiagnosticsMessage("testDiagnosticMessage");
@@ -168,6 +177,29 @@ public class TestYarnServerApiClasses {
     Map<ApplicationId, AppCollectorData> collectors = getCollectors(false);
     original.setAppCollectors(collectors);
 
+    // create token1
+    Text userText1 = new Text("user1");
+    DelegationTokenIdentifier dtId1 = new DelegationTokenIdentifier(userText1,
+        new Text("renewer1"), userText1);
+    final Token<DelegationTokenIdentifier> expectedToken1 =
+        new Token<DelegationTokenIdentifier>(dtId1.getBytes(),
+            "password12".getBytes(), dtId1.getKind(), new Text("service1"));
+
+    Credentials credentials1 = new Credentials();
+    credentials1.addToken(expectedToken1.getService(), expectedToken1);
+
+    DataOutputBuffer dob1 = new DataOutputBuffer();
+    credentials1.writeTokenStorageToStream(dob1);
+
+    ByteBuffer byteBuffer1 =
+        ByteBuffer.wrap(dob1.getData(), 0, dob1.getLength());
+
+    Map<ApplicationId, ByteBuffer> systemCredentials =
+        new HashMap<ApplicationId, ByteBuffer>();
+    systemCredentials.put(getApplicationId(1), byteBuffer1);
+    original.setSystemCredentialsForApps(
+        YarnServerBuilderUtils.convertToProtoFormat(systemCredentials));
+
     NodeHeartbeatResponsePBImpl copy = new NodeHeartbeatResponsePBImpl(
         original.getProto());
     assertEquals(100, copy.getResponseId());
@@ -178,6 +210,22 @@ public class TestYarnServerApiClasses {
     assertEquals("testDiagnosticMessage", copy.getDiagnosticsMessage());
     assertEquals(collectors, copy.getAppCollectors());
     assertEquals(false, copy.getAreNodeLabelsAcceptedByRM());
+    assertEquals(1, copy.getSystemCredentialsForApps().size());
+
+    Credentials credentials1Out = new Credentials();
+    DataInputByteBuffer buf = new DataInputByteBuffer();
+    ByteBuffer buffer =
+        YarnServerBuilderUtils
+            .convertFromProtoFormat(copy.getSystemCredentialsForApps())
+            .get(getApplicationId(1));
+    Assert.assertNotNull(buffer);
+    buffer.rewind();
+    buf.reset(buffer);
+    credentials1Out.readTokenStorageStream(buf);
+    assertEquals(1, credentials1Out.getAllTokens().size());
+    // Ensure token1's password "password12" is available from proto response
+    assertEquals(10,
+        credentials1Out.getAllTokens().iterator().next().getPassword().length);
    }
 
   @Test
@@ -376,7 +424,8 @@ public class TestYarnServerApiClasses {
     AppCollectorData data = AppCollectorData.newInstance(appID, collectorAddr);
     if (!hasNullCollectorToken) {
       data.setCollectorToken(
-          Token.newInstance(new byte[0], "kind", new byte[0], "s"));
+          org.apache.hadoop.yarn.api.records.Token.newInstance(new byte[0],
+              "kind", new byte[0], "s"));
     }
     Map<ApplicationId, AppCollectorData> collectorMap =
         new HashMap<>();

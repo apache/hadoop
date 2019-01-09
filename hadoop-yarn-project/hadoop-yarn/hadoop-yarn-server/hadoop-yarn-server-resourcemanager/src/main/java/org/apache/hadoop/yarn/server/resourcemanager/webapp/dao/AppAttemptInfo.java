@@ -21,6 +21,7 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import com.google.gson.Gson;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -43,6 +44,7 @@ public class AppAttemptInfo {
   protected String blacklistedNodes;
   private String nodesBlacklistedBySystem;
   protected String appAttemptId;
+  private String exportPorts;
 
   public AppAttemptInfo() {
   }
@@ -55,6 +57,7 @@ public class AppAttemptInfo {
     this.nodeId = "";
     this.logsLink = "";
     this.blacklistedNodes = "";
+    this.exportPorts = "";
     if (attempt != null) {
       this.id = attempt.getAppAttemptId().getAttemptId();
       this.startTime = attempt.getStartTime();
@@ -67,6 +70,9 @@ public class AppAttemptInfo {
         this.logsLink = WebAppUtils.getRunningLogURL(schemePrefix
             + masterContainer.getNodeHttpAddress(),
             masterContainer.getId().toString(), user);
+
+        Gson gson = new Gson();
+        this.exportPorts = gson.toJson(masterContainer.getExposedPorts());
 
         nodesBlacklistedBySystem =
             StringUtils.join(attempt.getAMBlacklistManager()

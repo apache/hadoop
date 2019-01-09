@@ -49,7 +49,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 
 import static org.apache.ratis.rpc.SupportedRpcType.GRPC;
 import org.apache.ratis.protocol.RaftGroupId;
-import org.apache.ratis.util.CheckedBiConsumer;
+import org.apache.ratis.util.function.CheckedBiConsumer;
 
 import java.util.function.BiConsumer;
 

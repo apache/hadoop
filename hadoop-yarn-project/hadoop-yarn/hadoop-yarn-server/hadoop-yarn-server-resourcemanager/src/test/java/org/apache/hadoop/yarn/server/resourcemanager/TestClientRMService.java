@@ -1449,7 +1449,8 @@ public class TestClientRMService {
     RMAppAttemptImpl rmAppAttemptImpl = spy(new RMAppAttemptImpl(attemptId,
         rmContext, yarnScheduler, null, asContext, config, null, app));
     Container container = Container.newInstance(
-        ContainerId.newContainerId(attemptId, 1), null, "", null, null, null);
+        ContainerId.newContainerId(attemptId, 1), null,
+        "", null, null, null);
     RMContainerImpl containerimpl = spy(new RMContainerImpl(container,
         SchedulerRequestKey.extractFrom(container), attemptId, null, "",
         rmContext));

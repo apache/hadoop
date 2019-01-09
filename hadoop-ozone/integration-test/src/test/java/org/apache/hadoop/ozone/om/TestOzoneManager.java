@@ -63,14 +63,14 @@ import org.apache.hadoop.utils.db.Table;
 import org.apache.hadoop.utils.db.Table.KeyValue;
 import org.apache.hadoop.utils.db.TableIterator;
 import org.apache.ratis.util.LifeCycle;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-
+import org.junit.rules.Timeout;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -98,17 +98,20 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys
  * Test Ozone Manager operation in distributed handler scenario.
  */
 public class TestOzoneManager {
-  private static MiniOzoneCluster cluster = null;
-  private static StorageHandler storageHandler;
-  private static UserArgs userArgs;
-  private static OMMetrics omMetrics;
-  private static OzoneConfiguration conf;
-  private static String clusterId;
-  private static String scmId;
-  private static String omId;
+  private MiniOzoneCluster cluster = null;
+  private StorageHandler storageHandler;
+  private UserArgs userArgs;
+  private OMMetrics omMetrics;
+  private OzoneConfiguration conf;
+  private String clusterId;
+  private String scmId;
+  private String omId;
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
+
+  @Rule
+  public Timeout timeout = new Timeout(60000);
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -117,8 +120,8 @@ public class TestOzoneManager {
    *
    * @throws IOException
    */
-  @BeforeClass
-  public static void init() throws Exception {
+  @Before
+  public void init() throws Exception {
     conf = new OzoneConfiguration();
     clusterId = UUID.randomUUID().toString();
     scmId = UUID.randomUUID().toString();
@@ -140,15 +143,15 @@ public class TestOzoneManager {
   /**
    * Shutdown MiniDFSCluster.
    */
-  @AfterClass
-  public static void shutdown() {
+  @After
+  public void shutdown() {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
   // Create a volume and test its attribute after creating them
-  @Test(timeout = 60000)
+  @Test
   public void testCreateVolume() throws IOException, OzoneException {
     long volumeCreateFailCount = omMetrics.getNumVolumeCreateFails();
     String userName = "user" + RandomStringUtils.randomNumeric(5);
@@ -169,7 +172,7 @@ public class TestOzoneManager {
   }
 
   // Create a volume and modify the volume owner and then test its attributes
-  @Test(timeout = 60000)
+  @Test
   public void testChangeVolumeOwner() throws IOException, OzoneException {
     long volumeCreateFailCount = omMetrics.getNumVolumeCreateFails();
     long volumeInfoFailCount = omMetrics.getNumVolumeInfoFails();
@@ -199,7 +202,7 @@ public class TestOzoneManager {
   }
 
   // Create a volume and modify the volume owner and then test its attributes
-  @Test(timeout = 60000)
+  @Test
   public void testChangeVolumeQuota() throws IOException, OzoneException {
     long numVolumeCreateFail = omMetrics.getNumVolumeCreateFails();
     long numVolumeInfoFail = omMetrics.getNumVolumeInfoFails();
@@ -245,7 +248,7 @@ public class TestOzoneManager {
   }
 
   // Create a volume and then delete it and then check for deletion
-  @Test(timeout = 60000)
+  @Test
   public void testDeleteVolume() throws IOException, OzoneException {
     long volumeCreateFailCount = omMetrics.getNumVolumeCreateFails();
     String userName = "user" + RandomStringUtils.randomNumeric(5);
@@ -309,7 +312,7 @@ public class TestOzoneManager {
 
   // Create a volume and a bucket inside the volume,
   // then delete it and then check for deletion failure
-  @Test(timeout = 60000)
+  @Test
   public void testFailedDeleteVolume() throws IOException, OzoneException {
     long numVolumeCreateFails = omMetrics.getNumVolumeCreateFails();
     String userName = "user" + RandomStringUtils.randomNumeric(5);
@@ -346,7 +349,7 @@ public class TestOzoneManager {
   }
 
   // Create a volume and test Volume access for a different user
-  @Test(timeout = 60000)
+  @Test
   public void testAccessVolume() throws IOException, OzoneException {
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
@@ -390,7 +393,7 @@ public class TestOzoneManager {
     Assert.assertEquals(0, omMetrics.getNumVolumeCreateFails());
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testCreateBucket() throws IOException, OzoneException {
     long numVolumeCreateFail = omMetrics.getNumVolumeCreateFails();
     long numBucketCreateFail = omMetrics.getNumBucketCreateFails();
@@ -421,7 +424,7 @@ public class TestOzoneManager {
         omMetrics.getNumBucketInfoFails());
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testDeleteBucket() throws IOException, OzoneException {
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
@@ -444,7 +447,7 @@ public class TestOzoneManager {
     storageHandler.getBucketInfo(getBucketArgs);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testDeleteNonExistingBucket() throws IOException, OzoneException {
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
@@ -469,7 +472,7 @@ public class TestOzoneManager {
   }
 
 
-  @Test(timeout = 60000)
+  @Test
   public void testDeleteNonEmptyBucket() throws IOException, OzoneException {
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
@@ -791,7 +794,7 @@ public class TestOzoneManager {
         omMetrics.getNumKeyRenameFails());
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testListBuckets() throws IOException, OzoneException {
     ListBuckets result = null;
     ListArgs listBucketArgs = null;

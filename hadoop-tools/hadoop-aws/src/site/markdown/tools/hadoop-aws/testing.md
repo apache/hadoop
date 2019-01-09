@@ -570,9 +570,22 @@ rather than write new tests. When doing this, make sure that the new predicates
 fail with meaningful diagnostics, so any new problems can be easily debugged
 from test logs.
 
+***Effective use of FS instances during S3A integration tests.*** Tests using
+`FileSystem` instances are fastest if they can recycle the existing FS
+instance from the same JVM.
+
+If you do that, you MUST NOT close or do unique configuration on them.
+If you want a guarantee of 100% isolation or an instance with unique config,
+create a new instance which you MUST close in the teardown to avoid leakage
+of resources.
+
+Do NOT add `FileSystem` instances manually
+(with e.g `org.apache.hadoop.fs.FileSystem#addFileSystemForTesting`) to the
+cache that will be modified or closed during the test runs. This can cause
+other tests to fail when using the same modified or closed FS instance.
+For more details see HADOOP-15819.
 
 ## <a name="requirements"></a> Requirements of new Tests
-
 
 This is what we expect from new tests; they're an extension of the normal
 Hadoop requirements, based on the need to work with remote servers whose
@@ -996,11 +1009,7 @@ When the `s3guard` profile is enabled, following profiles can be specified:
 
 * `dynamo`: use an AWS-hosted DynamoDB table; creating the table if it does
   not exist. You will have to pay the bills for DynamoDB web service.
-* `dynamodblocal`: use an in-memory DynamoDBLocal server instead of real AWS
-  DynamoDB web service; launch the server and creating the table.
-  You won't be charged bills for using DynamoDB in test. As it runs in-JVM,
-  the table isn't shared across other tests running in parallel.
-* `non-auth`: treat the S3Guard metadata as authoritative.
+* `auth`: treat the S3Guard metadata as authoritative.
 
 ```bash
 mvn -T 1C verify -Dparallel-tests -DtestsThreadCount=6 -Ds3guard -Ddynamo -Dauth
@@ -1022,6 +1031,10 @@ If the `s3guard` profile *is* set,
 1. The S3Guard options from maven (the dynamo and authoritative flags)
   overwrite any previously set in the configuration files.
 1. DynamoDB will be configured to create any missing tables.
+1. When using DynamoDB and running ITestDynamoDBMetadataStore, the fs.s3a.s3guard.ddb.test.table
+property should be configured, and the name of that table should be different
+ than what is used for fs.s3a.s3guard.ddb.table. The test table is destroyed
+ and modified multiple times during the test.
 
 
 ### Scale Testing MetadataStore Directly

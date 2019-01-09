@@ -103,7 +103,8 @@ public class TestOzoneRestWithMiniCluster {
     putKey(bucket, keyName, keyData);
   }
 
-  private void putKey(OzoneBucket bucket, String keyName, String keyData) throws IOException {
+  private void putKey(OzoneBucket bucket, String keyName, String keyData)
+      throws IOException {
     try (
         OzoneOutputStream ozoneOutputStream = bucket
             .createKey(keyName, 0, replicationType, replicationFactor);

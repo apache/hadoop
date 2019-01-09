@@ -18,8 +18,11 @@
 package org.apache.hadoop.yarn.csi.translator;
 
 import csi.v0.Csi;
+import org.apache.hadoop.yarn.api.protocolrecords.NodePublishVolumeRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.NodeUnpublishVolumeRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetPluginInfoResponse;
 
 /**
  * Factory class to get desired proto transformer instance.
@@ -57,6 +60,15 @@ public final class ProtoTranslatorFactory {
     } else if (yarnProto == ValidateVolumeCapabilitiesResponse.class
         && csiProto == Csi.ValidateVolumeCapabilitiesResponse.class) {
       return new ValidationVolumeCapabilitiesResponseProtoTranslator();
+    } else if (yarnProto == NodePublishVolumeRequest.class
+        && csiProto == Csi.NodePublishVolumeRequest.class) {
+      return new NodePublishVolumeRequestProtoTranslator();
+    } else if (yarnProto == GetPluginInfoResponse.class
+        && csiProto == Csi.GetPluginInfoResponse.class) {
+      return new GetPluginInfoResponseProtoTranslator();
+    } else if (yarnProto == NodeUnpublishVolumeRequest.class
+        && csiProto == Csi.NodeUnpublishVolumeRequest.class) {
+      return new NodeUnpublishVolumeRequestProtoTranslator();
     }
     throw new IllegalArgumentException("A problem is found while processing"
         + " proto message translating. Unexpected message types,"

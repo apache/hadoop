@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import static org.mockito.Mockito.spy;
 
@@ -175,6 +177,11 @@ public class NameNodeAdapter {
     return l == null ? -1 : l.getLastUpdate();
   }
 
+
+  public static HAServiceState getServiceState(NameNode nn) {
+    return nn.getServiceState();
+  }
+
   /**
    * Return the datanode descriptor for the given datanode.
    */
@@ -221,6 +228,12 @@ public class NameNodeAdapter {
       fsnOld.writeUnlock();
     }
     return fsnSpy;
+  }
+
+  public static BlockManager spyOnBlockManager(NameNode nn) {
+    BlockManager bmSpy = Mockito.spy(nn.getNamesystem().getBlockManager());
+    nn.getNamesystem().setBlockManagerForTesting(bmSpy);
+    return bmSpy;
   }
 
   public static ReentrantReadWriteLock spyOnFsLock(FSNamesystem fsn) {

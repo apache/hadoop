@@ -616,6 +616,8 @@ public class ContainersMonitorImpl extends AbstractService implements
               LOG.info("Can not get both ip and hostname: "
                   + Arrays.toString(ipAndHost));
             }
+            String exposedPorts = containerExecutor.getExposedPorts(container);
+            container.setExposedPorts(exposedPorts);
           } else {
             LOG.info(containerId + " is missing. Not setting ip and hostname");
           }

@@ -550,7 +550,7 @@ void test_yarn_sysfs() {
       exit(1);
     }
     free(user_dir);
-    char *app_dir = make_string("%s/usercache/%s/appcache/%s/%s", *local_dir_ptr, username, app_id);
+    char *app_dir = make_string("%s/usercache/%s/appcache/%s", *local_dir_ptr, username, app_id);
     if (mkdirs(app_dir, 0750) != 0) {
       printf("Can not make app directories: %s\n", app_dir);
       exit(1);
@@ -1154,6 +1154,8 @@ static void test_delete_race_internal() {
       printf("FAIL: return code from delete_as_user is %d\n", ret);
       exit(1);
     }
+    free(app_dir);
+    free(container_dir);
     exit(0);
   } else {
     // delete application directory
@@ -1472,6 +1474,53 @@ void test_cleaning_docker_cgroups() {
   }
 }
 
+void test_exec_container() {
+  int ret = -1;
+  char* filename = TEST_ROOT "/exec_container.cmd";
+  FILE *file = fopen(filename, "w");
+  if (file == NULL) {
+    printf("FAIL: Could not write to command file: %s\n", filename);
+    exit(1);
+  }
+  // Test missing user
+  fprintf(file, "[command-execution]\n");
+  fprintf(file, "workdir=/tmp/container_1541184499854_0001_01_000001\n");
+  fprintf(file, "launch-command=/bin/bash,-ir\n");
+  fprintf(file, "command=exec\n");
+  fclose(file);
+  ret = exec_container(filename);
+  if (ret!=-1) {
+    printf("FAIL: broken command file should not pass.\n");
+    exit(1);
+  }
+
+  // Test missing workdir
+  file = fopen(filename, "w");
+  fprintf(file, "[command-execution]\n");
+  fprintf(file, "launch-command=/bin/bash,-ir\n");
+  fprintf(file, "user=test\n");
+  fprintf(file, "command=exec\n");
+  fclose(file);
+  ret = exec_container(filename);
+  if (ret!=-1) {
+    printf("FAIL: broken command file should not pass.\n");
+    exit(1);
+  }
+
+  // Test missing launch-command
+  file = fopen(filename, "w");
+  fprintf(file, "[command-execution]\n");
+  fprintf(file, "workdir=/tmp/container_1541184499854_0001_01_000001\n");
+  fprintf(file, "user=test\n");
+  fprintf(file, "command=exec\n");
+  fclose(file);
+  ret = exec_container(filename);
+  if (ret!=-1) {
+    printf("FAIL: broken command file should not pass.\n");
+    exit(1);
+  }
+}
+
 // This test is expected to be executed either by a regular
 // user or by root. If executed by a regular user it doesn't
 // test all the functions that would depend on changing the
@@ -1611,6 +1660,9 @@ int main(int argc, char **argv) {
 
   printf("\nTesting yarn sysfs\n");
   test_yarn_sysfs();
+
+  printf("\nTesting exec_container()\n");
+  test_exec_container();
 
   test_check_user(0);
 

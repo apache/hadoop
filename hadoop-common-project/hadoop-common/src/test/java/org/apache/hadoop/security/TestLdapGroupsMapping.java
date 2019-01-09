@@ -300,11 +300,51 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
         mapping.getPassword(conf, LdapGroupsMapping.BIND_PASSWORD_KEY, ""));
     Assert.assertEquals("storepass",
         mapping.getPassword(conf, LdapGroupsMapping.LDAP_KEYSTORE_PASSWORD_KEY,
-           ""));
+            ""));
     // let's make sure that a password that doesn't exist returns an
     // empty string as currently expected and used to trigger a call to
     // extract password
     Assert.assertEquals("", mapping.getPassword(conf,"invalid-alias", ""));
+  }
+
+  @Test
+  public void testConfGetPasswordUsingAlias() throws Exception {
+    File testDir = GenericTestUtils.getTestDir();
+    Configuration conf = getBaseConf();
+    final Path jksPath = new Path(testDir.toString(), "test.jks");
+    final String ourUrl =
+        JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri();
+
+    File file = new File(testDir, "test.jks");
+    file.delete();
+    conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, ourUrl);
+
+    // Set alias
+    String bindpassAlias = "bindpassAlias";
+    conf.set(LdapGroupsMapping.BIND_PASSWORD_ALIAS_KEY, bindpassAlias);
+
+    CredentialProvider provider =
+        CredentialProviderFactory.getProviders(conf).get(0);
+    char[] bindpass = "bindpass".toCharArray();
+
+    // Ensure that we get null when the key isn't there
+    assertNull(provider.getCredentialEntry(bindpassAlias));
+
+    // Create credential for the alias
+    provider.createCredentialEntry(bindpassAlias, bindpass);
+    provider.flush();
+
+    // Make sure we get back the right key
+    assertArrayEquals(bindpass, provider.getCredentialEntry(
+        bindpassAlias).getCredential());
+
+    LdapGroupsMapping mapping = new LdapGroupsMapping();
+    Assert.assertEquals("bindpass",
+        mapping.getPasswordFromCredentialProviders(conf, bindpassAlias, ""));
+
+    // Empty for an invalid alias
+    Assert.assertEquals("", mapping.getPasswordFromCredentialProviders(
+        conf, "invalid-alias", ""));
   }
 
   /**

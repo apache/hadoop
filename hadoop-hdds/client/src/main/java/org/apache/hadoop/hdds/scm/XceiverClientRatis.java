@@ -190,12 +190,6 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     return minIndex.isPresent() ? minIndex.getAsLong() : 0;
   }
 
-  private void getFailedServer(
-      Collection<RaftProtos.CommitInfoProto> commitInfos) {
-    for (RaftProtos.CommitInfoProto proto : commitInfos) {
-
-    }
-  }
 
   @Override
   public long watchForCommit(long index, long timeout)
@@ -217,7 +211,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
         .sendWatchAsync(index, RaftProtos.ReplicationLevel.ALL_COMMITTED);
     RaftClientReply reply;
     try {
-      reply = replyFuture.get(timeout, TimeUnit.MILLISECONDS);
+      replyFuture.get(timeout, TimeUnit.MILLISECONDS);
     } catch (TimeoutException toe) {
       LOG.warn("3 way commit failed ", toe);
 

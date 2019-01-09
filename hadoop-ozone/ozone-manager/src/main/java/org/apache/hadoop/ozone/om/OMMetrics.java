@@ -62,6 +62,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numGetServiceLists;
   private @Metric MutableCounterLong numListS3Buckets;
   private @Metric MutableCounterLong numInitiateMultipartUploads;
+  private @Metric MutableCounterLong numCompleteMultipartUploads;
 
 
   // Failure Metrics
@@ -86,6 +87,11 @@ public class OMMetrics {
   private @Metric MutableCounterLong numGetServiceListFails;
   private @Metric MutableCounterLong numListS3BucketsFails;
   private @Metric MutableCounterLong numInitiateMultipartUploadFails;
+  private @Metric MutableCounterLong numCommitMultipartUploadParts;
+  private @Metric MutableCounterLong getNumCommitMultipartUploadPartFails;
+  private @Metric MutableCounterLong numCompleteMultipartUploadFails;
+  private @Metric MutableCounterLong numAbortMultipartUploads;
+  private @Metric MutableCounterLong numAbortMultipartUploadFails;
 
   // Metrics for total number of volumes, buckets and keys
 
@@ -234,6 +240,33 @@ public class OMMetrics {
 
   public void incNumInitiateMultipartUploadFails() {
     numInitiateMultipartUploadFails.incr();
+  }
+
+  public void incNumCommitMultipartUploadParts() {
+    numKeyOps.incr();
+    numCommitMultipartUploadParts.incr();
+  }
+
+  public void incNumCommitMultipartUploadPartFails() {
+    numInitiateMultipartUploadFails.incr();
+  }
+
+  public void incNumCompleteMultipartUploads() {
+    numKeyOps.incr();
+    numCompleteMultipartUploads.incr();
+  }
+
+  public void incNumCompleteMultipartUploadFails() {
+    numCompleteMultipartUploadFails.incr();
+  }
+
+  public void incNumAbortMultipartUploads() {
+    numKeyOps.incr();
+    numAbortMultipartUploads.incr();
+  }
+
+  public void incNumAbortMultipartUploadFails() {
+    numAbortMultipartUploadFails.incr();
   }
 
   public void incNumGetServiceLists() {
@@ -552,6 +585,14 @@ public class OMMetrics {
 
   public long getNumInitiateMultipartUploadFails() {
     return numInitiateMultipartUploadFails.value();
+  }
+
+  public long getNumAbortMultipartUploads() {
+    return numAbortMultipartUploads.value();
+  }
+
+  public long getNumAbortMultipartUploadFails() {
+    return numAbortMultipartUploadFails.value();
   }
 
   public void unRegister() {

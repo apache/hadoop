@@ -351,6 +351,8 @@ const char *get_docker_error_message(const int error_code) {
       return "Docker image is not trusted";
     case INVALID_DOCKER_TMPFS_MOUNT:
       return "Invalid docker tmpfs mount";
+    case INVALID_DOCKER_RUNTIME:
+      return "Invalid docker runtime";
     default:
       return "Unknown error";
   }
@@ -568,9 +570,10 @@ cleanup:
 }
 
 int get_docker_inspect_command(const char *command_file, const struct configuration *conf, args *args) {
-  const char *valid_format_strings[] = { "{{.State.Status}}",
+  const char *valid_format_strings[] = {"{{.State.Status}}",
                                 "{{range(.NetworkSettings.Networks)}}{{.IPAddress}},{{end}}{{.Config.Hostname}}",
-                                 "{{.State.Status}},{{.Config.StopSignal}}"};
+                                "{{json .NetworkSettings.Ports}}",
+                                "{{.State.Status}},{{.Config.StopSignal}}"};
   int ret = 0, i = 0, valid_format = 0;
   char *format = NULL, *container_name = NULL, *tmp_buffer = NULL;
   struct configuration command_config = {0, NULL};
@@ -590,7 +593,8 @@ int get_docker_inspect_command(const char *command_file, const struct configurat
     ret = INVALID_DOCKER_INSPECT_FORMAT;
     goto free_and_exit;
   }
-  for (i = 0; i < 3; ++i) {
+
+  for (i = 0; i < 4; ++i) {
     if (strcmp(format, valid_format_strings[i]) == 0) {
       valid_format = 1;
       break;
@@ -942,6 +946,19 @@ static int set_network(const struct configuration *command_config,
     ret = INVALID_DOCKER_NETWORK;
   }
 
+  return ret;
+}
+
+static int set_runtime(const struct configuration *command_config,
+                       const struct configuration *conf, args *args) {
+  int ret = 0;
+  ret = add_param_to_command_if_allowed(command_config, conf, "runtime",
+                                        "docker.allowed.runtimes", "--runtime=",
+                                        0, 0, args);
+  if (ret != 0) {
+    fprintf(ERRORFILE, "Could not find requested runtime in allowed runtimes\n");
+    ret = INVALID_DOCKER_RUNTIME;
+  }
   return ret;
 }
 
@@ -1648,6 +1665,11 @@ int get_docker_run_command(const char *command_file, const struct configuration 
   }
 
   ret = set_capabilities(&command_config, conf, args);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  ret = set_runtime(&command_config, conf, args);
   if (ret != 0) {
     goto free_and_exit;
   }

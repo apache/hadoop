@@ -51,7 +51,8 @@ enum operations {
   RUN_AS_USER_LIST = 12,
   REMOVE_DOCKER_CONTAINER = 13,
   INSPECT_DOCKER_CONTAINER = 14,
-  RUN_AS_USER_SYNC_YARN_SYSFS = 15
+  RUN_AS_USER_SYNC_YARN_SYSFS = 15,
+  EXEC_CONTAINER = 16
 };
 
 #define NM_GROUP_KEY "yarn.nodemanager.linux-container-executor.group"
@@ -66,11 +67,13 @@ enum operations {
 #define MIN_USERID_KEY "min.user.id"
 #define BANNED_USERS_KEY "banned.users"
 #define ALLOWED_SYSTEM_USERS_KEY "allowed.system.users"
+#define TERMINAL_SUPPORT_ENABLED_KEY "feature.terminal.enabled"
 #define DOCKER_SUPPORT_ENABLED_KEY "feature.docker.enabled"
 #define TC_SUPPORT_ENABLED_KEY "feature.tc.enabled"
 #define MOUNT_CGROUP_SUPPORT_ENABLED_KEY "feature.mount-cgroup.enabled"
 #define YARN_SYSFS_SUPPORT_ENABLED_KEY "feature.yarn.sysfs.enabled"
 #define TMP_DIR "tmp"
+#define COMMAND_FILE_SECTION "command-execution"
 
 extern struct passwd *user_detail;
 
@@ -296,6 +299,11 @@ int run_docker_with_pty(const char *command_file);
  */
 int exec_docker_command(char *docker_command, char **argv, int argc);
 
+/**
+ * Exec a container terminal.
+ */
+int exec_container(const char *command_file);
+
 /** Check if yarn sysfs is enabled in configuration. */
 int is_yarn_sysfs_support_enabled();
 
@@ -334,3 +342,8 @@ char* flatten(char **args);
  * Remove docker container
  */
 int remove_docker_container(char **argv, int argc);
+
+/**
+ * Check if terminal feature is enabled
+ */
+int is_terminal_support_enabled();

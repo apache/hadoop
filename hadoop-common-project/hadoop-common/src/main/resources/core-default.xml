@@ -371,6 +371,16 @@
 </property>
 
 <property>
+  <name>hadoop.security.group.mapping.ldap.bind.password.alias</name>
+  <value></value>
+  <description>
+    The alias of the bind user to be used to get the password from credential
+    providers. If the alias is empty, property
+    hadoop.security.group.mapping.ldap.bind.password is used instead.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.group.mapping.ldap.bind.password.file</name>
   <value></value>
   <description>
@@ -692,6 +702,15 @@
   <name>hadoop.security.auth_to_local</name>
   <value></value>
   <description>Maps kerberos principals to local user names</description>
+</property>
+
+<property>
+  <name>hadoop.security.auth_to_local.mechanism</name>
+  <value>hadoop</value>
+  <description>The mechanism by which auth_to_local rules are evaluated.
+    If set to 'hadoop' it will not allow resulting local user names to have
+    either '@' or '/'. If set to 'MIT' it will follow MIT evaluation rules
+    and the restrictions of 'hadoop' do not apply.</description>
 </property>
 
 <property>
@@ -2407,9 +2426,10 @@
 
 <property>
   <name>hadoop.ssl.enabled.protocols</name>
-  <value>TLSv1,SSLv2Hello,TLSv1.1,TLSv1.2</value>
+  <value>TLSv1.1,TLSv1.2</value>
   <description>
-    The supported SSL protocols.
+    The supported SSL protocols. The parameter will only used from
+    DatanodeHttpServer.
   </description>
 </property>
 
