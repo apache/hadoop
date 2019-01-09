@@ -1814,8 +1814,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       if (newTrackingUrl != null &&
           !newTrackingUrl.equals(appAttempt.originalTrackingUrl)) {
         appAttempt.originalTrackingUrl = newTrackingUrl;
-        AggregateAppResourceUsage resUsage =
-            appAttempt.attemptMetrics.getAggregateAppResourceUsage();
         ApplicationAttemptStateData attemptState = ApplicationAttemptStateData
             .newInstance(appAttempt.applicationAttemptId,
                 appAttempt.getMasterContainer(),

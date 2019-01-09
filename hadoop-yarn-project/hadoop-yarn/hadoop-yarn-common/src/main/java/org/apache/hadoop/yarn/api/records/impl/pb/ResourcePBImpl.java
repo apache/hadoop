@@ -25,7 +25,6 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
-import org.apache.hadoop.yarn.api.records.impl.BaseResource;
 import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
@@ -34,13 +33,12 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ResourceInformationProto;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
-import java.util.Arrays;
 import java.util.Map;
 
 
 @Private
 @Unstable
-public class ResourcePBImpl extends BaseResource {
+public class ResourcePBImpl extends Resource {
 
   private static final Log LOG = LogFactory.getLog(ResourcePBImpl.class);
 
@@ -95,7 +93,7 @@ public class ResourcePBImpl extends BaseResource {
   @Override
   public long getMemorySize() {
     // memory should always be present
-    ResourceInformation ri = resources[MandatoryResources.MEMORY.getId()];
+    ResourceInformation ri = resources[MEMORY_INDEX];
 
     if (ri.getUnits().isEmpty()) {
       return ri.getValue();
@@ -113,19 +111,19 @@ public class ResourcePBImpl extends BaseResource {
   @Override
   public void setMemorySize(long memory) {
     maybeInitBuilder();
-    getResourceInformation(MEMORY).setValue(memory);
+    getResourceInformation(ResourceInformation.MEMORY_URI).setValue(memory);
   }
 
   @Override
   public int getVirtualCores() {
     // vcores should always be present
-    return (int) resources[MandatoryResources.VCORES.getId()].getValue();
+    return (int) resources[VCORES_INDEX].getValue();
   }
 
   @Override
   public void setVirtualCores(int vCores) {
     maybeInitBuilder();
-    getResourceInformation(VCORES).setValue(vCores);
+    getResourceInformation(ResourceInformation.VCORES_URI).setValue(vCores);
   }
 
   private void initResources() {
@@ -156,7 +154,6 @@ public class ResourcePBImpl extends BaseResource {
         resources[index].setValue(value);
       }
     }
-    readOnlyResources = Arrays.copyOf(resources, resources.length);
     this.setMemorySize(p.getMemory());
     this.setVirtualCores(p.getVirtualCores());
   }
@@ -187,11 +184,6 @@ public class ResourcePBImpl extends BaseResource {
   }
 
   @Override
-  public ResourceInformation[] getResources() {
-    return super.getResources();
-  }
-
-  @Override
   public ResourceInformation getResourceInformation(String resource)
       throws ResourceNotFoundException {
     return super.getResourceInformation(resource);
@@ -212,7 +204,6 @@ public class ResourcePBImpl extends BaseResource {
       }
 
       resources = new ResourceInformation[types.length];
-      readOnlyResources = new ResourceInformation[types.length];
       for (ResourceInformation entry : types) {
         int index = ResourceUtils.getResourceTypeIndex().get(entry.getName());
         resources[index] = ResourceInformation.newInstance(entry);

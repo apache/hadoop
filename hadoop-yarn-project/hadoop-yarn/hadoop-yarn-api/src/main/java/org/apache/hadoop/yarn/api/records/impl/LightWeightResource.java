@@ -18,19 +18,24 @@
 
 package org.apache.hadoop.yarn.api.records.impl;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 
-import java.util.Arrays;
+import static org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_MB;
+import static org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_URI;
+import static org.apache.hadoop.yarn.api.records.ResourceInformation.VCORES_URI;
 
 /**
  * <p>
- * <code>BaseResource</code> extends Resource to handle base resources such
+ * <code>LightResource</code> extends Resource to handle base resources such
  * as memory and CPU.
  * TODO: We have a long term plan to use AbstractResource when additional
  * resource types are to be handled as well.
+ * This will be used to speed up internal calculation to avoid creating
+ * costly PB-backed Resource object: <code>ResourcePBImpl</code>
  * </p>
  *
  * <p>
@@ -54,48 +59,34 @@ import java.util.Arrays;
  *
  * @see Resource
  */
-@Public
+@InterfaceAudience.Private
 @Unstable
-public class BaseResource extends Resource {
+public class LightWeightResource extends Resource {
 
   private ResourceInformation memoryResInfo;
   private ResourceInformation vcoresResInfo;
-  protected ResourceInformation[] resources = null;
-  protected ResourceInformation[] readOnlyResources = null;
 
-  // Number of mandatory resources, this is added to avoid invoke
-  // MandatoryResources.values().length, since values() internally will
-  // copy array, etc.
-  private static final int NUM_MANDATORY_RESOURCES = 2;
-
-  protected enum MandatoryResources {
-    MEMORY(0), VCORES(1);
-
-    private final int id;
-
-    MandatoryResources(int id) {
-      this.id = id;
-    }
-
-    public int getId() {
-      return this.id;
-    }
-  }
-
-  public BaseResource() {
-    // Base constructor.
-  }
-
-  public BaseResource(long memory, long vcores) {
-    this.memoryResInfo = ResourceInformation.newInstance(MEMORY,
-        ResourceInformation.MEMORY_MB.getUnits(), memory);
-    this.vcoresResInfo = ResourceInformation.newInstance(VCORES, "", vcores);
+  public LightWeightResource(long memory, long vcores) {
+    this.memoryResInfo = LightWeightResource.newDefaultInformation(MEMORY_URI,
+        MEMORY_MB.getUnits(), memory);
+    this.vcoresResInfo = LightWeightResource.newDefaultInformation(VCORES_URI,
+        "", vcores);
 
     resources = new ResourceInformation[NUM_MANDATORY_RESOURCES];
-    readOnlyResources = new ResourceInformation[NUM_MANDATORY_RESOURCES];
-    resources[MandatoryResources.MEMORY.id] = memoryResInfo;
-    resources[MandatoryResources.VCORES.id] = vcoresResInfo;
-    readOnlyResources = Arrays.copyOf(resources, resources.length);
+    resources[MEMORY_INDEX] = memoryResInfo;
+    resources[VCORES_INDEX] = vcoresResInfo;
+  }
+
+  private static ResourceInformation newDefaultInformation(String name,
+      String unit, long value) {
+    ResourceInformation ri = new ResourceInformation();
+    ri.setName(name);
+    ri.setValue(value);
+    ri.setResourceType(ResourceTypes.COUNTABLE);
+    ri.setUnitsWithoutValidation(unit);
+    ri.setMinimumAllocation(0);
+    ri.setMaximumAllocation(Long.MAX_VALUE);
+    return ri;
   }
 
   @Override
@@ -131,7 +122,42 @@ public class BaseResource extends Resource {
   }
 
   @Override
-  public ResourceInformation[] getResources() {
-    return readOnlyResources;
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null || !(obj instanceof Resource)) {
+      return false;
+    }
+    Resource other = (Resource) obj;
+    if (getMemorySize() != other.getMemorySize()
+        || getVirtualCores() != other.getVirtualCores()) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int compareTo(Resource other) {
+    // compare memory and vcores first(in that order) to preserve
+    // existing behaviour
+    long diff = this.getMemorySize() - other.getMemorySize();
+    if (diff == 0) {
+      return this.getVirtualCores() - other.getVirtualCores();
+    } else if (diff > 0){
+      return 1;
+    } else {
+      return -1;
+    }
+  }
+
+  @Override
+  public int hashCode() {
+    final int prime = 47;
+    long result = prime + getMemorySize();
+    result = prime * result + getVirtualCores();
+
+    return (int) result;
   }
 }
