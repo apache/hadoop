@@ -250,23 +250,25 @@ public class RouterAdminServer extends AbstractService
 
     MountTable mountTable = request.getEntry();
     if (mountTable != null && router.isQuotaEnabled()) {
-      synchronizeQuota(mountTable);
+      synchronizeQuota(mountTable.getSourcePath(),
+          mountTable.getQuota().getQuota(),
+          mountTable.getQuota().getSpaceQuota());
     }
     return response;
   }
 
   /**
    * Synchronize the quota value across mount table and subclusters.
-   * @param mountTable Quota set in given mount table.
+   * @param path Source path in given mount table.
+   * @param nsQuota Name quota definition in given mount table.
+   * @param ssQuota Space quota definition in given mount table.
    * @throws IOException
    */
-  private void synchronizeQuota(MountTable mountTable) throws IOException {
-    String path = mountTable.getSourcePath();
-    long nsQuota = mountTable.getQuota().getQuota();
-    long ssQuota = mountTable.getQuota().getSpaceQuota();
-
-    if (nsQuota != HdfsConstants.QUOTA_DONT_SET
-        || ssQuota != HdfsConstants.QUOTA_DONT_SET) {
+  private void synchronizeQuota(String path, long nsQuota, long ssQuota)
+      throws IOException {
+    if (router.isQuotaEnabled() &&
+        (nsQuota != HdfsConstants.QUOTA_DONT_SET
+        || ssQuota != HdfsConstants.QUOTA_DONT_SET)) {
       HdfsFileStatus ret = this.router.getRpcServer().getFileInfo(path);
       if (ret != null) {
         this.router.getRpcServer().getQuotaModule().setQuota(path, nsQuota,
@@ -278,6 +280,9 @@ public class RouterAdminServer extends AbstractService
   @Override
   public RemoveMountTableEntryResponse removeMountTableEntry(
       RemoveMountTableEntryRequest request) throws IOException {
+    // clear sub-cluster's quota definition
+    synchronizeQuota(request.getSrcPath(), HdfsConstants.QUOTA_RESET,
+        HdfsConstants.QUOTA_RESET);
     return getMountTableStore().removeMountTableEntry(request);
   }
 
