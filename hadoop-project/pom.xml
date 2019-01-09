@@ -2014,8 +2014,7 @@
       </dependencyManagement>
     </profile>
     <profile>
-      <!-- TODO: remove this profile to generate html5 docs when we stop supporting JDK8 -->
-      <id>javadoc-html-version</id>
+      <id>jdk11</id>
       <activation>
         <jdk>[11,)</jdk>
       </activation>
@@ -2026,7 +2025,10 @@
             <artifactId>maven-javadoc-plugin</artifactId>
             <configuration>
               <additionalOptions>
+                <!-- TODO: remove -html4 option to generate html5 docs when we stop supporting JDK8 -->
                 <additionalOption>-html4</additionalOption>
+                <additionalOption>--add-exports</additionalOption>
+                <additionalOption>java.naming/com.sun.jndi.ldap=ALL-UNNAMED</additionalOption>
               </additionalOptions>
             </configuration>
           </plugin>
