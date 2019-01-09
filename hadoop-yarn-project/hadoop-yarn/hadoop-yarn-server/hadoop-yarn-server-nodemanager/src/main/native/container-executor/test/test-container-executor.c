@@ -1404,7 +1404,6 @@ int main(int argc, char **argv) {
 #endif
 
   test_trim_function();
-  run("rm -fr " TEST_ROOT);
   printf("\nFinished tests\n");
 
   free(current_username);
