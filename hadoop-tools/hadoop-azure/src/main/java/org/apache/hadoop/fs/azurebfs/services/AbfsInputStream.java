@@ -61,6 +61,7 @@ public class AbfsInputStream extends FSInputStream {
       final long contentLength,
       final int bufferSize,
       final int readAheadQueueDepth,
+      final boolean tolerateOobAppends,
       final String eTag) {
     this.client = client;
     this.statistics = statistics;
@@ -68,8 +69,8 @@ public class AbfsInputStream extends FSInputStream {
     this.contentLength = contentLength;
     this.bufferSize = bufferSize;
     this.readAheadQueueDepth = (readAheadQueueDepth >= 0) ? readAheadQueueDepth : Runtime.getRuntime().availableProcessors();
+    this.tolerateOobAppends = tolerateOobAppends;
     this.eTag = eTag;
-    this.tolerateOobAppends = false;
     this.readAheadEnabled = true;
   }
 
