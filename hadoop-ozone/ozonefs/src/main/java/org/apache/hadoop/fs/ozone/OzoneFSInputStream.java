@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.ozone;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSInputStream;
-import org.apache.hadoop.ozone.client.io.ChunkGroupInputStream;
+import org.apache.hadoop.ozone.client.io.KeyInputStream;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,10 +36,10 @@ import java.io.InputStream;
 @InterfaceStability.Evolving
 public final class OzoneFSInputStream extends FSInputStream {
 
-  private final ChunkGroupInputStream inputStream;
+  private final KeyInputStream inputStream;
 
   public OzoneFSInputStream(InputStream inputStream) {
-    this.inputStream = (ChunkGroupInputStream)inputStream;
+    this.inputStream = (KeyInputStream)inputStream;
   }
 
   @Override
