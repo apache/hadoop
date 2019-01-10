@@ -25,6 +25,7 @@ import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 import com.amazonaws.SdkBaseException;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
 import com.amazonaws.retry.RetryUtils;
@@ -600,6 +601,7 @@ public final class S3AUtils {
       credentials.add(new SimpleAWSCredentialsProvider(binding, conf));
       credentials.add(new EnvironmentVariableCredentialsProvider());
       credentials.add(InstanceProfileCredentialsProvider.getInstance());
+      credentials.add(new EC2ContainerCredentialsProviderWrapper());
     } else {
       for (Class<?> aClass : awsClasses) {
         credentials.add(createAWSCredentialProvider(conf,
