@@ -35,7 +35,7 @@
     var BEANS = [
       {"name": "federation",  "url": "/jmx?qry=Hadoop:service=Router,name=FederationState"},
       {"name": "routerstat",  "url": "/jmx?qry=Hadoop:service=NameNode,name=NameNodeStatus"},
-      {"name": "router",      "url": "/jmx?qrt=Hadoop:service=NameNode,name=NameNodeInfo"},
+      {"name": "router",      "url": "/jmx?qry=Hadoop:service=NameNode,name=NameNodeInfo"},
       {"name": "mem",         "url": "/jmx?qry=java.lang:type=Memory"}
     ];
 

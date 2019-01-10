@@ -582,7 +582,7 @@ public class FederationMetrics implements FederationMBean {
 
   @Override
   public String getRouterStatus() {
-    return "RUNNING";
+    return this.router.getRouterState().toString();
   }
 
   /**

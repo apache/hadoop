@@ -585,6 +585,13 @@ public class Router extends CompositeService {
     return this.state;
   }
 
+  /**
+   * Compare router state.
+   */
+  public boolean isRouterState(RouterServiceState routerState) {
+    return routerState.equals(this.state);
+  }
+
   /////////////////////////////////////////////////////////
   // Submodule getters
   /////////////////////////////////////////////////////////
