@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
+import org.apache.hadoop.hdfs.server.federation.router.RouterServiceState;
 import org.apache.hadoop.hdfs.server.federation.router.SubClusterTimeoutException;
 import org.apache.hadoop.hdfs.server.federation.store.MembershipStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
@@ -232,7 +233,29 @@ public class NamenodeBeanMetrics
 
   @Override
   public String getSafemode() {
-    // We assume that the global federated view is never in safe mode
+    try {
+      if (!getRouter().isRouterState(RouterServiceState.SAFEMODE)) {
+        return "Safe mode is ON. " + this.getSafeModeTip();
+      }
+    } catch (IOException e) {
+      return "Failed to get safemode status. Please check router"
+          + "log for more detail.";
+    }
+    return "";
+  }
+
+  private String getSafeModeTip() throws IOException {
+    Router rt = getRouter();
+    String cmd = "Use \"hdfs dfsrouteradmin -safemode leave\" "
+        + "to turn safe mode off.";
+    if (rt.isRouterState(RouterServiceState.INITIALIZING)
+        || rt.isRouterState(RouterServiceState.UNINITIALIZED)) {
+      return "Router is in" + rt.getRouterState()
+          + "mode, the router will immediately return to "
+          + "normal mode after some time. " + cmd;
+    } else if (rt.isRouterState(RouterServiceState.SAFEMODE)) {
+      return "It was turned on manually. " + cmd;
+    }
     return "";
   }
 
