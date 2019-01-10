@@ -63,6 +63,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.XAttrSetFlag;
+import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -3413,8 +3414,9 @@ public class DistributedFileSystem extends FileSystem
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
-    // query the superclass, which triggers argument validation.
-    boolean superCapability = super.hasPathCapability(path, capability);
+    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
+    // qualify the path to make sure that it refers to the current FS.
+    makeQualified(path);
 
     switch (capability.toLowerCase(Locale.ENGLISH)) {
     case PathCapabilities.FS_ACLS:
@@ -3431,7 +3433,7 @@ public class DistributedFileSystem extends FileSystem
     case PathCapabilities.FS_SYMLINKS:
       return FileSystem.areSymlinksEnabled();
     default:
-      return superCapability;
+      return super.hasPathCapability(path, capability);
     }
   }
 }

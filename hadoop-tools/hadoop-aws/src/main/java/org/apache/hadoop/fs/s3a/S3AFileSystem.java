@@ -105,6 +105,7 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.fs.s3a.auth.delegation.AWSPolicyProvider;
@@ -3606,8 +3607,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
-    // delegate to parent simply to validate arguments.
-    super.hasPathCapability(path, capability);
+    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
+    // qualify the path to make sure that it refers to the current FS.
+    makeQualified(path);
     switch (capability.toLowerCase(Locale.ENGLISH)) {
 
     case CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER:
@@ -3624,7 +3626,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           ETAG_CHECKSUM_ENABLED_DEFAULT);
       
     default:
-      return false;
+      return super.hasPathCapability(path, capability);
     }
   }
 

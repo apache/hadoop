@@ -46,6 +46,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.impl.FutureDataInputStreamBuilderImpl;
+import org.apache.hadoop.fs.impl.FsLinkResolution;
+import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -2941,9 +2943,11 @@ public class FileContext implements PathCapabilities {
    * @param capability string to query the stream support for.
    * @return true iff the capability is supported under that FS.
    * @throws IOException path resolution or other IO failure
+   * @throws IllegalArgumentException invalid arguments
    */
   public boolean hasPathCapability(Path path, String capability)
       throws IOException {
+    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
     return FsLinkResolution.resolve(this,
         fixRelativePart(path),
         (fs, p) -> fs.hasPathCapability(p, capability));

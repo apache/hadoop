@@ -59,6 +59,7 @@ import org.apache.hadoop.fs.Options.HandleOpt;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
 import org.apache.hadoop.fs.impl.FutureDataInputStreamBuilderImpl;
+import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -3224,14 +3225,16 @@ public abstract class FileSystem extends Configured
    */
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
-    Preconditions.checkArgument(capability != null && !capability.isEmpty(),
-        "null/empty capability");
+    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
     // qualify the path to make sure that it refers to the current FS.
     makeQualified(path);
     switch (capability.toLowerCase(Locale.ENGLISH)) {
-    case PathCapabilities.FS_SYMLINKS:
+    case FS_SYMLINKS:
       // delegate to the existing supportsSymlinks() call.
       return supportsSymlinks() && areSymlinksEnabled();
+    case FS_DELEGATION_TOKENS:
+      // this is less efficient than it should be.
+      return getCanonicalServiceName() != null;
     default:
       // the feature is not implemented.
       return false;

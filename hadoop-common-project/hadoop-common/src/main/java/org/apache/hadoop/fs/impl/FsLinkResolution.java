@@ -16,17 +16,27 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs;
+package org.apache.hadoop.fs.impl;
 
 import java.io.IOException;
 
 import com.google.common.base.Preconditions;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.AbstractFileSystem;
+import org.apache.hadoop.fs.FSLinkResolver;
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.UnresolvedLinkException;
+
 /**
- * Class to allow Java lambda expressions to be used in {@link FileContext}
+ * Class to allow Lambda expressions to be used in {@link FileContext}
  * link resolution.
  * @param <T> type of the returned value.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class FsLinkResolution<T> extends FSLinkResolver<T> {
 
   /**
@@ -44,19 +54,26 @@ public class FsLinkResolution<T> extends FSLinkResolver<T> {
 
   @Override
   public T next(final AbstractFileSystem fs, final Path p)
-      throws IOException, UnresolvedLinkException {
+      throws UnresolvedLinkException, IOException {
     return fn.apply(fs, p);
   }
 
   /**
    * The signature of the function to invoke.
-   * @param <T> return type.
-   * @throws UnresolvedLinkException link resolution failure
-   * @throws IOException other IO failure.
+   * @param <T> type resolved to
    */
   @FunctionalInterface
   public interface FsLinkResolutionFunction<T> {
-    T apply(final AbstractFileSystem fs, final Path p)
+
+    /**
+     * 
+     * @param fs filesystem to resolve against.
+     * @param path path to resolve
+     * @return a result of type T
+     * @throws UnresolvedLinkException link resolution failure
+     * @throws IOException other IO failure.
+     */
+    T apply(final AbstractFileSystem fs, final Path path)
         throws IOException, UnresolvedLinkException;
   }
 
@@ -76,6 +93,6 @@ public class FsLinkResolution<T> extends FSLinkResolver<T> {
       final FileContext fileContext, final Path path,
       final FsLinkResolutionFunction<T> fn)
       throws UnresolvedLinkException, IOException {
-    return new FsLinkResolution<T>(fn).resolve(fileContext, path);
+    return new FsLinkResolution<>(fn).resolve(fileContext, path);
   }
 }
