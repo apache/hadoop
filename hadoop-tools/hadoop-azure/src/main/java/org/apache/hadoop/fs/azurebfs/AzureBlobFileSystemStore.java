@@ -374,7 +374,8 @@ public class AzureBlobFileSystemStore {
     // Add statistics for InputStream
     return new AbfsInputStream(client, statistics,
             AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), contentLength,
-                abfsConfiguration.getReadBufferSize(), abfsConfiguration.getReadAheadQueueDepth(), eTag);
+                abfsConfiguration.getReadBufferSize(), abfsConfiguration.getReadAheadQueueDepth(),
+                abfsConfiguration.getTolerateOobAppends(), eTag);
   }
 
   public OutputStream openFileForWrite(final Path path, final boolean overwrite) throws
