@@ -46,7 +46,7 @@ import java.util.List;
  * instances.  This class encapsulates all state management for iterating
  * through the sequence of chunks and the sequence of buffers within each chunk.
  */
-public class ChunkInputStream extends InputStream implements Seekable {
+public class BlockInputStream extends InputStream implements Seekable {
 
   private static final int EOF = -1;
 
@@ -61,7 +61,7 @@ public class ChunkInputStream extends InputStream implements Seekable {
   private int bufferIndex;
 
   /**
-   * Creates a new ChunkInputStream.
+   * Creates a new BlockInputStream.
    *
    * @param blockID block ID of the chunk
    * @param xceiverClientManager client manager that controls client
@@ -69,7 +69,7 @@ public class ChunkInputStream extends InputStream implements Seekable {
    * @param chunks list of chunks to read
    * @param traceID container protocol call traceID
    */
-  public ChunkInputStream(
+  public BlockInputStream(
       BlockID blockID, XceiverClientManager xceiverClientManager,
       XceiverClientSpi xceiverClient, List<ChunkInfo> chunks, String traceID) {
     this.blockID = blockID;
@@ -79,7 +79,7 @@ public class ChunkInputStream extends InputStream implements Seekable {
     this.chunks = chunks;
     this.chunkIndex = -1;
     // chunkOffset[i] stores offset at which chunk i stores data in
-    // ChunkInputStream
+    // BlockInputStream
     this.chunkOffset = new long[this.chunks.size()];
     initializeChunkOffset();
     this.buffers = null;
@@ -154,7 +154,7 @@ public class ChunkInputStream extends InputStream implements Seekable {
    */
   private synchronized void checkOpen() throws IOException {
     if (xceiverClient == null) {
-      throw new IOException("ChunkInputStream has been closed.");
+      throw new IOException("BlockInputStream has been closed.");
     }
   }
 

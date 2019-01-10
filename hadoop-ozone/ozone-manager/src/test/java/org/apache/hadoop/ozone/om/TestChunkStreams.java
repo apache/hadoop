@@ -17,8 +17,8 @@
 package org.apache.hadoop.ozone.om;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.hadoop.ozone.client.io.ChunkGroupInputStream;
-import org.apache.hadoop.hdds.scm.storage.ChunkInputStream;
+import org.apache.hadoop.hdds.scm.storage.BlockInputStream;
+import org.apache.hadoop.ozone.client.io.KeyInputStream;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -31,7 +31,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
 
 /**
- * This class tests ChunkGroupInputStream and KeyOutputStream.
+ * This class tests KeyInputStream and KeyOutputStream.
  */
 public class TestChunkStreams {
 
@@ -40,15 +40,15 @@ public class TestChunkStreams {
 
   @Test
   public void testReadGroupInputStream() throws Exception {
-    try (ChunkGroupInputStream groupInputStream = new ChunkGroupInputStream()) {
+    try (KeyInputStream groupInputStream = new KeyInputStream()) {
 
       String dataString = RandomStringUtils.randomAscii(500);
       byte[] buf = dataString.getBytes(UTF_8);
       int offset = 0;
       for (int i = 0; i < 5; i++) {
         int tempOffset = offset;
-        ChunkInputStream in =
-            new ChunkInputStream(null, null, null, new ArrayList<>(), null) {
+        BlockInputStream in =
+            new BlockInputStream(null, null, null, new ArrayList<>(), null) {
               private long pos = 0;
               private ByteArrayInputStream in =
                   new ByteArrayInputStream(buf, tempOffset, 100);
@@ -96,15 +96,15 @@ public class TestChunkStreams {
 
   @Test
   public void testErrorReadGroupInputStream() throws Exception {
-    try (ChunkGroupInputStream groupInputStream = new ChunkGroupInputStream()) {
+    try (KeyInputStream groupInputStream = new KeyInputStream()) {
 
       String dataString = RandomStringUtils.randomAscii(500);
       byte[] buf = dataString.getBytes(UTF_8);
       int offset = 0;
       for (int i = 0; i < 5; i++) {
         int tempOffset = offset;
-        ChunkInputStream in =
-            new ChunkInputStream(null, null, null, new ArrayList<>(), null) {
+        BlockInputStream in =
+            new BlockInputStream(null, null, null, new ArrayList<>(), null) {
               private long pos = 0;
               private ByteArrayInputStream in =
                   new ByteArrayInputStream(buf, tempOffset, 100);

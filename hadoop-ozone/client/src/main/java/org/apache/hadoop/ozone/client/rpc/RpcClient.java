@@ -38,7 +38,7 @@ import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.VolumeArgs;
-import org.apache.hadoop.ozone.client.io.ChunkGroupInputStream;
+import org.apache.hadoop.ozone.client.io.KeyInputStream;
 import org.apache.hadoop.ozone.client.io.KeyOutputStream;
 import org.apache.hadoop.ozone.client.io.LengthInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
@@ -541,7 +541,7 @@ public class RpcClient implements ClientProtocol {
         .build();
     OmKeyInfo keyInfo = ozoneManagerClient.lookupKey(keyArgs);
     LengthInputStream lengthInputStream =
-        ChunkGroupInputStream.getFromOmKeyInfo(
+        KeyInputStream.getFromOmKeyInfo(
             keyInfo, xceiverClientManager, storageContainerLocationClient,
             requestId);
     return new OzoneInputStream(lengthInputStream.getWrappedStream());

@@ -50,7 +50,7 @@ import java.util.ListIterator;
 import java.util.concurrent.TimeoutException;
 
 /**
- * Maintaining a list of ChunkInputStream. Write based on offset.
+ * Maintaining a list of BlockInputStream. Write based on offset.
  *
  * Note that this may write to multiple containers in one write call. In case
  * that first container succeeded but later ones failed, the succeeded writes

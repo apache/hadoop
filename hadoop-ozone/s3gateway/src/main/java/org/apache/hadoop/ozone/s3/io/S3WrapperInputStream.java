@@ -19,24 +19,24 @@
 package org.apache.hadoop.ozone.s3.io;
 
 import org.apache.hadoop.fs.FSInputStream;
-import org.apache.hadoop.ozone.client.io.ChunkGroupInputStream;
+import org.apache.hadoop.ozone.client.io.KeyInputStream;
 
 import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * S3Wrapper Input Stream which encapsulates ChunkGroupInputStream from ozone.
+ * S3Wrapper Input Stream which encapsulates KeyInputStream from ozone.
  */
 public class S3WrapperInputStream extends FSInputStream {
-  private final ChunkGroupInputStream inputStream;
+  private final KeyInputStream inputStream;
 
   /**
-   * Constructs S3WrapperInputStream with ChunkInputStream.
+   * Constructs S3WrapperInputStream with KeyInputStream.
    *
    * @param inputStream
    */
   public S3WrapperInputStream(InputStream inputStream) {
-    this.inputStream = (ChunkGroupInputStream) inputStream;
+    this.inputStream = (KeyInputStream) inputStream;
   }
 
   @Override
