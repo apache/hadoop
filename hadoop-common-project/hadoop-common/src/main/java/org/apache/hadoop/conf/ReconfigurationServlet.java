@@ -135,7 +135,7 @@ public class ReconfigurationServlet extends HttpServlet {
   }
 
   /**
-   * Apply configuratio changes after admin has approved them.
+   * Apply configuration changes after admin has approved them.
    */
   private void applyChanges(PrintWriter out, Reconfigurable reconf,
       HttpServletRequest req) throws ReconfigurationException {
