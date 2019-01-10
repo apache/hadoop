@@ -30,7 +30,7 @@ public class TestOzoneConfigurationFields extends TestConfigurationFieldsBase {
 
   @Override
   public void initializeMemberVariables() {
-    xmlFilename = new String("ozone-default.xml");
+    xmlFilename = "ozone-default.xml";
     configurationClasses =
         new Class[] {OzoneConfigKeys.class, ScmConfigKeys.class,
             OMConfigKeys.class, HddsConfigKeys.class,
@@ -44,5 +44,6 @@ public class TestOzoneConfigurationFields extends TestConfigurationFieldsBase {
   private void addPropertiesNotInXml() {
     configurationPropsToSkipCompare.add(HddsConfigKeys.HDDS_KEY_ALGORITHM);
     configurationPropsToSkipCompare.add(HddsConfigKeys.HDDS_SECURITY_PROVIDER);
+    configurationPropsToSkipCompare.add(HddsConfigKeys.HDDS_GRPC_TLS_TEST_CERT);
   }
 }

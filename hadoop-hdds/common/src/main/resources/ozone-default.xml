@@ -1139,7 +1139,7 @@
   <property>
     <name>ozone.tags.system</name>
     <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,
-      CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY,ACL,TOKEN</value>
+      CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY,TOKEN,TLS</value>
   </property>
 
 
@@ -1400,7 +1400,7 @@
   <property>
     <name>ozone.security.enabled</name>
     <value>false</value>
-    <tag> OZONE, SECURITY, FLAG</tag>
+    <tag> OZONE, SECURITY</tag>
     <description>True if security is enabled for ozone. When this property is
      true, hadoop.security.authentication should be Kerberos.
     </description>
@@ -1655,6 +1655,110 @@
       dfs.heartbeat.interval. If no suffix is specified, then milliseconds is
       assumed.
     </description>
+  </property>
+  
+  <property>
+    <name>hdds.grpc.block.token.enabled</name>
+    <value>false</value>
+    <tag>OZONE, HDDS, SECURITY, TOKEN</tag>
+    <description>True if block tokens are enabled, else false.</description>
+  </property>
+  <property>
+    <name>hdds.x509.file.name</name>
+    <value>certificate.crt</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>Certificate file name.</description>
+  </property>
+  <property>
+    <name>hdds.grpc.tls.provider</name>
+    <value>OPENSSL</value>
+    <tag>OZONE, HDDS, SECURITY, TLS</tag>
+    <description>HDDS GRPC server TLS provider.</description>
+  </property>
+  <property>
+    <name>hdds.client.cert.chain.file.name</name>
+    <value>client.crt</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>Client certificate file name. It is an optional
+      field only required when mutual TLS (hdds.grpc.mutual.tls.required)
+      is set to true .</description>
+  </property>
+  <property>
+    <name>hdds.grpc.mutual.tls.required</name>
+    <value>false</value>
+    <tag>OZONE, HDDS, SECURITY, TLS</tag>
+    <description>If mutual tls check is enabled for GRPC.
+    Considered only if hdds.grpc.tls.enabled is set to true.</description>
+  </property>
+  <property>
+    <name>hdds.grpc.tls.enabled</name>
+    <value>false</value>
+    <tag>OZONE, HDDS, SECURITY, TLS</tag>
+    <description>If HDDS GRPC server TLS is enabled.</description>
+  </property>
+  <property>
+    <name>hdds.server.cert.chain.file.name</name>
+    <value>server.crt</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>Hdds server certificate file name.</description>
+  </property>
+  <property>
+    <name>hdds.trust.cert.collection.file.name</name>
+    <value>ca.crt</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>HDDS Certificate Authority trust store file name.</description>
+  </property>
+  <property>
+    <name>hdds.x509.default.duration</name>
+    <value>P365D</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>Default duration for which x509 certificates issued by SCM are
+      valid. The formats accepted are based on the ISO-8601 duration format
+      PnDTnHnMn.nS</description>
+  </property>
+  <property>
+    <name>hdds.x509.dir.name</name>
+    <value>certs</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>X509 certificate directory name.</description>
+  </property>
+  <property>
+    <name>hdds.x509.max.duration</name>
+    <value>P1865D</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>Max time for which certificate issued by SCM CA are valid.
+      . The formats accepted are based on the ISO-8601 duration format
+      PnDTnHnMn.nS</description>
+  </property>
+  <property>
+    <name>hdds.x509.signature.algorithm</name>
+    <value>SHA256withRSA</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>X509 signature certificate.</description>
+  </property>
+  <property>
+    <name>ozone.scm.security.handler.count.key</name>
+    <value>2</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>Threads configured for SCMSecurityProtocolServer.</description>
+  </property>
+  <property>
+    <name>ozone.scm.security.service.address</name>
+    <value>0.0.0.0:9961</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>Address of SCMSecurityProtocolServer.</description>
+  </property>
+  <property>
+    <name>ozone.scm.security.service.bind.host</name>
+    <value>0.0.0.0</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>SCM security server host.</description>
+  </property>
+  <property>
+    <name>ozone.scm.security.service.port</name>
+    <value>9961</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>SCM security server port.</description>
   </property>
 
   <property>
