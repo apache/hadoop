@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
+import org.apache.hadoop.hdfs.server.federation.metrics.FederationMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
@@ -66,6 +67,7 @@ public class TestRouterAdminCLI {
 
   private static RouterAdmin admin;
   private static RouterClient client;
+  private static Router router;
 
   private static final String TEST_USER = "test-user";
 
@@ -80,6 +82,7 @@ public class TestRouterAdminCLI {
     // Build and start a router with State Store + admin + RPC
     Configuration conf = new RouterConfigBuilder()
         .stateStore()
+        .metrics()
         .admin()
         .rpc()
         .safemode()
@@ -90,7 +93,7 @@ public class TestRouterAdminCLI {
     cluster.startRouters();
 
     routerContext = cluster.getRandomRouter();
-    Router router = routerContext.getRouter();
+    router = routerContext.getRouter();
     stateStore = router.getStateStore();
 
     Configuration routerConf = new Configuration();
@@ -718,6 +721,34 @@ public class TestRouterAdminCLI {
     assertTrue(err.toString(),
         err.toString().contains("safemode: Invalid argument: check"));
     err.reset();
+  }
+
+  @Test
+  public void testSafeModeStatus() throws Exception {
+    // ensure the Router become RUNNING state
+    waitState(RouterServiceState.RUNNING);
+    assertFalse(routerContext.getRouter().getSafemodeService().isInSafeMode());
+    assertEquals(0,
+        ToolRunner.run(admin, new String[] {"-safemode", "enter" }));
+
+    FederationMetrics metrics = router.getMetrics();
+    String jsonString = metrics.getRouterStatus();
+
+    // verify state using FederationMetrics
+    assertEquals(RouterServiceState.SAFEMODE.toString(), jsonString);
+    assertTrue(routerContext.getRouter().getSafemodeService().isInSafeMode());
+
+    System.setOut(new PrintStream(out));
+    assertEquals(0,
+        ToolRunner.run(admin, new String[] {"-safemode", "leave" }));
+    jsonString = metrics.getRouterStatus();
+    // verify state
+    assertEquals(RouterServiceState.RUNNING.toString(), jsonString);
+    assertFalse(routerContext.getRouter().getSafemodeService().isInSafeMode());
+
+    out.reset();
+    assertEquals(0, ToolRunner.run(admin, new String[] {"-safemode", "get" }));
+    assertTrue(out.toString().contains("false"));
   }
 
   @Test
