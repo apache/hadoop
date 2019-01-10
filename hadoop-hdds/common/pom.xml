@@ -115,7 +115,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcpkix-jdk15on</artifactId>
-      <version>1.54</version>
+      <version>${bouncycastle.version}</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/commons-validator/commons-validator -->
     <dependency>
