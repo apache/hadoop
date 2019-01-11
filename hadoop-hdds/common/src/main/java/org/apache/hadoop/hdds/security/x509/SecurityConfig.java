@@ -98,16 +98,17 @@ public class SecurityConfig {
   private final String publicKeyFileName;
   private final Duration certDuration;
   private final String x509SignatureAlgo;
-  private final Boolean grpcBlockTokenEnabled;
+  private final boolean grpcBlockTokenEnabled;
   private final String certificateDir;
   private final String certificateFileName;
-  private final Boolean grpcTlsEnabled;
-  private Boolean grpcTlsUseTestCert;
+  private final boolean grpcTlsEnabled;
+  private boolean grpcTlsUseTestCert;
   private String trustStoreFileName;
   private String serverCertChainFileName;
   private String clientCertChainFileName;
   private final Duration defaultCertDuration;
   private final boolean isSecurityEnabled;
+  private boolean grpcMutualTlsRequired;
 
   /**
    * Constructs a SecurityConfig.
@@ -152,7 +153,10 @@ public class SecurityConfig {
 
     this.grpcTlsEnabled = this.configuration.getBoolean(HDDS_GRPC_TLS_ENABLED,
         HDDS_GRPC_TLS_ENABLED_DEFAULT);
+
     if (grpcTlsEnabled) {
+      this.grpcMutualTlsRequired = configuration.getBoolean(
+          HDDS_GRPC_MUTUAL_TLS_REQUIRED, HDDS_GRPC_MUTUAL_TLS_REQUIRED_DEFAULT);
 
       this.trustStoreFileName = this.configuration.get(
           HDDS_TRUST_STORE_FILE_NAME, HDDS_TRUST_STORE_FILE_NAME_DEFAULT);
@@ -353,27 +357,24 @@ public class SecurityConfig {
     return this.certDuration;
   }
 
-  public Boolean isGrpcBlockTokenEnabled() {
+  public boolean isGrpcBlockTokenEnabled() {
     return this.grpcBlockTokenEnabled;
   }
 
   /**
    * Returns true if TLS is enabled for gRPC services.
-   * @param conf configuration
    * @return true if TLS is enabled for gRPC services.
    */
-  public static Boolean isGrpcTlsEnabled(Configuration conf) {
-    return conf.getBoolean(HDDS_GRPC_TLS_ENABLED,
-        HDDS_GRPC_TLS_ENABLED_DEFAULT);
+  public boolean isGrpcTlsEnabled() {
+    return this.grpcTlsEnabled;
   }
 
   /**
    * Returns true if TLS mutual authentication is enabled for gRPC services.
    * @return true if TLS is enabled for gRPC services.
    */
-  public Boolean isGrpcMutualTlsRequired() {
-    return configuration.getBoolean(HDDS_GRPC_MUTUAL_TLS_REQUIRED,
-        HDDS_GRPC_MUTUAL_TLS_REQUIRED_DEFAULT);
+  public boolean isGrpcMutualTlsRequired() {
+    return this.grpcMutualTlsRequired;
   }
 
   /**

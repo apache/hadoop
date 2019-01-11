@@ -133,7 +133,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
             .getIpAddress(), port).usePlaintext()
             .maxInboundMessageSize(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE)
             .intercept(new ClientCredentialInterceptor(userName, encodedToken));
-    if (SecurityConfig.isGrpcTlsEnabled(config)) {
+    if (secConfig.isGrpcTlsEnabled()) {
       File trustCertCollectionFile = secConfig.getTrustStoreFile();
       File privateKeyFile = secConfig.getClientPrivateKeyFile();
       File clientCertChainFile = secConfig.getClientCertChainFile();
