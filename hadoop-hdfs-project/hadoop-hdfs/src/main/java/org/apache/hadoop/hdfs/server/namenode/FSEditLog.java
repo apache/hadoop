@@ -762,16 +762,16 @@ public class FSEditLog implements LogsPurgeable {
     }
     lastPrintTime = now;
     StringBuilder buf = new StringBuilder();
-    buf.append("Number of transactions: ");
-    buf.append(numTransactions);
-    buf.append(" Total time for transactions(ms): ");
-    buf.append(totalTimeTransactions);
-    buf.append(" Number of transactions batched in Syncs: ");
-    buf.append(numTransactionsBatchedInSync.get());
-    buf.append(" Number of syncs: ");
-    buf.append(editLogStream.getNumSync());
-    buf.append(" SyncTimes(ms): ");
-    buf.append(journalSet.getSyncTimes());
+    buf.append("Number of transactions: ")
+        .append(numTransactions)
+        .append(" Total time for transactions(ms): ")
+        .append(totalTimeTransactions)
+        .append(" Number of transactions batched in Syncs: ")
+        .append(numTransactionsBatchedInSync.get())
+        .append(" Number of syncs: ")
+        .append(editLogStream.getNumSync())
+        .append(" SyncTimes(ms): ")
+        .append(journalSet.getSyncTimes());
     LOG.info(buf.toString());
   }
 

@@ -181,17 +181,17 @@ public class WritableRpcEngine implements RpcEngine {
     @Override
     public String toString() {
       StringBuilder buffer = new StringBuilder();
-      buffer.append(methodName);
-      buffer.append("(");
+      buffer.append(methodName)
+          .append("(");
       for (int i = 0; i < parameters.length; i++) {
         if (i != 0)
           buffer.append(", ");
         buffer.append(parameters[i]);
       }
-      buffer.append(")");
-      buffer.append(", rpc version="+rpcVersion);
-      buffer.append(", client version="+clientVersion);
-      buffer.append(", methodsFingerPrint="+clientMethodsHash);
+      buffer.append(")")
+          .append(", rpc version="+rpcVersion)
+          .append(", client version="+clientVersion)
+          .append(", methodsFingerPrint="+clientMethodsHash);
       return buffer.toString();
     }
 

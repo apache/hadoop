@@ -456,11 +456,11 @@ public class Token<T extends TokenIdentifier> implements Writable {
   @Override
   public String toString() {
     StringBuilder buffer = new StringBuilder();
-    buffer.append("Kind: ");
-    buffer.append(kind.toString());
-    buffer.append(", Service: ");
-    buffer.append(service.toString());
-    buffer.append(", Ident: ");
+    buffer.append("Kind: ")
+        .append(kind.toString())
+        .append(", Service: ")
+        .append(service.toString())
+        .append(", Ident: ");
     identifierToString(buffer);
     return buffer.toString();
   }

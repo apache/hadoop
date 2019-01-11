@@ -173,10 +173,10 @@ public class SemaphoredDelegatingExecutor extends
   public String toString() {
     final StringBuilder sb = new StringBuilder(
         "SemaphoredDelegatingExecutor{");
-    sb.append("permitCount=").append(getPermitCount());
-    sb.append(", available=").append(getAvailablePermits());
-    sb.append(", waiting=").append(getWaitingCount());
-    sb.append('}');
+    sb.append("permitCount=").append(getPermitCount())
+        .append(", available=").append(getAvailablePermits())
+        .append(", waiting=").append(getWaitingCount())
+        .append('}');
     return sb.toString();
   }
 

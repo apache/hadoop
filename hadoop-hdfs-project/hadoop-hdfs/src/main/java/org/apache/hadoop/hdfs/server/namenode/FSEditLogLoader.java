@@ -1055,8 +1055,8 @@ public class FSEditLogLoader {
   private static String formatEditLogReplayError(EditLogInputStream in,
       long recentOpcodeOffsets[], long txid) {
     StringBuilder sb = new StringBuilder();
-    sb.append("Error replaying edit log at offset " + in.getPosition());
-    sb.append(".  Expected transaction ID was ").append(txid);
+    sb.append("Error replaying edit log at offset " + in.getPosition())
+        .append(".  Expected transaction ID was ").append(txid);
     if (recentOpcodeOffsets[0] != -1) {
       Arrays.sort(recentOpcodeOffsets);
       sb.append("\nRecent opcode offsets:");

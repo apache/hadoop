@@ -855,11 +855,11 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
           block.getLocalBlock());
       DatanodeStorageInfo[] storages = storedBlock
           .getUnderConstructionFeature().getExpectedStorageLocations();
-      report.append('\n');
-      report.append("Under Construction Block:\n");
-      report.append(blockNumber).append(". ").append(blkName);
-      report.append(" len=").append(block.getNumBytes());
-      report.append(" Expected_repl=" + storages.length);
+      report.append('\n')
+          .append("Under Construction Block:\n")
+          .append(blockNumber).append(". ").append(blkName)
+          .append(" len=").append(block.getNumBytes())
+          .append(" Expected_repl=" + storages.length);
       String info=getReplicaInfo(storedBlock);
       if (!info.isEmpty()){
         report.append(" ").append(info);

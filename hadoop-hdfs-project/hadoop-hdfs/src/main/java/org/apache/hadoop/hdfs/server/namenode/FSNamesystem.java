@@ -8031,19 +8031,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         src = escapeJava(src);
         dst = escapeJava(dst);
         sb.setLength(0);
-        sb.append("allowed=").append(succeeded).append("\t");
-        sb.append("ugi=").append(userName).append("\t");
-        sb.append("ip=").append(addr).append("\t");
-        sb.append("cmd=").append(cmd).append("\t");
-        sb.append("src=").append(src).append("\t");
-        sb.append("dst=").append(dst).append("\t");
+        sb.append("allowed=").append(succeeded).append("\t")
+            .append("ugi=").append(userName).append("\t")
+            .append("ip=").append(addr).append("\t")
+            .append("cmd=").append(cmd).append("\t")
+            .append("src=").append(src).append("\t")
+            .append("dst=").append(dst).append("\t");
         if (null == status) {
           sb.append("perm=null");
         } else {
-          sb.append("perm=");
-          sb.append(status.getOwner()).append(":");
-          sb.append(status.getGroup()).append(":");
-          sb.append(status.getPermission());
+          sb.append("perm=")
+              .append(status.getOwner()).append(":")
+              .append(status.getGroup()).append(":")
+              .append(status.getPermission());
         }
         if (logTokenTrackingId) {
           sb.append("\t").append("trackingId=");
@@ -8061,8 +8061,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           }
           sb.append(trackingId);
         }
-        sb.append("\t").append("proto=");
-        sb.append(Server.getProtocol());
+        sb.append("\t").append("proto=")
+            .append(Server.getProtocol());
         if (isCallerContextEnabled &&
             callerContext != null &&
             callerContext.isContextValid()) {
@@ -8076,8 +8076,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           if (callerContext.getSignature() != null &&
               callerContext.getSignature().length > 0 &&
               callerContext.getSignature().length <= callerSignatureMaxLen) {
-            sb.append(":");
-            sb.append(new String(callerContext.getSignature(),
+            sb.append(":")
+                .append(new String(callerContext.getSignature(),
                 CallerContext.SIGNATURE_ENCODING));
           }
         }

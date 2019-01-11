@@ -202,8 +202,8 @@ public class Count extends FsCommand {
       if(!summary.getErasureCodingPolicy().equals("Replicated")){
         outputString.append("EC:");
       }
-      outputString.append(summary.getErasureCodingPolicy());
-      outputString.append(" ");
+      outputString.append(summary.getErasureCodingPolicy())
+          .append(" ");
     }
     outputString.append(src);
     out.println(outputString.toString());

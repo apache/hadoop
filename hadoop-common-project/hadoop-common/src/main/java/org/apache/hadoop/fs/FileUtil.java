@@ -367,8 +367,8 @@ public class FileUtil {
           returnVal = false;
       } catch (IOException e) {
         gotException = true;
-        exceptions.append(e.getMessage());
-        exceptions.append("\n");
+        exceptions.append(e.getMessage())
+            .append("\n");
       }
     }
     if (gotException) {
@@ -873,10 +873,10 @@ public class FileUtil {
     if (gzipped) {
       untarCommand.append("gzip -dc | (");
     }
-    untarCommand.append("cd '");
-    untarCommand.append(FileUtil.makeSecureShellPath(untarDir));
-    untarCommand.append("' && ");
-    untarCommand.append("tar -x ");
+    untarCommand.append("cd '")
+        .append(FileUtil.makeSecureShellPath(untarDir))
+        .append("' && ")
+        .append("tar -x ");
 
     if (gzipped) {
       untarCommand.append(")");
@@ -888,14 +888,14 @@ public class FileUtil {
       boolean gzipped) throws IOException {
     StringBuffer untarCommand = new StringBuffer();
     if (gzipped) {
-      untarCommand.append(" gzip -dc '");
-      untarCommand.append(FileUtil.makeSecureShellPath(inFile));
-      untarCommand.append("' | (");
+      untarCommand.append(" gzip -dc '")
+          .append(FileUtil.makeSecureShellPath(inFile))
+          .append("' | (");
     }
-    untarCommand.append("cd '");
-    untarCommand.append(FileUtil.makeSecureShellPath(untarDir));
-    untarCommand.append("' && ");
-    untarCommand.append("tar -xf ");
+    untarCommand.append("cd '")
+        .append(FileUtil.makeSecureShellPath(untarDir))
+        .append("' && ")
+        .append("tar -xf ");
 
     if (gzipped) {
       untarCommand.append(" -)");
@@ -1504,8 +1504,8 @@ public class FileUtil {
             classPathEntryList.add(jar.toUri().toURL().toExternalForm());
           }
         } else {
-          unexpandedWildcardClasspath.append(File.pathSeparator);
-          unexpandedWildcardClasspath.append(classPathEntry);
+          unexpandedWildcardClasspath.append(File.pathSeparator)
+              .append(classPathEntry);
         }
       } else {
         // Append just this entry

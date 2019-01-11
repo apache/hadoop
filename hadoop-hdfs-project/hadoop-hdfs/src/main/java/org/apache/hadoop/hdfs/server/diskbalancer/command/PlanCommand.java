@@ -176,8 +176,7 @@ public class PlanCommand extends Command {
       final String errMsg =
           "Errors while recording the output of plan command.";
       LOG.error(errMsg, e);
-      result.appendln(errMsg);
-      result.appendln(Throwables.getStackTraceAsString(e));
+      result.appendln(errMsg).appendln(Throwables.getStackTraceAsString(e));
     }
 
     getPrintStream().print(result.toString());

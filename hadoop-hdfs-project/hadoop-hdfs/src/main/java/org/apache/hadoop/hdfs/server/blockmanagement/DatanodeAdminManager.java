@@ -395,8 +395,7 @@ public class DatanodeAdminManager {
     StringBuilder nodeList = new StringBuilder();
     for (DatanodeStorageInfo storage : storages) {
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
-      nodeList.append(node);
-      nodeList.append(' ');
+      nodeList.append(node).append(' ');
     }
     NameNode.blockStateChangeLog.info(
         "Block: " + block + ", Expected Replicas: "

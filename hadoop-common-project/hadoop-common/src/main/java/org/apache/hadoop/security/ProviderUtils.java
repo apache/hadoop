@@ -81,8 +81,8 @@ public final class ProviderUtils {
     String authority = nestedUri.getAuthority();
     if (authority != null) {
       String[] parts = nestedUri.getAuthority().split("@", 2);
-      result.append(parts[0]);
-      result.append("://");
+      result.append(parts[0])
+          .append("://");
       if (parts.length == 2) {
         result.append(parts[1]);
       }

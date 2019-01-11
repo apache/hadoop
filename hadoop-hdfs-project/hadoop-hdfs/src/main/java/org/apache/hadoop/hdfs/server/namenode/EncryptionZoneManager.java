@@ -499,11 +499,8 @@ public class EncryptionZoneManager {
         final String srcEZPath = getFullPathName(srcParentEZI.getINodeId());
         final String dstEZPath = getFullPathName(dstParentEZI.getINodeId());
         final StringBuilder sb = new StringBuilder(srcIIP.getPath());
-        sb.append(" can't be moved from encryption zone ");
-        sb.append(srcEZPath);
-        sb.append(" to encryption zone ");
-        sb.append(dstEZPath);
-        sb.append(".");
+        sb.append(" can't be moved from encryption zone ").append(srcEZPath)
+            .append(" to encryption zone ").append(dstEZPath).append(".");
         throw new IOException(sb.toString());
       }
       checkMoveValidityForReencryption(srcIIP.getPath(),

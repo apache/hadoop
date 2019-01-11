@@ -110,8 +110,8 @@ public final class RouterQuotaUsage extends QuotaUsage {
 
     StringBuilder str = new StringBuilder();
     str.append("[NsQuota: ").append(nsQuota).append("/")
-        .append(nsCount);
-    str.append(", SsQuota: ").append(ssQuota)
+        .append(nsCount)
+        .append(", SsQuota: ").append(ssQuota)
         .append("/").append(ssCount)
         .append("]");
     return str.toString();

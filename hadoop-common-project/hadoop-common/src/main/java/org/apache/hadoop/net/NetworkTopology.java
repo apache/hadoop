@@ -710,18 +710,18 @@ public class NetworkTopology {
   public String toString() {
     // print the number of racks
     StringBuilder tree = new StringBuilder();
-    tree.append("Number of racks: ");
-    tree.append(numOfRacks);
-    tree.append("\n");
+    tree.append("Number of racks: ")
+        .append(numOfRacks)
+        .append("\n");
     // print the number of leaves
     int numOfLeaves = getNumOfLeaves();
-    tree.append("Expected number of leaves:");
-    tree.append(numOfLeaves);
-    tree.append("\n");
+    tree.append("Expected number of leaves:")
+        .append(numOfLeaves)
+        .append("\n");
     // print nodes
     for(int i=0; i<numOfLeaves; i++) {
-      tree.append(NodeBase.getPath(clusterMap.getLeaf(i, null)));
-      tree.append("\n");
+      tree.append(NodeBase.getPath(clusterMap.getLeaf(i, null)))
+          .append("\n");
     }
     return tree.toString();
   }

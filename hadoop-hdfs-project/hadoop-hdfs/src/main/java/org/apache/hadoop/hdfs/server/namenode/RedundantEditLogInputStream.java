@@ -140,8 +140,8 @@ class RedundantEditLogInputStream extends EditLogInputStream {
     StringBuilder bld = new StringBuilder();
     String prefix = "";
     for (EditLogInputStream elis : streams) {
-      bld.append(prefix);
-      bld.append(elis.getName());
+      bld.append(prefix)
+          .append(elis.getName());
       prefix = ", ";
     }
     return bld.toString();
