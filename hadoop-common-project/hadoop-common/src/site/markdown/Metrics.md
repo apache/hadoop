@@ -104,6 +104,16 @@ RetryCache metrics is useful to monitor NameNode fail-over. Each metrics record 
 | `CacheCleared` | Total number of RetryCache cleared |
 | `CacheUpdated` | Total number of RetryCache updated |
 
+FairCallQueue
+-------------
+
+FairCallQueue metrics will only exist if FairCallQueue is enabled. Each metric exists for each level of priority.
+
+| Name | Description |
+|:---- |:---- |
+| `FairCallQueueSize_p`*Priority* | Current number of calls in priority queue |
+| `FairCallQueueOverflowedCalls_p`*Priority* | Total number of overflowed calls in priority queue |
+
 rpcdetailed context
 ===================
 
