@@ -33,6 +33,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineAction;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
@@ -44,6 +45,8 @@ import org.apache.ratis.RatisHelper;
 import org.apache.ratis.client.RaftClientConfigKeys;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.grpc.GrpcConfigKeys;
+import org.apache.ratis.grpc.GrpcFactory;
+import org.apache.ratis.grpc.GrpcTlsConfig;
 import org.apache.ratis.netty.NettyConfigKeys;
 import org.apache.ratis.protocol.RaftClientRequest;
 import org.apache.ratis.protocol.Message;
@@ -66,6 +69,7 @@ import org.apache.ratis.util.TimeDuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.HEAD;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -107,9 +111,9 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   private long nodeFailureTimeoutMs;
   private final long cacheEntryExpiryInteval;
 
-
   private XceiverServerRatis(DatanodeDetails dd, int port,
-      ContainerDispatcher dispatcher, Configuration conf, StateContext context)
+      ContainerDispatcher dispatcher, Configuration conf, StateContext
+      context, GrpcTlsConfig tlsConfig)
       throws IOException {
     Objects.requireNonNull(dd, "id == null");
     this.port = port;
@@ -139,12 +143,14 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     for (int i = 0; i < numContainerOpExecutors; i++) {
       executors.add(Executors.newSingleThreadExecutor());
     }
-
-    this.server = RaftServer.newBuilder()
+    RaftServer.Builder builder = RaftServer.newBuilder()
         .setServerId(RatisHelper.toRaftPeerId(dd))
         .setProperties(serverProperties)
-        .setStateMachineRegistry(this::getStateMachine)
-        .build();
+        .setStateMachineRegistry(this::getStateMachine);
+    if (tlsConfig != null) {
+      builder.setParameters(GrpcFactory.newRaftParameters(tlsConfig));
+    }
+    this.server = builder.build();
   }
 
   private ContainerStateMachine getStateMachine(RaftGroupId gid) {
@@ -405,10 +411,12 @@ public final class XceiverServerRatis implements XceiverServerSpi {
             + "fallback to use default port {}", localPort, e);
       }
     }
+    GrpcTlsConfig tlsConfig = RatisHelper.createTlsServerConfig(
+          new SecurityConfig(ozoneConf));
     datanodeDetails.setPort(
         DatanodeDetails.newPort(DatanodeDetails.Port.Name.RATIS, localPort));
     return new XceiverServerRatis(datanodeDetails, localPort,
-        dispatcher, ozoneConf, context);
+        dispatcher, ozoneConf, context, tlsConfig);
   }
 
   @Override

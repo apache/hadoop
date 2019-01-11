@@ -242,8 +242,9 @@ public class TestCloseContainerCommandHandler {
     final RaftPeer peer = RatisHelper.toRaftPeer(datanodeDetails);
     final RaftGroup group = RatisHelper.newRaftGroup(raftGroupId,
         Collections.singleton(datanodeDetails));
-    final RaftClient client = RatisHelper.newRaftClient(
-        SupportedRpcType.GRPC, peer, retryPolicy);
+    final int maxOutstandingRequests = 100;
+    final RaftClient client = RatisHelper.newRaftClient(SupportedRpcType.GRPC,
+        peer, retryPolicy, maxOutstandingRequests, null);
     Assert.assertTrue(client.groupAdd(group, peer.getId()).isSuccess());
     Thread.sleep(2000);
     final ContainerID containerId = ContainerID.valueof(

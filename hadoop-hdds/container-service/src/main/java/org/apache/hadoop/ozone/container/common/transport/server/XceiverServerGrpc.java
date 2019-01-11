@@ -115,7 +115,7 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
       nettyServerBuilder.addService(service);
     }
 
-    if (SecurityConfig.isGrpcTlsEnabled(conf)) {
+    if (secConfig.isGrpcTlsEnabled()) {
       File privateKeyFilePath = secConfig.getServerPrivateKeyFile();
       File serverCertChainFilePath = secConfig.getServerCertChainFile();
       File clientCertChainFilePath = secConfig.getClientCertChainFile();
