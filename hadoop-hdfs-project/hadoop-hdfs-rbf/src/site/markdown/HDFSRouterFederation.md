@@ -274,6 +274,12 @@ For example, one can disable `ns1`, list it and enable it again:
 
 This is useful when decommissioning subclusters or when one subcluster is missbehaving (e.g., low performance or unavailability).
 
+### Router server generically refresh
+
+To trigger a runtime-refresh of the resource specified by \<key\> on \<host:ipc\_port\>. For example, to enable white list checking, we just need to send a refresh command other than restart the router server.
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -refreshRouterArgs <host:ipc_port> <key> [arg1..argn]
+
 Client configuration
 --------------------
 
