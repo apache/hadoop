@@ -3826,11 +3826,7 @@ public abstract class FSEditLogOp {
     public String toString() {
       StringBuilder builder = new StringBuilder();
       builder.append("AddCacheDirectiveInfo [");
-      builder.append("id=" + directive.getId() + ",");
-      builder.append("path=" + directive.getPath().toUri().getPath() + ",");
-      builder.append("replication=" + directive.getReplication() + ",");
-      builder.append("pool=" + directive.getPool() + ",");
-      builder.append("expiration=" + directive.getExpiration().getMillis());
+      builder.append(directive);
       appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append("]");
       return builder.toString();
@@ -3891,22 +3887,8 @@ public abstract class FSEditLogOp {
     @Override
     public String toString() {
       StringBuilder builder = new StringBuilder();
-      builder.append("ModifyCacheDirectiveInfoOp[");
-      builder.append("id=").append(directive.getId());
-      if (directive.getPath() != null) {
-        builder.append(",").append("path=").append(directive.getPath());
-      }
-      if (directive.getReplication() != null) {
-        builder.append(",").append("replication=").
-            append(directive.getReplication());
-      }
-      if (directive.getPool() != null) {
-        builder.append(",").append("pool=").append(directive.getPool());
-      }
-      if (directive.getExpiration() != null) {
-        builder.append(",").append("expiration=").
-            append(directive.getExpiration().getMillis());
-      }
+      builder.append("ModifyCacheDirectiveInfoOp [");
+      builder.append(directive);
       appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append("]");
       return builder.toString();
@@ -4028,11 +4010,7 @@ public abstract class FSEditLogOp {
     public String toString() {
       StringBuilder builder = new StringBuilder();
       builder.append("AddCachePoolOp [");
-      builder.append("poolName=" + info.getPoolName() + ",");
-      builder.append("ownerName=" + info.getOwnerName() + ",");
-      builder.append("groupName=" + info.getGroupName() + ",");
-      builder.append("mode=" + Short.toString(info.getMode().toShort()) + ",");
-      builder.append("limit=" + Long.toString(info.getLimit()));
+      builder.append(info);
       appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append("]");
       return builder.toString();
@@ -4089,23 +4067,7 @@ public abstract class FSEditLogOp {
     public String toString() {
       StringBuilder builder = new StringBuilder();
       builder.append("ModifyCachePoolOp [");
-      ArrayList<String> fields = new ArrayList<String>(5);
-      if (info.getPoolName() != null) {
-        fields.add("poolName=" + info.getPoolName());
-      }
-      if (info.getOwnerName() != null) {
-        fields.add("ownerName=" + info.getOwnerName());
-      }
-      if (info.getGroupName() != null) {
-        fields.add("groupName=" + info.getGroupName());
-      }
-      if (info.getMode() != null) {
-        fields.add("mode=" + info.getMode().toString());
-      }
-      if (info.getLimit() != null) {
-        fields.add("limit=" + info.getLimit());
-      }
-      builder.append(Joiner.on(",").join(fields));
+      builder.append(info);
       appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append("]");
       return builder.toString();
@@ -4479,7 +4441,7 @@ public abstract class FSEditLogOp {
     public String toString() {
       StringBuilder builder = new StringBuilder();
       builder.append("AddErasureCodingPolicy [");
-      builder.append(ecPolicy.toString());
+      builder.append(ecPolicy);
 
       appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append("]");
