@@ -241,8 +241,8 @@ public class DFSZKFailoverController extends ZKFailoverController {
       IOUtils.copyBytes(conn.getInputStream(), out, 4096, true);
       StringBuilder localNNThreadDumpContent =
           new StringBuilder("-- Local NN thread dump -- \n");
-      localNNThreadDumpContent.append(out);
-      localNNThreadDumpContent.append("\n -- Local NN thread dump -- ");
+      localNNThreadDumpContent.append(out)
+          .append("\n -- Local NN thread dump -- ");
       LOG.info("{}", localNNThreadDumpContent.toString());
       isThreadDumpCaptured = true;
     } catch (IOException e) {

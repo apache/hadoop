@@ -85,15 +85,15 @@ public class CompressionCodecFactory {
     buf.append("{ ");
     if (itr.hasNext()) {
       Map.Entry<String, CompressionCodec> entry = itr.next();
-      buf.append(entry.getKey());
-      buf.append(": ");
-      buf.append(entry.getValue().getClass().getName());
+      buf.append(entry.getKey())
+          .append(": ")
+          .append(entry.getValue().getClass().getName());
       while (itr.hasNext()) {
         entry = itr.next();
-        buf.append(", ");
-        buf.append(entry.getKey());
-        buf.append(": ");
-        buf.append(entry.getValue().getClass().getName());
+        buf.append(", ")
+            .append(entry.getKey())
+            .append(": ")
+            .append(entry.getValue().getClass().getName());
       }
     }
     buf.append(" }");
@@ -161,8 +161,8 @@ public class CompressionCodecFactory {
       Class cls = itr.next();
       buf.append(cls.getName());
       while(itr.hasNext()) {
-        buf.append(',');
-        buf.append(itr.next().getName());
+        buf.append(',')
+            .append(itr.next().getName());
       }
     }
     conf.set(CommonConfigurationKeys.IO_COMPRESSION_CODECS_KEY, buf.toString());

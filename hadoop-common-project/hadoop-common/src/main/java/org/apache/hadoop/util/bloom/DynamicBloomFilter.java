@@ -237,8 +237,8 @@ public class DynamicBloomFilter extends Filter {
     StringBuilder res = new StringBuilder();
 
     for (int i = 0; i < matrix.length; i++) {
-      res.append(matrix[i]);
-      res.append(Character.LINE_SEPARATOR);
+      res.append(matrix[i])
+          .append(Character.LINE_SEPARATOR);
     }
     return res.toString();
   }

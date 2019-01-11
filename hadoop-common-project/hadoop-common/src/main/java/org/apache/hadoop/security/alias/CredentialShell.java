@@ -121,12 +121,12 @@ public class CredentialShell extends CommandShell {
   public String getCommandUsage() {
     StringBuffer sbuf = new StringBuffer(USAGE_PREFIX + COMMANDS);
     String banner = StringUtils.repeat("=", 66);
-    sbuf.append(banner + "\n");
-    sbuf.append(CreateCommand.USAGE + ":\n\n" + CreateCommand.DESC + "\n");
-    sbuf.append(banner + "\n");
-    sbuf.append(DeleteCommand.USAGE + ":\n\n" + DeleteCommand.DESC + "\n");
-    sbuf.append(banner + "\n");
-    sbuf.append(ListCommand.USAGE + ":\n\n" + ListCommand.DESC + "\n");
+    sbuf.append(banner + "\n")
+        .append(CreateCommand.USAGE + ":\n\n" + CreateCommand.DESC + "\n")
+        .append(banner + "\n")
+        .append(DeleteCommand.USAGE + ":\n\n" + DeleteCommand.DESC + "\n")
+        .append(banner + "\n")
+        .append(ListCommand.USAGE + ":\n\n" + ListCommand.DESC + "\n");
     return sbuf.toString();
   }
 

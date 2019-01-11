@@ -69,8 +69,8 @@ public abstract class GetGroupsBase extends Configured implements Tool {
       StringBuilder sb = new StringBuilder();
       sb.append(username + " :");
       for (String group : getUgmProtocol().getGroupsForUser(username)) {
-        sb.append(" ");
-        sb.append(group);
+        sb.append(" ")
+            .append(group);
       }
       out.println(sb);
     }

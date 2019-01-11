@@ -228,15 +228,15 @@ public class VolumeScanner extends Thread {
         " path %s%n", volume.getStorageID(), volume));
     synchronized (stats) {
       p.append(String.format("Bytes verified in last hour       : %57d%n",
-          stats.bytesScannedInPastHour));
-      p.append(String.format("Blocks scanned in current period  : %57d%n",
-          stats.blocksScannedInCurrentPeriod));
-      p.append(String.format("Blocks scanned since restart      : %57d%n",
-          stats.blocksScannedSinceRestart));
-      p.append(String.format("Block pool scans since restart    : %57d%n",
-          stats.scansSinceRestart));
-      p.append(String.format("Block scan errors since restart   : %57d%n",
-          stats.scanErrorsSinceRestart));
+          stats.bytesScannedInPastHour))
+          .append(String.format("Blocks scanned in current period  : %57d%n",
+              stats.blocksScannedInCurrentPeriod))
+          .append(String.format("Blocks scanned since restart      : %57d%n",
+              stats.blocksScannedSinceRestart))
+          .append(String.format("Block pool scans since restart    : %57d%n",
+              stats.scansSinceRestart))
+          .append(String.format("Block scan errors since restart   : %57d%n",
+              stats.scanErrorsSinceRestart));
       if (stats.nextBlockPoolScanStartMs > 0) {
         p.append(String.format("Hours until next block pool scan  : %57.3f%n",
             positiveMsToHours(stats.nextBlockPoolScanStartMs -
