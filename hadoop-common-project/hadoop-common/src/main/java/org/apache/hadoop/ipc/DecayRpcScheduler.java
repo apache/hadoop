@@ -233,7 +233,7 @@ public class DecayRpcScheduler implements RpcScheduler,
         "the number of top users for scheduler metrics must be at least 1");
 
     // Setup delay timer
-    Timer timer = new Timer();
+    Timer timer = new Timer(true);
     DecayTask task = new DecayTask(this, timer);
     timer.scheduleAtFixedRate(task, decayPeriodMillis, decayPeriodMillis);
 
