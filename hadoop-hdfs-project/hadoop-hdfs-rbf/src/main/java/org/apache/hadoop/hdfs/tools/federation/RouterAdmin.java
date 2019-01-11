@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.tools.federation;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,8 +28,10 @@ import java.util.Map;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
@@ -61,9 +65,14 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableE
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RefreshResponse;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolClientSideTranslatorPB;
+import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolPB;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -147,6 +156,8 @@ public class RouterAdmin extends Configured implements Tool {
       return "\t[-getDisabledNameservices]";
     } else if (cmd.equals("-refresh")) {
       return "\t[-refresh]";
+    } else if (cmd.equals("-refreshRouterArgs")) {
+      return "\t[-refreshRouterArgs <host:ipc_port> <key> [arg1..argn]]";
     }
     return getUsage(null);
   }
@@ -211,6 +222,10 @@ public class RouterAdmin extends Configured implements Tool {
       }
     } else if ("-nameservice".equals(cmd)) {
       if (argv.length < 3) {
+        return false;
+      }
+    } else if ("-refreshRouterArgs".equals(cmd)) {
+      if (argv.length < 2) {
         return false;
       }
     }
@@ -310,6 +325,8 @@ public class RouterAdmin extends Configured implements Tool {
         getDisabledNameservices();
       } else if ("-refresh".equals(cmd)) {
         refresh(address);
+      } else if ("-refreshRouterArgs".equals(cmd)) {
+        exitCode = genericRefresh(argv, i);
       } else {
         throw new IllegalArgumentException("Unknown Command: " + cmd);
       }
@@ -920,6 +937,61 @@ public class RouterAdmin extends Configured implements Tool {
     System.out.println("List of disabled nameservices:");
     for (String nsId : response.getNameservices()) {
       System.out.println(nsId);
+    }
+  }
+
+  public int genericRefresh(String[] argv, int i) throws IOException {
+    String hostport = argv[i++];
+    String identifier = argv[i++];
+    String[] args = Arrays.copyOfRange(argv, i, argv.length);
+
+    // Get the current configuration
+    Configuration conf = getConf();
+
+    // for security authorization
+    // server principal for this call
+    // should be NN's one.
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY,
+        conf.get(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, ""));
+
+    // Create the client
+    Class<?> xface = GenericRefreshProtocolPB.class;
+    InetSocketAddress address = NetUtils.createSocketAddr(hostport);
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+
+    RPC.setProtocolEngine(conf, xface, ProtobufRpcEngine.class);
+    GenericRefreshProtocolPB proxy = (GenericRefreshProtocolPB)RPC.getProxy(
+        xface, RPC.getProtocolVersion(xface), address, ugi, conf,
+        NetUtils.getDefaultSocketFactory(conf), 0);
+
+    Collection<RefreshResponse> responses = null;
+    try (GenericRefreshProtocolClientSideTranslatorPB xlator =
+        new GenericRefreshProtocolClientSideTranslatorPB(proxy)) {
+      // Refresh
+      responses = xlator.refresh(identifier, args);
+
+      int returnCode = 0;
+
+      // Print refresh responses
+      System.out.println("Refresh Responses:\n");
+      for (RefreshResponse response : responses) {
+        System.out.println(response.toString());
+
+        if (returnCode == 0 && response.getReturnCode() != 0) {
+          // This is the first non-zero return code, so we should return this
+          returnCode = response.getReturnCode();
+        } else if (returnCode != 0 && response.getReturnCode() != 0) {
+          // Then now we have multiple non-zero return codes,
+          // so we merge them into -1
+          returnCode = -1;
+        }
+      }
+      return returnCode;
+    } finally {
+      if (responses == null) {
+        System.out.println("Failed to get response.\n");
+        return -1;
+      }
     }
   }
 
