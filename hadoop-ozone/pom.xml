@@ -293,6 +293,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>webapps/static/nvd3-1.8.5.min.css</exclude>
             <exclude>webapps/static/nvd3-1.8.5.min.js.map</exclude>
             <exclude>webapps/static/nvd3-1.8.5.min.js</exclude>
+            <exclude>**/dependency-reduced-pom.xml</exclude>
           </excludes>
         </configuration>
       </plugin>
