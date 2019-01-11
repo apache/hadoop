@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.client;
 import org.apache.hadoop.hdds.client.ReplicationType;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * A class that encapsulates OzoneKeyLocation.
@@ -32,6 +33,8 @@ public class OzoneKeyDetails extends OzoneKey {
    */
   private List<OzoneKeyLocation> ozoneKeyLocations;
 
+  private Map<String, String> metadata;
+
   /**
    * Constructs OzoneKeyDetails from OmKeyInfo.
    */
@@ -39,10 +42,11 @@ public class OzoneKeyDetails extends OzoneKey {
   public OzoneKeyDetails(String volumeName, String bucketName, String keyName,
                          long size, long creationTime, long modificationTime,
                          List<OzoneKeyLocation> ozoneKeyLocations,
-                         ReplicationType type) {
+                         ReplicationType type, Map<String, String> metadata) {
     super(volumeName, bucketName, keyName, size, creationTime,
         modificationTime, type);
     this.ozoneKeyLocations = ozoneKeyLocations;
+    this.metadata = metadata;
   }
 
   /**
@@ -50,6 +54,10 @@ public class OzoneKeyDetails extends OzoneKey {
    */
   public List<OzoneKeyLocation> getOzoneKeyLocations() {
     return ozoneKeyLocations;
+  }
+
+  public Map<String, String> getMetadata() {
+    return metadata;
   }
 
   /**

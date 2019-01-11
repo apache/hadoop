@@ -19,8 +19,10 @@
 package org.apache.hadoop.ozone.client;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -71,6 +73,7 @@ public class OzoneVolume {
 
   private int listCacheSize;
 
+  private Map<String, String> metadata;
   /**
    * Constructs OzoneVolume instance.
    * @param conf Configuration object.
@@ -81,11 +84,13 @@ public class OzoneVolume {
    * @param quotaInBytes Volume quota in bytes.
    * @param creationTime creation time of the volume
    * @param acls ACLs associated with the volume.
+   * @param metadata custom key value metadata.
    */
   @SuppressWarnings("parameternumber")
   public OzoneVolume(Configuration conf, ClientProtocol proxy, String name,
                      String admin, String owner, long quotaInBytes,
-                     long creationTime, List<OzoneAcl> acls) {
+                     long creationTime, List<OzoneAcl> acls,
+                     Map<String, String> metadata) {
     Preconditions.checkNotNull(proxy, "Client proxy is not set.");
     this.proxy = proxy;
     this.name = name;
@@ -95,6 +100,15 @@ public class OzoneVolume {
     this.creationTime = creationTime;
     this.acls = acls;
     this.listCacheSize = HddsClientUtils.getListCacheSize(conf);
+    this.metadata = metadata;
+  }
+
+  @SuppressWarnings("parameternumber")
+  public OzoneVolume(Configuration conf, ClientProtocol proxy, String name,
+                     String admin, String owner, long quotaInBytes,
+                     long creationTime, List<OzoneAcl> acls) {
+    this(conf, proxy, name, admin, owner, quotaInBytes, creationTime, acls,
+        new HashMap<>());
   }
 
   @VisibleForTesting
@@ -108,6 +122,7 @@ public class OzoneVolume {
     this.quotaInBytes = quotaInBytes;
     this.creationTime = creationTime;
     this.acls = acls;
+    this.metadata = new HashMap<>();
   }
 
   /**
@@ -144,6 +159,13 @@ public class OzoneVolume {
    */
   public long getQuota() {
     return quotaInBytes;
+  }
+
+  /**
+   * Returns custom key/value metadata map.
+   */
+  public Map<String, String> getMetadata() {
+    return metadata;
   }
 
   /**

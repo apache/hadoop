@@ -21,7 +21,9 @@ package org.apache.hadoop.ozone.client;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneAcl;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * This class encapsulates the arguments that are
@@ -44,16 +46,22 @@ public final class BucketArgs {
   private StorageType storageType;
 
   /**
+   * Custom key/value metadata.
+   */
+  private Map<String, String> metadata;
+
+  /**
    * Private constructor, constructed via builder.
    * @param versioning Bucket version flag.
    * @param storageType Storage type to be used.
    * @param acls list of ACLs.
    */
   private BucketArgs(Boolean versioning, StorageType storageType,
-                     List<OzoneAcl> acls) {
+                     List<OzoneAcl> acls, Map<String, String> metadata) {
     this.acls = acls;
     this.versioning = versioning;
     this.storageType = storageType;
+    this.metadata = metadata;
   }
 
   /**
@@ -81,6 +89,15 @@ public final class BucketArgs {
   }
 
   /**
+   * Custom metadata for the buckets.
+   *
+   * @return key value map
+   */
+  public Map<String, String> getMetadata() {
+    return metadata;
+  }
+
+  /**
    * Returns new builder class that builds a OmBucketInfo.
    *
    * @return Builder
@@ -96,6 +113,11 @@ public final class BucketArgs {
     private Boolean versioning;
     private StorageType storageType;
     private List<OzoneAcl> acls;
+    private Map<String, String> metadata;
+
+    public Builder() {
+      metadata = new HashMap<>();
+    }
 
     public BucketArgs.Builder setVersioning(Boolean versionFlag) {
       this.versioning = versionFlag;
@@ -112,12 +134,16 @@ public final class BucketArgs {
       return this;
     }
 
+    public BucketArgs.Builder addMetadata(String key, String value) {
+      this.metadata.put(key, value);
+      return this;
+    }
     /**
      * Constructs the BucketArgs.
      * @return instance of BucketArgs.
      */
     public BucketArgs build() {
-      return new BucketArgs(versioning, storageType, acls);
+      return new BucketArgs(versioning, storageType, acls, metadata);
     }
   }
 }

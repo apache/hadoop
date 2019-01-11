@@ -262,12 +262,14 @@ public interface ClientProtocol {
    * @param bucketName Name of the Bucket
    * @param keyName Name of the Key
    * @param size Size of the data
+   * @param metadata custom key value metadata
    * @return {@link OzoneOutputStream}
    *
    */
   OzoneOutputStream createKey(String volumeName, String bucketName,
                               String keyName, long size, ReplicationType type,
-                              ReplicationFactor factor)
+                              ReplicationFactor factor,
+                              Map<String, String> metadata)
       throws IOException;
 
   /**

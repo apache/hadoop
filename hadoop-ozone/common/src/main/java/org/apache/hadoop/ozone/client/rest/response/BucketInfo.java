@@ -18,8 +18,10 @@
 package org.apache.hadoop.ozone.client.rest.response;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneAcl;
@@ -44,7 +46,7 @@ public class BucketInfo implements Comparable<BucketInfo> {
   private List<OzoneAcl> acls;
   private OzoneConsts.Versioning versioning;
   private StorageType storageType;
-
+  private Map<String, String> metadata = new HashMap<>();
   /**
    * Constructor for BucketInfo.
    *
@@ -182,6 +184,20 @@ public class BucketInfo implements Comparable<BucketInfo> {
    */
   public void setVolumeName(String volumeName) {
     this.volumeName = volumeName;
+  }
+
+  /**
+   * Get custom key value metadata.
+   */
+  public Map<String, String> getMetadata() {
+    return metadata;
+  }
+
+  /**
+   * Set custom key value metadata.
+   */
+  public void setMetadata(Map<String, String> metadata) {
+    this.metadata = metadata;
   }
 
   /**

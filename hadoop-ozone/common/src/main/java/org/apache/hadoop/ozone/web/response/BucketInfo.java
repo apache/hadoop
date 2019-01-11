@@ -20,13 +20,14 @@ package org.apache.hadoop.ozone.web.response;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.hdds.protocol.StorageType;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.OzoneConsts.Versioning;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.annotation.JsonFilter;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -53,7 +54,7 @@ public class BucketInfo implements Comparable<BucketInfo> {
 
     FilterProvider filters = new SimpleFilterProvider().addFilter(BUCKET_INFO,
         SimpleBeanPropertyFilter.serializeAllExcept(ignorableFieldNames));
-    mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
+    mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);
     mapper.addMixIn(Object.class, MixIn.class);
 
     mapper.setFilterProvider(filters);
@@ -64,10 +65,11 @@ public class BucketInfo implements Comparable<BucketInfo> {
   private String bucketName;
   private String createdOn;
   private List<OzoneAcl> acls;
-  private OzoneConsts.Versioning versioning;
+  private Versioning versioning;
   private StorageType storageType;
   private long bytesUsed;
   private long keyCount;
+  private Map<String, String> metadata;
 
   /**
    * Constructor for BucketInfo.
@@ -142,7 +144,7 @@ public class BucketInfo implements Comparable<BucketInfo> {
    *
    * @return versioning Enum
    */
-  public OzoneConsts.Versioning getVersioning() {
+  public Versioning getVersioning() {
     return versioning;
   }
 
@@ -151,7 +153,7 @@ public class BucketInfo implements Comparable<BucketInfo> {
    *
    * @param versioning
    */
-  public void setVersioning(OzoneConsts.Versioning versioning) {
+  public void setVersioning(Versioning versioning) {
     this.versioning = versioning;
   }
 
@@ -311,6 +313,14 @@ public class BucketInfo implements Comparable<BucketInfo> {
    */
   public void setKeyCount(long keyCount) {
     this.keyCount = keyCount;
+  }
+
+  public Map<String, String> getMetadata() {
+    return metadata;
+  }
+
+  public void setMetadata(Map<String, String> metadata) {
+    this.metadata = metadata;
   }
 
   /**

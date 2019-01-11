@@ -107,6 +107,7 @@ public class BucketManagerImpl implements BucketManager {
           .setStorageType(bucketInfo.getStorageType())
           .setIsVersionEnabled(bucketInfo.getIsVersionEnabled())
           .setCreationTime(Time.now())
+          .addAllMetadata(bucketInfo.getMetadata())
           .build();
       metadataManager.getBucketTable().put(bucketKey,
           omBucketInfo);

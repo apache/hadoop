@@ -19,7 +19,10 @@ package org.apache.hadoop.ozone.om.helpers;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -44,13 +47,15 @@ public final class OmKeyInfo {
   private long modificationTime;
   private HddsProtos.ReplicationType type;
   private HddsProtos.ReplicationFactor factor;
+  private Map<String, String> metadata;
 
   @SuppressWarnings("parameternumber")
-  private OmKeyInfo(String volumeName, String bucketName, String keyName,
-                    List<OmKeyLocationInfoGroup> versions, long dataSize,
-                    long creationTime, long modificationTime,
-                    HddsProtos.ReplicationType type,
-                    HddsProtos.ReplicationFactor factor) {
+  OmKeyInfo(String volumeName, String bucketName, String keyName,
+      List<OmKeyLocationInfoGroup> versions, long dataSize,
+      long creationTime, long modificationTime,
+      HddsProtos.ReplicationType type,
+      HddsProtos.ReplicationFactor factor,
+      Map<String, String> metadata) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.keyName = keyName;
@@ -71,6 +76,7 @@ public final class OmKeyInfo {
     this.modificationTime = modificationTime;
     this.factor = factor;
     this.type = type;
+    this.metadata = metadata;
   }
 
   public String getVolumeName() {
@@ -116,6 +122,10 @@ public final class OmKeyInfo {
 
   public void updateModifcationTime() {
     this.modificationTime = Time.monotonicNow();
+  }
+
+  public Map<String, String> getMetadata() {
+    return metadata;
   }
 
   /**
@@ -217,6 +227,12 @@ public final class OmKeyInfo {
     private HddsProtos.ReplicationType type;
     private HddsProtos.ReplicationFactor factor;
     private boolean isMultipartKey;
+    private Map<String, String> metadata;
+
+    public Builder() {
+      this.metadata = new HashMap<>();
+      omKeyLocationInfoGroups = new ArrayList<>();
+    }
 
     public Builder setVolumeName(String volume) {
       this.volumeName = volume;
@@ -269,10 +285,20 @@ public final class OmKeyInfo {
       return this;
     }
 
+    public Builder addMetadata(String key, String value) {
+      metadata.put(key, value);
+      return this;
+    }
+
+    public Builder addAllMetadata(Map<String, String> newMetadata) {
+      metadata.putAll(newMetadata);
+      return this;
+    }
+
     public OmKeyInfo build() {
       return new OmKeyInfo(
           volumeName, bucketName, keyName, omKeyLocationInfoGroups,
-          dataSize, creationTime, modificationTime, type, factor);
+          dataSize, creationTime, modificationTime, type, factor, metadata);
     }
   }
 
@@ -292,6 +318,7 @@ public final class OmKeyInfo {
         .setLatestVersion(latestVersion)
         .setCreationTime(creationTime)
         .setModificationTime(modificationTime)
+        .addAllMetadata(KeyValueUtil.toProtobuf(metadata))
         .build();
   }
 
@@ -307,7 +334,34 @@ public final class OmKeyInfo {
         keyInfo.getCreationTime(),
         keyInfo.getModificationTime(),
         keyInfo.getType(),
-        keyInfo.getFactor());
+        keyInfo.getFactor(),
+        KeyValueUtil.getFromProtobuf(keyInfo.getMetadataList()));
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    OmKeyInfo omKeyInfo = (OmKeyInfo) o;
+    return dataSize == omKeyInfo.dataSize &&
+        creationTime == omKeyInfo.creationTime &&
+        modificationTime == omKeyInfo.modificationTime &&
+        volumeName.equals(omKeyInfo.volumeName) &&
+        bucketName.equals(omKeyInfo.bucketName) &&
+        keyName.equals(omKeyInfo.keyName) &&
+        Objects
+            .equals(keyLocationVersions, omKeyInfo.keyLocationVersions) &&
+        type == omKeyInfo.type &&
+        factor == omKeyInfo.factor &&
+        Objects.equals(metadata, omKeyInfo.metadata);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(volumeName, bucketName, keyName);
+  }
 }

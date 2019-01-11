@@ -19,6 +19,8 @@
 package org.apache.hadoop.ozone.client.rest.response;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.client.OzoneQuota;
@@ -42,6 +44,8 @@ public class VolumeInfo implements Comparable<VolumeInfo> {
   private String volumeName;
   private String createdOn;
   private String createdBy;
+  private Map<String, String> metadata = new HashMap<>();
+
 
 
   /**
@@ -176,6 +180,20 @@ public class VolumeInfo implements Comparable<VolumeInfo> {
    */
   public static VolumeInfo parse(String data) throws IOException {
     return READER.readValue(data);
+  }
+
+  /**
+   * Get custom key value metadata.
+   */
+  public Map<String, String> getMetadata() {
+    return metadata;
+  }
+
+  /**
+   * Set custom key value metadata.
+   */
+  public void setMetadata(Map<String, String> metadata) {
+    this.metadata = metadata;
   }
 
   /**

@@ -19,6 +19,8 @@
 package org.apache.hadoop.ozone.client.rest.response;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
@@ -42,6 +44,7 @@ public class KeyInfo implements Comparable<KeyInfo> {
   private long size;
   private String keyName;
   private ReplicationType type;
+  private Map<String, String> metadata = new HashMap<>();
 
   /**
    * Return replication type of the key.
@@ -167,6 +170,20 @@ public class KeyInfo implements Comparable<KeyInfo> {
    */
   public void setVersion(long version) {
     this.version = version;
+  }
+
+  /**
+   * Get custom key value metadata.
+   */
+  public Map<String, String> getMetadata() {
+    return metadata;
+  }
+
+  /**
+   * Set custom key value metadata.
+   */
+  public void setMetadata(Map<String, String> metadata) {
+    this.metadata = metadata;
   }
 
   /**
