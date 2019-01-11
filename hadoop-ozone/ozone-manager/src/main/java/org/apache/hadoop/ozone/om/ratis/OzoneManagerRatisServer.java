@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
+import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.ratis.RaftConfigKeys;
 import org.apache.ratis.client.RaftClientConfigKeys;
 import org.apache.ratis.conf.RaftProperties;
@@ -68,6 +69,7 @@ public final class OzoneManagerRatisServer {
   private final RaftGroupId raftGroupId;
   private final RaftGroup raftGroup;
   private final RaftPeerId raftPeerId;
+  private final OzoneManagerProtocol ozoneManager;
 
   private static final AtomicLong CALL_ID_COUNTER = new AtomicLong();
 
@@ -75,9 +77,10 @@ public final class OzoneManagerRatisServer {
     return CALL_ID_COUNTER.getAndIncrement() & Long.MAX_VALUE;
   }
 
-  private OzoneManagerRatisServer(String omId, InetAddress addr, int port,
-      Configuration conf) throws IOException {
-    Objects.requireNonNull(omId, "omId == null");
+  private OzoneManagerRatisServer(OzoneManagerProtocol om, String omId,
+      InetAddress addr, int port, Configuration conf) throws IOException {
+    Objects.requireNonNull(omId, "omId is null");
+    this.ozoneManager = om;
     this.port = port;
     this.omRatisAddress = new InetSocketAddress(addr.getHostAddress(), port);
     RaftProperties serverProperties = newRaftProperties(conf);
@@ -98,8 +101,9 @@ public final class OzoneManagerRatisServer {
         .build();
   }
 
-  public static OzoneManagerRatisServer newOMRatisServer(String omId,
-      InetAddress omAddress, Configuration ozoneConf) throws IOException {
+  public static OzoneManagerRatisServer newOMRatisServer(
+      OzoneManagerProtocol om, String omId, InetAddress omAddress,
+      Configuration ozoneConf) throws IOException {
     int localPort = ozoneConf.getInt(
         OMConfigKeys.OZONE_OM_RATIS_PORT_KEY,
         OMConfigKeys.OZONE_OM_RATIS_PORT_DEFAULT);
@@ -120,7 +124,8 @@ public final class OzoneManagerRatisServer {
             + "fallback to use default port {}", localPort, e);
       }
     }
-    return new OzoneManagerRatisServer(omId, omAddress, localPort, ozoneConf);
+    return new OzoneManagerRatisServer(om, omId, omAddress, localPort,
+        ozoneConf);
   }
 
   public RaftGroup getRaftGroup() {
@@ -128,11 +133,10 @@ public final class OzoneManagerRatisServer {
   }
 
   /**
-   * Return a dummy StateMachine.
-   * TODO: Implement a state machine on OM.
+   * Returns OzoneManager StateMachine.
    */
   private BaseStateMachine getStateMachine(RaftGroupId gid) {
-    return  new OzoneManagerStateMachine(null);
+    return  new OzoneManagerStateMachine(ozoneManager);
   }
 
   public void start() throws IOException {
@@ -199,8 +203,7 @@ public final class OzoneManagerRatisServer {
         SizeInBytes.valueOf(raftSegmentPreallocatedSize));
 
     // For grpc set the maximum message size
-    // TODO: calculate the max message size based on the max size of a
-    // PutSmallFileRequest's file size limit
+    // TODO: calculate the optimal max message size
     GrpcConfigKeys.setMessageSizeMax(properties,
         SizeInBytes.valueOf(logAppenderQueueByteLimit));
 
@@ -262,11 +265,6 @@ public final class OzoneManagerRatisServer {
         clientRequestTimeout);
 
     // TODO: set max write buffer size
-
-    /**
-     * TODO: when state machine is implemented, enable StateMachineData sync
-     * and set sync timeout and number of sync retries.
-     */
 
     /**
      * TODO: set following ratis leader election related configs when

@@ -72,10 +72,8 @@ import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisClient;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServicePort;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type;
 import org.apache.hadoop.ozone.protocolPB.OzoneManagerProtocolServerSideTranslatorPB;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
@@ -602,8 +600,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
         OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
     if (omRatisEnabled) {
-      omRatisServer = OzoneManagerRatisServer.newOMRatisServer(
-          omId, omRpcAddress.getAddress(), configuration);
+      omRatisServer = OzoneManagerRatisServer.newOMRatisServer(this, omId,
+          omNodeRpcAddr.getAddress(), configuration);
       omRatisServer.start();
 
       LOG.info("OzoneManager Ratis server started at port {}",
@@ -701,22 +699,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       LOG.info("Interrupted during OzoneManager join.", e);
-    }
-  }
-
-  /**
-   * Validates that the incoming OM request has required parameters.
-   * TODO: Add more validation checks before writing the request to Ratis log.
-   * @param omRequest client request to OM
-   * @throws OMException thrown if required parameters are set to null.
-   */
-  public void validateRequest(OMRequest omRequest) throws OMException {
-    Type cmdType = omRequest.getCmdType();
-    if (cmdType == null) {
-      throw new OMException("CmdType is null", ResultCodes.INVALID_REQUEST);
-    }
-    if (omRequest.getClientId() == null) {
-      throw new OMException("ClientId is null", ResultCodes.INVALID_REQUEST);
     }
   }
 
