@@ -3006,6 +3006,17 @@
 </property>
 
 <property>
+  <name>dfs.ha.zkfc.nn.safemode-as-unhealthy</name>
+  <value>false</value>
+  <description>
+    Whether to report SERVICE_UNHEALTHY to ZKFC while namenode is in safemode,
+    when it is set to true, the namenode in safemode will not become active, and
+    only namenodes that not in safemode and ready to fully serve will become
+    active.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.quota.init-threads</name>
   <value>4</value>
   <description>

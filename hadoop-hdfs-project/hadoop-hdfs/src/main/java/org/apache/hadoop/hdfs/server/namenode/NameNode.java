@@ -158,6 +158,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAUL
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.FS_PROTECTED_DIRECTORIES;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_ZKFC_NN_SAFEMODE_AS_UNHEALTHY_TO_ZKFC_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_ZKFC_NN_SAFEMODE_AS_UNHEALTHY_TO_ZKFC_DEFAULT;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_BACKOFF_ENABLE;
@@ -369,6 +371,7 @@ public class NameNode extends ReconfigurableBase implements
   private final HAContext haContext;
   protected final boolean allowStaleStandbyReads;
   private AtomicBoolean started = new AtomicBoolean(false);
+  private final boolean safemodeAsUnhealthyToZkfc;
 
   private final static int HEALTH_MONITOR_WARN_THRESHOLD_MS = 5000;
   
@@ -965,6 +968,9 @@ public class NameNode extends ReconfigurableBase implements
       this.stopAtException(e);
       throw e;
     }
+    safemodeAsUnhealthyToZkfc = conf.getBoolean(
+        DFS_HA_ZKFC_NN_SAFEMODE_AS_UNHEALTHY_TO_ZKFC_KEY,
+        DFS_HA_ZKFC_NN_SAFEMODE_AS_UNHEALTHY_TO_ZKFC_DEFAULT);
     this.started.set(true);
   }
 
@@ -1765,6 +1771,10 @@ public class NameNode extends ReconfigurableBase implements
     if (!getNamesystem().nameNodeHasResourcesAvailable()) {
       throw new HealthCheckFailedException(
           "The NameNode has no resources available");
+    }
+    if (safemodeAsUnhealthyToZkfc && isInSafeMode()) {
+      throw new HealthCheckFailedException("The NameNode is configured to " +
+          "report UNHEALTHY to ZKFC in Safemode.");
     }
   }
   

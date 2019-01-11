@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_ZKFC_NN_SAFEMODE_AS_UNHEALTHY_TO_ZKFC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -31,6 +32,7 @@ import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.MockNameNodeResourceChecker;
 import org.apache.hadoop.hdfs.tools.NNHAServiceTarget;
 import org.apache.hadoop.ipc.RemoteException;
@@ -74,6 +76,38 @@ public class TestNNHealthCheck {
           .nnTopology(MiniDFSNNTopology.simpleHATopology())
           .build();
     doNNHealthCheckTest();
+  }
+
+  @Test
+  public void testNNHealthCheckWithSafemodeAsUnhealthy() throws IOException {
+    conf.setBoolean(DFS_HA_ZKFC_NN_SAFEMODE_AS_UNHEALTHY_TO_ZKFC_KEY, true);
+
+    // now bring up just the NameNode.
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+        .nnTopology(MiniDFSNNTopology.simpleHATopology()).build();
+    cluster.waitActive();
+
+    // manually set safemode.
+    cluster.getFileSystem(0)
+        .setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+
+    NNHAServiceTarget haTarget = new NNHAServiceTarget(conf,
+        DFSUtil.getNamenodeNameServiceId(conf), "nn1");
+    final String expectedTargetString = haTarget.getAddress().toString();
+
+    assertTrue("Expected haTarget " + haTarget + " containing " +
+        expectedTargetString,
+        haTarget.toString().contains(expectedTargetString));
+    HAServiceProtocol rpc = haTarget.getHealthMonitorProxy(conf, 5000);
+
+    try {
+      // Should throw error - NN is unhealthy.
+      rpc.monitorHealth();
+      fail("Should not have succeeded in calling monitorHealth");
+    } catch (Exception hcfe) {
+      GenericTestUtils.assertExceptionContains("The NameNode is configured" +
+          " to report UNHEALTHY to ZKFC in Safemode.", hcfe);
+    }
   }
 
   private void doNNHealthCheckTest() throws IOException {
