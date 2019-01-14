@@ -66,6 +66,7 @@ import static org.apache.hadoop.service.launcher.LauncherExitCodes.*;
  * CLI to manage S3Guard Metadata Store.
  */
 public abstract class S3GuardTool extends Configured implements Tool {
+
   private static final Logger LOG = LoggerFactory.getLogger(S3GuardTool.class);
 
   private static final String NAME = "s3guard";
@@ -90,6 +91,9 @@ public abstract class S3GuardTool extends Configured implements Tool {
       "\t" + SetCapacity.NAME + " - " +SetCapacity.PURPOSE + "\n";
   private static final String DATA_IN_S3_IS_PRESERVED
       = "(all data in S3 is preserved)";
+
+  public static final String E_NO_METASTORE_OR_FILESYSTEM
+      = "No metastore or filesystem specified";
 
   abstract public String getUsage();
 
@@ -267,12 +271,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
     if (getStore() != null) {
       return getStore();
     }
-    Configuration conf;
-    if (filesystem == null) {
-      conf = getConf();
-    } else {
-      conf = filesystem.getConf();
-    }
+    final boolean hasFileSystem = filesystem != null;
+    final Configuration conf = hasFileSystem ? filesystem.getConf() : getConf();
     String metaURI = getCommandFormat().getOptValue(META_FLAG);
     if (metaURI != null && !metaURI.isEmpty()) {
       URI uri = URI.create(metaURI);
@@ -294,6 +294,13 @@ public abstract class S3GuardTool extends Configured implements Tool {
             String.format("Metadata store %s is not supported", uri));
       }
     } else {
+      if (!hasFileSystem) {
+        // command didn't declare a metadata store URI or a bucket.
+        // to avoid problems related to picking up a shared table for actions
+        // line init and destroy (HADOOP-15843), this is rejected
+        printHelp(this);
+        throw usageError(E_NO_METASTORE_OR_FILESYSTEM);
+      }
       // CLI does not specify metadata store URI, it uses default metadata store
       // DynamoDB instead.
       setStore(new DynamoDBMetadataStore());
@@ -302,10 +309,10 @@ public abstract class S3GuardTool extends Configured implements Tool {
       }
     }
 
-    if (filesystem == null) {
-      getStore().initialize(conf);
-    } else {
+    if (hasFileSystem) {
       getStore().initialize(filesystem);
+    } else {
+      getStore().initialize(conf);
     }
     LOG.info("Metadata store {} is initialized.", getStore());
     return getStore();
@@ -1431,13 +1438,13 @@ public abstract class S3GuardTool extends Configured implements Tool {
     return uri;
   }
 
-  private static void printHelp() {
-    if (command == null) {
+  private static void printHelp(S3GuardTool tool) {
+    if (tool == null) {
       errorln("Usage: hadoop " + USAGE);
       errorln("\tperform S3Guard metadata store " +
           "administrative commands.");
     } else {
-      errorln("Usage: hadoop " + command.getUsage());
+      errorln("Usage: hadoop " + tool.getUsage());
     }
     errorln();
     errorln(COMMON_USAGE);
@@ -1476,7 +1483,6 @@ public abstract class S3GuardTool extends Configured implements Tool {
       println(out, "\t%s=%s", entry.getKey(), entry.getValue());
     }
   }
-
 
   /**
    * Handle store not found by converting to an exit exception
@@ -1525,6 +1531,18 @@ public abstract class S3GuardTool extends Configured implements Tool {
     return new ExitUtil.ExitException(ERROR, String.format(format, args));
   }
 
+
+  /**
+   * Build the exception to raise on a usage error
+   * @param format string format
+   * @param args optional arguments for the string
+   * @return a new exception to throw
+   */
+  protected static ExitUtil.ExitException usageError(
+      String format, Object...args) {
+    return new ExitUtil.ExitException(E_USAGE, String.format(format, args));
+  }
+
   /**
    * Execute the command with the given arguments.
    *
@@ -1540,8 +1558,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
     String[] otherArgs = new GenericOptionsParser(conf, args)
         .getRemainingArgs();
     if (otherArgs.length == 0) {
-      printHelp();
-      throw new ExitUtil.ExitException(E_USAGE, "No arguments provided");
+      printHelp(null);
+      throw usageError("No arguments provided");
     }
     final String subCommand = otherArgs[0];
     LOG.debug("Executing command {}", subCommand);
@@ -1571,7 +1589,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
       command = new Uploads(conf);
       break;
     default:
-      printHelp();
+      printHelp(null);
       throw new ExitUtil.ExitException(E_USAGE,
           "Unknown command " + subCommand);
     }
@@ -1588,11 +1606,17 @@ public abstract class S3GuardTool extends Configured implements Tool {
       exit(ret, "");
     } catch (CommandFormat.UnknownOptionException e) {
       errorln(e.getMessage());
-      printHelp();
+      printHelp(command);
       exit(E_USAGE, e.getMessage());
     } catch (ExitUtil.ExitException e) {
       // explicitly raised exit code
       exit(e.getExitCode(), e.toString());
+    } catch (FileNotFoundException e) {
+      // bucket doesn't exist or similar.
+      // skip the stack trace and choose the return code of 44, "404"
+      errorln(e.toString());
+      LOG.debug("Not found:", e);
+      exit(EXIT_NOT_FOUND, e.toString());
     } catch (Throwable e) {
       e.printStackTrace(System.err);
       exit(ERROR, e.toString());
