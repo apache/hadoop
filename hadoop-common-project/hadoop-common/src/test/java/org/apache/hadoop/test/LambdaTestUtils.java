@@ -23,8 +23,11 @@ import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
 
+import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeoutException;
@@ -646,6 +649,48 @@ public final class LambdaTestUtils {
   }
 
   /**
+   * Evaluate a closure and return the result, after verifying that it is
+   * not null.
+   * @param message message to use in assertion text if the result is null
+   * @param eval closure to evaluate
+   * @param <T> type of response
+   * @return the evaluated result
+   * @throws Exception on any problem
+   */
+  public static<T> T notNull(String message, Callable<T> eval)
+      throws Exception {
+    T t = eval.call();
+    Assert.assertNotNull(message, t);
+    return t;
+  }
+
+  /**
+   * Execute a closure as the given user.
+   * @param user user to invoke the closure as
+   * @param eval closure to evaluate
+   * @param <T> return type
+   * @return the result of calling the closure under the identity of the user.
+   * @throws IOException IO failure
+   * @throws InterruptedException interrupted operation.
+   */
+  public static<T> T doAs(UserGroupInformation user, Callable<T> eval)
+      throws IOException, InterruptedException {
+    return user.doAs(new PrivilegedOperation<>(eval));
+  }
+
+  /**
+   * Execute a closure as the given user.
+   * @param user user to invoke the closure as
+   * @param eval closure to evaluate
+   * @throws IOException IO failure
+   * @throws InterruptedException interrupted operation.
+   */
+  public static void doAs(UserGroupInformation user, VoidCallable eval)
+      throws IOException, InterruptedException {
+    user.doAs(new PrivilegedVoidOperation(eval));
+  }
+
+  /**
    * Returns {@code TimeoutException} on a timeout. If
    * there was a inner class passed in, includes it as the
    * inner failure.
@@ -812,4 +857,50 @@ public final class LambdaTestUtils {
     }
   }
 
+  /**
+   * A lambda-invoker for doAs use; invokes the callable provided
+   * in the constructor.
+   * @param <T> return type.
+   */
+  public static class PrivilegedOperation<T>
+      implements PrivilegedExceptionAction<T> {
+
+    private final Callable<T> callable;
+
+    /**
+     * Constructor.
+     * @param callable a non-null callable/closure.
+     */
+    public PrivilegedOperation(final Callable<T> callable) {
+      this.callable = Preconditions.checkNotNull(callable);
+    }
+
+    @Override
+    public T run() throws Exception {
+      return callable.call();
+    }
+  }
+
+  /**
+   * VoidCaller variant of {@link PrivilegedOperation}: converts
+   * a void-returning closure to an action which {@code doAs} can call.
+   */
+  public static class PrivilegedVoidOperation
+      implements PrivilegedExceptionAction<Void> {
+
+    private final Callable<Void> callable;
+
+    /**
+     * Constructor.
+     * @param callable a non-null callable/closure.
+     */
+    public PrivilegedVoidOperation(final VoidCallable callable) {
+      this.callable = new VoidCaller(callable);
+    }
+
+    @Override
+    public Void run() throws Exception {
+      return callable.call();
+    }
+  }
 }
