@@ -396,8 +396,11 @@ public abstract class AbstractFileSystem {
       thatPort = this.getUriDefaultPort();
     }
     if (thisPort != thatPort) {
-      throw new InvalidPathException("Wrong FS: " + path + ", expected: "
-          + this.getUri());
+      throw new InvalidPathException("Wrong FS: " + path
+          + " and port=" + thatPort
+          + ", expected: "
+          + this.getUri()
+          + " with port=" + thisPort);
     }
   }
   

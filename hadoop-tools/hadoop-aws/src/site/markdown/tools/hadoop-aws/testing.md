@@ -481,10 +481,11 @@ value as "do not override the default").
 
 ### Testing Session Credentials
 
-The test `TestS3ATemporaryCredentials` requests a set of temporary
-credentials from the STS service, then uses them to authenticate with S3.
+Some tests requests a session credentials and assumed role credentials from the
+AWS Secure Token Service, then use them to authenticate with S3 either directly
+or via delegation tokens.
 
-If an S3 implementation does not support STS, then the functional test
+If an S3 implementation does not support STS, then these functional test
 cases must be disabled:
 
 ```xml
@@ -492,18 +493,30 @@ cases must be disabled:
   <name>test.fs.s3a.sts.enabled</name>
   <value>false</value>
 </property>
+
 ```
 These tests request a temporary set of credentials from the STS service endpoint.
-An alternate endpoint may be defined in `test.fs.s3a.sts.endpoint`.
+An alternate endpoint may be defined in `fs.s3a.assumed.role.sts.endpoint`.
+If this is set, a delegation token region must also be defined:
+in `fs.s3a.assumed.role.sts.endpoint.region`.
+This is useful not just for testing alternative infrastructures,
+but to reduce latency on tests executed away from the central
+service.
 
 ```xml
 <property>
-  <name>test.fs.s3a.sts.endpoint</name>
-  <value>https://sts.example.org/</value>
+  <name>fs.s3a.delegation.token.endpoint</name>
+  <value>fs.s3a.assumed.role.sts.endpoint</value>
+</property>
+<property>
+  <name>fs.s3a.assumed.role.sts.endpoint.region</name>
+  <value>eu-west-2</value>
 </property>
 ```
-The default is ""; meaning "use the amazon default value".
+The default is ""; meaning "use the amazon default endpoint" (`sts.amazonaws.com`).
 
+Consult the [AWS documentation](https://docs.aws.amazon.com/general/latest/gr/rande.html#sts_region)
+for the full list of locations.
 
 ## <a name="debugging"></a> Debugging Test failures
 
@@ -1134,16 +1147,25 @@ This is not for use in production.
 Tests for the AWS Assumed Role credential provider require an assumed
 role to request.
 
-If this role is not set, the tests which require it will be skipped.
+If this role is not declared in `fs.s3a.assumed.role.arn`,
+the tests which require it will be skipped.
 
-To run the tests in `ITestAssumeRole`, you need:
+The specific tests an Assumed Role ARN is required for are
+
+- `ITestAssumeRole`.
+- `ITestRoleDelegationTokens`.
+- One of the parameterized test cases in `ITestDelegatedMRJob`.
+
+To run these tests you need:
 
 1. A role in your AWS account will full read and write access rights to
-the S3 bucket used in the tests, and ideally DynamoDB, for S3Guard.
+the S3 bucket used in the tests, DynamoDB, for S3Guard, and KMS for any
+SSE-KMS tests.
+
 If your bucket is set up by default to use S3Guard, the role must have access
 to that service.
 
-1.  Your IAM User to have the permissions to adopt that role.
+1. Your IAM User to have the permissions to "assume" that role.
 
 1. The role ARN must be set in `fs.s3a.assumed.role.arn`.
 

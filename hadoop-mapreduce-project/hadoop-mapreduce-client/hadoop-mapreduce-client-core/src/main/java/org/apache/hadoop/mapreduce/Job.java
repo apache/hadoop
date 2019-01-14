@@ -42,6 +42,8 @@ import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.util.ConfigUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1529,7 +1531,10 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
     return getSharedCacheUploadPolicies(conf, false);
   }
 
-  private synchronized void connect()
+  /** Only for mocking via unit tests. */
+  @Private
+  @VisibleForTesting
+  synchronized void connect()
           throws IOException, InterruptedException, ClassNotFoundException {
     if (cluster == null) {
       cluster = 
@@ -1549,7 +1554,8 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
 
   /** Only for mocking via unit tests. */
   @Private
-  public JobSubmitter getJobSubmitter(FileSystem fs, 
+  @VisibleForTesting
+  JobSubmitter getJobSubmitter(FileSystem fs,
       ClientProtocol submitClient) throws IOException {
     return new JobSubmitter(fs, submitClient);
   }
