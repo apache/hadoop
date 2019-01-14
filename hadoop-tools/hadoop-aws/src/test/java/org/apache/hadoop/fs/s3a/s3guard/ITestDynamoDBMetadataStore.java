@@ -40,6 +40,7 @@ import com.amazonaws.services.dynamodbv2.model.TableDescription;
 import com.amazonaws.services.dynamodbv2.model.Tag;
 import com.google.common.collect.Lists;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.Tristate;
@@ -145,7 +146,12 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   public static void beforeClassSetup() throws IOException {
     Configuration conf = prepareTestConfiguration(new Configuration());
     assumeThatDynamoMetadataStoreImpl(conf);
+    // S3GUARD_DDB_TEST_TABLE_NAME_KEY and S3GUARD_DDB_TABLE_NAME_KEY should
+    // be configured to use this test.
     testDynamoDBTableName = conf.get(S3GUARD_DDB_TEST_TABLE_NAME_KEY);
+    String dynamoDbTableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY);
+    Assume.assumeTrue("No DynamoDB table name configured", !StringUtils
+            .isEmpty(dynamoDbTableName));
 
     // We should assert that the table name is configured, so the test should
     // fail if it's not configured.
