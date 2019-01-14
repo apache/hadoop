@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.util.UUID;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FileSystem;
@@ -55,8 +56,11 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     }
   }
 
+  @Ignore("Enable this to verify the log warning message format for HostNotFoundException")
   @Test
-  public void verifyUnknownHost() throws Exception {
+  public void testUnknownHost() throws Exception {
+    // When hitting hostName not found exception, the retry will take about 14 mins until failed.
+    // This test is to verify that the "Unknown host name: %s. Retrying to resolve the host name..." is logged as warning during the retry.
     AbfsConfiguration conf = this.getConfiguration();
     String accountName = this.getAccountName();
     String fakeAccountName = "fake" + UUID.randomUUID() + accountName.substring(accountName.indexOf("."));
@@ -66,7 +70,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     conf.set(FS_AZURE_ACCOUNT_KEY + "." + fakeAccountName, this.getAccountKey());
 
     intercept(AbfsRestOperationException.class,
-            "Can not reach endpoint: " + fakeAccountName,
+            "UnknownHostException: " + fakeAccountName,
             () -> FileSystem.get(conf.getRawConfiguration()));
   }
 }

@@ -34,8 +34,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperati
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator.HttpException;
 
-import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.UNKNOWN;
-
 /**
  * The AbfsRestOperation for Rest AbfsClient.
  */
@@ -169,20 +167,16 @@ public class AbfsRestOperation {
 
       httpOperation.processResponse(buffer, bufferOffset, bufferLength);
     } catch (IOException ex) {
+      if (ex instanceof UnknownHostException) {
+        LOG.warn(String.format("Unknown host name: %s. Retrying to resolve the host name...", httpOperation.getUrl().getHost()));
+      }
+
       if (LOG.isDebugEnabled()) {
         if (httpOperation != null) {
           LOG.debug("HttpRequestFailure: " + httpOperation.toString(), ex);
         } else {
           LOG.debug("HttpRequestFailure: " + method + "," + url, ex);
         }
-      }
-
-      if (ex instanceof UnknownHostException) {
-        throw new AbfsRestOperationException(
-                UNKNOWN.getStatusCode(),
-                UNKNOWN.getErrorCode(),
-                String.format("Can not reach endpoint: %s, please check the account setting in configuration file", ex.getMessage()),
-                ex);
       }
 
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
