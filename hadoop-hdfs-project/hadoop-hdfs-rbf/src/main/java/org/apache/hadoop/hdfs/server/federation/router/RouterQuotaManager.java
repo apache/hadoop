@@ -88,7 +88,7 @@ public class RouterQuotaManager {
   }
 
   /**
-   * Get children paths (can including itself) under specified federation path.
+   * Get children paths (can include itself) under specified federation path.
    * @param parentPath Federated path.
    * @return Set of children paths.
    */
