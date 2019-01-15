@@ -92,6 +92,11 @@ public final class HdfsConstants {
    */
   public static final String CLIENT_NAMENODE_PROTOCOL_NAME =
       "org.apache.hadoop.hdfs.protocol.ClientProtocol";
+  /**
+   * Router admin Protocol Names.
+   */
+  public static final String ROUTER_ADMIN_PROTOCOL_NAME =
+      "org.apache.hadoop.hdfs.protocolPB.RouterAdminProtocol";
 
   // Timeouts for communicating with DataNode for streaming writes/reads
   public static final int READ_TIMEOUT = 60 * 1000;
