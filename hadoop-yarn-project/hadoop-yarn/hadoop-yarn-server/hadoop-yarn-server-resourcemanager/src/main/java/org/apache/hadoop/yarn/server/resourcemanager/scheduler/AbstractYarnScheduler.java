@@ -1040,20 +1040,27 @@ public abstract class AbstractYarnScheduler
     for (Map.Entry<ApplicationId, ContainerStatus> c : updateExistContainers) {
       SchedulerApplication<T> app = applications.get(c.getKey());
       ContainerId containerId = c.getValue().getContainerId();
-      String strExposedPorts = c.getValue().getExposedPorts();
-      Map<String, List<Map<String, String>>> exposedPorts = null;
-      if (null != strExposedPorts && !strExposedPorts.isEmpty()) {
-        Gson gson = new Gson();
-        exposedPorts = gson.fromJson(strExposedPorts,
-            new TypeToken<Map<String, List<Map<String, String>>>>()
-            {}.getType());
+      if (app == null || app.getCurrentAppAttempt() == null) {
+        continue;
       }
-
       RMContainer rmContainer
           = app.getCurrentAppAttempt().getRMContainer(containerId);
-      if (null != rmContainer &&
-          (null == rmContainer.getExposedPorts()
-              || rmContainer.getExposedPorts().size() == 0)) {
+      if (rmContainer == null) {
+        continue;
+      }
+      // exposed ports are already set for the container, skip
+      if (rmContainer.getExposedPorts() != null &&
+          rmContainer.getExposedPorts().size() > 0) {
+        continue;
+      }
+
+      String strExposedPorts = c.getValue().getExposedPorts();
+      if (null != strExposedPorts && !strExposedPorts.isEmpty()) {
+        Gson gson = new Gson();
+        Map<String, List<Map<String, String>>> exposedPorts =
+            gson.fromJson(strExposedPorts,
+            new TypeToken<Map<String, List<Map<String, String>>>>()
+                {}.getType());
         LOG.info("update exist container " + containerId.getContainerId()
             + ", strExposedPorts = " + strExposedPorts);
         rmContainer.setExposedPorts(exposedPorts);
