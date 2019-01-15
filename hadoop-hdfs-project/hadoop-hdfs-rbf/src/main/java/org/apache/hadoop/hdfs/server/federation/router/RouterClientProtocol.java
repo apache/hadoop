@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.updateMountPointStatus;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
-import org.apache.hadoop.fs.BatchedRemoteIterator;
+import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -1147,7 +1147,7 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   @Override
-  public BatchedRemoteIterator.BatchedEntries<CacheDirectiveEntry> listCacheDirectives(
+  public BatchedEntries<CacheDirectiveEntry> listCacheDirectives(
       long prevId, CacheDirectiveInfo filter) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
     return null;
@@ -1169,7 +1169,7 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   @Override
-  public BatchedRemoteIterator.BatchedEntries<CachePoolEntry> listCachePools(String prevKey)
+  public BatchedEntries<CachePoolEntry> listCachePools(String prevKey)
       throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
     return null;
@@ -1280,7 +1280,7 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   @Override
-  public BatchedRemoteIterator.BatchedEntries<EncryptionZone> listEncryptionZones(long prevId)
+  public BatchedEntries<EncryptionZone> listEncryptionZones(long prevId)
       throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
     return null;
@@ -1293,7 +1293,7 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   @Override
-  public BatchedRemoteIterator.BatchedEntries<ZoneReencryptionStatus> listReencryptionStatus(
+  public BatchedEntries<ZoneReencryptionStatus> listReencryptionStatus(
       long prevId) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
     return null;
@@ -1529,15 +1529,17 @@ public class RouterClientProtocol implements ClientProtocol {
 
   @Deprecated
   @Override
-  public BatchedRemoteIterator.BatchedEntries<OpenFileEntry> listOpenFiles(long prevId)
+  public BatchedEntries<OpenFileEntry> listOpenFiles(long prevId)
       throws IOException {
-    return listOpenFiles(prevId, EnumSet.of(OpenFilesIterator.OpenFilesType.ALL_OPEN_FILES),
+    return listOpenFiles(prevId,
+        EnumSet.of(OpenFilesIterator.OpenFilesType.ALL_OPEN_FILES),
         OpenFilesIterator.FILTER_PATH_DEFAULT);
   }
 
   @Override
-  public BatchedRemoteIterator.BatchedEntries<OpenFileEntry> listOpenFiles(long prevId,
-      EnumSet<OpenFilesIterator.OpenFilesType> openFilesTypes, String path) throws IOException {
+  public BatchedEntries<OpenFileEntry> listOpenFiles(long prevId,
+      EnumSet<OpenFilesIterator.OpenFilesType> openFilesTypes, String path)
+          throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
     return null;
   }
@@ -1669,7 +1671,7 @@ public class RouterClientProtocol implements ClientProtocol {
     // Get the file info from everybody
     Map<RemoteLocation, HdfsFileStatus> results =
         rpcClient.invokeConcurrent(locations, method, HdfsFileStatus.class);
-    int children=0;
+    int children = 0;
     // We return the first file
     HdfsFileStatus dirStatus = null;
     for (RemoteLocation loc : locations) {
