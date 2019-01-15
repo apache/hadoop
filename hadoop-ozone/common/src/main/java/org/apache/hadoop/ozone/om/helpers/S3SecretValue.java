@@ -76,9 +76,6 @@ public class S3SecretValue {
 
   @Override
   public String toString() {
-    return "S3SecretValue{" +
-        "kerberosID='" + kerberosID + '\'' +
-        ", awsSecret='" + awsSecret + '\'' +
-        '}';
+    return "awsAccessKey=" + awsAccessKey + "\nawsSecret=" + awsSecret;
   }
 }

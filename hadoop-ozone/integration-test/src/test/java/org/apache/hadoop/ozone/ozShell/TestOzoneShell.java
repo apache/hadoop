@@ -1172,6 +1172,46 @@ public class TestOzoneShell {
     executeWithError(shell, args, "S3_BUCKET_NOT_FOUND");
   }
 
+  @Test
+  public void testS3Secret() throws Exception {
+    List<ServiceInfo> services =
+        cluster.getOzoneManager().getServiceList();
+
+    String omHostName = services.stream().filter(
+        a -> a.getNodeType().equals(HddsProtos.NodeType.OM))
+        .collect(Collectors.toList()).get(0).getHostname();
+
+    String omPort = cluster.getOzoneManager().getRpcPort();
+    String setOmAddress =
+        "--set=" + OZONE_OM_ADDRESS_KEY + "=" + omHostName + ":" + omPort;
+
+    err.reset();
+    String outputFirstAttempt;
+    String outputSecondAttempt;
+
+    //First attempt: If secrets are not found in database, they will be created
+    String[] args = new String[] {setOmAddress, "s3", "getsecret"};
+    execute(shell, args);
+    outputFirstAttempt = out.toString();
+    //Extracting awsAccessKey & awsSecret value from output
+    String[] output = outputFirstAttempt.split("\n");
+    String awsAccessKey = output[0].split("=")[1];
+    String awsSecret = output[1].split("=")[1];
+    assertTrue((awsAccessKey != null && awsAccessKey.length() > 0) &&
+            (awsSecret != null && awsSecret.length() > 0));
+
+    out.reset();
+
+    //Second attempt: Since secrets were created in previous attempt, it
+    // should return the same value
+    args = new String[] {setOmAddress, "s3", "getsecret"};
+    execute(shell, args);
+    outputSecondAttempt = out.toString();
+
+    //verifying if secrets from both attempts are same
+    assertTrue(outputFirstAttempt.equals(outputSecondAttempt));
+  }
+
   private void createS3Bucket(String userName, String s3Bucket) {
     try {
       client.createS3Bucket("ozone", s3Bucket);
