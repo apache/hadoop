@@ -186,10 +186,8 @@ public class RouterQuotaUpdateService extends PeriodicService {
    */
   private List<MountTable> getQuotaSetMountTables() throws IOException {
     List<MountTable> mountTables = getMountTableEntries();
-    Set<String> stalePaths = new HashSet<>();
-    for (String path : this.quotaManager.getAll()) {
-      stalePaths.add(path);
-    }
+    Set<String> allPaths = this.quotaManager.getAll();
+    Set<String> stalePaths = new HashSet<>(allPaths);
 
     List<MountTable> neededMountTables = new LinkedList<>();
     for (MountTable entry : mountTables) {
