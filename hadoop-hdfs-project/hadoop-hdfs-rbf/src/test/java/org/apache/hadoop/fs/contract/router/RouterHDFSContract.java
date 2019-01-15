@@ -90,6 +90,10 @@ public class RouterHDFSContract extends HDFSContract {
     return cluster.getCluster();
   }
 
+  public static MiniRouterDFSCluster getRouterCluster() {
+    return cluster;
+  }
+
   public static FileSystem getFileSystem() throws IOException {
     //assumes cluster is not null
     Assert.assertNotNull("cluster not created", cluster);
