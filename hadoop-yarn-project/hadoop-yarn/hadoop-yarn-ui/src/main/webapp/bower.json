@@ -13,7 +13,7 @@
     "qunit": "1.19.0",
     "jquery-ui": "1.11.4",
     "moment": "2.12.0",
-    "moment-timezone": "0.5.0",
+    "moment-timezone": "0.5.1",
     "more-js": "0.8.2",
     "bootstrap": "3.3.6",
     "d3": "~3.5.6",
