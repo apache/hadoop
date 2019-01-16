@@ -2532,8 +2532,9 @@ public class BlockManager implements BlockStatsMXBean {
         return !node.hasStaleStorages();
       }
       if (context != null) {
-        if (!blockReportLeaseManager.checkLease(node, startTime,
-              context.getLeaseId())) {
+        if (!namesystem.isInStartupSafeMode()
+            && !blockReportLeaseManager.checkLease(node, startTime,
+                context.getLeaseId())) {
           return false;
         }
       }
