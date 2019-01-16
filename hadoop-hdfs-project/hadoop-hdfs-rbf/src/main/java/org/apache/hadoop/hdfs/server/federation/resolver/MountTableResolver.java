@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.federation.resolver;
 
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMESERVICES;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DeprecatedKeys.DFS_NAMESERVICE_ID;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE_DEFAULT;
@@ -50,8 +48,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
@@ -163,33 +159,22 @@ public class MountTableResolver
    * @param conf Configuration for this resolver.
    */
   private void initDefaultNameService(Configuration conf) {
-    this.defaultNameService = conf.get(
-        DFS_ROUTER_DEFAULT_NAMESERVICE,
-        DFSUtil.getNamenodeNameServiceId(conf));
-
     this.defaultNSEnable = conf.getBoolean(
         DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE,
         DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE_DEFAULT);
 
-    if (defaultNameService == null) {
-      LOG.warn(
-          "{} and {} is not set. Fallback to {} as the default name service.",
-          DFS_ROUTER_DEFAULT_NAMESERVICE, DFS_NAMESERVICE_ID, DFS_NAMESERVICES);
-      Collection<String> nsIds = DFSUtilClient.getNameServiceIds(conf);
-      if (nsIds.isEmpty()) {
-        this.defaultNameService = "";
-      } else {
-        this.defaultNameService = nsIds.iterator().next();
-      }
+    if (!this.defaultNSEnable) {
+      LOG.warn("Default name service is disabled.");
+      return;
     }
+    this.defaultNameService = conf.get(DFS_ROUTER_DEFAULT_NAMESERVICE, "");
 
     if (this.defaultNameService.equals("")) {
       this.defaultNSEnable = false;
       LOG.warn("Default name service is not set.");
     } else {
-      String enable = this.defaultNSEnable ? "enabled" : "disabled";
-      LOG.info("Default name service: {}, {} to read or write",
-          this.defaultNameService, enable);
+      LOG.info("Default name service: {}, enabled to read or write",
+          this.defaultNameService);
     }
   }
 
