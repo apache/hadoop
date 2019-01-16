@@ -2037,6 +2037,16 @@
               </additionalOptions>
             </configuration>
           </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <compilerArgs combine.children="append">
+                <arg>--add-exports</arg>
+                <arg>java.naming/com.sun.jndi.ldap=ALL-UNNAMED</arg>
+              </compilerArgs>
+            </configuration>
+          </plugin>
         </plugins>
       </build>
     </profile>
