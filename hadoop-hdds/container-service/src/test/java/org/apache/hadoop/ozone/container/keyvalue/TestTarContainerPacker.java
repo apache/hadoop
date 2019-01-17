@@ -23,13 +23,13 @@ import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerPacker;
@@ -44,6 +44,8 @@ import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Test the tar/untar for a given container.
@@ -90,7 +92,8 @@ public class TestTarContainerPacker {
     Files.createDirectories(dbDir);
     Files.createDirectories(dataDir);
 
-    KeyValueContainerData containerData = new KeyValueContainerData(id, -1);
+    KeyValueContainerData containerData = new KeyValueContainerData(
+        id, -1, UUID.randomUUID().toString(), UUID.randomUUID().toString());
     containerData.setChunksPath(dataDir.toString());
     containerData.setMetadataPath(dbDir.getParent().toString());
     containerData.setDbFile(dbDir.toFile());
@@ -161,7 +164,7 @@ public class TestTarContainerPacker {
     //read the container descriptor only
     try (FileInputStream input = new FileInputStream(targetFile.toFile())) {
       String containerYaml = new String(packer.unpackContainerDescriptor(input),
-          Charset.forName(StandardCharsets.UTF_8.name()));
+          Charset.forName(UTF_8.name()));
       Assert.assertEquals(TEST_DESCRIPTOR_FILE_CONTENT, containerYaml);
     }
 
@@ -177,7 +180,7 @@ public class TestTarContainerPacker {
     try (FileInputStream input = new FileInputStream(targetFile.toFile())) {
       descriptor =
           new String(packer.unpackContainerData(destinationContainer, input),
-              Charset.forName(StandardCharsets.UTF_8.name()));
+              Charset.forName(UTF_8.name()));
     }
 
     assertExampleMetadataDbIsGood(
@@ -204,7 +207,7 @@ public class TestTarContainerPacker {
 
     try (FileInputStream testFile = new FileInputStream(dbFile.toFile())) {
       List<String> strings = IOUtils
-          .readLines(testFile, Charset.forName(StandardCharsets.UTF_8.name()));
+          .readLines(testFile, Charset.forName(UTF_8.name()));
       Assert.assertEquals(1, strings.size());
       Assert.assertEquals(TEST_DB_FILE_CONTENT, strings.get(0));
     }
@@ -222,7 +225,7 @@ public class TestTarContainerPacker {
 
     try (FileInputStream testFile = new FileInputStream(chunkFile.toFile())) {
       List<String> strings = IOUtils
-          .readLines(testFile, Charset.forName(StandardCharsets.UTF_8.name()));
+          .readLines(testFile, Charset.forName(UTF_8.name()));
       Assert.assertEquals(1, strings.size());
       Assert.assertEquals(TEST_CHUNK_FILE_CONTENT, strings.get(0));
     }

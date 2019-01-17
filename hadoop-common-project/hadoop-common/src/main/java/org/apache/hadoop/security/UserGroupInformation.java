@@ -20,6 +20,8 @@ package org.apache.hadoop.security;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_KERBEROS_KEYTAB_LOGIN_AUTORENEWAL_ENABLED;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_KERBEROS_KEYTAB_LOGIN_AUTORENEWAL_ENABLED_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_TOKEN_FILES;
 import static org.apache.hadoop.security.UGIExceptionMessages.*;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
@@ -46,7 +48,11 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -280,6 +286,11 @@ public class UserGroupInformation {
   private static Groups groups;
   /** Min time (in seconds) before relogin for Kerberos */
   private static long kerberosMinSecondsBeforeRelogin;
+  /** Boolean flag to enable auto-renewal for keytab based loging. */
+  private static boolean kerberosKeyTabLoginRenewalEnabled;
+  /** A reference to Kerberos login auto renewal thread. */
+  private static Optional<ExecutorService> kerberosLoginRenewalExecutor =
+          Optional.empty();
   /** The configuration to use */
 
   private static Configuration conf;
@@ -332,6 +343,11 @@ public class UserGroupInformation {
                 HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN + " of " +
                 conf.get(HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN));
     }
+
+    kerberosKeyTabLoginRenewalEnabled = conf.getBoolean(
+            HADOOP_KERBEROS_KEYTAB_LOGIN_AUTORENEWAL_ENABLED,
+            HADOOP_KERBEROS_KEYTAB_LOGIN_AUTORENEWAL_ENABLED_DEFAULT);
+
     // If we haven't set up testing groups, use the configuration to find it
     if (!(groups instanceof TestingGroups)) {
       groups = Groups.getUserToGroupsMappingService(conf);
@@ -372,6 +388,8 @@ public class UserGroupInformation {
     conf = null;
     groups = null;
     kerberosMinSecondsBeforeRelogin = 0;
+    kerberosKeyTabLoginRenewalEnabled = false;
+    kerberosLoginRenewalExecutor = Optional.empty();
     setLoginUser(null);
     HadoopKerberosName.setRules(null);
   }
@@ -392,7 +410,23 @@ public class UserGroupInformation {
     ensureInitialized();
     return (authenticationMethod == method);
   }
-  
+
+  @InterfaceAudience.Private
+  @InterfaceStability.Evolving
+  @VisibleForTesting
+  static boolean isKerberosKeyTabLoginRenewalEnabled() {
+    ensureInitialized();
+    return kerberosKeyTabLoginRenewalEnabled;
+  }
+
+  @InterfaceAudience.Private
+  @InterfaceStability.Evolving
+  @VisibleForTesting
+  static Optional<ExecutorService> getKerberosLoginRenewalExecutor() {
+    ensureInitialized();
+    return kerberosLoginRenewalExecutor;
+  }
+
   /**
    * Information about the logged in user.
    */
@@ -676,7 +710,7 @@ public class UserGroupInformation {
 
   /**
    * remove the login method that is followed by a space from the username
-   * e.g. "jack (auth:SIMPLE)" -> "jack"
+   * e.g. "jack (auth:SIMPLE)" {@literal ->} "jack"
    *
    * @param userName
    * @return userName without login method
@@ -838,14 +872,16 @@ public class UserGroupInformation {
     return hasKerberosCredentials() && isHadoopLogin();
   }
 
+  /**
+   * Spawn a thread to do periodic renewals of kerberos credentials. NEVER
+   * directly call this method. This method should only be used for ticket cache
+   * based kerberos credentials.
+   *
+   * @param force - used by tests to forcibly spawn thread
+   */
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   @VisibleForTesting
-  /**
-   * Spawn a thread to do periodic renewals of kerberos credentials from
-   * a ticket cache.  NEVER directly call this method.
-   * @param force - used by tests to forcibly spawn thread
-   */
   void spawnAutoRenewalThreadForUserCreds(boolean force) {
     if (!force && (!shouldRelogin() || isFromKeytab())) {
       return;
@@ -858,25 +894,71 @@ public class UserGroupInformation {
     }
     String cmd = conf.get("hadoop.kerberos.kinit.command", "kinit");
     long nextRefresh = getRefreshTime(tgt);
-    Thread t =
-        new Thread(new AutoRenewalForUserCredsRunnable(tgt, cmd, nextRefresh));
-    t.setDaemon(true);
-    t.setName("TGT Renewer for " + getUserName());
-    t.start();
+    executeAutoRenewalTask(getUserName(),
+            new TicketCacheRenewalRunnable(tgt, cmd, nextRefresh));
   }
 
+  /**
+   * Spawn a thread to do periodic renewals of kerberos credentials from a
+   * keytab file.
+   */
+  private void spawnAutoRenewalThreadForKeytab() {
+    if (!shouldRelogin() || isFromTicket()) {
+      return;
+    }
+
+    // spawn thread only if we have kerb credentials
+    KerberosTicket tgt = getTGT();
+    if (tgt == null) {
+      return;
+    }
+    long nextRefresh = getRefreshTime(tgt);
+    executeAutoRenewalTask(getUserName(),
+            new KeytabRenewalRunnable(tgt, nextRefresh));
+  }
+
+  /**
+   * Spawn a thread to do periodic renewals of kerberos credentials from a
+   * keytab file. NEVER directly call this method.
+   *
+   * @param userName Name of the user for which login needs to be renewed.
+   * @param task  The reference of the login renewal task.
+   */
+  private void executeAutoRenewalTask(final String userName,
+                                      AutoRenewalForUserCredsRunnable task) {
+    kerberosLoginRenewalExecutor = Optional.of(
+            Executors.newSingleThreadExecutor(
+                  new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable r) {
+                      Thread t = new Thread(r);
+                      t.setDaemon(true);
+                      t.setName("TGT Renewer for " + userName);
+                      return t;
+                    }
+                  }
+            ));
+    kerberosLoginRenewalExecutor.get().submit(task);
+  }
+
+  /**
+   * An abstract class which encapsulates the functionality required to
+   * auto renew Kerbeors TGT. The concrete implementations of this class
+   * are expected to provide implementation required to perform actual
+   * TGT renewal (see {@code TicketCacheRenewalRunnable} and
+   * {@code KeytabRenewalRunnable}).
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
   @VisibleForTesting
-  class AutoRenewalForUserCredsRunnable implements Runnable {
+  abstract class AutoRenewalForUserCredsRunnable implements Runnable {
     private KerberosTicket tgt;
     private RetryPolicy rp;
-    private String kinitCmd;
     private long nextRefresh;
     private boolean runRenewalLoop = true;
 
-    AutoRenewalForUserCredsRunnable(KerberosTicket tgt, String kinitCmd,
-        long nextRefresh){
+    AutoRenewalForUserCredsRunnable(KerberosTicket tgt, long nextRefresh) {
       this.tgt = tgt;
-      this.kinitCmd = kinitCmd;
       this.nextRefresh = nextRefresh;
       this.rp = null;
     }
@@ -884,6 +966,13 @@ public class UserGroupInformation {
     public void setRunRenewalLoop(boolean runRenewalLoop) {
       this.runRenewalLoop = runRenewalLoop;
     }
+
+    /**
+     * This method is used to perform renewal of kerberos login ticket.
+     * The concrete implementations of this class should provide specific
+     * logic required to perform renewal as part of this method.
+     */
+    protected abstract void relogin() throws IOException;
 
     @Override
     public void run() {
@@ -897,11 +986,7 @@ public class UserGroupInformation {
           if (now < nextRefresh) {
             Thread.sleep(nextRefresh - now);
           }
-          String output = Shell.execCommand(kinitCmd, "-R");
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Renewed ticket. kinit output: {}", output);
-          }
-          reloginFromTicketCache();
+          relogin();
           tgt = getTGT();
           if (tgt == null) {
             LOG.warn("No TGT after renewal. Aborting renew thread for " +
@@ -920,8 +1005,8 @@ public class UserGroupInformation {
           final long now = Time.now();
 
           if (tgt.isDestroyed()) {
-            LOG.error("TGT is destroyed. Aborting renew thread for {}.",
-                getUserName());
+            LOG.error(String.format("TGT is destroyed. " +
+                    "Aborting renew thread for %s.", getUserName()), ie);
             return;
           }
 
@@ -933,16 +1018,18 @@ public class UserGroupInformation {
           try {
             tgtEndTime = tgt.getEndTime().getTime();
           } catch (NullPointerException npe) {
-            LOG.error("NPE thrown while getting KerberosTicket endTime. "
-                + "Aborting renew thread for {}.", getUserName());
+            LOG.error(String.format("NPE thrown while getting " +
+                "KerberosTicket endTime. Aborting renew thread for %s.",
+                getUserName()), ie);
             return;
           }
 
-          LOG.warn("Exception encountered while running the renewal "
-                  + "command for {}. (TGT end time:{}, renewalFailures: {},"
-                  + "renewalFailuresTotal: {})", getUserName(), tgtEndTime,
+          LOG.warn(String.format("Exception encountered while running the " +
+                  "renewal command for %s. " +
+                  "(TGT end time:%d, renewalFailures: %d, " +
+                  "renewalFailuresTotal: %d)", getUserName(), tgtEndTime,
               metrics.renewalFailures.value(),
-              metrics.renewalFailuresTotal.value(), ie);
+              metrics.renewalFailuresTotal.value()), ie);
           if (rp == null) {
             // Use a dummy maxRetries to create the policy. The policy will
             // only be used to get next retry time with exponential back-off.
@@ -966,6 +1053,52 @@ public class UserGroupInformation {
           }
         }
       } while (runRenewalLoop);
+    }
+  }
+
+  /**
+   * A concrete implementation of {@code AutoRenewalForUserCredsRunnable} class
+   * which performs TGT renewal using kinit command.
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  @VisibleForTesting
+  final class TicketCacheRenewalRunnable
+      extends AutoRenewalForUserCredsRunnable {
+    private String kinitCmd;
+
+    TicketCacheRenewalRunnable(KerberosTicket tgt, String kinitCmd,
+        long nextRefresh) {
+      super(tgt, nextRefresh);
+      this.kinitCmd = kinitCmd;
+    }
+
+    @Override
+    public void relogin() throws IOException {
+      String output = Shell.execCommand(kinitCmd, "-R");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Renewed ticket. kinit output: {}", output);
+      }
+      reloginFromTicketCache();
+    }
+  }
+
+  /**
+   * A concrete implementation of {@code AutoRenewalForUserCredsRunnable} class
+   * which performs TGT renewal using specified keytab.
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  @VisibleForTesting
+  final class KeytabRenewalRunnable extends AutoRenewalForUserCredsRunnable {
+
+    KeytabRenewalRunnable(KerberosTicket tgt, long nextRefresh) {
+      super(tgt, nextRefresh);
+    }
+
+    @Override
+    public void relogin() throws IOException {
+      reloginFromKeytab();
     }
   }
 
@@ -1005,9 +1138,16 @@ public class UserGroupInformation {
     if (!isSecurityEnabled())
       return;
 
-    setLoginUser(loginUserFromKeytabAndReturnUGI(user, path));
-    LOG.info("Login successful for user " + user
-        + " using keytab file " + path);
+    UserGroupInformation u = loginUserFromKeytabAndReturnUGI(user, path);
+    if (isKerberosKeyTabLoginRenewalEnabled()) {
+      u.spawnAutoRenewalThreadForKeytab();
+    }
+
+    setLoginUser(u);
+
+    LOG.info("Login successful for user {} using keytab file {}. Keytab auto" +
+            " renewal enabled : {}",
+            user, path, isKerberosKeyTabLoginRenewalEnabled());
   }
 
   /**
@@ -1025,6 +1165,12 @@ public class UserGroupInformation {
     if (!hasKerberosCredentials()) {
       return;
     }
+
+    // Shutdown the background task performing login renewal.
+    if (getKerberosLoginRenewalExecutor().isPresent()) {
+      getKerberosLoginRenewalExecutor().get().shutdownNow();
+    }
+
     HadoopLoginContext login = getLogin();
     String keytabFile = getKeytab();
     if (login == null || keytabFile == null) {

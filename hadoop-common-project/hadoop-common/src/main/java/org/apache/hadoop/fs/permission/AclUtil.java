@@ -36,8 +36,8 @@ public final class AclUtil {
    * Given permissions and extended ACL entries, returns the full logical ACL.
    *
    * @param perm FsPermission containing permissions
-   * @param entries List<AclEntry> containing extended ACL entries
-   * @return List<AclEntry> containing full logical ACL
+   * @param entries List&lt;AclEntry&gt; containing extended ACL entries
+   * @return List&lt;AclEntry&gt; containing full logical ACL
    */
   public static List<AclEntry> getAclFromPermAndEntries(FsPermission perm,
       List<AclEntry> entries) {
@@ -93,8 +93,8 @@ public final class AclUtil {
    * Translates the given permission bits to the equivalent minimal ACL.
    *
    * @param perm FsPermission to translate
-   * @return List<AclEntry> containing exactly 3 entries representing the owner,
-   *   group and other permissions
+   * @return List&lt;AclEntry&gt; containing exactly 3 entries representing the
+   *         owner, group and other permissions
    */
   public static List<AclEntry> getMinimalAcl(FsPermission perm) {
     return Lists.newArrayList(
@@ -119,7 +119,7 @@ public final class AclUtil {
    * Checks if the given entries represent a minimal ACL (contains exactly 3
    * entries).
    *
-   * @param entries List<AclEntry> entries to check
+   * @param entries List&lt;AclEntry&gt; entries to check
    * @return boolean true if the entries represent a minimal ACL
    */
   public static boolean isMinimalAcl(List<AclEntry> entries) {

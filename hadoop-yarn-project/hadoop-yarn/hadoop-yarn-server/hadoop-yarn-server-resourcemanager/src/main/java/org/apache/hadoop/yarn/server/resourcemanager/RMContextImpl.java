@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.logging.Log;
@@ -35,6 +34,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.ConfigurationProvider;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SystemCredentialsForAppsProto;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -58,9 +58,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretMan
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ProxyCAManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
+import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.VolumeManager;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.util.Clock;
 
@@ -570,7 +572,8 @@ public class RMContextImpl implements RMContext {
     activeServiceContext.setSystemClock(clock);
   }
 
-  public ConcurrentMap<ApplicationId, ByteBuffer> getSystemCredentialsForApps() {
+  public ConcurrentMap<ApplicationId, SystemCredentialsForAppsProto>
+      getSystemCredentialsForApps() {
     return activeServiceContext.getSystemCredentialsForApps();
   }
 
@@ -637,10 +640,41 @@ public class RMContextImpl implements RMContext {
   public void setResourceProfilesManager(ResourceProfilesManager mgr) {
     this.activeServiceContext.setResourceProfilesManager(mgr);
   }
+
+  @Override
+  public ProxyCAManager getProxyCAManager() {
+    return this.activeServiceContext.getProxyCAManager();
+  }
+
+  @Override
+  public void setProxyCAManager(ProxyCAManager proxyCAManager) {
+    this.activeServiceContext.setProxyCAManager(proxyCAManager);
+  }
+
+  @Override
+  public VolumeManager getVolumeManager() {
+    return activeServiceContext.getVolumeManager();
+  }
+
+  @Override
+  public void setVolumeManager(VolumeManager volumeManager) {
+    this.activeServiceContext.setVolumeManager(volumeManager);
+  }
+
   // Note: Read java doc before adding any services over here.
 
   @Override
   public NodeAttributesManager getNodeAttributesManager() {
     return activeServiceContext.getNodeAttributesManager();
+  }
+
+  @Override
+  public long getTokenSequenceNo() {
+    return this.activeServiceContext.getTokenSequenceNo();
+  }
+
+  @Override
+  public void incrTokenSequenceNo() {
+    this.activeServiceContext.incrTokenSequenceNo();
   }
 }

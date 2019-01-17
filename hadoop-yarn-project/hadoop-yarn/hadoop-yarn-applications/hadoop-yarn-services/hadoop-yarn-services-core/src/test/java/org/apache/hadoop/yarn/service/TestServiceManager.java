@@ -306,10 +306,14 @@ public class TestServiceManager {
   private void makeAllInstancesReady(ServiceContext context)
       throws TimeoutException, InterruptedException {
     context.scheduler.getLiveInstances().forEach(((containerId, instance) -> {
-      ComponentInstanceEvent event = new ComponentInstanceEvent(containerId,
-          ComponentInstanceEventType.BECOME_READY);
+      ComponentInstanceEvent startEvent = new ComponentInstanceEvent(
+          containerId, ComponentInstanceEventType.START);
+      context.scheduler.getDispatcher().getEventHandler().handle(startEvent);
 
-      context.scheduler.getDispatcher().getEventHandler().handle(event);
+      ComponentInstanceEvent becomeReadyEvent = new ComponentInstanceEvent(
+          containerId, ComponentInstanceEventType.BECOME_READY);
+      context.scheduler.getDispatcher().getEventHandler().handle(
+          becomeReadyEvent);
     }));
     GenericTestUtils.waitFor(()-> {
       for (ComponentInstance instance:
@@ -350,11 +354,17 @@ public class TestServiceManager {
     // instances of comp1 get upgraded and become ready event is triggered
     // become ready
     compInstances.forEach(instance -> {
-      ComponentInstanceEvent event = new ComponentInstanceEvent(
+      ComponentInstanceEvent startEvent = new ComponentInstanceEvent(
+          instance.getContainer().getId(),
+          ComponentInstanceEventType.START);
+      context.scheduler.getDispatcher().getEventHandler().handle(startEvent);
+
+      ComponentInstanceEvent becomeReadyEvent = new ComponentInstanceEvent(
           instance.getContainer().getId(),
           ComponentInstanceEventType.BECOME_READY);
 
-      context.scheduler.getDispatcher().getEventHandler().handle(event);
+      context.scheduler.getDispatcher().getEventHandler().handle(
+          becomeReadyEvent);
     });
 
     GenericTestUtils.waitFor(() -> {

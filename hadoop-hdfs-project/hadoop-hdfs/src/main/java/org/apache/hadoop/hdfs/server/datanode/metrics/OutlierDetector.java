@@ -94,7 +94,8 @@ public class OutlierDetector {
 
   /**
    * Return a set of nodes/ disks whose latency is much higher than
-   * their counterparts. The input is a map of (resource -> aggregate latency)
+   * their counterparts. The input is a map of (resource {@literal ->} aggregate
+   * latency)
    * entries.
    *
    * The aggregate may be an arithmetic mean or a percentile e.g.

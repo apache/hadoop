@@ -26,7 +26,6 @@ import com.microsoft.azure.storage.blob.CloudBlockBlob;
 import org.junit.Assume;
 import org.junit.Test;
 
-import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
@@ -38,14 +37,13 @@ public class ITestAzureBlobFileSystemBackCompat extends
 
   public ITestAzureBlobFileSystemBackCompat() throws Exception {
     super();
-    Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
   }
 
   @Test
   public void testBlobBackCompat() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
-    // test only valid for non-namespace enabled account
-    Assume.assumeFalse(fs.getIsNamespaceEnabled());
+    Assume.assumeFalse("This test does not support namespace enabled account",
+            this.getFileSystem().getIsNamespaceEnabled());
     String storageConnectionString = getBlobConnectionString();
     CloudStorageAccount storageAccount = CloudStorageAccount.parse(storageConnectionString);
     CloudBlobClient blobClient = storageAccount.createCloudBlobClient();

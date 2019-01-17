@@ -38,7 +38,7 @@ import java.text.MessageFormat;
 /**
  * {@link KeyStoresFactory} implementation that reads the certificates from
  * keystore files.
- * <p/>
+ * <p>
  * if the trust certificates keystore file changes, the {@link TrustManager}
  * is refreshed with the new trust certificate entries (using a
  * {@link ReloadingX509TrustManager} trustmanager).
@@ -87,7 +87,7 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
 
   /**
    * Resolves a property name to its client/server version if applicable.
-   * <p/>
+   * <p>
    * NOTE: This method is public for testing purposes.
    *
    * @param mode client/server mode.

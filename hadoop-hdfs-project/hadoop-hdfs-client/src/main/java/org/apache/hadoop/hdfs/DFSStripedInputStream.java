@@ -54,6 +54,8 @@ import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import static org.apache.hadoop.hdfs.util.IOUtilsClient.updateReadStatistics;
+
 /**
  * DFSStripedInputStream reads from striped block groups.
  */
@@ -326,6 +328,26 @@ public class DFSStripedInputStream extends DFSInputStream {
     curStripeBuf.position(stripeBufOffset);
     curStripeBuf.limit(stripeLimit);
     curStripeRange = stripeRange;
+  }
+
+  /**
+   * Update read statistics. Note that this has to be done on the thread that
+   * initiates the read, rather than inside each async thread, for
+   * {@link org.apache.hadoop.fs.FileSystem.Statistics} to work correctly with
+   * its ThreadLocal.
+   *
+   * @param stats striped read stats
+   */
+  void updateReadStats(final StripedBlockUtil.BlockReadStats stats) {
+    if (stats == null) {
+      return;
+    }
+    updateReadStatistics(readStatistics, stats.getBytesRead(),
+        stats.isShortCircuit(), stats.getNetworkDistance());
+    dfsClient.updateFileSystemReadStats(stats.getNetworkDistance(),
+        stats.getBytesRead());
+    assert readStatistics.getBlockType() == BlockType.STRIPED;
+    dfsClient.updateFileSystemECReadStats(stats.getBytesRead());
   }
 
   /**

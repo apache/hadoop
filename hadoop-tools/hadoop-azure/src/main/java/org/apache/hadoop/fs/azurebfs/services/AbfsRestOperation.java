@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -31,6 +32,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationExcep
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator.HttpException;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -165,6 +167,10 @@ public class AbfsRestOperation {
 
       httpOperation.processResponse(buffer, bufferOffset, bufferLength);
     } catch (IOException ex) {
+      if (ex instanceof UnknownHostException) {
+        LOG.warn(String.format("Unknown host name: %s. Retrying to resolve the host name...", httpOperation.getUrl().getHost()));
+      }
+
       if (LOG.isDebugEnabled()) {
         if (httpOperation != null) {
           LOG.debug("HttpRequestFailure: " + httpOperation.toString(), ex);
@@ -172,9 +178,18 @@ public class AbfsRestOperation {
           LOG.debug("HttpRequestFailure: " + method + "," + url, ex);
         }
       }
+
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex);
       }
+
+      // once HttpException is thrown by AzureADAuthenticator,
+      // it indicates the policy in AzureADAuthenticator determined
+      // retry is not needed
+      if (ex instanceof HttpException) {
+        throw new AbfsRestOperationException((HttpException) ex);
+      }
+
       return false;
     } finally {
       AbfsClientThrottlingIntercept.updateMetrics(operationType, httpOperation);

@@ -1587,7 +1587,8 @@ public class TestContainer {
 
     public void setupDockerContainerEnv() {
       Map<String, String> env = new HashMap<>();
-      env.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "docker");
+      env.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE,
+          ContainerRuntimeConstants.CONTAINER_RUNTIME_DOCKER);
       when(this.ctxt.getEnvironment()).thenReturn(env);
     }
 

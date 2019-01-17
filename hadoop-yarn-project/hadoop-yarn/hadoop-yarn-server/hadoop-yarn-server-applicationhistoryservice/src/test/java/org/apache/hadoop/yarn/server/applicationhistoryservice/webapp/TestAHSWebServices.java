@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
+import org.apache.hadoop.yarn.server.webapp.LogWebServiceUtils;
 import org.apache.hadoop.yarn.server.webapp.YarnWebServiceParams;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfo;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
@@ -774,7 +775,8 @@ public class TestAHSWebServices extends JerseyTestBase {
     // the warning message.
     assertTrue(responseText.contains("LogAggregationType: "
         + ContainerLogAggregationType.LOCAL));
-    assertTrue(responseText.contains(AHSWebServices.getNoRedirectWarning()));
+    assertTrue(
+        responseText.contains(LogWebServiceUtils.getNoRedirectWarning()));
 
     // If we can not container information from ATS, and we specify the NM id,
     // but we can not get nm web address, we would still try to
@@ -790,7 +792,8 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertTrue(responseText.contains(content));
     assertTrue(responseText.contains("LogAggregationType: "
         + ContainerLogAggregationType.LOCAL));
-    assertTrue(responseText.contains(AHSWebServices.getNoRedirectWarning()));
+    assertTrue(
+        responseText.contains(LogWebServiceUtils.getNoRedirectWarning()));
 
     // If this is the redirect request, we would not re-direct the request
     // back and get the aggregated logs.

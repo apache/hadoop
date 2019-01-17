@@ -67,4 +67,12 @@ public interface StorageContainerNodeProtocol {
    */
   List<SCMCommand> processHeartbeat(DatanodeDetails datanodeDetails);
 
+  /**
+   * Check if node is registered or not.
+   * Return true if Node is registered and false otherwise.
+   * @param datanodeDetails - Datanode ID.
+   * @return true if Node is registered, false otherwise
+   */
+  Boolean isNodeRegistered(DatanodeDetails datanodeDetails);
+
 }

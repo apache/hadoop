@@ -48,7 +48,7 @@ public class IPFailoverProxyProvider<T> extends
   public IPFailoverProxyProvider(Configuration conf, URI uri,
       Class<T> xface, HAProxyFactory<T> factory) {
     super(conf, uri, xface, factory);
-    this.nnProxyInfo = new NNProxyInfo<T>(DFSUtilClient.getNNAddress(uri));
+    this.nnProxyInfo = new NNProxyInfo<>(DFSUtilClient.getNNAddress(uri));
   }
 
   @Override

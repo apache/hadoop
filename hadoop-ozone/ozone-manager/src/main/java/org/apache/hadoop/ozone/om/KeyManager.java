@@ -16,10 +16,15 @@
  */
 package org.apache.hadoop.ozone.om;
 
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.utils.BackgroundService;
 
@@ -33,8 +38,11 @@ public interface KeyManager {
 
   /**
    * Start key manager.
+   *
+   * @param configuration
+   * @throws IOException
    */
-  void start();
+  void start(OzoneConfiguration configuration);
 
   /**
    * Stop key manager.
@@ -72,7 +80,7 @@ public interface KeyManager {
    *
    * @param args the args of the key provided by client.
    * @return a OpenKeySession instance client uses to talk to container.
-   * @throws Exception
+   * @throws IOException
    */
   OpenKeySession openKey(OmKeyArgs args) throws IOException;
 
@@ -176,4 +184,40 @@ public interface KeyManager {
    */
   BackgroundService getDeletingService();
 
+
+  /**
+   * Initiate multipart upload for the specified key.
+   * @param keyArgs
+   * @return MultipartInfo
+   * @throws IOException
+   */
+  OmMultipartInfo initiateMultipartUpload(OmKeyArgs keyArgs) throws IOException;
+
+  /**
+   * Commit Multipart upload part file.
+   * @param omKeyArgs
+   * @param clientID
+   * @return OmMultipartCommitUploadPartInfo
+   * @throws IOException
+   */
+
+  OmMultipartCommitUploadPartInfo commitMultipartUploadPart(
+      OmKeyArgs omKeyArgs, long clientID) throws IOException;
+
+  /**
+   * Complete Multipart upload Request.
+   * @param omKeyArgs
+   * @param multipartUploadList
+   * @return OmMultipartUploadCompleteInfo
+   * @throws IOException
+   */
+  OmMultipartUploadCompleteInfo completeMultipartUpload(OmKeyArgs omKeyArgs,
+      OmMultipartUploadList multipartUploadList) throws IOException;
+
+  /**
+   * Abort multipart upload request.
+   * @param omKeyArgs
+   * @throws IOException
+   */
+  void abortMultipartUpload(OmKeyArgs omKeyArgs) throws IOException;
 }

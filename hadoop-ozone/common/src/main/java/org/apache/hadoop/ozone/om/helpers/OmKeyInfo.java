@@ -17,14 +17,16 @@
  */
 package org.apache.hadoop.ozone.om.helpers;
 
-import com.google.common.base.Preconditions;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyInfo;
 import org.apache.hadoop.util.Time;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.stream.Collectors;
+import com.google.common.base.Preconditions;
 
 /**
  * Args for key block. The block instance for the key requested in putKey.
@@ -43,9 +45,11 @@ public final class OmKeyInfo {
   private HddsProtos.ReplicationType type;
   private HddsProtos.ReplicationFactor factor;
 
+  @SuppressWarnings("parameternumber")
   private OmKeyInfo(String volumeName, String bucketName, String keyName,
                     List<OmKeyLocationInfoGroup> versions, long dataSize,
-                    long creationTime, long modificationTime, HddsProtos.ReplicationType type,
+                    long creationTime, long modificationTime,
+                    HddsProtos.ReplicationType type,
                     HddsProtos.ReplicationFactor factor) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
@@ -119,7 +123,6 @@ public final class OmKeyInfo {
    * This will be called when the key is being committed to OzoneManager.
    *
    * @param locationInfoList list of locationInfo
-   * @throws IOException
    */
   public void updateLocationInfoList(List<OmKeyLocationInfo> locationInfoList) {
     long latestVersion = getLatestVersionLocations().getVersion();
@@ -207,11 +210,13 @@ public final class OmKeyInfo {
     private String bucketName;
     private String keyName;
     private long dataSize;
-    private List<OmKeyLocationInfoGroup> omKeyLocationInfoGroups;
+    private List<OmKeyLocationInfoGroup> omKeyLocationInfoGroups =
+        new ArrayList<>();
     private long creationTime;
     private long modificationTime;
     private HddsProtos.ReplicationType type;
     private HddsProtos.ReplicationFactor factor;
+    private boolean isMultipartKey;
 
     public Builder setVolumeName(String volume) {
       this.volumeName = volume;
@@ -249,13 +254,18 @@ public final class OmKeyInfo {
       return this;
     }
 
-    public Builder setReplicationFactor(HddsProtos.ReplicationFactor factor) {
-      this.factor = factor;
+    public Builder setReplicationFactor(HddsProtos.ReplicationFactor replFact) {
+      this.factor = replFact;
       return this;
     }
 
-    public Builder setReplicationType(HddsProtos.ReplicationType type) {
-      this.type = type;
+    public Builder setReplicationType(HddsProtos.ReplicationType replType) {
+      this.type = replType;
+      return this;
+    }
+
+    public Builder setIsMultipartKey(boolean isMultipart) {
+      this.isMultipartKey = isMultipart;
       return this;
     }
 

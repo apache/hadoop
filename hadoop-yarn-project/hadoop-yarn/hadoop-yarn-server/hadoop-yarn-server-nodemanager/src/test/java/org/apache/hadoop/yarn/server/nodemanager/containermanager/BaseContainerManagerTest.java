@@ -238,10 +238,12 @@ public abstract class BaseContainerManagerTest {
       metrics, dirsHandler) {
 
       @Override
-        protected void authorizeGetAndStopContainerRequest(ContainerId containerId,
-            Container container, boolean stopRequest, NMTokenIdentifier identifier) throws YarnException {
-          // do nothing
-        }
+      protected void authorizeGetAndStopContainerRequest(
+          ContainerId containerId, Container container, boolean stopRequest,
+          NMTokenIdentifier identifier, String remoteUser)
+          throws YarnException {
+        // do nothing
+      }
       @Override
       protected void authorizeUser(UserGroupInformation remoteUgi,
           NMTokenIdentifier nmTokenIdentifier) {

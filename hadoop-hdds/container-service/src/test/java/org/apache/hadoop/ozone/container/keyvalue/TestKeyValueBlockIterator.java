@@ -42,9 +42,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -246,13 +246,14 @@ public class TestKeyValueBlockIterator {
       normalBlocks, int deletedBlocks) throws
       Exception {
     containerData = new KeyValueContainerData(containerId,
-        (long) StorageUnit.GB.toBytes(1));
+        (long) StorageUnit.GB.toBytes(1), UUID.randomUUID().toString(),
+        UUID.randomUUID().toString());
     container = new KeyValueContainer(containerData, conf);
     container.create(volumeSet, new RoundRobinVolumeChoosingPolicy(), UUID
         .randomUUID().toString());
     MetadataStore metadataStore = BlockUtils.getDB(containerData, conf);
 
-    List<ContainerProtos.ChunkInfo> chunkList = new LinkedList<>();
+    List<ContainerProtos.ChunkInfo> chunkList = new ArrayList<>();
     ChunkInfo info = new ChunkInfo("chunkfile", 0, 1024);
     chunkList.add(info.getProtoBufMessage());
 

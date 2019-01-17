@@ -251,7 +251,7 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
   }
 
   /**
-   * Retrieve a map of metric name -> (aggregate).
+   * Retrieve a map of metric name {@literal ->} (aggregate).
    * Filter out entries that don't have at least minSamples.
    *
    * @return a map of peer DataNode Id to the average latency to that

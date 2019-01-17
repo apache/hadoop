@@ -167,6 +167,13 @@ static int is_volume_name(const char *volume_name) {
   return execute_regex_match(regex_str, volume_name) == 0;
 }
 
+static int is_valid_ports_mapping(const char *ports_mapping) {
+  const char *regex_str = "^:[0-9]+|^[0-9]+:[0-9]+|^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.)"
+                          "{3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]):[0-9]+:[0-9]+$";
+  // execute_regex_match return 0 is matched success
+  return execute_regex_match(regex_str, ports_mapping) == 0;
+}
+
 static int is_volume_name_matched_by_regex(const char* requested, const char* pattern) {
   // execute_regex_match return 0 is matched success
   return is_volume_name(requested) && (execute_regex_match(pattern + sizeof("regex:"), requested) == 0);
@@ -314,6 +321,8 @@ const char *get_docker_error_message(const int error_code) {
       return "Unknown docker command";
     case INVALID_DOCKER_NETWORK:
       return "Invalid docker network";
+    case INVALID_DOCKER_PORTS_MAPPING:
+      return "Invalid docker ports mapping";
     case INVALID_DOCKER_CAPABILITY:
       return "Invalid docker capability";
     case PRIVILEGED_CONTAINERS_DISABLED:
@@ -342,6 +351,8 @@ const char *get_docker_error_message(const int error_code) {
       return "Docker image is not trusted";
     case INVALID_DOCKER_TMPFS_MOUNT:
       return "Invalid docker tmpfs mount";
+    case INVALID_DOCKER_RUNTIME:
+      return "Invalid docker runtime";
     default:
       return "Unknown error";
   }
@@ -432,6 +443,8 @@ int get_docker_command(const char *command_file, const struct configuration *con
     ret = get_docker_volume_command(command_file, conf, args);
   } else if (strcmp(DOCKER_START_COMMAND, command) == 0) {
     ret = get_docker_start_command(command_file, conf, args);
+  } else if (strcmp(DOCKER_EXEC_COMMAND, command) == 0) {
+    ret = get_docker_exec_command(command_file, conf, args);
   } else {
     ret = UNKNOWN_DOCKER_COMMAND;
   }
@@ -557,9 +570,10 @@ cleanup:
 }
 
 int get_docker_inspect_command(const char *command_file, const struct configuration *conf, args *args) {
-  const char *valid_format_strings[] = { "{{.State.Status}}",
+  const char *valid_format_strings[] = {"{{.State.Status}}",
                                 "{{range(.NetworkSettings.Networks)}}{{.IPAddress}},{{end}}{{.Config.Hostname}}",
-                                 "{{.State.Status}},{{.Config.StopSignal}}"};
+                                "{{json .NetworkSettings.Ports}}",
+                                "{{.State.Status}},{{.Config.StopSignal}}"};
   int ret = 0, i = 0, valid_format = 0;
   char *format = NULL, *container_name = NULL, *tmp_buffer = NULL;
   struct configuration command_config = {0, NULL};
@@ -579,7 +593,8 @@ int get_docker_inspect_command(const char *command_file, const struct configurat
     ret = INVALID_DOCKER_INSPECT_FORMAT;
     goto free_and_exit;
   }
-  for (i = 0; i < 3; ++i) {
+
+  for (i = 0; i < 4; ++i) {
     if (strcmp(format, valid_format_strings[i]) == 0) {
       valid_format = 1;
       break;
@@ -820,6 +835,57 @@ free_and_exit:
   return ret;
 }
 
+int get_docker_exec_command(const char *command_file, const struct configuration *conf, args *args) {
+  int ret = 0, i = 0;
+  char *container_name = NULL;
+  char **launch_command = NULL;
+  struct configuration command_config = {0, NULL};
+  ret = read_and_verify_command_file(command_file, DOCKER_EXEC_COMMAND, &command_config);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  container_name = get_configuration_value("name", DOCKER_COMMAND_FILE_SECTION, &command_config);
+  if (container_name == NULL || validate_container_name(container_name) != 0) {
+    ret = INVALID_DOCKER_CONTAINER_NAME;
+    goto free_and_exit;
+  }
+
+  ret = add_to_args(args, DOCKER_EXEC_COMMAND);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  ret = add_to_args(args, "-it");
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  ret = add_to_args(args, container_name);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  launch_command = get_configuration_values_delimiter("launch-command", DOCKER_COMMAND_FILE_SECTION, &command_config,
+                                                      ",");
+  if (launch_command != NULL) {
+    for (i = 0; launch_command[i] != NULL; ++i) {
+      ret = add_to_args(args, launch_command[i]);
+      if (ret != 0) {
+        ret = BUFFER_TOO_SMALL;
+        goto free_and_exit;
+      }
+    }
+  } else {
+    ret = INVALID_COMMAND_FILE;
+  }
+free_and_exit:
+  free(container_name);
+  free_configuration(&command_config);
+  free_values(launch_command);
+  return ret;
+}
+
 static int detach_container(const struct configuration *command_config, args *args) {
   return add_param_to_command(command_config, "detach", "-d", 0, args);
 }
@@ -880,6 +946,77 @@ static int set_network(const struct configuration *command_config,
     ret = INVALID_DOCKER_NETWORK;
   }
 
+  return ret;
+}
+
+static int set_runtime(const struct configuration *command_config,
+                       const struct configuration *conf, args *args) {
+  int ret = 0;
+  ret = add_param_to_command_if_allowed(command_config, conf, "runtime",
+                                        "docker.allowed.runtimes", "--runtime=",
+                                        0, 0, args);
+  if (ret != 0) {
+    fprintf(ERRORFILE, "Could not find requested runtime in allowed runtimes\n");
+    ret = INVALID_DOCKER_RUNTIME;
+  }
+  return ret;
+}
+
+static int add_ports_mapping_to_command(const struct configuration *command_config, args *args) {
+  int i = 0, ret = 0;
+  char *network_type = (char*) malloc(128);
+  char *docker_network_command = NULL;
+  char *docker_binary = get_docker_binary(command_config);
+  char *network_name = get_configuration_value("net", DOCKER_COMMAND_FILE_SECTION, command_config);
+  char **ports_mapping_values = get_configuration_values_delimiter("ports-mapping", DOCKER_COMMAND_FILE_SECTION, command_config, ",");
+  if (network_name != NULL) {
+    docker_network_command = make_string("%s network inspect %s --format='{{.Driver}}'", docker_binary, network_name);
+    FILE* docker_network = popen(docker_network_command, "r");
+    ret = fscanf(docker_network, "%s", network_type);
+    if (pclose (docker_network) != 0 || ret <= 0) {
+      fprintf (ERRORFILE, "Could not inspect docker network to get type %s.\n", docker_network_command);
+      goto cleanup;
+    }
+    // other network type exit successfully without ports mapping
+    if (strcasecmp(network_type, "bridge") != 0) {
+      ret = 0;
+      goto cleanup;
+    }
+    // add -P when not configure ports mapping
+    if (ports_mapping_values == NULL) {
+      ret = add_to_args(args, "-P");
+      if (ret != 0) {
+        ret = BUFFER_TOO_SMALL;
+      }
+    }
+  }
+  // add -p when configure ports mapping
+  if (ports_mapping_values != NULL) {
+    for (i = 0; ports_mapping_values[i] != NULL; i++) {
+      if (!is_valid_ports_mapping(ports_mapping_values[i])) {
+         fprintf (ERRORFILE, "Invalid port mappings:  %s.\n", ports_mapping_values[i]);
+         ret = INVALID_DOCKER_PORTS_MAPPING;
+         break;
+      }
+      ret = add_to_args(args, "-p");
+      if (ret != 0) {
+        ret = BUFFER_TOO_SMALL;
+        break;
+      }
+      ret = add_to_args(args, ports_mapping_values[i]);
+      if (ret != 0) {
+        ret = BUFFER_TOO_SMALL;
+        break;
+      }
+    }
+  }
+
+cleanup:
+  free(network_type);
+  free(docker_binary);
+  free(network_name);
+  free(docker_network_command);
+  free_values(ports_mapping_values);
   return ret;
 }
 
@@ -1497,6 +1634,11 @@ int get_docker_run_command(const char *command_file, const struct configuration 
     goto free_and_exit;
   }
 
+  ret = add_ports_mapping_to_command(&command_config, args);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
   ret = set_pid_namespace(&command_config, conf, args);
   if (ret != 0) {
     goto free_and_exit;
@@ -1523,6 +1665,11 @@ int get_docker_run_command(const char *command_file, const struct configuration 
   }
 
   ret = set_capabilities(&command_config, conf, args);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  ret = set_runtime(&command_config, conf, args);
   if (ret != 0) {
     goto free_and_exit;
   }

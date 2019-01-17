@@ -25,6 +25,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -40,16 +41,18 @@ public class TestKeyValueContainerData {
         .ContainerType.KeyValueContainer;
     String path = "/tmp";
     String containerDBType = "RocksDB";
-    ContainerProtos.ContainerLifeCycleState state = ContainerProtos
-        .ContainerLifeCycleState.CLOSED;
+    ContainerProtos.ContainerDataProto.State state =
+        ContainerProtos.ContainerDataProto.State.CLOSED;
     AtomicLong val = new AtomicLong(0);
+    UUID pipelineId = UUID.randomUUID();
+    UUID datanodeId = UUID.randomUUID();
 
     KeyValueContainerData kvData = new KeyValueContainerData(containerId,
-        MAXSIZE);
+        MAXSIZE, pipelineId.toString(), datanodeId.toString());
 
     assertEquals(containerType, kvData.getContainerType());
     assertEquals(containerId, kvData.getContainerID());
-    assertEquals(ContainerProtos.ContainerLifeCycleState.OPEN, kvData
+    assertEquals(ContainerProtos.ContainerDataProto.State.OPEN, kvData
         .getState());
     assertEquals(0, kvData.getMetadata().size());
     assertEquals(0, kvData.getNumPendingDeletionBlocks());
@@ -83,6 +86,8 @@ public class TestKeyValueContainerData {
     assertEquals(1, kvData.getWriteCount());
     assertEquals(1, kvData.getKeyCount());
     assertEquals(1, kvData.getNumPendingDeletionBlocks());
+    assertEquals(pipelineId.toString(), kvData.getOriginPipelineId());
+    assertEquals(datanodeId.toString(), kvData.getOriginNodeId());
   }
 
 }

@@ -17,13 +17,17 @@
  */
 package org.apache.hadoop.ozone.genesis;
 
+import com.google.common.collect.Maps;
+import org.apache.hadoop.hdds.HddsUtils;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
+import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.apache.hadoop.ozone.container.common.statemachine
     .DatanodeStateMachine.DatanodeStates;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
-import org.apache.ratis.shaded.com.google.protobuf.ByteString;
+import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -32,7 +36,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 
-import org.apache.hadoop.util.Time;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Scope;
@@ -44,6 +47,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -100,9 +104,18 @@ public class BenchMarkDatanodeDispatcher {
 
     ContainerSet containerSet = new ContainerSet();
     VolumeSet volumeSet = new VolumeSet(datanodeUuid, conf);
-
-    dispatcher = new HddsDispatcher(conf, containerSet, volumeSet,
-        new StateContext(conf, DatanodeStates.RUNNING, null));
+    StateContext context = new StateContext(
+        conf, DatanodeStates.RUNNING, null);
+    ContainerMetrics metrics = ContainerMetrics.create(conf);
+    Map<ContainerProtos.ContainerType, Handler> handlers = Maps.newHashMap();
+    for (ContainerProtos.ContainerType containerType :
+        ContainerProtos.ContainerType.values()) {
+      handlers.put(containerType,
+          Handler.getHandlerForContainerType(
+              containerType, conf, context, containerSet, volumeSet, metrics));
+    }
+    dispatcher = new HddsDispatcher(conf, containerSet, volumeSet, handlers,
+        context, metrics);
     dispatcher.init();
 
     containerCount = new AtomicInteger();
@@ -115,15 +128,15 @@ public class BenchMarkDatanodeDispatcher {
 
     // Create containers
     for (int x = 0; x < INIT_CONTAINERS; x++) {
-      long containerID = Time.getUtcTime() + x;
+      long containerID = HddsUtils.getUtcTime() + x;
       ContainerCommandRequestProto req = getCreateContainerCommand(containerID);
-      dispatcher.dispatch(req);
+      dispatcher.dispatch(req, null);
       containers.add(containerID);
       containerCount.getAndIncrement();
     }
 
     for (int x = 0; x < INIT_KEYS; x++) {
-      keys.add(Time.getUtcTime()+x);
+      keys.add(HddsUtils.getUtcTime()+x);
     }
 
     for (int x = 0; x < INIT_CHUNKS; x++) {
@@ -140,8 +153,8 @@ public class BenchMarkDatanodeDispatcher {
         long containerID = containers.get(y);
         BlockID  blockID = new BlockID(containerID, key);
         dispatcher
-            .dispatch(getPutBlockCommand(blockID, chunkName));
-        dispatcher.dispatch(getWriteChunkCommand(blockID, chunkName));
+            .dispatch(getPutBlockCommand(blockID, chunkName), null);
+        dispatcher.dispatch(getWriteChunkCommand(blockID, chunkName), null);
       }
     }
   }
@@ -255,7 +268,7 @@ public class BenchMarkDatanodeDispatcher {
   public void createContainer(BenchMarkDatanodeDispatcher bmdd) {
     long containerID = RandomUtils.nextLong();
     ContainerCommandRequestProto req = getCreateContainerCommand(containerID);
-    bmdd.dispatcher.dispatch(req);
+    bmdd.dispatcher.dispatch(req, null);
     bmdd.containers.add(containerID);
     bmdd.containerCount.getAndIncrement();
   }
@@ -264,27 +277,27 @@ public class BenchMarkDatanodeDispatcher {
   @Benchmark
   public void writeChunk(BenchMarkDatanodeDispatcher bmdd) {
     bmdd.dispatcher.dispatch(getWriteChunkCommand(
-        getRandomBlockID(), getNewChunkToWrite()));
+        getRandomBlockID(), getNewChunkToWrite()), null);
   }
 
   @Benchmark
   public void readChunk(BenchMarkDatanodeDispatcher bmdd) {
     BlockID blockID = getRandomBlockID();
     String chunkKey = getRandomChunkToRead();
-    bmdd.dispatcher.dispatch(getReadChunkCommand(blockID, chunkKey));
+    bmdd.dispatcher.dispatch(getReadChunkCommand(blockID, chunkKey), null);
   }
 
   @Benchmark
   public void putBlock(BenchMarkDatanodeDispatcher bmdd) {
     BlockID blockID = getRandomBlockID();
     String chunkKey = getNewChunkToWrite();
-    bmdd.dispatcher.dispatch(getPutBlockCommand(blockID, chunkKey));
+    bmdd.dispatcher.dispatch(getPutBlockCommand(blockID, chunkKey), null);
   }
 
   @Benchmark
   public void getBlock(BenchMarkDatanodeDispatcher bmdd) {
     BlockID blockID = getRandomBlockID();
-    bmdd.dispatcher.dispatch(getGetBlockCommand(blockID));
+    bmdd.dispatcher.dispatch(getGetBlockCommand(blockID), null);
   }
 
   // Chunks writes from benchmark only reaches certain containers

@@ -27,14 +27,19 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.apache.hadoop.fs.StorageType;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
+import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 
 /**
  * In-memory ozone bucket for testing.
@@ -44,6 +49,10 @@ public class OzoneBucketStub extends OzoneBucket {
   private Map<String, OzoneKeyDetails> keyDetails = new HashMap<>();
 
   private Map<String, byte[]> keyContents = new HashMap<>();
+
+  private Map<String, String> multipartUploadIdMap = new HashMap<>();
+
+  private Map<String, Map<Integer, Part>> partList = new HashMap<>();
 
   /**
    * Constructs OzoneBucket instance.
@@ -92,7 +101,7 @@ public class OzoneBucketStub extends OzoneBucket {
                 size,
                 System.currentTimeMillis(),
                 System.currentTimeMillis(),
-                new ArrayList<>()
+                new ArrayList<>(), type
             ));
             super.close();
           }
@@ -107,12 +116,17 @@ public class OzoneBucketStub extends OzoneBucket {
 
   @Override
   public OzoneKeyDetails getKey(String key) throws IOException {
-    return keyDetails.get(key);
+    if (keyDetails.containsKey(key)) {
+      return keyDetails.get(key);
+    } else {
+      throw new IOException("Lookup key failed, error:KEY_NOT_FOUND");
+    }
   }
 
   @Override
   public Iterator<? extends OzoneKey> listKeys(String keyPrefix) {
-    return keyDetails.values()
+    Map<String, OzoneKey> sortedKey = new TreeMap<String, OzoneKey>(keyDetails);
+    return sortedKey.values()
         .stream()
         .filter(key -> key.getName().startsWith(keyPrefix))
         .collect(Collectors.toList())
@@ -122,7 +136,8 @@ public class OzoneBucketStub extends OzoneBucket {
   @Override
   public Iterator<? extends OzoneKey> listKeys(String keyPrefix,
       String prevKey) {
-    return keyDetails.values()
+    Map<String, OzoneKey> sortedKey = new TreeMap<String, OzoneKey>(keyDetails);
+    return sortedKey.values()
         .stream()
         .filter(key -> key.getName().compareTo(prevKey) > 0)
         .filter(key -> key.getName().startsWith(keyPrefix))
@@ -139,5 +154,93 @@ public class OzoneBucketStub extends OzoneBucket {
   public void renameKey(String fromKeyName, String toKeyName)
       throws IOException {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public OmMultipartInfo initiateMultipartUpload(String keyName,
+                                                 ReplicationType type,
+                                                 ReplicationFactor factor)
+      throws IOException {
+    String uploadID = UUID.randomUUID().toString();
+    multipartUploadIdMap.put(keyName, uploadID);
+    return new OmMultipartInfo(getVolumeName(), getName(), keyName, uploadID);
+  }
+
+  @Override
+  public OzoneOutputStream createMultipartKey(String key, long size,
+                                              int partNumber, String uploadID)
+      throws IOException {
+    String multipartUploadID = multipartUploadIdMap.get(key);
+    if (multipartUploadID == null || multipartUploadID != uploadID) {
+      throw new IOException("NO_SUCH_MULTIPART_UPLOAD_ERROR");
+    } else {
+      ByteArrayOutputStream byteArrayOutputStream =
+          new ByteArrayOutputStream((int) size) {
+            @Override
+            public void close() throws IOException {
+              Part part = new Part(key + size,
+                  toByteArray());
+              if (partList.get(key) == null) {
+                Map<Integer, Part> parts = new TreeMap<>();
+                parts.put(partNumber, part);
+                partList.put(key, parts);
+              } else {
+                partList.get(key).put(partNumber, part);
+              }
+            }
+          };
+      return new OzoneOutputStreamStub(byteArrayOutputStream, key + size);
+    }
+  }
+
+  @Override
+  public OmMultipartUploadCompleteInfo completeMultipartUpload(String key,
+      String uploadID, Map<Integer, String> partsMap) throws IOException {
+
+    if (multipartUploadIdMap.get(key) == null) {
+      throw new IOException("NO_SUCH_MULTIPART_UPLOAD_ERROR");
+    } else {
+      final Map<Integer, Part> partsList = partList.get(key);
+
+      if (partsMap.size() != partsList.size()) {
+        throw new IOException("MISMATCH_MULTIPART_LIST");
+      }
+
+      int count = 1;
+      for (Map.Entry<Integer, String> part: partsMap.entrySet()) {
+        if (part.getKey() != count) {
+          throw new IOException("MISSING_UPLOAD_PARTS");
+        } else if (!part.getValue().equals(
+            partsList.get(part.getKey()).getPartName())) {
+          throw new IOException("MISMATCH_MULTIPART_LIST");
+        } else {
+          count++;
+        }
+      }
+    }
+
+    return new OmMultipartUploadCompleteInfo(getVolumeName(), getName(), key,
+        DigestUtils.sha256Hex(key));
+  }
+
+  /**
+   * Class used to hold part information in a upload part request.
+   */
+  public class Part {
+    private String partName;
+    private byte[] content;
+
+    public Part(String name, byte[] data) {
+      this.partName = name;
+      this.content = data;
+    }
+
+    public String getPartName() {
+      return partName;
+    }
+
+    public byte[] getContent() {
+      return content;
+    }
   }
 }

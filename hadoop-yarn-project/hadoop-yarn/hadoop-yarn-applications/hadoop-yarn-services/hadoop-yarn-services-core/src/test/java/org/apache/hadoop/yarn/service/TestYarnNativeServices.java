@@ -363,8 +363,12 @@ public class TestYarnNativeServices extends ServiceTestUtils {
 
     Multimap<String, String> containersAfterFailure = waitForAllCompToBeReady(
         client, exampleApp);
-    Assert.assertEquals("component container affected by restart",
-        containersBeforeFailure, containersAfterFailure);
+    containersBeforeFailure.keys().forEach(compName -> {
+      Assert.assertEquals("num containers after by restart for " + compName,
+          containersBeforeFailure.get(compName).size(),
+          containersAfterFailure.get(compName) == null ? 0 :
+              containersAfterFailure.get(compName).size());
+    });
 
     LOG.info("Stop/destroy service {}", exampleApp);
     client.actionStop(exampleApp.getName(), true);
@@ -497,7 +501,8 @@ public class TestYarnNativeServices extends ServiceTestUtils {
   }
 
   // Test to verify ANTI_AFFINITY placement policy
-  // 1. Start mini cluster with 3 NMs and scheduler placement-constraint handler
+  // 1. Start mini cluster
+  // with 3 NMs and scheduler placement-constraint handler
   // 2. Create an example service with 3 containers
   // 3. Verify no more than 1 container comes up in each of the 3 NMs
   // 4. Flex the component to 4 containers

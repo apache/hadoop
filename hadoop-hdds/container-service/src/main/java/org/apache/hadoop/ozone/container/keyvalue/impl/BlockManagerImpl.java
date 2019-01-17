@@ -25,12 +25,16 @@ import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.keyvalue.interfaces.BlockManager;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
+import org.apache.hadoop.utils.BatchOperation;
+import org.apache.hadoop.utils.MetadataKeyFilters;
 import org.apache.hadoop.utils.MetadataStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +45,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.NO_SUCH_BLOCK;
-
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.UNKNOWN_BCSID;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.BCSID_MISMATCH;
 /**
  * This class is for performing block related operations on the KeyValue
  * Container.
@@ -49,6 +54,8 @@ import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Res
 public class BlockManagerImpl implements BlockManager {
 
   static final Logger LOG = LoggerFactory.getLogger(BlockManagerImpl.class);
+  private static byte[] blockCommitSequenceIdKey =
+          DFSUtil.string2Bytes(OzoneConsts.BLOCK_COMMIT_SEQUENCE_ID_PREFIX);
 
   private Configuration config;
 
@@ -83,11 +90,40 @@ public class BlockManagerImpl implements BlockManager {
     // This is a post condition that acts as a hint to the user.
     // Should never fail.
     Preconditions.checkNotNull(db, "DB cannot be null here");
-    db.put(Longs.toByteArray(data.getLocalID()), data.getProtoBufMessage()
-        .toByteArray());
 
+    long bcsId = data.getBlockCommitSequenceId();
+    long containerBCSId = ((KeyValueContainerData) container.getContainerData())
+        .getBlockCommitSequenceId();
+
+    // default blockCommitSequenceId for any block is 0. It the putBlock
+    // request is not coming via Ratis(for test scenarios), it will be 0.
+    // In such cases, we should overwrite the block as well
+    if (bcsId != 0) {
+      if (bcsId <= containerBCSId) {
+        // Since the blockCommitSequenceId stored in the db is greater than
+        // equal to blockCommitSequenceId to be updated, it means the putBlock
+        // transaction is reapplied in the ContainerStateMachine on restart.
+        // It also implies that the given block must already exist in the db.
+        // just log and return
+        LOG.warn("blockCommitSequenceId " + containerBCSId
+            + " in the Container Db is greater than" + " the supplied value "
+            + bcsId + " .Ignoring it");
+        return data.getSize();
+      }
+    }
+    // update the blockData as well as BlockCommitSequenceId here
+    BatchOperation batch = new BatchOperation();
+    batch.put(Longs.toByteArray(data.getLocalID()),
+        data.getProtoBufMessage().toByteArray());
+    batch.put(blockCommitSequenceIdKey,
+        Longs.toByteArray(bcsId));
+    db.writeBatch(batch);
+    container.updateBlockCommitSequenceId(bcsId);
     // Increment keycount here
     container.getContainerData().incrKeyCount();
+    LOG.debug(
+        "Block " + data.getBlockID() + " successfully committed with bcsId "
+            + bcsId + " chunk size " + data.getChunks().size());
     return data.getSize();
   }
 
@@ -99,12 +135,14 @@ public class BlockManagerImpl implements BlockManager {
    * @return Key Data.
    * @throws IOException
    */
+  @Override
   public BlockData getBlock(Container container, BlockID blockID)
       throws IOException {
+    long bcsId = blockID.getBlockCommitSequenceId();
     Preconditions.checkNotNull(blockID,
         "BlockID cannot be null in GetBlock request");
-    Preconditions.checkNotNull(blockID.getContainerID(),
-        "Container name cannot be null");
+    Preconditions.checkNotNull(container,
+        "Container cannot be null");
 
     KeyValueContainerData containerData = (KeyValueContainerData) container
         .getContainerData();
@@ -112,6 +150,14 @@ public class BlockManagerImpl implements BlockManager {
     // This is a post condition that acts as a hint to the user.
     // Should never fail.
     Preconditions.checkNotNull(db, "DB cannot be null here");
+
+    long containerBCSId = containerData.getBlockCommitSequenceId();
+    if (containerBCSId < bcsId) {
+      throw new StorageContainerException(
+          "Unable to find the block with bcsID " + bcsId + " .Container "
+              + container.getContainerData().getContainerID() + " bcsId is "
+              + containerBCSId + ".", UNKNOWN_BCSID);
+    }
     byte[] kData = db.get(Longs.toByteArray(blockID.getLocalID()));
     if (kData == null) {
       throw new StorageContainerException("Unable to find the block.",
@@ -119,6 +165,12 @@ public class BlockManagerImpl implements BlockManager {
     }
     ContainerProtos.BlockData blockData =
         ContainerProtos.BlockData.parseFrom(kData);
+    long id = blockData.getBlockID().getBlockCommitSequenceId();
+    if (id < bcsId) {
+      throw new StorageContainerException(
+          "bcsId " + bcsId + " mismatches with existing block Id "
+              + id + " for block " + blockID + ".", BCSID_MISMATCH);
+    }
     return BlockData.getFromProtoBuf(blockData);
   }
 
@@ -209,8 +261,9 @@ public class BlockManagerImpl implements BlockManager {
     MetadataStore db = BlockUtils.getDB(cData, config);
     result = new ArrayList<>();
     byte[] startKeyInBytes = Longs.toByteArray(startLocalID);
-    List<Map.Entry<byte[], byte[]>> range = db.getSequentialRangeKVs(
-        startKeyInBytes, count, null);
+    List<Map.Entry<byte[], byte[]>> range =
+        db.getSequentialRangeKVs(startKeyInBytes, count,
+            MetadataKeyFilters.getNormalKeyFilter());
     for (Map.Entry<byte[], byte[]> entry : range) {
       BlockData value = BlockUtils.getBlockData(entry.getValue());
       BlockData data = new BlockData(value.getBlockID());

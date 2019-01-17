@@ -903,7 +903,6 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   @Override
   public void handle(RMAppEvent event) {
-
     this.writeLock.lock();
 
     try {
@@ -1459,8 +1458,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     }
   }
 
-  private static final class AppRejectedTransition extends
-      FinalTransition{
+  private static final class AppRejectedTransition extends FinalTransition {
     public AppRejectedTransition() {
       super(RMAppState.FAILED);
     }
@@ -1502,39 +1500,50 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     private final RMAppState finalState;
 
-    public FinalTransition(RMAppState finalState) {
+    FinalTransition(RMAppState finalState) {
       this.finalState = finalState;
     }
 
+    @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
-      app.logAggregationStartTime = app.systemClock.getTime();
+      completeAndCleanupApp(app);
+      handleAppFinished(app);
+      app.clearUnusedFields();
+      appAdminClientCleanUp(app);
+    }
+
+    private void completeAndCleanupApp(RMAppImpl app) {
+      //cleanup app in RM Nodes
       for (NodeId nodeId : app.getRanNodes()) {
         app.handler.handle(
-            new RMNodeCleanAppEvent(nodeId, app.applicationId));
-      }
-      app.finishTime = app.storedFinishTime;
-      if (app.finishTime == 0 ) {
-        app.finishTime = app.systemClock.getTime();
+                new RMNodeCleanAppEvent(nodeId, app.applicationId));
       }
       // Recovered apps that are completed were not added to scheduler, so no
       // need to remove them from scheduler.
       if (app.recoveredFinalState == null) {
         app.handler.handle(new AppRemovedSchedulerEvent(app.applicationId,
-          finalState));
+            finalState));
       }
-      app.handler.handle(
-          new RMAppManagerEvent(app.applicationId,
-          RMAppManagerEventType.APP_COMPLETED));
 
+      // Send app completed event to AppManager
+      app.handler.handle(new RMAppManagerEvent(app.applicationId,
+              RMAppManagerEventType.APP_COMPLETED));
+    }
+
+    private void handleAppFinished(RMAppImpl app) {
+      app.logAggregationStartTime = app.systemClock.getTime();
+      // record finish time
+      app.finishTime = app.storedFinishTime;
+      if (app.finishTime == 0) {
+        app.finishTime = app.systemClock.getTime();
+      }
+
+      //record finish in history and metrics
       app.rmContext.getRMApplicationHistoryWriter()
           .applicationFinished(app, finalState);
       app.rmContext.getSystemMetricsPublisher()
           .appFinished(app, finalState, app.finishTime);
-      // set the memory free
-      app.clearUnusedFields();
-
-      appAdminClientCleanUp(app);
-    };
+    }
   }
 
   public int getNumFailedAppAttempts() {
@@ -1550,7 +1559,7 @@ public class RMAppImpl implements RMApp, Recoverable {
   }
 
   private static final class AttemptFailedTransition implements
-      MultipleArcTransition<RMAppImpl, RMAppEvent, RMAppState> {
+        MultipleArcTransition<RMAppImpl, RMAppEvent, RMAppState> {
 
     private final RMAppState initialState;
 
@@ -1812,8 +1821,8 @@ public class RMAppImpl implements RMApp, Recoverable {
                 == LogAggregationStatus.TIME_OUT
                 && report.getLogAggregationStatus()
                     == LogAggregationStatus.RUNNING) {
-            // If the log aggregation status got from latest nm heartbeat
-            // is Running, and current log aggregation status is TimeOut,
+            // If the log aggregation status got from latest NM heartbeat
+            // is RUNNING, and current log aggregation status is TIME_OUT,
             // based on whether there are any failure messages for this NM,
             // we will reset the log aggregation status as RUNNING or
             // RUNNING_WITH_FAILURE
@@ -2137,4 +2146,10 @@ public class RMAppImpl implements RMApp, Recoverable {
               RMAppState state){
       /* TODO fail the application on the failed transition */
   }
+
+  @VisibleForTesting
+  public long getLogAggregationStartTime() {
+    return logAggregationStartTime;
+  }
+
 }

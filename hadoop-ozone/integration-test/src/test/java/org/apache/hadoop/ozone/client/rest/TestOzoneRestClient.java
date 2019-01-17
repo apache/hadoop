@@ -20,10 +20,11 @@ package org.apache.hadoop.ozone.client.rest;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.*;
 import org.apache.hadoop.ozone.client.*;
 import org.apache.hadoop.hdds.client.OzoneQuota;
@@ -445,9 +446,11 @@ public class TestOzoneRestClient {
     // Sum the data size from chunks in Container via containerID
     // and localID, make sure the size equals to the actually value size.
     Pipeline pipeline = cluster.getStorageContainerManager()
-        .getContainerManager().getContainerWithPipeline(containerID)
-        .getPipeline();
-    List<DatanodeDetails> datanodes = pipeline.getMachines();
+        .getPipelineManager().getPipeline(
+            cluster.getStorageContainerManager()
+                .getContainerManager().getContainer(
+                    ContainerID.valueof(containerID)).getPipelineID());
+    List<DatanodeDetails> datanodes = pipeline.getNodes();
     Assert.assertEquals(datanodes.size(), 1);
 
     DatanodeDetails datanodeDetails = datanodes.get(0);

@@ -161,7 +161,7 @@ public class TestNMProxy extends BaseContainerManagerTest {
         IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY, 100);
     // connect to some dummy address so that it can trigger
     // connection failure and RPC level retires.
-    newConf.set(YarnConfiguration.NM_ADDRESS, "1234");
+    newConf.set(YarnConfiguration.NM_ADDRESS, "0.0.0.0:1234");
     ContainerManagementProtocol proxy = getNMProxy(newConf);
     try {
       proxy.startContainers(allRequests);

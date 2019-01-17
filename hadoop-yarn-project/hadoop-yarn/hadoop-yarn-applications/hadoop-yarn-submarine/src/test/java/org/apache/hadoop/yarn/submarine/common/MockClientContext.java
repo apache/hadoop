@@ -22,7 +22,6 @@ import org.apache.hadoop.yarn.submarine.common.fs.MockRemoteDirectoryManager;
 import org.apache.hadoop.yarn.submarine.common.fs.RemoteDirectoryManager;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.service.client.ServiceClient;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 import java.io.IOException;
@@ -32,12 +31,18 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class MockClientContext extends ClientContext {
-  private MockRemoteDirectoryManager remoteDirectoryMgr =
+
+  private RemoteDirectoryManager remoteDirectoryMgr =
       new MockRemoteDirectoryManager();
 
   @Override
   public RemoteDirectoryManager getRemoteDirectoryManager() {
     return remoteDirectoryMgr;
+  }
+
+  public void setRemoteDirectoryMgr(
+      RemoteDirectoryManager remoteDirectoryMgr) {
+    this.remoteDirectoryMgr = remoteDirectoryMgr;
   }
 
   @Override

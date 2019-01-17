@@ -19,7 +19,7 @@ package org.apache.hadoop.hdds.scm;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.ratis.shaded.proto.RaftProtos.ReplicationLevel;
+import org.apache.ratis.proto.RaftProtos.ReplicationLevel;
 import org.apache.ratis.util.TimeDuration;
 
 import java.util.concurrent.TimeUnit;
@@ -30,6 +30,11 @@ import java.util.concurrent.TimeUnit;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public final class ScmConfigKeys {
+
+  // Location of SCM DB files. For now we just support a single
+  // metadata dir but in future we may support multiple for redundancy or
+  // performance.
+  public static final String OZONE_SCM_DB_DIRS = "ozone.scm.db.dirs";
 
   public static final String SCM_CONTAINER_CLIENT_STALE_THRESHOLD_KEY =
       "scm.container.client.idle.threshold";
@@ -62,14 +67,53 @@ public final class ScmConfigKeys {
       = "dfs.container.ratis.replication.level";
   public static final ReplicationLevel
       DFS_CONTAINER_RATIS_REPLICATION_LEVEL_DEFAULT = ReplicationLevel.MAJORITY;
+  public static final String DFS_CONTAINER_RATIS_NUM_CONTAINER_OP_EXECUTORS_KEY
+      = "dfs.container.ratis.num.container.op.executors";
+  public static final int DFS_CONTAINER_RATIS_NUM_CONTAINER_OP_EXECUTORS_DEFAULT
+      = 10;
   public static final String DFS_CONTAINER_RATIS_SEGMENT_SIZE_KEY =
       "dfs.container.ratis.segment.size";
-  public static final int DFS_CONTAINER_RATIS_SEGMENT_SIZE_DEFAULT =
-      1 * 1024 * 1024 * 1024;
+  public static final String DFS_CONTAINER_RATIS_SEGMENT_SIZE_DEFAULT =
+      "16KB";
   public static final String DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_KEY =
       "dfs.container.ratis.segment.preallocated.size";
+  public static final String
+      DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_DEFAULT = "16KB";
+  public static final String
+      DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_TIMEOUT =
+      "dfs.container.ratis.statemachinedata.sync.timeout";
+  public static final TimeDuration
+      DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_TIMEOUT_DEFAULT =
+      TimeDuration.valueOf(10, TimeUnit.SECONDS);
+  public static final String
+      DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_RETRIES =
+      "dfs.container.ratis.statemachinedata.sync.retries";
   public static final int
-      DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_DEFAULT = 128 * 1024 * 1024;
+      DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_RETRIES_DEFAULT = -1;
+  public static final String DFS_CONTAINER_RATIS_LOG_QUEUE_NUM_ELEMENTS =
+      "dfs.container.ratis.log.queue.num-elements";
+  public static final int DFS_CONTAINER_RATIS_LOG_QUEUE_NUM_ELEMENTS_DEFAULT =
+      1024;
+  public static final String DFS_CONTAINER_RATIS_LOG_QUEUE_BYTE_LIMIT =
+      "dfs.container.ratis.log.queue.byte-limit";
+  public static final String DFS_CONTAINER_RATIS_LOG_QUEUE_BYTE_LIMIT_DEFAULT =
+      "4GB";
+  public static final String
+      DFS_CONTAINER_RATIS_LOG_APPENDER_QUEUE_NUM_ELEMENTS =
+      "dfs.container.ratis.log.appender.queue.num-elements";
+  public static final int
+      DFS_CONTAINER_RATIS_LOG_APPENDER_QUEUE_NUM_ELEMENTS_DEFAULT = 1;
+  public static final String DFS_CONTAINER_RATIS_LOG_APPENDER_QUEUE_BYTE_LIMIT =
+      "dfs.container.ratis.log.appender.queue.byte-limit";
+  public static final String
+      DFS_CONTAINER_RATIS_LOG_APPENDER_QUEUE_BYTE_LIMIT_DEFAULT = "32MB";
+  // expiry interval stateMachineData cache entry inside containerStateMachine
+  public static final String
+      DFS_CONTAINER_RATIS_STATEMACHINEDATA_CACHE_EXPIRY_INTERVAL =
+      "dfs.container.ratis.statemachine.cache.expiry.interval";
+  public static final String
+      DFS_CONTAINER_RATIS_STATEMACHINEDATA_CACHE_EXPIRY_INTERVAL_DEFAULT =
+      "10s";
   public static final String DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_KEY =
       "dfs.ratis.client.request.timeout.duration";
   public static final TimeDuration
@@ -100,6 +144,10 @@ public final class ScmConfigKeys {
       DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_DEFAULT =
       TimeDuration.valueOf(1, TimeUnit.SECONDS);
 
+  public static final String DFS_RATIS_SNAPSHOT_THRESHOLD_KEY =
+      "dfs.ratis.snapshot.threshold";
+  public static final long DFS_RATIS_SNAPSHOT_THRESHOLD_DEFAULT = 10000;
+
   public static final String DFS_RATIS_SERVER_FAILURE_DURATION_KEY =
       "dfs.ratis.server.failure.duration";
   public static final TimeDuration
@@ -109,8 +157,7 @@ public final class ScmConfigKeys {
   // TODO : this is copied from OzoneConsts, may need to move to a better place
   public static final String OZONE_SCM_CHUNK_SIZE_KEY = "ozone.scm.chunk.size";
   // 16 MB by default
-  public static final int OZONE_SCM_CHUNK_SIZE_DEFAULT = 16 * 1024 * 1024;
-  public static final int OZONE_SCM_CHUNK_MAX_SIZE = 32 * 1024 * 1024;
+  public static final String OZONE_SCM_CHUNK_SIZE_DEFAULT = "16MB";
 
   public static final String OZONE_SCM_CLIENT_PORT_KEY =
       "ozone.scm.client.port";
@@ -199,8 +246,8 @@ public final class ScmConfigKeys {
 
   public static final String OZONE_SCM_HEARTBEAT_RPC_TIMEOUT =
       "ozone.scm.heartbeat.rpc-timeout";
-  public static final long OZONE_SCM_HEARTBEAT_RPC_TIMEOUT_DEFAULT =
-      1000;
+  public static final String OZONE_SCM_HEARTBEAT_RPC_TIMEOUT_DEFAULT =
+      "1s";
 
   /**
    * Defines how frequently we will log the missing of heartbeat to a specific
@@ -262,11 +309,11 @@ public final class ScmConfigKeys {
   public static final String
       OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT_DEFAULT = "60s";
 
-  public static final String OZONE_SCM_PIPELINE_CREATION_LEASE_TIMEOUT =
-      "ozone.scm.pipeline.creation.lease.timeout";
+  public static final String OZONE_SCM_PIPELINE_DESTROY_TIMEOUT =
+      "ozone.scm.pipeline.destroy.timeout";
 
-  public static final String
-      OZONE_SCM_PIPELINE_CREATION_LEASE_TIMEOUT_DEFAULT = "60s";
+  public static final String OZONE_SCM_PIPELINE_DESTROY_TIMEOUT_DEFAULT =
+      "300s";
 
   public static final String OZONE_SCM_BLOCK_DELETION_MAX_RETRY =
       "ozone.scm.block.deletion.max.retry";

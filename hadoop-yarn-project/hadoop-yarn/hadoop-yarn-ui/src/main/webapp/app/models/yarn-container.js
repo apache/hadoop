@@ -30,6 +30,7 @@ export default DS.Model.extend({
   containerExitStatus: DS.attr('number'),
   containerState: DS.attr('string'),
   nodeHttpAddress: DS.attr('string'),
+  exposedPorts: DS.attr('string'),
   nodeId: DS.attr('string'),
 
   startTs: function() {
@@ -65,5 +66,5 @@ export default DS.Model.extend({
   masterNodeURL: function() {
     var addr = encodeURIComponent(this.get("nodeHttpAddress"));
     return `#/yarn-node/${this.get("nodeId")}/${addr}/info/`;
-  }.property("nodeId", "nodeHttpAddress"),
+  }.property("nodeId", "nodeHttpAddress")
 });

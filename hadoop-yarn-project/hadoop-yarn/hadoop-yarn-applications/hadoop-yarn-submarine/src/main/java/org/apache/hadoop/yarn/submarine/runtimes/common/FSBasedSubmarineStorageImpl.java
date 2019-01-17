@@ -42,7 +42,7 @@ public class FSBasedSubmarineStorageImpl extends SubmarineStorage {
   public void addNewJob(String jobName, Map<String, String> jobInfo)
       throws IOException {
     Path jobInfoPath = getJobInfoPath(jobName, true);
-    FSDataOutputStream fos = rdm.getFileSystem().create(jobInfoPath);
+    FSDataOutputStream fos = rdm.getDefaultFileSystem().create(jobInfoPath);
     serializeMap(fos, jobInfo);
   }
 
@@ -50,7 +50,7 @@ public class FSBasedSubmarineStorageImpl extends SubmarineStorage {
   public Map<String, String> getJobInfoByName(String jobName)
       throws IOException {
     Path jobInfoPath = getJobInfoPath(jobName, false);
-    FSDataInputStream fis = rdm.getFileSystem().open(jobInfoPath);
+    FSDataInputStream fis = rdm.getDefaultFileSystem().open(jobInfoPath);
     return deserializeMap(fis);
   }
 
@@ -58,7 +58,7 @@ public class FSBasedSubmarineStorageImpl extends SubmarineStorage {
   public void addNewModel(String modelName, String version,
       Map<String, String> modelInfo) throws IOException {
     Path modelInfoPath = getModelInfoPath(modelName, version, true);
-    FSDataOutputStream fos = rdm.getFileSystem().create(modelInfoPath);
+    FSDataOutputStream fos = rdm.getDefaultFileSystem().create(modelInfoPath);
     serializeMap(fos, modelInfo);
   }
 
@@ -66,15 +66,14 @@ public class FSBasedSubmarineStorageImpl extends SubmarineStorage {
   public Map<String, String> getModelInfoByName(String modelName,
       String version) throws IOException {
     Path modelInfoPath = getModelInfoPath(modelName, version, false);
-    FSDataInputStream fis = rdm.getFileSystem().open(modelInfoPath);
+    FSDataInputStream fis = rdm.getDefaultFileSystem().open(modelInfoPath);
     return deserializeMap(fis);
   }
 
   private Path getModelInfoPath(String modelName, String version, boolean create)
       throws IOException {
     Path modelDir = rdm.getModelDir(modelName, create);
-    Path modelInfo = new Path(modelDir, version + ".info");
-    return modelInfo;
+    return new Path(modelDir, version + ".info");
   }
 
   private void serializeMap(FSDataOutputStream fos, Map<String, String> map)
@@ -98,7 +97,6 @@ public class FSBasedSubmarineStorageImpl extends SubmarineStorage {
 
   private Path getJobInfoPath(String jobName, boolean create) throws IOException {
     Path path = rdm.getJobStagingArea(jobName, create);
-    Path fileName = new Path(path, "job.info");
-    return fileName;
+    return new Path(path, "job.info");
   }
 }

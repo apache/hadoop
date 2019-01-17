@@ -20,10 +20,7 @@
 package org.apache.hadoop.ozone.client;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -36,6 +33,9 @@ public class ObjectStoreStub extends ObjectStore {
   }
 
   private Map<String, OzoneVolumeStub> volumes = new HashMap<>();
+  private Map<String, String> bucketVolumeMap = new HashMap<>();
+  private Map<String, Boolean> bucketEmptyStatus = new HashMap<>();
+  private Map<String, List<OzoneBucket>> userBuckets = new HashMap<>();
 
   @Override
   public void createVolume(String volumeName) throws IOException {
@@ -106,5 +106,127 @@ public class ObjectStoreStub extends ObjectStore {
   @Override
   public void deleteVolume(String volumeName) throws IOException {
     volumes.remove(volumeName);
+  }
+
+  @Override
+  public void createS3Bucket(String userName, String s3BucketName) throws
+      IOException {
+    String volumeName = "s3" + userName;
+    if (bucketVolumeMap.get(s3BucketName) == null) {
+      bucketVolumeMap.put(s3BucketName, volumeName + "/" + s3BucketName);
+      bucketEmptyStatus.put(s3BucketName, true);
+      createVolume(volumeName);
+      volumes.get(volumeName).createBucket(s3BucketName);
+    } else {
+      throw new IOException("BUCKET_ALREADY_EXISTS");
+    }
+
+    if (userBuckets.get(userName) == null) {
+      List<OzoneBucket> ozoneBuckets = new ArrayList<>();
+      ozoneBuckets.add(volumes.get(volumeName).getBucket(s3BucketName));
+      userBuckets.put(userName, ozoneBuckets);
+    } else {
+      userBuckets.get(userName).add(volumes.get(volumeName).getBucket(
+          s3BucketName));
+    }
+  }
+
+  public Iterator<? extends OzoneBucket> listS3Buckets(String userName,
+                                                       String bucketPrefix) {
+    if (userBuckets.get(userName) == null) {
+      return new ArrayList<OzoneBucket>().iterator();
+    } else {
+      return userBuckets.get(userName).parallelStream()
+          .filter(ozoneBucket -> {
+            if (bucketPrefix != null) {
+              return ozoneBucket.getName().startsWith(bucketPrefix);
+            } else {
+              return true;
+            }
+          }).collect(Collectors.toList())
+          .iterator();
+    }
+  }
+
+  public Iterator<? extends OzoneBucket> listS3Buckets(String userName,
+                                                       String bucketPrefix,
+                                                       String prevBucket) {
+
+    if (userBuckets.get(userName) == null) {
+      return new ArrayList<OzoneBucket>().iterator();
+    } else {
+      //Sort buckets lexicographically
+      userBuckets.get(userName).sort(
+          (bucket1, bucket2) -> {
+            int compare = bucket1.getName().compareTo(bucket2.getName());
+            if (compare < 0) {
+              return -1;
+            } else if (compare == 0) {
+              return 0;
+            } else {
+              return 1;
+            }
+          });
+      return userBuckets.get(userName).stream()
+          .filter(ozoneBucket -> {
+            if (prevBucket != null) {
+              return ozoneBucket.getName().compareTo(prevBucket) > 0;
+            } else {
+              return true;
+            }
+          })
+          .filter(ozoneBucket -> {
+            if (bucketPrefix != null) {
+              return ozoneBucket.getName().startsWith(bucketPrefix);
+            } else {
+              return true;
+            }
+          }).collect(Collectors.toList())
+          .iterator();
+    }
+  }
+
+  @Override
+  public void deleteS3Bucket(String s3BucketName) throws
+      IOException {
+    if (bucketVolumeMap.containsKey(s3BucketName)) {
+      if (bucketEmptyStatus.get(s3BucketName)) {
+        bucketVolumeMap.remove(s3BucketName);
+      } else {
+        throw new IOException("BUCKET_NOT_EMPTY");
+      }
+    } else {
+      throw new IOException("BUCKET_NOT_FOUND");
+    }
+  }
+
+  @Override
+  public String getOzoneBucketMapping(String s3BucketName) throws IOException {
+    if (bucketVolumeMap.get(s3BucketName) == null) {
+      throw new IOException("S3_BUCKET_NOT_FOUND");
+    }
+    return bucketVolumeMap.get(s3BucketName);
+  }
+
+  @Override
+  @SuppressWarnings("StringSplitter")
+  public String getOzoneVolumeName(String s3BucketName) throws IOException {
+    if (bucketVolumeMap.get(s3BucketName) == null) {
+      throw new IOException("S3_BUCKET_NOT_FOUND");
+    }
+    return bucketVolumeMap.get(s3BucketName).split("/")[0];
+  }
+
+  @Override
+  @SuppressWarnings("StringSplitter")
+  public String getOzoneBucketName(String s3BucketName) throws IOException {
+    if (bucketVolumeMap.get(s3BucketName) == null) {
+      throw new IOException("S3_BUCKET_NOT_FOUND");
+    }
+    return bucketVolumeMap.get(s3BucketName).split("/")[1];
+  }
+
+  public void setBucketEmptyStatus(String bucketName, boolean status) {
+    bucketEmptyStatus.put(bucketName, status);
   }
 }

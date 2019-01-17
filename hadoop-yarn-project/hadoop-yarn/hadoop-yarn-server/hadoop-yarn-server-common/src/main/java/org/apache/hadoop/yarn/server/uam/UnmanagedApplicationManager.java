@@ -134,10 +134,12 @@ public class UnmanagedApplicationManager {
     this.submitter = submitter;
     this.appNameSuffix = appNameSuffix;
     this.userUgi = null;
-    this.heartbeatHandler =
-        new AMHeartbeatRequestHandler(this.conf, this.applicationId);
+    // Relayer's rmClient will be set after the RM connection is created
     this.rmProxyRelayer =
         new AMRMClientRelayer(null, this.applicationId, rmName);
+    this.heartbeatHandler = createAMHeartbeatRequestHandler(this.conf,
+        this.applicationId, this.rmProxyRelayer);
+
     this.connectionInitiated = false;
     this.registerRequest = null;
     this.recordFactory = RecordFactoryProvider.getRecordFactory(conf);
@@ -148,6 +150,13 @@ public class UnmanagedApplicationManager {
             DEFAULT_YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS);
     this.keepContainersAcrossApplicationAttempts =
         keepContainersAcrossApplicationAttempts;
+  }
+
+  @VisibleForTesting
+  protected AMHeartbeatRequestHandler createAMHeartbeatRequestHandler(
+      Configuration config, ApplicationId appId,
+      AMRMClientRelayer relayer) {
+    return new AMHeartbeatRequestHandler(config, appId, relayer);
   }
 
   /**
@@ -191,8 +200,6 @@ public class UnmanagedApplicationManager {
         this.applicationId.toString(), UserGroupInformation.getCurrentUser());
     this.rmProxyRelayer.setRMClient(createRMProxy(
         ApplicationMasterProtocol.class, this.conf, this.userUgi, amrmToken));
-
-    this.heartbeatHandler.setAMRMClientRelayer(this.rmProxyRelayer);
     this.heartbeatHandler.setUGI(this.userUgi);
   }
 
@@ -248,9 +255,6 @@ public class UnmanagedApplicationManager {
   public FinishApplicationMasterResponse finishApplicationMaster(
       FinishApplicationMasterRequest request)
       throws YarnException, IOException {
-
-    this.heartbeatHandler.shutdown();
-
     if (this.userUgi == null) {
       if (this.connectionInitiated) {
         // This is possible if the async launchUAM is still
@@ -263,7 +267,12 @@ public class UnmanagedApplicationManager {
             + "be called before createAndRegister");
       }
     }
-    return this.rmProxyRelayer.finishApplicationMaster(request);
+    FinishApplicationMasterResponse response =
+        this.rmProxyRelayer.finishApplicationMaster(request);
+    if (response.getIsUnregistered()) {
+      shutDownConnections();
+    }
+    return response;
   }
 
   /**
@@ -275,11 +284,10 @@ public class UnmanagedApplicationManager {
    */
   public KillApplicationResponse forceKillApplication()
       throws IOException, YarnException {
+    shutDownConnections();
+
     KillApplicationRequest request =
         KillApplicationRequest.newInstance(this.applicationId);
-
-    this.heartbeatHandler.shutdown();
-
     if (this.rmClient == null) {
       this.rmClient = createRMProxy(ApplicationClientProtocol.class, this.conf,
           UserGroupInformation.createRemoteUser(this.submitter), null);
@@ -314,6 +322,14 @@ public class UnmanagedApplicationManager {
             "AllocateAsync should not be called before launchUAM");
       }
     }
+  }
+
+  /**
+   * Shutdown this UAM client, without killing the UAM in the YarnRM side.
+   */
+  public void shutDownConnections() {
+    this.heartbeatHandler.shutdown();
+    this.rmProxyRelayer.shutdown();
   }
 
   /**
@@ -522,12 +538,12 @@ public class UnmanagedApplicationManager {
   }
 
   @VisibleForTesting
-  protected void setHandlerThread(AMHeartbeatRequestHandler thread) {
-    this.heartbeatHandler = thread;
+  protected void drainHeartbeatThread() {
+    this.heartbeatHandler.drainHeartbeatThread();
   }
 
   @VisibleForTesting
-  protected void drainHeartbeatThread() {
-    this.heartbeatHandler.drainHeartbeatThread();
+  protected boolean isHeartbeatThreadAlive() {
+    return this.heartbeatHandler.isAlive();
   }
 }

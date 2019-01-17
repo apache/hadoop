@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.service;
 
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.io.FileUtils;
 import org.apache.curator.test.TestingCluster;
@@ -424,6 +423,84 @@ public class TestServiceAM extends ServiceTestUtils{
 
     Assert.assertEquals(1,
         am.getComponent("compa").getPendingInstances().size());
+    am.stop();
+  }
+
+  @Test(timeout = 30000)
+  public void testSyncSysFS() {
+    ApplicationId applicationId = ApplicationId.newInstance(
+        System.currentTimeMillis(), 1);
+    Service exampleApp = new Service();
+    exampleApp.setId(applicationId.toString());
+    exampleApp.setVersion("v1");
+    exampleApp.setName("tensorflow");
+
+    Component compA = createComponent("compa", 1, "pwd");
+    compA.getConfiguration().getEnv().put(
+        "YARN_CONTAINER_RUNTIME_YARN_SYSFS_ENABLE", "true");
+    Artifact artifact = new Artifact();
+    artifact.setType(Artifact.TypeEnum.TARBALL);
+    compA.artifact(artifact);
+    exampleApp.addComponent(compA);
+    try {
+      MockServiceAM am = new MockServiceAM(exampleApp);
+      am.init(conf);
+      am.start();
+      ServiceScheduler scheduler = am.context.scheduler;
+      scheduler.syncSysFs(exampleApp);
+      scheduler.close();
+      am.stop();
+      am.close();
+    } catch (Exception e) {
+      LOG.error("Fail to sync sysfs: {}", e);
+      Assert.fail("Fail to sync sysfs.");
+    }
+  }
+
+  @Test
+  public void testScheduleWithResourceAttributes() throws Exception {
+    ApplicationId applicationId = ApplicationId.newInstance(123456, 1);
+    Service exampleApp = new Service();
+    exampleApp.setId(applicationId.toString());
+    exampleApp.setName("testScheduleWithResourceAttributes");
+    exampleApp.setVersion("v1");
+
+    List<ResourceTypeInfo> resourceTypeInfos = new ArrayList<>(
+        ResourceUtils.getResourcesTypeInfo());
+    // Add 3rd resource type.
+    resourceTypeInfos.add(ResourceTypeInfo
+        .newInstance("test-resource", "", ResourceTypes.COUNTABLE));
+    // Reinitialize resource types
+    ResourceUtils.reinitializeResources(resourceTypeInfos);
+
+    Component serviceCompoent = createComponent("compa", 1, "pwd");
+    serviceCompoent.getResource().setResourceInformations(
+        ImmutableMap.of("test-resource",
+            new ResourceInformation()
+                .value(1234L)
+                .unit("Gi")
+                .attributes(ImmutableMap.of("k1", "v1", "k2", "v2"))));
+    exampleApp.addComponent(serviceCompoent);
+
+    MockServiceAM am = new MockServiceAM(exampleApp);
+    am.init(conf);
+    am.start();
+
+    ServiceScheduler serviceScheduler = am.context.scheduler;
+    AMRMClientAsync<AMRMClient.ContainerRequest> amrmClientAsync =
+        serviceScheduler.getAmRMClient();
+
+    Collection<AMRMClient.ContainerRequest> rr =
+        amrmClientAsync.getMatchingRequests(0);
+    Assert.assertEquals(1, rr.size());
+
+    org.apache.hadoop.yarn.api.records.Resource capability =
+        rr.iterator().next().getCapability();
+    Assert.assertEquals(1234L, capability.getResourceValue("test-resource"));
+    Assert.assertEquals("Gi",
+        capability.getResourceInformation("test-resource").getUnits());
+    Assert.assertEquals(2, capability.getResourceInformation("test-resource")
+        .getAttributes().size());
     am.stop();
   }
 }

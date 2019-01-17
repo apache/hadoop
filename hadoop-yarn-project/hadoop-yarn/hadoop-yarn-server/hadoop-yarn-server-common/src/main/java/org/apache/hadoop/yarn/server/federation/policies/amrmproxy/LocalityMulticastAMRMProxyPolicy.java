@@ -34,7 +34,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
@@ -132,11 +131,8 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
   private SubClusterResolver resolver;
 
   private Map<SubClusterId, Resource> headroom;
-  private Map<SubClusterId, Long> lastHeartbeatTimeStamp;
-  private long subClusterTimeOut;
   private float hrAlpha;
   private FederationStateStoreFacade federationFacade;
-  private AllocationBookkeeper bookkeeper;
   private SubClusterId homeSubcluster;
 
   @Override
@@ -186,26 +182,12 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
 
     if (headroom == null) {
       headroom = new ConcurrentHashMap<>();
-      lastHeartbeatTimeStamp = new ConcurrentHashMap<>();
     }
     hrAlpha = policy.getHeadroomAlpha();
 
     this.federationFacade =
         policyContext.getFederationStateStoreFacade();
     this.homeSubcluster = policyContext.getHomeSubcluster();
-
-    this.subClusterTimeOut = this.federationFacade.getConf().getLong(
-        YarnConfiguration.FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT,
-        YarnConfiguration.DEFAULT_FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT);
-    if (this.subClusterTimeOut <= 0) {
-      LOG.info(
-          "{} configured to be {}, should be positive. Using default of {}.",
-          YarnConfiguration.FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT,
-          this.subClusterTimeOut,
-          YarnConfiguration.DEFAULT_FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT);
-      this.subClusterTimeOut =
-          YarnConfiguration.DEFAULT_FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT;
-    }
   }
 
   @Override
@@ -216,18 +198,18 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
       LOG.info("Subcluster {} updated with {} memory headroom", subClusterId,
           response.getAvailableResources().getMemorySize());
     }
-    lastHeartbeatTimeStamp.put(subClusterId, System.currentTimeMillis());
   }
 
   @Override
   public Map<SubClusterId, List<ResourceRequest>> splitResourceRequests(
-      List<ResourceRequest> resourceRequests) throws YarnException {
+      List<ResourceRequest> resourceRequests,
+      Set<SubClusterId> timedOutSubClusters) throws YarnException {
 
     // object used to accumulate statistics about the answer, initialize with
     // active subclusters. Create a new instance per call because this method
     // can be called concurrently.
-    bookkeeper = new AllocationBookkeeper();
-    bookkeeper.reinitialize(federationFacade.getSubClusters(true));
+    AllocationBookkeeper bookkeeper = new AllocationBookkeeper();
+    bookkeeper.reinitialize(getActiveSubclusters(), timedOutSubClusters);
 
     List<ResourceRequest> nonLocalizedRequests =
         new ArrayList<ResourceRequest>();
@@ -298,15 +280,6 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     // handle all non-localized requests (ANY)
     splitAnyRequests(nonLocalizedRequests, bookkeeper);
 
-    for (Map.Entry<SubClusterId, List<ResourceRequest>> entry : bookkeeper
-        .getAnswer().entrySet()) {
-      // A new-cluster here will trigger new UAM luanch, which might take a long
-      // time. We don't want too many requests stuck in this UAM before it is
-      // ready and starts heartbeating
-      if (!lastHeartbeatTimeStamp.containsKey(entry.getKey())) {
-        lastHeartbeatTimeStamp.put(entry.getKey(), System.currentTimeMillis());
-      }
-    }
     return bookkeeper.getAnswer();
   }
 
@@ -540,8 +513,8 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     private float totPolicyWeight = 0;
 
     private void reinitialize(
-        Map<SubClusterId, SubClusterInfo> activeSubclusters)
-        throws YarnException {
+        Map<SubClusterId, SubClusterInfo> activeSubclusters,
+        Set<SubClusterId> timedOutSubClusters) throws YarnException {
       if (activeSubclusters == null) {
         throw new YarnRuntimeException("null activeSubclusters received");
       }
@@ -573,17 +546,8 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
       }
 
       Set<SubClusterId> tmpSCSet = new HashSet<>(activeAndEnabledSC);
-      for (Map.Entry<SubClusterId, Long> entry : lastHeartbeatTimeStamp
-          .entrySet()) {
-        long duration = System.currentTimeMillis() - entry.getValue();
-        if (duration > subClusterTimeOut) {
-          LOG.warn(
-              "Subcluster {} does not have a success heartbeat for {}s, "
-                  + "skip routing asks there for this request",
-              entry.getKey(), (double) duration / 1000);
-          tmpSCSet.remove(entry.getKey());
-        }
-      }
+      tmpSCSet.removeAll(timedOutSubClusters);
+
       if (tmpSCSet.size() < 1) {
         LOG.warn("All active and enabled subclusters have expired last "
             + "heartbeat time. Ignore the expiry check for this request");

@@ -71,6 +71,13 @@ run mkdir -p ./share/hadoop/hdds
 run mkdir -p ./share/hadoop/yarn
 run mkdir -p ./share/hadoop/hdfs
 run mkdir -p ./share/hadoop/common
+
+touch ./share/hadoop/mapreduce/.keep
+touch ./share/hadoop/yarn/.keep
+touch ./share/hadoop/hdfs/.keep
+touch ./share/hadoop/common/.keep
+
+
 run mkdir -p ./share/ozone/web
 run mkdir -p ./bin
 run mkdir -p ./sbin
@@ -78,7 +85,11 @@ run mkdir -p ./etc
 run mkdir -p ./libexec
 
 run cp -r "${ROOT}/hadoop-common-project/hadoop-common/src/main/conf" "etc/hadoop"
-
+run cp "${ROOT}/hadoop-ozone/dist/src/main/conf/om-audit-log4j2.properties" "etc/hadoop"
+run cp "${ROOT}/hadoop-ozone/dist/src/main/conf/dn-audit-log4j2.properties" "etc/hadoop"
+run cp "${ROOT}/hadoop-ozone/dist/src/main/conf/scm-audit-log4j2.properties" "etc/hadoop"
+run cp "${ROOT}/hadoop-ozone/dist/src/main/conf/ozone-site.xml" "etc/hadoop"
+run cp -f "${ROOT}/hadoop-ozone/dist/src/main/conf/log4j.properties" "etc/hadoop"
 run cp "${ROOT}/hadoop-common-project/hadoop-common/src/main/bin/hadoop" "bin/"
 run cp "${ROOT}/hadoop-common-project/hadoop-common/src/main/bin/hadoop.cmd" "bin/"
 run cp "${ROOT}/hadoop-ozone/common/src/main/bin/ozone" "bin/"
@@ -105,9 +116,9 @@ run cp "${ROOT}/hadoop-ozone/objectstore-service/target/hadoop-ozone-objectstore
 
 
 # Optional documentation, could be missing
-cp -r "${ROOT}/hadoop-ozone/docs/target/classes/webapps/docs" ./share/hadoop/ozone/webapps/ozoneManager/
-cp -r "${ROOT}/hadoop-ozone/docs/target/classes/webapps/docs" ./share/hadoop/hdds/webapps/scm/
+cp -r "${ROOT}/hadoop-hdds/docs/target/classes/docs" ./
 
 #Copy docker compose files
 run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/compose" .
 run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/smoketest" .
+run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/blockade" .

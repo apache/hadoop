@@ -37,6 +37,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,6 +58,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.Conta
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerPrepareContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerLivenessContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReacquisitionContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
@@ -79,6 +81,7 @@ public abstract class ContainerExecutor implements Configurable {
   private static final Logger LOG =
        LoggerFactory.getLogger(ContainerExecutor.class);
   protected static final String WILDCARD = "*";
+  public static final String TOKEN_FILE_NAME_FMT = "%s.tokens";
 
   /**
    * The permissions to use when creating the launch script.
@@ -217,6 +220,16 @@ public abstract class ContainerExecutor implements Configurable {
       throws IOException;
 
   /**
+   * Perform interactive docker command into running container.
+   *
+   * @param ctx Encapsulates information necessary for exec containers.
+   * @return return input/output stream if the operation succeeded.
+   * @throws ContainerExecutionException if container exec fails.
+   */
+  public abstract IOStreamPair execContainer(ContainerExecContext ctx)
+      throws ContainerExecutionException;
+
+  /**
    * Delete specified directories as a given user.
    *
    * @param ctx Encapsulates information necessary for deletion.
@@ -245,6 +258,18 @@ public abstract class ContainerExecutor implements Configurable {
    */
   public abstract boolean isContainerAlive(ContainerLivenessContext ctx)
       throws IOException;
+
+  /**
+   * Update cluster information inside container.
+   *
+   * @param ctx ContainerRuntimeContext
+   * @param user Owner of application
+   * @param appId YARN application ID
+   * @param spec Service Specification
+   * @throws IOException if there is a failure while writing spec to disk
+   */
+  public abstract void updateYarnSysFS(Context ctx, String user,
+      String appId, String spec) throws IOException;
 
   /**
    * Recover an already existing container. This is a blocking call and returns
@@ -904,5 +929,10 @@ public abstract class ContainerExecutor implements Configurable {
       }
     }
     return symLinks;
+  }
+
+  public String getExposedPorts(Container container)
+      throws ContainerExecutionException {
+    return null;
   }
 }

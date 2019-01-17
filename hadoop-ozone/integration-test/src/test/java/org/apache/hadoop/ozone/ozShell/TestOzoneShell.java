@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.ozone.ozShell;
 
-import com.google.common.base.Strings;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -32,7 +31,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.RandomStringUtils;
+
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.cli.MissingSubcommandException;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
@@ -60,10 +59,20 @@ import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.response.KeyInfo;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+
+import com.google.common.base.Strings;
+import org.apache.commons.lang3.RandomStringUtils;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -79,12 +88,6 @@ import picocli.CommandLine.IExceptionHandler2;
 import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.ParseResult;
 import picocli.CommandLine.RunLast;
-
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * This test class specified for testing Ozone shell command.
@@ -122,6 +125,7 @@ public class TestOzoneShell {
   }
 
   @Parameterized.Parameter
+  @SuppressWarnings("visibilitymodifier")
   public Class clientProtocol;
   /**
    * Create a MiniDFSCluster for testing with using distributed Ozone
@@ -207,8 +211,7 @@ public class TestOzoneShell {
     testCreateVolume(volumeName, "");
     volumeName = "volume" + RandomStringUtils.randomNumeric(5);
     testCreateVolume("/////" + volumeName, "");
-    testCreateVolume("/////", "Volume name is required " +
-        "to create a volume");
+    testCreateVolume("/////", "Volume name is required");
     testCreateVolume("/////vol/123",
         "Invalid volume name. Delimiters (/) not allowed in volume name");
   }
@@ -258,6 +261,26 @@ public class TestOzoneShell {
         exceptionHandler, args);
   }
 
+  /**
+   * Test to create volume without specifying --user or -u.
+   * @throws Exception
+   */
+  @Test
+  public void testCreateVolumeWithoutUser() throws Exception {
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    String[] args = new String[] {"volume", "create", url + "/" + volumeName,
+        "--root"};
+
+    execute(shell, args);
+
+    String truncatedVolumeName =
+        volumeName.substring(volumeName.lastIndexOf('/') + 1);
+    OzoneVolume volumeInfo = client.getVolumeDetails(truncatedVolumeName);
+    assertEquals(truncatedVolumeName, volumeInfo.getName());
+    assertEquals(UserGroupInformation.getCurrentUser().getUserName(),
+        volumeInfo.getOwner());
+  }
+
   @Test
   public void testDeleteVolume() throws Exception {
     LOG.info("Running testDeleteVolume");
@@ -283,6 +306,33 @@ public class TestOzoneShell {
       GenericTestUtils.assertExceptionContains(
           "Info Volume failed, error:VOLUME_NOT_FOUND", e);
     }
+
+
+    volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    volumeArgs = VolumeArgs.newBuilder()
+        .setOwner("bilbo")
+        .setQuota("100TB")
+        .build();
+    client.createVolume(volumeName, volumeArgs);
+    volume = client.getVolumeDetails(volumeName);
+    assertNotNull(volume);
+
+    //volumeName prefixed with /
+    String volumeNameWithSlashPrefix = "/" + volumeName;
+    args = new String[] {"volume", "delete",
+        url + "/" + volumeNameWithSlashPrefix};
+    execute(shell, args);
+    output = out.toString();
+    assertTrue(output.contains("Volume " + volumeName + " is deleted"));
+
+    // verify if volume has been deleted
+    try {
+      client.getVolumeDetails(volumeName);
+      fail("Get volume call should have thrown.");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Info Volume failed, error:VOLUME_NOT_FOUND", e);
+    }
   }
 
   @Test
@@ -295,10 +345,22 @@ public class TestOzoneShell {
         .build();
     client.createVolume(volumeName, volumeArgs);
 
+    //volumeName supplied as-is
     String[] args = new String[] {"volume", "info", url + "/" + volumeName};
     execute(shell, args);
 
     String output = out.toString();
+    assertTrue(output.contains(volumeName));
+    assertTrue(output.contains("createdOn")
+        && output.contains(OzoneConsts.OZONE_TIME_ZONE));
+
+    //volumeName prefixed with /
+    String volumeNameWithSlashPrefix = "/" + volumeName;
+    args = new String[] {"volume", "info",
+        url + "/" + volumeNameWithSlashPrefix};
+    execute(shell, args);
+
+    output = out.toString();
     assertTrue(output.contains(volumeName));
     assertTrue(output.contains("createdOn")
         && output.contains(OzoneConsts.OZONE_TIME_ZONE));
@@ -364,6 +426,15 @@ public class TestOzoneShell {
     execute(shell, args);
     vol = client.getVolumeDetails(volumeName);
     assertEquals(newUser, vol.getOwner());
+
+    //volume with / prefix
+    String volumeWithPrefix = "/" + volumeName;
+    String newUser2 = "new-user2";
+    args = new String[] {"volume", "update", url + "/" + volumeWithPrefix,
+        "--user", newUser2};
+    execute(shell, args);
+    vol = client.getVolumeDetails(volumeName);
+    assertEquals(newUser2, vol.getOwner());
 
     // test error conditions
     args = new String[] {"volume", "update", url + "/invalid-volume",
@@ -1052,6 +1123,61 @@ public class TestOzoneShell {
         new String[] {"key", "list", url + "/" + volumeName + "/" + bucketName,
             "--length", "-1"};
     executeWithError(shell, args, "the length should be a positive number");
+  }
+
+  @Test
+  public void testS3BucketMapping() throws  IOException {
+
+    List<ServiceInfo> services =
+        cluster.getOzoneManager().getServiceList();
+
+    String omHostName = services.stream().filter(
+        a -> a.getNodeType().equals(HddsProtos.NodeType.OM))
+        .collect(Collectors.toList()).get(0).getHostname();
+
+    String omPort = cluster.getOzoneManager().getRpcPort();
+    String setOmAddress =
+        "--set=" + OZONE_OM_ADDRESS_KEY + "=" + omHostName + ":" + omPort;
+
+    String s3Bucket = "bucket1";
+    String commandOutput;
+    createS3Bucket("ozone", s3Bucket);
+
+    //WHEN
+    String[] args =
+        new String[] {setOmAddress, "bucket",
+            "path", s3Bucket};
+    execute(shell, args);
+
+    //THEN
+    commandOutput = out.toString();
+    String volumeName = client.getOzoneVolumeName(s3Bucket);
+    assertTrue(commandOutput.contains("Volume name for S3Bucket is : " +
+        volumeName));
+    assertTrue(commandOutput.contains(OzoneConsts.OZONE_URI_SCHEME + "://" +
+        s3Bucket + "." + volumeName));
+    out.reset();
+
+    //Trying to get map for an unknown bucket
+    args = new String[] {setOmAddress, "bucket", "path",
+        "unknownbucket"};
+    executeWithError(shell, args, "S3_BUCKET_NOT_FOUND");
+
+    // No bucket name
+    args = new String[] {setOmAddress, "bucket", "path"};
+    executeWithError(shell, args, "Missing required parameter");
+
+    // Invalid bucket name
+    args = new String[] {setOmAddress, "bucket", "path", "/asd/multipleslash"};
+    executeWithError(shell, args, "S3_BUCKET_NOT_FOUND");
+  }
+
+  private void createS3Bucket(String userName, String s3Bucket) {
+    try {
+      client.createS3Bucket("ozone", s3Bucket);
+    } catch (IOException ex) {
+      GenericTestUtils.assertExceptionContains("S3_BUCKET_ALREADY_EXISTS", ex);
+    }
   }
 
   private OzoneVolume creatVolume() throws OzoneException, IOException {

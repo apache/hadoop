@@ -225,11 +225,35 @@
 </property>
 
 <property>
+  <name>hadoop.security.group.mapping.ldap.num.attempts</name>
+  <value>3</value>
+  <description>
+    This property is the number of attempts to be made for LDAP operations.
+    If this limit is exceeded, LdapGroupsMapping will return an empty
+    group list.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.num.attempts.before.failover</name>
+  <value>3</value>
+  <description>
+    This property is the number of attempts to be made for LDAP operations
+    using a single LDAP instance. If multiple LDAP servers are configured
+    and this number of failed operations is reached, we will switch to the
+    next LDAP server. The configuration for the overall number of attempts
+    will still be respected, failover will thus be performed only if this
+    property is less than hadoop.security.group.mapping.ldap.num.attempts.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.group.mapping.ldap.url</name>
   <value></value>
   <description>
-    The URL of the LDAP server to use for resolving user groups when using
-    the LdapGroupsMapping user to group mapping.
+    The URL of the LDAP server(s) to use for resolving user groups when using
+    the LdapGroupsMapping user to group mapping. Supports configuring multiple
+    LDAP servers via a comma-separated list.
   </description>
 </property>
 
@@ -343,6 +367,16 @@
   <description>
     The distinguished name of the user to bind as when connecting to the LDAP
     server. This may be left blank if the LDAP server supports anonymous binds.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.bind.password.alias</name>
+  <value></value>
+  <description>
+    The alias of the bind user to be used to get the password from credential
+    providers. If the alias is empty, property
+    hadoop.security.group.mapping.ldap.bind.password is used instead.
   </description>
 </property>
 
@@ -599,9 +633,17 @@
       secret$
       password$
       ssl.keystore.pass$
-      fs.s3.*[Ss]ecret.?[Kk]ey
+      fs.s3a.server-side-encryption.key
       fs.s3a.*.server-side-encryption.key
+      fs.s3a.secret.key
+      fs.s3a.*.secret.key
+      fs.s3a.session.key
+      fs.s3a.*.session.key
+      fs.s3a.session.token
+      fs.s3a.*.session.token
       fs.azure.account.key.*
+      fs.azure.oauth2.*
+      fs.adl.oauth2.*
       credential$
       oauth.*secret
       oauth.*password
@@ -649,9 +691,26 @@
 </property>
 
 <property>
+  <name>hadoop.kerberos.keytab.login.autorenewal.enabled</name>
+  <value>false</value>
+  <description>Used to enable automatic renewal of keytab based kerberos login.
+    By default the automatic renewal is disabled for keytab based kerberos login.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.auth_to_local</name>
   <value></value>
   <description>Maps kerberos principals to local user names</description>
+</property>
+
+<property>
+  <name>hadoop.security.auth_to_local.mechanism</name>
+  <value>hadoop</value>
+  <description>The mechanism by which auth_to_local rules are evaluated.
+    If set to 'hadoop' it will not allow resulting local user names to have
+    either '@' or '/'. If set to 'MIT' it will follow MIT evaluation rules
+    and the restrictions of 'hadoop' do not apply.</description>
 </property>
 
 <property>
@@ -918,6 +977,14 @@
 </property>
 
 <property>
+  <name>fs.ftp.timeout</name>
+  <value>0</value>
+  <description>
+    FTP filesystem's timeout in seconds.
+  </description>
+</property>
+
+<property>
   <name>fs.df.interval</name>
   <value>60000</value>
   <description>Disk usage statistics refresh interval in msec.</description>
@@ -957,19 +1024,33 @@
 
 <property>
   <name>fs.s3a.aws.credentials.provider</name>
+  <value>
+    org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider,
+    org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider,
+    com.amazonaws.auth.EnvironmentVariableCredentialsProvider,
+    org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider
+  </value>
   <description>
     Comma-separated class names of credential provider classes which implement
     com.amazonaws.auth.AWSCredentialsProvider.
 
+    When S3A delegation tokens are not enabled, this list will be used
+    to directly authenticate with S3 and DynamoDB services.
+    When S3A Delegation tokens are enabled, depending upon the delegation
+    token binding it may be used
+    to communicate wih the STS endpoint to request session/role
+    credentials.
+
     These are loaded and queried in sequence for a valid set of credentials.
     Each listed class must implement one of the following means of
     construction, which are attempted in order:
-    1. a public constructor accepting java.net.URI and
+    * a public constructor accepting java.net.URI and
         org.apache.hadoop.conf.Configuration,
-    2. a public static method named getInstance that accepts no
+    * a public constructor accepting org.apache.hadoop.conf.Configuration,
+    * a public static method named getInstance that accepts no
        arguments and returns an instance of
        com.amazonaws.auth.AWSCredentialsProvider, or
-    3. a public default constructor.
+    * a public default constructor.
 
     Specifying org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider allows
     anonymous access to a publicly accessible S3 bucket without any credentials.
@@ -979,13 +1060,15 @@
 
     If unspecified, then the default list of credential provider classes,
     queried in sequence, is:
-    1. org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider:
+    * org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider: looks
+       for session login secrets in the Hadoop configuration.
+    * org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider:
        Uses the values of fs.s3a.access.key and fs.s3a.secret.key.
-    2. com.amazonaws.auth.EnvironmentVariableCredentialsProvider: supports
+    * com.amazonaws.auth.EnvironmentVariableCredentialsProvider: supports
         configuration of AWS access key ID and secret access key in
         environment variables named AWS_ACCESS_KEY_ID and
         AWS_SECRET_ACCESS_KEY, as documented in the AWS SDK.
-    3. com.amazonaws.auth.InstanceProfileCredentialsProvider: supports use
+    * com.amazonaws.auth.InstanceProfileCredentialsProvider: supports use
         of instance profile credentials if running in an EC2 VM.
   </description>
 </property>
@@ -1041,7 +1124,7 @@
   <value>30m</value>
   <description>
     Duration of assumed roles before a refresh is attempted.
-    Only used if AssumedRoleCredentialProvider is the AWS credential provider.
+    Used when session tokens are requested.
     Range: 15m to 1h
   </description>
 </property>
@@ -1053,17 +1136,20 @@
     AWS Security Token Service Endpoint.
     If unset, uses the default endpoint.
     Only used if AssumedRoleCredentialProvider is the AWS credential provider.
+    Used by the AssumedRoleCredentialProvider and in Session and Role delegation
+    tokens.
   </description>
 </property>
 
 <property>
   <name>fs.s3a.assumed.role.sts.endpoint.region</name>
-  <value>us-west-1</value>
+  <value></value>
   <description>
     AWS Security Token Service Endpoint's region;
     Needed if fs.s3a.assumed.role.sts.endpoint points to an endpoint
     other than the default one and the v4 signature is used.
-    Only used if AssumedRoleCredentialProvider is the AWS credential provider.
+    Used by the AssumedRoleCredentialProvider and in Session and Role delegation
+    tokens.
   </description>
 </property>
 
@@ -1075,6 +1161,29 @@
     retrieve short-lived role credentials.
     Only used if AssumedRoleCredentialProvider is the AWS credential provider.
     If unset, uses "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider".
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.delegation.tokens.enabled</name>
+  <value>false</value>
+  <description></description>
+</property>
+
+<property>
+  <name>fs.s3a.delegation.token.binding</name>
+  <value></value>
+  <description>
+    The name of a class to provide delegation tokens support in S3A.
+    If unset: delegation token support is disabled.
+
+    Note: for job submission to actually collect these tokens,
+    Kerberos must be enabled.
+
+    Options are:
+    org.apache.hadoop.fs.s3a.auth.delegation.SessionTokenBinding
+    org.apache.hadoop.fs.s3a.auth.delegation.FullCredentialsTokenBinding
+    and org.apache.hadoop.fs.s3a.auth.delegation.RoleTokenBinding
   </description>
 </property>
 
@@ -1772,19 +1881,6 @@
 </property>
 
 
-<!-- Ozone file system properties -->
-<property>
-  <name>fs.o3.impl</name>
-  <value>org.apache.hadoop.fs.ozone.OzoneFileSystem</value>
-  <description>The implementation class of the Ozone FileSystem.</description>
-</property>
-
-<property>
-  <name>fs.AbstractFileSystem.o3.impl</name>
-  <value>org.apache.hadoop.fs.ozone.OzFs</value>
-  <description>The implementation class of the OzFs AbstractFileSystem.</description>
-</property>
-
 <!-- ipc properties -->
 
 <property>
@@ -2372,9 +2468,10 @@
 
 <property>
   <name>hadoop.ssl.enabled.protocols</name>
-  <value>TLSv1,SSLv2Hello,TLSv1.1,TLSv1.2</value>
+  <value>TLSv1.1,TLSv1.2</value>
   <description>
-    The supported SSL protocols.
+    The supported SSL protocols. The parameter will only used from
+    DatanodeHttpServer.
   </description>
 </property>
 
@@ -2752,22 +2849,6 @@
 
 
   <!-- YARN registry -->
-
-  <property>
-    <name>hadoop.registry.rm.enabled</name>
-    <value>false</value>
-    <description>
-      Is the registry enabled in the YARN Resource Manager?
-
-      If true, the YARN RM will, as needed.
-      create the user and system paths, and purge
-      service records when containers, application attempts
-      and applications complete.
-
-      If false, the paths must be created by other means,
-      and no automatic cleanup of service records will take place.
-    </description>
-  </property>
 
   <property>
     <name>hadoop.registry.zk.root</name>

@@ -29,8 +29,11 @@ import java.util.concurrent.TimeoutException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
@@ -79,7 +82,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ProxyCAManager;
+import org.apache.hadoop.yarn.server.security.AMSecretKeys;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.server.webproxy.ProxyCA;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -91,6 +97,7 @@ import com.google.common.base.Supplier;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 public class TestApplicationMasterLauncher {
@@ -424,16 +431,47 @@ public class TestApplicationMasterLauncher {
   }
 
   @Test
-  public void testSetupTokens() throws Exception {
-    MockRM rm = new MockRM();
+  public void testSetupTokensWithoutHTTPS() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    // default conf
+    testSetupTokens(false, conf);
+    conf.set(YarnConfiguration.RM_APPLICATION_HTTPS_POLICY, "NONE");
+    testSetupTokens(false, conf);
+  }
+
+  @Test
+  public void testSetupTokensWithHTTPS() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.RM_APPLICATION_HTTPS_POLICY, "LENIENT");
+    testSetupTokens(true, conf);
+    conf.set(YarnConfiguration.RM_APPLICATION_HTTPS_POLICY, "STRICT");
+    testSetupTokens(true, conf);
+  }
+
+  private void testSetupTokens(boolean https, YarnConfiguration conf)
+      throws Exception {
+    MockRM rm = new MockRM(conf);
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 5000);
     RMApp app = rm.submitApp(2000);
     /// kick the scheduling
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt = app.getCurrentAppAttempt();
-    MyAMLauncher launcher = new MyAMLauncher(rm.getRMContext(),
-        attempt, AMLauncherEventType.LAUNCH, rm.getConfig());
+    AMRMTokenIdentifier tokenIdentifier =
+        new AMRMTokenIdentifier(attempt.getAppAttemptId(), 1);
+    ProxyCA proxyCA = mock(ProxyCA.class);
+    when(proxyCA.generateKeyStorePassword())
+        .thenReturn("kPassword").thenReturn("tPassword");
+    when(proxyCA.createChildKeyStore(any(), any()))
+        .thenReturn("keystore".getBytes());
+    when(proxyCA.getChildTrustStore(any()))
+        .thenReturn("truststore".getBytes());
+    RMContext rmContext = spy(rm.getRMContext());
+    ProxyCAManager proxyCAManager = mock(ProxyCAManager.class);
+    when(proxyCAManager.getProxyCA()).thenReturn(proxyCA);
+    when(rmContext.getProxyCAManager()).thenReturn(proxyCAManager);
+    MyAMLauncher launcher = new MyAMLauncher(rmContext,
+        attempt, AMLauncherEventType.LAUNCH, rm.getConfig(), tokenIdentifier);
     DataOutputBuffer dob = new DataOutputBuffer();
     Credentials ts = new Credentials();
     ts.writeTokenStorageToStream(dob);
@@ -455,14 +493,48 @@ public class TestApplicationMasterLauncher {
     } catch (java.io.EOFException e) {
       Assert.fail("EOFException should not happen.");
     }
+
+    // verify token
+    DataInputByteBuffer dibb = new DataInputByteBuffer();
+    dibb.reset(amContainer.getTokens());
+    Credentials credentials = new Credentials();
+    credentials.readTokenStorageStream(dibb);
+    Assert.assertEquals(1, credentials.numberOfTokens());
+    org.apache.hadoop.security.token.Token<? extends TokenIdentifier> token =
+        credentials.getAllTokens().iterator().next();
+    Assert.assertEquals(tokenIdentifier.getKind(), token.getKind());
+    Assert.assertArrayEquals(tokenIdentifier.getBytes(), token.getIdentifier());
+    Assert.assertArrayEquals("password".getBytes(), token.getPassword());
+
+    // verify keystore and truststore
+    if (https) {
+      Assert.assertEquals(4, credentials.numberOfSecretKeys());
+      Assert.assertArrayEquals("keystore".getBytes(),
+          credentials.getSecretKey(
+              AMSecretKeys.YARN_APPLICATION_AM_KEYSTORE));
+      Assert.assertArrayEquals("kPassword".getBytes(),
+          credentials.getSecretKey(
+              AMSecretKeys.YARN_APPLICATION_AM_KEYSTORE_PASSWORD));
+      Assert.assertArrayEquals("truststore".getBytes(),
+          credentials.getSecretKey(
+              AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE));
+      Assert.assertArrayEquals("tPassword".getBytes(),
+          credentials.getSecretKey(
+              AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE_PASSWORD));
+    } else {
+      Assert.assertEquals(0, credentials.numberOfSecretKeys());
+    }
   }
 
   static class MyAMLauncher extends AMLauncher {
     int count;
+    AMRMTokenIdentifier tokenIdentifier;
     public MyAMLauncher(RMContext rmContext, RMAppAttempt application,
-        AMLauncherEventType eventType, Configuration conf) {
+        AMLauncherEventType eventType, Configuration conf,
+        AMRMTokenIdentifier tokenIdentifier) {
       super(rmContext, application, eventType, conf);
       count = 0;
+      this.tokenIdentifier = tokenIdentifier;
     }
 
     protected org.apache.hadoop.security.token.Token<AMRMTokenIdentifier>
@@ -471,7 +543,9 @@ public class TestApplicationMasterLauncher {
       if (count == 1) {
         throw new RuntimeException("createAndSetAMRMToken failure");
       }
-      return null;
+      return new org.apache.hadoop.security.token.Token<>(
+          tokenIdentifier.getBytes(), "password".getBytes(),
+          tokenIdentifier.getKind(), new Text());
     }
 
     protected void setupTokens(ContainerLaunchContext container,

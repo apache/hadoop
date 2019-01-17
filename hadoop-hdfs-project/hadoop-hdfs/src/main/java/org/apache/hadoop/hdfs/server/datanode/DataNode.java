@@ -242,7 +242,7 @@ import org.slf4j.LoggerFactory;
  * DataNodes.
  *
  * The DataNode maintains just one critical table:
- *   block-> stream of bytes (of BLOCK_SIZE or less)
+ *   block{@literal ->} stream of bytes (of BLOCK_SIZE or less)
  *
  * This info is stored on a local disk.  The DataNode
  * reports the table's contents to the NameNode upon startup
@@ -294,7 +294,8 @@ public class DataNode extends ReconfigurableBase
 
   static final int CURRENT_BLOCK_FORMAT_VERSION = 1;
   public static final int MAX_VOLUME_FAILURE_TOLERATED_LIMIT = -1;
-  public static final String MAX_VOLUME_FAILURES_TOLERATED_MSG = "should be greater than -1";
+  public static final String MAX_VOLUME_FAILURES_TOLERATED_MSG =
+      "should be greater than or equal to -1";
 
   /** A list of property that are reconfigurable at runtime. */
   private static final List<String> RECONFIGURABLE_PROPERTIES =
@@ -527,7 +528,7 @@ public class DataNode extends ReconfigurableBase
   }
 
   /**
-   * {@inheritdoc}.
+   * {@inheritDoc }.
    */
   @Override
   public String reconfigurePropertyImpl(String property, String newVal)
@@ -1086,7 +1087,7 @@ public class DataNode extends ReconfigurableBase
       reason = "verifcation is not supported by SimulatedFSDataset";
     } 
     if (reason == null) {
-      directoryScanner = new DirectoryScanner(this, data, conf);
+      directoryScanner = new DirectoryScanner(data, conf);
       directoryScanner.start();
     } else {
       LOG.info("Periodic Directory Tree Verification scan " +
@@ -1405,7 +1406,7 @@ public class DataNode extends ReconfigurableBase
         || volFailuresTolerated >= volsConfigured) {
       throw new DiskErrorException("Invalid value configured for "
           + "dfs.datanode.failed.volumes.tolerated - " + volFailuresTolerated
-          + ". Value configured is either greater than -1 or >= "
+          + ". Value configured is either less than -1 or >= "
           + "to the number of configured volumes (" + volsConfigured + ").");
     }
 
@@ -2322,8 +2323,7 @@ public class DataNode extends ReconfigurableBase
     if (numTargets > 0) {
       StringBuilder xfersBuilder = new StringBuilder();
       for (int i = 0; i < numTargets; i++) {
-        xfersBuilder.append(xferTargets[i]);
-        xfersBuilder.append(" ");
+        xfersBuilder.append(xferTargets[i]).append(" ");
       }
       LOG.info(bpReg + " Starting thread to transfer " + 
                block + " to " + xfersBuilder);                       
@@ -2713,7 +2713,8 @@ public class DataNode extends ReconfigurableBase
     return locations;
   }
 
-  /** Instantiate & Start a single datanode daemon and wait for it to finish.
+  /** Instantiate &amp; Start a single datanode daemon and wait for it to
+   * finish.
    *  If this thread is specifically interrupted, it will stop waiting.
    */
   @VisibleForTesting
@@ -2722,7 +2723,8 @@ public class DataNode extends ReconfigurableBase
     return createDataNode(args, conf, null);
   }
   
-  /** Instantiate & Start a single datanode daemon and wait for it to finish.
+  /** Instantiate &amp; Start a single datanode daemon and wait for it to
+   * finish.
    *  If this thread is specifically interrupted, it will stop waiting.
    */
   @VisibleForTesting

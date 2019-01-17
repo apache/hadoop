@@ -59,12 +59,23 @@ public final class KMSUtil {
   public static KeyProvider createKeyProvider(final Configuration conf,
       final String configKeyName) throws IOException {
     LOG.debug("Creating key provider with config key {}", configKeyName);
+    URI uri = getKeyProviderUri(conf, configKeyName);
+    return (uri != null) ? createKeyProviderFromUri(conf, uri) : null;
+  }
+
+  public static URI getKeyProviderUri(final Configuration conf) {
+    return KMSUtil.getKeyProviderUri(
+        conf, KeyProviderFactory.KEY_PROVIDER_PATH);
+  }
+
+  public static URI getKeyProviderUri(final Configuration conf,
+                                      final String configKeyName) {
     final String providerUriStr = conf.getTrimmed(configKeyName);
     // No provider set in conf
     if (providerUriStr == null || providerUriStr.isEmpty()) {
       return null;
     }
-    return createKeyProviderFromUri(conf, URI.create(providerUriStr));
+    return URI.create(providerUriStr);
   }
 
   public static KeyProvider createKeyProviderFromUri(final Configuration conf,

@@ -82,6 +82,7 @@ public class RouterWebHDFSContract extends HDFSContract {
           cluster.switchToStandby(ns, NAMENODES[1]);
         }
       }
+      cluster.waitActiveNamespaces();
     } catch (Exception e) {
       cluster = null;
       throw new IOException("Cannot start federated cluster", e);

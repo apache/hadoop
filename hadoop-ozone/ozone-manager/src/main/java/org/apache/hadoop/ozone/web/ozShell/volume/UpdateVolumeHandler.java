@@ -23,14 +23,13 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 import org.apache.hadoop.hdds.client.OzoneQuota;
+import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
-import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
-
-import java.net.URI;
 
 /**
  * Executes update volume calls.
@@ -57,14 +56,11 @@ public class UpdateVolumeHandler extends Handler {
   @Override
   public Void call() throws Exception {
 
-    URI ozoneURI = verifyURI(uri);
-    if (ozoneURI.getPath().isEmpty()) {
-      throw new OzoneClientException(
-          "Volume name is required to update a volume");
-    }
+    OzoneAddress address = new OzoneAddress(uri);
+    address.ensureVolumeAddress();
+    OzoneClient client = address.createClient(createOzoneConfiguration());
 
-    // we need to skip the slash in the URI path
-    String volumeName = ozoneURI.getPath().substring(1);
+    String volumeName = address.getVolumeName();
 
     OzoneVolume volume = client.getObjectStore().getVolume(volumeName);
     if (quota != null && !quota.isEmpty()) {

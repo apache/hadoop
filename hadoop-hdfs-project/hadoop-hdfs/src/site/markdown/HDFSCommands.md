@@ -86,7 +86,7 @@ Usage:
               [-files [-blocks [-locations | -racks | -replicaDetails | -upgradedomains]]]
               [-includeSnapshots] [-showprogress]
               [-storagepolicies] [-maintenance]
-              [-blockId <blk_Id>]
+              [-blockId <blk_Id>] [-replicate]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -106,6 +106,7 @@ Usage:
 | `-storagepolicies` | Print out storage policy summary for the blocks. |
 | `-maintenance` | Print out maintenance state node details. |
 | `-blockId` | Print out information about the block. |
+| `-replicate` | Initiate replication work to make mis-replicated blocks satisfy block placement policy. |
 
 Runs the HDFS filesystem checking utility. See [fsck](./HdfsUserGuide.html#fsck) for more info.
 
@@ -508,6 +509,7 @@ Usage:
 
         hdfs haadmin -transitionToActive <serviceId> [--forceactive]
         hdfs haadmin -transitionToStandby <serviceId>
+        hdfs haadmin -transitionToObserver <serviceId>
         hdfs haadmin -failover [--forcefence] [--forceactive] <serviceId> <serviceId>
         hdfs haadmin -getServiceState <serviceId>
         hdfs haadmin -getAllServiceState
@@ -523,6 +525,7 @@ Usage:
 | `-getAllServiceState` | returns the state of all the NameNodes | |
 | `-transitionToActive` | transition the state of the given NameNode to Active (Warning: No fencing is done) |
 | `-transitionToStandby` | transition the state of the given NameNode to Standby (Warning: No fencing is done) |
+| `-transitionToObserver` | transition the state of the given NameNode to Observer (Warning: No fencing is done) |
 | `-help` [cmd] | Displays help for the given command or all commands if none is specified. |
 
 See [HDFS HA with NFS](./HDFSHighAvailabilityWithNFS.html#Administrative_commands) or [HDFS HA with QJM](./HDFSHighAvailabilityWithQJM.html#Administrative_commands) for more information on this command.

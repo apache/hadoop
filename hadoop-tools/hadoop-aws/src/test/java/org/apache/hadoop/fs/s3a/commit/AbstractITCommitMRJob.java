@@ -56,9 +56,9 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
-import org.apache.hadoop.service.ServiceOperations;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.terminateService;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.*;
 
@@ -88,22 +88,17 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
     conf.setBoolean(JHAdminConfig.MR_HISTORY_CLEANER_ENABLE, false);
     conf.setLong(CommonConfigurationKeys.FS_DU_INTERVAL_KEY, Long.MAX_VALUE);
 
-    hdfs = new MiniDFSClusterService();
-    hdfs.init(conf);
-    hdfs.start();
-    yarn = new MiniMRYarnCluster("ITCommitMRJob", 2);
-    yarn.init(conf);
-    yarn.start();
+    hdfs = deployService(conf, new MiniDFSClusterService());
+    yarn = deployService(conf,
+        new MiniMRYarnCluster("ITCommitMRJob", 2));
   }
 
   @SuppressWarnings("ThrowableNotThrown")
   @AfterClass
   public static void teardownClusters() throws IOException {
     conf = null;
-    ServiceOperations.stopQuietly(yarn);
-    ServiceOperations.stopQuietly(hdfs);
-    hdfs = null;
-    yarn = null;
+    yarn = terminateService(yarn);
+    hdfs = terminateService(hdfs);
   }
 
   public static MiniDFSCluster getHdfs() {

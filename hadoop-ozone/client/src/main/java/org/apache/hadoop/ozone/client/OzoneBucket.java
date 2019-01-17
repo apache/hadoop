@@ -21,7 +21,7 @@ package org.apache.hadoop.ozone.client;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
@@ -30,10 +30,13 @@ import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 /**
@@ -100,6 +103,7 @@ public class OzoneBucket {
    * @param versioning versioning status of the bucket.
    * @param creationTime creation time of the bucket.
    */
+  @SuppressWarnings("parameternumber")
   public OzoneBucket(Configuration conf, ClientProtocol proxy,
                      String volumeName, String bucketName,
                      List<OzoneAcl> acls, StorageType storageType,
@@ -122,6 +126,7 @@ public class OzoneBucket {
   }
 
   @VisibleForTesting
+  @SuppressWarnings("parameternumber")
   OzoneBucket(String volumeName, String name,
       ReplicationFactor defaultReplication,
       ReplicationType defaultReplicationType,
@@ -321,6 +326,77 @@ public class OzoneBucket {
   public void renameKey(String fromKeyName, String toKeyName)
       throws IOException {
     proxy.renameKey(volumeName, name, fromKeyName, toKeyName);
+  }
+
+  /**
+   * Initiate multipart upload for a specified key.
+   * @param keyName
+   * @param type
+   * @param factor
+   * @return OmMultipartInfo
+   * @throws IOException
+   */
+  public OmMultipartInfo initiateMultipartUpload(String keyName,
+                                                 ReplicationType type,
+                                                 ReplicationFactor factor)
+      throws IOException {
+    return  proxy.initiateMultipartUpload(volumeName, name, keyName, type,
+        factor);
+  }
+
+  /**
+   * Initiate multipart upload for a specified key, with default replication
+   * type RATIS and with replication factor THREE.
+   * @param key Name of the key to be created.
+   * @return OmMultipartInfo.
+   * @throws IOException
+   */
+  public OmMultipartInfo initiateMultipartUpload(String key)
+      throws IOException {
+    return initiateMultipartUpload(key, defaultReplicationType,
+        defaultReplication);
+  }
+
+  /**
+   * Create a part key for a multipart upload key.
+   * @param key
+   * @param size
+   * @param partNumber
+   * @param uploadID
+   * @return OzoneOutputStream
+   * @throws IOException
+   */
+  public OzoneOutputStream createMultipartKey(String key, long size,
+                                              int partNumber, String uploadID)
+      throws IOException {
+    return proxy.createMultipartKey(volumeName, name, key, size, partNumber,
+        uploadID);
+  }
+
+  /**
+   * Complete Multipart upload. This will combine all the parts and make the
+   * key visible in ozone.
+   * @param key
+   * @param uploadID
+   * @param partsMap
+   * @return OmMultipartUploadCompleteInfo
+   * @throws IOException
+   */
+  public OmMultipartUploadCompleteInfo completeMultipartUpload(String key,
+      String uploadID, Map<Integer, String> partsMap) throws IOException {
+    return proxy.completeMultipartUpload(volumeName, name, key, uploadID,
+        partsMap);
+  }
+
+  /**
+   * Abort multipart upload request.
+   * @param keyName
+   * @param uploadID
+   * @throws IOException
+   */
+  public void abortMultipartUpload(String keyName, String uploadID) throws
+      IOException {
+    proxy.abortMultipartUpload(volumeName, name, keyName, uploadID);
   }
 
   /**

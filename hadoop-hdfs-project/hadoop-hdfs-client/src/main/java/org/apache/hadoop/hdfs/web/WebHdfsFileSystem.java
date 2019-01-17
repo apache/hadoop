@@ -94,6 +94,7 @@ import org.apache.hadoop.hdfs.HdfsKMSUtil;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -111,7 +112,6 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -119,6 +119,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
+import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.KMSUtil;
 import org.apache.hadoop.util.Progressable;
@@ -173,6 +174,7 @@ public class WebHdfsFileSystem extends FileSystem
   private Set<String> restCsrfMethodsToIgnore;
 
   private DFSOpsCountStatistics storageStatistics;
+  private KeyProvider testProvider;
 
   /**
    * Return the protocol scheme for the FileSystem.
@@ -1309,6 +1311,48 @@ public class WebHdfsFileSystem extends FileSystem
     new FsPathRunner(op, p).run();
   }
 
+  public void enableECPolicy(String policyName) throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.ENABLE_EC_POLICY);
+    final HttpOpParam.Op op = PutOpParam.Op.ENABLEECPOLICY;
+    new FsPathRunner(op, null, new ECPolicyParam(policyName)).run();
+  }
+
+  public void disableECPolicy(String policyName) throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.DISABLE_EC_POLICY);
+    final HttpOpParam.Op op = PutOpParam.Op.DISABLEECPOLICY;
+    new FsPathRunner(op, null, new ECPolicyParam(policyName)).run();
+  }
+
+  public void setErasureCodingPolicy(Path p, String policyName)
+      throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.SET_EC_POLICY);
+    final HttpOpParam.Op op = PutOpParam.Op.SETECPOLICY;
+    new FsPathRunner(op, p, new ECPolicyParam(policyName)).run();
+  }
+
+  public void unsetErasureCodingPolicy(Path p) throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.UNSET_EC_POLICY);
+    final HttpOpParam.Op op = PostOpParam.Op.UNSETECPOLICY;
+    new FsPathRunner(op, p).run();
+  }
+
+  public ErasureCodingPolicy getErasureCodingPolicy(Path p)
+      throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_EC_POLICY);
+    final HttpOpParam.Op op =GetOpParam.Op.GETECPOLICY;
+    return new FsPathResponseRunner<ErasureCodingPolicy>(op, p) {
+      @Override
+      ErasureCodingPolicy decodeResponse(Map<?, ?> json) throws IOException {
+        return JsonUtilClient.toECPolicy((Map<?, ?>) json);
+      }
+    }.run();
+  }
+
   @Override
   public Path createSnapshot(final Path path, final String snapshotName)
       throws IOException {
@@ -1691,6 +1735,16 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   @Override
+  public DelegationTokenIssuer[] getAdditionalTokenIssuers()
+      throws IOException {
+    KeyProvider keyProvider = getKeyProvider();
+    if (keyProvider instanceof DelegationTokenIssuer) {
+      return new DelegationTokenIssuer[] {(DelegationTokenIssuer) keyProvider};
+    }
+    return null;
+  }
+
+  @Override
   public synchronized Token<?> getRenewToken() {
     return delegationToken;
   }
@@ -1723,14 +1777,6 @@ public class WebHdfsFileSystem extends FileSystem
     new FsPathRunner(op, null,
         new TokenArgumentParam(token.encodeToUrlString())
     ).run();
-  }
-
-  @Override
-  public Token<?>[] addDelegationTokens(String renewer,
-      Credentials credentials) throws IOException {
-    Token<?>[] tokens = super.addDelegationTokens(renewer, credentials);
-    return HdfsKMSUtil.addDelegationTokensForKeyProvider(this, renewer,
-        credentials, getUri(), tokens);
   }
 
   public BlockLocation[] getFileBlockLocations(final FileStatus status,
@@ -1947,11 +1993,19 @@ public class WebHdfsFileSystem extends FileSystem
 
   @Override
   public KeyProvider getKeyProvider() throws IOException {
+    if (testProvider != null) {
+      return testProvider;
+    }
     URI keyProviderUri = getKeyProviderUri();
     if (keyProviderUri == null) {
       return null;
     }
     return KMSUtil.createKeyProviderFromUri(getConf(), keyProviderUri);
+  }
+
+  @VisibleForTesting
+  public void setTestProvider(KeyProvider kp) {
+    testProvider = kp;
   }
 
   /**

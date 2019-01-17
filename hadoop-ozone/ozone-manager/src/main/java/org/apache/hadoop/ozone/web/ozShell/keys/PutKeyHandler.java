@@ -20,20 +20,19 @@ package org.apache.hadoop.ozone.web.ozShell.keys;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.net.URI;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.client.OzoneBucket;
-import org.apache.hadoop.ozone.client.OzoneClientException;
+import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 
 import org.apache.commons.codec.digest.DigestUtils;
@@ -71,16 +70,13 @@ public class PutKeyHandler extends Handler {
   @Override
   public Void call() throws Exception {
 
-    URI ozoneURI = verifyURI(uri);
-    Path path = Paths.get(ozoneURI.getPath());
-    if (path.getNameCount() < 3) {
-      throw new OzoneClientException(
-          "volume/bucket/key name required in putKey");
-    }
+    OzoneAddress address = new OzoneAddress(uri);
+    address.ensureKeyAddress();
+    OzoneClient client = address.createClient(createOzoneConfiguration());
 
-    String volumeName = path.getName(0).toString();
-    String bucketName = path.getName(1).toString();
-    String keyName = path.getName(2).toString();
+    String volumeName = address.getVolumeName();
+    String bucketName = address.getBucketName();
+    String keyName = address.getKeyName();
 
     if (isVerbose()) {
       System.out.printf("Volume Name : %s%n", volumeName);
@@ -111,8 +107,9 @@ public class PutKeyHandler extends Handler {
         .createKey(keyName, dataFile.length(), replicationType,
             replicationFactor);
     FileInputStream fileInputStream = new FileInputStream(dataFile);
-    IOUtils.copyBytes(fileInputStream, outputStream,
-        conf.getInt(OZONE_SCM_CHUNK_SIZE_KEY, OZONE_SCM_CHUNK_SIZE_DEFAULT));
+    IOUtils.copyBytes(fileInputStream, outputStream, (int) conf
+        .getStorageSize(OZONE_SCM_CHUNK_SIZE_KEY, OZONE_SCM_CHUNK_SIZE_DEFAULT,
+            StorageUnit.BYTES));
     outputStream.close();
     fileInputStream.close();
     return null;

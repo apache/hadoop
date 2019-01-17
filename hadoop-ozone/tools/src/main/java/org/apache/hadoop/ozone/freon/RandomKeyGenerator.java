@@ -62,7 +62,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.annotations.VisibleForTesting;
 import static java.lang.Math.min;
-import org.apache.commons.cli.CommandLine;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.time.DurationFormatUtils;
@@ -185,6 +184,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
   private ArrayList<Histogram> histograms = new ArrayList<>();
 
   private OzoneConfiguration ozoneConfiguration;
+  private ProgressBar progressbar;
 
   RandomKeyGenerator() {
   }
@@ -251,26 +251,36 @@ public final class RandomKeyGenerator implements Callable<Void> {
       validator.start();
       LOG.info("Data validation is enabled.");
     }
-    Thread progressbar = getProgressBarThread();
+
+    Supplier<Long> currentValue;
+    long maxValue;
+
+    currentValue = () -> numberOfKeysAdded.get();
+    maxValue = numOfVolumes *
+            numOfBuckets *
+            numOfKeys;
+
+    progressbar = new ProgressBar(System.out, maxValue, currentValue);
+
     LOG.info("Starting progress bar Thread.");
+
     progressbar.start();
+
     processor.shutdown();
     processor.awaitTermination(Integer.MAX_VALUE, TimeUnit.MILLISECONDS);
     completed = true;
-    progressbar.join();
-    if (validateWrites) {
+
+    if (exception) {
+      progressbar.terminate();
+    } else {
+      progressbar.shutdown();
+    }
+
+    if (validator != null) {
       validator.join();
     }
     ozoneClient.close();
     return null;
-  }
-
-  private void parseOptions(CommandLine cmdLine) {
-    if (keySize < 1024) {
-      throw new IllegalArgumentException(
-          "keySize can not be less than 1024 bytes");
-    }
-
   }
 
   /**
@@ -280,22 +290,6 @@ public final class RandomKeyGenerator implements Callable<Void> {
     Runtime.getRuntime().addShutdownHook(
         new Thread(() -> printStats(System.out)));
   }
-
-  private Thread getProgressBarThread() {
-    Supplier<Long> currentValue;
-    long maxValue;
-
-    currentValue = () -> numberOfKeysAdded.get();
-    maxValue = numOfVolumes *
-        numOfBuckets *
-        numOfKeys;
-
-    Thread progressBarThread = new Thread(
-        new ProgressBar(System.out, currentValue, maxValue));
-    progressBarThread.setName("ProgressBar");
-    return progressBarThread;
-  }
-
   /**
    * Prints stats of {@link Freon} run to the PrintStream.
    *
@@ -893,73 +887,6 @@ public final class RandomKeyGenerator implements Callable<Void> {
 
     public String[] getTenQuantileKeyWriteTime() {
       return tenQuantileKeyWriteTime;
-    }
-  }
-
-  private class ProgressBar implements Runnable {
-
-    private static final long REFRESH_INTERVAL = 1000L;
-
-    private PrintStream stream;
-    private Supplier<Long> currentValue;
-    private long maxValue;
-
-    ProgressBar(PrintStream stream, Supplier<Long> currentValue,
-        long maxValue) {
-      this.stream = stream;
-      this.currentValue = currentValue;
-      this.maxValue = maxValue;
-    }
-
-    @Override
-    public void run() {
-      try {
-        stream.println();
-        long value;
-        while ((value = currentValue.get()) < maxValue) {
-          print(value);
-          if (completed) {
-            break;
-          }
-          Thread.sleep(REFRESH_INTERVAL);
-        }
-        if (exception) {
-          stream.println();
-          stream.println("Incomplete termination, " +
-              "check log for exception.");
-        } else {
-          print(maxValue);
-        }
-        stream.println();
-      } catch (InterruptedException e) {
-      }
-    }
-
-    /**
-     * Given current value prints the progress bar.
-     *
-     * @param value
-     */
-    private void print(long value) {
-      stream.print('\r');
-      double percent = 100.0 * value / maxValue;
-      StringBuilder sb = new StringBuilder();
-      sb.append(" " + String.format("%.2f", percent) + "% |");
-
-      for (int i = 0; i <= percent; i++) {
-        sb.append('█');
-      }
-      for (int j = 0; j < 100 - percent; j++) {
-        sb.append(' ');
-      }
-      sb.append("|  ");
-      sb.append(value + "/" + maxValue);
-      long timeInSec = TimeUnit.SECONDS.convert(
-          System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
-      String timeToPrint = String.format("%d:%02d:%02d", timeInSec / 3600,
-          (timeInSec % 3600) / 60, timeInSec % 60);
-      sb.append(" Time: " + timeToPrint);
-      stream.print(sb);
     }
   }
 

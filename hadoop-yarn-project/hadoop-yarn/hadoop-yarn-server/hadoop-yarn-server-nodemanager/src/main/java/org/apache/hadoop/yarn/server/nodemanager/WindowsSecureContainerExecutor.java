@@ -663,8 +663,8 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
 
     Path appStorageDir = getWorkingDir(localDirs, user, appId);
 
-    String tokenFn = String.format(
-        ContainerLocalizer.TOKEN_FILE_NAME_FMT, locId);
+    String tokenFn = String.format(ContainerExecutor.TOKEN_FILE_NAME_FMT,
+        locId);
     Path tokenDst = new Path(appStorageDir, tokenFn);
     copyFile(nmPrivateContainerTokensPath, tokenDst, user);
 
@@ -702,7 +702,7 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
     command.addAll(ContainerLocalizer.getJavaOpts(getConf()));
 
     ContainerLocalizer.buildMainArgs(command, user, appId, locId, nmAddr,
-        localDirs, super.getConf());
+        tokenFn, localDirs, super.getConf());
 
     String cmdLine = StringUtils.join(command, " ");
 

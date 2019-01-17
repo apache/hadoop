@@ -55,7 +55,13 @@ The Offline Image Viewer provides several output processors:
    delimiter. The default delimiter is \t, though this may be changed via
    the -delimiter argument.
 
-5. ReverseXML (experimental): This is the opposite of the XML processor;
+5. DetectCorruption (experimental): Detect potential corruption of the image
+   by selectively loading parts of it and actively searching for
+   inconsistencies. Outputs a summary of the found corruptions
+   in a delimited format. Note that the check is not exhaustive,
+   and only catches missing nodes during the namespace reconstruction.
+
+6. ReverseXML (experimental): This is the opposite of the XML processor;
    it reconstructs an fsimage from an XML file. This processor makes it easy to
    create fsimages for testing, and manually edit fsimages when there is
    corruption.
@@ -197,6 +203,30 @@ If not set, Delimited processor will construct the namespace in memory before ou
        /dir0/file1	1	2017-02-13 10:39	2017-02-13 10:39	134217728	1	1	0	0	-rw-r--r--	root	supergroup
        /dir0/file2	1	2017-02-13 10:39	2017-02-13 10:39	134217728	1	1	0	0	-rw-r--r--	root	supergroup
 
+### DetectCorruption Processor
+
+DetectCorruption processor generates a text representation of the errors of the fsimage, if there's any. It displays the following cases:
+
+1.  an inode is mentioned in the fsimage but no associated metadata is found (CorruptNode)
+
+2.  an inode has at least one corrupt children (MissingChildren)
+
+The delimiter string can be provided with the -delimiter option, and the processor can cache intermediate result using the -t option.
+
+        bash$ bin/hdfs oiv -p DetectCorruption -delimiter delimiterString -t temporaryDir -i fsimage -o output
+
+The output result of this processor is empty if no corruption is found, otherwise the found entries in the following format:
+
+        CorruptionType	Id	IsSnapshot	ParentPath	ParentId	Name	NodeType	CorruptChildren
+        MissingChild	16385	false	/	Missing		Node	1
+        MissingChild	16386	false	/	16385	dir0	Node	2
+        CorruptNode	16388	true		16386		Unknown	0
+        CorruptNode	16389	true		16386		Unknown	0
+        CorruptNodeWithMissingChild	16391	true		16385		Unknown	1
+        CorruptNode	16394	true		16391		Unknown	0
+
+The column CorruptionType can be MissingChild, CorruptNode or the combination of these two. IsSnapshot shows whether the node is kept in a snapshot or not. To the NodeType column either Node, Ref or Unknown can be written depending whether the node is an inode, a reference, or is corrupted and thus unknown. CorruptChildren contains the number of the corrupt children the inode may have.
+
 Options
 -------
 
@@ -204,12 +234,12 @@ Options
 |:---- |:---- |
 | `-i`\|`--inputFile` *input file* | Specify the input fsimage file (or XML file, if ReverseXML processor is used) to process. Required. |
 | `-o`\|`--outputFile` *output file* | Specify the output filename, if the specified output processor generates one. If the specified file already exists, it is silently overwritten. (output to stdout by default) If the input file is an XML file, it also creates an &lt;outputFile&gt;.md5. |
-| `-p`\|`--processor` *processor* | Specify the image processor to apply against the image file. Currently valid options are `Web` (default), `XML`, `Delimited`, `FileDistribution` and `ReverseXML`. |
+| `-p`\|`--processor` *processor* | Specify the image processor to apply against the image file. Currently valid options are `Web` (default), `XML`, `Delimited`, `DetectCorruption`, `FileDistribution` and `ReverseXML`. |
 | `-addr` *address* | Specify the address(host:port) to listen. (localhost:5978 by default). This option is used with Web processor. |
 | `-maxSize` *size* | Specify the range [0, maxSize] of file sizes to be analyzed in bytes (128GB by default). This option is used with FileDistribution processor. |
 | `-step` *size* | Specify the granularity of the distribution in bytes (2MB by default). This option is used with FileDistribution processor. |
 | `-format` | Format the output result in a human-readable fashion rather than a number of bytes. (false by default). This option is used with FileDistribution processor. |
-| `-delimiter` *arg* | Delimiting string to use with Delimited processor. |
+| `-delimiter` *arg* | Delimiting string to use with Delimited or DetectCorruption processor. |
 | `-t`\|`--temp` *temporary dir* | Use temporary dir to cache intermediate result to generate Delimited outputs. If not set, Delimited processor constructs the namespace in memory before outputting text. |
 | `-h`\|`--help` | Display the tool usage and help information and exit. |
 

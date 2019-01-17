@@ -18,7 +18,8 @@ package org.apache.hadoop.ozone.om;
 
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.HddsConfigKeys;
+import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
@@ -31,10 +32,12 @@ import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.hdds.scm.server.SCMStorage;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.KeyArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
@@ -57,15 +60,17 @@ import org.apache.hadoop.ozone.web.response.ListKeys;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.db.Table;
+import org.apache.hadoop.utils.db.Table.KeyValue;
 import org.apache.hadoop.utils.db.TableIterator;
-import org.junit.AfterClass;
+import org.apache.ratis.util.LifeCycle;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-
+import org.junit.rules.Timeout;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -82,6 +87,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
@@ -92,17 +98,20 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys
  * Test Ozone Manager operation in distributed handler scenario.
  */
 public class TestOzoneManager {
-  private static MiniOzoneCluster cluster = null;
-  private static StorageHandler storageHandler;
-  private static UserArgs userArgs;
-  private static OMMetrics omMetrics;
-  private static OzoneConfiguration conf;
-  private static String clusterId;
-  private static String scmId;
-  private static String omId;
+  private MiniOzoneCluster cluster = null;
+  private StorageHandler storageHandler;
+  private UserArgs userArgs;
+  private OMMetrics omMetrics;
+  private OzoneConfiguration conf;
+  private String clusterId;
+  private String scmId;
+  private String omId;
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
+
+  @Rule
+  public Timeout timeout = new Timeout(60000);
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -111,12 +120,13 @@ public class TestOzoneManager {
    *
    * @throws IOException
    */
-  @BeforeClass
-  public static void init() throws Exception {
+  @Before
+  public void init() throws Exception {
     conf = new OzoneConfiguration();
     clusterId = UUID.randomUUID().toString();
     scmId = UUID.randomUUID().toString();
     omId = UUID.randomUUID().toString();
+    conf.setBoolean(OZONE_ACL_ENABLED, true);
     conf.setInt(OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS, 2);
     cluster =  MiniOzoneCluster.newBuilder(conf)
         .setClusterId(clusterId)
@@ -133,15 +143,15 @@ public class TestOzoneManager {
   /**
    * Shutdown MiniDFSCluster.
    */
-  @AfterClass
-  public static void shutdown() {
+  @After
+  public void shutdown() {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
   // Create a volume and test its attribute after creating them
-  @Test(timeout = 60000)
+  @Test
   public void testCreateVolume() throws IOException, OzoneException {
     long volumeCreateFailCount = omMetrics.getNumVolumeCreateFails();
     String userName = "user" + RandomStringUtils.randomNumeric(5);
@@ -162,7 +172,7 @@ public class TestOzoneManager {
   }
 
   // Create a volume and modify the volume owner and then test its attributes
-  @Test(timeout = 60000)
+  @Test
   public void testChangeVolumeOwner() throws IOException, OzoneException {
     long volumeCreateFailCount = omMetrics.getNumVolumeCreateFails();
     long volumeInfoFailCount = omMetrics.getNumVolumeInfoFails();
@@ -192,7 +202,7 @@ public class TestOzoneManager {
   }
 
   // Create a volume and modify the volume owner and then test its attributes
-  @Test(timeout = 60000)
+  @Test
   public void testChangeVolumeQuota() throws IOException, OzoneException {
     long numVolumeCreateFail = omMetrics.getNumVolumeCreateFails();
     long numVolumeInfoFail = omMetrics.getNumVolumeInfoFails();
@@ -238,7 +248,7 @@ public class TestOzoneManager {
   }
 
   // Create a volume and then delete it and then check for deletion
-  @Test(timeout = 60000)
+  @Test
   public void testDeleteVolume() throws IOException, OzoneException {
     long volumeCreateFailCount = omMetrics.getNumVolumeCreateFails();
     String userName = "user" + RandomStringUtils.randomNumeric(5);
@@ -291,8 +301,8 @@ public class TestOzoneManager {
     OMMetadataManager metadataManager =
         cluster.getOzoneManager().getMetadataManager();
 
-    byte[] userKey = metadataManager.getUserKey(userName);
-    byte[] volumes = metadataManager.getUserTable().get(userKey);
+    String userKey = metadataManager.getUserKey(userName);
+    VolumeList volumes = metadataManager.getUserTable().get(userKey);
 
     //that was the last volume of the user, shouldn't be any record here
     Assert.assertNull(volumes);
@@ -302,7 +312,7 @@ public class TestOzoneManager {
 
   // Create a volume and a bucket inside the volume,
   // then delete it and then check for deletion failure
-  @Test(timeout = 60000)
+  @Test
   public void testFailedDeleteVolume() throws IOException, OzoneException {
     long numVolumeCreateFails = omMetrics.getNumVolumeCreateFails();
     String userName = "user" + RandomStringUtils.randomNumeric(5);
@@ -339,7 +349,7 @@ public class TestOzoneManager {
   }
 
   // Create a volume and test Volume access for a different user
-  @Test(timeout = 60000)
+  @Test
   public void testAccessVolume() throws IOException, OzoneException {
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
@@ -383,7 +393,7 @@ public class TestOzoneManager {
     Assert.assertEquals(0, omMetrics.getNumVolumeCreateFails());
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testCreateBucket() throws IOException, OzoneException {
     long numVolumeCreateFail = omMetrics.getNumVolumeCreateFails();
     long numBucketCreateFail = omMetrics.getNumBucketCreateFails();
@@ -414,7 +424,7 @@ public class TestOzoneManager {
         omMetrics.getNumBucketInfoFails());
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testDeleteBucket() throws IOException, OzoneException {
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
@@ -437,7 +447,7 @@ public class TestOzoneManager {
     storageHandler.getBucketInfo(getBucketArgs);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testDeleteNonExistingBucket() throws IOException, OzoneException {
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
@@ -462,7 +472,7 @@ public class TestOzoneManager {
   }
 
 
-  @Test(timeout = 60000)
+  @Test
   public void testDeleteNonEmptyBucket() throws IOException, OzoneException {
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
@@ -651,8 +661,7 @@ public class TestOzoneManager {
     // Make sure the deleted key has been moved to the deleted table.
     OMMetadataManager manager = cluster.getOzoneManager().
         getMetadataManager();
-
-    try(TableIterator<Table.KeyValue> iter =
+    try (TableIterator<String, ? extends KeyValue<String, OmKeyInfo>>  iter =
             manager.getDeletedTable().iterator()) {
       iter.seekToFirst();
       Table.KeyValue kv = iter.next();
@@ -785,7 +794,7 @@ public class TestOzoneManager {
         omMetrics.getNumKeyRenameFails());
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testListBuckets() throws IOException, OzoneException {
     ListBuckets result = null;
     ListArgs listBucketArgs = null;
@@ -1323,7 +1332,7 @@ public class TestOzoneManager {
     final String path =
         GenericTestUtils.getTempPath(UUID.randomUUID().toString());
     Path metaDirPath = Paths.get(path, "om-meta");
-    config.set(OzoneConfigKeys.OZONE_METADATA_DIRS, metaDirPath.toString());
+    config.set(HddsConfigKeys.OZONE_METADATA_DIRS, metaDirPath.toString());
     config.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
     config.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
     config.set(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY,
@@ -1364,5 +1373,26 @@ public class TestOzoneManager {
         scmInfo.getPort(ServicePort.Type.RPC));
     Assert.assertEquals(NetUtils.createSocketAddr(
         conf.get(OZONE_SCM_CLIENT_ADDRESS_KEY)), scmAddress);
+  }
+
+  /**
+   * Test that OM Ratis server is started only when OZONE_OM_RATIS_ENABLE_KEY is
+   * set to true.
+   */
+  @Test
+  public void testRatsiServerOnOmInitialization() throws IOException {
+    // OM Ratis server should not be started when OZONE_OM_RATIS_ENABLE_KEY
+    // is not set to true
+    Assert.assertNull("OM Ratis server started though OM Ratis is disabled.",
+        cluster.getOzoneManager().getOmRatisServerState());
+
+    // Enable OM Ratis and restart OM
+    conf.setBoolean(OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY, true);
+    cluster.restartOzoneManager();
+
+    // On enabling OM Ratis, the Ratis server should be started
+    Assert.assertEquals("OM Ratis server did not start",
+        LifeCycle.State.RUNNING,
+        cluster.getOzoneManager().getOmRatisServerState());
   }
 }

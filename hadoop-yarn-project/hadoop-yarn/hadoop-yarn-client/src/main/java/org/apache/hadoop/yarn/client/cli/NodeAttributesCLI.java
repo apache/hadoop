@@ -205,6 +205,9 @@ public class NodeAttributesCLI extends Configured implements Tool {
       // print admin command detail
       printUsage(true, handler);
       return exitCode;
+    } catch (YarnException e) {
+      errOut.println(e.toString());
+      return exitCode;
     } catch (Exception e) {
       errOut.println(e.toString());
       printUsage(true, handler);

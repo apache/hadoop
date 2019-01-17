@@ -734,7 +734,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Set RS-6-3-1024k erasure coding policy on /ecdir</expected-output>
+          <expected-output>Set default erasure coding policy on /ecdir</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -752,11 +752,11 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Set RS-6-3-1024k erasure coding policy on /ecdir</expected-output>
+          <expected-output>Set default erasure coding policy on /ecdir</expected-output>
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Warning: setting erasure coding policy on a non-empty directory will not automatically convert existing files to RS-6-3-1024k erasure coding policy</expected-output>
+          <expected-output>Warning: setting erasure coding policy on a non-empty directory will not automatically convert existing files to default erasure coding policy</expected-output>
         </comparator>
       </comparators>
     </test>

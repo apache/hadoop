@@ -83,8 +83,7 @@ public class TestXceiverClientMetrics {
         .allocateContainer(clientManager.getType(), clientManager.getFactor(),
             containerOwner);
     XceiverClientSpi client = clientManager
-        .acquireClient(container.getPipeline(),
-            container.getContainerInfo().getContainerID());
+        .acquireClient(container.getPipeline());
 
     ContainerCommandRequestProto request = ContainerTestHelper
         .getCreateContainerRequest(
@@ -120,7 +119,8 @@ public class TestXceiverClientMetrics {
             smallFileRequest = ContainerTestHelper.getWriteSmallFileRequest(
                 client.getPipeline(), blockID, 1024);
             CompletableFuture<ContainerProtos.ContainerCommandResponseProto>
-                response = client.sendCommandAsync(smallFileRequest);
+                response =
+                client.sendCommandAsync(smallFileRequest).getResponse();
             computeResults.add(response);
           }
 

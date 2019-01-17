@@ -22,8 +22,20 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 
 public class ContainerStopMonitoringEvent extends ContainersMonitorEvent {
 
+  private final boolean forReInit;
+
   public ContainerStopMonitoringEvent(ContainerId containerId) {
     super(containerId, ContainersMonitorEventType.STOP_MONITORING_CONTAINER);
+    forReInit = false;
   }
 
+  public ContainerStopMonitoringEvent(ContainerId containerId,
+      boolean forReInit) {
+    super(containerId, ContainersMonitorEventType.STOP_MONITORING_CONTAINER);
+    this.forReInit = forReInit;
+  }
+
+  public boolean isForReInit() {
+    return forReInit;
+  }
 }

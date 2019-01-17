@@ -21,13 +21,13 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerData;
+    .ContainerDataProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ReadContainerResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -39,11 +39,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
-
-import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState
-    .ALLOCATED;
-import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState
-    .OPEN;
 
 /**
  * This class provides the client-facing APIs of container operations.
@@ -83,9 +78,7 @@ public class ContainerOperationClient implements ScmClient {
     containerSizeB = size;
   }
 
-  /**
-   * @inheritDoc
-   */
+
   @Override
   public ContainerWithPipeline createContainer(String owner)
       throws IOException {
@@ -96,17 +89,12 @@ public class ContainerOperationClient implements ScmClient {
               xceiverClientManager.getType(),
               xceiverClientManager.getFactor(), owner);
       Pipeline pipeline = containerWithPipeline.getPipeline();
-      client = xceiverClientManager.acquireClient(pipeline,
-          containerWithPipeline.getContainerInfo().getContainerID());
+      client = xceiverClientManager.acquireClient(pipeline);
 
-      // Allocated State means that SCM has allocated this pipeline in its
-      // namespace. The client needs to create the pipeline on the machines
-      // which was choosen by the SCM.
-      Preconditions.checkState(pipeline.getLifeCycleState() == ALLOCATED ||
-          pipeline.getLifeCycleState() == OPEN, "Unexpected pipeline state");
-      if (pipeline.getLifeCycleState() == ALLOCATED) {
-        createPipeline(client, pipeline);
-      }
+      Preconditions.checkState(pipeline.isOpen(), String
+          .format("Unexpected state=%s for pipeline=%s, expected state=%s",
+              pipeline.getPipelineState(), pipeline.getId(),
+              Pipeline.PipelineState.OPEN));
       createContainer(client,
           containerWithPipeline.getContainerInfo().getContainerID());
       return containerWithPipeline;
@@ -127,24 +115,13 @@ public class ContainerOperationClient implements ScmClient {
   public void createContainer(XceiverClientSpi client,
       long containerId) throws IOException {
     String traceID = UUID.randomUUID().toString();
-    storageContainerLocationClient.notifyObjectStageChange(
-        ObjectStageChangeRequestProto.Type.container,
-        containerId,
-        ObjectStageChangeRequestProto.Op.create,
-        ObjectStageChangeRequestProto.Stage.begin);
     ContainerProtocolCalls.createContainer(client, containerId, traceID);
-    storageContainerLocationClient.notifyObjectStageChange(
-        ObjectStageChangeRequestProto.Type.container,
-        containerId,
-        ObjectStageChangeRequestProto.Op.create,
-        ObjectStageChangeRequestProto.Stage.complete);
 
     // Let us log this info after we let SCM know that we have completed the
     // creation state.
     if (LOG.isDebugEnabled()) {
       LOG.debug("Created container " + containerId
-          + " leader:" + client.getPipeline().getLeader()
-          + " machines:" + client.getPipeline().getMachines());
+          + " machines:" + client.getPipeline().getNodes());
     }
   }
 
@@ -180,7 +157,8 @@ public class ContainerOperationClient implements ScmClient {
     //    ObjectStageChangeRequestProto.Op.create,
     //    ObjectStageChangeRequestProto.Stage.begin);
 
-    client.createPipeline();
+    // client.createPipeline();
+    // TODO: Use PipelineManager to createPipeline
 
     //storageContainerLocationClient.notifyObjectStageChange(
     //    ObjectStageChangeRequestProto.Type.pipeline,
@@ -194,9 +172,6 @@ public class ContainerOperationClient implements ScmClient {
         pipeline.toString());
   }
 
-  /**
-   * @inheritDoc
-   */
   @Override
   public ContainerWithPipeline createContainer(HddsProtos.ReplicationType type,
       HddsProtos.ReplicationFactor factor, String owner) throws IOException {
@@ -207,18 +182,10 @@ public class ContainerOperationClient implements ScmClient {
           storageContainerLocationClient.allocateContainer(type, factor,
               owner);
       Pipeline pipeline = containerWithPipeline.getPipeline();
-      client = xceiverClientManager.acquireClient(pipeline,
-          containerWithPipeline.getContainerInfo().getContainerID());
+      client = xceiverClientManager.acquireClient(pipeline);
 
-      // Allocated State means that SCM has allocated this pipeline in its
-      // namespace. The client needs to create the pipeline on the machines
-      // which was choosen by the SCM.
-      if (pipeline.getLifeCycleState() == ALLOCATED) {
-        createPipeline(client, pipeline);
-      }
       // connect to pipeline leader and allocate container on leader datanode.
-      client = xceiverClientManager.acquireClient(pipeline,
-          containerWithPipeline.getContainerInfo().getContainerID());
+      client = xceiverClientManager.acquireClient(pipeline);
       createContainer(client,
           containerWithPipeline.getContainerInfo().getContainerID());
       return containerWithPipeline;
@@ -258,6 +225,17 @@ public class ContainerOperationClient implements ScmClient {
   }
 
   @Override
+  public List<Pipeline> listPipelines() throws IOException {
+    return storageContainerLocationClient.listPipelines();
+  }
+
+  @Override
+  public void closePipeline(HddsProtos.PipelineID pipelineID)
+      throws IOException {
+    storageContainerLocationClient.closePipeline(pipelineID);
+  }
+
+  @Override
   public void close() {
     try {
       xceiverClientManager.close();
@@ -279,17 +257,15 @@ public class ContainerOperationClient implements ScmClient {
       boolean force) throws IOException {
     XceiverClientSpi client = null;
     try {
-      client = xceiverClientManager.acquireClient(pipeline, containerId);
+      client = xceiverClientManager.acquireClient(pipeline);
       String traceID = UUID.randomUUID().toString();
       ContainerProtocolCalls
           .deleteContainer(client, containerId, force, traceID);
       storageContainerLocationClient
           .deleteContainer(containerId);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Deleted container {}, leader: {}, machines: {} ",
-            containerId,
-            pipeline.getLeader(),
-            pipeline.getMachines());
+        LOG.debug("Deleted container {}, machines: {} ", containerId,
+            pipeline.getNodes());
       }
     } finally {
       if (client != null) {
@@ -311,9 +287,6 @@ public class ContainerOperationClient implements ScmClient {
     deleteContainer(containerID, info.getPipeline(), force);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public List<ContainerInfo> listContainer(long startContainerID,
       int count) throws IOException {
@@ -330,19 +303,17 @@ public class ContainerOperationClient implements ScmClient {
    * @throws IOException
    */
   @Override
-  public ContainerData readContainer(long containerID,
+  public ContainerDataProto readContainer(long containerID,
       Pipeline pipeline) throws IOException {
     XceiverClientSpi client = null;
     try {
-      client = xceiverClientManager.acquireClient(pipeline, containerID);
+      client = xceiverClientManager.acquireClient(pipeline);
       String traceID = UUID.randomUUID().toString();
       ReadContainerResponseProto response =
           ContainerProtocolCalls.readContainer(client, containerID, traceID);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Read container {}, leader: {}, machines: {} ",
-            containerID,
-            pipeline.getLeader(),
-            pipeline.getMachines());
+        LOG.debug("Read container {}, machines: {} ", containerID,
+            pipeline.getNodes());
       }
       return response.getContainerData();
     } finally {
@@ -360,7 +331,7 @@ public class ContainerOperationClient implements ScmClient {
    * @throws IOException
    */
   @Override
-  public ContainerData readContainer(long containerID) throws IOException {
+  public ContainerDataProto readContainer(long containerID) throws IOException {
     ContainerWithPipeline info = getContainerWithPipeline(containerID);
     return readContainer(containerID, info.getPipeline());
   }
@@ -421,7 +392,7 @@ public class ContainerOperationClient implements ScmClient {
       For now, take the #2 way.
        */
       // Actually close the container on Datanode
-      client = xceiverClientManager.acquireClient(pipeline, containerId);
+      client = xceiverClientManager.acquireClient(pipeline);
       String traceID = UUID.randomUUID().toString();
 
       storageContainerLocationClient.notifyObjectStageChange(
@@ -472,5 +443,25 @@ public class ContainerOperationClient implements ScmClient {
       throw new IOException("Container size unknown!");
     }
     return size;
+  }
+
+  /**
+   * Check if SCM is in chill mode.
+   *
+   * @return Returns true if SCM is in chill mode else returns false.
+   * @throws IOException
+   */
+  public boolean inChillMode() throws IOException {
+    return storageContainerLocationClient.inChillMode();
+  }
+
+  /**
+   * Force SCM out of chill mode.
+   *
+   * @return returns true if operation is successful.
+   * @throws IOException
+   */
+  public boolean forceExitChillMode() throws IOException {
+    return storageContainerLocationClient.forceExitChillMode();
   }
 }

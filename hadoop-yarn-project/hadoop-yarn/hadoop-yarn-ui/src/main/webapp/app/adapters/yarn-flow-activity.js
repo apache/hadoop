@@ -25,6 +25,10 @@ export default AbstractAdapter.extend({
   serverName: "ATS",
 
   pathForType(/*modelName*/) {
+    var clusterId = this.get("env.app.clusterId");
+    if (clusterId) {
+      return `clusters/${clusterId}/flows`;
+    }
     return 'flows'; // move to some common place, return path by modelname.
   },
 });

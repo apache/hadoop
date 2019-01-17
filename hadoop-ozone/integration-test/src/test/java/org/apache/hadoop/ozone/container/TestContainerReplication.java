@@ -36,7 +36,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .DatanodeBlockID;
 import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
@@ -123,7 +123,7 @@ public class TestContainerReplication {
     cluster.getStorageContainerManager().getScmNodeManager()
         .addDatanodeCommand(destinationDatanode.getDatanodeDetails().getUuid(),
             new ReplicateContainerCommand(containerId,
-                sourcePipelines.getMachines()));
+                sourcePipelines.getNodes()));
 
     Thread.sleep(3000);
 
@@ -163,7 +163,7 @@ public class TestContainerReplication {
   private HddsDatanodeService chooseDatanodeWithoutContainer(Pipeline pipeline,
       List<HddsDatanodeService> dataNodes) {
     for (HddsDatanodeService datanode : dataNodes) {
-      if (!pipeline.getMachines().contains(datanode.getDatanodeDetails())) {
+      if (!pipeline.getNodes().contains(datanode.getDatanodeDetails())) {
         return datanode;
       }
     }

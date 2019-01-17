@@ -20,6 +20,9 @@ import com.google.common.base.Preconditions;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ListPipelineRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ListPipelineResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ClosePipelineRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ForceExitChillModeRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ForceExitChillModeResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerWithPipelineRequestProto;
@@ -28,8 +31,8 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolPro
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.InChillModeResponseProto;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
@@ -181,7 +184,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
       SCMListContainerResponseProto response =
           rpcProxy.listContainer(NULL_RPC_CONTROLLER, request);
       List<ContainerInfo> containerList = new ArrayList<>();
-      for (HddsProtos.SCMContainerInfo containerInfoProto : response
+      for (HddsProtos.ContainerInfoProto containerInfoProto : response
           .getContainersList()) {
         containerList.add(ContainerInfo.fromProtobuf(containerInfoProto));
       }
@@ -292,13 +295,45 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
           PipelineResponseProto.Error.success) {
         Preconditions.checkState(response.hasPipeline(), "With success, " +
             "must come a pipeline");
-        return Pipeline.getFromProtoBuf(response.getPipeline());
+        return Pipeline.getFromProtobuf(response.getPipeline());
       } else {
         String errorMessage = String.format("create replication pipeline " +
                 "failed. code : %s Message: %s", response.getErrorCode(),
             response.hasErrorMessage() ? response.getErrorMessage() : "");
         throw new IOException(errorMessage);
       }
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public List<Pipeline> listPipelines() throws IOException {
+    try {
+      ListPipelineRequestProto request = ListPipelineRequestProto
+          .newBuilder().build();
+      ListPipelineResponseProto response = rpcProxy.listPipelines(
+          NULL_RPC_CONTROLLER, request);
+      List<Pipeline> list = new ArrayList<>();
+      for (HddsProtos.Pipeline pipeline : response.getPipelinesList()) {
+        Pipeline fromProtobuf = Pipeline.getFromProtobuf(pipeline);
+        list.add(fromProtobuf);
+      }
+      return list;
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void closePipeline(HddsProtos.PipelineID pipelineID)
+      throws IOException {
+    try {
+      ClosePipelineRequestProto request =
+          ClosePipelineRequestProto.newBuilder()
+          .setPipelineID(pipelineID)
+          .build();
+      rpcProxy.closePipeline(NULL_RPC_CONTROLLER, request);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

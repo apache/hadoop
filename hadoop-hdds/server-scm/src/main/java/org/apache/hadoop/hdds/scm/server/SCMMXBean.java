@@ -59,4 +59,9 @@ public interface SCMMXBean extends ServiceRuntimeInfo {
    * @return String
    */
   double getChillModeCurrentContainerThreshold();
+
+  /**
+   * Returns the container count in all states.
+   */
+  Map<String, Integer> getContainerStateCount();
 }

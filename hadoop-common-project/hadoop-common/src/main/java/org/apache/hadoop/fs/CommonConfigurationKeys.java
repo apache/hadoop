@@ -309,7 +309,7 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
     "dr.who";
 
   /**
-   * User->groups static mapping to override the groups lookup
+   * User{@literal ->}groups static mapping to override the groups lookup
    */
   public static final String HADOOP_USER_GROUP_STATIC_OVERRIDES = 
       "hadoop.user.group.static.mapping.overrides";

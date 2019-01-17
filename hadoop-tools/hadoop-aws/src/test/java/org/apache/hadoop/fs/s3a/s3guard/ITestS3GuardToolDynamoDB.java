@@ -126,7 +126,8 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
 
     String[] argsR = new String[]{
         cmdR.getName(),
-        "-tag", tagMapToStringParams(tagMap)
+        "-tag", tagMapToStringParams(tagMap),
+        getFileSystem().getBucket()
     };
 
     // run

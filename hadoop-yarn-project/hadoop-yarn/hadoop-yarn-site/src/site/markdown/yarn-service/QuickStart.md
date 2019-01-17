@@ -73,6 +73,7 @@ Refer to [Yarn Commands](../YarnCommands.html) for the full list of commands and
 yarn app -launch ${SERVICE_NAME} ${PATH_TO_SERVICE_DEF_FILE}
 ```
 Params:
+
 - SERVICE_NAME: The name of the service. Note that this needs to be unique across running services for the current user.
 - PATH_TO_SERVICE_DEF: The path to the service definition file in JSON format.
 

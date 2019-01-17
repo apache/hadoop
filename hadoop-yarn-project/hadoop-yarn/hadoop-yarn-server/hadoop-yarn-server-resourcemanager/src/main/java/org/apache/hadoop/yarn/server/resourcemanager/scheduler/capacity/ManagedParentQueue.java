@@ -62,12 +62,10 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
 
     leafQueueTemplate = initializeLeafQueueConfigs().build();
 
-    StringBuffer queueInfo = new StringBuffer();
-    queueInfo.append("Created Managed Parent Queue: ").append(queueName).append(
-        "]\nwith capacity: [").append(super.getCapacity()).append(
-        "]\nwith max capacity: [").append(super.getMaximumCapacity()).append(
-        "].");
-    LOG.info(queueInfo.toString());
+    LOG.info(
+        "Created Managed Parent Queue: [{}] with capacity: [{}]"
+            + " with max capacity: [{}]",
+        queueName, super.getCapacity(), super.getMaximumCapacity());
 
     initializeQueueManagementPolicy();
   }
@@ -117,12 +115,10 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
 
       validateAndApplyQueueManagementChanges(queueManagementChanges);
 
-      StringBuffer queueInfo = new StringBuffer();
-      queueInfo.append("Reinitialized Managed Parent Queue: ").append(queueName)
-          .append("]\nwith capacity: [").append(super.getCapacity()).append(
-          "]\nwith max capacity: [").append(super.getMaximumCapacity()).append(
-          "].");
-      LOG.info(queueInfo.toString());
+      LOG.info(
+          "Reinitialized Managed Parent Queue: [{}] with capacity [{}]"
+              + " with max capacity [{}]",
+          queueName, super.getCapacity(), super.getMaximumCapacity());
     } catch (YarnException ye) {
       LOG.error("Exception while computing policy changes for leaf queue : "
           + getQueueName(), ye);

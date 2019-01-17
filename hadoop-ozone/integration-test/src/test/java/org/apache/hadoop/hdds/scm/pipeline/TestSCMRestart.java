@@ -19,9 +19,8 @@
 package org.apache.hadoop.hdds.scm.pipeline;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.junit.AfterClass;
@@ -48,6 +47,7 @@ public class TestSCMRestart {
   private static Pipeline ratisPipeline2;
   private static ContainerManager containerManager;
   private static ContainerManager newContainerManager;
+  private static PipelineManager pipelineManager;
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -65,16 +65,20 @@ public class TestSCMRestart {
     cluster.waitForClusterToBeReady();
     StorageContainerManager scm = cluster.getStorageContainerManager();
     containerManager = scm.getContainerManager();
-    ratisPipeline1 = containerManager.allocateContainer(
-        RATIS, THREE, "Owner1").getPipeline();
-    ratisPipeline2 = containerManager.allocateContainer(
-        RATIS, ONE, "Owner2").getPipeline();
+    pipelineManager = scm.getPipelineManager();
+    ratisPipeline1 = pipelineManager.getPipeline(
+        containerManager.allocateContainer(
+        RATIS, THREE, "Owner1").getPipelineID());
+    ratisPipeline2 = pipelineManager.getPipeline(
+        containerManager.allocateContainer(
+        RATIS, ONE, "Owner2").getPipelineID());
     // At this stage, there should be 2 pipeline one with 1 open container
     // each. Try restarting the SCM and then discover that pipeline are in
     // correct state.
     cluster.restartStorageContainerManager();
     newContainerManager = cluster.getStorageContainerManager()
         .getContainerManager();
+    pipelineManager = cluster.getStorageContainerManager().getPipelineManager();
   }
 
   /**
@@ -90,29 +94,19 @@ public class TestSCMRestart {
   @Test
   public void testPipelineWithScmRestart() throws IOException {
     // After restart make sure that the pipeline are still present
-    Pipeline ratisPipeline1AfterRestart = newContainerManager
-        .getPipelineSelector().getPipeline(ratisPipeline1.getId());
-    Pipeline ratisPipeline2AfterRestart = newContainerManager
-        .getPipelineSelector().getPipeline(ratisPipeline2.getId());
+    Pipeline ratisPipeline1AfterRestart =
+        pipelineManager.getPipeline(ratisPipeline1.getId());
+    Pipeline ratisPipeline2AfterRestart =
+        pipelineManager.getPipeline(ratisPipeline2.getId());
     Assert.assertNotSame(ratisPipeline1AfterRestart, ratisPipeline1);
     Assert.assertNotSame(ratisPipeline2AfterRestart, ratisPipeline2);
     Assert.assertEquals(ratisPipeline1AfterRestart, ratisPipeline1);
     Assert.assertEquals(ratisPipeline2AfterRestart, ratisPipeline2);
 
-    for (DatanodeDetails dn : ratisPipeline1.getMachines()) {
-      Assert.assertEquals(dn, ratisPipeline1AfterRestart.getDatanodes()
-              .get(dn.getUuidString()));
-    }
-
-    for (DatanodeDetails dn : ratisPipeline2.getMachines()) {
-      Assert.assertEquals(dn, ratisPipeline2AfterRestart.getDatanodes()
-              .get(dn.getUuidString()));
-    }
-
-    // Try creating a new ratis pipeline, it should be from the same pipeline
+    // Try creating a new container, it should be from the same pipeline
     // as was before restart
-    Pipeline newRatisPipeline = newContainerManager
-        .allocateContainer(RATIS, THREE, "Owner1").getPipeline();
-    Assert.assertEquals(newRatisPipeline.getId(), ratisPipeline1.getId());
+    ContainerInfo containerInfo = newContainerManager
+        .allocateContainer(RATIS, THREE, "Owner1");
+    Assert.assertEquals(containerInfo.getPipelineID(), ratisPipeline1.getId());
   }
 }

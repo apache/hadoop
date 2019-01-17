@@ -62,7 +62,7 @@ public class TestOzoneRestWithMiniCluster {
   private static OzoneConfiguration conf;
   private static ClientProtocol client;
   private static ReplicationFactor replicationFactor = ReplicationFactor.ONE;
-  private static ReplicationType replicationType = ReplicationType.STAND_ALONE;
+  private static ReplicationType replicationType = ReplicationType.RATIS;
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -103,7 +103,8 @@ public class TestOzoneRestWithMiniCluster {
     putKey(bucket, keyName, keyData);
   }
 
-  private void putKey(OzoneBucket bucket, String keyName, String keyData) throws IOException {
+  private void putKey(OzoneBucket bucket, String keyName, String keyData)
+      throws IOException {
     try (
         OzoneOutputStream ozoneOutputStream = bucket
             .createKey(keyName, 0, replicationType, replicationFactor);

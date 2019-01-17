@@ -53,7 +53,7 @@ The benefits of combining these workloads are two-fold:
 * [Concepts](Concepts.html): Describes the internals of the framework and some features in YARN core to support running services on YARN.
 * [Service REST API](YarnServiceAPI.html): The API doc for deploying/managing services on YARN.
 * [Service Discovery](ServiceDiscovery.html): Describes the service discovery mechanism on YARN.
-* [Registry DNS](RegistryDNS.html): Deep dives into the Registry DNS internals.
+* [Registry DNS](../registry/registry-dns.html): Deep dives into the Registry DNS internals.
 * [Examples](Examples.html): List some example service definitions (`Yarnfile`).
 * [Configurations](Configurations.html): Describes how to configure the custom services on YARN.
 * [Service Upgrade](ServiceUpgrade.html): Describes how to upgrade a YARN service which is an experimental feature.

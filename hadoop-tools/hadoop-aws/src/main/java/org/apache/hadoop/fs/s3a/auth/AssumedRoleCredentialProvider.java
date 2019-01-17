@@ -18,19 +18,22 @@
 
 package org.apache.hadoop.fs.s3a.auth;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +42,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
+import org.apache.hadoop.fs.s3a.CredentialInitializationException;
+import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3ARetryPolicy;
@@ -46,8 +51,7 @@ import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProvider;
-import static org.apache.hadoop.fs.s3a.S3AUtils.loadAWSProviderClasses;
+import static org.apache.hadoop.fs.s3a.S3AUtils.buildAWSProviderList;
 
 /**
  * Support IAM Assumed roles by instantiating an instance of
@@ -66,10 +70,6 @@ public class AssumedRoleCredentialProvider implements AWSCredentialsProvider,
       LoggerFactory.getLogger(AssumedRoleCredentialProvider.class);
   public static final String NAME
       = "org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider";
-
-  static final String E_FORBIDDEN_PROVIDER =
-      "AssumedRoleCredentialProvider cannot be in "
-          + ASSUMED_ROLE_CREDENTIALS_PROVIDER;
 
   public static final String E_NO_ROLE = "Unset property "
       + ASSUMED_ROLE_ARN;
@@ -90,13 +90,13 @@ public class AssumedRoleCredentialProvider implements AWSCredentialsProvider,
    * Instantiate.
    * This calls {@link #getCredentials()} to fail fast on the inner
    * role credential retrieval.
-   * @param fsUri URI of the filesystem.
+   * @param fsUri possibly null URI of the filesystem.
    * @param conf configuration
    * @throws IOException on IO problems and some parameter checking
    * @throws IllegalArgumentException invalid parameters
    * @throws AWSSecurityTokenServiceException problems getting credentials
    */
-  public AssumedRoleCredentialProvider(URI fsUri, Configuration conf)
+  public AssumedRoleCredentialProvider(@Nullable URI fsUri, Configuration conf)
       throws IOException {
 
     arn = conf.getTrimmed(ASSUMED_ROLE_ARN, "");
@@ -105,16 +105,12 @@ public class AssumedRoleCredentialProvider implements AWSCredentialsProvider,
     }
 
     // build up the base provider
-    Class<?>[] awsClasses = loadAWSProviderClasses(conf,
+    credentialsToSTS = buildAWSProviderList(fsUri, conf,
         ASSUMED_ROLE_CREDENTIALS_PROVIDER,
-        SimpleAWSCredentialsProvider.class);
-    credentialsToSTS = new AWSCredentialProviderList();
-    for (Class<?> aClass : awsClasses) {
-      if (this.getClass().equals(aClass)) {
-        throw new IOException(E_FORBIDDEN_PROVIDER);
-      }
-      credentialsToSTS.add(createAWSCredentialProvider(conf, aClass, fsUri));
-    }
+        Arrays.asList(
+            SimpleAWSCredentialsProvider.class,
+            EnvironmentVariableCredentialsProvider.class),
+        Sets.newHashSet(this.getClass()));
     LOG.debug("Credentials to obtain role credentials: {}", credentialsToSTS);
 
     // then the STS binding
@@ -132,13 +128,13 @@ public class AssumedRoleCredentialProvider implements AWSCredentialsProvider,
       LOG.debug("Scope down policy {}", policy);
       builder.withScopeDownPolicy(policy);
     }
-    String endpoint = conf.get(ASSUMED_ROLE_STS_ENDPOINT, "");
-    String region = conf.get(ASSUMED_ROLE_STS_ENDPOINT_REGION,
+    String endpoint = conf.getTrimmed(ASSUMED_ROLE_STS_ENDPOINT, "");
+    String region = conf.getTrimmed(ASSUMED_ROLE_STS_ENDPOINT_REGION,
         ASSUMED_ROLE_STS_ENDPOINT_REGION_DEFAULT);
     AWSSecurityTokenServiceClientBuilder stsbuilder =
         STSClientFactory.builder(
           conf,
-          fsUri.getHost(),
+          fsUri != null ?  fsUri.getHost() : "",
           credentialsToSTS,
           endpoint,
           region);
@@ -164,6 +160,7 @@ public class AssumedRoleCredentialProvider implements AWSCredentialsProvider,
    * @throws AWSSecurityTokenServiceException if none could be obtained.
    */
   @Override
+  @Retries.RetryRaw
   public AWSCredentials getCredentials() {
     try {
       return invoker.retryUntranslated("getCredentials",
@@ -174,7 +171,7 @@ public class AssumedRoleCredentialProvider implements AWSCredentialsProvider,
       // its hard to see how this could be raised, but for
       // completeness, it is wrapped as an Amazon Client Exception
       // and rethrown.
-      throw new AmazonClientException(
+      throw new CredentialInitializationException(
           "getCredentials failed: " + e,
           e);
     } catch (AWSSecurityTokenServiceException e) {

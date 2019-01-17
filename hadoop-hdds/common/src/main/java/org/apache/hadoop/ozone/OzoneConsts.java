@@ -47,11 +47,20 @@ public final class OzoneConsts {
   public static final String OZONE_ACL_USER_TYPE = "user";
   public static final String OZONE_ACL_GROUP_TYPE = "group";
   public static final String OZONE_ACL_WORLD_TYPE = "world";
+  public static final String OZONE_ACL_IP_TYPE = "ip";
 
   public static final String OZONE_ACL_READ = "r";
   public static final String OZONE_ACL_WRITE = "w";
   public static final String OZONE_ACL_READ_WRITE = "rw";
   public static final String OZONE_ACL_WRITE_READ = "wr";
+  public static final String OZONE_ACL_DELETE = "d";
+  public static final String OZONE_ACL_LIST = "l";
+  public static final String OZONE_ACL_ALL = "a";
+  public static final String OZONE_ACL_NONE = "n";
+  public static final String OZONE_ACL_CREATE = "c";
+  public static final String OZONE_ACL_READ_ACL = "x";
+  public static final String OZONE_ACL_WRITE_ACL = "y";
+
 
   public static final String OZONE_DATE_FORMAT =
       "EEE, dd MMM yyyy HH:mm:ss zzz";
@@ -63,7 +72,10 @@ public final class OzoneConsts {
   public static final String OZONE_USER = "user";
   public static final String OZONE_REQUEST = "request";
 
-  public static final String OZONE_URI_SCHEME = "o3";
+  // Ozone File System scheme
+  public static final String OZONE_URI_SCHEME = "o3fs";
+
+  public static final String OZONE_RPC_SCHEME = "o3";
   public static final String OZONE_HTTP_SCHEME = "http";
   public static final String OZONE_URI_DELIMITER = "/";
 
@@ -113,6 +125,7 @@ public final class OzoneConsts {
   public static final String DELETING_KEY_PREFIX = "#deleting#";
   public static final String DELETED_KEY_PREFIX = "#deleted#";
   public static final String DELETE_TRANSACTION_KEY_PREFIX = "#delTX#";
+  public static final String BLOCK_COMMIT_SEQUENCE_ID_PREFIX = "#BCSID";
 
   /**
    * OM LevelDB prefixes.
@@ -139,6 +152,14 @@ public final class OzoneConsts {
 
   public static final String OM_KEY_PREFIX = "/";
   public static final String OM_USER_PREFIX = "$";
+  public static final String OM_S3_PREFIX ="S3:";
+  public static final String OM_S3_VOLUME_PREFIX = "s3";
+
+  /**
+   *   Max chunk size limit.
+   */
+  public static final int OZONE_SCM_CHUNK_MAX_SIZE = 32 * 1024 * 1024;
+
 
   /**
    * Max OM Quota size of 1024 PB.
@@ -181,6 +202,12 @@ public final class OzoneConsts {
   public static final String CHUNKS_PATH = "chunksPath";
   public static final String CONTAINER_DB_TYPE = "containerDBType";
   public static final String CHECKSUM = "checksum";
+  public static final String ORIGIN_PIPELINE_ID = "originPipelineId";
+  public static final String ORIGIN_NODE_ID = "originNodeId";
+
+  // Supported store types.
+  public static final String OZONE = "ozone";
+  public static final String S3 = "s3";
 
   // For OM Audit usage
   public static final String VOLUME = "volume";
@@ -210,7 +237,14 @@ public final class OzoneConsts {
   public static final String REPLICATION_TYPE = "replicationType";
   public static final String REPLICATION_FACTOR = "replicationFactor";
   public static final String KEY_LOCATION_INFO = "keyLocationInfo";
+  public static final String MULTIPART_LIST = "multipartList";
 
 
+  // For OM metrics saving to a file
+  public static final String OM_METRICS_FILE = "omMetrics";
+  public static final String OM_METRICS_TEMP_FILE = OM_METRICS_FILE + ".tmp";
+
+  // For Multipart upload
+  public static final int OM_MULTIPART_MIN_SIZE = 5 * 1024 * 1024;
 
 }

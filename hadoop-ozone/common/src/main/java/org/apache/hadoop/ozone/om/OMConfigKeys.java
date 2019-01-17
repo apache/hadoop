@@ -17,7 +17,11 @@
 
 package org.apache.hadoop.ozone.om;
 
+import java.util.concurrent.TimeUnit;
+
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.ratis.util.TimeDuration;
+
 /**
  * Ozone Manager Constants.
  */
@@ -28,6 +32,9 @@ public final class OMConfigKeys {
   private OMConfigKeys() {
   }
 
+  // Location where the OM stores its DB files. In the future we may support
+  // multiple entries for performance (sharding)..
+  public static final String OZONE_OM_DB_DIRS = "ozone.om.db.dirs";
 
   public static final String OZONE_OM_HANDLER_COUNT_KEY =
       "ozone.om.handler.count.key";
@@ -78,4 +85,94 @@ public final class OMConfigKeys {
   public static final String OZONE_KEY_DELETING_LIMIT_PER_TASK =
       "ozone.key.deleting.limit.per.task";
   public static final int OZONE_KEY_DELETING_LIMIT_PER_TASK_DEFAULT = 1000;
+
+  public static final String OZONE_OM_METRICS_SAVE_INTERVAL =
+      "ozone.om.save.metrics.interval";
+  public static final String OZONE_OM_METRICS_SAVE_INTERVAL_DEFAULT = "5m";
+
+  /**
+   * OM Ratis related configurations.
+   */
+  public static final String OZONE_OM_RATIS_ENABLE_KEY
+      = "ozone.om.ratis.enable";
+  public static final boolean OZONE_OM_RATIS_ENABLE_DEFAULT
+      = false;
+  public static final String OZONE_OM_RATIS_PORT_KEY
+      = "ozone.om.ratis.port";
+  public static final int OZONE_OM_RATIS_PORT_DEFAULT
+      = 9872;
+  // When set to true, allocate a random free port for ozone ratis server
+  public static final String OZONE_OM_RATIS_RANDOM_PORT_KEY =
+      "ozone.om.ratis.random.port";
+  public static final boolean OZONE_OM_RATIS_RANDOM_PORT_KEY_DEFAULT
+      = false;
+  public static final String OZONE_OM_RATIS_RPC_TYPE_KEY
+      = "ozone.om.ratis.rpc.type";
+  public static final String OZONE_OM_RATIS_RPC_TYPE_DEFAULT
+      = "GRPC";
+
+  // OM Ratis Log configurations
+  public static final String OZONE_OM_RATIS_STORAGE_DIR
+      = "ozone.om.ratis.storage.dir";
+  public static final String OZONE_OM_RATIS_SEGMENT_SIZE_KEY
+      = "ozone.om.ratis.segment.size";
+  public static final String OZONE_OM_RATIS_SEGMENT_SIZE_DEFAULT
+      = "16KB";
+  public static final String OZONE_OM_RATIS_SEGMENT_PREALLOCATED_SIZE_KEY
+      = "ozone.om.ratis.segment.preallocated.size";
+  public static final String OZONE_OM_RATIS_SEGMENT_PREALLOCATED_SIZE_DEFAULT
+      = "16KB";
+
+  // OM Ratis Log Appender configurations
+  public static final String
+      OZONE_OM_RATIS_LOG_APPENDER_QUEUE_NUM_ELEMENTS =
+      "ozone.om.ratis.log.appender.queue.num-elements";
+  public static final int
+      OZONE_OM_RATIS_LOG_APPENDER_QUEUE_NUM_ELEMENTS_DEFAULT = 1024;
+  public static final String OZONE_OM_RATIS_LOG_APPENDER_QUEUE_BYTE_LIMIT =
+      "ozone.om.ratis.log.appender.queue.byte-limit";
+  public static final String
+      OZONE_OM_RATIS_LOG_APPENDER_QUEUE_BYTE_LIMIT_DEFAULT = "32MB";
+
+
+  // OM Ratis server configurations
+  public static final String OZONE_OM_RATIS_SERVER_REQUEST_TIMEOUT_KEY
+      = "ozone.om.ratis.server.request.timeout";
+  public static final TimeDuration
+      OZONE_OM_RATIS_SERVER_REQUEST_TIMEOUT_DEFAULT
+      = TimeDuration.valueOf(3000, TimeUnit.MILLISECONDS);
+  public static final String
+      OZONE_OM_RATIS_SERVER_RETRY_CACHE_TIMEOUT_KEY
+      = "ozone.om.ratis.server.retry.cache.timeout";
+  public static final TimeDuration
+      OZONE_OM_RATIS_SERVER_RETRY_CACHE_TIMEOUT_DEFAULT
+      = TimeDuration.valueOf(600000, TimeUnit.MILLISECONDS);
+  public static final String OZONE_OM_RATIS_MINIMUM_TIMEOUT_KEY
+      = "ozone.om.ratis.minimum.timeout";
+  public static final TimeDuration OZONE_OM_RATIS_MINIMUM_TIMEOUT_DEFAULT
+      = TimeDuration.valueOf(1, TimeUnit.SECONDS);
+
+  // OM Ratis client configurations
+  public static final String OZONE_OM_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_KEY
+      = "ozone.om.ratis.client.request.timeout.duration";
+  public static final TimeDuration
+      OZONE_OM_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_DEFAULT
+      = TimeDuration.valueOf(3000, TimeUnit.MILLISECONDS);
+  public static final String OZONE_OM_RATIS_CLIENT_REQUEST_MAX_RETRIES_KEY
+      = "ozone.om.ratis.client.request.max.retries";
+  public static final int OZONE_OM_RATIS_CLIENT_REQUEST_MAX_RETRIES_DEFAULT
+      = 180;
+  public static final String OZONE_OM_RATIS_CLIENT_REQUEST_RETRY_INTERVAL_KEY
+      = "ozone.om.ratis.client.request.retry.interval";
+  public static final TimeDuration
+      OZONE_OM_RATIS_CLIENT_REQUEST_RETRY_INTERVAL_DEFAULT
+      = TimeDuration.valueOf(100, TimeUnit.MILLISECONDS);
+
+  // OM Ratis Leader Election configurations
+  public static final String
+      OZONE_OM_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_KEY =
+      "ozone.om.leader.election.minimum.timeout.duration";
+  public static final TimeDuration
+      OZONE_OM_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_DEFAULT =
+      TimeDuration.valueOf(1, TimeUnit.SECONDS);
 }

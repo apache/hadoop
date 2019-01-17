@@ -40,3 +40,5 @@ Click below contents if you want to understand more.
 - [How to write Dockerfile for Submarine jobs](WriteDockerfile.html)
 
 - [Developer guide](DeveloperGuide.html)
+
+- [Installation guides](HowToInstall.html)

@@ -24,6 +24,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -114,6 +116,7 @@ public class FileSystemRMStateStore extends RMStateStore {
 
   Path amrmTokenSecretManagerRoot;
   private Path reservationRoot;
+  private Path proxyCARoot;
 
   @Override
   public synchronized void initInternal(Configuration conf)
@@ -125,6 +128,7 @@ public class FileSystemRMStateStore extends RMStateStore {
     amrmTokenSecretManagerRoot =
         new Path(rootDirPath, AMRMTOKEN_SECRET_MANAGER_ROOT);
     reservationRoot = new Path(rootDirPath, RESERVATION_SYSTEM_ROOT);
+    proxyCARoot = new Path(rootDirPath, PROXY_CA_ROOT);
     fsNumRetries =
         conf.getInt(YarnConfiguration.FS_RM_STATE_STORE_NUM_RETRIES,
             YarnConfiguration.DEFAULT_FS_RM_STATE_STORE_NUM_RETRIES);
@@ -157,6 +161,7 @@ public class FileSystemRMStateStore extends RMStateStore {
     mkdirsWithRetries(rmAppRoot);
     mkdirsWithRetries(amrmTokenSecretManagerRoot);
     mkdirsWithRetries(reservationRoot);
+    mkdirsWithRetries(proxyCARoot);
   }
 
   @Override
@@ -228,6 +233,8 @@ public class FileSystemRMStateStore extends RMStateStore {
     loadAMRMTokenSecretManagerState(rmState);
     // recover reservation state
     loadReservationSystemState(rmState);
+    // recover ProxyCAManager state
+    loadProxyCAManagerState(rmState);
     return rmState;
   }
 
@@ -393,6 +400,30 @@ public class FileSystemRMStateStore extends RMStateStore {
         }
       }
     }
+  }
+
+  private void loadProxyCAManagerState(RMState rmState) throws Exception {
+    checkAndResumeUpdateOperation(proxyCARoot);
+
+    Path caCertPath = getNodePath(proxyCARoot, PROXY_CA_CERT_NODE);
+    Path caPrivateKeyPath = getNodePath(proxyCARoot, PROXY_CA_PRIVATE_KEY_NODE);
+
+    if (!existsWithRetries(caCertPath)
+        || !existsWithRetries(caPrivateKeyPath)) {
+      LOG.warn("Couldn't find Proxy CA data");
+      return;
+    }
+
+    FileStatus caCertFileStatus = getFileStatus(caCertPath);
+    byte[] caCertData = readFileWithRetries(caCertPath,
+        caCertFileStatus.getLen());
+
+    FileStatus caPrivateKeyFileStatus = getFileStatus(caPrivateKeyPath);
+    byte[] caPrivateKeyData = readFileWithRetries(caPrivateKeyPath,
+        caPrivateKeyFileStatus.getLen());
+
+    rmState.getProxyCAState().setCaCert(caCertData);
+    rmState.getProxyCAState().setCaPrivateKey(caPrivateKeyData);
   }
 
   @Override
@@ -590,6 +621,28 @@ public class FileSystemRMStateStore extends RMStateStore {
     Path nodeRemovePath = getAppDir(rmAppRoot, removeAppId);
     if (existsWithRetries(nodeRemovePath)) {
       deleteFileWithRetries(nodeRemovePath);
+    }
+  }
+
+  @Override
+  synchronized protected void storeProxyCACertState(
+      X509Certificate caCert, PrivateKey caPrivateKey) throws Exception {
+    byte[] caCertData = caCert.getEncoded();
+    byte[] caPrivateKeyData = caPrivateKey.getEncoded();
+
+    Path caCertPath = getNodePath(proxyCARoot, PROXY_CA_CERT_NODE);
+    Path caPrivateKeyPath = getNodePath(proxyCARoot, PROXY_CA_PRIVATE_KEY_NODE);
+
+    if (existsWithRetries(caCertPath)) {
+      updateFile(caCertPath, caCertData, true);
+    } else {
+      writeFileWithRetries(caCertPath, caCertData, true);
+    }
+
+    if (existsWithRetries(caPrivateKeyPath)) {
+      updateFile(caPrivateKeyPath, caPrivateKeyData, true);
+    } else {
+      writeFileWithRetries(caPrivateKeyPath, caPrivateKeyData, true);
     }
   }
 

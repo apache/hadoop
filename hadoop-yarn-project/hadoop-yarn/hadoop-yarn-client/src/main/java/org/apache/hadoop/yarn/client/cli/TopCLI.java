@@ -463,6 +463,7 @@ public class TopCLI extends YarnCLI {
       LOG.error("Unable to parse options", e);
       return 1;
     }
+    createAndStartYarnClient();
     setAppsHeader();
 
     Thread keyboardMonitor = new KeyboardMonitor();

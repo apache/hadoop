@@ -117,7 +117,6 @@ public class TestBlockStorageMovementAttemptedItems {
    */
   @Test(timeout = 30000)
   public void testNoBlockMovementAttemptFinishedReportAdded() throws Exception {
-    bsmAttemptedItems.start(); // start block movement report monitor thread
     Long item = new Long(1234);
     Block block = new Block(item);
     DatanodeInfo dnInfo = DFSTestUtil.getLocalDatanodeInfo(9867);

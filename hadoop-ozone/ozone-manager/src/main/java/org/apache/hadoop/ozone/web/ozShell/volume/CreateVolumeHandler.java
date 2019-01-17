@@ -18,17 +18,15 @@
 
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
-import java.net.URI;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
-import org.apache.hadoop.ozone.client.OzoneClientException;
+import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -45,8 +43,7 @@ public class CreateVolumeHandler extends Handler {
   private String uri;
 
   @Option(names = {"--user", "-u"},
-      description = "Owner of of the volume", required =
-      true)
+      description = "Owner of of the volume")
   private String userName;
 
   @Option(names = {"--quota", "-q"},
@@ -64,22 +61,16 @@ public class CreateVolumeHandler extends Handler {
    */
   @Override
   public Void call() throws Exception {
-
-    URI ozoneURI = verifyURI(uri);
-    Path path = Paths.get(ozoneURI.getPath());
-    int pathNameCount = path.getNameCount();
-    if (pathNameCount != 1) {
-      String errorMessage;
-      if (pathNameCount < 1) {
-        errorMessage = "Volume name is required to create a volume";
-      } else {
-        errorMessage = "Invalid volume name. Delimiters (/) not allowed in " +
-            "volume name";
-      }
-      throw new OzoneClientException(errorMessage);
+    if(userName == null) {
+      userName = UserGroupInformation.getCurrentUser().getUserName();
     }
 
-    String volumeName = ozoneURI.getPath().replaceAll("^/+", "");
+    OzoneAddress address = new OzoneAddress(uri);
+    address.ensureVolumeAddress();
+    OzoneClient client = address.createClient(createOzoneConfiguration());
+
+    String volumeName = address.getVolumeName();
+
     if (isVerbose()) {
       System.out.printf("Volume name : %s%n", volumeName);
     }
@@ -88,7 +79,7 @@ public class CreateVolumeHandler extends Handler {
     if (root) {
       rootName = "hdfs";
     } else {
-      rootName = System.getProperty("user.name");
+      rootName = UserGroupInformation.getCurrentUser().getShortUserName();
     }
 
     VolumeArgs.Builder volumeArgsBuilder = VolumeArgs.newBuilder()

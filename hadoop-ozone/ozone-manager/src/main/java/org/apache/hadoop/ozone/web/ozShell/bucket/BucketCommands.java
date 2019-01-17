@@ -23,6 +23,7 @@ import java.util.concurrent.Callable;
 import org.apache.hadoop.hdds.cli.GenericParentCommand;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.cli.MissingSubcommandException;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 
 import picocli.CommandLine.Command;
@@ -38,7 +39,8 @@ import picocli.CommandLine.ParentCommand;
         ListBucketHandler.class,
         CreateBucketHandler.class,
         UpdateBucketHandler.class,
-        DeleteBucketHandler.class
+        DeleteBucketHandler.class,
+        S3BucketMapping.class
     },
     mixinStandardHelpOptions = true,
     versionProvider = HddsVersionProvider.class)
@@ -56,5 +58,10 @@ public class BucketCommands implements GenericParentCommand, Callable<Void> {
   @Override
   public boolean isVerbose() {
     return shell.isVerbose();
+  }
+
+  @Override
+  public OzoneConfiguration createOzoneConfiguration() {
+    return shell.createOzoneConfiguration();
   }
 }

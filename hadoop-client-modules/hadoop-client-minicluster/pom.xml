@@ -477,7 +477,7 @@
         </exclusion>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-yarn-registry</artifactId>
+          <artifactId>hadoop-registry</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
@@ -666,7 +666,13 @@
                       <exclude>junit:junit</exclude>
                       <exclude>com.google.code.findbugs:jsr305</exclude>
                       <exclude>log4j:log4j</exclude>
+                      <exclude>org.eclipse.jetty.websocket:*</exclude>
+                      <exclude>javax.websocket:javax.websocket-api</exclude>
+                      <exclude>javax.annotation:javax.annotation-api</exclude>
+                      <exclude>org.eclipse.jetty:jetty-jndi</exclude>
                       <!-- We need a filter that matches just those things that are included in the above artiacts -->
+                      <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
+                      <exclude>org.bouncycastle:*</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>
@@ -713,6 +719,14 @@
                         <exclude>testdata/*</exclude>
                       </excludes>
                     </filter>
+                    <!-- Skip terminal html and javascript -->
+                    <filter>
+                      <artifact>org.apache.hadoop:hadoop-yarn-server-nodemanager:*</artifact>
+                      <excludes>
+                        <exclude>TERMINAL/**/*</exclude>
+                      </excludes>
+                    </filter>
+
                     <!-- Mockito tries to include its own unrelocated copy of hamcrest. :( -->
                     <filter>
                       <artifact>org.mockito:mockito-all</artifact>
@@ -723,6 +737,8 @@
                         <exclude>objenesis-license.txt</exclude>
                         <exclude>org/hamcrest/**/*.class</exclude>
                         <exclude>org/hamcrest/*.class</exclude>
+                        <exclude>org/objenesis/**/*.class</exclude>
+                        <exclude>org/objenesis/*.class</exclude>
                       </excludes>
                     </filter>
                     <!-- skip grizzly internals we don't need to run. -->
@@ -775,6 +791,24 @@
                       <excludes>
                         <exclude>ehcache-107ext.xsd</exclude>
                         <exclude>ehcache-core.xsd</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <artifact>org.eclipse.jetty.websocket:javax-websocket-server-impl</artifact>
+                      <excludes>
+                        <exclude>*/**</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <artifact>org.eclipse.jetty.websocket:websocket-client</artifact>
+                      <excludes>
+                        <exclude>*/**</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <artifact>org.eclipse.jetty:jetty-io</artifact>
+                      <excludes>
+                        <exclude>*/**</exclude>
                       </excludes>
                     </filter>
                   </filters>

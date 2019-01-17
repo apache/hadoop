@@ -26,7 +26,7 @@ import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
  * The <code>KerberosDelegationTokenAuthenticator</code> provides support for
  * Kerberos SPNEGO authentication mechanism and support for Hadoop Delegation
  * Token operations.
- * <p/>
+ * <p>
  * It falls back to the {@link PseudoDelegationTokenAuthenticator} if the HTTP
  * endpoint does not trigger a SPNEGO authentication
  */

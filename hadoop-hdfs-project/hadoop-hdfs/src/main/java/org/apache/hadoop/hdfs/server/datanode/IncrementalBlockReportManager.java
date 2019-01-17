@@ -194,7 +194,7 @@ class IncrementalBlockReportManager {
 
   /** Send IBRs to namenode. */
   void sendIBRs(DatanodeProtocol namenode, DatanodeRegistration registration,
-      String bpid) throws IOException {
+      String bpid, String nnRpcLatencySuffix) throws IOException {
     // Generate a list of the pending reports for each storage under the lock
     final StorageReceivedDeletedBlocks[] reports = generateIBRs();
     if (reports.length == 0) {
@@ -214,7 +214,8 @@ class IncrementalBlockReportManager {
     } finally {
 
       if (success) {
-        dnMetrics.addIncrementalBlockReport(monotonicNow() - startTime);
+        dnMetrics.addIncrementalBlockReport(monotonicNow() - startTime,
+            nnRpcLatencySuffix);
         lastIBR = startTime;
       } else {
         // If we didn't succeed in sending the report, put all of the

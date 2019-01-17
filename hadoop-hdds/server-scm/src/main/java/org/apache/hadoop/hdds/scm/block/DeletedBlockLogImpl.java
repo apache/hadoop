@@ -29,8 +29,11 @@ import org.apache.hadoop.hdds.protocol.proto
     .DeleteBlockTransactionResult;
 import org.apache.hadoop.hdds.scm.command
     .CommandStatusReportHandler.DeleteBlockStatus;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.ContainerReplica;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -47,7 +50,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,7 +70,6 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_DB_CACHE_SIZE_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_DB_CACHE_SIZE_MB;
-import static org.apache.hadoop.hdds.server.ServerUtils.getOzoneMetaDirPath;
 import static org.apache.hadoop.ozone.OzoneConsts.DELETED_BLOCK_DB;
 
 /**
@@ -100,14 +101,14 @@ public class DeletedBlockLogImpl
   private Map<Long, Set<UUID>> transactionToDNsCommitMap;
 
   public DeletedBlockLogImpl(Configuration conf,
-     ContainerManager containerManager) throws IOException {
+      ContainerManager containerManager) throws IOException {
     maxRetry = conf.getInt(OZONE_SCM_BLOCK_DELETION_MAX_RETRY,
         OZONE_SCM_BLOCK_DELETION_MAX_RETRY_DEFAULT);
 
-    File metaDir = getOzoneMetaDirPath(conf);
-    String scmMetaDataDir = metaDir.getPath();
-    File deletedLogDbPath = new File(scmMetaDataDir, DELETED_BLOCK_DB);
-    int cacheSize = conf.getInt(OZONE_SCM_DB_CACHE_SIZE_MB,
+    final File metaDir = ServerUtils.getScmDbDir(conf);
+    final String scmMetaDataDir = metaDir.getPath();
+    final File deletedLogDbPath = new File(scmMetaDataDir, DELETED_BLOCK_DB);
+    final int cacheSize = conf.getInt(OZONE_SCM_DB_CACHE_SIZE_MB,
         OZONE_SCM_DB_CACHE_SIZE_DEFAULT);
     // Load store of all transactions.
     deletedStore = MetadataStoreBuilder.newBuilder()
@@ -248,7 +249,8 @@ public class DeletedBlockLogImpl
           long txID = transactionResult.getTxID();
           // set of dns which have successfully committed transaction txId.
           dnsWithCommittedTxn = transactionToDNsCommitMap.get(txID);
-          Long containerId = transactionResult.getContainerID();
+          final ContainerID containerId = ContainerID.valueof(
+              transactionResult.getContainerID());
           if (dnsWithCommittedTxn == null) {
             LOG.warn("Transaction txId={} commit by dnId={} for containerID={} "
                     + "failed. Corresponding entry not found.", txID, dnID,
@@ -257,17 +259,17 @@ public class DeletedBlockLogImpl
           }
 
           dnsWithCommittedTxn.add(dnID);
-          Pipeline pipeline =
-              containerManager.getContainerWithPipeline(containerId)
-                  .getPipeline();
-          Collection<DatanodeDetails> containerDnsDetails =
-              pipeline.getDatanodes().values();
+          final ContainerInfo container = containerManager
+              .getContainer(containerId);
+          final Set<ContainerReplica> replicas =
+              containerManager.getContainerReplicas(containerId);
           // The delete entry can be safely removed from the log if all the
           // corresponding nodes commit the txn. It is required to check that
           // the nodes returned in the pipeline match the replication factor.
-          if (min(containerDnsDetails.size(), dnsWithCommittedTxn.size())
-              >= pipeline.getFactor().getNumber()) {
-            List<UUID> containerDns = containerDnsDetails.stream()
+          if (min(replicas.size(), dnsWithCommittedTxn.size())
+              >= container.getReplicationFactor().getNumber()) {
+            List<UUID> containerDns = replicas.stream()
+                .map(ContainerReplica::getDatanodeDetails)
                 .map(DatanodeDetails::getUuid)
                 .collect(Collectors.toList());
             if (dnsWithCommittedTxn.containsAll(containerDns)) {

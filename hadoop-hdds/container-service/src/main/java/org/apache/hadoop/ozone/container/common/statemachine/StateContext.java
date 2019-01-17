@@ -19,10 +19,9 @@ package org.apache.hadoop.ozone.container.common.statemachine;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.GeneratedMessage;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMCommandProto.Type;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineAction;
 import org.apache.hadoop.hdds.protocol.proto
@@ -58,8 +57,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
-
-import static org.apache.hadoop.ozone.OzoneConsts.INVALID_PORT;
 
 /**
  * Current Context of State Machine.
@@ -113,24 +110,6 @@ public class StateContext {
    */
   public DatanodeStateMachine getParent() {
     return parent;
-  }
-
-  /**
-   * Get the container server port.
-   * @return The container server port if available, return -1 if otherwise
-   */
-  public int getContainerPort() {
-    return parent == null ?
-        INVALID_PORT : parent.getContainer().getContainerServerPort();
-  }
-
-  /**
-   * Gets the Ratis Port.
-   * @return int , return -1 if not valid.
-   */
-  public int getRatisPort() {
-    return parent == null ?
-        INVALID_PORT : parent.getContainer().getRatisContainerServerPort();
   }
 
   /**
@@ -204,7 +183,7 @@ public class StateContext {
    * Returns all the available reports from the report queue, or empty list if
    * the queue is empty.
    *
-   * @return List<reports>
+   * @return List of reports
    */
   public List<GeneratedMessage> getAllAvailableReports() {
     return getReports(Integer.MAX_VALUE);
@@ -214,7 +193,7 @@ public class StateContext {
    * Returns available reports from the report queue with a max limit on
    * list size, or empty list if the queue is empty.
    *
-   * @return List<reports>
+   * @return List of reports
    */
   public List<GeneratedMessage> getReports(int maxLimit) {
     List<GeneratedMessage> reportsToReturn = new LinkedList<>();
@@ -256,7 +235,7 @@ public class StateContext {
    * Returns all the pending ContainerActions from the ContainerAction queue,
    * or empty list if the queue is empty.
    *
-   * @return List<ContainerAction>
+   * @return {@literal List<ContainerAction>}
    */
   public List<ContainerAction> getAllPendingContainerActions() {
     return getPendingContainerAction(Integer.MAX_VALUE);
@@ -266,7 +245,7 @@ public class StateContext {
    * Returns pending ContainerActions from the ContainerAction queue with a
    * max limit on list size, or empty list if the queue is empty.
    *
-   * @return List<ContainerAction>
+   * @return {@literal List<ContainerAction>}
    */
   public List<ContainerAction> getPendingContainerAction(int maxLimit) {
     List<ContainerAction> containerActionList = new ArrayList<>();
@@ -318,7 +297,7 @@ public class StateContext {
    * Returns pending PipelineActions from the PipelineAction queue with a
    * max limit on list size, or empty list if the queue is empty.
    *
-   * @return List<ContainerAction>
+   * @return {@literal List<ContainerAction>}
    */
   public List<PipelineAction> getPendingPipelineAction(int maxLimit) {
     List<PipelineAction> pipelineActionList = new ArrayList<>();
@@ -447,17 +426,27 @@ public class StateContext {
    * @param cmd - {@link SCMCommand}.
    */
   public void addCmdStatus(SCMCommand cmd) {
-    CommandStatusBuilder statusBuilder;
-    if (cmd.getType() == Type.deleteBlocksCommand) {
-      statusBuilder = new DeleteBlockCommandStatusBuilder();
-    } else {
-      statusBuilder = CommandStatusBuilder.newBuilder();
+    final Optional<CommandStatusBuilder> cmdStatusBuilder;
+    switch (cmd.getType()) {
+    case replicateContainerCommand:
+      cmdStatusBuilder = Optional.of(CommandStatusBuilder.newBuilder());
+      break;
+    case deleteBlocksCommand:
+      cmdStatusBuilder = Optional.of(
+          DeleteBlockCommandStatusBuilder.newBuilder());
+      break;
+    case deleteContainerCommand:
+      cmdStatusBuilder = Optional.of(CommandStatusBuilder.newBuilder());
+      break;
+    default:
+      cmdStatusBuilder = Optional.empty();
     }
-    this.addCmdStatus(cmd.getId(),
-        statusBuilder.setCmdId(cmd.getId())
+    cmdStatusBuilder.ifPresent(statusBuilder ->
+        addCmdStatus(cmd.getId(), statusBuilder
+            .setCmdId(cmd.getId())
             .setStatus(Status.PENDING)
             .setType(cmd.getType())
-            .build());
+            .build()));
   }
 
   /**
@@ -466,14 +455,6 @@ public class StateContext {
    */
   public Map<Long, CommandStatus> getCommandStatusMap() {
     return cmdStatusMap;
-  }
-
-  /**
-   * Remove object from cache in StateContext#cmdStatusMap.
-   *
-   */
-  public void removeCommandStatus(Long cmdId) {
-    cmdStatusMap.remove(cmdId);
   }
 
   /**

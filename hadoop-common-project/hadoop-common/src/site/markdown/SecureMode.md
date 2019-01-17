@@ -133,21 +133,34 @@ The MapReduce JobHistory Server keytab file, on that host, should look like the 
 
 ### Mapping from Kerberos principals to OS user accounts
 
-Hadoop maps Kerberos principals to OS user (system) accounts using rules specified by `hadoop.security.auth_to_local`. These rules work in the same way as the `auth_to_local` in [Kerberos configuration file (krb5.conf)](http://web.mit.edu/Kerberos/krb5-latest/doc/admin/conf_files/krb5_conf.html). In addition, Hadoop `auth_to_local` mapping supports the **/L** flag that lowercases the returned name.
+Hadoop maps Kerberos principals to OS user (system) accounts using rules specified by `hadoop.security.auth_to_local`. How Hadoop evaluates these rules is determined by the setting of `hadoop.security.auth_to_local.mechanism`.
 
-The default is to pick the first component of the principal name as the system user name if the realm matches the `default_realm` (usually defined in /etc/krb5.conf). e.g. The default rule maps the principal `host/full.qualified.domain.name@REALM.TLD` to system user `host`. The default rule will *not be appropriate* for most clusters.
+In the default `hadoop` mode a Kerberos principal *must* be matched against a rule that transforms the principal to a simple form, i.e. a user account name without '@' or '/', otherwise a principal will not be authorized and a error will be logged.  In case of the `MIT` mode the rules work in the same way as the `auth_to_local` in [Kerberos configuration file (krb5.conf)](http://web.mit.edu/Kerberos/krb5-latest/doc/admin/conf_files/krb5_conf.html) and the restrictions of `hadoop` mode do *not* apply. If you use `MIT` mode it is suggested to use the same `auth_to_local` rules that are specified in your /etc/krb5.conf as part of your default realm and keep them in sync. In both `hadoop` and `MIT` mode the rules are being applied (with the exception of `DEFAULT`) to *all* principals regardless of their specified realm. Also, note you should *not* rely on the `auth_to_local` rules as an ACL and use proper (OS) mechanisms.
 
+Possible values for `auth_to_local` are:
+
+* `RULE:exp` The local name will be formulated from exp. The format for exp is `[n:string](regexp)s/pattern/replacement/g`. The integer n indicates how many components the target principal should have. If this matches, then a string will be formed from string, substituting the realm of the principal for `$0` and the n’th component of the principal for `$n` (e.g., if the principal was johndoe/admin then `[2:$2$1foo]` would result in the string `adminjohndoefoo`). If this string matches regexp, then the `s//[g]` substitution command will be run over the string. The optional g will cause the substitution to be global over the string, instead of replacing only the first match in the string. As an extension to MIT, Hadoop `auth_to_local` mapping supports the **/L** flag that lowercases the returned name.
+
+* `DEFAULT` Picks the first component of the principal name as the system user name if and only if the realm matches the `default_realm` (usually defined in /etc/krb5.conf). e.g. The default rule maps the principal `host/full.qualified.domain.name@MYREALM.TLD` to system user `host` if the default realm is `MYREALM.TLD`.
+
+In case no rules are specified Hadoop defaults to using `DEFAULT`, which is probably *not suitable* to most of the clusters.
+
+Please note that Hadoop does not support multiple default realms (e.g like Heimdal does). Also, Hadoop does not do a verification on mapping whether a local system account exists.
+
+### Example rules
 In a typical cluster HDFS and YARN services will be launched as the system `hdfs` and `yarn` users respectively. `hadoop.security.auth_to_local` can be configured as follows:
 
     <property>
       <name>hadoop.security.auth_to_local</name>
       <value>
-        RULE:[2:$1/$2@$0]([ndj]n/.*@REALM.TLD)s/.*/hdfs/
-        RULE:[2:$1/$2@$0]([rn]m/.*@REALM.TLD)s/.*/yarn/
-        RULE:[2:$1/$2@$0](jhs/.*@REALM.TLD)s/.*/mapred/
+        RULE:[2:$1/$2@$0]([ndj]n/.*@REALM.\TLD)s/.*/hdfs/
+        RULE:[2:$1/$2@$0]([rn]m/.*@REALM\.TLD)s/.*/yarn/
+        RULE:[2:$1/$2@$0](jhs/.*@REALM\.TLD)s/.*/mapred/
         DEFAULT
       </value>
     </property>
+
+This would map any principal `nn, dn, jn` on any `host` from realm `REALM.TLD` to the local system account `hdfs`. Secondly it would map any principal `rm, nm` on any `host` from `REALM.TLD` to the local system account `yarn`. Thirdly, it would map the principal `jhs` on any `host` from realm `REALM.TLD` to the local system account `mapred`. Finally, any principal on any host from the default realm will be mapped to the user component of that principal.
 
 Custom rules can be tested using the `hadoop kerbname` command.  This command allows one to specify a principal and apply Hadoop's current `auth_to_local` ruleset.
 

@@ -21,7 +21,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.Date;
 
-import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -158,7 +157,7 @@ public final class CacheDirective implements IntrusiveCollection.Element {
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder().append(id).toHashCode();
+    return Long.hashCode(id);
   }
 
   //

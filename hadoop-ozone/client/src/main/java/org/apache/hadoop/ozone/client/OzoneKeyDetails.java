@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.ozone.client;
 
+import org.apache.hadoop.hdds.client.ReplicationType;
+
 import java.util.List;
 
 /**
@@ -33,11 +35,13 @@ public class OzoneKeyDetails extends OzoneKey {
   /**
    * Constructs OzoneKeyDetails from OmKeyInfo.
    */
+  @SuppressWarnings("parameternumber")
   public OzoneKeyDetails(String volumeName, String bucketName, String keyName,
-                  long size, long creationTime, long modificationTime,
-                         List<OzoneKeyLocation> ozoneKeyLocations) {
+                         long size, long creationTime, long modificationTime,
+                         List<OzoneKeyLocation> ozoneKeyLocations,
+                         ReplicationType type) {
     super(volumeName, bucketName, keyName, size, creationTime,
-        modificationTime);
+        modificationTime, type);
     this.ozoneKeyLocations = ozoneKeyLocations;
   }
 

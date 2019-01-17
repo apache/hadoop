@@ -22,18 +22,19 @@ import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.container.PreMatching;
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.ext.Provider;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.InvalidRequestException;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.s3.header.AuthenticationHeaderParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,16 +50,21 @@ public class VirtualHostStyleFilter implements ContainerRequestFilter {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       VirtualHostStyleFilter.class);
-  private static final Pattern URL_SCHEME_PATTERN = Pattern.compile("" +
-      "(?<bucket>(.+))\\.(?<volume>(.+))\\.");
 
   @Inject
   private OzoneConfiguration conf;
+
+  @Inject
+  private AuthenticationHeaderParser authenticationHeaderParser;
+
   private String[] domains;
 
   @Override
   public void filter(ContainerRequestContext requestContext) throws
       IOException {
+
+    authenticationHeaderParser.setAuthHeader(requestContext.getHeaderString(
+        HttpHeaders.AUTHORIZATION));
     domains = conf.getTrimmedStrings(OZONE_S3G_DOMAIN_NAME);
 
     if (domains.length == 0) {
@@ -68,6 +74,7 @@ public class VirtualHostStyleFilter implements ContainerRequestFilter {
     }
     //Get the value of the host
     String host = requestContext.getHeaderString(HttpHeaders.HOST);
+    host = checkHostWithoutPort(host);
     String domain = getDomainName(host);
 
     if (domain == null) {
@@ -83,28 +90,30 @@ public class VirtualHostStyleFilter implements ContainerRequestFilter {
     // address length means it is virtual host style, we need to convert to
     // path style.
     if (host.length() > domain.length()) {
-      String bothNames = host.substring(0, host.length() - domain.length());
-      LOG.debug("Both volume name and bucket name is {}", bothNames);
-      Matcher matcher = URL_SCHEME_PATTERN.matcher(bothNames);
+      String bucketName = host.substring(0, host.length() - domain.length());
 
-      if (!matcher.matches()) {
+      if(!bucketName.endsWith(".")) {
+        //Checking this as the virtual host style pattern is http://bucket.host/
         throw getException("Invalid S3 Gateway request {" + requestContext
             .getUriInfo().getRequestUri().toString() +"}:" +" Host: {" + host
             + " is in invalid format");
+      } else {
+        bucketName = bucketName.substring(0, bucketName.length() - 1);
       }
-
-      String bucketStr = matcher.group("bucket");
-      String volumeStr = matcher.group("volume");
-
-      LOG.debug("bucket {}, volumeStr {}", bucketStr, volumeStr);
+      LOG.debug("Bucket name is {}", bucketName);
 
       URI baseURI = requestContext.getUriInfo().getBaseUri();
       String currentPath = requestContext.getUriInfo().getPath();
-      String newPath = String.format("%s/%s", volumeStr, bucketStr);
+      String newPath = bucketName;
       if (currentPath != null) {
         newPath += String.format("%s", currentPath);
       }
-      URI requestAddr = UriBuilder.fromUri(baseURI).path(newPath).build();
+      MultivaluedMap<String, String> queryParams = requestContext.getUriInfo()
+          .getQueryParameters();
+      UriBuilder requestAddrBuilder = UriBuilder.fromUri(baseURI).path(newPath);
+      queryParams.forEach((k, v) -> requestAddrBuilder.queryParam(k,
+          v.toArray()));
+      URI requestAddr = requestAddrBuilder.build();
       requestContext.setRequestUri(baseURI, requestAddr);
     }
   }
@@ -138,6 +147,19 @@ public class VirtualHostStyleFilter implements ContainerRequestFilter {
       }
     }
     return match;
+  }
+
+  private String checkHostWithoutPort(String host) {
+    if (host.contains(":")){
+      return host.substring(0, host.lastIndexOf(":"));
+    } else {
+      return host;
+    }
+  }
+
+  @VisibleForTesting
+  public void setAuthenticationHeaderParser(AuthenticationHeaderParser parser) {
+    this.authenticationHeaderParser = parser;
   }
 
 }

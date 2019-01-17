@@ -21,6 +21,7 @@ package org.apache.hadoop.crypto.key.kms;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.ConnectException;
+import java.net.URI;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -36,12 +37,15 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
 import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.KMSUtil;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,19 +80,42 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
 
   private final KMSClientProvider[] providers;
   private final AtomicInteger currentIdx;
+  private final Text dtService; // service in token.
+  private final Text canonicalService; // credentials alias for token.
 
   private RetryPolicy retryPolicy = null;
 
-  public LoadBalancingKMSClientProvider(KMSClientProvider[] providers,
-      Configuration conf) {
-    this(shuffle(providers), Time.monotonicNow(), conf);
+  public LoadBalancingKMSClientProvider(URI providerUri,
+      KMSClientProvider[] providers, Configuration conf) {
+    this(providerUri, providers, Time.monotonicNow(), conf);
   }
 
   @VisibleForTesting
   LoadBalancingKMSClientProvider(KMSClientProvider[] providers, long seed,
       Configuration conf) {
+    this(URI.create("kms://testing"), providers, seed, conf);
+  }
+
+  private LoadBalancingKMSClientProvider(URI uri,
+      KMSClientProvider[] providers, long seed, Configuration conf) {
     super(conf);
-    this.providers = providers;
+    // uri is the token service so it can be instantiated for renew/cancel.
+    dtService = KMSClientProvider.getDtService(uri);
+    // if provider not in conf, new client will alias on uri else addr.
+    if (KMSUtil.getKeyProviderUri(conf) == null) {
+      canonicalService = dtService;
+    } else {
+      // canonical service (credentials alias) will be the first underlying
+      // provider's service.  must be deterministic before shuffle so multiple
+      // calls for a token do not obtain another unnecessary token.
+      canonicalService = new Text(providers[0].getCanonicalServiceName());
+    }
+
+    // shuffle unless seed is 0 which is used by tests for determinism.
+    this.providers = (seed != 0) ? shuffle(providers) : providers;
+    for (KMSClientProvider provider : providers) {
+      provider.setClientTokenProvider(this);
+    }
     this.currentIdx = new AtomicInteger((int)(seed % providers.length));
     int maxNumRetries = conf.getInt(CommonConfigurationKeysPublic.
         KMS_CLIENT_FAILOVER_MAX_RETRIES_KEY, providers.length);
@@ -106,11 +133,31 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
     this.retryPolicy = RetryPolicies.failoverOnNetworkException(
         RetryPolicies.TRY_ONCE_THEN_FAIL, maxNumRetries, 0, sleepBaseMillis,
         sleepMaxMillis);
+    LOG.debug("Created LoadBalancingKMSClientProvider for KMS url: {} with {} "
+            + "providers. delegation token service: {}, canonical service: {}",
+        uri, providers.length, dtService, canonicalService);
   }
 
   @VisibleForTesting
   public KMSClientProvider[] getProviders() {
     return providers;
+  }
+
+  @Override
+  public org.apache.hadoop.security.token.Token<? extends TokenIdentifier>
+      selectDelegationToken(Credentials creds) {
+    Token<? extends TokenIdentifier> token =
+        KMSClientProvider.selectDelegationToken(creds, canonicalService);
+    // fallback to querying each sub-provider.
+    if (token == null) {
+      for (KMSClientProvider provider : getProviders()) {
+        token = provider.selectDelegationToken(creds);
+        if (token != null) {
+          break;
+        }
+      }
+    }
+    return token;
   }
 
   private <T> T doOp(ProviderCallable<T> op, int currPos,
@@ -193,13 +240,21 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
   }
 
   @Override
-  public Token<?>[]
-      addDelegationTokens(final String renewer, final Credentials credentials)
-          throws IOException {
-    return doOp(new ProviderCallable<Token<?>[]>() {
+  public String getCanonicalServiceName() {
+    return canonicalService.toString();
+  }
+
+  @Override
+  public Token<?> getDelegationToken(String renewer) throws IOException {
+    return doOp(new ProviderCallable<Token<?>>() {
       @Override
-      public Token<?>[] call(KMSClientProvider provider) throws IOException {
-        return provider.addDelegationTokens(renewer, credentials);
+      public Token<?> call(KMSClientProvider provider) throws IOException {
+        Token<?> token = provider.getDelegationToken(renewer);
+        // override sub-providers service with our own so it can be used
+        // across all providers.
+        token.setService(dtService);
+        LOG.debug("New token service set. Token: ({})", token);
+        return token;
       }
     }, nextIdx(), false);
   }

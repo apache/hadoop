@@ -88,7 +88,8 @@ public class NameNodeLayoutVersion {
     TRUNCATE(-61, -61, "Truncate"),
     APPEND_NEW_BLOCK(-62, -61, "Support appending to new block"),
     QUOTA_BY_STORAGE_TYPE(-63, -61, "Support quota for specific storage types"),
-    ERASURE_CODING(-64, -61, "Support erasure coding");
+    ERASURE_CODING(-64, -61, "Support erasure coding"),
+    EXPANDED_STRING_TABLE(-65, -61, "Support expanded string table in fsimage");
 
     private final FeatureInfo info;
 

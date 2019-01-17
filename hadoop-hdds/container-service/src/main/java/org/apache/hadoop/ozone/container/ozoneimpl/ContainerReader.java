@@ -51,21 +51,24 @@ import java.io.IOException;
  *
  * Layout of the container directory on disk is as follows:
  *
- * ../hdds/VERSION
- * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID>/metadata/<<containerID>>.container
- * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID>/<<dataPath>>
- *
+ * <p>../hdds/VERSION
+ * <p>{@literal ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID
+ * >/metadata/<<containerID>>.container}
+ * <p>{@literal ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID
+ * >/<<dataPath>>}
+ * <p>
  * Some ContainerTypes will have extra metadata other than the .container
  * file. For example, KeyValueContainer will have a .db file. This .db file
  * will also be stored in the metadata folder along with the .container file.
- *
- * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<KVcontainerID>/metadata/<<KVcontainerID>>.db
- *
- * Note that the <<dataPath>> is dependent on the ContainerType.
+ * <p>
+ * {@literal ../hdds/<<scmUuid>>/current/<<containerDir>>/<<KVcontainerID
+ * >/metadata/<<KVcontainerID>>.db}
+ * <p>
+ * Note that the {@literal <<dataPath>>} is dependent on the ContainerType.
  * For KeyValueContainers, the data is stored in a "chunks" folder. As such,
- * the <<dataPath>> layout for KeyValueContainers is
- *
- * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<KVcontainerID>/chunks/<<chunksFile>>
+ * the {@literal <<dataPath>>} layout for KeyValueContainers is:
+ * <p>{@literal ../hdds/<<scmUuid>>/current/<<containerDir>>/<<KVcontainerID
+ * >/chunks/<<chunksFile>>}
  *
  */
 public class ContainerReader implements Runnable {
@@ -93,8 +96,8 @@ public class ContainerReader implements Runnable {
     try {
       readVolume(hddsVolumeDir);
     } catch (RuntimeException ex) {
-      LOG.info("Caught an Run time exception during reading container files" +
-          " from Volume {}", hddsVolumeDir);
+      LOG.error("Caught a Run time exception during reading container files" +
+          " from Volume {} {}", hddsVolumeDir, ex);
     }
   }
 
@@ -190,6 +193,13 @@ public class ContainerReader implements Runnable {
         if (delTxnId != null) {
           kvContainerData
               .updateDeleteTransactionId(Longs.fromByteArray(delTxnId));
+        }
+        // sets the BlockCommitSequenceId.
+        byte[] bcsId = containerDB.get(
+            DFSUtil.string2Bytes(OzoneConsts.BLOCK_COMMIT_SEQUENCE_ID_PREFIX));
+        if (bcsId != null) {
+          kvContainerData
+              .updateBlockCommitSequenceId(Longs.fromByteArray(bcsId));
         }
         containerSet.addContainer(kvContainer);
       } else {

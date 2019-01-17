@@ -167,6 +167,9 @@ public class TestLogThrottlingHelper {
     assertEquals(2.0, bar.getStats(0).getMean(), 0.01);
     assertEquals(3.0, baz.getStats(0).getMean(), 0.01);
     assertEquals(3.0, baz.getStats(1).getMean(), 0.01);
+
+    assertEquals(2.0, helper.getCurrentStats("bar", 0).getMax(), 0);
+    assertEquals(3.0, helper.getCurrentStats("baz", 0).getMax(), 0);
   }
 
 }

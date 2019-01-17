@@ -18,13 +18,17 @@
 
 package org.apache.hadoop.ozone.container.server;
 
+import com.google.common.collect.Maps;
+import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
+import org.apache.hadoop.ozone.container.common.transport.server.ratis.DispatcherContext;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
+import org.apache.hadoop.ozone.container.ozoneimpl.ContainerController;
 import org.apache.hadoop.ozone.container.replication.GrpcReplicationService;
 import org.apache.hadoop.ozone.container.replication.OnDemandContainerReplicationSource;
-import org.apache.ratis.shaded.io.netty.channel.embedded.EmbeddedChannel;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -45,10 +49,10 @@ import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
 import org.apache.hadoop.hdds.scm.XceiverClientRatis;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.ratis.rpc.RpcType;
-import org.apache.ratis.util.CheckedBiConsumer;
+import org.apache.ratis.util.function.CheckedBiConsumer;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -57,7 +61,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.BiConsumer;
+import java.util.Map;
 
 import static org.apache.ratis.rpc.SupportedRpcType.GRPC;
 import static org.apache.ratis.rpc.SupportedRpcType.NETTY;
@@ -72,24 +76,26 @@ public class TestContainerServer {
       = GenericTestUtils.getTestDir("dfs").getAbsolutePath() + File.separator;
 
   private GrpcReplicationService createReplicationService(
-      ContainerSet containerSet) {
+      ContainerController containerController) {
     return new GrpcReplicationService(
-        new OnDemandContainerReplicationSource(containerSet));
+        new OnDemandContainerReplicationSource(containerController));
   }
 
   @Test
   public void testClientServer() throws Exception {
     DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
     ContainerSet containerSet = new ContainerSet();
-    runTestClientServer(1,
-        (pipeline, conf) -> conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
-            pipeline.getLeader()
-                .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue()),
+    ContainerController controller = new ContainerController(
+        containerSet, null);
+    runTestClientServer(1, (pipeline, conf) -> conf
+            .setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
+                pipeline.getFirstNode()
+                    .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue()),
         XceiverClientGrpc::new,
         (dn, conf) -> new XceiverServerGrpc(datanodeDetails, conf,
             new TestContainerDispatcher(),
-            createReplicationService(containerSet)),
-        (dn, p) -> {});
+            createReplicationService(controller)), (dn, p) -> {
+        });
   }
 
   @FunctionalInterface
@@ -132,7 +138,7 @@ public class TestContainerServer {
 
   static void runTestClientServer(
       int numDatanodes,
-      BiConsumer<Pipeline, OzoneConfiguration> initConf,
+      CheckedBiConsumer<Pipeline, OzoneConfiguration, IOException> initConf,
       CheckedBiFunction<Pipeline, OzoneConfiguration, XceiverClientSpi,
           IOException> createClient,
       CheckedBiFunction<DatanodeDetails, OzoneConfiguration, XceiverServerSpi,
@@ -143,11 +149,12 @@ public class TestContainerServer {
     XceiverClientSpi client = null;
     String containerName = OzoneUtils.getRequestID();
     try {
-      final Pipeline pipeline = ContainerTestHelper.createPipeline(numDatanodes);
+      final Pipeline pipeline =
+          ContainerTestHelper.createPipeline(numDatanodes);
       final OzoneConfiguration conf = new OzoneConfiguration();
       initConf.accept(pipeline, conf);
 
-      for(DatanodeDetails dn : pipeline.getMachines()) {
+      for (DatanodeDetails dn : pipeline.getNodes()) {
         final XceiverServerSpi s = createServer.apply(dn, conf);
         servers.add(s);
         s.start();
@@ -182,16 +189,26 @@ public class TestContainerServer {
       Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline();
       OzoneConfiguration conf = new OzoneConfiguration();
       conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
-          pipeline.getLeader()
+          pipeline.getFirstNode()
               .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue());
 
       ContainerSet containerSet = new ContainerSet();
+      VolumeSet volumeSet = mock(VolumeSet.class);
+      ContainerMetrics metrics = ContainerMetrics.create(conf);
+      Map<ContainerProtos.ContainerType, Handler> handlers = Maps.newHashMap();
+      for (ContainerProtos.ContainerType containerType :
+          ContainerProtos.ContainerType.values()) {
+        handlers.put(containerType,
+            Handler.getHandlerForContainerType(
+                containerType, conf, null, containerSet, volumeSet, metrics));
+      }
       HddsDispatcher dispatcher = new HddsDispatcher(
-          conf, mock(ContainerSet.class), mock(VolumeSet.class), null);
+          conf, containerSet, volumeSet, handlers, null, metrics);
       dispatcher.init();
       DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
       server = new XceiverServerGrpc(datanodeDetails, conf, dispatcher,
-          createReplicationService(containerSet));
+          createReplicationService(
+              new ContainerController(containerSet, null)));
       client = new XceiverClientGrpc(pipeline, conf);
 
       server.start();
@@ -221,13 +238,19 @@ public class TestContainerServer {
      * @return Command Response
      */
     @Override
-    public ContainerCommandResponseProto
-        dispatch(ContainerCommandRequestProto msg)  {
+    public ContainerCommandResponseProto dispatch(
+        ContainerCommandRequestProto msg,
+        DispatcherContext context) {
       return ContainerTestHelper.getCreateContainerResponse(msg);
     }
 
     @Override
     public void init() {
+    }
+
+    @Override
+    public void validateContainerCommand(
+        ContainerCommandRequestProto msg) throws StorageContainerException {
     }
 
     @Override

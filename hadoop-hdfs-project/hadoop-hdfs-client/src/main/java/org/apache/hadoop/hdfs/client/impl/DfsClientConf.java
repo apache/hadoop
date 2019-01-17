@@ -122,6 +122,7 @@ public class DfsClientConf {
   private final int numBlockWriteRetry;
   private final int numBlockWriteLocateFollowingRetry;
   private final int blockWriteLocateFollowingInitialDelayMs;
+  private final int blockWriteLocateFollowingMaxDelayMs;
   private final long defaultBlockSize;
   private final long prefetchSize;
   private final short defaultReplication;
@@ -237,6 +238,9 @@ public class DfsClientConf {
     blockWriteLocateFollowingInitialDelayMs = conf.getInt(
         BlockWrite.LOCATEFOLLOWINGBLOCK_INITIAL_DELAY_MS_KEY,
         BlockWrite.LOCATEFOLLOWINGBLOCK_INITIAL_DELAY_MS_DEFAULT);
+    blockWriteLocateFollowingMaxDelayMs = conf.getInt(
+        BlockWrite.LOCATEFOLLOWINGBLOCK_MAX_DELAY_MS_KEY,
+        BlockWrite.LOCATEFOLLOWINGBLOCK_MAX_DELAY_MS_DEFAULT);
     uMask = FsPermission.getUMask(conf);
     connectToDnViaHostname = conf.getBoolean(DFS_CLIENT_USE_DN_HOSTNAME,
         DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT);
@@ -347,6 +351,10 @@ public class DfsClientConf {
   @VisibleForTesting
   public int getBlockWriteLocateFollowingInitialDelayMs() {
     return blockWriteLocateFollowingInitialDelayMs;
+  }
+
+  public int getBlockWriteLocateFollowingMaxDelayMs() {
+    return blockWriteLocateFollowingMaxDelayMs;
   }
 
   /**

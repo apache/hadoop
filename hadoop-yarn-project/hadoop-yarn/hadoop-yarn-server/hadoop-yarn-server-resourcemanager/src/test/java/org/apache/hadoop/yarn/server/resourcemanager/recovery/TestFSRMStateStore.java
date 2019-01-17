@@ -205,6 +205,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       testRemoveAttempt(fsTester);
       testAMRMTokenSecretManagerStateStore(fsTester);
       testReservationStateStore(fsTester);
+      testProxyCA(fsTester);
     } finally {
       cluster.shutdown();
     }

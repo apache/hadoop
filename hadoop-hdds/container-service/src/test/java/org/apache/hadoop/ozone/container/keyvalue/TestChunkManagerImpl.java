@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
+import org.apache.hadoop.ozone.container.common.transport.server.ratis.DispatcherContext;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.ChunkUtils;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume.RoundRobinVolumeChoosingPolicy;
@@ -39,9 +40,11 @@ import org.junit.rules.TemporaryFolder;
 import org.mockito.Mockito;
 
 import java.io.File;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.UUID;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -70,8 +73,9 @@ public class TestChunkManagerImpl {
   @Before
   public void setUp() throws Exception {
     config = new OzoneConfiguration();
+    UUID datanodeId = UUID.randomUUID();
     hddsVolume = new HddsVolume.Builder(folder.getRoot()
-        .getAbsolutePath()).conf(config).datanodeUuid(UUID.randomUUID()
+        .getAbsolutePath()).conf(config).datanodeUuid(datanodeId
         .toString()).build();
 
     volumeSet = mock(VolumeSet.class);
@@ -81,21 +85,26 @@ public class TestChunkManagerImpl {
         .thenReturn(hddsVolume);
 
     keyValueContainerData = new KeyValueContainerData(1L,
-        (long) StorageUnit.GB.toBytes(5));
+        (long) StorageUnit.GB.toBytes(5), UUID.randomUUID().toString(),
+        datanodeId.toString());
 
     keyValueContainer = new KeyValueContainer(keyValueContainerData, config);
 
     keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
 
-    data = "testing write chunks".getBytes();
+    data = "testing write chunks".getBytes(UTF_8);
     // Creating BlockData
     blockID = new BlockID(1L, 1L);
     chunkInfo = new ChunkInfo(String.format("%d.data.%d", blockID
         .getLocalID(), 0), 0, data.length);
 
     // Create a ChunkManager object.
-    chunkManager = new ChunkManagerImpl();
+    chunkManager = new ChunkManagerImpl(true);
 
+  }
+
+  private DispatcherContext getDispatcherContext() {
+    return new DispatcherContext.Builder().build();
   }
 
   @Test
@@ -109,25 +118,30 @@ public class TestChunkManagerImpl {
 
     // As no chunks are written to the volume writeBytes should be 0
     checkWriteIOStats(0, 0);
-    chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo, data,
-        ContainerProtos.Stage.WRITE_DATA);
+    chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo,
+        ByteBuffer.wrap(data), new DispatcherContext.Builder()
+            .setStage(DispatcherContext.WriteChunkStage.WRITE_DATA).build());
     // Now a chunk file is being written with Stage WRITE_DATA, so it should
     // create a temporary chunk file.
     assertTrue(chunksPath.listFiles().length == 1);
 
+    long term = 0;
+    long index = 0;
     File chunkFile = ChunkUtils.getChunkFile(keyValueContainerData, chunkInfo);
     File tempChunkFile = new File(chunkFile.getParent(),
-        chunkFile.getName() +
-            OzoneConsts.CONTAINER_CHUNK_NAME_DELIMITER +
-            OzoneConsts.CONTAINER_TEMPORARY_CHUNK_PREFIX);
+        chunkFile.getName() + OzoneConsts.CONTAINER_CHUNK_NAME_DELIMITER
+            + OzoneConsts.CONTAINER_TEMPORARY_CHUNK_PREFIX
+            + OzoneConsts.CONTAINER_CHUNK_NAME_DELIMITER + term
+            + OzoneConsts.CONTAINER_CHUNK_NAME_DELIMITER + index);
 
     // As chunk write stage is WRITE_DATA, temp chunk file will be created.
     assertTrue(tempChunkFile.exists());
 
     checkWriteIOStats(data.length, 1);
 
-    chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo, data,
-        ContainerProtos.Stage.COMMIT_DATA);
+    chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo,
+        ByteBuffer.wrap(data), new DispatcherContext.Builder()
+            .setStage(DispatcherContext.WriteChunkStage.COMMIT_DATA).build());
 
     checkWriteIOStats(data.length, 1);
 
@@ -146,8 +160,8 @@ public class TestChunkManagerImpl {
       long randomLength = 200L;
       chunkInfo = new ChunkInfo(String.format("%d.data.%d", blockID
           .getLocalID(), 0), 0, randomLength);
-      chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo, data,
-          ContainerProtos.Stage.WRITE_DATA);
+      chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo,
+          ByteBuffer.wrap(data), getDispatcherContext());
       fail("testWriteChunkIncorrectLength failed");
     } catch (StorageContainerException ex) {
       // As we got an exception, writeBytes should be 0.
@@ -167,8 +181,8 @@ public class TestChunkManagerImpl {
     // Initially chunks folder should be empty.
     assertTrue(chunksPath.listFiles().length == 0);
     checkWriteIOStats(0, 0);
-    chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo, data,
-        ContainerProtos.Stage.COMBINED);
+    chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo,
+        ByteBuffer.wrap(data), getDispatcherContext());
     // Now a chunk file is being written with Stage COMBINED_DATA, so it should
     // create a chunk file.
     assertTrue(chunksPath.listFiles().length == 1);
@@ -180,12 +194,12 @@ public class TestChunkManagerImpl {
   @Test
   public void testReadChunk() throws Exception {
     checkWriteIOStats(0, 0);
-    chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo, data,
-        ContainerProtos.Stage.COMBINED);
+    chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo,
+        ByteBuffer.wrap(data), getDispatcherContext());
     checkWriteIOStats(data.length, 1);
     checkReadIOStats(0, 0);
     byte[] expectedData = chunkManager.readChunk(keyValueContainer, blockID,
-        chunkInfo);
+        chunkInfo, getDispatcherContext());
     assertEquals(expectedData.length, data.length);
     assertTrue(Arrays.equals(expectedData, data));
     checkReadIOStats(data.length, 1);
@@ -194,8 +208,8 @@ public class TestChunkManagerImpl {
   @Test
   public void testDeleteChunk() throws Exception {
     File chunksPath = new File(keyValueContainerData.getChunksPath());
-    chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo, data,
-        ContainerProtos.Stage.COMBINED);
+    chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo,
+        ByteBuffer.wrap(data), getDispatcherContext());
     assertTrue(chunksPath.listFiles().length == 1);
     chunkManager.deleteChunk(keyValueContainer, blockID, chunkInfo);
     assertTrue(chunksPath.listFiles().length == 0);
@@ -204,8 +218,8 @@ public class TestChunkManagerImpl {
   @Test
   public void testDeleteChunkUnsupportedRequest() throws Exception {
     try {
-      chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo, data,
-          ContainerProtos.Stage.COMBINED);
+      chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo,
+          ByteBuffer.wrap(data), getDispatcherContext());
       long randomLength = 200L;
       chunkInfo = new ChunkInfo(String.format("%d.data.%d", blockID
           .getLocalID(), 0), 0, randomLength);
@@ -218,27 +232,11 @@ public class TestChunkManagerImpl {
   }
 
   @Test
-  public void testWriteChunkChecksumMismatch() throws Exception {
-    try {
-      chunkInfo = new ChunkInfo(String.format("%d.data.%d", blockID
-          .getLocalID(), 0), 0, data.length);
-      //Setting checksum to some value.
-      chunkInfo.setChecksum("some garbage");
-      chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo, data,
-          ContainerProtos.Stage.COMBINED);
-      fail("testWriteChunkChecksumMismatch failed");
-    } catch (StorageContainerException ex) {
-      GenericTestUtils.assertExceptionContains("Checksum mismatch.", ex);
-      assertEquals(ContainerProtos.Result.CHECKSUM_MISMATCH, ex.getResult());
-    }
-  }
-
-  @Test
   public void testReadChunkFileNotExists() throws Exception {
     try {
       // trying to read a chunk, where chunk file does not exist
       byte[] expectedData = chunkManager.readChunk(keyValueContainer, blockID,
-          chunkInfo);
+          chunkInfo, getDispatcherContext());
       fail("testReadChunkFileNotExists failed");
     } catch (StorageContainerException ex) {
       GenericTestUtils.assertExceptionContains("Unable to find the chunk " +
@@ -252,8 +250,8 @@ public class TestChunkManagerImpl {
     for (int i=0; i<100; i++) {
       chunkInfo = new ChunkInfo(String.format("%d.data.%d", blockID
           .getLocalID(), i), 0, data.length);
-      chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo, data,
-          ContainerProtos.Stage.COMBINED);
+      chunkManager.writeChunk(keyValueContainer, blockID, chunkInfo,
+          ByteBuffer.wrap(data), getDispatcherContext());
     }
     checkWriteIOStats(data.length*100, 100);
     assertTrue(hddsVolume.getVolumeIOStats().getWriteTime() > 0);
@@ -261,7 +259,8 @@ public class TestChunkManagerImpl {
     for (int i=0; i<100; i++) {
       chunkInfo = new ChunkInfo(String.format("%d.data.%d", blockID
           .getLocalID(), i), 0, data.length);
-      chunkManager.readChunk(keyValueContainer, blockID, chunkInfo);
+      chunkManager.readChunk(keyValueContainer, blockID, chunkInfo,
+          getDispatcherContext());
     }
     checkReadIOStats(data.length*100, 100);
     assertTrue(hddsVolume.getVolumeIOStats().getReadTime() > 0);

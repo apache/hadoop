@@ -80,7 +80,7 @@ public class ReadaheadPool {
    * @param readaheadLength the configured length to read ahead
    * @param maxOffsetToRead the maximum offset that will be readahead
    *        (useful if, for example, only some segment of the file is
-   *        requested by the user). Pass {@link Long.MAX_VALUE} to allow
+   *        requested by the user). Pass {@link Long#MAX_VALUE} to allow
    *        readahead to the end of the file.
    * @param lastReadahead the result returned by the previous invocation
    *        of this function on this file descriptor, or null if this is

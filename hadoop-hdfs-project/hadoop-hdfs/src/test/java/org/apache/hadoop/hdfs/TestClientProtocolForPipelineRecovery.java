@@ -436,6 +436,8 @@ public class TestClientProtocolForPipelineRecovery {
           0, out.getStreamer().getPipelineRecoveryCount());
       out.write(1);
       out.close();
+      // Ensure that subsequent closes are idempotent and do not throw errors
+      out.close();
     } finally {
       if (cluster != null) {
         cluster.shutdown();

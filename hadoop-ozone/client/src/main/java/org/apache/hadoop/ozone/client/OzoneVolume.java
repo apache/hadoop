@@ -82,6 +82,7 @@ public class OzoneVolume {
    * @param creationTime creation time of the volume
    * @param acls ACLs associated with the volume.
    */
+  @SuppressWarnings("parameternumber")
   public OzoneVolume(Configuration conf, ClientProtocol proxy, String name,
                      String admin, String owner, long quotaInBytes,
                      long creationTime, List<OzoneAcl> acls) {
@@ -265,12 +266,13 @@ public class OzoneVolume {
 
 
     /**
-     * Creates an Iterator to iterate over all buckets after prevBucket in the volume.
+     * Creates an Iterator to iterate over all buckets after prevBucket in
+     * the volume.
      * If prevBucket is null it iterates from the first bucket in the volume.
      * The returned buckets match bucket prefix.
      * @param bucketPrefix
      */
-    public BucketIterator(String bucketPrefix, String prevBucket) {
+    BucketIterator(String bucketPrefix, String prevBucket) {
       this.bucketPrefix = bucketPrefix;
       this.currentValue = null;
       this.currentIterator = getNextListOfBuckets(prevBucket).iterator();

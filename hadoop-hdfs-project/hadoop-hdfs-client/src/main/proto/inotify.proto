@@ -80,6 +80,7 @@ message CreateEventProto {
   optional string symlinkTarget = 8;
   optional bool overwrite = 9;
   optional int64 defaultBlockSize = 10 [default=0];
+  optional bool erasureCoded = 11;
 }
 
 message CloseEventProto {

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.ozone.client.protocol;
 
-import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.client.*;
 import org.apache.hadoop.hdds.client.OzoneQuota;
@@ -26,9 +26,12 @@ import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * An implementer of this interface is capable of connecting to Ozone Cluster
@@ -322,8 +325,124 @@ public interface ClientProtocol {
       throws IOException;
 
   /**
+   * Creates an S3 bucket inside Ozone manager and creates the mapping needed
+   * to access via both S3 and Ozone.
+   * @param userName - S3 user name.
+   * @param s3BucketName - S3 bucket Name.
+   * @throws IOException - On failure, throws an exception like Bucket exists.
+   */
+  void createS3Bucket(String userName, String s3BucketName) throws IOException;
+
+  /**
+   * Deletes an s3 bucket and removes mapping of Ozone volume/bucket.
+   * @param bucketName - S3 Bucket Name.
+   * @throws  IOException in case the bucket cannot be deleted.
+   */
+  void deleteS3Bucket(String bucketName) throws IOException;
+
+
+  /**
+   * Returns the Ozone Namespace for the S3Bucket. It will return the
+   * OzoneVolume/OzoneBucketName.
+   * @param s3BucketName  - S3 Bucket Name.
+   * @return String - The Ozone canonical name for this s3 bucket. This
+   * string is useful for mounting an OzoneFS.
+   * @throws IOException - Error is throw if the s3bucket does not exist.
+   */
+  String getOzoneBucketMapping(String s3BucketName) throws IOException;
+
+  /**
+   * Returns the corresponding Ozone volume given an S3 Bucket.
+   * @param s3BucketName - S3Bucket Name.
+   * @return String - Ozone Volume name.
+   * @throws IOException - Throws if the s3Bucket does not exist.
+   */
+  String getOzoneVolumeName(String s3BucketName) throws IOException;
+
+  /**
+   * Returns the corresponding Ozone bucket name for the given S3 bucket.
+   * @param s3BucketName - S3Bucket Name.
+   * @return String - Ozone bucket Name.
+   * @throws IOException - Throws if the s3bucket does not exist.
+   */
+  String getOzoneBucketName(String s3BucketName) throws IOException;
+
+  /**
+   * Returns Iterator to iterate over all buckets after prevBucket for a
+   * specific user. If prevBucket is null it returns an iterator to iterate over
+   * all the buckets of a user. The result can be restricted using bucket
+   * prefix, will return all buckets if bucket prefix is null.
+   *
+   * @param userName user name
+   * @param bucketPrefix Bucket prefix to match
+   * @param prevBucket Buckets are listed after this bucket
+   * @return {@code Iterator<OzoneBucket>}
+   * @throws IOException
+   */
+  List<OzoneBucket> listS3Buckets(String userName, String bucketPrefix,
+                                String prevBucket, int maxListResult)
+      throws IOException;
+
+  /**
    * Close and release the resources.
    */
   void close() throws IOException;
+
+
+  /**
+   * Initiate Multipart upload.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param type
+   * @param factor
+   * @return {@link OmMultipartInfo}
+   * @throws IOException
+   */
+  OmMultipartInfo initiateMultipartUpload(String volumeName, String
+      bucketName, String keyName, ReplicationType type, ReplicationFactor
+      factor) throws IOException;
+
+  /**
+   * Create a part key for a multipart upload key.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param size
+   * @param partNumber
+   * @param uploadID
+   * @return OzoneOutputStream
+   * @throws IOException
+   */
+  OzoneOutputStream createMultipartKey(String volumeName, String bucketName,
+                                       String keyName, long size,
+                                       int partNumber, String uploadID)
+      throws IOException;
+
+  /**
+   * Complete Multipart upload. This will combine all the parts and make the
+   * key visible in ozone.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param uploadID
+   * @param partsMap
+   * @return OmMultipartUploadCompleteInfo
+   * @throws IOException
+   */
+  OmMultipartUploadCompleteInfo completeMultipartUpload(String volumeName,
+      String bucketName, String keyName, String uploadID,
+      Map<Integer, String> partsMap) throws IOException;
+
+  /**
+   * Abort Multipart upload request for the given key with given uploadID.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param uploadID
+   * @throws IOException
+   */
+  void abortMultipartUpload(String volumeName,
+      String bucketName, String keyName, String uploadID) throws IOException;
 
 }

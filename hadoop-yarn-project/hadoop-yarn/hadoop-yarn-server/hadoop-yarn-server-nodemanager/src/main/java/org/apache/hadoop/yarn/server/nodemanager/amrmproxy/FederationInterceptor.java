@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -60,6 +61,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.PreemptionContract;
 import org.apache.hadoop.yarn.api.records.PreemptionMessage;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.StrictPreemptionContract;
@@ -163,9 +165,26 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
   /**
    * Stores the AllocateResponses that are received asynchronously from all the
-   * sub-cluster resource managers, including home RM.
+   * sub-cluster resource managers, including home RM, but not merged and
+   * returned back to AM yet.
    */
   private Map<SubClusterId, List<AllocateResponse>> asyncResponseSink;
+
+  /**
+   * Remembers the last allocate response from all known sub-clusters. This is
+   * used together with sub-cluster timeout to assemble entries about
+   * cluster-wide info (e.g. AvailableResource, NumClusterNodes) in the allocate
+   * response back to AM.
+   */
+  private Map<SubClusterId, AllocateResponse> lastSCResponse;
+
+  /**
+   * The async UAM registration result that is not consumed yet.
+   */
+  private Map<SubClusterId, RegisterApplicationMasterResponse> uamRegistrations;
+
+  // For unit test synchronization
+  private Map<SubClusterId, Future<?>> uamRegisterFutures;
 
   /** Thread pool used for asynchronous operations. */
   private ExecutorService threadpool;
@@ -211,6 +230,16 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
   private SubClusterResolver subClusterResolver;
 
+  /**
+   * Records the last time a successful heartbeat response received from a known
+   * sub-cluster. lastHeartbeatTimeStamp.keySet() should be in sync with
+   * uamPool.getAllUAMIds().
+   */
+  private Map<SubClusterId, Long> lastSCResponseTime;
+  private long subClusterTimeOut;
+
+  private long lastAMHeartbeatTime;
+
   /** The policy used to split requests among sub-clusters. */
   private FederationAMRMProxyPolicy policyInterpreter;
 
@@ -227,6 +256,9 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
   public FederationInterceptor() {
     this.containerIdToSubClusterIdMap = new ConcurrentHashMap<>();
     this.asyncResponseSink = new ConcurrentHashMap<>();
+    this.lastSCResponse = new ConcurrentHashMap<>();
+    this.uamRegistrations = new ConcurrentHashMap<>();
+    this.uamRegisterFutures = new ConcurrentHashMap<>();
     this.threadpool = Executors.newCachedThreadPool();
     this.uamPool = createUnmanagedAMPoolManager(this.threadpool);
     this.secondaryRelayers = new ConcurrentHashMap<>();
@@ -234,6 +266,8 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     this.amRegistrationResponse = null;
     this.justRecovered = false;
     this.finishAMCalled = false;
+    this.lastSCResponseTime = new ConcurrentHashMap<>();
+    this.lastAMHeartbeatTime = this.clock.getTime();
   }
 
   /**
@@ -279,8 +313,8 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
         ApplicationMasterProtocol.class, appOwner), appId,
         this.homeSubClusterId.toString());
 
-    this.homeHeartbeartHandler = createHomeHeartbeartHandler(conf, appId);
-    this.homeHeartbeartHandler.setAMRMClientRelayer(this.homeRMRelayer);
+    this.homeHeartbeartHandler =
+        createHomeHeartbeartHandler(conf, appId, this.homeRMRelayer);
     this.homeHeartbeartHandler.setUGI(appOwner);
     this.homeHeartbeartHandler.setDaemon(true);
     this.homeHeartbeartHandler.start();
@@ -303,6 +337,19 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     this.heartbeatMaxWaitTimeMs =
         conf.getLong(YarnConfiguration.FEDERATION_AMRMPROXY_HB_MAX_WAIT_MS,
             YarnConfiguration.DEFAULT_FEDERATION_AMRMPROXY_HB_MAX_WAIT_MS);
+
+    this.subClusterTimeOut =
+        conf.getLong(YarnConfiguration.FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT,
+            YarnConfiguration.DEFAULT_FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT);
+    if (this.subClusterTimeOut <= 0) {
+      LOG.info(
+          "{} configured to be {}, should be positive. Using default of {}.",
+          YarnConfiguration.FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT,
+          this.subClusterTimeOut,
+          YarnConfiguration.DEFAULT_FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT);
+      this.subClusterTimeOut =
+          YarnConfiguration.DEFAULT_FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT;
+    }
   }
 
   @Override
@@ -386,6 +433,10 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
           RegisterApplicationMasterResponse response =
               this.uamPool.registerApplicationMaster(subClusterId.getId(),
                   this.amRegistrationRequest);
+
+          // Set sub-cluster to be timed out initially
+          lastSCResponseTime.put(subClusterId,
+              clock.getTime() - subClusterTimeOut);
 
           // Running containers from secondary RMs
           for (Container container : response
@@ -573,6 +624,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       throws YarnException, IOException {
     Preconditions.checkArgument(this.policyInterpreter != null,
         "Allocate should be called after registerApplicationMaster");
+    this.lastAMHeartbeatTime = this.clock.getTime();
 
     if (this.justRecovered) {
       throw new ApplicationMasterNotRegisteredException(
@@ -615,10 +667,9 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       /**
        * Send the requests to the all sub-cluster resource managers. All
        * requests are synchronously triggered but sent asynchronously. Later the
-       * responses will be collected and merged. In addition, it also returns
-       * the newly registered UAMs.
+       * responses will be collected and merged.
        */
-      Registrations newRegistrations = sendRequestsToResourceManagers(requests);
+      sendRequestsToResourceManagers(requests);
 
       // Wait for the first async response to arrive
       long startTime = this.clock.getTime();
@@ -638,17 +689,21 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       }
 
       // Prepare the response to AM
-      AllocateResponse response =
-          RECORD_FACTORY.newRecordInstance(AllocateResponse.class);
+      AllocateResponse response = generateBaseAllocationResponse();
 
       // Merge all responses from response sink
       mergeAllocateResponses(response);
 
       // Merge the containers and NMTokens from the new registrations into
       // the response
-      if (!isNullOrEmpty(newRegistrations.getSuccessfulRegistrations())) {
-        mergeRegistrationResponses(response,
-            newRegistrations.getSuccessfulRegistrations());
+
+      if (!isNullOrEmpty(this.uamRegistrations)) {
+        Map<SubClusterId, RegisterApplicationMasterResponse> newRegistrations;
+        synchronized (this.uamRegistrations) {
+          newRegistrations = new HashMap<>(this.uamRegistrations);
+          this.uamRegistrations.clear();
+        }
+        mergeRegistrationResponses(response, newRegistrations);
       }
 
       // update the responseId and return the final response to AM
@@ -705,12 +760,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
                   uamPool.finishApplicationMaster(subClusterId, finishRequest);
 
               if (uamResponse.getIsUnregistered()) {
-                AMRMClientRelayer relayer =
-                    secondaryRelayers.remove(subClusterId);
-                if(relayer != null) {
-                  relayer.shutdown();
-                }
-
+                secondaryRelayers.remove(subClusterId);
                 if (getNMStateStore() != null) {
                   getNMStateStore().removeAMRMProxyAppContextEntry(attemptId,
                       NMSS_SECONDARY_SC_PREFIX + subClusterId);
@@ -790,8 +840,16 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
    */
   @Override
   public void shutdown() {
+    LOG.info("Shutting down FederationInterceptor for {}", this.attemptId);
+
     // Do not stop uamPool service and kill UAMs here because of possible second
     // app attempt
+    try {
+      this.uamPool.shutDownConnections();
+    } catch (YarnException e) {
+      LOG.error("Error shutting down all UAM clients without killing them", e);
+    }
+
     if (this.threadpool != null) {
       try {
         this.threadpool.shutdown();
@@ -803,9 +861,6 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     // Stop the home heartbeat thread
     this.homeHeartbeartHandler.shutdown();
     this.homeRMRelayer.shutdown();
-    for (AMRMClientRelayer relayer : this.secondaryRelayers.values()) {
-      relayer.shutdown();
-    }
 
     super.shutdown();
   }
@@ -850,8 +905,9 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
   @VisibleForTesting
   protected AMHeartbeatRequestHandler createHomeHeartbeartHandler(
-      Configuration conf, ApplicationId appId) {
-    return new AMHeartbeatRequestHandler(conf, appId);
+      Configuration conf, ApplicationId appId,
+      AMRMClientRelayer rmProxyRelayer) {
+    return new AMHeartbeatRequestHandler(conf, appId, rmProxyRelayer);
   }
 
   /**
@@ -957,6 +1013,10 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
                 response = uamPool.registerApplicationMaster(
                     subClusterId.getId(), amRegistrationRequest);
+
+                // Set sub-cluster to be timed out initially
+                lastSCResponseTime.put(subClusterId,
+                    clock.getTime() - subClusterTimeOut);
 
                 if (response != null
                     && response.getContainersFromPreviousAttempts() != null) {
@@ -1107,18 +1167,16 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
    *
    * @param requests contains the heart beat requests to send to the resource
    *          manager keyed by the sub-cluster id
-   * @return the registration responses from the newly added sub-cluster
-   *         resource managers
    * @throws YarnException
    * @throws IOException
    */
-  private Registrations sendRequestsToResourceManagers(
+  private void sendRequestsToResourceManagers(
       Map<SubClusterId, AllocateRequest> requests)
       throws YarnException, IOException {
 
-    // Create new UAM instances for the sub-cluster that we have not seen
-    // before
-    Registrations registrations = registerWithNewSubClusters(requests.keySet());
+    // Create new UAM instances for the sub-cluster that we haven't seen before
+    List<SubClusterId> newSubClusters =
+        registerAndAllocateWithNewSubClusters(requests);
 
     // Now that all the registrations are done, send the allocation request
     // to the sub-cluster RMs asynchronously and don't wait for the response.
@@ -1126,6 +1184,11 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     // response sink, then merged and sent to the application master.
     for (Entry<SubClusterId, AllocateRequest> entry : requests.entrySet()) {
       SubClusterId subClusterId = entry.getKey();
+      if (newSubClusters.contains(subClusterId)) {
+        // For new sub-clusters, we have already sent the request right after
+        // register in the async thread
+        continue;
+      }
 
       if (subClusterId.equals(this.homeSubClusterId)) {
         // Request for the home sub-cluster resource manager
@@ -1133,131 +1196,136 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
             new HeartbeatCallBack(this.homeSubClusterId, false));
       } else {
         if (!this.uamPool.hasUAMId(subClusterId.getId())) {
-          // TODO: This means that the registration for this sub-cluster RM
-          // failed. For now, we ignore the resource requests and continue
-          // but we need to fix this and handle this situation. One way would
-          // be to send the request to another RM by consulting the policy.
-          LOG.warn("Unmanaged AM registration not found for sub-cluster {}",
-              subClusterId);
-          continue;
+          throw new YarnException("UAM not found for " + this.attemptId
+              + " in sub-cluster " + subClusterId);
         }
         this.uamPool.allocateAsync(subClusterId.getId(), entry.getValue(),
             new HeartbeatCallBack(subClusterId, true));
       }
     }
-
-    return registrations;
   }
 
   /**
-   * This method ensures that Unmanaged AMs are created for each of the
-   * specified sub-cluster specified in the input and registers with the
-   * corresponding resource managers.
+   * This method ensures that Unmanaged AMs are created for newly specified
+   * sub-clusters, registers with the corresponding resource managers and send
+   * the first allocate request async.
    */
-  private Registrations registerWithNewSubClusters(
-      Set<SubClusterId> subClusterSet) throws IOException {
-
-    List<SubClusterId> failedRegistrations = new ArrayList<>();
-    Map<SubClusterId, RegisterApplicationMasterResponse>
-        successfulRegistrations = new HashMap<>();
+  private List<SubClusterId> registerAndAllocateWithNewSubClusters(
+      final Map<SubClusterId, AllocateRequest> requests) throws IOException {
 
     // Check to see if there are any new sub-clusters in this request
     // list and create and register Unmanaged AM instance for the new ones
-    List<String> newSubClusters = new ArrayList<>();
-    for (SubClusterId subClusterId : subClusterSet) {
+    List<SubClusterId> newSubClusters = new ArrayList<>();
+    for (SubClusterId subClusterId : requests.keySet()) {
       if (!subClusterId.equals(this.homeSubClusterId)
           && !this.uamPool.hasUAMId(subClusterId.getId())) {
-        newSubClusters.add(subClusterId.getId());
+        newSubClusters.add(subClusterId);
+
+        // Set sub-cluster to be timed out initially
+        lastSCResponseTime.put(subClusterId,
+            clock.getTime() - subClusterTimeOut);
       }
     }
 
-    if (newSubClusters.size() > 0) {
-      final RegisterApplicationMasterRequest registerRequest =
-          this.amRegistrationRequest;
-      final AMRMProxyApplicationContext appContext = getApplicationContext();
-      ExecutorCompletionService<RegisterApplicationMasterResponseInfo>
-          completionService = new ExecutorCompletionService<>(this.threadpool);
+    this.uamRegisterFutures.clear();
+    for (final SubClusterId scId : newSubClusters) {
+      Future<?> future = this.threadpool.submit(new Runnable() {
+        @Override
+        public void run() {
+          String subClusterId = scId.getId();
 
-      for (final String subClusterId : newSubClusters) {
-        completionService
-            .submit(new Callable<RegisterApplicationMasterResponseInfo>() {
-              @Override
-              public RegisterApplicationMasterResponseInfo call()
-                  throws Exception {
+          // Create a config loaded with federation on and subclusterId
+          // for each UAM
+          YarnConfiguration config = new YarnConfiguration(getConf());
+          FederationProxyProviderUtil.updateConfForFederation(config,
+              subClusterId);
 
-                // Create a config loaded with federation on and subclusterId
-                // for each UAM
-                YarnConfiguration config = new YarnConfiguration(getConf());
-                FederationProxyProviderUtil.updateConfForFederation(config,
-                    subClusterId);
+          RegisterApplicationMasterResponse uamResponse = null;
+          Token<AMRMTokenIdentifier> token = null;
+          try {
+            // For appNameSuffix, use subClusterId of the home sub-cluster
+            token = uamPool.launchUAM(subClusterId, config,
+                attemptId.getApplicationId(), amRegistrationResponse.getQueue(),
+                getApplicationContext().getUser(), homeSubClusterId.toString(),
+                true, subClusterId);
 
-                RegisterApplicationMasterResponse uamResponse = null;
-                Token<AMRMTokenIdentifier> token = null;
-                try {
-                  // For appNameSuffix, use subClusterId of the home sub-cluster
-                  token = uamPool.launchUAM(subClusterId, config,
-                      attemptId.getApplicationId(),
-                      amRegistrationResponse.getQueue(), appContext.getUser(),
-                      homeSubClusterId.toString(), true, subClusterId);
+            secondaryRelayers.put(subClusterId,
+                uamPool.getAMRMClientRelayer(subClusterId));
 
-                  secondaryRelayers.put(subClusterId,
-                      uamPool.getAMRMClientRelayer(subClusterId));
+            uamResponse = uamPool.registerApplicationMaster(subClusterId,
+                amRegistrationRequest);
+          } catch (Throwable e) {
+            LOG.error("Failed to register application master: " + subClusterId
+                + " Application: " + attemptId, e);
+            // TODO: UAM registration for this sub-cluster RM
+            // failed. For now, we ignore the resource requests and continue
+            // but we need to fix this and handle this situation. One way would
+            // be to send the request to another RM by consulting the policy.
+            return;
+          }
+          uamRegistrations.put(scId, uamResponse);
+          LOG.info("Successfully registered unmanaged application master: "
+              + subClusterId + " ApplicationId: " + attemptId);
 
-                  uamResponse = uamPool.registerApplicationMaster(subClusterId,
-                      registerRequest);
-                } catch (Throwable e) {
-                  LOG.error("Failed to register application master: "
-                      + subClusterId + " Application: " + attemptId, e);
-                }
-                return new RegisterApplicationMasterResponseInfo(uamResponse,
-                    SubClusterId.newInstance(subClusterId), token);
-              }
-            });
-      }
-
-      // Wait for other sub-cluster resource managers to return the
-      // response and add it to the Map for returning to the caller
-      for (int i = 0; i < newSubClusters.size(); ++i) {
-        try {
-          Future<RegisterApplicationMasterResponseInfo> future =
-              completionService.take();
-          RegisterApplicationMasterResponseInfo uamResponse = future.get();
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Received register application response from RM: "
-                + uamResponse.getSubClusterId());
+          try {
+            uamPool.allocateAsync(subClusterId, requests.get(scId),
+                new HeartbeatCallBack(scId, true));
+          } catch (Throwable e) {
+            LOG.error("Failed to allocate async to " + subClusterId
+                + " Application: " + attemptId, e);
           }
 
-          if (uamResponse.getResponse() == null) {
-            failedRegistrations.add(uamResponse.getSubClusterId());
-          } else {
-            LOG.info("Successfully registered unmanaged application master: "
-                + uamResponse.getSubClusterId() + " ApplicationId: "
-                + this.attemptId);
-            successfulRegistrations.put(uamResponse.getSubClusterId(),
-                uamResponse.getResponse());
-
-            // Save the UAM token in registry or NMSS
+          // Save the UAM token in registry or NMSS
+          try {
             if (registryClient != null) {
-              registryClient.writeAMRMTokenForUAM(
-                  this.attemptId.getApplicationId(),
-                  uamResponse.getSubClusterId().getId(),
-                  uamResponse.getUamToken());
+              registryClient.writeAMRMTokenForUAM(attemptId.getApplicationId(),
+                  subClusterId, token);
             } else if (getNMStateStore() != null) {
-              getNMStateStore().storeAMRMProxyAppContextEntry(this.attemptId,
-                  NMSS_SECONDARY_SC_PREFIX
-                      + uamResponse.getSubClusterId().getId(),
-                  uamResponse.getUamToken().encodeToUrlString()
-                      .getBytes(STRING_TO_BYTE_FORMAT));
+              getNMStateStore().storeAMRMProxyAppContextEntry(attemptId,
+                  NMSS_SECONDARY_SC_PREFIX + subClusterId,
+                  token.encodeToUrlString().getBytes(STRING_TO_BYTE_FORMAT));
             }
+          } catch (Throwable e) {
+            LOG.error("Failed to persist UAM token from " + subClusterId
+                + " Application: " + attemptId, e);
           }
-        } catch (Exception e) {
-          LOG.warn("Failed to register unmanaged application master: "
-              + " ApplicationId: " + this.attemptId, e);
         }
-      }
+      });
+      this.uamRegisterFutures.put(scId, future);
     }
+    return newSubClusters;
+  }
 
-    return new Registrations(successfulRegistrations, failedRegistrations);
+  /**
+   * Prepare the base allocation response. Use lastSCResponse and
+   * lastHeartbeatTimeStamp to assemble entries about cluster-wide info, e.g.
+   * AvailableResource, NumClusterNodes.
+   */
+  protected AllocateResponse generateBaseAllocationResponse() {
+    AllocateResponse baseResponse =
+        RECORD_FACTORY.newRecordInstance(AllocateResponse.class);
+
+    baseResponse.setAvailableResources(Resource.newInstance(0, 0));
+    baseResponse.setNumClusterNodes(0);
+
+    Set<SubClusterId> expiredSC = getTimedOutSCs(false);
+    for (Entry<SubClusterId, AllocateResponse> entry : lastSCResponse
+        .entrySet()) {
+      if (expiredSC.contains(entry.getKey())) {
+        // Skip expired sub-clusters
+        continue;
+      }
+      AllocateResponse response = entry.getValue();
+
+      if (response.getAvailableResources() != null) {
+        baseResponse.setAvailableResources(
+            Resources.add(baseResponse.getAvailableResources(),
+                response.getAvailableResources()));
+      }
+      baseResponse.setNumClusterNodes(
+          baseResponse.getNumClusterNodes() + response.getNumClusterNodes());
+    }
+    return baseResponse;
   }
 
   /**
@@ -1337,7 +1405,8 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     }
   }
 
-  private void mergeAllocateResponse(AllocateResponse homeResponse,
+  @VisibleForTesting
+  protected void mergeAllocateResponse(AllocateResponse homeResponse,
       AllocateResponse otherResponse, SubClusterId otherRMAddress) {
 
     if (otherResponse.getAMRMToken() != null) {
@@ -1358,17 +1427,6 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       } else {
         homeResponse
             .setAllocatedContainers(otherResponse.getAllocatedContainers());
-      }
-    }
-
-    if (otherResponse.getAvailableResources() != null) {
-      if (homeResponse.getAvailableResources() != null) {
-        homeResponse.setAvailableResources(
-            Resources.add(homeResponse.getAvailableResources(),
-                otherResponse.getAvailableResources()));
-      } else {
-        homeResponse
-            .setAvailableResources(otherResponse.getAvailableResources());
       }
     }
 
@@ -1410,7 +1468,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
       if (par1 != null && par2 != null) {
         par1.getResourceRequest().addAll(par2.getResourceRequest());
-        par2.getContainers().addAll(par2.getContainers());
+        par1.getContainers().addAll(par2.getContainers());
       }
 
       StrictPreemptionContract spar1 = homePreempMessage.getStrictContract();
@@ -1536,6 +1594,29 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     return request;
   }
 
+  protected Set<SubClusterId> getTimedOutSCs(boolean verbose) {
+    Set<SubClusterId> timedOutSCs = new HashSet<>();
+    for (Map.Entry<SubClusterId, Long> entry : this.lastSCResponseTime
+        .entrySet()) {
+      if (entry.getValue() > this.lastAMHeartbeatTime) {
+        // AM haven't heartbeat to us (and thus we to all SCs) for a long time,
+        // should not consider the SC as timed out
+        continue;
+      }
+      long duration = this.clock.getTime() - entry.getValue();
+      if (duration > this.subClusterTimeOut) {
+        if (verbose) {
+          LOG.warn(
+              "Subcluster {} doesn't have a successful heartbeat"
+                  + " for {} seconds for {}",
+              entry.getKey(), (double) duration / 1000, this.attemptId);
+        }
+        timedOutSCs.add(entry.getKey());
+      }
+    }
+    return timedOutSCs;
+  }
+
   /**
    * Check to see if the specified containerId exists in the cache and log an
    * error if not found.
@@ -1569,17 +1650,23 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
    */
   protected Map<SubClusterId, List<ResourceRequest>> splitResourceRequests(
       List<ResourceRequest> askList) throws YarnException {
-    return this.policyInterpreter.splitResourceRequests(askList);
+    return policyInterpreter.splitResourceRequests(askList,
+        getTimedOutSCs(true));
   }
 
   @VisibleForTesting
-  public int getUnmanagedAMPoolSize() {
+  protected int getUnmanagedAMPoolSize() {
     return this.uamPool.getAllUAMIds().size();
   }
 
   @VisibleForTesting
   protected UnmanagedAMPoolManager getUnmanagedAMPool() {
     return this.uamPool;
+  }
+
+  @VisibleForTesting
+  protected Map<SubClusterId, Future<?>> getUamRegisterFutures() {
+    return this.uamRegisterFutures;
   }
 
   @VisibleForTesting
@@ -1613,8 +1700,19 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
         // Notify main thread about the response arrival
         asyncResponseSink.notifyAll();
       }
+      lastSCResponse.put(subClusterId, response);
+      lastSCResponseTime.put(subClusterId, clock.getTime());
+
+      // Notify policy of allocate response
+      try {
+        policyInterpreter.notifyOfResponse(subClusterId, response);
+      } catch (YarnException e) {
+        LOG.warn("notifyOfResponse for policy failed for sub-cluster "
+            + subClusterId, e);
+      }
 
       // Save the new AMRMToken for the UAM if present
+      // Do this last because it can be slow...
       if (this.isUAM && response.getAMRMToken() != null) {
         Token<AMRMTokenIdentifier> newToken = ConverterUtils
             .convertFromYarn(response.getAMRMToken(), (Text) null);
@@ -1648,44 +1746,6 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
           }
         }
       }
-
-      // Notify policy of allocate response
-      try {
-        policyInterpreter.notifyOfResponse(subClusterId, response);
-      } catch (YarnException e) {
-        LOG.warn("notifyOfResponse for policy failed for sub-cluster "
-            + subClusterId, e);
-      }
-    }
-  }
-
-  /**
-   * Private structure for encapsulating SubClusterId and
-   * RegisterApplicationMasterResponse instances.
-   */
-  private static class RegisterApplicationMasterResponseInfo {
-    private RegisterApplicationMasterResponse response;
-    private SubClusterId subClusterId;
-    private Token<AMRMTokenIdentifier> uamToken;
-
-    RegisterApplicationMasterResponseInfo(
-        RegisterApplicationMasterResponse response, SubClusterId subClusterId,
-        Token<AMRMTokenIdentifier> uamToken) {
-      this.response = response;
-      this.subClusterId = subClusterId;
-      this.uamToken = uamToken;
-    }
-
-    public RegisterApplicationMasterResponse getResponse() {
-      return response;
-    }
-
-    public SubClusterId getSubClusterId() {
-      return subClusterId;
-    }
-
-    public Token<AMRMTokenIdentifier> getUamToken() {
-      return uamToken;
     }
   }
 
@@ -1709,33 +1769,6 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
     public String getSubClusterId() {
       return subClusterId;
-    }
-  }
-
-  /**
-   * Private structure for encapsulating successful and failed application
-   * master registration responses.
-   */
-  private static class Registrations {
-    private Map<SubClusterId, RegisterApplicationMasterResponse>
-        successfulRegistrations;
-    private List<SubClusterId> failedRegistrations;
-
-    Registrations(
-        Map<SubClusterId, RegisterApplicationMasterResponse>
-            successfulRegistrations,
-        List<SubClusterId> failedRegistrations) {
-      this.successfulRegistrations = successfulRegistrations;
-      this.failedRegistrations = failedRegistrations;
-    }
-
-    public Map<SubClusterId, RegisterApplicationMasterResponse>
-        getSuccessfulRegistrations() {
-      return this.successfulRegistrations;
-    }
-
-    public List<SubClusterId> getFailedRegistrations() {
-      return this.failedRegistrations;
     }
   }
 

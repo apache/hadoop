@@ -44,10 +44,17 @@ message PipelineID {
   required string id = 1;
 }
 
+enum PipelineState {
+    PIPELINE_ALLOCATED = 1;
+    PIPELINE_OPEN = 2;
+    PIPELINE_CLOSED = 3;
+}
+
 message Pipeline {
     required string leaderID = 1;
     repeated DatanodeDetailsProto members = 2;
-    optional LifeCycleState state = 3 [default = OPEN];
+    // TODO: remove the state and leaderID from this class
+    optional PipelineState state = 3 [default = PIPELINE_ALLOCATED];
     optional ReplicationType type = 4 [default = STAND_ALONE];
     optional ReplicationFactor factor = 5 [default = ONE];
     required PipelineID id = 6;
@@ -110,44 +117,39 @@ message NodePool {
  */
 
 enum LifeCycleState {
-    ALLOCATED = 1;
-    CREATING = 2; // Used for container allocated/created by different client.
-    OPEN =3; // Mostly an update to SCM via HB or client call.
-    CLOSING = 4;
-    CLOSED = 5; // !!State after this has not been used yet.
-    DELETING = 6;
-    DELETED = 7; // object is deleted.
+    OPEN = 1;
+    CLOSING = 2;
+    QUASI_CLOSED = 3;
+    CLOSED = 4;
+    DELETING = 5;
+    DELETED = 6; // object is deleted.
 }
 
 enum LifeCycleEvent {
-    CREATE = 1; // A request to client to create this object
-    CREATED = 2;
-    FINALIZE = 3;
-    CLOSE = 4; // !!Event after this has not been used yet.
-    UPDATE = 5;
-    TIMEOUT = 6; // creation has timed out from SCM's View.
-    DELETE = 7;
-    CLEANUP = 8;
+    FINALIZE = 1;
+    QUASI_CLOSE = 2;
+    CLOSE = 3; // !!Event after this has not been used yet.
+    FORCE_CLOSE = 4;
+    DELETE = 5;
+    CLEANUP = 6;
 }
 
-message SCMContainerInfo {
+message ContainerInfoProto {
     required int64 containerID = 1;
     required LifeCycleState state = 2;
     optional PipelineID pipelineID = 3;
-    // This is not total size of container, but space allocated by SCM for
-    // clients to write blocks
-    required uint64 allocatedBytes = 4;
-    required uint64 usedBytes = 5;
-    required uint64 numberOfKeys = 6;
-    optional int64 stateEnterTime = 7;
-    required string owner = 8;
-    optional int64 deleteTransactionId = 9;
+    required uint64 usedBytes = 4;
+    required uint64 numberOfKeys = 5;
+    optional int64 stateEnterTime = 6;
+    required string owner = 7;
+    optional int64 deleteTransactionId = 8;
+    optional int64 sequenceId = 9;
     required ReplicationFactor replicationFactor  = 10;
     required ReplicationType replicationType  = 11;
 }
 
 message ContainerWithPipeline {
-  required SCMContainerInfo containerInfo = 1;
+  required ContainerInfoProto containerInfo = 1;
   required Pipeline pipeline = 2;
 }
 
@@ -188,7 +190,12 @@ enum ScmOps {
 /**
  * Block ID that uniquely identify a block by SCM.
  */
-message BlockID {
+message ContainerBlockID {
     required int64 containerID = 1;
     required int64 localID = 2;
+}
+
+message BlockID {
+    required ContainerBlockID containerBlockID = 1;
+    optional uint64 blockCommitSequenceId = 2 [default = 0];
 }

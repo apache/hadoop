@@ -19,9 +19,10 @@
 package org.apache.ratis;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.grpc.GrpcConfigKeys;
@@ -32,14 +33,14 @@ import org.apache.ratis.protocol.RaftPeerId;
 import org.apache.ratis.retry.RetryPolicies;
 import org.apache.ratis.retry.RetryPolicy;
 import org.apache.ratis.rpc.RpcType;
-import org.apache.ratis.shaded.com.google.protobuf.ByteString;
-import org.apache.ratis.shaded.proto.RaftProtos;
-import org.apache.ratis.util.Preconditions;
+import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
+import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.util.SizeInBytes;
 import org.apache.ratis.util.TimeDuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -48,9 +49,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_KEY;
 
 /**
  * Ratis helper methods.
@@ -88,7 +86,7 @@ public interface RatisHelper {
   }
 
   static List<RaftPeer> toRaftPeers(Pipeline pipeline) {
-    return toRaftPeers(pipeline.getMachines());
+    return toRaftPeers(pipeline.getNodes());
   }
 
   static <E extends DatanodeDetails> List<RaftPeer> toRaftPeers(
@@ -103,7 +101,7 @@ public interface RatisHelper {
   RaftGroupId DUMMY_GROUP_ID =
       RaftGroupId.valueOf(ByteString.copyFromUtf8("AOzoneRatisGroup"));
 
-  RaftGroup EMPTY_GROUP = new RaftGroup(DUMMY_GROUP_ID,
+  RaftGroup EMPTY_GROUP = RaftGroup.valueOf(DUMMY_GROUP_ID,
       Collections.emptyList());
 
   static RaftGroup emptyRaftGroup() {
@@ -112,7 +110,7 @@ public interface RatisHelper {
 
   static RaftGroup newRaftGroup(Collection<RaftPeer> peers) {
     return peers.isEmpty()? emptyRaftGroup()
-        : new RaftGroup(DUMMY_GROUP_ID, peers);
+        : RaftGroup.valueOf(DUMMY_GROUP_ID, peers);
   }
 
   static RaftGroup newRaftGroup(RaftGroupId groupId,
@@ -120,20 +118,20 @@ public interface RatisHelper {
     final List<RaftPeer> newPeers = peers.stream()
         .map(RatisHelper::toRaftPeer)
         .collect(Collectors.toList());
-    return peers.isEmpty() ? new RaftGroup(groupId, Collections.emptyList())
-        : new RaftGroup(groupId, newPeers);
+    return peers.isEmpty() ? RaftGroup.valueOf(groupId, Collections.emptyList())
+        : RaftGroup.valueOf(groupId, newPeers);
   }
 
   static RaftGroup newRaftGroup(Pipeline pipeline) {
-    return new RaftGroup(pipeline.getId().getRaftGroupID(),
+    return RaftGroup.valueOf(RaftGroupId.valueOf(pipeline.getId().getId()),
         toRaftPeers(pipeline));
   }
 
   static RaftClient newRaftClient(RpcType rpcType, Pipeline pipeline,
-      RetryPolicy retryPolicy) {
-    return newRaftClient(rpcType, toRaftPeerId(pipeline.getLeader()),
-        newRaftGroup(pipeline.getId().getRaftGroupID(), pipeline.getMachines()),
-        retryPolicy);
+      RetryPolicy retryPolicy) throws IOException {
+    return newRaftClient(rpcType, toRaftPeerId(pipeline.getFirstNode()),
+        newRaftGroup(RaftGroupId.valueOf(pipeline.getId().getId()),
+            pipeline.getNodes()), retryPolicy);
   }
 
   static RaftClient newRaftClient(RpcType rpcType, RaftPeer leader,
@@ -154,7 +152,7 @@ public interface RatisHelper {
     RaftConfigKeys.Rpc.setType(properties, rpcType);
 
     GrpcConfigKeys.setMessageSizeMax(properties,
-        SizeInBytes.valueOf(OzoneConfigKeys.DFS_CONTAINER_CHUNK_MAX_SIZE));
+        SizeInBytes.valueOf(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE));
 
     return RaftClient.newBuilder()
         .setRaftGroup(group)
@@ -172,32 +170,7 @@ public interface RatisHelper {
     long retryInterval = conf.getTimeDuration(OzoneConfigKeys.
         DFS_RATIS_CLIENT_REQUEST_RETRY_INTERVAL_KEY, OzoneConfigKeys.
         DFS_RATIS_CLIENT_REQUEST_RETRY_INTERVAL_DEFAULT
-        .toInt(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
-    long leaderElectionTimeout = conf.getTimeDuration(
-        DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_KEY,
-        DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_DEFAULT
-            .toInt(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
-    long clientRequestTimeout = conf.getTimeDuration(
-        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_KEY,
-        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_DEFAULT
-            .toInt(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
-    long retryCacheTimeout = conf.getTimeDuration(
-        OzoneConfigKeys.DFS_RATIS_SERVER_RETRY_CACHE_TIMEOUT_DURATION_KEY,
-        OzoneConfigKeys.DFS_RATIS_SERVER_RETRY_CACHE_TIMEOUT_DURATION_DEFAULT
-            .toInt(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
-    Preconditions
-        .assertTrue(maxRetryCount * retryInterval > 5 * leaderElectionTimeout,
-            "Please make sure dfs.ratis.client.request.max.retries * "
-                + "dfs.ratis.client.request.retry.interval > "
-                + "5 * dfs.ratis.leader.election.minimum.timeout.duration");
-    Preconditions.assertTrue(
-        maxRetryCount * (retryInterval + clientRequestTimeout)
-            < retryCacheTimeout,
-        "Please make sure "
-            + "(dfs.ratis.client.request.max.retries * "
-            + "(dfs.ratis.client.request.retry.interval + "
-            + "dfs.ratis.client.request.timeout.duration)) "
-            + "< dfs.ratis.server.retry-cache.timeout.duration");
+        .toIntExact(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
     TimeDuration sleepDuration =
         TimeDuration.valueOf(retryInterval, TimeUnit.MILLISECONDS);
     RetryPolicy retryPolicy = RetryPolicies

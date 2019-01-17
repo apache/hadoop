@@ -326,7 +326,7 @@ public class TestKeys {
 
   private static void restartDatanode(MiniOzoneCluster cluster, int datanodeIdx)
       throws Exception {
-    cluster.restartHddsDatanode(datanodeIdx);
+    cluster.restartHddsDatanode(datanodeIdx, true);
   }
 
   @Test
@@ -699,8 +699,8 @@ public class TestKeys {
                   .KeyValueContainer);
           KeyValueContainer container = (KeyValueContainer) cm.getContainerSet()
               .getContainer(location.getBlockID().getContainerID());
-          BlockData blockInfo = keyValueHandler
-              .getBlockManager().getBlock(container, location.getBlockID());
+          BlockData blockInfo = keyValueHandler.getBlockManager()
+              .getBlock(container, location.getBlockID());
           KeyValueContainerData containerData =
               (KeyValueContainerData) container.getContainerData();
           File dataDir = new File(containerData.getChunksPath());

@@ -18,19 +18,17 @@
 
 package org.apache.hadoop.ozone.web.ozShell.bucket;
 
-import java.net.URI;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.ozone.client.OzoneBucket;
-import org.apache.hadoop.ozone.client.OzoneClientException;
+import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.rest.response.BucketInfo;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
@@ -69,26 +67,15 @@ public class ListBucketHandler extends Handler {
   @Override
   public Void call() throws Exception {
 
-    URI ozoneURI = verifyURI(uri);
-    Path path = Paths.get(ozoneURI.getPath());
-    int pathNameCount = path.getNameCount();
-    if (pathNameCount != 1) {
-      String errorMessage;
-      if (pathNameCount < 1) {
-        errorMessage = "volume is required in listBucket";
-      } else {
-        errorMessage = "Invalid volume name. Delimiters (/) not allowed in " +
-            "volume name";
-      }
-      throw new OzoneClientException(errorMessage);
-    }
+    OzoneAddress address = new OzoneAddress(uri);
+    address.ensureVolumeAddress();
+    OzoneClient client = address.createClient(createOzoneConfiguration());
 
+    String volumeName = address.getVolumeName();
     if (maxBuckets < 1) {
       throw new IllegalArgumentException(
           "the length should be a positive number");
     }
-
-    String volumeName = path.getName(0).toString();
 
     if (isVerbose()) {
       System.out.printf("Volume Name : %s%n", volumeName);
@@ -114,5 +101,6 @@ public class ListBucketHandler extends Handler {
         JsonUtils.toJsonString(bucketList)));
     return null;
   }
+
 }
 

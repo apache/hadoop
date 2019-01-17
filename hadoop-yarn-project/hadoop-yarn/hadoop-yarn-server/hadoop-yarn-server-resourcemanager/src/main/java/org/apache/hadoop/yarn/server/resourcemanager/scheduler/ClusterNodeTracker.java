@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -72,7 +73,7 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
   private boolean reportedMaxAllocation = false;
 
   public ClusterNodeTracker() {
-    maxAllocation = new long[ResourceUtils.getNumberOfKnownResourceTypes()];
+    maxAllocation = new long[ResourceUtils.getNumberOfCountableResourceTypes()];
     Arrays.fill(maxAllocation, -1);
   }
 
@@ -255,6 +256,16 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
       return ret;
     } finally {
       readLock.unlock();
+    }
+  }
+
+  @VisibleForTesting
+  public void setForceConfiguredMaxAllocation(boolean flag) {
+    writeLock.lock();
+    try {
+      forceConfiguredMaxAllocation = flag;
+    } finally {
+      writeLock.unlock();
     }
   }
 

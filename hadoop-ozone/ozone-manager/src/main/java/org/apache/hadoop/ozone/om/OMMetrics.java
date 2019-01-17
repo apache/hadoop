@@ -60,6 +60,10 @@ public class OMMetrics {
   private @Metric MutableCounterLong numKeyCommits;
   private @Metric MutableCounterLong numAllocateBlockCalls;
   private @Metric MutableCounterLong numGetServiceLists;
+  private @Metric MutableCounterLong numListS3Buckets;
+  private @Metric MutableCounterLong numInitiateMultipartUploads;
+  private @Metric MutableCounterLong numCompleteMultipartUploads;
+
 
   // Failure Metrics
   private @Metric MutableCounterLong numVolumeCreateFails;
@@ -81,6 +85,24 @@ public class OMMetrics {
   private @Metric MutableCounterLong numKeyCommitFails;
   private @Metric MutableCounterLong numBlockAllocateCallFails;
   private @Metric MutableCounterLong numGetServiceListFails;
+  private @Metric MutableCounterLong numListS3BucketsFails;
+  private @Metric MutableCounterLong numInitiateMultipartUploadFails;
+  private @Metric MutableCounterLong numCommitMultipartUploadParts;
+  private @Metric MutableCounterLong getNumCommitMultipartUploadPartFails;
+  private @Metric MutableCounterLong numCompleteMultipartUploadFails;
+  private @Metric MutableCounterLong numAbortMultipartUploads;
+  private @Metric MutableCounterLong numAbortMultipartUploadFails;
+
+  // Metrics for total number of volumes, buckets and keys
+
+  private @Metric MutableCounterLong numVolumes;
+  private @Metric MutableCounterLong numBuckets;
+
+  //TODO: This metric is an estimate and it may be inaccurate on restart if the
+  // OM process was not shutdown cleanly. Key creations/deletions in the last
+  // few minutes before restart may not be included in this count.
+  private @Metric MutableCounterLong numKeys;
+
 
   public OMMetrics() {
   }
@@ -91,6 +113,55 @@ public class OMMetrics {
         "Ozone Manager Metrics",
         new OMMetrics());
   }
+
+  public void incNumVolumes() {
+    numVolumes.incr();
+  }
+
+  public void decNumVolumes() {
+    numVolumes.incr(-1);
+  }
+
+  public void incNumBuckets() {
+    numBuckets.incr();
+  }
+
+  public void decNumBuckets() {
+    numBuckets.incr(-1);
+  }
+
+  public void incNumKeys() {
+    numKeys.incr();
+  }
+
+  public void decNumKeys() {
+    numKeys.incr(-1);
+  }
+
+  public void setNumVolumes(long val) {
+    this.numVolumes.incr(val);
+  }
+
+  public void setNumBuckets(long val) {
+    this.numBuckets.incr(val);
+  }
+
+  public void setNumKeys(long val) {
+    this.numKeys.incr(val);
+  }
+
+  public long getNumVolumes() {
+    return numVolumes.value();
+  }
+
+  public long getNumBuckets() {
+    return numBuckets.value();
+  }
+
+  public long getNumKeys() {
+    return numKeys.value();
+  }
+
 
   public void incNumVolumeCreates() {
     numVolumeOps.incr();
@@ -150,6 +221,52 @@ public class OMMetrics {
   public void incNumVolumeLists() {
     numVolumeOps.incr();
     numVolumeLists.incr();
+  }
+
+  public void incNumListS3Buckets() {
+    numBucketOps.incr();
+    numListS3Buckets.incr();
+  }
+
+  public void incNumListS3BucketsFails() {
+    numBucketOps.incr();
+    numListS3BucketsFails.incr();
+  }
+
+  public void incNumInitiateMultipartUploads() {
+    numKeyOps.incr();
+    numInitiateMultipartUploads.incr();
+  }
+
+  public void incNumInitiateMultipartUploadFails() {
+    numInitiateMultipartUploadFails.incr();
+  }
+
+  public void incNumCommitMultipartUploadParts() {
+    numKeyOps.incr();
+    numCommitMultipartUploadParts.incr();
+  }
+
+  public void incNumCommitMultipartUploadPartFails() {
+    numInitiateMultipartUploadFails.incr();
+  }
+
+  public void incNumCompleteMultipartUploads() {
+    numKeyOps.incr();
+    numCompleteMultipartUploads.incr();
+  }
+
+  public void incNumCompleteMultipartUploadFails() {
+    numCompleteMultipartUploadFails.incr();
+  }
+
+  public void incNumAbortMultipartUploads() {
+    numKeyOps.incr();
+    numAbortMultipartUploads.incr();
+  }
+
+  public void incNumAbortMultipartUploadFails() {
+    numAbortMultipartUploadFails.incr();
   }
 
   public void incNumGetServiceLists() {
@@ -450,6 +567,32 @@ public class OMMetrics {
   @VisibleForTesting
   public long getNumGetServiceListFails() {
     return numGetServiceListFails.value();
+  }
+
+  @VisibleForTesting
+  public long getNumListS3Buckets() {
+    return numListS3Buckets.value();
+  }
+
+  @VisibleForTesting
+  public long getNumListS3BucketsFails() {
+    return numListS3BucketsFails.value();
+  }
+
+  public long getNumInitiateMultipartUploads() {
+    return numInitiateMultipartUploads.value();
+  }
+
+  public long getNumInitiateMultipartUploadFails() {
+    return numInitiateMultipartUploadFails.value();
+  }
+
+  public long getNumAbortMultipartUploads() {
+    return numAbortMultipartUploads.value();
+  }
+
+  public long getNumAbortMultipartUploadFails() {
+    return numAbortMultipartUploadFails.value();
   }
 
   public void unRegister() {

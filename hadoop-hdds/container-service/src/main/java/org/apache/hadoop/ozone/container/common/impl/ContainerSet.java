@@ -117,7 +117,7 @@ public class ContainerSet {
 
   /**
    * Return an container Iterator over {@link ContainerSet#containerMap}.
-   * @return Iterator<Container>
+   * @return {@literal Iterator<Container>}
    */
   public Iterator<Container> getContainerIterator() {
     return containerMap.values().iterator();
@@ -141,13 +141,13 @@ public class ContainerSet {
 
   /**
    * A simple interface for container Iterations.
-   * <p/>
+   * <p>
    * This call make no guarantees about consistency of the data between
    * different list calls. It just returns the best known data at that point of
    * time. It is possible that using this iteration you can miss certain
    * container from the listing.
    *
-   * @param startContainerId -  Return containers with Id >= startContainerId.
+   * @param startContainerId - Return containers with Id &gt;= startContainerId.
    * @param count - how many to return
    * @param data - Actual containerData
    * @throws StorageContainerException

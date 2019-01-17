@@ -170,4 +170,11 @@ public abstract class HAServiceTarget {
   public boolean isAutoFailoverEnabled() {
     return false;
   }
+
+  /**
+   * @return true if this target supports the Observer state, false otherwise.
+   */
+  public boolean supportObserver() {
+    return false;
+  }
 }

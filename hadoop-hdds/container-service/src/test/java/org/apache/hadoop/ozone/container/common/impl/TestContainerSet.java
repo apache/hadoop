@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -51,11 +52,12 @@ public class TestContainerSet {
   public void testAddGetRemoveContainer() throws StorageContainerException {
     ContainerSet containerSet = new ContainerSet();
     long containerId = 100L;
-    ContainerProtos.ContainerLifeCycleState state = ContainerProtos
-        .ContainerLifeCycleState.CLOSED;
+    ContainerProtos.ContainerDataProto.State state = ContainerProtos
+        .ContainerDataProto.State.CLOSED;
 
     KeyValueContainerData kvData = new KeyValueContainerData(containerId,
-        (long) StorageUnit.GB.toBytes(5));
+        (long) StorageUnit.GB.toBytes(5), UUID.randomUUID().toString(),
+        UUID.randomUUID().toString());
     kvData.setState(state);
     KeyValueContainer keyValueContainer = new KeyValueContainer(kvData, new
         OzoneConfiguration());
@@ -101,10 +103,10 @@ public class TestContainerSet {
       ContainerData containerData = kv.getContainerData();
       long containerId = containerData.getContainerID();
       if (containerId%2 == 0) {
-        assertEquals(ContainerProtos.ContainerLifeCycleState.CLOSED,
+        assertEquals(ContainerProtos.ContainerDataProto.State.CLOSED,
             containerData.getState());
       } else {
-        assertEquals(ContainerProtos.ContainerLifeCycleState.OPEN,
+        assertEquals(ContainerProtos.ContainerDataProto.State.OPEN,
             containerData.getState());
       }
       count++;
@@ -121,10 +123,10 @@ public class TestContainerSet {
       ContainerData containerData = kv.getContainerData();
       long containerId = containerData.getContainerID();
       if (containerId%2 == 0) {
-        assertEquals(ContainerProtos.ContainerLifeCycleState.CLOSED,
+        assertEquals(ContainerProtos.ContainerDataProto.State.CLOSED,
             containerData.getState());
       } else {
-        assertEquals(ContainerProtos.ContainerLifeCycleState.OPEN,
+        assertEquals(ContainerProtos.ContainerDataProto.State.OPEN,
             containerData.getState());
       }
       count++;
@@ -166,11 +168,12 @@ public class TestContainerSet {
     ContainerSet containerSet = new ContainerSet();
     for (int i=0; i<10; i++) {
       KeyValueContainerData kvData = new KeyValueContainerData(i,
-          (long) StorageUnit.GB.toBytes(5));
+          (long) StorageUnit.GB.toBytes(5), UUID.randomUUID().toString(),
+          UUID.randomUUID().toString());
       if (i%2 == 0) {
-        kvData.setState(ContainerProtos.ContainerLifeCycleState.CLOSED);
+        kvData.setState(ContainerProtos.ContainerDataProto.State.CLOSED);
       } else {
-        kvData.setState(ContainerProtos.ContainerLifeCycleState.OPEN);
+        kvData.setState(ContainerProtos.ContainerDataProto.State.OPEN);
       }
       KeyValueContainer kv = new KeyValueContainer(kvData, new
           OzoneConfiguration());

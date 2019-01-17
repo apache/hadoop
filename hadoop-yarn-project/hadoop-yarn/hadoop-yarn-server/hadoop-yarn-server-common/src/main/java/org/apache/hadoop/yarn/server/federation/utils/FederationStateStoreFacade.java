@@ -463,8 +463,9 @@ public final class FederationStateStoreFacade {
 
   private Object buildGetSubClustersCacheRequest(
       final boolean filterInactiveSubClusters) {
-    final String cacheKey = buildCacheKey(getClass().getSimpleName(),
-        GET_SUBCLUSTERS_CACHEID, null);
+    final String cacheKey =
+        buildCacheKey(getClass().getSimpleName(), GET_SUBCLUSTERS_CACHEID,
+            Boolean.toString(filterInactiveSubClusters));
     CacheRequest<String, Map<SubClusterId, SubClusterInfo>> cacheRequest =
         new CacheRequest<String, Map<SubClusterId, SubClusterInfo>>(cacheKey,
             new Func<String, Map<SubClusterId, SubClusterInfo>>() {

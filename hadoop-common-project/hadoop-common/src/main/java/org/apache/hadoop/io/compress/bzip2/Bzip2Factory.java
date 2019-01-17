@@ -37,11 +37,11 @@ public class Bzip2Factory {
   private static boolean nativeBzip2Loaded;
   
   /**
-   * Check if native-bzip2 code is loaded & initialized correctly and 
+   * Check if native-bzip2 code is loaded &amp; initialized correctly and
    * can be loaded for this job.
    * 
    * @param conf configuration
-   * @return <code>true</code> if native-bzip2 is loaded & initialized 
+   * @return <code>true</code> if native-bzip2 is loaded &amp; initialized
    *         and can be loaded for this job, else <code>false</code>
    */
   public static synchronized boolean isNativeBzip2Loaded(Configuration conf) {

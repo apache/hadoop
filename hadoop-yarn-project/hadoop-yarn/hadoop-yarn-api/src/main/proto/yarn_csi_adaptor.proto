@@ -1,0 +1,93 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+option java_package = "org.apache.hadoop.yarn.proto";
+option java_outer_classname = "CsiAdaptorProtos";
+option java_generate_equals_and_hash = true;
+package hadoop.yarn;
+
+import "yarn_protos.proto";
+
+message ValidateVolumeCapabilitiesRequest {
+    required string volume_id = 1;
+    repeated VolumeCapability volume_capabilities = 2;
+    repeated StringStringMapProto volume_attributes = 3;
+}
+
+message ValidateVolumeCapabilitiesResponse {
+    // True if the Plugin supports the specified capabilities for the
+    // given volume. This field is REQUIRED.
+    required bool supported = 1;
+
+    // Message to the CO if `supported` above is false. This field is
+    // OPTIONAL.
+    // An empty string is equal to an unspecified field value.
+    optional string message = 2;
+}
+
+message VolumeCapability {
+    enum VolumeType {
+        BLOCK = 0;
+        FILE_SYSTEM = 1;
+    }
+
+    enum AccessMode {
+        UNKNOWN = 0;
+        SINGLE_NODE_WRITER = 1;
+        SINGLE_NODE_READER_ONLY = 2;
+        MULTI_NODE_READER_ONLY = 3;
+        MULTI_NODE_SINGLE_WRITER = 4;
+        MULTI_NODE_MULTI_WRITER = 5;
+    }
+
+    required VolumeType volume_type = 1;
+    required AccessMode access_mode = 2;
+    repeated string mount_flags = 3;
+}
+
+message GetPluginInfoRequest {
+    // Intentionally empty.
+}
+
+message GetPluginInfoResponse {
+    required string name = 1;
+    required string vendor_version = 2;
+}
+
+message NodePublishVolumeRequest {
+    required string volume_id = 1;
+    repeated StringStringMapProto publish_context = 2;
+    optional string staging_target_path = 3;
+    required string target_path = 4;
+    required VolumeCapability volume_capability = 5;
+    required bool readonly = 6;
+    repeated StringStringMapProto secrets = 7;
+    repeated StringStringMapProto volume_context = 8;
+}
+
+message NodePublishVolumeResponse {
+    // Intentionally empty.
+}
+
+message NodeUnpublishVolumeRequest {
+    required string volume_id = 1;
+    required string target_path = 2;
+}
+
+message NodeUnpublishVolumeResponse {
+    // Intentionally empty.
+}

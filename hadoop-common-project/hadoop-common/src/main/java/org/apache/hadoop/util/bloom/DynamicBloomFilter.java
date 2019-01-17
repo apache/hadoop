@@ -64,8 +64,9 @@ import org.apache.hadoop.classification.InterfaceStability;
  * process of a DBF is iterative. At the start, the DBF is a <code>1 * m</code>
  * bit matrix, i.e., it is composed of a single standard Bloom filter.
  * It assumes that <code>n<sub>r</sub></code> elements are recorded in the 
- * initial bit vector, where <code>n<sub>r</sub> <= n</code> (<code>n</code> is
- * the cardinality of the set <code>A</code> to record in the filter).  
+ * initial bit vector, where <code>n<sub>r</sub> {@literal <=} n</code>
+ * (<code>n</code> is the cardinality of the set <code>A</code> to record in
+ * the filter).
  * <p>
  * As the size of <code>A</code> grows during the execution of the application,
  * several keys must be inserted in the DBF.  When inserting a key into the DBF,
@@ -236,8 +237,8 @@ public class DynamicBloomFilter extends Filter {
     StringBuilder res = new StringBuilder();
 
     for (int i = 0; i < matrix.length; i++) {
-      res.append(matrix[i]);
-      res.append(Character.LINE_SEPARATOR);
+      res.append(matrix[i])
+          .append(Character.LINE_SEPARATOR);
     }
     return res.toString();
   }

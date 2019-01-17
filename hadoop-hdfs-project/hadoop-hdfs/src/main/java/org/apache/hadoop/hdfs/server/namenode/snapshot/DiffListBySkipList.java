@@ -44,15 +44,15 @@ import java.util.Objects;
  * and created after a particular snapshot and before the next snapshot. The
  * sequence will look like this:
  * <p>
- * s0->s1->s2->s3->s4->s5->s6->s7->s8->s9.
+ * {@literal s0->s1->s2->s3->s4->s5->s6->s7->s8->s9}.
  * <p>
  * Assuming a skip interval of 3, which means a new diff will be added at a
  * level higher than the current level after we have  ore than 3 snapshots.
  * Next level promotion happens after 9 snapshots and so on.
  * <p>
- * level 2:   s08------------------------------->s9
- * level 1:   S02------->s35-------->s68-------->s9
- * level 0:  s0->s1->s2->s3->s4->s5->s6->s7->s8->s9
+ * level 2:   {@literal s08------------------------------->s9}
+ * level 1:   {@literal S02------->s35-------->s68-------->s9}
+ * level 0:  {@literal s0->s1->s2->s3->s4->s5->s6->s7->s8->s9}
  * <p>
  * s02 will be created by combining diffs for s0, s1, s2 once s3 gets created.
  * Similarly, s08 will be created by combining s02, s35 and s68 once s9 gets
@@ -143,6 +143,7 @@ public class DiffListBySkipList implements DiffList<DirectoryDiff> {
      * and level.
      *
      * @param diff The element to be stored in the node.
+     * @param level
      */
     SkipListNode(DirectoryDiff diff, int level) {
       this.diff = diff;

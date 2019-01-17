@@ -24,6 +24,8 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import java.io.IOException;
 import java.util.Map;
 import java.util.TreeMap;
+import org.apache.hadoop.ozone.common.Checksum;
+import org.apache.hadoop.ozone.common.ChecksumData;
 
 /**
  * Java class that represents ChunkInfo ProtoBuf class. This helper class allows
@@ -33,7 +35,7 @@ public class ChunkInfo {
   private final String chunkName;
   private final long offset;
   private final long len;
-  private String checksum;
+  private ChecksumData checksumData;
   private final Map<String, String> metadata;
 
 
@@ -86,10 +88,9 @@ public class ChunkInfo {
           info.getMetadata(x).getValue());
     }
 
+    chunkInfo.setChecksumData(
+        ChecksumData.getFromProtoBuf(info.getChecksumData()));
 
-    if (info.hasChecksum()) {
-      chunkInfo.setChecksum(info.getChecksum());
-    }
     return chunkInfo;
   }
 
@@ -105,8 +106,12 @@ public class ChunkInfo {
     builder.setChunkName(this.getChunkName());
     builder.setOffset(this.getOffset());
     builder.setLen(this.getLen());
-    if (this.getChecksum() != null && !this.getChecksum().isEmpty()) {
-      builder.setChecksum(this.getChecksum());
+    if (checksumData == null) {
+      // ChecksumData cannot be null while computing the protobufMessage.
+      // Set it to NONE type (equivalent to non checksum).
+      builder.setChecksumData(Checksum.getNoChecksumDataProto());
+    } else {
+      builder.setChecksumData(this.checksumData.getProtoBufMessage());
     }
 
     for (Map.Entry<String, String> entry : metadata.entrySet()) {
@@ -147,21 +152,17 @@ public class ChunkInfo {
   }
 
   /**
-   * Returns the SHA256 value of this chunk.
-   *
-   * @return - Hash String
+   * Returns the checksumData of this chunk.
    */
-  public String getChecksum() {
-    return checksum;
+  public ChecksumData getChecksumData() {
+    return checksumData;
   }
 
   /**
-   * Sets the Hash value of this chunk.
-   *
-   * @param checksum - Hash String.
+   * Sets the checksums of this chunk.
    */
-  public void setChecksum(String checksum) {
-    this.checksum = checksum;
+  public void setChecksumData(ChecksumData cData) {
+    this.checksumData = cData;
   }
 
   /**

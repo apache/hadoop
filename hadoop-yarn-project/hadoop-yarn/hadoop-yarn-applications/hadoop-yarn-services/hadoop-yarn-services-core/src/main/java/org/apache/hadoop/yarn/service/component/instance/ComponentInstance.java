@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.yarn.service.component.instance;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
-import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.registry.client.types.yarn.PersistencePolicies;
 import org.apache.hadoop.util.StringUtils;
@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.service.component.Component;
 import org.apache.hadoop.yarn.service.component.ComponentEvent;
 import org.apache.hadoop.yarn.service.component.ComponentEventType;
 import org.apache.hadoop.yarn.service.component.ComponentRestartPolicy;
+import org.apache.hadoop.yarn.service.monitor.probe.DefaultProbe;
 import org.apache.hadoop.yarn.service.monitor.probe.ProbeStatus;
 import org.apache.hadoop.yarn.service.registry.YarnRegistryViewForProviders;
 import org.apache.hadoop.yarn.service.timelineservice.ServiceTimelinePublisher;
@@ -66,6 +67,8 @@ import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -131,7 +134,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       .addTransition(STARTED, INIT, STOP,
           new ContainerStoppedTransition())
       .addTransition(STARTED, READY, BECOME_READY,
-          new ContainerBecomeReadyTransition())
+          new ContainerBecomeReadyTransition(false))
 
       // FROM READY
       .addTransition(READY, STARTED, BECOME_NOT_READY,
@@ -144,16 +147,24 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       // FROM UPGRADING
       .addTransition(UPGRADING, EnumSet.of(READY, CANCEL_UPGRADING),
           CANCEL_UPGRADE, new CancelUpgradeTransition())
-      .addTransition(UPGRADING, EnumSet.of(READY), BECOME_READY,
-          new ReadyAfterUpgradeTransition())
+      .addTransition(UPGRADING, EnumSet.of(REINITIALIZED), START,
+          new StartedAfterUpgradeTransition())
       .addTransition(UPGRADING, UPGRADING, STOP,
           new StoppedAfterUpgradeTransition())
 
       // FROM CANCEL_UPGRADING
-      .addTransition(CANCEL_UPGRADING, EnumSet.of(CANCEL_UPGRADING, READY),
-          BECOME_READY, new ReadyAfterUpgradeTransition())
+      .addTransition(CANCEL_UPGRADING, EnumSet.of(CANCEL_UPGRADING,
+          REINITIALIZED), START, new StartedAfterUpgradeTransition())
       .addTransition(CANCEL_UPGRADING, EnumSet.of(CANCEL_UPGRADING, INIT),
           STOP, new StoppedAfterCancelUpgradeTransition())
+
+      // FROM REINITIALIZED
+      .addTransition(REINITIALIZED, CANCEL_UPGRADING, CANCEL_UPGRADE,
+          new CancelledAfterReinitTransition())
+      .addTransition(REINITIALIZED, READY, BECOME_READY,
+           new ContainerBecomeReadyTransition(true))
+      .addTransition(REINITIALIZED, REINITIALIZED, STOP,
+          new StoppedAfterUpgradeTransition())
       .installTopology();
 
   public ComponentInstance(Component component,
@@ -180,20 +191,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     @Override public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
       // Query container status for ip and host
-      boolean cancelOnSuccess = true;
-      if (compInstance.getCompSpec().getArtifact() != null && compInstance
-          .getCompSpec().getArtifact().getType() == Artifact.TypeEnum.DOCKER) {
-        // A docker container might get a different IP if the container is
-        // relaunched by the NM, so we need to keep checking the status.
-        // This is a temporary fix until the NM provides a callback for
-        // container relaunch (see YARN-8265).
-        cancelOnSuccess = false;
-      }
-      compInstance.containerStatusFuture =
-          compInstance.scheduler.executorService.scheduleAtFixedRate(
-              new ContainerStatusRetriever(compInstance.scheduler,
-                  event.getContainerId(), compInstance, cancelOnSuccess), 0, 1,
-              TimeUnit.SECONDS);
+      compInstance.initializeStatusRetriever(event, 0);
       long containerStartTime = System.currentTimeMillis();
       try {
         ContainerTokenIdentifier containerTokenIdentifier = BuilderUtils
@@ -229,16 +227,30 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
   }
 
   private static class ContainerBecomeReadyTransition extends BaseTransition {
+    private final boolean isReinitialized;
+
+    ContainerBecomeReadyTransition(boolean isReinitialized) {
+      this.isReinitialized = isReinitialized;
+    }
+
     @Override
     public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
       compInstance.setContainerState(ContainerState.READY);
-      compInstance.component.incContainersReady(true);
+      if (!isReinitialized) {
+        compInstance.component.incContainersReady(true);
+      } else {
+        compInstance.component.incContainersReady(false);
+        ComponentEvent checkState = new ComponentEvent(
+            compInstance.component.getName(), ComponentEventType.CHECK_STABLE);
+        compInstance.scheduler.getDispatcher().getEventHandler().handle(
+            checkState);
+      }
       compInstance.postContainerReady();
     }
   }
 
-  private static class ReadyAfterUpgradeTransition implements
+  private static class StartedAfterUpgradeTransition implements
       MultipleArcTransition<ComponentInstance, ComponentInstanceEvent,
           ComponentInstanceState> {
 
@@ -249,7 +261,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       if (instance.pendingCancelUpgrade) {
         // cancellation of upgrade was triggered before the upgrade was
         // finished.
-        LOG.info("{} received ready but cancellation pending",
+        LOG.info("{} received started but cancellation pending",
             event.getContainerId());
         instance.upgradeInProgress.set(true);
         instance.cancelUpgrade();
@@ -258,8 +270,13 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       }
 
       instance.upgradeInProgress.set(false);
-      instance.setContainerState(ContainerState.READY);
-      instance.component.incContainersReady(false);
+      instance.setContainerState(ContainerState.RUNNING_BUT_UNREADY);
+      if (instance.component.getProbe() != null &&
+          instance.component.getProbe() instanceof DefaultProbe) {
+        instance.initializeStatusRetriever(event, 30);
+      } else {
+        instance.initializeStatusRetriever(event, 0);
+      }
 
       Component.UpgradeStatus status = instance.getState().equals(UPGRADING) ?
           instance.component.getUpgradeStatus() :
@@ -267,12 +284,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       status.decContainersThatNeedUpgrade();
 
       instance.serviceVersion = status.getTargetVersion();
-      ComponentEvent checkState = new ComponentEvent(
-          instance.component.getName(),
-          ComponentEventType.CHECK_STABLE);
-      instance.scheduler.getDispatcher().getEventHandler().handle(checkState);
-      instance.postContainerReady();
-      return ComponentInstanceState.READY;
+      return ComponentInstanceState.REINITIALIZED;
     }
   }
 
@@ -560,13 +572,22 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       instance.setContainerState(ContainerState.UPGRADING);
       instance.component.decContainersReady(false);
 
-      Component.UpgradeStatus status = instance.component.getUpgradeStatus();
-      instance.scheduler.getContainerLaunchService()
-          .reInitCompInstance(instance.scheduler.getApp(), instance,
-              instance.container,
-              instance.component.createLaunchContext(
-                  status.getTargetSpec(),
-                  status.getTargetVersion()));
+      Component.UpgradeStatus upgradeStatus = instance.component.
+          getUpgradeStatus();
+      instance.reInitHelper(upgradeStatus);
+    }
+  }
+
+  private static class CancelledAfterReinitTransition extends BaseTransition {
+    @Override
+    public void transition(ComponentInstance instance,
+        ComponentInstanceEvent event) {
+      if (instance.upgradeInProgress.compareAndSet(false, true)) {
+        instance.cancelUpgrade();
+      } else {
+        LOG.info("{} pending cancellation", event.getContainerId());
+        instance.pendingCancelUpgrade = true;
+      }
     }
   }
 
@@ -609,11 +630,37 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     LOG.info("{} cancelling upgrade", container.getId());
     setContainerState(ContainerState.UPGRADING);
     Component.UpgradeStatus cancelStatus = component.getCancelUpgradeStatus();
+    reInitHelper(cancelStatus);
+  }
+
+  private void reInitHelper(Component.UpgradeStatus upgradeStatus) {
+    cancelContainerStatusRetriever();
+    setContainerStatus(container.getId(), null);
+    scheduler.executorService.submit(() -> cleanupRegistry(container.getId()));
     scheduler.getContainerLaunchService()
         .reInitCompInstance(scheduler.getApp(), this,
             this.container, this.component.createLaunchContext(
-                cancelStatus.getTargetSpec(),
-                cancelStatus.getTargetVersion()));
+                upgradeStatus.getTargetSpec(),
+                upgradeStatus.getTargetVersion()));
+  }
+
+  private void initializeStatusRetriever(ComponentInstanceEvent event,
+      long initialDelay) {
+    boolean cancelOnSuccess = true;
+    if (getCompSpec().getArtifact() != null &&
+        getCompSpec().getArtifact().getType() == Artifact.TypeEnum.DOCKER) {
+      // A docker container might get a different IP if the container is
+      // relaunched by the NM, so we need to keep checking the status.
+      // This is a temporary fix until the NM provides a callback for
+      // container relaunch (see YARN-8265).
+      cancelOnSuccess = false;
+    }
+    LOG.info("{} retrieve status after {}", compInstanceId, initialDelay);
+    containerStatusFuture =
+        scheduler.executorService.scheduleAtFixedRate(
+            new ContainerStatusRetriever(scheduler, event.getContainerId(),
+                this, cancelOnSuccess), initialDelay, 1,
+            TimeUnit.SECONDS);
   }
 
   public ComponentInstanceState getState() {
@@ -700,26 +747,61 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
   }
 
   public ContainerStatus getContainerStatus() {
-    return status;
+    try {
+      readLock.lock();
+      return status;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  private void setContainerStatus(ContainerId containerId,
+      ContainerStatus latestStatus) {
+    try {
+      writeLock.lock();
+      this.status = latestStatus;
+      org.apache.hadoop.yarn.service.api.records.Container containerRec =
+          getCompSpec().getContainer(containerId.toString());
+
+      if (containerRec != null) {
+        if (latestStatus != null) {
+          containerRec.setIp(StringUtils.join(",", latestStatus.getIPs()));
+          containerRec.setHostname(latestStatus.getHost());
+        } else {
+          containerRec.setIp(null);
+          containerRec.setHostname(null);
+        }
+      }
+    } finally {
+      writeLock.unlock();
+    }
   }
 
   public void updateContainerStatus(ContainerStatus status) {
-    this.status = status;
-    org.apache.hadoop.yarn.service.api.records.Container container =
+    org.apache.hadoop.yarn.service.api.records.Container containerRec =
         getCompSpec().getContainer(status.getContainerId().toString());
     boolean doRegistryUpdate = true;
-    if (container != null) {
-      String existingIP = container.getIp();
+    if (containerRec != null) {
+      String existingIP = containerRec.getIp();
       String newIP = StringUtils.join(",", status.getIPs());
-      container.setIp(newIP);
-      container.setHostname(status.getHost());
       if (existingIP != null && newIP.equals(existingIP)) {
         doRegistryUpdate = false;
       }
-      if (timelineServiceEnabled && doRegistryUpdate) {
-        serviceTimelinePublisher.componentInstanceIPHostUpdated(container);
-      }
     }
+    ObjectMapper mapper = new ObjectMapper();
+    try {
+      Map<String, List<Map<String, String>>> ports = null;
+      ports = mapper.readValue(status.getExposedPorts(),
+          new TypeReference<Map<String, List<Map<String, String>>>>(){});
+      container.setExposedPorts(ports);
+    } catch (IOException e) {
+      LOG.warn("Unable to process container ports mapping: {}", e);
+    }
+    setContainerStatus(status.getContainerId(), status);
+    if (containerRec != null && timelineServiceEnabled && doRegistryUpdate) {
+      serviceTimelinePublisher.componentInstanceIPHostUpdated(containerRec);
+    }
+
     if (doRegistryUpdate) {
       cleanupRegistry(status.getContainerId());
       LOG.info(
@@ -913,21 +995,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
   }
 
   public String getHostname() {
-    String domain = getComponent().getScheduler().getConfig()
-        .get(RegistryConstants.KEY_DNS_DOMAIN);
-    String hostname;
-    if (domain == null || domain.isEmpty()) {
-      hostname = MessageFormat
-          .format("{0}.{1}.{2}", getCompInstanceName(),
-              getComponent().getContext().service.getName(),
-              RegistryUtils.currentUser());
-    } else {
-      hostname = MessageFormat
-          .format("{0}.{1}.{2}.{3}", getCompInstanceName(),
-              getComponent().getContext().service.getName(),
-              RegistryUtils.currentUser(), domain);
-    }
-    return hostname;
+    return getCompInstanceName() + getComponent().getHostnameSuffix();
   }
 
   @Override

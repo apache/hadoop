@@ -14,22 +14,33 @@
 
 package org.apache.hadoop.yarn.submarine.client.cli;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
+import org.apache.hadoop.yarn.submarine.common.exception.SubmarineRuntimeException;
 import org.apache.hadoop.yarn.submarine.common.fs.RemoteDirectoryManager;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.hadoop.yarn.submarine.client.cli.CliConstants.KEYTAB;
+import static org.apache.hadoop.yarn.submarine.client.cli.CliConstants.PRINCIPAL;
+
 public class CliUtils {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CliUtils.class);
   private final static String RES_PATTERN = "^[^=]+=\\d+\\s?\\w*$";
   /**
    * Replace patterns inside cli
@@ -63,19 +74,10 @@ public class CliUtils {
     return newCli;
   }
 
-  // TODO, this duplicated to Client of distributed shell, should cleanup
   private static Map<String, Long> parseResourcesString(String resourcesStr) {
     Map<String, Long> resources = new HashMap<>();
-
-    // Ignore the grouping "[]"
-    if (resourcesStr.startsWith("[")) {
-      resourcesStr = resourcesStr.substring(1);
-    }
-    if (resourcesStr.endsWith("]")) {
-      resourcesStr = resourcesStr.substring(0, resourcesStr.length());
-    }
-
-    for (String resource : resourcesStr.trim().split(",")) {
+    String[] pairs = resourcesStr.trim().split(",");
+    for (String resource : pairs) {
       resource = resource.trim();
       if (!resource.matches(RES_PATTERN)) {
         throw new IllegalArgumentException("\"" + resource + "\" is not a "
@@ -86,8 +88,9 @@ public class CliUtils {
       String key = splits[0], value = splits[1];
       String units = ResourceUtils.getUnits(value);
 
-      String valueWithoutUnit = value.substring(0, value.length() - units.length()).trim();
-      Long resourceValue = Long.valueOf(valueWithoutUnit);
+      String valueWithoutUnit = value.substring(0,
+          value.length()- units.length()).trim();
+      long resourceValue = Long.parseLong(valueWithoutUnit);
 
       // Convert commandline unit to standard YARN unit.
       if (units.equals("M") || units.equals("m")) {
@@ -96,7 +99,7 @@ public class CliUtils {
         units = "Gi";
       } else if (units.isEmpty()) {
         // do nothing;
-      } else{
+      } else {
         throw new IllegalArgumentException("Acceptable units are M/G or empty");
       }
 
@@ -110,7 +113,8 @@ public class CliUtils {
 
       if (key.equals("memory")) {
         key = ResourceInformation.MEMORY_URI;
-        resourceValue = UnitsConversionUtil.convert(units, "Mi", resourceValue);
+        resourceValue = UnitsConversionUtil.convert(units, "Mi",
+            resourceValue);
       }
 
       // special handle gpu
@@ -156,11 +160,54 @@ public class CliUtils {
       return true;
 
     if (args.length == 1) {
-      if (args[0].equals("-h") || args[0].equals("--help")) {
-        return true;
-      }
+      return args[0].equals("-h") || args[0].equals("--help");
     }
 
     return false;
+  }
+
+  public static void doLoginIfSecure(String keytab, String principal) throws
+      IOException {
+    if (!UserGroupInformation.isSecurityEnabled()) {
+      return;
+    }
+
+    if (StringUtils.isEmpty(keytab) || StringUtils.isEmpty(principal)) {
+      if (StringUtils.isNotEmpty(keytab)) {
+        SubmarineRuntimeException e = new SubmarineRuntimeException("The " +
+            "parameter of " + PRINCIPAL + " is missing.");
+        LOG.error(e.getMessage(), e);
+        throw e;
+      }
+
+      if (StringUtils.isNotEmpty(principal)) {
+        SubmarineRuntimeException e = new SubmarineRuntimeException("The " +
+            "parameter of " + KEYTAB + " is missing.");
+        LOG.error(e.getMessage(), e);
+        throw e;
+      }
+
+      UserGroupInformation user = UserGroupInformation.getCurrentUser();
+      if(user == null || user.getAuthenticationMethod() ==
+          UserGroupInformation.AuthenticationMethod.SIMPLE) {
+        SubmarineRuntimeException e = new SubmarineRuntimeException("Failed " +
+            "to authenticate in secure environment. Please run kinit " +
+            "command in advance or use " + "--" + KEYTAB + "/--" + PRINCIPAL +
+            " parameters");
+        LOG.error(e.getMessage(), e);
+        throw e;
+      }
+      LOG.info("Submarine job is submitted by user: " + user.getUserName());
+      return;
+    }
+
+    File keytabFile = new File(keytab);
+    if (!keytabFile.exists()) {
+      SubmarineRuntimeException e =  new SubmarineRuntimeException("No " +
+          "keytab localized at  " + keytab);
+      LOG.error(e.getMessage(), e);
+      throw e;
+    }
+    UserGroupInformation.loginUserFromKeytab(principal, keytab);
   }
 }

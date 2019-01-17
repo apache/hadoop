@@ -17,15 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.federation.resolver.order;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.hdfs.server.federation.resolver.PathLocation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.Iterables;
 
 /**
  * Order the destinations randomly.
@@ -35,10 +35,6 @@ public class RandomResolver implements OrderedResolver {
   private static final Logger LOG =
       LoggerFactory.getLogger(RandomResolver.class);
 
-
-  /** Random number generator. */
-  private static final Random RANDOM = new Random();
-
   /**
    * Get a random name space from the path.
    *
@@ -47,16 +43,12 @@ public class RandomResolver implements OrderedResolver {
    * @return Random name space.
    */
   public String getFirstNamespace(final String path, final PathLocation loc) {
-    if (loc == null) {
-      return null;
-    }
-    Set<String> namespaces = loc.getNamespaces();
-    if (namespaces == null || namespaces.isEmpty()) {
+    final Set<String> namespaces = (loc == null) ? null : loc.getNamespaces();
+    if (CollectionUtils.isEmpty(namespaces)) {
       LOG.error("Cannot get namespaces for {}", loc);
       return null;
     }
-    List<String> nssList = new ArrayList<>(namespaces);
-    int index = RANDOM.nextInt(nssList.size());
-    return nssList.get(index);
+    final int index = ThreadLocalRandom.current().nextInt(namespaces.size());
+    return Iterables.get(namespaces, index);
   }
 }

@@ -305,6 +305,22 @@ Following are the basic configurations to start Timeline service v.2:
 </property>
 ```
 
+If using an aux services manifest instead of setting aux services through the Configuration, ensure that the manifest services array includes the timeline\_collector service as follows:
+```
+{
+  "services": [
+    {
+      "name": "timeline_collector",
+      "configuration": {
+        "properties": {
+          "class.name": "org.apache.hadoop.yarn.server.timelineservice.collector.PerNodeTimelineCollectorsAuxService"
+        }
+      }
+    }
+  ]
+}
+```
+
 In addition, you may want to set the YARN cluster name to a reasonably unique value in case you
 are using multiple clusters to store data in the same Apache HBase storage:
 
@@ -332,6 +348,18 @@ that it can write data to the Apache HBase cluster you are using, or set
   <value>file:/etc/hbase/hbase-ats-dc1/hbase-site.xml</value>
 </property>
 ```
+
+To configure both Timeline Service 1.5 and v.2, add the following property
+
+ ```
+ <property>
+   <name>yarn.timeline-service.versions</name>
+   <value>1.5f,2.0f</value>
+ </property>
+```
+
+If the above is not configured, then it defaults to the version set in `yarn.timeline-service.version`
+
 
 #### Running Timeline Service v.2
 Restart the resource manager as well as the node managers to pick up the new configuration. The
@@ -1570,3 +1598,8 @@ With this API, you can query set of available entity types for a given app id. I
 1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.
 1. If flow context information cannot be retrieved or entity for the given entity id cannot be found, HTTP 404 (Not Found) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
+
+## <a name="Aggregated Log Serving for Historical Apps"></a>Aggregated Log Serving for Historical Apps
+
+ TimelineService v.2 supports serving aggregated logs of historical apps. To enable this, configure "yarn.log.server.web-service.url" to "${yarn .timeline-service.hostname}:8188/ws/v2/applicationlog"
+ in `yarn-site.xml`

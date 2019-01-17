@@ -51,7 +51,7 @@ public class GenericCli implements Callable<Void>, GenericParentCommand {
     try {
       execute(argv);
     } catch (ExecutionException ex) {
-      printError(ex.getCause());
+      printError(ex.getCause() == null ? ex : ex.getCause());
       System.exit(-1);
     }
   }
@@ -62,7 +62,9 @@ public class GenericCli implements Callable<Void>, GenericParentCommand {
   }
 
   private void printError(Throwable error) {
-    if (verbose) {
+    //message could be null in case of NPE. This is unexpected so we can
+    //print out the stack trace.
+    if (verbose || error.getMessage() == null) {
       error.printStackTrace(System.err);
     } else {
       System.err.println(error.getMessage().split("\n")[0]);
@@ -77,6 +79,7 @@ public class GenericCli implements Callable<Void>, GenericParentCommand {
     throw new MissingSubcommandException(cmd.getUsageMessage());
   }
 
+  @Override
   public OzoneConfiguration createOzoneConfiguration() {
     OzoneConfiguration ozoneConf = new OzoneConfiguration();
     if (configurationOverrides != null) {

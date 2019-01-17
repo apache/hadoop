@@ -332,7 +332,8 @@ public final class SecurityUtil {
    }
   
   /**
-   * Get the host name from the principal name of format <service>/host@realm.
+   * Get the host name from the principal name of format {@literal <}service
+   * {@literal >}/host@realm.
    * @param principalName principal name of format as described above
    * @return host name if the the string conforms to the above format, else null
    */

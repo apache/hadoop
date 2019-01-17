@@ -73,7 +73,7 @@ public interface NamenodeProtocol {
    * @param datanode  a data node
    * @param size      requested size
    * @param minBlockSize each block should be of this minimum Block Size
-   * @return          a list of blocks & their locations
+   * @return BlocksWithLocations a list of blocks &amp; their locations
    * @throws IOException if size is less than or equal to 0 or
   datanode does not exist
    */
@@ -183,7 +183,8 @@ public interface NamenodeProtocol {
   /**
    * Return a structure containing details about all edit logs
    * available to be fetched from the NameNode.
-   * @param sinceTxId return only logs that contain transactions >= sinceTxId
+   * @param sinceTxId return only logs that contain transactions {@literal >=}
+   * sinceTxId
    */
   @Idempotent
   public RemoteEditLogManifest getEditLogManifest(long sinceTxId)

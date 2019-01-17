@@ -25,10 +25,9 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
-import org.apache.hadoop.ozone.container.common.volume
-    .RoundRobinVolumeChoosingPolicy;
-import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
+import org.apache.hadoop.ozone.container.common.volume.RoundRobinVolumeChoosingPolicy;
+import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.impl.BlockManagerImpl;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Before;
@@ -37,12 +36,14 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.mockito.Mockito;
 
-import java.io.IOException;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
@@ -52,6 +53,8 @@ import static org.mockito.Mockito.mock;
  */
 public class TestBlockManagerImpl {
 
+  @Rule
+  public TemporaryFolder folder = new TemporaryFolder();
   private OzoneConfiguration config;
   private String scmId = UUID.randomUUID().toString();
   private VolumeSet volumeSet;
@@ -62,16 +65,12 @@ public class TestBlockManagerImpl {
   private BlockManagerImpl blockManager;
   private BlockID blockID;
 
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
-
-
   @Before
   public void setUp() throws Exception {
     config = new OzoneConfiguration();
-
+    UUID datanodeId = UUID.randomUUID();
     HddsVolume hddsVolume = new HddsVolume.Builder(folder.getRoot()
-        .getAbsolutePath()).conf(config).datanodeUuid(UUID.randomUUID()
+        .getAbsolutePath()).conf(config).datanodeUuid(datanodeId
         .toString()).build();
 
     volumeSet = mock(VolumeSet.class);
@@ -81,7 +80,8 @@ public class TestBlockManagerImpl {
         .thenReturn(hddsVolume);
 
     keyValueContainerData = new KeyValueContainerData(1L,
-        (long) StorageUnit.GB.toBytes(5));
+        (long) StorageUnit.GB.toBytes(5), UUID.randomUUID().toString(),
+        datanodeId.toString());
 
     keyValueContainer = new KeyValueContainer(
         keyValueContainerData, config);
@@ -93,7 +93,7 @@ public class TestBlockManagerImpl {
     blockData = new BlockData(blockID);
     blockData.addMetadata("VOLUME", "ozone");
     blockData.addMetadata("OWNER", "hdfs");
-    List<ContainerProtos.ChunkInfo> chunkList = new LinkedList<>();
+    List<ContainerProtos.ChunkInfo> chunkList = new ArrayList<>();
     ChunkInfo info = new ChunkInfo(String.format("%d.data.%d", blockID
         .getLocalID(), 0), 0, 1024);
     chunkList.add(info.getProtoBufMessage());
@@ -124,88 +124,74 @@ public class TestBlockManagerImpl {
 
   }
 
-
   @Test
   public void testDeleteBlock() throws Exception {
+    assertEquals(0,
+        keyValueContainer.getContainerData().getKeyCount());
+    //Put Block
+    blockManager.putBlock(keyValueContainer, blockData);
+    assertEquals(1,
+        keyValueContainer.getContainerData().getKeyCount());
+    //Delete Block
+    blockManager.deleteBlock(keyValueContainer, blockID);
+    assertEquals(0,
+        keyValueContainer.getContainerData().getKeyCount());
     try {
-      assertEquals(0,
-          keyValueContainer.getContainerData().getKeyCount());
-      //Put Block
-      blockManager.putBlock(keyValueContainer, blockData);
-      assertEquals(1,
-          keyValueContainer.getContainerData().getKeyCount());
-      //Delete Block
-      blockManager.deleteBlock(keyValueContainer, blockID);
-      assertEquals(0,
-          keyValueContainer.getContainerData().getKeyCount());
-      try {
-        blockManager.getBlock(keyValueContainer, blockID);
-        fail("testDeleteBlock");
-      } catch (StorageContainerException ex) {
-        GenericTestUtils.assertExceptionContains(
-            "Unable to find the block", ex);
-      }
-    } catch (IOException ex) {
-      fail("testDeleteBlock failed");
+      blockManager.getBlock(keyValueContainer, blockID);
+      fail("testDeleteBlock");
+    } catch (StorageContainerException ex) {
+      GenericTestUtils.assertExceptionContains(
+          "Unable to find the block", ex);
     }
   }
 
   @Test
   public void testListBlock() throws Exception {
-    try {
+    blockManager.putBlock(keyValueContainer, blockData);
+    List<BlockData> listBlockData = blockManager.listBlock(
+        keyValueContainer, 1, 10);
+    assertNotNull(listBlockData);
+    assertTrue(listBlockData.size() == 1);
+
+    for (long i = 2; i <= 10; i++) {
+      blockID = new BlockID(1L, i);
+      blockData = new BlockData(blockID);
+      blockData.addMetadata("VOLUME", "ozone");
+      blockData.addMetadata("OWNER", "hdfs");
+      List<ContainerProtos.ChunkInfo> chunkList = new ArrayList<>();
+      ChunkInfo info = new ChunkInfo(String.format("%d.data.%d", blockID
+          .getLocalID(), 0), 0, 1024);
+      chunkList.add(info.getProtoBufMessage());
+      blockData.setChunks(chunkList);
       blockManager.putBlock(keyValueContainer, blockData);
-      List<BlockData> listBlockData = blockManager.listBlock(
-          keyValueContainer, 1, 10);
-      assertNotNull(listBlockData);
-      assertTrue(listBlockData.size() == 1);
-
-      for (long i = 2; i <= 10; i++) {
-        blockID = new BlockID(1L, i);
-        blockData = new BlockData(blockID);
-        blockData.addMetadata("VOLUME", "ozone");
-        blockData.addMetadata("OWNER", "hdfs");
-        List<ContainerProtos.ChunkInfo> chunkList = new LinkedList<>();
-        ChunkInfo info = new ChunkInfo(String.format("%d.data.%d", blockID
-            .getLocalID(), 0), 0, 1024);
-        chunkList.add(info.getProtoBufMessage());
-        blockData.setChunks(chunkList);
-        blockManager.putBlock(keyValueContainer, blockData);
-      }
-
-      listBlockData = blockManager.listBlock(
-          keyValueContainer, 1, 10);
-      assertNotNull(listBlockData);
-      assertTrue(listBlockData.size() == 10);
-
-    } catch (IOException ex) {
-      fail("testListBlock failed");
     }
+
+    listBlockData = blockManager.listBlock(
+        keyValueContainer, 1, 10);
+    assertNotNull(listBlockData);
+    assertTrue(listBlockData.size() == 10);
   }
 
   @Test
   public void testGetNoSuchBlock() throws Exception {
+    assertEquals(0,
+        keyValueContainer.getContainerData().getKeyCount());
+    //Put Block
+    blockManager.putBlock(keyValueContainer, blockData);
+    assertEquals(1,
+        keyValueContainer.getContainerData().getKeyCount());
+    //Delete Block
+    blockManager.deleteBlock(keyValueContainer, blockID);
+    assertEquals(0,
+        keyValueContainer.getContainerData().getKeyCount());
     try {
-      assertEquals(0,
-          keyValueContainer.getContainerData().getKeyCount());
-      //Put Block
-      blockManager.putBlock(keyValueContainer, blockData);
-      assertEquals(1,
-          keyValueContainer.getContainerData().getKeyCount());
-      //Delete Block
-      blockManager.deleteBlock(keyValueContainer, blockID);
-      assertEquals(0,
-          keyValueContainer.getContainerData().getKeyCount());
-      try {
-        //Since the block has been deleted, we should not be able to find it
-        blockManager.getBlock(keyValueContainer, blockID);
-        fail("testGetNoSuchBlock failed");
-      } catch (StorageContainerException ex) {
-        GenericTestUtils.assertExceptionContains(
-            "Unable to find the block", ex);
-        assertEquals(ContainerProtos.Result.NO_SUCH_BLOCK, ex.getResult());
-      }
-    } catch (IOException ex) {
+      //Since the block has been deleted, we should not be able to find it
+      blockManager.getBlock(keyValueContainer, blockID);
       fail("testGetNoSuchBlock failed");
+    } catch (StorageContainerException ex) {
+      GenericTestUtils.assertExceptionContains(
+          "Unable to find the block", ex);
+      assertEquals(ContainerProtos.Result.NO_SUCH_BLOCK, ex.getResult());
     }
   }
 }

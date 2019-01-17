@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -41,6 +42,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl.ProcessTreeInfo;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerLivenessContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
@@ -100,6 +103,13 @@ public class TestContainersMonitorResourceChange {
         throws IOException {
       return true;
     }
+
+    @Override
+    public IOStreamPair execContainer(ContainerExecContext ctx)
+        throws ContainerExecutionException {
+      return new IOStreamPair(null, null);
+    }
+
     @Override
     public void deleteAsUser(DeletionAsUserContext ctx)
         throws IOException, InterruptedException {
@@ -119,6 +129,10 @@ public class TestContainersMonitorResourceChange {
     public boolean isContainerAlive(ContainerLivenessContext ctx)
         throws IOException {
       return true;
+    }
+    @Override
+    public void updateYarnSysFS(Context ctx, String user, String appId,
+        String spec) throws IOException {
     }
   }
 

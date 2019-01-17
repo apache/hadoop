@@ -67,7 +67,7 @@ public class TimelineReaderWhitelistAuthorizationFilter implements Filter {
 
     if (isWhitelistReadAuthEnabled) {
       UserGroupInformation callerUGI = TimelineReaderWebServicesUtils
-          .getCallerUserGroupInformation(httpRequest, true);
+          .getUser(httpRequest);
       if (callerUGI == null) {
         String msg = "Unable to obtain user name, user not authenticated";
         throw new AuthorizationException(msg);

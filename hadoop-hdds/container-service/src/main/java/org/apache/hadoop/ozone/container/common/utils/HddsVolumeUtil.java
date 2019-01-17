@@ -164,7 +164,7 @@ public final class HddsVolumeUtil {
   }
 
   /**
-   * Check Volume is consistent state or not.
+   * Check Volume is in consistent state or not.
    * @param hddsVolume
    * @param scmId
    * @param clusterId

@@ -98,13 +98,9 @@ public class HashResolver implements OrderedResolver {
    *         namespaces using the provided set of namespace identifiers.
    */
   private ConsistentHashRing getHashResolver(final Set<String> namespaces) {
-    int hash = namespaces.hashCode();
-    ConsistentHashRing resolver = this.hashResolverMap.get(hash);
-    if (resolver == null) {
-      resolver = new ConsistentHashRing(namespaces);
-      this.hashResolverMap.put(hash, resolver);
-    }
-    return resolver;
+    final int hash = namespaces.hashCode();
+    return this.hashResolverMap.computeIfAbsent(hash,
+        k -> new ConsistentHashRing(namespaces));
   }
 
   /**

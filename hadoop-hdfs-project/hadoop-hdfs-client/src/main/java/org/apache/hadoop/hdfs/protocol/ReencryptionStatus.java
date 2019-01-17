@@ -200,12 +200,12 @@ public final class ReencryptionStatus {
     StringBuilder sb = new StringBuilder();
     for (Map.Entry<Long, ZoneReencryptionStatus> entry : zoneStatuses
         .entrySet()) {
-      sb.append("[zone:" + entry.getKey());
-      sb.append(" state:" + entry.getValue().getState());
-      sb.append(" lastProcessed:" + entry.getValue().getLastCheckpointFile());
-      sb.append(" filesReencrypted:" + entry.getValue().getFilesReencrypted());
-      sb.append(" fileReencryptionFailures:" + entry.getValue()
-          .getNumReencryptionFailures() + "]");
+      sb.append("[zone:" + entry.getKey())
+          .append(" state:" + entry.getValue().getState())
+          .append(" lastProcessed:" + entry.getValue().getLastCheckpointFile())
+          .append(" filesReencrypted:" + entry.getValue().getFilesReencrypted())
+          .append(" fileReencryptionFailures:" + entry.getValue()
+              .getNumReencryptionFailures() + "]");
     }
     return sb.toString();
   }

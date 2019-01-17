@@ -69,6 +69,8 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
+import org.apache.hadoop.log.LogThrottlingHelper;
+import org.apache.hadoop.log.LogThrottlingHelper.LogAction;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Time;
 
@@ -123,6 +125,11 @@ public class FSImage implements Closeable {
   */
   private final Set<Long> currentlyCheckpointing =
       Collections.<Long>synchronizedSet(new HashSet<Long>());
+
+  /** Limit logging about edit loading to every 5 seconds max. */
+  private static final long LOAD_EDIT_LOG_INTERVAL_MS = 5000;
+  private final LogThrottlingHelper loadEditLogHelper =
+      new LogThrottlingHelper(LOAD_EDIT_LOG_INTERVAL_MS);
 
   /**
    * Construct an FSImage
@@ -886,8 +893,16 @@ public class FSImage implements Closeable {
       
       // Load latest edits
       for (EditLogInputStream editIn : editStreams) {
-        LOG.info("Reading " + editIn + " expecting start txid #" +
-              (lastAppliedTxId + 1));
+        LogAction logAction = loadEditLogHelper.record();
+        if (logAction.shouldLog()) {
+          String logSuppressed = "";
+          if (logAction.getCount() > 1) {
+            logSuppressed = "; suppressed logging for " +
+                (logAction.getCount() - 1) + " edit reads";
+          }
+          LOG.info("Reading " + editIn + " expecting start txid #" +
+              (lastAppliedTxId + 1) + logSuppressed);
+        }
         try {
           loader.loadFSEdits(editIn, lastAppliedTxId + 1, maxTxnsToRead,
               startOpt, recovery);

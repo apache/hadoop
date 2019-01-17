@@ -52,7 +52,7 @@ import org.slf4j.LoggerFactory;
  * with ssh.
  * <p>
  * In order to achieve passwordless SSH, the operator must also configure
- * <code>dfs.ha.fencing.ssh.private-key-files<code> to point to an
+ * <code>dfs.ha.fencing.ssh.private-key-files</code> to point to an
  * SSH key that has passphrase-less access to the given username and host.
  */
 public class SshFenceByTcpPort extends Configured

@@ -50,10 +50,13 @@ Usage: `yarn app [options] `
 | -appTypes \<Types\> | Works with -list to filter applications based on input comma-separated list of application types. |
 | -changeQueue \<Queue Name\> | Moves application to a new queue. ApplicationId can be passed using 'appId' option. 'movetoqueue' command is deprecated, this new command 'changeQueue' performs same functionality. |
 | -component \<Component Name\> \<Count\> | Works with -flex option to change the number of components/containers running for an application / long-running service. Supports absolute or relative changes, such as +1, 2, or -3. |
+| -components \<Components\> | Works with -upgrade option to trigger the upgrade of specified components of the application. Multiple components should be separated by commas. |
+| -decommission \<Application Name\> | Decommissions component instances for an application / long-running service. Requires -instances option. Supports -appTypes option to specify which client implementation to use. |
 | -destroy \<Application Name\> | Destroys a saved application specification and removes all application data permanently. Supports -appTypes option to specify which client implementation to use. |
 | -enableFastLaunch | Uploads AM dependencies to HDFS to make future launches faster. Supports -appTypes option to specify which client implementation to use. |
 | -flex \<Application Name or ID\> | Changes number of running containers for a component of an application / long-running service. Requires -component option. If name is provided, appType must be provided unless it is the default yarn-service. If ID is provided, the appType will be looked up. Supports -appTypes option to specify which client implementation to use. |
 | -help | Displays help for all commands. |
+| -instances \<Component Instances\> | Works with -upgrade option to trigger the upgrade of specified component instances of the application. Also works with -decommission option to decommission specified component instances. Multiple instances should be separated by commas. |
 | -kill \<Application ID\> | Kills the application. Set of applications can be provided separated with space |
 | -launch \<Application Name\> \<File Name\> | Launches application from specification file (saves specification and starts application). Options -updateLifetime and -changeQueue can be specified to alter the values provided in the file. Supports -appTypes option to specify which client implementation to use. |
 | -list | List applications. Supports optional use of -appTypes to filter applications based on application type, -appStates to filter applications based on application state and -appTags to filter applications based on application tag. |

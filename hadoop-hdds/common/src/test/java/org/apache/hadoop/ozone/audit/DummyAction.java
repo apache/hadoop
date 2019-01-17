@@ -22,30 +22,24 @@ package org.apache.hadoop.ozone.audit;
  */
 public enum DummyAction implements AuditAction {
 
-  CREATE_VOLUME("CREATE_VOLUME"),
-  CREATE_BUCKET("CREATE_BUCKET"),
-  CREATE_KEY("CREATE_KEY"),
-  READ_VOLUME("READ_VOLUME"),
-  READ_BUCKET("READ_BUCKET"),
-  READ_KEY("READ_BUCKET"),
-  UPDATE_VOLUME("UPDATE_VOLUME"),
-  UPDATE_BUCKET("UPDATE_BUCKET"),
-  UPDATE_KEY("UPDATE_KEY"),
-  DELETE_VOLUME("DELETE_VOLUME"),
-  DELETE_BUCKET("DELETE_BUCKET"),
-  DELETE_KEY("DELETE_KEY"),
-  SET_OWNER("SET_OWNER"),
-  SET_QUOTA("SET_QUOTA");
-
-  private String action;
-
-  DummyAction(String action) {
-    this.action = action;
-  }
+  CREATE_VOLUME,
+  CREATE_BUCKET,
+  CREATE_KEY,
+  READ_VOLUME,
+  READ_BUCKET,
+  READ_KEY,
+  UPDATE_VOLUME,
+  UPDATE_BUCKET,
+  UPDATE_KEY,
+  DELETE_VOLUME,
+  DELETE_BUCKET,
+  DELETE_KEY,
+  SET_OWNER,
+  SET_QUOTA;
 
   @Override
   public String getAction() {
-    return this.action;
+    return this.toString();
   }
 
 }

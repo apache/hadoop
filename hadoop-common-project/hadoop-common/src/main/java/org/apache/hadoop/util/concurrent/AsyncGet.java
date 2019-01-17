@@ -37,7 +37,7 @@ public interface AsyncGet<R, E extends Throwable> {
    *
    * @param timeout The maximum time period to wait.
    *                When timeout == 0, it does not wait at all.
-   *                When timeout < 0, it waits indefinitely.
+   *                When timeout &lt; 0, it waits indefinitely.
    * @param unit The unit of the timeout value
    * @return the result, which is possibly null.
    * @throws E an exception thrown by the underlying implementation.

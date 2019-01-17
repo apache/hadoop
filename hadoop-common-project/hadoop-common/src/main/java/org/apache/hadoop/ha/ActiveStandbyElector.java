@@ -54,10 +54,10 @@ import org.slf4j.LoggerFactory;
  * Apache Zookeeper. Using Zookeeper as a coordination service, leader election
  * can be performed by atomically creating an ephemeral lock file (znode) on
  * Zookeeper. The service instance that successfully creates the znode becomes
- * active and the rest become standbys. <br/>
+ * active and the rest become standbys. <br>
  * This election mechanism is only efficient for small number of election
  * candidates (order of 10's) because contention on single znode by a large
- * number of candidates can result in Zookeeper overload. <br/>
+ * number of candidates can result in Zookeeper overload. <br>
  * The elector does not guarantee fencing (protection of shared resources) among
  * service instances. After it has notified an instance about becoming a leader,
  * then that instance must ensure that it meets the service consistency
@@ -70,10 +70,10 @@ import org.slf4j.LoggerFactory;
 public class ActiveStandbyElector implements StatCallback, StringCallback {
 
   /**
-   * Callback interface to interact with the ActiveStandbyElector object. <br/>
+   * Callback interface to interact with the ActiveStandbyElector object. <br>
    * The application will be notified with a callback only on state changes
    * (i.e. there will never be successive calls to becomeActive without an
-   * intermediate call to enterNeutralMode). <br/>
+   * intermediate call to enterNeutralMode). <br>
    * The callbacks will be running on Zookeeper client library threads. The
    * application should return from these callbacks quickly so as not to impede
    * Zookeeper client library performance and notifications. The app will
@@ -105,7 +105,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
      * interface. The service may choose to ignore this or stop doing state
      * changing operations. Upon reconnection, the elector verifies the leader
      * status and calls back on the becomeActive and becomeStandby app
-     * interfaces. <br/>
+     * interfaces. <br>
      * Zookeeper disconnects can happen due to network issues or loss of
      * Zookeeper quorum. Thus enterNeutralMode can be used to guard against
      * split-brain issues. In such situations it might be prudent to call
@@ -178,12 +178,12 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   private ZooKeeper monitorLockNodeClient;
 
   /**
-   * Create a new ActiveStandbyElector object <br/>
+   * Create a new ActiveStandbyElector object <br>
    * The elector is created by providing to it the Zookeeper configuration, the
    * parent znode under which to create the znode and a reference to the
-   * callback interface. <br/>
+   * callback interface. <br>
    * The parent znode name must be the same for all service instances and
-   * different across services. <br/>
+   * different across services. <br>
    * After the leader has been lost, a new leader will be elected after the
    * session timeout expires. Hence, the app must set this parameter based on
    * its needs for failure response time. The session timeout must be greater
@@ -217,12 +217,12 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   }
 
   /**
-   * Create a new ActiveStandbyElector object <br/>
+   * Create a new ActiveStandbyElector object <br>
    * The elector is created by providing to it the Zookeeper configuration, the
    * parent znode under which to create the znode and a reference to the
-   * callback interface. <br/>
+   * callback interface. <br>
    * The parent znode name must be the same for all service instances and
-   * different across services. <br/>
+   * different across services. <br>
    * After the leader has been lost, a new leader will be elected after the
    * session timeout expires. Hence, the app must set this parameter based on
    * its needs for failure response time. The session timeout must be greater
@@ -278,9 +278,9 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   /**
    * To participate in election, the app will call joinElection. The result will
    * be notified by a callback on either the becomeActive or becomeStandby app
-   * interfaces. <br/>
+   * interfaces. <br>
    * After this the elector will automatically monitor the leader status and
-   * perform re-election if necessary<br/>
+   * perform re-election if necessary<br>
    * The app could potentially start off in standby mode and ignore the
    * becomeStandby call.
    * 
@@ -397,11 +397,11 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
 
   /**
    * Any service instance can drop out of the election by calling quitElection. 
-   * <br/>
+   * <br>
    * This will lose any leader status, if held, and stop monitoring of the lock
-   * node. <br/>
+   * node. <br>
    * If the instance wants to participate in election again, then it needs to
-   * call joinElection(). <br/>
+   * call joinElection(). <br>
    * This allows service instances to take themselves out of rotation for known
    * impending unavailable states (e.g. long GC pause or software upgrade).
    * 

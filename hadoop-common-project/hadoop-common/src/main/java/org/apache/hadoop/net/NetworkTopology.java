@@ -114,7 +114,7 @@ public class NetworkTopology {
   }
 
   /** Add a leaf node
-   * Update node counter & rack counter if necessary
+   * Update node counter &amp; rack counter if necessary
    * @param node node to be added; can be null
    * @exception IllegalArgumentException if add a node to a leave 
                                          or node to be added is not a leaf
@@ -532,8 +532,13 @@ public class NetworkTopology {
     if (excludedScope == null) {
       availableNodes = countNumOfAvailableNodes(scope, excludedNodes);
     } else {
-      availableNodes =
-          countNumOfAvailableNodes("~" + excludedScope, excludedNodes);
+      netlock.readLock().lock();
+      try {
+        availableNodes = countNumOfAvailableNodes(scope, excludedNodes) -
+            countNumOfAvailableNodes(excludedScope, excludedNodes);
+      } finally {
+        netlock.readLock().unlock();
+      }
     }
     LOG.debug("Choosing random from {} available nodes on node {},"
         + " scope={}, excludedScope={}, excludeNodes={}. numOfDatanodes={}.",
@@ -705,18 +710,18 @@ public class NetworkTopology {
   public String toString() {
     // print the number of racks
     StringBuilder tree = new StringBuilder();
-    tree.append("Number of racks: ");
-    tree.append(numOfRacks);
-    tree.append("\n");
+    tree.append("Number of racks: ")
+        .append(numOfRacks)
+        .append("\n");
     // print the number of leaves
     int numOfLeaves = getNumOfLeaves();
-    tree.append("Expected number of leaves:");
-    tree.append(numOfLeaves);
-    tree.append("\n");
+    tree.append("Expected number of leaves:")
+        .append(numOfLeaves)
+        .append("\n");
     // print nodes
     for(int i=0; i<numOfLeaves; i++) {
-      tree.append(NodeBase.getPath(clusterMap.getLeaf(i, null)));
-      tree.append("\n");
+      tree.append(NodeBase.getPath(clusterMap.getLeaf(i, null)))
+          .append("\n");
     }
     return tree.toString();
   }
@@ -858,12 +863,12 @@ public class NetworkTopology {
 
   /**
    * Sort nodes array by network distance to <i>reader</i>.
-   * <p/>
+   * <p>
    * In a three-level topology, a node can be either local, on the same rack,
    * or on a different rack from the reader. Sorting the nodes based on network
    * distance from the reader reduces network traffic and improves
    * performance.
-   * <p/>
+   * <p>
    * As an additional twist, we also randomize the nodes at each network
    * distance. This helps with load balancing when there is data skew.
    *
@@ -881,11 +886,11 @@ public class NetworkTopology {
 
   /**
    * Sort nodes array by network distance to <i>reader</i>.
-   * <p/> using network location. This is used when the reader
+   * <p> using network location. This is used when the reader
    * is not a datanode. Sorting the nodes based on network distance
    * from the reader reduces network traffic and improves
    * performance.
-   * <p/>
+   * <p>
    *
    * @param reader    Node where data will be read
    * @param nodes     Available replicas with the requested data
@@ -902,7 +907,7 @@ public class NetworkTopology {
 
   /**
    * Sort nodes array by network distance to <i>reader</i>.
-   * <p/>
+   * <p>
    * As an additional twist, we also randomize the nodes at each network
    * distance. This helps with load balancing when there is data skew.
    *

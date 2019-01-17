@@ -57,6 +57,9 @@ public interface MRJobConfig {
   // negative values disable the limit
   public static final long DEFAULT_JOB_SINGLE_DISK_LIMIT_BYTES = -1;
 
+  public static final String JOB_DFS_STORAGE_CAPACITY_KILL_LIMIT_EXCEED =
+      "mapreduce.job.dfs.storage.capacity.kill-limit-exceed";
+  public static final boolean DEFAULT_JOB_DFS_STORAGE_CAPACITY_KILL_LIMIT_EXCEED = false;
   public static final String JOB_SINGLE_DISK_LIMIT_KILL_LIMIT_EXCEED =
       "mapreduce.job.local-fs.single-disk-limit.check.kill-limit-exceed";
   // setting to false only logs the kill
@@ -349,6 +352,14 @@ public interface MRJobConfig {
   
   public static final String TASK_TIMEOUT = "mapreduce.task.timeout";
   long DEFAULT_TASK_TIMEOUT_MILLIS = 5 * 60 * 1000L;
+
+  /**
+   * The max timeout before receiving remote task's first heartbeat.
+   * This parameter is in order to avoid waiting for the container
+   * to start indefinitely, which made task stuck in the NEW state.
+   */
+  String TASK_STUCK_TIMEOUT_MS = "mapreduce.task.stuck.timeout-ms";
+  long DEFAULT_TASK_STUCK_TIMEOUT_MS = 10 * 60 * 1000L;
 
   String TASK_PROGRESS_REPORT_INTERVAL =
       "mapreduce.task.progress-report.interval";
@@ -761,6 +772,28 @@ public interface MRJobConfig {
    * Leave blank if you want all possible ports.
    */
   String MR_AM_WEBAPP_PORT_RANGE = MR_AM_PREFIX + "webapp.port-range";
+
+  /**
+   * True if the MR AM should use HTTPS for its webapp.  If
+   * {@link org.apache.hadoop.yarn.conf.YarnConfiguration#RM_APPLICATION_HTTPS_POLICY}
+   * is set to LENIENT or STRICT, the MR AM will automatically use the
+   * keystore provided by YARN with a certificate for the MR AM webapp, unless
+   * provided by the user.
+   */
+  String MR_AM_WEBAPP_HTTPS_ENABLED = MR_AM_PREFIX + "webapp.https.enabled";
+  boolean DEFAULT_MR_AM_WEBAPP_HTTPS_ENABLED = false;
+
+  /**
+   * True if the MR AM webapp should require client HTTPS authentication (i.e.
+   * the proxy server (RM) should present a certificate to the MR AM webapp).
+   * If {@link org.apache.hadoop.yarn.conf.YarnConfiguration#RM_APPLICATION_HTTPS_POLICY}
+   * is set to LENIENT or STRICT, the MR AM will automatically use the
+   * truststore provided by YARN with the RMs certificate, unless provided by
+   * the user.
+   */
+  String MR_AM_WEBAPP_HTTPS_CLIENT_AUTH =
+      MR_AM_PREFIX + "webapp.https.client.auth";
+  boolean DEFAULT_MR_AM_WEBAPP_HTTPS_CLIENT_AUTH = false;
 
   /** Enable blacklisting of nodes in the job.*/
   public static final String MR_AM_JOB_NODE_BLACKLISTING_ENABLE = 

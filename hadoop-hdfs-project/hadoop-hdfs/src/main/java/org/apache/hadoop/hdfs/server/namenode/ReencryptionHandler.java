@@ -319,7 +319,7 @@ public class ReencryptionHandler implements Runnable {
   /**
    * Main loop. It takes at most 1 zone per scan, and executes until the zone
    * is completed.
-   * {@see #reencryptEncryptionZoneInt(Long)}.
+   * {@link #reencryptEncryptionZone(long)}.
    */
   @Override
   public void run() {

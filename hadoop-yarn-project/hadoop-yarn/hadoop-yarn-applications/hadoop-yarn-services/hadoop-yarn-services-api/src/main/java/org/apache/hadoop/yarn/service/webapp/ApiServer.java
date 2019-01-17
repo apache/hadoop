@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.ComponentContainers;
 import org.apache.hadoop.yarn.service.api.records.ComponentState;
 import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
@@ -117,10 +118,13 @@ public class ApiServer {
           @Override
           public Void run() throws YarnException, IOException {
             ServiceClient sc = getServiceClient();
-            sc.init(YARN_CONFIG);
-            sc.start();
-            sc.actionBuild(service);
-            sc.close();
+            try {
+              sc.init(YARN_CONFIG);
+              sc.start();
+              sc.actionBuild(service);
+            } finally {
+              sc.close();
+            }
             return null;
           }
         });
@@ -132,11 +136,14 @@ public class ApiServer {
               @Override
               public ApplicationId run() throws IOException, YarnException {
                 ServiceClient sc = getServiceClient();
-                sc.init(YARN_CONFIG);
-                sc.start();
-                ApplicationId applicationId = sc.actionCreate(service);
-                sc.close();
-                return applicationId;
+                try {
+                  sc.init(YARN_CONFIG);
+                  sc.start();
+                  ApplicationId applicationId = sc.actionCreate(service);
+                  return applicationId;
+                } finally {
+                  sc.close();
+                }
               }
             });
         serviceStatus.setDiagnostics("Application ID: " + applicationId);
@@ -244,29 +251,32 @@ public class ApiServer {
       public Integer run() throws Exception {
         int result = 0;
         ServiceClient sc = getServiceClient();
-        sc.init(YARN_CONFIG);
-        sc.start();
-        Exception stopException = null;
         try {
-          result = sc.actionStop(appName, destroy);
-          if (result == EXIT_SUCCESS) {
-            LOG.info("Successfully stopped service {}", appName);
+          sc.init(YARN_CONFIG);
+          sc.start();
+          Exception stopException = null;
+          try {
+            result = sc.actionStop(appName, destroy);
+            if (result == EXIT_SUCCESS) {
+              LOG.info("Successfully stopped service {}", appName);
+            }
+          } catch (Exception e) {
+            LOG.info("Got exception stopping service", e);
+            stopException = e;
           }
-        } catch (Exception e) {
-          LOG.info("Got exception stopping service", e);
-          stopException = e;
+          if (destroy) {
+            result = sc.actionDestroy(appName);
+            if (result == EXIT_SUCCESS) {
+              LOG.info("Successfully deleted service {}", appName);
+            }
+          } else {
+            if (stopException != null) {
+              throw stopException;
+            }
+          }
+        } finally {
+          sc.close();
         }
-        if (destroy) {
-          result = sc.actionDestroy(appName);
-          if (result == EXIT_SUCCESS) {
-            LOG.info("Successfully deleted service {}", appName);
-          }
-        } else {
-          if (stopException != null) {
-            throw stopException;
-          }
-        }
-        sc.close();
         return result;
       }
     });
@@ -377,13 +387,16 @@ public class ApiServer {
             @Override
             public Map<String, Long> run() throws YarnException, IOException {
               ServiceClient sc = new ServiceClient();
-              sc.init(YARN_CONFIG);
-              sc.start();
-              Map<String, Long> original = sc.flexByRestService(appName,
-                  Collections.singletonMap(componentName,
-                      component.getNumberOfContainers()));
-              sc.close();
-              return original;
+              try {
+                sc.init(YARN_CONFIG);
+                sc.start();
+                Map<String, Long> original = sc.flexByRestService(appName,
+                    Collections.singletonMap(componentName,
+                        component.getNumberOfContainers()));
+                return original;
+              } finally {
+                sc.close();
+              }
             }
           });
       ServiceStatus status = new ServiceStatus();
@@ -456,6 +469,12 @@ public class ApiServer {
       if (updateServiceData.getLifetime() != null
           && updateServiceData.getLifetime() > 0) {
         return updateLifetime(appName, updateServiceData, ugi);
+      }
+
+      for (Component c : updateServiceData.getComponents()) {
+        if (c.getDecommissionedInstances().size() > 0) {
+          return decommissionInstances(updateServiceData, ugi);
+        }
       }
     } catch (UndeclaredThrowableException e) {
       return formatResponse(Status.BAD_REQUEST,
@@ -625,12 +644,15 @@ public class ApiServer {
       public Integer run() throws YarnException, IOException {
         int result = 0;
         ServiceClient sc = new ServiceClient();
-        sc.init(YARN_CONFIG);
-        sc.start();
-        result = sc
-            .actionFlex(appName, componentCountStrings);
-        sc.close();
-        return Integer.valueOf(result);
+        try {
+          sc.init(YARN_CONFIG);
+          sc.start();
+          result = sc
+              .actionFlex(appName, componentCountStrings);
+          return Integer.valueOf(result);
+        } finally {
+          sc.close();
+        }
       }
     });
     if (result == EXIT_SUCCESS) {
@@ -651,12 +673,15 @@ public class ApiServer {
       @Override
       public String run() throws YarnException, IOException {
         ServiceClient sc = getServiceClient();
-        sc.init(YARN_CONFIG);
-        sc.start();
-        String newLifeTime = sc.updateLifetime(appName,
-            updateAppData.getLifetime());
-        sc.close();
-        return newLifeTime;
+        try {
+          sc.init(YARN_CONFIG);
+          sc.start();
+          String newLifeTime = sc.updateLifetime(appName,
+              updateAppData.getLifetime());
+          return newLifeTime;
+        } finally {
+          sc.close();
+        }
       }
     });
     ServiceStatus status = new ServiceStatus();
@@ -674,11 +699,14 @@ public class ApiServer {
           @Override public ApplicationId run()
               throws YarnException, IOException {
             ServiceClient sc = getServiceClient();
-            sc.init(YARN_CONFIG);
-            sc.start();
-            ApplicationId appId = sc.actionStartAndGetId(appName);
-            sc.close();
-            return appId;
+            try {
+              sc.init(YARN_CONFIG);
+              sc.start();
+              ApplicationId appId = sc.actionStartAndGetId(appName);
+              return appId;
+            } finally {
+              sc.close();
+            }
           }
         });
     LOG.info("Successfully started service " + appName);
@@ -695,14 +723,17 @@ public class ApiServer {
     ServiceStatus status = new ServiceStatus();
     ugi.doAs((PrivilegedExceptionAction<Void>) () -> {
       ServiceClient sc = getServiceClient();
-      sc.init(YARN_CONFIG);
-      sc.start();
-      if (service.getState().equals(ServiceState.EXPRESS_UPGRADING)) {
-        sc.actionUpgradeExpress(service);
-      } else {
-        sc.initiateUpgrade(service);
+      try {
+        sc.init(YARN_CONFIG);
+        sc.start();
+        if (service.getState().equals(ServiceState.EXPRESS_UPGRADING)) {
+          sc.actionUpgradeExpress(service);
+        } else {
+          sc.initiateUpgrade(service);
+        }
+      } finally {
+        sc.close();
       }
-      sc.close();
       return null;
     });
     LOG.info("Service {} version {} upgrade initialized", service.getName(),
@@ -717,11 +748,14 @@ public class ApiServer {
       final UserGroupInformation ugi) throws IOException, InterruptedException {
     int result = ugi.doAs((PrivilegedExceptionAction<Integer>) () -> {
       ServiceClient sc = getServiceClient();
-      sc.init(YARN_CONFIG);
-      sc.start();
-      int exitCode = sc.actionCancelUpgrade(serviceName);
-      sc.close();
-      return exitCode;
+      try {
+        sc.init(YARN_CONFIG);
+        sc.start();
+        int exitCode = sc.actionCancelUpgrade(serviceName);
+        return exitCode;
+      } finally {
+        sc.close();
+      }
     });
     if (result == EXIT_SUCCESS) {
       ServiceStatus status = new ServiceStatus();
@@ -786,12 +820,52 @@ public class ApiServer {
     return ugi.doAs((PrivilegedExceptionAction<Integer>) () -> {
       int result1;
       ServiceClient sc = getServiceClient();
-      sc.init(YARN_CONFIG);
-      sc.start();
-      result1 = sc.actionUpgrade(service, containers);
-      sc.close();
+      try {
+        sc.init(YARN_CONFIG);
+        sc.start();
+        result1 = sc.actionUpgrade(service, containers);
+      } finally {
+        sc.close();
+      }
       return result1;
     });
+  }
+
+  private Response decommissionInstances(Service service, UserGroupInformation
+      ugi) throws IOException, InterruptedException {
+    String appName = service.getName();
+    Response response = Response.status(Status.BAD_REQUEST).build();
+
+    List<String> instances = new ArrayList<>();
+    for (Component c : service.getComponents()) {
+      instances.addAll(c.getDecommissionedInstances());
+    }
+    Integer result = ugi.doAs(new PrivilegedExceptionAction<Integer>() {
+      @Override
+      public Integer run() throws YarnException, IOException {
+        int result = 0;
+        ServiceClient sc = new ServiceClient();
+        try {
+          sc.init(YARN_CONFIG);
+          sc.start();
+          result = sc
+              .actionDecommissionInstances(appName, instances);
+          return Integer.valueOf(result);
+        } finally {
+          sc.close();
+        }
+      }
+    });
+    if (result == EXIT_SUCCESS) {
+      String message = "Service " + appName + " has successfully " +
+          "decommissioned instances.";
+      LOG.info(message);
+      ServiceStatus status = new ServiceStatus();
+      status.setDiagnostics(message);
+      status.setState(ServiceState.ACCEPTED);
+      response = formatResponse(Status.ACCEPTED, status);
+    }
+    return response;
   }
 
   private Service getServiceFromClient(UserGroupInformation ugi,
@@ -799,27 +873,33 @@ public class ApiServer {
 
     return ugi.doAs((PrivilegedExceptionAction<Service>) () -> {
       ServiceClient sc = getServiceClient();
-      sc.init(YARN_CONFIG);
-      sc.start();
-      Service app1 = sc.getStatus(serviceName);
-      sc.close();
-      return app1;
+      try {
+        sc.init(YARN_CONFIG);
+        sc.start();
+        Service app1 = sc.getStatus(serviceName);
+        return app1;
+      } finally {
+        sc.close();
+      }
     });
   }
 
-  private Container[] getContainers(UserGroupInformation ugi,
+  private ComponentContainers[] getContainers(UserGroupInformation ugi,
       String serviceName, List<String> componentNames, String version,
       List<ContainerState> containerStates) throws IOException,
       InterruptedException {
-    return ugi.doAs((PrivilegedExceptionAction<Container[]>) () -> {
-      Container[] result;
+    return ugi.doAs((PrivilegedExceptionAction<ComponentContainers[]>) () -> {
+      ComponentContainers[] result;
       ServiceClient sc = getServiceClient();
-      sc.init(YARN_CONFIG);
-      sc.start();
-      result = sc.getContainers(serviceName, componentNames, version,
-          containerStates);
-      sc.close();
-      return result;
+      try {
+        sc.init(YARN_CONFIG);
+        sc.start();
+        result = sc.getContainers(serviceName, componentNames, version,
+            containerStates);
+        return result;
+      } finally {
+        sc.close();
+      }
     });
   }
 

@@ -42,9 +42,9 @@ public final class ServiceOperations {
 
   /**
    * Stop a service.
-   * <p/>Do nothing if the service is null or not
+   * <p>Do nothing if the service is null or not
    * in a state in which it can be/needs to be stopped.
-   * <p/>
+   * <p>
    * The service state is checked <i>before</i> the operation begins.
    * This process is <i>not</i> thread safe.
    * @param service a service or null

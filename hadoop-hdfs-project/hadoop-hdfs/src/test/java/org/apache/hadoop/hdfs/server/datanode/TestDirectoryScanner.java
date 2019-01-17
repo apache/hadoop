@@ -33,8 +33,8 @@ import java.net.URI;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Executors;
@@ -44,26 +44,23 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.io.FileUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
-import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner.ReportCompiler;
+import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi.FsVolumeReferences;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
@@ -73,14 +70,17 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.LazyPersistTestCase;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.Time;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Tests {@link DirectoryScanner} handling of differences
- * between blocks on the disk and block in memory.
+ * Tests {@link DirectoryScanner} handling of differences between blocks on the
+ * disk and block in memory.
  */
 public class TestDirectoryScanner {
   private static final Logger LOG =
@@ -102,7 +102,7 @@ public class TestDirectoryScanner {
     CONF.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 1);
     CONF.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     CONF.setLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
-                 getMemlockLimit(Long.MAX_VALUE));
+        getMemlockLimit(Long.MAX_VALUE));
   }
 
   @Before
@@ -110,21 +110,20 @@ public class TestDirectoryScanner {
     LazyPersistTestCase.initCacheManipulator();
   }
 
-  /** create a file with a length of <code>fileLen</code> */
-  private List<LocatedBlock> createFile(String fileNamePrefix,
-                                        long fileLen,
-                                        boolean isLazyPersist) throws IOException {
+  /** create a file with a length of <code>fileLen</code>. */
+  private List<LocatedBlock> createFile(String fileNamePrefix, long fileLen,
+      boolean isLazyPersist) throws IOException {
     FileSystem fs = cluster.getFileSystem();
     Path filePath = new Path("/" + fileNamePrefix + ".dat");
-    DFSTestUtil.createFile(
-        fs, filePath, isLazyPersist, 1024, fileLen,
+    DFSTestUtil.createFile(fs, filePath, isLazyPersist, 1024, fileLen,
         BLOCK_LENGTH, (short) 1, r.nextLong(), false);
-    return client.getLocatedBlocks(filePath.toString(), 0, fileLen).getLocatedBlocks();
+    return client.getLocatedBlocks(filePath.toString(), 0, fileLen)
+        .getLocatedBlocks();
   }
 
-  /** Truncate a block file */
+  /** Truncate a block file. */
   private long truncateBlockFile() throws IOException {
-    try(AutoCloseableLock lock = fds.acquireDatasetLock()) {
+    try (AutoCloseableLock lock = fds.acquireDatasetLock()) {
       for (ReplicaInfo b : FsDatasetTestUtil.getReplicas(fds, bpid)) {
         File f = new File(b.getBlockURI());
         File mf = new File(b.getMetadataURI());
@@ -149,7 +148,7 @@ public class TestDirectoryScanner {
 
   /** Delete a block file */
   private long deleteBlockFile() {
-    try(AutoCloseableLock lock = fds.acquireDatasetLock()) {
+    try (AutoCloseableLock lock = fds.acquireDatasetLock()) {
       for (ReplicaInfo b : FsDatasetTestUtil.getReplicas(fds, bpid)) {
         File f = new File(b.getBlockURI());
         File mf = new File(b.getMetadataURI());
@@ -165,7 +164,7 @@ public class TestDirectoryScanner {
 
   /** Delete block meta file */
   private long deleteMetaFile() {
-    try(AutoCloseableLock lock = fds.acquireDatasetLock()) {
+    try (AutoCloseableLock lock = fds.acquireDatasetLock()) {
       for (ReplicaInfo b : FsDatasetTestUtil.getReplicas(fds, bpid)) {
         // Delete a metadata file
         if (b.metadataExists() && b.deleteMetadata()) {
@@ -179,11 +178,12 @@ public class TestDirectoryScanner {
 
   /**
    * Duplicate the given block on all volumes.
+   *
    * @param blockId
    * @throws IOException
    */
   private void duplicateBlock(long blockId) throws IOException {
-    try(AutoCloseableLock lock = fds.acquireDatasetLock()) {
+    try (AutoCloseableLock lock = fds.acquireDatasetLock()) {
       ReplicaInfo b = FsDatasetTestUtil.fetchReplicaInfo(fds, bpid, blockId);
       try (FsDatasetSpi.FsVolumeReferences volumes =
           fds.getFsVolumeReferences()) {
@@ -199,16 +199,14 @@ public class TestDirectoryScanner {
           URI destRoot = v.getStorageLocation().getUri();
 
           String relativeBlockPath =
-              sourceRoot.relativize(sourceBlock.toURI())
-                  .getPath();
+              sourceRoot.relativize(sourceBlock.toURI()).getPath();
           String relativeMetaPath =
-              sourceRoot.relativize(sourceMeta.toURI())
-                  .getPath();
+              sourceRoot.relativize(sourceMeta.toURI()).getPath();
 
-          File destBlock = new File(new File(destRoot).toString(),
-              relativeBlockPath);
-          File destMeta = new File(new File(destRoot).toString(),
-              relativeMetaPath);
+          File destBlock =
+              new File(new File(destRoot).toString(), relativeBlockPath);
+          File destMeta =
+              new File(new File(destRoot).toString(), relativeMetaPath);
 
           destBlock.getParentFile().mkdirs();
           FileUtils.copyFile(sourceBlock, destBlock);
@@ -223,7 +221,7 @@ public class TestDirectoryScanner {
     }
   }
 
-  /** Get a random blockId that is not used already */
+  /** Get a random blockId that is not used already. */
   private long getFreeBlockId() {
     long id = rand.nextLong();
     while (true) {
@@ -244,14 +242,15 @@ public class TestDirectoryScanner {
         + Block.METADATA_EXTENSION;
   }
 
-  /** Create a block file in a random volume*/
+  /** Create a block file in a random volume. */
   private long createBlockFile() throws IOException {
     long id = getFreeBlockId();
-    try (FsDatasetSpi.FsVolumeReferences volumes = fds.getFsVolumeReferences()) {
+    try (
+        FsDatasetSpi.FsVolumeReferences volumes = fds.getFsVolumeReferences()) {
       int numVolumes = volumes.size();
       int index = rand.nextInt(numVolumes - 1);
-      File finalizedDir = ((FsVolumeImpl) volumes.get(index))
-          .getFinalizedDir(bpid);
+      File finalizedDir =
+          ((FsVolumeImpl) volumes.get(index)).getFinalizedDir(bpid);
       File file = new File(finalizedDir, getBlockFile(id));
       if (file.createNewFile()) {
         LOG.info("Created block file " + file.getName());
@@ -260,14 +259,14 @@ public class TestDirectoryScanner {
     return id;
   }
 
-  /** Create a metafile in a random volume*/
+  /** Create a metafile in a random volume */
   private long createMetaFile() throws IOException {
     long id = getFreeBlockId();
     try (FsDatasetSpi.FsVolumeReferences refs = fds.getFsVolumeReferences()) {
       int numVolumes = refs.size();
       int index = rand.nextInt(numVolumes - 1);
-      File finalizedDir = ((FsVolumeImpl) refs.get(index))
-          .getFinalizedDir(bpid);
+      File finalizedDir =
+          ((FsVolumeImpl) refs.get(index)).getFinalizedDir(bpid);
       File file = new File(finalizedDir, getMetaFile(id));
       if (file.createNewFile()) {
         LOG.info("Created metafile " + file.getName());
@@ -276,7 +275,7 @@ public class TestDirectoryScanner {
     return id;
   }
 
-  /** Create block file and corresponding metafile in a rondom volume */
+  /** Create block file and corresponding metafile in a rondom volume. */
   private long createBlockMetaFile() throws IOException {
     long id = getFreeBlockId();
 
@@ -318,7 +317,7 @@ public class TestDirectoryScanner {
       long missingBlockFile, long missingMemoryBlocks, long mismatchBlocks)
       throws IOException, InterruptedException, TimeoutException {
     scan(totalBlocks, diffsize, missingMetaFile, missingBlockFile,
-         missingMemoryBlocks, mismatchBlocks, 0);
+        missingMemoryBlocks, mismatchBlocks, 0);
   }
 
   private void scan(long totalBlocks, int diffsize, long missingMetaFile,
@@ -332,22 +331,22 @@ public class TestDirectoryScanner {
         verifyStats(totalBlocks, diffsize, missingMetaFile, missingBlockFile,
             missingMemoryBlocks, mismatchBlocks, duplicateBlocks);
       } catch (AssertionError ex) {
+        LOG.warn("Assertion Error", ex);
         return false;
       }
 
       return true;
-    }, 50, 2000);
+    }, 100, 2000);
   }
 
   private void verifyStats(long totalBlocks, int diffsize, long missingMetaFile,
       long missingBlockFile, long missingMemoryBlocks, long mismatchBlocks,
       long duplicateBlocks) {
-    assertTrue(scanner.diffs.containsKey(bpid));
-    LinkedList<FsVolumeSpi.ScanInfo> diff = scanner.diffs.get(bpid);
-    assertTrue(scanner.stats.containsKey(bpid));
-    DirectoryScanner.Stats stats = scanner.stats.get(bpid);
-
+    Collection<FsVolumeSpi.ScanInfo> diff = scanner.diffs.getScanInfo(bpid);
     assertEquals(diffsize, diff.size());
+
+    DirectoryScanner.Stats stats = scanner.stats.get(bpid);
+    assertNotNull(stats);
     assertEquals(totalBlocks, stats.totalBlocks);
     assertEquals(missingMetaFile, stats.missingMetaFile);
     assertEquals(missingBlockFile, stats.missingBlockFile);
@@ -356,20 +355,18 @@ public class TestDirectoryScanner {
     assertEquals(duplicateBlocks, stats.duplicateBlocks);
   }
 
-  @Test (timeout=300000)
+  @Test(timeout = 300000)
   public void testRetainBlockOnPersistentStorage() throws Exception {
-    cluster = new MiniDFSCluster
-        .Builder(CONF)
-        .storageTypes(new StorageType[] { StorageType.RAM_DISK, StorageType.DEFAULT })
-        .numDataNodes(1)
-        .build();
+    cluster = new MiniDFSCluster.Builder(CONF)
+        .storageTypes(
+            new StorageType[] { StorageType.RAM_DISK, StorageType.DEFAULT })
+        .numDataNodes(1).build();
     try {
       cluster.waitActive();
-      DataNode dataNode = cluster.getDataNodes().get(0);
       bpid = cluster.getNamesystem().getBlockPoolId();
       fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
       client = cluster.getFileSystem().getClient();
-      scanner = new DirectoryScanner(dataNode, fds, CONF);
+      scanner = new DirectoryScanner(fds, CONF);
       scanner.setRetainDiffs(true);
       FsDatasetTestUtil.stopLazyWriter(cluster.getDataNodes().get(0));
 
@@ -397,24 +394,22 @@ public class TestDirectoryScanner {
     }
   }
 
-  @Test (timeout=300000)
+  @Test(timeout = 300000)
   public void testDeleteBlockOnTransientStorage() throws Exception {
-    cluster = new MiniDFSCluster
-        .Builder(CONF)
-        .storageTypes(new StorageType[] { StorageType.RAM_DISK, StorageType.DEFAULT })
-        .numDataNodes(1)
-        .build();
+    cluster = new MiniDFSCluster.Builder(CONF)
+        .storageTypes(
+            new StorageType[] { StorageType.RAM_DISK, StorageType.DEFAULT })
+        .numDataNodes(1).build();
     try {
       cluster.waitActive();
       bpid = cluster.getNamesystem().getBlockPoolId();
-      DataNode dataNode = cluster.getDataNodes().get(0);
       fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
       client = cluster.getFileSystem().getClient();
-      scanner = new DirectoryScanner(dataNode, fds, CONF);
+      scanner = new DirectoryScanner(fds, CONF);
       scanner.setRetainDiffs(true);
       FsDatasetTestUtil.stopLazyWriter(cluster.getDataNodes().get(0));
 
-      // Create a file file on RAM_DISK
+      // Create a file on RAM_DISK
       List<LocatedBlock> blocks =
           createFile(GenericTestUtils.getMethodName(), BLOCK_LENGTH, true);
 
@@ -440,14 +435,14 @@ public class TestDirectoryScanner {
     }
   }
 
-  @Test (timeout=600000)
+  @Test(timeout = 600000)
   public void testDirectoryScanner() throws Exception {
     // Run the test with and without parallel scanning
     for (int parallelism = 1; parallelism < 3; parallelism++) {
       runTest(parallelism);
     }
   }
-  
+
   public void runTest(int parallelism) throws Exception {
     cluster = new MiniDFSCluster.Builder(CONF).build();
     try {
@@ -456,9 +451,9 @@ public class TestDirectoryScanner {
       fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
       client = cluster.getFileSystem().getClient();
       CONF.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY,
-                  parallelism);
-      DataNode dataNode = cluster.getDataNodes().get(0);
-      scanner = new DirectoryScanner(dataNode, fds, CONF);
+          parallelism);
+
+      scanner = new DirectoryScanner(fds, CONF);
       scanner.setRetainDiffs(true);
 
       // Add files with 100 blocks
@@ -492,7 +487,7 @@ public class TestDirectoryScanner {
       // Test5: A metafile exists for which there is no block file and
       // a block in memory
       blockId = createMetaFile();
-      scan(totalBlocks+1, 1, 0, 1, 1, 0);
+      scan(totalBlocks + 1, 1, 0, 1, 1, 0);
       File metafile = new File(getMetaFile(blockId));
       assertTrue(!metafile.exists());
       scan(totalBlocks, 0, 0, 0, 0, 0);
@@ -521,7 +516,7 @@ public class TestDirectoryScanner {
       scan(totalBlocks, 0, 0, 0, 0, 0);
 
       // Test9: create a bunch of blocks files
-      for (int i = 0; i < 10 ; i++) {
+      for (int i = 0; i < 10; i++) {
         blockId = createBlockFile();
       }
       totalBlocks += 10;
@@ -529,14 +524,14 @@ public class TestDirectoryScanner {
       scan(totalBlocks, 0, 0, 0, 0, 0);
 
       // Test10: create a bunch of metafiles
-      for (int i = 0; i < 10 ; i++) {
+      for (int i = 0; i < 10; i++) {
         blockId = createMetaFile();
       }
-      scan(totalBlocks+10, 10, 0, 10, 10, 0);
+      scan(totalBlocks + 10, 10, 0, 10, 10, 0);
       scan(totalBlocks, 0, 0, 0, 0, 0);
 
       // Test11: create a bunch block files and meta files
-      for (int i = 0; i < 10 ; i++) {
+      for (int i = 0; i < 10; i++) {
         blockId = createBlockMetaFile();
       }
       totalBlocks += 10;
@@ -544,7 +539,7 @@ public class TestDirectoryScanner {
       scan(totalBlocks, 0, 0, 0, 0, 0);
 
       // Test12: truncate block files to test block length mismatch
-      for (int i = 0; i < 10 ; i++) {
+      for (int i = 0; i < 10; i++) {
         truncateBlockFile();
       }
       scan(totalBlocks, 10, 0, 0, 0, 10);
@@ -557,9 +552,9 @@ public class TestDirectoryScanner {
       deleteMetaFile();
       deleteBlockFile();
       truncateBlockFile();
-      scan(totalBlocks+3, 6, 2, 2, 3, 2);
-      scan(totalBlocks+1, 0, 0, 0, 0, 0);
-      
+      scan(totalBlocks + 3, 6, 2, 2, 3, 2);
+      scan(totalBlocks + 1, 0, 0, 0, 0, 0);
+
       // Test14: make sure no throttling is happening
       assertTrue("Throttle appears to be engaged",
           scanner.timeWaitingMs.get() < 10L);
@@ -567,10 +562,11 @@ public class TestDirectoryScanner {
           scanner.timeRunningMs.get() > 0L);
 
       // Test15: validate clean shutdown of DirectoryScanner
-      ////assertTrue(scanner.getRunStatus()); //assumes "real" FSDataset, not sim
+      //// assertTrue(scanner.getRunStatus()); //assumes "real" FSDataset, not
+      // sim
       scanner.shutdown();
       assertFalse(scanner.getRunStatus());
-      
+
     } finally {
       if (scanner != null) {
         scanner.shutdown();
@@ -582,17 +578,17 @@ public class TestDirectoryScanner {
 
   /**
    * Test that the timeslice throttle limits the report compiler thread's
-   * execution time correctly.  We test by scanning a large block pool and
+   * execution time correctly. We test by scanning a large block pool and
    * comparing the time spent waiting to the time spent running.
    *
-   * The block pool has to be large, or the ratio will be off.  The throttle
-   * allows the report compiler thread to finish its current cycle when
-   * blocking it, so the ratio will always be a little lower than expected.
-   * The smaller the block pool, the further off the ratio will be.
+   * The block pool has to be large, or the ratio will be off. The throttle
+   * allows the report compiler thread to finish its current cycle when blocking
+   * it, so the ratio will always be a little lower than expected. The smaller
+   * the block pool, the further off the ratio will be.
    *
    * @throws Exception thrown on unexpected failure
    */
-  @Test (timeout=600000)
+  @Test(timeout = 600000)
   public void testThrottling() throws Exception {
     Configuration conf = new Configuration(CONF);
 
@@ -611,10 +607,9 @@ public class TestDirectoryScanner {
       conf.setInt(
           DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
           100);
-      DataNode dataNode = cluster.getDataNodes().get(0);
 
-      final int maxBlocksPerFile = (int) DFSConfigKeys
-          .DFS_NAMENODE_MAX_BLOCKS_PER_FILE_DEFAULT;
+      final int maxBlocksPerFile =
+          (int) DFSConfigKeys.DFS_NAMENODE_MAX_BLOCKS_PER_FILE_DEFAULT;
       int numBlocksToCreate = blocks;
       while (numBlocksToCreate > 0) {
         final int toCreate = Math.min(maxBlocksPerFile, numBlocksToCreate);
@@ -627,7 +622,7 @@ public class TestDirectoryScanner {
       int retries = maxRetries;
 
       while ((retries > 0) && ((ratio < 7f) || (ratio > 10f))) {
-        scanner = new DirectoryScanner(dataNode, fds, conf);
+        scanner = new DirectoryScanner(fds, conf);
         ratio = runThrottleTest(blocks);
         retries -= 1;
       }
@@ -645,7 +640,7 @@ public class TestDirectoryScanner {
       retries = maxRetries;
 
       while ((retries > 0) && ((ratio < 2.75f) || (ratio > 4.5f))) {
-        scanner = new DirectoryScanner(dataNode, fds, conf);
+        scanner = new DirectoryScanner(fds, conf);
         ratio = runThrottleTest(blocks);
         retries -= 1;
       }
@@ -664,7 +659,7 @@ public class TestDirectoryScanner {
       retries = maxRetries;
 
       while ((retries > 0) && ((ratio < 7f) || (ratio > 10f))) {
-        scanner = new DirectoryScanner(dataNode, fds, conf);
+        scanner = new DirectoryScanner(fds, conf);
         ratio = runThrottleTest(blocks);
         retries -= 1;
       }
@@ -675,7 +670,7 @@ public class TestDirectoryScanner {
       assertTrue("Throttle is too permissive", ratio >= 7f);
 
       // Test with no limit
-      scanner = new DirectoryScanner(dataNode, fds, CONF);
+      scanner = new DirectoryScanner(fds, CONF);
       scanner.setRetainDiffs(true);
       scan(blocks, 0, 0, 0, 0, 0);
       scanner.shutdown();
@@ -686,7 +681,7 @@ public class TestDirectoryScanner {
       assertTrue("Report complier threads logged no execution time",
           scanner.timeRunningMs.get() > 0L);
 
-      // Test with a 1ms limit.  This also tests whether the scanner can be
+      // Test with a 1ms limit. This also tests whether the scanner can be
       // shutdown cleanly in mid stride.
       conf.setInt(
           DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
@@ -698,7 +693,7 @@ public class TestDirectoryScanner {
 
       try {
         while ((retries > 0) && (ratio < 10)) {
-          scanner = new DirectoryScanner(dataNode, fds, conf);
+          scanner = new DirectoryScanner(fds, conf);
           scanner.setRetainDiffs(true);
 
           final AtomicLong nowMs = new AtomicLong();
@@ -728,7 +723,7 @@ public class TestDirectoryScanner {
           }
 
           ratio =
-              (float)scanner.timeWaitingMs.get() / scanner.timeRunningMs.get();
+              (float) scanner.timeWaitingMs.get() / scanner.timeRunningMs.get();
           retries -= 1;
         }
       } finally {
@@ -737,8 +732,7 @@ public class TestDirectoryScanner {
 
       // We just want to test that it waits a lot, but it also runs some
       LOG.info("RATIO: " + ratio);
-      assertTrue("Throttle is too permissive",
-          ratio > 10);
+      assertTrue("Throttle is too permissive", ratio > 8);
       assertTrue("Report complier threads logged no execution time",
           scanner.timeRunningMs.get() > 0L);
 
@@ -746,7 +740,7 @@ public class TestDirectoryScanner {
       conf.setInt(
           DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
           0);
-      scanner = new DirectoryScanner(dataNode, fds, conf);
+      scanner = new DirectoryScanner(fds, conf);
       scanner.setRetainDiffs(true);
       scan(blocks, 0, 0, 0, 0, 0);
       scanner.shutdown();
@@ -761,7 +755,7 @@ public class TestDirectoryScanner {
       conf.setInt(
           DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
           1000);
-      scanner = new DirectoryScanner(dataNode, fds, conf);
+      scanner = new DirectoryScanner(fds, conf);
       scanner.setRetainDiffs(true);
       scan(blocks, 0, 0, 0, 0, 0);
       scanner.shutdown();
@@ -777,9 +771,8 @@ public class TestDirectoryScanner {
       conf.setInt(
           DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
           10);
-      conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY,
-        1);
-      scanner = new DirectoryScanner(dataNode, fds, conf);
+      conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1);
+      scanner = new DirectoryScanner(fds, conf);
       scanner.setRetainDiffs(true);
       scanner.start();
 
@@ -805,7 +798,7 @@ public class TestDirectoryScanner {
     scanner.shutdown();
     assertFalse(scanner.getRunStatus());
 
-    return (float)scanner.timeWaitingMs.get() / scanner.timeRunningMs.get();
+    return (float) scanner.timeWaitingMs.get() / scanner.timeRunningMs.get();
   }
 
   private void verifyAddition(long blockId, long genStamp, long size) {
@@ -836,7 +829,7 @@ public class TestDirectoryScanner {
     assertNotNull(memBlock);
     assertEquals(genStamp, memBlock.getGenerationStamp());
   }
-  
+
   private void verifyStorageType(long blockId, boolean expectTransient) {
     final ReplicaInfo memBlock;
     memBlock = FsDatasetTestUtil.fetchReplicaInfo(fds, bpid, blockId);
@@ -859,7 +852,7 @@ public class TestDirectoryScanner {
     public long getAvailable() throws IOException {
       return 0;
     }
-    
+
     public File getFinalizedDir(String bpid) throws IOException {
       return new File("/base/current/" + bpid + "/finalized");
     }
@@ -898,10 +891,11 @@ public class TestDirectoryScanner {
 
     @Override
     public BlockIterator loadBlockIterator(String bpid, String name)
-          throws IOException {
+        throws IOException {
       throw new UnsupportedOperationException();
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
     public FsDatasetSpi getDataset() {
       throw new UnsupportedOperationException();
@@ -923,16 +917,15 @@ public class TestDirectoryScanner {
     }
 
     @Override
-    public byte[] loadLastPartialChunkChecksum(
-        File blockFile, File metaFile) throws IOException {
+    public byte[] loadLastPartialChunkChecksum(File blockFile, File metaFile)
+        throws IOException {
       return null;
     }
 
     @Override
-    public LinkedList<ScanInfo> compileReport(String bpid,
-        LinkedList<ScanInfo> report, ReportCompiler reportCompiler)
+    public void compileReport(String bpid,
+        Collection<ScanInfo> report, ReportCompiler reportCompiler)
         throws InterruptedException, IOException {
-      return null;
     }
 
     @Override
@@ -945,7 +938,6 @@ public class TestDirectoryScanner {
       return null;
     }
 
-
     @Override
     public VolumeCheckResult check(VolumeCheckContext context)
         throws Exception {
@@ -954,11 +946,11 @@ public class TestDirectoryScanner {
   }
 
   private final static TestFsVolumeSpi TEST_VOLUME = new TestFsVolumeSpi();
-  
+
   private final static String BPID_1 = "BP-783049782-127.0.0.1-1370971773491";
-  
+
   private final static String BPID_2 = "BP-367845636-127.0.0.1-5895645674231";
-      
+
   void testScanInfoObject(long blockId, File blockFile, File metaFile)
       throws Exception {
     FsVolumeSpi.ScanInfo scanInfo =
@@ -978,7 +970,7 @@ public class TestDirectoryScanner {
     }
     assertEquals(TEST_VOLUME, scanInfo.getVolume());
   }
-  
+
   void testScanInfoObject(long blockId) throws Exception {
     FsVolumeSpi.ScanInfo scanInfo =
         new FsVolumeSpi.ScanInfo(blockId, null, null, null);
@@ -987,7 +979,7 @@ public class TestDirectoryScanner {
     assertNull(scanInfo.getMetaFile());
   }
 
-  @Test(timeout=120000)
+  @Test(timeout = 120000)
   public void TestScanInfo() throws Exception {
     testScanInfoObject(123,
         new File(TEST_VOLUME.getFinalizedDir(BPID_1).getAbsolutePath(),
@@ -998,13 +990,10 @@ public class TestDirectoryScanner {
         new File(TEST_VOLUME.getFinalizedDir(BPID_1).getAbsolutePath(),
             "blk_123"),
         null);
-    testScanInfoObject(523,
-        null,
+    testScanInfoObject(523, null,
         new File(TEST_VOLUME.getFinalizedDir(BPID_1).getAbsolutePath(),
             "blk_123__1009.meta"));
-    testScanInfoObject(789,
-        null,
-        null);
+    testScanInfoObject(789, null, null);
     testScanInfoObject(456);
     testScanInfoObject(123,
         new File(TEST_VOLUME.getFinalizedDir(BPID_2).getAbsolutePath(),
@@ -1027,7 +1016,6 @@ public class TestDirectoryScanner {
       fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
       client = cluster.getFileSystem().getClient();
       CONF.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY, 1);
-      DataNode dataNode = cluster.getDataNodes().get(0);
 
       // Add files with 2 blocks
       createFile(GenericTestUtils.getMethodName(), BLOCK_LENGTH * 2, false);
@@ -1047,7 +1035,7 @@ public class TestDirectoryScanner {
       FsDatasetSpi<? extends FsVolumeSpi> spyFds = Mockito.spy(fds);
       Mockito.doReturn(volReferences).when(spyFds).getFsVolumeReferences();
 
-      scanner = new DirectoryScanner(dataNode, spyFds, CONF);
+      scanner = new DirectoryScanner(spyFds, CONF);
       scanner.setRetainDiffs(true);
       scanner.reconcile();
     } finally {
@@ -1061,28 +1049,27 @@ public class TestDirectoryScanner {
 
   @Test
   public void testDirectoryScannerInFederatedCluster() throws Exception {
-    //Create Federated cluster with two nameservices and one DN
+    // Create Federated cluster with two nameservices and one DN
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(CONF)
         .nnTopology(MiniDFSNNTopology.simpleHAFederatedTopology(2))
         .numDataNodes(1).build()) {
       cluster.waitActive();
       cluster.transitionToActive(1);
       cluster.transitionToActive(3);
-      DataNode dataNode = cluster.getDataNodes().get(0);
       fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
-      //Create one block in first nameservice
+      // Create one block in first nameservice
       FileSystem fs = cluster.getFileSystem(1);
       int bp1Files = 1;
       writeFile(fs, bp1Files);
-      //Create two blocks in second nameservice
+      // Create two blocks in second nameservice
       FileSystem fs2 = cluster.getFileSystem(3);
       int bp2Files = 2;
       writeFile(fs2, bp2Files);
-      //Call the Directory scanner
-      scanner = new DirectoryScanner(dataNode, fds, CONF);
+      // Call the Directory scanner
+      scanner = new DirectoryScanner(fds, CONF);
       scanner.setRetainDiffs(true);
       scanner.reconcile();
-      //Check blocks in corresponding BP
+      // Check blocks in corresponding BP
 
       GenericTestUtils.waitFor(() -> {
         try {

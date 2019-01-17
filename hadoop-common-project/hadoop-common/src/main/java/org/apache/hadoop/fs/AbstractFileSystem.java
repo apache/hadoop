@@ -336,7 +336,7 @@ public abstract class AbstractFileSystem {
    * The default port of this file system.
    * 
    * @return default port of this file system's Uri scheme
-   *         A uri with a port of -1 => default port;
+   *         A uri with a port of -1 =&gt; default port;
    */
   public abstract int getUriDefaultPort();
 
@@ -396,8 +396,11 @@ public abstract class AbstractFileSystem {
       thatPort = this.getUriDefaultPort();
     }
     if (thisPort != thatPort) {
-      throw new InvalidPathException("Wrong FS: " + path + ", expected: "
-          + this.getUri());
+      throw new InvalidPathException("Wrong FS: " + path
+          + " and port=" + thatPort
+          + ", expected: "
+          + this.getUri()
+          + " with port=" + thisPort);
     }
   }
   
@@ -478,9 +481,11 @@ public abstract class AbstractFileSystem {
    * through any internal symlinks or mount point
    * @param p path to be resolved
    * @return fully qualified path 
-   * @throws FileNotFoundException, AccessControlException, IOException
-   *         UnresolvedLinkException if symbolic link on path cannot be resolved
-   *          internally
+   * @throws FileNotFoundException
+   * @throws AccessControlException
+   * @throws IOException
+   * @throws UnresolvedLinkException if symbolic link on path cannot be
+   * resolved internally
    */
    public Path resolvePath(final Path p) throws FileNotFoundException,
            UnresolvedLinkException, AccessControlException, IOException {
@@ -1021,7 +1026,7 @@ public abstract class AbstractFileSystem {
    * changes.  (Modifications are merged into the current ACL.)
    *
    * @param path Path to modify
-   * @param aclSpec List<AclEntry> describing modifications
+   * @param aclSpec List{@literal <AclEntry>} describing modifications
    * @throws IOException if an ACL could not be modified
    */
   public void modifyAclEntries(Path path, List<AclEntry> aclSpec)
@@ -1035,7 +1040,7 @@ public abstract class AbstractFileSystem {
    * retained.
    *
    * @param path Path to modify
-   * @param aclSpec List<AclEntry> describing entries to remove
+   * @param aclSpec List{@literal <AclEntry>} describing entries to remove
    * @throws IOException if an ACL could not be modified
    */
   public void removeAclEntries(Path path, List<AclEntry> aclSpec)
@@ -1075,8 +1080,9 @@ public abstract class AbstractFileSystem {
    * entries.
    *
    * @param path Path to modify
-   * @param aclSpec List<AclEntry> describing modifications, must include entries
-   *   for user, group, and others for compatibility with permission bits.
+   * @param aclSpec List{@literal <AclEntry>} describing modifications, must
+   * include entries for user, group, and others for compatibility with
+   * permission bits.
    * @throws IOException if an ACL could not be modified
    */
   public void setAcl(Path path, List<AclEntry> aclSpec) throws IOException {
@@ -1088,7 +1094,7 @@ public abstract class AbstractFileSystem {
    * Gets the ACLs of files and directories.
    *
    * @param path Path to get
-   * @return RemoteIterator<AclStatus> which returns each AclStatus
+   * @return RemoteIterator{@literal <AclStatus>} which returns each AclStatus
    * @throws IOException if an ACL could not be read
    */
   public AclStatus getAclStatus(Path path) throws IOException {
@@ -1100,7 +1106,7 @@ public abstract class AbstractFileSystem {
    * Set an xattr of a file or directory.
    * The name must be prefixed with the namespace followed by ".". For example,
    * "user.attr".
-   * <p/>
+   * <p>
    * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to modify
@@ -1118,7 +1124,7 @@ public abstract class AbstractFileSystem {
    * Set an xattr of a file or directory.
    * The name must be prefixed with the namespace followed by ".". For example,
    * "user.attr".
-   * <p/>
+   * <p>
    * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to modify
@@ -1137,7 +1143,7 @@ public abstract class AbstractFileSystem {
    * Get an xattr for a file or directory.
    * The name must be prefixed with the namespace followed by ".". For example,
    * "user.attr".
-   * <p/>
+   * <p>
    * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to get extended attribute
@@ -1154,11 +1160,13 @@ public abstract class AbstractFileSystem {
    * Get all of the xattrs for a file or directory.
    * Only those xattrs for which the logged-in user has permissions to view
    * are returned.
-   * <p/>
+   * <p>
    * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to get extended attributes
-   * @return Map<String, byte[]> describing the XAttrs of the file or directory
+   *
+   * @return {@literal Map<String, byte[]>} describing the XAttrs of the file
+   * or directory
    * @throws IOException
    */
   public Map<String, byte[]> getXAttrs(Path path) throws IOException {
@@ -1170,12 +1178,13 @@ public abstract class AbstractFileSystem {
    * Get all of the xattrs for a file or directory.
    * Only those xattrs for which the logged-in user has permissions to view
    * are returned.
-   * <p/>
+   * <p>
    * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to get extended attributes
    * @param names XAttr names.
-   * @return Map<String, byte[]> describing the XAttrs of the file or directory
+   * @return {@literal Map<String, byte[]>} describing the XAttrs of the file
+   * or directory
    * @throws IOException
    */
   public Map<String, byte[]> getXAttrs(Path path, List<String> names)
@@ -1188,11 +1197,12 @@ public abstract class AbstractFileSystem {
    * Get all of the xattr names for a file or directory.
    * Only the xattr names for which the logged-in user has permissions to view
    * are returned.
-   * <p/>
+   * <p>
    * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to get extended attributes
-   * @return Map<String, byte[]> describing the XAttrs of the file or directory
+   * @return {@literal Map<String, byte[]>} describing the XAttrs of the file
+   * or directory
    * @throws IOException
    */
   public List<String> listXAttrs(Path path)
@@ -1205,7 +1215,7 @@ public abstract class AbstractFileSystem {
    * Remove an xattr of a file or directory.
    * The name must be prefixed with the namespace followed by ".". For example,
    * "user.attr".
-   * <p/>
+   * <p>
    * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to remove extended attribute
@@ -1245,6 +1255,16 @@ public abstract class AbstractFileSystem {
       throws IOException {
     throw new UnsupportedOperationException(getClass().getSimpleName()
         + " doesn't support deleteSnapshot");
+  }
+
+  /**
+   * Set the source path to satisfy storage policy.
+   * @param path The source path referring to either a directory or a file.
+   * @throws IOException
+   */
+  public void satisfyStoragePolicy(final Path path) throws IOException {
+    throw new UnsupportedOperationException(
+        getClass().getSimpleName() + " doesn't support satisfyStoragePolicy");
   }
 
   /**

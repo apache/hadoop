@@ -66,10 +66,10 @@ public abstract class EventWatcher<TIMEOUT_PAYLOAD extends
 
   private final String name;
 
-  protected final Map<Long, TIMEOUT_PAYLOAD> trackedEventsByID =
+  private final Map<Long, TIMEOUT_PAYLOAD> trackedEventsByID =
       new ConcurrentHashMap<>();
 
-  protected final Set<TIMEOUT_PAYLOAD> trackedEvents = new HashSet<>();
+  private final Set<TIMEOUT_PAYLOAD> trackedEvents = new HashSet<>();
 
   private final Map<Long, Long> startTrackingTimes = new HashedMap();
 
@@ -205,5 +205,13 @@ public abstract class EventWatcher<TIMEOUT_PAYLOAD extends
    */
   public TIMEOUT_PAYLOAD getTrackedEventbyId(long id) {
     return trackedEventsByID.get(id);
+  }
+
+  public Map<Long, TIMEOUT_PAYLOAD> getTrackedEventsByID() {
+    return trackedEventsByID;
+  }
+
+  public Set<TIMEOUT_PAYLOAD> getTrackedEvents() {
+    return trackedEvents;
   }
 }

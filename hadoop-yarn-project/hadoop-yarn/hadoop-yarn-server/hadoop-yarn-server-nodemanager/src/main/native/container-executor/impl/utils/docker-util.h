@@ -34,6 +34,7 @@
 #define DOCKER_KILL_COMMAND "kill"
 #define DOCKER_VOLUME_COMMAND "volume"
 #define DOCKER_START_COMMAND "start"
+#define DOCKER_EXEC_COMMAND "exec"
 #define DOCKER_ARG_MAX 1024
 #define ARGS_INITIAL_VALUE { 0 };
 
@@ -52,6 +53,7 @@ enum docker_error_codes {
     INVALID_DOCKER_INSPECT_FORMAT,
     UNKNOWN_DOCKER_COMMAND,
     INVALID_DOCKER_NETWORK,
+    INVALID_DOCKER_PORTS_MAPPING,
     INVALID_DOCKER_CAPABILITY,
     PRIVILEGED_CONTAINERS_DISABLED,
     INVALID_DOCKER_MOUNT,
@@ -67,7 +69,8 @@ enum docker_error_codes {
     PID_HOST_DISABLED,
     INVALID_PID_NAMESPACE,
     INVALID_DOCKER_IMAGE_TRUST,
-    INVALID_DOCKER_TMPFS_MOUNT
+    INVALID_DOCKER_TMPFS_MOUNT,
+    INVALID_DOCKER_RUNTIME
 };
 
 /**
@@ -174,6 +177,15 @@ int get_docker_volume_command(const char *command_file, const struct configurati
  * @return Return code with 0 indicating success and non-zero codes indicating error
  */
 int get_docker_start_command(const char* command_file, const struct configuration* conf, args *args);
+
+/**
+ * Get the Docker exec command line string. The function will verify that the params file is meant for the exec command.
+ * @param command_file File containing the params for the Docker start command
+ * @param conf Configuration struct containing the container-executor.cfg details
+ * @param args Buffer to construct argv
+ * @return Return code with 0 indicating success and non-zero codes indicating error
+ */
+int get_docker_exec_command(const char* command_file, const struct configuration* conf, args *args);
 
 /**
  * Give an error message for the supplied error code

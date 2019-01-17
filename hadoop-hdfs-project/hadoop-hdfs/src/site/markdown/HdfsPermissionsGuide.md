@@ -221,6 +221,8 @@ Note that the copy occurs at time of creation of the new file or sub-directory. 
 
 The default ACL must have all minimum required ACL entries, including the unnamed user (file owner), unnamed group (file group) and other entries. If the user doesn't supply one of these entries while setting a default ACL, then the entries are inserted automatically by copying the corresponding permissions from the access ACL, or permission bits if there is no access ACL. The default ACL also must have mask. As described above, if the mask is unspecified, then a mask is inserted automatically by calculating the union of permissions on all entries that would be filtered by the mask.
 
+Note that you can not have unlimited amount of ACL entries for a given file or directory. The maximum number is 32 for access and 32 for default entries which is 64 in total.
+
 When considering a file that has an ACL, the algorithm for permission checks changes to:
 
 * If the user name matches the owner of file, then the owner

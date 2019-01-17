@@ -16,8 +16,8 @@ package org.apache.hadoop.yarn.submarine.runtimes.yarnservice;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.client.api.AppAdminClient;
 import org.apache.hadoop.yarn.service.api.records.Service;
-import org.apache.hadoop.yarn.service.client.ServiceClient;
 import org.apache.hadoop.yarn.submarine.common.Envs;
 import org.apache.hadoop.yarn.submarine.common.conf.SubmarineLogs;
 import org.slf4j.Logger;
@@ -26,27 +26,28 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.apache.hadoop.yarn.client.api.AppAdminClient.DEFAULT_TYPE;
+
 public class YarnServiceUtils {
   private static final Logger LOG =
       LoggerFactory.getLogger(YarnServiceUtils.class);
 
   // This will be true only in UT.
-  private static ServiceClient stubServiceClient = null;
+  private static AppAdminClient stubServiceClient = null;
 
-  public static ServiceClient createServiceClient(
+  public static AppAdminClient createServiceClient(
       Configuration yarnConfiguration) {
     if (stubServiceClient != null) {
       return stubServiceClient;
     }
 
-    ServiceClient serviceClient = new ServiceClient();
-    serviceClient.init(yarnConfiguration);
-    serviceClient.start();
+    AppAdminClient serviceClient = AppAdminClient.createAppAdminClient(
+        DEFAULT_TYPE, yarnConfiguration);
     return serviceClient;
   }
 
   @VisibleForTesting
-  public static void setStubServiceClient(ServiceClient stubServiceClient) {
+  public static void setStubServiceClient(AppAdminClient stubServiceClient) {
     YarnServiceUtils.stubServiceClient = stubServiceClient;
   }
 
@@ -58,9 +59,7 @@ public class YarnServiceUtils {
 
   private static String getDNSNameCommonSuffix(String serviceName,
       String userName, String domain, int port) {
-    String commonEndpointSuffix =
-        "." + serviceName + "." + userName + "." + domain + ":" + port;
-    return commonEndpointSuffix;
+    return "." + serviceName + "." + userName + "." + domain + ":" + port;
   }
 
   public static String getTFConfigEnv(String curCommponentName, int nWorkers,
@@ -115,15 +114,20 @@ public class YarnServiceUtils {
   private static String getComponentArrayJson(String componentName, int count,
       String endpointSuffix) {
     String component = "\\\"" + componentName + "\\\":";
-    String array = "[";
+    StringBuilder array = new StringBuilder();
+    array.append("[");
     for (int i = 0; i < count; i++) {
-      array = array + "\\\"" + componentName + "-" + i
-          + endpointSuffix + "\\\"";
+      array.append("\\\"");
+      array.append(componentName);
+      array.append("-");
+      array.append(i);
+      array.append(endpointSuffix);
+      array.append("\\\"");
       if (i != count - 1) {
-        array = array + ",";
+        array.append(",");
       }
     }
-    array = array + "]";
-    return component + array;
+    array.append("]");
+    return component + array.toString();
   }
 }

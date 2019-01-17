@@ -185,7 +185,7 @@ public class JsonSerialization<T> {
    * Save to a local file. Any existing file is overwritten unless
    * the OS blocks that.
    * @param file file
-   * @param path path
+   * @param instance instance
    * @throws IOException IO exception
    */
   public void save(File file, T instance) throws

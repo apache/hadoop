@@ -48,12 +48,13 @@ public class ReplicationActivityStatus implements
     replicationStatusListener = new ReplicationStatusListener();
     chillModeStatusListener = new ChillModeStatusListener();
   }
-
+  @Override
   public boolean isReplicationEnabled() {
     return replicationEnabled.get();
   }
 
   @VisibleForTesting
+  @Override
   public void setReplicationEnabled(boolean enabled) {
     replicationEnabled.set(enabled);
   }

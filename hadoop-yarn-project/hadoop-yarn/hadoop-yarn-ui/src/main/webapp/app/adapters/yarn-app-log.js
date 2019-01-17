@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-import DS from 'ember-data';
 import Ember from 'ember';
 import Converter from 'yarn-ui/utils/converter';
 import RESTAbstractAdapter from './restabstract';
@@ -26,8 +25,8 @@ import RESTAbstractAdapter from './restabstract';
  * in plain text format and not JSON.
  */
 export default RESTAbstractAdapter.extend({
-  address: "timelineV1WebAddress",
-  restNameSpace: "timeline",
+  address: "timelineWebAddress",
+  restNameSpace: "timelineV2Log",
   serverName: "ATS",
 
   headers: {
@@ -36,10 +35,14 @@ export default RESTAbstractAdapter.extend({
 
   urlForFindRecord(id/*, modelName, snapshot*/) {
     var splits = Converter.splitForAppLogs(id);
+    var clusterId = this.get("env.app.clusterId");
     var containerId = splits[0];
     var logFile = splits[1];
+    if (splits[2]) {
+      clusterId = splits[2];
+    }
     var url = this._buildURL();
-    url = url + '/containers/' + containerId + '/logs/' + logFile;
+    url = url + '/containers/' + containerId + '/logs/' + logFile + '?clusterid=' + clusterId;
     console.log('log url' + url);
     return url;
   },

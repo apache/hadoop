@@ -362,6 +362,13 @@ public class AdminService extends CompositeService implements
     }
   }
 
+  @Override
+  public synchronized void transitionToObserver(
+      StateChangeRequestInfo reqInfo) throws IOException {
+    // Should NOT get here, as RMHAServiceTarget doesn't support observer.
+    throw new ServiceFailedException("Does not support transition to Observer");
+  }
+
   /**
    * Return the HA status of this RM. This includes the current state and
    * whether the RM is ready to become active.
@@ -993,6 +1000,7 @@ public class AdminService extends CompositeService implements
         nodeAttributesManager.addNodeAttributes(nodeAttributeMapping);
         break;
       case REMOVE:
+        validateAttributesExists(nodesToAttributes);
         nodeAttributesManager.removeNodeAttributes(nodeAttributeMapping);
         break;
       case REPLACE:
@@ -1011,6 +1019,27 @@ public class AdminService extends CompositeService implements
         "AdminService");
     return recordFactory
         .newRecordInstance(NodesToAttributesMappingResponse.class);
+  }
+
+  private void validateAttributesExists(
+      List<NodeToAttributes> nodesToAttributes) throws IOException {
+    NodeAttributesManager nodeAttributesManager =
+        rm.getRMContext().getNodeAttributesManager();
+    for (NodeToAttributes nodeToAttrs : nodesToAttributes) {
+      String hostname = nodeToAttrs.getNode();
+      if (hostname == null) {
+        continue;
+      }
+      Set<NodeAttribute> attrs =
+          nodeAttributesManager.getAttributesForNode(hostname).keySet();
+      List<NodeAttribute> attributes = nodeToAttrs.getNodeAttributes();
+      for (NodeAttribute nodeAttr : attributes) {
+        if (!attrs.contains(nodeAttr)) {
+          throw new IOException("Node attribute [" + nodeAttr.getAttributeKey()
+              + "] doesn't exist on node " + nodeToAttrs.getNode());
+        }
+      }
+    }
   }
 
   /**

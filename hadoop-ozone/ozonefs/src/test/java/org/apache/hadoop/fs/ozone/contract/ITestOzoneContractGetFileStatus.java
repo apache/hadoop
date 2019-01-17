@@ -23,6 +23,8 @@ import org.apache.hadoop.fs.contract.AbstractContractGetFileStatusTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
@@ -32,6 +34,8 @@ import java.io.IOException;
 public class ITestOzoneContractGetFileStatus
     extends AbstractContractGetFileStatusTest {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ITestOzoneContractGetFileStatus.class);
 
   @BeforeClass
   public static void createCluster() throws IOException {
@@ -50,7 +54,7 @@ public class ITestOzoneContractGetFileStatus
 
   @Override
   public void teardown() throws Exception {
-    getLogger().info("FS details {}", getFileSystem());
+    LOG.info("FS details {}", getFileSystem());
     super.teardown();
   }
 

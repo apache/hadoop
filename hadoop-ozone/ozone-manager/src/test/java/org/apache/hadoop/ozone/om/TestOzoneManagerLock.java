@@ -165,7 +165,8 @@ public class TestOzoneManagerLock {
       Assert.fail();
     } catch (RuntimeException ex) {
       String msg =
-          "cannot acquire user lock while holding volume/bucket lock(s).";
+          "cannot acquire user lock while holding " +
+              "volume, bucket or S3 bucket lock(s).";
       Assert.assertTrue(ex.getMessage().contains(msg));
     }
     lock.releaseVolumeLock("volOne");

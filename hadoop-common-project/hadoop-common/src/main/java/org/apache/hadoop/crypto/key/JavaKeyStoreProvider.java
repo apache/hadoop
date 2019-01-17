@@ -62,23 +62,24 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 /**
  * KeyProvider based on Java's KeyStore file format. The file may be stored in
  * any Hadoop FileSystem using the following name mangling:
- *  jks://hdfs@nn1.example.com/my/keys.jks -> hdfs://nn1.example.com/my/keys.jks
- *  jks://file/home/owen/keys.jks -> file:///home/owen/keys.jks
- * <p/>
+ *  jks://hdfs@nn1.example.com/my/keys.jks {@literal ->}
+ *  hdfs://nn1.example.com/my/keys.jks
+ *  jks://file/home/owen/keys.jks {@literal ->} file:///home/owen/keys.jks
+ * <p>
  * If the <code>HADOOP_KEYSTORE_PASSWORD</code> environment variable is set,
  * its value is used as the password for the keystore.
- * <p/>
+ * <p>
  * If the <code>HADOOP_KEYSTORE_PASSWORD</code> environment variable is not set,
  * the password for the keystore is read from file specified in the
  * {@link #KEYSTORE_PASSWORD_FILE_KEY} configuration property. The password file
  * is looked up in Hadoop's configuration directory via the classpath.
- * <p/>
+ * <p>
  * <b>NOTE:</b> Make sure the password in the password file does not have an
  * ENTER at the end, else it won't be valid for the Java KeyStore.
- * <p/>
+ * <p>
  * If the environment variable, nor the property are not set, the password used
  * is 'none'.
- * <p/>
+ * <p>
  * It is expected for encrypted InputFormats and OutputFormats to copy the keys
  * from the original provider into the job's Credentials object, which is
  * accessed via the UserProvider. Therefore, this provider won't be used by

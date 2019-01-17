@@ -28,12 +28,15 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.common.Checksum;
+import org.apache.hadoop.ozone.common.ChecksumData;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.interfaces.VolumeChoosingPolicy;
+import org.apache.hadoop.ozone.container.common.transport.server.ratis.DispatcherContext;
 import org.apache.hadoop.ozone.container.common.volume.RoundRobinVolumeChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
@@ -59,6 +62,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -73,8 +77,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Stage.COMBINED;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.BCSID_MISMATCH;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.UNKNOWN_BCSID;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper.getChunk;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper.getData;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper.setDataChecksum;
@@ -127,9 +131,9 @@ public class TestContainerPersistence {
     containerSet = new ContainerSet();
     volumeSet = new VolumeSet(DATANODE_UUID, conf);
     blockManager = new BlockManagerImpl(conf);
-    chunkManager = new ChunkManagerImpl();
+    chunkManager = new ChunkManagerImpl(true);
 
-    for (String dir : conf.getStrings(DFS_DATANODE_DATA_DIR_KEY)) {
+    for (String dir : conf.getStrings(ScmConfigKeys.HDDS_DATANODE_DIR_KEY)) {
       StorageLocation location = StorageLocation.parse(dir);
       FileUtils.forceMkdir(new File(location.getNormalizedUri()));
     }
@@ -152,10 +156,15 @@ public class TestContainerPersistence {
     return ContainerTestHelper.getTestContainerID();
   }
 
+  private DispatcherContext getDispatcherContext() {
+    return new DispatcherContext.Builder().build();
+  }
+
   private Container addContainer(ContainerSet cSet, long cID)
       throws IOException {
     KeyValueContainerData data = new KeyValueContainerData(cID,
-        ContainerTestHelper.CONTAINER_MAX_SIZE);
+        ContainerTestHelper.CONTAINER_MAX_SIZE, UUID.randomUUID().toString(),
+        UUID.randomUUID().toString());
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner)", "bilbo");
     KeyValueContainer container = new KeyValueContainer(data, conf);
@@ -267,10 +276,10 @@ public class TestContainerPersistence {
 
     // ContainerSet#getContainerReport currently returns all containers (open
     // and closed) reports.
-    List<StorageContainerDatanodeProtocolProtos.ContainerInfo> reports =
+    List<StorageContainerDatanodeProtocolProtos.ContainerReplicaProto> reports =
         containerSet.getContainerReport().getReportsList();
     Assert.assertEquals(10, reports.size());
-    for (StorageContainerDatanodeProtocolProtos.ContainerInfo report :
+    for (StorageContainerDatanodeProtocolProtos.ContainerReplicaProto report :
         reports) {
       long actualContainerID = report.getContainerID();
       Assert.assertTrue(containerIDs.remove(actualContainerID));
@@ -317,8 +326,7 @@ public class TestContainerPersistence {
     Assert.assertTrue(testMap.isEmpty());
   }
 
-  private ChunkInfo writeChunkHelper(BlockID blockID)
-      throws IOException, NoSuchAlgorithmException {
+  private ChunkInfo writeChunkHelper(BlockID blockID) throws IOException {
     final int datalen = 1024;
     long testContainerID = blockID.getContainerID();
     Container container = containerSet.getContainer(testContainerID);
@@ -329,7 +337,8 @@ public class TestContainerPersistence {
         blockID.getLocalID(), 0, 0, datalen);
     byte[] data = getData(datalen);
     setDataChecksum(info, data);
-    chunkManager.writeChunk(container, blockID, info, data, COMBINED);
+    chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+        getDispatcherContext());
     return info;
 
   }
@@ -356,8 +365,7 @@ public class TestContainerPersistence {
    * @throws NoSuchAlgorithmException
    */
   @Test
-  public void testWritReadManyChunks() throws IOException,
-      NoSuchAlgorithmException {
+  public void testWritReadManyChunks() throws IOException {
     final int datalen = 1024;
     final int chunkCount = 1024;
 
@@ -370,7 +378,8 @@ public class TestContainerPersistence {
       ChunkInfo info = getChunk(blockID.getLocalID(), x, 0, datalen);
       byte[] data = getData(datalen);
       setDataChecksum(info, data);
-      chunkManager.writeChunk(container, blockID, info, data, COMBINED);
+      chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+          getDispatcherContext());
       String fileName = String.format("%s.data.%d", blockID.getLocalID(), x);
       fileHashMap.put(fileName, info);
     }
@@ -381,32 +390,30 @@ public class TestContainerPersistence {
     Path dataDir = Paths.get(cNewData.getChunksPath());
 
     String globFormat = String.format("%s.data.*", blockID.getLocalID());
-    MessageDigest sha = MessageDigest.getInstance(OzoneConsts.FILE_HASH);
 
     // Read chunk via file system and verify.
     int count = 0;
     try (DirectoryStream<Path> stream =
              Files.newDirectoryStream(dataDir, globFormat)) {
+      Checksum checksum = new Checksum();
+
       for (Path fname : stream) {
-        sha.update(FileUtils.readFileToByteArray(fname.toFile()));
-        String val = Hex.encodeHexString(sha.digest());
+        ChecksumData checksumData = checksum
+            .computeChecksum(FileUtils.readFileToByteArray(fname.toFile()));
         Assert.assertEquals(fileHashMap.get(fname.getFileName().toString())
-            .getChecksum(), val);
+            .getChecksumData(), checksumData);
         count++;
-        sha.reset();
       }
       Assert.assertEquals(chunkCount, count);
 
       // Read chunk via ReadChunk call.
-      sha.reset();
       for (int x = 0; x < chunkCount; x++) {
         String fileName = String.format("%s.data.%d", blockID.getLocalID(), x);
         ChunkInfo info = fileHashMap.get(fileName);
-        byte[] data = chunkManager.readChunk(container, blockID, info);
-        sha.update(data);
-        Assert.assertEquals(Hex.encodeHexString(sha.digest()),
-            info.getChecksum());
-        sha.reset();
+        byte[] data = chunkManager
+            .readChunk(container, blockID, info, getDispatcherContext());
+        ChecksumData checksumData = checksum.computeChecksum(data);
+        Assert.assertEquals(info.getChecksumData(), checksumData);
       }
     }
   }
@@ -430,13 +437,16 @@ public class TestContainerPersistence {
         blockID.getLocalID(), 0, 0, datalen);
     byte[] data = getData(datalen);
     setDataChecksum(info, data);
-    chunkManager.writeChunk(container, blockID, info, data, COMBINED);
+    chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+        getDispatcherContext());
 
-    byte[] readData = chunkManager.readChunk(container, blockID, info);
+    byte[] readData = chunkManager
+        .readChunk(container, blockID, info, getDispatcherContext());
     assertTrue(Arrays.equals(data, readData));
 
     ChunkInfo info2 = getChunk(blockID.getLocalID(), 0, start, length);
-    byte[] readData2 = chunkManager.readChunk(container, blockID, info2);
+    byte[] readData2 = chunkManager
+        .readChunk(container, blockID, info2, getDispatcherContext());
     assertEquals(length, readData2.length);
     assertTrue(Arrays.equals(
         Arrays.copyOfRange(data, start, start + length), readData2));
@@ -462,24 +472,19 @@ public class TestContainerPersistence {
         blockID.getLocalID(), 0, 0, datalen);
     byte[] data = getData(datalen);
     setDataChecksum(info, data);
-    chunkManager.writeChunk(container, blockID, info, data, COMBINED);
-    try {
-      chunkManager.writeChunk(container, blockID, info, data, COMBINED);
-    } catch (StorageContainerException ex) {
-      Assert.assertTrue(ex.getMessage().contains(
-          "Rejecting write chunk request. OverWrite flag required"));
-      Assert.assertEquals(ex.getResult(),
-          ContainerProtos.Result.OVERWRITE_FLAG_REQUIRED);
-    }
-
+    chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+        getDispatcherContext());
+    chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+        getDispatcherContext());
     // With the overwrite flag it should work now.
     info.addMetadata(OzoneConsts.CHUNK_OVERWRITE, "true");
-    chunkManager.writeChunk(container, blockID, info, data, COMBINED);
+    chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+        getDispatcherContext());
     long bytesUsed = container.getContainerData().getBytesUsed();
     Assert.assertEquals(datalen, bytesUsed);
 
     long bytesWrite = container.getContainerData().getWriteBytes();
-    Assert.assertEquals(datalen * 2, bytesWrite);
+    Assert.assertEquals(datalen * 3, bytesWrite);
   }
 
   /**
@@ -508,13 +513,16 @@ public class TestContainerPersistence {
       byte[] data = getData(datalen);
       oldSha.update(data);
       setDataChecksum(info, data);
-      chunkManager.writeChunk(container, blockID, info, data, COMBINED);
+      chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+          getDispatcherContext());
     }
 
     // Request to read the whole data in a single go.
     ChunkInfo largeChunk = getChunk(blockID.getLocalID(), 0, 0,
         datalen * chunkCount);
-    byte[] newdata = chunkManager.readChunk(container, blockID, largeChunk);
+    byte[] newdata =
+        chunkManager.readChunk(container, blockID, largeChunk,
+            getDispatcherContext());
     MessageDigest newSha = MessageDigest.getInstance(OzoneConsts.FILE_HASH);
     newSha.update(newdata);
     Assert.assertEquals(Hex.encodeHexString(oldSha.digest()),
@@ -539,11 +547,12 @@ public class TestContainerPersistence {
         blockID.getLocalID(), 0, 0, datalen);
     byte[] data = getData(datalen);
     setDataChecksum(info, data);
-    chunkManager.writeChunk(container, blockID, info, data, COMBINED);
+    chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+        getDispatcherContext());
     chunkManager.deleteChunk(container, blockID, info);
     exception.expect(StorageContainerException.class);
     exception.expectMessage("Unable to find the chunk file.");
-    chunkManager.readChunk(container, blockID, info);
+    chunkManager.readChunk(container, blockID, info, getDispatcherContext());
   }
 
   /**
@@ -568,7 +577,65 @@ public class TestContainerPersistence {
         getBlock(container, blockData.getBlockID());
     ChunkInfo readChunk =
         ChunkInfo.getFromProtoBuf(readBlockData.getChunks().get(0));
-    Assert.assertEquals(info.getChecksum(), readChunk.getChecksum());
+    Assert.assertEquals(info.getChecksumData(), readChunk.getChecksumData());
+  }
+
+  /**
+   * Tests a put block and read block with invalid bcsId.
+   *
+   * @throws IOException
+   * @throws NoSuchAlgorithmException
+   */
+  @Test
+  public void testPutBlockWithInvalidBCSId()
+      throws IOException, NoSuchAlgorithmException {
+    long testContainerID = getTestContainerID();
+    Container container = addContainer(containerSet, testContainerID);
+
+    BlockID blockID1 = ContainerTestHelper.getTestBlockID(testContainerID);
+    ChunkInfo info = writeChunkHelper(blockID1);
+    BlockData blockData = new BlockData(blockID1);
+    List<ContainerProtos.ChunkInfo> chunkList = new LinkedList<>();
+    chunkList.add(info.getProtoBufMessage());
+    blockData.setChunks(chunkList);
+    blockData.setBlockCommitSequenceId(3);
+    blockManager.putBlock(container, blockData);
+    chunkList.clear();
+
+    // write a 2nd block
+    BlockID blockID2 = ContainerTestHelper.getTestBlockID(testContainerID);
+    info = writeChunkHelper(blockID2);
+    blockData = new BlockData(blockID2);
+    chunkList.add(info.getProtoBufMessage());
+    blockData.setChunks(chunkList);
+    blockData.setBlockCommitSequenceId(4);
+    blockManager.putBlock(container, blockData);
+    BlockData readBlockData;
+    try {
+      blockID1.setBlockCommitSequenceId(5);
+      // read with bcsId higher than container bcsId
+      blockManager.
+          getBlock(container, blockID1);
+      Assert.fail("Expected exception not thrown");
+    } catch (StorageContainerException sce) {
+      Assert.assertTrue(sce.getResult() == UNKNOWN_BCSID);
+    }
+
+    try {
+      blockID1.setBlockCommitSequenceId(4);
+      // read with bcsId lower than container bcsId but greater than committed
+      // bcsId.
+      blockManager.
+          getBlock(container, blockID1);
+      Assert.fail("Expected exception not thrown");
+    } catch (StorageContainerException sce) {
+      Assert.assertTrue(sce.getResult() == BCSID_MISMATCH);
+    }
+    readBlockData = blockManager.
+        getBlock(container, blockData.getBlockID());
+    ChunkInfo readChunk =
+        ChunkInfo.getFromProtoBuf(readBlockData.getChunks().get(0));
+    Assert.assertEquals(info.getChecksumData(), readChunk.getChecksumData());
   }
 
   /**
@@ -595,7 +662,8 @@ public class TestContainerPersistence {
       info = getChunk(blockID.getLocalID(), x, x * datalen, datalen);
       byte[] data = getData(datalen);
       setDataChecksum(info, data);
-      chunkManager.writeChunk(container, blockID, info, data, COMBINED);
+      chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+          getDispatcherContext());
       totalSize += datalen;
       chunkList.add(info);
     }
@@ -622,7 +690,8 @@ public class TestContainerPersistence {
     ChunkInfo readChunk =
         ChunkInfo.getFromProtoBuf(readBlockData.getChunks().get(readBlockData
             .getChunks().size() - 1));
-    Assert.assertEquals(lastChunk.getChecksum(), readChunk.getChecksum());
+    Assert.assertEquals(
+        lastChunk.getChecksumData(), readChunk.getChecksumData());
   }
 
   /**
@@ -749,10 +818,11 @@ public class TestContainerPersistence {
 
   }
 
-  private BlockData writeBlockHelper(BlockID blockID)
+  private BlockData writeBlockHelper(BlockID blockID, int i)
       throws IOException, NoSuchAlgorithmException {
     ChunkInfo info = writeChunkHelper(blockID);
     BlockData blockData = new BlockData(blockID);
+    blockData.setBlockCommitSequenceId((long) i);
     List<ContainerProtos.ChunkInfo> chunkList = new LinkedList<>();
     chunkList.add(info.getProtoBufMessage());
     blockData.setChunks(chunkList);
@@ -767,7 +837,7 @@ public class TestContainerPersistence {
     for (int i = 0; i < 10; i++) {
       BlockID blockID = new BlockID(testContainerID, i);
       expectedBlocks.add(blockID);
-      BlockData kd = writeBlockHelper(blockID);
+      BlockData kd = writeBlockHelper(blockID, i);
       blockManager.putBlock(container, kd);
     }
 

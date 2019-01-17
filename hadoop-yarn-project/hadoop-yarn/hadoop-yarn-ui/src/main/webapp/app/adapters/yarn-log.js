@@ -19,15 +19,15 @@
 import AbstractAdapter from './abstract';
 
 export default AbstractAdapter.extend({
-  address: "timelineV1WebAddress",
-  // restNameSpace: "timelineV2", // Use ATSv2 when it supports log APIs.
-  restNameSpace: "timeline", //Using ATSv1.5 now, would be supported by ATSv2 very soon.
+  address: "timelineWebAddress",
+  restNameSpace: "timelineV2Log",
   serverName: "ATS",
 
   urlForQuery(query/*, modelName*/) {
     var url = this._buildURL();
     var containerId = query['containerId'];
+    var clusterId = this.get("env.app.clusterId");
     delete query.containerId;
-    return url + '/containers/' + containerId + '/logs';
+    return url + '/containers/' + containerId + '/logs' + '?clusterid=' + clusterId;
   }
 });

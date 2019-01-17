@@ -404,7 +404,7 @@ public class BuiltInGzipDecompressor implements Decompressor {
 
   /**
    * Returns the total number of compressed bytes input so far, including
-   * gzip header/trailer bytes.</p>
+   * gzip header/trailer bytes.
    *
    * @return the total (non-negative) number of compressed bytes read so far
    */
@@ -420,7 +420,7 @@ public class BuiltInGzipDecompressor implements Decompressor {
    * non-zero value unless called after {@link #setInput(byte[] b, int off,
    * int len)} and before {@link #decompress(byte[] b, int off, int len)}.
    * (That is, after {@link #decompress(byte[] b, int off, int len)} it
-   * always returns zero, except in finished state with concatenated data.)</p>
+   * always returns zero, except in finished state with concatenated data.)
    *
    * @return the total (non-negative) number of unprocessed bytes in input
    */
@@ -441,7 +441,7 @@ public class BuiltInGzipDecompressor implements Decompressor {
 
   /**
    * Returns true if the end of the gzip substream (single "member") has been
-   * reached.</p>
+   * reached.
    */
   @Override
   public synchronized boolean finished() {
@@ -450,7 +450,7 @@ public class BuiltInGzipDecompressor implements Decompressor {
 
   /**
    * Resets everything, including the input buffer, regardless of whether the
-   * current gzip substream is finished.</p>
+   * current gzip substream is finished.
    */
   @Override
   public synchronized void reset() {

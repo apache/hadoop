@@ -42,7 +42,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
 /**
- * Register a container with SCM.
+ * Register a datanode with SCM.
  */
 public final class RegisterEndpointTask implements
     Callable<EndpointStateMachine.EndPointStates> {
@@ -111,7 +111,7 @@ public final class RegisterEndpointTask implements
     try {
 
       ContainerReportsProto containerReport = datanodeContainerManager
-          .getContainerReport();
+          .getController().getContainerReport();
       NodeReportProto nodeReport = datanodeContainerManager.getNodeReport();
       PipelineReportsProto pipelineReportsProto =
               datanodeContainerManager.getPipelineReport();

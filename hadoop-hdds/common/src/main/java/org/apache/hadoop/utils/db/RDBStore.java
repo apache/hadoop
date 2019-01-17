@@ -19,22 +19,6 @@
 
 package org.apache.hadoop.utils.db;
 
-import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.metrics2.util.MBeans;
-import org.apache.hadoop.utils.RocksDBStoreMBean;
-import org.apache.ratis.shaded.com.google.common.annotations.VisibleForTesting;
-import org.rocksdb.ColumnFamilyDescriptor;
-import org.rocksdb.ColumnFamilyHandle;
-
-import org.rocksdb.DBOptions;
-import org.rocksdb.RocksDB;
-import org.rocksdb.RocksDBException;
-import org.rocksdb.WriteBatch;
-import org.rocksdb.WriteOptions;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import javax.management.ObjectName;
 import java.io.File;
 import java.io.IOException;
@@ -44,6 +28,22 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.apache.hadoop.hdds.HddsUtils;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.metrics2.util.MBeans;
+import org.apache.hadoop.utils.RocksDBStoreMBean;
+
+import com.google.common.base.Preconditions;
+import org.apache.ratis.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.rocksdb.ColumnFamilyDescriptor;
+import org.rocksdb.ColumnFamilyHandle;
+import org.rocksdb.DBOptions;
+import org.rocksdb.RocksDB;
+import org.rocksdb.RocksDBException;
+import org.rocksdb.WriteOptions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * RocksDB Store that supports creating Tables in DB.
@@ -55,16 +55,24 @@ public class RDBStore implements DBStore {
   private final File dbLocation;
   private final WriteOptions writeOptions;
   private final DBOptions dbOptions;
+  private final CodecRegistry codecRegistry;
   private final Hashtable<String, ColumnFamilyHandle> handleTable;
   private ObjectName statMBeanName;
 
-  public RDBStore(File dbFile, DBOptions options, Set<TableConfig> families)
+  @VisibleForTesting
+  public RDBStore(File dbFile, DBOptions options,
+                  Set<TableConfig> families) throws IOException {
+    this(dbFile, options, families, new CodecRegistry());
+  }
+
+  public RDBStore(File dbFile, DBOptions options, Set<TableConfig> families,
+                  CodecRegistry registry)
       throws IOException {
     Preconditions.checkNotNull(dbFile, "DB file location cannot be null");
     Preconditions.checkNotNull(families);
     Preconditions.checkArgument(families.size() > 0);
     handleTable = new Hashtable<>();
-
+    codecRegistry = registry;
     final List<ColumnFamilyDescriptor> columnFamilyDescriptors =
         new ArrayList<>();
     final List<ColumnFamilyHandle> columnFamilyHandles = new ArrayList<>();
@@ -91,7 +99,8 @@ public class RDBStore implements DBStore {
       if (dbOptions.statistics() != null) {
         Map<String, String> jmxProperties = new HashMap<>();
         jmxProperties.put("dbName", dbFile.getName());
-        statMBeanName = MBeans.register("Ozone", "RocksDbStore", jmxProperties,
+        statMBeanName = HddsUtils.registerWithJmxProperties(
+            "Ozone", "RocksDbStore", jmxProperties,
             new RocksDBStoreMBean(dbOptions.statistics()));
         if (statMBeanName == null) {
           LOG.warn("jmx registration failed during RocksDB init, db path :{}",
@@ -159,71 +168,31 @@ public class RDBStore implements DBStore {
   }
 
   @Override
-  public void move(byte[] key, Table source, Table dest) throws IOException {
-    RDBTable sourceTable;
-    RDBTable destTable;
-    if (source instanceof RDBTable) {
-      sourceTable = (RDBTable) source;
-    } else {
-      LOG.error("Unexpected Table type. Expected RocksTable Store for Source.");
-      throw new IOException("Unexpected TableStore Type in source. Expected "
-          + "RocksDBTable.");
-    }
+  public <KEY, VALUE> void move(KEY key, Table<KEY, VALUE> source,
+                                Table<KEY, VALUE> dest) throws IOException {
+    try (BatchOperation batchOperation = initBatchOperation()) {
 
-    if (dest instanceof RDBTable) {
-      destTable = (RDBTable) dest;
-    } else {
-      LOG.error("Unexpected Table type. Expected RocksTable Store for Dest.");
-      throw new IOException("Unexpected TableStore Type in dest. Expected "
-          + "RocksDBTable.");
-    }
-    try (WriteBatch batch = new WriteBatch()) {
-      byte[] value = sourceTable.get(key);
-      batch.put(destTable.getHandle(), key, value);
-      batch.delete(sourceTable.getHandle(), key);
-      db.write(writeOptions, batch);
-    } catch (RocksDBException rockdbException) {
-      LOG.error("Move of key failed. Key:{}", DFSUtil.bytes2String(key));
-      throw toIOException("Unable to move key: " + DFSUtil.bytes2String(key),
-          rockdbException);
+      VALUE value = source.get(key);
+      dest.putWithBatch(batchOperation, key, value);
+      source.deleteWithBatch(batchOperation, key);
+      commitBatchOperation(batchOperation);
     }
   }
 
-
   @Override
-  public void move(byte[] key, byte[] value, Table source,
-      Table dest) throws IOException {
+  public <KEY, VALUE> void move(KEY key, VALUE value, Table<KEY, VALUE> source,
+                                Table<KEY, VALUE> dest) throws IOException {
     move(key, key, value, source, dest);
   }
 
   @Override
-  public void move(byte[] sourceKey, byte[] destKey, byte[] value, Table source,
-      Table dest) throws IOException {
-    RDBTable sourceTable;
-    RDBTable destTable;
-    if (source instanceof RDBTable) {
-      sourceTable = (RDBTable) source;
-    } else {
-      LOG.error("Unexpected Table type. Expected RocksTable Store for Source.");
-      throw new IOException("Unexpected TableStore Type in source. Expected "
-          + "RocksDBTable.");
-    }
-
-    if (dest instanceof RDBTable) {
-      destTable = (RDBTable) dest;
-    } else {
-      LOG.error("Unexpected Table type. Expected RocksTable Store for Dest.");
-      throw new IOException("Unexpected TableStore Type in dest. Expected "
-          + "RocksDBTable.");
-    }
-    try (WriteBatch batch = new WriteBatch()) {
-      batch.put(destTable.getHandle(), destKey, value);
-      batch.delete(sourceTable.getHandle(), sourceKey);
-      db.write(writeOptions, batch);
-    } catch (RocksDBException rockdbException) {
-      LOG.error("Move of key failed. Key:{}", DFSUtil.bytes2String(sourceKey));
-      throw toIOException("Unable to move key: " +
-              DFSUtil.bytes2String(sourceKey), rockdbException);
+  public <KEY, VALUE> void move(KEY sourceKey, KEY destKey, VALUE value,
+                                Table<KEY, VALUE> source,
+                                Table<KEY, VALUE> dest) throws IOException {
+    try (BatchOperation batchOperation = initBatchOperation()) {
+      dest.putWithBatch(batchOperation, destKey, value);
+      source.deleteWithBatch(batchOperation, sourceKey);
+      commitBatchOperation(batchOperation);
     }
   }
 
@@ -237,13 +206,16 @@ public class RDBStore implements DBStore {
   }
 
   @Override
-  public void write(WriteBatch batch) throws IOException {
-    try {
-      db.write(writeOptions, batch);
-    } catch (RocksDBException e) {
-      throw toIOException("Unable to write the batch.", e);
-    }
+  public BatchOperation initBatchOperation() {
+    return new RDBBatchOperation();
   }
+
+  @Override
+  public void commitBatchOperation(BatchOperation operation)
+      throws IOException {
+    ((RDBBatchOperation) operation).commit(db, writeOptions);
+  }
+
 
   @VisibleForTesting
   protected ObjectName getStatMBeanName() {
@@ -251,12 +223,19 @@ public class RDBStore implements DBStore {
   }
 
   @Override
-  public Table getTable(String name) throws IOException {
+  public Table<byte[], byte[]> getTable(String name) throws IOException {
     ColumnFamilyHandle handle = handleTable.get(name);
     if (handle == null) {
       throw new IOException("No such table in this DB. TableName : " + name);
     }
     return new RDBTable(this.db, handle, this.writeOptions);
+  }
+
+  @Override
+  public <KEY, VALUE> Table<KEY, VALUE> getTable(String name,
+      Class<KEY> keyType, Class<VALUE> valueType) throws IOException {
+    return new TypedTable<KEY, VALUE>(getTable(name), codecRegistry, keyType,
+        valueType);
   }
 
   @Override

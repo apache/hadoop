@@ -21,11 +21,15 @@ package org.apache.hadoop.hdds.scm.node;
 import java.util.Set;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.scm.container.ContainerException;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
-import org.apache.hadoop.hdds.scm.container.ContainerStateManager;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
+import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
+import org.apache.hadoop.hdds.scm.container.ContainerReplica;
 import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
-import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
@@ -37,7 +41,7 @@ import org.slf4j.LoggerFactory;
  */
 public class DeadNodeHandler implements EventHandler<DatanodeDetails> {
 
-  private final ContainerStateManager containerStateManager;
+  private final ContainerManager containerManager;
 
   private final NodeManager nodeManager;
 
@@ -45,8 +49,8 @@ public class DeadNodeHandler implements EventHandler<DatanodeDetails> {
       LoggerFactory.getLogger(DeadNodeHandler.class);
 
   public DeadNodeHandler(NodeManager nodeManager,
-      ContainerStateManager containerStateManager) {
-    this.containerStateManager = containerStateManager;
+      ContainerManager containerManager) {
+    this.containerManager = containerManager;
     this.nodeManager = nodeManager;
   }
 
@@ -55,45 +59,70 @@ public class DeadNodeHandler implements EventHandler<DatanodeDetails> {
       EventPublisher publisher) {
     nodeManager.processDeadNode(datanodeDetails.getUuid());
 
-    Set<ContainerID> containers =
-        nodeManager.getContainers(datanodeDetails.getUuid());
-    if (containers == null) {
+    // TODO: check if there are any pipeline on this node and fire close
+    // pipeline event
+    Set<ContainerID> ids =
+        null;
+    try {
+      ids = nodeManager.getContainers(datanodeDetails);
+    } catch (NodeNotFoundException e) {
+      // This should not happen, we cannot get a dead node event for an
+      // unregistered node!
+      LOG.error("DeadNode event for a unregistered node: {}!", datanodeDetails);
+    }
+    if (ids == null) {
       LOG.info("There's no containers in dead datanode {}, no replica will be"
           + " removed from the in-memory state.", datanodeDetails.getUuid());
       return;
     }
-    LOG.info(
-        "Datanode {}  is dead. Removing replications from the in-memory state.",
-        datanodeDetails.getUuid());
-    for (ContainerID container : containers) {
+    LOG.info("Datanode {}  is dead. Removing replications from the in-memory" +
+            " state.", datanodeDetails.getUuid());
+    for (ContainerID id : ids) {
       try {
-        try {
-          containerStateManager.removeContainerReplica(container,
-              datanodeDetails);
-        } catch (SCMException ex) {
-          LOG.info("DataNode {} doesn't have replica for container {}.",
-              datanodeDetails.getUuid(), container.getId());
+        final ContainerInfo container = containerManager.getContainer(id);
+        // TODO: For open containers, trigger close on other nodes
+        // TODO: Check replica count and call replication manager
+        // on these containers.
+        if (!container.isOpen()) {
+          Set<ContainerReplica> replicas = containerManager
+              .getContainerReplicas(id);
+          replicas.stream()
+              .filter(r -> r.getDatanodeDetails().equals(datanodeDetails))
+              .findFirst()
+              .ifPresent(replica -> {
+                try {
+                  containerManager.removeContainerReplica(id, replica);
+                } catch (ContainerException ex) {
+                  LOG.warn("Exception while removing container replica #{} " +
+                      "for container #{}.", replica, container, ex);
+                }
+              });
         }
-
-        if (!containerStateManager.isOpen(container)) {
-          ReplicationRequest replicationRequest =
-              containerStateManager.checkReplicationState(container);
-
-          if (replicationRequest != null) {
-            publisher.fireEvent(SCMEvents.REPLICATE_CONTAINER,
-                replicationRequest);
-          }
-        }
-      } catch (SCMException e) {
-        LOG.error("Can't remove container from containerStateMap {}", container
-            .getId(), e);
+      } catch (ContainerNotFoundException cnfe) {
+        LOG.warn("Container Not found!", cnfe);
       }
+    }
+  }
+
+  /**
+   * Compare the existing replication number with the expected one.
+   */
+  private void replicateIfNeeded(ContainerInfo container,
+      EventPublisher publisher) throws ContainerNotFoundException {
+    final int existingReplicas = containerManager
+        .getContainerReplicas(container.containerID()).size();
+    final int expectedReplicas = container.getReplicationFactor().getNumber();
+    if (existingReplicas != expectedReplicas) {
+      publisher.fireEvent(SCMEvents.REPLICATE_CONTAINER,
+          new ReplicationRequest(
+              container.getContainerID(), existingReplicas, expectedReplicas));
     }
   }
 
   /**
    * Returns logger.
    * */
+  // TODO: remove this.
   public static Logger getLogger() {
     return LOG;
   }

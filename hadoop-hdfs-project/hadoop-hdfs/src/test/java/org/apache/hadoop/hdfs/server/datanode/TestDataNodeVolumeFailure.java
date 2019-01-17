@@ -389,6 +389,7 @@ public class TestDataNodeVolumeFailure {
     DataNodeTestUtils.injectDataDirFailure(dn0Vol2);
     DataNodeTestUtils.waitForDiskError(dn0,
         DataNodeTestUtils.getVolume(dn0, dn0Vol2));
+    dn0.checkDiskError();
     assertFalse(dn0.shouldRun());
   }
 
@@ -424,10 +425,8 @@ public class TestDataNodeVolumeFailure {
       @Override
       public Boolean get() {
         // underReplicatedBlocks are due to failed volumes
-        int underReplicatedBlocks = BlockManagerTestUtil
-            .checkHeartbeatAndGetUnderReplicatedBlocksCount(
-                cluster.getNamesystem(), bm);
-
+        long underReplicatedBlocks = bm.getLowRedundancyBlocksCount()
+            + bm.getPendingReconstructionBlocksCount();
         if (underReplicatedBlocks > 0) {
           return true;
         }

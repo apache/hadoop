@@ -19,30 +19,70 @@
 {{breadcrumb-bar breadcrumbs=breadcrumbs}}
 
 <div class="row container-fluid">
-  <div class="col-md-2">
-    <div class="panel panel-default">
-      <div class="panel-heading">
-        Application Attempt
-      </div>
-      <div class="panel-body">
-        <ul class="nav nav-pills nav-stacked" id="stacked-menu">
-          <ul class="nav nav-pills nav-stacked collapse in">
-            {{#link-to 'yarn-app-attempt' tagName="li"}}
-              {{#link-to 'yarn-app-attempt' model.attempt.id}}Attempt Info{{/link-to}}
-            {{/link-to}}
-          </ul>
-        </ul>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-10">
+
+  <div class="col-md-12">
     <div class="row container-fluid">
       {{#if model.attempt}}
         <div class="panel panel-default">
-          <div class="panel-heading">
-            Attempt Information
+          <div class="panel-body">
+            <div class="flex">
+              <div>
+                <h3 class="top-2">{{model.attempt.id}}</h3>
+                <div class="muted-text">{{model.attempt.appMasterContainerId}}</div>
+                {{#if model.attempt.attemptState}}
+                  {{em-table-simple-status-cell class="top-1" content=model.attempt.attemptState}}
+                {{/if}}
+                {{#if (or model.attempt.attemptStartedTime model.attempt.validatedFinishedTs)}}
+                <div class="flex yarn-tooltip" title="Elapsed Time: {{model.attempt.elapsedTime}}">
+                  {{#if model.attempt.attemptStartedTime}}
+                  <div class="top-1 tail-2" >
+                    <i class="glyphicon glyphicon-time glyphicon-gray" />
+                    Started at {{model.attempt.attemptStartedTime}}
+                  </div>
+                  {{/if}}
+                  {{#if model.attempt.validatedFinishedTs}}
+                  <div class="top-1">
+                    <i class="glyphicon glyphicon-time glyphicon-gray" />
+                    Finished at {{model.attempt.validatedFinishedTs}}
+                  </div>
+                  {{/if}}
+                </div>
+                {{/if}}
+              </div>
+              <div class="flex-right">
+                <div class="top-2">
+                  <span>AM Host: </span>
+                  <strong class="yarn-tooltip" title="{{model.attempt.amNodeId}}">{{model.attempt.amNodeId}}</strong>
+                </div>
+                {{#if model.attempt.nodeHttpAddress}}
+                 <div class="top-1">
+                  <span>AM Node WebUI: </span>
+                  <strong class="yarn-tooltip" title="{{model.attempt.nodeHttpAddress}}">
+                    <a href="{{model.attempt.masterNodeURL}}">{{model.attempt.nodeHttpAddress}}</a>
+                  </strong>
+                </div>
+                {{/if}}
+                {{#if model.attempt.logsLink}}
+                <div class="top-1">
+                  <span>Log: </span>
+                  <strong>
+                    <a href="{{prepend-protocol model.attempt.logsLink}}" target="_blank">{{model.attempt.logsLink}}</a>
+                  </strong>
+                </div>
+                {{/if}}
+              </div>
+            </div>
+            {{#if model.attempt.diagnosticsInfo}}
+            <div class="panel panel-default top-3">
+              <div class="panel-heading">
+                Diagnostic Info for {{model.attempt.id}}
+              </div>
+              <div class="diagnostic-info">
+                <pre>{{model.attempt.diagnosticsInfo}}</pre>
+              </div>
+            </div>
+            {{/if}}
           </div>
-          {{app-attempt-table attempt=model.attempt}}
         </div>
       {{/if}}
     </div>
@@ -58,6 +98,7 @@
           attemptModel=false
           changeViewType="changeViewType"
           viewType=viewType
+          userInfo=model.userInfo
         }}
       {{else}}
         <div class="col-md-12 container-fluid">

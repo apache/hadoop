@@ -44,10 +44,10 @@ import java.util.List;
 /**
  * Factory that creates SSLEngine and SSLSocketFactory instances using
  * Hadoop configuration information.
- * <p/>
+ * <p>
  * This SSLFactory uses a {@link ReloadingX509TrustManager} instance,
  * which reloads public keys if the truststore file changes.
- * <p/>
+ * <p>
  * This factory is used to configure HTTPS in Hadoop HTTP based endpoints, both
  * client and server.
  */
@@ -72,7 +72,7 @@ public class SSLFactory implements ConnectionConfigurator {
   public static final String SSL_ENABLED_PROTOCOLS_KEY =
       "hadoop.ssl.enabled.protocols";
   public static final String SSL_ENABLED_PROTOCOLS_DEFAULT =
-      "TLSv1,SSLv2Hello,TLSv1.1,TLSv1.2";
+      "TLSv1.1,TLSv1.2";
 
   public static final String SSL_SERVER_NEED_CLIENT_AUTH =
       "ssl.server.need.client.auth";

@@ -19,16 +19,25 @@ package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
+import org.apache.ratis.util.function.CheckedConsumer;
 import org.junit.Assert;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.function.Consumer;
 
-public class OzoneTestUtils {
+/**
+ * Helper class for Tests.
+ */
+public final class OzoneTestUtils {
+  /**
+   * Never Constructed.
+   */
+  private OzoneTestUtils() {
+  }
 
   /**
    * Close containers which contain the blocks listed in
@@ -39,23 +48,27 @@ public class OzoneTestUtils {
    * @return true if close containers is successful.
    * @throws IOException
    */
-  public static boolean closeContainers(
+  public static void closeContainers(
       List<OmKeyLocationInfoGroup> omKeyLocationInfoGroups,
-      StorageContainerManager scm) throws IOException {
-    return performOperationOnKeyContainers((blockID) -> {
-      try {
+      StorageContainerManager scm) throws Exception {
+    performOperationOnKeyContainers((blockID) -> {
+      if (scm.getContainerManager()
+          .getContainer(ContainerID.valueof(blockID.getContainerID()))
+          .getState() == HddsProtos.LifeCycleState.OPEN) {
         scm.getContainerManager()
-            .updateContainerState(blockID.getContainerID(),
+            .updateContainerState(ContainerID.valueof(blockID.getContainerID()),
                 HddsProtos.LifeCycleEvent.FINALIZE);
-        scm.getContainerManager()
-            .updateContainerState(blockID.getContainerID(),
-                HddsProtos.LifeCycleEvent.CLOSE);
-        Assert.assertFalse(scm.getContainerManager()
-            .getContainerWithPipeline(blockID.getContainerID())
-            .getContainerInfo().isContainerOpen());
-      } catch (IOException e) {
-        e.printStackTrace();
       }
+      if (scm.getContainerManager()
+          .getContainer(ContainerID.valueof(blockID.getContainerID()))
+          .getState() == HddsProtos.LifeCycleState.CLOSING) {
+        scm.getContainerManager()
+            .updateContainerState(ContainerID.valueof(blockID.getContainerID()),
+                HddsProtos.LifeCycleEvent.CLOSE);
+      }
+      Assert.assertFalse(scm.getContainerManager()
+          .getContainer(ContainerID.valueof(blockID.getContainerID()))
+          .isOpen());
     }, omKeyLocationInfoGroups);
   }
 
@@ -65,28 +78,21 @@ public class OzoneTestUtils {
    *
    * @param consumer Consumer which accepts BlockID as argument.
    * @param omKeyLocationInfoGroups locationInfos for a key.
-   * @return true if consumer is successful.
    * @throws IOException
    */
-  public static boolean performOperationOnKeyContainers(
-      Consumer<BlockID> consumer,
-      List<OmKeyLocationInfoGroup> omKeyLocationInfoGroups) throws IOException {
+  public static void performOperationOnKeyContainers(
+      CheckedConsumer<BlockID, Exception> consumer,
+      List<OmKeyLocationInfoGroup> omKeyLocationInfoGroups) throws Exception {
 
-    try {
-      for (OmKeyLocationInfoGroup omKeyLocationInfoGroup :
-          omKeyLocationInfoGroups) {
-        List<OmKeyLocationInfo> omKeyLocationInfos =
-            omKeyLocationInfoGroup.getLocationList();
-        for (OmKeyLocationInfo omKeyLocationInfo : omKeyLocationInfos) {
-          BlockID blockID = omKeyLocationInfo.getBlockID();
-          consumer.accept(blockID);
-        }
+    for (OmKeyLocationInfoGroup omKeyLocationInfoGroup :
+        omKeyLocationInfoGroups) {
+      List<OmKeyLocationInfo> omKeyLocationInfos =
+          omKeyLocationInfoGroup.getLocationList();
+      for (OmKeyLocationInfo omKeyLocationInfo : omKeyLocationInfos) {
+        BlockID blockID = omKeyLocationInfo.getBlockID();
+        consumer.accept(blockID);
       }
-    } catch (Error e) {
-      e.printStackTrace();
-      return false;
     }
-    return true;
   }
 
 }

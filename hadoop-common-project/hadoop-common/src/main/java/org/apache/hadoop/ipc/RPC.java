@@ -586,7 +586,44 @@ public class RPC {
     }
     return getProtocolEngine(protocol, conf).getProxy(protocol, clientVersion,
         addr, ticket, conf, factory, rpcTimeout, connectionRetryPolicy,
-        fallbackToSimpleAuth);
+        fallbackToSimpleAuth, null);
+  }
+
+  /**
+   * Get a protocol proxy that contains a proxy connection to a remote server
+   * and a set of methods that are supported by the server.
+   *
+   * @param protocol protocol
+   * @param clientVersion client's version
+   * @param addr server address
+   * @param ticket security ticket
+   * @param conf configuration
+   * @param factory socket factory
+   * @param rpcTimeout max time for each rpc; 0 means no timeout
+   * @param connectionRetryPolicy retry policy
+   * @param fallbackToSimpleAuth set to true or false during calls to indicate
+   *   if a secure client falls back to simple auth
+   * @param alignmentContext state alignment context
+   * @return the proxy
+   * @throws IOException if any error occurs
+   */
+  public static <T> ProtocolProxy<T> getProtocolProxy(Class<T> protocol,
+                                long clientVersion,
+                                InetSocketAddress addr,
+                                UserGroupInformation ticket,
+                                Configuration conf,
+                                SocketFactory factory,
+                                int rpcTimeout,
+                                RetryPolicy connectionRetryPolicy,
+                                AtomicBoolean fallbackToSimpleAuth,
+                                AlignmentContext alignmentContext)
+       throws IOException {
+    if (UserGroupInformation.isSecurityEnabled()) {
+      SaslRpcServer.init(conf);
+    }
+    return getProtocolEngine(protocol, conf).getProxy(protocol, clientVersion,
+        addr, ticket, conf, factory, rpcTimeout, connectionRetryPolicy,
+        fallbackToSimpleAuth, alignmentContext);
   }
 
    /**
@@ -719,6 +756,7 @@ public class RPC {
     private final Configuration conf;    
     private SecretManager<? extends TokenIdentifier> secretManager = null;
     private String portRangeConfig = null;
+    private AlignmentContext alignmentContext = null;
     
     public Builder(Configuration conf) {
       this.conf = conf;
@@ -785,6 +823,12 @@ public class RPC {
       return this;
     }
     
+    /** Default: null */
+    public Builder setAlignmentContext(AlignmentContext alignmentContext) {
+      this.alignmentContext = alignmentContext;
+      return this;
+    }
+
     /**
      * Build the RPC Server. 
      * @throws IOException on error
@@ -804,7 +848,8 @@ public class RPC {
       return getProtocolEngine(this.protocol, this.conf).getServer(
           this.protocol, this.instance, this.bindAddress, this.port,
           this.numHandlers, this.numReaders, this.queueSizePerHandler,
-          this.verbose, this.conf, this.secretManager, this.portRangeConfig);
+          this.verbose, this.conf, this.secretManager, this.portRangeConfig,
+          this.alignmentContext);
     }
   }
   

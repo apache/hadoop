@@ -36,7 +36,9 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.hdfs.server.common.TokenVerifier;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.web.AuthFilter;
@@ -68,6 +70,7 @@ public class NameNodeHttpServer {
   public static final String FSIMAGE_ATTRIBUTE_KEY = "name.system.image";
   protected static final String NAMENODE_ATTRIBUTE_KEY = "name.node";
   public static final String STARTUP_PROGRESS_ATTRIBUTE_KEY = "startup.progress";
+  public static final String ALIASMAP_ATTRIBUTE_KEY = "name.system.aliasmap";
 
   NameNodeHttpServer(Configuration conf, NameNode nn,
       InetSocketAddress bindAddress) {
@@ -77,6 +80,7 @@ public class NameNodeHttpServer {
   }
 
   public static void initWebHdfs(Configuration conf, String hostname,
+      String httpKeytab,
       HttpServer2 httpServer2, String jerseyResourcePackage)
       throws IOException {
     // set user pattern based on configuration file
@@ -94,7 +98,8 @@ public class NameNodeHttpServer {
     final String name = className;
 
     final String pathSpec = WebHdfsFileSystem.PATH_PREFIX + "/*";
-    Map<String, String> params = getAuthFilterParams(conf, hostname);
+    Map<String, String> params = getAuthFilterParams(conf, hostname,
+        httpKeytab);
     HttpServer2.defineFilter(httpServer2.getWebAppContext(), name, className,
         params, new String[] { pathSpec });
     HttpServer2.LOG.info("Added filter '" + name + "' (class=" + className
@@ -167,8 +172,9 @@ public class NameNodeHttpServer {
       httpServer.setAttribute(DFSConfigKeys.DFS_DATANODE_HTTPS_PORT_KEY,
           datanodeSslPort.getPort());
     }
-
-    initWebHdfs(conf, bindAddress.getHostName(), httpServer,
+    String httpKeytab = conf.get(DFSUtil.getSpnegoKeytabKey(conf,
+        DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY));
+    initWebHdfs(conf, bindAddress.getHostName(), httpKeytab, httpServer,
         NamenodeWebHdfsMethods.class.getPackage().getName());
 
     httpServer.setAttribute(NAMENODE_ATTRIBUTE_KEY, nn);
@@ -191,7 +197,7 @@ public class NameNodeHttpServer {
   }
   
   private static Map<String, String> getAuthFilterParams(Configuration conf,
-      String hostname) throws IOException {
+      String hostname, String httpKeytab) throws IOException {
     Map<String, String> params = new HashMap<String, String>();
     // Select configs beginning with 'dfs.web.authentication.'
     Iterator<Map.Entry<String, String>> iterator = conf.iterator();
@@ -214,8 +220,6 @@ public class NameNodeHttpServer {
           DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY +
           "' is not set.");
     }
-    String httpKeytab = conf.get(DFSUtil.getSpnegoKeytabKey(conf,
-        DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY));
     if (httpKeytab != null && !httpKeytab.isEmpty()) {
       params.put(
           DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
@@ -287,6 +291,15 @@ public class NameNodeHttpServer {
     httpServer.setAttribute(STARTUP_PROGRESS_ATTRIBUTE_KEY, prog);
   }
 
+  /**
+   * Sets the aliasmap URI.
+   *
+   * @param aliasMap the alias map used.
+   */
+  void setAliasMap(InMemoryAliasMap aliasMap) {
+    httpServer.setAttribute(ALIASMAP_ATTRIBUTE_KEY, aliasMap);
+  }
+
   private static void setupServlets(HttpServer2 httpServer, Configuration conf) {
     httpServer.addInternalServlet("startupProgress",
         StartupProgressServlet.PATH_SPEC, StartupProgressServlet.class);
@@ -307,8 +320,17 @@ public class NameNodeHttpServer {
     return (NameNode)context.getAttribute(NAMENODE_ATTRIBUTE_KEY);
   }
 
+  public static TokenVerifier
+      getTokenVerifierFromContext(ServletContext context) {
+    return (TokenVerifier) context.getAttribute(NAMENODE_ATTRIBUTE_KEY);
+  }
+
   static Configuration getConfFromContext(ServletContext context) {
     return (Configuration)context.getAttribute(JspHelper.CURRENT_CONF);
+  }
+
+  static InMemoryAliasMap getAliasMapFromContext(ServletContext context) {
+    return (InMemoryAliasMap) context.getAttribute(ALIASMAP_ATTRIBUTE_KEY);
   }
 
   public static InetSocketAddress getNameNodeAddressFromContext(

@@ -32,7 +32,10 @@
     {{#if model.apps}}
       {{em-table columns=columns rows=model.apps  definition=tableDefinitio}}
     {{else}}
-      <h4 align = "center">Could not find any applications from this cluster</h4>
+      <br>
+      <div class="panel panel-default">
+        <h4 align = "center">Could not find any applications from this cluster</h4>
+      </div>
     {{/if}}
   </div>
 </div>

@@ -96,19 +96,6 @@
 # section as to why....
 export HADOOP_OS_TYPE=${HADOOP_OS_TYPE:-$(uname -s)}
 
-
-# Under certain conditions, Java on OS X will throw SCDynamicStore errors
-# in the system logs.
-# See HADOOP-8719 for more information.  If one needs Kerberos
-# support on OS X, one will want to change/remove this extra bit.
-case ${HADOOP_OS_TYPE} in
-  Darwin*)
-    export HADOOP_OPTS="${HADOOP_OPTS} -Djava.security.krb5.realm= "
-    export HADOOP_OPTS="${HADOOP_OPTS} -Djava.security.krb5.kdc= "
-    export HADOOP_OPTS="${HADOOP_OPTS} -Djava.security.krb5.conf= "
-  ;;
-esac
-
 # Extra Java runtime options for some Hadoop commands
 # and clients (i.e., hdfs dfs -blah).  These get appended to HADOOP_OPTS for
 # such commands.  In most cases, # this should be left empty and
@@ -437,3 +424,16 @@ esac
 #
 # For example, to limit who can execute the namenode command,
 # export HDFS_NAMENODE_USER=hdfs
+
+
+###
+# Registry DNS specific parameters
+###
+# For privileged registry DNS, user to run as after dropping privileges
+# This will replace the hadoop.id.str Java property in secure mode.
+# export HADOOP_REGISTRYDNS_SECURE_USER=yarn
+
+# Supplemental options for privileged registry DNS
+# By default, Hadoop uses jsvc which needs to know to launch a
+# server jvm.
+# export HADOOP_REGISTRYDNS_SECURE_EXTRA_OPTS="-jvm server"

@@ -17,20 +17,36 @@
 
 set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
+RESULT_DIR=result
+#delete previous results
+rm -rf "${DIR:?}/$RESULT_DIR"
+mkdir -p "$DIR/$RESULT_DIR"
+#Should be writeable from the docker containers where user is different.
+chmod ogu+w "$DIR/$RESULT_DIR"
 
 execute_tests(){
-  COMPOSE_FILE=$DIR/../compose/$1/docker-compose.yaml
+  COMPOSE_DIR=$1
+  COMPOSE_FILE=$DIR/../compose/$COMPOSE_DIR/docker-compose.yaml
   TESTS=$2
-  echo "Executing test ${TESTS[*]} with $COMPOSE_FILE"
+  echo "-------------------------------------------------"
+  echo "Executing test(s): [${TESTS[*]}]"
+  echo ""
+  echo "  Cluster type:      $COMPOSE_DIR"
+  echo "  Compose file:      $COMPOSE_FILE"
+  echo "  Output dir:        $DIR/$RESULT_DIR"
+  echo "  Command to rerun:  ./test.sh --keep --env $COMPOSE_DIR $TESTS"
+  echo "-------------------------------------------------"
   docker-compose -f "$COMPOSE_FILE" down
   docker-compose -f "$COMPOSE_FILE" up -d
-  docker-compose -f "$COMPOSE_FILE" exec datanode sudo apt-get update
-  docker-compose -f "$COMPOSE_FILE" exec datanode sudo apt-get install -y python-pip
-  docker-compose -f "$COMPOSE_FILE" exec datanode sudo pip install robotframework
+  echo "Waiting 30s for cluster start up..."
+  sleep 30
   for TEST in "${TESTS[@]}"; do
+     TITLE="Ozone $TEST tests with $COMPOSE_DIR cluster"
      set +e
-     docker-compose -f "$COMPOSE_FILE" exec datanode python -m robot "smoketest/$TEST"
+     OUTPUT_NAME="$COMPOSE_DIR-${TEST//\//_}"
+	  docker-compose -f "$COMPOSE_FILE" exec ozoneManager python -m robot --log NONE --report NONE "${OZONE_ROBOT_OPTS[@]}" --output "smoketest/$RESULT_DIR/robot-$OUTPUT_NAME.xml" --logtitle "$TITLE" --reporttitle "$TITLE" "smoketest/$TEST"
      set -e
+     docker-compose -f "$COMPOSE_FILE" logs > "$DIR/$RESULT_DIR/docker-$OUTPUT_NAME.log"
   done
   if [ "$KEEP_RUNNING" = false ]; then
      docker-compose -f "$COMPOSE_FILE" down
@@ -95,8 +111,13 @@ if [ "$RUN_ALL" = true ]; then
    execute_tests ozone "${DEFAULT_TESTS[@]}"
    TESTS=("ozonefs")
    execute_tests ozonefs "${TESTS[@]}"
+   TESTS=("ozone-hdfs")
+   execute_tests ozone-hdfs "${DEFAULT_TESTS[@]}"
    TESTS=("s3")
    execute_tests ozones3 "${TESTS[@]}"
 else
    execute_tests "$DOCKERENV" "${POSITIONAL[@]}"
 fi
+
+#Generate the combined output and return with the right exit code (note: robot = execute test, rebot = generate output)
+docker run --rm -it -v "$DIR/..:/opt/hadoop" apache/hadoop-runner rebot -d "smoketest/$RESULT_DIR" "smoketest/$RESULT_DIR/robot-*.xml"

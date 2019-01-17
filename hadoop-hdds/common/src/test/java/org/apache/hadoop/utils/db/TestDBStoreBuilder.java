@@ -124,14 +124,14 @@ public class TestDBStoreBuilder {
         .addTable("First")
         .addTable("Second")
         .build()) {
-      try (Table firstTable = dbStore.getTable("First")) {
+      try (Table<byte[], byte[]> firstTable = dbStore.getTable("First")) {
         byte[] key =
             RandomStringUtils.random(9).getBytes(StandardCharsets.UTF_8);
         byte[] value =
             RandomStringUtils.random(9).getBytes(StandardCharsets.UTF_8);
         firstTable.put(key, value);
         byte[] temp = firstTable.get(key);
-        Arrays.equals(value, temp);
+        Assert.assertTrue(Arrays.equals(value, temp));
       }
 
       try (Table secondTable = dbStore.getTable("Second")) {
@@ -154,14 +154,14 @@ public class TestDBStoreBuilder {
         .addTable("Second")
         .setProfile(DBProfile.DISK)
         .build()) {
-      try (Table firstTable = dbStore.getTable("First")) {
+      try (Table<byte[], byte[]> firstTable = dbStore.getTable("First")) {
         byte[] key =
             RandomStringUtils.random(9).getBytes(StandardCharsets.UTF_8);
         byte[] value =
             RandomStringUtils.random(9).getBytes(StandardCharsets.UTF_8);
         firstTable.put(key, value);
         byte[] temp = firstTable.get(key);
-        Arrays.equals(value, temp);
+        Assert.assertTrue(Arrays.equals(value, temp));
       }
 
       try (Table secondTable = dbStore.getTable("Second")) {

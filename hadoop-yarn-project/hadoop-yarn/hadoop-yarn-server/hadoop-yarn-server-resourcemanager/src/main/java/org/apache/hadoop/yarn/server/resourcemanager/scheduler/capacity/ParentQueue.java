@@ -911,6 +911,10 @@ public class ParentQueue extends AbstractCSQueue {
 
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
           this, labelManager, null);
+      // Update configured capacity/max-capacity for default partition only
+      CSQueueUtils.updateConfiguredCapacityMetrics(resourceCalculator,
+          labelManager.getResourceByLabel(null, clusterResource),
+          RMNodeLabelsManager.NO_LABEL, this);
     } finally {
       writeLock.unlock();
     }
@@ -1027,7 +1031,7 @@ public class ParentQueue extends AbstractCSQueue {
   private Resource getMinResourceNormalized(String name, Map<String, Float> effectiveMinRatio,
       Resource minResource) {
     Resource ret = Resource.newInstance(minResource);
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       ResourceInformation nResourceInformation = minResource
           .getResourceInformation(i);
@@ -1051,7 +1055,7 @@ public class ParentQueue extends AbstractCSQueue {
       Resource configuredMinResources, Resource numeratorForMinRatio) {
     Map<String, Float> effectiveMinRatioPerResource = new HashMap<>();
     if (numeratorForMinRatio != null) {
-      int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+      int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
       for (int i = 0; i < maxLength; i++) {
         ResourceInformation nResourceInformation = numeratorForMinRatio
             .getResourceInformation(i);

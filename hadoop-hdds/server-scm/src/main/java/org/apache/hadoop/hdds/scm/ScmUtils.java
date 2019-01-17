@@ -19,8 +19,8 @@
 package org.apache.hadoop.hdds.scm;
 
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
+import org.apache.hadoop.hdds.scm.chillmode.Precheck;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
-import org.apache.hadoop.hdds.scm.server.Precheck;
 
 /**
  * SCM utility class.

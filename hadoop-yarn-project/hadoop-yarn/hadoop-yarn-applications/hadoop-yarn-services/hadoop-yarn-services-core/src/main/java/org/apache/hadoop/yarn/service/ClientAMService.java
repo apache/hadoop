@@ -35,6 +35,8 @@ import org.apache.hadoop.yarn.proto.ClientAMProtocol.CancelUpgradeResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.ComponentCountProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.DecommissionCompInstancesRequestProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.DecommissionCompInstancesResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetCompInstancesRequestProto;
@@ -47,7 +49,7 @@ import org.apache.hadoop.yarn.proto.ClientAMProtocol.StopRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.StopResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.UpgradeServiceRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.UpgradeServiceResponseProto;
-import org.apache.hadoop.yarn.service.api.records.Container;
+import org.apache.hadoop.yarn.service.api.records.ComponentContainers;
 import org.apache.hadoop.yarn.service.component.ComponentEvent;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEvent;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType;
@@ -60,6 +62,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
 
+import static org.apache.hadoop.yarn.service.component.ComponentEventType.DECOMMISSION_INSTANCE;
 import static org.apache.hadoop.yarn.service.component.ComponentEventType.FLEX;
 
 public class ClientAMService extends AbstractService
@@ -205,10 +208,11 @@ public class ClientAMService extends AbstractService
   @Override
   public GetCompInstancesResponseProto getCompInstances(
       GetCompInstancesRequestProto request) throws IOException {
-    List<Container> containers = FilterUtils.filterInstances(context, request);
+    List<ComponentContainers> containers = FilterUtils.filterInstances(context,
+        request);
     return GetCompInstancesResponseProto.newBuilder().setCompInstances(
-        ServiceApiUtil.CONTAINER_JSON_SERDE.toJson(containers.toArray(
-            new Container[containers.size()]))).build();
+        ServiceApiUtil.COMP_CONTAINERS_JSON_SERDE.toJson(containers.toArray(
+            new ComponentContainers[containers.size()]))).build();
   }
 
   @Override
@@ -219,5 +223,22 @@ public class ClientAMService extends AbstractService
     ServiceEvent event = new ServiceEvent(ServiceEventType.CANCEL_UPGRADE);
     context.scheduler.getDispatcher().getEventHandler().handle(event);
     return CancelUpgradeResponseProto.newBuilder().build();
+  }
+
+  @Override
+  public DecommissionCompInstancesResponseProto decommissionCompInstances(
+      DecommissionCompInstancesRequestProto request)
+      throws IOException, YarnException {
+    if (!request.getCompInstancesList().isEmpty()) {
+      for (String instance : request.getCompInstancesList()) {
+        String componentName = ServiceApiUtil.parseComponentName(instance);
+        ComponentEvent event = new ComponentEvent(componentName,
+            DECOMMISSION_INSTANCE).setInstanceName(instance);
+        context.scheduler.getDispatcher().getEventHandler().handle(event);
+        LOG.info("Decommissioning component {} instance {}", componentName,
+            instance);
+      }
+    }
+    return DecommissionCompInstancesResponseProto.newBuilder().build();
   }
 }

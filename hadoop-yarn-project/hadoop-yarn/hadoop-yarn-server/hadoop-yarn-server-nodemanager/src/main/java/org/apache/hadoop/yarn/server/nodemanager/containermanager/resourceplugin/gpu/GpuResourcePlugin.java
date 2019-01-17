@@ -89,4 +89,9 @@ public class GpuResourcePlugin implements ResourcePlugin {
     return new NMGpuResourceInfo(gpuDeviceInformation, totalGpus,
         assignedGpuDevices);
   }
+
+  @Override
+  public String toString() {
+    return GpuResourcePlugin.class.getName();
+  }
 }

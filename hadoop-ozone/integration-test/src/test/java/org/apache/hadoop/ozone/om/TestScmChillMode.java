@@ -30,11 +30,11 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.chillmode.SCMChillModeManager;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
-import org.apache.hadoop.hdds.scm.server.SCMChillModeManager;
 import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.HddsDatanodeService;
@@ -127,8 +127,7 @@ public class TestScmChillMode {
         new TestStorageContainerManagerHelper(cluster, conf);
     Map<String, OmKeyInfo> keyLocations = helper.createKeys(100, 4096);
     final List<ContainerInfo> containers = cluster
-        .getStorageContainerManager()
-        .getContainerManager().getStateManager().getAllContainers();
+        .getStorageContainerManager().getContainerManager().getContainers();
     GenericTestUtils.waitFor(() -> {
       return containers.size() > 10;
     }, 100, 1000);
@@ -230,7 +229,7 @@ public class TestScmChillMode {
 
   }
 
-  @Test
+  @Test(timeout=300_000)
   public void testSCMChillMode() throws Exception {
     MiniOzoneCluster.Builder clusterBuilder = MiniOzoneCluster.newBuilder(conf)
         .setHbInterval(1000)
@@ -251,8 +250,7 @@ public class TestScmChillMode {
         new TestStorageContainerManagerHelper(miniCluster, conf);
     Map<String, OmKeyInfo> keyLocations = helper.createKeys(100 * 2, 4096);
     final List<ContainerInfo> containers = miniCluster
-        .getStorageContainerManager().getContainerManager()
-        .getStateManager().getAllContainers();
+        .getStorageContainerManager().getContainerManager().getContainers();
     GenericTestUtils.waitFor(() -> {
       return containers.size() > 10;
     }, 100, 1000 * 2);
@@ -268,9 +266,9 @@ public class TestScmChillMode {
         .getStorageContainerManager().getContainerManager();
     containers.forEach(c -> {
       try {
-        mapping.updateContainerState(c.getContainerID(),
+        mapping.updateContainerState(c.containerID(),
             HddsProtos.LifeCycleEvent.FINALIZE);
-        mapping.updateContainerState(c.getContainerID(),
+        mapping.updateContainerState(c.containerID(),
             LifeCycleEvent.CLOSE);
       } catch (IOException e) {
         LOG.info("Failed to change state of open containers.", e);
@@ -348,7 +346,7 @@ public class TestScmChillMode {
         .getStorageContainerManager().getClientProtocolServer();
     assertFalse((scm.getClientProtocolServer()).getChillModeStatus());
     final List<ContainerInfo> containers = scm.getContainerManager()
-        .getStateManager().getAllContainers();
+        .getContainers();
     scm.getEventQueue().fireEvent(SCMEvents.CHILL_MODE_STATUS, true);
     GenericTestUtils.waitFor(() -> {
       return clientProtocolServer.getChillModeStatus();
@@ -362,4 +360,24 @@ public class TestScmChillMode {
             .getContainerWithPipeline(containers.get(0).getContainerID()));
   }
 
+  @Test(timeout = 300_000)
+  public void testSCMChillModeDisabled() throws Exception {
+    cluster.stop();
+
+    // If chill mode is disabled, cluster should not be in chill mode even if
+    // min number of datanodes are not started.
+    conf.setBoolean(HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED, false);
+    conf.setInt(HddsConfigKeys.HDDS_SCM_CHILLMODE_MIN_DATANODE, 3);
+    builder = MiniOzoneCluster.newBuilder(conf)
+        .setHbInterval(1000)
+        .setHbProcessorInterval(500)
+        .setNumDatanodes(1);
+    cluster = builder.build();
+    StorageContainerManager scm = cluster.getStorageContainerManager();
+    assertFalse(scm.isInChillMode());
+
+    // Even on SCM restart, cluster should be out of chill mode immediately.
+    cluster.restartStorageContainerManager();
+    assertFalse(scm.isInChillMode());
+  }
 }

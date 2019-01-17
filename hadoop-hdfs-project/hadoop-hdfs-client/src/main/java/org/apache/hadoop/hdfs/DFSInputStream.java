@@ -90,6 +90,8 @@ import com.google.common.annotations.VisibleForTesting;
 
 import javax.annotation.Nonnull;
 
+import static org.apache.hadoop.hdfs.util.IOUtilsClient.updateReadStatistics;
+
 /****************************************************************
  * DFSInputStream provides bytes from a named file.  It handles
  * negotiation of the namenode and various datanodes as necessary.
@@ -769,6 +771,12 @@ public class DFSInputStream extends FSInputStream
             // got a EOS from reader though we expect more data on it.
             throw new IOException("Unexpected EOS from the reader");
           }
+          updateReadStatistics(readStatistics, result, blockReader);
+          dfsClient.updateFileSystemReadStats(blockReader.getNetworkDistance(),
+              result);
+          if (readStatistics.getBlockType() == BlockType.STRIPED) {
+            dfsClient.updateFileSystemECReadStats(result);
+          }
           return result;
         } catch (ChecksumException ce) {
           throw ce;
@@ -964,19 +972,19 @@ public class DFSInputStream extends FSInputStream
         " No live nodes contain current block ");
     errMsgr.append("Block locations:");
     for (DatanodeInfo datanode : nodes) {
-      errMsgr.append(" ");
-      errMsgr.append(datanode.toString());
+      errMsgr.append(" ")
+          .append(datanode.toString());
     }
     errMsgr.append(" Dead nodes: ");
     for (DatanodeInfo datanode : deadNodes.keySet()) {
-      errMsgr.append(" ");
-      errMsgr.append(datanode.toString());
+      errMsgr.append(" ")
+          .append(datanode.toString());
     }
     if (ignoredNodes != null) {
       errMsgr.append(" Ignored nodes: ");
       for (DatanodeInfo datanode : ignoredNodes) {
-        errMsgr.append(" ");
-        errMsgr.append(datanode.toString());
+        errMsgr.append(" ")
+            .append(datanode.toString());
       }
     }
     return errMsgr.toString();

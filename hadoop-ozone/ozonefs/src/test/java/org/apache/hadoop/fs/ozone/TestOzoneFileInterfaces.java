@@ -23,6 +23,7 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.junit.Before;
@@ -50,6 +51,7 @@ import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.fs.ozone.Constants.OZONE_DEFAULT_USER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -167,12 +169,31 @@ public class TestOzoneFileInterfaces {
     assertTrue("Modification time has not been recorded: " + status,
         status.getModificationTime() > currentTime);
 
+    assertEquals(false, status.isDirectory());
+    assertEquals(FsPermission.getFileDefault(), status.getPermission());
+    verifyOwnerGroup(status);
+
     try (FSDataInputStream inputStream = fs.open(path)) {
       byte[] buffer = new byte[stringLen];
-      inputStream.readFully(0, buffer);
-      String out = new String(buffer, 0, buffer.length);
+      // This read will not change the offset inside the file
+      int readBytes = inputStream.read(0, buffer, 0, buffer.length);
+      String out = new String(buffer, 0, buffer.length, UTF_8);
       assertEquals(data, out);
+      assertEquals(readBytes, buffer.length);
+      assertEquals(0, inputStream.getPos());
+
+      // The following read will change the internal offset
+      readBytes = inputStream.read(buffer, 0, buffer.length);
+      assertEquals(data, out);
+      assertEquals(readBytes, buffer.length);
+      assertEquals(buffer.length, inputStream.getPos());
     }
+  }
+
+  private void verifyOwnerGroup(FileStatus fileStatus) {
+    String owner = getCurrentUser();
+    assertEquals(owner, fileStatus.getOwner());
+    assertEquals(owner, fileStatus.getGroup());
   }
 
 
@@ -186,6 +207,10 @@ public class TestOzoneFileInterfaces {
     FileStatus status = fs.getFileStatus(path);
     assertTrue("The created path is not directory.", status.isDirectory());
 
+    assertEquals(true, status.isDirectory());
+    assertEquals(FsPermission.getDirDefault(), status.getPermission());
+    verifyOwnerGroup(status);
+
     assertEquals(0, status.getLen());
 
     FileStatus[] statusList = fs.listStatus(createPath("/"));
@@ -195,8 +220,6 @@ public class TestOzoneFileInterfaces {
     FileStatus statusRoot = fs.getFileStatus(createPath("/"));
     assertTrue("Root dir (/) is not a directory.", status.isDirectory());
     assertEquals(0, status.getLen());
-
-
   }
 
   @Test
@@ -209,7 +232,7 @@ public class TestOzoneFileInterfaces {
         ozoneFs.pathToKey(new Path("key1/key2")));
 
     assertEquals("key1/key2",
-        ozoneFs.pathToKey(new Path("o3://test1/key1/key2")));
+        ozoneFs.pathToKey(new Path("o3fs://test1/key1/key2")));
   }
 
   private String getCurrentUser() {

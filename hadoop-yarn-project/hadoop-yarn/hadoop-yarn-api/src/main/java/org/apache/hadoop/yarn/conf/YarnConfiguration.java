@@ -541,7 +541,14 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_RESOURCE_TRACKER_CLIENT_THREAD_COUNT =
     RM_PREFIX + "resource-tracker.client.thread-count";
   public static final int DEFAULT_RM_RESOURCE_TRACKER_CLIENT_THREAD_COUNT = 50;
-  
+
+  /** Check IP and hostname resolution during nodemanager registration.*/
+  public static final String RM_NM_REGISTRATION_IP_HOSTNAME_CHECK_KEY =
+      RM_PREFIX + "resource-tracker.nm.ip-hostname-check";
+
+  public static final boolean DEFAULT_RM_NM_REGISTRATION_IP_HOSTNAME_CHECK_KEY =
+      false;
+
   /** The class to use as the resource scheduler.*/
   public static final String RM_SCHEDULER = 
     RM_PREFIX + "scheduler.class";
@@ -1599,6 +1606,28 @@ public class YarnConfiguration extends Configuration {
       NM_PREFIX + "resource-plugins";
 
   /**
+   * This setting controls if pluggable device plugin framework is enabled.
+   * */
+  @Private
+  public static final String NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED =
+      NM_PREFIX + "pluggable-device-framework.enabled";
+
+  /**
+   * The pluggable device plugin framework is disabled by default
+   * */
+  @Private
+  public static final boolean DEFAULT_NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED =
+      false;
+
+  /**
+   * This setting contains vendor plugin class names for
+   * device plugin framework to load. Split by comma
+   * */
+  @Private
+  public static final String NM_PLUGGABLE_DEVICE_FRAMEWORK_DEVICE_CLASSES =
+      NM_PREFIX + "pluggable-device-framework.device-classes";
+
+  /**
    * Prefix for gpu configurations. Work in progress: This configuration
    * parameter may be changed/removed in the future.
    */
@@ -1636,11 +1665,14 @@ public class YarnConfiguration extends Configuration {
   public static final String NVIDIA_DOCKER_V1 = "nvidia-docker-v1";
 
   @Private
+  public static final String NVIDIA_DOCKER_V2 = "nvidia-docker-v2";
+
+  @Private
   public static final String DEFAULT_NM_GPU_DOCKER_PLUGIN_IMPL =
       NVIDIA_DOCKER_V1;
 
   /**
-   * This setting controls end point of nvidia-docker-v1 plugin
+   * This setting controls end point of nvidia-docker-v1 plugin.
    */
   @Private
   public static final String NVIDIA_DOCKER_PLUGIN_V1_ENDPOINT =
@@ -2125,6 +2157,26 @@ public class YarnConfiguration extends Configuration {
       3000;
 
   /**
+   * Specifies what the RM does regarding HTTPS enforcement for communication
+   * with AM Web Servers, as well as generating and providing certificates.
+   * Possible values are:
+   * <ul>
+   *   <li>NONE - the RM will do nothing special.</li>
+   *   <li>LENIENT - the RM will generate and provide a keystore and truststore
+   *   to the AM, which it is free to use for HTTPS in its tracking URL web
+   *   server.  The RM proxy will still allow HTTP connections to AMs that opt
+   *   not to use HTTPS.</li>
+   *   <li>STRICT - this is the same as LENIENT, except that the RM proxy will
+   *   only allow HTTPS connections to AMs; HTTP connections will be blocked
+   *   and result in a warning page to the user.</li>
+   * </ul>
+   */
+  public static final String RM_APPLICATION_HTTPS_POLICY =
+      RM_PREFIX + "application-https.policy";
+
+  public static final String DEFAULT_RM_APPLICATION_HTTPS_POLICY = "NONE";
+
+  /**
    * Interval of time the linux container executor should try cleaning up
    * cgroups entry when cleaning up a container. This is required due to what 
    * it seems a race condition because the SIGTERM/SIGKILL is asynch.
@@ -2173,7 +2225,15 @@ public class YarnConfiguration extends Configuration {
   
   public static final String NM_AUX_SERVICES = 
       NM_PREFIX + "aux-services";
-  
+
+  public static final String NM_AUX_SERVICES_MANIFEST =
+      NM_AUX_SERVICES + ".manifest";
+
+  public static final String NM_AUX_SERVICES_MANIFEST_RELOAD_MS =
+      NM_AUX_SERVICES + ".manifest.reload-ms";
+
+  public static final long DEFAULT_NM_AUX_SERVICES_MANIFEST_RELOAD_MS = 120000;
+
   public static final String NM_AUX_SERVICE_FMT =
       NM_PREFIX + "aux-services.%s.class";
 
@@ -2245,13 +2305,17 @@ public class YarnConfiguration extends Configuration {
   
   /** Keytab for Proxy.*/
   public static final String PROXY_KEYTAB = PROXY_PREFIX + "keytab";
-  
+
   /** The address for the web proxy.*/
   public static final String PROXY_ADDRESS =
     PROXY_PREFIX + "address";
   public static final int DEFAULT_PROXY_PORT = 9099;
   public static final String DEFAULT_PROXY_ADDRESS =
     "0.0.0.0:" + DEFAULT_PROXY_PORT;
+
+  /** Binding address for the web proxy. */
+  public static final String PROXY_BIND_HOST =
+      PROXY_PREFIX + "bind-host";
   
   /**
    * YARN Service Level Authorization
@@ -2632,6 +2696,13 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_TIMELINE_SERVICE_READER_CLASS =
       "org.apache.hadoop.yarn.server.timelineservice.storage" +
           ".HBaseTimelineReaderImpl";
+
+  public static final String TIMELINE_SERVICE_SCHEMA_CREATOR_CLASS =
+      TIMELINE_SERVICE_PREFIX + "schema-creator.class";
+
+  public static final String DEFAULT_TIMELINE_SERVICE_SCHEMA_CREATOR_CLASS =
+      "org.apache.hadoop.yarn.server.timelineservice.storage" +
+          ".HBaseTimelineSchemaCreator";
 
   /**
    * default schema prefix for hbase tables.
@@ -3379,6 +3450,33 @@ public class YarnConfiguration extends Configuration {
       false;
 
   ////////////////////////////////
+  // CSI Volume configs
+  ////////////////////////////////
+  /**
+   * TERMS:
+   * csi-driver: a 3rd party CSI driver which implements the CSI protocol.
+   *   It is provided by the storage system.
+   * csi-driver-adaptor: this is an internal RPC service working
+   *   as a bridge between YARN and a csi-driver.
+   */
+  public static final String NM_CSI_ADAPTOR_PREFIX =
+      NM_PREFIX + "csi-driver-adaptor.";
+  public static final String NM_CSI_DRIVER_PREFIX =
+      NM_PREFIX + "csi-driver.";
+  public static final String NM_CSI_DRIVER_ENDPOINT_SUFFIX =
+      ".endpoint";
+  public static final String NM_CSI_ADAPTOR_ADDRESS_SUFFIX =
+      ".address";
+  /**
+   * One or more socket addresses for csi-adaptor.
+   * Multiple addresses are delimited by ",".
+   */
+  public static final String NM_CSI_ADAPTOR_ADDRESSES =
+      NM_CSI_ADAPTOR_PREFIX + "addresses";
+  public static final String NM_CSI_DRIVER_NAMES =
+      NM_CSI_DRIVER_PREFIX + "names";
+
+  ////////////////////////////////
   // Other Configs
   ////////////////////////////////
 
@@ -3596,6 +3694,12 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_NM_NODE_LABELS_RESYNC_INTERVAL =
       2 * 60 * 1000;
 
+  public static final String NM_NODE_ATTRIBUTES_RESYNC_INTERVAL =
+      NM_NODE_ATTRIBUTES_PREFIX + "resync-interval-ms";
+
+  public static final long DEFAULT_NM_NODE_ATTRIBUTES_RESYNC_INTERVAL =
+      2 * 60 * 1000;
+
   // If -1 is configured then no timer task should be created
   public static final String NM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS =
       NM_NODE_LABELS_PROVIDER_PREFIX + "fetch-interval-ms";
@@ -3773,6 +3877,10 @@ public class YarnConfiguration extends Configuration {
   @Private
   public static final String TIMELINE_SERVICE_COLLECTOR_BIND_HOST =
       TIMELINE_SERVICE_COLLECTOR_PREFIX + "bind-host";
+
+  @Private
+  public static final String TIMELINE_SERVICE_COLLECTOR_BIND_PORT_RANGES =
+      TIMELINE_SERVICE_COLLECTOR_PREFIX + "bind-port-ranges";
 
   @Private
   public static final String TIMELINE_SERVICE_COLLECTOR_WEBAPP_ADDRESS =

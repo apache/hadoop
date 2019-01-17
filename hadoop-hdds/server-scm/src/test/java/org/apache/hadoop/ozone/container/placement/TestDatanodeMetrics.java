@@ -19,9 +19,8 @@ package org.apache.hadoop.ozone.container.placement;
 
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
+
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -30,20 +29,18 @@ import static org.junit.Assert.assertTrue;
  * Tests that test Metrics that support placement.
  */
 public class TestDatanodeMetrics {
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
   @Test
   public void testSCMNodeMetric() {
     SCMNodeStat stat = new SCMNodeStat(100L, 10L, 90L);
     assertEquals((long) stat.getCapacity().get(), 100L);
-    assertEquals((long) stat.getScmUsed().get(), 10L);
-    assertEquals((long) stat.getRemaining().get(), 90L);
+    assertEquals(10L, (long) stat.getScmUsed().get());
+    assertEquals(90L, (long) stat.getRemaining().get());
     SCMNodeMetric metric = new SCMNodeMetric(stat);
 
     SCMNodeStat newStat = new SCMNodeStat(100L, 10L, 90L);
-    assertEquals((long) stat.getCapacity().get(), 100L);
-    assertEquals((long) stat.getScmUsed().get(), 10L);
-    assertEquals((long) stat.getRemaining().get(), 90L);
+    assertEquals(100L, (long) stat.getCapacity().get());
+    assertEquals(10L, (long) stat.getScmUsed().get());
+    assertEquals(90L, (long) stat.getRemaining().get());
 
     SCMNodeMetric newMetric = new SCMNodeMetric(newStat);
     assertTrue(metric.isEqual(newMetric.get()));

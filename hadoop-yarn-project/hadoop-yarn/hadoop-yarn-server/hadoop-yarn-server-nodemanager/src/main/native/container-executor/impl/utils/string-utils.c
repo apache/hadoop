@@ -17,6 +17,9 @@
  */
 #include "util.h"
 
+#include <unistd.h>
+#include <sys/types.h>
+#include <dirent.h>
 #include <limits.h>
 #include <errno.h>
 #include <strings.h>
@@ -179,4 +182,10 @@ char *make_string(const char *fmt, ...) {
     }
   }
   return buf;
+}
+
+int str_ends_with(const char *s, const char *suffix) {
+    size_t slen = strlen(s);
+    size_t suffix_len = strlen(suffix);
+    return suffix_len <= slen && !strcmp(s + slen - suffix_len, suffix);
 }

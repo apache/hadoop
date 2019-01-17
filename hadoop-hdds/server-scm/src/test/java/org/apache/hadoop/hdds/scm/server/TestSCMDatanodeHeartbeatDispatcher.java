@@ -19,6 +19,7 @@ package org.apache.hadoop.hdds.scm.server;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.UUID;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.
@@ -39,6 +40,7 @@ import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .NodeReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.Event;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.apache.hadoop.ozone.protocol.commands.ReregisterCommand;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -61,8 +63,12 @@ public class TestSCMDatanodeHeartbeatDispatcher {
 
     NodeReportProto nodeReport = NodeReportProto.getDefaultInstance();
 
+    NodeManager mockNodeManager = Mockito.mock(NodeManager.class);
+    Mockito.when(mockNodeManager.isNodeRegistered(Mockito.any()))
+        .thenReturn(true);
+
     SCMDatanodeHeartbeatDispatcher dispatcher =
-        new SCMDatanodeHeartbeatDispatcher(Mockito.mock(NodeManager.class),
+        new SCMDatanodeHeartbeatDispatcher(mockNodeManager,
             new EventPublisher() {
           @Override
           public <PAYLOAD, EVENT_TYPE extends Event<PAYLOAD>> void fireEvent(
@@ -99,8 +105,13 @@ public class TestSCMDatanodeHeartbeatDispatcher {
     CommandStatusReportsProto commandStatusReport =
         CommandStatusReportsProto.getDefaultInstance();
 
+    NodeManager mockNodeManager = Mockito.mock(NodeManager.class);
+    Mockito.when(mockNodeManager.isNodeRegistered(Mockito.any()))
+        .thenReturn(true);
+
     SCMDatanodeHeartbeatDispatcher dispatcher =
-        new SCMDatanodeHeartbeatDispatcher(Mockito.mock(NodeManager.class),
+        new SCMDatanodeHeartbeatDispatcher(
+            mockNodeManager,
             new EventPublisher() {
           @Override
           public <PAYLOAD, EVENT_TYPE extends Event<PAYLOAD>> void fireEvent(
@@ -135,4 +146,30 @@ public class TestSCMDatanodeHeartbeatDispatcher {
 
   }
 
+  /**
+   * Asserts scm informs datanodes to re-register on a restart.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testScmHeartbeatAfterRestart() throws Exception {
+
+    NodeManager mockNodeManager = Mockito.mock(NodeManager.class);
+    SCMDatanodeHeartbeatDispatcher dispatcher =
+        new SCMDatanodeHeartbeatDispatcher(
+            mockNodeManager, Mockito.mock(EventPublisher.class));
+
+    DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
+
+    SCMHeartbeatRequestProto heartbeat =
+        SCMHeartbeatRequestProto.newBuilder()
+            .setDatanodeDetails(datanodeDetails.getProtoBufMessage())
+            .build();
+
+    dispatcher.dispatch(heartbeat);
+    // If SCM receives heartbeat from a node after it restarts and the node
+    // is not registered, it should send a Re-Register command back to the node.
+    Mockito.verify(mockNodeManager, Mockito.times(1)).addDatanodeCommand(
+        Mockito.any(UUID.class), Mockito.any(ReregisterCommand.class));
+  }
 }

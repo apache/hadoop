@@ -370,7 +370,7 @@ public class IOUtils {
   }
 
   /**
-   * Return the complete list of files in a directory as strings.<p/>
+   * Return the complete list of files in a directory as strings.<p>
    *
    * This is better than File#listDir because it does not ignore IOExceptions.
    *

@@ -111,7 +111,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  * <i>unknown</i>.</p>
  *
  * <p>Instead of appending to an existing file, by default the sink
- * will create a new file with a suffix of &quot;.&lt;n&gt;&quet;, where
+ * will create a new file with a suffix of &quot;.&lt;n&gt;&quot;, where
  * <i>n</i> is the next lowest integer that isn't already used in a file name,
  * similar to the Hadoop daemon logs.  NOTE: the file with the <b>highest</b>
  * sequence number is the <b>newest</b> file, unlike the Hadoop daemon logs.</p>

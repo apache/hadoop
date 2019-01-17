@@ -808,6 +808,21 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     }
   }
 
+  @Test
+  public void testPutRetainsIsDeletedInParentListing() throws Exception {
+    final Path path = strToPath("/a/b");
+    final FileStatus fileStatus = basicFileStatus(path, 0, false);
+    PathMetadata pm = new PathMetadata(fileStatus);
+    pm.setIsDeleted(true);
+    ms.put(pm);
+    if(!allowMissing()) {
+      final PathMetadata pathMetadata =
+          ms.listChildren(path.getParent()).get(path);
+      assertTrue("isDeleted should be true on the parent listing",
+          pathMetadata.isDeleted());
+    }
+  }
+
   /*
    * Helper functions.
    */

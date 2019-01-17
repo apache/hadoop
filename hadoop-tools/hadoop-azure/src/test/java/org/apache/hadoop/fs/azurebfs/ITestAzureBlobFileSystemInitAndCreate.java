@@ -46,8 +46,7 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
 
   @Test (expected = FileNotFoundException.class)
   public void ensureFilesystemWillNotBeCreatedIfCreationConfigIsNotSet() throws Exception {
-    super.setup();
-    final AzureBlobFileSystem fs = this.getFileSystem();
+    final AzureBlobFileSystem fs = this.createFileSystem();
     FileStatus[] fileStatuses = fs.listStatus(new Path("/"));
   }
 }

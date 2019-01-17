@@ -131,7 +131,7 @@ public final class CallerContext {
 
   /**
    * The thread local current caller context.
-   * <p/>
+   * <p>
    * Internal class for defered singleton idiom.
    * https://en.wikipedia.org/wiki/Initialization_on_demand_holder_idiom
    */

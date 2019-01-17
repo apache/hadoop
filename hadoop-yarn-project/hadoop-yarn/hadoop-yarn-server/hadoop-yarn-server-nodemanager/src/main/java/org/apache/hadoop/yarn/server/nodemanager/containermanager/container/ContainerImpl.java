@@ -172,10 +172,12 @@ public class ContainerImpl implements Container {
   private SlidingWindowRetryPolicy.RetryContext windowRetryContext;
   private SlidingWindowRetryPolicy retryPolicy;
 
+  private String csiVolumesRootDir;
   private String workDir;
   private String logDir;
   private String host;
   private String ips;
+  private String exposedPorts;
   private volatile ReInitializationContext reInitContext;
   private volatile boolean isReInitializing = false;
   private volatile boolean isMarkeForKilling = false;
@@ -857,6 +859,7 @@ public class ContainerImpl implements Container {
           Arrays.asList(ips.split(",")));
       status.setHost(host);
       status.setContainerSubState(getContainerSubState());
+      status.setExposedPorts(exposedPorts);
       return status;
     } finally {
       this.readLock.unlock();
@@ -935,9 +938,30 @@ public class ContainerImpl implements Container {
   }
 
   @Override
+  public String getCsiVolumesRootDir() {
+    return csiVolumesRootDir;
+  }
+
+  @Override
+  public void setCsiVolumesRootDir(String volumesRootDir) {
+    this.csiVolumesRootDir = volumesRootDir;
+  }
+
+  private void clearIpAndHost() {
+    LOG.info("{} clearing ip and host", containerId);
+    this.ips = null;
+    this.host = null;
+  }
+
+  @Override
   public void setIpAndHost(String[] ipAndHost) {
-    this.ips = ipAndHost[0];
-    this.host = ipAndHost[1];
+    try {
+      this.writeLock.lock();
+      this.ips = ipAndHost[0];
+      this.host = ipAndHost[1];
+    } finally {
+      this.writeLock.unlock();
+    }
   }
 
   @Override
@@ -1653,10 +1677,17 @@ public class ContainerImpl implements Container {
 
     private void doRelaunch(final ContainerImpl container,
         int remainingRetryAttempts, final int retryInterval) {
-      LOG.info("Relaunching Container " + container.getContainerId()
-          + ". Remaining retry attempts(after relaunch) : "
-          + remainingRetryAttempts + ". Interval between retries is "
-          + retryInterval + "ms");
+      if (remainingRetryAttempts == ContainerRetryContext.RETRY_FOREVER) {
+        LOG.info("Relaunching Container {}. " +
+                "retry interval {} ms", container.getContainerId(),
+            retryInterval);
+      } else {
+        LOG.info("Relaunching Container {}. " +
+                "remaining retry attempts(after relaunch) {}, " +
+                "retry interval {} ms", container.getContainerId(),
+            remainingRetryAttempts, retryInterval);
+      }
+
       container.wasLaunched  = false;
       container.metrics.endRunningContainer();
       if (retryInterval == 0) {
@@ -1722,7 +1753,11 @@ public class ContainerImpl implements Container {
           + "] for re-initialization !!");
       container.wasLaunched  = false;
       container.metrics.endRunningContainer();
-
+      container.clearIpAndHost();
+      // Remove the container from the resource-monitor. When container
+      // is launched again, it is added back to monitoring service.
+      container.dispatcher.getEventHandler().handle(
+          new ContainerStopMonitoringEvent(container.containerId, true));
       container.launchContext = container.reInitContext.newLaunchContext;
 
       // Re configure the Retry Context
@@ -1887,7 +1922,7 @@ public class ContainerImpl implements Container {
       if (container.containerMetrics != null) {
         container.containerMetrics
             .recordFinishTimeAndExitCode(clock.getTime(), container.exitCode);
-        container.containerMetrics.finished();
+        container.containerMetrics.finished(false);
       }
       container.sendFinishedEvents();
 
@@ -2247,5 +2282,10 @@ public class ContainerImpl implements Container {
         || state == ContainerState.CONTAINER_CLEANEDUP_AFTER_KILL
         || state == ContainerState.EXITED_WITH_FAILURE
         || state == ContainerState.EXITED_WITH_SUCCESS;
+  }
+
+  @Override
+  public void setExposedPorts(String ports) {
+    this.exposedPorts = ports;
   }
 }

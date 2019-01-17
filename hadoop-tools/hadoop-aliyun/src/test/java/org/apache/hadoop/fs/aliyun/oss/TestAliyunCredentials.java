@@ -33,10 +33,6 @@ import java.net.URI;
 
 import static org.apache.hadoop.fs.aliyun.oss.Constants.ACCESS_KEY_ID;
 import static org.apache.hadoop.fs.aliyun.oss.Constants.ACCESS_KEY_SECRET;
-import static org.apache.hadoop.fs.aliyun.oss.Constants.ASSUMED_ROLE_SESSION_NAME;
-import static org.apache.hadoop.fs.aliyun.oss.Constants.ASSUMED_ROLE_STS_ENDPOINT;
-import static org.apache.hadoop.fs.aliyun.oss.Constants.CREDENTIALS_PROVIDER_KEY;
-import static org.apache.hadoop.fs.aliyun.oss.Constants.ROLE_ARN;
 import static org.apache.hadoop.fs.aliyun.oss.Constants.SECURITY_TOKEN;
 
 /**
@@ -67,30 +63,6 @@ public class TestAliyunCredentials extends AbstractFSContractTestBase {
     conf.set(ACCESS_KEY_ID, "accessKeyId");
     conf.set(ACCESS_KEY_SECRET, "");
     conf.set(SECURITY_TOKEN, "token");
-    validateCredential(conf);
-  }
-
-  @Test
-  public void testCredentialMissingRoleArn() throws Throwable {
-    Configuration conf = new Configuration();
-    conf.set(CREDENTIALS_PROVIDER_KEY, AssumedRoleCredentialProvider.NAME);
-    conf.set(ROLE_ARN, "");
-    validateCredential(conf);
-  }
-
-  @Test
-  public void testCredentialMissingStsEndpoint() throws Throwable {
-    Configuration conf = new Configuration();
-    conf.set(CREDENTIALS_PROVIDER_KEY, AssumedRoleCredentialProvider.NAME);
-    conf.set(ASSUMED_ROLE_STS_ENDPOINT, "");
-    validateCredential(conf);
-  }
-
-  @Test
-  public void testCredentialInvalidSessionName() throws Throwable {
-    Configuration conf = new Configuration();
-    conf.set(CREDENTIALS_PROVIDER_KEY, AssumedRoleCredentialProvider.NAME);
-    conf.set(ASSUMED_ROLE_SESSION_NAME, "hadoop oss");
     validateCredential(conf);
   }
 

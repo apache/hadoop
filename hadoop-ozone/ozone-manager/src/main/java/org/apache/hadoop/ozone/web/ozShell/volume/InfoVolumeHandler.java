@@ -18,14 +18,11 @@
 
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
-import java.net.URI;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
-import org.apache.hadoop.ozone.client.OzoneClientException;
+import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
@@ -48,22 +45,11 @@ public class InfoVolumeHandler extends Handler{
   @Override
   public Void call() throws Exception {
 
-    URI ozoneURI = verifyURI(uri);
-    Path path = Paths.get(ozoneURI.getPath());
-    int pathNameCount = path.getNameCount();
-    if (pathNameCount != 1) {
-      String errorMessage;
-      if (pathNameCount < 1) {
-        errorMessage = "Volume name is required to get info of a volume";
-      } else {
-        errorMessage = "Invalid volume name. Delimiters (/) not allowed in " +
-            "volume name";
-      }
-      throw new OzoneClientException(errorMessage);
-    }
+    OzoneAddress address = new OzoneAddress(uri);
+    address.ensureVolumeAddress();
+    OzoneClient client = address.createClient(createOzoneConfiguration());
 
-    // we need to skip the slash in the URI path
-    String volumeName = ozoneURI.getPath().substring(1);
+    String volumeName = address.getVolumeName();
 
     OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
     System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(

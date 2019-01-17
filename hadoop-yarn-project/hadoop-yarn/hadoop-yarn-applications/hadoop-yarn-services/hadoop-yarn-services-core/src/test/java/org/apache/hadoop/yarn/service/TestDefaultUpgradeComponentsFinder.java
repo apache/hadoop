@@ -17,14 +17,15 @@
  */
 package org.apache.hadoop.yarn.service;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.ConfigFile;
+import org.apache.hadoop.yarn.service.api.records.Configuration;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 import static org.junit.Assert.assertEquals;
 
@@ -85,5 +86,38 @@ public class TestDefaultUpgradeComponentsFinder {
     assertEquals("single components needs upgrade",
         expected, finder.findTargetComponentSpecs(currentDef,
             targetDef));
+  }
+
+  @Test
+  public void testChangeInConfigFileProperty() {
+    ConfigFile file = new ConfigFile().srcFile("src").destFile("dest")
+        .type(ConfigFile.TypeEnum.HADOOP_XML);
+
+    Map<String, String> props = new HashMap<>();
+    props.put("k1", "v1");
+    file.setProperties(props);
+
+    Configuration conf = new Configuration().files(Lists.newArrayList(file));
+
+    Service currentDef = TestServiceManager.createBaseDef("test");
+    currentDef.setConfiguration(conf);
+
+    // new spec has changes in config file property
+    file = new ConfigFile().srcFile("src").destFile("dest")
+        .type(ConfigFile.TypeEnum.HADOOP_XML);
+    Map<String, String> changedProps = new HashMap<>();
+    changedProps.put("k1", "v2");
+    file.setProperties(changedProps);
+
+    conf = new Configuration().files(Lists.newArrayList(file));
+
+    Service targetDef =  TestServiceManager.createBaseDef("test");
+    targetDef.setConfiguration(conf);
+
+    List<Component> expected = new ArrayList<>();
+    expected.addAll(targetDef.getComponents());
+
+    assertEquals("all components needs upgrade",
+        expected, finder.findTargetComponentSpecs(currentDef, targetDef));
   }
 }

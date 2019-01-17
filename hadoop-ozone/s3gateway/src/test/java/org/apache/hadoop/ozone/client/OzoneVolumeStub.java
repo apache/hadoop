@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneAcl;
 
 /**
@@ -65,14 +65,25 @@ public class OzoneVolumeStub extends OzoneVolume {
 
   @Override
   public OzoneBucket getBucket(String bucketName) throws IOException {
-    return buckets.get(bucketName);
+    if (buckets.containsKey(bucketName)) {
+      return buckets.get(bucketName);
+    } else {
+      throw new IOException("BUCKET_NOT_FOUND");
+    }
+
   }
 
   @Override
   public Iterator<? extends OzoneBucket> listBuckets(String bucketPrefix) {
     return buckets.values()
         .stream()
-        .filter(bucket -> bucket.getName().startsWith(bucketPrefix))
+        .filter(bucket -> {
+          if (bucketPrefix != null) {
+            return bucket.getName().startsWith(bucketPrefix);
+          } else {
+            return true;
+          }
+        })
         .collect(Collectors.toList())
         .iterator();
   }
@@ -90,6 +101,10 @@ public class OzoneVolumeStub extends OzoneVolume {
 
   @Override
   public void deleteBucket(String bucketName) throws IOException {
-    buckets.remove(bucketName);
+    if (buckets.containsKey(bucketName)) {
+      buckets.remove(bucketName);
+    } else {
+      throw new IOException("BUCKET_NOT_FOUND");
+    }
   }
 }

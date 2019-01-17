@@ -21,6 +21,7 @@
  */
 package org.apache.hadoop.hdds.scm.server;
 
+import com.google.common.collect.Maps;
 import com.google.protobuf.BlockingService;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -35,6 +36,14 @@ import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.ozone.audit.AuditAction;
+import org.apache.hadoop.ozone.audit.AuditEventStatus;
+import org.apache.hadoop.ozone.audit.AuditLogger;
+import org.apache.hadoop.ozone.audit.AuditLoggerType;
+import org.apache.hadoop.ozone.audit.AuditMessage;
+import org.apache.hadoop.ozone.audit.Auditor;
+import org.apache.hadoop.ozone.audit.SCMAction;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
@@ -47,6 +56,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY;
@@ -62,9 +72,13 @@ import static org.apache.hadoop.hdds.scm.server.StorageContainerManager
  * SCM block protocol is the protocol used by Namenode and OzoneManager to get
  * blocks from the SCM.
  */
-public class SCMBlockProtocolServer implements ScmBlockLocationProtocol {
+public class SCMBlockProtocolServer implements
+    ScmBlockLocationProtocol, Auditor {
   private static final Logger LOG =
       LoggerFactory.getLogger(SCMBlockProtocolServer.class);
+
+  private static final AuditLogger AUDIT =
+      new AuditLogger(AuditLoggerType.SCMLOGGER);
 
   private final StorageContainerManager scm;
   private final OzoneConfiguration conf;
@@ -140,7 +154,27 @@ public class SCMBlockProtocolServer implements ScmBlockLocationProtocol {
   public AllocatedBlock allocateBlock(long size, HddsProtos.ReplicationType
       type, HddsProtos.ReplicationFactor factor, String owner) throws
       IOException {
-    return scm.getScmBlockManager().allocateBlock(size, type, factor, owner);
+    Map<String, String> auditMap = Maps.newHashMap();
+    auditMap.put("size", String.valueOf(size));
+    auditMap.put("type", type.name());
+    auditMap.put("factor", factor.name());
+    auditMap.put("owner", owner);
+    boolean auditSuccess = true;
+    try {
+      return scm.getScmBlockManager().allocateBlock(size, type, factor, owner);
+    } catch (Exception ex) {
+      auditSuccess = false;
+      AUDIT.logWriteFailure(
+          buildAuditMessageForFailure(SCMAction.ALLOCATE_BLOCK, auditMap, ex)
+      );
+      throw ex;
+    } finally {
+      if(auditSuccess) {
+        AUDIT.logWriteSuccess(
+            buildAuditMessageForSuccess(SCMAction.ALLOCATE_BLOCK, auditMap)
+        );
+      }
+    }
   }
 
   /**
@@ -155,17 +189,26 @@ public class SCMBlockProtocolServer implements ScmBlockLocationProtocol {
     LOG.info("SCM is informed by OM to delete {} blocks", keyBlocksInfoList
         .size());
     List<DeleteBlockGroupResult> results = new ArrayList<>();
+    Map<String, String> auditMap = Maps.newHashMap();
     for (BlockGroup keyBlocks : keyBlocksInfoList) {
       ScmBlockLocationProtocolProtos.DeleteScmBlockResult.Result resultCode;
       try {
         // We delete blocks in an atomic operation to prevent getting
         // into state like only a partial of blocks are deleted,
         // which will leave key in an inconsistent state.
+        auditMap.put("keyBlockToDelete", keyBlocks.toString());
         scm.getScmBlockManager().deleteBlocks(keyBlocks.getBlockIDList());
         resultCode = ScmBlockLocationProtocolProtos.DeleteScmBlockResult
             .Result.success;
+        AUDIT.logWriteSuccess(
+            buildAuditMessageForSuccess(SCMAction.DELETE_KEY_BLOCK, auditMap)
+        );
       } catch (SCMException scmEx) {
         LOG.warn("Fail to delete block: {}", keyBlocks.getGroupID(), scmEx);
+        AUDIT.logWriteFailure(
+            buildAuditMessageForFailure(SCMAction.DELETE_KEY_BLOCK, auditMap,
+                scmEx)
+        );
         switch (scmEx.getResult()) {
         case CHILL_MODE_EXCEPTION:
           resultCode = ScmBlockLocationProtocolProtos.DeleteScmBlockResult
@@ -182,6 +225,10 @@ public class SCMBlockProtocolServer implements ScmBlockLocationProtocol {
       } catch (IOException ex) {
         LOG.warn("Fail to delete blocks for object key: {}", keyBlocks
             .getGroupID(), ex);
+        AUDIT.logWriteFailure(
+            buildAuditMessageForFailure(SCMAction.DELETE_KEY_BLOCK, auditMap,
+                ex)
+        );
         resultCode = ScmBlockLocationProtocolProtos.DeleteScmBlockResult
             .Result.unknownFailure;
       }
@@ -197,10 +244,55 @@ public class SCMBlockProtocolServer implements ScmBlockLocationProtocol {
 
   @Override
   public ScmInfo getScmInfo() throws IOException {
-    ScmInfo.Builder builder =
-        new ScmInfo.Builder()
-            .setClusterId(scm.getScmStorage().getClusterID())
-            .setScmId(scm.getScmStorage().getScmId());
-    return builder.build();
+    boolean auditSuccess = true;
+    try{
+      ScmInfo.Builder builder =
+          new ScmInfo.Builder()
+              .setClusterId(scm.getScmStorage().getClusterID())
+              .setScmId(scm.getScmStorage().getScmId());
+      return builder.build();
+    } catch (Exception ex) {
+      auditSuccess = false;
+      AUDIT.logReadFailure(
+          buildAuditMessageForFailure(SCMAction.GET_SCM_INFO, null, ex)
+      );
+      throw ex;
+    } finally {
+      if(auditSuccess) {
+        AUDIT.logReadSuccess(
+            buildAuditMessageForSuccess(SCMAction.GET_SCM_INFO, null)
+        );
+      }
+    }
+  }
+
+  @Override
+  public AuditMessage buildAuditMessageForSuccess(
+      AuditAction op, Map<String, String> auditMap) {
+    return new AuditMessage.Builder()
+        .setUser((Server.getRemoteUser() == null) ? null :
+            Server.getRemoteUser().getUserName())
+        .atIp((Server.getRemoteIp() == null) ? null :
+            Server.getRemoteIp().getHostAddress())
+        .forOperation(op.getAction())
+        .withParams(auditMap)
+        .withResult(AuditEventStatus.SUCCESS.toString())
+        .withException(null)
+        .build();
+  }
+
+  @Override
+  public AuditMessage buildAuditMessageForFailure(AuditAction op, Map<String,
+      String> auditMap, Throwable throwable) {
+    return new AuditMessage.Builder()
+        .setUser((Server.getRemoteUser() == null) ? null :
+            Server.getRemoteUser().getUserName())
+        .atIp((Server.getRemoteIp() == null) ? null :
+            Server.getRemoteIp().getHostAddress())
+        .forOperation(op.getAction())
+        .withParams(auditMap)
+        .withResult(AuditEventStatus.FAILURE.toString())
+        .withException(throwable)
+        .build();
   }
 }

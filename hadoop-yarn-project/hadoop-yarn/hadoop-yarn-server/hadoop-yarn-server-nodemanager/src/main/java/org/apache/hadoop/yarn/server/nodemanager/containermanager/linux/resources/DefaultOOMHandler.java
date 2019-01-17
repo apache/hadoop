@@ -34,7 +34,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 
-import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler.CGROUP_FILE_TASKS;
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler.CGROUP_PROCS_FILE;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler.CGROUP_PARAM_MEMORY_MEMSW_USAGE_BYTES;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler.CGROUP_PARAM_MEMORY_OOM_CONTROL;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler.CGROUP_PARAM_MEMORY_USAGE_BYTES;
@@ -116,8 +116,10 @@ public class DefaultOOMHandler implements Runnable {
    * Currently the killing only succeeds for PGIDS.
    *
    * @param container Container to clean up
+   * @return true if the container is killed successfully, false otherwise
    */
-  private void sigKill(Container container) {
+  private boolean sigKill(Container container) {
+    boolean containerKilled = false;
     boolean finished = false;
     try {
       while (!finished) {
@@ -125,7 +127,7 @@ public class DefaultOOMHandler implements Runnable {
             cgroups.getCGroupParam(
                 CGroupsHandler.CGroupController.MEMORY,
                 container.getContainerId().toString(),
-                CGROUP_FILE_TASKS)
+                CGROUP_PROCS_FILE)
                 .split("\n");
         finished = true;
         for (String pid : pids) {
@@ -154,11 +156,17 @@ public class DefaultOOMHandler implements Runnable {
           LOG.debug("Interrupted while waiting for processes to disappear");
         }
       }
+      containerKilled = true;
     } catch (ResourceHandlerException ex) {
+      // the tasks file of the container may not be available because the
+      // container may not have been launched at this point when the root
+      // cgroup is under oom
       LOG.warn(String.format(
           "Cannot list more tasks in container %s to kill.",
           container.getContainerId()));
     }
+
+    return containerKilled;
   }
 
   /**
@@ -216,19 +224,34 @@ public class DefaultOOMHandler implements Runnable {
 
     ArrayList<ContainerCandidate> candidates = new ArrayList<>(0);
     for (Container container : context.getContainers().values()) {
+      if (!container.isRunning()) {
+        // skip containers that are not running yet because killing them
+        // won't release any memory to get us out of OOM.
+        continue;
+        // note even if it is indicated that the container is running from
+        // container.isRunning(), the container process might not have been
+        // running yet. From NM's perspective, a container is running as
+        // soon as the container launch is handed over the container executor
+      }
       candidates.add(
           new ContainerCandidate(container, isContainerOutOfLimit(container)));
     }
     Collections.sort(candidates);
+    if (candidates.isEmpty()) {
+      LOG.warn(
+          "Found no running containers to kill in order to release memory");
+    }
 
-    if (candidates.size() > 0) {
-      ContainerCandidate candidate = candidates.get(0);
-      sigKill(candidate.container);
-      String message = String.format(
-          "container %s killed by elastic cgroups OOM handler.",
-          candidate.container.getContainerId());
-      LOG.warn(message);
-      containerKilled = true;
+    // make sure one container is killed successfully to release memory
+    for(int i = 0; !containerKilled && i < candidates.size(); i++) {
+      ContainerCandidate candidate = candidates.get(i);
+      if (sigKill(candidate.container)) {
+        String message = String.format(
+            "container %s killed by elastic cgroups OOM handler.",
+            candidate.container.getContainerId());
+        LOG.warn(message);
+        containerKilled = true;
+      }
     }
     return containerKilled;
   }

@@ -80,6 +80,13 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <configuration>
+          <excludePackageNames>org.apache.hadoop.yarn.proto:org.apache.hadoop.mapreduce.v2.proto:org.apache.hadoop.mapreduce.v2.hs.proto</excludePackageNames>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 </project>

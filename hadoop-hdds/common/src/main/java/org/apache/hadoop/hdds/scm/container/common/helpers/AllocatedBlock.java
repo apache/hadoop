@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.hdds.scm.container.common.helpers;
 
-import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.client.ContainerBlockID;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 
 /**
  * Allocated block wraps the result returned from SCM#allocateBlock which
@@ -26,54 +27,40 @@ import org.apache.hadoop.hdds.client.BlockID;
  */
 public final class AllocatedBlock {
   private Pipeline pipeline;
-  private BlockID blockID;
-  // Indicates whether the client should create container before writing block.
-  private boolean shouldCreateContainer;
+  private ContainerBlockID containerBlockID;
 
   /**
    * Builder for AllocatedBlock.
    */
   public static class Builder {
     private Pipeline pipeline;
-    private BlockID blockID;
-    private boolean shouldCreateContainer;
+    private ContainerBlockID containerBlockID;
 
     public Builder setPipeline(Pipeline p) {
       this.pipeline = p;
       return this;
     }
 
-    public Builder setBlockID(BlockID blockId) {
-      this.blockID = blockId;
-      return this;
-    }
-
-    public Builder setShouldCreateContainer(boolean shouldCreate) {
-      this.shouldCreateContainer = shouldCreate;
+    public Builder setContainerBlockID(ContainerBlockID blockId) {
+      this.containerBlockID = blockId;
       return this;
     }
 
     public AllocatedBlock build() {
-      return new AllocatedBlock(pipeline, blockID, shouldCreateContainer);
+      return new AllocatedBlock(pipeline, containerBlockID);
     }
   }
 
-  private AllocatedBlock(Pipeline pipeline, BlockID blockID,
-      boolean shouldCreateContainer) {
+  private AllocatedBlock(Pipeline pipeline, ContainerBlockID containerBlockID) {
     this.pipeline = pipeline;
-    this.blockID = blockID;
-    this.shouldCreateContainer = shouldCreateContainer;
+    this.containerBlockID = containerBlockID;
   }
 
   public Pipeline getPipeline() {
     return pipeline;
   }
 
-  public BlockID getBlockID() {
-    return blockID;
-  }
-
-  public boolean getCreateContainer() {
-    return shouldCreateContainer;
+  public ContainerBlockID getBlockID() {
+    return containerBlockID;
   }
 }

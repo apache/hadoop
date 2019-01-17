@@ -68,7 +68,10 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
-class JsonUtilClient {
+/**
+ * Utility methods used in WebHDFS/HttpFS JSON conversion.
+ */
+public class JsonUtilClient {
   static final DatanodeInfo[] EMPTY_DATANODE_INFO_ARRAY = {};
   static final String UNSUPPPORTED_EXCEPTION_STR =
       UnsupportedOperationException.class.getName();
@@ -670,6 +673,17 @@ class JsonUtilClient {
     Boolean copyOnCreateFile = (Boolean) m.get("copyOnCreateFile");
     return new BlockStoragePolicy(id, name, storageTypes, creationFallbacks,
         replicationFallbacks, copyOnCreateFile.booleanValue());
+  }
+
+  public static ErasureCodingPolicy toECPolicy(Map<?, ?> m) {
+    byte id = ((Number) m.get("id")).byteValue();
+    String name = (String) m.get("name");
+    String codec = (String) m.get("codecName");
+    int cellsize = ((Number) m.get("cellSize")).intValue();
+    int dataunits = ((Number) m.get("numDataUnits")).intValue();
+    int parityunits = ((Number) m.get("numParityUnits")).intValue();
+    ECSchema ecs = new ECSchema(codec, dataunits, parityunits);
+    return new ErasureCodingPolicy(name, ecs, cellsize, id);
   }
 
   private static StorageType[] toStorageTypes(List<?> list) {

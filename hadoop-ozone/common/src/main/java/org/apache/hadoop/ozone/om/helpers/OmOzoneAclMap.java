@@ -34,6 +34,7 @@ import java.util.HashMap;
 /**
  * This helper class keeps a map of all user and their permissions.
  */
+@SuppressWarnings("ProtocolBufferOrdinal")
 public class OmOzoneAclMap {
   // per Acl Type user:rights map
   private ArrayList<Map<String, OzoneAclRights>> aclMaps;

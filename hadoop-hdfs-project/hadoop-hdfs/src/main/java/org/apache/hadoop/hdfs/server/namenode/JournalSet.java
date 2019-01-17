@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
@@ -76,7 +77,7 @@ public class JournalSet implements JournalManager {
    * stream, then the stream will be aborted and set to null.
    */
   static class JournalAndStream implements CheckableNameNodeResource {
-    private final JournalManager journal;
+    private JournalManager journal;
     private boolean disabled = false;
     private EditLogOutputStream stream;
     private final boolean required;
@@ -146,7 +147,12 @@ public class JournalSet implements JournalManager {
     void setCurrentStreamForTests(EditLogOutputStream stream) {
       this.stream = stream;
     }
-    
+
+    @VisibleForTesting
+    void setJournalForTests(JournalManager jm) {
+      this.journal = jm;
+    }
+
     JournalManager getManager() {
       return journal;
     }
@@ -691,8 +697,8 @@ public class JournalSet implements JournalManager {
     StringBuilder buf = new StringBuilder();
     for (JournalAndStream jas : journals) {
       if (jas.isActive()) {
-        buf.append(jas.getCurrentStream().getTotalSyncTime());
-        buf.append(" ");
+        buf.append(jas.getCurrentStream().getTotalSyncTime())
+            .append(" ");
       }
     }
     return buf.toString();

@@ -17,12 +17,18 @@
 
 package org.apache.hadoop.ozone;
 
+import java.io.File;
 import java.net.InetSocketAddress;
+import java.util.Collection;
+import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.HddsConfigKeys;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 
-import com.google.common.base.Optional;
 import static org.apache.hadoop.hdds.HddsUtils.getHostNameFromConfigKeys;
 import static org.apache.hadoop.hdds.HddsUtils.getPortNumberFromConfigKeys;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
@@ -30,12 +36,15 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_BIND_HOST_DEFAULT
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTP_BIND_PORT_DEFAULT;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_PORT_DEFAULT;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Stateless helper functions for the server and client side of OM
  * communication.
  */
 public final class OmUtils {
+  public static final Logger LOG = LoggerFactory.getLogger(OmUtils.class);
 
   private OmUtils() {
   }
@@ -51,7 +60,7 @@ public final class OmUtils {
         OZONE_OM_ADDRESS_KEY);
 
     return NetUtils.createSocketAddr(
-        host.or(OZONE_OM_BIND_HOST_DEFAULT) + ":" +
+        host.orElse(OZONE_OM_BIND_HOST_DEFAULT) + ":" +
             getOmRpcPort(conf));
   }
 
@@ -81,7 +90,7 @@ public final class OmUtils {
     // If no port number is specified then we'll just try the defaultBindPort.
     final Optional<Integer> port = getPortNumberFromConfigKeys(conf,
         OZONE_OM_ADDRESS_KEY);
-    return port.or(OZONE_OM_PORT_DEFAULT);
+    return port.orElse(OZONE_OM_PORT_DEFAULT);
   }
 
   public static int getOmRestPort(Configuration conf) {
@@ -89,6 +98,83 @@ public final class OmUtils {
     // HTTP BindPort.
     final Optional<Integer> port =
         getPortNumberFromConfigKeys(conf, OZONE_OM_HTTP_ADDRESS_KEY);
-    return port.or(OZONE_OM_HTTP_BIND_PORT_DEFAULT);
+    return port.orElse(OZONE_OM_HTTP_BIND_PORT_DEFAULT);
+  }
+
+  /**
+   * Get the location where OM should store its metadata directories.
+   * Fall back to OZONE_METADATA_DIRS if not defined.
+   *
+   * @param conf
+   * @return
+   */
+  public static File getOmDbDir(Configuration conf) {
+    final Collection<String> dbDirs = conf.getTrimmedStringCollection(
+        OMConfigKeys.OZONE_OM_DB_DIRS);
+
+    if (dbDirs.size() > 1) {
+      throw new IllegalArgumentException(
+          "Bad configuration setting " + OMConfigKeys.OZONE_OM_DB_DIRS +
+              ". OM does not support multiple metadata dirs currently.");
+    }
+
+    if (dbDirs.size() == 1) {
+      final File dbDirPath = new File(dbDirs.iterator().next());
+      if (!dbDirPath.exists() && !dbDirPath.mkdirs()) {
+        throw new IllegalArgumentException("Unable to create directory " +
+            dbDirPath + " specified in configuration setting " +
+            OMConfigKeys.OZONE_OM_DB_DIRS);
+      }
+      return dbDirPath;
+    }
+
+    LOG.warn("{} is not configured. We recommend adding this setting. " +
+        "Falling back to {} instead.",
+        OMConfigKeys.OZONE_OM_DB_DIRS, HddsConfigKeys.OZONE_METADATA_DIRS);
+    return ServerUtils.getOzoneMetaDirPath(conf);
+  }
+
+  /**
+   * Checks if the OM request is read only or not.
+   * @param omRequest OMRequest proto
+   * @return True if its readOnly, false otherwise.
+   */
+  public static boolean isReadOnly(
+      OzoneManagerProtocolProtos.OMRequest omRequest) {
+    OzoneManagerProtocolProtos.Type cmdType = omRequest.getCmdType();
+    switch (cmdType) {
+    case CheckVolumeAccess:
+    case InfoVolume:
+    case ListVolume:
+    case InfoBucket:
+    case ListBuckets:
+    case LookupKey:
+    case ListKeys:
+    case InfoS3Bucket:
+    case ListS3Buckets:
+    case ServiceList:
+      return true;
+    case CreateVolume:
+    case SetVolumeProperty:
+    case DeleteVolume:
+    case CreateBucket:
+    case SetBucketProperty:
+    case DeleteBucket:
+    case CreateKey:
+    case RenameKey:
+    case DeleteKey:
+    case CommitKey:
+    case AllocateBlock:
+    case CreateS3Bucket:
+    case DeleteS3Bucket:
+    case InitiateMultiPartUpload:
+    case CommitMultiPartUpload:
+    case CompleteMultiPartUpload:
+    case AbortMultiPartUpload:
+      return false;
+    default:
+      LOG.error("CmdType {} is not categorized as readOnly or not.", cmdType);
+      return false;
+    }
   }
 }

@@ -22,32 +22,44 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import javax.management.MBeanServer;
 import java.io.File;
 import java.lang.management.ManagementFactory;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 /**
  * Test the JMX interface for the rocksdb metastore implementation.
  */
 public class TestRocksDBStoreMBean {
+  
+  private Configuration conf;
+  
+  @Before
+  public void init() throws Exception {
+    conf = new OzoneConfiguration();
+
+    conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL,
+        OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_ROCKSDB);
+  }
+  
 
   @Test
   public void testJmxBeans() throws Exception {
     File testDir =
         GenericTestUtils.getTestDir(getClass().getSimpleName() + "-withstat");
 
-    Configuration conf = new OzoneConfiguration();
-    conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL,
-        OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_ROCKSDB);
+    conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_ROCKSDB_STATISTICS, "ALL");
 
     RocksDBStore metadataStore =
         (RocksDBStore) MetadataStoreBuilder.newBuilder().setConf(conf)
             .setCreateIfMissing(true).setDbFile(testDir).build();
 
     for (int i = 0; i < 10; i++) {
-      metadataStore.put("key".getBytes(), "value".getBytes());
+      metadataStore.put("key".getBytes(UTF_8), "value".getBytes(UTF_8));
     }
 
     MBeanServer platformMBeanServer =
@@ -72,9 +84,6 @@ public class TestRocksDBStoreMBean {
     File testDir = GenericTestUtils
         .getTestDir(getClass().getSimpleName() + "-withoutstat");
 
-    Configuration conf = new OzoneConfiguration();
-    conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL,
-        OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_ROCKSDB);
     conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_ROCKSDB_STATISTICS,
         OzoneConfigKeys.OZONE_METADATA_STORE_ROCKSDB_STATISTICS_OFF);
 

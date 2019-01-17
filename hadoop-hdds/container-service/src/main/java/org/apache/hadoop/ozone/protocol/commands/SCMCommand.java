@@ -49,7 +49,7 @@ public abstract class SCMCommand<T extends GeneratedMessage> implements
    * Gets the protobuf message of this object.
    * @return A protobuf message.
    */
-  public abstract byte[] getProtoBufMessage();
+  public abstract T getProto();
 
   /**
    * Gets the commandId of this object.

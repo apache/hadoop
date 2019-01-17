@@ -37,7 +37,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * and returns the instance.</p>
  * 
  * <p>Example:</p>
- * <p><blockquote><pre>
+ * <blockquote><pre>
  *     public class MyWritable implements Writable {
  *       // Some data
  *       private int counter;
@@ -62,7 +62,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  *         return w;
  *       }
  *     }
- * </pre></blockquote></p>
+ * </pre></blockquote>
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable

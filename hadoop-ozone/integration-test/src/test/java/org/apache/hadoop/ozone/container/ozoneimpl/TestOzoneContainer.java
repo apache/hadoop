@@ -28,12 +28,15 @@ import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.Timeout;
+import org.mockito.Mockito;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -66,13 +69,18 @@ public class TestOzoneContainer {
       // independently in our test path.
       Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline();
       conf.set(HDDS_DATANODE_DIR_KEY, tempFolder.getRoot().getPath());
-      conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT, pipeline.getLeader()
+      conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
+          pipeline.getFirstNode()
               .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue());
       conf.setBoolean(
           OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, false);
 
-      container = new OzoneContainer(TestUtils.randomDatanodeDetails(),
-          conf, null);
+      DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
+      StateContext context = Mockito.mock(StateContext.class);
+      DatanodeStateMachine dsm = Mockito.mock(DatanodeStateMachine.class);
+      Mockito.when(dsm.getDatanodeDetails()).thenReturn(datanodeDetails);
+      Mockito.when(context.getParent()).thenReturn(dsm);
+      container = new OzoneContainer(datanodeDetails, conf, context);
       //Setting scmId, as we start manually ozone container.
       container.getDispatcher().setScmId(UUID.randomUUID().toString());
       container.start();
@@ -108,7 +116,7 @@ public class TestOzoneContainer {
       Pipeline pipeline =
           ContainerTestHelper.createSingleNodePipeline();
       conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
-          pipeline.getLeader()
+          pipeline.getFirstNode()
               .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue());
 
       cluster = MiniOzoneCluster.newBuilder(conf)
@@ -467,7 +475,7 @@ public class TestOzoneContainer {
             client.getPipeline(), blockID, 1024);
 
         CompletableFuture<ContainerProtos.ContainerCommandResponseProto>
-            response = client.sendCommandAsync(smallFileRequest);
+            response = client.sendCommandAsync(smallFileRequest).getResponse();
         computeResults.add(response);
       }
 
@@ -514,7 +522,7 @@ public class TestOzoneContainer {
     Pipeline pipeline =
         ContainerTestHelper.createSingleNodePipeline();
     conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
-        pipeline.getLeader()
+        pipeline.getFirstNode()
             .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue());
 
     // This client talks to ozone container via datanode.

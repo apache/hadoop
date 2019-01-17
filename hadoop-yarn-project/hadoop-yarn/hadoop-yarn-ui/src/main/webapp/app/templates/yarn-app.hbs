@@ -60,14 +60,14 @@
               <i class="glyphicon glyphicon-user glyphicon-gray" /> {{model.app.user}}
             </div>
             {{#if model.app.hasFinishedTime}}
-              <div title="Started at {{model.app.startTime}}. &#10; Ran for {{model.app.formattedElapsedTime}}" class="yarn-tooltip">
+              <div title="Started at {{model.app.formattedStartTime}}. &#10; Ran for {{model.app.formattedElapsedTime}}" class="yarn-tooltip">
                 <i class="glyphicon glyphicon-time glyphicon-gray" />
-                Finished at {{model.app.validatedFinishedTs}}
+                Finished at {{model.app.formattedFinishedTime}}
               </div>
             {{else}}
               <div title="Running for {{model.app.formattedElapsedTime}}" class="yarn-tooltip">
                 <i class="glyphicon glyphicon-time glyphicon-gray" />
-                Started at {{model.app.startTime}}
+                Started at {{model.app.formattedStartTime}}
               </div>
             {{/if}}
           </div>
@@ -75,21 +75,33 @@
 
         <div class="flex-right">
           <div class="links">
-              {{#if (or isRunningService isKillable)}}
+              {{#if (or (or isServiceDeployedOrRunning isServiceStoppped) isAppKillable)}}
               <div class="btn-group">
                 <button type="button" class="btn btn-unstyled dropdown-toggle" title="Settings"
                   data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="margin-left: -5px;">
                   <i class="glyphicon glyphicon-cog"/> Settings
                 </button>
                 <ul class="dropdown-menu dropdown-menu-right">
-                  {{#if isRunningService}}
+                  {{#if isServiceDeployedOrRunning}}
                     <li>
-                      <a href="#"  {{action "showStopServiceConfirm"}} target="_blank"><i class="glyphicon glyphicon-stop" /> &nbsp;Stop Service</a>
+                      <a href="#"  {{action "showStopServiceConfirm"}} target="_blank">
+                        <i class="glyphicon glyphicon-stop" /> &nbsp;Stop Service
+                      </a>
                     </li>
                     <li>
-                      <a href="#" target="_blank" {{action "showDeleteServiceConfirm"}}><i class="glyphicon glyphicon-trash" /> &nbsp;Delete Service </a>
+                      <a href="#" target="_blank" {{action "showDeleteServiceConfirm"}}>
+                        <i class="glyphicon glyphicon-trash" /> &nbsp;Delete Service
+                      </a>
                     </li>
-                  {{else if isKillable}}
+                  {{/if}}
+                  {{#if isServiceStoppped}}
+                  <li>
+                    <a href="#" target="_blank" {{action "showDeleteServiceConfirm"}}>
+                      <i class="glyphicon glyphicon-trash" /> &nbsp;Delete Service
+                    </a>
+                  </li>
+                  {{/if}}
+                  {{#if isAppKillable}}
                     <li>
                       <a href="#"  {{action "showKillApplicationConfirm"}} target="_blank">
                         <i class="glyphicon glyphicon-stop" />&nbsp;Kill Application

@@ -139,6 +139,10 @@ enum Result {
   CONTAINER_CHECKSUM_ERROR = 33;
   UNKNOWN_CONTAINER_TYPE = 34;
   BLOCK_NOT_COMMITTED = 35;
+  CONTAINER_UNHEALTHY = 36;
+  UNKNOWN_BCSID = 37;
+  BCSID_MISMATCH = 38;
+  CONTAINER_NOT_OPEN = 39;
 }
 
 /**
@@ -147,21 +151,12 @@ enum Result {
 message DatanodeBlockID {
   required int64 containerID = 1;
   required int64 localID = 2;
+  optional uint64 blockCommitSequenceId = 3 [default = 0];
 }
 
 message KeyValue {
   required string key = 1;
   optional string value = 2;
-}
-
-/**
- * Lifecycle states of a container in Datanode.
- */
-enum ContainerLifeCycleState {
-    OPEN = 1;
-    CLOSING = 2;
-    CLOSED = 3;
-    INVALID = 4;
 }
 
 message ContainerCommandRequestProto {
@@ -173,32 +168,32 @@ message ContainerCommandRequestProto {
 
   required   int64 containerID = 3;
   required   string datanodeUuid = 4;
+  optional   string pipelineID = 5;
 
   // One of the following command is available when the corresponding
   // cmdType is set. At the protocol level we allow only
   // one command in each packet.
   // TODO : Upgrade to Protobuf 2.6 or later.
-  optional   CreateContainerRequestProto createContainer = 5;
-  optional   ReadContainerRequestProto readContainer = 6;
-  optional   UpdateContainerRequestProto updateContainer = 7;
-  optional   DeleteContainerRequestProto deleteContainer = 8;
-  optional   ListContainerRequestProto listContainer = 9;
-  optional   CloseContainerRequestProto closeContainer = 10;
+  optional   CreateContainerRequestProto createContainer = 6;
+  optional   ReadContainerRequestProto readContainer = 7;
+  optional   UpdateContainerRequestProto updateContainer = 8;
+  optional   DeleteContainerRequestProto deleteContainer = 9;
+  optional   ListContainerRequestProto listContainer = 10;
+  optional   CloseContainerRequestProto closeContainer = 11;
 
-  optional   PutBlockRequestProto putBlock = 11;
-  optional   GetBlockRequestProto getBlock = 12;
-  optional   DeleteBlockRequestProto deleteBlock = 13;
-  optional   ListBlockRequestProto listBlock = 14;
+  optional   PutBlockRequestProto putBlock = 12;
+  optional   GetBlockRequestProto getBlock = 13;
+  optional   DeleteBlockRequestProto deleteBlock = 14;
+  optional   ListBlockRequestProto listBlock = 15;
 
-  optional   ReadChunkRequestProto readChunk = 15;
-  optional   WriteChunkRequestProto writeChunk = 16;
-  optional   DeleteChunkRequestProto deleteChunk = 17;
-  optional   ListChunkRequestProto listChunk = 18;
+  optional   ReadChunkRequestProto readChunk = 16;
+  optional   WriteChunkRequestProto writeChunk = 17;
+  optional   DeleteChunkRequestProto deleteChunk = 18;
+  optional   ListChunkRequestProto listChunk = 19;
 
-  optional   PutSmallFileRequestProto putSmallFile = 19;
-  optional   GetSmallFileRequestProto getSmallFile = 20;
-
-  optional   GetCommittedBlockLengthRequestProto getCommittedBlockLength = 21;
+  optional   PutSmallFileRequestProto putSmallFile = 20;
+  optional   GetSmallFileRequestProto getSmallFile = 21;
+  optional   GetCommittedBlockLengthRequestProto getCommittedBlockLength = 22;
 }
 
 message ContainerCommandResponseProto {
@@ -231,14 +226,22 @@ message ContainerCommandResponseProto {
   optional GetCommittedBlockLengthResponseProto getCommittedBlockLength = 21;
 }
 
-message ContainerData {
+message ContainerDataProto {
+  enum State {
+    OPEN = 1;
+    CLOSING = 2;
+    QUASI_CLOSED =3;
+    CLOSED = 4;
+    UNHEALTHY = 5;
+    INVALID = 6;
+  }
   required int64 containerID = 1;
   repeated KeyValue metadata = 2;
   optional string containerPath = 4;
   optional int64 bytesUsed = 6;
   optional int64 size = 7;
   optional int64 blockCount = 8;
-  optional ContainerLifeCycleState state = 9 [default = OPEN];
+  optional State state = 9 [default = OPEN];
   optional ContainerType containerType = 10 [default = KeyValueContainer];
 }
 
@@ -260,7 +263,7 @@ message  ReadContainerRequestProto {
 }
 
 message  ReadContainerResponseProto {
-  optional ContainerData containerData = 1;
+  optional ContainerDataProto containerData = 1;
 }
 
 message  UpdateContainerRequestProto {
@@ -283,7 +286,7 @@ message  ListContainerRequestProto {
 }
 
 message  ListContainerResponseProto {
-  repeated ContainerData containerData = 1;
+  repeated ContainerDataProto containerData = 1;
 }
 
 message CloseContainerRequestProto {
@@ -352,21 +355,28 @@ message ChunkInfo {
   required string chunkName = 1;
   required uint64 offset = 2;
   required uint64 len = 3;
-  optional string checksum = 4;
-  repeated KeyValue metadata = 5;
+  repeated KeyValue metadata = 4;
+  required ChecksumData checksumData =5;
 }
 
-enum Stage {
-    WRITE_DATA = 1;
-    COMMIT_DATA = 2;
-    COMBINED = 3;
+message ChecksumData {
+  required ChecksumType type = 1;
+  required uint32 bytesPerChecksum = 2;
+  repeated bytes checksums = 3;
+}
+
+enum ChecksumType {
+    NONE = 1;
+    CRC32 = 2;
+    CRC32C = 3;
+    SHA256 = 4;
+    MD5 = 5;
 }
 
 message  WriteChunkRequestProto  {
   required DatanodeBlockID blockID = 1;
   required ChunkInfo chunkData = 2;
   optional bytes data = 3;
-  optional Stage stage = 4 [default = COMBINED];
 }
 
 message  WriteChunkResponseProto {
@@ -412,7 +422,7 @@ message PutSmallFileRequestProto {
 
 
 message PutSmallFileResponseProto {
-
+  required GetCommittedBlockLengthResponseProto committedBlockLength = 1;
 }
 
 message GetSmallFileRequestProto {
