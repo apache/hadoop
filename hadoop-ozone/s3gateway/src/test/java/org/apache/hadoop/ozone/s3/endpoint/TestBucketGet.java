@@ -212,6 +212,53 @@ public class TestBucketGet {
   }
 
   @Test
+  public void listWithContinuationTokenDirBreak()
+      throws OS3Exception, IOException {
+
+    BucketEndpoint getBucket = new BucketEndpoint();
+
+    OzoneClient ozoneClient =
+        createClientWithKeys(
+            "test/dir1/file1",
+            "test/dir1/file2",
+            "test/dir1/file3",
+            "test/dir2/file4",
+            "test/dir2/file5",
+            "test/dir2/file6",
+            "test/dir3/file7",
+            "test/file8");
+
+    getBucket.setClient(ozoneClient);
+
+    int maxKeys = 2;
+
+    ListObjectResponse getBucketResponse;
+
+    getBucketResponse =
+        (ListObjectResponse) getBucket.list("b1", "/", null, null, maxKeys,
+            "test/", null, null, null, null).getEntity();
+
+    Assert.assertEquals(0, getBucketResponse.getContents().size());
+    Assert.assertEquals(2, getBucketResponse.getCommonPrefixes().size());
+    Assert.assertEquals("test/dir1/",
+        getBucketResponse.getCommonPrefixes().get(0).getPrefix());
+    Assert.assertEquals("test/dir2/",
+        getBucketResponse.getCommonPrefixes().get(1).getPrefix());
+
+    getBucketResponse =
+        (ListObjectResponse) getBucket.list("b1", "/", null, null, maxKeys,
+            "test/", null, getBucketResponse.getNextToken(), null, null)
+            .getEntity();
+    Assert.assertEquals(1, getBucketResponse.getContents().size());
+    Assert.assertEquals(1, getBucketResponse.getCommonPrefixes().size());
+    Assert.assertEquals("test/dir3/",
+        getBucketResponse.getCommonPrefixes().get(0).getPrefix());
+    Assert.assertEquals("test/file8",
+        getBucketResponse.getContents().get(0).getKey());
+
+  }
+
+  @Test
   /**
    * This test is with prefix and delimiter and verify continuation-token
    * behavior.
@@ -237,7 +284,6 @@ public class TestBucketGet {
     Assert.assertTrue(getBucketResponse.isTruncated());
     Assert.assertTrue(getBucketResponse.getCommonPrefixes().size() == 2);
 
-
     // 2nd time
     String continueToken = getBucketResponse.getNextToken();
     getBucketResponse =
@@ -245,7 +291,6 @@ public class TestBucketGet {
             "dir", null, continueToken, null, null).getEntity();
     Assert.assertTrue(getBucketResponse.isTruncated());
     Assert.assertTrue(getBucketResponse.getCommonPrefixes().size() == 2);
-
 
     //3rd time
     continueToken = getBucketResponse.getNextToken();

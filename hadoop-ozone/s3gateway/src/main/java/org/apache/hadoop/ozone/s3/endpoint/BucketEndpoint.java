@@ -46,16 +46,15 @@ import org.apache.hadoop.ozone.s3.endpoint.MultiDeleteResponse.DeletedObject;
 import org.apache.hadoop.ozone.s3.endpoint.MultiDeleteResponse.Error;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
+import org.apache.hadoop.ozone.s3.util.ContinueToken;
+import org.apache.hadoop.ozone.s3.util.S3StorageType;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.ozone.s3.util.S3StorageType;
-import org.apache.hadoop.ozone.s3.util.S3utils;
+import static org.apache.hadoop.ozone.s3.util.S3Consts.ENCODING_TYPE;
 import org.apache.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static org.apache.hadoop.ozone.s3.util.S3Consts.ENCODING_TYPE;
 
 /**
  * Bucket level rest endpoints.
@@ -104,16 +103,17 @@ public class BucketEndpoint extends EndpointBase {
 
     Iterator<? extends OzoneKey> ozoneKeyIterator;
 
-    String decodedToken = S3utils.decodeContinueToken(continueToken);
+    ContinueToken decodedToken =
+        ContinueToken.decodeFromString(continueToken);
 
     if (startAfter != null && continueToken != null) {
       // If continuation token and start after both are provided, then we
       // ignore start After
-      ozoneKeyIterator = bucket.listKeys(prefix, decodedToken);
+      ozoneKeyIterator = bucket.listKeys(prefix, decodedToken.getLastKey());
     } else if (startAfter != null && continueToken == null) {
       ozoneKeyIterator = bucket.listKeys(prefix, startAfter);
     } else if (startAfter == null && continueToken != null){
-      ozoneKeyIterator = bucket.listKeys(prefix, decodedToken);
+      ozoneKeyIterator = bucket.listKeys(prefix, decodedToken.getLastKey());
     } else {
       ozoneKeyIterator = bucket.listKeys(prefix);
     }
@@ -130,6 +130,9 @@ public class BucketEndpoint extends EndpointBase {
     response.setContinueToken(continueToken);
 
     String prevDir = null;
+    if (continueToken != null) {
+      prevDir = decodedToken.getLastDir();
+    }
     String lastKey = null;
     int count = 0;
     while (ozoneKeyIterator.hasNext()) {
@@ -176,7 +179,8 @@ public class BucketEndpoint extends EndpointBase {
       response.setTruncated(false);
     } else if(ozoneKeyIterator.hasNext()) {
       response.setTruncated(true);
-      response.setNextToken(S3utils.generateContinueToken(lastKey));
+      ContinueToken nextToken = new ContinueToken(lastKey, prevDir);
+      response.setNextToken(nextToken.encodeToString());
     } else {
       response.setTruncated(false);
     }
