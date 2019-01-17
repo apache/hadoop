@@ -183,6 +183,10 @@ public final class OmUtils {
       case CommitMultiPartUpload:
       case CompleteMultiPartUpload:
       case AbortMultiPartUpload:
+      case GetS3Secret:
+      case GetDelegationToken:
+      case RenewDelegationToken:
+      case CancelDelegationToken:
         return false;
       default:
         LOG.error("CmdType {} is not categorized as readOnly or not.", cmdType);
