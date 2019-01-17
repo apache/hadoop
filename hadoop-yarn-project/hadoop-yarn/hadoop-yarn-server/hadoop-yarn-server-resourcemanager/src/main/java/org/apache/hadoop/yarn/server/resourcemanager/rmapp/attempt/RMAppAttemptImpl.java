@@ -437,9 +437,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           RMAppAttemptState.FAILED,
           EnumSet.of(
               RMAppAttemptEventType.LAUNCHED,
+              RMAppAttemptEventType.LAUNCH_FAILED,
               RMAppAttemptEventType.EXPIRE,
               RMAppAttemptEventType.KILL,
               RMAppAttemptEventType.FAIL,
+              RMAppAttemptEventType.REGISTERED,
               RMAppAttemptEventType.UNREGISTERED,
               RMAppAttemptEventType.STATUS_UPDATE,
               RMAppAttemptEventType.CONTAINER_ALLOCATED))
@@ -1203,10 +1205,16 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       }
 
       // Set the masterContainer
-      appAttempt.setMasterContainer(amContainerAllocation.getContainers()
-          .get(0));
+      Container amContainer = amContainerAllocation.getContainers().get(0);
       RMContainerImpl rmMasterContainer = (RMContainerImpl)appAttempt.scheduler
-          .getRMContainer(appAttempt.getMasterContainer().getId());
+          .getRMContainer(amContainer.getId());
+      //while one NM is removed, the scheduler will clean the container,the
+      //following CONTAINER_FINISHED event will handle the cleaned container.
+      //so just return RMAppAttemptState.SCHEDULED
+      if (rmMasterContainer == null) {
+        return RMAppAttemptState.SCHEDULED;
+      }
+      appAttempt.setMasterContainer(amContainer);
       rmMasterContainer.setAMContainer(true);
       // The node set in NMTokenSecrentManager is used for marking whether the
       // NMToken has been issued for this node to the AM.
