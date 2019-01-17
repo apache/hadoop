@@ -137,12 +137,14 @@ ENV MAVEN_OPTS -Xms256m -Xmx1536m
 ###
 # Install node js tools for web UI frameowkr
 ###
-RUN apt-get -y install nodejs && \
-    ln -s /usr/bin/nodejs /usr/bin/node && \
-    apt-get -y install npm && \
-    npm config set strict-ssl false && \
-    npm install -g bower && \
-    npm install -g ember-cli
+RUN apt-get -q update \
+    && apt-get install -y --no-install-recommends nodejs npm \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -s /usr/bin/nodejs /usr/bin/node \
+    && npm config set strict-ssl false \
+    && npm install npm@latest -g \
+    && npm install -g jshint
 
 ###
 # Everything past this point is either not needed for testing or breaks Yetus.
