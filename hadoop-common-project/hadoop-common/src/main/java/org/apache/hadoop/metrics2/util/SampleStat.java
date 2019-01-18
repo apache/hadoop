@@ -74,6 +74,21 @@ public class SampleStat {
     return add(1, x);
   }
 
+
+  /**
+   * Add some sample and a partial sum to the running stat and set the iMin & iMax
+   * @param nSamples number of samples
+   * @param x the partial sum
+   * @param iMin minNum
+   * @param iMax maxNum
+   * @return self
+   */
+  public SampleStat add(long nSamples, double x, double iMin, double iMax) {
+    minmax.add(iMin);
+    minmax.add(iMax);
+    return add(nSamples, x);
+  }
+
   /**
    * Add some sample and a partial sum to the running stat.
    * Note, min/max is not evaluated using this method.

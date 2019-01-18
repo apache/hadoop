@@ -114,6 +114,22 @@ public class MutableStat extends MutableMetric {
     setChanged();
   }
 
+
+  /**
+   * Add a number of samples and their sum to the running stat and set the iMin & IMax
+   *
+   * @param numSamples number of samples
+   * @param sum of the samples
+   * @param iMin minNum
+   * @param iMax maxNum
+   */
+  public synchronized void add(long numSamples, long sum, double iMin, double iMax) {
+    intervalStat.add(numSamples, sum, iMin, iMax);
+    minMax.add(iMin);
+    minMax.add(iMax);
+    setChanged();
+  }
+
   /**
    * Add a snapshot to the metric
    * @param value of the metric
