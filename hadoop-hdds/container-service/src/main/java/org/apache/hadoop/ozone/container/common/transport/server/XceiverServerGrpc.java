@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.ozone.container.common.transport.server;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -31,9 +30,6 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.
     StorageContainerException;
-import org.apache.hadoop.hdds.security.token.BlockTokenVerifier;
-import org.apache.hadoop.hdds.security.x509.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
@@ -62,7 +58,7 @@ import java.util.UUID;
  * Creates a Grpc server endpoint that acts as the communication layer for
  * Ozone containers.
  */
-public final class XceiverServerGrpc implements XceiverServerSpi {
+public final class XceiverServerGrpc extends XceiverServer {
   private static final Logger
       LOG = LoggerFactory.getLogger(XceiverServerGrpc.class);
   private int port;
@@ -77,6 +73,7 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
    */
   public XceiverServerGrpc(DatanodeDetails datanodeDetails, Configuration conf,
       ContainerDispatcher dispatcher, BindableService... additionalServices) {
+    super(conf);
     Preconditions.checkNotNull(conf);
 
     this.id = datanodeDetails.getUuid();
@@ -103,33 +100,35 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
         ((NettyServerBuilder) ServerBuilder.forPort(port))
             .maxInboundMessageSize(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE);
 
-    // Populate UGI context via ServerCredentialInterceptor
-    SecurityConfig secConfig = new SecurityConfig(conf);
     ServerCredentialInterceptor credInterceptor =
-        new ServerCredentialInterceptor(
-            new BlockTokenVerifier(secConfig, getCaClient()));
+        new ServerCredentialInterceptor(getBlockTokenVerifier());
     nettyServerBuilder.addService(ServerInterceptors.intercept(
-          new GrpcXceiverService(dispatcher), credInterceptor));
+        new GrpcXceiverService(dispatcher,
+            getSecurityConfig().isBlockTokenEnabled(),
+            getBlockTokenVerifier()), credInterceptor));
+
 
     for (BindableService service : additionalServices) {
       nettyServerBuilder.addService(service);
     }
 
-    if (secConfig.isGrpcTlsEnabled()) {
-      File privateKeyFilePath = secConfig.getServerPrivateKeyFile();
-      File serverCertChainFilePath = secConfig.getServerCertChainFile();
-      File clientCertChainFilePath = secConfig.getClientCertChainFile();
+    if (getSecConfig().isGrpcTlsEnabled()) {
+      File privateKeyFilePath = getSecurityConfig().getServerPrivateKeyFile();
+      File serverCertChainFilePath =
+          getSecurityConfig().getServerCertChainFile();
+      File clientCertChainFilePath =
+          getSecurityConfig().getClientCertChainFile();
       try {
         SslContextBuilder sslClientContextBuilder = SslContextBuilder.forServer(
             serverCertChainFilePath, privateKeyFilePath);
-        if (secConfig.isGrpcMutualTlsRequired() && clientCertChainFilePath
-            != null) {
+        if (getSecurityConfig().isGrpcMutualTlsRequired() &&
+            clientCertChainFilePath != null) {
           // Only needed for mutual TLS
           sslClientContextBuilder.clientAuth(ClientAuth.REQUIRE);
           sslClientContextBuilder.trustManager(clientCertChainFilePath);
         }
         SslContextBuilder sslContextBuilder = GrpcSslContexts.configure(
-            sslClientContextBuilder, secConfig.getGrpcSslProvider());
+            sslClientContextBuilder, getSecurityConfig().getGrpcSslProvider());
         nettyServerBuilder.sslContext(sslContextBuilder.build());
       } catch (Exception ex) {
         LOG.error("Unable to setup TLS for secure datanode GRPC endpoint.", ex);
@@ -137,12 +136,6 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
     }
     server = nettyServerBuilder.build();
     storageContainer = dispatcher;
-  }
-
-  @VisibleForTesting
-  public CertificateClient getCaClient() {
-    // TODO: instantiate CertificateClient
-    return null;
   }
 
   @Override
@@ -173,6 +166,7 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
   @Override
   public void submitRequest(ContainerCommandRequestProto request,
       HddsProtos.PipelineID pipelineID) throws IOException {
+    super.submitRequest(request, pipelineID);
     ContainerProtos.ContainerCommandResponseProto response =
         storageContainer.dispatch(request, null);
     if (response.getResult() != ContainerProtos.Result.SUCCESS) {

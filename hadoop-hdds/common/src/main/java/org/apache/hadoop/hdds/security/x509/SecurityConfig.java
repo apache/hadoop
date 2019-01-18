@@ -36,8 +36,8 @@ import java.time.Duration;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_DEFAULT_KEY_ALGORITHM;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_DEFAULT_KEY_LEN;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_DEFAULT_SECURITY_PROVIDER;
-import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_BLOCK_TOKEN_ENABLED;
-import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_BLOCK_TOKEN_ENABLED_DEFAULT;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_BLOCK_TOKEN_ENABLED;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_BLOCK_TOKEN_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_TLS_ENABLED;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_TLS_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_TLS_PROVIDER;
@@ -98,7 +98,7 @@ public class SecurityConfig {
   private final String publicKeyFileName;
   private final Duration certDuration;
   private final String x509SignatureAlgo;
-  private final boolean grpcBlockTokenEnabled;
+  private final boolean blockTokenEnabled;
   private final String certificateDir;
   private final String certificateFileName;
   private final boolean grpcTlsEnabled;
@@ -147,9 +147,9 @@ public class SecurityConfig {
     this.certificateFileName = this.configuration.get(HDDS_X509_FILE_NAME,
         HDDS_X509_FILE_NAME_DEFAULT);
 
-    this.grpcBlockTokenEnabled = this.configuration.getBoolean(
-        HDDS_GRPC_BLOCK_TOKEN_ENABLED,
-        HDDS_GRPC_BLOCK_TOKEN_ENABLED_DEFAULT);
+    this.blockTokenEnabled = this.configuration.getBoolean(
+        HDDS_BLOCK_TOKEN_ENABLED,
+        HDDS_BLOCK_TOKEN_ENABLED_DEFAULT);
 
     this.grpcTlsEnabled = this.configuration.getBoolean(HDDS_GRPC_TLS_ENABLED,
         HDDS_GRPC_TLS_ENABLED_DEFAULT);
@@ -357,8 +357,8 @@ public class SecurityConfig {
     return this.certDuration;
   }
 
-  public boolean isGrpcBlockTokenEnabled() {
-    return this.grpcBlockTokenEnabled;
+  public boolean isBlockTokenEnabled() {
+    return this.blockTokenEnabled;
   }
 
   /**

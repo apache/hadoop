@@ -120,7 +120,7 @@ public class TestSecureOzoneContainer {
     LOG.info("Test case: requireBlockToken: {} hasBlockToken: {} " +
         "blockTokenExpired: {}.", requireBlockToken, hasBlockToken,
         blockTokeExpired);
-    conf.setBoolean(HddsConfigKeys.HDDS_GRPC_BLOCK_TOKEN_ENABLED,
+    conf.setBoolean(HddsConfigKeys.HDDS_BLOCK_TOKEN_ENABLED,
         requireBlockToken);
 
     long containerID = ContainerTestHelper.getTestContainerID();
@@ -161,7 +161,7 @@ public class TestSecureOzoneContainer {
           new InetSocketAddress(dn.getIpAddress(), port);
 
       Token<OzoneBlockTokenIdentifier> token =
-          new Token(tokenId.getBytes(), new byte[2], tokenId.getKind(),
+          new Token(tokenId.getBytes(), new byte[50], tokenId.getKind(),
               SecurityUtil.buildTokenService(addr));
       if (hasBlockToken) {
         ugi.addToken(token);
@@ -173,9 +173,15 @@ public class TestSecureOzoneContainer {
           try {
             XceiverClientGrpc client = new XceiverClientGrpc(pipeline, conf);
             client.connect(token.encodeToUrlString());
-            createContainerForTesting(client, containerID);
+            if (hasBlockToken) {
+              createContainerForTesting(client, containerID, token);
+            } else {
+              createContainerForTesting(client, containerID, null);
+            }
+
           } catch (Exception e) {
             if (requireBlockToken && hasBlockToken && !blockTokeExpired) {
+              LOG.error("Unexpected error. ", e);
               fail("Client with BlockToken should succeed when block token is" +
                   " required.");
             }
@@ -185,7 +191,7 @@ public class TestSecureOzoneContainer {
             }
             if (requireBlockToken && !hasBlockToken) {
               assertTrue("Receive expected exception", e instanceof
-                  SCMSecurityException);
+                  IOException);
             }
           }
           return null;
@@ -199,11 +205,11 @@ public class TestSecureOzoneContainer {
   }
 
   public static void createContainerForTesting(XceiverClientSpi client,
-      long containerID) throws Exception {
+      long containerID, Token token) throws Exception {
     // Create container
     ContainerProtos.ContainerCommandRequestProto request =
-        ContainerTestHelper.getCreateContainerRequest(
-            containerID, client.getPipeline());
+        ContainerTestHelper.getCreateContainerSecureRequest(
+            containerID, client.getPipeline(), token);
     ContainerProtos.ContainerCommandResponseProto response =
         client.sendCommand(request);
     Assert.assertNotNull(response);

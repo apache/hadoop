@@ -38,8 +38,7 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
-import org.apache.hadoop.ozone.container.common.transport.server
-    .XceiverServerSpi;
+import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
 import org.apache.ratis.RaftConfigKeys;
 import org.apache.ratis.RatisHelper;
 import org.apache.ratis.client.RaftClientConfigKeys;
@@ -69,7 +68,6 @@ import org.apache.ratis.util.TimeDuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.HEAD;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -91,7 +89,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * Creates a ratis server endpoint that acts as the communication layer for
  * Ozone containers.
  */
-public final class XceiverServerRatis implements XceiverServerSpi {
+public final class XceiverServerRatis extends XceiverServer {
   private static final Logger LOG = LoggerFactory
       .getLogger(XceiverServerRatis.class);
   private static final AtomicLong CALL_ID_COUNTER = new AtomicLong();
@@ -115,6 +113,7 @@ public final class XceiverServerRatis implements XceiverServerSpi {
       ContainerDispatcher dispatcher, Configuration conf, StateContext
       context, GrpcTlsConfig tlsConfig)
       throws IOException {
+    super(conf);
     Objects.requireNonNull(dd, "id == null");
     this.port = port;
     RaftProperties serverProperties = newRaftProperties(conf);
@@ -155,7 +154,8 @@ public final class XceiverServerRatis implements XceiverServerSpi {
 
   private ContainerStateMachine getStateMachine(RaftGroupId gid) {
     return new ContainerStateMachine(gid, dispatcher, chunkExecutor, this,
-        Collections.unmodifiableList(executors), cacheEntryExpiryInteval);
+        Collections.unmodifiableList(executors), cacheEntryExpiryInteval,
+        getSecurityConfig().isBlockTokenEnabled(), getBlockTokenVerifier());
   }
 
   private RaftProperties newRaftProperties(Configuration conf) {
@@ -479,6 +479,7 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   @Override
   public void submitRequest(ContainerCommandRequestProto request,
       HddsProtos.PipelineID pipelineID) throws IOException {
+    super.submitRequest(request, pipelineID);
     RaftClientReply reply;
     RaftClientRequest raftClientRequest =
         createRaftClientRequest(request, pipelineID,

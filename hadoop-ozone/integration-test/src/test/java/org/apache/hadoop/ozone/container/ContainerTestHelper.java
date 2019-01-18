@@ -23,8 +23,10 @@ import java.security.MessageDigest;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.client.ReplicationType;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandRequestProto.Builder;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -35,6 +37,7 @@ import org.apache.hadoop.ozone.common.Checksum;
 import org.apache.hadoop.ozone.common.OzoneChecksumException;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
+import org.apache.hadoop.security.token.Token;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -213,7 +216,7 @@ public final class ContainerTestHelper {
     writeRequest.setChunkData(info.getProtoBufMessage());
     writeRequest.setData(ByteString.copyFrom(data));
 
-    ContainerCommandRequestProto.Builder request =
+    Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.WriteChunk);
     request.setContainerID(blockID.getContainerID());
@@ -255,7 +258,7 @@ public final class ContainerTestHelper {
     smallFileRequest.setData(ByteString.copyFrom(data));
     smallFileRequest.setBlock(putRequest);
 
-    ContainerCommandRequestProto.Builder request =
+    Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.PutSmallFile);
     request.setContainerID(blockID.getContainerID());
@@ -274,7 +277,7 @@ public final class ContainerTestHelper {
     ContainerCommandRequestProto getKey = getBlockRequest(pipeline, putKey);
     smallFileRequest.setBlock(getKey.getGetBlock());
 
-    ContainerCommandRequestProto.Builder request =
+    Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.GetSmallFile);
     request.setContainerID(getKey.getGetBlock().getBlockID().getContainerID());
@@ -304,7 +307,7 @@ public final class ContainerTestHelper {
     readRequest.setBlockID(request.getBlockID());
     readRequest.setChunkData(request.getChunkData());
 
-    ContainerCommandRequestProto.Builder newRequest =
+    Builder newRequest =
         ContainerCommandRequestProto.newBuilder();
     newRequest.setCmdType(ContainerProtos.Type.ReadChunk);
     newRequest.setContainerID(readRequest.getBlockID().getContainerID());
@@ -337,7 +340,7 @@ public final class ContainerTestHelper {
     deleteRequest.setChunkData(writeRequest.getChunkData());
     deleteRequest.setBlockID(writeRequest.getBlockID());
 
-    ContainerCommandRequestProto.Builder request =
+    Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.DeleteChunk);
     request.setContainerID(writeRequest.getBlockID().getContainerID());
@@ -356,8 +359,12 @@ public final class ContainerTestHelper {
   public static ContainerCommandRequestProto getCreateContainerRequest(
       long containerID, Pipeline pipeline) throws IOException {
     LOG.trace("addContainer: {}", containerID);
+    return getContainerCommandRequestBuilder(containerID, pipeline).build();
+  }
 
-    ContainerCommandRequestProto.Builder request =
+  private static Builder getContainerCommandRequestBuilder(long containerID,
+      Pipeline pipeline) throws IOException {
+    Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.CreateContainer);
     request.setContainerID(containerID);
@@ -366,6 +373,24 @@ public final class ContainerTestHelper {
     request.setTraceID(UUID.randomUUID().toString());
     request.setDatanodeUuid(pipeline.getFirstNode().getUuidString());
 
+    return request;
+  }
+
+  /**
+   * Returns a create container command for test purposes. There are a bunch of
+   * tests where we need to just send a request and get a reply.
+   *
+   * @return ContainerCommandRequestProto.
+   */
+  public static ContainerCommandRequestProto getCreateContainerSecureRequest(
+      long containerID, Pipeline pipeline,
+      Token<OzoneBlockTokenIdentifier> token) throws IOException {
+    LOG.trace("addContainer: {}", containerID);
+
+    Builder request = getContainerCommandRequestBuilder(containerID, pipeline);
+    if(token != null){
+      request.setEncodedToken(token.encodeToUrlString());
+    }
     return request.build();
   }
 
@@ -393,7 +418,7 @@ public final class ContainerTestHelper {
     Pipeline pipeline =
         ContainerTestHelper.createSingleNodePipeline();
 
-    ContainerCommandRequestProto.Builder request =
+    Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.UpdateContainer);
     request.setContainerID(containerID);
@@ -444,7 +469,7 @@ public final class ContainerTestHelper {
     blockData.setBlockCommitSequenceId(0);
     putRequest.setBlockData(blockData.getProtoBufMessage());
 
-    ContainerCommandRequestProto.Builder request =
+    Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.PutBlock);
     request.setContainerID(blockData.getContainerID());
@@ -472,7 +497,7 @@ public final class ContainerTestHelper {
         ContainerProtos.GetBlockRequestProto.newBuilder();
     getRequest.setBlockID(blockID);
 
-    ContainerCommandRequestProto.Builder request =
+    Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.GetBlock);
     request.setContainerID(blockID.getContainerID());
@@ -510,7 +535,7 @@ public final class ContainerTestHelper {
     ContainerProtos.DeleteBlockRequestProto.Builder delRequest =
         ContainerProtos.DeleteBlockRequestProto.newBuilder();
     delRequest.setBlockID(blockID);
-    ContainerCommandRequestProto.Builder request =
+    Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.DeleteBlock);
     request.setContainerID(blockID.getContainerID());

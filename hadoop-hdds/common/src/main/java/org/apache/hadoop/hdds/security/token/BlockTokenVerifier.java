@@ -25,6 +25,8 @@ import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -40,6 +42,8 @@ public class BlockTokenVerifier implements TokenVerifier {
   private final CertificateClient caClient;
   private final SecurityConfig conf;
   private static boolean testStub = false;
+  private final static Logger LOGGER =
+      LoggerFactory.getLogger(BlockTokenVerifier.class);
 
   public BlockTokenVerifier(SecurityConfig conf, CertificateClient caClient) {
     this.conf = conf;
@@ -53,7 +57,9 @@ public class BlockTokenVerifier implements TokenVerifier {
   @Override
   public UserGroupInformation verify(String user, String tokenStr)
       throws SCMSecurityException {
-    if (conf.isGrpcBlockTokenEnabled()) {
+    if (conf.isBlockTokenEnabled()) {
+      // TODO: add audit logs.
+
       if (Strings.isNullOrEmpty(tokenStr) || isTestStub()) {
         throw new BlockTokenException("Fail to find any token (empty or " +
             "null.");
@@ -62,10 +68,12 @@ public class BlockTokenVerifier implements TokenVerifier {
       OzoneBlockTokenIdentifier tokenId = new OzoneBlockTokenIdentifier();
       try {
         token.decodeFromUrlString(tokenStr);
+        LOGGER.debug("Verifying token:{} for user:{} ", token, user);
         ByteArrayInputStream buf = new ByteArrayInputStream(
             token.getIdentifier());
         DataInputStream in = new DataInputStream(buf);
         tokenId.readFields(in);
+
       } catch (IOException ex) {
         throw new BlockTokenException("Failed to decode token : " + tokenStr);
       }
