@@ -141,7 +141,7 @@ public class BlockInputStream extends InputStream implements Seekable {
   @Override
   public synchronized void close() {
     if (xceiverClientManager != null && xceiverClient != null) {
-      xceiverClientManager.releaseClient(xceiverClient);
+      xceiverClientManager.releaseClient(xceiverClient, false);
       xceiverClientManager = null;
       xceiverClient = null;
     }

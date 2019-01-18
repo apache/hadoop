@@ -21,6 +21,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.XceiverClientAsyncReply;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.common.Checksum;
 import org.apache.hadoop.ozone.common.ChecksumData;
 import org.apache.hadoop.ozone.common.OzoneChecksumException;
@@ -113,7 +114,7 @@ public class BlockOutputStream extends OutputStream {
    * @param blockID              block ID
    * @param key                  chunk key
    * @param xceiverClientManager client manager that controls client
-   * @param xceiverClient        client to perform container calls
+   * @param pipeline             pipeline where block will be written
    * @param traceID              container protocol call args
    * @param chunkSize            chunk size
    * @param bufferList           list of byte buffers
@@ -124,10 +125,10 @@ public class BlockOutputStream extends OutputStream {
    */
   @SuppressWarnings("parameternumber")
   public BlockOutputStream(BlockID blockID, String key,
-      XceiverClientManager xceiverClientManager, XceiverClientSpi xceiverClient,
+      XceiverClientManager xceiverClientManager, Pipeline pipeline,
       String traceID, int chunkSize, long streamBufferFlushSize,
-      long streamBufferMaxSize, long watchTimeout,
-      List<ByteBuffer> bufferList, Checksum checksum) {
+      long streamBufferMaxSize, long watchTimeout, List<ByteBuffer> bufferList,
+      Checksum checksum) throws IOException {
     this.blockID = blockID;
     this.key = key;
     this.traceID = traceID;
@@ -138,7 +139,7 @@ public class BlockOutputStream extends OutputStream {
         BlockData.newBuilder().setBlockID(blockID.getDatanodeBlockIDProtobuf())
             .addMetadata(keyValue);
     this.xceiverClientManager = xceiverClientManager;
-    this.xceiverClient = xceiverClient;
+    this.xceiverClient = xceiverClientManager.acquireClient(pipeline);
     this.streamId = UUID.randomUUID().toString();
     this.chunkIndex = 0;
     this.streamBufferFlushSize = streamBufferFlushSize;
@@ -500,7 +501,7 @@ public class BlockOutputStream extends OutputStream {
           throw new IOException(
               "Unexpected Storage Container Exception: " + e.toString(), e);
         } finally {
-          cleanup();
+          cleanup(false);
         }
       }
       // clear the currentBuffer
@@ -541,9 +542,9 @@ public class BlockOutputStream extends OutputStream {
     }
   }
 
-  public void cleanup() {
+  public void cleanup(boolean invalidateClient) {
     if (xceiverClientManager != null) {
-      xceiverClientManager.releaseClient(xceiverClient);
+      xceiverClientManager.releaseClient(xceiverClient, invalidateClient);
     }
     xceiverClientManager = null;
     xceiverClient = null;
