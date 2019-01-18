@@ -116,6 +116,6 @@ public class TestContainerStateMachineIdempotency {
     } catch (IOException ioe) {
       Assert.fail("Container operation failed" + ioe);
     }
-    xceiverClientManager.releaseClient(client);
+    xceiverClientManager.releaseClient(client, false);
   }
 }

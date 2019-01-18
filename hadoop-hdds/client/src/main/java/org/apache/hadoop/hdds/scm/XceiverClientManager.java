@@ -129,11 +129,20 @@ public class XceiverClientManager implements Closeable {
    * Releases a XceiverClientSpi after use.
    *
    * @param client client to release
+   * @param invalidateClient if true, invalidates the client in cache
    */
-  public void releaseClient(XceiverClientSpi client) {
+  public void releaseClient(XceiverClientSpi client, boolean invalidateClient) {
     Preconditions.checkNotNull(client);
     synchronized (clientCache) {
       client.decrementReference();
+      if (invalidateClient) {
+        Pipeline pipeline = client.getPipeline();
+        String key = pipeline.getId().getId().toString() + pipeline.getType();
+        XceiverClientSpi cachedClient = clientCache.getIfPresent(key);
+        if (cachedClient == client) {
+          clientCache.invalidate(key);
+        }
+      }
     }
   }
 

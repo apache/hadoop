@@ -698,7 +698,7 @@ public abstract class TestOzoneRpcClientAbstract {
       Assert.assertTrue(
           e.getMessage().contains("on the pipeline " + pipeline.getId()));
     }
-    manager.releaseClient(clientSpi);
+    manager.releaseClient(clientSpi, false);
   }
 
   private void readKey(OzoneBucket bucket, String keyName, String data)

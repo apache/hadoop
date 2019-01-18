@@ -114,7 +114,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
     Assert.assertTrue(
         BlockID.getFromProtobuf(response.getBlockID()).equals(blockID));
     Assert.assertTrue(response.getBlockLength() == data.length);
-    xceiverClientManager.releaseClient(client);
+    xceiverClientManager.releaseClient(client, false);
   }
 
   @Test
@@ -139,7 +139,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
     } catch (StorageContainerException sce) {
       Assert.assertTrue(sce.getMessage().contains("Unable to find the block"));
     }
-    xceiverClientManager.releaseClient(client);
+    xceiverClientManager.releaseClient(client, false);
   }
 
   @Test
@@ -180,6 +180,6 @@ public class TestGetCommittedBlockLengthAndPutKey {
     // This will also ensure that closing the container committed the block
     // on the Datanodes.
     Assert.assertEquals(responseBlockID, blockID);
-    xceiverClientManager.releaseClient(client);
+    xceiverClientManager.releaseClient(client, false);
   }
 }
