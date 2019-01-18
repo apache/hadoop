@@ -100,7 +100,7 @@ public class ContainerOperationClient implements ScmClient {
       return containerWithPipeline;
     } finally {
       if (client != null) {
-        xceiverClientManager.releaseClient(client);
+        xceiverClientManager.releaseClient(client, false);
       }
     }
   }
@@ -191,7 +191,7 @@ public class ContainerOperationClient implements ScmClient {
       return containerWithPipeline;
     } finally {
       if (client != null) {
-        xceiverClientManager.releaseClient(client);
+        xceiverClientManager.releaseClient(client, false);
       }
     }
   }
@@ -269,7 +269,7 @@ public class ContainerOperationClient implements ScmClient {
       }
     } finally {
       if (client != null) {
-        xceiverClientManager.releaseClient(client);
+        xceiverClientManager.releaseClient(client, false);
       }
     }
   }
@@ -319,7 +319,7 @@ public class ContainerOperationClient implements ScmClient {
       return response.getContainerData();
     } finally {
       if (client != null) {
-        xceiverClientManager.releaseClient(client);
+        xceiverClientManager.releaseClient(client, false);
       }
     }
   }
@@ -412,7 +412,7 @@ public class ContainerOperationClient implements ScmClient {
           ObjectStageChangeRequestProto.Stage.complete);
     } finally {
       if (client != null) {
-        xceiverClientManager.releaseClient(client);
+        xceiverClientManager.releaseClient(client, false);
       }
     }
   }

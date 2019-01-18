@@ -316,7 +316,7 @@ public class KeyInputStream extends InputStream implements Seekable {
             omKeyLocationInfo.getLength());
       } finally {
         if (!success) {
-          xceiverClientManager.releaseClient(xceiverClient);
+          xceiverClientManager.releaseClient(xceiverClient, false);
         }
       }
     }

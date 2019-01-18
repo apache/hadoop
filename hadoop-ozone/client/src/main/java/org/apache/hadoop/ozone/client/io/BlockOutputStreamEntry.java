@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.client.io;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.storage.BlockOutputStream;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
 import org.apache.hadoop.ozone.common.Checksum;
@@ -40,7 +41,7 @@ public class BlockOutputStreamEntry extends OutputStream {
   private BlockID blockID;
   private final String key;
   private final XceiverClientManager xceiverClientManager;
-  private final XceiverClientSpi xceiverClient;
+  private final Pipeline pipeline;
   private final Checksum checksum;
   private final String requestId;
   private final int chunkSize;
@@ -57,7 +58,7 @@ public class BlockOutputStreamEntry extends OutputStream {
 
   private BlockOutputStreamEntry(BlockID blockID, String key,
       XceiverClientManager xceiverClientManager,
-      XceiverClientSpi xceiverClient, String requestId, int chunkSize,
+      Pipeline pipeline, String requestId, int chunkSize,
       long length, long streamBufferFlushSize, long streamBufferMaxSize,
       long watchTimeout, List<ByteBuffer> bufferList, Checksum checksum,
       Token<OzoneBlockTokenIdentifier> token) {
@@ -65,7 +66,7 @@ public class BlockOutputStreamEntry extends OutputStream {
     this.blockID = blockID;
     this.key = key;
     this.xceiverClientManager = xceiverClientManager;
-    this.xceiverClient = xceiverClient;
+    this.pipeline = pipeline;
     this.requestId = requestId;
     this.chunkSize = chunkSize;
     this.token = token;
@@ -75,31 +76,6 @@ public class BlockOutputStreamEntry extends OutputStream {
     this.streamBufferMaxSize = streamBufferMaxSize;
     this.watchTimeout = watchTimeout;
     this.bufferList = bufferList;
-    this.checksum = checksum;
-  }
-
-  /**
-   * For testing purpose, taking a some random created stream instance.
-   *
-   * @param outputStream a existing writable output stream
-   * @param length the length of data to write to the stream
-   */
-  BlockOutputStreamEntry(OutputStream outputStream, long length,
-                         Checksum checksum) {
-    this.outputStream = outputStream;
-    this.blockID = null;
-    this.key = null;
-    this.xceiverClientManager = null;
-    this.xceiverClient = null;
-    this.requestId = null;
-    this.chunkSize = -1;
-    this.token = null;
-    this.length = length;
-    this.currentPosition = 0;
-    streamBufferFlushSize = 0;
-    streamBufferMaxSize = 0;
-    bufferList = null;
-    watchTimeout = 0;
     this.checksum = checksum;
   }
 
@@ -115,6 +91,12 @@ public class BlockOutputStreamEntry extends OutputStream {
     return length - currentPosition;
   }
 
+  /**
+   * BlockOutputStream is initialized in this function. This makes sure that
+   * xceiverClient initialization is not done during preallocation and only
+   * done when data is written.
+   * @throws IOException if xceiverClient initialization fails
+   */
   private void checkStream() throws IOException {
     if (this.outputStream == null) {
       if (getToken() != null) {
@@ -122,10 +104,11 @@ public class BlockOutputStreamEntry extends OutputStream {
       }
       this.outputStream =
           new BlockOutputStream(blockID, key, xceiverClientManager,
-              xceiverClient, requestId, chunkSize, streamBufferFlushSize,
+              pipeline, requestId, chunkSize, streamBufferFlushSize,
               streamBufferMaxSize, watchTimeout, bufferList, checksum);
     }
   }
+
 
   @Override
   public void write(int b) throws IOException {
@@ -187,11 +170,11 @@ public class BlockOutputStreamEntry extends OutputStream {
     throw new IOException("Invalid Output Stream for Key: " + key);
   }
 
-  void cleanup() throws IOException{
+  void cleanup(boolean invalidateClient) throws IOException {
     checkStream();
     if (this.outputStream instanceof BlockOutputStream) {
       BlockOutputStream out = (BlockOutputStream) this.outputStream;
-      out.cleanup();
+      out.cleanup(invalidateClient);
     }
   }
 
@@ -214,7 +197,7 @@ public class BlockOutputStreamEntry extends OutputStream {
     private BlockID blockID;
     private String key;
     private XceiverClientManager xceiverClientManager;
-    private XceiverClientSpi xceiverClient;
+    private Pipeline pipeline;
     private String requestId;
     private int chunkSize;
     private long length;
@@ -246,8 +229,8 @@ public class BlockOutputStreamEntry extends OutputStream {
       return this;
     }
 
-    public Builder setXceiverClient(XceiverClientSpi client) {
-      this.xceiverClient = client;
+    public Builder setPipeline(Pipeline pipeline) {
+      this.pipeline = pipeline;
       return this;
     }
 
@@ -293,7 +276,7 @@ public class BlockOutputStreamEntry extends OutputStream {
 
     public BlockOutputStreamEntry build() {
       return new BlockOutputStreamEntry(blockID, key,
-          xceiverClientManager, xceiverClient, requestId, chunkSize,
+          xceiverClientManager, pipeline, requestId, chunkSize,
           length, streamBufferFlushSize, streamBufferMaxSize, watchTimeout,
           bufferList, checksum, token);
     }
@@ -315,8 +298,8 @@ public class BlockOutputStreamEntry extends OutputStream {
     return xceiverClientManager;
   }
 
-  public XceiverClientSpi getXceiverClient() {
-    return xceiverClient;
+  public Pipeline getPipeline() {
+    return pipeline;
   }
 
   public Checksum getChecksum() {

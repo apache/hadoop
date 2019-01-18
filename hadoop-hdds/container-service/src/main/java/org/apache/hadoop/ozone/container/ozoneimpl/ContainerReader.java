@@ -96,8 +96,8 @@ public class ContainerReader implements Runnable {
     try {
       readVolume(hddsVolumeDir);
     } catch (RuntimeException ex) {
-      LOG.info("Caught an Run time exception during reading container files" +
-          " from Volume {}", hddsVolumeDir);
+      LOG.error("Caught a Run time exception during reading container files" +
+          " from Volume {} {}", hddsVolumeDir, ex);
     }
   }
 

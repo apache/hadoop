@@ -21,22 +21,21 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result;
-import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.storage.BlockOutputStream;
 import org.apache.hadoop.ozone.common.Checksum;
 import org.apache.hadoop.ozone.om.helpers.*;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
-import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.ratis.protocol.AlreadyClosedException;
 import org.apache.ratis.protocol.RaftRetryFailureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,19 +105,6 @@ public class KeyOutputStream extends OutputStream {
     watchTimeout = 0;
     blockSize = 0;
     this.checksum = new Checksum();
-  }
-
-  /**
-   * For testing purpose only. Not building output stream from blocks, but
-   * taking from externally.
-   *
-   * @param outputStream
-   * @param length
-   */
-  @VisibleForTesting
-  public void addStream(OutputStream outputStream, long length) {
-    streamEntries.add(
-        new BlockOutputStreamEntry(outputStream, length, checksum));
   }
 
   @VisibleForTesting
@@ -223,7 +209,7 @@ public class KeyOutputStream extends OutputStream {
             .setBlockID(subKeyInfo.getBlockID())
             .setKey(keyArgs.getKeyName())
             .setXceiverClientManager(xceiverClientManager)
-            .setXceiverClient(xceiverClient)
+            .setPipeline(containerWithPipeline.getPipeline())
             .setRequestId(requestID)
             .setChunkSize(chunkSize)
             .setLength(subKeyInfo.getLength())
@@ -311,12 +297,14 @@ public class KeyOutputStream extends OutputStream {
           current.write(b, off, writeLen);
         }
       } catch (IOException ioe) {
-        if (checkIfContainerIsClosed(ioe) || checkIfTimeoutException(ioe)) {
+        boolean retryFailure = checkForRetryFailure(ioe);
+        if (checkIfContainerIsClosed(ioe) || checkIfTimeoutException(ioe)
+            || retryFailure) {
           // for the current iteration, totalDataWritten - currentPos gives the
           // amount of data already written to the buffer
           writeLen = (int) (current.getWrittenDataLength() - currentPos);
           LOG.debug("writeLen {}, total len {}", writeLen, len);
-          handleException(current, currentStreamIndex);
+          handleException(current, currentStreamIndex, retryFailure);
         } else {
           throw ioe;
         }
@@ -376,17 +364,19 @@ public class KeyOutputStream extends OutputStream {
    *
    * @param streamEntry StreamEntry
    * @param streamIndex Index of the entry
+   * @param retryFailure if true the xceiverClient needs to be invalidated in
+   *                     the client cache.
    * @throws IOException Throws IOException if Write fails
    */
   private void handleException(BlockOutputStreamEntry streamEntry,
-      int streamIndex) throws IOException {
+      int streamIndex, boolean retryFailure) throws IOException {
     long totalSuccessfulFlushedData =
         streamEntry.getTotalSuccessfulFlushedData();
     //set the correct length for the current stream
     streamEntry.setCurrentPosition(totalSuccessfulFlushedData);
     long bufferedDataLen = computeBufferData();
     // just clean up the current stream.
-    streamEntry.cleanup();
+    streamEntry.cleanup(retryFailure);
     if (bufferedDataLen > 0) {
       // If the data is still cached in the underlying stream, we need to
       // allocate new block and write this data in the datanode.
@@ -404,7 +394,7 @@ public class KeyOutputStream extends OutputStream {
 
   private boolean checkIfContainerIsClosed(IOException ioe) {
     if (ioe.getCause() != null) {
-      return checkIfContainerNotOpenOrRaftRetryFailureException(ioe) || Optional
+      return checkForException(ioe, ContainerNotOpenException.class) || Optional
           .of(ioe.getCause())
           .filter(e -> e instanceof StorageContainerException)
           .map(e -> (StorageContainerException) e)
@@ -414,13 +404,23 @@ public class KeyOutputStream extends OutputStream {
     return false;
   }
 
-  private boolean checkIfContainerNotOpenOrRaftRetryFailureException(
-      IOException ioe) {
+  /**
+   * Checks if the provided exception signifies retry failure in ratis client.
+   * In case of retry failure, ratis client throws RaftRetryFailureException
+   * and all succeeding operations are failed with AlreadyClosedException.
+   */
+  private boolean checkForRetryFailure(IOException ioe) {
+    return checkForException(ioe, RaftRetryFailureException.class,
+        AlreadyClosedException.class);
+  }
+
+  private boolean checkForException(IOException ioe, Class... classes) {
     Throwable t = ioe.getCause();
     while (t != null) {
-      if (t instanceof ContainerNotOpenException
-          || t instanceof RaftRetryFailureException) {
-        return true;
+      for (Class cls : classes) {
+        if (cls.isInstance(t)) {
+          return true;
+        }
       }
       t = t.getCause();
     }
@@ -483,11 +483,13 @@ public class KeyOutputStream extends OutputStream {
           entry.flush();
         }
       } catch (IOException ioe) {
-        if (checkIfContainerIsClosed(ioe) || checkIfTimeoutException(ioe)) {
+        boolean retryFailure = checkForRetryFailure(ioe);
+        if (checkIfContainerIsClosed(ioe) || checkIfTimeoutException(ioe)
+            || retryFailure) {
           // This call will allocate a new streamEntry and write the Data.
           // Close needs to be retried on the newly allocated streamEntry as
           // as well.
-          handleException(entry, streamIndex);
+          handleException(entry, streamIndex, retryFailure);
           handleFlushOrClose(close);
         } else {
           throw ioe;
