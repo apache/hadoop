@@ -78,8 +78,6 @@ Optional packages:
   (OR https://github.com/01org/isa-l)
 * Bzip2
   $ sudo apt-get install bzip2 libbz2-dev
-* Jansson (C Library for JSON)
-  $ sudo apt-get install libjansson-dev
 * Linux FUSE
   $ sudo apt-get install fuse libfuse-dev
 * ZStandard compression
