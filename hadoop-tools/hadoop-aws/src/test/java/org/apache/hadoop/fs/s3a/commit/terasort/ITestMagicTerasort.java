@@ -16,18 +16,27 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.commit.staging.integration;
+package org.apache.hadoop.fs.s3a.commit.terasort;
 
-import org.apache.hadoop.fs.s3a.commit.AbstractITCommitMRJob;
-import org.apache.hadoop.fs.s3a.commit.staging.PartitionedStagingCommitter;
+import org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter;
+import org.apache.hadoop.mapred.JobConf;
 
-/**
- * Full integration test for the partition committer.
- */
-public class ITPartitionCommitMRJob extends AbstractITCommitMRJob {
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_ENABLED;
+
+public class ITestMagicTerasort extends AbstractCommitTerasortIT {
 
   @Override
   protected String committerName() {
-    return PartitionedStagingCommitter.NAME;
+    return MagicS3GuardCommitter.NAME;
   }
+
+  /**
+   * Turn on the magic commit support for the FS, else nothing will work.
+   * @param conf configuration
+   */
+  @Override
+  protected void applyCustomConfigOptions(JobConf conf) {
+    conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
+  }
+
 }

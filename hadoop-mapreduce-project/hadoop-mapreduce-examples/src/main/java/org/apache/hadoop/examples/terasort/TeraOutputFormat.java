@@ -145,12 +145,4 @@ public class TeraOutputFormat extends FileOutputFormat<Text,Text> {
     return new TeraRecordWriter(fileOut, job);
   }
   
-  public OutputCommitter getOutputCommitter(TaskAttemptContext context) 
-      throws IOException {
-    if (committer == null) {
-      Path output = getOutputPath(context);
-      committer = new FileOutputCommitter(output, context);
-    }
-    return committer;
-  }
 }

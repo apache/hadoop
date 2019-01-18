@@ -16,18 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.commit.staging.integration;
+package org.apache.hadoop.fs.s3a.commit.terasort;
 
-import org.apache.hadoop.fs.s3a.commit.AbstractITCommitMRJob;
 import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitter;
 
-/**
- * Full integration test for the directory committer.
- */
-public class ITDirectoryCommitMRJob extends AbstractITCommitMRJob {
+public class ITestDirectoryTerasort extends AbstractCommitTerasortIT {
 
   @Override
   protected String committerName() {
     return DirectoryStagingCommitter.NAME;
   }
+
 }

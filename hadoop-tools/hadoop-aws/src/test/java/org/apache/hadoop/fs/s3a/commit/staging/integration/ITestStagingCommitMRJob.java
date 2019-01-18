@@ -36,7 +36,7 @@ import static org.apache.hadoop.fs.s3a.commit.staging.Paths.getMultipartUploadCo
 /**
  * Full integration test for the staging committer.
  */
-public class ITStagingCommitMRJob extends AbstractITCommitMRJob {
+public class ITestStagingCommitMRJob extends AbstractITCommitMRJob {
 
   @Override
   protected String committerName() {

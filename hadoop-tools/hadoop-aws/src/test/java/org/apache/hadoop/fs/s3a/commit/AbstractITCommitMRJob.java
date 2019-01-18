@@ -38,6 +38,7 @@ import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -63,18 +64,28 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.terminateService;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.*;
 
-/** Full integration test of an MR job. */
+/** 
+ * Full integration test MR jobs.
+ * 
+ * This is all done on a shared mini YARN and HDFS clusters, set up before
+ * any of the tests methods run.
+ * 
+ */
 public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
+
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractITCommitMRJob.class);
 
   private static final int TEST_FILE_COUNT = 2;
   private static final int SCALE_TEST_FILE_COUNT = 20;
 
+  public static final int SCALE_TEST_KEYS = 1000;
+  public static final int BASE_TEST_KEYS = 10;
+
   private static MiniDFSClusterService hdfs;
-  private static MiniMRYarnCluster yarn = null;
-  private static JobConf conf = null;
-  private boolean uniqueFilenames = false;
+  private static MiniMRYarnCluster yarn;
+  private static JobConf conf;
+  private boolean uniqueFilenames;
   private boolean scaleTest;
 
   protected static FileSystem getDFS() {
@@ -89,9 +100,11 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
     conf.setBoolean(JHAdminConfig.MR_HISTORY_CLEANER_ENABLE, false);
     conf.setLong(CommonConfigurationKeys.FS_DU_INTERVAL_KEY, Long.MAX_VALUE);
 
+    // create a unique cluster name.
+    String clusterName = "yarn-" + UUID.randomUUID();
     hdfs = deployService(conf, new MiniDFSClusterService());
     yarn = deployService(conf,
-        new MiniMRYarnCluster("ITCommitMRJob", 2));
+        new MiniMRYarnCluster(clusterName, 2));
   }
 
   @SuppressWarnings("ThrowableNotThrown")
@@ -133,11 +146,40 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
     return SCALE_TEST_TIMEOUT_SECONDS * 1000;
   }
 
+  protected static MiniMRYarnCluster getYarn() {
+    return yarn;
+  }
+
+  protected static JobConf newJobConf() {
+    return new JobConf(yarn.getConfig());
+  }
+
+  
+  protected Job createJob() throws IOException {
+    Job mrJob = Job.getInstance(yarn.getConfig(), getMethodName());
+    patchConfigurationForCommitter(mrJob.getConfiguration());
+    return mrJob;
+  }
+
+  protected Configuration patchConfigurationForCommitter(
+      final Configuration jobConf) {
+    jobConf.setBoolean(FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES,
+        uniqueFilenames);
+    bindCommitter(jobConf,
+        CommitConstants.S3A_COMMITTER_FACTORY,
+        committerName());
+    // pass down the scale test flag
+    jobConf.setBoolean(KEY_SCALE_TESTS_ENABLED, scaleTest);
+    return jobConf;
+  }
+
   @Test
   public void testMRJob() throws Exception {
+    describe("Run a simple MR Job");
+      
     S3AFileSystem fs = getFileSystem();
     // final dest is in S3A
-    Path outputPath = path("testMRJob");
+    Path outputPath = path(getMethodName());
 
     String commitUUID = UUID.randomUUID().toString();
     String suffix = uniqueFilenames ? ("-" + commitUUID) : "";
@@ -156,17 +198,8 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
     }
     Collections.sort(expectedFiles);
 
-    Job mrJob = Job.getInstance(yarn.getConfig(), "test-committer-job");
+    Job mrJob = createJob();
     JobConf jobConf = (JobConf) mrJob.getConfiguration();
-    jobConf.setBoolean(FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES,
-        uniqueFilenames);
-
-
-    bindCommitter(jobConf,
-        CommitConstants.S3A_COMMITTER_FACTORY,
-        committerName());
-    // pass down the scale test flag
-    jobConf.setBoolean(KEY_SCALE_TESTS_ENABLED, scaleTest);
 
     mrJob.setOutputFormatClass(LoggingTextOutputFormat.class);
     FileOutputFormat.setOutputPath(mrJob, outputPath);
@@ -219,24 +252,11 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
     }
     Collections.sort(actualFiles);
 
-    // load in the success data marker: this guarantees that a s3guard
-    // committer was used
-    Path success = new Path(outputPath, _SUCCESS);
-    FileStatus status = fs.getFileStatus(success);
-    assertTrue("0 byte success file - not a s3guard committer " + success,
-        status.getLen() > 0);
-    SuccessData successData = SuccessData.load(fs, success);
-    String commitDetails = successData.toString();
-    LOG.info("Committer name " + committerName() + "\n{}",
-        commitDetails);
-    LOG.info("Committer statistics: \n{}",
-        successData.dumpMetrics("  ", " = ", "\n"));
-    LOG.info("Diagnostics\n{}",
-        successData.dumpDiagnostics("  ", " = ", "\n"));
-    assertEquals("Wrong committer in " + commitDetails,
-        committerName(), successData.getCommitter());
+    SuccessData successData = validateSuccessFile(fs, outputPath,
+        committerName());
     List<String> successFiles = successData.getFilenames();
-    assertTrue("No filenames in " + commitDetails,
+    String commitData = successData.toString();
+    assertTrue("No filenames in " + commitData,
         !successFiles.isEmpty());
 
     assertEquals("Should commit the expected files",
@@ -245,7 +265,7 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
     Set<String> summaryKeys = Sets.newHashSet();
     summaryKeys.addAll(successFiles);
     assertEquals("Summary keyset doesn't list the the expected paths "
-        + commitDetails, expectedKeys, summaryKeys);
+        + commitData, expectedKeys, summaryKeys);
     assertPathDoesNotExist("temporary dir",
         new Path(outputPath, CommitConstants.TEMPORARY));
     customPostExecutionValidation(outputPath, successData);
@@ -301,7 +321,7 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
       org.apache.log4j.BasicConfigurator.configure();
       boolean scaleMap = context.getConfiguration()
           .getBoolean(KEY_SCALE_TESTS_ENABLED, false);
-      operations = scaleMap ? 1000 : 10;
+      operations = scaleMap ? SCALE_TEST_KEYS : BASE_TEST_KEYS;
       id = context.getTaskAttemptID().toString();
     }
 
