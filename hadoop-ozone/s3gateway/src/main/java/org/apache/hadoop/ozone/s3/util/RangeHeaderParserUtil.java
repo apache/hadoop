@@ -27,15 +27,10 @@ import static org.apache.hadoop.ozone.s3.util.S3Consts.RANGE_HEADER_MATCH_PATTER
  * Utility class for S3.
  */
 @InterfaceAudience.Private
-public final class S3utils {
+public final class RangeHeaderParserUtil {
 
-  private S3utils() {
-
+  private RangeHeaderParserUtil() {
   }
-
-
-
-
 
   /**
    * Parse the rangeHeader and set the start and end offset.

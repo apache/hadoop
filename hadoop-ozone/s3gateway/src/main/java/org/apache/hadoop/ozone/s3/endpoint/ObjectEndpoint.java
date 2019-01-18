@@ -60,8 +60,8 @@ import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
 import org.apache.hadoop.ozone.s3.io.S3WrapperInputStream;
 import org.apache.hadoop.ozone.s3.util.RFC1123Util;
 import org.apache.hadoop.ozone.s3.util.RangeHeader;
+import org.apache.hadoop.ozone.s3.util.RangeHeaderParserUtil;
 import org.apache.hadoop.ozone.s3.util.S3StorageType;
-import org.apache.hadoop.ozone.s3.util.S3utils;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.util.Time;
 
@@ -210,7 +210,7 @@ public class ObjectEndpoint extends EndpointBase {
       LOG.debug("range Header provided value is {}", rangeHeaderVal);
 
       if (rangeHeaderVal != null) {
-        rangeHeader = S3utils.parseRangeHeader(rangeHeaderVal,
+        rangeHeader = RangeHeaderParserUtil.parseRangeHeader(rangeHeaderVal,
             length);
         LOG.debug("range Header provided value is {}", rangeHeader);
         if (rangeHeader.isInValidRange()) {

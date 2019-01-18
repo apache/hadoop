@@ -23,9 +23,9 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 /**
- * Test class to test S3utils.
+ * Test class to test RangeHeaderParserUtil.
  */
-public class TestS3utils {
+public class TestRangeHeaderParserUtil {
 
   @Test
   public void testRangeHeaderParser() {
@@ -34,14 +34,14 @@ public class TestS3utils {
 
 
     //range is with in file length
-    rangeHeader = S3utils.parseRangeHeader("bytes=0-8", 10);
+    rangeHeader = RangeHeaderParserUtil.parseRangeHeader("bytes=0-8", 10);
     assertEquals(0, rangeHeader.getStartOffset());
     assertEquals(8, rangeHeader.getEndOffset());
     assertEquals(false, rangeHeader.isReadFull());
     assertEquals(false, rangeHeader.isInValidRange());
 
     //range is with in file length, both start and end offset are same
-    rangeHeader = S3utils.parseRangeHeader("bytes=0-0", 10);
+    rangeHeader = RangeHeaderParserUtil.parseRangeHeader("bytes=0-0", 10);
     assertEquals(0, rangeHeader.getStartOffset());
     assertEquals(0, rangeHeader.getEndOffset());
     assertEquals(false, rangeHeader.isReadFull());
@@ -49,39 +49,39 @@ public class TestS3utils {
 
     //range is not with in file length, both start and end offset are greater
     // than length
-    rangeHeader = S3utils.parseRangeHeader("bytes=11-10", 10);
+    rangeHeader = RangeHeaderParserUtil.parseRangeHeader("bytes=11-10", 10);
     assertEquals(true, rangeHeader.isInValidRange());
 
     // range is satisfying, one of the range is with in the length. So, read
     // full file
-    rangeHeader = S3utils.parseRangeHeader("bytes=11-8", 10);
+    rangeHeader = RangeHeaderParserUtil.parseRangeHeader("bytes=11-8", 10);
     assertEquals(0, rangeHeader.getStartOffset());
     assertEquals(9, rangeHeader.getEndOffset());
     assertEquals(true, rangeHeader.isReadFull());
     assertEquals(false, rangeHeader.isInValidRange());
 
     // bytes spec is wrong
-    rangeHeader = S3utils.parseRangeHeader("mb=11-8", 10);
+    rangeHeader = RangeHeaderParserUtil.parseRangeHeader("mb=11-8", 10);
     assertEquals(0, rangeHeader.getStartOffset());
     assertEquals(9, rangeHeader.getEndOffset());
     assertEquals(true, rangeHeader.isReadFull());
     assertEquals(false, rangeHeader.isInValidRange());
 
     // range specified is invalid
-    rangeHeader = S3utils.parseRangeHeader("bytes=-11-8", 10);
+    rangeHeader = RangeHeaderParserUtil.parseRangeHeader("bytes=-11-8", 10);
     assertEquals(0, rangeHeader.getStartOffset());
     assertEquals(9, rangeHeader.getEndOffset());
     assertEquals(true, rangeHeader.isReadFull());
     assertEquals(false, rangeHeader.isInValidRange());
 
     //Last n bytes
-    rangeHeader = S3utils.parseRangeHeader("bytes=-6", 10);
+    rangeHeader = RangeHeaderParserUtil.parseRangeHeader("bytes=-6", 10);
     assertEquals(4, rangeHeader.getStartOffset());
     assertEquals(9, rangeHeader.getEndOffset());
     assertEquals(false, rangeHeader.isReadFull());
     assertEquals(false, rangeHeader.isInValidRange());
 
-    rangeHeader = S3utils.parseRangeHeader("bytes=-106", 10);
+    rangeHeader = RangeHeaderParserUtil.parseRangeHeader("bytes=-106", 10);
     assertEquals(0, rangeHeader.getStartOffset());
     assertEquals(9, rangeHeader.getEndOffset());
     assertEquals(false, rangeHeader.isInValidRange());
