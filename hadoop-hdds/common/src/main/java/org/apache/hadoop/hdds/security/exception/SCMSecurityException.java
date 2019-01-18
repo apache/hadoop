@@ -24,6 +24,7 @@ import java.io.IOException;
  * Root Security Exception call for all Certificate related Execptions.
  */
 public class SCMSecurityException extends IOException {
+  private final ErrorCode errorCode;
 
   /**
    * Ctor.
@@ -31,6 +32,7 @@ public class SCMSecurityException extends IOException {
    */
   public SCMSecurityException(String message) {
     super(message);
+    this.errorCode = ErrorCode.DEFAULT;
   }
 
   /**
@@ -40,6 +42,17 @@ public class SCMSecurityException extends IOException {
    */
   public SCMSecurityException(String message, Throwable cause) {
     super(message, cause);
+    this.errorCode = ErrorCode.DEFAULT;
+  }
+
+  /**
+   * Ctor.
+   * @param message - Message.
+   * @param error   - error code.
+   */
+  public SCMSecurityException(String message, ErrorCode error) {
+    super(message);
+    this.errorCode = error;
   }
 
   /**
@@ -48,5 +61,18 @@ public class SCMSecurityException extends IOException {
    */
   public SCMSecurityException(Throwable cause) {
     super(cause);
+    this.errorCode = ErrorCode.DEFAULT;
+  }
+
+  public ErrorCode getErrorCode() {
+    return errorCode;
+  }
+
+  /**
+   * Error codes to make it easy to decode these exceptions.
+   */
+  public enum ErrorCode {
+    DEFAULT,
+    MISSING_BLOCK_TOKEN
   }
 }

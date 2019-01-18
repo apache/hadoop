@@ -1658,7 +1658,7 @@
   </property>
   
   <property>
-    <name>hdds.grpc.block.token.enabled</name>
+    <name>hdds.block.token.enabled</name>
     <value>false</value>
     <tag>OZONE, HDDS, SECURITY, TOKEN</tag>
     <description>True if block tokens are enabled, else false.</description>

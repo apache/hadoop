@@ -255,7 +255,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
     omRpcAddressTxt = new Text(OmUtils.getOmRpcAddress(configuration));
     secConfig = new SecurityConfig(configuration);
-    if (secConfig.isGrpcBlockTokenEnabled()) {
+    if (secConfig.isBlockTokenEnabled()) {
       blockTokenMgr = createBlockTokenSecretManager(configuration);
     }
     if(secConfig.isSecurityEnabled()){
@@ -385,7 +385,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     if (testSecureOmFlag) {
       return new OzoneBlockTokenSecretManager(secConfig, expiryTime, "1");
     }
-    Objects.nonNull(certClient);
+    Objects.requireNonNull(certClient);
     return new OzoneBlockTokenSecretManager(secConfig, expiryTime,
         certClient.getCertificate(OM_DAEMON).getSerialNumber().toString());
   }
@@ -418,7 +418,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       LOG.error("Unable to read key pair for OM.", e);
       throw new RuntimeException(e);
     }
-    if (secConfig.isGrpcBlockTokenEnabled() && blockTokenMgr != null) {
+    if (secConfig.isBlockTokenEnabled() && blockTokenMgr != null) {
       try {
         LOG.info("Starting OM block token secret manager");
         blockTokenMgr.start(keyPair);
@@ -981,11 +981,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       }
     }
   }
-
-  private boolean shouldUseDelegationTokens() {
-    return UserGroupInformation.isSecurityEnabled();
-  }
-
 
   /**
    *
@@ -1770,7 +1765,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
   @Override
   public AuditMessage buildAuditMessageForSuccess(AuditAction op,
-                                                  Map<String, String> auditMap) {
+      Map<String, String> auditMap) {
     return new AuditMessage.Builder()
         .setUser((Server.getRemoteUser() == null) ? null :
             Server.getRemoteUser().getUserName())

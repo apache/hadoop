@@ -63,8 +63,8 @@ import org.apache.hadoop.utils.db.DBStore;
 
 import com.google.common.base.Preconditions;
 
-import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_BLOCK_TOKEN_ENABLED;
-import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_GRPC_BLOCK_TOKEN_ENABLED_DEFAULT;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_BLOCK_TOKEN_ENABLED;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_BLOCK_TOKEN_ENABLED_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
@@ -119,8 +119,8 @@ public class KeyManagerImpl implements KeyManager {
     start(conf);
     this.secretManager = secretManager;
     this.grpcBlockTokenEnabled = conf.getBoolean(
-        HDDS_GRPC_BLOCK_TOKEN_ENABLED,
-        HDDS_GRPC_BLOCK_TOKEN_ENABLED_DEFAULT);
+        HDDS_BLOCK_TOKEN_ENABLED,
+        HDDS_BLOCK_TOKEN_ENABLED_DEFAULT);
   }
 
   @Override
