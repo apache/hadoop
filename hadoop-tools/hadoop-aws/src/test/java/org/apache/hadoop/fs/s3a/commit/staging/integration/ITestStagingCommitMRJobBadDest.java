@@ -33,7 +33,7 @@ import org.apache.hadoop.test.LambdaTestUtils;
  * This is a test to verify that the committer will fail if the destination
  * directory exists, and that this happens in job setup.
  */
-public class ITStagingCommitMRJobBadDest extends AbstractITCommitMRJob {
+public class ITestStagingCommitMRJobBadDest extends AbstractITCommitMRJob {
 
   @Override
   protected String committerName() {
@@ -59,4 +59,5 @@ public class ITStagingCommitMRJobBadDest extends AbstractITCommitMRJob {
         "Output directory",
         super::testMRJob);
   }
+
 }

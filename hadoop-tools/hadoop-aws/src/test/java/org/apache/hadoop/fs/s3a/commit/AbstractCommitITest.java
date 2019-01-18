@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
@@ -435,5 +436,47 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     return new TaskAttemptContextImpl(
         jContext.getConfiguration(),
         TypeConverter.fromYarn(attemptID));
+  }
+
+
+  /**
+   * Load in the success data marker: this guarantees that an S3A
+   * committer was used,
+   * @param fs filesystem
+   * @param outputPath path of job
+   * @param committerName name of committer to match
+   * @return the success data
+   * @throws IOException IO failure
+   */
+  public static SuccessData validateSuccessFile(final S3AFileSystem fs,
+      final Path outputPath, final String committerName) throws IOException {
+    SuccessData successData = loadSuccessFile(fs, outputPath);
+    String commitDetails = successData.toString();
+    LOG.info("Committer name " + committerName + "\n{}",
+        commitDetails);
+    LOG.info("Committer statistics: \n{}",
+        successData.dumpMetrics("  ", " = ", "\n"));
+    LOG.info("Diagnostics\n{}",
+        successData.dumpDiagnostics("  ", " = ", "\n"));
+    assertEquals("Wrong committer in " + commitDetails,
+        committerName, successData.getCommitter());
+    return successData;
+  }
+
+  /**
+   * Load a success file; fail if the file is empty/nonexistent.
+   * @param fs filesystem
+   * @param outputPath directory containing the success file.
+   * @return the loaded file.
+   * @throws IOException failure to find/load the file
+   * @throws AssertionError file is 0-bytes long
+   */
+  public static SuccessData loadSuccessFile(final S3AFileSystem fs,
+      final Path outputPath) throws IOException {
+    Path success = new Path(outputPath, _SUCCESS);
+    FileStatus status = fs.getFileStatus(success);
+    assertTrue("0 byte success file - not a s3guard committer " + success,
+        status.getLen() > 0);
+    return SuccessData.load(fs, success);
   }
 }

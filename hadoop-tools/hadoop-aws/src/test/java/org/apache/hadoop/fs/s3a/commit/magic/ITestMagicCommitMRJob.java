@@ -33,7 +33,7 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
  * the settings in {@link AbstractITCommitMRJob#applyCustomConfigOptions(JobConf)} are
  * passed down to these processes.
  */
-public class ITMagicCommitMRJob extends AbstractITCommitMRJob {
+public class ITestMagicCommitMRJob extends AbstractITCommitMRJob {
 
   /**
    * Need consistency here.
