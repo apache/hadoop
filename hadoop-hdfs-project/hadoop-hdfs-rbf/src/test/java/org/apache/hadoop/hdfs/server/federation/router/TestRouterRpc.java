@@ -111,6 +111,8 @@ import com.google.common.collect.Maps;
 /**
  * The the RPC interface of the {@link Router} implemented by
  * {@link RouterRpcServer}.
+ * Tests covering the functionality of RouterRPCServer with
+ * multi nameServices.
  */
 public class TestRouterRpc {
 
@@ -1253,6 +1255,31 @@ public class TestRouterRpc {
     ECBlockGroupStats statsRouter = routerProtocol.getECBlockGroupStats();
     ECBlockGroupStats statsNamenode = nnProtocol.getECBlockGroupStats();
     assertEquals(statsNamenode.toString(), statsRouter.toString());
+  }
+
+  @Test
+  public void testGetCurrentTXIDandRollEdits() throws IOException {
+    Long rollEdits = routerProtocol.rollEdits();
+    Long currentTXID = routerProtocol.getCurrentEditLogTxid();
+
+    assertEquals(rollEdits, currentTXID);
+  }
+
+  @Test
+  public void testSaveNamespace() throws IOException {
+    cluster.getCluster().getFileSystem(0)
+        .setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+    cluster.getCluster().getFileSystem(1)
+        .setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+
+    Boolean saveNamespace = routerProtocol.saveNamespace(0, 0);
+
+    assertTrue(saveNamespace);
+
+    cluster.getCluster().getFileSystem(0)
+        .setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+    cluster.getCluster().getFileSystem(1)
+        .setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
   }
 
   @Test
