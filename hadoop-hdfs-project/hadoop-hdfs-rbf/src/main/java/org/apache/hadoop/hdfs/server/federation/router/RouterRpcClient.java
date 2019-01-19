@@ -1045,7 +1045,7 @@ public class RouterRpcClient {
       Class<?> proto = method.getProtocol();
       Object[] paramList = method.getParams(location);
       Object result = invokeMethod(ugi, namenodes, proto, m, paramList);
-      return Collections.singletonMap(location, clazz.cast(result));
+      return Collections.singletonMap(location, (R) result);
     }
 
     List<T> orderedLocations = new LinkedList<>();
@@ -1103,7 +1103,7 @@ public class RouterRpcClient {
         try {
           Future<Object> future = futures.get(i);
           Object result = future.get();
-          results.put(location, clazz.cast(result));
+          results.put(location, (R) result);
         } catch (CancellationException ce) {
           T loc = orderedLocations.get(i);
           String msg = "Invocation to \"" + loc + "\" for \""

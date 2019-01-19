@@ -875,7 +875,7 @@ public class RouterClientProtocol implements ClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED);
 
     RemoteMethod method = new RemoteMethod("saveNamespace",
-        new Class<?>[] {Long.class, Long.class}, timeWindow, txGap);
+        new Class<?>[] {long.class, long.class}, timeWindow, txGap);
     final Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
     Map<FederationNamespaceInfo, Boolean> ret =
         rpcClient.invokeConcurrent(nss, method, true, false, boolean.class);
