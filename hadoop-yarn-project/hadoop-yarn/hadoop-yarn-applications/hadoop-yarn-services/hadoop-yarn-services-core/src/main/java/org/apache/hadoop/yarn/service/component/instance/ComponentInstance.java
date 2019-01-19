@@ -378,7 +378,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       LOG.info(compInstance.getCompInstanceId() + (!hasContainerFailed ?
           " succeeded" :
           " failed") + " without retry, exitStatus=" + event.getStatus());
-      comp.getScheduler().terminateServiceIfAllComponentsFinished();
+      comp.getScheduler().terminateServiceIfNeeded(comp);
     }
   }
 

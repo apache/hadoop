@@ -41,6 +41,9 @@ import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanc
 import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.START;
 import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.STOP;
 
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConstants
+    .CONTAINER_STATE_REPORT_AS_SERVICE_STATE;
+
 /**
  * Tests for {@link Component}.
  */
@@ -431,6 +434,60 @@ public class TestComponent {
       Assert.assertEquals(
           ComponentState.SUCCEEDED,
           componentState);
+    }
+
+    ServiceState serviceState =
+        testService.getState();
+    Assert.assertEquals(
+        ServiceState.SUCCEEDED,
+        serviceState);
+  }
+
+  @Test
+  public void testComponentStateUpdatesWithTerminatingDominantComponents()
+      throws Exception {
+    final String serviceName =
+        "testComponentStateUpdatesWithTerminatingServiceStateComponents";
+
+    Service testService =
+        ServiceTestUtils.createTerminatingDominantComponentJobExample(
+            serviceName);
+    TestServiceManager.createDef(serviceName, testService);
+
+    ServiceContext context = new MockRunningServiceContext(rule, testService);
+
+    for (Component comp : context.scheduler.getAllComponents().values()) {
+      boolean componentIsDominant = comp.getComponentSpec()
+          .getConfiguration().getPropertyBool(
+              CONTAINER_STATE_REPORT_AS_SERVICE_STATE, false);
+      if (componentIsDominant) {
+        Iterator<ComponentInstance> instanceIter = comp.
+            getAllComponentInstances().iterator();
+
+        while (instanceIter.hasNext()) {
+
+          ComponentInstance componentInstance = instanceIter.next();
+          Container instanceContainer = componentInstance.getContainer();
+
+          //stop 1 container
+          ContainerStatus containerStatus = ContainerStatus.newInstance(
+              instanceContainer.getId(),
+              org.apache.hadoop.yarn.api.records.ContainerState.COMPLETE,
+              "successful", 0);
+          comp.handle(new ComponentEvent(comp.getName(),
+              ComponentEventType.CONTAINER_COMPLETED).setStatus(containerStatus)
+              .setContainerId(instanceContainer.getId()));
+          componentInstance.handle(
+              new ComponentInstanceEvent(componentInstance.getContainer().
+                  getId(), ComponentInstanceEventType.STOP).
+                  setStatus(containerStatus));
+        }
+        ComponentState componentState =
+            comp.getComponentSpec().getState();
+        Assert.assertEquals(
+            ComponentState.SUCCEEDED,
+            componentState);
+      }
     }
 
     ServiceState serviceState =

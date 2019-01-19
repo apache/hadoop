@@ -74,6 +74,9 @@ import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_VMEM_CHECK_ENABLE
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.TIMELINE_SERVICE_ENABLED;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.AM_RESOURCE_MEM;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.YARN_SERVICE_BASE_PATH;
+
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConstants
+    .CONTAINER_STATE_REPORT_AS_SERVICE_STATE;
 import static org.mockito.Matchers.anyObject;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -121,6 +124,23 @@ public class ServiceTestUtils {
             Component.RestartPolicyEnum.ON_FAILURE, null));
     exampleApp.addComponent(
         createComponent("terminating-comp3", 2, "sleep 1000",
+            Component.RestartPolicyEnum.ON_FAILURE, null));
+
+    return exampleApp;
+  }
+
+  public static Service createTerminatingDominantComponentJobExample(
+      String serviceName) {
+    Service exampleApp = new Service();
+    exampleApp.setName(serviceName);
+    exampleApp.setVersion("v1");
+    Component serviceStateComponent = createComponent("terminating-comp1", 2,
+        "sleep 1000", Component.RestartPolicyEnum.NEVER, null);
+    serviceStateComponent.getConfiguration().setProperty(
+        CONTAINER_STATE_REPORT_AS_SERVICE_STATE, "true");
+    exampleApp.addComponent(serviceStateComponent);
+    exampleApp.addComponent(
+        createComponent("terminating-comp2", 2, "sleep 60000",
             Component.RestartPolicyEnum.ON_FAILURE, null));
 
     return exampleApp;

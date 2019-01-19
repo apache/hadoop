@@ -95,4 +95,6 @@ public interface YarnServiceConstants {
   String PRINCIPAL = "yarn.service.am.principal";
 
   String UPGRADE_DIR = "upgrade";
+  String CONTAINER_STATE_REPORT_AS_SERVICE_STATE =
+      "yarn.service.container-state-report-as-service-state";
 }
