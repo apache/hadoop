@@ -204,10 +204,7 @@ public final class ReportHandlerHelper {
               .distinct()
               .count();
 
-          float quasiClosePercent = ((float) uniqueQuasiClosedReplicaCount) /
-              ((float) replicationFactor);
-
-          if (quasiClosePercent > 0.5F) {
+          if (uniqueQuasiClosedReplicaCount > (replicationFactor / 2)) {
             // Quorum of unique replica has been QUASI_CLOSED
             long sequenceId = forceCloseContainerReplicaWithHighestSequenceId(
                 container, quasiClosedReplicas, publisher);

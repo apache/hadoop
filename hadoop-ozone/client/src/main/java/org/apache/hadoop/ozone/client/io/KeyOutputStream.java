@@ -21,21 +21,21 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result;
-import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.storage.BlockOutputStream;
 import org.apache.hadoop.ozone.common.Checksum;
 import org.apache.hadoop.ozone.om.helpers.*;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
-import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.ratis.protocol.AlreadyClosedException;
 import org.apache.ratis.protocol.RaftRetryFailureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +50,7 @@ import java.util.ListIterator;
 import java.util.concurrent.TimeoutException;
 
 /**
- * Maintaining a list of ChunkInputStream. Write based on offset.
+ * Maintaining a list of BlockInputStream. Write based on offset.
  *
  * Note that this may write to multiple containers in one write call. In case
  * that first container succeeded but later ones failed, the succeeded writes
@@ -86,6 +86,7 @@ public class KeyOutputStream extends OutputStream {
    * A constructor for testing purpose only.
    */
   @VisibleForTesting
+  @SuppressWarnings("parameternumber")
   public KeyOutputStream() {
     streamEntries = new ArrayList<>();
     omClient = null;
@@ -106,19 +107,6 @@ public class KeyOutputStream extends OutputStream {
     this.checksum = new Checksum();
   }
 
-  /**
-   * For testing purpose only. Not building output stream from blocks, but
-   * taking from externally.
-   *
-   * @param outputStream
-   * @param length
-   */
-  @VisibleForTesting
-  public void addStream(OutputStream outputStream, long length) {
-    streamEntries.add(
-        new BlockOutputStreamEntry(outputStream, length, checksum));
-  }
-
   @VisibleForTesting
   public List<BlockOutputStreamEntry> getStreamEntries() {
     return streamEntries;
@@ -132,17 +120,20 @@ public class KeyOutputStream extends OutputStream {
     List<OmKeyLocationInfo> locationInfoList = new ArrayList<>();
     for (BlockOutputStreamEntry streamEntry : streamEntries) {
       OmKeyLocationInfo info =
-          new OmKeyLocationInfo.Builder().setBlockID(streamEntry.blockID)
-              .setLength(streamEntry.currentPosition).setOffset(0)
+          new OmKeyLocationInfo.Builder().setBlockID(streamEntry.getBlockID())
+              .setLength(streamEntry.getCurrentPosition()).setOffset(0)
+              .setToken(streamEntry.getToken())
               .build();
-      LOG.debug("block written " + streamEntry.blockID + ", length "
-          + streamEntry.currentPosition + " bcsID " + streamEntry.blockID
-          .getBlockCommitSequenceId());
+      LOG.debug("block written " + streamEntry.getBlockID() + ", length "
+          + streamEntry.getCurrentPosition() + " bcsID "
+          + streamEntry.getBlockID().getBlockCommitSequenceId());
       locationInfoList.add(info);
     }
     return locationInfoList;
   }
 
+
+  @SuppressWarnings("parameternumber")
   public KeyOutputStream(OpenKeySession handler,
       XceiverClientManager xceiverClientManager,
       StorageContainerLocationProtocolClientSideTranslatorPB scmClient,
@@ -210,14 +201,26 @@ public class KeyOutputStream extends OutputStream {
       throws IOException {
     ContainerWithPipeline containerWithPipeline = scmClient
         .getContainerWithPipeline(subKeyInfo.getContainerID());
+    UserGroupInformation.getCurrentUser().addToken(subKeyInfo.getToken());
     XceiverClientSpi xceiverClient =
         xceiverClientManager.acquireClient(containerWithPipeline.getPipeline());
-    streamEntries.add(new BlockOutputStreamEntry(subKeyInfo.getBlockID(),
-        keyArgs.getKeyName(), xceiverClientManager, xceiverClient, requestID,
-        chunkSize, subKeyInfo.getLength(), streamBufferFlushSize,
-        streamBufferMaxSize, watchTimeout, bufferList, checksum));
+    BlockOutputStreamEntry.Builder builder =
+        new BlockOutputStreamEntry.Builder()
+            .setBlockID(subKeyInfo.getBlockID())
+            .setKey(keyArgs.getKeyName())
+            .setXceiverClientManager(xceiverClientManager)
+            .setPipeline(containerWithPipeline.getPipeline())
+            .setRequestId(requestID)
+            .setChunkSize(chunkSize)
+            .setLength(subKeyInfo.getLength())
+            .setStreamBufferFlushSize(streamBufferFlushSize)
+            .setStreamBufferMaxSize(streamBufferMaxSize)
+            .setWatchTimeout(watchTimeout)
+            .setBufferList(bufferList)
+            .setChecksum(checksum)
+            .setToken(subKeyInfo.getToken());
+    streamEntries.add(builder.build());
   }
-
 
   @Override
   public void write(int b) throws IOException {
@@ -294,12 +297,14 @@ public class KeyOutputStream extends OutputStream {
           current.write(b, off, writeLen);
         }
       } catch (IOException ioe) {
-        if (checkIfContainerIsClosed(ioe) || checkIfTimeoutException(ioe)) {
+        boolean retryFailure = checkForRetryFailure(ioe);
+        if (checkIfContainerIsClosed(ioe) || checkIfTimeoutException(ioe)
+            || retryFailure) {
           // for the current iteration, totalDataWritten - currentPos gives the
           // amount of data already written to the buffer
           writeLen = (int) (current.getWrittenDataLength() - currentPos);
           LOG.debug("writeLen {}, total len {}", writeLen, len);
-          handleException(current, currentStreamIndex);
+          handleException(current, currentStreamIndex, retryFailure);
         } else {
           throw ioe;
         }
@@ -326,7 +331,7 @@ public class KeyOutputStream extends OutputStream {
       ListIterator<BlockOutputStreamEntry> streamEntryIterator =
           streamEntries.listIterator(currentStreamIndex);
       while (streamEntryIterator.hasNext()) {
-        if (streamEntryIterator.next().blockID.getContainerID()
+        if (streamEntryIterator.next().getBlockID().getContainerID()
             == containerID) {
           streamEntryIterator.remove();
         }
@@ -345,7 +350,7 @@ public class KeyOutputStream extends OutputStream {
       ListIterator<BlockOutputStreamEntry> streamEntryIterator =
           streamEntries.listIterator(currentStreamIndex);
       while (streamEntryIterator.hasNext()) {
-        if (streamEntryIterator.next().currentPosition == 0) {
+        if (streamEntryIterator.next().getCurrentPosition() == 0) {
           streamEntryIterator.remove();
         }
       }
@@ -359,17 +364,19 @@ public class KeyOutputStream extends OutputStream {
    *
    * @param streamEntry StreamEntry
    * @param streamIndex Index of the entry
+   * @param retryFailure if true the xceiverClient needs to be invalidated in
+   *                     the client cache.
    * @throws IOException Throws IOException if Write fails
    */
   private void handleException(BlockOutputStreamEntry streamEntry,
-      int streamIndex) throws IOException {
+      int streamIndex, boolean retryFailure) throws IOException {
     long totalSuccessfulFlushedData =
         streamEntry.getTotalSuccessfulFlushedData();
     //set the correct length for the current stream
-    streamEntry.currentPosition = totalSuccessfulFlushedData;
+    streamEntry.setCurrentPosition(totalSuccessfulFlushedData);
     long bufferedDataLen = computeBufferData();
     // just clean up the current stream.
-    streamEntry.cleanup();
+    streamEntry.cleanup(retryFailure);
     if (bufferedDataLen > 0) {
       // If the data is still cached in the underlying stream, we need to
       // allocate new block and write this data in the datanode.
@@ -382,12 +389,12 @@ public class KeyOutputStream extends OutputStream {
     }
     // discard subsequent pre allocated blocks from the streamEntries list
     // from the closed container
-    discardPreallocatedBlocks(streamEntry.blockID.getContainerID());
+    discardPreallocatedBlocks(streamEntry.getBlockID().getContainerID());
   }
 
   private boolean checkIfContainerIsClosed(IOException ioe) {
     if (ioe.getCause() != null) {
-      return checkIfContainerNotOpenOrRaftRetryFailureException(ioe) || Optional
+      return checkForException(ioe, ContainerNotOpenException.class) || Optional
           .of(ioe.getCause())
           .filter(e -> e instanceof StorageContainerException)
           .map(e -> (StorageContainerException) e)
@@ -397,13 +404,23 @@ public class KeyOutputStream extends OutputStream {
     return false;
   }
 
-  private boolean checkIfContainerNotOpenOrRaftRetryFailureException(
-      IOException ioe) {
+  /**
+   * Checks if the provided exception signifies retry failure in ratis client.
+   * In case of retry failure, ratis client throws RaftRetryFailureException
+   * and all succeeding operations are failed with AlreadyClosedException.
+   */
+  private boolean checkForRetryFailure(IOException ioe) {
+    return checkForException(ioe, RaftRetryFailureException.class,
+        AlreadyClosedException.class);
+  }
+
+  private boolean checkForException(IOException ioe, Class... classes) {
     Throwable t = ioe.getCause();
     while (t != null) {
-      if (t instanceof ContainerNotOpenException
-          || t instanceof RaftRetryFailureException) {
-        return true;
+      for (Class cls : classes) {
+        if (cls.isInstance(t)) {
+          return true;
+        }
       }
       t = t.getCause();
     }
@@ -420,7 +437,7 @@ public class KeyOutputStream extends OutputStream {
   }
 
   private long getKeyLength() {
-    return streamEntries.stream().mapToLong(e -> e.currentPosition)
+    return streamEntries.parallelStream().mapToLong(e -> e.getCurrentPosition())
         .sum();
   }
 
@@ -466,11 +483,13 @@ public class KeyOutputStream extends OutputStream {
           entry.flush();
         }
       } catch (IOException ioe) {
-        if (checkIfContainerIsClosed(ioe) || checkIfTimeoutException(ioe)) {
+        boolean retryFailure = checkForRetryFailure(ioe);
+        if (checkIfContainerIsClosed(ioe) || checkIfTimeoutException(ioe)
+            || retryFailure) {
           // This call will allocate a new streamEntry and write the Data.
           // Close needs to be retried on the newly allocated streamEntry as
           // as well.
-          handleException(entry, streamIndex);
+          handleException(entry, streamIndex, retryFailure);
           handleFlushOrClose(close);
         } else {
           throw ioe;
@@ -632,168 +651,6 @@ public class KeyOutputStream extends OutputStream {
           omClient, chunkSize, requestID, factor, type, streamBufferFlushSize,
           streamBufferMaxSize, blockSize, watchTimeout, checksum,
           multipartUploadID, multipartNumber, isMultipartKey);
-    }
-  }
-
-  private static class BlockOutputStreamEntry extends OutputStream {
-    private OutputStream outputStream;
-    private BlockID blockID;
-    private final String key;
-    private final XceiverClientManager xceiverClientManager;
-    private final XceiverClientSpi xceiverClient;
-    private final Checksum checksum;
-    private final String requestId;
-    private final int chunkSize;
-    // total number of bytes that should be written to this stream
-    private final long length;
-    // the current position of this stream 0 <= currentPosition < length
-    private long currentPosition;
-
-    private final long streamBufferFlushSize;
-    private final long streamBufferMaxSize;
-    private final long watchTimeout;
-    private List<ByteBuffer> bufferList;
-
-    BlockOutputStreamEntry(BlockID blockID, String key,
-        XceiverClientManager xceiverClientManager,
-        XceiverClientSpi xceiverClient, String requestId, int chunkSize,
-        long length, long streamBufferFlushSize, long streamBufferMaxSize,
-        long watchTimeout, List<ByteBuffer> bufferList, Checksum checksum) {
-      this.outputStream = null;
-      this.blockID = blockID;
-      this.key = key;
-      this.xceiverClientManager = xceiverClientManager;
-      this.xceiverClient = xceiverClient;
-      this.requestId = requestId;
-      this.chunkSize = chunkSize;
-
-      this.length = length;
-      this.currentPosition = 0;
-      this.streamBufferFlushSize = streamBufferFlushSize;
-      this.streamBufferMaxSize = streamBufferMaxSize;
-      this.watchTimeout = watchTimeout;
-      this.checksum = checksum;
-      this.bufferList = bufferList;
-    }
-
-    /**
-     * For testing purpose, taking a some random created stream instance.
-     * @param  outputStream a existing writable output stream
-     * @param  length the length of data to write to the stream
-     */
-    BlockOutputStreamEntry(OutputStream outputStream, long length,
-        Checksum checksum) {
-      this.outputStream = outputStream;
-      this.blockID = null;
-      this.key = null;
-      this.xceiverClientManager = null;
-      this.xceiverClient = null;
-      this.requestId = null;
-      this.chunkSize = -1;
-
-      this.length = length;
-      this.currentPosition = 0;
-      streamBufferFlushSize = 0;
-      streamBufferMaxSize = 0;
-      bufferList = null;
-      watchTimeout = 0;
-      this.checksum = checksum;
-    }
-
-    long getLength() {
-      return length;
-    }
-
-    long getRemaining() {
-      return length - currentPosition;
-    }
-
-    private void checkStream() {
-      if (this.outputStream == null) {
-        this.outputStream =
-            new BlockOutputStream(blockID, key, xceiverClientManager,
-                xceiverClient, requestId, chunkSize, streamBufferFlushSize,
-                streamBufferMaxSize, watchTimeout, bufferList, checksum);
-      }
-    }
-
-    @Override
-    public void write(int b) throws IOException {
-      checkStream();
-      outputStream.write(b);
-      this.currentPosition += 1;
-    }
-
-    @Override
-    public void write(byte[] b, int off, int len) throws IOException {
-      checkStream();
-      outputStream.write(b, off, len);
-      this.currentPosition += len;
-    }
-
-    @Override
-    public void flush() throws IOException {
-      if (this.outputStream != null) {
-        this.outputStream.flush();
-      }
-    }
-
-    @Override
-    public void close() throws IOException {
-      if (this.outputStream != null) {
-        this.outputStream.close();
-        // after closing the chunkOutPutStream, blockId would have been
-        // reconstructed with updated bcsId
-        if (this.outputStream instanceof BlockOutputStream) {
-          this.blockID = ((BlockOutputStream) outputStream).getBlockID();
-        }
-      }
-    }
-
-    long getTotalSuccessfulFlushedData() throws IOException {
-      if (this.outputStream instanceof BlockOutputStream) {
-        BlockOutputStream out = (BlockOutputStream) this.outputStream;
-        blockID = out.getBlockID();
-        return out.getTotalSuccessfulFlushedData();
-      } else if (outputStream == null) {
-        // For a pre allocated block for which no write has been initiated,
-        // the OutputStream will be null here.
-        // In such cases, the default blockCommitSequenceId will be 0
-        return 0;
-      }
-      throw new IOException("Invalid Output Stream for Key: " + key);
-    }
-
-    long getWrittenDataLength() throws IOException {
-      if (this.outputStream instanceof BlockOutputStream) {
-        BlockOutputStream out = (BlockOutputStream) this.outputStream;
-        return out.getWrittenDataLength();
-      } else if (outputStream == null) {
-        // For a pre allocated block for which no write has been initiated,
-        // the OutputStream will be null here.
-        // In such cases, the default blockCommitSequenceId will be 0
-        return 0;
-      }
-      throw new IOException("Invalid Output Stream for Key: " + key);
-    }
-
-    void cleanup() {
-      checkStream();
-      if (this.outputStream instanceof BlockOutputStream) {
-        BlockOutputStream out = (BlockOutputStream) this.outputStream;
-        out.cleanup();
-      }
-    }
-
-    void writeOnRetry(long len) throws IOException {
-      checkStream();
-      if (this.outputStream instanceof BlockOutputStream) {
-        BlockOutputStream out = (BlockOutputStream) this.outputStream;
-        out.writeOnRetry(len);
-        this.currentPosition += len;
-      } else {
-        throw new IOException("Invalid Output Stream for Key: " + key);
-      }
     }
   }
 

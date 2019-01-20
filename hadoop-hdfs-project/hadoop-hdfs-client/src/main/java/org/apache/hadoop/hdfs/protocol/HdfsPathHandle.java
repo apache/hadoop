@@ -111,8 +111,8 @@ public final class HdfsPathHandle implements PathHandle {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("{ ");
-    sb.append("\"path\" : \"").append(path).append("\"");
+    sb.append("{ ")
+        .append("\"path\" : \"").append(path).append("\"");
     if (inodeId != null) {
       sb.append(",\"inodeId\" : ").append(inodeId);
     }

@@ -139,6 +139,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       INVOCATION_CREATE_NON_RECURSIVE,
       INVOCATION_DELETE,
       INVOCATION_EXISTS,
+      INVOCATION_GET_DELEGATION_TOKEN,
       INVOCATION_GET_FILE_CHECKSUM,
       INVOCATION_GET_FILE_STATUS,
       INVOCATION_GLOB_STATUS,
@@ -181,7 +182,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       S3GUARD_METADATASTORE_INITIALIZATION,
       S3GUARD_METADATASTORE_RETRY,
       S3GUARD_METADATASTORE_THROTTLED,
-      STORE_IO_THROTTLED
+      STORE_IO_THROTTLED,
+      DELEGATION_TOKENS_ISSUED
   };
 
   private static final Statistic[] GAUGES_TO_CREATE = {
@@ -1101,6 +1103,30 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
   }
 
   /**
+   * Create a delegation token statistics instance.
+   * @return an instance of delegation token statistics
+   */
+  public DelegationTokenStatistics newDelegationTokenStatistics() {
+    return new DelegationTokenStatistics();
+  }
+
+  /**
+   * Instrumentation exported to S3A Delegation Token support.
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public final class DelegationTokenStatistics {
+
+    private DelegationTokenStatistics() {
+    }
+
+    /** A token has been issued. */
+    public void tokenIssued() {
+      incrementCounter(DELEGATION_TOKENS_ISSUED, 1);
+    }
+  }
+
+    /**
    * Copy all the metrics to a map of (name, long-value).
    * @return a map of the metrics
    */

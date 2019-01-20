@@ -240,6 +240,13 @@ public class BlockLocation implements Serializable {
   }
 
   /**
+   * Return true if the block is striped (erasure coded).
+   */
+  public boolean isStriped() {
+    return false;
+  }
+
+  /**
    * Set the start offset of file associated with this block
    */
   public void setOffset(long offset) {
@@ -323,9 +330,9 @@ public class BlockLocation implements Serializable {
   @Override
   public String toString() {
     StringBuilder result = new StringBuilder();
-    result.append(offset);
-    result.append(',');
-    result.append(length);
+    result.append(offset)
+        .append(',')
+        .append(length);
     if (corrupt) {
       result.append("(corrupt)");
     }

@@ -99,8 +99,10 @@ public class SCMPipelineManager implements PipelineManager {
             (MetadataKeyFilters.MetadataKeyFilter[])null);
 
     for (Map.Entry<byte[], byte[]> entry : pipelines) {
-      Pipeline pipeline = Pipeline.getFromProtobuf(
-          HddsProtos.Pipeline.PARSER.parseFrom(entry.getValue()));
+      HddsProtos.Pipeline.Builder pipelineBuilder = HddsProtos.Pipeline
+          .newBuilder(HddsProtos.Pipeline.PARSER.parseFrom(entry.getValue()));
+      Pipeline pipeline = Pipeline.getFromProtobuf(pipelineBuilder.setState(
+          HddsProtos.PipelineState.PIPELINE_ALLOCATED).build());
       Preconditions.checkNotNull(pipeline);
       stateManager.addPipeline(pipeline);
       nodeManager.addPipeline(pipeline);

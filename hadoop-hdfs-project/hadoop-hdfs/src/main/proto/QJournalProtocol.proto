@@ -286,6 +286,21 @@ message GetEditLogManifestResponseProto {
 }
 
 /**
+ * getJournaledEdits()
+ */
+message GetJournaledEditsRequestProto {
+  required JournalIdProto jid = 1;
+  required uint64 sinceTxId = 2;
+  required uint32 maxTxns = 3;
+  optional string nameServiceId = 4;
+}
+
+message GetJournaledEditsResponseProto {
+  required uint32 txnCount = 1;
+  optional bytes editLog = 2;
+}
+
+/**
  * prepareRecovery()
  */
 message PrepareRecoveryRequestProto {
@@ -363,6 +378,9 @@ service QJournalProtocolService {
 
   rpc getEditLogManifest(GetEditLogManifestRequestProto)
       returns (GetEditLogManifestResponseProto);
+
+  rpc getJournaledEdits(GetJournaledEditsRequestProto)
+  returns (GetJournaledEditsResponseProto);
 
   rpc prepareRecovery(PrepareRecoveryRequestProto)
       returns (PrepareRecoveryResponseProto);

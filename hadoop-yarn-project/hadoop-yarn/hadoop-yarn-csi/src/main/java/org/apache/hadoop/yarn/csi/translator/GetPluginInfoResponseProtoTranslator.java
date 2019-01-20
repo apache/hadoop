@@ -25,7 +25,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
  * Protobuf message translator for GetPluginInfoResponse and
  * Csi.GetPluginInfoResponse.
  */
-public class GetPluginInfoResponseProtoTranslator implements
+public class GetPluginInfoResponseProtoTranslator<A, B> implements
     ProtoTranslator<GetPluginInfoResponse, Csi.GetPluginInfoResponse> {
 
   @Override public Csi.GetPluginInfoResponse convertTo(

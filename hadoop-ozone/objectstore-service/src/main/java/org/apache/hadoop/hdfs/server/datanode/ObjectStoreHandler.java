@@ -37,6 +37,7 @@ import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.netty.ObjectStoreJerseyContainer;
 import org.apache.hadoop.ozone.web.storage.DistributedStorageHandler;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.ratis.protocol.ClientId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,6 +73,7 @@ public final class ObjectStoreHandler implements Closeable {
   private final ScmBlockLocationProtocolClientSideTranslatorPB
       scmBlockLocationClient;
   private final StorageHandler storageHandler;
+  private ClientId clientId = ClientId.randomId();
 
   /**
    * Creates a new ObjectStoreHandler.
@@ -117,7 +119,7 @@ public final class ObjectStoreHandler implements Closeable {
             RPC.getProxy(OzoneManagerProtocolPB.class, omVersion,
                 omAddress, UserGroupInformation.getCurrentUser(), conf,
                 NetUtils.getDefaultSocketFactory(conf),
-                Client.getRpcTimeout(conf)));
+                Client.getRpcTimeout(conf)), clientId.toString());
 
     storageHandler = new DistributedStorageHandler(
         new OzoneConfiguration(conf),

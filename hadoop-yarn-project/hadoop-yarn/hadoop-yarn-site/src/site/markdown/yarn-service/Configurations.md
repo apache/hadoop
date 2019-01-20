@@ -147,6 +147,7 @@ Component-level service AM configuration properties can be specified either in t
 |yarn.service.container-health-threshold.poll-frequency-secs | Health check monitor poll frequency. It is an advanced setting and does not need to be set unless the service owner understands the implication and does not want the default. The default is 10 secs.
 |yarn.service.container-health-threshold.window-secs | The amount of time the health check monitor allows a specific component to be below the health threshold after which it considers the service to be unhealthy. The default is 600 secs (10 mins).
 |yarn.service.container-health-threshold.init-delay-secs | The amount of initial time the health check monitor waits before the first check kicks in. It gives a lead time for the service containers to come up for the first time. The default is 600 secs (10 mins).
+|yarn.service.container-state-report-as-service-state | The boolean flag indicates that if this component is finished, the service is also terminated. The default is false.
 
 There is one component-level configuration property that is set differently in the `yarn-site.xml` file than it is in the service specification.
 To select the docker network type that will be used for docker containers, `docker.network` may be set in the service `Configuration` `properties` or the component `Configuration` `properties`.

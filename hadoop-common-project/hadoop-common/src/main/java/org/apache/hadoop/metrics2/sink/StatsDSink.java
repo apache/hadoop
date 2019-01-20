@@ -122,9 +122,9 @@ public class StatsDSink implements MetricsSink, Closeable {
         buf.append(hn.substring(0, idx)).append(PERIOD);
       }
     }
-    buf.append(sn).append(PERIOD);
-    buf.append(ctx).append(PERIOD);
-    buf.append(record.name().replaceAll("\\.", "-")).append(PERIOD);
+    buf.append(sn).append(PERIOD)
+        .append(ctx).append(PERIOD)
+        .append(record.name().replaceAll("\\.", "-")).append(PERIOD);
 
     // Collect datapoints.
     for (AbstractMetric metric : record.metrics()) {

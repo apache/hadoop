@@ -400,6 +400,7 @@ public final class TestUtils {
    *
    * @return ContainerInfo
    */
+  @SuppressWarnings("parameternumber")
   public static ContainerReplicaProto createContainerInfo(
       long containerId, long size, long keyCount, long bytesUsed,
       long readCount, long readBytes, long writeCount, long writeBytes) {

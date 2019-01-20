@@ -88,6 +88,12 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
    */
   public static final String NAME_RULES = TYPE + ".name.rules";
 
+  /**
+   * Constant for the configuration property that indicates how auth_to_local
+   * rules are evaluated.
+   */
+  public static final String RULE_MECHANISM = TYPE + ".name.rules.mechanism";
+
   private String type;
   private String keytab;
   private GSSManager gssManager;
@@ -163,7 +169,10 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
       if (nameRules != null) {
         KerberosName.setRules(nameRules);
       }
-
+      String ruleMechanism = config.getProperty(RULE_MECHANISM, null);
+      if (ruleMechanism != null) {
+        KerberosName.setRuleMechanism(ruleMechanism);
+      }
       try {
         gssManager = Subject.doAs(serverSubject,
             new PrivilegedExceptionAction<GSSManager>() {

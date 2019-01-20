@@ -519,10 +519,10 @@ public class DFSUtilClient {
     // localhost), then append port
     // TODO : revisit if there is a better way
     StringBuilder sb = new StringBuilder();
-    sb.append(uri.getScheme());
-    sb.append("://");
-    sb.append(uri.getHost());
-    sb.append(":");
+    sb.append(uri.getScheme())
+        .append("://")
+        .append(uri.getHost())
+        .append(":");
     // TODO : currently, only the very first auxiliary port is being used.
     // But actually NN supports running multiple auxiliary
     sb.append(ports[0]);

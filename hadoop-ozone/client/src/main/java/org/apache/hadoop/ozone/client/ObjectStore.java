@@ -28,6 +28,7 @@ import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
+import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -153,6 +154,10 @@ public class ObjectStore {
   public OzoneVolume getVolume(String volumeName) throws IOException {
     OzoneVolume volume = proxy.getVolumeDetails(volumeName);
     return volume;
+  }
+
+  public S3SecretValue getS3Secret(String kerberosID) throws IOException {
+    return proxy.getS3Secret(kerberosID);
   }
 
   /**

@@ -57,11 +57,10 @@ public class GrpcReplicationService extends
     LOG.info("Streaming container data ({}) to other datanode",
         request.getContainerID());
     try {
-        GrpcOutputStream outputStream =
-            new GrpcOutputStream(responseObserver, request.getContainerID());
-        containerReplicationSource
-            .copyData(request.getContainerID(), outputStream);
-
+      GrpcOutputStream outputStream =
+          new GrpcOutputStream(responseObserver, request.getContainerID());
+      containerReplicationSource
+          .copyData(request.getContainerID(), outputStream);
     } catch (IOException e) {
       LOG.error("Can't stream the container data", e);
       responseObserver.onError(e);

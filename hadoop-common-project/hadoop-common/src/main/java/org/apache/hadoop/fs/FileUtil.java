@@ -367,8 +367,8 @@ public class FileUtil {
           returnVal = false;
       } catch (IOException e) {
         gotException = true;
-        exceptions.append(e.getMessage());
-        exceptions.append("\n");
+        exceptions.append(e.getMessage())
+            .append("\n");
       }
     }
     if (gotException) {
@@ -873,10 +873,10 @@ public class FileUtil {
     if (gzipped) {
       untarCommand.append("gzip -dc | (");
     }
-    untarCommand.append("cd '");
-    untarCommand.append(FileUtil.makeSecureShellPath(untarDir));
-    untarCommand.append("' && ");
-    untarCommand.append("tar -x ");
+    untarCommand.append("cd '")
+        .append(FileUtil.makeSecureShellPath(untarDir))
+        .append("' && ")
+        .append("tar -x ");
 
     if (gzipped) {
       untarCommand.append(")");
@@ -888,14 +888,14 @@ public class FileUtil {
       boolean gzipped) throws IOException {
     StringBuffer untarCommand = new StringBuffer();
     if (gzipped) {
-      untarCommand.append(" gzip -dc '");
-      untarCommand.append(FileUtil.makeSecureShellPath(inFile));
-      untarCommand.append("' | (");
+      untarCommand.append(" gzip -dc '")
+          .append(FileUtil.makeSecureShellPath(inFile))
+          .append("' | (");
     }
-    untarCommand.append("cd '");
-    untarCommand.append(FileUtil.makeSecureShellPath(untarDir));
-    untarCommand.append("' && ");
-    untarCommand.append("tar -xf ");
+    untarCommand.append("cd '")
+        .append(FileUtil.makeSecureShellPath(untarDir))
+        .append("' && ")
+        .append("tar -xf ");
 
     if (gzipped) {
       untarCommand.append(" -)");
@@ -918,11 +918,12 @@ public class FileUtil {
     TarArchiveInputStream tis = null;
     try {
       if (gzipped) {
-        inputStream = new BufferedInputStream(new GZIPInputStream(
-            new FileInputStream(inFile)));
+        inputStream = new GZIPInputStream(new FileInputStream(inFile));
       } else {
-        inputStream = new BufferedInputStream(new FileInputStream(inFile));
+        inputStream = new FileInputStream(inFile);
       }
+
+      inputStream = new BufferedInputStream(inputStream);
 
       tis = new TarArchiveInputStream(inputStream);
 
@@ -940,13 +941,9 @@ public class FileUtil {
     TarArchiveInputStream tis = null;
     try {
       if (gzipped) {
-        inputStream = new BufferedInputStream(new GZIPInputStream(
-            inputStream));
-      } else {
-        inputStream =
-            new BufferedInputStream(inputStream);
+        inputStream = new GZIPInputStream(inputStream);
       }
-
+      inputStream = new BufferedInputStream(inputStream);
       tis = new TarArchiveInputStream(inputStream);
 
       for (TarArchiveEntry entry = tis.getNextTarEntry(); entry != null;) {
@@ -1002,17 +999,7 @@ public class FileUtil {
       return;
     }
 
-    int count;
-    byte data[] = new byte[2048];
-    try (BufferedOutputStream outputStream = new BufferedOutputStream(
-        new FileOutputStream(outputFile));) {
-
-      while ((count = tis.read(data)) != -1) {
-        outputStream.write(data, 0, count);
-      }
-
-      outputStream.flush();
-    }
+    org.apache.commons.io.FileUtils.copyToFile(tis, outputFile);
   }
 
   /**
@@ -1517,8 +1504,8 @@ public class FileUtil {
             classPathEntryList.add(jar.toUri().toURL().toExternalForm());
           }
         } else {
-          unexpandedWildcardClasspath.append(File.pathSeparator);
-          unexpandedWildcardClasspath.append(classPathEntry);
+          unexpandedWildcardClasspath.append(File.pathSeparator)
+              .append(classPathEntry);
         }
       } else {
         // Append just this entry

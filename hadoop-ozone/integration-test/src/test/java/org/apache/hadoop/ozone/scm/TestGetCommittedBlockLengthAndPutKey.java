@@ -93,7 +93,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
     Pipeline pipeline = container.getPipeline();
     XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     //create the container
-    ContainerProtocolCalls.createContainer(client, containerID, traceID);
+    ContainerProtocolCalls.createContainer(client, containerID, traceID, null);
 
     BlockID blockID = ContainerTestHelper.getTestBlockID(containerID);
     byte[] data =
@@ -114,7 +114,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
     Assert.assertTrue(
         BlockID.getFromProtobuf(response.getBlockID()).equals(blockID));
     Assert.assertTrue(response.getBlockLength() == data.length);
-    xceiverClientManager.releaseClient(client);
+    xceiverClientManager.releaseClient(client, false);
   }
 
   @Test
@@ -126,11 +126,11 @@ public class TestGetCommittedBlockLengthAndPutKey {
     long containerID = container.getContainerInfo().getContainerID();
     XceiverClientSpi client = xceiverClientManager
         .acquireClient(container.getPipeline());
-    ContainerProtocolCalls.createContainer(client, containerID, traceID);
+    ContainerProtocolCalls.createContainer(client, containerID, traceID, null);
 
     BlockID blockID = ContainerTestHelper.getTestBlockID(containerID);
     // move the container to closed state
-    ContainerProtocolCalls.closeContainer(client, containerID, traceID);
+    ContainerProtocolCalls.closeContainer(client, containerID, traceID, null);
     try {
       // There is no block written inside the container. The request should
       // fail.
@@ -139,7 +139,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
     } catch (StorageContainerException sce) {
       Assert.assertTrue(sce.getMessage().contains("Unable to find the block"));
     }
-    xceiverClientManager.releaseClient(client);
+    xceiverClientManager.releaseClient(client, false);
   }
 
   @Test
@@ -153,7 +153,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
     Pipeline pipeline = container.getPipeline();
     XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     //create the container
-    ContainerProtocolCalls.createContainer(client, containerID, traceID);
+    ContainerProtocolCalls.createContainer(client, containerID, traceID, null);
 
     BlockID blockID = ContainerTestHelper.getTestBlockID(containerID);
     byte[] data =
@@ -180,6 +180,6 @@ public class TestGetCommittedBlockLengthAndPutKey {
     // This will also ensure that closing the container committed the block
     // on the Datanodes.
     Assert.assertEquals(responseBlockID, blockID);
-    xceiverClientManager.releaseClient(client);
+    xceiverClientManager.releaseClient(client, false);
   }
 }

@@ -29,7 +29,7 @@ And when GPU wanna to be used:
 
 For your convenience, we provided installation documents to help you to setup your environment. You can always choose to have them installed in your own way.
 
-Use Submarine installer to install dependencies: [EN](InstallationScriptEN.html) [CN](InstallationScriptCN.html)
+Use Submarine installer to install dependencies: [EN](https://github.com/hadoopsubmarine/hadoop-submarine-ecosystem/tree/master/submarine-installer) [CN](https://github.com/hadoopsubmarine/hadoop-submarine-ecosystem/blob/master/submarine-installer/README-CN.md)
 
 Alternatively, you can follow manual install dependencies: [EN](InstallationGuide.html) [CN](InstallationGuideChineseVersion.html)
 

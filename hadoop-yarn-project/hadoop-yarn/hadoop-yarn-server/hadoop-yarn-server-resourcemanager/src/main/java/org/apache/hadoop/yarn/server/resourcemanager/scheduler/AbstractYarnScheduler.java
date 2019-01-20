@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,6 +32,8 @@ import java.util.TimerTask;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -690,8 +693,10 @@ public abstract class AbstractYarnScheduler
         LOG.debug("Completed container: " + rmContainer.getContainerId() +
             " in state: " + rmContainer.getState() + " event:" + event);
       }
-      getSchedulerNode(rmContainer.getNodeId()).releaseContainer(
-          rmContainer.getContainerId(), false);
+      SchedulerNode node = getSchedulerNode(rmContainer.getNodeId());
+      if (node != null) {
+        node.releaseContainer(rmContainer.getContainerId(), false);
+      }
     }
 
     // If the container is getting killed in ACQUIRED state, the requester (AM
@@ -1008,11 +1013,14 @@ public abstract class AbstractYarnScheduler
         new ArrayList<>();
     List<ContainerStatus> completedContainers =
         new ArrayList<>();
+    List<Map.Entry<ApplicationId, ContainerStatus>> updateExistContainers =
+        new ArrayList<>();
 
     for(UpdatedContainerInfo containerInfo : containerInfoList) {
       newlyLaunchedContainers
           .addAll(containerInfo.getNewlyLaunchedContainers());
       completedContainers.addAll(containerInfo.getCompletedContainers());
+      updateExistContainers.addAll(containerInfo.getUpdateContainers());
     }
 
     // Processing the newly launched containers
@@ -1026,6 +1034,37 @@ public abstract class AbstractYarnScheduler
         nm.pullNewlyIncreasedContainers();
     for (Container container : newlyIncreasedContainers) {
       containerIncreasedOnNode(container.getId(), schedulerNode, container);
+    }
+
+    // Processing the update exist containers
+    for (Map.Entry<ApplicationId, ContainerStatus> c : updateExistContainers) {
+      SchedulerApplication<T> app = applications.get(c.getKey());
+      ContainerId containerId = c.getValue().getContainerId();
+      if (app == null || app.getCurrentAppAttempt() == null) {
+        continue;
+      }
+      RMContainer rmContainer
+          = app.getCurrentAppAttempt().getRMContainer(containerId);
+      if (rmContainer == null) {
+        continue;
+      }
+      // exposed ports are already set for the container, skip
+      if (rmContainer.getExposedPorts() != null &&
+          rmContainer.getExposedPorts().size() > 0) {
+        continue;
+      }
+
+      String strExposedPorts = c.getValue().getExposedPorts();
+      if (null != strExposedPorts && !strExposedPorts.isEmpty()) {
+        Gson gson = new Gson();
+        Map<String, List<Map<String, String>>> exposedPorts =
+            gson.fromJson(strExposedPorts,
+            new TypeToken<Map<String, List<Map<String, String>>>>()
+                {}.getType());
+        LOG.info("update exist container " + containerId.getContainerId()
+            + ", strExposedPorts = " + strExposedPorts);
+        rmContainer.setExposedPorts(exposedPorts);
+      }
     }
 
     return completedContainers;
@@ -1270,8 +1309,10 @@ public abstract class AbstractYarnScheduler
               uReq.getContainerUpdateType()) {
             RMContainer demotedRMContainer =
                 createDemotedRMContainer(appAttempt, oppCntxt, rmContainer);
-            appAttempt.addToNewlyDemotedContainers(
-                uReq.getContainerId(), demotedRMContainer);
+            if (demotedRMContainer != null) {
+              appAttempt.addToNewlyDemotedContainers(
+                      uReq.getContainerId(), demotedRMContainer);
+            }
           } else {
             RMContainer demotedRMContainer = createDecreasedRMContainer(
                 appAttempt, uReq, rmContainer);

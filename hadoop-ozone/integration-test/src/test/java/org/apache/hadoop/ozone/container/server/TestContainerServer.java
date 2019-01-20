@@ -19,11 +19,14 @@
 package org.apache.hadoop.ozone.container.server;
 
 import com.google.common.collect.Maps;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
+import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis.DispatcherContext;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.ozoneimpl.ContainerController;
@@ -54,14 +57,17 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.util.function.CheckedBiConsumer;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.apache.ratis.rpc.SupportedRpcType.GRPC;
 import static org.apache.ratis.rpc.SupportedRpcType.NETTY;
@@ -72,13 +78,19 @@ import static org.mockito.Mockito.mock;
  */
 @Ignore("Takes too long to run this test. Ignoring for time being.")
 public class TestContainerServer {
-  static final String TEST_DIR
-      = GenericTestUtils.getTestDir("dfs").getAbsolutePath() + File.separator;
+  static final String TEST_DIR = GenericTestUtils.getTestDir("dfs")
+      .getAbsolutePath() + File.separator;
+  private static final OzoneConfiguration CONF = new OzoneConfiguration();
 
   private GrpcReplicationService createReplicationService(
       ContainerController containerController) {
     return new GrpcReplicationService(
         new OnDemandContainerReplicationSource(containerController));
+  }
+
+  @BeforeClass
+  static public void setup() {
+    CONF.set(HddsConfigKeys.HDDS_METADATA_DIR_NAME, TEST_DIR);
   }
 
   @Test
@@ -149,18 +161,18 @@ public class TestContainerServer {
     XceiverClientSpi client = null;
     String containerName = OzoneUtils.getRequestID();
     try {
-      final Pipeline pipeline = ContainerTestHelper.createPipeline(numDatanodes);
-      final OzoneConfiguration conf = new OzoneConfiguration();
-      initConf.accept(pipeline, conf);
+      final Pipeline pipeline =
+          ContainerTestHelper.createPipeline(numDatanodes);
+      initConf.accept(pipeline, CONF);
 
       for (DatanodeDetails dn : pipeline.getNodes()) {
-        final XceiverServerSpi s = createServer.apply(dn, conf);
+        final XceiverServerSpi s = createServer.apply(dn, CONF);
         servers.add(s);
         s.start();
         initServer.accept(dn, pipeline);
       }
 
-      client = createClient.apply(pipeline, conf);
+      client = createClient.apply(pipeline, CONF);
       client.connect();
 
       final ContainerCommandRequestProto request =
@@ -183,7 +195,7 @@ public class TestContainerServer {
   public void testClientServerWithContainerDispatcher() throws Exception {
     XceiverServerGrpc server = null;
     XceiverClientGrpc client = null;
-
+    UUID scmId = UUID.randomUUID();
     try {
       Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline();
       OzoneConfiguration conf = new OzoneConfiguration();
@@ -195,16 +207,26 @@ public class TestContainerServer {
       VolumeSet volumeSet = mock(VolumeSet.class);
       ContainerMetrics metrics = ContainerMetrics.create(conf);
       Map<ContainerProtos.ContainerType, Handler> handlers = Maps.newHashMap();
+      DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
+      DatanodeStateMachine stateMachine = Mockito.mock(
+          DatanodeStateMachine.class);
+      StateContext context = Mockito.mock(StateContext.class);
+      Mockito.when(stateMachine.getDatanodeDetails())
+          .thenReturn(datanodeDetails);
+      Mockito.when(context.getParent()).thenReturn(stateMachine);
+
+
       for (ContainerProtos.ContainerType containerType :
           ContainerProtos.ContainerType.values()) {
         handlers.put(containerType,
-            Handler.getHandlerForContainerType(
-                containerType, conf, null, containerSet, volumeSet, metrics));
+            Handler.getHandlerForContainerType(containerType, conf, context,
+                containerSet, volumeSet, metrics));
       }
       HddsDispatcher dispatcher = new HddsDispatcher(
-          conf, containerSet, volumeSet, handlers, null, metrics);
+          conf, containerSet, volumeSet, handlers, context, metrics);
+      dispatcher.setScmId(scmId.toString());
       dispatcher.init();
-      DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
+
       server = new XceiverServerGrpc(datanodeDetails, conf, dispatcher,
           createReplicationService(
               new ContainerController(containerSet, null)));

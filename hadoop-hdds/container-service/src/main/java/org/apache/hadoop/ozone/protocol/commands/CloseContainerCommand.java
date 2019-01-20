@@ -54,16 +54,7 @@ public class CloseContainerCommand
     return SCMCommandProto.Type.closeContainerCommand;
   }
 
-  /**
-   * Gets the protobuf message of this object.
-   *
-   * @return A protobuf message.
-   */
   @Override
-  public byte[] getProtoBufMessage() {
-    return getProto().toByteArray();
-  }
-
   public CloseContainerCommandProto getProto() {
     return CloseContainerCommandProto.newBuilder()
         .setContainerID(getId())
@@ -83,5 +74,9 @@ public class CloseContainerCommand
 
   public long getContainerID() {
     return getId();
+  }
+
+  public PipelineID getPipelineID() {
+    return pipelineID;
   }
 }

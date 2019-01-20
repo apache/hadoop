@@ -2323,8 +2323,7 @@ public class DataNode extends ReconfigurableBase
     if (numTargets > 0) {
       StringBuilder xfersBuilder = new StringBuilder();
       for (int i = 0; i < numTargets; i++) {
-        xfersBuilder.append(xferTargets[i]);
-        xfersBuilder.append(" ");
+        xfersBuilder.append(xferTargets[i]).append(" ");
       }
       LOG.info(bpReg + " Starting thread to transfer " + 
                block + " to " + xfersBuilder);                       

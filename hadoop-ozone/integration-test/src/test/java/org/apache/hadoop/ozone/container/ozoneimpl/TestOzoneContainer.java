@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.container.ozoneimpl;
 
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
@@ -75,13 +76,12 @@ public class TestOzoneContainer {
       conf.setBoolean(
           OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, false);
 
-      DatanodeDetails datanodeDetails = Mockito.mock(DatanodeDetails.class);
+      DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
       StateContext context = Mockito.mock(StateContext.class);
       DatanodeStateMachine dsm = Mockito.mock(DatanodeStateMachine.class);
       Mockito.when(dsm.getDatanodeDetails()).thenReturn(datanodeDetails);
       Mockito.when(context.getParent()).thenReturn(dsm);
-      container = new OzoneContainer(TestUtils.randomDatanodeDetails(),
-          conf, context);
+      container = new OzoneContainer(datanodeDetails, conf, context);
       //Setting scmId, as we start manually ozone container.
       container.getDispatcher().setScmId(UUID.randomUUID().toString());
       container.start();
@@ -229,7 +229,8 @@ public class TestOzoneContainer {
     XceiverClientGrpc client = null;
     try {
       OzoneConfiguration conf = newOzoneConfiguration();
-
+      conf.set(HddsConfigKeys.OZONE_METADATA_DIRS,
+          tempFolder.getRoot().getPath());
       client = createClientForTesting(conf);
       cluster = MiniOzoneCluster.newBuilder(conf)
           .setRandomContainerPort(false)
@@ -287,7 +288,8 @@ public class TestOzoneContainer {
     try {
 
       OzoneConfiguration conf = newOzoneConfiguration();
-
+      conf.set(HddsConfigKeys.OZONE_METADATA_DIRS,
+          tempFolder.getRoot().getPath());
       client = createClientForTesting(conf);
       cluster = MiniOzoneCluster.newBuilder(conf)
           .setRandomContainerPort(false)
@@ -384,7 +386,8 @@ public class TestOzoneContainer {
         writeChunkRequest, putBlockRequest;
     try {
       OzoneConfiguration conf = newOzoneConfiguration();
-
+      conf.set(HddsConfigKeys.OZONE_METADATA_DIRS,
+          tempFolder.getRoot().getPath());
       client = createClientForTesting(conf);
       cluster = MiniOzoneCluster.newBuilder(conf)
           .setRandomContainerPort(false)
@@ -502,7 +505,8 @@ public class TestOzoneContainer {
     XceiverClientGrpc client = null;
     try {
       OzoneConfiguration conf = newOzoneConfiguration();
-
+      conf.set(HddsConfigKeys.OZONE_METADATA_DIRS,
+          tempFolder.getRoot().getPath());
       client = createClientForTesting(conf);
       cluster = MiniOzoneCluster.newBuilder(conf)
           .setRandomContainerPort(false)

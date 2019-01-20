@@ -41,6 +41,8 @@ import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
     .DeleteBlocksCommandHandler;
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
+    .DeleteContainerCommandHandler;
+import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
     .ReplicateContainerCommandHandler;
 import org.apache.hadoop.ozone.container.keyvalue.TarContainerPacker;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
@@ -49,6 +51,7 @@ import org.apache.hadoop.ozone.container.replication.DownloadAndImportReplicator
 import org.apache.hadoop.ozone.container.replication.ReplicationSupervisor;
 import org.apache.hadoop.ozone.container.replication.SimpleContainerDownloader;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
+import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
@@ -77,6 +80,8 @@ public class DatanodeStateMachine implements Closeable {
   private Thread stateMachineThread = null;
   private Thread cmdProcessThread = null;
   private final ReplicationSupervisor supervisor;
+
+  private JvmPauseMonitor jvmPauseMonitor;
 
   /**
    * Constructs a a datanode state machine.
@@ -112,6 +117,7 @@ public class DatanodeStateMachine implements Closeable {
         .addHandler(new DeleteBlocksCommandHandler(container.getContainerSet(),
             conf))
         .addHandler(new ReplicateContainerCommandHandler(conf, supervisor))
+        .addHandler(new DeleteContainerCommandHandler())
         .setConnectionManager(connectionManager)
         .setContainer(container)
         .setContext(context)
@@ -159,6 +165,12 @@ public class DatanodeStateMachine implements Closeable {
     container.start();
     reportManager.init();
     initCommandHandlerThread(conf);
+
+    // Start jvm monitor
+    jvmPauseMonitor = new JvmPauseMonitor();
+    jvmPauseMonitor.init(conf);
+    jvmPauseMonitor.start();
+
     while (context.getState() != DatanodeStates.SHUTDOWN) {
       try {
         LOG.debug("Executing cycle Number : {}", context.getExecutionCount());
@@ -241,6 +253,10 @@ public class DatanodeStateMachine implements Closeable {
 
     if(container != null) {
       container.stop();
+    }
+
+    if (jvmPauseMonitor != null) {
+      jvmPauseMonitor.stop();
     }
   }
 

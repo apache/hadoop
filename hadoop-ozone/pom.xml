@@ -33,7 +33,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <hadoop.version>3.2.1-SNAPSHOT</hadoop.version>
     <hdds.version>0.4.0-SNAPSHOT</hdds.version>
     <ozone.version>0.4.0-SNAPSHOT</ozone.version>
-    <ratis.version>0.4.0-3b0be02-SNAPSHOT</ratis.version>
+    <ratis.version>0.4.0-a8c4ca0-SNAPSHOT</ratis.version>
     <bouncycastle.version>1.60</bouncycastle.version>
     <ozone.release>Badlands</ozone.release>
     <declared.ozone.version>${ozone.version}</declared.ozone.version>
@@ -278,9 +278,13 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/site/resources/images/*</exclude>
             <exclude>src/test/all-tests</exclude>
             <exclude>src/test/empty-file</exclude>
+            <exclude>src/test/resources/*.log</exclude>
             <exclude>src/test/resources/*.tgz</exclude>
             <exclude>src/test/resources/data*</exclude>
             <exclude>src/test/resources/empty-file</exclude>
+            <exclude>src/test/resources/ssl/*</exclude>
+            <exclude>src/main/compose/ozonesecure/docker-image/runner/build/apache-rat-0.12/README-CLI.txt</exclude>
+            <exclude>src/main/compose/ozonesecure/docker-image/runner/build/apache-rat-0.12/README-ANT.txt</exclude>
             <exclude>webapps/static/angular-1.6.4.min.js</exclude>
             <exclude>webapps/static/angular-nvd3-1.0.9.min.js</exclude>
             <exclude>webapps/static/angular-route-1.6.4.min.js</exclude>
@@ -292,6 +296,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>webapps/static/nvd3-1.8.5.min.css</exclude>
             <exclude>webapps/static/nvd3-1.8.5.min.js.map</exclude>
             <exclude>webapps/static/nvd3-1.8.5.min.js</exclude>
+            <exclude>**/dependency-reduced-pom.xml</exclude>
           </excludes>
         </configuration>
       </plugin>

@@ -403,6 +403,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * @return The JSON serializer.
    */
   private static JSON createPermissionJsonSerializer() {
+    org.eclipse.jetty.util.log.Log.getProperties().setProperty("org.eclipse.jetty.util.log.announce", "false");
     JSON serializer = new JSON();
     serializer.addConvertor(PermissionStatus.class,
         new PermissionStatusJsonSerializer());

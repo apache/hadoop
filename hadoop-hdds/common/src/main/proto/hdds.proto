@@ -44,11 +44,17 @@ message PipelineID {
   required string id = 1;
 }
 
+enum PipelineState {
+    PIPELINE_ALLOCATED = 1;
+    PIPELINE_OPEN = 2;
+    PIPELINE_CLOSED = 3;
+}
+
 message Pipeline {
     required string leaderID = 1;
     repeated DatanodeDetailsProto members = 2;
     // TODO: remove the state and leaderID from this class
-    optional LifeCycleState state = 3 [default = OPEN];
+    optional PipelineState state = 3 [default = PIPELINE_ALLOCATED];
     optional ReplicationType type = 4 [default = STAND_ALONE];
     optional ReplicationFactor factor = 5 [default = ONE];
     required PipelineID id = 6;
@@ -187,6 +193,30 @@ enum ScmOps {
 message ContainerBlockID {
     required int64 containerID = 1;
     required int64 localID = 2;
+}
+
+
+/**
+ * Information for the Hdds block token.
+ * When adding further fields, make sure they are optional as they would
+ * otherwise not be backwards compatible.
+ */
+message BlockTokenSecretProto {
+    /**
+ * File access permissions mode.
+ */
+    enum AccessModeProto {
+        READ = 1;
+        WRITE = 2;
+        COPY = 3;
+        DELETE = 4;
+    }
+    required string ownerId = 1;
+    required string blockId = 2;
+    required uint64 expiryDate = 3;
+    required string omCertSerialId = 4;
+    repeated AccessModeProto modes = 5;
+    required uint64 maxLength = 6;
 }
 
 message BlockID {

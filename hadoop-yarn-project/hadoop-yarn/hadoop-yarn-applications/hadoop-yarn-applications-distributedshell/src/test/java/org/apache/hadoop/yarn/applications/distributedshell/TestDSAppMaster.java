@@ -159,7 +159,8 @@ public class TestDSAppMaster {
 
   private Container generateContainer(ContainerId cid) {
     return Container.newInstance(cid, NodeId.newInstance("host", 5000),
-      "host:80", Resource.newInstance(1024, 1), Priority.newInstance(0), null);
+      "host:80", Resource.newInstance(1024, 1), Priority.newInstance(0),
+      null);
   }
 
   private ContainerStatus

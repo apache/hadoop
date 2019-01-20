@@ -697,8 +697,8 @@ public class JournalSet implements JournalManager {
     StringBuilder buf = new StringBuilder();
     for (JournalAndStream jas : journals) {
       if (jas.isActive()) {
-        buf.append(jas.getCurrentStream().getTotalSyncTime());
-        buf.append(" ");
+        buf.append(jas.getCurrentStream().getTotalSyncTime())
+            .append(" ");
       }
     }
     return buf.toString();

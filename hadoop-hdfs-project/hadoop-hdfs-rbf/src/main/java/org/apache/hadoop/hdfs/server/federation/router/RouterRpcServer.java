@@ -58,6 +58,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
@@ -1188,9 +1189,20 @@ public class RouterRpcServer extends AbstractService
   }
 
   @Override // ClientProtocol
+  public HAServiceProtocol.HAServiceState getHAServiceState()
+      throws IOException {
+    return clientProto.getHAServiceState();
+  }
+
+  @Override // ClientProtocol
   public BatchedEntries<OpenFileEntry> listOpenFiles(long prevId,
       EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException {
     return clientProto.listOpenFiles(prevId, openFilesTypes, path);
+  }
+
+  @Override // ClientProtocol
+  public void msync() throws IOException {
+    clientProto.msync();
   }
 
   @Override // ClientProtocol

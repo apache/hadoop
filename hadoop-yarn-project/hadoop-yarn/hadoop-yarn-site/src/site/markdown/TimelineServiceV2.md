@@ -305,6 +305,22 @@ Following are the basic configurations to start Timeline service v.2:
 </property>
 ```
 
+If using an aux services manifest instead of setting aux services through the Configuration, ensure that the manifest services array includes the timeline\_collector service as follows:
+```
+{
+  "services": [
+    {
+      "name": "timeline_collector",
+      "configuration": {
+        "properties": {
+          "class.name": "org.apache.hadoop.yarn.server.timelineservice.collector.PerNodeTimelineCollectorsAuxService"
+        }
+      }
+    }
+  ]
+}
+```
+
 In addition, you may want to set the YARN cluster name to a reasonably unique value in case you
 are using multiple clusters to store data in the same Apache HBase storage:
 

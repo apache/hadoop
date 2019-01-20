@@ -31,6 +31,7 @@ export default DS.Model.extend({
   node: DS.attr('string'),
   hostUrl: DS.attr('string'),
   ipAddr: DS.attr('string'),
+  exposedPorts: DS.attr('string'),
   exitStatusCode: DS.attr('string'),
 
   createdDate: Ember.computed('createdTimestamp', function() {

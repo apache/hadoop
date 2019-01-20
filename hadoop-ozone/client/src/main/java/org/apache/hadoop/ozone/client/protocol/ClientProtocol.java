@@ -19,6 +19,8 @@
 package org.apache.hadoop.ozone.client.protocol;
 
 import org.apache.hadoop.hdds.protocol.StorageType;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.client.*;
 import org.apache.hadoop.hdds.client.OzoneQuota;
@@ -27,9 +29,16 @@ import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+
+import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
+import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.security.KerberosInfo;
+import org.apache.hadoop.security.token.Token;
 
 /**
  * An implementer of this interface is capable of connecting to Ozone Cluster
@@ -39,6 +48,7 @@ import java.util.List;
  * includes: {@link org.apache.hadoop.ozone.client.rpc.RpcClient} for RPC and
  * {@link  org.apache.hadoop.ozone.client.rest.RestClient} for REST.
  */
+@KerberosInfo(serverPrincipal = ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY)
 public interface ClientProtocol {
 
   /**
@@ -386,7 +396,6 @@ public interface ClientProtocol {
    */
   void close() throws IOException;
 
-
   /**
    * Initiate Multipart upload.
    * @param volumeName
@@ -401,10 +410,82 @@ public interface ClientProtocol {
       bucketName, String keyName, ReplicationType type, ReplicationFactor
       factor) throws IOException;
 
+  /**
+   * Create a part key for a multipart upload key.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param size
+   * @param partNumber
+   * @param uploadID
+   * @return OzoneOutputStream
+   * @throws IOException
+   */
   OzoneOutputStream createMultipartKey(String volumeName, String bucketName,
                                        String keyName, long size,
                                        int partNumber, String uploadID)
       throws IOException;
 
+  /**
+   * Complete Multipart upload. This will combine all the parts and make the
+   * key visible in ozone.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param uploadID
+   * @param partsMap
+   * @return OmMultipartUploadCompleteInfo
+   * @throws IOException
+   */
+  OmMultipartUploadCompleteInfo completeMultipartUpload(String volumeName,
+      String bucketName, String keyName, String uploadID,
+      Map<Integer, String> partsMap) throws IOException;
 
+  /**
+   * Abort Multipart upload request for the given key with given uploadID.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param uploadID
+   * @throws IOException
+   */
+  void abortMultipartUpload(String volumeName,
+      String bucketName, String keyName, String uploadID) throws IOException;
+
+  /**
+   * Get a valid Delegation Token.
+   *
+   * @param renewer the designated renewer for the token
+   * @return Token<OzoneDelegationTokenSelector>
+   * @throws IOException
+   */
+  Token<OzoneTokenIdentifier> getDelegationToken(Text renewer)
+      throws IOException;
+
+  /**
+   * Renew an existing delegation token.
+   *
+   * @param token delegation token obtained earlier
+   * @return the new expiration time
+   * @throws IOException
+   */
+  long renewDelegationToken(Token<OzoneTokenIdentifier> token)
+      throws IOException;
+
+  /**
+   * Cancel an existing delegation token.
+   *
+   * @param token delegation token
+   * @throws IOException
+   */
+  void cancelDelegationToken(Token<OzoneTokenIdentifier> token)
+      throws IOException;
+
+  /**
+   * returns S3 Secret given kerberos user.
+   * @param kerberosID
+   * @return S3SecretValue
+   * @throws IOException
+   */
+  S3SecretValue getS3Secret(String kerberosID) throws IOException;
 }

@@ -18,12 +18,19 @@
 
 package org.apache.hadoop.yarn.server.utils;
 
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SystemCredentialsForAppsProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
@@ -65,5 +72,66 @@ public class YarnServerBuilderUtils {
       response.addAllApplicationsToCleanup(applicationsToCleanUp);
     }
     return response;
+  }
+
+  /**
+   * Build SystemCredentialsForAppsProto objects.
+   *
+   * @param applicationId Application ID
+   * @param credentials HDFS Tokens
+   * @return systemCredentialsForAppsProto SystemCredentialsForAppsProto
+   */
+  public static SystemCredentialsForAppsProto newSystemCredentialsForAppsProto(
+      ApplicationId applicationId, ByteBuffer credentials) {
+    SystemCredentialsForAppsProto systemCredentialsForAppsProto =
+        SystemCredentialsForAppsProto.newBuilder()
+            .setAppId(ProtoUtils.convertToProtoFormat(applicationId))
+            .setCredentialsForApp(ProtoUtils.BYTE_STRING_INTERNER.intern(
+                ProtoUtils.convertToProtoFormat(credentials.duplicate())))
+            .build();
+    return systemCredentialsForAppsProto;
+  }
+
+  /**
+   * Convert Collection of SystemCredentialsForAppsProto proto objects to a Map
+   * of ApplicationId to ByteBuffer.
+   *
+   * @param systemCredentials List of SystemCredentialsForAppsProto proto
+   *          objects
+   * @return systemCredentialsForApps Map of Application Id to ByteBuffer
+   */
+  public static Map<ApplicationId, ByteBuffer> convertFromProtoFormat(
+      Collection<SystemCredentialsForAppsProto> systemCredentials) {
+
+    Map<ApplicationId, ByteBuffer> systemCredentialsForApps =
+        new HashMap<ApplicationId, ByteBuffer>(systemCredentials.size());
+    for (SystemCredentialsForAppsProto proto : systemCredentials) {
+      systemCredentialsForApps.put(
+          ProtoUtils.convertFromProtoFormat(proto.getAppId()),
+          ProtoUtils.convertFromProtoFormat(proto.getCredentialsForApp()));
+    }
+    return systemCredentialsForApps;
+  }
+
+  /**
+   * Convert Map of Application Id to ByteBuffer to Collection of
+   * SystemCredentialsForAppsProto proto objects.
+   *
+   * @param systemCredentialsForApps Map of Application Id to ByteBuffer
+   * @return systemCredentials List of SystemCredentialsForAppsProto proto
+   *         objects
+   */
+  public static List<SystemCredentialsForAppsProto> convertToProtoFormat(
+      Map<ApplicationId, ByteBuffer> systemCredentialsForApps) {
+    List<SystemCredentialsForAppsProto> systemCredentials =
+        new ArrayList<SystemCredentialsForAppsProto>(
+            systemCredentialsForApps.size());
+    for (Map.Entry<ApplicationId, ByteBuffer> entry : systemCredentialsForApps
+        .entrySet()) {
+      SystemCredentialsForAppsProto proto =
+          newSystemCredentialsForAppsProto(entry.getKey(), entry.getValue());
+      systemCredentials.add(proto);
+    }
+    return systemCredentials;
   }
 }

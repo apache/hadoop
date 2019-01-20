@@ -21,6 +21,8 @@ package org.apache.hadoop.hdds.scm;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.ratis.grpc.GrpcTlsConfig;
 import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.protocol.RaftRetryFailureException;
 import org.apache.ratis.retry.RetryPolicy;
@@ -69,9 +71,11 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     final int maxOutstandingRequests =
         HddsClientUtils.getMaxOutstandingRequests(ozoneConf);
     final RetryPolicy retryPolicy = RatisHelper.createRetryPolicy(ozoneConf);
+    final GrpcTlsConfig tlsConfig = RatisHelper.createTlsClientConfig(new
+        SecurityConfig(ozoneConf));
     return new XceiverClientRatis(pipeline,
         SupportedRpcType.valueOfIgnoreCase(rpcType), maxOutstandingRequests,
-        retryPolicy);
+        retryPolicy, tlsConfig);
   }
 
   private final Pipeline pipeline;
@@ -79,6 +83,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   private final AtomicReference<RaftClient> client = new AtomicReference<>();
   private final int maxOutstandingRequests;
   private final RetryPolicy retryPolicy;
+  private final GrpcTlsConfig tlsConfig;
 
   // Map to track commit index at every server
   private final ConcurrentHashMap<String, Long> commitInfoMap;
@@ -90,7 +95,8 @@ public final class XceiverClientRatis extends XceiverClientSpi {
    * Constructs a client.
    */
   private XceiverClientRatis(Pipeline pipeline, RpcType rpcType,
-      int maxOutStandingChunks, RetryPolicy retryPolicy) {
+      int maxOutStandingChunks, RetryPolicy retryPolicy,
+      GrpcTlsConfig tlsConfig) {
     super();
     this.pipeline = pipeline;
     this.rpcType = rpcType;
@@ -98,6 +104,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     this.retryPolicy = retryPolicy;
     commitInfoMap = new ConcurrentHashMap<>();
     watchClient = null;
+    this.tlsConfig = tlsConfig;
   }
 
   private void updateCommitInfosMap(
@@ -145,9 +152,16 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     // maxOutstandingRequests so as to set the upper bound on max no of async
     // requests to be handled by raft client
     if (!client.compareAndSet(null,
-        RatisHelper.newRaftClient(rpcType, getPipeline(), retryPolicy))) {
+        RatisHelper.newRaftClient(rpcType, getPipeline(), retryPolicy,
+            maxOutstandingRequests, tlsConfig))) {
       throw new IllegalStateException("Client is already connected.");
     }
+  }
+
+  @Override
+  public void connect(String encodedToken) throws Exception {
+    throw new UnsupportedOperationException("Block tokens are not " +
+        "implemented for Ratis clients.");
   }
 
   @Override
@@ -190,12 +204,6 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     return minIndex.isPresent() ? minIndex.getAsLong() : 0;
   }
 
-  private void getFailedServer(
-      Collection<RaftProtos.CommitInfoProto> commitInfos) {
-    for (RaftProtos.CommitInfoProto proto : commitInfos) {
-
-    }
-  }
 
   @Override
   public long watchForCommit(long index, long timeout)
@@ -211,13 +219,14 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     // create a new RaftClient instance for watch request
     if (watchClient == null) {
       watchClient =
-          RatisHelper.newRaftClient(rpcType, getPipeline(), retryPolicy);
+          RatisHelper.newRaftClient(rpcType, getPipeline(), retryPolicy,
+              maxOutstandingRequests, tlsConfig);
     }
     CompletableFuture<RaftClientReply> replyFuture = watchClient
         .sendWatchAsync(index, RaftProtos.ReplicationLevel.ALL_COMMITTED);
     RaftClientReply reply;
     try {
-      reply = replyFuture.get(timeout, TimeUnit.MILLISECONDS);
+      replyFuture.get(timeout, TimeUnit.MILLISECONDS);
     } catch (TimeoutException toe) {
       LOG.warn("3 way commit failed ", toe);
 
@@ -229,7 +238,8 @@ public final class XceiverClientRatis extends XceiverClientSpi {
       // here once the watch request bypassing sliding window in Raft Client
       // gets fixed.
       watchClient =
-          RatisHelper.newRaftClient(rpcType, getPipeline(), retryPolicy);
+          RatisHelper.newRaftClient(rpcType, getPipeline(), retryPolicy,
+              maxOutstandingRequests, tlsConfig);
       reply = watchClient
           .sendWatchAsync(index, RaftProtos.ReplicationLevel.MAJORITY_COMMITTED)
           .get(timeout, TimeUnit.MILLISECONDS);

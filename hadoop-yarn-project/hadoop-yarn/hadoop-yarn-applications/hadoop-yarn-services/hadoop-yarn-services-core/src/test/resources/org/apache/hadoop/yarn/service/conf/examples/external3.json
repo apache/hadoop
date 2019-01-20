@@ -14,6 +14,7 @@
           "yarn.io/csi-volume": {
             "value": 100,
             "unit": "Gi",
+            "tags": ["sample-tag"],
             "attributes" : {
               "driver" : "hostpath",
               "mountPath" : "/mnt/data"

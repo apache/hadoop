@@ -105,4 +105,14 @@ public interface ContainerRuntime {
    * and hostname
    */
   String[] getIpAndHost(Container container) throws ContainerExecutionException;
+
+  /**
+   * Return the exposed ports of the container.
+   * @param container the {@link Container}
+   * @return List of exposed ports
+   * @throws ContainerExecutionException if an error occurs while getting
+   * the exposed ports
+   */
+  String getExposedPorts(Container container)
+      throws ContainerExecutionException;
 }

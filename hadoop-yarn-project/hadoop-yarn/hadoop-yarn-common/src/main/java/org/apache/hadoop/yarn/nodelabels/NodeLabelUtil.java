@@ -22,6 +22,7 @@ import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -40,6 +41,8 @@ public final class NodeLabelUtil {
       Pattern.compile("^[0-9a-zA-Z][0-9a-zA-Z-_\\.]*");
   private static final Pattern ATTRIBUTE_VALUE_PATTERN =
       Pattern.compile("^[0-9a-zA-Z][0-9a-zA-Z-_.]*");
+  private static final Pattern ATTRIBUTE_NAME_PATTERN =
+      Pattern.compile("^[0-9a-zA-Z][0-9a-zA-Z-_]*");
 
   public static void checkAndThrowLabelName(String label) throws IOException {
     if (label == null || label.isEmpty() || label.length() > MAX_LABEL_LENGTH) {
@@ -54,6 +57,25 @@ public final class NodeLabelUtil {
       throw new IOException("label name should only contains "
           + "{0-9, a-z, A-Z, -, _} and should not started with {-,_}"
           + ", now it is= " + label);
+    }
+  }
+
+  public static void checkAndThrowAttributeName(String attributeName)
+      throws IOException {
+    if (attributeName == null || attributeName.isEmpty()
+        || attributeName.length() > MAX_LABEL_LENGTH) {
+      throw new IOException(
+          "attribute name added is empty or exceeds " + MAX_LABEL_LENGTH
+              + " character(s)");
+    }
+    attributeName = attributeName.trim();
+
+    boolean match = ATTRIBUTE_NAME_PATTERN.matcher(attributeName).matches();
+
+    if (!match) {
+      throw new IOException("attribute name should only contains "
+          + "{0-9, a-z, A-Z, -, _} and should not started with {-,_}"
+          + ", now it is= " + attributeName);
     }
   }
 
@@ -129,7 +151,9 @@ public final class NodeLabelUtil {
         // Verify attribute prefix format.
         checkAndThrowAttributePrefix(prefix);
         // Verify attribute name format.
-        checkAndThrowLabelName(attributeKey.getAttributeName());
+        checkAndThrowAttributeName(attributeKey.getAttributeName());
+        // Verify attribute value format.
+        checkAndThrowAttributeValue(nodeAttribute.getAttributeValue());
       }
     }
   }
@@ -151,5 +175,30 @@ public final class NodeLabelUtil {
         .filter(nodeAttribute -> prefix
             .equals(nodeAttribute.getAttributeKey().getAttributePrefix()))
         .collect(Collectors.toSet());
+  }
+
+  /**
+   * Are these two input node attributes the same.
+   * @return true if they are the same
+   */
+  public static boolean isNodeAttributesEquals(
+      Set<NodeAttribute> leftNodeAttributes,
+      Set<NodeAttribute> rightNodeAttributes) {
+    if (leftNodeAttributes == null && rightNodeAttributes == null) {
+      return true;
+    } else if (leftNodeAttributes == null || rightNodeAttributes == null
+        || leftNodeAttributes.size() != rightNodeAttributes.size()) {
+      return false;
+    }
+    return leftNodeAttributes.stream()
+        .allMatch(e -> isNodeAttributeIncludes(rightNodeAttributes, e));
+  }
+
+  private static boolean isNodeAttributeIncludes(
+      Set<NodeAttribute> nodeAttributes, NodeAttribute checkNodeAttribute) {
+    return nodeAttributes.stream().anyMatch(
+        e -> e.equals(checkNodeAttribute) && Objects
+            .equals(e.getAttributeValue(),
+                checkNodeAttribute.getAttributeValue()));
   }
 }

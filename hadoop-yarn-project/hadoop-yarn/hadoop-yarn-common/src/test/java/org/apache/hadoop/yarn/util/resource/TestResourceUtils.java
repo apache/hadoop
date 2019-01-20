@@ -400,4 +400,57 @@ public class TestResourceUtils {
     ResourceUtils.getResourceTypes();
     return dest.getAbsolutePath();
   }
+
+  @Test
+  public void testMultipleOpsForResourcesWithTags() throws Exception {
+
+    Configuration conf = new YarnConfiguration();
+    setupResourceTypes(conf, "resource-types-6.xml");
+    Resource resourceA = Resource.newInstance(2, 4);
+    Resource resourceB = Resource.newInstance(3, 6);
+
+    resourceA.setResourceInformation("resource1",
+        ResourceInformation.newInstance("resource1", "T", 5L));
+
+    resourceA.setResourceInformation("resource2",
+        ResourceInformation.newInstance("resource2", "M", 2L));
+    resourceA.setResourceInformation("yarn.io/gpu",
+        ResourceInformation.newInstance("yarn.io/gpu", "", 1));
+    resourceA.setResourceInformation("yarn.io/test-volume",
+        ResourceInformation.newInstance("yarn.io/test-volume", "", 2));
+
+    resourceB.setResourceInformation("resource1",
+        ResourceInformation.newInstance("resource1", "T", 3L));
+
+    resourceB.setResourceInformation("resource2",
+        ResourceInformation.newInstance("resource2", "M", 4L));
+    resourceB.setResourceInformation("yarn.io/gpu",
+        ResourceInformation.newInstance("yarn.io/gpu", "", 2));
+    resourceB.setResourceInformation("yarn.io/test-volume",
+        ResourceInformation.newInstance("yarn.io/test-volume", "", 3));
+
+    Resource addedResource = Resources.add(resourceA, resourceB);
+    Assert.assertEquals(addedResource.getMemorySize(), 5);
+    Assert.assertEquals(addedResource.getVirtualCores(), 10);
+    Assert.assertEquals(
+        addedResource.getResourceInformation("resource1").getValue(), 8);
+
+    // Verify that value of resourceA and resourceB is not added up for
+    // "yarn.io/test-volume".
+    Assert.assertEquals(
+        addedResource.getResourceInformation("yarn.io/test-volume").getValue(),
+        2);
+
+    Resource mulResource = Resources.multiplyAndRoundDown(resourceA, 3);
+    Assert.assertEquals(mulResource.getMemorySize(), 6);
+    Assert.assertEquals(mulResource.getVirtualCores(), 12);
+    Assert.assertEquals(
+        mulResource.getResourceInformation("resource1").getValue(), 15);
+
+    // Verify that value of resourceA is not multiplied up for
+    // "yarn.io/test-volume".
+    Assert.assertEquals(
+        mulResource.getResourceInformation("yarn.io/test-volume").getValue(),
+        2);
+  }
 }

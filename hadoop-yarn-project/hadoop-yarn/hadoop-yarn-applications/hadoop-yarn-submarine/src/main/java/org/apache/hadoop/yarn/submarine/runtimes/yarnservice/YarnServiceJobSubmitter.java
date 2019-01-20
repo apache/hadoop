@@ -65,6 +65,9 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
+
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConstants
+    .CONTAINER_STATE_REPORT_AS_SERVICE_STATE;
 import static org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes.EXIT_SUCCESS;
 import static org.apache.hadoop.yarn.service.utils.ServiceApiUtil.jsonSerDeser;
 
@@ -492,6 +495,8 @@ public class YarnServiceJobSubmitter implements JobSubmitter {
 
     if (taskType.equals(TaskType.PRIMARY_WORKER)) {
       workerComponent.setNumberOfContainers(1L);
+      workerComponent.getConfiguration().setProperty(
+          CONTAINER_STATE_REPORT_AS_SERVICE_STATE, "true");
     } else{
       workerComponent.setNumberOfContainers(
           (long) parameters.getNumWorkers() - 1);

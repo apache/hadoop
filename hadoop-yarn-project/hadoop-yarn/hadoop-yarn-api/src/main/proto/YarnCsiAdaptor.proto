@@ -31,4 +31,10 @@ service CsiAdaptorProtocolService {
 
     rpc validateVolumeCapacity (ValidateVolumeCapabilitiesRequest)
     returns (ValidateVolumeCapabilitiesResponse);
+
+    rpc nodePublishVolume (NodePublishVolumeRequest)
+    returns (NodePublishVolumeResponse);
+
+    rpc nodeUnpublishVolume (NodeUnpublishVolumeRequest)
+    returns (NodeUnpublishVolumeResponse);
 }

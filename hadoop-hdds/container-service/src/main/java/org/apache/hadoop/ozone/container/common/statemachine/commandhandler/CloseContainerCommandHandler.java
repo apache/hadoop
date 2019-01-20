@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto
@@ -31,6 +30,7 @@ import org.apache.hadoop.ozone.container.common.statemachine
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.ozoneimpl.ContainerController;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
+import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.util.Time;
 import org.apache.ratis.protocol.NotLeaderException;
@@ -68,61 +68,57 @@ public class CloseContainerCommandHandler implements CommandHandler {
   @Override
   public void handle(SCMCommand command, OzoneContainer ozoneContainer,
       StateContext context, SCMConnectionManager connectionManager) {
+    LOG.debug("Processing Close Container command.");
+    invocationCount++;
+    final long startTime = Time.monotonicNow();
+    final DatanodeDetails datanodeDetails = context.getParent()
+        .getDatanodeDetails();
+    final CloseContainerCommandProto closeCommand =
+        ((CloseContainerCommand)command).getProto();
+    final ContainerController controller = ozoneContainer.getController();
+    final long containerId = closeCommand.getContainerID();
     try {
-      LOG.debug("Processing Close Container command.");
-      invocationCount++;
-      final long startTime = Time.monotonicNow();
-      final DatanodeDetails datanodeDetails = context.getParent()
-          .getDatanodeDetails();
-      final CloseContainerCommandProto closeCommand =
-          CloseContainerCommandProto.parseFrom(command.getProtoBufMessage());
-      final ContainerController controller = ozoneContainer.getController();
-      final long containerId = closeCommand.getContainerID();
-      try {
-        final Container container = controller.getContainer(containerId);
+      final Container container = controller.getContainer(containerId);
 
-        if (container == null) {
-          LOG.error("Container #{} does not exist in datanode. "
-              + "Container close failed.", containerId);
-          return;
-        }
-
-        // Move the container to CLOSING state
-        controller.markContainerForClose(containerId);
-
-        // If the container is part of open pipeline, close it via write channel
-        if (ozoneContainer.getWriteChannel()
-            .isExist(closeCommand.getPipelineID())) {
-          if (closeCommand.getForce()) {
-            LOG.warn("Cannot force close a container when the container is" +
-                " part of an active pipeline.");
-            return;
-          }
-          ContainerCommandRequestProto request =
-              getContainerCommandRequestProto(datanodeDetails,
-                  closeCommand.getContainerID());
-          ozoneContainer.getWriteChannel().submitRequest(
-              request, closeCommand.getPipelineID());
-          return;
-        }
-        // If we reach here, there is no active pipeline for this container.
-        if (!closeCommand.getForce()) {
-          // QUASI_CLOSE the container.
-          controller.quasiCloseContainer(containerId);
-        } else {
-          // SCM told us to force close the container.
-          controller.closeContainer(containerId);
-        }
-      } catch (NotLeaderException e) {
-        LOG.debug("Follower cannot close container #{}.", containerId);
-      } catch (IOException e) {
-        LOG.error("Can't close container #{}", containerId, e);
-      } finally {
-        long endTime = Time.monotonicNow();
-        totalTime += endTime - startTime;
+      if (container == null) {
+        LOG.error("Container #{} does not exist in datanode. "
+            + "Container close failed.", containerId);
+        return;
       }
-    } catch (InvalidProtocolBufferException ex) {
-      LOG.error("Exception while closing container", ex);
+
+      // Move the container to CLOSING state
+      controller.markContainerForClose(containerId);
+
+      // If the container is part of open pipeline, close it via write channel
+      if (ozoneContainer.getWriteChannel()
+          .isExist(closeCommand.getPipelineID())) {
+        if (closeCommand.getForce()) {
+          LOG.warn("Cannot force close a container when the container is" +
+              " part of an active pipeline.");
+          return;
+        }
+        ContainerCommandRequestProto request =
+            getContainerCommandRequestProto(datanodeDetails,
+                closeCommand.getContainerID());
+        ozoneContainer.getWriteChannel().submitRequest(
+            request, closeCommand.getPipelineID());
+        return;
+      }
+      // If we reach here, there is no active pipeline for this container.
+      if (!closeCommand.getForce()) {
+        // QUASI_CLOSE the container.
+        controller.quasiCloseContainer(containerId);
+      } else {
+        // SCM told us to force close the container.
+        controller.closeContainer(containerId);
+      }
+    } catch (NotLeaderException e) {
+      LOG.debug("Follower cannot close container #{}.", containerId);
+    } catch (IOException e) {
+      LOG.error("Can't close container #{}", containerId, e);
+    } finally {
+      long endTime = Time.monotonicNow();
+      totalTime += endTime - startTime;
     }
   }
 

@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ShellContainerCommand;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -113,6 +114,11 @@ public class ContainerShellWebSocket {
           .fromString(cId));
       if (!checkAuthorization(session, container)) {
         session.close(1008, "Forbidden");
+        return;
+      }
+      if (checkInsecureSetup()) {
+        session.close(1003, "Nonsecure mode is unsupported.");
+        return;
       }
       LOG.info(session.getRemoteAddress().getHostString() + " connected!");
       LOG.info(
@@ -135,6 +141,9 @@ public class ContainerShellWebSocket {
   public void onClose(Session session, int status, String reason) {
     try {
       LOG.info(session.getRemoteAddress().getHostString() + " closed!");
+      String exit = "exit\r\n";
+      pair.out.write(exit.getBytes(Charset.forName("UTF-8")));
+      pair.out.flush();
       pair.in.close();
       pair.out.close();
     } catch (IOException e) {
@@ -175,5 +184,15 @@ public class ContainerShellWebSocket {
       authorized = false;
     }
     return authorized;
+  }
+
+  private boolean checkInsecureSetup() {
+    boolean kerberos = UserGroupInformation.isSecurityEnabled();
+    boolean limitUsers = nmContext.getConf()
+        .getBoolean(YarnConfiguration.NM_NONSECURE_MODE_LIMIT_USERS, true);
+    if (kerberos) {
+      return false;
+    }
+    return limitUsers;
   }
 }

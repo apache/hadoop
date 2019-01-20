@@ -24,7 +24,10 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
+import org.apache.hadoop.yarn.api.CsiAdaptorProtocol;
+import org.apache.hadoop.yarn.api.impl.pb.client.CsiAdaptorProtocolPBClientImpl;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommandExecutor;
@@ -35,7 +38,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerVolumeCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.DockerCommandPlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.volume.csi.ContainerVolumePublisher;
 import org.apache.hadoop.yarn.util.DockerClientConfigHandler;
+import org.apache.hadoop.yarn.util.csi.CsiConfigUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -69,6 +74,7 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
@@ -76,6 +82,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -262,6 +269,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private Configuration conf;
   private Context nmContext;
   private DockerClient dockerClient;
+  private Map<String, CsiAdaptorProtocol> csiClients = new HashMap<>();
   private PrivilegedOperationExecutor privilegedOperationExecutor;
   private String defaultImageName;
   private Set<String> allowedNetworks = new HashSet<>();
@@ -363,6 +371,9 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       throw new ContainerExecutionException(message);
     }
 
+    // initialize csi adaptors if necessary
+    initiateCsiClients(conf);
+
     privilegedContainersAcl = new AccessControlList(conf.getTrimmed(
         YarnConfiguration.NM_DOCKER_PRIVILEGED_CONTAINERS_ACL,
         YarnConfiguration.DEFAULT_NM_DOCKER_PRIVILEGED_CONTAINERS_ACL));
@@ -396,6 +407,10 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     defaultTmpfsMounts.addAll(Arrays.asList(
         conf.getTrimmedStrings(
         YarnConfiguration.NM_DOCKER_DEFAULT_TMPFS_MOUNTS)));
+  }
+
+  public Map<String, CsiAdaptorProtocol> getCsiClients() {
+    return csiClients;
   }
 
   @Override
@@ -942,6 +957,18 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       }
     }
 
+    ContainerVolumePublisher publisher = new ContainerVolumePublisher(
+        container, container.getCsiVolumesRootDir(), this);
+    try {
+      Map<String, String> volumeMounts = publisher.publishVolumes();
+      volumeMounts.forEach((local, remote) ->
+          runCommand.addReadWriteMountLocation(local, remote));
+    } catch (YarnException | IOException e) {
+      throw new ContainerExecutionException(
+          "Container requests for volume resource but we are failed"
+              + " to publish volumes on this node");
+    }
+
     if (environment.containsKey(ENV_DOCKER_CONTAINER_TMPFS_MOUNTS)) {
       String[] tmpfsMounts = environment.get(ENV_DOCKER_CONTAINER_TMPFS_MOUNTS)
           .split(",");
@@ -1268,7 +1295,23 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     return null;
   }
 
-
+  @Override
+  public String getExposedPorts(Container container)
+      throws ContainerExecutionException {
+    ContainerId containerId = container.getContainerId();
+    String containerIdStr = containerId.toString();
+    DockerInspectCommand inspectCommand =
+        new DockerInspectCommand(containerIdStr).getExposedPorts();
+    try {
+      String output = executeDockerInspect(containerId, inspectCommand);
+      return output;
+    } catch (ContainerExecutionException e) {
+      LOG.error("Error when writing command to temp file", e);
+    } catch (PrivilegedOperationException e) {
+      LOG.error("Error when executing command.", e);
+    }
+    return null;
+  }
 
   private PrivilegedOperation buildLaunchOp(ContainerRuntimeContext ctx,
       String commandFile, DockerCommand command) {
@@ -1426,6 +1469,14 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       ContainerExecutor.Signal signal) throws ContainerExecutionException {
     Container container = ctx.getContainer();
 
+    ContainerVolumePublisher publisher = new ContainerVolumePublisher(
+        container, container.getCsiVolumesRootDir(), this);
+    try {
+      publisher.unpublishVolumes();
+    } catch (YarnException | IOException e) {
+      throw new ContainerExecutionException(e);
+    }
+
     // Only need to check whether the container was asked to be privileged.
     // If the container had failed the permissions checks upon launch, it
     // would have never been launched and thus we wouldn't be here
@@ -1521,4 +1572,33 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     }
   }
 
+  /**
+   * Initiate CSI clients to talk to the CSI adaptors on this node and
+   * cache the clients for easier fetch.
+   * @param config configuration
+   * @throws ContainerExecutionException
+   */
+  private void initiateCsiClients(Configuration config)
+      throws ContainerExecutionException {
+    String[] driverNames = CsiConfigUtils.getCsiDriverNames(config);
+    if (driverNames != null && driverNames.length > 0) {
+      for (String driverName : driverNames) {
+        try {
+          // find out the adaptors service address
+          InetSocketAddress adaptorServiceAddress =
+              CsiConfigUtils.getCsiAdaptorAddressForDriver(driverName, config);
+          LOG.info("Initializing a csi-adaptor-client for csi-adaptor {},"
+              + " csi-driver {}", adaptorServiceAddress.toString(), driverName);
+          CsiAdaptorProtocolPBClientImpl client =
+              new CsiAdaptorProtocolPBClientImpl(1L, adaptorServiceAddress,
+                  config);
+          csiClients.put(driverName, client);
+        } catch (IOException e1) {
+          throw new ContainerExecutionException(e1.getMessage());
+        } catch (YarnException e2) {
+          throw new ContainerExecutionException(e2.getMessage());
+        }
+      }
+    }
+  }
 }

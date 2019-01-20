@@ -27,6 +27,7 @@ export default DS.Model.extend({
   containerId: DS.attr('string'),
   amContainerId: DS.attr('string'),
   nodeHttpAddress: DS.attr('string'),
+  exposedPorts: DS.attr('string'),
   nodeId: DS.attr('string'),
   hosts: DS.attr('string'),
   logsLink: DS.attr('string'),

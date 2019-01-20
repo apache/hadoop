@@ -67,7 +67,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * This class is the client-side translator to translate the requests made on
@@ -315,9 +314,12 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
           .newBuilder().build();
       ListPipelineResponseProto response = rpcProxy.listPipelines(
           NULL_RPC_CONTROLLER, request);
-      return response.getPipelinesList().stream()
-          .map(Pipeline::getFromProtobuf)
-          .collect(Collectors.toList());
+      List<Pipeline> list = new ArrayList<>();
+      for (HddsProtos.Pipeline pipeline : response.getPipelinesList()) {
+        Pipeline fromProtobuf = Pipeline.getFromProtobuf(pipeline);
+        list.add(fromProtobuf);
+      }
+      return list;
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

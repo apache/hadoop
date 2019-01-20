@@ -202,7 +202,11 @@ public class TestFSNamesystemLock {
     timer.advance(writeLockReportingThreshold + 100);
     logs.clearOutput();
     fsnLock.writeUnlock();
+    // look for the method name in the stack trace
     assertTrue(logs.getOutput().contains(GenericTestUtils.getMethodName()));
+    // find the held interval time in the log
+    Pattern pattern = Pattern.compile(".*[\n].*\\d+ms(.*[\n].*){1,}");
+    assertTrue(pattern.matcher(logs.getOutput()).find());
     assertTrue(logs.getOutput().contains(
         "Number of suppressed write-lock reports: 2"));
   }
@@ -215,7 +219,7 @@ public class TestFSNamesystemLock {
   public void testFSReadLockLongHoldingReport() throws Exception {
     final long readLockReportingThreshold = 100L;
     final long readLockSuppressWarningInterval = 10000L;
-    final String readLockLogStmt = "FSNamesystem read lock held for ";
+    final String readLockLogStmt = "Number of suppressed read-lock reports";
     Configuration conf = new Configuration();
     conf.setLong(
         DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY,
@@ -256,6 +260,18 @@ public class TestFSNamesystemLock {
     // Track but do not Report if it's held for a long time when re-entering
     // read lock but time since last report does not exceed the suppress
     // warning interval
+    Thread tLong = new Thread() {
+      @Override
+      public void run() {
+        fsnLock.readLock();
+        // Add one lock hold which is the longest, but occurs under a different
+        // stack trace, to ensure this is the one that gets logged
+        timer.advance(readLockReportingThreshold + 20);
+        fsnLock.readUnlock();
+      }
+    };
+    tLong.start();
+    tLong.join();
     fsnLock.readLock();
     timer.advance(readLockReportingThreshold / 2 + 1);
     fsnLock.readLock();
@@ -268,6 +284,18 @@ public class TestFSNamesystemLock {
     fsnLock.readUnlock();
     assertFalse(logs.getOutput().contains(GenericTestUtils.getMethodName()) &&
         logs.getOutput().contains(readLockLogStmt));
+    timer.advance(readLockSuppressWarningInterval);
+    fsnLock.readLock();
+    timer.advance(readLockReportingThreshold + 1);
+    fsnLock.readUnlock();
+    // Assert that stack trace eventually logged is the one for the longest hold
+    String stackTracePatternString =
+        String.format("INFO.+%s(.+\n){5}\\Q%%s\\E\\.run", readLockLogStmt);
+    Pattern tLongPattern = Pattern.compile(
+        String.format(stackTracePatternString, tLong.getClass().getName()));
+    assertTrue(tLongPattern.matcher(logs.getOutput()).find());
+    assertTrue(logs.getOutput().contains(
+        "Number of suppressed read-lock reports: 3"));
 
     // Report if it's held for a long time (and time since last report
     // exceeds the suppress warning interval) while another thread also has the
@@ -310,16 +338,15 @@ public class TestFSNamesystemLock {
     t1.join();
     t2.join();
     // Look for the differentiating class names in the stack trace
-    String stackTracePatternString =
-        String.format("INFO.+%s(.+\n){5}\\Q%%s\\E\\.run", readLockLogStmt);
     Pattern t1Pattern = Pattern.compile(
         String.format(stackTracePatternString, t1.getClass().getName()));
     assertTrue(t1Pattern.matcher(logs.getOutput()).find());
     Pattern t2Pattern = Pattern.compile(
         String.format(stackTracePatternString, t2.getClass().getName()));
     assertFalse(t2Pattern.matcher(logs.getOutput()).find());
-    assertTrue(logs.getOutput().contains(
-        "Number of suppressed read-lock reports: 2"));
+    // match the held interval time in the log
+    Pattern pattern = Pattern.compile(".*[\n].*\\d+ms(.*[\n].*){1,}");
+    assertTrue(pattern.matcher(logs.getOutput()).find());
   }
 
   @Test
@@ -396,7 +423,7 @@ public class TestFSNamesystemLock {
     timer.advance(writeLockReportingThreshold + 100);
     fsnLock.writeUnlock();
     assertTrue(logs.getOutput().contains(
-        "FSNamesystem write lock held for"));
+        "Number of suppressed write-lock reports"));
 
     logs.clearOutput();
 
@@ -407,8 +434,6 @@ public class TestFSNamesystemLock {
     assertFalse(logs.getOutput().contains(GenericTestUtils.getMethodName()));
     assertFalse(logs.getOutput().contains(
         "Number of suppressed write-lock reports:"));
-    assertFalse(logs.getOutput().contains(
-        "FSNamesystem write lock held for"));
   }
 
 }

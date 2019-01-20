@@ -39,7 +39,8 @@ public class OmBucketInfoCodec implements Codec<OmBucketInfo> {
   @Override
   public OmBucketInfo fromPersistedFormat(byte[] rawData) {
     Preconditions
-        .checkNotNull("Null byte array can't converted to real object.");
+        .checkNotNull(rawData,
+            "Null byte array can't converted to real object.");
     try {
       return OmBucketInfo.getFromProtobuf(BucketInfo.parseFrom(rawData));
     } catch (InvalidProtocolBufferException e) {

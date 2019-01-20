@@ -18,18 +18,21 @@
 package org.apache.hadoop.ozone;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Collection;
 import java.util.Optional;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.net.NetUtils;
-
 import org.apache.hadoop.ozone.om.OMConfigKeys;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 
 import static org.apache.hadoop.hdds.HddsUtils.getHostNameFromConfigKeys;
 import static org.apache.hadoop.hdds.HddsUtils.getPortNumberFromConfigKeys;
@@ -38,13 +41,15 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_BIND_HOST_DEFAULT
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTP_BIND_PORT_DEFAULT;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_PORT_DEFAULT;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Stateless helper functions for the server and client side of OM
  * communication.
  */
 public final class OmUtils {
-  private static final Logger LOG = LoggerFactory.getLogger(OmUtils.class);
+  public static final Logger LOG = LoggerFactory.getLogger(OmUtils.class);
 
   private OmUtils() {
   }
@@ -54,14 +59,21 @@ public final class OmUtils {
    * @param conf
    * @return Target InetSocketAddress for the SCM service endpoint.
    */
-  public static InetSocketAddress getOmAddress(
-      Configuration conf) {
+  public static InetSocketAddress getOmAddress(Configuration conf) {
+    return NetUtils.createSocketAddr(getOmRpcAddress(conf));
+  }
+
+  /**
+   * Retrieve the socket address that is used by OM.
+   * @param conf
+   * @return Target InetSocketAddress for the SCM service endpoint.
+   */
+  public static String getOmRpcAddress(Configuration conf) {
     final Optional<String> host = getHostNameFromConfigKeys(conf,
         OZONE_OM_ADDRESS_KEY);
 
-    return NetUtils.createSocketAddr(
-        host.orElse(OZONE_OM_BIND_HOST_DEFAULT) + ":" +
-            getOmRpcPort(conf));
+    return host.orElse(OZONE_OM_BIND_HOST_DEFAULT) + ":" +
+        getOmRpcPort(conf);
   }
 
   /**
@@ -132,5 +144,74 @@ public final class OmUtils {
         "Falling back to {} instead.",
         OMConfigKeys.OZONE_OM_DB_DIRS, HddsConfigKeys.OZONE_METADATA_DIRS);
     return ServerUtils.getOzoneMetaDirPath(conf);
+  }
+
+  /**
+   * Checks if the OM request is read only or not.
+   * @param omRequest OMRequest proto
+   * @return True if its readOnly, false otherwise.
+   */
+  public static boolean isReadOnly(
+      OzoneManagerProtocolProtos.OMRequest omRequest) {
+    OzoneManagerProtocolProtos.Type cmdType = omRequest.getCmdType();
+    switch (cmdType) {
+      case CheckVolumeAccess:
+      case InfoVolume:
+      case ListVolume:
+      case InfoBucket:
+      case ListBuckets:
+      case LookupKey:
+      case ListKeys:
+      case InfoS3Bucket:
+      case ListS3Buckets:
+      case ServiceList:
+        return true;
+      case CreateVolume:
+      case SetVolumeProperty:
+      case DeleteVolume:
+      case CreateBucket:
+      case SetBucketProperty:
+      case DeleteBucket:
+      case CreateKey:
+      case RenameKey:
+      case DeleteKey:
+      case CommitKey:
+      case AllocateBlock:
+      case CreateS3Bucket:
+      case DeleteS3Bucket:
+      case InitiateMultiPartUpload:
+      case CommitMultiPartUpload:
+      case CompleteMultiPartUpload:
+      case AbortMultiPartUpload:
+      case GetS3Secret:
+      case GetDelegationToken:
+      case RenewDelegationToken:
+      case CancelDelegationToken:
+        return false;
+      default:
+        LOG.error("CmdType {} is not categorized as readOnly or not.", cmdType);
+        return false;
+    }
+  }
+
+  public static byte[] getMD5Digest(String input) throws IOException {
+    try {
+      MessageDigest md = MessageDigest.getInstance(OzoneConsts.MD5_HASH);
+      return md.digest(input.getBytes(StandardCharsets.UTF_8));
+    } catch (NoSuchAlgorithmException ex) {
+      throw new IOException("Error creating an instance of MD5 digest.\n" +
+          "This could possibly indicate a faulty JRE");
+    }
+  }
+
+  public static byte[] getSHADigest() throws IOException {
+    try {
+      MessageDigest sha = MessageDigest.getInstance(OzoneConsts.FILE_HASH);
+      return sha.digest(RandomStringUtils.random(32)
+          .getBytes(StandardCharsets.UTF_8));
+    } catch (NoSuchAlgorithmException ex) {
+      throw new IOException("Error creating an instance of SHA-256 digest.\n" +
+          "This could possibly indicate a faulty JRE");
+    }
   }
 }

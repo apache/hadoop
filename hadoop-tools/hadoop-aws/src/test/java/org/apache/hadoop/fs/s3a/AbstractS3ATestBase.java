@@ -133,10 +133,10 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
    * Assert that an exception failed with a specific status code.
    * @param e exception
    * @param code expected status code
-   * @throws AWSS3IOException rethrown if the status code does not match.
+   * @throws AWSServiceIOException rethrown if the status code does not match.
    */
-  protected void assertStatusCode(AWSS3IOException e, int code)
-      throws AWSS3IOException {
+  protected void assertStatusCode(AWSServiceIOException e, int code)
+      throws AWSServiceIOException {
     if (e.getStatusCode() != code) {
       throw e;
     }

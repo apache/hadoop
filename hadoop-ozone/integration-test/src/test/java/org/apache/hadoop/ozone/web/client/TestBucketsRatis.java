@@ -57,6 +57,7 @@ public class TestBucketsRatis {
   }
 
   @Parameterized.Parameter
+  @SuppressWarnings("visibilitymodifier")
   public static Class clientProtocol;
 
   @BeforeClass

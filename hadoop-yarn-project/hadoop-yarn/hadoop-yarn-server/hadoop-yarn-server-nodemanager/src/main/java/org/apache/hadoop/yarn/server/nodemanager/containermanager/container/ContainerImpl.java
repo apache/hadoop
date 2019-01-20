@@ -172,10 +172,12 @@ public class ContainerImpl implements Container {
   private SlidingWindowRetryPolicy.RetryContext windowRetryContext;
   private SlidingWindowRetryPolicy retryPolicy;
 
+  private String csiVolumesRootDir;
   private String workDir;
   private String logDir;
   private String host;
   private String ips;
+  private String exposedPorts;
   private volatile ReInitializationContext reInitContext;
   private volatile boolean isReInitializing = false;
   private volatile boolean isMarkeForKilling = false;
@@ -857,6 +859,7 @@ public class ContainerImpl implements Container {
           Arrays.asList(ips.split(",")));
       status.setHost(host);
       status.setContainerSubState(getContainerSubState());
+      status.setExposedPorts(exposedPorts);
       return status;
     } finally {
       this.readLock.unlock();
@@ -932,6 +935,16 @@ public class ContainerImpl implements Container {
   @Override
   public void setWorkDir(String workDir) {
     this.workDir = workDir;
+  }
+
+  @Override
+  public String getCsiVolumesRootDir() {
+    return csiVolumesRootDir;
+  }
+
+  @Override
+  public void setCsiVolumesRootDir(String volumesRootDir) {
+    this.csiVolumesRootDir = volumesRootDir;
   }
 
   private void clearIpAndHost() {
@@ -2269,5 +2282,10 @@ public class ContainerImpl implements Container {
         || state == ContainerState.CONTAINER_CLEANEDUP_AFTER_KILL
         || state == ContainerState.EXITED_WITH_FAILURE
         || state == ContainerState.EXITED_WITH_SUCCESS;
+  }
+
+  @Override
+  public void setExposedPorts(String ports) {
+    this.exposedPorts = ports;
   }
 }

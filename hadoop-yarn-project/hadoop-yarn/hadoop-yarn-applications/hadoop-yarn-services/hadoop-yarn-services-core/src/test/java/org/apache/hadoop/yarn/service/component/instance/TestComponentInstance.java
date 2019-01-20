@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.service.ServiceContext;
 import org.apache.hadoop.yarn.service.ServiceScheduler;
 import org.apache.hadoop.yarn.service.ServiceTestUtils;
+import org.apache.hadoop.yarn.service.api.records.Configuration;
 import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.api.records.Service;
@@ -348,6 +349,8 @@ public class TestComponentInstance {
     org.apache.hadoop.yarn.service.api.records.Component componentSpec = mock(
         org.apache.hadoop.yarn.service.api.records.Component.class);
     when(componentSpec.getRestartPolicy()).thenReturn(restartPolicy);
+    Configuration conf = new Configuration();
+    when(componentSpec.getConfiguration()).thenReturn(conf);
     when(comp.getRestartPolicyHandler()).thenReturn(
         Component.getRestartPolicyHandler(restartPolicy));
     when(componentSpec.getNumberOfContainers()).thenReturn(
@@ -401,6 +404,8 @@ public class TestComponentInstance {
     org.apache.hadoop.yarn.service.api.records.Component componentSpec = mock(
         org.apache.hadoop.yarn.service.api.records.Component.class);
     when(componentSpec.getRestartPolicy()).thenReturn(restartPolicy);
+    Configuration conf = new Configuration();
+    when(componentSpec.getConfiguration()).thenReturn(conf);
     when(comp.getRestartPolicyHandler()).thenReturn(
         Component.getRestartPolicyHandler(restartPolicy));
     when(componentSpec.getNumberOfContainers()).thenReturn(

@@ -473,7 +473,7 @@ public class TestNameNodeMetrics {
 
     verifyZeroMetrics();
     verifyAggregatedMetricsTally();
-
+    BlockManagerTestUtil.stopRedundancyThread(bm);
     // Corrupt first replica of the block
     LocatedBlock block = NameNodeAdapter.getBlockLocations(
         cluster.getNameNode(), file.toString(), 0, 1).get(0);
@@ -562,7 +562,7 @@ public class TestNameNodeMetrics {
 
     verifyZeroMetrics();
     verifyAggregatedMetricsTally();
-
+    BlockManagerTestUtil.stopRedundancyThread(bm);
     // Corrupt first replica of the block
     LocatedBlocks lbs = fs.getClient().getNamenode().getBlockLocations(
         ecFile.toString(), 0, fileLen);

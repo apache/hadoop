@@ -879,7 +879,7 @@ public class YarnClientImpl extends YarnClient {
     try {
       containersListFromAHS =
           getContainerReportFromHistory(applicationAttemptId);
-    } catch (IOException e) {
+    } catch (IOException | YarnException e) {
       if (appNotFoundInRM) {
         throw e;
       }
@@ -1121,13 +1121,10 @@ public class YarnClientImpl extends YarnClient {
         }
         // Attempt Connect
         Future<Session> fut = client.connect(socket, uri, upgradeRequest);
-        // Wait for Connect
         Session session = fut.get();
-        // Send a message
-        session.getRemote().sendString("stty -echo");
-        session.getRemote().sendString("\r");
-        session.getRemote().flush();
-        socket.run();
+        if (session.isOpen()) {
+          socket.run();
+        }
       } finally {
         client.stop();
       }

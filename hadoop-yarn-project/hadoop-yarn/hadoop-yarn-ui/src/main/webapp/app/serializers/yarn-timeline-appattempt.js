@@ -38,6 +38,7 @@ export default DS.JSONAPISerializer.extend({
           containerId: payload.info.YARN_APPLICATION_ATTEMPT_MASTER_CONTAINER,
           amContainerId: payload.info.YARN_APPLICATION_ATTEMPT_MASTER_CONTAINER,
           nodeHttpAddress: payload.info.YARN_APPLICATION_ATTEMPT_MASTER_NODE_ADDRESS,
+          exposedPorts: payload.info.YARN_CONTAINER_ALLOCATED_EXPOSED_PORTS,
           nodeId: payload.info.YARN_APPLICATION_ATTEMPT_MASTER_NODE_ID,
           hosts: payload.info.YARN_APPLICATION_ATTEMPT_HOST,
           state: payload.info.YARN_APPLICATION_ATTEMPT_STATE,

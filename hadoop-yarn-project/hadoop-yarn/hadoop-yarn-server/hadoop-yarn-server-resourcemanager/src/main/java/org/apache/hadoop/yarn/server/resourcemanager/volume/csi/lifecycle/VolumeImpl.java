@@ -146,6 +146,8 @@ public class VolumeImpl implements Volume {
     @Override
     public VolumeState transition(VolumeImpl volume,
         VolumeEvent volumeEvent) {
+      // Some of CSI driver implementation does't provide the capability
+      // to validate volumes. Skip this for now.
       try {
         // this call could cross node, we should keep the message tight
         // TODO we should parse the capability from volume resource spec

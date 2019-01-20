@@ -85,7 +85,7 @@ public class TestObjectPut {
 
     //WHEN
     Response response = objectEndpoint.put(bucketName, keyName, CONTENT
-        .length(), body);
+        .length(), 1, null, body);
 
 
     //THEN
@@ -117,7 +117,7 @@ public class TestObjectPut {
 
     //WHEN
     Response response = objectEndpoint.put(bucketName, keyName,
-        chunkedContent.length(),
+        chunkedContent.length(), 1, null,
         new ByteArrayInputStream(chunkedContent.getBytes()));
 
     //THEN
@@ -142,7 +142,7 @@ public class TestObjectPut {
     keyName = "sourceKey";
 
     Response response = objectEndpoint.put(bucketName, keyName,
-        CONTENT.length(), body);
+        CONTENT.length(), 1, null, body);
 
     String volumeName = clientStub.getObjectStore().getOzoneVolumeName(
         bucketName);
@@ -161,7 +161,8 @@ public class TestObjectPut {
     when(headers.getHeaderString(COPY_SOURCE_HEADER)).thenReturn(
         bucketName  + "/" + keyName);
 
-    response = objectEndpoint.put(destBucket, destkey, CONTENT.length(), body);
+    response = objectEndpoint.put(destBucket, destkey, CONTENT.length(), 1,
+        null, body);
 
     // Check destination key and response
     volumeName = clientStub.getObjectStore().getOzoneVolumeName(destBucket);
@@ -175,7 +176,7 @@ public class TestObjectPut {
 
     // source and dest same
     try {
-      objectEndpoint.put(bucketName, keyName, CONTENT.length(), body);
+      objectEndpoint.put(bucketName, keyName, CONTENT.length(), 1, null, body);
       fail("test copy object failed");
     } catch (OS3Exception ex) {
       Assert.assertTrue(ex.getErrorMessage().contains("This copy request is " +
@@ -186,7 +187,7 @@ public class TestObjectPut {
     try {
       when(headers.getHeaderString(COPY_SOURCE_HEADER)).thenReturn(
           nonexist + "/"  + keyName);
-      objectEndpoint.put(destBucket, destkey, CONTENT.length(),
+      objectEndpoint.put(destBucket, destkey, CONTENT.length(), 1, null,
           body);
       fail("test copy object failed");
     } catch (OS3Exception ex) {
@@ -197,7 +198,7 @@ public class TestObjectPut {
     try {
       when(headers.getHeaderString(COPY_SOURCE_HEADER)).thenReturn(
           bucketName + "/" + keyName);
-      objectEndpoint.put(nonexist, destkey, CONTENT.length(), body);
+      objectEndpoint.put(nonexist, destkey, CONTENT.length(), 1, null, body);
       fail("test copy object failed");
     } catch (OS3Exception ex) {
       Assert.assertTrue(ex.getCode().contains("NoSuchBucket"));
@@ -207,7 +208,7 @@ public class TestObjectPut {
     try {
       when(headers.getHeaderString(COPY_SOURCE_HEADER)).thenReturn(
           nonexist + "/" + keyName);
-      objectEndpoint.put(nonexist, destkey, CONTENT.length(), body);
+      objectEndpoint.put(nonexist, destkey, CONTENT.length(), 1, null, body);
       fail("test copy object failed");
     } catch (OS3Exception ex) {
       Assert.assertTrue(ex.getCode().contains("NoSuchBucket"));
@@ -217,7 +218,8 @@ public class TestObjectPut {
     try {
       when(headers.getHeaderString(COPY_SOURCE_HEADER)).thenReturn(
           bucketName + "/" + nonexist);
-      objectEndpoint.put("nonexistent", keyName, CONTENT.length(), body);
+      objectEndpoint.put("nonexistent", keyName, CONTENT.length(), 1,
+          null, body);
       fail("test copy object failed");
     } catch (OS3Exception ex) {
       Assert.assertTrue(ex.getCode().contains("NoSuchBucket"));
@@ -235,7 +237,7 @@ public class TestObjectPut {
 
     try {
       Response response = objectEndpoint.put(bucketName, keyName,
-          CONTENT.length(), body);
+          CONTENT.length(), 1, null, body);
       fail("testInvalidStorageType");
     } catch (OS3Exception ex) {
       assertEquals(S3ErrorTable.INVALID_ARGUMENT.getErrorMessage(),
@@ -252,8 +254,8 @@ public class TestObjectPut {
     keyName = "sourceKey";
     when(headers.getHeaderString(STORAGE_CLASS_HEADER)).thenReturn("");
 
-    Response response =
-        objectEndpoint.put(bucketName, keyName, CONTENT.length(), body);
+    Response response = objectEndpoint.put(bucketName, keyName, CONTENT
+            .length(), 1, null, body);
 
     String volumeName = clientStub.getObjectStore()
         .getOzoneVolumeName(bucketName);

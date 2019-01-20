@@ -254,6 +254,7 @@ public interface OMMetadataManager {
   Table<byte[], byte[]> getS3Table();
 
   /**
+<<<<<<< HEAD
    * Returns the DB key name of a multipart upload key in OM metadata store.
    *
    * @param volume - volume name
@@ -272,6 +273,12 @@ public interface OMMetadataManager {
    * @return Table
    */
   Table<String, OmMultipartKeyInfo> getMultipartInfoTable();
+
+  /**
+   * Gets the S3 Secrets table.
+   * @return Table
+   */
+  Table<byte[], byte[]> getS3SecretTable();
 
   /**
    * Returns number of rows in a table.  This should not be used for very

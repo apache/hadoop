@@ -19,10 +19,9 @@ package org.apache.hadoop.ozone.container.common.statemachine;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.GeneratedMessage;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMCommandProto.Type;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineAction;
 import org.apache.hadoop.hdds.protocol.proto
@@ -427,22 +426,27 @@ public class StateContext {
    * @param cmd - {@link SCMCommand}.
    */
   public void addCmdStatus(SCMCommand cmd) {
-    if (cmd.getType().equals(Type.closeContainerCommand)) {
-      // We will be removing CommandStatus completely.
-      // As a first step, removed it for CloseContainerCommand.
-      return;
+    final Optional<CommandStatusBuilder> cmdStatusBuilder;
+    switch (cmd.getType()) {
+    case replicateContainerCommand:
+      cmdStatusBuilder = Optional.of(CommandStatusBuilder.newBuilder());
+      break;
+    case deleteBlocksCommand:
+      cmdStatusBuilder = Optional.of(
+          DeleteBlockCommandStatusBuilder.newBuilder());
+      break;
+    case deleteContainerCommand:
+      cmdStatusBuilder = Optional.of(CommandStatusBuilder.newBuilder());
+      break;
+    default:
+      cmdStatusBuilder = Optional.empty();
     }
-    CommandStatusBuilder statusBuilder;
-    if (cmd.getType() == Type.deleteBlocksCommand) {
-      statusBuilder = new DeleteBlockCommandStatusBuilder();
-    } else {
-      statusBuilder = CommandStatusBuilder.newBuilder();
-    }
-    this.addCmdStatus(cmd.getId(),
-        statusBuilder.setCmdId(cmd.getId())
+    cmdStatusBuilder.ifPresent(statusBuilder ->
+        addCmdStatus(cmd.getId(), statusBuilder
+            .setCmdId(cmd.getId())
             .setStatus(Status.PENDING)
             .setType(cmd.getType())
-            .build());
+            .build()));
   }
 
   /**

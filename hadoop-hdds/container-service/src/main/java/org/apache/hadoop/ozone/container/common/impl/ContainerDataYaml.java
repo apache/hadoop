@@ -256,21 +256,8 @@ public final class ContainerDataYaml {
         kvData.setMetadata(meta);
         kvData.setChecksum((String) nodes.get(OzoneConsts.CHECKSUM));
         String state = (String) nodes.get(OzoneConsts.STATE);
-        switch (state) {
-        case "OPEN":
-          kvData.setState(ContainerProtos.ContainerDataProto.State.OPEN);
-          break;
-        case "CLOSING":
-          kvData.setState(ContainerProtos.ContainerDataProto.State.CLOSING);
-          break;
-        case "CLOSED":
-          kvData.setState(ContainerProtos.ContainerDataProto.State.CLOSED);
-          break;
-        default:
-          throw new IllegalStateException("Unexpected " +
-              "ContainerLifeCycleState " + state + " for the containerId " +
-              nodes.get(OzoneConsts.CONTAINER_ID));
-        }
+        kvData
+            .setState(ContainerProtos.ContainerDataProto.State.valueOf(state));
         return kvData;
       }
     }

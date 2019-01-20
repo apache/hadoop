@@ -48,14 +48,15 @@ public class TestOzoneObjInfo {
     assertEquals(objInfo.getVolumeName(), volume);
   }
 
-  private OzoneObjInfo.Builder getBuilder(String volume, String bucket,
-      String key) {
+  private OzoneObjInfo.Builder getBuilder(String withVolume,
+      String withBucket,
+      String withKey) {
     return OzoneObjInfo.Builder.newBuilder()
         .setResType(ResourceType.VOLUME)
         .setStoreType(STORE)
-        .setVolumeName(volume)
-        .setBucketName(bucket)
-        .setKeyName(key);
+        .setVolumeName(withVolume)
+        .setBucketName(withBucket)
+        .setKeyName(withKey);
   }
 
   @Test
