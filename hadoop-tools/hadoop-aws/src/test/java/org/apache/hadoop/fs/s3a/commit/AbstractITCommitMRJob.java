@@ -30,23 +30,17 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.google.common.collect.Sets;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
@@ -55,123 +49,20 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.util.DurationInfo;
 
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.terminateService;
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
-import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.*;
+import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_STAGING_UUID;
 
 /** 
- * Full integration test MR jobs.
- * 
- * This is all done on a shared mini YARN and HDFS clusters, set up before
- * any of the tests methods run.
- * 
+ * Test for an MR Job with all the different committers.
  */
-public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
+public abstract class AbstractITCommitMRJob extends AbstractYarnClusterITest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractITCommitMRJob.class);
 
-  private static final int TEST_FILE_COUNT = 2;
-  private static final int SCALE_TEST_FILE_COUNT = 20;
-
-  public static final int SCALE_TEST_KEYS = 1000;
-  public static final int BASE_TEST_KEYS = 10;
-
-  private static MiniDFSClusterService hdfs;
-  private static MiniMRYarnCluster yarn;
-  private static JobConf conf;
-  private boolean uniqueFilenames;
-  private boolean scaleTest;
-
-  protected static FileSystem getDFS() {
-    return hdfs.getClusterFS();
-  }
-
-  @BeforeClass
-  public static void setupClusters() throws IOException {
-    // the HDFS and YARN clusters share the same configuration, so
-    // the HDFS cluster binding is implicitly propagated to YARN
-    conf = new JobConf();
-    conf.setBoolean(JHAdminConfig.MR_HISTORY_CLEANER_ENABLE, false);
-    conf.setLong(CommonConfigurationKeys.FS_DU_INTERVAL_KEY, Long.MAX_VALUE);
-
-    // create a unique cluster name.
-    String clusterName = "yarn-" + UUID.randomUUID();
-    hdfs = deployService(conf, new MiniDFSClusterService());
-    yarn = deployService(conf,
-        new MiniMRYarnCluster(clusterName, 2));
-  }
-
-  @SuppressWarnings("ThrowableNotThrown")
-  @AfterClass
-  public static void teardownClusters() throws IOException {
-    conf = null;
-    yarn = terminateService(yarn);
-    hdfs = terminateService(hdfs);
-  }
-
-  public static MiniDFSCluster getHdfs() {
-    return hdfs.getCluster();
-  }
-
-  public static FileSystem getLocalFS() {
-    return hdfs.getLocalFS();
-  }
-
   @Rule
   public final TemporaryFolder temp = new TemporaryFolder();
-
-  /**
-   * The name of the committer as returned by
-   * {@link AbstractS3ACommitter#getName()} and used for committer construction.
-   */
-  protected abstract String committerName();
-
-  @Override
-  public void setup() throws Exception {
-    super.setup();
-    scaleTest = getTestPropertyBool(
-        getConfiguration(),
-        KEY_SCALE_TESTS_ENABLED,
-        DEFAULT_SCALE_TESTS_ENABLED);
-  }
-
-  @Override
-  protected int getTestTimeoutMillis() {
-    return SCALE_TEST_TIMEOUT_SECONDS * 1000;
-  }
-
-  protected static MiniMRYarnCluster getYarn() {
-    return yarn;
-  }
-
-  protected static JobConf newJobConf() {
-    return new JobConf(yarn.getConfig());
-  }
-
-  
-  protected Job createJob() throws IOException {
-    Job mrJob = Job.getInstance(yarn.getConfig(), getMethodName());
-    patchConfigurationForCommitter(mrJob.getConfiguration());
-    return mrJob;
-  }
-
-  protected Configuration patchConfigurationForCommitter(
-      final Configuration jobConf) {
-    jobConf.setBoolean(FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES,
-        uniqueFilenames);
-    bindCommitter(jobConf,
-        CommitConstants.S3A_COMMITTER_FACTORY,
-        committerName());
-    // pass down the scale test flag
-    jobConf.setBoolean(KEY_SCALE_TESTS_ENABLED, scaleTest);
-    return jobConf;
-  }
 
   @Test
   public void testMRJob() throws Exception {
@@ -182,12 +73,12 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
     Path outputPath = path(getMethodName());
 
     String commitUUID = UUID.randomUUID().toString();
-    String suffix = uniqueFilenames ? ("-" + commitUUID) : "";
+    String suffix = isUniqueFilenames() ? ("-" + commitUUID) : "";
     int numFiles = getTestFileCount();
     List<String> expectedFiles = new ArrayList<>(numFiles);
     Set<String> expectedKeys = Sets.newHashSet();
     for (int i = 0; i < numFiles; i += 1) {
-      File file = temp.newFile(String.valueOf(i) + ".text");
+      File file = temp.newFile(i + ".text");
       try (FileOutputStream out = new FileOutputStream(file)) {
         out.write(("file " + i).getBytes(StandardCharsets.UTF_8));
       }
@@ -233,7 +124,7 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
     mrJob.setMaxMapAttempts(1);
 
     mrJob.submit();
-    try (DurationInfo d = new DurationInfo(LOG, "Job Execution")) {
+    try (DurationInfo ignore = new DurationInfo(LOG, "Job Execution")) {
       boolean succeeded = mrJob.waitForCompletion(true);
       assertTrue("MR job failed", succeeded);
     }
@@ -269,35 +160,6 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
     assertPathDoesNotExist("temporary dir",
         new Path(outputPath, CommitConstants.TEMPORARY));
     customPostExecutionValidation(outputPath, successData);
-  }
-
-  /**
-   * Get the file count for the test.
-   * @return the number of mappers to create.
-   */
-  public int getTestFileCount() {
-    return scaleTest ? SCALE_TEST_FILE_COUNT : TEST_FILE_COUNT;
-  }
-
-  /**
-   * Override point to let implementations tune the MR Job conf.
-   * @param jobConf configuration
-   */
-  protected void applyCustomConfigOptions(JobConf jobConf) throws IOException {
-
-  }
-
-  /**
-   * Override point for any committer specific validation operations;
-   * called after the base assertions have all passed.
-   * @param destPath destination of work
-   * @param successData loaded success data
-   * @throws Exception failure
-   */
-  protected void customPostExecutionValidation(Path destPath,
-      SuccessData successData)
-      throws Exception {
-
   }
 
   /**

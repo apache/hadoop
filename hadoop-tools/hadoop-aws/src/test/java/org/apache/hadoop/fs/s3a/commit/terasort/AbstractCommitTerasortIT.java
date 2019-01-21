@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.commit.terasort;
 
-import java.io.IOException;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
@@ -28,14 +27,17 @@ import org.junit.runners.MethodSorters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.examples.terasort.TeraGen;
 import org.apache.hadoop.examples.terasort.TeraSort;
+import org.apache.hadoop.examples.terasort.TeraSortConfigKeys;
 import org.apache.hadoop.examples.terasort.TeraValidate;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.fs.s3a.commit.AbstractITCommitMRJob;
+import org.apache.hadoop.fs.s3a.commit.AbstractYarnClusterITest;
 import org.apache.hadoop.fs.s3a.commit.DurationInfo;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -55,7 +57,8 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_S
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @SuppressWarnings("StaticNonFinalField")
-public abstract class AbstractCommitTerasortIT extends AbstractITCommitMRJob {
+public abstract class AbstractCommitTerasortIT extends
+    AbstractYarnClusterITest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractCommitTerasortIT.class);
@@ -88,23 +91,23 @@ public abstract class AbstractCommitTerasortIT extends AbstractITCommitMRJob {
   }
 
   @Override
-  public void testMRJob() throws Exception {
-    // no-op. Don't declare as skipped as it will only confuse people.  
-  }
-
-  @Override
   public void setup() throws Exception {
     super.setup();
+    requireScaleTestsEnabled();
     prepareToTerasort();
   }
 
   /**
    * Set up for terasorting by initializing paths.
-   * The paths used must (a) be unique across parallell 
-   * Includes a check for the terasort tests being enabled.
-   * @throws IOException IO failure.
+   * The paths used must be unique across parallel runs. 
    */
-  private void prepareToTerasort() throws IOException {
+  private void prepareToTerasort() {
+    // small sample size for faster runs
+    Configuration yarnConfig = getYarn().getConfig();
+    yarnConfig.setInt(TeraSortConfigKeys.SAMPLE_SIZE.key(), 1000);
+    yarnConfig.setBoolean(
+        TeraSortConfigKeys.USE_SIMPLE_PARTITIONER.key(),
+        true);
     terasortPath = new Path("/terasort-" + getClass().getSimpleName())
         .makeQualified(getFileSystem());
     sortInput = new Path(terasortPath, "sortin");
@@ -137,7 +140,9 @@ public abstract class AbstractCommitTerasortIT extends AbstractITCommitMRJob {
     } finally {
       d.close();
     }
-    assertEquals(stage + " failed", 0, result);
+    assertEquals(stage
+        + "(" + StringUtils.join(", ", args) + ")"
+        + " failed", 0, result);
     validateSuccessFile(getFileSystem(), dest, committerName());
     return Optional.of(d);
   }
@@ -199,12 +204,15 @@ public abstract class AbstractCommitTerasortIT extends AbstractITCommitMRJob {
    * Why there? Makes it easy to list and compare.
    */
   @Test
-  public void test_190_teracomplete() throws Throwable {
+  public void test_140_teracomplete() throws Throwable {
     terasortDuration.get().close();
 
     final StringBuilder results = new StringBuilder();
     results.append("\"Operation\"\t\"Duration\"\n");
 
+    // this is how you dynamically create a function in a method
+    // for use afterwards.
+    // Works because there's no IOEs being raised in this sequence.
     BiConsumer<String, Optional<DurationInfo>> stage =
         (s, od) ->
             results.append(String.format("\"%s\"\t\"%s\"\n",
@@ -221,4 +229,13 @@ public abstract class AbstractCommitTerasortIT extends AbstractITCommitMRJob {
     ContractTestUtils.writeTextFile(getFileSystem(), path, text, true);
   }
 
+  /**
+   * Reset the duration so if two committer tests are run sequentially.
+   * Without this the total execution time is reported as from the start of
+   * the first test suite to the end of the second. 
+   */
+  @Test
+  public void test_150_teracleanup() throws Throwable {
+    terasortDuration = Optional.empty();
+  }
 }

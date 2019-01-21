@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.fs.s3a.commit;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -51,6 +53,7 @@ import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.listMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 
 /**
@@ -76,6 +79,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
 
   private InconsistentAmazonS3Client inconsistentClient;
 
+  
   /**
    * Should the inconsistent S3A client be used?
    * Default value: true.
@@ -441,7 +445,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
 
   /**
    * Load in the success data marker: this guarantees that an S3A
-   * committer was used,
+   * committer was used.
    * @param fs filesystem
    * @param outputPath path of job
    * @param committerName name of committer to match
@@ -450,7 +454,24 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    */
   public static SuccessData validateSuccessFile(final S3AFileSystem fs,
       final Path outputPath, final String committerName) throws IOException {
-    SuccessData successData = loadSuccessFile(fs, outputPath);
+    SuccessData successData = null;
+    try {
+      successData = loadSuccessFile(fs, outputPath);
+    } catch (FileNotFoundException e) {
+      // either the output path is missing or, if its the success file,
+      // somehow the relevant committer wasn't picked up.
+      String dest = outputPath.toString();
+      LOG.error("No _SUCCESS file found under {}", dest);
+      List<String> files = new ArrayList<>();
+      applyLocatedFiles(fs.listFiles(outputPath, true),
+          (status) -> {
+            files.add(status.getPath().toString());
+            LOG.error("{} {}", status.getPath(), status.getLen());
+          });
+      throw new AssertionError("No _SUCCESS file in " + dest
+          + "; found : " + files.stream().collect(Collectors.joining("\n")),
+          e);
+    }
     String commitDetails = successData.toString();
     LOG.info("Committer name " + committerName + "\n{}",
         commitDetails);

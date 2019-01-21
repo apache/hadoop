@@ -18,13 +18,44 @@
 
 package org.apache.hadoop.fs.s3a.commit.terasort;
 
+import java.io.IOException;
+
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+
 import org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter;
 import org.apache.hadoop.mapred.JobConf;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_ENABLED;
 
-public class ITestMagicTerasort extends AbstractCommitTerasortIT {
+/**
+ * Terasort with the magic committer.
+ */
+public final class ITestTerasortMagicCommitter
+    extends AbstractCommitTerasortIT {
 
+  /**
+   * The static cluster binding with the lifecycle of this test; served
+   * through instance-level methods for sharing across methods in the 
+   * suite.
+   */
+  @SuppressWarnings("StaticNonFinalField")
+  private static ClusterBinding clusterBinding;
+
+  @BeforeClass
+  public static void setupClusters() throws IOException {
+    clusterBinding = createCluster(new JobConf());
+  }
+
+  @AfterClass
+  public static void teardownClusters() throws IOException {
+    clusterBinding.terminate();
+  }
+
+  @Override
+  public ClusterBinding getClusterBinding() {
+    return clusterBinding;
+  }
   @Override
   protected String committerName() {
     return MagicS3GuardCommitter.NAME;
