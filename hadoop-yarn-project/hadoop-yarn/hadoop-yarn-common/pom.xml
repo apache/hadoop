@@ -372,9 +372,11 @@
             <artifactId>maven-compiler-plugin</artifactId>
             <configuration>
               <excludes>
-                <exclude>src/main/java/org/apache/hadoop/yarn/webapp/hamlet/**</exclude>
-                <exclude>src/main/test/org/apache/haodop/yarn/webapp/hamlet/**</exclude>
+                <exclude>org/apache/hadoop/yarn/webapp/hamlet/**</exclude>
               </excludes>
+              <testExcludes>
+                <exclude>org/apache/hadoop/yarn/webapp/hamlet/**</exclude>
+              </testExcludes>
             </configuration>
           </plugin>
           <plugin>
