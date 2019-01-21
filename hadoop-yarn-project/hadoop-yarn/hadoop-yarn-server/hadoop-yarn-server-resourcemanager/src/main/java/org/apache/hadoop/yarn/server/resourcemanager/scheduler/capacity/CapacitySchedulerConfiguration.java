@@ -474,6 +474,17 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         ", capacity=" + capacity);
   }
 
+  @VisibleForTesting
+  public void setCapacity(String queue, String absoluteResourceCapacity) {
+    if (queue.equals("root")) {
+      throw new IllegalArgumentException(
+          "Cannot set capacity, root queue has a fixed capacity");
+    }
+    set(getQueuePrefix(queue) + CAPACITY, absoluteResourceCapacity);
+    LOG.debug("CSConf - setCapacity: queuePrefix=" + getQueuePrefix(queue)
+        + ", capacity=" + absoluteResourceCapacity);
+  }
+
   public float getNonLabeledQueueMaximumCapacity(String queue) {
     String configuredCapacity = get(getQueuePrefix(queue) + MAXIMUM_CAPACITY);
     boolean matcher = (configuredCapacity != null)
@@ -508,7 +519,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public void setCapacityByLabel(String queue, String label, float capacity) {
     setFloat(getNodeLabelPrefix(queue, label) + CAPACITY, capacity);
   }
-  
+
+  @VisibleForTesting
+  public void setCapacityByLabel(String queue, String label,
+                                 String absoluteResourceCapacity) {
+    set(getNodeLabelPrefix(queue, label) + CAPACITY, absoluteResourceCapacity);
+  }
+
   public void setMaximumCapacityByLabel(String queue, String label,
       float capacity) {
     setFloat(getNodeLabelPrefix(queue, label) + MAXIMUM_CAPACITY, capacity);
@@ -645,8 +662,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   private float internalGetLabeledQueueCapacity(String queue, String label, String suffix,
       float defaultValue) {
     String capacityPropertyName = getNodeLabelPrefix(queue, label) + suffix;
-    boolean matcher = (capacityPropertyName != null)
-        && RESOURCE_PATTERN.matcher(capacityPropertyName).find();
+    String configuredCapacity = get(capacityPropertyName);
+    boolean matcher = (configuredCapacity != null)
+        && RESOURCE_PATTERN.matcher(configuredCapacity).find();
     if (matcher) {
       // Return capacity in percentage as 0 for non-root queues and 100 for
       // root.From AbstractCSQueue, absolute resource will be parsed and
