@@ -315,10 +315,20 @@ public class BucketInfo implements Comparable<BucketInfo> {
     this.keyCount = keyCount;
   }
 
+  /**
+   * Return custom key value.
+   *
+   * @return metadata map
+   */
   public Map<String, String> getMetadata() {
     return metadata;
   }
 
+  /**
+   * Set custom key value map.
+   *
+   * @param metadata map
+   */
   public void setMetadata(Map<String, String> metadata) {
     this.metadata = metadata;
   }

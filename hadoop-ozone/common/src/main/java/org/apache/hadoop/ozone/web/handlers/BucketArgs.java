@@ -116,10 +116,20 @@ public class BucketArgs extends VolumeArgs {
     return removeAcls;
   }
 
+  /**
+   * Return custom key value metadata.
+   *
+   * @return metadata map
+   */
   public Map<String, String> getMetadata() {
     return metadata;
   }
 
+  /**
+   * Set custom key value metadata.
+   *
+   * @param metadata
+   */
   public void setMetadata(Map<String, String> metadata) {
     this.metadata = metadata;
   }
