@@ -71,8 +71,7 @@ execute_tests(){
   echo "  Command to rerun:  ./test.sh --keep --env $COMPOSE_DIR $TESTS"
   echo "-------------------------------------------------"
   docker-compose -f "$COMPOSE_FILE" down
-  docker-compose -f "$COMPOSE_FILE" up -d
-  docker-compose -f "$COMPOSE_FILE" scale datanode=3
+  docker-compose -f "$COMPOSE_FILE" up -d --scale datanode=3
   wait_for_datanodes "$COMPOSE_FILE"
   for TEST in "${TESTS[@]}"; do
      TITLE="Ozone $TEST tests with $COMPOSE_DIR cluster"
