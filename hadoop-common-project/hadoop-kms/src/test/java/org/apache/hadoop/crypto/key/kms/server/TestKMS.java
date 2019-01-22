@@ -2115,6 +2115,70 @@ public class TestKMS {
     });
   }
 
+  @Test
+  public void testGetDelegationTokenByProxyUser() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set("hadoop.security.auth_to_local.mechanism", "mit");
+    conf.set("hadoop.security.authentication", "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+    final File testDir = getTestDir();
+
+    conf = createBaseKMSConf(testDir, conf);
+    conf.set("hadoop.kms.authentication.type", "kerberos");
+    conf.set("hadoop.kms.authentication.kerberos.keytab",
+            keytab.getAbsolutePath());
+    conf.set("hadoop.kms.authentication.kerberos.principal", "HTTP/localhost");
+    conf.set("hadoop.kms.proxyuser.client.users", "foo/localhost");
+    conf.set("hadoop.kms.proxyuser.client.hosts", "localhost");
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "kcc.ALL",
+        "foo/localhost");
+
+    writeConf(testDir, conf);
+
+    runServer(null, null, testDir, new KMSCallable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        final Configuration conf = new Configuration();
+        final URI uri = createKMSUri(getKMSUrl());
+
+        // proxyuser client using kerberos credentials
+        UserGroupInformation proxyUgi = UserGroupInformation.
+            loginUserFromKeytabAndReturnUGI("client/host", keytab.getAbsolutePath());
+        UserGroupInformation foo = UserGroupInformation.createProxyUser(
+            "foo/localhost", proxyUgi);
+        final Credentials credentials = new Credentials();
+        foo.doAs(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            final KeyProvider kp = createProvider(uri, conf);
+            KeyProviderDelegationTokenExtension keyProviderDelegationTokenExtension
+                = KeyProviderDelegationTokenExtension
+                    .createKeyProviderDelegationTokenExtension(kp);
+            keyProviderDelegationTokenExtension.addDelegationTokens("client",
+                credentials);
+            Assert.assertNotNull(kp.createKey("kcc",
+                new KeyProvider.Options(conf)));
+            return null;
+          }
+        });
+
+        // current user client using token credentials for proxy user
+        UserGroupInformation nonKerberosUgi
+            = UserGroupInformation.getCurrentUser();
+        nonKerberosUgi.addCredentials(credentials);
+        nonKerberosUgi.doAs(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            final KeyProvider kp = createProvider(uri, conf);
+            Assert.assertNotNull(kp.getMetadata("kcc"));
+            return null;
+          }
+        });
+        return null;
+      }
+    });
+  }
+
   private Configuration setupConfForKerberos(File confDir) throws Exception {
     final Configuration conf =  createBaseKMSConf(confDir, null);
     conf.set("hadoop.security.authentication", "kerberos");
