@@ -898,4 +898,27 @@ public class TestAuxServices {
     aux.loadManifest(conf, false);
     assertEquals(0, aux.getServices().size());
   }
+
+  @Test
+  public void testManualReload() throws IOException {
+    Configuration conf = getABConf();
+    final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+        MOCK_CONTEXT, MOCK_DEL_SERVICE);
+    aux.init(conf);
+    try {
+      aux.reload(null);
+      Assert.fail("Should receive the exception.");
+    } catch (IOException e) {
+      assertTrue("Wrong message: " + e.getMessage(),
+          e.getMessage().equals("Auxiliary services have not been started " +
+              "yet, please retry later"));
+    }
+    aux.start();
+    assertEquals(2, aux.getServices().size());
+    aux.reload(null);
+    assertEquals(2, aux.getServices().size());
+    aux.reload(new AuxServiceRecords());
+    assertEquals(0, aux.getServices().size());
+    aux.stop();
+  }
 }

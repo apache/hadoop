@@ -106,7 +106,8 @@ To launch auxiliary services on a NodeManager, users have to add their jar to No
 ### Manifest
 This section describes the auxiliary service manifest for aux-service classpath isolation.
 
-The manifest file should be set in *yarn-site.xml* under the property `yarn.nodemanager.aux-services.manifest`. The NMs will check this file for new modifications at an interval specified by `yarn.nodemanager.aux-services.manifest.reload-ms`.
+The manifest file can be set in *yarn-site.xml* under the property `yarn.nodemanager.aux-services.manifest`. The NMs will check this file for new modifications at an interval specified by `yarn.nodemanager.aux-services.manifest.reload-ms` (defaults to 2 minutes; setting interval <= 0 means it will not be reloaded automatically).
+Alternatively, the manifest file may be sent to the NM via REST API by making a PUT call to the endpoint `http://nm-http-address:port/ws/v1/node/auxiliaryservices`.
 
 An example manifest that configures classpath isolation for a CustomAuxService follows. One or more files may be specified to make up the classpath of a service, with jar or archive formats being supported.
 ```

@@ -591,13 +591,16 @@ Auxiliary Services API
 
 With the auxiliary services API, you can obtain a collection of resources, each of which represents an auxiliary service. When you run a GET operation on this resource, you obtain a collection of auxiliary service information objects.
 
+A YARN admin can use a PUT operation to update the auxiliary services running on the NodeManager. The body of the request should be of the same format as an auxiliary services manifest file.
+
 ### URI
 
       * http://nm-http-address:port/ws/v1/node/auxiliaryservices
 
 ### HTTP Operations Supported
 
-      * GET
+ * GET
+ * PUT
 
 ### Query Parameters Supported
 
@@ -611,7 +614,7 @@ When you make a request for the list of auxiliary services, the information will
 |:---- |:---- |:---- |
 | services | array of service information objects(JSON)/zero or more service information objects (XML) | A collection of service information objects |
 
-### Response Examples
+### GET Response Examples
 
 **JSON response**
 

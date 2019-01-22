@@ -64,7 +64,10 @@ The collector class configuration may specify a comma-separated list of collecto
 ### NodeManager Configuration properties, `yarn-site.xml` in all nodes:
 
 There are two ways to configure auxiliary services, through a manifest file or through the Configuration (the old way). If a manifest file is used, auxiliary service configurations are not read from the Configuration.
-If using a manifest file, the file name should be set in *yarn-site.xml* under the property `yarn.nodemanager.aux-services.manifest`. The NMs will check this file for new modifications at an interval specified by `yarn.nodemanager.aux-services.manifest.reload-ms`. Otherwise, set the following properties to configure aux services through the Configuration.
+
+If using a manifest file, the file name can be set in *yarn-site.xml* under the property `yarn.nodemanager.aux-services.manifest`, or the file may be sent to the NM via a PUT call to the endpoint `http://nm-http-address:port/ws/v1/node/auxiliaryservices`. If the file name is set in the Configuration, NMs will check this file for new modifications at an interval specified by `yarn.nodemanager.aux-services.manifest.reload-ms` (defaults to 2 minutes; setting interval <= 0 means it will not be reloaded automatically).
+
+Otherwise, set the following properties to configure aux services through the Configuration.
 
 | **Property** | **Default Value** | **Explanation** |
 |:---- |:---- |:---- |
