@@ -183,6 +183,7 @@ public class BucketManagerImpl implements BucketManager {
       OmBucketInfo.Builder bucketInfoBuilder = OmBucketInfo.newBuilder();
       bucketInfoBuilder.setVolumeName(oldBucketInfo.getVolumeName())
           .setBucketName(oldBucketInfo.getBucketName());
+      bucketInfoBuilder.addAllMetadata(args.getMetadata());
 
       //Check ACLs to update
       if (args.getAddAcls() != null || args.getRemoveAcls() != null) {

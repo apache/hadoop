@@ -335,6 +335,7 @@ message BucketArgs {
     repeated OzoneAclInfo removeAcls = 4;
     optional bool isVersionEnabled = 5;
     optional StorageTypeProto storageType = 6;
+    repeated hadoop.hdds.KeyValue metadata = 7;
 }
 
 message OzoneAclInfo {
