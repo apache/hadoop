@@ -31,6 +31,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecord;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecords;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AuxiliaryServicesInfo;
@@ -573,6 +574,27 @@ public class NMWebServices {
       auxiliaryServices.addAll(loadedServices);
     }
     return auxiliaryServices;
+  }
+
+  @PUT
+  @Path("/auxiliaryservices")
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public Response putAuxiliaryServices(@javax.ws.rs.core.Context
+      HttpServletRequest req, AuxServiceRecords services) {
+    if (!hasAdminAccess(req)) {
+      return Response.status(Status.FORBIDDEN).build();
+    }
+    if (services == null) {
+      return Response.status(Status.BAD_REQUEST).build();
+    }
+    try {
+      nmContext.getAuxServices().reload(services);
+    } catch (Exception e) {
+      LOG.error("Fail to reload auxiliary services, reason: ", e);
+      return Response.status(Status.INTERNAL_SERVER_ERROR).entity(e).build();
+    }
+    return Response.ok().build();
   }
 
   @PUT

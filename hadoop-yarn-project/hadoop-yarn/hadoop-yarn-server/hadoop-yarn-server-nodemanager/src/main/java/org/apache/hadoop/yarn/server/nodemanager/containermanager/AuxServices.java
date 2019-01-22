@@ -484,6 +484,22 @@ public class AuxServices extends AbstractService
     loadManifest(getConfig(), true);
   }
 
+  /**
+   * Reloads auxiliary services. Must be called after service init.
+   *
+   * @param services a list of auxiliary services
+   * @throws IOException if aux services have not been started yet
+   */
+  public void reload(AuxServiceRecords services) throws IOException {
+    if (getServiceState() != Service.STATE.STARTED) {
+      throw new IOException("Auxiliary services have not been started yet, " +
+          "please retry later");
+    }
+    LOG.info("Received list of auxiliary services: " + mapper
+        .writeValueAsString(services));
+    loadServices(services, getConfig(), true);
+  }
+
   private boolean checkManifestPermissions(FileStatus status) throws
       IOException {
     if ((status.getPermission().toShort() & 0022) != 0) {
@@ -578,6 +594,19 @@ public class AuxServices extends AbstractService
       return;
     }
     AuxServiceRecords services = maybeReadManifestFile();
+    loadServices(services, conf, startServices);
+  }
+
+  /**
+   * Updates current aux services based on changes found in the service list.
+   *
+   * @param services list of auxiliary services
+   * @param conf configuration
+   * @param startServices if true starts services, otherwise only inits services
+   * @throws IOException
+   */
+  private synchronized void loadServices(AuxServiceRecords services,
+      Configuration conf, boolean startServices) throws IOException {
     if (services == null) {
       // read did not occur or no changes detected
       return;
@@ -613,7 +642,7 @@ public class AuxServices extends AbstractService
       }
     }
 
-    // remove aux services that do not appear in the manifest
+    // remove aux services that do not appear in the new list
     Set<String> servicesToRemove = new HashSet<>(serviceMap.keySet());
     servicesToRemove.removeAll(loadedAuxServices);
     for (String sName : servicesToRemove) {
@@ -622,7 +651,7 @@ public class AuxServices extends AbstractService
     }
 
     if (!foundChanges) {
-      LOG.info("No auxiliary services changes detected in manifest");
+      LOG.info("No auxiliary services changes detected");
     }
   }
 
