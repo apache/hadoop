@@ -55,6 +55,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
 
   private static Logger LOG = LoggerFactory.getLogger(RetriableFileCopyCommand.class);
   private boolean skipCrc = false;
+  private boolean directWrite = false;
   private FileAction action;
 
   /**
@@ -77,6 +78,20 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       FileAction action) {
     this(description, action);
     this.skipCrc = skipCrc;
+  }
+
+  /**
+   * Create a RetriableFileCopyCommand.
+   *
+   * @param skipCrc Whether to skip the crc check.
+   * @param description A verbose description of the copy operation.
+   * @param action We should overwrite the target file or append new data to it.
+   * @param directWrite Whether to write directly to the target path, avoiding a temporary file rename.
+   */
+  public RetriableFileCopyCommand(boolean skipCrc, String description,
+          FileAction action, boolean directWrite) {
+    this(skipCrc, description, action);
+    this.directWrite = directWrite;
   }
 
   /**
@@ -103,15 +118,20 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       Mapper.Context context, EnumSet<FileAttribute> fileAttributes)
       throws IOException {
     final boolean toAppend = action == FileAction.APPEND;
-    Path targetPath = toAppend ? target : getTmpFile(target, context);
+    final boolean useTmpTarget = !toAppend && !directWrite;
+    Path targetPath = useTmpTarget ? getTmpFile(target, context) : target;
+
+    LOG.info("Copying " + source.getPath() + " to " + target);
+    if (useTmpTarget) {
+      LOG.info("Writing to temporary target file path " + targetPath);
+    } else {
+      LOG.info("Writing directly to target file path " + targetPath);
+    }
+
     final Configuration configuration = context.getConfiguration();
     FileSystem targetFS = target.getFileSystem(configuration);
 
     try {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Copying " + source.getPath() + " to " + target);
-        LOG.debug("Target file path: " + targetPath);
-      }
       final Path sourcePath = source.getPath();
       final FileSystem sourceFS = sourcePath.getFileSystem(configuration);
       final FileChecksum sourceChecksum = fileAttributes
@@ -134,17 +154,19 @@ public class RetriableFileCopyCommand extends RetriableCommand {
               targetFS, targetPath);
         }
       }
-      // it's not append case, thus we first write to a temporary file, rename
-      // it to the target path.
-      if (!toAppend) {
+      // it's not append or direct write (preferred for s3a) case, thus we first
+      // write to a temporary file, then rename it to the target path.
+      if (useTmpTarget) {
+        LOG.info("Renaming temporary target file path " + targetPath + " to " + target);
         promoteTmpToTarget(targetPath, target, targetFS);
       }
+      LOG.info("Completed writing " + target + " (" + bytesRead + " bytes)");
       return bytesRead;
     } finally {
       // note that for append case, it is possible that we append partial data
       // and then fail. In that case, for the next retry, we either reuse the
       // partial appended data if it is good or we overwrite the whole file
-      if (!toAppend) {
+      if (useTmpTarget && targetFS.exists(targetPath)) {
         targetFS.delete(targetPath, false);
       }
     }
@@ -257,9 +279,9 @@ public class RetriableFileCopyCommand extends RetriableCommand {
         get(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH));
 
     Path root = target.equals(targetWorkPath)? targetWorkPath.getParent() : targetWorkPath;
-    LOG.info("Creating temp file: " +
-        new Path(root, ".distcp.tmp." + context.getTaskAttemptID().toString()));
-    return new Path(root, ".distcp.tmp." + context.getTaskAttemptID().toString());
+    Path tempFile = new Path(root, ".distcp.tmp." + context.getTaskAttemptID().toString());
+    LOG.info("Creating temp file: " + tempFile);
+    return tempFile;
   }
 
   @VisibleForTesting
