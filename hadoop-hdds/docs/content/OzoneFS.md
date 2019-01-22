@@ -47,7 +47,7 @@ Please add the following entry to the core-site.xml.
 </property>
 <property>
   <name>fs.defaultFS</name>
-  <value>o3fs://localhost:9864/volume/bucket</value>
+  <value>o3fs://bucket.volume</value>
 </property>
 {{< /highlight >}}
 
