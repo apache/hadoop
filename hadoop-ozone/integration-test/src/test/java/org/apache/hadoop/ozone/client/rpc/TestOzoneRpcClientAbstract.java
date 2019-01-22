@@ -60,6 +60,7 @@ import org.apache.hadoop.ozone.client.OzoneKey;
 import org.apache.hadoop.ozone.client.OzoneKeyDetails;
 import org.apache.hadoop.ozone.client.OzoneKeyLocation;
 import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.KeyOutputStream;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
@@ -201,6 +202,39 @@ public abstract class TestOzoneRpcClientAbstract {
     store.getVolume(volumeName);
   }
 
+  @Test
+  public void testCreateVolumeWithMetadata()
+      throws IOException, OzoneException {
+    String volumeName = UUID.randomUUID().toString();
+    VolumeArgs volumeArgs = VolumeArgs.newBuilder()
+        .addMetadata("key1", "val1")
+        .build();
+    store.createVolume(volumeName, volumeArgs);
+    OzoneVolume volume = store.getVolume(volumeName);
+
+    Assert.assertEquals("val1", volume.getMetadata().get("key1"));
+    Assert.assertEquals(volumeName, volume.getName());
+  }
+
+  @Test
+  public void testCreateBucketWithMetadata()
+      throws IOException, OzoneException {
+    long currentTime = Time.now();
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    BucketArgs args = BucketArgs.newBuilder()
+        .addMetadata("key1", "value1").build();
+    volume.createBucket(bucketName, args);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    Assert.assertEquals(bucketName, bucket.getName());
+    Assert.assertNotNull(bucket.getMetadata());
+    Assert.assertEquals("value1", bucket.getMetadata().get("key1"));
+
+  }
+
+  
   @Test
   public void testCreateBucket()
       throws IOException, OzoneException {
