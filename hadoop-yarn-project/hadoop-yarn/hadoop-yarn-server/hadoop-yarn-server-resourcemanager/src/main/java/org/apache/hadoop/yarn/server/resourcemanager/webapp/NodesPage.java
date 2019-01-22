@@ -168,7 +168,7 @@ class NodesPage extends RmView {
         nodeTableData.append("<br title='")
             .append(String.valueOf(info.getLastHealthUpdate())).append("'>")
             .append(Times.format(info.getLastHealthUpdate())).append("\",\"")
-            .append(info.getHealthReport()).append("\",\"")
+            .append(StringEscapeUtils.escapeJava(info.getHealthReport())).append("\",\"")
             .append(String.valueOf(info.getNumContainers())).append("\",\"")
             .append(info.getAllocationTagsSummary()).append("\",\"")
             .append("<br title='").append(String.valueOf(usedMemory))
@@ -204,9 +204,8 @@ class NodesPage extends RmView {
             nodeTableData.length() - 1);
       }
       nodeTableData.append("]");
-      String nodeTableDataEscaped = StringEscapeUtils.escapeJava(nodeTableData.toString());
       html.script().$type("text/javascript")
-          .__("var nodeTableData=" + nodeTableDataEscaped).__();
+          .__("var nodeTableData=" + nodeTableData).__();
       tbody.__().__();
     }
   }
