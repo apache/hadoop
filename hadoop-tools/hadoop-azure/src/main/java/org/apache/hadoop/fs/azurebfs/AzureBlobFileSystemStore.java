@@ -40,6 +40,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -845,7 +846,7 @@ public class AzureBlobFileSystemStore {
   private long parseLastModifiedTime(final String lastModifiedTime) {
     long parsedTime = 0;
     try {
-      Date utcDate = new SimpleDateFormat(DATE_TIME_PATTERN).parse(lastModifiedTime);
+      Date utcDate = new SimpleDateFormat(DATE_TIME_PATTERN, Locale.US).parse(lastModifiedTime);
       parsedTime = utcDate.getTime();
     } catch (ParseException e) {
       LOG.error("Failed to parse the date {}", lastModifiedTime);
