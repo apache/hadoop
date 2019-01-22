@@ -34,13 +34,12 @@ import com.google.common.base.Preconditions;
 /**
  * A class that encapsulates the OmVolumeArgs Args.
  */
-public final class OmVolumeArgs implements Auditable{
+public final class OmVolumeArgs extends WithMetadata implements Auditable {
   private final String adminName;
   private final String ownerName;
   private final String volume;
   private final long creationTime;
   private final long quotaInBytes;
-  private final Map<String, String> metadata;
   private final OmOzoneAclMap aclMap;
 
   /**
@@ -103,10 +102,6 @@ public final class OmVolumeArgs implements Auditable{
    */
   public long getQuotaInBytes() {
     return quotaInBytes;
-  }
-
-  public Map<String, String> getMetadata() {
-    return metadata;
   }
 
   public OmOzoneAclMap getAclMap() {

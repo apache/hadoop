@@ -30,6 +30,7 @@ import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
+import org.apache.hadoop.ozone.om.helpers.WithMetadata;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -37,7 +38,7 @@ import com.google.common.base.Preconditions;
 /**
  * A class that encapsulates OzoneVolume.
  */
-public class OzoneVolume {
+public class OzoneVolume extends WithMetadata {
 
   /**
    * The proxy used for connecting to the cluster and perform
@@ -73,7 +74,6 @@ public class OzoneVolume {
 
   private int listCacheSize;
 
-  private Map<String, String> metadata;
   /**
    * Constructs OzoneVolume instance.
    * @param conf Configuration object.
@@ -159,13 +159,6 @@ public class OzoneVolume {
    */
   public long getQuota() {
     return quotaInBytes;
-  }
-
-  /**
-   * Returns custom key/value metadata map.
-   */
-  public Map<String, String> getMetadata() {
-    return metadata;
   }
 
   /**

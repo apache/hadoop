@@ -32,6 +32,7 @@ import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.WithMetadata;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -43,7 +44,7 @@ import java.util.NoSuchElementException;
 /**
  * A class that encapsulates OzoneBucket.
  */
-public class OzoneBucket {
+public class OzoneBucket extends WithMetadata {
 
   /**
    * The proxy used for connecting to the cluster and perform
@@ -92,11 +93,6 @@ public class OzoneBucket {
    * Creation time of the bucket.
    */
   private long creationTime;
-
-  /**
-   * Custom key value metadata.
-   */
-  private Map<String, String> metadata;
 
   /**
    * Constructs OzoneBucket instance.
@@ -203,20 +199,6 @@ public class OzoneBucket {
    */
   public long getCreationTime() {
     return creationTime;
-  }
-
-  /**
-   * Custom key value metadata.
-   */
-  public Map<String, String> getMetadata() {
-    return metadata;
-  }
-
-  /**
-   * Set custom key value metadata.
-   */
-  public void setMetadata(Map<String, String> metadata) {
-    this.metadata = metadata;
   }
 
   /**

@@ -38,7 +38,7 @@ import com.google.common.base.Preconditions;
 /**
  * A class that encapsulates Bucket Info.
  */
-public final class OmBucketInfo implements Auditable {
+public final class OmBucketInfo extends WithMetadata implements Auditable {
   /**
    * Name of the volume in which the bucket belongs to.
    */
@@ -64,11 +64,6 @@ public final class OmBucketInfo implements Auditable {
    * Creation time of bucket.
    */
   private final long creationTime;
-
-  /**
-   * Custom key value map for any metadata.
-   */
-  private Map<String, String> metadata;
 
   /**
    * Private constructor, constructed via builder.
@@ -142,19 +137,6 @@ public final class OmBucketInfo implements Auditable {
    */
   public long getCreationTime() {
     return creationTime;
-  }
-
-  /**
-   * Returns custom key value metadata.
-   *
-   * @return key value map.
-   */
-  public Map<String, String> getMetadata() {
-    return metadata;
-  }
-
-  public void setMetadata(Map<String, String> metadata) {
-    this.metadata = metadata;
   }
 
   /**

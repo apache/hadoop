@@ -36,7 +36,7 @@ import com.google.common.base.Preconditions;
  * This is returned from OM to client, and client use class to talk to
  * datanode. Also, this is the metadata written to om.db on server side.
  */
-public final class OmKeyInfo {
+public final class OmKeyInfo extends WithMetadata {
   private final String volumeName;
   private final String bucketName;
   // name of key client specified
@@ -47,7 +47,6 @@ public final class OmKeyInfo {
   private long modificationTime;
   private HddsProtos.ReplicationType type;
   private HddsProtos.ReplicationFactor factor;
-  private Map<String, String> metadata;
 
   @SuppressWarnings("parameternumber")
   OmKeyInfo(String volumeName, String bucketName, String keyName,
@@ -122,10 +121,6 @@ public final class OmKeyInfo {
 
   public void updateModifcationTime() {
     this.modificationTime = Time.monotonicNow();
-  }
-
-  public Map<String, String> getMetadata() {
-    return metadata;
   }
 
   /**
