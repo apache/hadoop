@@ -23,7 +23,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -642,6 +641,16 @@ public class TestIPC {
   }
 
   /**
+   * Mock socket class to help inject an exception for HADOOP-7428.
+   */
+  static class MockSocket extends Socket {
+    @Override
+    public synchronized void setSoTimeout(int timeout) {
+      throw new RuntimeException("Injected fault");
+    }
+  }
+
+  /**
    * Test that, if a RuntimeException is thrown after creating a socket
    * but before successfully connecting to the IPC server, that the
    * failure is handled properly. This is a regression test for
@@ -654,11 +663,8 @@ public class TestIPC {
     SocketFactory spyFactory = spy(NetUtils.getDefaultSocketFactory(conf));
     Mockito.doAnswer(new Answer<Socket>() {
       @Override
-      public Socket answer(InvocationOnMock invocation) throws Throwable {
-        Socket s = spy((Socket)invocation.callRealMethod());
-        doThrow(new RuntimeException("Injected fault")).when(s)
-          .setSoTimeout(anyInt());
-        return s;
+      public Socket answer(InvocationOnMock invocation) {
+        return new MockSocket();
       }
     }).when(spyFactory).createSocket();
       
