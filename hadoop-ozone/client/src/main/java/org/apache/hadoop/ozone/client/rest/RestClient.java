@@ -614,7 +614,7 @@ public class RestClient implements ClientProtocol {
             bucketInfo.getBucketName(), bucketInfo.getAcls(),
             bucketInfo.getStorageType(),
             getBucketVersioningFlag(bucketInfo.getVersioning()), creationTime,
-            bucketInfo.getMetadata());
+            new HashMap<>());
       }).collect(Collectors.toList());
     } catch (URISyntaxException e) {
       throw new IOException(e);
@@ -869,7 +869,7 @@ public class RestClient implements ClientProtocol {
           HddsClientUtils.formatDateTime(keyInfo.getCreatedOn()),
           HddsClientUtils.formatDateTime(keyInfo.getModifiedOn()),
           ozoneKeyLocations, ReplicationType.valueOf(
-          keyInfo.getType().toString()),
+              keyInfo.getType().toString()),
           new HashMap<>());
       EntityUtils.consume(response);
       return key;

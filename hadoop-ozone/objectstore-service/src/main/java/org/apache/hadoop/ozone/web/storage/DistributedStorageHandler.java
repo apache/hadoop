@@ -281,9 +281,6 @@ public final class DistributedStorageHandler implements StorageHandler {
       builder.setIsVersionEnabled(getBucketVersioningProtobuf(
           args.getVersioning()));
     }
-    if (args.getMetadata() != null) {
-      builder.addAllMetadata(args.getMetadata());
-    }
     ozoneManagerClient.createBucket(builder.build());
   }
 
@@ -424,7 +421,6 @@ public final class DistributedStorageHandler implements StorageHandler {
     bucketInfo.setAcls(omBucketInfo.getAcls());
     bucketInfo.setCreatedOn(
         HddsClientUtils.formatDateTime(omBucketInfo.getCreationTime()));
-    bucketInfo.setMetadata(omBucketInfo.getMetadata());
     return bucketInfo;
   }
 

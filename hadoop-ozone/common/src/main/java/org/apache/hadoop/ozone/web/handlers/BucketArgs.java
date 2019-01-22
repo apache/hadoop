@@ -21,10 +21,8 @@ import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
 
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * BucketArgs packages all bucket related arguments to
@@ -36,7 +34,6 @@ public class BucketArgs extends VolumeArgs {
   private List<OzoneAcl> removeAcls;
   private OzoneConsts.Versioning versioning;
   private StorageType storageType;
-  private Map<String, String> metadata;
 
   /**
    * Constructor for BucketArgs.
@@ -50,7 +47,6 @@ public class BucketArgs extends VolumeArgs {
     this.bucketName = bucketName;
     this.versioning = OzoneConsts.Versioning.NOT_DEFINED;
     this.storageType = null;
-    metadata = new HashMap<>();
   }
 
 
@@ -65,7 +61,6 @@ public class BucketArgs extends VolumeArgs {
     this.bucketName = bucketName;
     this.versioning = OzoneConsts.Versioning.NOT_DEFINED;
     this.storageType = null;
-    metadata = new HashMap<>();
   }
 
   /**
@@ -77,7 +72,6 @@ public class BucketArgs extends VolumeArgs {
     this(args.getBucketName(), args);
     this.setAddAcls(args.getAddAcls());
     this.setRemoveAcls(args.getRemoveAcls());
-    metadata = new HashMap<>();
   }
 
   /**
@@ -114,24 +108,6 @@ public class BucketArgs extends VolumeArgs {
    */
   public List<OzoneAcl> getRemoveAcls() {
     return removeAcls;
-  }
-
-  /**
-   * Return custom key value metadata.
-   *
-   * @return metadata map
-   */
-  public Map<String, String> getMetadata() {
-    return metadata;
-  }
-
-  /**
-   * Set custom key value metadata.
-   *
-   * @param metadata
-   */
-  public void setMetadata(Map<String, String> metadata) {
-    this.metadata = metadata;
   }
 
   /**

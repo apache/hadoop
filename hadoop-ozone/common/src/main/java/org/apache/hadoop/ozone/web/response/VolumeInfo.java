@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.web.response;
 
 
 import java.io.IOException;
-import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
@@ -74,7 +73,7 @@ public class VolumeInfo implements Comparable<VolumeInfo> {
   private String volumeName;
   private String createdOn;
   private String createdBy;
-  private Map<String, String> metadata;
+
   private long bytesUsed;
   private long bucketCount;
 
@@ -305,13 +304,5 @@ public class VolumeInfo implements Comparable<VolumeInfo> {
    */
   public void setBucketCount(long bucketCount) {
     this.bucketCount = bucketCount;
-  }
-
-  public Map<String, String> getMetadata() {
-    return metadata;
-  }
-
-  public void setMetadata(Map<String, String> metadata) {
-    this.metadata = metadata;
   }
 }
