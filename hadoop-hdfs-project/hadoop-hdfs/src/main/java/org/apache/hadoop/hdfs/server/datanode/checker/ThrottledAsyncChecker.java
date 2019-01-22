@@ -88,7 +88,7 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
    */
   private final Map<Checkable, LastCheckResult<V>> completedChecks;
 
-  ThrottledAsyncChecker(final Timer timer,
+  public ThrottledAsyncChecker(final Timer timer,
                         final long minMsBetweenChecks,
                         final long diskCheckTimeout,
                         final ExecutorService executorService) {
