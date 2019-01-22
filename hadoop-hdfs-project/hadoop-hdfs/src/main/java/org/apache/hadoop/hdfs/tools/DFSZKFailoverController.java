@@ -189,9 +189,9 @@ public class DFSZKFailoverController extends ZKFailoverController {
     
     GenericOptionsParser parser = new GenericOptionsParser(
         new HdfsConfiguration(), args);
-    DFSZKFailoverController zkfc = DFSZKFailoverController.create(
-        parser.getConfiguration());
     try {
+      DFSZKFailoverController zkfc = DFSZKFailoverController.create(
+          parser.getConfiguration());
       System.exit(zkfc.run(parser.getRemainingArgs()));
     } catch (Throwable t) {
       LOG.error("DFSZKFailOverController exiting due to earlier exception "
