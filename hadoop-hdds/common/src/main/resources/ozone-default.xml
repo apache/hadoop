@@ -1572,10 +1572,7 @@
     <description>Key to enable/disable ozone acls.</description>
   </property>
   <property>
-    <name>ozone.scm.kerberos.keytab.file</name>
-=======
     <name>hdds.scm.kerberos.keytab.file</name>
->>>>>>> HDDS-70. Fix config names for secure ksm and scm. Contributed by Ajay Kumar.
     <value></value>
     <tag> OZONE, SECURITY</tag>
     <description> The keytab file used by each SCM daemon to login as its
