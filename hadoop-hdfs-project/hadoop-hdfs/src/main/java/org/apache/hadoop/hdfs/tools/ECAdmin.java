@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hdfs.tools;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -536,6 +537,13 @@ public class ECAdmin extends Configured implements Tool {
         dfs.enableErasureCodingPolicy(ecPolicyName);
         System.out.println("Erasure coding policy " + ecPolicyName +
             " is enabled");
+        ECTopologyVerifierResult result =
+            getECTopologyVerifierResultForPolicy(dfs, ecPolicyName);
+        if (!result.isSupported()) {
+          System.err.println("Warning: The cluster setup does not support " +
+              "EC policy " + ecPolicyName + ". Reason: " +
+              result.getResultMessage());
+        }
       } catch (IOException e) {
         System.err.println(AdminHelper.prettifyException(e));
         return 2;
@@ -621,19 +629,54 @@ public class ECAdmin extends Configured implements Tool {
         return 1;
       }
       final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
-      final ErasureCodingPolicyInfo[] policies =
-          dfs.getClient().getNamenode().getErasureCodingPolicies();
-      final DatanodeInfo[] report = dfs.getClient().getNamenode()
-          .getDatanodeReport(HdfsConstants.DatanodeReportType.ALL);
-
-      ECTopologyVerifierResult result = ECTopologyVerifier
-          .getECTopologyVerifierResult(report, policies);
+      ECTopologyVerifierResult result = getECTopologyVerifierResult(dfs);
       System.out.println(result.getResultMessage());
       if (result.isSupported()) {
         return 0;
       }
       return 2;
     }
+  }
+
+  private static ECTopologyVerifierResult getECTopologyVerifierResult(
+      final DistributedFileSystem dfs) throws IOException {
+    final ErasureCodingPolicyInfo[] policies =
+        dfs.getClient().getNamenode().getErasureCodingPolicies();
+    final DatanodeInfo[] report = dfs.getClient().getNamenode()
+        .getDatanodeReport(HdfsConstants.DatanodeReportType.ALL);
+
+    return ECTopologyVerifier.getECTopologyVerifierResult(report,
+        getEnabledPolicies(policies));
+  }
+
+  private static ECTopologyVerifierResult getECTopologyVerifierResultForPolicy(
+      final DistributedFileSystem dfs, final String policyName)
+      throws IOException {
+    final ErasureCodingPolicy policy =
+        getPolicy(dfs.getClient().getNamenode().getErasureCodingPolicies(),
+            policyName);
+    final DatanodeInfo[] report = dfs.getClient().getNamenode()
+        .getDatanodeReport(HdfsConstants.DatanodeReportType.ALL);
+    return ECTopologyVerifier.getECTopologyVerifierResult(report, policy);
+  }
+
+  private static ErasureCodingPolicy getPolicy(
+      final ErasureCodingPolicyInfo[] policies, final String policyName) {
+    for (ErasureCodingPolicyInfo policy : policies) {
+      if (policyName.equals(policy.getPolicy().getName())) {
+        return policy.getPolicy();
+      }
+    }
+    throw new HadoopIllegalArgumentException("The given erasure coding " +
+        "policy " + policyName + " does not exist.");
+  }
+
+  private static ErasureCodingPolicy[] getEnabledPolicies(
+      final ErasureCodingPolicyInfo[] policies) {
+    return Arrays.asList(policies).stream()
+        .filter(policyInfo -> policyInfo.isEnabled())
+        .map(ErasureCodingPolicyInfo::getPolicy)
+        .toArray(ErasureCodingPolicy[]::new);
   }
 
   private static final AdminHelper.Command[] COMMANDS = {
