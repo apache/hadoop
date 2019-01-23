@@ -100,6 +100,7 @@ public class YarnConfiguration extends Configuration {
     addDeprecatedKeys();
     Configuration.addDefaultResource(YARN_DEFAULT_CONFIGURATION_FILE);
     Configuration.addDefaultResource(YARN_SITE_CONFIGURATION_FILE);
+    Configuration.addDefaultResource(RESOURCE_TYPES_CONFIGURATION_FILE);
   }
 
   private static void addDeprecatedKeys() {
