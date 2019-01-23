@@ -41,6 +41,7 @@ public class PutOpParam extends HttpOpParam<PutOpParam.Op> {
     REMOVEACLENTRIES(false, HttpURLConnection.HTTP_OK),
     REMOVEDEFAULTACL(false, HttpURLConnection.HTTP_OK),
     REMOVEACL(false, HttpURLConnection.HTTP_OK),
+    SATISFYSTORAGEPOLICY(false, HttpURLConnection.HTTP_OK),
     SETACL(false, HttpURLConnection.HTTP_OK),
 
     SETXATTR(false, HttpURLConnection.HTTP_OK),
