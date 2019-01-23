@@ -24,6 +24,7 @@ import org.apache.hadoop.ozone.web.ozShell.bucket.BucketCommands;
 import org.apache.hadoop.ozone.web.ozShell.keys.KeyCommands;
 import org.apache.hadoop.ozone.web.ozShell.s3.S3Commands;
 import org.apache.hadoop.ozone.web.ozShell.volume.VolumeCommands;
+import org.apache.hadoop.ozone.web.ozShell.token.TokenCommands;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +42,7 @@ import picocli.CommandLine.Command;
         VolumeCommands.class,
         BucketCommands.class,
         KeyCommands.class,
+        TokenCommands.class,
         S3Commands.class
     },
     versionProvider = HddsVersionProvider.class,
