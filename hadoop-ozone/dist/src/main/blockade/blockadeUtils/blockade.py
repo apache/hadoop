@@ -21,6 +21,7 @@ from subprocess import call
 import subprocess
 import logging
 import random
+from clusterUtils.cluster_utils import ClusterUtils
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +33,13 @@ class Blockade(object):
         call(["blockade", "destroy"])
 
     @classmethod
+    def blockade_up(cls):
+        call(["blockade", "up"])
+
+    @classmethod
     def blockade_status(cls):
-        output = call(["blockade", "status"])
-        return output
+        exit_code, output = ClusterUtils.run_cmd("blockade status")
+        return exit_code, output
 
     @classmethod
     def make_flaky(cls, flaky_node, container_list):
@@ -57,3 +62,32 @@ class Blockade(object):
     def blockade_fast_all(cls):
         output = call(["blockade", "fast", "--all"])
         assert output == 0, "fast command failed with exit code=[%s]" % output
+
+    @classmethod
+    def blockade_create_partition(cls, *args):
+        nodes = ""
+        for node_list in args:
+            nodes = nodes + ','.join(node_list) + " "
+        exit_code, output = ClusterUtils.run_cmd("blockade partition %s" % nodes)
+        assert exit_code == 0, "blockade partition command failed with exit code=[%s]" % output
+
+    @classmethod
+    def blockade_join(cls):
+        output = call(["blockade", "join"])
+        assert output == 0, "blockade join command failed with exit code=[%s]" % output
+
+    @classmethod
+    def blockade_stop(cls, node, all_nodes=False):
+        if all_nodes:
+            output = call(["blockade", "stop", "--all"])
+        else:
+            output = call(["blockade", "stop", node])
+        assert output == 0, "blockade stop command failed with exit code=[%s]" % output
+
+    @classmethod
+    def blockade_start(cls, node, all_nodes=False):
+        if all_nodes:
+            output = call(["blockade", "start", "--all"])
+        else:
+            output = call(["blockade", "start", node])
+        assert output == 0, "blockade start command failed with exit code=[%s]" % output

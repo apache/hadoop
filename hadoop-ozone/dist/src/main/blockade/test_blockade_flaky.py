@@ -17,6 +17,7 @@
 
 """This module has apis to create and remove a blockade cluster"""
 import os
+import time
 import logging
 import pytest
 from blockadeUtils.blockade import Blockade
@@ -32,9 +33,10 @@ CONTAINER_LIST = []
 
 def setup_module():
     global CONTAINER_LIST
+    Blockade.blockade_destroy()
     CONTAINER_LIST = ClusterUtils.cluster_setup(FILE, SCALE)
-    output = Blockade.blockade_status()
-    assert output == 0, "blockade status command failed with exit code=[%s]" % output
+    exit_code, output = Blockade.blockade_status()
+    assert exit_code == 0, "blockade status command failed with output=[%s]" % output
 
 
 def teardown_module():
@@ -45,10 +47,12 @@ def teardown_module():
 def teardown():
     logger.info("Inside teardown")
     Blockade.blockade_fast_all()
+    time.sleep(5)
 
 
 @pytest.mark.parametrize("flaky_nodes", ["datanode", "scm", "om", "all"])
 def test_flaky(flaky_nodes):
     Blockade.make_flaky(flaky_nodes, CONTAINER_LIST)
     Blockade.blockade_status()
-    ClusterUtils.run_freon(FILE, 1, 1, 1, 10240, "RATIS", "THREE")
+    exit_code, output = ClusterUtils.run_freon(FILE, 1, 1, 1, 10240, "RATIS", "THREE")
+    assert exit_code == 0, "freon run failed with output=[%s]" % output

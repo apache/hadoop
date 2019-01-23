@@ -21,6 +21,8 @@ from subprocess import call
 import subprocess
 import logging
 import time
+import re
+import yaml
 
 
 logger = logging.getLogger(__name__)
@@ -61,15 +63,101 @@ class ClusterUtils(object):
     def run_freon(cls, docker_compose_file, num_volumes, num_buckets, num_keys, key_size,
                   replication_type, replication_factor):
         # run freon
-        logger.info("Running freon ...")
-        output = call(["docker-compose", "-f", docker_compose_file,
-                                          "exec", "ozoneManager",
-                                          "/opt/hadoop/bin/ozone",
-                                          "freon", "rk",
-                                          "--numOfVolumes", str(num_volumes),
-                                          "--numOfBuckets", str(num_buckets),
-                                          "--numOfKeys", str(num_keys),
-                                          "--keySize", str(key_size),
-                                          "--replicationType", replication_type,
-                                          "--factor", replication_factor])
-        assert output == 0, "freon run failed with exit code=[%s]" % output
+        cmd = "docker-compose -f %s exec ozoneManager /opt/hadoop/bin/ozone freon rk " \
+              "--numOfVolumes %s --numOfBuckets %s --numOfKeys %s --keySize %s " \
+              "--replicationType %s --factor %s" % (docker_compose_file, num_volumes,
+                                                    num_buckets, num_keys, key_size, replication_type,
+                                                    replication_factor)
+        exit_code, output = cls.run_cmd(cmd)
+        return exit_code, output
+
+    @classmethod
+    def run_cmd(cls, cmd):
+        command = cmd
+        if isinstance(cmd, list):
+            command = ' '.join(cmd)
+        logger.info(" RUNNING: " + command)
+        all_output = ""
+        myprocess = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+        while myprocess.poll() is None:
+            op = myprocess.stdout.readline()
+            if op:
+                all_output += op
+                logger.info(op)
+        other_output = myprocess.communicate()
+        other_output = other_output[0].strip()
+        if other_output != "":
+            all_output += other_output
+            for each_line in other_output.split("\n"):
+                logger.info(" " + each_line.strip())
+        reg = re.compile(r"(\r\n|\n)$")
+        all_output = reg.sub("", all_output, 1)
+
+        return myprocess.returncode, all_output
+
+    @classmethod
+    def get_ozone_confkey_value(cls, docker_compose_file, key_name):
+        cmd = "docker-compose -f %s exec ozoneManager /opt/hadoop/bin/ozone getconf -confKey %s" \
+              %(docker_compose_file, key_name)
+        exit_code, output = cls.run_cmd(cmd)
+        assert exit_code == 0, "getconf of key=[%s] failed with output=[%s]" %(key_name, output)
+        return output
+
+    @classmethod
+    def find_scm_uuid(cls, docker_compose_file):
+        """
+        This function returns scm uuid.
+        """
+        ozone_metadata_dir = cls.get_ozone_confkey_value(docker_compose_file, "ozone.metadata.dirs")
+        cmd = "docker-compose -f %s exec scm cat %s/scm/current/VERSION" % (docker_compose_file, ozone_metadata_dir)
+        exit_code, output = cls.run_cmd(cmd)
+        assert exit_code == 0, "get scm UUID failed with output=[%s]" % output
+        output_list = output.split("\n")
+        output_list = list(filter(lambda x: re.search("\w+=\w+", x), output_list))
+        output_dict = dict(map(lambda x: x.split("="), output_list))
+        return str(output_dict['scmUuid']).strip()
+
+    @classmethod
+    def find_datanode_container_status(cls, docker_compose_file, datanode_index):
+        """
+        This function returns the datanode's container replica state.
+        """
+        datanode_dir = cls.get_ozone_confkey_value(docker_compose_file, "hdds.datanode.dir")
+        scm_uuid = cls.find_scm_uuid(docker_compose_file)
+        container_parent_path = "%s/hdds/%s/current/containerDir0" %(datanode_dir, scm_uuid)
+        cmd = "docker-compose -f %s exec --index=%s datanode find %s -type f -name '*.container'" \
+              % (docker_compose_file, datanode_index, container_parent_path)
+        exit_code, output = cls.run_cmd(cmd)
+        assert exit_code == 0, "command=[%s] failed with output=[%s]" % (cmd, output)
+        assert output, "No container info present"
+        container_list = map(str.strip, output.split("\n"))
+        container_state = None
+        for container_path in container_list:
+            cmd = "docker-compose -f %s exec --index=%s datanode cat %s" \
+                  % (docker_compose_file, datanode_index, container_path)
+            exit_code, output = cls.run_cmd(cmd)
+            assert exit_code == 0, "command=[%s] failed with output=[%s]" % (cmd, output)
+            container_db_list = output.split("\n")
+            container_db_list = list(filter(lambda x: re.search("\w+:\s\w+", x), container_db_list))
+            container_db_info = "\n".join(container_db_list)
+            container_db_dict = yaml.load(container_db_info)
+            for key, value in container_db_dict.items():
+                container_db_dict[key] = str(value).lstrip()
+            if not container_state:
+                container_state = container_db_dict['state']
+            else:
+                assert container_db_dict['state'] == container_state, "all containers are not in same state"
+
+        return container_state
+
+    @classmethod
+    def find_all_datanodes_container_status(cls, docker_compose_file, scale):
+        """
+        This function returns container replica states of all datanodes.
+        """
+        all_datanode_container_status = []
+        for index in range(scale):
+            all_datanode_container_status.append(cls.find_datanode_container_status(docker_compose_file, index+1))
+        logger.info("All datanodes container status: %s", ' '.join(all_datanode_container_status))
+
+        return all_datanode_container_status
