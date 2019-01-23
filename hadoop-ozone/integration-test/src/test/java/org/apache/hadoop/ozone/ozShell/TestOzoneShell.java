@@ -18,16 +18,21 @@
 package org.apache.hadoop.ozone.ozShell;
 
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -65,6 +70,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import com.google.common.base.Strings;
 import org.apache.commons.lang3.RandomStringUtils;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -473,6 +479,27 @@ public class TestOzoneShell {
                   expectedError, exceptionToCheck.getMessage()),
               exceptionToCheck.getMessage().contains(expectedError));
         }
+      }
+    }
+  }
+
+  /**
+   * Execute command, assert exception message and returns true if error
+   * was thrown.
+   */
+  private void executeWithError(Shell ozoneShell, String[] args,
+      Class exception) {
+    if (Objects.isNull(exception)) {
+      execute(ozoneShell, args);
+    } else {
+      try {
+        execute(ozoneShell, args);
+        fail("Exception is expected from command execution " + Arrays
+            .asList(args));
+      } catch (Exception ex) {
+        LOG.error("Exception: ", ex);
+        assertTrue(ex.getCause().getClass().getCanonicalName()
+            .equals(exception.getCanonicalName()));
       }
     }
   }
@@ -1244,6 +1271,73 @@ public class TestOzoneShell {
     OzoneBucket bucketInfo = vol.getBucket(bucketName);
 
     return bucketInfo;
+  }
+
+  @Test
+  public void testTokenCommands() throws Exception {
+    String omHostName = cluster.getOzoneManager().getServiceList().stream()
+        .filter(a -> a.getNodeType().equals(HddsProtos.NodeType.OM))
+        .collect(Collectors.toList()).get(0).getHostname();
+
+    String omPort = cluster.getOzoneManager().getRpcPort();
+    String omAdd = "--set=" + OZONE_OM_ADDRESS_KEY + "=" + omHostName
+        + ":" + omPort;
+    List<String[]> shellCommands = new ArrayList<>(4);
+    // Case 1: Execution will fail when security is disabled.
+    shellCommands.add(new String[]{omAdd, "token", "get"});
+    shellCommands.add(new String[]{omAdd, "token", "renew"});
+    shellCommands.add(new String[]{omAdd, "token", "cancel"});
+    shellCommands.add(new String[]{omAdd, "token", "print"});
+    shellCommands.forEach(cmd -> execute(cmd, "Error:Token operations " +
+        "work only"));
+
+    String security = "-D=" + OZONE_SECURITY_ENABLED_KEY + "=true";
+
+    // Case 2: Execution of get token will fail when security is enabled but
+    // OzoneManager is not setup correctly.
+    execute(new String[]{omAdd, security,
+        "token", "get"}, "Error: Get delegation token operation failed.");
+
+    // Clear all commands.
+    shellCommands.clear();
+
+    // Case 3: Execution of renew/cancel/print token will fail as token file
+    // doesn't exist.
+    shellCommands.add(new String[]{omAdd, security, "token", "renew"});
+    shellCommands.add(new String[]{omAdd, security, "token", "cancel"});
+    shellCommands.add(new String[]{omAdd, security, "token", "print"});
+    shellCommands.forEach(cmd -> execute(cmd, "token " +
+        "operation failed as token file:"));
+
+    // Create corrupt token file.
+    File testPath = GenericTestUtils.getTestDir();
+    Files.createDirectories(testPath.toPath());
+    Path tokenFile = Paths.get(testPath.toString(), "token.txt");
+    String question = RandomStringUtils.random(100);
+    Files.write(tokenFile, question.getBytes());
+
+    // Clear all commands.
+    shellCommands.clear();
+    String file = "-t=" + tokenFile.toString();
+
+    // Case 4: Execution of renew/cancel/print token will fail if token file
+    // is corrupt.
+    shellCommands.add(new String[]{omAdd, security, "token", "renew", file});
+    shellCommands.add(new String[]{omAdd, security, "token",
+        "cancel", file});
+    shellCommands.add(new String[]{omAdd, security, "token", "print", file});
+    shellCommands.forEach(cmd -> executeWithError(shell, cmd,
+        EOFException.class));
+  }
+
+  private void execute(String[] cmd, String msg) {
+    // verify the response output
+    execute(shell, cmd);
+    String output = err.toString();
+    assertTrue(output.contains(msg));
+    // reset stream
+    out.reset();
+    err.reset();
   }
 
   /**
