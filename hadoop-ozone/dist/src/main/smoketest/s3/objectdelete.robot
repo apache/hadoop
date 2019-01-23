@@ -28,7 +28,7 @@ ${BUCKET}             generated
 *** Test Cases ***
 Delete file with s3api
                         Execute                    date > /tmp/testfile
-    ${result} =         Execute AWSS3ApiCli        put-object --storage-class REDUCED_REDUNDANCY --bucket ${BUCKET} --key deletetestapi/f1 --body /tmp/testfile
+    ${result} =         Execute AWSS3ApiCli        put-object --bucket ${BUCKET} --key deletetestapi/f1 --body /tmp/testfile
     ${result} =         Execute AWSS3ApiCli        list-objects --bucket ${BUCKET} --prefix deletetestapi/
                         Should contain             ${result}         f1
     ${result} =         Execute AWSS3APICli        delete-object --bucket ${BUCKET} --key deletetestapi/f1
@@ -46,7 +46,7 @@ Delete file with s3api, file doesn't exist
 
 Delete dir with s3api
                         Execute                    date > /tmp/testfile
-    ${result} =         Execute AWSS3Cli           cp --storage-class REDUCED_REDUNDANCY /tmp/testfile s3://${BUCKET}/deletetestapidir/f1
+    ${result} =         Execute AWSS3Cli           cp /tmp/testfile s3://${BUCKET}/deletetestapidir/f1
     ${result} =         Execute AWSS3Cli           ls s3://${BUCKET}/deletetestapidir/
                         Should contain             ${result}         f1
     ${result} =         Execute AWSS3APICli        delete-object --bucket ${BUCKET} --key deletetestapidir/
@@ -57,7 +57,7 @@ Delete dir with s3api
 
 Delete file with s3api, file doesn't exist, prefix of a real file
                         Execute                    date > /tmp/testfile
-    ${result} =         Execute AWSS3Cli           cp --storage-class REDUCED_REDUNDANCY /tmp/testfile s3://${BUCKET}/deletetestapiprefix/filefile
+    ${result} =         Execute AWSS3Cli           cp /tmp/testfile s3://${BUCKET}/deletetestapiprefix/filefile
     ${result} =         Execute AWSS3Cli           ls s3://${BUCKET}/deletetestapiprefix/
                         Should contain             ${result}         filefile
     ${result} =         Execute AWSS3APICli        delete-object --bucket ${BUCKET} --key deletetestapiprefix/file

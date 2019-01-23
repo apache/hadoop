@@ -29,9 +29,9 @@ ${BUCKET}             generated
 
 File upload and directory list
                         Execute                   date > /tmp/testfile
-    ${result} =         Execute AWSS3Cli          cp --storage-class REDUCED_REDUNDANCY /tmp/testfile s3://${BUCKET}
+    ${result} =         Execute AWSS3Cli          cp /tmp/testfile s3://${BUCKET}
                         Should contain            ${result}         upload
-    ${result} =         Execute AWSS3Cli          cp --storage-class REDUCED_REDUNDANCY /tmp/testfile s3://${BUCKET}/dir1/dir2/file
+    ${result} =         Execute AWSS3Cli          cp /tmp/testfile s3://${BUCKET}/dir1/dir2/file
                         Should contain            ${result}         upload
     ${result} =         Execute AWSS3Cli          ls s3://${BUCKET}
                         Should contain            ${result}         testfile

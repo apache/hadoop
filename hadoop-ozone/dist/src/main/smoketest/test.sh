@@ -14,7 +14,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 RESULT_DIR=result
@@ -24,6 +23,41 @@ mkdir -p "$DIR/$RESULT_DIR"
 #Should be writeable from the docker containers where user is different.
 chmod ogu+w "$DIR/$RESULT_DIR"
 
+## @description wait until 3 datanodes are up (or 30 seconds)
+## @param the docker-compose file
+wait_for_datanodes(){
+
+  #Reset the timer
+  SECONDS=0
+
+  #Don't give it up until 30 seconds
+  while [[ $SECONDS -lt 30 ]]; do
+
+     #This line checks the number of HEALTHY datanodes registered in scm over the
+     # jmx HTTP servlet
+     datanodes=$(docker-compose -f "$1" exec scm curl -s 'http://localhost:9876/jmx?qry=Hadoop:service=SCMNodeManager,name=SCMNodeManagerInfo' | jq -r '.beans[0].NodeCount[] | select(.key=="HEALTHY") | .value')
+      if [[ "$datanodes" == "3" ]]; then
+
+        #It's up and running. Let's return from the function.
+         echo "$datanodes datanodes are up and registered to the scm"
+         return
+      else
+
+         #Print it only if a number. Could be not a number if scm is not yet started
+         if [[ "$datanodes" ]]; then
+            echo "$datanodes datanode is up and healhty (until now)"
+         fi
+      fi
+
+      sleep 2
+   done
+
+   echo "WARNING! Datanodes are not started successfully. Please check the docker-compose files"
+}
+
+## @description  Execute selected test suites in a specified docker-compose engironment
+## @param        the name of the docker-compose env relative to ../compose
+## @param        the name of the tests (array of subdir names of the dir of this script)
 execute_tests(){
   COMPOSE_DIR=$1
   COMPOSE_FILE=$DIR/../compose/$COMPOSE_DIR/docker-compose.yaml
@@ -37,9 +71,8 @@ execute_tests(){
   echo "  Command to rerun:  ./test.sh --keep --env $COMPOSE_DIR $TESTS"
   echo "-------------------------------------------------"
   docker-compose -f "$COMPOSE_FILE" down
-  docker-compose -f "$COMPOSE_FILE" up -d
-  echo "Waiting 30s for cluster start up..."
-  sleep 30
+  docker-compose -f "$COMPOSE_FILE" up -d --scale datanode=3
+  wait_for_datanodes "$COMPOSE_FILE"
   for TEST in "${TESTS[@]}"; do
      TITLE="Ozone $TEST tests with $COMPOSE_DIR cluster"
      set +e

@@ -30,12 +30,12 @@ ${BUCKET}             generated
 
 Put object to s3
                         Execute                    echo "Randomtext" > /tmp/testfile
-    ${result} =         Execute AWSS3ApiCli        put-object --storage-class REDUCED_REDUNDANCY --bucket ${BUCKET} --key putobject/f1 --body /tmp/testfile
+    ${result} =         Execute AWSS3ApiCli        put-object --bucket ${BUCKET} --key putobject/f1 --body /tmp/testfile
     ${result} =         Execute AWSS3ApiCli        list-objects --bucket ${BUCKET} --prefix putobject/
                         Should contain             ${result}         f1
 
                         Execute                    touch -f /tmp/zerobyte
-    ${result} =         Execute AWSS3ApiCli        put-object --storage-class REDUCED_REDUNDANCY --bucket ${BUCKET} --key putobject/zerobyte --body /tmp/zerobyte
+    ${result} =         Execute AWSS3ApiCli        put-object --bucket ${BUCKET} --key putobject/zerobyte --body /tmp/zerobyte
     ${result} =         Execute AWSS3ApiCli        list-objects --bucket ${BUCKET} --prefix putobject/
                         Should contain             ${result}         zerobyte
 
