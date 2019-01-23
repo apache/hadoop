@@ -8194,11 +8194,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         .getNumOfDataNodes();
     int numOfRacks = getBlockManager().getDatanodeManager()
         .getNetworkTopology().getNumOfRacks();
-    ErasureCodingPolicyInfo[] ecPolicies =
-        getErasureCodingPolicyManager().getCopyOfPolicies();
+    ErasureCodingPolicy[] enabledEcPolicies =
+        getErasureCodingPolicyManager().getCopyOfEnabledPolicies();
     ECTopologyVerifierResult result =
-        ECTopologyVerifier.getECTopologyVerifierResult(ecPolicies,
-        numOfRacks, numOfDataNodes);
+        ECTopologyVerifier.getECTopologyVerifierResult(
+            numOfRacks, numOfDataNodes, enabledEcPolicies);
 
     Map<String, String> resultMap = new HashMap<String, String>();
     resultMap.put("isSupported", Boolean.toString(result.isSupported()));
