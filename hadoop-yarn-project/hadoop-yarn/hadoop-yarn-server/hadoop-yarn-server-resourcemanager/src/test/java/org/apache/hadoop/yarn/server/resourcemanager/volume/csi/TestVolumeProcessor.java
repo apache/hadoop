@@ -131,18 +131,15 @@ public class TestVolumeProcessor {
   }
 
   private void writeTmpResourceTypesFile(File tmpFile) throws IOException {
-    FileWriter fw = new FileWriter(tmpFile);
-    try {
-      Configuration yarnConf = new YarnConfiguration();
-      yarnConf.set(YarnConfiguration.RESOURCE_TYPES, VOLUME_RESOURCE_NAME);
-      yarnConf.set("yarn.resource-types."
-          + VOLUME_RESOURCE_NAME + ".units", "Mi");
-      yarnConf.set("yarn.resource-types."
-          + VOLUME_RESOURCE_NAME + ".tags",
-          CsiConstants.CSI_VOLUME_RESOURCE_TAG);
+    Configuration yarnConf = new YarnConfiguration();
+    yarnConf.set(YarnConfiguration.RESOURCE_TYPES, VOLUME_RESOURCE_NAME);
+    yarnConf.set("yarn.resource-types."
+        + VOLUME_RESOURCE_NAME + ".units", "Mi");
+    yarnConf.set("yarn.resource-types."
+            + VOLUME_RESOURCE_NAME + ".tags",
+        CsiConstants.CSI_VOLUME_RESOURCE_TAG);
+    try (FileWriter fw = new FileWriter(tmpFile)) {
       yarnConf.writeXml(fw);
-    } finally {
-      fw.close();
     }
   }
 
