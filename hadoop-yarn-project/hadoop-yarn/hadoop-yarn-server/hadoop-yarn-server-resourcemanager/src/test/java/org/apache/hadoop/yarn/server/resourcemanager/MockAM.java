@@ -180,6 +180,17 @@ public class MockAM {
             labelExpression, 0L);
     return allocate(reqs, releases);
   }
+
+  public AllocateResponse allocate(
+      String host, Resource cap, int numContainers,
+      List<ContainerId> rels, String labelExpression) throws Exception {
+    List<ResourceRequest> reqs = new ArrayList<>();
+    ResourceRequest oneReq =
+        createResourceReq(host, cap, numContainers,
+            labelExpression);
+    reqs.add(oneReq);
+    return allocate(reqs, rels);
+  }
   
   public List<ResourceRequest> createReq(String[] hosts, int memory,
       int priority, int containers, long allocationRequestId) throws Exception {
@@ -243,6 +254,23 @@ public class MockAM {
       req.setNodeLabelExpression(labelExpression);
     }
     req.setExecutionTypeRequest(executionTypeRequest);
+    return req;
+
+  }
+
+  public ResourceRequest createResourceReq(String host, Resource cap,
+      int containers, String labelExpression) throws Exception {
+    ResourceRequest req = Records.newRecord(ResourceRequest.class);
+    req.setResourceName(host);
+    req.setNumContainers(containers);
+    Priority pri = Records.newRecord(Priority.class);
+    pri.setPriority(1);
+    req.setPriority(pri);
+    req.setCapability(cap);
+    if (labelExpression != null) {
+      req.setNodeLabelExpression(labelExpression);
+    }
+    req.setExecutionTypeRequest(ExecutionTypeRequest.newInstance());
     return req;
 
   }

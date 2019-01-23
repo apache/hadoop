@@ -427,7 +427,7 @@ public class ResourceUtils {
   }
 
   @VisibleForTesting
-  synchronized static void resetResourceTypes() {
+  public synchronized static void resetResourceTypes() {
     initializedResources = false;
   }
 
