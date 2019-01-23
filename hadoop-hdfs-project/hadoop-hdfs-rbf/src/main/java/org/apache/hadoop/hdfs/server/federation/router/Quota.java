@@ -216,6 +216,11 @@ public class Quota {
         locations.addAll(rpcServer.getLocationsForPath(childPath, true, false));
       }
     }
-    return locations;
+    if (locations.size() >= 1) {
+      return locations;
+    } else {
+      locations.addAll(rpcServer.getLocationsForPath(path, true, false));
+      return locations;
+    }
   }
 }

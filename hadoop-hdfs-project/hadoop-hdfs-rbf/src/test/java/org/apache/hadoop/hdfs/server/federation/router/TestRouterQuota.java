@@ -755,4 +755,34 @@ public class TestRouterQuota {
     assertEquals(HdfsConstants.QUOTA_RESET, subClusterQuota.getQuota());
     assertEquals(HdfsConstants.QUOTA_RESET, subClusterQuota.getSpaceQuota());
   }
+
+  @Test
+  public void testSetQuotaNotMountTable() throws Exception {
+    long nsQuota = 5;
+    long ssQuota = 100;
+    final FileSystem nnFs1 = nnContext1.getFileSystem();
+
+    // setQuota should run for any directory
+    MountTable mountTable1 = MountTable.newInstance("/setquotanmt",
+        Collections.singletonMap("ns0", "/testdir16"));
+
+    addMountTable(mountTable1);
+
+    // Add a directory not present in mount table.
+    nnFs1.mkdirs(new Path("/testdir16/testdir17"));
+
+    routerContext.getRouter().getRpcServer().setQuota("/setquotanmt/testdir17",
+        nsQuota, ssQuota, null);
+
+    RouterQuotaUpdateService updateService = routerContext.getRouter()
+        .getQuotaCacheUpdateService();
+    // ensure setQuota RPC call was invoked
+    updateService.periodicInvoke();
+
+    ClientProtocol client1 = nnContext1.getClient().getNamenode();
+    final QuotaUsage quota1 = client1.getQuotaUsage("/testdir16/testdir17");
+
+    assertEquals(nsQuota, quota1.getQuota());
+    assertEquals(ssQuota, quota1.getSpaceQuota());
+  }
 }
