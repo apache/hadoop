@@ -801,6 +801,10 @@ public class NamenodeWebHdfsMethods {
       cp.setStoragePolicy(fullpath, policyName.getValue());
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
+    case SATISFYSTORAGEPOLICY:
+      cp.satisfyStoragePolicy(fullpath);
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
+
     case ENABLEECPOLICY:
       validateOpParams(op, ecpolicy);
       cp.enableErasureCodingPolicy(ecpolicy.getValue());

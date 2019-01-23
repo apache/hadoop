@@ -256,6 +256,7 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
     case SETSTORAGEPOLICY:
     case ENABLEECPOLICY:
     case DISABLEECPOLICY:
+    case SATISFYSTORAGEPOLICY:
     {
       // Whitelist operations that can handled by NamenodeWebHdfsMethods
       return super.put(ugi, delegation, username, doAsUser, fullpath, op,

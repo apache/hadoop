@@ -1311,6 +1311,12 @@ public class WebHdfsFileSystem extends FileSystem
     new FsPathRunner(op, p).run();
   }
 
+  @Override
+  public void satisfyStoragePolicy(final Path p) throws IOException {
+    final HttpOpParam.Op op = PutOpParam.Op.SATISFYSTORAGEPOLICY;
+    new FsPathRunner(op, p).run();
+  }
+
   public void enableECPolicy(String policyName) throws IOException {
     statistics.incrementWriteOps(1);
     storageStatistics.incrementOpCounter(OpType.ENABLE_EC_POLICY);
