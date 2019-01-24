@@ -21,11 +21,14 @@ import com.google.protobuf.ServiceException;
 import java.io.Closeable;
 import java.io.IOException;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.OzoneManagerDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetDataNodeCertRequestProto;
 import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
+
+import static org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetOMCertRequestProto;
 
 /**
  * This class is the client-side translator that forwards requests for
@@ -67,7 +70,7 @@ public class SCMSecurityProtocolClientSideTranslatorPB implements
    * Get SCM signed certificate for DataNode.
    *
    * @param dataNodeDetails - DataNode Details.
-   * @param certSignReq             - Certificate signing request.
+   * @param certSignReq     - Certificate signing request.
    * @return byte[]         - SCM signed certificate.
    */
   @Override
@@ -81,6 +84,28 @@ public class SCMSecurityProtocolClientSideTranslatorPB implements
     try {
       return rpcProxy
           .getDataNodeCertificate(NULL_RPC_CONTROLLER, builder.build())
+          .getX509Certificate();
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  /**
+   * Get SCM signed certificate for OM.
+   *
+   * @param omDetails       - OzoneManager Details.
+   * @param certSignReq     - Certificate signing request.
+   * @return byte[]         - SCM signed certificate.
+   */
+  @Override
+  public String getOMCertificate(OzoneManagerDetailsProto omDetails,
+      String certSignReq) throws IOException {
+    SCMGetOMCertRequestProto.Builder builder = SCMGetOMCertRequestProto
+        .newBuilder()
+        .setCSR(certSignReq)
+        .setOmDetails(omDetails);
+    try {
+      return rpcProxy.getOMCertificate(NULL_RPC_CONTROLLER, builder.build())
           .getX509Certificate();
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);

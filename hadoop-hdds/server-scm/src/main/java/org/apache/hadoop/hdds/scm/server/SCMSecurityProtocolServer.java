@@ -19,20 +19,31 @@ package org.apache.hadoop.hdds.scm.server;
 import com.google.protobuf.BlockingService;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Objects;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.OzoneManagerDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos;
 import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolPB;
 import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateServer;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.KerberosInfo;
+import org.bouncycastle.cert.X509CertificateHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateApprover.ApprovalType.KERBEROS_TRUSTED;
 
 /**
  * The protocol used to perform security related operations with SCM.
@@ -44,15 +55,15 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol {
 
   private static final Logger LOGGER = LoggerFactory
       .getLogger(SCMClientProtocolServer.class);
-  private final OzoneConfiguration config;
-  private final StorageContainerManager scm;
+  private final SecurityConfig config;
+  private final CertificateServer certificateServer;
   private final RPC.Server rpcServer;
   private final InetSocketAddress rpcAddress;
 
   SCMSecurityProtocolServer(OzoneConfiguration conf,
-      StorageContainerManager scm) throws IOException {
-    this.config = conf;
-    this.scm = scm;
+      CertificateServer certificateServer) throws IOException {
+    this.config = new SecurityConfig(conf);
+    this.certificateServer = certificateServer;
 
     final int handlerCount =
         conf.getInt(ScmConfigKeys.OZONE_SCM_SECURITY_HANDLER_COUNT_KEY,
@@ -78,9 +89,9 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol {
   /**
    * Get SCM signed certificate for DataNode.
    *
-   * @param dnDetails   - DataNode Details.
-   * @param certSignReq - Certificate signing request.
-   * @return byte[]         - SCM signed certificate.
+   * @param dnDetails       - DataNode Details.
+   * @param certSignReq     - Certificate signing request.
+   * @return String         - SCM signed pem encoded certificate.
    */
   @Override
   public String getDataNodeCertificate(
@@ -88,8 +99,42 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol {
       String certSignReq) throws IOException {
     LOGGER.info("Processing CSR for dn {}, UUID: {}", dnDetails.getHostName(),
         dnDetails.getUuid());
-    // TODO: Call scm to sign the csr.
-    return null;
+    Objects.requireNonNull(dnDetails);
+    Future<X509CertificateHolder> future =
+        certificateServer.requestCertificate(certSignReq,
+            KERBEROS_TRUSTED);
+
+    try {
+      return CertificateCodec.getPEMEncodedString(future.get());
+    } catch (InterruptedException | ExecutionException e) {
+      LOGGER.error("getDataNodeCertificate operation failed. ", e);
+      throw new IOException("getDataNodeCertificate operation failed. ", e);
+    }
+  }
+
+  /**
+   * Get SCM signed certificate for OM.
+   *
+   * @param omDetails       - OzoneManager Details.
+   * @param certSignReq     - Certificate signing request.
+   * @return String         - SCM signed pem encoded certificate.
+   */
+  @Override
+  public String getOMCertificate(OzoneManagerDetailsProto omDetails,
+      String certSignReq) throws IOException {
+    LOGGER.info("Processing CSR for om {}, UUID: {}", omDetails.getHostName(),
+        omDetails.getUuid());
+    Objects.requireNonNull(omDetails);
+    Future<X509CertificateHolder> future =
+        certificateServer.requestCertificate(certSignReq,
+            KERBEROS_TRUSTED);
+
+    try {
+      return CertificateCodec.getPEMEncodedString(future.get());
+    } catch (InterruptedException | ExecutionException e) {
+      LOGGER.error("getOMCertificate operation failed. ", e);
+      throw new IOException("getOMCertificate operation failed. ", e);
+    }
   }
 
   public RPC.Server getRpcServer() {

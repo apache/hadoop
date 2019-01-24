@@ -32,7 +32,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Certificate Approver interface is used to inspectCSR a certificate.
  */
-interface CertificateApprover {
+public interface CertificateApprover {
   /**
    * Approves a Certificate Request based on the policies of this approver.
    *

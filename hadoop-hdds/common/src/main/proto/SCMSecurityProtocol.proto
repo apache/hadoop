@@ -35,9 +35,27 @@ package hadoop.hdds;
 import "hdds.proto";
 
 /**
+* This message is send by data node to prove its identity and get an SCM
+* signed certificate.
+*/
+message SCMGetDataNodeCertRequestProto {
+  required DatanodeDetailsProto datanodeDetails = 1;
+  required string CSR = 2;
+}
+
+/**
+* This message is send by OzoneManager to prove its identity and get an SCM
+* signed certificate.
+*/
+message SCMGetOMCertRequestProto {
+  required OzoneManagerDetailsProto omDetails = 1;
+  required string CSR = 2;
+}
+
+/**
  * Returns a certificate signed by SCM.
  */
-message SCMGetDataNodeCertResponseProto {
+message SCMGetCertResponseProto {
   enum ResponseCode {
     success = 1;
     authenticationFailed = 2;
@@ -47,20 +65,18 @@ message SCMGetDataNodeCertResponseProto {
   required string x509Certificate = 2; // Base64 encoded X509 certificate.
 }
 
-/**
-* This message is send by data node to prove its identity and get an SCM
-* signed certificate.
-*/
-message SCMGetDataNodeCertRequestProto {
-  required DatanodeDetailsProto datanodeDetails = 1;
-  required string CSR = 2;
-}
-
 
 service SCMSecurityProtocolService {
   /**
   * Get SCM signed certificate for DataNode.
   */
-  rpc getDataNodeCertificate (SCMGetDataNodeCertRequestProto) returns (SCMGetDataNodeCertResponseProto);
+  rpc getDataNodeCertificate (SCMGetDataNodeCertRequestProto) returns
+  (SCMGetCertResponseProto);
+
+  /**
+  * Get SCM signed certificate for DataNode.
+  */
+  rpc getOMCertificate (SCMGetOMCertRequestProto) returns
+  (SCMGetCertResponseProto);
 
 }

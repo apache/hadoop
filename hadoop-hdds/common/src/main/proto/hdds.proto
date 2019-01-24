@@ -35,6 +35,17 @@ message DatanodeDetailsProto {
     repeated Port ports = 4;
 }
 
+/**
+ Proto message encapsulating information required to uniquely identify a
+ OzoneManager.
+*/
+message OzoneManagerDetailsProto {
+    required string uuid = 1;          // UUID assigned to the OzoneManager.
+    required string ipAddress = 2;     // IP address of OM.
+    required string hostName = 3;      // Hostname of OM.
+    repeated Port ports = 4;
+}
+
 message Port {
     required string name = 1;
     required uint32 value = 2;

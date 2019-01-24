@@ -40,7 +40,7 @@ public class TestSCMSecurityProtocolServer {
   }
 
   @After
-  public void tearDown() throws Exception {
+  public void tearDown() {
     if (securityProtocolServer != null) {
       securityProtocolServer.stop();
       securityProtocolServer = null;
