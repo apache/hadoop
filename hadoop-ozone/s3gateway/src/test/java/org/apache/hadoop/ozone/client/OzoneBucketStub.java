@@ -223,6 +223,16 @@ public class OzoneBucketStub extends OzoneBucket {
         DigestUtils.sha256Hex(key));
   }
 
+  @Override
+  public void abortMultipartUpload(String keyName, String uploadID) throws
+      IOException {
+    if (multipartUploadIdMap.get(keyName) == null) {
+      throw new IOException("NO_SUCH_MULTIPART_UPLOAD");
+    } else {
+      multipartUploadIdMap.remove(keyName);
+    }
+  }
+
   /**
    * Class used to hold part information in a upload part request.
    */

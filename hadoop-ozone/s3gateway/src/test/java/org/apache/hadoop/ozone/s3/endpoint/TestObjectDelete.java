@@ -51,7 +51,7 @@ public class TestObjectDelete {
     rest.setClient(client);
 
     //WHEN
-    rest.delete("b1", "key1");
+    rest.delete("b1", "key1", null);
 
     //THEN
     Assert.assertFalse("Bucket Should not contain any key after delete",

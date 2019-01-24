@@ -1016,7 +1016,7 @@ public class KeyManagerImpl implements KeyManager {
       LOG.error("Abort Multipart Upload Failed: volume: " + volumeName +
           "bucket: " + bucketName + "key: " + keyName, ex);
       throw new OMException(ex.getMessage(), ResultCodes
-          .COMPLETE_MULTIPART_UPLOAD_FAILED);
+          .ABORT_MULTIPART_UPLOAD_FAILED);
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
