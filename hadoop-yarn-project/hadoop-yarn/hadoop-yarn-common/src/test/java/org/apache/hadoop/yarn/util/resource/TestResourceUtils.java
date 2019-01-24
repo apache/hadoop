@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.junit.After;
@@ -31,7 +32,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -389,6 +392,74 @@ public class TestResourceUtils {
         Assert.assertEquals(resInfo, actual.get(resInfo.getName()));
       }
     }
+  }
+
+  @Test
+  public void testResourceUnitParsing() throws Exception {
+    Resource res = ResourceUtils.createResourceFromString("memory=20g,vcores=3",
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(20 * 1024, 3), res);
+
+    res = ResourceUtils.createResourceFromString("memory=20G,vcores=3",
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(20 * 1024, 3), res);
+
+    res = ResourceUtils.createResourceFromString("memory=20M,vcores=3",
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(20, 3), res);
+
+    res = ResourceUtils.createResourceFromString("memory=20m,vcores=3",
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(20, 3), res);
+
+    res = ResourceUtils.createResourceFromString("memory-mb=20,vcores=3",
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(20, 3), res);
+
+    res = ResourceUtils.createResourceFromString("memory-mb=20m,vcores=3",
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(20, 3), res);
+
+    res = ResourceUtils.createResourceFromString("memory-mb=20G,vcores=3",
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(20 * 1024, 3), res);
+
+    // W/o unit for memory means bits, and 20 bits will be rounded to 0
+    res = ResourceUtils.createResourceFromString("memory=20,vcores=3",
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(0, 3), res);
+
+    // Test multiple resources
+    List<ResourceTypeInfo> resTypes = new ArrayList<>(
+            ResourceUtils.getResourcesTypeInfo());
+    resTypes.add(ResourceTypeInfo.newInstance(ResourceInformation.GPU_URI, ""));
+    ResourceUtils.reinitializeResources(resTypes);
+    res = ResourceUtils.createResourceFromString("memory=2G,vcores=3,gpu=0",
+            resTypes);
+    Assert.assertEquals(2 * 1024, res.getMemorySize());
+    Assert.assertEquals(0, res.getResourceValue(ResourceInformation.GPU_URI));
+
+    res = ResourceUtils.createResourceFromString("memory=2G,vcores=3,gpu=3",
+            resTypes);
+    Assert.assertEquals(2 * 1024, res.getMemorySize());
+    Assert.assertEquals(3, res.getResourceValue(ResourceInformation.GPU_URI));
+
+    res = ResourceUtils.createResourceFromString("memory=2G,vcores=3",
+            resTypes);
+    Assert.assertEquals(2 * 1024, res.getMemorySize());
+    Assert.assertEquals(0, res.getResourceValue(ResourceInformation.GPU_URI));
+
+    res = ResourceUtils.createResourceFromString(
+            "memory=2G,vcores=3,yarn.io/gpu=0", resTypes);
+    Assert.assertEquals(2 * 1024, res.getMemorySize());
+    Assert.assertEquals(0, res.getResourceValue(ResourceInformation.GPU_URI));
+
+    res = ResourceUtils.createResourceFromString(
+            "memory=2G,vcores=3,yarn.io/gpu=3", resTypes);
+    Assert.assertEquals(2 * 1024, res.getMemorySize());
+    Assert.assertEquals(3, res.getResourceValue(ResourceInformation.GPU_URI));
+
+    // TODO, add more negative tests.
   }
 
   public static String setupResourceTypes(Configuration conf, String filename)

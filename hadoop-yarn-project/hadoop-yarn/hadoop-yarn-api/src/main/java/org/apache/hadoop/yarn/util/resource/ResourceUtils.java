@@ -20,14 +20,18 @@ package org.apache.hadoop.yarn.util.resource;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
+import org.apache.hadoop.yarn.api.records.impl.LightWeightResource;
 import org.apache.hadoop.yarn.conf.ConfigurationProvider;
 import org.apache.hadoop.yarn.conf.ConfigurationProviderFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
@@ -70,6 +74,8 @@ public class ResourceUtils {
   private static final Pattern RESOURCE_NAME_PATTERN = Pattern.compile(
       "^(((\\p{Alnum}([\\p{Alnum}-]*\\p{Alnum})?\\.)*"
           + "\\p{Alnum}([\\p{Alnum}-]*\\p{Alnum})?)/)?\\p{Alpha}([\\w.-]*)$");
+
+  private final static String RES_PATTERN = "^[^=]+=\\d+\\s?\\w*$";
 
   private static volatile boolean initializedResources = false;
   private static final Map<String, Integer> RESOURCE_NAME_TO_INDEX =
@@ -775,5 +781,109 @@ public class ResourceUtils {
     }
 
     return info;
+  }
+
+  /**
+   * Return a new {@link Resource} instance with all resource values
+   * initialized to {@code value}.
+   * @param value the value to use for all resources
+   * @return a new {@link Resource} instance
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public static Resource createResourceWithSameValue(long value) {
+    LightWeightResource res = new LightWeightResource(value,
+            Long.valueOf(value).intValue());
+    int numberOfResources = getNumberOfKnownResourceTypes();
+    for (int i = 2; i < numberOfResources; i++) {
+      res.setResourceValue(i, value);
+    }
+
+    return res;
+  }
+
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public static Resource createResourceFromString(
+          String resourceStr,
+          List<ResourceTypeInfo> resourceTypeInfos) {
+    Map<String, Long> typeToValue = parseResourcesString(resourceStr);
+    validateResourceTypes(typeToValue.keySet(), resourceTypeInfos);
+    Resource resource = Resource.newInstance(0, 0);
+    for (Entry<String, Long> entry : typeToValue.entrySet()) {
+      resource.setResourceValue(entry.getKey(), entry.getValue());
+    }
+    return resource;
+  }
+
+  private static Map<String, Long> parseResourcesString(String resourcesStr) {
+    Map<String, Long> resources = new HashMap<>();
+    String[] pairs = resourcesStr.trim().split(",");
+    for (String resource : pairs) {
+      resource = resource.trim();
+      if (!resource.matches(RES_PATTERN)) {
+        throw new IllegalArgumentException("\"" + resource + "\" is not a "
+                + "valid resource type/amount pair. "
+                + "Please provide key=amount pairs separated by commas.");
+      }
+      String[] splits = resource.split("=");
+      String key = splits[0], value = splits[1];
+      String units = getUnits(value);
+
+      String valueWithoutUnit = value.substring(0,
+              value.length()- units.length()).trim();
+      long resourceValue = Long.parseLong(valueWithoutUnit);
+
+      // Convert commandline unit to standard YARN unit.
+      if (units.equals("M") || units.equals("m")) {
+        units = "Mi";
+      } else if (units.equals("G") || units.equals("g")) {
+        units = "Gi";
+      } else if (units.isEmpty()) {
+        // do nothing;
+      } else {
+        throw new IllegalArgumentException("Acceptable units are M/G or empty");
+      }
+
+      // special handle memory-mb and memory
+      if (key.equals(ResourceInformation.MEMORY_URI)) {
+        if (!units.isEmpty()) {
+          resourceValue = UnitsConversionUtil.convert(units, "Mi",
+                  resourceValue);
+        }
+      }
+
+      if (key.equals("memory")) {
+        key = ResourceInformation.MEMORY_URI;
+        resourceValue = UnitsConversionUtil.convert(units, "Mi",
+                resourceValue);
+      }
+
+      // special handle gpu
+      if (key.equals("gpu")) {
+        key = ResourceInformation.GPU_URI;
+      }
+
+      // special handle fpga
+      if (key.equals("fpga")) {
+        key = ResourceInformation.FPGA_URI;
+      }
+
+      resources.put(key, resourceValue);
+    }
+    return resources;
+  }
+
+  private static void validateResourceTypes(
+          Iterable<String> resourceNames,
+          List<ResourceTypeInfo> resourceTypeInfos)
+          throws ResourceNotFoundException {
+    for (String resourceName : resourceNames) {
+      if (!resourceTypeInfos.stream().anyMatch(
+          e -> e.getName().equals(resourceName))) {
+        throw new ResourceNotFoundException(
+                "Unknown resource: " + resourceName);
+      }
+    }
   }
 }
