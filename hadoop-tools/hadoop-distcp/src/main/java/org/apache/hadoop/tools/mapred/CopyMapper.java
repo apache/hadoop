@@ -112,7 +112,8 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
         DistCpOptionSwitch.VERBOSE_LOG.getConfigLabel(), false);
     preserve = DistCpUtils.unpackAttributes(conf.get(DistCpOptionSwitch.
         PRESERVE_STATUS.getConfigLabel()));
-    directWrite = conf.getBoolean(DistCpOptionSwitch.DIRECT_WRITE.getConfigLabel(), false);
+    directWrite = conf.getBoolean(
+        DistCpOptionSwitch.DIRECT_WRITE.getConfigLabel(), false);
 
     targetWorkPath = new Path(conf.get(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH));
     Path targetFinalPath = new Path(conf.get(

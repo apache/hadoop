@@ -81,7 +81,8 @@ public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
   public void testDirectWrite() throws Exception {
     resetStorageStatistics();
     super.testDirectWrite();
-    assertEquals("Expected no renames for a direct write distcp", 0L, getRenameOperationCount());
+    assertEquals("Expected no renames for a direct write distcp", 0L,
+        getRenameOperationCount());
   }
 
   @Override
@@ -90,10 +91,12 @@ public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
     try {
       super.testNonDirectWrite();
     } catch (FileNotFoundException e) {
-      // We may get this exception when data is written to a DELAY_LISTING_ME directory causing verification of the
-      // distcp success to fail if S3Guard is not enabled
+      // We may get this exception when data is written to a DELAY_LISTING_ME
+      // directory causing verification of the distcp success to fail if
+      // S3Guard is not enabled
     }
-    assertEquals("Expected 2 renames for a non-direct write distcp", 2L, getRenameOperationCount());
+    assertEquals("Expected 2 renames for a non-direct write distcp", 2L,
+        getRenameOperationCount());
   }
 
   private void resetStorageStatistics() {
@@ -101,6 +104,7 @@ public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
   }
 
   private long getRenameOperationCount() {
-    return getFileSystem().getStorageStatistics().getLong(StorageStatistics.CommonStatisticNames.OP_RENAME);
+    return getFileSystem().getStorageStatistics()
+        .getLong(StorageStatistics.CommonStatisticNames.OP_RENAME);
   }
 }

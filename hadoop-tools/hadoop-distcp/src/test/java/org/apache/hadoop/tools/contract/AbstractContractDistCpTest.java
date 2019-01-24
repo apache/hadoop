@@ -595,7 +595,8 @@ public abstract class AbstractContractDistCpTest
 
   @Test
   public void testNonDirectWrite() throws Exception {
-    describe("copy file from local to remote without using direct write option");
+    describe("copy file from local to remote without using direct write " +
+        "option");
     directWrite(localFS, localDir, remoteFS, remoteDir, false);
   }
 
@@ -630,7 +631,8 @@ public abstract class AbstractContractDistCpTest
 
     // Verify copied file contents
     verifyFileContents(dstFS, new Path(target, "inputDir/file1"), data1);
-    verifyFileContents(dstFS, new Path(target, "inputDir/subDir1/file2"), data2);
+    verifyFileContents(dstFS, new Path(target, "inputDir/subDir1/file2"),
+        data2);
   }
 
   /**

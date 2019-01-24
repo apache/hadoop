@@ -86,7 +86,8 @@ public class RetriableFileCopyCommand extends RetriableCommand {
    * @param skipCrc Whether to skip the crc check.
    * @param description A verbose description of the copy operation.
    * @param action We should overwrite the target file or append new data to it.
-   * @param directWrite Whether to write directly to the target path, avoiding a temporary file rename.
+   * @param directWrite Whether to write directly to the target path, avoiding a
+   *                    temporary file rename.
    */
   public RetriableFileCopyCommand(boolean skipCrc, String description,
           FileAction action, boolean directWrite) {
@@ -157,7 +158,8 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       // it's not append or direct write (preferred for s3a) case, thus we first
       // write to a temporary file, then rename it to the target path.
       if (useTmpTarget) {
-        LOG.info("Renaming temporary target file path " + targetPath + " to " + target);
+        LOG.info("Renaming temporary target file path " + targetPath + " to " +
+            target);
         promoteTmpToTarget(targetPath, target, targetFS);
       }
       LOG.info("Completed writing " + target + " (" + bytesRead + " bytes)");
@@ -278,8 +280,10 @@ public class RetriableFileCopyCommand extends RetriableCommand {
     Path targetWorkPath = new Path(context.getConfiguration().
         get(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH));
 
-    Path root = target.equals(targetWorkPath)? targetWorkPath.getParent() : targetWorkPath;
-    Path tempFile = new Path(root, ".distcp.tmp." + context.getTaskAttemptID().toString());
+    Path root = target.equals(targetWorkPath) ? targetWorkPath.getParent()
+        : targetWorkPath;
+    Path tempFile = new Path(root, ".distcp.tmp." +
+        context.getTaskAttemptID().toString());
     LOG.info("Creating temp file: " + tempFile);
     return tempFile;
   }
