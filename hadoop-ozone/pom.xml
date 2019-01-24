@@ -20,7 +20,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.2.1-SNAPSHOT</version>
+    <version>3.2.0</version>
     <relativePath/>
   </parent>
   <artifactId>hadoop-ozone</artifactId>
@@ -30,7 +30,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <packaging>pom</packaging>
 
   <properties>
-    <hadoop.version>3.2.1-SNAPSHOT</hadoop.version>
+    <hadoop.version>3.2.0</hadoop.version>
     <hdds.version>0.4.0-SNAPSHOT</hdds.version>
     <ozone.version>0.4.0-SNAPSHOT</ozone.version>
     <ratis.version>0.4.0-a8c4ca0-SNAPSHOT</ratis.version>

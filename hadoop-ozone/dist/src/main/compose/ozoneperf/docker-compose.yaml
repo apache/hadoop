@@ -33,6 +33,7 @@ services:
          - 9874:9874
       environment:
          ENSURE_OM_INITIALIZED: /data/metadata/ozoneManager/current/VERSION
+         WAITFOR: scm:9876
       env_file:
           - ./docker-config
       command: ["ozone","om"]
