@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.LocalizationState;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -92,12 +93,16 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ResourceTypesProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeUpdateTypeProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.ContainerUpdateTypeProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.LocalizationStateProto;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import com.google.protobuf.ByteString;
 
+/**
+ * Utils to convert enum protos to corresponding java enums and vice versa.
+ */
 @Private
 @Unstable
 public class ProtoUtils {
@@ -596,6 +601,21 @@ public class ProtoUtils {
   public static ApplicationIdProto convertToProtoFormat(ApplicationId t) {
     return ((ApplicationIdPBImpl) t).getProto();
   }
+
+  //Localization State
+  private final static String LOCALIZATION_STATE_PREFIX = "L_";
+  public static LocalizationStateProto convertToProtoFormat(
+      LocalizationState e) {
+    return LocalizationStateProto.valueOf(LOCALIZATION_STATE_PREFIX + e.name());
+  }
+
+  public static LocalizationState convertFromProtoFormat(
+      LocalizationStateProto e) {
+    return LocalizationState.valueOf(e.name()
+        .replace(LOCALIZATION_STATE_PREFIX, ""));
+  }
+
 }
+
 
 

@@ -23,6 +23,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.LocalizationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -125,4 +126,10 @@ public interface Container extends EventHandler<ContainerEvent> {
    * @return true/false based on container's state
    */
   boolean isContainerInFinalStates();
+
+  /**
+   * Get the localization statuses.
+   * @return localization statuses.
+   */
+  List<LocalizationStatus> getLocalizationStatuses();
 }

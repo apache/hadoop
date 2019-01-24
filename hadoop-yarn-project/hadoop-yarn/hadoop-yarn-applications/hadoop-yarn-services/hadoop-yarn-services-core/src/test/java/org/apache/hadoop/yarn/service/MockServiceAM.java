@@ -453,6 +453,6 @@ public class MockServiceAM extends ServiceMaster {
   public void waitForContainerToRelease(ContainerId containerId)
       throws TimeoutException, InterruptedException {
     GenericTestUtils.waitFor(() -> releasedContainers.contains(containerId),
-        1000, 9990000);
+        1000, 30000);
   }
 }

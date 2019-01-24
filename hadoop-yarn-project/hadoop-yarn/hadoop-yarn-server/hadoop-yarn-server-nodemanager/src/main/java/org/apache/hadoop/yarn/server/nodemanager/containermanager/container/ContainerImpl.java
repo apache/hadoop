@@ -36,6 +36,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerSubState;
+import org.apache.hadoop.yarn.api.records.LocalizationStatus;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.UpdateContainerSchedulerEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1469,7 +1470,8 @@ public class ContainerImpl implements Container {
       ContainerResourceFailedEvent failedEvent =
           (ContainerResourceFailedEvent) event;
       container.resourceSet
-          .resourceLocalizationFailed(failedEvent.getResource());
+          .resourceLocalizationFailed(failedEvent.getResource(),
+              failedEvent.getDiagnosticMessage());
       container.addDiagnostics(failedEvent.getDiagnosticMessage());
     }
   }
@@ -1485,7 +1487,7 @@ public class ContainerImpl implements Container {
       ContainerResourceFailedEvent failedEvent =
           (ContainerResourceFailedEvent) event;
       container.resourceSet.resourceLocalizationFailed(
-          failedEvent.getResource());
+          failedEvent.getResource(), failedEvent.getDiagnosticMessage());
       container.addDiagnostics("Container aborting re-initialization.. "
           + failedEvent.getDiagnosticMessage());
       LOG.error("Container [" + container.getContainerId() + "] Re-init" +
@@ -2287,5 +2289,15 @@ public class ContainerImpl implements Container {
   @Override
   public void setExposedPorts(String ports) {
     this.exposedPorts = ports;
+  }
+
+  @Override
+  public List<LocalizationStatus> getLocalizationStatuses() {
+    this.readLock.lock();
+    try {
+      return resourceSet.getLocalizationStatuses();
+    } finally {
+      this.readLock.unlock();
+    }
   }
 }
