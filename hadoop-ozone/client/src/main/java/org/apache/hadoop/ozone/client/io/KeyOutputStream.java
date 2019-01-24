@@ -286,7 +286,7 @@ public class KeyOutputStream extends OutputStream {
       BlockOutputStreamEntry current = streamEntries.get(currentStreamIndex);
 
       // length(len) will be in int range if the call is happening through
-      // write API of chunkOutputStream. Length can be in long range if it comes
+      // write API of blockOutputStream. Length can be in long range if it comes
       // via Exception path.
       int writeLen = Math.min((int)len, (int) current.getRemaining());
       long currentPos = current.getWrittenDataLength();
@@ -302,7 +302,14 @@ public class KeyOutputStream extends OutputStream {
             || retryFailure) {
           // for the current iteration, totalDataWritten - currentPos gives the
           // amount of data already written to the buffer
-          writeLen = (int) (current.getWrittenDataLength() - currentPos);
+
+          // In the retryPath, the total data to be written will always be equal
+          // to or less than the max length of the buffer allocated.
+          // The len specified here is the combined sum of the data length of
+          // the buffers
+          Preconditions.checkState(!retry || len <= streamBufferMaxSize);
+          writeLen = retry ? (int) len :
+              (int) (current.getWrittenDataLength() - currentPos);
           LOG.debug("writeLen {}, total len {}", writeLen, len);
           handleException(current, currentStreamIndex, retryFailure);
         } else {
