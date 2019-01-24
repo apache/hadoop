@@ -28,6 +28,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReInitializeContainerRequest;
@@ -288,4 +290,21 @@ public interface ContainerManagementProtocol {
   @Unstable
   CommitResponse commitLastReInitialization(ContainerId containerId)
       throws YarnException, IOException;
+
+  /**
+   * API to request for the localization statuses of requested containers from
+   * the Node Manager.
+   * @param request {@link GetLocalizationStatusesRequest} which includes the
+   *                container ids of all the containers whose localization
+   *                statuses are needed.
+   * @return {@link GetLocalizationStatusesResponse} which contains the
+   *         localization statuses of all the requested containers.
+   * @throws YarnException Exception specific to YARN.
+   * @throws IOException IOException thrown from the RPC layer.
+   */
+  @Public
+  @Unstable
+  GetLocalizationStatusesResponse getLocalizationStatuses(
+      GetLocalizationStatusesRequest request) throws YarnException,
+      IOException;
 }

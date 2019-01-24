@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.LocalizationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -271,5 +272,10 @@ public class MockContainer implements Container {
   }
   @Override public boolean isContainerInFinalStates() {
     return false;
+  }
+
+  @Override
+  public List<LocalizationStatus> getLocalizationStatuses() {
+    return null;
   }
 }

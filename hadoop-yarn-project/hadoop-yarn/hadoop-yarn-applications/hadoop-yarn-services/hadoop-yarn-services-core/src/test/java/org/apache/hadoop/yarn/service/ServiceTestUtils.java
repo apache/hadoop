@@ -62,6 +62,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
@@ -403,6 +404,7 @@ public class ServiceTestUtils {
           description.getClassName(), description.getMethodName());
       conf.set(YARN_SERVICE_BASE_PATH, serviceBasePath.toString());
       try {
+        Files.createDirectories(serviceBasePath);
         fs = new SliderFileSystem(conf);
         fs.setAppDir(new Path(serviceBasePath.toString()));
       } catch (IOException e) {

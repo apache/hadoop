@@ -18,16 +18,22 @@
 
 package org.apache.hadoop.yarn.service.component.instance;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.LocalizationState;
+import org.apache.hadoop.yarn.api.records.LocalizationStatus;
+import org.apache.hadoop.yarn.service.MockRunningServiceContext;
 import org.apache.hadoop.yarn.service.ServiceContext;
 import org.apache.hadoop.yarn.service.ServiceScheduler;
 import org.apache.hadoop.yarn.service.ServiceTestUtils;
 import org.apache.hadoop.yarn.service.api.records.Configuration;
+import org.apache.hadoop.yarn.service.TestServiceManager;
+import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.api.records.Service;
@@ -41,6 +47,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -259,6 +268,58 @@ public class TestComponentInstance {
   @Test
   public void testCancelFailedWhileUpgradeWithFailure() throws Exception {
     validateCancelWhileUpgrading(false, false);
+  }
+
+  @Test
+  public void testUpdateLocalizationStatuses() throws Exception {
+    Service def = TestServiceManager.createBaseDef(
+        "testUpdateLocalizationStatuses");
+
+    String file1 = rule.getServiceBasePath().toString() + "/file1";
+    Files.write(Paths.get(file1), "test file".getBytes(),
+        StandardOpenOption.CREATE_NEW);
+
+    org.apache.hadoop.yarn.service.api.records.Component compDef =
+        def.getComponents().iterator().next();
+    ConfigFile configFile1 = new ConfigFile();
+    configFile1.setType(ConfigFile.TypeEnum.STATIC);
+    configFile1.setSrcFile(file1);
+    compDef.setConfiguration(new Configuration().files(
+        Lists.newArrayList(configFile1)));
+
+    ServiceContext context = new MockRunningServiceContext(rule, def);
+    Component component = context.scheduler.getAllComponents().get(
+        compDef.getName());
+    ComponentInstance instance = component.getAllComponentInstances().iterator()
+        .next();
+    LocalizationStatus status = LocalizationStatus.newInstance("file1",
+        LocalizationState.PENDING);
+
+    instance.updateLocalizationStatuses(Lists.newArrayList(status));
+    Assert.assertTrue("retriever should still be active",
+        instance.isLclRetrieverActive());
+
+    Container container = instance.getContainerSpec();
+    Assert.assertTrue(container.getLocalizationStatuses() != null);
+    Assert.assertEquals("dest file",
+        container.getLocalizationStatuses().get(0).getDestFile(),
+        status.getResourceKey());
+    Assert.assertEquals("state",
+        container.getLocalizationStatuses().get(0).getState(),
+        status.getLocalizationState());
+
+    status = LocalizationStatus.newInstance("file1",
+        LocalizationState.COMPLETED);
+    instance.updateLocalizationStatuses(Lists.newArrayList(status));
+    Assert.assertTrue("retriever should not be active",
+        !instance.isLclRetrieverActive());
+    Assert.assertTrue(container.getLocalizationStatuses() != null);
+    Assert.assertEquals("dest file",
+        container.getLocalizationStatuses().get(0).getDestFile(),
+        status.getResourceKey());
+    Assert.assertEquals("state",
+        container.getLocalizationStatuses().get(0).getState(),
+        status.getLocalizationState());
   }
 
   private void validateCancelWhileUpgrading(boolean upgradeSuccessful,
