@@ -34,14 +34,21 @@ export default DS.JSONAPISerializer.extend({
           runid: payload.info.SYSTEM_INFO_FLOW_RUN_ID,
           shownid: payload.id,
           type: payload.type,
-          createTime: Converter.timeStampToDate(payload.createdtime),
-          endTime: Converter.timeStampToDate(payload.info.SYSTEM_INFO_FLOW_RUN_END_TIME),
+          createTime: this.checkDateValidity(payload.createdtime),
+          endTime: this.checkDateValidity(payload.info.SYSTEM_INFO_FLOW_RUN_END_TIME),
           user: payload.info.SYSTEM_INFO_USER,
           metrics: payload.metrics,
         }
       };
 
       return fixedPayload;
+    },
+
+    checkDateValidity(timestamp) {
+      if (timestamp && timestamp > 0) {
+        return Converter.timeStampToDate(timestamp);
+      }
+      return 'N/A';
     },
 
     normalizeSingleResponse(store, primaryModelClass, payload, id/*, requestType*/) {
