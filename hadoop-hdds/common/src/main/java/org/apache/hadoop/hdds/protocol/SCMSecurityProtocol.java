@@ -19,6 +19,7 @@ package org.apache.hadoop.hdds.protocol;
 import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.OzoneManagerDetailsProto;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.security.KerberosInfo;
 
@@ -34,11 +35,21 @@ public interface SCMSecurityProtocol {
    * Get SCM signed certificate for DataNode.
    *
    * @param dataNodeDetails - DataNode Details.
-   * @param certSignReq             - Certificate signing request.
+   * @param certSignReq     - Certificate signing request.
    * @return byte[]         - SCM signed certificate.
    */
   String getDataNodeCertificate(
       DatanodeDetailsProto dataNodeDetails,
+      String certSignReq) throws IOException;
+
+  /**
+   * Get SCM signed certificate for OM.
+   *
+   * @param omDetails - DataNode Details.
+   * @param certSignReq     - Certificate signing request.
+   * @return byte[]         - SCM signed certificate.
+   */
+  String getOMCertificate(OzoneManagerDetailsProto omDetails,
       String certSignReq) throws IOException;
 
 }

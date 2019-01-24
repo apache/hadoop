@@ -227,14 +227,15 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       // TODO: Support Intermediary CAs in future.
       certificateServer.init(new SecurityConfig(conf),
           CertificateServer.CAType.SELF_SIGNED_CA);
+      securityProtocolServer = new SCMSecurityProtocolServer(conf,
+          certificateServer);
     } else {
       // if no Security, we do not create a Certificate Server at all.
       // This allows user to boot SCM without security temporarily
       // and then come back and enable it without any impact.
       certificateServer = null;
+      securityProtocolServer = null;
     }
-
-
 
     eventQueue = new EventQueue();
 
@@ -309,11 +310,6 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         eventQueue);
     blockProtocolServer = new SCMBlockProtocolServer(conf, this);
     clientProtocolServer = new SCMClientProtocolServer(conf, this);
-    if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
-      securityProtocolServer = new SCMSecurityProtocolServer(conf, this);
-    } else {
-      securityProtocolServer = null;
-    }
     httpServer = new StorageContainerManagerHttpServer(conf);
 
     eventQueue.addHandler(SCMEvents.DATANODE_COMMAND, scmNodeManager);

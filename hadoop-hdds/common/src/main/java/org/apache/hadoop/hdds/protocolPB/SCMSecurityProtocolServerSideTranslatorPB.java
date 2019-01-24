@@ -19,10 +19,12 @@ package org.apache.hadoop.hdds.protocolPB;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import java.io.IOException;
+
+import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetDataNodeCertRequestProto;
-import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetDataNodeCertResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetDataNodeCertResponseProto.ResponseCode;
+import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertResponseProto.ResponseCode;
 import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
+import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetOMCertRequestProto;
 
 /**
  * This class is the server-side translator that forwards requests received on
@@ -46,15 +48,41 @@ public class SCMSecurityProtocolServerSideTranslatorPB implements
    * @return SCMGetDataNodeCertResponseProto.
    */
   @Override
-  public SCMGetDataNodeCertResponseProto getDataNodeCertificate(
+  public SCMGetCertResponseProto getDataNodeCertificate(
       RpcController controller, SCMGetDataNodeCertRequestProto request)
       throws ServiceException {
     try {
       String certificate = impl
           .getDataNodeCertificate(request.getDatanodeDetails(),
               request.getCSR());
-      SCMGetDataNodeCertResponseProto.Builder builder =
-          SCMGetDataNodeCertResponseProto
+      SCMGetCertResponseProto.Builder builder =
+          SCMGetCertResponseProto
+              .newBuilder()
+              .setResponseCode(ResponseCode.success)
+              .setX509Certificate(certificate);
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  /**
+   * Get SCM signed certificate for OzoneManager.
+   *
+   * @param controller
+   * @param request
+   * @return SCMGetCertResponseProto.
+   */
+  @Override
+  public SCMGetCertResponseProto getOMCertificate(
+      RpcController controller, SCMGetOMCertRequestProto request)
+      throws ServiceException {
+    try {
+      String certificate = impl
+          .getOMCertificate(request.getOmDetails(),
+              request.getCSR());
+      SCMGetCertResponseProto.Builder builder =
+          SCMGetCertResponseProto
               .newBuilder()
               .setResponseCode(ResponseCode.success)
               .setX509Certificate(certificate);
