@@ -16,23 +16,15 @@ package org.apache.hadoop.yarn.submarine.client.cli;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceInformation;
-import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
-import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
 import org.apache.hadoop.yarn.submarine.common.exception.SubmarineRuntimeException;
 import org.apache.hadoop.yarn.submarine.common.fs.RemoteDirectoryManager;
-import org.apache.hadoop.yarn.util.UnitsConversionUtil;
-import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.apache.hadoop.yarn.submarine.client.cli.CliConstants.KEYTAB;
@@ -41,7 +33,6 @@ import static org.apache.hadoop.yarn.submarine.client.cli.CliConstants.PRINCIPAL
 public class CliUtils {
   private static final Logger LOG =
       LoggerFactory.getLogger(CliUtils.class);
-  private final static String RES_PATTERN = "^[^=]+=\\d+\\s?\\w*$";
   /**
    * Replace patterns inside cli
    *
@@ -72,86 +63,6 @@ public class CliUtils {
     }
 
     return newCli;
-  }
-
-  private static Map<String, Long> parseResourcesString(String resourcesStr) {
-    Map<String, Long> resources = new HashMap<>();
-    String[] pairs = resourcesStr.trim().split(",");
-    for (String resource : pairs) {
-      resource = resource.trim();
-      if (!resource.matches(RES_PATTERN)) {
-        throw new IllegalArgumentException("\"" + resource + "\" is not a "
-            + "valid resource type/amount pair. "
-            + "Please provide key=amount pairs separated by commas.");
-      }
-      String[] splits = resource.split("=");
-      String key = splits[0], value = splits[1];
-      String units = ResourceUtils.getUnits(value);
-
-      String valueWithoutUnit = value.substring(0,
-          value.length()- units.length()).trim();
-      long resourceValue = Long.parseLong(valueWithoutUnit);
-
-      // Convert commandline unit to standard YARN unit.
-      if (units.equals("M") || units.equals("m")) {
-        units = "Mi";
-      } else if (units.equals("G") || units.equals("g")) {
-        units = "Gi";
-      } else if (units.isEmpty()) {
-        // do nothing;
-      } else {
-        throw new IllegalArgumentException("Acceptable units are M/G or empty");
-      }
-
-      // special handle memory-mb and memory
-      if (key.equals(ResourceInformation.MEMORY_URI)) {
-        if (!units.isEmpty()) {
-          resourceValue = UnitsConversionUtil.convert(units, "Mi",
-              resourceValue);
-        }
-      }
-
-      if (key.equals("memory")) {
-        key = ResourceInformation.MEMORY_URI;
-        resourceValue = UnitsConversionUtil.convert(units, "Mi",
-            resourceValue);
-      }
-
-      // special handle gpu
-      if (key.equals("gpu")) {
-        key = ResourceInformation.GPU_URI;
-      }
-
-      // special handle fpga
-      if (key.equals("fpga")) {
-        key = ResourceInformation.FPGA_URI;
-      }
-
-      resources.put(key, resourceValue);
-    }
-    return resources;
-  }
-
-  private static void validateResourceTypes(Iterable<String> resourceNames,
-      List<ResourceTypeInfo> resourceTypes) throws IOException, YarnException {
-    for (String resourceName : resourceNames) {
-      if (!resourceTypes.stream().anyMatch(
-          e -> e.getName().equals(resourceName))) {
-        throw new ResourceNotFoundException(
-            "Unknown resource: " + resourceName);
-      }
-    }
-  }
-
-  public static Resource createResourceFromString(String resourceStr,
-      List<ResourceTypeInfo> resourceTypes) throws IOException, YarnException {
-    Map<String, Long> typeToValue = parseResourcesString(resourceStr);
-    validateResourceTypes(typeToValue.keySet(), resourceTypes);
-    Resource resource = Resource.newInstance(0, 0);
-    for (Map.Entry<String, Long> entry : typeToValue.entrySet()) {
-      resource.setResourceValue(entry.getKey(), entry.getValue());
-    }
-    return resource;
   }
 
   // Is it for help?

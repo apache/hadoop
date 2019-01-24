@@ -22,6 +22,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.submarine.client.cli.CliConstants;
 import org.apache.hadoop.yarn.submarine.client.cli.CliUtils;
 import org.apache.hadoop.yarn.submarine.common.ClientContext;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -104,7 +105,7 @@ public class RunJobParameters extends RunParameters {
         throw new ParseException(
             "--" + CliConstants.WORKER_RES + " is absent.");
       }
-      workerResource = CliUtils.createResourceFromString(
+      workerResource = ResourceUtils.createResourceFromString(
           workerResourceStr,
           clientContext.getOrCreateYarnClient().getResourceTypeInfo());
     }
@@ -115,7 +116,7 @@ public class RunJobParameters extends RunParameters {
       if (psResourceStr == null) {
         throw new ParseException("--" + CliConstants.PS_RES + " is absent.");
       }
-      psResource = CliUtils.createResourceFromString(psResourceStr,
+      psResource = ResourceUtils.createResourceFromString(psResourceStr,
           clientContext.getOrCreateYarnClient().getResourceTypeInfo());
     }
 
@@ -127,7 +128,7 @@ public class RunJobParameters extends RunParameters {
       if (tensorboardResourceStr == null || tensorboardResourceStr.isEmpty()) {
         tensorboardResourceStr = CliConstants.TENSORBOARD_DEFAULT_RESOURCES;
       }
-      tensorboardResource = CliUtils.createResourceFromString(
+      tensorboardResource = ResourceUtils.createResourceFromString(
           tensorboardResourceStr,
           clientContext.getOrCreateYarnClient().getResourceTypeInfo());
       tensorboardDockerImage = parsedCommandLine.getOptionValue(

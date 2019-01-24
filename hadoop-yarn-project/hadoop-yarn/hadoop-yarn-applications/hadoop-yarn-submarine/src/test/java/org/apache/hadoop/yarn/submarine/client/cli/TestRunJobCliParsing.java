@@ -21,9 +21,6 @@ package org.apache.hadoop.yarn.submarine.client.cli;
 
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceInformation;
-import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
 import org.apache.hadoop.yarn.submarine.common.MockClientContext;
@@ -32,15 +29,12 @@ import org.apache.hadoop.yarn.submarine.runtimes.RuntimeFactory;
 import org.apache.hadoop.yarn.submarine.runtimes.common.JobMonitor;
 import org.apache.hadoop.yarn.submarine.runtimes.common.JobSubmitter;
 import org.apache.hadoop.yarn.submarine.runtimes.common.SubmarineStorage;
-import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -203,73 +197,5 @@ public class TestRunJobCliParsing {
     Assert.assertEquals(
         "python run-ps.py --input=hdfs://input --model_dir=hdfs://output/model",
         runJobCli.getRunJobParameters().getPSLaunchCmd());
-  }
-
-  @Test
-  public void testResourceUnitParsing() throws Exception {
-    Resource res = CliUtils.createResourceFromString("memory=20g,vcores=3",
-        ResourceUtils.getResourcesTypeInfo());
-    Assert.assertEquals(Resources.createResource(20 * 1024, 3), res);
-
-    res = CliUtils.createResourceFromString("memory=20G,vcores=3",
-        ResourceUtils.getResourcesTypeInfo());
-    Assert.assertEquals(Resources.createResource(20 * 1024, 3), res);
-
-    res = CliUtils.createResourceFromString("memory=20M,vcores=3",
-        ResourceUtils.getResourcesTypeInfo());
-    Assert.assertEquals(Resources.createResource(20, 3), res);
-
-    res = CliUtils.createResourceFromString("memory=20m,vcores=3",
-        ResourceUtils.getResourcesTypeInfo());
-    Assert.assertEquals(Resources.createResource(20, 3), res);
-
-    res = CliUtils.createResourceFromString("memory-mb=20,vcores=3",
-        ResourceUtils.getResourcesTypeInfo());
-    Assert.assertEquals(Resources.createResource(20, 3), res);
-
-    res = CliUtils.createResourceFromString("memory-mb=20m,vcores=3",
-        ResourceUtils.getResourcesTypeInfo());
-    Assert.assertEquals(Resources.createResource(20, 3), res);
-
-    res = CliUtils.createResourceFromString("memory-mb=20G,vcores=3",
-        ResourceUtils.getResourcesTypeInfo());
-    Assert.assertEquals(Resources.createResource(20 * 1024, 3), res);
-
-    // W/o unit for memory means bits, and 20 bits will be rounded to 0
-    res = CliUtils.createResourceFromString("memory=20,vcores=3",
-        ResourceUtils.getResourcesTypeInfo());
-    Assert.assertEquals(Resources.createResource(0, 3), res);
-
-    // Test multiple resources
-    List<ResourceTypeInfo> resTypes = new ArrayList<>(
-        ResourceUtils.getResourcesTypeInfo());
-    resTypes.add(ResourceTypeInfo.newInstance(ResourceInformation.GPU_URI, ""));
-    ResourceUtils.reinitializeResources(resTypes);
-    res = CliUtils.createResourceFromString("memory=2G,vcores=3,gpu=0",
-        resTypes);
-    Assert.assertEquals(2 * 1024, res.getMemorySize());
-    Assert.assertEquals(0, res.getResourceValue(ResourceInformation.GPU_URI));
-
-    res = CliUtils.createResourceFromString("memory=2G,vcores=3,gpu=3",
-        resTypes);
-    Assert.assertEquals(2 * 1024, res.getMemorySize());
-    Assert.assertEquals(3, res.getResourceValue(ResourceInformation.GPU_URI));
-
-    res = CliUtils.createResourceFromString("memory=2G,vcores=3",
-        resTypes);
-    Assert.assertEquals(2 * 1024, res.getMemorySize());
-    Assert.assertEquals(0, res.getResourceValue(ResourceInformation.GPU_URI));
-
-    res = CliUtils.createResourceFromString("memory=2G,vcores=3,yarn.io/gpu=0",
-        resTypes);
-    Assert.assertEquals(2 * 1024, res.getMemorySize());
-    Assert.assertEquals(0, res.getResourceValue(ResourceInformation.GPU_URI));
-
-    res = CliUtils.createResourceFromString("memory=2G,vcores=3,yarn.io/gpu=3",
-        resTypes);
-    Assert.assertEquals(2 * 1024, res.getMemorySize());
-    Assert.assertEquals(3, res.getResourceValue(ResourceInformation.GPU_URI));
-
-    // TODO, add more negative tests.
   }
 }
