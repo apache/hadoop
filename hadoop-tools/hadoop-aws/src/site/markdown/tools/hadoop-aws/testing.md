@@ -804,7 +804,7 @@ it can be manually done:
       hadoop s3guard destroy s3a://hwdev-steve-ireland-new/
 
 The S3Guard tests will automatically create the Dynamo DB table in runs with
-`-Ds3guard -Ddynamodb` set; default capacity of these buckets
+`-Ds3guard -Ddynamo` set; default capacity of these buckets
 tests is very small; it keeps costs down at the expense of IO performance
 and, for test runs in or near the S3/DDB stores, throttling events.
 
@@ -1218,7 +1218,7 @@ as it may take a couple of SDK updates before it is ready.
 1. Create a private git branch of trunk for JIRA, and in
   `hadoop-project/pom.xml` update the `aws-java-sdk.version` to the new SDK version.
 1. Update AWS SDK versions in NOTICE.txt.
-1. Do a clean build and rerun all the `hadoop-aws` tests, with and without the `-Ds3guard -Ddynamodb` options.
+1. Do a clean build and rerun all the `hadoop-aws` tests, with and without the `-Ds3guard -Ddynamo` options.
   This includes the `-Pscale` set, with a role defined for the assumed role tests.
   in `fs.s3a.assumed.role.arn` for testing assumed roles,
   and `fs.s3a.server-side-encryption.key` for encryption, for full coverage.
@@ -1243,7 +1243,7 @@ or whether some packaging change breaks that CLI
 
 From the root of the project, create a command line release `mvn package -Pdist -DskipTests -Dmaven.javadoc.skip=true  -DskipShade`;
 
-1. Change into the `hadoop/dist/target/hadoop-x.y.z-SNAPSHOT` dir.
+1. Change into the `hadoop-dist/target/hadoop-x.y.z-SNAPSHOT` dir.
 1. Copy a `core-site.xml` file into `etc/hadoop`.
 1. Set the `HADOOP_OPTIONAL_TOOLS` env var on the command line or `~/.hadoop-env`.
 
@@ -1291,9 +1291,9 @@ bin/hadoop fs -stat $BUCKET/dir-no-trailing/file2/
 bin/hadoop fs -ls $BUCKET/dir-no-trailing/file2/
 bin/hadoop fs -ls $BUCKET/dir-no-trailing
 # expect a "0" here:
-bin/hadoop fs -test -d  $BUCKET/dir-no-trailing && echo $?
+bin/hadoop fs -test -d  $BUCKET/dir-no-trailing ; echo $?
 # expect a "1" here:
-bin/hadoop fs -test -d  $BUCKET/dir-no-trailing/file2 && echo $?
+bin/hadoop fs -test -d  $BUCKET/dir-no-trailing/file2 ; echo $?
 # will return NONE unless bucket has checksums enabled
 bin/hadoop fs -checksum $BUCKET/dir-no-trailing/file2
 # expect "etag" + a long string
