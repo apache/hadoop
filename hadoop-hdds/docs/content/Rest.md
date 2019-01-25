@@ -219,7 +219,7 @@ this request gets all volumes owned by *bilbo* and each volume's name contains p
 
 ### Create Bucket
 
-This API allows an user to create a bucket in a volume.
+This API allows users to create a bucket in a volume.
 
 Schema:
 

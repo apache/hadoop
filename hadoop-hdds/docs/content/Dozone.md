@@ -23,7 +23,7 @@ menu:
   limitations under the License.
 -->
 
-Dozone stands for docker for ozone. Ozone supports docker to make it easy to develop and test ozone.  Starting a docker based ozone container is simple.
+Dozone stands for docker for ozone. Ozone supports docker to make it easy to develop and test ozone.  Starting a docker-based ozone container is simple.
 
 In the `compose/ozone` directory there are two files that define the docker and ozone settings.
 
@@ -41,13 +41,13 @@ docker-compose up -d
 
 to run a ozone cluster on docker.
 
-This command will launch a Namenode, OM, SCM and a data node.
+This command will launch OM, SCM and a data node.
 
-To access the OM UI, one can run 'http://localhost:9874'.
+To access the OM UI, one can view http://localhost:9874.
 
 _Please note_: dozone does not map the data node ports to the 9864. Instead, it maps to the ephemeral port range. So many examples in the command shell will not work if you run those commands from the host machine. To find out where the data node port is listening, you can run the `docker ps` command or always ssh into a container before running ozone commands.
 
-To shutdown a running docker based ozone cluster, please run
+To shutdown a running docker-based ozone cluster, please run
 
 {{< highlight bash >}}
 docker-compose down
@@ -63,7 +63,7 @@ Useful Docker & Ozone Commands
 
 If you make any modifications to ozone, the simplest way to test it is to run freon and unit tests.
 
-Here are the instructions to run freon in a docker based cluster.
+Here are the instructions to run freon in a docker-based cluster.
 
 {{< highlight bash >}}
 docker-compose exec datanode bash
@@ -76,7 +76,7 @@ Now we can execute freon for load generation.
 ozone freon randomkeys --numOfVolumes=10 --numOfBuckets 10 --numOfKeys 10
 {{< /highlight >}}
 
-Here is a set  helpful commands while working with docker for ozone.
+Here is a set of helpful commands for working with docker for ozone.
 To check the status of the components:
 
 {{< highlight bash >}}
@@ -93,9 +93,8 @@ docker-compose logs scm
 As the WebUI ports are forwarded to the external machine, you can check the web UI:
 
 * For the Storage Container Manager: http://localhost:9876
-* For the Ozone Managerr: http://localhost:9874
-* For the Datanode: check the port with docker ps (as there could be multiple data node ports are mapped to the ephemeral port range)
-* For the Namenode: http://localhost:9870
+* For the Ozone Manager: http://localhost:9874
+* For the Datanode: check the port with `docker ps` (as there could be multiple data nodes, ports are mapped to the ephemeral port range)
 
 You can start multiple data nodes with:
 

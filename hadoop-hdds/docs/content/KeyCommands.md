@@ -69,7 +69,7 @@ The above command will put the sales.orc as a new key into _/hive/jan/corrected-
 
 ### Delete
 
-The delete key command removes the key from the bucket.
+The key delete command removes the key from the bucket.
 
 ***Params:***
 
@@ -102,7 +102,7 @@ key.
 
 ### List
 
-The key list commands allows user to list all keys in a bucket.
+The key list command allows user to list all keys in a bucket.
 
 ***Params:***
 
@@ -117,7 +117,7 @@ The key list commands allows user to list all keys in a bucket.
 ozone sh key list /hive/jan
 {{< /highlight >}}
 
-This command will  list all key in the bucket _/hive/jan_.
+This command will list all keys in the bucket _/hive/jan_.
 
 
 
