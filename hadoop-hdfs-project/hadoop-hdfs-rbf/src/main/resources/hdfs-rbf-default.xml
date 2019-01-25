@@ -275,7 +275,8 @@
     <name>dfs.federation.router.file.resolver.client.class</name>
     <value>org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver</value>
     <description>
-      Class to resolve files to subclusters.
+      Class to resolve files to subclusters. To enable multiple subclusters for a mount point,
+      set to org.apache.hadoop.hdfs.server.federation.resolver.MultipleDestinationMountTableResolver.
     </description>
   </property>
 
