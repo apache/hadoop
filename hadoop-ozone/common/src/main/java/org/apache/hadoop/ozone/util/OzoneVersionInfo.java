@@ -20,90 +20,25 @@ package org.apache.hadoop.ozone.util;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.ClassUtil;
-import org.apache.hadoop.util.ThreadUtil;
 import org.apache.hadoop.utils.HddsVersionInfo;
+import org.apache.hadoop.utils.VersionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Properties;
 
 /**
  * This class returns build information about Hadoop components.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class OzoneVersionInfo {
+public final class OzoneVersionInfo {
   private static final Logger LOG =
       LoggerFactory.getLogger(OzoneVersionInfo.class);
 
-  private Properties info;
+  public static final VersionInfo OZONE_VERSION_INFO =
+      new VersionInfo("ozone");
 
-  protected OzoneVersionInfo(String component) {
-    info = new Properties();
-    String versionInfoFile = component + "-version-info.properties";
-    InputStream is = null;
-    try {
-      is = ThreadUtil
-          .getResourceAsStream(OzoneVersionInfo.class.getClassLoader(),
-              versionInfoFile);
-      info.load(is);
-    } catch (IOException ex) {
-      LoggerFactory.getLogger(getClass()).warn("Could not read '" +
-          versionInfoFile + "', " + ex.toString(), ex);
-    } finally {
-      IOUtils.closeStream(is);
-    }
-  }
-
-  protected String getVersion() {
-    return info.getProperty("version", "Unknown");
-  }
-
-  protected String getRelease() {
-    return info.getProperty("release", "Unknown");
-  }
-
-  protected String getRevision() {
-    return info.getProperty("revision", "Unknown");
-  }
-
-  protected String getBranch() {
-    return info.getProperty("branch", "Unknown");
-  }
-
-  protected String getDate() {
-    return info.getProperty("date", "Unknown");
-  }
-
-  protected String getUser() {
-    return info.getProperty("user", "Unknown");
-  }
-
-  protected String getUrl() {
-    return info.getProperty("url", "Unknown");
-  }
-
-  protected String getSrcChecksum() {
-    return info.getProperty("srcChecksum", "Unknown");
-  }
-
-  protected String getBuildVersion() {
-    return getVersion() +
-        " from " + getRevision() +
-        " by " + getUser() +
-        " source checksum " + getSrcChecksum();
-  }
-
-  protected String getProtocVersion() {
-    return info.getProperty("protocVersion", "Unknown");
-  }
-
-  private static final OzoneVersionInfo OZONE_VERSION_INFO =
-      new OzoneVersionInfo("ozone");
+  private OzoneVersionInfo() {}
 
   public static void main(String[] args) {
     System.out.println(

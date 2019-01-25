@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.hdds.server;
 
-import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.utils.VersionInfo;
 
 /**
  * Helper base class to report the standard version and runtime information.
@@ -26,21 +26,26 @@ import org.apache.hadoop.util.VersionInfo;
 public class ServiceRuntimeInfoImpl implements ServiceRuntimeInfo {
 
   private long startedTimeInMillis;
+  private final VersionInfo versionInfo;
+
+  protected ServiceRuntimeInfoImpl(VersionInfo versionInfo) {
+    this.versionInfo = versionInfo;
+  }
 
   @Override
   public String getVersion() {
-    return VersionInfo.getVersion() + ", r" + VersionInfo.getRevision();
+    return versionInfo.getVersion() + ", r" + versionInfo.getRevision();
   }
 
   @Override
   public String getSoftwareVersion() {
-    return VersionInfo.getVersion();
+    return versionInfo.getVersion();
   }
 
   @Override
   public String getCompileInfo() {
-    return VersionInfo.getDate() + " by " + VersionInfo.getUser() + " from "
-        + VersionInfo.getBranch();
+    return versionInfo.getDate() + " by " + versionInfo.getUser() + " from "
+        + versionInfo.getBranch();
   }
 
   @Override
