@@ -100,7 +100,6 @@ import org.apache.hadoop.ozone.security.acl.RequestContext;
 import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
 import org.apache.hadoop.ozone.security.OzoneDelegationTokenSecretManager;
 import org.apache.hadoop.ozone.util.OzoneVersionInfo;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -157,6 +156,8 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys
     .OZONE_OM_METRICS_SAVE_INTERVAL;
 import static org.apache.hadoop.ozone.om.OMConfigKeys
     .OZONE_OM_METRICS_SAVE_INTERVAL_DEFAULT;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVALID_AUTH_METHOD;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_ERROR_OTHER;
 import static org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneManagerService
     .newReflectiveBlockingService;
@@ -1031,30 +1032,37 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   @Override
   public Token<OzoneTokenIdentifier> getDelegationToken(Text renewer)
-      throws IOException {
+      throws OMException {
     final boolean success;
     final String tokenId;
     Token<OzoneTokenIdentifier> token;
+    try {
+      if (!isAllowedDelegationTokenOp()) {
+        throw new OMException("Delegation Token can be issued only with "
+            + "kerberos or web authentication",
+            INVALID_AUTH_METHOD);
+      }
+      if (delegationTokenMgr == null || !delegationTokenMgr.isRunning()) {
+        LOG.warn("trying to get DT with no secret manager running in OM.");
+        return null;
+      }
 
-    if (!isAllowedDelegationTokenOp()) {
-      throw new IOException("Delegation Token can be issued only with "
-          + "kerberos or web authentication");
-    }
-    if (delegationTokenMgr == null || !delegationTokenMgr.isRunning()) {
-      LOG.warn("trying to get DT with no secret manager running in OM.");
-      return null;
-    }
+      UserGroupInformation ugi = getRemoteUser();
+      String user = ugi.getUserName();
+      Text owner = new Text(user);
+      Text realUser = null;
+      if (ugi.getRealUser() != null) {
+        realUser = new Text(ugi.getRealUser().getUserName());
+      }
 
-    UserGroupInformation ugi = getRemoteUser();
-    String user = ugi.getUserName();
-    Text owner = new Text(user);
-    Text realUser = null;
-    if (ugi.getRealUser() != null) {
-      realUser = new Text(ugi.getRealUser().getUserName());
+      return delegationTokenMgr.createToken(owner, renewer, realUser);
+    } catch (OMException oex) {
+      throw oex;
+    } catch (IOException ex) {
+      LOG.error("Get Delegation token failed, cause: {}", ex.getMessage());
+      throw new OMException("Get Delegation token failed.", ex,
+          TOKEN_ERROR_OTHER);
     }
-
-    token = delegationTokenMgr.createToken(owner, renewer, realUser);
-    return token;
   }
 
   /**
@@ -1066,24 +1074,31 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   @Override
   public long renewDelegationToken(Token<OzoneTokenIdentifier> token)
-      throws InvalidToken, IOException {
+      throws OMException {
     long expiryTime;
 
     try {
 
       if (!isAllowedDelegationTokenOp()) {
-        throw new IOException("Delegation Token can be renewed only with "
-            + "kerberos or web authentication");
+        throw new OMException("Delegation Token can be renewed only with "
+            + "kerberos or web authentication",
+            INVALID_AUTH_METHOD);
       }
       String renewer = getRemoteUser().getShortUserName();
       expiryTime = delegationTokenMgr.renewToken(token, renewer);
 
-    } catch (AccessControlException ace) {
-      final OzoneTokenIdentifier id = OzoneTokenIdentifier.readProtoBuf(
-          token.getIdentifier());
-      LOG.error("Delegation token renewal failed for dt: {}, cause: {}",
-          id.toString(), ace.getMessage());
-      throw ace;
+    } catch (OMException oex) {
+      throw oex;
+    } catch (IOException ex) {
+      OzoneTokenIdentifier id = null;
+      try {
+        id = OzoneTokenIdentifier.readProtoBuf(token.getIdentifier());
+      } catch (IOException exe) {
+      }
+      LOG.error("Delegation token renewal failed for dt id: {}, cause: {}",
+          id, ex.getMessage());
+      throw new OMException("Delegation token renewal failed for dt: " + token,
+          ex, TOKEN_ERROR_OTHER);
     }
     return expiryTime;
   }
@@ -1095,16 +1110,19 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   @Override
   public void cancelDelegationToken(Token<OzoneTokenIdentifier> token)
-      throws IOException {
+      throws OMException {
     OzoneTokenIdentifier id = null;
     try {
       String canceller = getRemoteUser().getUserName();
       id = delegationTokenMgr.cancelToken(token, canceller);
-      LOG.trace("Delegation token renewed for dt: {}", id);
-    } catch (AccessControlException ace) {
-      LOG.error("Delegation token renewal failed for dt: {}, cause: {}", id,
-          ace.getMessage());
-      throw ace;
+      LOG.trace("Delegation token cancelled for dt: {}", id);
+    } catch (OMException oex) {
+      throw oex;
+    } catch (IOException ex) {
+      LOG.error("Delegation token cancellation failed for dt id: {}, cause: {}",
+          id, ex.getMessage());
+      throw new OMException("Delegation token renewal failed for dt: " + token,
+          ex, TOKEN_ERROR_OTHER);
     }
   }
   /**

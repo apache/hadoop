@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.security.OzoneSecretStore.OzoneManagerSecretState;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier.TokenInfo;
 import org.apache.hadoop.security.AccessControlException;
@@ -40,6 +41,8 @@ import java.security.PrivateKey;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_EXPIRED;
 
 /**
  * SecretManager for Ozone Master. Responsible for signing identifiers with
@@ -172,8 +175,7 @@ public class OzoneDelegationTokenSecretManager
    */
   @Override
   public synchronized long renewToken(Token<OzoneTokenIdentifier> token,
-      String renewer)
-      throws IOException {
+      String renewer) throws IOException {
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
     DataInputStream in = new DataInputStream(buf);
     OzoneTokenIdentifier id = OzoneTokenIdentifier.readProtoBuf(in);
@@ -184,10 +186,10 @@ public class OzoneDelegationTokenSecretManager
 
     long now = Time.monotonicNow();
     if (id.getMaxDate() < now) {
-      throw new InvalidToken(renewer + " tried to renew an expired token "
+      throw new OMException(renewer + " tried to renew an expired token "
           + formatTokenId(id) + " max expiration date: "
           + Time.formatTime(id.getMaxDate())
-          + " currentTime: " + Time.formatTime(now));
+          + " currentTime: " + Time.formatTime(now), TOKEN_EXPIRED);
     }
     validateToken(id);
     if ((id.getRenewer() == null) || (id.getRenewer().toString().isEmpty())) {
