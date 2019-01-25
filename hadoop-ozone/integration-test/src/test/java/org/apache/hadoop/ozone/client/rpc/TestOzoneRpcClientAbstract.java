@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +60,7 @@ import org.apache.hadoop.ozone.client.OzoneKey;
 import org.apache.hadoop.ozone.client.OzoneKeyDetails;
 import org.apache.hadoop.ozone.client.OzoneKeyLocation;
 import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.KeyOutputStream;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
@@ -200,6 +202,39 @@ public abstract class TestOzoneRpcClientAbstract {
     store.getVolume(volumeName);
   }
 
+  @Test
+  public void testCreateVolumeWithMetadata()
+      throws IOException, OzoneException {
+    String volumeName = UUID.randomUUID().toString();
+    VolumeArgs volumeArgs = VolumeArgs.newBuilder()
+        .addMetadata("key1", "val1")
+        .build();
+    store.createVolume(volumeName, volumeArgs);
+    OzoneVolume volume = store.getVolume(volumeName);
+
+    Assert.assertEquals("val1", volume.getMetadata().get("key1"));
+    Assert.assertEquals(volumeName, volume.getName());
+  }
+
+  @Test
+  public void testCreateBucketWithMetadata()
+      throws IOException, OzoneException {
+    long currentTime = Time.now();
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    BucketArgs args = BucketArgs.newBuilder()
+        .addMetadata("key1", "value1").build();
+    volume.createBucket(bucketName, args);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    Assert.assertEquals(bucketName, bucket.getName());
+    Assert.assertNotNull(bucket.getMetadata());
+    Assert.assertEquals("value1", bucket.getMetadata().get("key1"));
+
+  }
+
+  
   @Test
   public void testCreateBucket()
       throws IOException, OzoneException {
@@ -518,7 +553,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
       OzoneOutputStream out = bucket.createKey(keyName,
           value.getBytes().length, ReplicationType.STAND_ALONE,
-          ReplicationFactor.ONE);
+          ReplicationFactor.ONE, new HashMap<>());
       out.write(value.getBytes());
       out.close();
       OzoneKey key = bucket.getKey(keyName);
@@ -549,7 +584,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
     // create the initial key with size 0, write will allocate the first block.
     OzoneOutputStream out = bucket.createKey(keyName, 0,
-        ReplicationType.STAND_ALONE, ReplicationFactor.ONE);
+        ReplicationType.STAND_ALONE, ReplicationFactor.ONE, new HashMap<>());
     out.write(value.getBytes());
     out.close();
     OmKeyArgs.Builder builder = new OmKeyArgs.Builder();
@@ -587,7 +622,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
       OzoneOutputStream out = bucket.createKey(keyName,
           value.getBytes().length, ReplicationType.RATIS,
-          ReplicationFactor.ONE);
+          ReplicationFactor.ONE, new HashMap<>());
       out.write(value.getBytes());
       out.close();
       OzoneKey key = bucket.getKey(keyName);
@@ -622,7 +657,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
       OzoneOutputStream out = bucket.createKey(keyName,
           value.getBytes().length, ReplicationType.RATIS,
-          ReplicationFactor.THREE);
+          ReplicationFactor.THREE, new HashMap<>());
       out.write(value.getBytes());
       out.close();
       OzoneKey key = bucket.getKey(keyName);
@@ -656,7 +691,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
     OzoneOutputStream out = bucket
         .createKey(keyName, value.getBytes().length, ReplicationType.RATIS,
-            ReplicationFactor.THREE);
+            ReplicationFactor.THREE, new HashMap<>());
     KeyOutputStream groupOutputStream =
         (KeyOutputStream) out.getOutputStream();
     XceiverClientManager manager = groupOutputStream.getXceiverClientManager();
@@ -757,7 +792,7 @@ public abstract class TestOzoneRpcClientAbstract {
     // create the initial key with size 0, write will allocate the first block.
     OzoneOutputStream out = bucket.createKey(keyName,
         keyValue.getBytes().length, ReplicationType.STAND_ALONE,
-        ReplicationFactor.ONE);
+        ReplicationFactor.ONE, new HashMap<>());
     out.write(keyValue.getBytes());
     out.close();
 
@@ -844,7 +879,7 @@ public abstract class TestOzoneRpcClientAbstract {
     // Write data into a key
     OzoneOutputStream out = bucket.createKey(keyName,
         value.getBytes().length, ReplicationType.STAND_ALONE,
-        ReplicationFactor.ONE);
+        ReplicationFactor.ONE, new HashMap<>());
     out.write(value.getBytes());
     out.close();
 
@@ -925,7 +960,7 @@ public abstract class TestOzoneRpcClientAbstract {
     OzoneBucket bucket = volume.getBucket(bucketName);
     OzoneOutputStream out = bucket.createKey(keyName,
         value.getBytes().length, ReplicationType.STAND_ALONE,
-        ReplicationFactor.ONE);
+        ReplicationFactor.ONE, new HashMap<>());
     out.write(value.getBytes());
     out.close();
     OzoneKey key = bucket.getKey(keyName);
@@ -947,7 +982,7 @@ public abstract class TestOzoneRpcClientAbstract {
     OzoneBucket bucket = volume.getBucket(bucketName);
     OzoneOutputStream out = bucket.createKey(fromKeyName,
         value.getBytes().length, ReplicationType.STAND_ALONE,
-        ReplicationFactor.ONE);
+        ReplicationFactor.ONE, new HashMap<>());
     out.write(value.getBytes());
     out.close();
     OzoneKey key = bucket.getKey(fromKeyName);
@@ -1141,22 +1176,26 @@ public abstract class TestOzoneRpcClientAbstract {
       byte[] value = RandomStringUtils.randomAscii(10240).getBytes();
       OzoneOutputStream one = volAbucketA.createKey(
           keyBaseA + i + "-" + RandomStringUtils.randomNumeric(5),
-          value.length, ReplicationType.STAND_ALONE, ReplicationFactor.ONE);
+          value.length, ReplicationType.STAND_ALONE, ReplicationFactor.ONE,
+          new HashMap<>());
       one.write(value);
       one.close();
       OzoneOutputStream two = volAbucketB.createKey(
           keyBaseA + i + "-" + RandomStringUtils.randomNumeric(5),
-          value.length, ReplicationType.STAND_ALONE, ReplicationFactor.ONE);
+          value.length, ReplicationType.STAND_ALONE, ReplicationFactor.ONE,
+          new HashMap<>());
       two.write(value);
       two.close();
       OzoneOutputStream three = volBbucketA.createKey(
           keyBaseA + i + "-" + RandomStringUtils.randomNumeric(5),
-          value.length, ReplicationType.STAND_ALONE, ReplicationFactor.ONE);
+          value.length, ReplicationType.STAND_ALONE, ReplicationFactor.ONE,
+          new HashMap<>());
       three.write(value);
       three.close();
       OzoneOutputStream four = volBbucketB.createKey(
           keyBaseA + i + "-" + RandomStringUtils.randomNumeric(5),
-          value.length, ReplicationType.STAND_ALONE, ReplicationFactor.ONE);
+          value.length, ReplicationType.STAND_ALONE, ReplicationFactor.ONE,
+          new HashMap<>());
       four.write(value);
       four.close();
     }
@@ -1170,22 +1209,26 @@ public abstract class TestOzoneRpcClientAbstract {
       byte[] value = RandomStringUtils.randomAscii(10240).getBytes();
       OzoneOutputStream one = volAbucketA.createKey(
           keyBaseB + i + "-" + RandomStringUtils.randomNumeric(5),
-          value.length, ReplicationType.STAND_ALONE, ReplicationFactor.ONE);
+          value.length, ReplicationType.STAND_ALONE, ReplicationFactor.ONE,
+          new HashMap<>());
       one.write(value);
       one.close();
       OzoneOutputStream two = volAbucketB.createKey(
           keyBaseB + i + "-" + RandomStringUtils.randomNumeric(5),
-          value.length, ReplicationType.STAND_ALONE, ReplicationFactor.ONE);
+          value.length, ReplicationType.STAND_ALONE, ReplicationFactor.ONE,
+          new HashMap<>());
       two.write(value);
       two.close();
       OzoneOutputStream three = volBbucketA.createKey(
           keyBaseB + i + "-" + RandomStringUtils.randomNumeric(5),
-          value.length, ReplicationType.STAND_ALONE, ReplicationFactor.ONE);
+          value.length, ReplicationType.STAND_ALONE, ReplicationFactor.ONE,
+          new HashMap<>());
       three.write(value);
       three.close();
       OzoneOutputStream four = volBbucketB.createKey(
           keyBaseB + i + "-" + RandomStringUtils.randomNumeric(5),
-          value.length, ReplicationType.STAND_ALONE, ReplicationFactor.ONE);
+          value.length, ReplicationType.STAND_ALONE, ReplicationFactor.ONE,
+          new HashMap<>());
       four.write(value);
       four.close();
     }

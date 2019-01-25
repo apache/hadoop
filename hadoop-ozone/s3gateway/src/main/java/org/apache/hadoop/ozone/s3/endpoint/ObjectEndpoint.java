@@ -41,6 +41,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -163,7 +164,7 @@ public class ObjectEndpoint extends EndpointBase {
       OzoneBucket bucket = getBucket(bucketName);
 
       output = bucket.createKey(keyPath, length, replicationType,
-          replicationFactor);
+          replicationFactor, new HashMap<>());
 
       if ("STREAMING-AWS4-HMAC-SHA256-PAYLOAD"
           .equals(headers.getHeaderString("x-amz-content-sha256"))) {
@@ -619,7 +620,7 @@ public class ObjectEndpoint extends EndpointBase {
       sourceInputStream = sourceOzoneBucket.readKey(sourceKey);
 
       destOutputStream = destOzoneBucket.createKey(destkey, sourceKeyLen,
-          replicationType, replicationFactor);
+          replicationType, replicationFactor, new HashMap<>());
 
       IOUtils.copy(sourceInputStream, destOutputStream);
 

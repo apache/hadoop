@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
+import org.apache.hadoop.ozone.om.helpers.KeyValueUtil;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
@@ -651,6 +652,11 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
     if (args.getDataSize() > 0) {
       keyArgs.setDataSize(args.getDataSize());
     }
+
+    if (args.getMetadata() != null && args.getMetadata().size() > 0) {
+      keyArgs.addAllMetadata(KeyValueUtil.toProtobuf(args.getMetadata()));
+    }
+    req.setKeyArgs(keyArgs.build());
 
     if (args.getMultipartUploadID() != null) {
       keyArgs.setMultipartUploadID(args.getMultipartUploadID());

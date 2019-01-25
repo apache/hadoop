@@ -83,12 +83,15 @@ public class OzoneBucketStub extends OzoneBucket {
   @Override
   public OzoneOutputStream createKey(String key, long size) throws IOException {
     return createKey(key, size, ReplicationType.STAND_ALONE,
-        ReplicationFactor.ONE);
+        ReplicationFactor.ONE, new HashMap<>());
   }
 
   @Override
   public OzoneOutputStream createKey(String key, long size,
-      ReplicationType type, ReplicationFactor factor) throws IOException {
+                                     ReplicationType type,
+                                     ReplicationFactor factor,
+                                     Map<String, String> metadata)
+      throws IOException {
     ByteArrayOutputStream byteArrayOutputStream =
         new ByteArrayOutputStream((int) size) {
           @Override
@@ -101,7 +104,7 @@ public class OzoneBucketStub extends OzoneBucket {
                 size,
                 System.currentTimeMillis(),
                 System.currentTimeMillis(),
-                new ArrayList<>(), type
+                new ArrayList<>(), type, metadata
             ));
             super.close();
           }

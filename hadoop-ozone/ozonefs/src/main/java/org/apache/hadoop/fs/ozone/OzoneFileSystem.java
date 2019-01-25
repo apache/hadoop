@@ -207,7 +207,8 @@ public class OzoneFileSystem extends FileSystem {
     }
 
     OzoneOutputStream ozoneOutputStream =
-        bucket.createKey(key, 0, replicationType, replicationFactor);
+        bucket.createKey(key, 0, replicationType, replicationFactor,
+            new HashMap<>());
     // We pass null to FSDataOutputStream so it won't count writes that
     // are being buffered to a file
     return new FSDataOutputStream(
@@ -770,7 +771,8 @@ public class OzoneFileSystem extends FileSystem {
   private boolean createDirectory(String keyName) {
     try {
       LOG.trace("creating dir for key:{}", keyName);
-      bucket.createKey(keyName, 0, replicationType, replicationFactor).close();
+      bucket.createKey(keyName, 0, replicationType, replicationFactor,
+          new HashMap<>()).close();
       return true;
     } catch (IOException ioe) {
       LOG.error("create key failed for key:{}", keyName, ioe);

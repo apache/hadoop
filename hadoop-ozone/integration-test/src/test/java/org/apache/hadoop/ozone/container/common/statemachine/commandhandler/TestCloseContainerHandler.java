@@ -41,6 +41,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -66,7 +67,7 @@ public class TestCloseContainerHandler {
     objectStore.getVolume("test").createBucket("test");
     OzoneOutputStream key = objectStore.getVolume("test").getBucket("test")
         .createKey("test", 1024, ReplicationType.STAND_ALONE,
-            ReplicationFactor.ONE);
+            ReplicationFactor.ONE, new HashMap<>());
     key.write("test".getBytes());
     key.close();
 

@@ -51,6 +51,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.UUID;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
@@ -134,7 +135,7 @@ public class TestSecureOzoneRpcClient extends TestOzoneRpcClient {
 
       try (OzoneOutputStream out = bucket.createKey(keyName,
           value.getBytes().length, ReplicationType.STAND_ALONE,
-          ReplicationFactor.ONE)) {
+          ReplicationFactor.ONE, new HashMap<>())) {
         out.write(value.getBytes());
       }
 
@@ -177,7 +178,7 @@ public class TestSecureOzoneRpcClient extends TestOzoneRpcClient {
 
       try(OzoneOutputStream out = bucket.createKey(keyName,
           value.getBytes().length, ReplicationType.STAND_ALONE,
-          ReplicationFactor.ONE)) {
+          ReplicationFactor.ONE, new HashMap<>())) {
         LambdaTestUtils.intercept(IOException.class, "UNAUTHENTICATED: Fail " +
                 "to find any token ",
             () -> out.write(value.getBytes()));

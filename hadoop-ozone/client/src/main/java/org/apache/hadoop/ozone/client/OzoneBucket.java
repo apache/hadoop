@@ -32,8 +32,10 @@ import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.WithMetadata;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +44,7 @@ import java.util.NoSuchElementException;
 /**
  * A class that encapsulates OzoneBucket.
  */
-public class OzoneBucket {
+public class OzoneBucket extends WithMetadata {
 
   /**
    * The proxy used for connecting to the cluster and perform
@@ -107,7 +109,8 @@ public class OzoneBucket {
   public OzoneBucket(Configuration conf, ClientProtocol proxy,
                      String volumeName, String bucketName,
                      List<OzoneAcl> acls, StorageType storageType,
-                     Boolean versioning, long creationTime) {
+                     Boolean versioning, long creationTime,
+                     Map<String, String> metadata) {
     Preconditions.checkNotNull(proxy, "Client proxy is not set.");
     this.proxy = proxy;
     this.volumeName = volumeName;
@@ -123,6 +126,7 @@ public class OzoneBucket {
     this.defaultReplicationType = ReplicationType.valueOf(conf.get(
         OzoneConfigKeys.OZONE_REPLICATION_TYPE,
         OzoneConfigKeys.OZONE_REPLICATION_TYPE_DEFAULT));
+    this.metadata = metadata;
   }
 
   @VisibleForTesting
@@ -248,7 +252,8 @@ public class OzoneBucket {
    */
   public OzoneOutputStream createKey(String key, long size)
       throws IOException {
-    return createKey(key, size, defaultReplicationType, defaultReplication);
+    return createKey(key, size, defaultReplicationType, defaultReplication,
+        new HashMap<>());
   }
 
   /**
@@ -262,9 +267,11 @@ public class OzoneBucket {
    */
   public OzoneOutputStream createKey(String key, long size,
                                      ReplicationType type,
-                                     ReplicationFactor factor)
+                                     ReplicationFactor factor,
+                                     Map<String, String> keyMetadata)
       throws IOException {
-    return proxy.createKey(volumeName, name, key, size, type, factor);
+    return proxy
+        .createKey(volumeName, name, key, size, type, factor, keyMetadata);
   }
 
   /**

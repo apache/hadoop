@@ -24,6 +24,7 @@ import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -592,7 +593,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
                   key, bucket, volume);
               long keyCreateStart = System.nanoTime();
               OzoneOutputStream os =
-                  bucket.createKey(key, keySize, type, factor);
+                  bucket.createKey(key, keySize, type, factor, new HashMap<>());
               long keyCreationDuration = System.nanoTime() - keyCreateStart;
               histograms.get(FreonOps.KEY_CREATE.ordinal())
                   .update(keyCreationDuration);

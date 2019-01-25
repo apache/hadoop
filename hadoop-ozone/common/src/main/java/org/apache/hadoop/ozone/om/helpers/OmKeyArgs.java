@@ -23,6 +23,7 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.Auditable;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,12 +43,14 @@ public final class OmKeyArgs implements Auditable {
   private final boolean isMultipartKey;
   private final String multipartUploadID;
   private final int multipartUploadPartNumber;
+  private Map<String, String> metadata;
 
   @SuppressWarnings("parameternumber")
   private OmKeyArgs(String volumeName, String bucketName, String keyName,
       long dataSize, ReplicationType type, ReplicationFactor factor,
       List<OmKeyLocationInfo> locationInfoList, boolean isMultipart,
-      String uploadID, int partNumber) {
+      String uploadID, int partNumber,
+      Map<String, String> metadataMap) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.keyName = keyName;
@@ -58,6 +61,7 @@ public final class OmKeyArgs implements Auditable {
     this.isMultipartKey = isMultipart;
     this.multipartUploadID = uploadID;
     this.multipartUploadPartNumber = partNumber;
+    this.metadata = metadataMap;
   }
 
   public boolean getIsMultipartKey() {
@@ -98,6 +102,14 @@ public final class OmKeyArgs implements Auditable {
 
   public void setDataSize(long size) {
     dataSize = size;
+  }
+
+  public Map<String, String> getMetadata() {
+    return metadata;
+  }
+
+  public void setMetadata(Map<String, String> metadata) {
+    this.metadata = metadata;
   }
 
   public void setLocationInfoList(List<OmKeyLocationInfo> locationInfoList) {
@@ -146,6 +158,7 @@ public final class OmKeyArgs implements Auditable {
     private boolean isMultipartKey;
     private String multipartUploadID;
     private int multipartUploadPartNumber;
+    private Map<String, String> metadata = new HashMap<>();
 
     public Builder setVolumeName(String volume) {
       this.volumeName = volume;
@@ -197,10 +210,21 @@ public final class OmKeyArgs implements Auditable {
       return this;
     }
 
+    public Builder addMetadata(String key, String value) {
+      this.metadata.put(key, value);
+      return this;
+    }
+
+    public Builder addAllMetadata(Map<String, String> metadatamap) {
+      this.metadata.putAll(metadatamap);
+      return this;
+    }
+
     public OmKeyArgs build() {
       return new OmKeyArgs(volumeName, bucketName, keyName, dataSize, type,
           factor, locationInfoList, isMultipartKey, multipartUploadID,
-          multipartUploadPartNumber);
+          multipartUploadPartNumber, metadata);
     }
+
   }
 }

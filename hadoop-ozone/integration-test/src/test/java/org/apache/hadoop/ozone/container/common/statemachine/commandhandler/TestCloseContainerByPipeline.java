@@ -44,6 +44,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -92,7 +93,7 @@ public class TestCloseContainerByPipeline {
   public void testIfCloseContainerCommandHandlerIsInvoked() throws Exception {
     OzoneOutputStream key = objectStore.getVolume("test").getBucket("test")
         .createKey("standalone", 1024, ReplicationType.RATIS,
-            ReplicationFactor.ONE);
+            ReplicationFactor.ONE, new HashMap<>());
     key.write("standalone".getBytes());
     key.close();
 
@@ -146,7 +147,7 @@ public class TestCloseContainerByPipeline {
 
     OzoneOutputStream key = objectStore.getVolume("test").getBucket("test")
         .createKey("standalone", 1024, ReplicationType.RATIS,
-            ReplicationFactor.ONE);
+            ReplicationFactor.ONE, new HashMap<>());
     key.write("standalone".getBytes());
     key.close();
 
@@ -195,7 +196,7 @@ public class TestCloseContainerByPipeline {
 
     OzoneOutputStream key = objectStore.getVolume("test").getBucket("test")
         .createKey("ratis", 1024, ReplicationType.RATIS,
-            ReplicationFactor.THREE);
+            ReplicationFactor.THREE, new HashMap<>());
     key.write("ratis".getBytes());
     key.close();
 
