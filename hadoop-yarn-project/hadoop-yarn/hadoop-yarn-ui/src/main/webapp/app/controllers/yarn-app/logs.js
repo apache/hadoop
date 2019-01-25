@@ -20,8 +20,10 @@ import Ember from 'ember';
 import Constants from 'yarn-ui/constants';
 
 export default Ember.Controller.extend({
-  queryParams: ["service"],
+  queryParams: ["service", "attempt", "containerid"],
   service: undefined,
+  attempt: undefined,
+  containerid: undefined,
 
   selectedAttemptId: "",
   attemptContainerList: null,
@@ -40,7 +42,7 @@ export default Ember.Controller.extend({
   },
 
   actions: {
-    showContainersForAttemptId(attemptId) {
+    showContainersForAttemptId(attemptId, containerId = "") {
       this.set("selectedAttemptId", "");
       if (attemptId) {
         this.set("_isLoadingTopPanel", true);
@@ -75,6 +77,9 @@ export default Ember.Controller.extend({
             }
             this.set("attemptContainerList", containers);
             this.initializeSelect(".js-fetch-logs-containers");
+            if (containerId) {
+              this.send("showLogFilesForContainerId", containerId);
+            }
           })
           .finally(() => {
             this.set("_isLoadingTopPanel", false);
