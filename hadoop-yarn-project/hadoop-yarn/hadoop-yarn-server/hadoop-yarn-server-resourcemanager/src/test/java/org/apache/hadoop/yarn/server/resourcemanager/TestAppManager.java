@@ -1069,6 +1069,7 @@ public class TestAppManager extends AppManagerTestBase{
     when(app.getState()).thenReturn(RMAppState.RUNNING);
     when(app.getApplicationType()).thenReturn("MAPREDUCE");
     when(app.getSubmitTime()).thenReturn(1000L);
+    when(app.getLaunchTime()).thenReturn(2000L);
     Map<String, Long> resourceSecondsMap = new HashMap<>();
     resourceSecondsMap.put(ResourceInformation.MEMORY_MB.getName(), 16384L);
     resourceSecondsMap.put(ResourceInformation.VCORES.getName(), 64L);
@@ -1089,6 +1090,7 @@ public class TestAppManager extends AppManagerTestBase{
     assertTrue(msg.contains("Multiline" + escaped +"UserName"));
     assertTrue(msg.contains("Multiline" + escaped +"QueueName"));
     assertTrue(msg.contains("submitTime=1000"));
+    assertTrue(msg.contains("launchTime=2000"));
     assertTrue(msg.contains("memorySeconds=16384"));
     assertTrue(msg.contains("vcoreSeconds=64"));
     assertTrue(msg.contains("preemptedAMContainers=1"));
