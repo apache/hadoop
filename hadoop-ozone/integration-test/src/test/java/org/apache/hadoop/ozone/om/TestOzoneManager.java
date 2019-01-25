@@ -38,6 +38,7 @@ import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
+import org.apache.hadoop.ozone.util.OzoneVersionInfo;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.KeyArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
@@ -1394,5 +1395,12 @@ public class TestOzoneManager {
     Assert.assertEquals("OM Ratis server did not start",
         LifeCycle.State.RUNNING,
         cluster.getOzoneManager().getOmRatisServerState());
+  }
+
+  @Test
+  public void testVersion() {
+    String expectedVersion = OzoneVersionInfo.OZONE_VERSION_INFO.getVersion();
+    String actualVersion = cluster.getOzoneManager().getSoftwareVersion();
+    Assert.assertEquals(expectedVersion, actualVersion);
   }
 }
