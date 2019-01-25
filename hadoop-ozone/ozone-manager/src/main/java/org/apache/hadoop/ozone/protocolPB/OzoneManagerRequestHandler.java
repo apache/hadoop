@@ -163,7 +163,6 @@ import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequest
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetDelegationTokenResponseProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.RenewDelegationTokenResponseProto;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetS3SecretRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetS3SecretResponse;
 import org.apache.hadoop.security.token.Token;
 
@@ -418,6 +417,14 @@ public class OzoneManagerRequestHandler {
         return Status.ENTITY_TOO_SMALL;
       case ABORT_MULTIPART_UPLOAD_FAILED:
         return Status.ABORT_MULTIPART_UPLOAD_FAILED;
+      case INVALID_AUTH_METHOD:
+        return Status.INVALID_AUTH_METHOD;
+      case INVALID_TOKEN:
+        return Status.INVALID_TOKEN;
+      case TOKEN_EXPIRED:
+        return Status.TOKEN_EXPIRED;
+      case TOKEN_ERROR_OTHER:
+        return Status.TOKEN_ERROR_OTHER;
       default:
         return Status.INTERNAL_ERROR;
       }
@@ -963,7 +970,7 @@ public class OzoneManagerRequestHandler {
                 .convertToTokenProto(token)).build());
       }
       rb.setStatus(Status.OK);
-      } catch (IOException ex) {
+    } catch (IOException ex) {
       rb.setStatus(exceptionToResponseStatus(ex));
     }
     return rb.build();

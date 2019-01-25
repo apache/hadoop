@@ -57,7 +57,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
   }
 
   /**
-   * Submit requests to Ratis server for OM HA implmentation.
+   * Submit requests to Ratis server for OM HA implementation.
    * TODO: Once HA is implemented fully, we should have only one server side
    * translator for OM protocol.
    */

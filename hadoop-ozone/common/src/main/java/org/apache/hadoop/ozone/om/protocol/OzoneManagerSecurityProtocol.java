@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.ozone.om.protocol;
 
-import java.io.IOException;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.Idempotent;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 
 /**
  * Security protocol for a secure OzoneManager.
@@ -37,31 +37,31 @@ public interface OzoneManagerSecurityProtocol {
    *
    * @param renewer the designated renewer for the token
    * @return Token<OzoneDelegationTokenSelector>
-   * @throws IOException
+   * @throws OMException
    */
   @Idempotent
   Token<OzoneTokenIdentifier> getDelegationToken(Text renewer)
-      throws IOException;
+      throws OMException;
 
   /**
    * Renew an existing delegation token.
    *
    * @param token delegation token obtained earlier
    * @return the new expiration time
-   * @throws IOException
+   * @throws OMException
    */
   @Idempotent
   long renewDelegationToken(Token<OzoneTokenIdentifier> token)
-      throws IOException;
+      throws OMException;
 
   /**
    * Cancel an existing delegation token.
    *
    * @param token delegation token
-   * @throws IOException
+   * @throws OMException
    */
   @Idempotent
   void cancelDelegationToken(Token<OzoneTokenIdentifier> token)
-      throws IOException;
+      throws OMException;
 
 }

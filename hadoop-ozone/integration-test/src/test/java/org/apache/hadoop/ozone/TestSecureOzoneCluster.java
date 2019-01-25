@@ -21,6 +21,9 @@ import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ADMINISTRATORS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVALID_AUTH_METHOD;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_ERROR_OTHER;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_EXPIRED;
 import static org.slf4j.event.Level.INFO;
 
 import java.io.File;
@@ -50,7 +53,6 @@ import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.minikdc.MiniKdc;
@@ -58,13 +60,13 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMStorage;
 import org.apache.hadoop.ozone.om.OzoneManager;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.security.KerberosAuthException;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -80,7 +82,6 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.HEAD;
 
 /**
  * Test class to for security enabled Ozone cluster.
@@ -345,6 +346,7 @@ public final class TestSecureOzoneCluster {
 
     // Capture logs for assertions
     LogCapturer logs = LogCapturer.captureLogs(Server.AUDITLOG);
+    LogCapturer omLogs = LogCapturer.captureLogs(OzoneManager.getLogger());
     GenericTestUtils
         .setLogLevel(LoggerFactory.getLogger(Server.class.getName()), INFO);
 
@@ -407,18 +409,28 @@ public final class TestSecureOzoneCluster {
       Assert.assertFalse(logs.getOutput().contains(
           "Auth successful for " + username + " (auth:TOKEN)"));
       LambdaTestUtils.intercept(IOException.class, "Delete Volume failed,"
-              + " error:VOLUME_NOT_FOUND", () -> omClient.deleteVolume("vol1"));
+          + " error:VOLUME_NOT_FOUND", () -> omClient.deleteVolume("vol1"));
       Assert.assertTrue(logs.getOutput().contains("Auth successful for "
           + username + " (auth:TOKEN)"));
 
       // Case 4: Test failure of token renewal.
       // Call to renewDelegationToken will fail but it will confirm that
       // initial connection via DT succeeded
-      LambdaTestUtils.intercept(RemoteException.class, "Delegation "
-              + "Token can be renewed only with kerberos or web authentication",
-          () -> omClient.renewDelegationToken(token));
+      omLogs.clearOutput();
+
+      LambdaTestUtils.intercept(OMException.class, "Renew delegation token " +
+              "failed",
+          () -> {
+            try {
+              omClient.renewDelegationToken(token);
+            } catch (OMException ex) {
+              Assert.assertTrue(ex.getResult().equals(INVALID_AUTH_METHOD));
+              throw ex;
+            }
+          });
       Assert.assertTrue(logs.getOutput().contains(
           "Auth successful for " + username + " (auth:TOKEN)"));
+      omLogs.clearOutput();
       //testUser.setAuthenticationMethod(AuthMethod.KERBEROS);
       UserGroupInformation.setLoginUser(ugi);
       omClient = new OzoneManagerProtocolClientSideTranslatorPB(
@@ -438,16 +450,25 @@ public final class TestSecureOzoneCluster {
 
       // Case 6: Test failure of token cancellation.
       // Get Om client, this time authentication using Token will fail as
-      // token is expired
+      // token is not in cache anymore.
       omClient = new OzoneManagerProtocolClientSideTranslatorPB(
           RPC.getProxy(OzoneManagerProtocolPB.class, omVersion,
               OmUtils.getOmAddress(conf), testUser, conf,
               NetUtils.getDefaultSocketFactory(conf),
               Client.getRpcTimeout(conf)), RandomStringUtils.randomAscii(5));
-      LambdaTestUtils.intercept(RemoteException.class, "can't be found in cache",
-          () -> omClient.cancelDelegationToken(token));
+      LambdaTestUtils.intercept(OMException.class, "Cancel delegation " +
+              "token failed",
+          () -> {
+            try {
+              omClient.cancelDelegationToken(token);
+            } catch (OMException ex) {
+              Assert.assertTrue(ex.getResult().equals(TOKEN_ERROR_OTHER));
+              throw ex;
+            }
+          });
+
       Assert.assertTrue(logs.getOutput().contains("Auth failed for"));
-  } finally {
+    } finally {
       om.stop();
       om.join();
     }
@@ -469,6 +490,7 @@ public final class TestSecureOzoneCluster {
   public void testDelegationTokenRenewal() throws Exception {
     GenericTestUtils
         .setLogLevel(LoggerFactory.getLogger(Server.class.getName()), INFO);
+    LogCapturer omLogs = LogCapturer.captureLogs(OzoneManager.getLogger());
 
     // Setup secure OM for start.
     OzoneConfiguration newConf = new OzoneConfiguration(conf);
@@ -502,16 +524,35 @@ public final class TestSecureOzoneCluster {
       // Renew delegation token
       long expiryTime = omClient.renewDelegationToken(token);
       Assert.assertTrue(expiryTime > 0);
+      omLogs.clearOutput();
 
       // Test failure of delegation renewal
-      // 1. When renewer doesn't match (implicitly covers when renewer is
+      // 1. When token maxExpiryTime exceeds
+      Thread.sleep(500);
+      LambdaTestUtils.intercept(OMException.class,
+          "Renew delegation token failed",
+          () -> {
+            try {
+              omClient.renewDelegationToken(token);
+            } catch (OMException ex) {
+              Assert.assertTrue(ex.getResult().equals(TOKEN_EXPIRED));
+              throw ex;
+            }
+          });
+
+      omLogs.clearOutput();
+
+      // 2. When renewer doesn't match (implicitly covers when renewer is
       // null or empty )
       Token token2 = omClient.getDelegationToken(new Text("randomService"));
-      LambdaTestUtils.intercept(RemoteException.class,
-          " with non-matching renewer randomService",
+      LambdaTestUtils.intercept(OMException.class,
+          "Renew delegation token failed",
           () -> omClient.renewDelegationToken(token2));
+      Assert.assertTrue(omLogs.getOutput().contains(" with non-matching " +
+          "renewer randomService"));
+      omLogs.clearOutput();
 
-      // 2. Test tampered token
+      // 3. Test tampered token
       OzoneTokenIdentifier tokenId = OzoneTokenIdentifier.readProtoBuf(
           token.getIdentifier());
       tokenId.setRenewer(new Text("om"));
@@ -519,15 +560,13 @@ public final class TestSecureOzoneCluster {
       Token<OzoneTokenIdentifier> tamperedToken = new Token<>(
           tokenId.getBytes(), token2.getPassword(), token2.getKind(),
           token2.getService());
-      LambdaTestUtils.intercept(RemoteException.class,
-          "can't be found in cache",
+      LambdaTestUtils.intercept(OMException.class,
+          "Renew delegation token failed",
           () -> omClient.renewDelegationToken(tamperedToken));
+      Assert.assertTrue(omLogs.getOutput().contains("can't be found in " +
+          "cache"));
+      omLogs.clearOutput();
 
-      // 3. When token maxExpiryTime exceeds
-      Thread.sleep(500);
-      LambdaTestUtils.intercept(RemoteException.class,
-          "om tried to renew an expired" + " token",
-          () -> omClient.renewDelegationToken(token));
     } finally {
       om.stop();
       om.join();
