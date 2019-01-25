@@ -166,18 +166,20 @@ public final class DatabaseHelper {
             tempEntry.appendException(currentLine);
           } else {
             entry = StringUtils.stripAll(currentLine.split("\\|"));
+            String[] ops =
+                entry[5].substring(entry[5].indexOf('=') + 1).split(" ", 2);
             tempEntry = new AuditEntry.Builder()
                 .setTimestamp(entry[0])
                 .setLevel(entry[1])
                 .setLogger(entry[2])
                 .setUser(entry[3].substring(entry[3].indexOf('=') + 1))
                 .setIp(entry[4].substring(entry[4].indexOf('=') + 1))
-                .setOp(entry[5].substring(entry[5].indexOf('=') + 1))
-                .setParams(entry[6])
-                .setResult(entry[7].substring(entry[7].indexOf('=') + 1))
+                .setOp(ops[0])
+                .setParams(ops[1])
+                .setResult(entry[6].substring(entry[6].indexOf('=') + 1))
                 .build();
-            if(entry.length == 9){
-              tempEntry.setException(entry[8]);
+            if(entry.length == 8){
+              tempEntry.setException(entry[7]);
             }
           }
           if(nextLine == null || nextLine.matches(ParserConsts.DATE_REGEX)){
