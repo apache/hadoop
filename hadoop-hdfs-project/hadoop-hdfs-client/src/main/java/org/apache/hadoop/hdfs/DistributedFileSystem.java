@@ -1972,8 +1972,11 @@ public class DistributedFileSystem extends FileSystem
   }
 
   /**
-   * @return All the snapshottable directories
-   * @throws IOException
+   * Get the list of snapshottable directories that are owned
+   * by the current user. Return all the snapshottable directories if the
+   * current user is a super user.
+   * @return The list of all the current snapshottable directories.
+   * @throws IOException If an I/O error occurred.
    */
   public SnapshottableDirectoryStatus[] getSnapshottableDirListing()
       throws IOException {
