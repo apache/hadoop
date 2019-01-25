@@ -107,6 +107,7 @@ public class BucketManagerImpl implements BucketManager {
           .setStorageType(bucketInfo.getStorageType())
           .setIsVersionEnabled(bucketInfo.getIsVersionEnabled())
           .setCreationTime(Time.now())
+          .addAllMetadata(bucketInfo.getMetadata())
           .build();
       metadataManager.getBucketTable().put(bucketKey,
           omBucketInfo);
@@ -182,6 +183,7 @@ public class BucketManagerImpl implements BucketManager {
       OmBucketInfo.Builder bucketInfoBuilder = OmBucketInfo.newBuilder();
       bucketInfoBuilder.setVolumeName(oldBucketInfo.getVolumeName())
           .setBucketName(oldBucketInfo.getBucketName());
+      bucketInfoBuilder.addAllMetadata(args.getMetadata());
 
       //Check ACLs to update
       if (args.getAddAcls() != null || args.getRemoveAcls() != null) {

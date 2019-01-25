@@ -83,6 +83,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -572,7 +573,8 @@ public class RestClient implements ClientProtocol {
           bucketInfo.getAcls(),
           bucketInfo.getStorageType(),
           getBucketVersioningFlag(bucketInfo.getVersioning()),
-          HddsClientUtils.formatDateTime(bucketInfo.getCreatedOn()));
+          HddsClientUtils.formatDateTime(bucketInfo.getCreatedOn()),
+          new HashMap<>());
       EntityUtils.consume(response);
       return bucket;
     } catch (URISyntaxException | ParseException e) {
@@ -611,7 +613,8 @@ public class RestClient implements ClientProtocol {
         return new OzoneBucket(conf, this, volumeName,
             bucketInfo.getBucketName(), bucketInfo.getAcls(),
             bucketInfo.getStorageType(),
-            getBucketVersioningFlag(bucketInfo.getVersioning()), creationTime);
+            getBucketVersioningFlag(bucketInfo.getVersioning()), creationTime,
+            new HashMap<>());
       }).collect(Collectors.toList());
     } catch (URISyntaxException e) {
       throw new IOException(e);
@@ -631,7 +634,8 @@ public class RestClient implements ClientProtocol {
   @Override
   public OzoneOutputStream createKey(
       String volumeName, String bucketName, String keyName, long size,
-      ReplicationType type, ReplicationFactor factor)
+      ReplicationType type, ReplicationFactor factor,
+      Map<String, String> metadata)
       throws IOException {
     // TODO: Once ReplicationType and ReplicationFactor are supported in
     // OzoneHandler (in Datanode), set them in header.
@@ -865,7 +869,8 @@ public class RestClient implements ClientProtocol {
           HddsClientUtils.formatDateTime(keyInfo.getCreatedOn()),
           HddsClientUtils.formatDateTime(keyInfo.getModifiedOn()),
           ozoneKeyLocations, ReplicationType.valueOf(
-              keyInfo.getType().toString()));
+              keyInfo.getType().toString()),
+          new HashMap<>());
       EntityUtils.consume(response);
       return key;
     } catch (URISyntaxException | ParseException e) {

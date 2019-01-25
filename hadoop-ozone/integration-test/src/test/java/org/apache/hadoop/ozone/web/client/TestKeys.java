@@ -80,6 +80,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -259,7 +260,8 @@ public class TestKeys {
 
       try (
           OzoneOutputStream ozoneOutputStream = bucket
-              .createKey(keyName, 0, replicationType, replicationFactor);
+              .createKey(keyName, 0, replicationType, replicationFactor,
+                  new HashMap<>());
           InputStream fileInputStream = new FileInputStream(file)) {
         IOUtils.copy(fileInputStream, ozoneOutputStream);
       }
@@ -291,7 +293,7 @@ public class TestKeys {
     String newkeyName = OzoneUtils.getRequestID().toLowerCase();
     OzoneOutputStream ozoneOutputStream = helperClient
         .createKey(helper.getVol().getName(), helper.getBucket().getName(),
-            newkeyName, 0, replicationType, replicationFactor);
+            newkeyName, 0, replicationType, replicationFactor, new HashMap<>());
     ozoneOutputStream.close();
     keyList = helperClient
         .listKeys(helper.getVol().getName(), helper.getBucket().getName(), null,
@@ -302,7 +304,7 @@ public class TestKeys {
     try {
       ozoneOutputStream = helperClient
           .createKey("invalid-volume", helper.getBucket().getName(), newkeyName,
-              0, replicationType, replicationFactor);
+              0, replicationType, replicationFactor, new HashMap<>());
       ozoneOutputStream.close();
       fail("Put key should have thrown"
           + " when using invalid volume name.");
@@ -314,7 +316,7 @@ public class TestKeys {
     try {
       ozoneOutputStream = helperClient
           .createKey(helper.getVol().getName(), "invalid-bucket", newkeyName, 0,
-              replicationType, replicationFactor);
+              replicationType, replicationFactor, new HashMap<>());
       ozoneOutputStream.close();
       fail("Put key should have thrown "
           + "when using invalid bucket name.");
@@ -488,7 +490,8 @@ public class TestKeys {
       String newkeyName = "list-key" + x;
       try (
           OzoneOutputStream ozoneOutputStream = helper.getBucket()
-              .createKey(newkeyName, 0, replicationType, replicationFactor);
+              .createKey(newkeyName, 0, replicationType, replicationFactor,
+                  new HashMap<>());
           InputStream fileInputStream = new FileInputStream(helper.getFile())) {
         IOUtils.copy(fileInputStream, ozoneOutputStream);
       }

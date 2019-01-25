@@ -21,7 +21,9 @@ package org.apache.hadoop.ozone.client;
 import org.apache.hadoop.ozone.OzoneAcl;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * This class encapsulates the arguments that are
@@ -33,6 +35,7 @@ public final class VolumeArgs {
   private final String owner;
   private final String quota;
   private final List<OzoneAcl> acls;
+  private Map<String, String> metadata;
 
   /**
    * Private constructor, constructed via builder.
@@ -41,12 +44,16 @@ public final class VolumeArgs {
    * @param quota Volume Quota.
    * @param acls User to access rights map.
    */
-  private VolumeArgs(String admin, String owner,
-                        String quota, List<OzoneAcl> acls) {
+  private VolumeArgs(String admin,
+      String owner,
+      String quota,
+      List<OzoneAcl> acls,
+      Map<String, String> metadata) {
     this.admin = admin;
     this.owner = owner;
     this.quota = quota;
     this.acls = acls;
+    this.metadata = metadata;
   }
 
   /**
@@ -73,6 +80,15 @@ public final class VolumeArgs {
     return quota;
   }
 
+  /**
+   * Return custom key value map.
+   *
+   * @return metadata
+   */
+  public Map<String, String> getMetadata() {
+    return metadata;
+  }
+
   public List<OzoneAcl> getAcls() {
     return acls;
   }
@@ -93,6 +109,7 @@ public final class VolumeArgs {
     private String ownerName;
     private String volumeQuota;
     private List<OzoneAcl> listOfAcls;
+    private Map<String, String> metadata = new HashMap<>();
 
 
     public VolumeArgs.Builder setAdmin(String admin) {
@@ -110,6 +127,10 @@ public final class VolumeArgs {
       return this;
     }
 
+    public VolumeArgs.Builder addMetadata(String key, String value) {
+      metadata.put(key, value);
+      return this;
+    }
     public VolumeArgs.Builder setAcls(List<OzoneAcl> acls)
         throws IOException {
       this.listOfAcls = acls;
@@ -121,7 +142,8 @@ public final class VolumeArgs {
      * @return CreateVolumeArgs.
      */
     public VolumeArgs build() {
-      return new VolumeArgs(adminName, ownerName, volumeQuota, listOfAcls);
+      return new VolumeArgs(adminName, ownerName, volumeQuota, listOfAcls,
+          metadata);
     }
   }
 

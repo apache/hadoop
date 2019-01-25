@@ -334,6 +334,7 @@ public class KeyManagerImpl implements KeyManager {
         // For this upload part we don't need to check in KeyTable. As this
         // is not an actual key, it is a part of the key.
         keyInfo = createKeyInfo(args, locations, factor, type, size);
+        //TODO args.getMetadata
         openVersion = 0;
       } else {
         keyInfo = metadataManager.getKeyTable().get(objectKey);

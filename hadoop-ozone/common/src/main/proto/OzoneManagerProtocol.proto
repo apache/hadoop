@@ -317,6 +317,8 @@ message BucketInfo {
     required bool isVersionEnabled = 4 [default = false];
     required StorageTypeProto storageType = 5 [default = DISK];
     required uint64 creationTime = 6;
+    repeated hadoop.hdds.KeyValue metadata = 7;
+
 }
 
 enum StorageTypeProto {
@@ -333,6 +335,7 @@ message BucketArgs {
     repeated OzoneAclInfo removeAcls = 4;
     optional bool isVersionEnabled = 5;
     optional StorageTypeProto storageType = 6;
+    repeated hadoop.hdds.KeyValue metadata = 7;
 }
 
 message OzoneAclInfo {
@@ -409,6 +412,7 @@ message KeyArgs {
     optional bool isMultipartKey = 8;
     optional string multipartUploadID = 9;
     optional uint32 multipartNumber = 10;
+    repeated hadoop.hdds.KeyValue metadata = 11;
 }
 
 message KeyLocation {
@@ -436,6 +440,8 @@ message KeyInfo {
     required uint64 creationTime = 8;
     required uint64 modificationTime = 9;
     optional uint64 latestVersion = 10;
+    repeated hadoop.hdds.KeyValue metadata = 11;
+
 }
 
 message CreateKeyRequest {
