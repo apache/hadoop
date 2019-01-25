@@ -71,6 +71,11 @@ HDFS supports [user quotas](HdfsQuotaAdminGuide.html) and [access permissions](H
 HDFS does not support hard links or soft links.
 However, the HDFS architecture does not preclude implementing these features.
 
+While HDFS follows [naming convention of the FileSystem](../hadoop-common/filesystem/model.html#Paths_and_Path_Elements),
+some paths and names (e.g. `/.reserved` and `.snapshot` ) are reserved.
+Features such as [transparent encryption](TransparentEncryption.html) and
+[snapshot](HdfsSnapshots.html) use reserved paths.
+
 The NameNode maintains the file system namespace. Any change to the file system namespace or its properties is recorded by the NameNode. An application can specify the number of replicas of a file that should be maintained by HDFS. The number of copies of a file is called the replication factor of that file. This information is stored by the NameNode.
 
 Data Replication
