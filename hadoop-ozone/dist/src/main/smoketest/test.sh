@@ -140,6 +140,8 @@ if [ "$RUN_ALL" = true ]; then
 #
 # We select the test suites and execute them on multiple type of clusters
 #
+   DEFAULT_TESTS=("auditparser")
+   execute_tests auditparser "${DEFAULT_TESTS[@]}"
    DEFAULT_TESTS=("security")
    execute_tests ozonesecure "${DEFAULT_TESTS[@]}"
    DEFAULT_TESTS=("basic")
