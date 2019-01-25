@@ -19,7 +19,7 @@
 {{breadcrumb-bar breadcrumbs=breadcrumbs}}
 
 {{#if actionResponse}}
-  <div class="row">
+  <div class="alert-wrapper">
     <div class="col-md-12">
       <div class="alert alert-dismissible {{if (eq actionResponse.type 'error') 'alert-danger' 'alert-success'}}" role="alert">
         <button class="close" data-dismiss="alert" aria-label="Close" {{action "resetActionResponse"}}><span aria-hidden="true">&times;</span></button>
@@ -29,7 +29,7 @@
   </div>
 {{/if}}
 
-<div class="panel-group">
+<div class="panel-group col-md-12">
   <div class="panel panel-default">
     <div class="yarn-app-header">
       <div class="flex">

@@ -113,7 +113,8 @@ function getClusterIdFromYARN(rmhost, application) {
 function getNodeManagerPort(rmhost, application) {
   var httpUrl = window.location.protocol + "//" +
     (ENV.hosts.localBaseAddress ? ENV.hosts.localBaseAddress + '/' : '') + rmhost
-    + ":" + window.location.port + "/conf?name=yarn.nodemanager.webapp.address";
+    + "/conf?name=yarn.nodemanager.webapp.address";
+
   var port = "8042";
   $.ajax({
     type: 'GET',
@@ -158,6 +159,7 @@ function updateConfigs(application) {
   ENV.clusterId = clusterIdFromYARN;
 
   var nodeManagerPort = getNodeManagerPort(rmhost, application);
+  Ember.Logger.log("NodeMananger port: " + nodeManagerPort);
   ENV.nodeManagerPort = nodeManagerPort;
 
   if(!ENV.hosts.timelineWebAddress) {

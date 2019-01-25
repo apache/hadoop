@@ -60,10 +60,12 @@
       <td title="{{container.exposedPorts}}">{{container.exposedPorts}}</td>
     </tr>
     {{/if}}
-    {{#if container.logUrl}}
+    {{#if container.appAttemptContainerLogsURL}}
     <tr>
-      <td>Log</td>
-      <td><a href="{{prepend-protocol container.logUrl}}" target="_blank">Link</a></td>
+      <td>Logs</td>
+      <td>
+        <a href="{{container.appAttemptContainerLogsURL}}">Link</a>
+      </td>
     </tr>
     {{/if}}
     {{#if container.nodeHttpAddress}}
