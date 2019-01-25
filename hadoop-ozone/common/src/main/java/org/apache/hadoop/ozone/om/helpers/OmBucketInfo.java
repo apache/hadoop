@@ -219,7 +219,9 @@ public final class OmBucketInfo extends WithMetadata implements Auditable {
     }
 
     public Builder addAllMetadata(Map<String, String> additionalMetadata) {
-      metadata.putAll(additionalMetadata);
+      if (additionalMetadata != null) {
+        metadata.putAll(additionalMetadata);
+      }
       return this;
     }
 
