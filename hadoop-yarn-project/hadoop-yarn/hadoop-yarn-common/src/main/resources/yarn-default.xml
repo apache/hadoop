@@ -1922,9 +1922,17 @@
   </property>
 
   <property>
-    <description>A file containing auxiliary service specifications. If
-      manifest file is specified, yarn.nodemanager.aux-services and other
-      aux services configuration properties will be ignored.</description>
+    <description>Boolean indicating whether loading aux services from a manifest
+      is enabled. If enabled, aux services may be dynamically modified through
+      reloading the manifest via filesystem changes or a REST API. When
+      enabled, aux services configuration properties unrelated to the manifest
+      will be ignored.</description>
+    <name>yarn.nodemanager.aux-services.manifest.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>A file containing auxiliary service specifications.</description>
     <name>yarn.nodemanager.aux-services.manifest</name>
     <value></value>
   </property>
@@ -1933,7 +1941,7 @@
     <description>Length of time in ms to wait between reloading aux services
       manifest. If 0 or less, manifest will not be reloaded.</description>
     <name>yarn.nodemanager.aux-services.manifest.reload-ms</name>
-    <value></value>
+    <value>0</value>
   </property>
 
   <property>
