@@ -133,6 +133,7 @@ class Checkpointer extends Daemon {
     long checkpointPeriodMSec = checkpointConf.getPeriod() * 1000;
 
     long lastCheckpointTime = 0;
+    long lastEditLogCheckTime =0;
     if (!backupNode.shouldCheckpointAtStartup()) {
       lastCheckpointTime = monotonicNow();
     }
@@ -142,8 +143,9 @@ class Checkpointer extends Daemon {
         boolean shouldCheckpoint = false;
         if(now >= lastCheckpointTime + checkpointPeriodMSec) {
           shouldCheckpoint = true;
-        } else {
+        } else if(now >= lastEditLogCheckTime + periodMSec) {
           long txns = countUncheckpointedTxns();
+          lastEditLogCheckTime = now;
           if(txns >= checkpointConf.getTxnCount())
             shouldCheckpoint = true;
         }
