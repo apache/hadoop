@@ -47,6 +47,7 @@ import java.io.IOException;
 import org.junit.rules.Timeout;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -190,6 +191,71 @@ public class TestOzoneFileSystem {
     fileStatuses = o3fs.listStatus(parent);
     assertEquals("FileStatus did not return all children of the directory",
         3, fileStatuses.length);
+  }
+
+  /**
+   * Tests listStatus operation on root directory.
+   */
+  @Test
+  public void testListStatusOnRoot() throws Exception {
+    Path root = new Path("/");
+    Path dir1 = new Path(root, "dir1");
+    Path dir12 = new Path(dir1, "dir12");
+    Path dir2 = new Path(root, "dir2");
+    fs.mkdirs(dir12);
+    fs.mkdirs(dir2);
+
+    // ListStatus on root should return dir1 (even though /dir1 key does not
+    // exist) and dir2 only. dir12 is not an immediate child of root and
+    // hence should not be listed.
+    FileStatus[] fileStatuses = o3fs.listStatus(root);
+    assertEquals("FileStatus should return only the immediate children", 2,
+        fileStatuses.length);
+
+    // Verify that dir12 is not included in the result of the listStatus on root
+    String fileStatus1 = fileStatuses[0].getPath().toUri().getPath();
+    String fileStatus2 = fileStatuses[1].getPath().toUri().getPath();
+    assertFalse(fileStatus1.equals(dir12.toString()));
+    assertFalse(fileStatus2.equals(dir12.toString()));
+  }
+
+  /**
+   * Tests listStatus on a path with subdirs.
+   */
+  @Test
+  public void testListStatusOnSubDirs() throws Exception {
+    // Create the following key structure
+    //      /dir1/dir11/dir111
+    //      /dir1/dir12
+    //      /dir1/dir12/file121
+    //      /dir2
+    // ListStatus on /dir1 should return all its immediated subdirs only
+    // which are /dir1/dir11 and /dir1/dir12. Super child files/dirs
+    // (/dir1/dir12/file121 and /dir1/dir11/dir111) should not be returned by
+    // listStatus.
+    Path dir1 = new Path("/dir1");
+    Path dir11 = new Path(dir1, "dir11");
+    Path dir111 = new Path(dir11, "dir111");
+    Path dir12 = new Path(dir1, "dir12");
+    Path file121 = new Path(dir12, "file121");
+    Path dir2 = new Path("/dir2");
+    fs.mkdirs(dir111);
+    fs.mkdirs(dir12);
+    ContractTestUtils.touch(fs, file121);
+    fs.mkdirs(dir2);
+
+    FileStatus[] fileStatuses = o3fs.listStatus(dir1);
+    assertEquals("FileStatus should return only the immediate children", 2,
+        fileStatuses.length);
+
+    // Verify that the two children of /dir1 returned by listStatus operation
+    // are /dir1/dir11 and /dir1/dir12.
+    String fileStatus1 = fileStatuses[0].getPath().toUri().getPath();
+    String fileStatus2 = fileStatuses[1].getPath().toUri().getPath();
+    assertTrue(fileStatus1.equals(dir11.toString()) ||
+        fileStatus1.equals(dir12.toString()));
+    assertTrue(fileStatus2.equals(dir11.toString()) ||
+        fileStatus2.equals(dir12.toString()));
   }
 
   private KeyInfo getKey(Path keyPath, boolean isDirectory)
