@@ -528,7 +528,9 @@ public class OzoneFileSystem extends FileSystem {
         // traverse the parent tree structure of this key until we get the
         // immediate child of the input directory.
         Path immediateChildPath = getImmediateChildPath(keyPath.getParent());
-        addSubDirStatus(immediateChildPath);
+        if (immediateChildPath != null) {
+          addSubDirStatus(immediateChildPath);
+        }
       }
       return true;
     }
@@ -565,7 +567,7 @@ public class OzoneFileSystem extends FileSystem {
     Path getImmediateChildPath(Path keyPath) {
       Path path = keyPath;
       Path parent = path.getParent();
-      while (parent != null && !parent.isRoot()) {
+      while (parent != null) {
         if (pathToKey(parent).equals(pathToKey(f))) {
           return path;
         }
