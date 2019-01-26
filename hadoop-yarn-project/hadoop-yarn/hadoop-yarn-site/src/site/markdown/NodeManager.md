@@ -95,7 +95,7 @@ Step 5.  Auxiliary services.
 
   * A simple example for the above is the auxiliary service 'ShuffleHandler' for MapReduce (MR). ShuffleHandler respects the above two requirements already, so users/admins don't have to do anything for it to support NM restart: (1) The configuration property **mapreduce.shuffle.port** controls which port the ShuffleHandler on a NodeManager host binds to, and it defaults to a non-ephemeral port. (2) The ShuffleHandler service also already supports recovery of previous state after NM restarts.
 
-  * There are two ways to configure auxiliary services, through a manifest file or through the Configuration. If a manifest file is used, auxiliary service configurations are not read from the Configuration. If no manifest file is specified, auxiliary services will be loaded via the prior method of using Configuration properties. One advantage of using the manifest file is that the NMs will detect changes in auxiliary services specified in the manifest file (as determined by the service name and version) and will remove or reload running auxiliary services as needed. To support reloading, AuxiliaryService implementations must perform any cleanup that is needed during the service stop phase for the NM to be able to create a new instance of the auxiliary service.
+  * There are two ways to configure auxiliary services, through a manifest or through the Configuration. Auxiliary services will only be loaded via the prior method of using Configuration properties when an auxiliary services manifest is not enabled. One advantage of using a manifest is that NMs can dynamically reload auxiliary services based on changes to the manifest. To support reloading, AuxiliaryService implementations must perform any cleanup that is needed during the service stop phase for the NM to be able to create a new instance of the auxiliary service.
 
 Auxiliary Service Classpath Isolation
 -------------------------------------
@@ -105,9 +105,11 @@ To launch auxiliary services on a NodeManager, users have to add their jar to No
 
 ### Manifest
 This section describes the auxiliary service manifest for aux-service classpath isolation.
+To use a manifest, the property `yarn.nodemanager.aux-services.manifest.enabled` must be set to true in *yarn-site.xml*.
 
-The manifest file can be set in *yarn-site.xml* under the property `yarn.nodemanager.aux-services.manifest`. The NMs will check this file for new modifications at an interval specified by `yarn.nodemanager.aux-services.manifest.reload-ms` (defaults to 2 minutes; setting interval <= 0 means it will not be reloaded automatically).
-Alternatively, the manifest file may be sent to the NM via REST API by making a PUT call to the endpoint `http://nm-http-address:port/ws/v1/node/auxiliaryservices`.
+To load the manifest file from a filesystem, set the file path in *yarn-site.xml* under the property `yarn.nodemanager.aux-services.manifest`. The NMs will check this file for new modifications at an interval specified by `yarn.nodemanager.aux-services.manifest.reload-ms` (defaults to 0; setting interval <= 0 means it will not be reloaded automatically).
+Alternatively, the manifest file may be sent to an NM via REST API by making a PUT call to the endpoint `http://nm-http-address:port/ws/v1/node/auxiliaryservices`. Note this only updates the manifest on one NM.
+When it reads a new manifest, the NM will add, remove, or reload auxiliary services as needed based on the service names and versions found in the manifest.
 
 An example manifest that configures classpath isolation for a CustomAuxService follows. One or more files may be specified to make up the classpath of a service, with jar or archive formats being supported.
 ```

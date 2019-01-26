@@ -2227,13 +2227,34 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_AUX_SERVICES = 
       NM_PREFIX + "aux-services";
 
+  /**
+   * Boolean indicating whether loading aux services from a manifest is
+   * enabled. If enabled, aux services may be dynamically modified through
+   * reloading the manifest via filesystem changes or a REST API. When
+   * enabled, aux services configuration properties unrelated to the manifest
+   * will be ignored.
+   */
+  public static final String NM_AUX_SERVICES_MANIFEST_ENABLED =
+      NM_AUX_SERVICES + ".manifest.enabled";
+
+  public static final boolean DEFAULT_NM_AUX_SERVICES_MANIFEST_ENABLED =
+      false;
+
+  /**
+   * File containing auxiliary service specifications.
+   */
   public static final String NM_AUX_SERVICES_MANIFEST =
       NM_AUX_SERVICES + ".manifest";
 
+  /**
+   * Interval at which manifest file will be reloaded when modifications are
+   * found (0 or less means that the file will not be checked for modifications
+   * and reloaded).
+   */
   public static final String NM_AUX_SERVICES_MANIFEST_RELOAD_MS =
       NM_AUX_SERVICES + ".manifest.reload-ms";
 
-  public static final long DEFAULT_NM_AUX_SERVICES_MANIFEST_RELOAD_MS = 120000;
+  public static final long DEFAULT_NM_AUX_SERVICES_MANIFEST_RELOAD_MS = 0;
 
   public static final String NM_AUX_SERVICE_FMT =
       NM_PREFIX + "aux-services.%s.class";

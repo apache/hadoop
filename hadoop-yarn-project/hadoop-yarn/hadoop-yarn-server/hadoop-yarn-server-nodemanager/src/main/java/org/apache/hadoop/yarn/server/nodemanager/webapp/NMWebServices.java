@@ -567,6 +567,10 @@ public class NMWebServices {
   public AuxiliaryServicesInfo getAuxiliaryServices(@javax.ws.rs.core.Context
       HttpServletRequest hsr) {
     init();
+    if (!this.nmContext.getAuxServices().isManifestEnabled()) {
+      throw new BadRequestException("Auxiliary services manifest is not " +
+          "enabled");
+    }
     AuxiliaryServicesInfo auxiliaryServices = new AuxiliaryServicesInfo();
     Collection<AuxServiceRecord> loadedServices = nmContext.getAuxServices()
         .getServiceRecords();
@@ -582,6 +586,11 @@ public class NMWebServices {
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public Response putAuxiliaryServices(@javax.ws.rs.core.Context
       HttpServletRequest req, AuxServiceRecords services) {
+    init();
+    if (!this.nmContext.getAuxServices().isManifestEnabled()) {
+      throw new BadRequestException("Auxiliary services manifest is not " +
+          "enabled");
+    }
     if (!hasAdminAccess(req)) {
       return Response.status(Status.FORBIDDEN).build();
     }

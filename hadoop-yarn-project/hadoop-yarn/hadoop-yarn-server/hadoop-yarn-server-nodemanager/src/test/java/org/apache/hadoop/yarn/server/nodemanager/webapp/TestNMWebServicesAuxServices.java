@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
+import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -33,6 +35,7 @@ import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.filter.LoggingFilter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -54,6 +57,7 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -195,6 +199,7 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
   private void addAuxServices(AuxServiceRecord... records) {
     AuxServices auxServices = mock(AuxServices.class);
     when(auxServices.getServiceRecords()).thenReturn(Arrays.asList(records));
+    when(auxServices.isManifestEnabled()).thenReturn(true);
     nmContext.setAuxServices(auxServices);
   }
 
@@ -238,7 +243,7 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
   }
 
   @Test
-  public void testNodeContainerXML() throws Exception {
+  public void testNodeAuxServicesXML() throws Exception {
     AuxServiceRecord r1 = new AuxServiceRecord().name("name1").launchTime(new
         Date(123L)).version("1");
     AuxServiceRecord r2 = new AuxServiceRecord().name("name2").launchTime(new
@@ -259,10 +264,43 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
     Document dom = db.parse(is);
     NodeList nodes = dom.getElementsByTagName("service");
     assertEquals("incorrect number of elements", 2, nodes.getLength());
-    verifyContainersInfoXML(nodes, r1, r2);
+    verifyAuxServicesInfoXML(nodes, r1, r2);
   }
 
-  public void verifyContainersInfoXML(NodeList nodes, AuxServiceRecord...
+  @Test
+  public void testAuxServicesDisabled() throws JSONException, Exception {
+    AuxServices auxServices = mock(AuxServices.class);
+    when(auxServices.isManifestEnabled()).thenReturn(false);
+    nmContext.setAuxServices(auxServices);
+    WebResource r = resource();
+    try {
+      r.path("ws").path("v1").path("node").path(AUX_SERVICES_PATH)
+          .accept(MediaType.APPLICATION_JSON).get(JSONObject.class);
+      fail("should have thrown exception on invalid user query");
+    } catch (UniformInterfaceException ue) {
+      ClientResponse response = ue.getResponse();
+      assertResponseStatusCode(ClientResponse.Status.BAD_REQUEST,
+          response.getStatusInfo());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
+      JSONObject msg = response.getEntity(JSONObject.class);
+      JSONObject exception = msg.getJSONObject("RemoteException");
+      assertEquals("incorrect number of elements", 3, exception.length());
+      String message = exception.getString("message");
+      String type = exception.getString("exception");
+      String classname = exception.getString("javaClassName");
+      WebServicesTestUtils.checkStringMatch(
+          "exception message",
+          "java.lang.Exception: Auxiliary services manifest is not enabled",
+          message);
+      WebServicesTestUtils.checkStringMatch("exception type",
+          "BadRequestException", type);
+      WebServicesTestUtils.checkStringMatch("exception classname",
+          "org.apache.hadoop.yarn.webapp.BadRequestException", classname);
+    }
+  }
+
+  public void verifyAuxServicesInfoXML(NodeList nodes, AuxServiceRecord...
       records) {
     for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);
