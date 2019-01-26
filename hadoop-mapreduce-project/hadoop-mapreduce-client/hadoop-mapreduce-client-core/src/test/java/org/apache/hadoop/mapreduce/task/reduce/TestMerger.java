@@ -24,6 +24,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -362,7 +363,9 @@ public class TestMerger {
         mock.bytesRead += 10 * multiplier;
         Object[] args = invocation.getArguments();
         DataInputBuffer key = (DataInputBuffer) args[0];
-        key.reset(("Segment Key " + segmentName + i).getBytes(), 20);
+        key.reset(
+            ("Segment Key " + segmentName + i).getBytes(StandardCharsets.UTF_8),
+            20);
         return true;
       }
     };
@@ -375,7 +378,8 @@ public class TestMerger {
       public Void answer(InvocationOnMock invocation) {
         Object[] args = invocation.getArguments();
         DataInputBuffer key = (DataInputBuffer) args[0];
-        key.reset(("Segment Value " + segmentName + i).getBytes(), 20);
+        key.reset(("Segment Value " + segmentName + i)
+            .getBytes(StandardCharsets.UTF_8), 20);
         return null;
       }
     };

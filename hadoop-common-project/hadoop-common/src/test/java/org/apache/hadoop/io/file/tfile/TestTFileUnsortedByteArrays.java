@@ -18,6 +18,7 @@
 package org.apache.hadoop.io.file.tfile;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -69,10 +70,14 @@ public class TestTFileUnsortedByteArrays {
     fs = path.getFileSystem(conf);
     out = fs.create(path);
     writer = new Writer(out, BLOCK_SIZE, compression, null, conf);
-    writer.append("keyZ".getBytes(), "valueZ".getBytes());
-    writer.append("keyM".getBytes(), "valueM".getBytes());
-    writer.append("keyN".getBytes(), "valueN".getBytes());
-    writer.append("keyA".getBytes(), "valueA".getBytes());
+    writer.append("keyZ".getBytes(StandardCharsets.UTF_8),
+        "valueZ".getBytes(StandardCharsets.UTF_8));
+    writer.append("keyM".getBytes(StandardCharsets.UTF_8),
+        "valueM".getBytes(StandardCharsets.UTF_8));
+    writer.append("keyN".getBytes(StandardCharsets.UTF_8),
+        "valueN".getBytes(StandardCharsets.UTF_8));
+    writer.append("keyA".getBytes(StandardCharsets.UTF_8),
+        "valueA".getBytes(StandardCharsets.UTF_8));
     closeOutput();
   }
 
@@ -91,7 +96,8 @@ public class TestTFileUnsortedByteArrays {
 
     try {
       Scanner scanner =
-          reader.createScannerByKey("aaa".getBytes(), "zzz".getBytes());
+          reader.createScannerByKey("aaa".getBytes(StandardCharsets.UTF_8),
+              "zzz".getBytes(StandardCharsets.UTF_8));
       Assert
           .fail("Failed to catch creating scanner with keys on unsorted file.");
     }
@@ -195,7 +201,7 @@ public class TestTFileUnsortedByteArrays {
     try {
       // can't find ceil
       try {
-        scanner.lowerBound("keyN".getBytes());
+        scanner.lowerBound("keyN".getBytes(StandardCharsets.UTF_8));
         Assert.fail("Cannot search in a unsorted TFile!");
       }
       catch (Exception e) {
@@ -206,7 +212,7 @@ public class TestTFileUnsortedByteArrays {
 
       // can't find higher
       try {
-        scanner.upperBound("keyA".getBytes());
+        scanner.upperBound("keyA".getBytes(StandardCharsets.UTF_8));
         Assert.fail("Cannot search higher in a unsorted TFile!");
       }
       catch (Exception e) {
@@ -217,7 +223,7 @@ public class TestTFileUnsortedByteArrays {
 
       // can't seek
       try {
-        scanner.seekTo("keyM".getBytes());
+        scanner.seekTo("keyM".getBytes(StandardCharsets.UTF_8));
         Assert.fail("Cannot search a unsorted TFile!");
       }
       catch (Exception e) {

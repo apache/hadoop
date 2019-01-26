@@ -22,6 +22,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -1348,7 +1349,7 @@ public class NNThroughputBenchmark implements Tool {
       for(int i=0; i < nodesToDecommission; i++) {
         TinyDatanode dn = blockReportObject.datanodes[nrDatanodes-1-i];
         numDecommissionedBlocks += dn.nrBlocks;
-        excludeFile.write(dn.getXferAddr().getBytes());
+        excludeFile.write(dn.getXferAddr().getBytes(StandardCharsets.UTF_8));
         excludeFile.write('\n');
         LOG.info("Datanode " + dn + " is decommissioned.");
       }

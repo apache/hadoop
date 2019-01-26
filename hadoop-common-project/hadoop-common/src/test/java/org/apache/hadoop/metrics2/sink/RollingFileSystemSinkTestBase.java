@@ -441,7 +441,7 @@ public class RollingFileSystemSinkTestBase {
 
     // Create the log file to force the sink to append
     try (FSDataOutputStream out = fs.create(file)) {
-      out.write("Extra stuff\n".getBytes());
+      out.write("Extra stuff\n".getBytes(StandardCharsets.UTF_8));
       out.flush();
     }
 
@@ -453,7 +453,7 @@ public class RollingFileSystemSinkTestBase {
 
         // Create the log file to force the sink to append
         try (FSDataOutputStream out = fs.create(file)) {
-          out.write("Extra stuff\n".getBytes());
+          out.write("Extra stuff\n".getBytes(StandardCharsets.UTF_8));
           out.flush();
         }
 

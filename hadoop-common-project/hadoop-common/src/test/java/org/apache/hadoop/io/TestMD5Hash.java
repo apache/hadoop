@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Random;
 
@@ -123,7 +124,7 @@ public class TestMD5Hash {
   public void testFactoryReturnsClearedHashes() throws IOException {
     // A stream that will throw an IOE after reading some bytes
     ByteArrayInputStream failingStream = new ByteArrayInputStream(
-        "xxxx".getBytes()) {
+        "xxxx".getBytes(StandardCharsets.UTF_8)) {
       @Override
       public synchronized int read(byte[] b) throws IOException {
         int ret = super.read(b);

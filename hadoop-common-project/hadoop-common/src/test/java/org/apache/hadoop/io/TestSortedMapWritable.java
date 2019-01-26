@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import org.junit.Test;
 
@@ -40,9 +41,9 @@ public class TestSortedMapWritable {
     };
     
     BytesWritable[] values = {
-        new BytesWritable("value1".getBytes()),
-        new BytesWritable("value2".getBytes()),
-        new BytesWritable("value3".getBytes())
+        new BytesWritable("value1".getBytes(StandardCharsets.UTF_8)),
+        new BytesWritable("value2".getBytes(StandardCharsets.UTF_8)),
+        new BytesWritable("value3".getBytes(StandardCharsets.UTF_8))
     };
 
     SortedMapWritable<Text> inMap = new SortedMapWritable<Text>();
@@ -134,8 +135,8 @@ public class TestSortedMapWritable {
     };
     
     BytesWritable[] values = {
-        new BytesWritable("value1".getBytes()),
-        new BytesWritable("value2".getBytes())
+        new BytesWritable("value1".getBytes(StandardCharsets.UTF_8)),
+        new BytesWritable("value2".getBytes(StandardCharsets.UTF_8))
     };
     
     mapA.put(keys[0], values[0]);

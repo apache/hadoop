@@ -815,7 +815,7 @@ public class YarnServiceJobSubmitter implements JobSubmitter {
     File serviceSpecFile = File.createTempFile(service.getName(), ".json");
     String buffer = jsonSerDeser.toJson(service);
     Writer w = new OutputStreamWriter(new FileOutputStream(serviceSpecFile),
-        "UTF-8");
+        StandardCharsets.UTF_8);
     PrintWriter pw = new PrintWriter(w);
     try {
       pw.append(buffer);

@@ -25,6 +25,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -167,7 +168,7 @@ public class TestDelegationTokenForProxyUser {
     final Path f = new Path("/testWebHdfsDoAs/a.txt");
     {
       FSDataOutputStream out = webhdfs.create(f);
-      out.write("Hello, webhdfs user!".getBytes());
+      out.write("Hello, webhdfs user!".getBytes(StandardCharsets.UTF_8));
       out.close();
   
       final FileStatus status = webhdfs.getFileStatus(f);
@@ -177,7 +178,7 @@ public class TestDelegationTokenForProxyUser {
 
     {
       final FSDataOutputStream out = webhdfs.append(f);
-      out.write("\nHello again!".getBytes());
+      out.write("\nHello again!".getBytes(StandardCharsets.UTF_8));
       out.close();
   
       final FileStatus status = webhdfs.getFileStatus(f);

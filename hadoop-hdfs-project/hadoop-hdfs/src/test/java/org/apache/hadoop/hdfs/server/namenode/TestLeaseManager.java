@@ -42,6 +42,7 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -474,7 +475,7 @@ public class TestLeaseManager {
     PermissionStatus p = new PermissionStatus(
         "dummy", "dummy", new FsPermission((short) 0777));
     return new INodeFile(
-        inodeId, new String("foo-" + inodeId).getBytes(), p, 0L, 0L,
-        BlockInfo.EMPTY_ARRAY, (short) 1, 1L);
+        inodeId, new String("foo-" + inodeId).getBytes(StandardCharsets.UTF_8),
+        p, 0L, 0L, BlockInfo.EMPTY_ARRAY, (short) 1, 1L);
   }
 }

@@ -43,6 +43,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import org.yaml.snakeyaml.Yaml;
 
@@ -274,7 +275,7 @@ public final class ContainerUtils {
     MessageDigest sha;
     try {
       sha = MessageDigest.getInstance(OzoneConsts.FILE_HASH);
-      sha.update(containerDataYamlStr.getBytes(CHARSET_ENCODING));
+      sha.update(containerDataYamlStr.getBytes(StandardCharsets.UTF_8));
       return DigestUtils.sha256Hex(sha.digest());
     } catch (NoSuchAlgorithmException e) {
       throw new StorageContainerException("Unable to create Message Digest, " +

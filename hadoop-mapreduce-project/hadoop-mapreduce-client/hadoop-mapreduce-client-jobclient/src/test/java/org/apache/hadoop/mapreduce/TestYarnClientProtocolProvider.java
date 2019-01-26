@@ -27,6 +27,7 @@ import static org.mockito.Mockito.doNothing;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -102,7 +103,8 @@ public class TestYarnClientProtocolProvider {
         org.apache.hadoop.yarn.api.records.Token.class);
       rmDTToken.setIdentifier(ByteBuffer.wrap(new byte[2]));
       rmDTToken.setKind("Testclusterkind");
-      rmDTToken.setPassword(ByteBuffer.wrap("testcluster".getBytes()));
+      rmDTToken.setPassword(
+          ByteBuffer.wrap("testcluster".getBytes(StandardCharsets.UTF_8)));
       rmDTToken.setService("0.0.0.0:8032");
       getDTResponse.setRMDelegationToken(rmDTToken);
       final ApplicationClientProtocol cRMProtocol = mock(ApplicationClientProtocol.class);

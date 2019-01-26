@@ -27,6 +27,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -90,6 +91,6 @@ public class TestIsActiveServlet {
 
   private String doGet() throws IOException {
     servlet.doGet(req, resp);
-    return new String(respOut.toByteArray(), "UTF-8");
+    return new String(respOut.toByteArray(), StandardCharsets.UTF_8);
   }
 }

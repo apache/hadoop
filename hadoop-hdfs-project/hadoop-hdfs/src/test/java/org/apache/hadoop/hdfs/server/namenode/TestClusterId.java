@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -406,7 +407,8 @@ public class TestClusterId {
 
     // capture the input stream
     InputStream origIn = System.in;
-    ByteArrayInputStream bins = new ByteArrayInputStream("Y\n".getBytes());
+    ByteArrayInputStream bins =
+        new ByteArrayInputStream("Y\n".getBytes(StandardCharsets.UTF_8));
     System.setIn(bins);
 
     String[] argv = { "-format" };
@@ -443,7 +445,8 @@ public class TestClusterId {
 
     // capture the input stream
     InputStream origIn = System.in;
-    ByteArrayInputStream bins = new ByteArrayInputStream("N\n".getBytes());
+    ByteArrayInputStream bins =
+        new ByteArrayInputStream("N\n".getBytes(StandardCharsets.UTF_8));
     System.setIn(bins);
 
     String[] argv = { "-format" };

@@ -28,6 +28,7 @@ import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -93,8 +94,8 @@ public class TestINodeFile {
   private long preferredBlockSize = 1024;
 
   static public INodeFile createINodeFile(long id) {
-    return new INodeFile(id, ("file" + id).getBytes(), perm, 0L, 0L, null,
-        (short)3, 1024L);
+    return new INodeFile(id, ("file" + id).getBytes(StandardCharsets.UTF_8),
+        perm, 0L, 0L, null, (short) 3, 1024L);
   }
 
   static void toCompleteFile(INodeFile file) {
@@ -1162,20 +1163,21 @@ public class TestINodeFile {
       assertTrue(dl.getPartialListing().length == 3);
 
       String f2 = new String("f2");
-      dl = cluster.getNameNodeRpc().getListing("/tmp", f2.getBytes(), false);
+      dl = cluster.getNameNodeRpc().getListing("/tmp",
+          f2.getBytes(StandardCharsets.UTF_8), false);
       assertTrue(dl.getPartialListing().length == 1);
 
       INode f2INode = fsdir.getINode("/tmp/f2");
       String f2InodePath = "/.reserved/.inodes/" + f2INode.getId();
-      dl = cluster.getNameNodeRpc().getListing("/tmp", f2InodePath.getBytes(),
-          false);
+      dl = cluster.getNameNodeRpc().getListing("/tmp",
+          f2InodePath.getBytes(StandardCharsets.UTF_8), false);
       assertTrue(dl.getPartialListing().length == 1);
 
       // Test the deleted startAfter file
       hdfs.delete(new Path("/tmp/f2"), false);
       try {
         dl = cluster.getNameNodeRpc().getListing("/tmp",
-            f2InodePath.getBytes(), false);
+            f2InodePath.getBytes(StandardCharsets.UTF_8), false);
         fail("Didn't get exception for the deleted startAfter token.");
       } catch (IOException e) {
         assertTrue(e instanceof DirectoryListingStartAfterNotFoundException);

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.registry.client.binding;
 
+import java.nio.charset.StandardCharsets;
+
 import org.apache.hadoop.registry.RegistryTestHelper;
 import org.apache.hadoop.registry.client.exceptions.InvalidRecordException;
 import org.apache.hadoop.registry.client.exceptions.NoRecordException;
@@ -78,13 +80,14 @@ public class TestMarshalling extends RegistryTestHelper {
 
   @Test(expected = InvalidRecordException.class)
   public void testUnmarshallNoBody() throws Throwable {
-    byte[] bytes = "this is not valid JSON at all and should fail".getBytes();
+    byte[] bytes = "this is not valid JSON at all and should fail"
+        .getBytes(StandardCharsets.UTF_8);
     marshal.fromBytes("src", bytes);
   }
 
   @Test(expected = InvalidRecordException.class)
   public void testUnmarshallWrongType() throws Throwable {
-    byte[] bytes = "{'type':''}".getBytes();
+    byte[] bytes = "{'type':''}".getBytes(StandardCharsets.UTF_8);
     ServiceRecord serviceRecord = marshal.fromBytes("marshalling", bytes);
     RegistryTypeUtils.validateServiceRecord("validating", serviceRecord);
   }

@@ -45,6 +45,7 @@ import java.io.Writer;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -516,7 +517,7 @@ public class TestFsck {
           if(blockFile != null && blockFile.exists()) {
             FileOutputStream blockFileStream =
                 new FileOutputStream(blockFile, false);
-            blockFileStream.write("corrupt".getBytes());
+            blockFileStream.write("corrupt".getBytes(StandardCharsets.UTF_8));
             blockFileStream.close();
             LOG.info("Corrupted block file " + blockFile);
           }
@@ -658,7 +659,7 @@ public class TestFsck {
     FSDataOutputStream out = fs.create(openFile);
     int writeCount = 0;
     while (writeCount != 100) {
-      out.write(randomString.getBytes());
+      out.write(randomString.getBytes(StandardCharsets.UTF_8));
       writeCount++;
     }
     ((DFSOutputStream) out.getWrappedStream()).hflush();
@@ -813,7 +814,7 @@ public class TestFsck {
       String badString = "BADBAD";
       int rand = random.nextInt((int) channel.size()/2);
       raFile.seek(rand);
-      raFile.write(badString.getBytes());
+      raFile.write(badString.getBytes(StandardCharsets.UTF_8));
       raFile.close();
     }
     // Read the file to trigger reportBadBlocks
@@ -886,7 +887,7 @@ public class TestFsck {
       String badString = "BADBAD";
       int rand = random.nextInt((int) channel.size()/2);
       raFile.seek(rand);
-      raFile.write(badString.getBytes());
+      raFile.write(badString.getBytes(StandardCharsets.UTF_8));
       raFile.close();
     }
 
@@ -1761,7 +1762,7 @@ public class TestFsck {
       String badString = "BADBAD";
       int rand = random.nextInt((int) channel.size()/2);
       raFile.seek(rand);
-      raFile.write(badString.getBytes());
+      raFile.write(badString.getBytes(StandardCharsets.UTF_8));
       raFile.close();
     }
 
@@ -2364,7 +2365,7 @@ public class TestFsck {
       Assert.assertTrue("Block file does not exist", blkFile.exists());
 
       FileOutputStream out = new FileOutputStream(blkFile);
-      out.write("corruption".getBytes());
+      out.write("corruption".getBytes(StandardCharsets.UTF_8));
     }
 
     // disable the heart beat from DN so that the corrupted block record is

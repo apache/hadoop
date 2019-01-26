@@ -104,6 +104,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedAction;
 import java.util.Collection;
 import java.util.HashSet;
@@ -467,7 +468,7 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
         int port = Integer.parseInt(nnWebAddressSplit[1]);
 
         // Avoid double-encoding here
-        query = URLDecoder.decode(query, "UTF-8");
+        query = URLDecoder.decode(query, StandardCharsets.UTF_8.name());
         URI uri = new URI(getScheme(), null, host, port,
             reqPath + dest, query, null);
         URL url = uri.toURL();

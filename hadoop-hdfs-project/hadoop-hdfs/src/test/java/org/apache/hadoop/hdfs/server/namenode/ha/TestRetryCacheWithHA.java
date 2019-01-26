@@ -27,6 +27,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1077,7 +1078,7 @@ public class TestRetryCacheWithHA {
     @Override
     void invoke() throws Exception {
       expectedUpdateCount++;
-      client.setXAttr(src, "user.key", "value".getBytes(),
+      client.setXAttr(src, "user.key", "value".getBytes(StandardCharsets.UTF_8),
           EnumSet.of(XAttrSetFlag.CREATE));
     }
 
@@ -1116,8 +1117,9 @@ public class TestRetryCacheWithHA {
         expectedUpdateCount++;
         DFSTestUtil.createFile(dfs, p, BlockSize, DataNodes, 0);
         expectedUpdateCount++;
-        client.setXAttr(src, "user.key", "value".getBytes(),
-          EnumSet.of(XAttrSetFlag.CREATE));
+        client.setXAttr(src, "user.key",
+            "value".getBytes(StandardCharsets.UTF_8),
+            EnumSet.of(XAttrSetFlag.CREATE));
       }
     }
 

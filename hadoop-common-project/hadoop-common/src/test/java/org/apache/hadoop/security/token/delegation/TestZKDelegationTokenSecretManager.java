@@ -19,6 +19,7 @@
 package org.apache.hadoop.security.token.delegation;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -344,7 +345,7 @@ public class TestZKDelegationTokenSecretManager {
         .connectString(connectString)
         .retryPolicy(retryPolicy)
         .aclProvider(digestAclProvider)
-        .authorization("digest", userPass.getBytes("UTF-8"))
+        .authorization("digest", userPass.getBytes(StandardCharsets.UTF_8))
         .build();
     curatorFramework.start();
     ZKDelegationTokenSecretManager.setCurator(curatorFramework);

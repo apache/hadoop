@@ -40,6 +40,7 @@ import java.net.InetSocketAddress;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -134,7 +135,6 @@ import org.eclipse.jetty.http.HttpHeader;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -1237,7 +1237,7 @@ public class ShuffleHandler extends AuxiliaryService {
       SecureShuffleUtils.verifyReply(urlHashStr, enc_str, tokenSecret);
       // verification passed - encode the reply
       String reply =
-        SecureShuffleUtils.generateHash(urlHashStr.getBytes(Charsets.UTF_8), 
+        SecureShuffleUtils.generateHash(urlHashStr.getBytes(StandardCharsets.UTF_8), 
             tokenSecret);
       response.headers().set(
           SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH, reply);

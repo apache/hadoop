@@ -41,6 +41,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -130,7 +131,9 @@ public class TestDFSInotifyEventInputStream {
       // SetOwnerOp -> MetadataUpdateEvent
       client.setOwner("/dir", "username", "groupname");
       client.createSymlink("/dir", "/dir2", false); // SymlinkOp -> CreateEvent
-      client.setXAttr("/file5", "user.field", "value".getBytes(), EnumSet.of(
+      client.setXAttr("/file5", "user.field",
+          "value".getBytes(StandardCharsets.UTF_8),
+          EnumSet.of(
           XAttrSetFlag.CREATE)); // SetXAttrOp -> MetadataUpdateEvent
       // RemoveXAttrOp -> MetadataUpdateEvent
       client.removeXAttr("/file5", "user.field");

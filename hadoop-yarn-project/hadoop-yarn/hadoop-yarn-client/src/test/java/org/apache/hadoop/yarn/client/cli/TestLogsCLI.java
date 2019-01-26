@@ -46,6 +46,7 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -353,7 +354,7 @@ public class TestLogsCLI {
     pw.println("                                              ignore the size limit and");
     pw.println("                                              fetch all logs.");
     pw.close();
-    String appReportStr = baos.toString("UTF-8");
+    String appReportStr = baos.toString(StandardCharsets.UTF_8.name());
     Assert.assertTrue(sysOutStream.toString().contains(appReportStr));
   }
 
@@ -567,7 +568,7 @@ public class TestLogsCLI {
     sysOutStream.reset();
 
     String logMessage = logMessage(containerId3, "stdout");
-    int fileContentSize = logMessage.getBytes().length;
+    int fileContentSize = logMessage.getBytes(StandardCharsets.UTF_8).length;
     StringBuilder sb = new StringBuilder();
     String endOfFile = "End of LogType:stdout";
     sb.append("\n" + endOfFile + "\n");
@@ -581,9 +582,10 @@ public class TestLogsCLI {
         "-containerId", containerId3.toString(), "-log_files", "stdout",
         "-size", "5"});
     assertTrue(exitCode == 0);
-    Assert.assertEquals(new String(logMessage.getBytes(), 0, 5),
+    Assert.assertEquals(
+        new String(logMessage.getBytes(StandardCharsets.UTF_8), 0, 5),
         new String(sysOutStream.toByteArray(),
-        (fullContextSize - fileContentSize - tailContentSize), 5));
+            (fullContextSize - fileContentSize - tailContentSize), 5));
     sysOutStream.reset();
 
     // specify a negative number, it would get the last n bytes from
@@ -592,10 +594,11 @@ public class TestLogsCLI {
         "-containerId", containerId3.toString(), "-log_files", "stdout",
         "-size", "-5"});
     assertTrue(exitCode == 0);
-    Assert.assertEquals(new String(logMessage.getBytes(),
-        logMessage.getBytes().length - 5, 5),
+    Assert.assertEquals(
+        new String(logMessage.getBytes(StandardCharsets.UTF_8),
+            logMessage.getBytes(StandardCharsets.UTF_8).length - 5, 5),
         new String(sysOutStream.toByteArray(),
-        (fullContextSize - fileContentSize - tailContentSize), 5));
+            (fullContextSize - fileContentSize - tailContentSize), 5));
     sysOutStream.reset();
 
     long negative = (fullContextSize + 1000) * (-1);

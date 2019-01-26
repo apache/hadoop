@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.AbstractCollection;
 import java.util.Collection;
 import java.util.Iterator;
@@ -153,16 +154,20 @@ public class BloomFilterCommonTester<T extends Filter> {
         filter.add(keys);
 
         assertTrue(" might contain key error ",
-            filter.membershipTest(new Key("100".getBytes())));
+            filter.membershipTest(
+                new Key("100".getBytes(StandardCharsets.UTF_8))));
         assertTrue(" might contain key error ",
-            filter.membershipTest(new Key("200".getBytes())));
+            filter.membershipTest(
+                new Key("200".getBytes(StandardCharsets.UTF_8))));
 
         filter.add(keys.toArray(new Key[] {}));
 
         assertTrue(" might contain key error ",
-            filter.membershipTest(new Key("100".getBytes())));
+            filter.membershipTest(
+                new Key("100".getBytes(StandardCharsets.UTF_8))));
         assertTrue(" might contain key error ",
-            filter.membershipTest(new Key("200".getBytes())));
+            filter.membershipTest(
+                new Key("200".getBytes(StandardCharsets.UTF_8))));
 
         filter.add(new AbstractCollection<Key>() {
 
@@ -179,9 +184,11 @@ public class BloomFilterCommonTester<T extends Filter> {
         });
 
         assertTrue(" might contain key error ",
-            filter.membershipTest(new Key("100".getBytes())));
+            filter.membershipTest(
+                new Key("100".getBytes(StandardCharsets.UTF_8))));
         assertTrue(" might contain key error ",
-            filter.membershipTest(new Key("200".getBytes())));
+            filter.membershipTest(
+                new Key("200".getBytes(StandardCharsets.UTF_8))));
       }
     }),
 
@@ -190,21 +197,21 @@ public class BloomFilterCommonTester<T extends Filter> {
       private void checkOnKeyMethods() {
         String line = "werabsdbe";
 
-        Key key = new Key(line.getBytes());
+        Key key = new Key(line.getBytes(StandardCharsets.UTF_8));
         assertTrue("default key weight error ", key.getWeight() == 1d);
 
-        key.set(line.getBytes(), 2d);
+        key.set(line.getBytes(StandardCharsets.UTF_8), 2d);
         assertTrue(" setted key weight error ", key.getWeight() == 2d);
 
-        Key sKey = new Key(line.getBytes(), 2d);
+        Key sKey = new Key(line.getBytes(StandardCharsets.UTF_8), 2d);
         assertTrue("equals error", key.equals(sKey));
         assertTrue("hashcode error", key.hashCode() == sKey.hashCode());
 
-        sKey = new Key(line.concat("a").getBytes(), 2d);
+        sKey = new Key(line.concat("a").getBytes(StandardCharsets.UTF_8), 2d);
         assertFalse("equals error", key.equals(sKey));
         assertFalse("hashcode error", key.hashCode() == sKey.hashCode());
 
-        sKey = new Key(line.getBytes(), 3d);
+        sKey = new Key(line.getBytes(StandardCharsets.UTF_8), 3d);
         assertFalse("equals error", key.equals(sKey));
         assertFalse("hashcode error", key.hashCode() == sKey.hashCode());
 
@@ -219,7 +226,7 @@ public class BloomFilterCommonTester<T extends Filter> {
         String line = "qryqeb354645rghdfvbaq23312fg";
         DataOutputBuffer out = new DataOutputBuffer();
         DataInputBuffer in = new DataInputBuffer();
-        Key originKey = new Key(line.getBytes(), 100d);
+        Key originKey = new Key(line.getBytes(StandardCharsets.UTF_8), 100d);
         try {
           originKey.write(out);
           in.reset(out.getData(), out.getData().length);
@@ -352,20 +359,23 @@ public class BloomFilterCommonTester<T extends Filter> {
 
         // add all even keys
         for (int i = 0; i < numInsertions; i += 2) {
-          filter.add(new Key(Integer.toString(i).getBytes()));
+          filter.add(
+              new Key(Integer.toString(i).getBytes(StandardCharsets.UTF_8)));
         }
 
         // check on present even key
         for (int i = 0; i < numInsertions; i += 2) {
           Assert.assertTrue(" filter might contains " + i,
-              filter.membershipTest(new Key(Integer.toString(i).getBytes())));
+              filter.membershipTest(new Key(
+                  Integer.toString(i).getBytes(StandardCharsets.UTF_8))));
         }
 
         // check on absent odd in event
         for (int i = 1; i < numInsertions; i += 2) {
           if (!falsePositives.contains(i)) {
             assertFalse(" filter should not contain " + i,
-                filter.membershipTest(new Key(Integer.toString(i).getBytes())));
+                filter.membershipTest(new Key(
+                    Integer.toString(i).getBytes(StandardCharsets.UTF_8))));
           }
         }
       }
@@ -394,7 +404,8 @@ public class BloomFilterCommonTester<T extends Filter> {
 
           // mark bits for later check
           for (Integer slot : list) {
-            filter.add(new Key(String.valueOf(slot).getBytes()));
+            filter.add(
+                new Key(String.valueOf(slot).getBytes(StandardCharsets.UTF_8)));
           }
 
           filter.write(out);
@@ -403,7 +414,8 @@ public class BloomFilterCommonTester<T extends Filter> {
 
           for (Integer slot : list) {
             assertTrue("read/write mask check filter error on " + slot,
-                filter.membershipTest(new Key(String.valueOf(slot).getBytes())));
+                filter.membershipTest(new Key(
+                    String.valueOf(slot).getBytes(StandardCharsets.UTF_8))));
           }
 
         } catch (IOException ex) {
@@ -425,17 +437,20 @@ public class BloomFilterCommonTester<T extends Filter> {
           // check on present all key
           for (int i = 0; i < numInsertions; i++) {
             Assert.assertFalse(" filter might contains " + i,
-                filter.membershipTest(new Key(Integer.toString(i).getBytes())));
+                filter.membershipTest(new Key(
+                    Integer.toString(i).getBytes(StandardCharsets.UTF_8))));
           }
 
           // add all even keys
           for (int i = 0; i < numInsertions; i += 2) {
-            filter.add(new Key(Integer.toString(i).getBytes()));
+            filter.add(
+                new Key(Integer.toString(i).getBytes(StandardCharsets.UTF_8)));
           }
 
           // add all odd keys
           for (int i = 0; i < numInsertions; i += 2) {
-            symmetricFilter.add(new Key(Integer.toString(i).getBytes()));
+            symmetricFilter.add(
+                new Key(Integer.toString(i).getBytes(StandardCharsets.UTF_8)));
           }
 
           filter.xor(symmetricFilter);
@@ -443,7 +458,8 @@ public class BloomFilterCommonTester<T extends Filter> {
           // check on absent all key
           for (int i = 0; i < numInsertions; i++) {
             Assert.assertFalse(" filter might not contains " + i,
-                filter.membershipTest(new Key(Integer.toString(i).getBytes())));
+                filter.membershipTest(new Key(
+                    Integer.toString(i).getBytes(StandardCharsets.UTF_8))));
           }
 
         } catch (UnsupportedOperationException ex) {
@@ -467,9 +483,9 @@ public class BloomFilterCommonTester<T extends Filter> {
 
         for (int i = 0; i < numInsertions; i++) {
           String digit = Integer.toString(i);
-          filter.add(new Key(digit.getBytes()));
+          filter.add(new Key(digit.getBytes(StandardCharsets.UTF_8)));
           if (i >= startIntersection && i <= endIntersection) {
-            partialFilter.add(new Key(digit.getBytes()));
+            partialFilter.add(new Key(digit.getBytes(StandardCharsets.UTF_8)));
           }
         }
 
@@ -479,7 +495,8 @@ public class BloomFilterCommonTester<T extends Filter> {
         for (int i = 0; i < numInsertions; i++) {
           if (i >= startIntersection && i <= endIntersection) {
             Assert.assertTrue(" filter might contains " + i,
-                filter.membershipTest(new Key(Integer.toString(i).getBytes())));
+                filter.membershipTest(new Key(
+                    Integer.toString(i).getBytes(StandardCharsets.UTF_8))));
           }
         }        
       }
@@ -495,12 +512,14 @@ public class BloomFilterCommonTester<T extends Filter> {
 
         // add all even
         for (int i = 0; i < numInsertions; i += 2) {
-          evenFilter.add(new Key(Integer.toString(i).getBytes()));
+          evenFilter.add(
+              new Key(Integer.toString(i).getBytes(StandardCharsets.UTF_8)));
         }
 
         // add all odd
         for (int i = 1; i < numInsertions; i += 2) {
-          filter.add(new Key(Integer.toString(i).getBytes()));
+          filter.add(
+              new Key(Integer.toString(i).getBytes(StandardCharsets.UTF_8)));
         }
 
         // union odd with even
@@ -509,7 +528,8 @@ public class BloomFilterCommonTester<T extends Filter> {
         // check on present all key
         for (int i = 0; i < numInsertions; i++) {
           Assert.assertTrue(" filter might contains " + i,
-              filter.membershipTest(new Key(Integer.toString(i).getBytes())));
+              filter.membershipTest(new Key(
+                  Integer.toString(i).getBytes(StandardCharsets.UTF_8))));
         }        
       }
     });

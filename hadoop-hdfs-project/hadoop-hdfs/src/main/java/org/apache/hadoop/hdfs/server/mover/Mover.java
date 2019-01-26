@@ -63,6 +63,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -711,7 +712,8 @@ public class Mover {
     private static String[] readPathFile(String file) throws IOException {
       List<String> list = Lists.newArrayList();
       BufferedReader reader = new BufferedReader(
-          new InputStreamReader(new FileInputStream(file), "UTF-8"));
+          new InputStreamReader(new FileInputStream(file),
+              StandardCharsets.UTF_8));
       try {
         String line;
         while ((line = reader.readLine()) != null) {

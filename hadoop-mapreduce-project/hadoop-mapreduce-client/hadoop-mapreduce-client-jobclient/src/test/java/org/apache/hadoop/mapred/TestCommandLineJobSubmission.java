@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
@@ -55,18 +56,18 @@ public class TestCommandLineJobSubmission {
       dfs = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
       fs = dfs.getFileSystem();
       FSDataOutputStream stream = fs.create(testFile);
-      stream.write("teststring".getBytes());
+      stream.write("teststring".getBytes(StandardCharsets.UTF_8));
       stream.close();
       mr = new MiniMRCluster(2, fs.getUri().toString(), 1);
       File thisbuildDir = new File(buildDir, "jobCommand");
       assertTrue("create build dir", thisbuildDir.mkdirs()); 
       File f = new File(thisbuildDir, "files_tmp");
       FileOutputStream fstream = new FileOutputStream(f);
-      fstream.write("somestrings".getBytes());
+      fstream.write("somestrings".getBytes(StandardCharsets.UTF_8));
       fstream.close();
       File f1 = new File(thisbuildDir, "files_tmp1");
       fstream = new FileOutputStream(f1);
-      fstream.write("somestrings".getBytes());
+      fstream.write("somestrings".getBytes(StandardCharsets.UTF_8));
       fstream.close();
       
       // copy files to dfs

@@ -23,6 +23,8 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
+import java.nio.charset.StandardCharsets;
+
 public class TestMRKeyFieldBasedPartitioner {
 
   /**
@@ -55,7 +57,7 @@ public class TestMRKeyFieldBasedPartitioner {
     conf.set(KeyFieldBasedPartitioner.PARTITIONER_OPTIONS, "-k2,2");
     kfbp.setConf(conf);
     String expectedOutput = "def";
-    byte[] eBytes = expectedOutput.getBytes();
+    byte[] eBytes = expectedOutput.getBytes(StandardCharsets.UTF_8);
     hashCode = kfbp.hashCode(eBytes, 0, eBytes.length - 1, 0);
     expectedPartition = kfbp.getPartition(hashCode, numReducers);
     assertEquals("Partitioner doesnt work as expected", expectedPartition, 
@@ -67,7 +69,7 @@ public class TestMRKeyFieldBasedPartitioner {
     conf.set(KeyFieldBasedPartitioner.PARTITIONER_OPTIONS, "-k2,5");
     kfbp.setConf(conf);
     expectedOutput = "def\txyz";
-    eBytes = expectedOutput.getBytes();
+    eBytes = expectedOutput.getBytes(StandardCharsets.UTF_8);
     hashCode = kfbp.hashCode(eBytes, 0, eBytes.length - 1, 0);
     expectedPartition = kfbp.getPartition(hashCode, numReducers);
     assertEquals("Partitioner doesnt work as expected", expectedPartition, 
@@ -79,7 +81,7 @@ public class TestMRKeyFieldBasedPartitioner {
     conf.set(KeyFieldBasedPartitioner.PARTITIONER_OPTIONS, "-k2");
     kfbp.setConf(conf);
     expectedOutput = "def\txyz";
-    eBytes = expectedOutput.getBytes();
+    eBytes = expectedOutput.getBytes(StandardCharsets.UTF_8);
     hashCode = kfbp.hashCode(eBytes, 0, eBytes.length - 1, 0);
     expectedPartition = kfbp.getPartition(hashCode, numReducers);
     assertEquals("Partitioner doesnt work as expected", expectedPartition, 
@@ -100,10 +102,10 @@ public class TestMRKeyFieldBasedPartitioner {
     kfbp.setConf(conf);
     input = "abc\tdef\tpqr\txyz";
     expectedOutput = "def";
-    eBytes = expectedOutput.getBytes();
+    eBytes = expectedOutput.getBytes(StandardCharsets.UTF_8);
     hashCode = kfbp.hashCode(eBytes, 0, eBytes.length - 1, 0);
     expectedOutput = "xyz";
-    eBytes = expectedOutput.getBytes();
+    eBytes = expectedOutput.getBytes(StandardCharsets.UTF_8);
     hashCode = kfbp.hashCode(eBytes, 0, eBytes.length - 1, hashCode);
     expectedPartition = kfbp.getPartition(hashCode, numReducers);
     assertEquals("Partitioner doesnt work as expected", expectedPartition, 
@@ -115,10 +117,10 @@ public class TestMRKeyFieldBasedPartitioner {
     conf.set(KeyFieldBasedPartitioner.PARTITIONER_OPTIONS, "-k2,2 -k30,21 -k4,4 -k5");
     kfbp.setConf(conf);
     expectedOutput = "def";
-    eBytes = expectedOutput.getBytes();
+    eBytes = expectedOutput.getBytes(StandardCharsets.UTF_8);
     hashCode = kfbp.hashCode(eBytes, 0, eBytes.length - 1, 0);
     expectedOutput = "xyz";
-    eBytes = expectedOutput.getBytes();
+    eBytes = expectedOutput.getBytes(StandardCharsets.UTF_8);
     hashCode = kfbp.hashCode(eBytes, 0, eBytes.length - 1, hashCode);
     expectedPartition = kfbp.getPartition(hashCode, numReducers);
     assertEquals("Partitioner doesnt work as expected", expectedPartition, 

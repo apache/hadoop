@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -189,7 +190,8 @@ public class TestWebHdfsContentLength {
         Socket client = listenSocket.accept();
         client.setSoTimeout(2000);
         try {
-          client.getOutputStream().write(response.getBytes());
+          client.getOutputStream()
+              .write(response.getBytes(StandardCharsets.UTF_8));
           client.shutdownOutput();
           byte[] buf = new byte[4*1024]; // much bigger than request
 
@@ -204,7 +206,7 @@ public class TestWebHdfsContentLength {
             if (n <= 0) {
               break;
             }
-            sb.append(new String(buf, 0, n, "UTF-8"));
+            sb.append(new String(buf, 0, n, StandardCharsets.UTF_8));
           }
           return sb.toString();
         } finally {

@@ -26,6 +26,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 
@@ -164,7 +165,7 @@ public class TestTransferFsImage {
 
       File mockImageFile = File.createTempFile("image", "", tmpDir);
       FileOutputStream imageFile = new FileOutputStream(mockImageFile);
-      imageFile.write("data".getBytes());
+      imageFile.write("data".getBytes(StandardCharsets.UTF_8));
       imageFile.close();
       Mockito.when(
           mockStorage.findImageFile(Mockito.any(NameNodeFile.class),

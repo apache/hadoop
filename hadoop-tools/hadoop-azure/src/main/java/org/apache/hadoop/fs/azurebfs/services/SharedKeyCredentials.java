@@ -20,10 +20,12 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -74,7 +76,7 @@ public class SharedKeyCredentials {
     initializeMac();
   }
 
-  public void signRequest(HttpURLConnection connection, final long contentLength) throws UnsupportedEncodingException {
+  public void signRequest(HttpURLConnection connection, final long contentLength) {
 
     connection.setRequestProperty(HttpHeaderConfigurations.X_MS_DATE, getGMTTime());
 
@@ -87,12 +89,7 @@ public class SharedKeyCredentials {
   }
 
   private String computeHmac256(final String stringToSign) {
-    byte[] utf8Bytes;
-    try {
-      utf8Bytes = stringToSign.getBytes(AbfsHttpConstants.UTF_8);
-    } catch (final UnsupportedEncodingException e) {
-      throw new IllegalArgumentException(e);
-    }
+    byte[] utf8Bytes = stringToSign.getBytes(StandardCharsets.UTF_8);
     byte[] hmac;
     synchronized (this) {
       hmac = hmacSha256.doFinal(utf8Bytes);
@@ -194,8 +191,7 @@ public class SharedKeyCredentials {
    */
   private static String canonicalizeHttpRequest(final URL address,
       final String accountName, final String method, final String contentType,
-      final long contentLength, final String date, final HttpURLConnection conn)
-      throws UnsupportedEncodingException {
+      final long contentLength, final String date, final HttpURLConnection conn) {
 
     // The first element should be the Method of the request.
     // I.e. GET, POST, PUT, or HEAD.
@@ -246,7 +242,7 @@ public class SharedKeyCredentials {
    * @return the canonicalized resource string.
    */
   private static String getCanonicalizedResource(final URL address,
-      final String accountName) throws UnsupportedEncodingException {
+      final String accountName) {
     // Resource path
     final StringBuilder resourcepath = new StringBuilder(AbfsHttpConstants.FORWARD_SLASH);
     resourcepath.append(accountName);
@@ -340,7 +336,7 @@ public class SharedKeyCredentials {
    * @param parseString the string to parse
    * @return a HashMap<String, String[]> of the key values.
    */
-  private static HashMap<String, String[]> parseQueryString(String parseString) throws UnsupportedEncodingException {
+  private static HashMap<String, String[]> parseQueryString(String parseString) {
     final HashMap<String, String[]> retVals = new HashMap<>();
     if (parseString == null || parseString.isEmpty()) {
       return retVals;
@@ -394,7 +390,7 @@ public class SharedKeyCredentials {
    * <p>
    * If a storage service error occurred.
    */
-  private static String safeDecode(final String stringToDecode) throws UnsupportedEncodingException {
+  private static String safeDecode(final String stringToDecode) {
     if (stringToDecode == null) {
       return null;
     }
@@ -403,30 +399,36 @@ public class SharedKeyCredentials {
       return "";
     }
 
-    if (stringToDecode.contains(AbfsHttpConstants.PLUS)) {
-      final StringBuilder outBuilder = new StringBuilder();
+    try {
+      if (stringToDecode.contains(AbfsHttpConstants.PLUS)) {
+        final StringBuilder outBuilder = new StringBuilder();
 
-      int startDex = 0;
-      for (int m = 0; m < stringToDecode.length(); m++) {
-        if (stringToDecode.charAt(m) == '+') {
-          if (m > startDex) {
-            outBuilder.append(URLDecoder.decode(stringToDecode.substring(startDex, m),
-                    AbfsHttpConstants.UTF_8));
+        int startDex = 0;
+        for (int m = 0; m < stringToDecode.length(); m++) {
+          if (stringToDecode.charAt(m) == '+') {
+            if (m > startDex) {
+              outBuilder.append(
+                  URLDecoder.decode(stringToDecode.substring(startDex, m),
+                      StandardCharsets.UTF_8.name()));
+            }
+
+            outBuilder.append(AbfsHttpConstants.PLUS);
+            startDex = m + 1;
           }
-
-          outBuilder.append(AbfsHttpConstants.PLUS);
-          startDex = m + 1;
         }
-      }
 
-      if (startDex != stringToDecode.length()) {
-        outBuilder.append(URLDecoder.decode(stringToDecode.substring(startDex, stringToDecode.length()),
-                AbfsHttpConstants.UTF_8));
-      }
+        if (startDex != stringToDecode.length()) {
+          outBuilder.append(URLDecoder.decode(
+              stringToDecode.substring(startDex, stringToDecode.length()),
+              StandardCharsets.UTF_8.name()));
+        }
 
-      return outBuilder.toString();
-    } else {
-      return URLDecoder.decode(stringToDecode, AbfsHttpConstants.UTF_8);
+        return outBuilder.toString();
+      } else {
+        return URLDecoder.decode(stringToDecode, StandardCharsets.UTF_8.name());
+      }
+    } catch (UnsupportedEncodingException e) {
+      throw new RuntimeException(e);
     }
   }
 
@@ -456,7 +458,7 @@ public class SharedKeyCredentials {
    */
   private String canonicalize(final HttpURLConnection conn,
                               final String accountName,
-                              final Long contentLength) throws UnsupportedEncodingException {
+                              final Long contentLength) {
 
     if (contentLength < -1) {
       throw new IllegalArgumentException(

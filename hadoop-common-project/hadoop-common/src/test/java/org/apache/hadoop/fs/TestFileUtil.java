@@ -599,7 +599,7 @@ public class TestFileUtil {
     TarOutputStream tos = new TarOutputStream(os);
     try {
       TarEntry te = new TarEntry("/bar/foo");
-      byte[] data = "some-content".getBytes("UTF-8");
+      byte[] data = "some-content".getBytes(StandardCharsets.UTF_8);
       te.setSize(data.length);
       tos.putNextEntry(te);
       tos.write(data);
@@ -694,7 +694,7 @@ public class TestFileUtil {
     ZipOutputStream tos = new ZipOutputStream(os);
     try {
       ZipEntry ze = new ZipEntry("foo");
-      byte[] data = "some-content".getBytes("UTF-8");
+      byte[] data = "some-content".getBytes(StandardCharsets.UTF_8);
       ze.setSize(data.length);
       tos.putNextEntry(ze);
       tos.write(data);
@@ -769,7 +769,7 @@ public class TestFileUtil {
     boolean result = FileUtil.copy(fs, srcPath, dest, false, conf);
     assertTrue(result);
     assertTrue(dest.exists());
-    assertEquals(content.getBytes().length 
+    assertEquals(content.getBytes(StandardCharsets.UTF_8).length 
         + System.getProperty("line.separator").getBytes().length, dest.length());
     assertTrue(srcFile.exists()); // should not be deleted
     
@@ -779,8 +779,10 @@ public class TestFileUtil {
     result = FileUtil.copy(fs, srcPath, dest, true, conf);
     assertTrue(result);
     assertTrue(dest.exists());
-    assertEquals(content.getBytes().length 
-        + System.getProperty("line.separator").getBytes().length, dest.length());
+    assertEquals(content.getBytes(StandardCharsets.UTF_8).length 
+        + System.getProperty("line.separator")
+            .getBytes(StandardCharsets.UTF_8).length,
+        dest.length());
     assertTrue(!srcFile.exists()); // should be deleted
     
     // copy a dir:
@@ -795,7 +797,9 @@ public class TestFileUtil {
     assertEquals(2, files.length);
     for (File f: files) {
       assertEquals(3 
-          + System.getProperty("line.separator").getBytes().length, f.length());
+          + System.getProperty("line.separator")
+              .getBytes(StandardCharsets.UTF_8).length,
+          f.length());
     }
     assertTrue(!partitioned.exists()); // should be deleted
   }  
@@ -849,7 +853,7 @@ public class TestFileUtil {
     Assert.assertFalse(del.exists());
     del.mkdirs();
 
-    byte[] data = "testSymLink".getBytes();
+    byte[] data = "testSymLink".getBytes(StandardCharsets.UTF_8);
 
     File file = new File(del, FILE);
     File link = new File(del, "_link");
@@ -940,7 +944,7 @@ public class TestFileUtil {
     Assert.assertFalse(del.exists());
     del.mkdirs();
 
-    byte[] data = "testSymLinkData".getBytes();
+    byte[] data = "testSymLinkData".getBytes(StandardCharsets.UTF_8);
 
     File file = new File(del, FILE);
     File link = new File(del, "_link");

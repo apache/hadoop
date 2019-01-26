@@ -26,6 +26,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -129,13 +130,13 @@ public class TestCompressionEmulationUtils {
       BufferedReader reader = new BufferedReader(new InputStreamReader(in));
       String line = reader.readLine();
       if (line != null) {
-        long lineSize = line.getBytes().length;
+        long lineSize = line.getBytes(StandardCharsets.UTF_8).length;
         if (lineSize > maxLineSize) {
           maxLineSize = lineSize;
         }
         while (line != null) {
           for (String word : line.split("\\s")) {
-            size += word.getBytes().length;
+            size += word.getBytes(StandardCharsets.UTF_8).length;
           }
           line = reader.readLine();
         }
@@ -551,7 +552,7 @@ public class TestCompressionEmulationUtils {
     CombineFileSplit split = 
       new CombineFileSplit(new Path[] {compressedFile}, new long[] {fileSize});
     FileQueue queue = new FileQueue(split, conf);
-    byte[] bytes = new byte[inputLine.getBytes().length];
+    byte[] bytes = new byte[inputLine.getBytes(StandardCharsets.UTF_8).length];
     queue.read(bytes);
     queue.close();
     String readLine = new String(bytes);

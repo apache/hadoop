@@ -38,6 +38,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -81,7 +82,7 @@ public class TestNameNodeMetadataConsistency {
 
     FileSystem fs = cluster.getFileSystem();
     OutputStream ostream = fs.create(filePath1);
-    ostream.write(TEST_DATA_IN_FUTURE.getBytes());
+    ostream.write(TEST_DATA_IN_FUTURE.getBytes(StandardCharsets.UTF_8));
     ostream.close();
 
     // Re-write the Generation Stamp to a Generation Stamp in future.
@@ -130,7 +131,7 @@ public class TestNameNodeMetadataConsistency {
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
     OutputStream ostream = fs.create(filePath2);
-    ostream.write(testData.getBytes());
+    ostream.write(testData.getBytes(StandardCharsets.UTF_8));
     ostream.close();
 
     ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, filePath2);

@@ -21,6 +21,7 @@ package org.apache.hadoop.streaming;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * This class tests StreamXmlRecordReader
@@ -44,9 +45,9 @@ public class TestStreamXmlRecordReader extends TestStreaming {
     FileOutputStream out = new FileOutputStream(INPUT_FILE.getAbsoluteFile());
     String dummyXmlStartTag = "<PATTERN>\n";
     String dummyXmlEndTag = "</PATTERN>\n";
-    out.write(dummyXmlStartTag.getBytes("UTF-8"));
-    out.write(input.getBytes("UTF-8"));
-    out.write(dummyXmlEndTag.getBytes("UTF-8"));
+    out.write(dummyXmlStartTag.getBytes(StandardCharsets.UTF_8));
+    out.write(input.getBytes(StandardCharsets.UTF_8));
+    out.write(dummyXmlEndTag.getBytes(StandardCharsets.UTF_8));
     out.close();
   }
 

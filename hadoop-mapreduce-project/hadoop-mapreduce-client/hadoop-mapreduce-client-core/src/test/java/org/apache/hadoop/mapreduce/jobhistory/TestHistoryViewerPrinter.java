@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.TimeZone;
 
@@ -1036,7 +1037,7 @@ public class TestHistoryViewerPrinter {
     PrintStream out = new PrintStream(boas, true);
     printer.print(out);
     out.close();
-    String outStr = boas.toString("UTF-8");
+    String outStr = boas.toString(StandardCharsets.UTF_8.name());
     LOG.info("out = " + outStr);
     return outStr;
   }

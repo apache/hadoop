@@ -20,6 +20,7 @@ package org.apache.hadoop.util;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * A simple Hello class that is called from TestRunJar
@@ -30,7 +31,7 @@ public class Hello {
     try {
       System.out.println("Creating file" + args[0]);
       FileOutputStream fstream = new FileOutputStream(args[0]);
-      fstream.write("Hello Hadoopers".getBytes());
+      fstream.write("Hello Hadoopers".getBytes(StandardCharsets.UTF_8));
       fstream.close();
     } catch (IOException e) {
       // do nothing

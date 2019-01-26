@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -156,7 +156,7 @@ public class KafkaSink implements MetricsSink, Closeable {
 
     // Create the record to be sent from the json.
     ProducerRecord<Integer, byte[]> data = new ProducerRecord<Integer, byte[]>(
-        topic, jsonLines.toString().getBytes(Charset.forName("UTF-8")));
+        topic, jsonLines.toString().getBytes(StandardCharsets.UTF_8));
 
     // Send the data to the Kafka broker. Here is an example of this data:
     // {"hostname": "...", "timestamp": 1436913651516,

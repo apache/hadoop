@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.Enumeration;
 import java.util.jar.JarFile;
@@ -144,9 +145,9 @@ public class JarFinder {
           if (path.startsWith("file:")) {
             path = path.substring("file:".length());
           }
-          path = URLDecoder.decode(path, "UTF-8");
+          path = URLDecoder.decode(path, StandardCharsets.UTF_8.name());
           if ("jar".equals(url.getProtocol())) {
-            path = URLDecoder.decode(path, "UTF-8");
+            path = URLDecoder.decode(path, StandardCharsets.UTF_8.name());
             return path.replaceAll("!.*$", "");
           }
           else if ("file".equals(url.getProtocol())) {

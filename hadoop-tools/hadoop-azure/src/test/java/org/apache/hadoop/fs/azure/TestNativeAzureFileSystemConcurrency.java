@@ -22,6 +22,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -62,7 +63,7 @@ public class TestNativeAzureFileSystemConcurrency extends AbstractWasbTestBase {
         .getMetadata(AzureBlobStorageTestAccount.toMockUri(filePath));
     assertNotNull(metadata);
     String linkValue = metadata.get(AzureNativeFileSystemStore.LINK_BACK_TO_UPLOAD_IN_PROGRESS_METADATA_KEY);
-    linkValue = URLDecoder.decode(linkValue, "UTF-8");
+    linkValue = URLDecoder.decode(linkValue, StandardCharsets.UTF_8.name());
     assertNotNull(linkValue);
     assertTrue(backingStore.exists(AzureBlobStorageTestAccount
         .toMockUri(linkValue)));

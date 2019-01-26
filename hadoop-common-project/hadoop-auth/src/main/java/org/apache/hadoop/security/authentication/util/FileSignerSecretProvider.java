@@ -13,7 +13,6 @@
  */
 package org.apache.hadoop.security.authentication.util;
 
-import com.google.common.base.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
@@ -21,7 +20,7 @@ import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 
 import javax.servlet.ServletContext;
 import java.io.*;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 /**
@@ -48,13 +47,13 @@ public class FileSignerSecretProvider extends SignerSecretProvider {
       try {
         StringBuilder sb = new StringBuilder();
         reader = new InputStreamReader(
-            new FileInputStream(signatureSecretFile), Charsets.UTF_8);
+            new FileInputStream(signatureSecretFile), StandardCharsets.UTF_8);
         int c = reader.read();
         while (c > -1) {
           sb.append((char) c);
           c = reader.read();
         }
-        secret = sb.toString().getBytes(Charset.forName("UTF-8"));
+        secret = sb.toString().getBytes(StandardCharsets.UTF_8);
       } catch (IOException ex) {
         throw new RuntimeException("Could not read signature secret file: " +
             signatureSecretFile);

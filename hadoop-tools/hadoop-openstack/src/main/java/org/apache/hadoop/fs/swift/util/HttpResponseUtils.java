@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.swift.util;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -90,7 +91,7 @@ public abstract class HttpResponseUtils {
       throws IOException {
     byte[] rawdata = getResponseBody(resp);
     if (rawdata != null) {
-      return EncodingUtils.getString(rawdata, "UTF-8");
+      return EncodingUtils.getString(rawdata, StandardCharsets.UTF_8.name());
     } else {
       return null;
     }

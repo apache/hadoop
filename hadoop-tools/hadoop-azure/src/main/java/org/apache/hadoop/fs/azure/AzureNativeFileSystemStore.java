@@ -29,6 +29,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.util.Calendar;
 import java.util.Date;
@@ -1670,7 +1671,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     // on the server side to authorize the request.
     String encodedLinkTarget = null;
     if (linkTarget != null) {
-      encodedLinkTarget = URLEncoder.encode(linkTarget, "UTF-8");
+      encodedLinkTarget =
+          URLEncoder.encode(linkTarget, StandardCharsets.UTF_8.name());
     }
     storeMetadataAttribute(blob,
         LINK_BACK_TO_UPLOAD_IN_PROGRESS_METADATA_KEY,
@@ -1687,7 +1689,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         OLD_LINK_BACK_TO_UPLOAD_IN_PROGRESS_METADATA_KEY);
     String linkTarget = null;
     if (encodedLinkTarget != null) {
-      linkTarget = URLDecoder.decode(encodedLinkTarget, "UTF-8");
+      linkTarget =
+          URLDecoder.decode(encodedLinkTarget, StandardCharsets.UTF_8.name());
     }
     return linkTarget;
   }

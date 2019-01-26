@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -53,9 +54,9 @@ final class Utils {
       if(i > 0) {
         sb.append("&");
       }
-      sb.append(URLEncoder.encode(kv[i++], "UTF-8"));
+      sb.append(URLEncoder.encode(kv[i++], StandardCharsets.UTF_8.name()));
       sb.append("=");
-      sb.append(URLEncoder.encode(kv[i++], "UTF-8"));
+      sb.append(URLEncoder.encode(kv[i++], StandardCharsets.UTF_8.name()));
     }
 
     return sb.toString();

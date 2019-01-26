@@ -21,6 +21,7 @@ import static org.apache.hadoop.fs.FileContextTestHelper.readFile;
 import static org.apache.hadoop.fs.FileContextTestHelper.writeFile;
 import static org.junit.Assert.assertTrue;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import org.apache.hadoop.test.GenericTestUtils;
@@ -75,15 +76,16 @@ public abstract class FileContextUtilBase {
     Path file1 = fileContextTestHelper.getTestRootPath(fc, "file1");
     Path file2 = fileContextTestHelper.getTestRootPath(fc, "file2");
     
-    writeFile(fc, file1, ts.getBytes());
+    writeFile(fc, file1, ts.getBytes(StandardCharsets.UTF_8));
     assertTrue(fc.util().exists(file1));
     fc.util().copy(file1, file2);
 
     // verify that newly copied file2 exists
     assertTrue("Failed to copy file2  ", fc.util().exists(file2));
     // verify that file2 contains test string
-    assertTrue("Copied files does not match ",Arrays.equals(ts.getBytes(),
-        readFile(fc,file2,ts.getBytes().length)));
+    assertTrue("Copied files does not match ",
+        Arrays.equals(ts.getBytes(StandardCharsets.UTF_8),
+            readFile(fc, file2, ts.getBytes(StandardCharsets.UTF_8).length)));
   }
 
   @Test
@@ -95,7 +97,7 @@ public abstract class FileContextUtilBase {
 
     Path file1 = new Path(dir1, "file1");
     fc.mkdir(dir1, null, false);
-    writeFile(fc, file1, ts.getBytes());
+    writeFile(fc, file1, ts.getBytes(StandardCharsets.UTF_8));
     assertTrue(fc.util().exists(file1));
 
     Path file2 = new Path(dir2, "file1");
@@ -105,7 +107,8 @@ public abstract class FileContextUtilBase {
     // verify that newly copied file2 exists
     assertTrue("Failed to copy file2  ", fc.util().exists(file2));
     // verify that file2 contains test string
-    assertTrue("Copied files does not match ",Arrays.equals(ts.getBytes(),
-        readFile(fc,file2,ts.getBytes().length)));
+    assertTrue("Copied files does not match ",
+        Arrays.equals(ts.getBytes(StandardCharsets.UTF_8),
+            readFile(fc, file2, ts.getBytes(StandardCharsets.UTF_8).length)));
   }
 }

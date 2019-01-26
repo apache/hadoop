@@ -31,7 +31,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.Writer;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -282,7 +282,7 @@ public class AggregatedLogFormat {
           this.uploadedFiles.add(logFile);
         } catch (IOException e) {
           String message = logErrorMessage(logFile, e);
-          out.write(message.getBytes(Charset.forName("UTF-8")));
+          out.write(message.getBytes(StandardCharsets.UTF_8));
         } finally {
           IOUtils.cleanupWithLogger(LOG, in);
         }
@@ -772,7 +772,7 @@ public class AggregatedLogFormat {
       OutputStream os = null;
       PrintStream ps = null;
       try {
-        os = new WriterOutputStream(writer, Charset.forName("UTF-8"));
+        os = new WriterOutputStream(writer, StandardCharsets.UTF_8);
         ps = new PrintStream(os);
         while (true) {
           try {
@@ -1049,7 +1049,7 @@ public class AggregatedLogFormat {
             new BoundedInputStream(valueStream, currentLogLength);
         currentLogData.setPropagateClose(false);
         currentLogISR = new InputStreamReader(currentLogData,
-            Charset.forName("UTF-8"));
+            StandardCharsets.UTF_8);
         currentLogType = logType;
       } catch (EOFException e) {
       }

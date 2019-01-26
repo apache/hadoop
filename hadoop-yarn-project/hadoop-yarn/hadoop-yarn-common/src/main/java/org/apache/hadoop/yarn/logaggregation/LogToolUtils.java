@@ -25,7 +25,7 @@ import java.io.PrintStream;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import org.apache.commons.lang3.StringUtils;
@@ -97,7 +97,7 @@ public final class LogToolUtils {
       sb.append("LogLength:" + Long.toString(fileLength) + "\n");
       sb.append("LogContents:\n");
       byte[] b = sb.toString().getBytes(
-          Charset.forName("UTF-8"));
+          StandardCharsets.UTF_8);
       os.write(b, 0, b.length);
     }
     while (keepGoing) {
@@ -146,7 +146,7 @@ public final class LogToolUtils {
       sb.append("LogLength:" + Long.toString(fileLength) + "\n");
       sb.append("LogContents:\n");
       byte[] b = sb.toString().getBytes(
-          Charset.forName("UTF-8"));
+          StandardCharsets.UTF_8);
       os.write(b, 0, b.length);
       // output log content
       FileChannel inputChannel = fis.getChannel();

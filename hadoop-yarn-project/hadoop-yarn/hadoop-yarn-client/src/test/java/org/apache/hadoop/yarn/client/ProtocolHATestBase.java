@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.client;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -710,13 +711,14 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
     public Token createFakeToken() {
       String identifier = "fake Token";
       String password = "fake token passwd";
-      Token token = Token.newInstance(
-          identifier.getBytes(), " ", password.getBytes(), " ");
+      Token token =
+          Token.newInstance(identifier.getBytes(StandardCharsets.UTF_8), " ",
+              password.getBytes(StandardCharsets.UTF_8), " ");
       return token;
     }
 
     public long createNextExpirationTime() {
-      return "fake Token".getBytes().length;
+      return "fake Token".getBytes(StandardCharsets.UTF_8).length;
     }
 
     private class CustomedResourceTrackerService extends
@@ -794,7 +796,8 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
       Map<ApplicationAccessType, String> acls =
           new HashMap<ApplicationAccessType, String>();
       acls.put(ApplicationAccessType.MODIFY_APP, "*");
-      ByteBuffer key = ByteBuffer.wrap("fake_key".getBytes());
+      ByteBuffer key =
+          ByteBuffer.wrap("fake_key".getBytes(StandardCharsets.UTF_8));
       return RegisterApplicationMasterResponse.newInstance(minCapability,
           maxCapability, acls, key, new ArrayList<Container>(), "root",
           new ArrayList<NMToken>());

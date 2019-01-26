@@ -20,6 +20,7 @@ package org.apache.hadoop.io.file.tfile;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 
@@ -94,8 +95,10 @@ public class TestTFile {
     String value = "value";
     for (int i = start; i < (start + n); i++) {
       String key = String.format(localFormatter, i);
-      writer.append(key.getBytes(), (value + key).getBytes());
-      writer.append(key.getBytes(), (value + key).getBytes());
+      writer.append(key.getBytes(StandardCharsets.UTF_8),
+          (value + key).getBytes(StandardCharsets.UTF_8));
+      writer.append(key.getBytes(StandardCharsets.UTF_8),
+          (value + key).getBytes(StandardCharsets.UTF_8));
     }
     return (start + n);
   }
@@ -110,17 +113,18 @@ public class TestTFile {
       String keyStr = String.format(localFormatter, i);
       String valStr = value + keyStr;
       assertTrue("btyes for keys do not match " + keyStr + " "
-          + new String(key), Arrays.equals(keyStr.getBytes(), key));
+          + new String(key),
+          Arrays.equals(keyStr.getBytes(StandardCharsets.UTF_8), key));
       assertTrue("bytes for vals do not match " + valStr + " "
-          + new String(val), Arrays.equals(
-          valStr.getBytes(), val));
+          + new String(val),
+          Arrays.equals(valStr.getBytes(StandardCharsets.UTF_8), val));
       assertTrue(scanner.advance());
       key = readKey(scanner);
       val = readValue(scanner);
       assertTrue("btyes for keys do not match", Arrays.equals(
-          keyStr.getBytes(), key));
+          keyStr.getBytes(StandardCharsets.UTF_8), key));
       assertTrue("bytes for vals do not match", Arrays.equals(
-          valStr.getBytes(), val));
+          valStr.getBytes(StandardCharsets.UTF_8), val));
       assertTrue(scanner.advance());
     }
     return (start + n);
@@ -133,8 +137,8 @@ public class TestTFile {
     byte[] value = new byte[largeVal];
     for (int i = start; i < (start + n); i++) {
       String key = String.format(localFormatter, i);
-      writer.append(key.getBytes(), value);
-      writer.append(key.getBytes(), value);
+      writer.append(key.getBytes(StandardCharsets.UTF_8), value);
+      writer.append(key.getBytes(StandardCharsets.UTF_8), value);
     }
     return (start + n);
   }
@@ -147,11 +151,11 @@ public class TestTFile {
       byte[] key = readKey(scanner);
       String keyStr = String.format(localFormatter, i);
       assertTrue("btyes for keys do not match", Arrays.equals(
-          keyStr.getBytes(), key));
+          keyStr.getBytes(StandardCharsets.UTF_8), key));
       scanner.advance();
       key = readKey(scanner);
       assertTrue("btyes for keys do not match", Arrays.equals(
-          keyStr.getBytes(), key));
+          keyStr.getBytes(StandardCharsets.UTF_8), key));
       scanner.advance();
     }
     return (start + n);
@@ -185,17 +189,17 @@ public class TestTFile {
       throws IOException {
     // get the length of the key
     String key = String.format(localFormatter, start);
-    int keyLen = key.getBytes().length;
+    int keyLen = key.getBytes(StandardCharsets.UTF_8).length;
     String value = "value" + key;
-    int valueLen = value.getBytes().length;
+    int valueLen = value.getBytes(StandardCharsets.UTF_8).length;
     for (int i = start; i < (start + n); i++) {
       DataOutputStream out = writer.prepareAppendKey(keyLen);
       String localKey = String.format(localFormatter, i);
-      out.write(localKey.getBytes());
+      out.write(localKey.getBytes(StandardCharsets.UTF_8));
       out.close();
       out = writer.prepareAppendValue(valueLen);
       String localValue = "value" + localKey;
-      out.write(localValue.getBytes());
+      out.write(localValue.getBytes(StandardCharsets.UTF_8));
       out.close();
     }
     return (start + n);
@@ -206,10 +210,12 @@ public class TestTFile {
     for (int i = start; i < (start + n); i++) {
       String key = String.format(localFormatter, i);
       byte[] read = readKey(scanner);
-      assertTrue("keys not equal", Arrays.equals(key.getBytes(), read));
+      assertTrue("keys not equal",
+          Arrays.equals(key.getBytes(StandardCharsets.UTF_8), read));
       String value = "value" + key;
       read = readValue(scanner);
-      assertTrue("values not equal", Arrays.equals(value.getBytes(), read));
+      assertTrue("values not equal",
+          Arrays.equals(value.getBytes(StandardCharsets.UTF_8), read));
       scanner.advance();
     }
     return (start + n);
@@ -220,11 +226,11 @@ public class TestTFile {
     for (int i = start; i < (start + n); i++) {
       DataOutputStream out = writer.prepareAppendKey(-1);
       String localKey = String.format(localFormatter, i);
-      out.write(localKey.getBytes());
+      out.write(localKey.getBytes(StandardCharsets.UTF_8));
       out.close();
       String value = "value" + localKey;
       out = writer.prepareAppendValue(-1);
-      out.write(value.getBytes());
+      out.write(value.getBytes(StandardCharsets.UTF_8));
       out.close();
     }
     return (start + n);
@@ -235,7 +241,8 @@ public class TestTFile {
     for (int i = start; i < start; i++) {
       String key = String.format(localFormatter, i);
       byte[] read = readKey(scanner);
-      assertTrue("keys not equal", Arrays.equals(key.getBytes(), read));
+      assertTrue("keys not equal",
+          Arrays.equals(key.getBytes(StandardCharsets.UTF_8), read));
       try {
         read = readValue(scanner);
         assertTrue(false);
@@ -244,15 +251,18 @@ public class TestTFile {
         // should have thrown exception
       }
       String value = "value" + key;
-      read = readLongValue(scanner, value.getBytes().length);
-      assertTrue("values nto equal", Arrays.equals(read, value.getBytes()));
+      read =
+          readLongValue(scanner, value.getBytes(StandardCharsets.UTF_8).length);
+      assertTrue("values nto equal",
+          Arrays.equals(read, value.getBytes(StandardCharsets.UTF_8)));
       scanner.advance();
     }
     return (start + n);
   }
 
   private byte[] getSomeKey(int rowId) {
-    return String.format(localFormatter, rowId).getBytes();
+    return String.format(localFormatter, rowId)
+        .getBytes(StandardCharsets.UTF_8);
   }
 
   private void writeRecords(Writer writer) throws IOException {
@@ -371,7 +381,7 @@ public class TestTFile {
     for (int i = 0; i < n; i++) {
       DataOutputStream dout =
           writer.prepareMetaBlock("TfileMeta" + i, compression);
-      byte[] b = ("something to test" + i).getBytes();
+      byte[] b = ("something to test" + i).getBytes(StandardCharsets.UTF_8);
       dout.write(b);
       dout.close();
     }
@@ -393,13 +403,13 @@ public class TestTFile {
   }
 
   private void readNumMetablocks(Reader reader, int n) throws IOException {
-    int len = ("something to test" + 0).getBytes().length;
+    int len = ("something to test" + 0).getBytes(StandardCharsets.UTF_8).length;
     for (int i = 0; i < n; i++) {
       DataInputStream din = reader.getMetaBlock("TfileMeta" + i);
       byte b[] = new byte[len];
       din.readFully(b);
       assertTrue("faield to match metadata", Arrays.equals(
-          ("something to test" + i).getBytes(), b));
+          ("something to test" + i).getBytes(StandardCharsets.UTF_8), b));
       din.close();
     }
   }

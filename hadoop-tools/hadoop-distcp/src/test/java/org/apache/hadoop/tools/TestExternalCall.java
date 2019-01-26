@@ -33,6 +33,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.Permission;
 
 public class TestExternalCall {
@@ -97,8 +98,8 @@ public class TestExternalCall {
     Path result = new Path(root + "/" + fname);
     OutputStream out = fs.create(result);
     try {
-      out.write((root + "/" + fname).getBytes());
-      out.write("\n".getBytes());
+      out.write((root + "/" + fname).getBytes(StandardCharsets.UTF_8));
+      out.write("\n".getBytes(StandardCharsets.UTF_8));
     } finally {
       out.close();
     }

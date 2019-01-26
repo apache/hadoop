@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -121,7 +122,7 @@ public class TestContainerLaunchRPC {
             resource, System.currentTimeMillis() + 10000, 42, 42,
             Priority.newInstance(0), 0);
       Token containerToken =
-          newContainerToken(nodeId, "password".getBytes(),
+          newContainerToken(nodeId, "password".getBytes(StandardCharsets.UTF_8),
             containerTokenIdentifier);
 
       StartContainerRequest scRequest =

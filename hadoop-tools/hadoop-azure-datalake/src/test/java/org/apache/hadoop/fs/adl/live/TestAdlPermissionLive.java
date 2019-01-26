@@ -32,7 +32,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -54,8 +53,7 @@ public class TestAdlPermissionLive {
   }
 
   @Parameterized.Parameters(name = "{0}")
-  public static Collection adlCreateNonRecursiveTestData()
-      throws UnsupportedEncodingException {
+  public static Collection adlCreateNonRecursiveTestData() {
     /*
       Test Data
       File/Folder name, User permission, Group permission, Other Permission,

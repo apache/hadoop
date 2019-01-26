@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -236,7 +237,7 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
         BufferedReader reader = null;
         try {
             OutputStream outstream = sock.getOutputStream();
-            outstream.write(cmd.getBytes());
+            outstream.write(cmd.getBytes(StandardCharsets.UTF_8));
             outstream.flush();
             // this replicates NC - close the output stream before reading
             sock.shutdownOutput();

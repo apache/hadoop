@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -823,7 +824,7 @@ public class TestHASafeMode {
       FSDataOutputStream create = dfs.create(filePath,
           FsPermission.getDefault(), true, 1024, (short) 3, testData.length(),
           null);
-      create.write(testData.getBytes());
+      create.write(testData.getBytes(StandardCharsets.UTF_8));
       create.hflush();
       long fileId = ((DFSOutputStream)create.
           getWrappedStream()).getFileId();

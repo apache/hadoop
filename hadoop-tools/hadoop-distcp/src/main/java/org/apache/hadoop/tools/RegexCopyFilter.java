@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -65,7 +66,7 @@ public class RegexCopyFilter extends CopyFilter {
     try {
       InputStream is = new FileInputStream(filtersFile);
       reader = new BufferedReader(new InputStreamReader(is,
-          Charset.forName("UTF-8")));
+          StandardCharsets.UTF_8));
       String line;
       while ((line = reader.readLine()) != null) {
         Pattern pattern = Pattern.compile(line);

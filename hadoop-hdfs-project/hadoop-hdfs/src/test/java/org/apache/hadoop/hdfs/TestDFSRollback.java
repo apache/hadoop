@@ -23,6 +23,7 @@ import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 
@@ -40,7 +41,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.junit.After;
 import org.junit.Test;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 
 /**
@@ -311,8 +311,8 @@ public class TestDFSRollback {
       for (File f : baseDirs) { 
         UpgradeUtilities.corruptFile(
             new File(f,"VERSION"),
-            "layoutVersion".getBytes(Charsets.UTF_8),
-            "xxxxxxxxxxxxx".getBytes(Charsets.UTF_8));
+            "layoutVersion".getBytes(StandardCharsets.UTF_8),
+            "xxxxxxxxxxxxx".getBytes(StandardCharsets.UTF_8));
       }
       startNameNodeShouldFail("file VERSION has layoutVersion missing");
 

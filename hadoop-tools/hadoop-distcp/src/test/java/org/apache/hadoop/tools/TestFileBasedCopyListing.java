@@ -36,6 +36,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -480,8 +481,8 @@ public class TestFileBasedCopyListing {
     OutputStream out = fs.create(listFile);
     try {
       for (String entry : entries){
-        out.write(entry.getBytes());
-        out.write("\n".getBytes());
+        out.write(entry.getBytes(StandardCharsets.UTF_8));
+        out.write("\n".getBytes(StandardCharsets.UTF_8));
       }
     } finally {
       out.close();
@@ -492,8 +493,8 @@ public class TestFileBasedCopyListing {
     for (String entry : entries){
       OutputStream out = fs.create(new Path(entry));
       try {
-        out.write(entry.getBytes());
-        out.write("\n".getBytes());
+        out.write(entry.getBytes(StandardCharsets.UTF_8));
+        out.write("\n".getBytes(StandardCharsets.UTF_8));
       } finally {
         out.close();
       }

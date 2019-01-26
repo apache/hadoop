@@ -135,7 +135,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -399,7 +399,7 @@ public class ResourceManager extends CompositeService
       String defaultFencingAuth =
           zkRootNodeUsername + ":" + zkRootNodePassword;
       byte[] defaultFencingAuthData =
-          defaultFencingAuth.getBytes(Charset.forName("UTF-8"));
+          defaultFencingAuth.getBytes(StandardCharsets.UTF_8);
       String scheme = new DigestAuthenticationProvider().getScheme();
       AuthInfo authInfo = new AuthInfo(scheme, defaultFencingAuthData);
       authInfos.add(authInfo);

@@ -29,6 +29,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configuration;
@@ -78,9 +79,11 @@ public class TestDelegationTokenFetcher {
    */
   @Test
   public void expectedTokenIsRetrievedFromHttp() throws Exception {
-    final Token<DelegationTokenIdentifier> testToken = new Token<DelegationTokenIdentifier>(
-        "id".getBytes(), "pwd".getBytes(), FakeRenewer.KIND, new Text(
-            "127.0.0.1:1234"));
+    final Token<DelegationTokenIdentifier> testToken =
+        new Token<DelegationTokenIdentifier>(
+            "id".getBytes(StandardCharsets.UTF_8),
+            "pwd".getBytes(StandardCharsets.UTF_8), FakeRenewer.KIND,
+            new Text("127.0.0.1:1234"));
 
     WebHdfsFileSystem fs = mock(WebHdfsFileSystem.class);
 

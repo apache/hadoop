@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.concurrent.TimeoutException;
 
@@ -45,7 +46,6 @@ public class TestBalancerBandwidth {
   final static private int DEFAULT_BANDWIDTH = 1024*1024;
   public static final Logger LOG =
       LoggerFactory.getLogger(TestBalancerBandwidth.class);
-  private static final Charset UTF8 = Charset.forName("UTF-8");
   private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
   private final PrintStream outStream = new PrintStream(outContent);
 
@@ -126,7 +126,8 @@ public class TestBalancerBandwidth {
       assertEquals("DFSAdmin should return 0", 0, exitCode);
       String bandwidthOutMsg = "Balancer bandwidth is " + expectedBandwidth
           + " bytes per second.";
-      String strOut = new String(outContent.toByteArray(), UTF8);
+      String strOut =
+          new String(outContent.toByteArray(), StandardCharsets.UTF_8);
       assertTrue("Wrong balancer bandwidth!", strOut.contains(bandwidthOutMsg));
     } finally {
       System.setOut(initialStdOut);

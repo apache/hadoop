@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.nio.charset.StandardCharsets;
 import java.util.AbstractCollection;
 import java.util.BitSet;
 import java.util.Iterator;
@@ -44,7 +45,8 @@ public class TestBloomFilters {
   private static final ImmutableMap<Integer, ? extends AbstractCollection<Key>> FALSE_POSITIVE_UNDER_1000 = ImmutableMap
       .of(Hash.JENKINS_HASH, new AbstractCollection<Key>() {
         final ImmutableList<Key> falsePositive = ImmutableList.<Key> of(
-            new Key("99".getBytes()), new Key("963".getBytes()));
+                new Key("99".getBytes(StandardCharsets.UTF_8)),
+                new Key("963".getBytes(StandardCharsets.UTF_8)));
 
         @Override
         public Iterator<Key> iterator() {
@@ -57,8 +59,10 @@ public class TestBloomFilters {
         }
       }, Hash.MURMUR_HASH, new AbstractCollection<Key>() {
         final ImmutableList<Key> falsePositive = ImmutableList.<Key> of(
-            new Key("769".getBytes()), new Key("772".getBytes()),
-            new Key("810".getBytes()), new Key("874".getBytes()));
+                new Key("769".getBytes(StandardCharsets.UTF_8)),
+                new Key("772".getBytes(StandardCharsets.UTF_8)),
+                new Key("810".getBytes(StandardCharsets.UTF_8)),
+                new Key("874".getBytes(StandardCharsets.UTF_8)));
 
         @Override
         public Iterator<Key> iterator() {
@@ -192,7 +196,7 @@ public class TestBloomFilters {
     filter.addFalsePositive(falsePositives);
 
     for (int i = digits.getStart(); i < numInsertions; i += 2) {
-      filter.add(new Key(Integer.toString(i).getBytes()));
+      filter.add(new Key(Integer.toString(i).getBytes(StandardCharsets.UTF_8)));
     }
 
     for (Key key : falsePositives) {
@@ -201,7 +205,8 @@ public class TestBloomFilters {
 
     for (int i = 1 - digits.getStart(); i < numInsertions; i += 2) {
       assertFalse(" testRetouchedBloomFilterAddFalsePositive error " + i,
-          filter.membershipTest(new Key(Integer.toString(i).getBytes())));
+          filter.membershipTest(
+              new Key(Integer.toString(i).getBytes(StandardCharsets.UTF_8))));
     }
   }
 

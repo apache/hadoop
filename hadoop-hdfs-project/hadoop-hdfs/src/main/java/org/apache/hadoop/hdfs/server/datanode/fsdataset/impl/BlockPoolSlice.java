@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -267,7 +268,8 @@ class BlockPoolSlice {
     Scanner sc;
 
     try {
-      sc = new Scanner(new File(currentDir, DU_CACHE_FILE), "UTF-8");
+      sc = new Scanner(new File(currentDir, DU_CACHE_FILE),
+          StandardCharsets.UTF_8.name());
     } catch (FileNotFoundException fnfe) {
       return -1;
     }
@@ -311,7 +313,7 @@ class BlockPoolSlice {
     try {
       long used = getDfsUsed();
       try (Writer out = new OutputStreamWriter(
-          new FileOutputStream(outFile), "UTF-8")) {
+          new FileOutputStream(outFile), StandardCharsets.UTF_8)) {
         // mtime is written last, so that truncated writes won't be valid.
         out.write(Long.toString(used) + " " + Long.toString(timer.now()));
         // This is only called as part of the volume shutdown.
@@ -571,7 +573,7 @@ class BlockPoolSlice {
           File.pathSeparator + "." + file.getName() + ".restart");
       Scanner sc = null;
       try {
-        sc = new Scanner(restartMeta, "UTF-8");
+        sc = new Scanner(restartMeta, StandardCharsets.UTF_8.name());
         // The restart meta file exists
         if (sc.hasNextLong() && (sc.nextLong() > timer.now())) {
           // It didn't expire. Load the replica as a RBW.

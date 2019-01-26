@@ -24,6 +24,7 @@ import java.net.ConnectException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -368,7 +369,7 @@ public class TopCLI extends YarnCLI {
   private class KeyboardMonitor extends Thread {
 
     public void run() {
-      Scanner keyboard = new Scanner(System.in, "UTF-8");
+      Scanner keyboard = new Scanner(System.in, StandardCharsets.UTF_8.name());
       while (runKeyboardMonitor.get()) {
         String in = keyboard.next();
         try {
@@ -778,7 +779,7 @@ public class TopCLI extends YarnCLI {
       throws IOException, JSONException {
     try(InputStream in = conn.getInputStream()) {
       String encoding = conn.getContentEncoding();
-      encoding = encoding == null ? "UTF-8" : encoding;
+      encoding = encoding == null ? StandardCharsets.UTF_8.name() : encoding;
       String body = IOUtils.toString(in, encoding);
       JSONObject obj = new JSONObject(body);
       JSONObject clusterInfo = obj.getJSONObject("clusterInfo");

@@ -55,6 +55,7 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -884,14 +885,16 @@ public class DFSTestUtil {
   /* Write the given string to the given file */
   public static void writeFile(FileSystem fs, Path p, String s)
       throws IOException {
-    writeFile(fs, p, s.getBytes());
+    writeFile(fs, p, s.getBytes(StandardCharsets.UTF_8));
   }
 
   /* Append the given string to the given file */
   public static void appendFile(FileSystem fs, Path p, String s) 
       throws IOException {
     assert fs.exists(p);
-    try (InputStream is = new ByteArrayInputStream(s.getBytes());
+    try (
+        InputStream is =
+            new ByteArrayInputStream(s.getBytes(StandardCharsets.UTF_8));
       FSDataOutputStream os = fs.append(p)) {
       IOUtils.copyBytes(is, os, s.length());
     }
@@ -1451,7 +1454,7 @@ public class DFSTestUtil {
     
     // OP_REASSIGN_LEASE 22
     String filePath = "/hard-lease-recovery-test";
-    byte[] bytes = "foo-bar-baz".getBytes();
+    byte[] bytes = "foo-bar-baz".getBytes(StandardCharsets.UTF_8);
     DFSClientAdapter.stopLeaseRenewer(filesystem);
     FSDataOutputStream leaseRecoveryPath = filesystem.create(new Path(filePath));
     leaseRecoveryPath.write(bytes);
@@ -1566,13 +1569,13 @@ public class DFSTestUtil {
 
     try (FSDataOutputStream out = filesystem.createFile(
         new Path(ecDir, "replicated")).replicate().build()) {
-      out.write("replicated".getBytes());
+      out.write("replicated".getBytes(StandardCharsets.UTF_8));
     }
 
     try (FSDataOutputStream out = filesystem
         .createFile(new Path(ecDir, "RS-3-2"))
         .ecPolicyName(ecPolicyRS32.getName()).blockSize(1024 * 1024).build()) {
-      out.write("RS-3-2".getBytes());
+      out.write("RS-3-2".getBytes(StandardCharsets.UTF_8));
     }
   }
 

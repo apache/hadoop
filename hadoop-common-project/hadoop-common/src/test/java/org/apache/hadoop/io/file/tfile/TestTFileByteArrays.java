@@ -21,6 +21,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
 import org.junit.Assert;
@@ -238,10 +239,12 @@ public class TestTFileByteArrays {
     writeRecords(3 * records1stBlock);
     Reader reader = new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
     Scanner scanner = reader.createScanner();
-    locate(scanner, composeSortedKey(KEY, 2).getBytes());
-    locate(scanner, composeSortedKey(KEY, records1stBlock - 1).getBytes());
-    locate(scanner, composeSortedKey(KEY, records1stBlock).getBytes());
-    Location locX = locate(scanner, "keyX".getBytes());
+    locate(scanner, composeSortedKey(KEY, 2).getBytes(StandardCharsets.UTF_8));
+    locate(scanner, composeSortedKey(KEY, records1stBlock - 1)
+        .getBytes(StandardCharsets.UTF_8));
+    locate(scanner, composeSortedKey(KEY, records1stBlock)
+        .getBytes(StandardCharsets.UTF_8));
+    Location locX = locate(scanner, "keyX".getBytes(StandardCharsets.UTF_8));
     Assert.assertEquals(scanner.endLocation, locX);
     scanner.close();
     reader.close();
@@ -268,13 +271,14 @@ public class TestTFileByteArrays {
   public void testFailureWriteMetaBlocksWithSameName() throws IOException {
     if (skip)
       return;
-    writer.append("keyX".getBytes(), "valueX".getBytes());
+    writer.append("keyX".getBytes(StandardCharsets.UTF_8),
+        "valueX".getBytes(StandardCharsets.UTF_8));
 
     // create a new metablock
     DataOutputStream outMeta =
         writer.prepareMetaBlock("testX", Compression.Algorithm.GZ.getName());
     outMeta.write(123);
-    outMeta.write("foo".getBytes());
+    outMeta.write("foo".getBytes(StandardCharsets.UTF_8));
     outMeta.close();
     // add the same metablock
     try {
@@ -290,13 +294,14 @@ public class TestTFileByteArrays {
   public void testFailureGetNonExistentMetaBlock() throws IOException {
     if (skip)
       return;
-    writer.append("keyX".getBytes(), "valueX".getBytes());
+    writer.append("keyX".getBytes(StandardCharsets.UTF_8),
+        "valueX".getBytes(StandardCharsets.UTF_8));
 
     // create a new metablock
     DataOutputStream outMeta =
         writer.prepareMetaBlock("testX", Compression.Algorithm.GZ.getName());
     outMeta.write(123);
-    outMeta.write("foo".getBytes());
+    outMeta.write("foo".getBytes(StandardCharsets.UTF_8));
     outMeta.close();
     closeOutput();
 
@@ -318,16 +323,18 @@ public class TestTFileByteArrays {
     if (skip)
       return;
     // write a key/value first
-    writer.append("keyX".getBytes(), "valueX".getBytes());
+    writer.append("keyX".getBytes(StandardCharsets.UTF_8),
+        "valueX".getBytes(StandardCharsets.UTF_8));
     // create a new metablock
     DataOutputStream outMeta =
         writer.prepareMetaBlock("testX", Compression.Algorithm.GZ.getName());
     outMeta.write(123);
-    outMeta.write("dummy".getBytes());
+    outMeta.write("dummy".getBytes(StandardCharsets.UTF_8));
     outMeta.close();
     // add more key/value
     try {
-      writer.append("keyY".getBytes(), "valueY".getBytes());
+      writer.append("keyY".getBytes(StandardCharsets.UTF_8),
+          "valueY".getBytes(StandardCharsets.UTF_8));
       Assert.fail("Cannot add key/value after start adding meta blocks.");
     } catch (Exception e) {
       // noop, expecting exceptions
@@ -423,7 +430,7 @@ public class TestTFileByteArrays {
     Random rand = new Random();
     rand.nextBytes(buf);
     try {
-      writer.append(buf, "valueX".getBytes());
+      writer.append(buf, "valueX".getBytes(StandardCharsets.UTF_8));
     } catch (IndexOutOfBoundsException e) {
       // noop, expecting exceptions
     }
@@ -435,8 +442,10 @@ public class TestTFileByteArrays {
     if (skip)
       return;
     try {
-      writer.append("keyM".getBytes(), "valueM".getBytes());
-      writer.append("keyA".getBytes(), "valueA".getBytes());
+      writer.append("keyM".getBytes(StandardCharsets.UTF_8),
+          "valueM".getBytes(StandardCharsets.UTF_8));
+      writer.append("keyA".getBytes(StandardCharsets.UTF_8),
+          "valueA".getBytes(StandardCharsets.UTF_8));
       Assert.fail("Error on handling out of order keys.");
     } catch (Exception e) {
       // noop, expecting exceptions
@@ -451,7 +460,8 @@ public class TestTFileByteArrays {
     if (skip)
       return;
     try {
-      writer.append("keyX".getBytes(), -1, 4, "valueX".getBytes(), 0, 6);
+      writer.append("keyX".getBytes(StandardCharsets.UTF_8), -1, 4,
+          "valueX".getBytes(StandardCharsets.UTF_8), 0, 6);
       Assert.fail("Error on handling negative offset.");
     } catch (Exception e) {
       // noop, expecting exceptions
@@ -468,7 +478,7 @@ public class TestTFileByteArrays {
     Reader reader = new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
     Scanner scanner = reader.createScanner();
     try {
-      scanner.lowerBound("keyX".getBytes(), -1, 4);
+      scanner.lowerBound("keyX".getBytes(StandardCharsets.UTF_8), -1, 4);
       Assert.fail("Error on handling negative offset.");
     } catch (Exception e) {
       // noop, expecting exceptions
@@ -484,7 +494,8 @@ public class TestTFileByteArrays {
     if (skip)
       return;
     try {
-      writer.append("keyX".getBytes(), 0, -1, "valueX".getBytes(), 0, 6);
+      writer.append("keyX".getBytes(StandardCharsets.UTF_8), 0, -1,
+          "valueX".getBytes(StandardCharsets.UTF_8), 0, 6);
       Assert.fail("Error on handling negative length.");
     } catch (Exception e) {
       // noop, expecting exceptions
@@ -501,7 +512,7 @@ public class TestTFileByteArrays {
     Reader reader = new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
     Scanner scanner = reader.createScanner();
     try {
-      scanner.lowerBound("keyX".getBytes(), 0, -1);
+      scanner.lowerBound("keyX".getBytes(StandardCharsets.UTF_8), 0, -1);
       Assert.fail("Error on handling negative length.");
     } catch (Exception e) {
       // noop, expecting exceptions
@@ -524,7 +535,7 @@ public class TestTFileByteArrays {
     try {
       // test negative array offset
       try {
-        scanner.seekTo("keyY".getBytes(), -1, 4);
+        scanner.seekTo("keyY".getBytes(StandardCharsets.UTF_8), -1, 4);
         Assert.fail("Failed to handle negative offset.");
       } catch (Exception e) {
         // noop, expecting exceptions
@@ -532,7 +543,7 @@ public class TestTFileByteArrays {
 
       // test negative array length
       try {
-        scanner.seekTo("keyY".getBytes(), 0, -2);
+        scanner.seekTo("keyY".getBytes(StandardCharsets.UTF_8), 0, -2);
         Assert.fail("Failed to handle negative key length.");
       } catch (Exception e) {
         // noop, expecting exceptions
@@ -587,8 +598,8 @@ public class TestTFileByteArrays {
     long rawDataSize = 0;
     int nx;
     for (nx = 0; nx < count; nx++) {
-      byte[] key = composeSortedKey(KEY, nx).getBytes();
-      byte[] value = (VALUE + nx).getBytes();
+      byte[] key = composeSortedKey(KEY, nx).getBytes(StandardCharsets.UTF_8);
+      byte[] value = (VALUE + nx).getBytes(StandardCharsets.UTF_8);
       writer.append(key, value);
       rawDataSize +=
           WritableUtils.getVIntSize(key.length) + key.length
@@ -646,7 +657,8 @@ public class TestTFileByteArrays {
   private void checkBlockIndex(int recordIndex, int blockIndexExpected) throws IOException {
     Reader reader = new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
     Scanner scanner = reader.createScanner();
-    scanner.seekTo(composeSortedKey(KEY, recordIndex).getBytes());
+    scanner.seekTo(
+        composeSortedKey(KEY, recordIndex).getBytes(StandardCharsets.UTF_8));
     Assert.assertEquals(blockIndexExpected, scanner.currentLocation
         .getBlockIndex());
     scanner.close();
@@ -659,7 +671,7 @@ public class TestTFileByteArrays {
         new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
     Scanner scanner =
         reader.createScannerByKey(composeSortedKey(KEY, recordIndex)
-            .getBytes(), null);
+            .getBytes(StandardCharsets.UTF_8), null);
 
     try {
       byte[] vbuf = new byte[BUF_SIZE];
@@ -683,7 +695,7 @@ public class TestTFileByteArrays {
     Reader reader = new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
     Scanner scanner =
         reader.createScannerByKey(composeSortedKey(KEY, recordIndex)
-            .getBytes(), null);
+            .getBytes(StandardCharsets.UTF_8), null);
 
     try {
       // read the indexed key
@@ -713,7 +725,7 @@ public class TestTFileByteArrays {
 
     Scanner scanner =
         reader.createScannerByKey(composeSortedKey(KEY, recordIndex)
-            .getBytes(), null);
+            .getBytes(StandardCharsets.UTF_8), null);
 
     byte[] vbuf1 = new byte[BUF_SIZE];
     int vlen1 = scanner.entry().getValueLength();
@@ -737,7 +749,7 @@ public class TestTFileByteArrays {
 
     Scanner scanner =
         reader.createScannerByKey(composeSortedKey(KEY, recordIndex)
-            .getBytes(), null);
+            .getBytes(StandardCharsets.UTF_8), null);
 
     // read the indexed key
     byte[] kbuf1 = new byte[BUF_SIZE];

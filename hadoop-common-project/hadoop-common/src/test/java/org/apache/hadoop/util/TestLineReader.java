@@ -19,6 +19,7 @@
 package org.apache.hadoop.util;
 
 import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.LineReader;
@@ -89,7 +90,8 @@ public class TestLineReader {
 
     TestData = fillerString + TestPartOfInput;
     lineReader = new LineReader(
-        new ByteArrayInputStream(TestData.getBytes()), Delimiter.getBytes());
+        new ByteArrayInputStream(TestData.getBytes(StandardCharsets.UTF_8)),
+        Delimiter.getBytes(StandardCharsets.UTF_8));
     
     line = new Text();
     
@@ -146,7 +148,8 @@ public class TestLineReader {
     TestData = "aaaabccc";
     Delimiter = "aaab";
     lineReader = new LineReader(
-        new ByteArrayInputStream(TestData.getBytes()), Delimiter.getBytes());
+        new ByteArrayInputStream(TestData.getBytes(StandardCharsets.UTF_8)),
+        Delimiter.getBytes(StandardCharsets.UTF_8));
 
     lineReader.readLine(line);
     Assert.assertEquals("a", line.toString());

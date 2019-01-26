@@ -37,6 +37,7 @@ import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -322,7 +323,8 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
 
     // proxyuser
     if (doAs != null) {
-      extraParams.put(DO_AS, URLEncoder.encode(doAs, "UTF-8"));
+      extraParams.put(DO_AS,
+          URLEncoder.encode(doAs, StandardCharsets.UTF_8.name()));
     }
 
     url = augmentURL(url, extraParams);

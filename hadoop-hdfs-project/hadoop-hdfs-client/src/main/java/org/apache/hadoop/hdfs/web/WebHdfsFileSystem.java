@@ -608,7 +608,8 @@ public class WebHdfsFileSystem extends FileSystem
       String fspathUriDecoded = fspathUri.getPath();
       boolean pathAlreadyEncoded = false;
       try {
-        fspathUriDecoded = URLDecoder.decode(fspathUri.getPath(), "UTF-8");
+        fspathUriDecoded = URLDecoder.decode(fspathUri.getPath(),
+            StandardCharsets.UTF_8.name());
         pathAlreadyEncoded = true;
       } catch (IllegalArgumentException ex) {
         LOG.trace("Cannot decode URL encoded file", ex);
@@ -621,7 +622,8 @@ public class WebHdfsFileSystem extends FileSystem
           fsPathEncodedItems.append("/");
           if (fsPathItem.matches(SPECIAL_FILENAME_CHARACTERS_REGEX) ||
               pathAlreadyEncoded) {
-            fsPathEncodedItems.append(URLEncoder.encode(fsPathItem, "UTF-8"));
+            fsPathEncodedItems.append(
+                URLEncoder.encode(fsPathItem, StandardCharsets.UTF_8.name()));
           } else {
             fsPathEncodedItems.append(fsPathItem);
           }

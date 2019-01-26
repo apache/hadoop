@@ -46,14 +46,13 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
 public class CoreFileSystem {
   private static final Logger
     log = LoggerFactory.getLogger(CoreFileSystem.class);
-
-  private static final String UTF_8 = "UTF-8";
 
   protected final FileSystem fileSystem;
   protected final Configuration configuration;
@@ -541,7 +540,7 @@ public class CoreFileSystem {
     try {
       in = fileSystem.open(path);
       int count = in.read(b);
-      return new String(b, 0, count, UTF_8);
+      return new String(b, 0, count, StandardCharsets.UTF_8);
     } finally {
       IOUtils.closeStream(in);
     }

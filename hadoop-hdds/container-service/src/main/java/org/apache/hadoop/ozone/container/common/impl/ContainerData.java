@@ -21,6 +21,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
@@ -87,9 +88,8 @@ public abstract class ContainerData {
   private HddsVolume volume;
 
   private String checksum;
-  public static final Charset CHARSET_ENCODING = Charset.forName("UTF-8");
   private static final String DUMMY_CHECKSUM = new String(new byte[64],
-      CHARSET_ENCODING);
+      StandardCharsets.UTF_8);
 
   // Common Fields need to be stored in .container file.
   protected static final List<String> YAML_FIELDS =

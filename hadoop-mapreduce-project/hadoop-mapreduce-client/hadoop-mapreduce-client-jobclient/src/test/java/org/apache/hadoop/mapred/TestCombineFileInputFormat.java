@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
@@ -54,7 +55,7 @@ public class TestCombineFileInputFormat {
                                 String contents) throws IOException {
     OutputStream stm;
     stm = fs.create(name);
-    stm.write(contents.getBytes());
+    stm.write(contents.getBytes(StandardCharsets.UTF_8));
     stm.close();
   }
   

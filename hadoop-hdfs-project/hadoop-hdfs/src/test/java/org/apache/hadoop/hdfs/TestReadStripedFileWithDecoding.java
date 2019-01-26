@@ -42,6 +42,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 import static org.apache.hadoop.hdfs.ReadStripedFileWithDecodingHelper.CELL_SIZE;
 import static org.apache.hadoop.hdfs.ReadStripedFileWithDecodingHelper.NUM_DATA_UNITS;
@@ -99,7 +100,7 @@ public class TestReadStripedFileWithDecoding {
     // corrupt the block file
     LOG.info("Deliberately corrupting file " + blkFile.getName());
     try (FileOutputStream out = new FileOutputStream(blkFile)) {
-      out.write("corruption".getBytes());
+      out.write("corruption".getBytes(StandardCharsets.UTF_8));
     }
 
     // disable the heartbeat from DN so that the corrupted block record is kept

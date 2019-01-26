@@ -32,6 +32,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
@@ -342,7 +343,7 @@ public class TestJobResourceUploaderWithSharedCache {
     JarOutputStream jos = new JarOutputStream(fos);
     ZipEntry ze = new ZipEntry("distributed.jar.inside" + index);
     jos.putNextEntry(ze);
-    jos.write(("inside the jar!" + index).getBytes());
+    jos.write(("inside the jar!" + index).getBytes(StandardCharsets.UTF_8));
     jos.closeEntry();
     jos.close();
     localFs.setPermission(p, new FsPermission("700"));
@@ -357,7 +358,7 @@ public class TestJobResourceUploaderWithSharedCache {
     ZipOutputStream zos = new ZipOutputStream(out);
     ZipEntry ze = new ZipEntry(file.toString());
     zos.putNextEntry(ze);
-    zos.write(input.getBytes("UTF-8"));
+    zos.write(input.getBytes(StandardCharsets.UTF_8));
     zos.closeEntry();
     zos.close();
     return archive;

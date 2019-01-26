@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.*;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
@@ -110,7 +111,7 @@ public class SortValidator extends Configured implements Tool {
        * @return raw data of the writable
        */
       public byte[] getRawBytes(Writable writable) {
-        return writable.toString().getBytes(); 
+        return writable.toString().getBytes(StandardCharsets.UTF_8); 
       } 
       
       /**
@@ -120,7 +121,7 @@ public class SortValidator extends Configured implements Tool {
        * @return number of raw data bytes
        */
       public int getRawBytesLength(Writable writable) {
-        return writable.toString().getBytes().length; 
+        return writable.toString().getBytes(StandardCharsets.UTF_8).length; 
       }
     }
 

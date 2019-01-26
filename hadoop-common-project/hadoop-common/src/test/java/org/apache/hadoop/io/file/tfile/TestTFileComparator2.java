@@ -18,6 +18,7 @@ package org.apache.hadoop.io.file.tfile;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -70,7 +71,7 @@ public class TestTFileComparator2 {
           }
           dos = writer.prepareAppendValue(-1);
           try {
-            dos.write(buildValue(i).getBytes());
+            dos.write(buildValue(i).getBytes(StandardCharsets.UTF_8));
           } finally {
             dos.close();
           }

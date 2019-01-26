@@ -25,6 +25,7 @@ import java.io.InputStreamReader;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.regex.Matcher;
@@ -246,7 +247,7 @@ public class SysInfoLinux extends SysInfo {
     InputStreamReader fReader;
     try {
       fReader = new InputStreamReader(
-          new FileInputStream(procfsMemFile), Charset.forName("UTF-8"));
+          new FileInputStream(procfsMemFile), StandardCharsets.UTF_8);
       in = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
       // shouldn't happen....
@@ -317,7 +318,7 @@ public class SysInfoLinux extends SysInfo {
     InputStreamReader fReader;
     try {
       fReader = new InputStreamReader(
-          new FileInputStream(procfsCpuFile), Charset.forName("UTF-8"));
+          new FileInputStream(procfsCpuFile), StandardCharsets.UTF_8);
       in = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
       // shouldn't happen....
@@ -377,7 +378,7 @@ public class SysInfoLinux extends SysInfo {
     InputStreamReader fReader;
     try {
       fReader = new InputStreamReader(
-          new FileInputStream(procfsStatFile), Charset.forName("UTF-8"));
+          new FileInputStream(procfsStatFile), StandardCharsets.UTF_8);
       in = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
       // shouldn't happen....
@@ -431,7 +432,7 @@ public class SysInfoLinux extends SysInfo {
     InputStreamReader fReader;
     try {
       fReader = new InputStreamReader(
-          new FileInputStream(procfsNetFile), Charset.forName("UTF-8"));
+          new FileInputStream(procfsNetFile), StandardCharsets.UTF_8);
       in = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
       return;
@@ -485,7 +486,7 @@ public class SysInfoLinux extends SysInfo {
     BufferedReader in;
     try {
       in = new BufferedReader(new InputStreamReader(
-            new FileInputStream(procfsDisksFile), Charset.forName("UTF-8")));
+            new FileInputStream(procfsDisksFile), StandardCharsets.UTF_8));
     } catch (FileNotFoundException f) {
       return;
     }
@@ -552,8 +553,7 @@ public class SysInfoLinux extends SysInfo {
     BufferedReader in;
     try {
       in = new BufferedReader(new InputStreamReader(
-            new FileInputStream(procfsDiskSectorFile),
-              Charset.forName("UTF-8")));
+          new FileInputStream(procfsDiskSectorFile), StandardCharsets.UTF_8));
     } catch (FileNotFoundException f) {
       return defSector;
     }

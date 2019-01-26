@@ -42,6 +42,7 @@ import org.junit.AfterClass;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -183,15 +184,15 @@ public class TestCopyListing extends SimpleCopyListing {
       TestDistCpUtils.createFile(fs, "/tmp/in2/2");
       fs.mkdirs(target);
       OutputStream out = fs.create(p1);
-      out.write("ABC".getBytes());
+      out.write("ABC".getBytes(StandardCharsets.UTF_8));
       out.close();
 
       out = fs.create(p2);
-      out.write("DEF".getBytes());
+      out.write("DEF".getBytes(StandardCharsets.UTF_8));
       out.close();
 
       out = fs.create(p3);
-      out.write("GHIJ".getBytes());
+      out.write("GHIJ".getBytes(StandardCharsets.UTF_8));
       out.close();
 
       Path listingFile = new Path("/tmp/file");

@@ -22,6 +22,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -252,11 +253,12 @@ public class GetJournalEditServlet extends HttpServlet {
     StringBuilder path = new StringBuilder("/getJournal?");
     try {
       path.append(JOURNAL_ID_PARAM).append("=")
-          .append(URLEncoder.encode(journalId, "UTF-8"));
+          .append(URLEncoder.encode(journalId, StandardCharsets.UTF_8.name()));
       path.append("&" + SEGMENT_TXID_PARAM).append("=")
           .append(segmentTxId);
       path.append("&" + STORAGEINFO_PARAM).append("=")
-          .append(URLEncoder.encode(nsInfo.toColonSeparatedString(), "UTF-8"));
+          .append(URLEncoder.encode(nsInfo.toColonSeparatedString(),
+              StandardCharsets.UTF_8.name()));
       path.append("&" + IN_PROGRESS_OK).append("=")
           .append(inProgressOk);
     } catch (UnsupportedEncodingException e) {

@@ -18,6 +18,7 @@
 package org.apache.hadoop.mapred.nativetask.buffer;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 
 import com.google.common.base.Charsets;
 import com.google.common.primitives.Shorts;
@@ -143,7 +144,7 @@ public class TestByteBufferReadWrite {
   }
   
   private static String toString(byte[] str) throws UnsupportedEncodingException {
-    return new String(str, 0, str.length, "UTF-8");
+    return new String(str, 0, str.length, StandardCharsets.UTF_8);
   }
   
   private static class MockDataTarget implements NativeDataTarget {

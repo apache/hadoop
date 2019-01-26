@@ -78,6 +78,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Properties;
 
@@ -1248,7 +1249,7 @@ public final class SwiftRestClient {
       LOG.debug("Authenticating with " + authenticationRequest);
     }
     return new StringEntity(data, ContentType.create("application/json",
-        "UTF-8"));
+        StandardCharsets.UTF_8));
   }
 
   /**
@@ -1607,7 +1608,7 @@ public final class SwiftRestClient {
   private static String encodeUrl(String url) throws SwiftException {
     if (url.matches(".*\\s+.*")) {
       try {
-        url = URLEncoder.encode(url, "UTF-8");
+        url = URLEncoder.encode(url, StandardCharsets.UTF_8.name());
         url = url.replace("+", "%20");
       } catch (UnsupportedEncodingException e) {
         throw new SwiftException("failed to encode URI", e);

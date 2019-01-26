@@ -33,6 +33,7 @@ import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 
 import java.io.*;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
@@ -616,7 +617,7 @@ public class TestLocalFileSystem {
     FSDataOutputStream out = fs.create(file);
 
     try {
-      out.write("text1".getBytes());
+      out.write("text1".getBytes(StandardCharsets.UTF_8));
     } finally {
       out.close();
     }
@@ -625,7 +626,7 @@ public class TestLocalFileSystem {
     out = fs.append(file);
     try {
       assertEquals(5, out.getPos());
-      out.write("text2".getBytes());
+      out.write("text2".getBytes(StandardCharsets.UTF_8));
     } finally {
       out.close();
     }
@@ -670,7 +671,7 @@ public class TestLocalFileSystem {
           fileSys.createFile(path).recursive();
       FSDataOutputStream out = builder.build();
       String content = "Create with a generic type of createFile!";
-      byte[] contentOrigin = content.getBytes("UTF8");
+      byte[] contentOrigin = content.getBytes(StandardCharsets.UTF_8);
       out.write(contentOrigin);
       out.close();
 

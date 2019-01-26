@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -130,7 +131,8 @@ public class TestHistoryServerLeveldbStateStoreService {
     assertTrue("key state not empty", state.tokenMasterKeyState.isEmpty());
 
     // store a key and some tokens
-    final DelegationKey key1 = new DelegationKey(1, 2, "keyData1".getBytes());
+    final DelegationKey key1 =
+        new DelegationKey(1, 2, "keyData1".getBytes(StandardCharsets.UTF_8));
     final MRDelegationTokenIdentifier token1 =
         new MRDelegationTokenIdentifier(new Text("tokenOwner1"),
             new Text("tokenRenewer1"), new Text("tokenUser1"));
@@ -164,8 +166,10 @@ public class TestHistoryServerLeveldbStateStoreService {
 
     // store some more keys and tokens, remove the previous key and one
     // of the tokens, and renew a previous token
-    final DelegationKey key2 = new DelegationKey(3, 4, "keyData2".getBytes());
-    final DelegationKey key3 = new DelegationKey(5, 6, "keyData3".getBytes());
+    final DelegationKey key2 =
+        new DelegationKey(3, 4, "keyData2".getBytes(StandardCharsets.UTF_8));
+    final DelegationKey key3 =
+        new DelegationKey(5, 6, "keyData3".getBytes(StandardCharsets.UTF_8));
     final MRDelegationTokenIdentifier token3 =
         new MRDelegationTokenIdentifier(new Text("tokenOwner3"),
             new Text("tokenRenewer3"), new Text("tokenUser3"));

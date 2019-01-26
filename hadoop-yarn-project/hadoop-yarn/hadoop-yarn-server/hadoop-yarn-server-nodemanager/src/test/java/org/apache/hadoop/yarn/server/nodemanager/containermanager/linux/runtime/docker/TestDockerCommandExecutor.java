@@ -37,7 +37,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -408,7 +408,7 @@ public class TestDockerCommandExecutor {
         String dockerCommandFile = op.getArguments().get(0);
         List<String> dockerCommandFileContents = Files
             .readAllLines(Paths.get(dockerCommandFile),
-                Charset.forName("UTF-8"));
+                StandardCharsets.UTF_8);
         dockerCommands.addAll(dockerCommandFileContents);
       }
       return dockerCommands;

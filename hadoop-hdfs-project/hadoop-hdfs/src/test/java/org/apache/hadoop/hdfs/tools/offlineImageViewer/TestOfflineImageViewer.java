@@ -62,6 +62,7 @@ import java.io.StringReader;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -422,7 +423,7 @@ public class TestOfflineImageViewer {
             }
           });
       p = Pattern.compile("maxFileSize = (\\d+)\n");
-      matcher = p.matcher(output.toString("UTF-8"));
+      matcher = p.matcher(output.toString(StandardCharsets.UTF_8.name()));
       assertTrue(matcher.find() && matcher.groupCount() == 1);
       assertEquals(maxFile.getLen(), Long.parseLong(matcher.group(1)));
     }
@@ -1018,7 +1019,8 @@ public class TestOfflineImageViewer {
   @Test
   public void testReverseXmlWrongLayoutVersion() throws Throwable {
     File imageWrongVersion = new File(tempDir, "imageWrongVersion.xml");
-    PrintWriter writer = new PrintWriter(imageWrongVersion, "UTF-8");
+    PrintWriter writer =
+        new PrintWriter(imageWrongVersion, StandardCharsets.UTF_8.name());
     try {
       writer.println("<?xml version=\"1.0\"?>");
       writer.println("<fsimage>");

@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.BitSet;
 import java.util.ArrayList;
 import java.util.List;
@@ -253,9 +254,9 @@ public class TestMRKeyValueTextInputFormat {
   }
 
   private LineReader makeStream(String str) throws IOException {
-    return new LineReader(new ByteArrayInputStream
-                                           (str.getBytes("UTF-8")), 
-                                           defaultConf);
+    return new LineReader(
+        new ByteArrayInputStream(str.getBytes(StandardCharsets.UTF_8)),
+        defaultConf);
   }
   
   @Test
@@ -298,7 +299,7 @@ public class TestMRKeyValueTextInputFormat {
     } else {
       stm = codec.createOutputStream(fs.create(name));
     }
-    stm.write(contents.getBytes());
+    stm.write(contents.getBytes(StandardCharsets.UTF_8));
     stm.close();
   }
   

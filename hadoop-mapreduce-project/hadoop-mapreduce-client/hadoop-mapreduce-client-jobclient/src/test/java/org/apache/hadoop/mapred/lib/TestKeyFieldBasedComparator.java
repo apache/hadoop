@@ -45,6 +45,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 
 
 public class TestKeyFieldBasedComparator extends HadoopTestCase {
@@ -97,8 +98,8 @@ public class TestKeyFieldBasedComparator extends HadoopTestCase {
     // set up input data in 2 files 
     Path inFile = new Path(inDir, "part0");
     FileOutputStream fos = new FileOutputStream(inFile.toString());
-    fos.write((line1 + "\n").getBytes());
-    fos.write((line2 + "\n").getBytes());
+    fos.write((line1 + "\n").getBytes(StandardCharsets.UTF_8));
+    fos.write((line2 + "\n").getBytes(StandardCharsets.UTF_8));
     fos.close();
     JobClient jc = new JobClient(conf);
     RunningJob r_job = jc.submitJob(conf);
@@ -157,8 +158,8 @@ public class TestKeyFieldBasedComparator extends HadoopTestCase {
     localTestWithoutMRJob("-k9,9", 1);
   }
   
-  byte[] line1_bytes = line1.getBytes();
-  byte[] line2_bytes = line2.getBytes();
+  byte[] line1_bytes = line1.getBytes(StandardCharsets.UTF_8);
+  byte[] line2_bytes = line2.getBytes(StandardCharsets.UTF_8);
 
   public void localTestWithoutMRJob(String keySpec, int expect) throws Exception {
     KeyFieldBasedComparator<Void, Void> keyFieldCmp = new KeyFieldBasedComparator<Void, Void>();

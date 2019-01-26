@@ -31,6 +31,7 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -98,7 +99,8 @@ public class TestHttpExceptionUtils {
   @Test
   public void testValidateResponseNonJsonErrorMessage() throws IOException {
     String msg = "stream";
-    InputStream is = new ByteArrayInputStream(msg.getBytes());
+    InputStream is =
+        new ByteArrayInputStream(msg.getBytes(StandardCharsets.UTF_8));
     HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
     Mockito.when(conn.getErrorStream()).thenReturn(is);
     Mockito.when(conn.getResponseMessage()).thenReturn("msg");
@@ -124,7 +126,8 @@ public class TestHttpExceptionUtils {
     response.put(HttpExceptionUtils.ERROR_JSON, json);
     ObjectMapper jsonMapper = new ObjectMapper();
     String msg = jsonMapper.writeValueAsString(response);
-    InputStream is = new ByteArrayInputStream(msg.getBytes());
+    InputStream is =
+        new ByteArrayInputStream(msg.getBytes(StandardCharsets.UTF_8));
     HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
     Mockito.when(conn.getErrorStream()).thenReturn(is);
     Mockito.when(conn.getResponseMessage()).thenReturn("msg");
@@ -149,7 +152,8 @@ public class TestHttpExceptionUtils {
     response.put(HttpExceptionUtils.ERROR_JSON, json);
     ObjectMapper jsonMapper = new ObjectMapper();
     String msg = jsonMapper.writeValueAsString(response);
-    InputStream is = new ByteArrayInputStream(msg.getBytes());
+    InputStream is =
+        new ByteArrayInputStream(msg.getBytes(StandardCharsets.UTF_8));
     HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
     Mockito.when(conn.getErrorStream()).thenReturn(is);
     Mockito.when(conn.getResponseMessage()).thenReturn("msg");

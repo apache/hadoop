@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -71,7 +72,7 @@ public class TestTaskAttemptContainerRequest {
   @Test
   public void testAttemptContainerRequest() throws Exception {
     final Text SECRET_KEY_ALIAS = new Text("secretkeyalias");
-    final byte[] SECRET_KEY = ("secretkey").getBytes();
+    final byte[] SECRET_KEY = ("secretkey").getBytes(StandardCharsets.UTF_8);
     Map<ApplicationAccessType, String> acls =
         new HashMap<ApplicationAccessType, String>(1);
     acls.put(ApplicationAccessType.VIEW_APP, "otheruser");
@@ -96,7 +97,8 @@ public class TestTaskAttemptContainerRequest {
     Credentials credentials = new Credentials();
     credentials.addSecretKey(SECRET_KEY_ALIAS, SECRET_KEY);
     Token<JobTokenIdentifier> jobToken = new Token<JobTokenIdentifier>(
-        ("tokenid").getBytes(), ("tokenpw").getBytes(),
+        ("tokenid").getBytes(StandardCharsets.UTF_8),
+        ("tokenpw").getBytes(StandardCharsets.UTF_8),
         new Text("tokenkind"), new Text("tokenservice"));
 
     TaskAttemptImpl taImpl =

@@ -36,6 +36,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -362,8 +363,8 @@ public class TestIntegration {
   
   @Test(timeout=100000)
   public void testOverwrite() {
-    byte[] contents1 = "contents1".getBytes();
-    byte[] contents2 = "contents2".getBytes();
+    byte[] contents1 = "contents1".getBytes(StandardCharsets.UTF_8);
+    byte[] contents2 = "contents2".getBytes(StandardCharsets.UTF_8);
     Assert.assertEquals(contents1.length, contents2.length);
     
     try {
@@ -516,8 +517,8 @@ public class TestIntegration {
     OutputStream out = fs.create(listFile);
     try {
       for (String entry : entries){
-        out.write((root + "/" + entry).getBytes());
-        out.write("\n".getBytes());
+        out.write((root + "/" + entry).getBytes(StandardCharsets.UTF_8));
+        out.write("\n".getBytes(StandardCharsets.UTF_8));
       }
     } finally {
       out.close();
@@ -528,8 +529,8 @@ public class TestIntegration {
     for (String entry : entries){
       OutputStream out = fs.create(new Path(root + "/" + entry));
       try {
-        out.write((root + "/" + entry).getBytes());
-        out.write("\n".getBytes());
+        out.write((root + "/" + entry).getBytes(StandardCharsets.UTF_8));
+        out.write("\n".getBytes(StandardCharsets.UTF_8));
       } finally {
         out.close();
       }

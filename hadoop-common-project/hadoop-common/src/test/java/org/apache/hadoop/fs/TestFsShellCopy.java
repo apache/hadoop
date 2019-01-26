@@ -30,6 +30,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -563,7 +564,7 @@ public class TestFsShellCopy {
   private void createFile(Path ... paths) throws IOException {
     for (Path path : paths) {
       FSDataOutputStream out = lfs.create(path);
-      out.write(path.getName().getBytes());
+      out.write(path.getName().getBytes(StandardCharsets.UTF_8));
       out.close();
     }
   }

@@ -33,6 +33,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -441,7 +442,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       try (DataOutputStream out =
                lfs.create(wrapperScriptPath, EnumSet.of(CREATE, OVERWRITE));
            PrintStream pout =
-               new PrintStream(out, false, "UTF-8")) {
+               new PrintStream(out, false, StandardCharsets.UTF_8.name())) {
         writeLocalWrapperScript(launchDst, pidFile, pout);
       }
     }
@@ -512,7 +513,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       try (DataOutputStream out =
                lfs.create(sessionScriptPath, EnumSet.of(CREATE, OVERWRITE));
            PrintStream pout =
-               new PrintStream(out, false, "UTF-8")) {
+               new PrintStream(out, false, StandardCharsets.UTF_8.name())) {
         // We need to do a move as writing to a file is not atomic
         // Process reading a file being written to may get garbled data
         // hence write pid to tmp file first followed by a mv

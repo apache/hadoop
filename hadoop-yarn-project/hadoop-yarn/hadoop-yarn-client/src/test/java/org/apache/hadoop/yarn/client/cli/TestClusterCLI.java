@@ -30,6 +30,7 @@ import static org.mockito.Mockito.when;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -73,7 +74,7 @@ public class TestClusterCLI {
     PrintWriter pw = new PrintWriter(baos);
     pw.print("Node Labels: <label1:exclusivity=true>,<label2:exclusivity=true>");
     pw.close();
-    verify(sysOut).println(baos.toString("UTF-8"));
+    verify(sysOut).println(baos.toString(StandardCharsets.UTF_8.name()));
   }
 
   @Test
@@ -94,7 +95,7 @@ public class TestClusterCLI {
     pw.println("rm.yarn.io/GPU(STRING)");
     pw.println("rm.yarn.io/CPU(STRING)");
     pw.close();
-    verify(sysOut).println(baos.toString("UTF-8"));
+    verify(sysOut).println(baos.toString(StandardCharsets.UTF_8.name()));
   }
 
   @Test
@@ -119,7 +120,7 @@ public class TestClusterCLI {
     // it should return local* instead of remote*
     pw.print("Node Labels: <local1:exclusivity=true>,<local2:exclusivity=true>");
     pw.close();
-    verify(sysOut).println(baos.toString("UTF-8"));
+    verify(sysOut).println(baos.toString(StandardCharsets.UTF_8.name()));
   }
   
   @Test
@@ -135,7 +136,7 @@ public class TestClusterCLI {
     PrintWriter pw = new PrintWriter(baos);
     pw.print("Node Labels: ");
     pw.close();
-    verify(sysOut).println(baos.toString("UTF-8"));
+    verify(sysOut).println(baos.toString(StandardCharsets.UTF_8.name()));
   }
   
   @Test
@@ -174,7 +175,7 @@ public class TestClusterCLI {
     pw.println(" -lnl,--list-node-labels                   List cluster node-label");
     pw.println("                                           collection");
     pw.close();
-    verify(sysOut).println(baos.toString("UTF-8"));
+    verify(sysOut).println(baos.toString(StandardCharsets.UTF_8.name()));
   }
 
   private ClusterCLI createAndGetClusterCLI() {

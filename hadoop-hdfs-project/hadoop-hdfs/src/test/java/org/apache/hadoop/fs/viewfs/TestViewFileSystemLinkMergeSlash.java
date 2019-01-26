@@ -22,6 +22,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -148,7 +149,7 @@ public class TestViewFileSystemLinkMergeSlash extends ViewFileSystemBaseTest {
     String testFileName = "testLinkMergeSlash";
 
     File infile = new File(TEST_DIR, testFileName);
-    final byte[] content = "HelloWorld".getBytes();
+    final byte[] content = "HelloWorld".getBytes(StandardCharsets.UTF_8);
     FileOutputStream fos = null;
     try {
       fos = new FileOutputStream(infile);

@@ -51,6 +51,7 @@ import java.lang.reflect.Modifier;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
 import java.util.concurrent.TimeUnit;
@@ -1081,7 +1082,7 @@ public class TestFileCreation {
       final String f = DIR + "foo";
       final Path fpath = new Path(f);
       HdfsDataOutputStream out = create(dfs, fpath, DATANODE_NUM);
-      out.write("something".getBytes());
+      out.write("something".getBytes(StandardCharsets.UTF_8));
       out.hflush();
       int actualRepl = out.getCurrentBlockReplication();
       assertTrue(f + " should be replicated to " + DATANODE_NUM + " datanodes.",
@@ -1136,7 +1137,7 @@ public class TestFileCreation {
       final String f = DIR + "foofs";
       final Path fpath = new Path(f);
       FSDataOutputStream out = TestFileCreation.createFile(dfs, fpath, DATANODE_NUM);
-      out.write("something".getBytes());
+      out.write("something".getBytes(StandardCharsets.UTF_8));
 
       // close file system without closing file
       dfs.close();
@@ -1168,7 +1169,7 @@ public class TestFileCreation {
       final String f = DIR + "testFsCloseAfterClusterShutdown";
       final Path fpath = new Path(f);
       FSDataOutputStream out = TestFileCreation.createFile(dfs, fpath, DATANODE_NUM);
-      out.write("something_test".getBytes());
+      out.write("something_test".getBytes(StandardCharsets.UTF_8));
       out.hflush();    // ensure that block is allocated
 
       // shutdown last datanode in pipeline.

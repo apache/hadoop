@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -222,11 +223,11 @@ public class AMRMProxyService extends CompositeService implements
         for (Map.Entry<String, byte[]> contextEntry : entry.getValue()
             .entrySet()) {
           if (contextEntry.getKey().equals(NMSS_USER_KEY)) {
-            user = new String(contextEntry.getValue(), "UTF-8");
+            user = new String(contextEntry.getValue(), StandardCharsets.UTF_8);
           } else if (contextEntry.getKey().equals(NMSS_AMRMTOKEN_KEY)) {
             amrmToken = new Token<>();
             amrmToken.decodeFromUrlString(
-                new String(contextEntry.getValue(), "UTF-8"));
+                new String(contextEntry.getValue(), StandardCharsets.UTF_8));
             // Clear the service field, as if RM just issued the token
             amrmToken.setService(new Text());
           }
@@ -470,10 +471,11 @@ public class AMRMProxyService extends CompositeService implements
       if (!isRecovery && this.nmContext.getNMStateStore() != null) {
         try {
           this.nmContext.getNMStateStore().storeAMRMProxyAppContextEntry(
-              applicationAttemptId, NMSS_USER_KEY, user.getBytes("UTF-8"));
+              applicationAttemptId, NMSS_USER_KEY,
+              user.getBytes(StandardCharsets.UTF_8));
           this.nmContext.getNMStateStore().storeAMRMProxyAppContextEntry(
               applicationAttemptId, NMSS_AMRMTOKEN_KEY,
-              amrmToken.encodeToUrlString().getBytes("UTF-8"));
+              amrmToken.encodeToUrlString().getBytes(StandardCharsets.UTF_8));
         } catch (IOException e) {
           LOG.error("Error storing AMRMProxy application context entry for "
               + applicationAttemptId, e);
@@ -558,7 +560,7 @@ public class AMRMProxyService extends CompositeService implements
         try {
           this.nmContext.getNMStateStore().storeAMRMProxyAppContextEntry(
               context.getApplicationAttemptId(), NMSS_AMRMTOKEN_KEY,
-              newToken.encodeToUrlString().getBytes("UTF-8"));
+              newToken.encodeToUrlString().getBytes(StandardCharsets.UTF_8));
         } catch (IOException e) {
           LOG.error("Error storing AMRMProxy application context entry for "
               + context.getApplicationAttemptId(), e);

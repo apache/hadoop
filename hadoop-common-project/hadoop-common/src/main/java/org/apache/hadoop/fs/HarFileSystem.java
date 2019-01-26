@@ -34,6 +34,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
@@ -252,7 +253,7 @@ public class HarFileSystem extends FileSystem {
 
   private static String decodeString(String str)
     throws UnsupportedEncodingException {
-    return URLDecoder.decode(str, "UTF-8");
+    return URLDecoder.decode(str, StandardCharsets.UTF_8.name());
   }
 
   private String decodeFileName(String fname)

@@ -57,6 +57,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.UUID;
 
@@ -279,7 +280,7 @@ public class TestNameNodePrunesMissingStorages {
     File newVersionFile =
         new File(versionFile.getParent(), UUID.randomUUID().toString());
     Writer out = new BufferedWriter(new OutputStreamWriter(
-        new FileOutputStream(newVersionFile), "UTF-8"));
+        new FileOutputStream(newVersionFile), StandardCharsets.UTF_8));
     final String STORAGE_ID = "storageID=";
     boolean success = false;
     try {

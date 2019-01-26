@@ -22,6 +22,8 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.nio.charset.StandardCharsets;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
@@ -54,15 +56,14 @@ public class TestEncryptionZoneManager {
     this.mockedINodesInPath = mock(INodesInPath.class);
     this.defaultPermission = new PermissionStatus("test", "test",
       new FsPermission((short) 755));
-    this.rootINode =
-        new INodeDirectory(0L, "".getBytes(), defaultPermission,
-          System.currentTimeMillis());
+    this.rootINode = new INodeDirectory(0L, "".getBytes(StandardCharsets.UTF_8),
+        defaultPermission, System.currentTimeMillis());
     this.firstINode =
-        new INodeDirectory(1L, "first".getBytes(), defaultPermission,
-          System.currentTimeMillis());
+        new INodeDirectory(1L, "first".getBytes(StandardCharsets.UTF_8),
+            defaultPermission, System.currentTimeMillis());
     this.secondINode =
-        new INodeDirectory(2L, "second".getBytes(), defaultPermission,
-          System.currentTimeMillis());
+        new INodeDirectory(2L, "second".getBytes(StandardCharsets.UTF_8),
+            defaultPermission, System.currentTimeMillis());
     when(this.mockedDir.hasReadLock()).thenReturn(true);
     when(this.mockedDir.hasWriteLock()).thenReturn(true);
     when(this.mockedDir.getInode(0L)).thenReturn(rootINode);
@@ -138,8 +139,9 @@ public class TestEncryptionZoneManager {
 
   @Test
   public void testListEncryptionZonesSubDirInvalid() throws Exception{
-    INodeDirectory thirdINode = new INodeDirectory(3L, "third".getBytes(),
-        defaultPermission, System.currentTimeMillis());
+    INodeDirectory thirdINode =
+        new INodeDirectory(3L, "third".getBytes(StandardCharsets.UTF_8),
+            defaultPermission, System.currentTimeMillis());
     when(this.mockedDir.getInode(3L)).thenReturn(thirdINode);
     //sets "second" as parent
     thirdINode.setParent(this.secondINode);

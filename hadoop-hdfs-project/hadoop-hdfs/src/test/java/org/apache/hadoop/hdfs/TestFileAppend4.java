@@ -29,6 +29,7 @@ import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -300,12 +301,12 @@ public class TestFileAppend4 {
       fileSystem = cluster.getFileSystem();
       Path f = new Path("/testAppend");
       FSDataOutputStream create = fileSystem.create(f, (short) 2);
-      create.write("/testAppend".getBytes());
+      create.write("/testAppend".getBytes(StandardCharsets.UTF_8));
       create.close();
 
       // Append to the file.
       FSDataOutputStream append = fileSystem.append(f);
-      append.write("/testAppend".getBytes());
+      append.write("/testAppend".getBytes(StandardCharsets.UTF_8));
       append.close();
 
       // Start a new datanode
@@ -343,7 +344,7 @@ public class TestFileAppend4 {
       fileSystem = cluster.getFileSystem();
       Path f = new Path("/testAppend");
       FSDataOutputStream create = fileSystem.create(f, (short) 2);
-      create.write("/testAppend".getBytes());
+      create.write("/testAppend".getBytes(StandardCharsets.UTF_8));
       create.close();
 
       // Check for replications

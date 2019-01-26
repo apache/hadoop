@@ -23,6 +23,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
@@ -44,9 +45,9 @@ public class TestMapWritable {
     };
     
     BytesWritable[] values = {
-        new BytesWritable("value1".getBytes()),
-        new BytesWritable("value2".getBytes()),
-        new BytesWritable("value3".getBytes())
+        new BytesWritable("value1".getBytes(StandardCharsets.UTF_8)),
+        new BytesWritable("value2".getBytes(StandardCharsets.UTF_8)),
+        new BytesWritable("value3".getBytes(StandardCharsets.UTF_8))
     };
 
     MapWritable inMap = new MapWritable();

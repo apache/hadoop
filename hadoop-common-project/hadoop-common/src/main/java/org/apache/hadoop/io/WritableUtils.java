@@ -19,6 +19,7 @@
 package org.apache.hadoop.io;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -86,12 +87,13 @@ public final class WritableUtils  {
   public static String readCompressedString(DataInput in) throws IOException {
     byte[] bytes = readCompressedByteArray(in);
     if (bytes == null) return null;
-    return new String(bytes, "UTF-8");
+    return new String(bytes, StandardCharsets.UTF_8);
   }
 
 
   public static int  writeCompressedString(DataOutput out, String s) throws IOException {
-    return writeCompressedByteArray(out, (s != null) ? s.getBytes("UTF-8") : null);
+    return writeCompressedByteArray(out,
+        (s != null) ? s.getBytes(StandardCharsets.UTF_8) : null);
   }
 
   /*
@@ -103,7 +105,7 @@ public final class WritableUtils  {
    */
   public static void writeString(DataOutput out, String s) throws IOException {
     if (s != null) {
-      byte[] buffer = s.getBytes("UTF-8");
+      byte[] buffer = s.getBytes(StandardCharsets.UTF_8);
       int len = buffer.length;
       out.writeInt(len);
       out.write(buffer, 0, len);
@@ -123,7 +125,7 @@ public final class WritableUtils  {
     if (length == -1) return null;
     byte[] buffer = new byte[length];
     in.readFully(buffer);      // could/should use readFully(buffer,0,length)?
-    return new String(buffer,"UTF-8");  
+    return new String(buffer, StandardCharsets.UTF_8);  
   }
 
 

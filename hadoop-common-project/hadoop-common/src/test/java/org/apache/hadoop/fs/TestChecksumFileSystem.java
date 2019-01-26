@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import org.apache.hadoop.fs.FileSystem;
@@ -59,11 +60,11 @@ public class TestChecksumFileSystem {
     Path testPath = new Path(TEST_ROOT_DIR, "testPath");
     Path testPath11 = new Path(TEST_ROOT_DIR, "testPath11");
     FSDataOutputStream fout = localFs.create(testPath);
-    fout.write("testing".getBytes());
+    fout.write("testing".getBytes(StandardCharsets.UTF_8));
     fout.close();
     
     fout = localFs.create(testPath11);
-    fout.write("testing you".getBytes());
+    fout.write("testing you".getBytes(StandardCharsets.UTF_8));
     fout.close();
 
     // Exercise some boundary cases - a divisor of the chunk size
@@ -103,7 +104,7 @@ public class TestChecksumFileSystem {
     Path testPath = new Path(TEST_ROOT_DIR, "testMultiChunk");
     FSDataOutputStream fout = localFs.create(testPath);
     for (int i = 0; i < 1000; i++) {
-      fout.write(("testing" + i).getBytes());
+      fout.write(("testing" + i).getBytes(StandardCharsets.UTF_8));
     }
     fout.close();
 
@@ -126,7 +127,7 @@ public class TestChecksumFileSystem {
   public void testTruncatedChecksum() throws Exception { 
     Path testPath = new Path(TEST_ROOT_DIR, "testtruncatedcrc");
     FSDataOutputStream fout = localFs.create(testPath);
-    fout.write("testing truncation".getBytes());
+    fout.write("testing truncation".getBytes(StandardCharsets.UTF_8));
     fout.close();
 
     // Read in the checksum
@@ -180,14 +181,14 @@ public class TestChecksumFileSystem {
 
     // write a file to generate checksum
     FSDataOutputStream out = localFs.create(testPath, true);
-    out.write("testing 1 2 3".getBytes());
+    out.write("testing 1 2 3".getBytes(StandardCharsets.UTF_8));
     out.close();
     assertTrue(localFs.exists(checksumPath));
     FileStatus stat = localFs.getFileStatus(checksumPath);
     
     // alter file directly so checksum is invalid
     out = localFs.getRawFileSystem().create(testPath, true);
-    out.write("testing stale checksum".getBytes());
+    out.write("testing stale checksum".getBytes(StandardCharsets.UTF_8));
     out.close();
     assertTrue(localFs.exists(checksumPath));
     // checksum didn't change on disk

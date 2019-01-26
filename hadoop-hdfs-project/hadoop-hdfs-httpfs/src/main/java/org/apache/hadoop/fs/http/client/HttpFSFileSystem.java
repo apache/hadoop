@@ -23,7 +23,6 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 
-import com.google.common.base.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
@@ -81,6 +80,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.text.MessageFormat;
 import java.util.HashMap;
@@ -743,7 +743,7 @@ public class HttpFSFileSystem extends FileSystem
     Map<String, String> params = new HashMap<String, String>();
     params.put(OP_PARAM, Operation.LISTSTATUS_BATCH.toString());
     if (token != null) {
-      params.put(START_AFTER_PARAM, new String(token, Charsets.UTF_8));
+      params.put(START_AFTER_PARAM, new String(token, StandardCharsets.UTF_8));
     }
     HttpURLConnection conn = getConnection(
         Operation.LISTSTATUS_BATCH.getMethod(),
@@ -758,7 +758,7 @@ public class HttpFSFileSystem extends FileSystem
     byte[] newToken = null;
     if (statuses.length > 0) {
       newToken = statuses[statuses.length - 1].getPath().getName().toString()
-          .getBytes(Charsets.UTF_8);
+          .getBytes(StandardCharsets.UTF_8);
     }
     // Parse the remainingEntries boolean into hasMore
     final long remainingEntries = (Long) listing.get(REMAINING_ENTRIES_JSON);

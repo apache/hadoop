@@ -23,6 +23,7 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -535,9 +536,12 @@ public class TestDelegationToken {
 
   @Test
   public void testDelegationKeyEqualAndHash() {
-    DelegationKey key1 = new DelegationKey(1111, 2222, "keyBytes".getBytes());
-    DelegationKey key2 = new DelegationKey(1111, 2222, "keyBytes".getBytes());
-    DelegationKey key3 = new DelegationKey(3333, 2222, "keyBytes".getBytes());
+    DelegationKey key1 = new DelegationKey(1111, 2222,
+        "keyBytes".getBytes(StandardCharsets.UTF_8));
+    DelegationKey key2 = new DelegationKey(1111, 2222,
+        "keyBytes".getBytes(StandardCharsets.UTF_8));
+    DelegationKey key3 = new DelegationKey(3333, 2222,
+        "keyBytes".getBytes(StandardCharsets.UTF_8));
     Assert.assertEquals(key1, key2);
     Assert.assertFalse(key2.equals(key3));
   }

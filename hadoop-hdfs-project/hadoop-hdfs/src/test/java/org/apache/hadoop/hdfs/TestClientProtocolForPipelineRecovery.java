@@ -21,6 +21,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -473,7 +474,7 @@ public class TestClientProtocolForPipelineRecovery {
         public void run() {
           while (running.get()) {
             try {
-              out.write("test".getBytes());
+              out.write("test".getBytes(StandardCharsets.UTF_8));
               out.hflush();
               // Keep writing data every one second
               Thread.sleep(1000);
@@ -522,7 +523,7 @@ public class TestClientProtocolForPipelineRecovery {
       assertFalse("Write should be going on", failed.get());
       running.set(false);
       t.join();
-      out.write("testagain".getBytes());
+      out.write("testagain".getBytes(StandardCharsets.UTF_8));
       assertTrue("There should be atleast 2 nodes in pipeline still", out
           .getPipeline().length >= 2);
       out.close();

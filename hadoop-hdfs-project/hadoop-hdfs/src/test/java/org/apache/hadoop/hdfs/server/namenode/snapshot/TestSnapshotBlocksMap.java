@@ -26,6 +26,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -390,7 +391,7 @@ public class TestSnapshotBlocksMap {
   public void testDeletionOfLaterBlocksWithZeroSizeFirstBlock() throws Exception {
     final Path foo = new Path("/foo");
     final Path bar = new Path(foo, "bar");
-    final byte[] testData = "foo bar baz".getBytes();
+    final byte[] testData = "foo bar baz".getBytes(StandardCharsets.UTF_8);
     
     // Create a zero-length file.
     DFSTestUtil.createFile(hdfs, bar, 0, REPLICATION, 0L);

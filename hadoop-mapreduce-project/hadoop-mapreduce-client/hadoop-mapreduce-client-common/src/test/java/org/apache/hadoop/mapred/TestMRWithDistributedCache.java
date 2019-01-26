@@ -23,6 +23,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
@@ -217,7 +218,7 @@ public class TestMRWithDistributedCache {
     JarOutputStream jos = new JarOutputStream(fos);
     ZipEntry ze = new ZipEntry("distributed.jar.inside" + index);
     jos.putNextEntry(ze);
-    jos.write(("inside the jar!" + index).getBytes());
+    jos.write(("inside the jar!" + index).getBytes(StandardCharsets.UTF_8));
     jos.closeEntry();
     jos.close();
     return p;

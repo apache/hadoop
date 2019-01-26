@@ -32,7 +32,7 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -734,7 +734,7 @@ public class FileUtil {
             try (BufferedReader reader =
                      new BufferedReader(
                          new InputStreamReader(process.getInputStream(),
-                             Charset.forName("UTF-8")))) {
+                             StandardCharsets.UTF_8))) {
               String line;
               while((line = reader.readLine()) != null) {
                 LOG.debug(line);
@@ -757,7 +757,7 @@ public class FileUtil {
             try (BufferedReader reader =
                      new BufferedReader(
                          new InputStreamReader(process.getErrorStream(),
-                             Charset.forName("UTF-8")))) {
+                             StandardCharsets.UTF_8))) {
               String line;
               while((line = reader.readLine()) != null) {
                 LOG.debug(line);

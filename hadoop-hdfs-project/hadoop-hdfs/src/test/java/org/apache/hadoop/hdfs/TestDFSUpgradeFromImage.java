@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -205,7 +206,7 @@ public class TestDFSUpgradeFromImage {
       boolean isDir = fileMap.get(path);
       
       String pathName = path.toUri().getPath();
-      overallChecksum.update(pathName.getBytes());
+      overallChecksum.update(pathName.getBytes(StandardCharsets.UTF_8));
       
       if ( isDir ) {
         verifyDir(dfs, path, overallChecksum);

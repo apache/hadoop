@@ -19,6 +19,7 @@ package org.apache.hadoop.fs.sftp;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
@@ -221,7 +222,7 @@ public class TestSFTPFileSystem {
    */
   @Test
   public void testReadFile() throws Exception {
-    byte[] data = "yaks".getBytes();
+    byte[] data = "yaks".getBytes(StandardCharsets.UTF_8);
     Path file = touch(localFs, name.getMethodName().toLowerCase(), data);
     FSDataInputStream is = null;
     try {
@@ -246,7 +247,7 @@ public class TestSFTPFileSystem {
    */
   @Test
   public void testStatFile() throws Exception {
-    byte[] data = "yaks".getBytes();
+    byte[] data = "yaks".getBytes(StandardCharsets.UTF_8);
     Path file = touch(localFs, name.getMethodName().toLowerCase(), data);
 
     FileStatus lstat = localFs.getFileStatus(file);
@@ -295,7 +296,6 @@ public class TestSFTPFileSystem {
    */
   @Test
   public void testRenameFile() throws Exception {
-    byte[] data = "dingos".getBytes();
     Path file1 = touch(localFs, name.getMethodName().toLowerCase() + "1");
     Path file2 = new Path(localDir, name.getMethodName().toLowerCase() + "2");
 

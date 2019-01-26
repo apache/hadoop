@@ -20,6 +20,7 @@ package org.apache.hadoop.streaming;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.mapred.JobConf;
 
@@ -28,11 +29,10 @@ public class PipeCombiner extends PipeReducer {
     String str = job.get("stream.combine.streamprocessor");
     try {
       if (str != null) {
-        return URLDecoder.decode(str, "UTF-8");
+        return URLDecoder.decode(str, StandardCharsets.UTF_8.name());
       }
     } catch (UnsupportedEncodingException e) {
-      System.err.println("stream.combine.streamprocessor" + 
-                         " in jobconf not found");
+      throw new RuntimeException(e);
     }
     return null;
   }

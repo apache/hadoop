@@ -22,6 +22,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -422,7 +423,7 @@ public class SLSRunner extends Configured implements Tool {
     ObjectMapper mapper = new ObjectMapper();
 
     try (Reader input = new InputStreamReader(
-        new FileInputStream(inputTrace), "UTF-8")) {
+        new FileInputStream(inputTrace), StandardCharsets.UTF_8)) {
       Iterator<Map> jobIter = mapper.readValues(
           jsonF.createParser(input), Map.class);
 

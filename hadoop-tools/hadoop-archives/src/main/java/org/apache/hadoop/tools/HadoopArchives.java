@@ -23,6 +23,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -653,7 +654,7 @@ public class HadoopArchives implements Tool {
 
     private static String encodeName(String s) 
       throws UnsupportedEncodingException {
-      return URLEncoder.encode(s,"UTF-8");
+      return URLEncoder.encode(s, StandardCharsets.UTF_8.name());
     }
 
     private static String encodeProperties( FileStatus fStatus )

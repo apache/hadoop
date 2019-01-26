@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -56,7 +57,7 @@ public final class DockerClient {
         TMP_ENV_FILE_SUFFIX, cmdDir);
     try (
         Writer envWriter = new OutputStreamWriter(
-            new FileOutputStream(dockerEnvFile), "UTF-8");
+            new FileOutputStream(dockerEnvFile), StandardCharsets.UTF_8);
         PrintWriter envPrintWriter = new PrintWriter(envWriter);
     ) {
       for (Map.Entry<String, String> entry : cmd.getEnv()
@@ -94,7 +95,8 @@ public final class DockerClient {
           TMP_FILE_SUFFIX, cmdDir);
       try (
         Writer writer = new OutputStreamWriter(
-            new FileOutputStream(dockerCommandFile.toString()), "UTF-8");
+              new FileOutputStream(dockerCommandFile.toString()),
+              StandardCharsets.UTF_8);
         PrintWriter printWriter = new PrintWriter(writer);
       ) {
         printWriter.println("[docker-command-execution]");

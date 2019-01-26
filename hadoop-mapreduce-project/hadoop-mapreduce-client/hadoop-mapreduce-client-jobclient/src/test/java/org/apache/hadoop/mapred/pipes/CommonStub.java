@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
 import javax.crypto.SecretKey;
 
@@ -118,7 +119,7 @@ public class CommonStub {
 
     dataOut = new DataOutputStream(output);
     WritableUtils.writeVInt(dataOut, 57);
-    String s = createDigest("password".getBytes(), str);
+    String s = createDigest("password".getBytes(StandardCharsets.UTF_8), str);
 
     Text.writeString(dataOut, s);
 

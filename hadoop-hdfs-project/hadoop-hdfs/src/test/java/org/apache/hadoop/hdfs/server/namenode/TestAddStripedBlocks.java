@@ -59,6 +59,7 @@ import org.junit.Rule;
 import org.junit.rules.Timeout;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -484,7 +485,7 @@ public class TestAddStripedBlocks {
     Path replicated = new Path("/blockLocation/replicated");
     try (FSDataOutputStream out =
         dfs.createFile(replicated).replicate().recursive().build()) {
-      out.write("this is a replicated file".getBytes());
+      out.write("this is a replicated file".getBytes(StandardCharsets.UTF_8));
     }
     BlockLocation[] locations = dfs.getFileBlockLocations(replicated, 0, 100);
     assertEquals("There should be exactly one Block present",
@@ -493,7 +494,7 @@ public class TestAddStripedBlocks {
 
     Path striped = new Path("/blockLocation/striped");
     try (FSDataOutputStream out = dfs.createFile(striped).recursive().build()) {
-      out.write("this is a striped file".getBytes());
+      out.write("this is a striped file".getBytes(StandardCharsets.UTF_8));
     }
     locations = dfs.getFileBlockLocations(striped, 0, 100);
     assertEquals("There should be exactly one Block present",

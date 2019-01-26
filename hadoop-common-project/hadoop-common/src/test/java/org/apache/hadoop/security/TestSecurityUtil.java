@@ -426,7 +426,8 @@ public class TestSecurityUtil {
     assertEquals(1, zkAuths.size());
     ZKAuthInfo zkAuthInfo = zkAuths.get(0);
     assertEquals("a_scheme", zkAuthInfo.getScheme());
-    assertArrayEquals("a_password".getBytes(), zkAuthInfo.getAuth());
+    assertArrayEquals("a_password".getBytes(StandardCharsets.UTF_8),
+        zkAuthInfo.getAuth());
   }
 
   @Test
@@ -443,7 +444,8 @@ public class TestSecurityUtil {
       assertEquals(1, zkAuths.size());
       ZKAuthInfo zkAuthInfo = zkAuths.get(0);
       assertEquals("a_scheme", zkAuthInfo.getScheme());
-      assertArrayEquals("a_password".getBytes(), zkAuthInfo.getAuth());
+      assertArrayEquals("a_password".getBytes(StandardCharsets.UTF_8),
+          zkAuthInfo.getAuth());
     } finally {
       boolean deleted = passwordTxtFile.delete();
       assertTrue(deleted);
@@ -466,7 +468,8 @@ public class TestSecurityUtil {
       assertEquals(1, zkAuths.size());
       ZKAuthInfo zkAuthInfo = zkAuths.get(0);
       assertEquals("a_scheme", zkAuthInfo.getScheme());
-      assertArrayEquals("a_password".getBytes(), zkAuthInfo.getAuth());
+      assertArrayEquals("a_password".getBytes(StandardCharsets.UTF_8),
+          zkAuthInfo.getAuth());
     } finally {
       boolean deleted = localJceksFile.delete();
       assertTrue(deleted);

@@ -27,6 +27,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
@@ -50,7 +51,7 @@ public class ProxyUriUtils {
   private static String uriEncode(Object o) {
     try {
       assert (o != null) : "o cannot be null";
-      return URLEncoder.encode(o.toString(), "UTF-8");
+      return URLEncoder.encode(o.toString(), StandardCharsets.UTF_8.name());
     } catch (UnsupportedEncodingException e) {
       //This should never happen
       throw new RuntimeException("UTF-8 is not supported by this system?", e);

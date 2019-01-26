@@ -32,6 +32,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.Scanner;
@@ -1513,7 +1514,7 @@ public class TestQuota {
 
     final Path testFile = new Path(dir, "file");
     final FSDataOutputStream stream = dfs.create(testFile);
-    stream.write("whatever".getBytes());
+    stream.write("whatever".getBytes(StandardCharsets.UTF_8));
     try {
       stream.close();
       fail("close should fail");
@@ -1541,7 +1542,7 @@ public class TestQuota {
     // get the lease renewer now so we can verify it later without calling
     // getLeaseRenewer, which will automatically add the client into it.
     final LeaseRenewer leaseRenewer = dfs.getClient().getLeaseRenewer();
-    stream.write("whatever".getBytes());
+    stream.write("whatever".getBytes(StandardCharsets.UTF_8));
     try {
       stream.hflush();
       fail("flush should fail");
@@ -1581,7 +1582,7 @@ public class TestQuota {
 
     final Path testFile = new Path(dir, "file");
     OutputStream stream = dfs.create(testFile);
-    stream.write("whatever".getBytes());
+    stream.write("whatever".getBytes(StandardCharsets.UTF_8));
     stream.close();
 
     assertEquals(0, cluster.getNamesystem().getNumFilesUnderConstruction());

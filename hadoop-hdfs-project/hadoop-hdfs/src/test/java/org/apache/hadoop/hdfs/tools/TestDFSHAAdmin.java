@@ -26,6 +26,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -255,7 +256,8 @@ public class TestDFSHAAdmin {
    */
   private static void setupConfirmationOnSystemIn() {
    // Answer "yes" to the prompt about transition to active
-   System.setIn(new ByteArrayInputStream("yes\n".getBytes()));
+    System.setIn(
+        new ByteArrayInputStream("yes\n".getBytes(StandardCharsets.UTF_8)));
   }
 
   /**

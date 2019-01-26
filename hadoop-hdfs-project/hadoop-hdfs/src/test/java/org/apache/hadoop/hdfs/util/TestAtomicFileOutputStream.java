@@ -28,6 +28,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -65,7 +66,7 @@ public class TestAtomicFileOutputStream {
   public void testWriteNewFile() throws IOException {
     OutputStream fos = new AtomicFileOutputStream(DST_FILE);
     assertFalse(DST_FILE.exists());
-    fos.write(TEST_STRING.getBytes());
+    fos.write(TEST_STRING.getBytes(StandardCharsets.UTF_8));
     fos.flush();
     assertFalse(DST_FILE.exists());
     fos.close();
@@ -85,7 +86,7 @@ public class TestAtomicFileOutputStream {
     OutputStream fos = new AtomicFileOutputStream(DST_FILE);
     
     assertTrue("Empty file still exists", DST_FILE.exists());
-    fos.write(TEST_STRING.getBytes());
+    fos.write(TEST_STRING.getBytes(StandardCharsets.UTF_8));
     fos.flush();
     
     // Original contents still in place
@@ -107,11 +108,11 @@ public class TestAtomicFileOutputStream {
   public void testFailToFlush() throws IOException {
     // Create a file at destination
     FileOutputStream fos = new FileOutputStream(DST_FILE);
-    fos.write(TEST_STRING_2.getBytes());
+    fos.write(TEST_STRING_2.getBytes(StandardCharsets.UTF_8));
     fos.close();
     
     OutputStream failingStream = createFailingStream();
-    failingStream.write(TEST_STRING.getBytes());
+    failingStream.write(TEST_STRING.getBytes(StandardCharsets.UTF_8));
     try {
       failingStream.close();
       fail("Close didn't throw exception");
@@ -132,7 +133,7 @@ public class TestAtomicFileOutputStream {
     OutputStream fos = null;
     try {
       fos = new AtomicFileOutputStream(DST_FILE);
-      fos.write(TEST_STRING.getBytes());
+      fos.write(TEST_STRING.getBytes(StandardCharsets.UTF_8));
       FileUtil.setWritable(TEST_DIR, false);
       exception.expect(IOException.class);
       exception.expectMessage("failure in native rename");

@@ -24,6 +24,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -110,7 +111,7 @@ public class FileSystemTimelineWriterImpl extends AbstractService
           TIMELINE_SERVICE_STORAGE_EXTENSION;
       out =
           new PrintWriter(new BufferedWriter(new OutputStreamWriter(
-              new FileOutputStream(fileName, true), "UTF-8")));
+              new FileOutputStream(fileName, true), StandardCharsets.UTF_8)));
       out.println(TimelineUtils.dumpTimelineRecordtoJSON(entity));
       out.write("\n");
     } catch (IOException ioe) {

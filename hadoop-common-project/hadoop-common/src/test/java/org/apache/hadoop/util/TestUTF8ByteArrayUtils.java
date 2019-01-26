@@ -24,10 +24,12 @@ import org.apache.hadoop.test.HadoopTestBase;
 
 import static org.junit.Assert.assertEquals;
 
+import java.nio.charset.StandardCharsets;
+
 public class TestUTF8ByteArrayUtils extends HadoopTestBase {
   @Test
   public void testFindByte() {
-    byte[] data = "Hello, world!".getBytes();
+    byte[] data = "Hello, world!".getBytes(StandardCharsets.UTF_8);
     assertEquals("Character 'a' does not exist in string", -1,
         UTF8ByteArrayUtils.findByte(data, 0, data.length, (byte) 'a'));
     assertEquals("Did not find first occurrence of character 'o'", 4,
@@ -36,17 +38,19 @@ public class TestUTF8ByteArrayUtils extends HadoopTestBase {
 
   @Test
   public void testFindBytes() {
-    byte[] data = "Hello, world!".getBytes();
+    byte[] data = "Hello, world!".getBytes(StandardCharsets.UTF_8);
     assertEquals("Did not find first occurrence of pattern 'ello'", 1,
-        UTF8ByteArrayUtils.findBytes(data, 0, data.length, "ello".getBytes()));
+        UTF8ByteArrayUtils.findBytes(data, 0, data.length,
+            "ello".getBytes(StandardCharsets.UTF_8)));
     assertEquals(
         "Substring starting at position 2 does not contain pattern 'ello'", -1,
-        UTF8ByteArrayUtils.findBytes(data, 2, data.length, "ello".getBytes()));
+        UTF8ByteArrayUtils.findBytes(data, 2, data.length,
+            "ello".getBytes(StandardCharsets.UTF_8)));
   }
 
   @Test
   public void testFindNthByte() {
-    byte[] data = "Hello, world!".getBytes();
+    byte[] data = "Hello, world!".getBytes(StandardCharsets.UTF_8);
     assertEquals("Did not find 2nd occurrence of character 'l'", 3,
         UTF8ByteArrayUtils.findNthByte(data, 0, data.length, (byte) 'l', 2));
     assertEquals("4th occurrence of character 'l' does not exist", -1,

@@ -32,6 +32,7 @@ import java.io.DataInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
 
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
@@ -174,7 +175,8 @@ public class TestFSImage {
     // Construct an INode with StripedBlock for saving and loading
     fsn.setErasureCodingPolicy("/", testECPolicy.getName(), false);
     long id = 123456789;
-    byte[] name = "testSaveAndLoadInodeFile_testfile".getBytes();
+    byte[] name =
+        "testSaveAndLoadInodeFile_testfile".getBytes(StandardCharsets.UTF_8);
     PermissionStatus permissionStatus = new PermissionStatus("testuser_a",
             "testuser_groups", new FsPermission((short)0x755));
     long mtime = 1426222916-3600;
@@ -225,8 +227,8 @@ public class TestFSImage {
     }
 
     assertEquals(id, fileByLoaded.getId() );
-    assertArrayEquals(isUC ? path.getBytes() : name,
-        fileByLoaded.getLocalName().getBytes());
+    assertArrayEquals(isUC ? path.getBytes(StandardCharsets.UTF_8) : name,
+        fileByLoaded.getLocalName().getBytes(StandardCharsets.UTF_8));
     assertEquals(permissionStatus.getUserName(),
         fileByLoaded.getPermissionStatus().getUserName());
     assertEquals(permissionStatus.getGroupName(),

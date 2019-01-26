@@ -30,6 +30,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.ArrayList;
@@ -161,7 +162,8 @@ public class TestLocalDistributedCacheManager {
 
     when(mockfs.getConf()).thenReturn(conf);
     final FSDataInputStream in =
-        new FSDataInputStream(new MockInputStream("This is a test file\n".getBytes()));
+        new FSDataInputStream(new MockInputStream(
+            "This is a test file\n".getBytes(StandardCharsets.UTF_8)));
     when(mockfs.open(any(Path.class), anyInt())).thenAnswer(new Answer<FSDataInputStream>() {
       @Override
       public FSDataInputStream answer(InvocationOnMock args) throws Throwable {
@@ -273,7 +275,8 @@ public class TestLocalDistributedCacheManager {
 
     when(mockfs.getConf()).thenReturn(conf);
     final FSDataInputStream in =
-        new FSDataInputStream(new MockInputStream("This is a test file\n".getBytes()));
+        new FSDataInputStream(new MockInputStream(
+            "This is a test file\n".getBytes(StandardCharsets.UTF_8)));
     when(mockfs.open(any(Path.class), anyInt())).thenAnswer(new Answer<FSDataInputStream>() {
       @Override
       public FSDataInputStream answer(InvocationOnMock args) throws Throwable {

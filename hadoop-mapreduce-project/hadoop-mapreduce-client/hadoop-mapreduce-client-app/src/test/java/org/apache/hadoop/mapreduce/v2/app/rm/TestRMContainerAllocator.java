@@ -36,6 +36,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -3595,7 +3596,7 @@ public class TestRMContainerAllocator {
           Resource.newInstance(512, 1),
           Resource.newInstance(512000, 1024),
           Collections.emptyMap(),
-          ByteBuffer.wrap("fake_key".getBytes()),
+          ByteBuffer.wrap("fake_key".getBytes(StandardCharsets.UTF_8)),
           Collections.<Container>emptyList(),
           "default",
           Collections.<NMToken>emptyList());

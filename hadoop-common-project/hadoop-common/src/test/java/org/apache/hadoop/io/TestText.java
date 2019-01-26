@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
-import com.google.common.base.Charsets;
 import com.google.common.primitives.Bytes;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
@@ -103,7 +103,7 @@ public class TestText {
       ByteBuffer bb = Text.encode(before);
           
       byte[] utf8Text = bb.array();
-      byte[] utf8Java = before.getBytes("UTF-8");
+      byte[] utf8Java = before.getBytes(StandardCharsets.UTF_8);
       assertEquals(0, WritableComparator.compareBytes(
               utf8Text, 0, bb.limit(),
               utf8Java, 0, utf8Java.length));
@@ -137,8 +137,8 @@ public class TestText {
         
       // Test compatibility with Java's other decoder 
       int strLenSize = WritableUtils.getVIntSize(Text.utf8Length(before));
-      String after2 = new String(out.getData(), strLenSize, 
-                                 out.getLength()-strLenSize, "UTF-8");
+      String after2 = new String(out.getData(), strLenSize,
+          out.getLength() - strLenSize, StandardCharsets.UTF_8);
       assertTrue(before.equals(after2));
     }
   }
@@ -241,7 +241,7 @@ public class TestText {
   @Test
   public void testFindAfterUpdatingContents() throws Exception {
     Text text = new Text("abcd");
-    text.set("a".getBytes());
+    text.set("a".getBytes(StandardCharsets.UTF_8));
     assertEquals(text.getLength(),1);
     assertEquals(text.find("a"), 0);
     assertEquals(text.find("b"), -1);
@@ -286,7 +286,7 @@ public class TestText {
     Text b=new Text("a");
     b.set(a);
     assertEquals("abc", b.toString());
-    a.append("xdefgxxx".getBytes(), 1, 4);
+    a.append("xdefgxxx".getBytes(StandardCharsets.UTF_8), 1, 4);
     assertEquals("modified aliased string", "abc", b.toString());
     assertEquals("appended string incorrectly", "abcdefg", a.toString());
     // add an extra byte so that capacity = 14 and length = 8
@@ -360,7 +360,7 @@ public class TestText {
   @Test
   public void testReadWriteOperations() {
     String line = "adsawseeeeegqewgasddga";
-    byte[] inputBytes = line.getBytes();       
+    byte[] inputBytes = line.getBytes(StandardCharsets.UTF_8);       
     inputBytes = Bytes.concat(new byte[] {(byte)22}, inputBytes);        
     
     DataInputBuffer in = new DataInputBuffer();
@@ -383,7 +383,7 @@ public class TestText {
   @Test
   public void testReadWithKnownLength() throws IOException {
     String line = "hello world";
-    byte[] inputBytes = line.getBytes(Charsets.UTF_8);
+    byte[] inputBytes = line.getBytes(StandardCharsets.UTF_8);
     DataInputBuffer in = new DataInputBuffer();
     Text text = new Text();
 
