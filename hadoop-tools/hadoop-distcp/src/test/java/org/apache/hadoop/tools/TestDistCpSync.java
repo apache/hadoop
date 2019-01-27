@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.tools;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -27,6 +28,8 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotInfo;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
@@ -35,8 +38,10 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.tools.mapred.CopyMapper;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -44,20 +49,35 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class TestDistCpSync {
-  private MiniDFSCluster cluster;
-  private final Configuration conf = new HdfsConfiguration();
+  private static MiniDFSCluster cluster;
+  private static final short DATA_NUM = 1;
+  private static final Configuration DFS_CONF = new HdfsConfiguration();
+
+  private Configuration conf;
   private DistributedFileSystem dfs;
   private DistCpOptions options;
   private final Path source = new Path("/source");
   private final Path target = new Path("/target");
   private final long BLOCK_SIZE = 1024;
-  private final short DATA_NUM = 1;
+
+  @BeforeClass
+  public static void setUp() throws Exception {
+    cluster = new MiniDFSCluster.Builder(DFS_CONF)
+        .numDataNodes(DATA_NUM)
+        .build();
+    cluster.waitActive();
+  }
+
+  @AfterClass
+  public static void tearDown() throws Exception {
+    if (cluster != null) {
+      cluster.shutdown();
+    }
+  }
 
   @Before
-  public void setUp() throws Exception {
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATA_NUM).build();
-    cluster.waitActive();
-
+  public void init() throws Exception {
+    conf = new HdfsConfiguration(DFS_CONF);
     dfs = cluster.getFileSystem();
     dfs.mkdirs(source);
     dfs.mkdirs(target);
@@ -72,11 +92,20 @@ public class TestDistCpSync {
   }
 
   @After
-  public void tearDown() throws Exception {
-    IOUtils.cleanup(null, dfs);
-    if (cluster != null) {
-      cluster.shutdown();
+  public void cleanup() throws Exception {
+    SnapshotManager snapshotManager = cluster
+        .getNameNode()
+        .getNamesystem()
+        .getSnapshotManager();
+    for (SnapshotInfo.Bean snapshot : snapshotManager.getSnapshots()) {
+      dfs.deleteSnapshot(new Path(
+          StringUtils.substringBefore(
+              snapshot.getSnapshotDirectory(), ".snapshot")),
+          snapshot.getSnapshotID());
     }
+    dfs.delete(source, true);
+    dfs.delete(target, true);
+    IOUtils.cleanup(null, dfs);
   }
 
   /**

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.tools;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsShell;
@@ -27,6 +28,8 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotInfo;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
@@ -34,8 +37,10 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.tools.mapred.CopyMapper;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -53,15 +58,17 @@ import java.util.StringTokenizer;
  * Shared by "-rdiff s2 s1 src tgt" and "-rdiff s2 s1 tgt tgt"
  */
 public abstract class TestDistCpSyncReverseBase {
-  private MiniDFSCluster cluster;
-  private final Configuration conf = new HdfsConfiguration();
+  private static MiniDFSCluster cluster;
+  private static final short DATA_NUM = 1;
+  private static final Configuration DFS_CONF = new HdfsConfiguration();
+
+  private Configuration conf;
   private DistributedFileSystem dfs;
   private DistCpOptions options;
   private Path source;
   private boolean isSrcNotSameAsTgt = true;
   private final Path target = new Path("/target");
   private final long blockSize = 1024;
-  private final short dataNum = 1;
 
   abstract void initSourcePath();
 
@@ -126,13 +133,25 @@ public abstract class TestDistCpSyncReverseBase {
     isSrcNotSameAsTgt = srcNotSameAsTgt;
   }
 
-  @Before
-  public void setUp() throws Exception {
-    initSourcePath();
-
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(dataNum).build();
+  @BeforeClass
+  public static void setUp() throws Exception {
+    cluster = new MiniDFSCluster.Builder(DFS_CONF)
+        .numDataNodes(DATA_NUM)
+        .build();
     cluster.waitActive();
+  }
 
+  @AfterClass
+  public static void tearDown() throws Exception {
+    if (cluster != null) {
+      cluster.shutdown();
+    }
+  }
+
+  @Before
+  public void init() throws Exception {
+    initSourcePath();
+    conf = new HdfsConfiguration(DFS_CONF);
     dfs = cluster.getFileSystem();
     if (isSrcNotSameAsTgt) {
       dfs.mkdirs(source);
@@ -149,11 +168,20 @@ public abstract class TestDistCpSyncReverseBase {
   }
 
   @After
-  public void tearDown() throws Exception {
-    IOUtils.cleanup(null, dfs);
-    if (cluster != null) {
-      cluster.shutdown();
+  public void cleanup() throws Exception {
+    SnapshotManager snapshotManager = cluster
+        .getNameNode()
+        .getNamesystem()
+        .getSnapshotManager();
+    for (SnapshotInfo.Bean snapshot : snapshotManager.getSnapshots()) {
+      dfs.deleteSnapshot(new Path(
+              StringUtils.substringBefore(
+                  snapshot.getSnapshotDirectory(), ".snapshot")),
+          snapshot.getSnapshotID());
     }
+    dfs.delete(source, true);
+    dfs.delete(target, true);
+    IOUtils.cleanup(null, dfs);
   }
 
   /**
@@ -254,10 +282,10 @@ public abstract class TestDistCpSyncReverseBase {
     final Path f3 = new Path(d1, "f3");
     final Path f4 = new Path(d2, "f4");
 
-    DFSTestUtil.createFile(dfs, f1, blockSize, dataNum, 0);
-    DFSTestUtil.createFile(dfs, f2, blockSize, dataNum, 0);
-    DFSTestUtil.createFile(dfs, f3, blockSize, dataNum, 0);
-    DFSTestUtil.createFile(dfs, f4, blockSize, dataNum, 0);
+    DFSTestUtil.createFile(dfs, f1, blockSize, DATA_NUM, 0);
+    DFSTestUtil.createFile(dfs, f2, blockSize, DATA_NUM, 0);
+    DFSTestUtil.createFile(dfs, f3, blockSize, DATA_NUM, 0);
+    DFSTestUtil.createFile(dfs, f4, blockSize, DATA_NUM, 0);
   }
 
   /**
@@ -297,7 +325,7 @@ public abstract class TestDistCpSyncReverseBase {
     final Path f1 = new Path(newfoo, "f1");
     dfs.delete(f1, true);
     numDeletedModified += 1; // delete ./foo/f1
-    DFSTestUtil.createFile(dfs, f1, 2 * blockSize, dataNum, 0);
+    DFSTestUtil.createFile(dfs, f1, 2 * blockSize, DATA_NUM, 0);
     DFSTestUtil.appendFile(dfs, f2, (int) blockSize);
     numDeletedModified += 1; // modify ./bar/f2
     dfs.rename(bar, new Path(dir, "foo"));
@@ -451,9 +479,9 @@ public abstract class TestDistCpSyncReverseBase {
     final Path f2 = new Path(foo, "f2");
     final Path f3 = new Path(bar, "f3");
 
-    DFSTestUtil.createFile(dfs, f1, blockSize, dataNum, 0L);
-    DFSTestUtil.createFile(dfs, f2, blockSize, dataNum, 1L);
-    DFSTestUtil.createFile(dfs, f3, blockSize, dataNum, 2L);
+    DFSTestUtil.createFile(dfs, f1, blockSize, DATA_NUM, 0L);
+    DFSTestUtil.createFile(dfs, f2, blockSize, DATA_NUM, 1L);
+    DFSTestUtil.createFile(dfs, f3, blockSize, DATA_NUM, 2L);
   }
 
   private void changeData2(Path dir) throws Exception {
@@ -495,9 +523,9 @@ public abstract class TestDistCpSyncReverseBase {
     final Path f2 = new Path(foo, "file");
     final Path f3 = new Path(bar, "file");
 
-    DFSTestUtil.createFile(dfs, f1, blockSize, dataNum, 0L);
-    DFSTestUtil.createFile(dfs, f2, blockSize * 2, dataNum, 1L);
-    DFSTestUtil.createFile(dfs, f3, blockSize * 3, dataNum, 2L);
+    DFSTestUtil.createFile(dfs, f1, blockSize, DATA_NUM, 0L);
+    DFSTestUtil.createFile(dfs, f2, blockSize * 2, DATA_NUM, 1L);
+    DFSTestUtil.createFile(dfs, f3, blockSize * 3, DATA_NUM, 2L);
   }
 
   private void changeData3(Path dir) throws Exception {
@@ -543,7 +571,7 @@ public abstract class TestDistCpSyncReverseBase {
     final Path d2 = new Path(d1, "d2");
     final Path f1 = new Path(d2, "f1");
 
-    DFSTestUtil.createFile(dfs, f1, blockSize, dataNum, 0L);
+    DFSTestUtil.createFile(dfs, f1, blockSize, DATA_NUM, 0L);
   }
 
   private int changeData4(Path dir) throws Exception {
@@ -594,8 +622,8 @@ public abstract class TestDistCpSyncReverseBase {
     final Path f1 = new Path(d1, "f1");
     final Path f2 = new Path(d2, "f2");
 
-    DFSTestUtil.createFile(dfs, f1, blockSize, dataNum, 0L);
-    DFSTestUtil.createFile(dfs, f2, blockSize, dataNum, 0L);
+    DFSTestUtil.createFile(dfs, f1, blockSize, DATA_NUM, 0L);
+    DFSTestUtil.createFile(dfs, f2, blockSize, DATA_NUM, 0L);
   }
 
   private int changeData5(Path dir) throws Exception {
@@ -694,8 +722,8 @@ public abstract class TestDistCpSyncReverseBase {
     final Path foo_f1 = new Path(foo, "f1");
     final Path bar_f1 = new Path(bar, "f1");
 
-    DFSTestUtil.createFile(dfs, foo_f1, blockSize, dataNum, 0L);
-    DFSTestUtil.createFile(dfs, bar_f1, blockSize, dataNum, 0L);
+    DFSTestUtil.createFile(dfs, foo_f1, blockSize, DATA_NUM, 0L);
+    DFSTestUtil.createFile(dfs, bar_f1, blockSize, DATA_NUM, 0L);
   }
 
   private int changeData6(Path dir) throws Exception {
@@ -736,8 +764,8 @@ public abstract class TestDistCpSyncReverseBase {
     final Path foo_f1 = new Path(foo, "f1");
     final Path bar_f1 = new Path(bar, "f1");
 
-    DFSTestUtil.createFile(dfs, foo_f1, blockSize, dataNum, 0L);
-    DFSTestUtil.createFile(dfs, bar_f1, blockSize, dataNum, 0L);
+    DFSTestUtil.createFile(dfs, foo_f1, blockSize, DATA_NUM, 0L);
+    DFSTestUtil.createFile(dfs, bar_f1, blockSize, DATA_NUM, 0L);
   }
 
   private int changeData7(Path dir) throws Exception {
@@ -750,7 +778,7 @@ public abstract class TestDistCpSyncReverseBase {
 
     int numDeletedAndModified = 0;
     dfs.rename(foo, foo2);
-    DFSTestUtil.createFile(dfs, foo_f1, blockSize, dataNum, 0L);
+    DFSTestUtil.createFile(dfs, foo_f1, blockSize, DATA_NUM, 0L);
     DFSTestUtil.appendFile(dfs, foo_f1, (int) blockSize);
     dfs.rename(foo_f1, foo2_f2);
     /*
@@ -763,7 +791,7 @@ M       ./foo
 +       ./foo/f2
      */
     numDeletedAndModified += 1; // "M ./foo"
-    DFSTestUtil.createFile(dfs, foo_d1_f3, blockSize, dataNum, 0L);
+    DFSTestUtil.createFile(dfs, foo_d1_f3, blockSize, DATA_NUM, 0L);
     return numDeletedAndModified;
   }
 
@@ -793,9 +821,9 @@ M       ./foo
     final Path bar_f1 = new Path(bar, "f1");
     final Path d1_f1 = new Path(d1, "f1");
 
-    DFSTestUtil.createFile(dfs, foo_f1, blockSize, dataNum, 0L);
-    DFSTestUtil.createFile(dfs, bar_f1, blockSize, dataNum, 0L);
-    DFSTestUtil.createFile(dfs, d1_f1, blockSize, dataNum, 0L);
+    DFSTestUtil.createFile(dfs, foo_f1, blockSize, DATA_NUM, 0L);
+    DFSTestUtil.createFile(dfs, bar_f1, blockSize, DATA_NUM, 0L);
+    DFSTestUtil.createFile(dfs, d1_f1, blockSize, DATA_NUM, 0L);
   }
 
   private int changeData8(Path dir, boolean createMiddleSnapshot)
@@ -813,8 +841,8 @@ M       ./foo
     final Path bar1 = new Path(dir, "bar1");
 
     int numDeletedAndModified = 0;
-    DFSTestUtil.createFile(dfs, foo_f3, blockSize, dataNum, 0L);
-    DFSTestUtil.createFile(dfs, createdDir_f1, blockSize, dataNum, 0L);
+    DFSTestUtil.createFile(dfs, foo_f3, blockSize, DATA_NUM, 0L);
+    DFSTestUtil.createFile(dfs, createdDir_f1, blockSize, DATA_NUM, 0L);
     dfs.rename(createdDir_f1, foo_f4);
     dfs.rename(d1_f1, createdDir_f1); // rename ./d1/f1 -> ./c/f1
     numDeletedAndModified += 1; // modify ./c/foo/d1
