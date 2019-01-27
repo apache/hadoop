@@ -20,17 +20,23 @@ package org.apache.hadoop.ozone.container.common.volume;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.sun.istack.Nullable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.GetSpaceUsed;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdfs.server.datanode.checker.Checkable;
+import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 import org.apache.hadoop.ozone.common.InconsistentStorageStateException;
 import org.apache.hadoop.ozone.container.common.DataNodeLayoutVersion;
 import org.apache.hadoop.ozone.container.common.helpers.DatanodeVersionFile;
 import org.apache.hadoop.ozone.container.common.impl.ChunkLayOutVersion;
 import org.apache.hadoop.ozone.container.common.utils.HddsVolumeUtil;
 
+import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.Time;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,7 +64,10 @@ import java.util.UUID;
  * During DN startup, if the VERSION file exists, we verify that the
  * clusterID in the version file matches the clusterID from SCM.
  */
-public final class HddsVolume {
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+public class HddsVolume
+    implements Checkable<Boolean, VolumeCheckResult> {
 
   private static final Logger LOG = LoggerFactory.getLogger(HddsVolume.class);
 
@@ -75,6 +84,19 @@ public final class HddsVolume {
   private String datanodeUuid;    // id of the DataNode
   private long cTime;             // creation time of the file system state
   private int layoutVersion;      // layout version of the storage data
+
+  /**
+   * Run a check on the current volume to determine if it is healthy.
+   * @param unused context for the check, ignored.
+   * @return result of checking the volume.
+   * @throws Exception if an exception was encountered while running
+   *            the volume check.
+   */
+  @Override
+  public VolumeCheckResult check(@Nullable Boolean unused) throws Exception {
+    DiskChecker.checkDir(hddsRootDir);
+    return VolumeCheckResult.HEALTHY;
+  }
 
   /**
    * Builder for HddsVolume.

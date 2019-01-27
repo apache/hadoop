@@ -160,6 +160,7 @@ public class OzoneContainer {
     writeChannel.stop();
     readChannel.stop();
     hddsDispatcher.shutdown();
+    volumeSet.shutdown();
   }
 
 
