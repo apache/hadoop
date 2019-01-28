@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.cli.MissingSubcommandException;
@@ -58,6 +57,7 @@ import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.client.rest.RestClient;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
@@ -177,25 +177,15 @@ public class TestOzoneShell {
   public void setup() {
     System.setOut(new PrintStream(out));
     System.setErr(new PrintStream(err));
+
     if(clientProtocol.equals(RestClient.class)) {
       String hostName = cluster.getOzoneManager().getHttpServer()
           .getHttpAddress().getHostName();
       int port = cluster
           .getOzoneManager().getHttpServer().getHttpAddress().getPort();
-      url = String.format("http://" + hostName + ":" + port);
+      url = String.format("http://%s:%d", hostName, port);
     } else {
-      List<ServiceInfo> services = null;
-      try {
-        services = cluster.getOzoneManager().getServiceList();
-      } catch (IOException e) {
-        LOG.error("Could not get service list from OM");
-      }
-      String hostName = services.stream().filter(
-          a -> a.getNodeType().equals(HddsProtos.NodeType.OM))
-          .collect(Collectors.toList()).get(0).getHostname();
-
-      String port = cluster.getOzoneManager().getRpcPort();
-      url = String.format("o3://" + hostName + ":" + port);
+      url = "o3://" + getOmAddress();
     }
   }
 
@@ -245,8 +235,7 @@ public class TestOzoneShell {
   }
 
   private void execute(Shell ozoneShell, String[] args) {
-    List<String> arguments = new ArrayList(Arrays.asList(args));
-    LOG.info("Executing shell command with args {}", arguments);
+    LOG.info("Executing shell command with args {}", Arrays.asList(args));
     CommandLine cmd = ozoneShell.getCmd();
 
     IExceptionHandler2<List<Object>> exceptionHandler =
@@ -1154,17 +1143,8 @@ public class TestOzoneShell {
 
   @Test
   public void testS3BucketMapping() throws  IOException {
-
-    List<ServiceInfo> services =
-        cluster.getOzoneManager().getServiceList();
-
-    String omHostName = services.stream().filter(
-        a -> a.getNodeType().equals(HddsProtos.NodeType.OM))
-        .collect(Collectors.toList()).get(0).getHostname();
-
-    String omPort = cluster.getOzoneManager().getRpcPort();
     String setOmAddress =
-        "--set=" + OZONE_OM_ADDRESS_KEY + "=" + omHostName + ":" + omPort;
+        "--set=" + OZONE_OM_ADDRESS_KEY + "=" + getOmAddress();
 
     String s3Bucket = "bucket1";
     String commandOutput;
@@ -1201,16 +1181,8 @@ public class TestOzoneShell {
 
   @Test
   public void testS3Secret() throws Exception {
-    List<ServiceInfo> services =
-        cluster.getOzoneManager().getServiceList();
-
-    String omHostName = services.stream().filter(
-        a -> a.getNodeType().equals(HddsProtos.NodeType.OM))
-        .collect(Collectors.toList()).get(0).getHostname();
-
-    String omPort = cluster.getOzoneManager().getRpcPort();
     String setOmAddress =
-        "--set=" + OZONE_OM_ADDRESS_KEY + "=" + omHostName + ":" + omPort;
+        "--set=" + OZONE_OM_ADDRESS_KEY + "=" + getOmAddress();
 
     err.reset();
     String outputFirstAttempt;
@@ -1275,13 +1247,7 @@ public class TestOzoneShell {
 
   @Test
   public void testTokenCommands() throws Exception {
-    String omHostName = cluster.getOzoneManager().getServiceList().stream()
-        .filter(a -> a.getNodeType().equals(HddsProtos.NodeType.OM))
-        .collect(Collectors.toList()).get(0).getHostname();
-
-    String omPort = cluster.getOzoneManager().getRpcPort();
-    String omAdd = "--set=" + OZONE_OM_ADDRESS_KEY + "=" + omHostName
-        + ":" + omPort;
+    String omAdd = "--set=" + OZONE_OM_ADDRESS_KEY + "=" + getOmAddress();
     List<String[]> shellCommands = new ArrayList<>(4);
     // Case 1: Execution will fail when security is disabled.
     shellCommands.add(new String[]{omAdd, "token", "get"});
@@ -1358,5 +1324,21 @@ public class TestOzoneShell {
     randFile.close();
 
     return tmpFile.getAbsolutePath();
+  }
+
+  private String getOmAddress() {
+    List<ServiceInfo> services;
+    try {
+      services = cluster.getOzoneManager().getServiceList();
+    } catch (IOException e) {
+      fail("Could not get service list from OM");
+      return null;
+    }
+
+    return services.stream()
+        .filter(a -> HddsProtos.NodeType.OM.equals(a.getNodeType()))
+        .findFirst()
+        .map(s -> s.getServiceAddress(ServicePort.Type.RPC))
+        .orElseThrow(IllegalStateException::new);
   }
 }

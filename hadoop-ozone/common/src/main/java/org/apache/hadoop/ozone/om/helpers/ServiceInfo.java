@@ -109,15 +109,25 @@ public final class ServiceInfo {
   }
 
   /**
-   * Returns the port for given type, null if the service doesn't support
-   * the type.
+   * Returns the port for given type.
    *
    * @param type the type of port.
    *             ex: RPC, HTTP, HTTPS, etc..
+   * @throws NullPointerException if the service doesn't support the given type
    */
   @JsonIgnore
   public int getPort(ServicePort.Type type) {
     return ports.get(type);
+  }
+
+  /**
+   * Returns the address of the service (hostname with port of the given type).
+   * @param portType the type of port, eg. RPC, HTTP, etc.
+   * @return service address (hostname with port of the given type)
+   */
+  @JsonIgnore
+  public String getServiceAddress(ServicePort.Type portType) {
+    return hostname + ":" + getPort(portType);
   }
 
   /**
