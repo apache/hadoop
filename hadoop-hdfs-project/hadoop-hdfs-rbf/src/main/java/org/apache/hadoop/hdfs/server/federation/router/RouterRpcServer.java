@@ -479,6 +479,29 @@ public class RouterRpcServer extends AbstractService
     return methodName;
   }
 
+  /**
+   * Invokes the method at default namespace, if default namespace is not
+   * available then at the first available namespace.
+   * @param <T> expected return type.
+   * @param method the remote method.
+   * @return the response received after invoking method.
+   * @throws IOException
+   */
+  <T> T invokeAtAvailableNs(RemoteMethod method, Class<T> clazz)
+      throws IOException {
+    String nsId = subclusterResolver.getDefaultNamespace();
+    if (!nsId.isEmpty()) {
+      return rpcClient.invokeSingle(nsId, method, clazz);
+    }
+    // If default Ns is not present return result from first namespace.
+    Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+    if (nss.isEmpty()) {
+      throw new IOException("No namespace availaible.");
+    }
+    nsId = nss.iterator().next().getNameserviceId();
+    return rpcClient.invokeSingle(nsId, method, clazz);
+  }
+
   @Override // ClientProtocol
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
