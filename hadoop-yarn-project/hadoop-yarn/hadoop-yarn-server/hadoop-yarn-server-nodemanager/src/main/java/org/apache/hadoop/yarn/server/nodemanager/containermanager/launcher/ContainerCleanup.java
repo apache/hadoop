@@ -29,10 +29,12 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.DockerContainerDeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
@@ -145,11 +147,12 @@ public class ContainerCleanup implements Runnable {
           // Increasing YarnConfiguration.NM_PROCESS_KILL_WAIT_MS
           // reduces the likelihood of this race condition and process leak.
         }
-        // The Docker container may not have fully started, reap the container.
-        if (DockerLinuxContainerRuntime.isDockerContainerRequested(conf,
-            container.getLaunchContext().getEnvironment())) {
-          reapDockerContainerNoPid(user);
-        }
+      }
+
+      // rm container in docker
+      if (DockerLinuxContainerRuntime.isDockerContainerRequested(conf,
+          container.getLaunchContext().getEnvironment())) {
+        rmDockerContainerDelayed();
       }
     } catch (Exception e) {
       String message =
@@ -179,6 +182,14 @@ public class ContainerCleanup implements Runnable {
       LOG.warn("{} exception trying to reap container. Ignoring.", containerId,
           ioe);
     }
+  }
+
+  private void rmDockerContainerDelayed() {
+    DeletionService deletionService = context.getDeletionService();
+    DockerContainerDeletionTask deletionTask =
+        new DockerContainerDeletionTask(deletionService, container.getUser(),
+            container.getContainerId().toString());
+    deletionService.delete(deletionTask);
   }
 
   private void signalProcess(String processId, String user,

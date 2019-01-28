@@ -82,7 +82,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEve
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.DockerContainerDeletionMatcher;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncher;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncherEvent;
@@ -1168,10 +1167,10 @@ public class TestContainer {
 
   private void verifyDockerContainerCleanupCall(WrappedContainer wc)
       throws Exception {
-    DeletionService delService = wc.context.getDeletionService();
-    verify(delService, times(1)).delete(argThat(
-        new DockerContainerDeletionMatcher(delService,
-            wc.c.getContainerId().toString())));
+    // check if containerlauncher cleans up the container launch.
+    verify(wc.launcherBus)
+        .handle(refEq(new ContainersLauncherEvent(wc.c,
+            ContainersLauncherEventType.CLEANUP_CONTAINER), "timestamp"));
   }
 
   // Argument matcher for matching container localization cleanup event.
@@ -1580,8 +1579,10 @@ public class TestContainer {
     public void dockerContainerResourcesCleanup() {
       c.handle(new ContainerEvent(cId,
           ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP));
-      verify(delService, times(1)).delete(argThat(
-          new DockerContainerDeletionMatcher(delService, cId.toString())));
+      // check if containerlauncher cleans up the container launch.
+      verify(this.launcherBus)
+          .handle(refEq(new ContainersLauncherEvent(this.c,
+              ContainersLauncherEventType.CLEANUP_CONTAINER), "timestamp"));
       drainDispatcherEvents();
     }
 
