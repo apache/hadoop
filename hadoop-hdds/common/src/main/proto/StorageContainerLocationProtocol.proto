@@ -38,7 +38,7 @@ message ContainerRequestProto {
   required ReplicationFactor replicationFactor = 2;
   required ReplicationType  replicationType = 3;
   required string owner = 4;
-
+  optional string traceID = 5;
 }
 
 /**
@@ -57,6 +57,8 @@ message ContainerResponseProto {
 
 message GetContainerRequestProto {
   required int64 containerID = 1;
+  optional string traceID = 2;
+
 }
 
 message GetContainerResponseProto {
@@ -65,6 +67,8 @@ message GetContainerResponseProto {
 
 message GetContainerWithPipelineRequestProto {
   required int64 containerID = 1;
+  optional string traceID = 2;
+
 }
 
 message GetContainerWithPipelineResponseProto {
@@ -74,7 +78,8 @@ message GetContainerWithPipelineResponseProto {
 message SCMListContainerRequestProto {
   required uint32 count = 1;
   optional uint64 startContainerID = 2;
- }
+  optional string traceID = 3;
+}
 
 message SCMListContainerResponseProto {
   repeated ContainerInfoProto containers = 1;
@@ -82,6 +87,8 @@ message SCMListContainerResponseProto {
 
 message SCMDeleteContainerRequestProto {
   required int64 containerID = 1;
+  optional string traceID = 2;
+
 }
 
 message SCMDeleteContainerResponseProto {
@@ -106,6 +113,7 @@ message ObjectStageChangeRequestProto {
   required Type type = 2;
   required Op op= 3;
   required Stage stage = 4;
+  optional string traceID = 5;
 }
 
 message ObjectStageChangeResponseProto {
@@ -120,6 +128,7 @@ message NodeQueryRequestProto {
   required NodeState state = 1;
   required QueryScope scope = 2;
   optional string poolName = 3; // if scope is pool, then pool name is needed.
+  optional string traceID = 4;
 }
 
 message NodeQueryResponseProto {
@@ -137,6 +146,7 @@ message PipelineRequestProto {
   // datanodes.
   optional NodePool nodePool = 3;
   optional string pipelineID = 4;
+  optional string traceID = 5;
 }
 
 message  PipelineResponseProto {
@@ -150,6 +160,7 @@ message  PipelineResponseProto {
 }
 
 message ListPipelineRequestProto {
+  optional string traceID = 1;
 }
 
 message ListPipelineResponseProto {
@@ -158,12 +169,15 @@ message ListPipelineResponseProto {
 
 message ClosePipelineRequestProto {
   required PipelineID pipelineID = 1;
+  optional string traceID = 2;
+
 }
 
 message ClosePipelineResponseProto {
 }
 
 message InChillModeRequestProto {
+  optional string traceID = 1;
 }
 
 message InChillModeResponseProto {
@@ -171,6 +185,7 @@ message InChillModeResponseProto {
 }
 
 message ForceExitChillModeRequestProto {
+  optional string traceID = 1;
 }
 
 message ForceExitChillModeResponseProto {

@@ -20,6 +20,8 @@ package org.apache.hadoop.ozone.protocolPB;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+import io.opentracing.Scope;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.InChillModeRequestProto;
@@ -72,6 +74,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.SCMListContainerRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.SCMListContainerResponseProto;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 
 import java.io.IOException;
 import java.util.List;
@@ -100,7 +103,8 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   @Override
   public ContainerResponseProto allocateContainer(RpcController unused,
       ContainerRequestProto request) throws ServiceException {
-    try {
+    try (Scope scope = TracingUtil
+        .initializeScope("allocateContainer", request.getTraceID())) {
       ContainerWithPipeline containerWithPipeline = impl
           .allocateContainer(request.getReplicationType(),
               request.getReplicationFactor(), request.getOwner());
@@ -118,7 +122,8 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   public GetContainerResponseProto getContainer(
       RpcController controller, GetContainerRequestProto request)
       throws ServiceException {
-    try {
+    try (Scope scope = TracingUtil
+        .initializeScope("getContainer", request.getTraceID())) {
       ContainerInfo container = impl.getContainer(request.getContainerID());
       return GetContainerResponseProto.newBuilder()
           .setContainerInfo(container.getProtobuf())
@@ -132,7 +137,8 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   public GetContainerWithPipelineResponseProto getContainerWithPipeline(
       RpcController controller, GetContainerWithPipelineRequestProto request)
       throws ServiceException {
-    try {
+    try (Scope scope = TracingUtil
+        .initializeScope("getContainerWithPipeline", request.getTraceID())) {
       ContainerWithPipeline container = impl
           .getContainerWithPipeline(request.getContainerID());
       return GetContainerWithPipelineResponseProto.newBuilder()
@@ -146,7 +152,8 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   @Override
   public SCMListContainerResponseProto listContainer(RpcController controller,
       SCMListContainerRequestProto request) throws ServiceException {
-    try {
+    try (Scope scope = TracingUtil
+        .initializeScope("listContainer", request.getTraceID())) {
       long startContainerID = 0;
       int count = -1;
 
@@ -173,7 +180,8 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   public SCMDeleteContainerResponseProto deleteContainer(
       RpcController controller, SCMDeleteContainerRequestProto request)
       throws ServiceException {
-    try {
+    try (Scope scope = TracingUtil
+        .initializeScope("deleteContainer", request.getTraceID())) {
       impl.deleteContainer(request.getContainerID());
       return SCMDeleteContainerResponseProto.newBuilder().build();
     } catch (IOException e) {
@@ -186,7 +194,8 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       queryNode(RpcController controller,
       StorageContainerLocationProtocolProtos.NodeQueryRequestProto request)
       throws ServiceException {
-    try {
+    try (Scope scope = TracingUtil
+        .initializeScope("queryNode", request.getTraceID())) {
       HddsProtos.NodeState nodeState = request.getState();
       List<HddsProtos.Node> datanodes = impl.queryNode(nodeState,
           request.getScope(), request.getPoolName());
@@ -203,7 +212,8 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   public ObjectStageChangeResponseProto notifyObjectStageChange(
       RpcController controller, ObjectStageChangeRequestProto request)
       throws ServiceException {
-    try {
+    try (Scope scope = TracingUtil
+        .initializeScope("notifyObjectStageChange", request.getTraceID())) {
       impl.notifyObjectStageChange(request.getType(), request.getId(),
           request.getOp(), request.getStage());
       return ObjectStageChangeResponseProto.newBuilder().build();
@@ -224,7 +234,8 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   public ListPipelineResponseProto listPipelines(
       RpcController controller, ListPipelineRequestProto request)
       throws ServiceException {
-    try {
+    try (Scope scope = TracingUtil
+        .initializeScope("listPipelines", request.getTraceID())) {
       ListPipelineResponseProto.Builder builder = ListPipelineResponseProto
           .newBuilder();
       List<Pipeline> pipelines = impl.listPipelines();
@@ -242,7 +253,8 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   public ClosePipelineResponseProto closePipeline(
       RpcController controller, ClosePipelineRequestProto request)
       throws ServiceException {
-    try {
+    try (Scope scope = TracingUtil
+        .initializeScope("closePipeline", request.getTraceID())) {
       impl.closePipeline(request.getPipelineID());
       return ClosePipelineResponseProto.newBuilder().build();
     } catch (IOException e) {
@@ -254,7 +266,8 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   public HddsProtos.GetScmInfoRespsonseProto getScmInfo(
       RpcController controller, HddsProtos.GetScmInfoRequestProto req)
       throws ServiceException {
-    try {
+    try (Scope scope = TracingUtil
+        .initializeScope("getScmInfo", req.getTraceID())) {
       ScmInfo scmInfo = impl.getScmInfo();
       return HddsProtos.GetScmInfoRespsonseProto.newBuilder()
           .setClusterId(scmInfo.getClusterId())
@@ -270,7 +283,8 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   public InChillModeResponseProto inChillMode(
       RpcController controller,
       InChillModeRequestProto request) throws ServiceException {
-    try {
+    try (Scope scope = TracingUtil
+        .initializeScope("inChillMode", request.getTraceID())) {
       return InChillModeResponseProto.newBuilder()
           .setInChillMode(impl.inChillMode()).build();
     } catch (IOException ex) {
@@ -282,7 +296,8 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   public ForceExitChillModeResponseProto forceExitChillMode(
       RpcController controller, ForceExitChillModeRequestProto request)
       throws ServiceException {
-    try {
+    try (Scope scope = TracingUtil
+        .initializeScope("forceExitChillMode", request.getTraceID())) {
       return ForceExitChillModeResponseProto.newBuilder()
           .setExitedChillMode(impl.forceExitChillMode()).build();
     } catch (IOException ex) {
