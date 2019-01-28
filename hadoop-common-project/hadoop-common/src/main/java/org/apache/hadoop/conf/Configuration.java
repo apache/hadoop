@@ -902,6 +902,20 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     restrictSystemPropsDefault = val;
   }
 
+  /**
+   * Creates an Unmodifiable view of Configuration. Any attempted changes to
+   * this object directly will throw an UnsupportedOperationException. The
+   * object returned does not prevent changes to the the configuration through
+   * use of static methods and means external to the object returned.
+   *
+   * @param other The configuration to wrap
+   * @return an Unmodifiable view of Configuration
+   */
+  public static Configuration unmodifiableConfiguration(Configuration other) {
+    Configuration unmodifiable = new UnmodifiableConfiguration(other);
+    return unmodifiable;
+  }
+
   public void setRestrictSystemProperties(boolean val) {
     this.restrictSystemProps = val;
   }
