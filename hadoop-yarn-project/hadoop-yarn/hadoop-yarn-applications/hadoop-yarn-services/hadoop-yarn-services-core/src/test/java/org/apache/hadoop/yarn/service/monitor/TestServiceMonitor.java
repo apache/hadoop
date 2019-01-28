@@ -85,11 +85,15 @@ public class TestServiceMonitor extends ServiceTestUtils {
     exampleApp.setId(applicationId.toString());
     exampleApp.setName("testComponentDependency");
     exampleApp.addComponent(createComponent("compa", 1, "sleep 1000"));
-    Component compb = createComponent("compb", 1, "sleep 1000");
-
     // Let compb depends on compa;
-    compb.setDependencies(Collections.singletonList("compa"));
+    Component compb = createComponent("compb", 1, "sleep 1000", Component
+        .RestartPolicyEnum.ON_FAILURE, Collections.singletonList("compa"));
+    // Let compb depends on compb;
+    Component compc = createComponent("compc", 1, "sleep 1000", Component
+        .RestartPolicyEnum.NEVER, Collections.singletonList("compb"));
+
     exampleApp.addComponent(compb);
+    exampleApp.addComponent(compc);
 
     MockServiceAM am = new MockServiceAM(exampleApp);
     am.init(conf);
@@ -104,6 +108,11 @@ public class TestServiceMonitor extends ServiceTestUtils {
     am.feedContainerToComp(exampleApp, 1, "compa");
     // waiting for compb's dependencies are satisfied
     am.waitForDependenciesSatisfied("compb");
+
+    // feed 1 container to compb,
+    am.feedContainerToComp(exampleApp, 2, "compb");
+    // waiting for compc's dependencies are satisfied
+    am.waitForDependenciesSatisfied("compc");
 
     // feed 1 container to compb
     am.feedContainerToComp(exampleApp, 2, "compb");

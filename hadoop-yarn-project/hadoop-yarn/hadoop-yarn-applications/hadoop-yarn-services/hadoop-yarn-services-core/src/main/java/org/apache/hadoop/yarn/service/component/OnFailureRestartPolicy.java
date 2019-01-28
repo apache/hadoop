@@ -65,12 +65,14 @@ public final class OnFailureRestartPolicy implements ComponentRestartPolicy {
     return false;
   }
 
-  @Override public boolean isReadyForDownStream(Component component) {
-    if (hasCompletedSuccessfully(component)) {
-      return true;
+  @Override public boolean isReadyForDownStream(Component dependentComponent) {
+    if (dependentComponent.getNumReadyInstances()
+        + dependentComponent.getNumSucceededInstances()
+        + dependentComponent.getNumFailedInstances()
+        < dependentComponent.getNumDesiredInstances()) {
+      return false;
     }
-
-    return false;
+    return true;
   }
 
   @Override public boolean allowUpgrades() {

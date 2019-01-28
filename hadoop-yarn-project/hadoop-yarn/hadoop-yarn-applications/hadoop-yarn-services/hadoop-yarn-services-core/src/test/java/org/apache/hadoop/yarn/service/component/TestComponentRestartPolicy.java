@@ -65,6 +65,7 @@ public class TestComponentRestartPolicy {
     when(component.getNumSucceededInstances()).thenReturn(new Long(1));
     when(component.getNumFailedInstances()).thenReturn(new Long(2));
     when(component.getNumDesiredInstances()).thenReturn(3);
+    when(component.getNumReadyInstances()).thenReturn(3);
 
     ComponentInstance instance = mock(ComponentInstance.class);
     when(instance.getComponent()).thenReturn(component);
@@ -92,6 +93,7 @@ public class TestComponentRestartPolicy {
     when(component.getNumSucceededInstances()).thenReturn(new Long(3));
     when(component.getNumFailedInstances()).thenReturn(new Long(0));
     when(component.getNumDesiredInstances()).thenReturn(3);
+    when(component.getNumReadyInstances()).thenReturn(3);
 
     ComponentInstance instance = mock(ComponentInstance.class);
     when(instance.getComponent()).thenReturn(component);
@@ -123,7 +125,7 @@ public class TestComponentRestartPolicy {
     assertEquals(true,
         restartPolicy.shouldRelaunchInstance(instance, containerStatus));
 
-    assertEquals(false, restartPolicy.isReadyForDownStream(component));
+    assertEquals(true, restartPolicy.isReadyForDownStream(component));
 
   }
 }
