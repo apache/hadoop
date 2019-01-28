@@ -41,6 +41,7 @@ import java.util.TreeSet;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -227,6 +228,21 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
     String filename1 = testDir1 + "/testrename";
     testRename(getRouterContext(), filename1, renamedFile, false);
     testRename2(getRouterContext(), filename1, renamedFile, false);
+  }
+
+  @Test
+  public void testGetContentSummaryEc() throws Exception {
+    DistributedFileSystem routerDFS =
+        (DistributedFileSystem) getRouterFileSystem();
+    Path dir = new Path("/");
+    String expectedECPolicy = "RS-6-3-1024k";
+    try {
+      routerDFS.setErasureCodingPolicy(dir, expectedECPolicy);
+      assertEquals(expectedECPolicy,
+          routerDFS.getContentSummary(dir).getErasureCodingPolicy());
+    } finally {
+      routerDFS.unsetErasureCodingPolicy(dir);
+    }
   }
 
   @Test
