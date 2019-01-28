@@ -57,6 +57,7 @@ public class MockResolver
   private Map<String, List<RemoteLocation>> locations = new HashMap<>();
   private Set<FederationNamespaceInfo> namespaces = new HashSet<>();
   private String defaultNamespace = null;
+  private boolean disableDefaultNamespace = false;
 
   public MockResolver() {
     this.cleanRegistrations();
@@ -322,8 +323,19 @@ public class MockResolver
   public void setRouterId(String router) {
   }
 
+  /**
+   * Mocks the availability of default namespace.
+   * @param b if true default namespace is unset.
+   */
+  public void setDisableNamespace(boolean b) {
+    this.disableDefaultNamespace = b;
+  }
+
   @Override
   public String getDefaultNamespace() {
+    if (disableDefaultNamespace) {
+      return "";
+    }
     return defaultNamespace;
   }
 }

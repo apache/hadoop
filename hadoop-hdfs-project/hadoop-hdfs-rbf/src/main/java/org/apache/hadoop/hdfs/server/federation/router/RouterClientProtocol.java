@@ -201,8 +201,7 @@ public class RouterClientProtocol implements ClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
     RemoteMethod method = new RemoteMethod("getServerDefaults");
-    String ns = subclusterResolver.getDefaultNamespace();
-    return (FsServerDefaults) rpcClient.invokeSingle(ns, method);
+    return rpcServer.invokeAtAvailableNs(method, FsServerDefaults.class);
   }
 
   @Override

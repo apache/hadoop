@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -829,6 +830,40 @@ public class TestRouterRpc {
   }
 
   @Test
+  public void testListStoragePolicies() throws IOException, URISyntaxException {
+    MockResolver resolver =
+        (MockResolver) router.getRouter().getSubclusterResolver();
+    try {
+      // Check with default namespace specified.
+      BlockStoragePolicy[] policies = namenode.getClient().getStoragePolicies();
+      assertArrayEquals(policies, routerProtocol.getStoragePolicies());
+      // Check with default namespace unspecified.
+      resolver.setDisableNamespace(true);
+      assertArrayEquals(policies, routerProtocol.getStoragePolicies());
+    } finally {
+      resolver.setDisableNamespace(false);
+    }
+  }
+
+  @Test
+  public void testGetServerDefaults() throws IOException, URISyntaxException {
+    MockResolver resolver =
+        (MockResolver) router.getRouter().getSubclusterResolver();
+    try {
+      // Check with default namespace specified.
+      FsServerDefaults defaults = namenode.getClient().getServerDefaults();
+      assertEquals(defaults.getBlockSize(),
+          routerProtocol.getServerDefaults().getBlockSize());
+      // Check with default namespace unspecified.
+      resolver.setDisableNamespace(true);
+      assertEquals(defaults.getBlockSize(),
+          routerProtocol.getServerDefaults().getBlockSize());
+    } finally {
+      resolver.setDisableNamespace(false);
+    }
+  }
+
+  @Test
   public void testProxyGetPreferedBlockSize() throws Exception {
 
     // Query via NN and Router and verify
@@ -1012,8 +1047,23 @@ public class TestRouterRpc {
 
   @Test
   public void testProxyVersionRequest() throws Exception {
-    NamespaceInfo rVersion = routerNamenodeProtocol.versionRequest();
-    NamespaceInfo nnVersion = nnNamenodeProtocol.versionRequest();
+    MockResolver resolver =
+        (MockResolver) router.getRouter().getSubclusterResolver();
+    try {
+      // Check with default namespace specified.
+      NamespaceInfo rVersion = routerNamenodeProtocol.versionRequest();
+      NamespaceInfo nnVersion = nnNamenodeProtocol.versionRequest();
+      compareVersion(rVersion, nnVersion);
+      // Check with default namespace unspecified.
+      resolver.setDisableNamespace(true);
+      rVersion = routerNamenodeProtocol.versionRequest();
+      compareVersion(rVersion, nnVersion);
+    } finally {
+      resolver.setDisableNamespace(false);
+    }
+  }
+
+  private void compareVersion(NamespaceInfo rVersion, NamespaceInfo nnVersion) {
     assertEquals(nnVersion.getBlockPoolID(), rVersion.getBlockPoolID());
     assertEquals(nnVersion.getNamespaceID(), rVersion.getNamespaceID());
     assertEquals(nnVersion.getClusterID(), rVersion.getClusterID());
@@ -1023,8 +1073,24 @@ public class TestRouterRpc {
 
   @Test
   public void testProxyGetBlockKeys() throws Exception {
-    ExportedBlockKeys rKeys = routerNamenodeProtocol.getBlockKeys();
-    ExportedBlockKeys nnKeys = nnNamenodeProtocol.getBlockKeys();
+    MockResolver resolver =
+        (MockResolver) router.getRouter().getSubclusterResolver();
+    try {
+      // Check with default namespace specified.
+      ExportedBlockKeys rKeys = routerNamenodeProtocol.getBlockKeys();
+      ExportedBlockKeys nnKeys = nnNamenodeProtocol.getBlockKeys();
+      compareBlockKeys(rKeys, nnKeys);
+      // Check with default namespace unspecified.
+      resolver.setDisableNamespace(true);
+      rKeys = routerNamenodeProtocol.getBlockKeys();
+      compareBlockKeys(rKeys, nnKeys);
+    } finally {
+      resolver.setDisableNamespace(false);
+    }
+  }
+
+  private void compareBlockKeys(ExportedBlockKeys rKeys,
+      ExportedBlockKeys nnKeys) {
     assertEquals(nnKeys.getCurrentKey(), rKeys.getCurrentKey());
     assertEquals(nnKeys.getKeyUpdateInterval(), rKeys.getKeyUpdateInterval());
     assertEquals(nnKeys.getTokenLifetime(), rKeys.getTokenLifetime());
@@ -1054,17 +1120,38 @@ public class TestRouterRpc {
 
   @Test
   public void testProxyGetTransactionID() throws IOException {
-    long routerTransactionID = routerNamenodeProtocol.getTransactionID();
-    long nnTransactionID = nnNamenodeProtocol.getTransactionID();
-    assertEquals(nnTransactionID, routerTransactionID);
+    MockResolver resolver =
+        (MockResolver) router.getRouter().getSubclusterResolver();
+    try {
+      // Check with default namespace specified.
+      long routerTransactionID = routerNamenodeProtocol.getTransactionID();
+      long nnTransactionID = nnNamenodeProtocol.getTransactionID();
+      assertEquals(nnTransactionID, routerTransactionID);
+      // Check with default namespace unspecified.
+      resolver.setDisableNamespace(true);
+      routerTransactionID = routerNamenodeProtocol.getTransactionID();
+      assertEquals(nnTransactionID, routerTransactionID);
+    } finally {
+      resolver.setDisableNamespace(false);
+    }
   }
 
   @Test
   public void testProxyGetMostRecentCheckpointTxId() throws IOException {
-    long routerCheckPointId =
-        routerNamenodeProtocol.getMostRecentCheckpointTxId();
-    long nnCheckPointId = nnNamenodeProtocol.getMostRecentCheckpointTxId();
-    assertEquals(nnCheckPointId, routerCheckPointId);
+    MockResolver resolver =
+        (MockResolver) router.getRouter().getSubclusterResolver();
+    try {
+      // Check with default namespace specified.
+      long routerCheckPointId =
+          routerNamenodeProtocol.getMostRecentCheckpointTxId();
+      long nnCheckPointId = nnNamenodeProtocol.getMostRecentCheckpointTxId();
+      assertEquals(nnCheckPointId, routerCheckPointId);
+      // Check with default namespace unspecified.
+      resolver.setDisableNamespace(true);
+      routerCheckPointId = routerNamenodeProtocol.getMostRecentCheckpointTxId();
+    } finally {
+      resolver.setDisableNamespace(false);
+    }
   }
 
   @Test

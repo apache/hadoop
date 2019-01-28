@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
-import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 
@@ -36,13 +35,10 @@ public class RouterStoragePolicy {
   private final RouterRpcServer rpcServer;
   /** RPC clients to connect to the Namenodes. */
   private final RouterRpcClient rpcClient;
-  /** Interface to map global name space to HDFS subcluster name spaces. */
-  private final FileSubclusterResolver subclusterResolver;
 
   public RouterStoragePolicy(RouterRpcServer server) {
     this.rpcServer = server;
     this.rpcClient = this.rpcServer.getRPCClient();
-    this.subclusterResolver = this.rpcServer.getSubclusterResolver();
   }
 
   public void setStoragePolicy(String src, String policyName)
@@ -61,8 +57,7 @@ public class RouterStoragePolicy {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
     RemoteMethod method = new RemoteMethod("getStoragePolicies");
-    String ns = subclusterResolver.getDefaultNamespace();
-    return (BlockStoragePolicy[]) rpcClient.invokeSingle(ns, method);
+    return rpcServer.invokeAtAvailableNs(method, BlockStoragePolicy[].class);
   }
 
   public void unsetStoragePolicy(String src) throws IOException {
