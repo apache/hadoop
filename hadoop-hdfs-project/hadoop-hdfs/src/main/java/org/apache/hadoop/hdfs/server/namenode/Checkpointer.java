@@ -152,6 +152,7 @@ class Checkpointer extends Daemon {
         if(shouldCheckpoint) {
           doCheckpoint();
           lastCheckpointTime = now;
+          lastEditLogCheckTime = now;
         }
       } catch(IOException e) {
         LOG.error("Exception in doCheckpoint: ", e);
