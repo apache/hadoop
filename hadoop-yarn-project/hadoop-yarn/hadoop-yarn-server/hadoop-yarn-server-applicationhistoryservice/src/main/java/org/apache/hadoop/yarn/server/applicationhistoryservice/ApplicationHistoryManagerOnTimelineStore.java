@@ -250,6 +250,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     String type = null;
     boolean unmanagedApplication = false;
     long createdTime = 0;
+    long submittedTime = 0;
     long finishedTime = 0;
     float progress = 0.0f;
     int applicationPriority = 0;
@@ -281,10 +282,11 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
         return new ApplicationReportExt(ApplicationReport.newInstance(
             ApplicationId.fromString(entity.getEntityId()),
             latestApplicationAttemptId, user, queue, name, null, -1, null,
-            state, diagnosticsInfo, null, createdTime, finishedTime,
-            finalStatus, null, null, progress, type, null, appTags,
-            unmanagedApplication, Priority.newInstance(applicationPriority),
-            appNodeLabelExpression, amNodeLabelExpression), appViewACLs);
+            state, diagnosticsInfo, null, createdTime, submittedTime, 0,
+            finishedTime, finalStatus, null, null, progress, type, null,
+            appTags, unmanagedApplication, Priority.newInstance(
+            applicationPriority), appNodeLabelExpression,
+            amNodeLabelExpression), appViewACLs);
       }
       if (entityInfo.containsKey(ApplicationMetricsConstants.QUEUE_ENTITY_INFO)) {
         queue =
@@ -329,6 +331,8 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
             entityInfo.get(ApplicationMetricsConstants.AM_NODE_LABEL_EXPRESSION)
                 .toString();
       }
+      submittedTime = parseLong(entityInfo,
+          ApplicationMetricsConstants.SUBMITTED_TIME_ENTITY_INFO);
 
       if (entityInfo.containsKey(ApplicationMetricsConstants.APP_CPU_METRICS)) {
         long vcoreSeconds = parseLong(entityInfo,
@@ -450,10 +454,10 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     return new ApplicationReportExt(ApplicationReport.newInstance(
         ApplicationId.fromString(entity.getEntityId()),
         latestApplicationAttemptId, user, queue, name, null, -1, null, state,
-        diagnosticsInfo, null, createdTime, finishedTime, finalStatus,
-        appResources, null, progress, type, null, appTags, unmanagedApplication,
-        Priority.newInstance(applicationPriority), appNodeLabelExpression,
-        amNodeLabelExpression), appViewACLs);
+        diagnosticsInfo, null, createdTime, submittedTime, 0, finishedTime,
+        finalStatus, appResources, null, progress, type, null, appTags,
+        unmanagedApplication, Priority.newInstance(applicationPriority),
+        appNodeLabelExpression, amNodeLabelExpression), appViewACLs);
   }
 
   private static long parseLong(Map<String, Object> entityInfo,
