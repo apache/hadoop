@@ -49,8 +49,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.hadoop.metrics2.MetricStringBuilder;
-import org.apache.hadoop.metrics2.lib.MutableRatesWithAggregation;
 
 /**
  * RPC Engine for for protobuf based RPCs.
@@ -197,9 +195,9 @@ public class ProtobufRpcEngine implements RpcEngine {
         throws ServiceException {
       long startTime = 0;
       if (LOG.isDebugEnabled()) {
-        startTime = System.currentTimeMillis();
+        startTime = Time.now();
       }
-
+      
       if (args.length != 2) { // RpcController + Message
         throw new ServiceException(
             "Too many or few parameters for request. Method: ["
@@ -252,18 +250,10 @@ public class ProtobufRpcEngine implements RpcEngine {
       }
 
       if (LOG.isDebugEnabled()) {
-        long callTime = System.currentTimeMillis() - startTime;
-        if (callTime > 0) {
-          MetricStringBuilder rb =
-              new MetricStringBuilder(null, "", " = ", "\n");
-          client.updateMetrics(method.getName(), callTime);
-          MutableRatesWithAggregation rates =
-              client.getRpcDetailedMetrics().getMutableRates();
-          rates.snapshot(rb, true);
-          LOG.debug("RPC Client stats: {}", rb);
-        }
+        long callTime = Time.now() - startTime;
+        LOG.debug("Call: " + method.getName() + " took " + callTime + "ms");
       }
-
+      
       if (Client.isAsynchronousMode()) {
         final AsyncGet<RpcWritable.Buffer, IOException> arr
             = Client.getAsyncRpcResponse();

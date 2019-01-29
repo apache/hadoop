@@ -48,19 +48,7 @@ public class RpcDetailedMetrics {
     LOG.debug(registry.info().toString());
   }
 
-  RpcDetailedMetrics(String clientId) {
-    name = "RpcDetailedActivityForClient"+ clientId;
-    registry = new MetricsRegistry("rpcdetailed")
-        .tag("client", "RPC client", clientId);
-    LOG.debug(registry.info().toString());
-  }
-
   public String name() { return name; }
-
-  public static RpcDetailedMetrics create(String clientId) {
-    RpcDetailedMetrics m = new RpcDetailedMetrics(clientId);
-    return DefaultMetricsSystem.instance().register(m.name, null, m);
-  }
 
   public static RpcDetailedMetrics create(int port) {
     RpcDetailedMetrics m = new RpcDetailedMetrics(port);
@@ -82,16 +70,12 @@ public class RpcDetailedMetrics {
    * @param processingTime  the processing time
    */
   //@Override // some instrumentation interface
-  public void addProcessingTime(String metName, long processingTime) {
-    rates.add(metName, processingTime);
+  public void addProcessingTime(String name, int processingTime) {
+    rates.add(name, processingTime);
   }
 
-  public void addDeferredProcessingTime(String metName, long processingTime) {
-    deferredRpcRates.add(metName, processingTime);
-  }
-
-  public MutableRatesWithAggregation getMutableRates() {
-    return rates;
+  public void addDeferredProcessingTime(String name, long processingTime) {
+    deferredRpcRates.add(name, processingTime);
   }
 
   /**
