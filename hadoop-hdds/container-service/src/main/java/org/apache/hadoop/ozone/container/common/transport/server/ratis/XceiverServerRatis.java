@@ -34,6 +34,7 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.tracing.GrpcServerInterceptor;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -145,6 +146,10 @@ public final class XceiverServerRatis extends XceiverServer {
     for (int i = 0; i < numContainerOpExecutors; i++) {
       executors.add(Executors.newSingleThreadExecutor());
     }
+
+    GrpcConfigKeys.Server.setInterceptor(serverProperties,
+        GrpcServerInterceptor.class.getCanonicalName());
+
     RaftServer.Builder builder = RaftServer.newBuilder()
         .setServerId(RatisHelper.toRaftPeerId(dd))
         .setProperties(serverProperties)

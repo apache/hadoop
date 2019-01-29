@@ -17,38 +17,39 @@
  */
 package org.apache.hadoop.hdds.tracing;
 
+import io.opentracing.Scope;
 import org.apache.ratis.thirdparty.io.grpc.CallOptions;
 import org.apache.ratis.thirdparty.io.grpc.Channel;
 import org.apache.ratis.thirdparty.io.grpc.ClientCall;
 import org.apache.ratis.thirdparty.io.grpc.ClientInterceptor;
 import org.apache.ratis.thirdparty.io.grpc.ForwardingClientCall.SimpleForwardingClientCall;
+import org.apache.ratis.thirdparty.io.grpc.ForwardingServerCallListener.SimpleForwardingServerCallListener;
 import org.apache.ratis.thirdparty.io.grpc.Metadata;
 import org.apache.ratis.thirdparty.io.grpc.MethodDescriptor;
+import org.apache.ratis.thirdparty.io.grpc.ServerCall;
+import org.apache.ratis.thirdparty.io.grpc.ServerCall.Listener;
+import org.apache.ratis.thirdparty.io.grpc.ServerCallHandler;
+import org.apache.ratis.thirdparty.io.grpc.ServerInterceptor;
 
 /**
  * Interceptor to add the tracing id to the outgoing call header.
  */
-public class GrpcServerInterceptor implements ClientInterceptor {
+public class GrpcServerInterceptor implements ServerInterceptor {
 
   @Override
-  public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(
-      MethodDescriptor<ReqT, RespT> method, CallOptions callOptions,
-      Channel next) {
+  public <ReqT, RespT> Listener<ReqT> interceptCall(
+      ServerCall<ReqT, RespT> call, Metadata headers,
+      ServerCallHandler<ReqT, RespT> next) {
 
-    return new SimpleForwardingClientCall<ReqT, RespT>(
-        next.newCall(method, callOptions)) {
-
+    return new SimpleForwardingServerCallListener<ReqT>(
+        next.startCall(call, headers)) {
       @Override
-      public void start(Listener<RespT> responseListener, Metadata headers) {
-
-        Metadata tracingHeaders = new Metadata();
-        Metadata.Key<String> key =
-            Metadata.Key.of("Tracing", Metadata.ASCII_STRING_MARSHALLER);
-        tracingHeaders.put(key, TracingUtil.exportCurrentSpan());
-
-        headers.merge(tracingHeaders);
-
-        super.start(responseListener, headers);
+      public void onMessage(ReqT message) {
+        try (Scope scope = TracingUtil
+            .initializeScope(call.getMethodDescriptor().getFullMethodName(),
+                headers.get(GrpcClientInterceptor.TRACING_HEADER))) {
+          super.onMessage(message);
+        }
       }
     };
   }

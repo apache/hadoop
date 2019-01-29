@@ -30,6 +30,7 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.
     StorageContainerException;
+import org.apache.hadoop.hdds.tracing.GrpcServerInterceptor;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
@@ -102,11 +103,12 @@ public final class XceiverServerGrpc extends XceiverServer {
 
     ServerCredentialInterceptor credInterceptor =
         new ServerCredentialInterceptor(getBlockTokenVerifier());
+    GrpcServerInterceptor tracingInterceptor = new GrpcServerInterceptor();
     nettyServerBuilder.addService(ServerInterceptors.intercept(
         new GrpcXceiverService(dispatcher,
             getSecurityConfig().isBlockTokenEnabled(),
-            getBlockTokenVerifier()), credInterceptor));
-
+            getBlockTokenVerifier()), credInterceptor,
+        tracingInterceptor));
 
     for (BindableService service : additionalServices) {
       nettyServerBuilder.addService(service);

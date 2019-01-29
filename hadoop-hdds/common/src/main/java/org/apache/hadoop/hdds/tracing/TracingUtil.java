@@ -62,6 +62,7 @@ public final class TracingUtil {
     return builder.toString();
   }
 
+
   public static Scope initializeScope(String name, String encodedParent) {
     Tracer.SpanBuilder spanBuilder;
     Tracer tracer = GlobalTracer.get();

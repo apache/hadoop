@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.tracing.GrpcClientInterceptor;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.ratis.client.RaftClient;
@@ -39,6 +40,7 @@ import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.ratis.proto.RaftProtos;
+import org.apache.ratis.thirdparty.io.grpc.Grpc;
 import org.apache.ratis.util.SizeInBytes;
 import org.apache.ratis.util.TimeDuration;
 import org.slf4j.Logger;
@@ -165,6 +167,10 @@ public interface RatisHelper {
         SizeInBytes.valueOf(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE));
     GrpcConfigKeys.OutputStream.setOutstandingAppendsMax(properties,
         maxOutStandingRequest);
+
+    GrpcConfigKeys.Client.setInterceptor(properties,
+        GrpcClientInterceptor.class.getCanonicalName());
+
     RaftClient.Builder builder =  RaftClient.newBuilder()
         .setRaftGroup(group)
         .setLeaderId(leader)

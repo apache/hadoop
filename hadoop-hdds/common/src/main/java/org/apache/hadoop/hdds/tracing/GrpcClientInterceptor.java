@@ -17,5 +17,41 @@
  */
 package org.apache.hadoop.hdds.tracing;
 
-public class GrpcClientInterceptor {
+import org.apache.ratis.thirdparty.io.grpc.CallOptions;
+import org.apache.ratis.thirdparty.io.grpc.Channel;
+import org.apache.ratis.thirdparty.io.grpc.ClientCall;
+import org.apache.ratis.thirdparty.io.grpc.ClientInterceptor;
+import org.apache.ratis.thirdparty.io.grpc.ForwardingClientCall.SimpleForwardingClientCall;
+import org.apache.ratis.thirdparty.io.grpc.Metadata;
+import org.apache.ratis.thirdparty.io.grpc.Metadata.Key;
+import org.apache.ratis.thirdparty.io.grpc.MethodDescriptor;
+
+/**
+ * Interceptor to add the tracing id to the outgoing call header.
+ */
+public class GrpcClientInterceptor implements ClientInterceptor {
+
+  public static final Key<String> TRACING_HEADER =
+      Key.of("Tracing", Metadata.ASCII_STRING_MARSHALLER);
+
+  @Override
+  public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(
+      MethodDescriptor<ReqT, RespT> method, CallOptions callOptions,
+      Channel next) {
+
+    return new SimpleForwardingClientCall<ReqT, RespT>(
+        next.newCall(method, callOptions)) {
+
+      @Override
+      public void start(Listener<RespT> responseListener, Metadata headers) {
+
+        Metadata tracingHeaders = new Metadata();
+        tracingHeaders.put(TRACING_HEADER, TracingUtil.exportCurrentSpan());
+
+        headers.merge(tracingHeaders);
+
+        super.start(responseListener, headers);
+      }
+    };
+  }
 }
