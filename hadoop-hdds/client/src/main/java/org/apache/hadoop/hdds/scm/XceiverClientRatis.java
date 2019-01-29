@@ -36,6 +36,8 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
+
 import org.apache.ratis.RatisHelper;
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.protocol.RaftClientReply;
@@ -189,9 +191,13 @@ public final class XceiverClientRatis extends XceiverClientSpi {
 
   private CompletableFuture<RaftClientReply> sendRequestAsync(
       ContainerCommandRequestProto request) {
-    boolean isReadOnlyRequest = HddsUtils.isReadOnly(request);
-    ByteString byteString = request.toByteString();
-    LOG.debug("sendCommandAsync {} {}", isReadOnlyRequest, request);
+    ContainerCommandRequestProto finalPayload =
+        ContainerCommandRequestProto.newBuilder(request)
+            .setTraceID(TracingUtil.exportCurrentSpan())
+            .build();
+    boolean isReadOnlyRequest = HddsUtils.isReadOnly(finalPayload);
+    ByteString byteString = finalPayload.toByteString();
+    LOG.debug("sendCommandAsync {} {}", isReadOnlyRequest, finalPayload);
     return isReadOnlyRequest ? getClient().sendReadOnlyAsync(() -> byteString) :
         getClient().sendAsync(() -> byteString);
   }
