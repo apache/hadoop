@@ -612,7 +612,13 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
   private List<ApplicationId> getRunningApplications() {
     List<ApplicationId> runningApplications = new ArrayList<ApplicationId>();
-    runningApplications.addAll(this.context.getApplications().keySet());
+    for (Entry<ApplicationId, Application> appEntry : this.context
+        .getApplications().entrySet()) {
+      if (ApplicationState.FINISHED != appEntry.getValue()
+          .getApplicationState()) {
+        runningApplications.add(appEntry.getKey());
+      }
+    }
     return runningApplications;
   }
 
