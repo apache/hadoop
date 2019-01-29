@@ -313,27 +313,6 @@ public class SCMContainerManager implements ContainerManager {
 
   private ContainerInfo updateContainerStateInternal(ContainerID containerID,
       HddsProtos.LifeCycleEvent event) throws IOException {
-    // Refactor the below code for better clarity.
-    switch (event) {
-    case FINALIZE:
-      // TODO: we don't need a lease manager here for closing as the
-      // container report will include the container state after HDFS-13008
-      // If a client failed to update the container close state, DN container
-      // report from 3 DNs will be used to close the container eventually.
-      break;
-    case CLOSE:
-      break;
-    case DELETE:
-      break;
-    case CLEANUP:
-      break;
-    default:
-      throw new SCMException("Unsupported container LifeCycleEvent.",
-          FAILED_TO_CHANGE_CONTAINER_STATE);
-    }
-    // If the below updateContainerState call fails, we should revert the
-    // changes made in switch case.
-    // Like releasing the lease in case of BEGIN_CREATE.
     return containerStateManager.updateContainerState(containerID, event);
   }
 
