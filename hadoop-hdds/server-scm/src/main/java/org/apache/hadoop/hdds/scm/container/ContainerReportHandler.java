@@ -127,8 +127,8 @@ public class ContainerReportHandler implements
                 }
               });
         } catch (ContainerNotFoundException e) {
-          LOG.warn("Cannot remove container replica, container {} not found",
-              id);
+          LOG.warn("Cannot remove container replica, container {} not found {}",
+              id, e);
         }
       }
 
@@ -140,8 +140,8 @@ public class ContainerReportHandler implements
       missingReplicas.forEach(id -> checkReplicationState(id, publisher));
 
     } catch (NodeNotFoundException ex) {
-      LOG.error("Received container report from unknown datanode {}",
-          datanodeDetails);
+      LOG.error("Received container report from unknown datanode {} {}",
+          datanodeDetails, ex);
     }
 
   }
@@ -170,12 +170,13 @@ public class ContainerReportHandler implements
                   containerInfo.getContainerID());
         }
       } catch (ContainerNotFoundException e) {
-        LOG.error("Received container report for an unknown container {} from" +
-                " datanode {}", replicaProto.getContainerID(), datanodeDetails);
+        LOG.error("Received container report for an unknown container {} from"
+                + " datanode {} {}", replicaProto.getContainerID(),
+            datanodeDetails, e);
       } catch (IOException e) {
-        LOG.error("Exception while processing container report for container" +
-                " {} from datanode {}",
-            replicaProto.getContainerID(), datanodeDetails);
+        LOG.error("Exception while processing container report for container"
+                + " {} from datanode {} {}", replicaProto.getContainerID(),
+            datanodeDetails, e);
       }
     }
     if (pendingDeleteStatusList.getNumPendingDeletes() > 0) {
@@ -190,10 +191,8 @@ public class ContainerReportHandler implements
       ContainerInfo container = containerManager.getContainer(containerID);
       replicateIfNeeded(container, publisher);
     } catch (ContainerNotFoundException ex) {
-      LOG.warn(
-          "Container is missing from containerStateManager. Can't request "
-              + "replication. {}",
-          containerID);
+      LOG.warn("Container is missing from containerStateManager. Can't request "
+          + "replication. {} {}", containerID, ex);
     }
 
   }

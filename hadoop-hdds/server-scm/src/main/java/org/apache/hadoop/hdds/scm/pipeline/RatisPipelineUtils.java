@@ -106,7 +106,7 @@ public final class RatisPipelineUtils {
       Pipeline pipeline, Configuration ozoneConf, boolean onTimeout)
       throws IOException {
     final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
-    LOG.debug("destroying pipeline:{} with {}", pipeline.getId(), group);
+    LOG.info("destroying pipeline:{} with {}", pipeline.getId(), group);
     pipelineManager.finalizePipeline(pipeline.getId());
     if (onTimeout) {
       long pipelineDestroyTimeoutInMillis = ozoneConf
