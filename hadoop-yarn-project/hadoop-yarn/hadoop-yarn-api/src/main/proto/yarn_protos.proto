@@ -211,6 +211,7 @@ message ApplicationReportProto {
   optional PriorityProto priority = 23;
   optional string appNodeLabelExpression = 24;
   optional string amNodeLabelExpression = 25;
+  optional int64 submitTime = 26;
 }
 
 enum LogAggregationStatusProto {

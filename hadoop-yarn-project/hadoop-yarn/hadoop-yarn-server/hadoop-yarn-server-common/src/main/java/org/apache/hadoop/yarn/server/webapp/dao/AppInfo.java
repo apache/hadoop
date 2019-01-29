@@ -84,7 +84,7 @@ public class AppInfo {
     diagnosticsInfo = app.getDiagnostics();
     trackingUrl = app.getTrackingUrl();
     originalTrackingUrl = app.getOriginalTrackingUrl();
-    submittedTime = app.getStartTime();
+    submittedTime = app.getSubmitTime();
     startedTime = app.getStartTime();
     finishedTime = app.getFinishTime();
     elapsedTime = Times.elapsed(startedTime, finishedTime);
