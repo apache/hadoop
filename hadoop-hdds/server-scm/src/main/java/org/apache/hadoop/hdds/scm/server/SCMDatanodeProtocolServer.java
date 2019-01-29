@@ -342,7 +342,8 @@ public class SCMDatanodeProtocolServer implements
               ((ReplicateContainerCommand)cmd).getProto())
           .build();
     default:
-      throw new IllegalArgumentException("Not implemented");
+      throw new IllegalArgumentException("Scm command " +
+          cmd.getType().toString() + " is not implemented");
     }
   }
 
