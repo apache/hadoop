@@ -93,6 +93,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Multipa
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartUploadListPartsRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartUploadListPartsResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest.Builder;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.RenameKeyRequest;
@@ -197,7 +198,6 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
 
     return OMRequest.newBuilder()
         .setCmdType(cmdType)
-        .setTraceID(TracingUtil.exportCurrentSpan())
         .setClientId(clientID);
   }
 
@@ -213,7 +213,10 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         GlobalTracer.get().buildSpan(omRequest.getCmdType().name())
             .startActive(true);
     try {
-      return rpcProxy.submitRequest(NULL_RPC_CONTROLLER, omRequest);
+      OMRequest payload = OMRequest.newBuilder(omRequest)
+          .setTraceID(TracingUtil.exportCurrentSpan())
+          .build();
+      return rpcProxy.submitRequest(NULL_RPC_CONTROLLER, payload);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     } finally {
