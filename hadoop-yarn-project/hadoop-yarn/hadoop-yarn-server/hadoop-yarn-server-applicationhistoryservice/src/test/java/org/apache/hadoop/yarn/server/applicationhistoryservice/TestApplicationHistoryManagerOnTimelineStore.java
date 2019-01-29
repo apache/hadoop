@@ -182,6 +182,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
       Assert.assertEquals("test queue", app.getQueue());
       Assert.assertEquals(Integer.MAX_VALUE + 2L
           + app.getApplicationId().getId(), app.getStartTime());
+      Assert.assertEquals(Integer.MAX_VALUE + 1L, app.getSubmitTime());
       Assert.assertEquals(Integer.MAX_VALUE + 3L
           + +app.getApplicationId().getId(), app.getFinishTime());
       Assert.assertTrue(Math.abs(app.getProgress() - 1.0F) < 0.0001);

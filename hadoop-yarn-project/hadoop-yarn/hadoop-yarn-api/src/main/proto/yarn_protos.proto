@@ -194,6 +194,7 @@ message ApplicationReportProto {
   optional string applicationType = 18;
   optional hadoop.common.TokenProto am_rm_token = 19;
   repeated string applicationTags = 20;
+  optional int64 submitTime = 21;
 }
 
 message ApplicationAttemptReportProto {

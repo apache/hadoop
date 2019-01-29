@@ -242,6 +242,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     String name = null;
     String type = null;
     long createdTime = 0;
+    long submittedTime = 0;
     long finishedTime = 0;
     ApplicationAttemptId latestApplicationAttemptId = null;
     String diagnosticsInfo = null;
@@ -268,8 +269,8 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
         return new ApplicationReportExt(ApplicationReport.newInstance(
             ConverterUtils.toApplicationId(entity.getEntityId()),
             latestApplicationAttemptId, user, queue, name, null, -1, null, state,
-            diagnosticsInfo, null, createdTime, finishedTime, finalStatus, null,
-            null, 1.0F, type, null), appViewACLs);
+            diagnosticsInfo, null, createdTime, submittedTime, finishedTime,
+            finalStatus, null, null, 1.0F, type, null), appViewACLs);
       }
       if (entityInfo.containsKey(ApplicationMetricsConstants.QUEUE_ENTITY_INFO)) {
         queue =
@@ -285,6 +286,12 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
         type =
             entityInfo.get(ApplicationMetricsConstants.TYPE_ENTITY_INFO)
                 .toString();
+      }
+      if (entityInfo.containsKey(ApplicationMetricsConstants.
+          SUBMITTED_TIME_ENTITY_INFO)) {
+        submittedTime = Long.parseLong(entityInfo.get(
+            ApplicationMetricsConstants.SUBMITTED_TIME_ENTITY_INFO)
+            .toString());
       }
       if (entityInfo.containsKey(ApplicationMetricsConstants.APP_CPU_METRICS)) {
         long vcoreSeconds=Long.parseLong(entityInfo.get(
@@ -344,8 +351,8 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     return new ApplicationReportExt(ApplicationReport.newInstance(
         ConverterUtils.toApplicationId(entity.getEntityId()),
         latestApplicationAttemptId, user, queue, name, null, -1, null, state,
-        diagnosticsInfo, null, createdTime, finishedTime, finalStatus, appResources,
-        null, 1.0F, type, null), appViewACLs);
+        diagnosticsInfo, null, createdTime, submittedTime, finishedTime,
+        finalStatus, appResources, null, 1.0F, type, null), appViewACLs);
   }
 
   private static ApplicationAttemptReport convertToApplicationAttemptReport(
