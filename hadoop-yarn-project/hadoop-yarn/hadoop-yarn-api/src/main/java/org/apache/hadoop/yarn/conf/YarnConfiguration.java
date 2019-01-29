@@ -3489,6 +3489,8 @@ public class YarnConfiguration extends Configuration {
       ".endpoint";
   public static final String NM_CSI_ADAPTOR_ADDRESS_SUFFIX =
       ".address";
+  public static final String NM_CSI_ADAPTOR_CLASS =
+      ".class";
   /**
    * One or more socket addresses for csi-adaptor.
    * Multiple addresses are delimited by ",".
