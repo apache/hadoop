@@ -27,13 +27,19 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.CsiAdaptorProtocol;
+import org.apache.hadoop.yarn.api.CsiAdaptorPlugin;
 import org.apache.hadoop.yarn.api.impl.pb.client.CsiAdaptorProtocolPBClientImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.GetPluginInfoRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetPluginInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.NodePublishVolumeRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.NodePublishVolumeResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.NodeUnpublishVolumeRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.NodeUnpublishVolumeResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ValidateVolumeCapabilitiesRequestPBImpl;
 import org.apache.hadoop.yarn.client.NMProxy;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.csi.client.ICsiClientTest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.junit.AfterClass;
@@ -72,6 +78,39 @@ public class TestCsiAdaptorService {
     }
   }
 
+  private interface FakeCsiAdaptor extends CsiAdaptorPlugin {
+
+    default void init(String driverName, Configuration conf)
+        throws YarnException {
+      return;
+    }
+
+    default String getDriverName() {
+      return null;
+    }
+
+    default GetPluginInfoResponse getPluginInfo(GetPluginInfoRequest request)
+        throws YarnException, IOException {
+      return null;
+    }
+
+    default ValidateVolumeCapabilitiesResponse validateVolumeCapacity(
+        ValidateVolumeCapabilitiesRequest request) throws YarnException,
+        IOException {
+      return null;
+    }
+
+    default NodePublishVolumeResponse nodePublishVolume(
+        NodePublishVolumeRequest request) throws YarnException, IOException {
+      return null;
+    }
+
+    default NodeUnpublishVolumeResponse nodeUnpublishVolume(
+        NodeUnpublishVolumeRequest request) throws YarnException, IOException{
+      return null;
+    }
+  }
+
   @Test
   public void testValidateVolume() throws IOException, YarnException {
     ServerSocket ss = new ServerSocket(0);
@@ -83,50 +122,52 @@ public class TestCsiAdaptorService {
         address);
     conf.set(
         YarnConfiguration.NM_CSI_DRIVER_PREFIX + "test-driver.endpoint",
-        "unix:///tmp/test-driver.scok");
-    CsiAdaptorProtocolService service =
-        new CsiAdaptorProtocolService("test-driver", domainSocket);
-    service.init(conf);
-    service.start();
+        "unix:///tmp/test-driver.sock");
 
-    // inject a fake CSI client
+    // inject a fake CSI adaptor
     // this client validates if the ValidateVolumeCapabilitiesRequest
     // is integrity, and then reply a fake response
-    service.setCsiClient(new ICsiClientTest() {
+    CsiAdaptorPlugin plugin = new FakeCsiAdaptor() {
       @Override
-      public Csi.GetPluginInfoResponse getPluginInfo() {
-        return Csi.GetPluginInfoResponse.newBuilder()
-            .setName("test-plugin")
-            .setVendorVersion("0.1")
-            .build();
+      public String getDriverName() {
+        return "test-driver";
+      }
+
+
+      @Override
+      public GetPluginInfoResponse getPluginInfo(GetPluginInfoRequest request) {
+        return GetPluginInfoResponse.newInstance("test-plugin", "0.1");
       }
 
       @Override
-      public Csi.ValidateVolumeCapabilitiesResponse validateVolumeCapabilities(
-          Csi.ValidateVolumeCapabilitiesRequest request) {
+      public ValidateVolumeCapabilitiesResponse validateVolumeCapacity(
+          ValidateVolumeCapabilitiesRequest request) throws YarnException,
+          IOException {
         // validate we get all info from the request
         Assert.assertEquals("volume-id-0000123", request.getVolumeId());
-        Assert.assertEquals(1, request.getVolumeCapabilitiesCount());
+        Assert.assertEquals(1, request.getVolumeCapabilities().size());
         Assert.assertEquals(Csi.VolumeCapability.AccessMode
-                .newBuilder().setModeValue(5).build(),
-            request.getVolumeCapabilities(0).getAccessMode());
-        Assert.assertTrue(request.getVolumeCapabilities(0).hasMount());
-        Assert.assertEquals(2, request.getVolumeCapabilities(0)
-            .getMount().getMountFlagsCount());
-        Assert.assertTrue(request.getVolumeCapabilities(0)
-            .getMount().getMountFlagsList().contains("mountFlag1"));
-        Assert.assertTrue(request.getVolumeCapabilities(0)
-            .getMount().getMountFlagsList().contains("mountFlag2"));
-        Assert.assertEquals(2, request.getVolumeAttributesCount());
-        Assert.assertEquals("v1", request.getVolumeAttributesMap().get("k1"));
-        Assert.assertEquals("v2", request.getVolumeAttributesMap().get("k2"));
+                .newBuilder().setModeValue(5).build().getMode().name(),
+            request.getVolumeCapabilities().get(0).getAccessMode().name());
+        Assert.assertEquals(2, request.getVolumeCapabilities().get(0)
+            .getMountFlags().size());
+        Assert.assertTrue(request.getVolumeCapabilities().get(0)
+            .getMountFlags().contains("mountFlag1"));
+        Assert.assertTrue(request.getVolumeCapabilities().get(0)
+            .getMountFlags().contains("mountFlag2"));
+        Assert.assertEquals(2, request.getVolumeAttributes().size());
+        Assert.assertEquals("v1", request.getVolumeAttributes().get("k1"));
+        Assert.assertEquals("v2", request.getVolumeAttributes().get("k2"));
         // return a fake result
-        return Csi.ValidateVolumeCapabilitiesResponse.newBuilder()
-            .setSupported(false)
-            .setMessage("this is a test")
-            .build();
+        return ValidateVolumeCapabilitiesResponse
+            .newInstance(false, "this is a test");
       }
-    });
+    };
+
+    CsiAdaptorProtocolService service =
+        new CsiAdaptorProtocolService(plugin);
+    service.init(conf);
+    service.start();
 
     try (CsiAdaptorProtocolPBClientImpl client =
         new CsiAdaptorProtocolPBClientImpl(1L, address, new Configuration())) {
@@ -161,50 +202,53 @@ public class TestCsiAdaptorService {
         address);
     conf.set(
         YarnConfiguration.NM_CSI_DRIVER_PREFIX + "test-driver.endpoint",
-        "unix:///tmp/test-driver.scok");
-    CsiAdaptorProtocolService service =
-        new CsiAdaptorProtocolService("test-driver", domainSocket);
-    service.init(conf);
-    service.start();
+        "unix:///tmp/test-driver.sock");
 
-    // inject a fake CSI client
+    // inject a fake CSI adaptor
     // this client validates if the ValidateVolumeCapabilitiesRequest
     // is integrity, and then reply a fake response
-    service.setCsiClient(new ICsiClientTest() {
+    FakeCsiAdaptor plugin = new FakeCsiAdaptor() {
       @Override
-      public Csi.GetPluginInfoResponse getPluginInfo() {
-        return Csi.GetPluginInfoResponse.newBuilder()
-            .setName("test-plugin")
-            .setVendorVersion("0.1")
-            .build();
+      public String getDriverName() {
+        return "test-driver";
       }
 
       @Override
-      public Csi.ValidateVolumeCapabilitiesResponse validateVolumeCapabilities(
-          Csi.ValidateVolumeCapabilitiesRequest request) {
+      public GetPluginInfoResponse getPluginInfo(
+          GetPluginInfoRequest request) throws YarnException, IOException {
+        return GetPluginInfoResponse.newInstance("test-plugin", "0.1");
+      }
+
+      @Override
+      public ValidateVolumeCapabilitiesResponse validateVolumeCapacity(
+          ValidateVolumeCapabilitiesRequest request)
+          throws YarnException, IOException {
         // validate we get all info from the request
         Assert.assertEquals("volume-id-0000123", request.getVolumeId());
-        Assert.assertEquals(1, request.getVolumeCapabilitiesCount());
-        Assert.assertEquals(Csi.VolumeCapability.AccessMode
-                .newBuilder().setModeValue(5).build(),
-            request.getVolumeCapabilities(0).getAccessMode());
-        Assert.assertTrue(request.getVolumeCapabilities(0).hasMount());
-        Assert.assertEquals(2, request.getVolumeCapabilities(0)
-            .getMount().getMountFlagsCount());
-        Assert.assertTrue(request.getVolumeCapabilities(0)
-            .getMount().getMountFlagsList().contains("mountFlag1"));
-        Assert.assertTrue(request.getVolumeCapabilities(0)
-            .getMount().getMountFlagsList().contains("mountFlag2"));
-        Assert.assertEquals(2, request.getVolumeAttributesCount());
-        Assert.assertEquals("v1", request.getVolumeAttributesMap().get("k1"));
-        Assert.assertEquals("v2", request.getVolumeAttributesMap().get("k2"));
+        Assert.assertEquals(1, request.getVolumeCapabilities().size());
+        Assert.assertEquals(
+            Csi.VolumeCapability.AccessMode.newBuilder().setModeValue(5)
+                .build().getMode().name(),
+            request.getVolumeCapabilities().get(0).getAccessMode().name());
+        Assert.assertEquals(2,
+            request.getVolumeCapabilities().get(0).getMountFlags().size());
+        Assert.assertTrue(request.getVolumeCapabilities().get(0).getMountFlags()
+            .contains("mountFlag1"));
+        Assert.assertTrue(request.getVolumeCapabilities().get(0).getMountFlags()
+            .contains("mountFlag2"));
+        Assert.assertEquals(2, request.getVolumeAttributes().size());
+        Assert.assertEquals("v1", request.getVolumeAttributes().get("k1"));
+        Assert.assertEquals("v2", request.getVolumeAttributes().get("k2"));
         // return a fake result
-        return Csi.ValidateVolumeCapabilitiesResponse.newBuilder()
-            .setSupported(false)
-            .setMessage("this is a test")
-            .build();
+        return ValidateVolumeCapabilitiesResponse
+            .newInstance(false, "this is a test");
       }
-    });
+    };
+
+    CsiAdaptorProtocolService service =
+        new CsiAdaptorProtocolService(plugin);
+    service.init(conf);
+    service.start();
 
     YarnRPC rpc = YarnRPC.create(conf);
     UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
@@ -232,7 +276,7 @@ public class TestCsiAdaptorService {
   public void testMissingConfiguration() {
     Configuration conf = new Configuration();
     CsiAdaptorProtocolService service =
-        new CsiAdaptorProtocolService("test-driver", domainSocket);
+        new CsiAdaptorProtocolService(new FakeCsiAdaptor() {});
     service.init(conf);
   }
 
@@ -243,7 +287,7 @@ public class TestCsiAdaptorService {
         + "test-driver-0001.address",
         "0.0.0.0:-100"); // this is an invalid address
     CsiAdaptorProtocolService service =
-        new CsiAdaptorProtocolService("test-driver-0001", domainSocket);
+        new CsiAdaptorProtocolService(new FakeCsiAdaptor() {});
     service.init(conf);
   }
 
@@ -254,7 +298,151 @@ public class TestCsiAdaptorService {
             + "test-driver-0001.address",
         "192.0.1:8999"); // this is an invalid ip address
     CsiAdaptorProtocolService service =
-        new CsiAdaptorProtocolService("test-driver-0001", domainSocket);
+        new CsiAdaptorProtocolService(new FakeCsiAdaptor() {});
     service.init(conf);
+  }
+
+  @Test
+  public void testCustomizedAdaptor() throws IOException, YarnException {
+    ServerSocket ss = new ServerSocket(0);
+    ss.close();
+    InetSocketAddress address = new InetSocketAddress(ss.getLocalPort());
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.NM_CSI_DRIVER_NAMES, "customized-driver");
+    conf.setSocketAddr(
+        YarnConfiguration.NM_CSI_ADAPTOR_PREFIX + "customized-driver.address",
+        address);
+    conf.set(
+        YarnConfiguration.NM_CSI_ADAPTOR_PREFIX + "customized-driver.class",
+        "org.apache.hadoop.yarn.csi.adaptor.MockCsiAdaptor");
+    conf.set(
+        YarnConfiguration.NM_CSI_DRIVER_PREFIX + "customized-driver.endpoint",
+        "unix:///tmp/customized-driver.sock");
+
+    CsiAdaptorServices services =
+        new CsiAdaptorServices();
+    services.init(conf);
+    services.start();
+
+    YarnRPC rpc = YarnRPC.create(conf);
+    UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
+    CsiAdaptorProtocol adaptorClient = NMProxy
+        .createNMProxy(conf, CsiAdaptorProtocol.class, currentUser, rpc,
+            NetUtils.createSocketAddrForHost("localhost", ss.getLocalPort()));
+
+    // Test getPluginInfo
+    GetPluginInfoResponse pluginInfo =
+        adaptorClient.getPluginInfo(GetPluginInfoRequest.newInstance());
+    Assert.assertEquals(pluginInfo.getDriverName(), "customized-driver");
+    Assert.assertEquals(pluginInfo.getVersion(), "1.0");
+
+    // Test validateVolumeCapacity
+    ValidateVolumeCapabilitiesRequest request =
+        ValidateVolumeCapabilitiesRequestPBImpl
+            .newInstance("volume-id-0000123",
+                ImmutableList.of(new ValidateVolumeCapabilitiesRequest
+                    .VolumeCapability(
+                    MULTI_NODE_MULTI_WRITER, FILE_SYSTEM,
+                    ImmutableList.of("mountFlag1", "mountFlag2"))),
+                ImmutableMap.of("k1", "v1", "k2", "v2"));
+
+    ValidateVolumeCapabilitiesResponse response = adaptorClient
+        .validateVolumeCapacity(request);
+    Assert.assertEquals(true, response.isSupported());
+    Assert.assertEquals("verified via MockCsiAdaptor",
+        response.getResponseMessage());
+
+    services.stop();
+  }
+
+  @Test
+  public void testMultipleCsiAdaptors() throws IOException, YarnException {
+    ServerSocket driver1Addr = new ServerSocket(0);
+    ServerSocket driver2Addr = new ServerSocket(0);
+
+    InetSocketAddress address1 =
+        new InetSocketAddress(driver1Addr.getLocalPort());
+    InetSocketAddress address2 =
+        new InetSocketAddress(driver2Addr.getLocalPort());
+
+    Configuration conf = new Configuration();
+
+    // Two csi-drivers configured
+    conf.set(YarnConfiguration.NM_CSI_DRIVER_NAMES,
+        "customized-driver-1,customized-driver-2");
+
+    // customized-driver-1
+    conf.setSocketAddr(YarnConfiguration.NM_CSI_ADAPTOR_PREFIX
+            + "customized-driver-1.address", address1);
+    conf.set(YarnConfiguration.NM_CSI_ADAPTOR_PREFIX
+            + "customized-driver-1.class",
+        "org.apache.hadoop.yarn.csi.adaptor.MockCsiAdaptor");
+    conf.set(YarnConfiguration.NM_CSI_DRIVER_PREFIX
+            + "customized-driver-1.endpoint",
+        "unix:///tmp/customized-driver-1.sock");
+
+    // customized-driver-2
+    conf.setSocketAddr(YarnConfiguration.NM_CSI_ADAPTOR_PREFIX
+        + "customized-driver-2.address", address2);
+    conf.set(YarnConfiguration.NM_CSI_ADAPTOR_PREFIX
+            + "customized-driver-2.class",
+        "org.apache.hadoop.yarn.csi.adaptor.MockCsiAdaptor");
+    conf.set(YarnConfiguration.NM_CSI_DRIVER_PREFIX
+            + "customized-driver-2.endpoint",
+        "unix:///tmp/customized-driver-2.sock");
+
+    driver1Addr.close();
+    driver2Addr.close();
+
+    CsiAdaptorServices services =
+        new CsiAdaptorServices();
+    services.init(conf);
+    services.start();
+
+    YarnRPC rpc = YarnRPC.create(conf);
+    UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
+    CsiAdaptorProtocol client1 = NMProxy
+        .createNMProxy(conf, CsiAdaptorProtocol.class, currentUser, rpc,
+            NetUtils.createSocketAddrForHost("localhost",
+                driver1Addr.getLocalPort()));
+
+    // ***************************************************
+    // Verify talking with customized-driver-1
+    // ***************************************************
+    // Test getPluginInfo
+    GetPluginInfoResponse pluginInfo =
+        client1.getPluginInfo(GetPluginInfoRequest.newInstance());
+    Assert.assertEquals(pluginInfo.getDriverName(), "customized-driver-1");
+    Assert.assertEquals(pluginInfo.getVersion(), "1.0");
+
+    // Test validateVolumeCapacity
+    ValidateVolumeCapabilitiesRequest request =
+        ValidateVolumeCapabilitiesRequestPBImpl
+            .newInstance("driver-1-volume-00001",
+                ImmutableList.of(new ValidateVolumeCapabilitiesRequest
+                    .VolumeCapability(
+                    MULTI_NODE_MULTI_WRITER, FILE_SYSTEM,
+                    ImmutableList.of())), ImmutableMap.of());
+
+    ValidateVolumeCapabilitiesResponse response = client1
+        .validateVolumeCapacity(request);
+    Assert.assertEquals(true, response.isSupported());
+    Assert.assertEquals("verified via MockCsiAdaptor",
+        response.getResponseMessage());
+
+
+    // ***************************************************
+    // Verify talking with customized-driver-2
+    // ***************************************************
+    CsiAdaptorProtocol client2 = NMProxy
+        .createNMProxy(conf, CsiAdaptorProtocol.class, currentUser, rpc,
+            NetUtils.createSocketAddrForHost("localhost",
+                driver2Addr.getLocalPort()));
+    GetPluginInfoResponse pluginInfo2 =
+        client2.getPluginInfo(GetPluginInfoRequest.newInstance());
+    Assert.assertEquals(pluginInfo2.getDriverName(), "customized-driver-2");
+    Assert.assertEquals(pluginInfo2.getVersion(), "1.0");
+
+    services.stop();
   }
 }

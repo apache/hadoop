@@ -18,9 +18,6 @@
 package org.apache.hadoop.yarn.csi.adaptor;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.yarn.api.CsiAdaptorProtocol;
 import org.apache.hadoop.yarn.api.CsiAdaptorPlugin;
 import org.apache.hadoop.yarn.api.protocolrecords.GetPluginInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetPluginInfoResponse;
@@ -31,84 +28,58 @@ import org.apache.hadoop.yarn.api.protocolrecords.NodeUnpublishVolumeResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesResponse;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.util.csi.CsiConfigUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
 /**
- * This is a Hadoop RPC server, we uses the Hadoop RPC framework here
- * because we need to stick to the security model current Hadoop supports.
+ * This class is used by {@link TestCsiAdaptorService} for testing.
+ * It gives some dummy implementation for a adaptor plugin, and used to
+ * verify the plugin can be properly loaded by NM and execution logic is
+ * as expected.
+ *
+ * This is created as a separated class instead of an inner class, because
+ * {@link CsiAdaptorServices} is loading classes using conf.getClass(),
+ * the utility class is unable to resolve inner classes.
  */
-public class CsiAdaptorProtocolService extends AbstractService
-    implements CsiAdaptorProtocol {
+public class MockCsiAdaptor implements CsiAdaptorPlugin {
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(CsiAdaptorProtocolService.class);
+  private String driverName;
 
-  private Server server;
-  private InetSocketAddress adaptorServiceAddress;
-  private CsiAdaptorPlugin serverImpl;
-
-  public CsiAdaptorProtocolService(CsiAdaptorPlugin adaptorImpl) {
-    super(CsiAdaptorProtocolService.class.getName());
-    this.serverImpl = adaptorImpl;
+  @Override
+  public void init(String driverName, Configuration conf)
+      throws YarnException {
+    this.driverName = driverName;
   }
 
   @Override
-  protected void serviceInit(Configuration conf) throws Exception {
-    adaptorServiceAddress = CsiConfigUtils
-        .getCsiAdaptorAddressForDriver(serverImpl.getDriverName(), conf);
-    super.serviceInit(conf);
-  }
-
-  @Override
-  protected void serviceStart() throws Exception {
-    Configuration conf = getConfig();
-    YarnRPC rpc = YarnRPC.create(conf);
-    this.server = rpc.getServer(
-        CsiAdaptorProtocol.class,
-        serverImpl, adaptorServiceAddress, conf, null, 1);
-    this.server.start();
-    LOG.info("{} started, listening on address: {}",
-        CsiAdaptorProtocolService.class.getName(),
-        adaptorServiceAddress.toString());
-    super.serviceStart();
-  }
-
-  @Override
-  protected void serviceStop() throws Exception {
-    if (this.server != null) {
-      this.server.stop();
-    }
-    super.serviceStop();
+  public String getDriverName() {
+    return this.driverName;
   }
 
   @Override
   public GetPluginInfoResponse getPluginInfo(
       GetPluginInfoRequest request) throws YarnException, IOException {
-    return serverImpl.getPluginInfo(request);
+    return GetPluginInfoResponse.newInstance(driverName,
+        "1.0");
   }
 
   @Override
   public ValidateVolumeCapabilitiesResponse validateVolumeCapacity(
-      ValidateVolumeCapabilitiesRequest request) throws YarnException,
-      IOException {
-    return serverImpl.validateVolumeCapacity(request);
+      ValidateVolumeCapabilitiesRequest request)
+      throws YarnException, IOException {
+    return ValidateVolumeCapabilitiesResponse.newInstance(true,
+        "verified via MockCsiAdaptor");
   }
 
   @Override
   public NodePublishVolumeResponse nodePublishVolume(
       NodePublishVolumeRequest request) throws YarnException, IOException {
-    return serverImpl.nodePublishVolume(request);
+    return null;
   }
 
   @Override
   public NodeUnpublishVolumeResponse nodeUnpublishVolume(
       NodeUnpublishVolumeRequest request) throws YarnException, IOException {
-    return serverImpl.nodeUnpublishVolume(request);
+    return null;
   }
 }

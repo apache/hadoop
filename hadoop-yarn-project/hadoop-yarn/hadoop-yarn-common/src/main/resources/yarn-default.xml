@@ -4096,12 +4096,20 @@
     <description>
       CSI driver names running on this node, multiple driver names need to
       be delimited by comma. The driver name should be same value returned
-      by the getPluginInfo call. For each of the CSI driver name, it must
+      by the getPluginInfo call.For each of the CSI driver name, it must
       to define following two corresponding properties:
         "yarn.nodemanager.csi-driver.${NAME}.endpoint"
         "yarn.nodemanager.csi-driver-adaptor.${NAME}.address"
       The 1st property defines where the driver's endpoint is;
       2nd property defines where the mapping csi-driver-adaptor's address is.
+      What's more, an optional csi-driver-adaptor class can be defined
+      for each csi-driver:
+        "yarn.nodemanager.csi-driver.${NAME}.class"
+      once given, the adaptor will be initiated with the given class instead
+      of the default implementation
+      org.apache.hadoop.yarn.csi.adaptor.DefaultCsiAdaptorImpl. User can plug
+      customized adaptor code for csi-driver with this configuration
+      if necessary.
     </description>
     <name>yarn.nodemanager.csi-driver.names</name>
     <value></value>
