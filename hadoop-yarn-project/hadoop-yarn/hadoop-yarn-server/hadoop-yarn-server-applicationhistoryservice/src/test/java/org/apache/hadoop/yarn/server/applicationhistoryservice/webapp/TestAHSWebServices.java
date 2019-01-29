@@ -407,6 +407,7 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertEquals("test app", app.get("name"));
     assertEquals(round == 0 ? "test diagnostics info" : "",
         app.get("diagnosticsInfo"));
+    assertEquals(Integer.MAX_VALUE + 1L, app.get("submittedTime"));
     assertEquals("test queue", app.get("queue"));
     assertEquals("user1", app.get("user"));
     assertEquals("test app type", app.get("type"));
