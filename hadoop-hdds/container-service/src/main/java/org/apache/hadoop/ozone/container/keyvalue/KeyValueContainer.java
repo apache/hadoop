@@ -64,6 +64,7 @@ import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.CONTAINER_FILES_CREATE_ERROR;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.CONTAINER_INTERNAL_ERROR;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.CONTAINER_NOT_OPEN;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.DISK_OUT_OF_SPACE;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -72,6 +73,7 @@ import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.INVALID_CONTAINER_STATE;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.UNSUPPORTED_REQUEST;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -109,8 +111,8 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
 
     File containerMetaDataPath = null;
     //acquiring volumeset read lock
-    volumeSet.readLock();
     long maxSize = containerData.getMaxSize();
+    volumeSet.readLock();
     try {
       HddsVolume containerVolume = volumeChoosingPolicy.chooseVolume(volumeSet
           .getVolumesList(), maxSize);
@@ -270,28 +272,67 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
 
   @Override
   public void markContainerForClose() throws StorageContainerException {
-    updateContainerData(() ->
-        containerData.setState(ContainerDataProto.State.CLOSING));
+    writeLock();
+    try {
+      if (getContainerState() != ContainerDataProto.State.OPEN) {
+        throw new StorageContainerException(
+            "Attempting to close a " + getContainerState() + " container.",
+            CONTAINER_NOT_OPEN);
+      }
+      updateContainerData(() ->
+          containerData.setState(ContainerDataProto.State.CLOSING));
+    } finally {
+      writeUnlock();
+    }
+  }
+
+  @Override
+  public void markContainerUnhealthy() throws StorageContainerException {
+    writeLock();
+    try {
+      updateContainerData(() ->
+          containerData.setState(ContainerDataProto.State.UNHEALTHY));
+    } finally {
+      writeUnlock();
+    }
   }
 
   @Override
   public void quasiClose() throws StorageContainerException {
-    updateContainerData(containerData::quasiCloseContainer);
+    writeLock();
+    try {
+      updateContainerData(containerData::quasiCloseContainer);
+    } finally {
+      writeUnlock();
+    }
   }
 
   @Override
   public void close() throws StorageContainerException {
-    updateContainerData(containerData::closeContainer);
+    writeLock();
+    try {
+      updateContainerData(containerData::closeContainer);
+    } finally {
+      writeUnlock();
+    }
+
     // It is ok if this operation takes a bit of time.
     // Close container is not expected to be instantaneous.
     compactDB();
   }
 
+  /**
+   *
+   * Must be invoked with the writeLock held.
+   *
+   * @param update
+   * @throws StorageContainerException
+   */
   private void updateContainerData(Runnable update)
       throws StorageContainerException {
+    Preconditions.checkState(hasWriteLock());
     ContainerDataProto.State oldState = null;
     try {
-      writeLock();
       oldState = containerData.getState();
       update.run();
       File containerFile = getContainerFile();
@@ -304,12 +345,10 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
         containerData.setState(oldState);
       }
       throw ex;
-    } finally {
-      writeUnlock();
     }
   }
 
-  private void compactDB() throws StorageContainerException {
+  void compactDB() throws StorageContainerException {
     try {
       MetadataStore db = BlockUtils.getDB(containerData, config);
       db.compactDB();
@@ -340,7 +379,8 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
   }
 
   @Override
-  public void update(Map<String, String> metadata, boolean forceUpdate)
+  public void update(
+      Map<String, String> metadata, boolean forceUpdate)
       throws StorageContainerException {
 
     // TODO: Now, when writing the updated data to .container file, we are
