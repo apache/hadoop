@@ -140,7 +140,7 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
    */
   @Override
   public void start(Object service) {
-    TracingUtil.initTrancing("OzoneManager");
+    TracingUtil.initTrancing("HddsDatanodeService");
     DefaultMetricsSystem.initialize("HddsDatanode");
     OzoneConfiguration.activate();
     if (service instanceof Configurable) {
