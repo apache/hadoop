@@ -30,7 +30,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.mockito.Matchers.anyObject;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -60,7 +60,7 @@ public class TestAbstractClientProvider {
     ClientProvider clientProvider = new ClientProvider();
     FileSystem mockFs = mock(FileSystem.class);
     FileStatus mockFileStatus = mock(FileStatus.class);
-    when(mockFs.exists(anyObject())).thenReturn(true);
+    when(mockFs.exists(any())).thenReturn(true);
 
     String compName = "sleeper";
     ConfigFile configFile = new ConfigFile();

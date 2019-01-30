@@ -25,7 +25,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.anyObject;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -679,7 +679,7 @@ public class TestLinuxContainerExecutor {
     ContainerReapContext ctx = builder.build();
     lce.reapContainer(ctx);
     verify(lce, times(1)).reapContainer(ctx);
-    verify(lce, times(1)).postComplete(anyObject());
+    verify(lce, times(1)).postComplete(any());
   }
 
   @Test

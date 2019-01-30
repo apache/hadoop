@@ -78,7 +78,7 @@ import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.YARN_SERVICE_B
 
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConstants
     .CONTAINER_STATE_REPORT_AS_SERVICE_STATE;
-import static org.mockito.Matchers.anyObject;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -186,10 +186,10 @@ public class ServiceTestUtils {
     FileSystem mockFs = mock(FileSystem.class);
     JsonSerDeser<Service> jsonSerDeser = mock(JsonSerDeser.class);
     when(sfs.getFileSystem()).thenReturn(mockFs);
-    when(sfs.buildClusterDirPath(anyObject())).thenReturn(
+    when(sfs.buildClusterDirPath(any())).thenReturn(
         new Path("cluster_dir_path"));
     if (ext != null) {
-      when(jsonSerDeser.load(anyObject(), anyObject())).thenReturn(ext);
+      when(jsonSerDeser.load(any(), any())).thenReturn(ext);
     }
     ServiceApiUtil.setJsonSerDeser(jsonSerDeser);
     return sfs;

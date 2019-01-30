@@ -1064,8 +1064,8 @@
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
-        <artifactId>mockito-all</artifactId>
-        <version>1.8.5</version>
+        <artifactId>mockito-core</artifactId>
+        <version>2.23.4</version>
       </dependency>
       <dependency>
         <groupId>org.objenesis</groupId>

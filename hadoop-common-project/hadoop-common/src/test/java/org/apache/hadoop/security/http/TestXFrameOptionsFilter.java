@@ -21,8 +21,6 @@ import java.util.Collection;
 import java.util.ArrayList;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -32,6 +30,8 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import static org.mockito.ArgumentMatchers.any;
 
 /**
  * Test the default and customized behaviors of XFrameOptionsFilter.
@@ -63,8 +63,7 @@ public class TestXFrameOptionsFilter {
             return null;
           }
         }
-       ).when(chain).doFilter(Mockito.<ServletRequest>anyObject(),
-          Mockito.<ServletResponse>anyObject());
+       ).when(chain).doFilter(any(), any());
 
     Mockito.doAnswer(
         new Answer() {
@@ -78,8 +77,7 @@ public class TestXFrameOptionsFilter {
             return null;
           }
         }
-       ).when(response).setHeader(Mockito.<String>anyObject(),
-        Mockito.<String>anyObject());
+       ).when(response).setHeader(any(), any());
 
     XFrameOptionsFilter filter = new XFrameOptionsFilter();
     filter.init(filterConfig);
@@ -119,8 +117,7 @@ public class TestXFrameOptionsFilter {
           return null;
           }
         }
-       ).when(chain).doFilter(Mockito.<ServletRequest>anyObject(),
-          Mockito.<ServletResponse>anyObject());
+       ).when(chain).doFilter(any(), any());
 
     Mockito.doAnswer(
         new Answer() {
@@ -134,8 +131,7 @@ public class TestXFrameOptionsFilter {
             return null;
           }
         }
-       ).when(response).setHeader(Mockito.<String>anyObject(),
-        Mockito.<String>anyObject());
+       ).when(response).setHeader(any(), any());
 
     XFrameOptionsFilter filter = new XFrameOptionsFilter();
     filter.init(filterConfig);

@@ -285,8 +285,7 @@ public class TestAmFilter {
     // "127.0.0.1" contains in host list. Without cookie
     Mockito.when(request.getRemoteAddr()).thenReturn("127.0.0.1");
     testFilter.doFilter(request, response, chain);
-    assertTrue(doFilterRequest
-        .contains("javax.servlet.http.HttpServletRequest"));
+    assertTrue(doFilterRequest.contains("HttpServletRequest"));
 
     // cookie added
     Cookie[] cookies = new Cookie[] {

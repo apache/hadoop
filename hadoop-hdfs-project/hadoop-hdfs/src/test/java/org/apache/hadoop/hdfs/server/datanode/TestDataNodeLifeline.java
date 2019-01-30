@@ -55,7 +55,6 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
-import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import org.apache.log4j.Level;
@@ -170,7 +169,7 @@ public class TestDataNodeLifeline {
             anyInt(),
             anyInt(),
             anyInt(),
-            any(VolumeFailureSummary.class),
+            any(),
             anyBoolean(),
             any(SlowPeerReports.class),
             any(SlowDiskReports.class));
@@ -185,7 +184,7 @@ public class TestDataNodeLifeline {
             anyInt(),
             anyInt(),
             anyInt(),
-            any(VolumeFailureSummary.class));
+            any());
 
     // While waiting on the latch for the expected number of lifeline messages,
     // poll DataNode tracking information.  Thanks to the lifeline, we expect
@@ -212,7 +211,7 @@ public class TestDataNodeLifeline {
         anyInt(),
         anyInt(),
         anyInt(),
-        any(VolumeFailureSummary.class));
+        any());
 
     // Also verify lifeline call through metrics.  We expect at least
     // numLifelines, guaranteed by waiting on the latch.  There is a small
@@ -239,7 +238,7 @@ public class TestDataNodeLifeline {
             anyInt(),
             anyInt(),
             anyInt(),
-            any(VolumeFailureSummary.class),
+            any(),
             anyBoolean(),
             any(SlowPeerReports.class),
             any(SlowDiskReports.class));
@@ -265,7 +264,7 @@ public class TestDataNodeLifeline {
         anyInt(),
         anyInt(),
         anyInt(),
-        any(VolumeFailureSummary.class));
+        any());
 
     // Also verify no lifeline calls through metrics.
     assertEquals("Expect metrics to count no lifeline calls.", 0,

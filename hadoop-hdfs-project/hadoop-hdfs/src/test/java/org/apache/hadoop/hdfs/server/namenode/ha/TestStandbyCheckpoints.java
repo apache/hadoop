@@ -62,6 +62,7 @@ import java.util.List;
 import java.util.Random;
 
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.any;
 
 public class TestStandbyCheckpoints {
   private static final int NUM_DIRS_IN_LOG = 200000;
@@ -274,7 +275,7 @@ public class TestStandbyCheckpoints {
     // We shouldn't save any checkpoints at txid=0
     Thread.sleep(1000);
     Mockito.verify(spyImage1, Mockito.never())
-      .saveNamespace((FSNamesystem) Mockito.anyObject());
+      .saveNamespace(any());
  
     // Roll the primary and wait for the standby to catch up
     HATestUtil.waitForStandbyToCatchUp(nns[0], nns[1]);
@@ -282,8 +283,7 @@ public class TestStandbyCheckpoints {
     
     // We should make exactly one checkpoint at this new txid. 
     Mockito.verify(spyImage1, Mockito.times(1)).saveNamespace(
-        (FSNamesystem) Mockito.anyObject(), Mockito.eq(NameNodeFile.IMAGE),
-        (Canceler) Mockito.anyObject());
+        any(), Mockito.eq(NameNodeFile.IMAGE), any());
   }
   
   /**
@@ -409,8 +409,8 @@ public class TestStandbyCheckpoints {
     FSImage spyImage1 = NameNodeAdapter.spyOnFsImage(nns[1]);
     DelayAnswer answerer = new DelayAnswer(LOG);
     Mockito.doAnswer(answerer).when(spyImage1)
-        .saveNamespace(Mockito.any(FSNamesystem.class),
-            Mockito.eq(NameNodeFile.IMAGE), Mockito.any(Canceler.class));
+        .saveNamespace(any(FSNamesystem.class),
+            Mockito.eq(NameNodeFile.IMAGE), any(Canceler.class));
 
     // Perform some edits and wait for a checkpoint to start on the SBN.
     doEdits(0, 1000);
@@ -454,9 +454,9 @@ public class TestStandbyCheckpoints {
     FSImage spyImage1 = NameNodeAdapter.spyOnFsImage(nns[1]);
     DelayAnswer answerer = new DelayAnswer(LOG);
     Mockito.doAnswer(answerer).when(spyImage1)
-        .saveNamespace(Mockito.any(FSNamesystem.class),
-            Mockito.any(NameNodeFile.class),
-            Mockito.any(Canceler.class));
+        .saveNamespace(any(FSNamesystem.class),
+            any(NameNodeFile.class),
+            any(Canceler.class));
     
     // Perform some edits and wait for a checkpoint to start on the SBN.
     doEdits(0, 1000);

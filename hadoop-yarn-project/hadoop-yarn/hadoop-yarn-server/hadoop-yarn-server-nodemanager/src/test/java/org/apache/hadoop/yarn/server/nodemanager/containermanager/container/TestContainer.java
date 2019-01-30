@@ -21,9 +21,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.argThat;
-import static org.mockito.Matchers.refEq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.refEq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
@@ -167,13 +167,7 @@ public class TestContainer {
       final WrappedContainer wcf = wc;
       // verify container launch
       ArgumentMatcher<ContainersLauncherEvent> matchesContainerLaunch =
-        new ArgumentMatcher<ContainersLauncherEvent>() {
-          @Override
-          public boolean matches(Object o) {
-            ContainersLauncherEvent launchEvent = (ContainersLauncherEvent) o;
-            return wcf.c == launchEvent.getContainer();
-          }
-        };
+          event -> wcf.c == event.getContainer();
       verify(wc.launcherBus).handle(argThat(matchesContainerLaunch));
     } finally {
       if (wc != null) {
@@ -949,28 +943,16 @@ public class TestContainer {
       
       for (final Map.Entry<String,ByteBuffer> e : wc.serviceData.entrySet()) {
         ArgumentMatcher<AuxServicesEvent> matchesServiceReq =
-          new ArgumentMatcher<AuxServicesEvent>() {
-            @Override
-            public boolean matches(Object o) {
-              AuxServicesEvent evt = (AuxServicesEvent) o;
-              return e.getKey().equals(evt.getServiceID())
+            evt -> e.getKey().equals(evt.getServiceID())
                 && 0 == e.getValue().compareTo(evt.getServiceData());
-            }
-          };
         verify(wc.auxBus).handle(argThat(matchesServiceReq));
       }
 
       final WrappedContainer wcf = wc;
       // verify launch on empty resource request
       ArgumentMatcher<ContainersLauncherEvent> matchesLaunchReq =
-        new ArgumentMatcher<ContainersLauncherEvent>() {
-          @Override
-          public boolean matches(Object o) {
-            ContainersLauncherEvent evt = (ContainersLauncherEvent) o;
-            return evt.getType() == ContainersLauncherEventType.LAUNCH_CONTAINER
+          evt -> evt.getType() == ContainersLauncherEventType.LAUNCH_CONTAINER
               && wcf.cId.equals(evt.getContainer().getContainerId());
-          }
-        };
       verify(wc.launcherBus).handle(argThat(matchesLaunchReq));
     } finally {
       if (wc != null) {
@@ -1174,7 +1156,7 @@ public class TestContainer {
   }
 
   // Argument matcher for matching container localization cleanup event.
-  private static class LocalizationCleanupMatcher extends
+  private static class LocalizationCleanupMatcher implements
       ArgumentMatcher<LocalizationEvent> {
     Container c;
 
@@ -1183,12 +1165,12 @@ public class TestContainer {
     }
 
     @Override
-    public boolean matches(Object o) {
-      if (!(o instanceof ContainerLocalizationCleanupEvent)) {
+    public boolean matches(LocalizationEvent e) {
+      if (!(e instanceof ContainerLocalizationCleanupEvent)) {
         return false;
       }
       ContainerLocalizationCleanupEvent evt =
-          (ContainerLocalizationCleanupEvent) o;
+          (ContainerLocalizationCleanupEvent) e;
 
       return (evt.getContainer() == c);
     }
@@ -1210,15 +1192,15 @@ public class TestContainer {
     }
 
     @Override
-    public boolean matches(Object o) {
+    public boolean matches(LocalizationEvent e) {
       // match event type and container.
-      if(!super.matches(o)){
+      if(!super.matches(e)){
         return false;
       }
 
       // match resources.
       ContainerLocalizationCleanupEvent evt =
-          (ContainerLocalizationCleanupEvent) o;
+          (ContainerLocalizationCleanupEvent) e;
       final HashSet<LocalResourceRequest> expected =
           new HashSet<LocalResourceRequest>(resources);
       for (Collection<LocalResourceRequest> rc : evt.getResources().values()) {
@@ -1233,7 +1215,7 @@ public class TestContainer {
   }
 
   // Accept iff the resource payload matches.
-  private static class ResourcesRequestedMatcher extends
+  private static class ResourcesRequestedMatcher implements
       ArgumentMatcher<LocalizationEvent> {
     final HashSet<LocalResourceRequest> resources =
         new HashSet<LocalResourceRequest>();
@@ -1248,9 +1230,9 @@ public class TestContainer {
     }
 
     @Override
-    public boolean matches(Object o) {
+    public boolean matches(LocalizationEvent e) {
       ContainerLocalizationRequestEvent evt =
-          (ContainerLocalizationRequestEvent) o;
+          (ContainerLocalizationRequestEvent) e;
       final HashSet<LocalResourceRequest> expected =
           new HashSet<LocalResourceRequest>(resources);
       for (Collection<LocalResourceRequest> rc : evt.getRequestedResources()

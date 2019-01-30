@@ -112,7 +112,7 @@ public class TestYarnChild {
   private void verifyReportError(Exception exception, boolean fastFail)
       throws IOException {
     YarnChild.reportError(exception, task, umbilical);
-    verify(umbilical).fatalError(any(TaskAttemptID.class), anyString(),
+    verify(umbilical).fatalError(any(), anyString(),
         eq(fastFail));
   }
 }

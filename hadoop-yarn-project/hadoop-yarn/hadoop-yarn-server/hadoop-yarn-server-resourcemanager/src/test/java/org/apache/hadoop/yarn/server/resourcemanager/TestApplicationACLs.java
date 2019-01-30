@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 
 import java.io.File;
 import java.io.FileWriter;

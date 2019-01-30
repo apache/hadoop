@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.argThat;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 

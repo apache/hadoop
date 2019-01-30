@@ -22,8 +22,8 @@ import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -46,7 +46,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -80,8 +79,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static org.mockito.Matchers.anyListOf;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -596,8 +594,8 @@ public class TestLinuxContainerExecutorWithMocks {
         spy(PrivilegedOperationExecutor.getInstance(conf));
     doThrow(new PrivilegedOperationException("interrupted"))
         .when(spyPrivilegedExecutor).executePrivilegedOperation(
-            any(List.class), any(PrivilegedOperation.class),
-            any(File.class), any(Map.class), anyBoolean(), anyBoolean());
+            any(), any(PrivilegedOperation.class),
+            any(), any(), anyBoolean(), anyBoolean());
     LinuxContainerRuntime runtime = new DefaultLinuxContainerRuntime(
         spyPrivilegedExecutor);
     runtime.initialize(conf, null);
@@ -720,8 +718,7 @@ public class TestLinuxContainerExecutorWithMocks {
         PrivilegedOperation.class);
     // Verify that
     verify(mockPrivilegedExec, times(1))
-        .executePrivilegedOperation(anyListOf(
-            String.class), opCaptor.capture(), any(
-            File.class), eq(null), eq(false), eq(false));
+        .executePrivilegedOperation(any(), opCaptor.capture(), any(),
+            eq(null), eq(false), eq(false));
   }
 }

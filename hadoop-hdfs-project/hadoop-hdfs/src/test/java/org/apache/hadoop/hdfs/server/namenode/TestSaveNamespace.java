@@ -22,7 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.anyObject;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
@@ -172,36 +172,36 @@ public class TestSaveNamespace {
       // The spy throws a RuntimeException when writing to the second directory
       doAnswer(new FaultySaveImage(true)).
           when(spyImage).saveFSImage(
-          anyObject(),
-          anyObject(), anyObject());
+          any(),
+          any(), any());
       shouldFail = false;
       break;
     case SAVE_SECOND_FSIMAGE_IOE:
       // The spy throws an IOException when writing to the second directory
       doAnswer(new FaultySaveImage(false)).
           when(spyImage).saveFSImage(
-          anyObject(),
-          anyObject(), anyObject());
+          any(),
+          any(), any());
       shouldFail = false;
       break;
     case SAVE_ALL_FSIMAGES:
       // The spy throws IOException in all directories
       doThrow(new RuntimeException("Injected")).
           when(spyImage).saveFSImage(
-          anyObject(),
-          anyObject(), anyObject());
+          any(),
+          any(), any());
       shouldFail = true;
       break;
     case WRITE_STORAGE_ALL:
       // The spy throws an exception before writing any VERSION files
       doAnswer(new FaultyWriteProperties(Fault.WRITE_STORAGE_ALL))
-          .when(spyStorage).writeProperties(anyObject());
+          .when(spyStorage).writeProperties(any());
       shouldFail = true;
       break;
     case WRITE_STORAGE_ONE:
       // The spy throws on exception on one particular storage directory
       doAnswer(new FaultyWriteProperties(Fault.WRITE_STORAGE_ONE))
-        .when(spyStorage).writeProperties(anyObject());
+        .when(spyStorage).writeProperties(any());
       shouldFail = false;
       break;
     default: fail("Unknown fail type");
@@ -414,7 +414,7 @@ public class TestSaveNamespace {
         FSNamesystem.getNamespaceEditsDirs(conf));
 
     doThrow(new IOException("Injected fault: saveFSImage")).
-        when(spyImage).saveFSImage(anyObject(), anyObject(), anyObject());
+        when(spyImage).saveFSImage(any(), any(), any());
 
     try {
       doAnEdit(fsn, 1);
