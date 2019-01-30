@@ -58,6 +58,9 @@ import static org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto
     .Type.deleteBlocksCommand;
 import static org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMCommandProto
+    .Type.deleteContainerCommand;
+import static org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto.Type
     .replicateContainerCommand;
 import static org.apache.hadoop.hdds.protocol.proto
@@ -87,6 +90,7 @@ import org.apache.hadoop.ozone.audit.SCMAction;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
+import org.apache.hadoop.ozone.protocol.commands.DeleteContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.ReplicateContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
@@ -334,6 +338,11 @@ public class SCMDatanodeProtocolServer implements
           .setCommandType(closeContainerCommand)
           .setCloseContainerCommandProto(
               ((CloseContainerCommand) cmd).getProto())
+          .build();
+    case deleteContainerCommand:
+      return builder.setCommandType(deleteContainerCommand)
+          .setDeleteContainerCommandProto(
+              ((DeleteContainerCommand) cmd).getProto())
           .build();
     case replicateContainerCommand:
       return builder
