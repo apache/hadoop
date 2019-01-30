@@ -407,10 +407,11 @@ public class TestFpgaResourceHandler {
 
   private static IntelFpgaOpenclPlugin mockPlugin(String type, List<FpgaResourceAllocator.FpgaDevice> list) {
     IntelFpgaOpenclPlugin plugin = mock(IntelFpgaOpenclPlugin.class);
-    when(plugin.initPlugin(Mockito.anyObject())).thenReturn(true);
+    when(plugin.initPlugin(Mockito.any())).thenReturn(true);
     when(plugin.getFpgaType()).thenReturn(type);
     when(plugin.downloadIP(Mockito.anyString(), Mockito.anyString(), Mockito.anyMap())).thenReturn("/tmp");
-    when(plugin.configureIP(Mockito.anyString(), Mockito.anyObject())).thenReturn(true);
+    when(plugin.configureIP(Mockito.anyString(), Mockito.any()))
+        .thenReturn(true);
     when(plugin.discover(Mockito.anyInt())).thenReturn(list);
     return plugin;
   }

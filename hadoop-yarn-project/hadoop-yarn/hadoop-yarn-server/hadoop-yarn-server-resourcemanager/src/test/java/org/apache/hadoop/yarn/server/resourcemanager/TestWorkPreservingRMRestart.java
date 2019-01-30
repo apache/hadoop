@@ -109,7 +109,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp
     .RMWebServices.DEFAULT_QUEUE;
 import static org.junit.Assert.*;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;

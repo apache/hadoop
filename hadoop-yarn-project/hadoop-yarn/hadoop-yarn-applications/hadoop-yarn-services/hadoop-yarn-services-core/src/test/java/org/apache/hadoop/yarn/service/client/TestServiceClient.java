@@ -52,7 +52,6 @@ import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-import org.mockito.Matchers;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,6 +60,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -220,18 +220,18 @@ public class TestServiceClient {
           ApplicationAttemptReport.newInstance(client.attemptId, "localhost", 0,
               null, null, null,
               YarnApplicationAttemptState.RUNNING, null);
-      when(yarnClient.getApplicationAttemptReport(Matchers.any()))
+      when(yarnClient.getApplicationAttemptReport(any()))
           .thenReturn(attemptReport);
       when(yarnClient.getApplicationReport(client.appId)).thenReturn(appReport);
       when(client.amProxy.upgrade(
-          Matchers.any(UpgradeServiceRequestProto.class))).thenAnswer(
+          any(UpgradeServiceRequestProto.class))).thenAnswer(
           (Answer<UpgradeServiceResponseProto>) invocation -> {
               UpgradeServiceResponseProto response =
                   UpgradeServiceResponseProto.newBuilder().build();
               client.proxyResponse = response;
               return response;
             });
-      when(client.amProxy.upgrade(Matchers.any(
+      when(client.amProxy.upgrade(any(
           CompInstancesUpgradeRequestProto.class))).thenAnswer(
           (Answer<CompInstancesUpgradeResponseProto>) invocation -> {
               CompInstancesUpgradeResponseProto response =
@@ -240,7 +240,7 @@ public class TestServiceClient {
               return response;
             });
 
-      when(client.amProxy.getCompInstances(Matchers.any(
+      when(client.amProxy.getCompInstances(any(
           GetCompInstancesRequestProto.class))).thenAnswer(
           (Answer<GetCompInstancesResponseProto>) invocation -> {
 
@@ -304,7 +304,7 @@ public class TestServiceClient {
   private static YarnClient createMockYarnClient() throws IOException,
       YarnException {
     YarnClient yarnClient = mock(YarnClient.class);
-    when(yarnClient.getApplications(Matchers.any(
+    when(yarnClient.getApplications(any(
         GetApplicationsRequest.class))).thenReturn(new ArrayList<>());
     return yarnClient;
   }

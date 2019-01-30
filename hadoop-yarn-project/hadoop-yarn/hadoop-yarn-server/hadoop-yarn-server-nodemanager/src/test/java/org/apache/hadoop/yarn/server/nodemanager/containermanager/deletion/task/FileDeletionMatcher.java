@@ -25,7 +25,7 @@ import java.util.List;
 /**
  * ArgumentMatcher to check the arguments of the {@link FileDeletionTask}.
  */
-public class FileDeletionMatcher extends ArgumentMatcher<FileDeletionTask> {
+public class FileDeletionMatcher implements ArgumentMatcher<FileDeletionTask> {
 
   private final DeletionService delService;
   private final String user;
@@ -41,8 +41,7 @@ public class FileDeletionMatcher extends ArgumentMatcher<FileDeletionTask> {
   }
 
   @Override
-  public boolean matches(Object o) {
-    FileDeletionTask fd = (FileDeletionTask) o;
+  public boolean matches(FileDeletionTask fd) {
     if (fd.getUser() == null && user != null) {
       return false;
     } else if (fd.getUser() != null && user == null) {

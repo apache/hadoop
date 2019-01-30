@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -53,9 +55,6 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
-import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
@@ -545,10 +544,10 @@ public class TestDNFencing {
 
       Mockito.doAnswer(delayer)
         .when(spy).blockReport(
-          Mockito.<DatanodeRegistration>anyObject(),
-          Mockito.anyString(),
-          Mockito.<StorageBlockReport[]>anyObject(),
-          Mockito.<BlockReportContext>anyObject());
+          any(),
+          anyString(),
+          any(),
+          any());
       dn.scheduleAllBlockReport(0);
       delayer.waitForCall();
       

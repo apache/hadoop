@@ -47,7 +47,7 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_USE_SECURE_MODE;
-import static org.mockito.Matchers.argThat;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.times;
 
@@ -317,27 +317,6 @@ public class ITestWasbRemoteCallHelper
     Mockito.when(mockHttpResponseServiceLocal.getEntity())
         .thenReturn(mockHttpEntity);
 
-
-
-    class HttpGetForService1 extends ArgumentMatcher<HttpGet>{
-      @Override public boolean matches(Object o) {
-        return checkHttpGetMatchHost((HttpGet) o, "localhost1");
-      }
-    }
-    class HttpGetForService2 extends ArgumentMatcher<HttpGet>{
-      @Override public boolean matches(Object o) {
-        return checkHttpGetMatchHost((HttpGet) o, "localhost2");
-      }
-    }
-    class HttpGetForServiceLocal extends ArgumentMatcher<HttpGet>{
-      @Override public boolean matches(Object o) {
-        try {
-          return checkHttpGetMatchHost((HttpGet) o, InetAddress.getLocalHost().getCanonicalHostName());
-        } catch (UnknownHostException e) {
-          return checkHttpGetMatchHost((HttpGet) o, "localhost");
-        }
-      }
-    }
     Mockito.when(mockHttpClient.execute(argThat(new HttpGetForService1())))
         .thenReturn(mockHttpResponseService1);
     Mockito.when(mockHttpClient.execute(argThat(new HttpGetForService2())))
@@ -401,30 +380,11 @@ public class ITestWasbRemoteCallHelper
     Mockito.when(mockHttpResponseService3.getEntity())
         .thenReturn(mockHttpEntity);
 
-    class HttpGetForService1 extends ArgumentMatcher<HttpGet>{
-      @Override public boolean matches(Object o) {
-        return checkHttpGetMatchHost((HttpGet) o, "localhost1");
-      }
-    }
-    class HttpGetForService2 extends ArgumentMatcher<HttpGet>{
-      @Override public boolean matches(Object o) {
-        return checkHttpGetMatchHost((HttpGet) o, "localhost2");
-      }
-    }
-    class HttpGetForService3 extends ArgumentMatcher<HttpGet> {
-      @Override public boolean matches(Object o){
-        try {
-          return checkHttpGetMatchHost((HttpGet) o, InetAddress.getLocalHost().getCanonicalHostName());
-        } catch (UnknownHostException e) {
-          return checkHttpGetMatchHost((HttpGet) o, "localhost");
-        }
-      }
-    }
     Mockito.when(mockHttpClient.execute(argThat(new HttpGetForService1())))
         .thenReturn(mockHttpResponseService1);
     Mockito.when(mockHttpClient.execute(argThat(new HttpGetForService2())))
         .thenReturn(mockHttpResponseService2);
-    Mockito.when(mockHttpClient.execute(argThat(new HttpGetForService3())))
+    Mockito.when(mockHttpClient.execute(argThat(new HttpGetForServiceLocal())))
         .thenReturn(mockHttpResponseService3);
 
     //Need 3 times because performop()  does 3 fs operations.
@@ -445,7 +405,7 @@ public class ITestWasbRemoteCallHelper
       Mockito.verify(mockHttpClient, atLeast(2))
           .execute(argThat(new HttpGetForService2()));
       Mockito.verify(mockHttpClient, atLeast(3))
-          .execute(argThat(new HttpGetForService3()));
+          .execute(argThat(new HttpGetForServiceLocal()));
       Mockito.verify(mockHttpClient, times(7)).execute(Mockito.<HttpGet>any());
     }
   }
@@ -565,4 +525,27 @@ public class ITestWasbRemoteCallHelper
     return g != null && g.getURI().getHost().equals(h);
   }
 
+  private class HttpGetForService1 implements ArgumentMatcher<HttpGet>{
+    @Override
+    public boolean matches(HttpGet httpGet) {
+      return checkHttpGetMatchHost(httpGet, "localhost1");
+    }
+  }
+  private class HttpGetForService2 implements ArgumentMatcher<HttpGet>{
+    @Override
+    public boolean matches(HttpGet httpGet) {
+      return checkHttpGetMatchHost(httpGet, "localhost2");
+    }
+  }
+  private class HttpGetForServiceLocal implements ArgumentMatcher<HttpGet>{
+    @Override
+    public boolean matches(HttpGet httpGet) {
+      try {
+        return checkHttpGetMatchHost(httpGet,
+            InetAddress.getLocalHost().getCanonicalHostName());
+      } catch (UnknownHostException e) {
+        return checkHttpGetMatchHost(httpGet, "localhost");
+      }
+    }
+  }
 }

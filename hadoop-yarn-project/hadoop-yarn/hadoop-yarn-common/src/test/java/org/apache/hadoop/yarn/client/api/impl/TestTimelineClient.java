@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -332,12 +332,12 @@ public class TestTimelineClient {
     ClientResponse response = mock(ClientResponse.class);
     if (hasRuntimeError) {
       doThrow(new ClientHandlerException(new ConnectException())).when(
-        spyTimelineWriter).doPostingObject(
-        any(TimelineEntities.class), any(String.class));
+          spyTimelineWriter).doPostingObject(
+              any(TimelineEntities.class), any());
       return response;
     }
     doReturn(response).when(spyTimelineWriter)
-        .doPostingObject(any(TimelineEntities.class), any(String.class));
+        .doPostingObject(any(TimelineEntities.class), any());
     when(response.getStatusInfo()).thenReturn(status);
     TimelinePutResponse.TimelinePutError error =
         new TimelinePutResponse.TimelinePutError();

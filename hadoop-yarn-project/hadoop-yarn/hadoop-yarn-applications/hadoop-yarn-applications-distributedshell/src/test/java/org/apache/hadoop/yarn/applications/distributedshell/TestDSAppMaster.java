@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Assert;
 import org.junit.Test;
-import org.mockito.Matchers;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import java.io.IOException;
@@ -92,7 +92,8 @@ public class TestDSAppMaster {
     master.setAmRMClient(mockClient);
     master.setNumTotalContainers(targetContainers);
     Mockito.doNothing().when(mockClient)
-        .addContainerRequest(Matchers.any(AMRMClient.ContainerRequest.class));
+        .addContainerRequest(ArgumentMatchers.any(
+            AMRMClient.ContainerRequest.class));
 
     ApplicationMaster.RMCallbackHandler handler = master.getRMCallbackHandler();
 

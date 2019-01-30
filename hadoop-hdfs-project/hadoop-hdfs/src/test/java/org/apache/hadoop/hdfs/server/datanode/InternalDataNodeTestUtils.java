@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -42,9 +41,6 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
-import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
-import org.apache.hadoop.hdfs.server.protocol.StorageReport;
-import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.junit.Assert;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -52,7 +48,7 @@ import org.mockito.stubbing.Answer;
 
 import com.google.common.base.Preconditions;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 
 /**
@@ -161,13 +157,13 @@ public class InternalDataNodeTestUtils {
             1L));
 
     when(
-        namenode.sendHeartbeat(Mockito.any(DatanodeRegistration.class),
-            Mockito.any(StorageReport[].class), Mockito.anyLong(),
+        namenode.sendHeartbeat(Mockito.any(),
+            Mockito.any(), Mockito.anyLong(),
             Mockito.anyLong(), Mockito.anyInt(), Mockito.anyInt(),
-            Mockito.anyInt(), Mockito.any(VolumeFailureSummary.class),
+            Mockito.anyInt(), Mockito.any(),
             Mockito.anyBoolean(),
-            Mockito.any(SlowPeerReports.class),
-            Mockito.any(SlowDiskReports.class))).thenReturn(
+            Mockito.any(),
+            Mockito.any())).thenReturn(
         new HeartbeatResponse(new DatanodeCommand[0], new NNHAStatusHeartbeat(
             HAServiceState.ACTIVE, 1), null, ThreadLocalRandom.current()
             .nextLong() | 1L));

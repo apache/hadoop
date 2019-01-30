@@ -20,13 +20,13 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 import static junit.framework.TestCase.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.argThat;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isA;
-import static org.mockito.Matchers.same;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -212,13 +212,7 @@ public class TestContainerLocalizer {
 
     // verify all HB use localizerID provided
     verify(nmProxy, never()).heartbeat(argThat(
-        new ArgumentMatcher<LocalizerStatus>() {
-          @Override
-          public boolean matches(Object o) {
-            LocalizerStatus status = (LocalizerStatus) o;
-            return !containerId.equals(status.getLocalizerId());
-          }
-        }));
+        status -> !containerId.equals(status.getLocalizerId())));
   }
 
   @Test(timeout = 15000)
@@ -402,14 +396,13 @@ public class TestContainerLocalizer {
     doReturn(cs).when(localizer).createCompletionService(syncExec);
   }
 
-  static class HBMatches extends ArgumentMatcher<LocalizerStatus> {
+  static class HBMatches implements ArgumentMatcher<LocalizerStatus> {
     final LocalResource rsrc;
     HBMatches(LocalResource rsrc) {
       this.rsrc = rsrc;
     }
     @Override
-    public boolean matches(Object o) {
-      LocalizerStatus status = (LocalizerStatus) o;
+    public boolean matches(LocalizerStatus status) {
       for (LocalResourceStatus localized : status.getResources()) {
         switch (localized.getStatus()) {
         case FETCH_SUCCESS:

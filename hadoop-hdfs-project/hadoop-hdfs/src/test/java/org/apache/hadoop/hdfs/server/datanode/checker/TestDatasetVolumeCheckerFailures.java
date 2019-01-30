@@ -26,7 +26,6 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.*;
 import org.apache.hadoop.util.FakeTimer;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,8 +36,11 @@ import java.util.*;
 
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 
 /**
@@ -106,7 +108,7 @@ public class TestDatasetVolumeCheckerFailures {
 
     // The closed volume should not have been checked as it cannot
     // be referenced.
-    verify(volumes.get(0), times(0)).check(anyObject());
+    verify(volumes.get(0), times(0)).check(any());
   }
 
   @Test(timeout=60000)
@@ -147,15 +149,11 @@ public class TestDatasetVolumeCheckerFailures {
     when(reference.getVolume()).thenReturn(volume);
     when(volume.obtainReference()).thenReturn(reference);
     when(volume.getStorageLocation()).thenReturn(location);
-    when(volume.check(anyObject())).thenAnswer(
-        new Answer<VolumeCheckResult>() {
-        @Override
-        public VolumeCheckResult answer(InvocationOnMock invocation)
-            throws Throwable {
+    when(volume.check(any())).thenAnswer(
+        (Answer<VolumeCheckResult>) invocation -> {
           Thread.sleep(Long.MAX_VALUE);     // Sleep forever.
           return VolumeCheckResult.HEALTHY; // unreachable.
-        }
-      });
+        });
     return volume;
   }
 

@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resourc
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -42,7 +43,6 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Matchers;
 
 /**
  * Test class for NumaResourceAllocator.
@@ -62,7 +62,7 @@ public class TestNumaResourceAllocator {
     Container mockContainer = mock(Container.class);
     when(mockContainer.getResourceMappings())
         .thenReturn(new ResourceMappings());
-    when(mockContainers.get(Matchers.any())).thenReturn(mockContainer);
+    when(mockContainers.get(any())).thenReturn(mockContainer);
     when(mockContext.getContainers()).thenReturn(mockContainers);
     NMStateStoreService mock = mock(NMStateStoreService.class);
     when(mockContext.getNMStateStore()).thenReturn(mock);
@@ -232,7 +232,7 @@ public class TestNumaResourceAllocator {
         Arrays.asList(new NumaResourceAllocation("0", 70000, "0", 4)));
     value.addAssignedResources("numa", assignedResources);
     when(mockContainer.getResourceMappings()).thenReturn(value);
-    when(mockContainers.get(Matchers.any())).thenReturn(mockContainer);
+    when(mockContainers.get(any())).thenReturn(mockContainer);
     when(mockContext.getContainers()).thenReturn(mockContainers);
     NMStateStoreService mock = mock(NMStateStoreService.class);
     when(mockContext.getNMStateStore()).thenReturn(mock);

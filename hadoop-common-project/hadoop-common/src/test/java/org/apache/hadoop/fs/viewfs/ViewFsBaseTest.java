@@ -25,9 +25,9 @@ import static org.apache.hadoop.fs.FileContextTestHelper.isFile;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -536,7 +536,7 @@ abstract public class ViewFsBaseTest {
   
   @Test
   public void testGetFileChecksum() throws AccessControlException,
-      UnresolvedLinkException, IOException {
+      UnresolvedLinkException, IOException, URISyntaxException {
     AbstractFileSystem mockAFS = mock(AbstractFileSystem.class);
     InodeTree.ResolveResult<AbstractFileSystem> res =
       new InodeTree.ResolveResult<AbstractFileSystem>(null, mockAFS , null,
@@ -544,13 +544,10 @@ abstract public class ViewFsBaseTest {
     @SuppressWarnings("unchecked")
     InodeTree<AbstractFileSystem> fsState = mock(InodeTree.class);
     when(fsState.resolve(anyString(), anyBoolean())).thenReturn(res);
-    ViewFs vfs = mock(ViewFs.class);
+    ViewFs vfs = new ViewFs(conf);
     vfs.fsState = fsState;
 
-    when(vfs.getFileChecksum(new Path("/tmp/someFile")))
-      .thenCallRealMethod();
     vfs.getFileChecksum(new Path("/tmp/someFile"));
-
     verify(mockAFS).getFileChecksum(new Path("someFile"));
   }
 

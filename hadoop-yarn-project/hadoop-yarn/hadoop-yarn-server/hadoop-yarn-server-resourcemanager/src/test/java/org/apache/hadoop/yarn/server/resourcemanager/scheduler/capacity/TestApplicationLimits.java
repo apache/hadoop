@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -74,7 +74,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Matchers;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import com.google.common.collect.ImmutableMap;
@@ -634,15 +634,17 @@ public class TestApplicationLimits {
     when(amResourceRequest.getCapability()).thenReturn(amResource);
     when(rmApp.getAMResourceRequests()).thenReturn(
         Collections.singletonList(amResourceRequest));
-    Mockito.doReturn(rmApp).when(spyApps).get((ApplicationId)Matchers.any());
+    Mockito.doReturn(rmApp)
+        .when(spyApps).get(ArgumentMatchers.<ApplicationId>any());
     when(spyRMContext.getRMApps()).thenReturn(spyApps);
     RMAppAttempt rmAppAttempt = mock(RMAppAttempt.class);
-    when(rmApp.getRMAppAttempt((ApplicationAttemptId) Matchers.any()))
+    when(rmApp.getRMAppAttempt(any()))
         .thenReturn(rmAppAttempt);
     when(rmApp.getCurrentAppAttempt()).thenReturn(rmAppAttempt);
-    Mockito.doReturn(rmApp).when(spyApps).get((ApplicationId) Matchers.any());
+    Mockito.doReturn(rmApp)
+        .when(spyApps).get(ArgumentMatchers.<ApplicationId>any());
     Mockito.doReturn(true).when(spyApps)
-        .containsKey((ApplicationId) Matchers.any());
+        .containsKey(ArgumentMatchers.<ApplicationId>any());
 
     Priority priority_1 = TestUtils.createMockPriority(1);
 

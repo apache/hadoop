@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resourc
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -39,7 +40,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resource
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Matchers;
 
 /**
  * Test class for NumaResourceHandlerImpl.
@@ -127,7 +127,7 @@ public class TestNumaResourceHandlerImpl {
     assignedRscs.updateAssignedResources(Arrays.asList(numaResourceAllocation));
     resourceMappings.addAssignedResources("numa", assignedRscs);
     when(mockContainer.getResourceMappings()).thenReturn(resourceMappings);
-    when(mockContainers.get(Matchers.any())).thenReturn(mockContainer);
+    when(mockContainers.get(any())).thenReturn(mockContainer);
     when(mockContext.getContainers()).thenReturn(mockContainers);
     numaResourceHandler = new NumaResourceHandlerImpl(conf, mockContext);
     numaResourceHandler.bootstrap(conf);
@@ -162,7 +162,7 @@ public class TestNumaResourceHandlerImpl {
     mockContainer = mock(Container.class);
     when(mockContainer.getResourceMappings())
         .thenReturn(new ResourceMappings());
-    when(mockContainers.get(Matchers.any())).thenReturn(mockContainer);
+    when(mockContainers.get(any())).thenReturn(mockContainer);
     when(mockContext.getContainers()).thenReturn(mockContainers);
     return mockContext;
   }

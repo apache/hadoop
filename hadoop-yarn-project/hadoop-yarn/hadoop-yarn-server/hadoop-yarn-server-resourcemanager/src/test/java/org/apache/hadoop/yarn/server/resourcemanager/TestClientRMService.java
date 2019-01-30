@@ -20,11 +20,11 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyListOf;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -558,7 +558,7 @@ public class TestClientRMService {
     QueueACLsManager mockQueueACLsManager = mock(QueueACLsManager.class);
     when(
         mockQueueACLsManager.checkAccess(any(UserGroupInformation.class),
-            any(QueueACL.class), any(RMApp.class), any(String.class),
+            any(QueueACL.class), any(RMApp.class), any(),
             any())).thenReturn(true);
     return new ClientRMService(rmContext, scheduler, appManager,
         mockAclsManager, mockQueueACLsManager, null);
@@ -806,11 +806,12 @@ public class TestClientRMService {
    */
   private ClientRMService createClientRMServiceForMoveApplicationRequest(
       ApplicationId applicationId, String appOwner,
-      ApplicationACLsManager appAclsManager, QueueACLsManager queueAclsManager)
-      throws IOException {
+      ApplicationACLsManager appAclsManager,
+      QueueACLsManager queueAclsManager) {
     RMApp app = mock(RMApp.class);
     when(app.getUser()).thenReturn(appOwner);
     when(app.getState()).thenReturn(RMAppState.RUNNING);
+    when(app.getApplicationId()).thenReturn(applicationId);
     ConcurrentHashMap<ApplicationId, RMApp> apps = new ConcurrentHashMap<>();
     apps.put(applicationId, app);
 
@@ -851,8 +852,8 @@ public class TestClientRMService {
         any(UserGroupInformation.class),
         any(QueueACL.class),
         any(RMApp.class),
-        any(String.class),
-        anyListOf(String.class))).thenAnswer(new Answer<Boolean>() {
+        any(),
+        any())).thenAnswer(new Answer<Boolean>() {
             @Override
             public Boolean answer(InvocationOnMock invocationOnMock) {
               final UserGroupInformation user =
@@ -868,8 +869,8 @@ public class TestClientRMService {
         any(UserGroupInformation.class),
         any(QueueACL.class),
         any(RMApp.class),
-        any(String.class),
-        anyListOf(String.class),
+        any(),
+        any(),
         any(String.class))).thenAnswer(new Answer<Boolean>() {
           @Override
           public Boolean answer(InvocationOnMock invocationOnMock) {
@@ -896,14 +897,14 @@ public class TestClientRMService {
         any(QueueACL.class),
         any(RMApp.class),
         any(String.class),
-        anyListOf(String.class),
+        anyList(),
         any(String.class))).thenReturn(false);
     when(queueACLsManager.checkAccess(
         any(UserGroupInformation.class),
         any(QueueACL.class),
         any(RMApp.class),
         any(String.class),
-        anyListOf(String.class))).thenReturn(true);
+        anyList())).thenReturn(true);
     return queueACLsManager;
   }
 
@@ -920,7 +921,7 @@ public class TestClientRMService {
         any()))
         .thenReturn(true);
     when(mockAclsManager.checkAccess(any(UserGroupInformation.class),
-        any(ApplicationAccessType.class), anyString(),
+        any(ApplicationAccessType.class), any(),
         any(ApplicationId.class))).thenReturn(true);
 
     ClientRMService rmService = new ClientRMService(rmContext, scheduler,
@@ -1105,7 +1106,7 @@ public class TestClientRMService {
     ApplicationACLsManager mockAclsManager = mock(ApplicationACLsManager.class);
     QueueACLsManager mockQueueACLsManager = mock(QueueACLsManager.class);
     when(mockQueueACLsManager.checkAccess(any(UserGroupInformation.class),
-        any(QueueACL.class), any(RMApp.class), any(String.class),
+        any(QueueACL.class), any(RMApp.class), any(),
         any()))
         .thenReturn(true);
     ClientRMService rmService =
@@ -2450,7 +2451,7 @@ public class TestClientRMService {
     QueueACLsManager queueAclsManager = mock(QueueACLsManager.class);
     when(queueAclsManager.checkAccess(any(UserGroupInformation.class),
         any(QueueACL.class), any(RMApp.class), any(String.class),
-        anyListOf(String.class))).thenReturn(false);
+        anyList())).thenReturn(false);
 
     // Simulate app ACL manager which returns false always
     ApplicationACLsManager appAclsManager = mock(ApplicationACLsManager.class);

@@ -27,8 +27,9 @@ import org.apache.hadoop.mapred.nativetask.buffer.InputBuffer;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Matchers;
 import org.mockito.Mockito;
+
+import static org.mockito.ArgumentMatchers.eq;
 
 @SuppressWarnings({ "rawtypes", "unchecked", "deprecation" })
 public class TestCombineHandler {
@@ -53,8 +54,10 @@ public class TestCombineHandler {
   @Test
   public void testCommandDispatcherSetting() throws IOException {
     this.handler = new CombinerHandler(nativeHandler, combinerRunner, puller, pusher);
-    Mockito.verify(nativeHandler, Mockito.times(1)).setCommandDispatcher(Matchers.eq(handler));
-    Mockito.verify(nativeHandler, Mockito.times(1)).setDataReceiver(Matchers.eq(puller));
+    Mockito.verify(nativeHandler,
+        Mockito.times(1)).setCommandDispatcher(eq(handler));
+    Mockito.verify(nativeHandler,
+        Mockito.times(1)).setDataReceiver(eq(puller));
   }
 
   @Test
@@ -65,7 +68,7 @@ public class TestCombineHandler {
     handler.close();
 
     Mockito.verify(combinerRunner, Mockito.times(1))
-      .combine(Matchers.eq(puller), Matchers.eq(pusher));
+      .combine(eq(puller), eq(pusher));
 
     Mockito.verify(pusher, Mockito.times(1)).close();
     Mockito.verify(puller, Mockito.times(1)).close();

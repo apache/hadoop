@@ -45,7 +45,7 @@ public class MockS3ClientFactory implements S3ClientFactory {
     // return a stub value
     MultipartUploadListing noUploads = new MultipartUploadListing();
     noUploads.setMultipartUploads(new ArrayList<>(0));
-    when(s3.listMultipartUploads(anyObject()))
+    when(s3.listMultipartUploads(any()))
         .thenReturn(noUploads);
     when(s3.getBucketLocation(anyString()))
         .thenReturn(Region.US_West.toString());

@@ -51,7 +51,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Future;
 
-import static org.mockito.Matchers.anyObject;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -82,7 +82,7 @@ public class MockRunningServiceContext extends ServiceContext {
         NMClientAsync nmClientAsync = super.createNMClient();
         NMClient nmClient = mock(NMClient.class);
         try {
-          when(nmClient.getContainerStatus(anyObject(), anyObject()))
+          when(nmClient.getContainerStatus(any(), any()))
               .thenAnswer(
                   (Answer<ContainerStatus>) invocation -> ContainerStatus
                       .newInstance((ContainerId) invocation.getArguments()[0],
@@ -119,13 +119,13 @@ public class MockRunningServiceContext extends ServiceContext {
 
 
     this.scheduler.init(fsWatcher.getConf());
-    when(mockLaunchService.launchCompInstance(anyObject(), anyObject(),
-        anyObject(), anyObject())).thenAnswer(
+    when(mockLaunchService.launchCompInstance(any(), any(),
+        any(), any())).thenAnswer(
         (Answer<Future<ProviderService.ResolvedLaunchParams>>)
             this::launchAndReinitHelper);
 
-    when(mockLaunchService.reInitCompInstance(anyObject(), anyObject(),
-        anyObject(), anyObject())).thenAnswer((
+    when(mockLaunchService.reInitCompInstance(any(), any(),
+        any(), any())).thenAnswer((
         Answer<Future<ProviderService.ResolvedLaunchParams>>)
         this::launchAndReinitHelper);
     stabilizeComponents(this);

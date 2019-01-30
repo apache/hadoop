@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.application;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
@@ -490,7 +489,8 @@ public class TestApplication {
     }
   }
 
-  private class ContainerKillMatcher extends ArgumentMatcher<ContainerEvent> {
+  private class ContainerKillMatcher implements
+      ArgumentMatcher<ContainerEvent> {
     private ContainerId cId;
 
     public ContainerKillMatcher(ContainerId cId) {
@@ -498,7 +498,7 @@ public class TestApplication {
     }
 
     @Override
-    public boolean matches(Object argument) {
+    public boolean matches(ContainerEvent argument) {
       if (argument instanceof ContainerKillEvent) {
         ContainerKillEvent event = (ContainerKillEvent) argument;
         return event.getContainerID().equals(cId);
@@ -507,7 +507,8 @@ public class TestApplication {
     }
   }
 
-  private class ContainerInitMatcher extends ArgumentMatcher<ContainerEvent> {
+  private class ContainerInitMatcher implements
+      ArgumentMatcher<ContainerEvent> {
     private ContainerId cId;
 
     public ContainerInitMatcher(ContainerId cId) {
@@ -515,7 +516,7 @@ public class TestApplication {
     }
 
     @Override
-    public boolean matches(Object argument) {
+    public boolean matches(ContainerEvent argument) {
       if (argument instanceof ContainerInitEvent) {
         ContainerInitEvent event = (ContainerInitEvent) argument;
         return event.getContainerID().equals(cId);

@@ -17,8 +17,8 @@
  *****************************************************************************/
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anySetOf;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -277,7 +277,7 @@ public class ReservationSystemTestUtil {
         new ClientToAMTokenSecretManagerInRM(), null));
 
     RMNodeLabelsManager nlm = mock(RMNodeLabelsManager.class);
-    when(nlm.getQueueResource(any(String.class), anySetOf(String.class),
+    when(nlm.getQueueResource(any(String.class), anySet(),
         any(Resource.class))).thenAnswer(new Answer<Resource>() {
           @Override
           public Resource answer(InvocationOnMock invocation) throws Throwable {
@@ -286,7 +286,7 @@ public class ReservationSystemTestUtil {
           }
         });
 
-    when(nlm.getResourceByLabel(any(String.class), any(Resource.class)))
+    when(nlm.getResourceByLabel(any(), any(Resource.class)))
         .thenAnswer(new Answer<Resource>() {
           @Override
           public Resource answer(InvocationOnMock invocation) throws Throwable {
