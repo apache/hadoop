@@ -85,6 +85,11 @@ public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
   void markContainerForClose() throws StorageContainerException;
 
   /**
+   * Marks the container replica as unhealthy.
+   */
+  void markContainerUnhealthy() throws StorageContainerException;
+
+  /**
    * Quasi Closes a open container, if it is already closed or does not exist a
    * StorageContainerException is thrown.
    *
