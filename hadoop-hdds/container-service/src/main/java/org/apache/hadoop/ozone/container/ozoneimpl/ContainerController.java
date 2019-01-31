@@ -116,11 +116,14 @@ public class ContainerController {
   /**
    * Deletes a container given its Id.
    * @param containerId Id of the container to be deleted
+   * @param force if this is set to true, we delete container without checking
+   * state of the container.
    * @throws IOException
    */
-  public void deleteContainer(final long containerId) throws IOException {
+  public void deleteContainer(final long containerId, boolean force)
+      throws IOException {
     final Container container = containerSet.getContainer(containerId);
-    getHandler(container).deleteContainer(container);
+    getHandler(container).deleteContainer(container, force);
   }
 
   /**

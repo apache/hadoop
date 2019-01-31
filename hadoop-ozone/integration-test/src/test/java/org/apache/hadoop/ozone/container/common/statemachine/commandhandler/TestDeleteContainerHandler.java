@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -121,9 +122,10 @@ public class TestDeleteContainerHandler {
 
     DatanodeDetails datanodeDetails = hddsDatanodeService.getDatanodeDetails();
 
+    NodeManager nodeManager =
+        cluster.getStorageContainerManager().getScmNodeManager();
     //send the order to close the container
-    cluster.getStorageContainerManager().getScmNodeManager()
-        .addDatanodeCommand(datanodeDetails.getUuid(),
+    nodeManager.addDatanodeCommand(datanodeDetails.getUuid(),
             new CloseContainerCommand(containerId.getId(), pipeline.getId()));
 
     GenericTestUtils.waitFor(() ->
@@ -139,40 +141,54 @@ public class TestDeleteContainerHandler {
         containerId.getId()));
 
     // send delete container to one of the datanode
-    cluster.getStorageContainerManager().getScmNodeManager()
-        .addDatanodeCommand(datanodeDetails.getUuid(),
-            new DeleteContainerCommand(containerId.getId()));
+    nodeManager.addDatanodeCommand(datanodeDetails.getUuid(),
+            new DeleteContainerCommand(containerId.getId(), true));
 
     GenericTestUtils.waitFor(() ->
             isContainerDeleted(hddsDatanodeService, containerId.getId()),
         500, 5 * 1000);
 
-    // On another node, where container is open try to delete container
+    // On another node, where container is open try to delete container with
+    // force flag set to false. here it will not be able to delete container
     HddsDatanodeService hddsDatanodeService1 =
         cluster.getHddsDatanodes().get(1);
     DatanodeDetails datanodeDetails1 =
         hddsDatanodeService1.getDatanodeDetails();
 
-    cluster.getStorageContainerManager().getScmNodeManager()
-        .addDatanodeCommand(datanodeDetails1.getUuid(),
-            new DeleteContainerCommand(containerId.getId()));
+    nodeManager.addDatanodeCommand(datanodeDetails1.getUuid(),
+            new DeleteContainerCommand(containerId.getId(), false));
 
     // Here it should not delete it, and the container should exist in the
     // containerset
 
     int count = 1;
-    // Checking for 10 seconds, whether it is containerSet, as after command
+    // Checking for 5 seconds, whether it is containerSet, as after command
     // is issued, giving some time for it to process.
     while (!isContainerDeleted(hddsDatanodeService1, containerId.getId())) {
       Thread.sleep(1000);
       count++;
-      if (count == 10) {
+      if (count == 5) {
         break;
       }
     }
 
     Assert.assertFalse(isContainerDeleted(hddsDatanodeService1,
         containerId.getId()));
+
+
+    // On another node, where container is open try to delete container with
+    // force flag set to true. now it should delete container
+
+    nodeManager.addDatanodeCommand(datanodeDetails1.getUuid(),
+            new DeleteContainerCommand(containerId.getId(), true));
+
+    GenericTestUtils.waitFor(() ->
+            isContainerDeleted(hddsDatanodeService1, containerId.getId()),
+        500, 5 * 1000);
+
+    Assert.assertTrue(isContainerDeleted(hddsDatanodeService1,
+        containerId.getId()));
+
 
   }
 

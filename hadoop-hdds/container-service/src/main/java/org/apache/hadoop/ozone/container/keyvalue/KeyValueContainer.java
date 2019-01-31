@@ -253,11 +253,10 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
 
 
   @Override
-  public void delete(boolean forceDelete)
-      throws StorageContainerException {
+  public void delete() throws StorageContainerException {
     long containerId = containerData.getContainerID();
     try {
-      KeyValueContainerUtil.removeContainer(containerData, config, forceDelete);
+      KeyValueContainerUtil.removeContainer(containerData, config);
     } catch (StorageContainerException ex) {
       throw ex;
     } catch (IOException ex) {

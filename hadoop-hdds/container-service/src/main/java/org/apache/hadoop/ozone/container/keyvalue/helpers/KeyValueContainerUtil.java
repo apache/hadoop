@@ -104,11 +104,10 @@ public final class KeyValueContainerUtil {
    *
    * @param containerData - Data of the container to remove.
    * @param conf - configuration of the cluster.
-   * @param forceDelete - whether this container should be deleted forcibly.
    * @throws IOException
    */
   public static void removeContainer(KeyValueContainerData containerData,
-                                     Configuration conf, boolean forceDelete)
+                                     Configuration conf)
       throws IOException {
     Preconditions.checkNotNull(containerData);
     File containerMetaDataPath = new File(containerData
