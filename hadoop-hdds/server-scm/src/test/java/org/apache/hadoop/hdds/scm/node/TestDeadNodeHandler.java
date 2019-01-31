@@ -59,6 +59,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.slf4j.event.Level;
 
 /**
  * Test DeadNodeHandler.
@@ -156,6 +157,7 @@ public class TestDeadNodeHandler {
     TestUtils.closeContainer(containerManager, container2.containerID());
     TestUtils.quasiCloseContainer(containerManager, container3.containerID());
 
+    GenericTestUtils.setLogLevel(DeadNodeHandler.getLogger(), Level.DEBUG);
     GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
         .captureLogs(DeadNodeHandler.getLogger());
 

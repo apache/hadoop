@@ -81,7 +81,6 @@ public class DeadNodeHandler implements EventHandler<DatanodeDetails> {
     for (ContainerID id : ids) {
       try {
         final ContainerInfo container = containerManager.getContainer(id);
-        // TODO: For open containers, trigger close on other nodes
         if (!container.isOpen()) {
           Set<ContainerReplica> replicas = containerManager
               .getContainerReplicas(id);
@@ -118,7 +117,7 @@ public class DeadNodeHandler implements EventHandler<DatanodeDetails> {
           .getContainerReplicas(container.containerID()).size();
       final int expectedReplicas = container.getReplicationFactor().getNumber();
       if (existingReplicas != expectedReplicas) {
-        LOG.info("Replicate Request fired for container {}, exisiting " +
+        LOG.debug("Replicate Request fired for container {}, exisiting " +
                 "replica count {}, expected replica count {}",
             container.getContainerID(), existingReplicas, expectedReplicas);
         publisher.fireEvent(SCMEvents.REPLICATE_CONTAINER,
