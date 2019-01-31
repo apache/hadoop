@@ -147,9 +147,6 @@ public final class XceiverServerRatis extends XceiverServer {
       executors.add(Executors.newSingleThreadExecutor());
     }
 
-    GrpcConfigKeys.Server.setInterceptor(serverProperties,
-        GrpcServerInterceptor.class.getCanonicalName());
-
     RaftServer.Builder builder = RaftServer.newBuilder()
         .setServerId(RatisHelper.toRaftPeerId(dd))
         .setProperties(serverProperties)

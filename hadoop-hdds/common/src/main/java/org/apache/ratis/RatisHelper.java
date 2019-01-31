@@ -168,9 +168,6 @@ public interface RatisHelper {
     GrpcConfigKeys.OutputStream.setOutstandingAppendsMax(properties,
         maxOutStandingRequest);
 
-    GrpcConfigKeys.Client.setInterceptor(properties,
-        GrpcClientInterceptor.class.getCanonicalName());
-
     RaftClient.Builder builder =  RaftClient.newBuilder()
         .setRaftGroup(group)
         .setLeaderId(leader)
