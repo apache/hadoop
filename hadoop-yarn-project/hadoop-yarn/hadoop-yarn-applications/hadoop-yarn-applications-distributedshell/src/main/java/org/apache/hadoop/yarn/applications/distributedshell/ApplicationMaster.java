@@ -265,6 +265,8 @@ public class ApplicationMaster {
   private ExecutionType containerType = ExecutionType.GUARANTEED;
   // Whether to automatically promote opportunistic containers.
   private boolean autoPromoteContainers = false;
+  // Whether to enforce execution type of the containers.
+  private boolean enforceExecType = false;
 
   // Resource profile for the container
   private String containerResourceProfile = "";
@@ -456,6 +458,8 @@ public class ApplicationMaster {
     opts.addOption("promote_opportunistic_after_start", false,
         "Flag to indicate whether to automatically promote opportunistic"
             + " containers to guaranteed.");
+    opts.addOption("enforce_execution_type", false,
+        "Flag to indicate whether to enforce execution type of containers");
     opts.addOption("container_memory", true,
         "Amount of memory in MB to be requested to run the shell command");
     opts.addOption("container_vcores", true,
@@ -646,6 +650,9 @@ public class ApplicationMaster {
     }
     if (cliParser.hasOption("promote_opportunistic_after_start")) {
       autoPromoteContainers = true;
+    }
+    if (cliParser.hasOption("enforce_execution_type")) {
+      enforceExecType = true;
     }
     containerMemory = Integer.parseInt(cliParser.getOptionValue(
         "container_memory", "-1"));
@@ -1502,7 +1509,7 @@ public class ApplicationMaster {
     ContainerRequest request = new ContainerRequest(
         getTaskResourceCapability(),
         null, null, pri, 0, true, null,
-        ExecutionTypeRequest.newInstance(containerType),
+        ExecutionTypeRequest.newInstance(containerType, enforceExecType),
         containerResourceProfile);
     LOG.info("Requested container ask: " + request.toString());
     return request;
