@@ -258,10 +258,7 @@ public class GpuResourceAllocator {
 
   private synchronized long getReleasingGpus() {
     long releasingGpus = 0;
-    Iterator<Map.Entry<GpuDevice, ContainerId>> iter = usedDevices.entrySet()
-        .iterator();
-    while (iter.hasNext()) {
-      ContainerId containerId = iter.next().getValue();
+    for (ContainerId containerId : ImmutableSet.copyOf(usedDevices.values())) {
       Container container;
       if ((container = nmContext.getContainers().get(containerId)) != null) {
         if (container.isContainerInFinalStates()) {
