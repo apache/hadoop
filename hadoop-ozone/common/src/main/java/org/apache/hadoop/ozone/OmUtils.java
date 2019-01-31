@@ -155,42 +155,43 @@ public final class OmUtils {
       OzoneManagerProtocolProtos.OMRequest omRequest) {
     OzoneManagerProtocolProtos.Type cmdType = omRequest.getCmdType();
     switch (cmdType) {
-      case CheckVolumeAccess:
-      case InfoVolume:
-      case ListVolume:
-      case InfoBucket:
-      case ListBuckets:
-      case LookupKey:
-      case ListKeys:
-      case InfoS3Bucket:
-      case ListS3Buckets:
-      case ServiceList:
-        return true;
-      case CreateVolume:
-      case SetVolumeProperty:
-      case DeleteVolume:
-      case CreateBucket:
-      case SetBucketProperty:
-      case DeleteBucket:
-      case CreateKey:
-      case RenameKey:
-      case DeleteKey:
-      case CommitKey:
-      case AllocateBlock:
-      case CreateS3Bucket:
-      case DeleteS3Bucket:
-      case InitiateMultiPartUpload:
-      case CommitMultiPartUpload:
-      case CompleteMultiPartUpload:
-      case AbortMultiPartUpload:
-      case GetS3Secret:
-      case GetDelegationToken:
-      case RenewDelegationToken:
-      case CancelDelegationToken:
-        return false;
-      default:
-        LOG.error("CmdType {} is not categorized as readOnly or not.", cmdType);
-        return false;
+    case CheckVolumeAccess:
+    case InfoVolume:
+    case ListVolume:
+    case InfoBucket:
+    case ListBuckets:
+    case LookupKey:
+    case ListKeys:
+    case InfoS3Bucket:
+    case ListS3Buckets:
+    case ServiceList:
+    case ListMultiPartUploadParts:
+      return true;
+    case CreateVolume:
+    case SetVolumeProperty:
+    case DeleteVolume:
+    case CreateBucket:
+    case SetBucketProperty:
+    case DeleteBucket:
+    case CreateKey:
+    case RenameKey:
+    case DeleteKey:
+    case CommitKey:
+    case AllocateBlock:
+    case CreateS3Bucket:
+    case DeleteS3Bucket:
+    case InitiateMultiPartUpload:
+    case CommitMultiPartUpload:
+    case CompleteMultiPartUpload:
+    case AbortMultiPartUpload:
+    case GetS3Secret:
+    case GetDelegationToken:
+    case RenewDelegationToken:
+    case CancelDelegationToken:
+      return false;
+    default:
+      LOG.error("CmdType {} is not categorized as readOnly or not.", cmdType);
+      return false;
     }
   }
 

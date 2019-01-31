@@ -36,6 +36,7 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
@@ -102,6 +103,10 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .MultipartUploadCompleteRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .MultipartUploadCompleteResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .MultipartUploadListPartsRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .MultipartUploadListPartsResponse;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.RenameKeyRequest;
 import org.apache.hadoop.ozone.protocol.proto
@@ -1140,6 +1145,37 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
       throw new IOException("Abort multipart upload failed, error:" +
           response.getStatus());
     }
+
+  }
+
+  @Override
+  public OmMultipartUploadListParts listParts(String volumeName,
+      String bucketName, String keyName, String uploadID,
+      int partNumberMarker, int maxParts) throws IOException {
+    MultipartUploadListPartsRequest.Builder multipartUploadListPartsRequest =
+        MultipartUploadListPartsRequest.newBuilder();
+    multipartUploadListPartsRequest.setVolume(volumeName)
+        .setBucket(bucketName).setKey(keyName).setUploadID(uploadID)
+        .setPartNumbermarker(partNumberMarker).setMaxParts(maxParts);
+
+    OMRequest omRequest = createOMRequest(Type.ListMultiPartUploadParts)
+        .setListMultipartUploadPartsRequest(
+            multipartUploadListPartsRequest.build()).build();
+
+    MultipartUploadListPartsResponse response =
+        submitRequest(omRequest).getListMultipartUploadPartsResponse();
+
+    if (response.getStatus() != Status.OK) {
+      throw new IOException("List Multipart upload parts failed, error: " +
+          response.getStatus());
+    }
+
+    OmMultipartUploadListParts omMultipartUploadListParts =
+        new OmMultipartUploadListParts(response.getType(),
+            response.getNextPartNumberMarker(), response.getIsTruncated());
+    omMultipartUploadListParts.addProtoPartList(response.getPartsListList());
+
+    return omMultipartUploadListParts;
 
   }
 
