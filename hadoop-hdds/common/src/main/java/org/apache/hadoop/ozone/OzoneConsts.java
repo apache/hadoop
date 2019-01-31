@@ -245,6 +245,10 @@ public final class OzoneConsts {
   public static final String REPLICATION_FACTOR = "replicationFactor";
   public static final String KEY_LOCATION_INFO = "keyLocationInfo";
   public static final String MULTIPART_LIST = "multipartList";
+  public static final String UPLOAD_ID = "uploadID";
+  public static final String PART_NUMBER_MARKER = "partNumberMarker";
+  public static final String MAX_PARTS = "maxParts";
+
 
 
   // For OM metrics saving to a file

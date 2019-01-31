@@ -69,6 +69,7 @@ enum Type {
   CompleteMultiPartUpload = 47;
   AbortMultiPartUpload = 48;
   GetS3Secret = 49;
+  ListMultiPartUploadParts = 50;
 
   ServiceList = 51;
 
@@ -116,6 +117,7 @@ message OMRequest {
   optional MultipartUploadCompleteRequest   completeMultiPartUploadRequest = 47;
   optional MultipartUploadAbortRequest      abortMultiPartUploadRequest    = 48;
   optional GetS3SecretRequest               getS3SecretRequest             = 49;
+  optional MultipartUploadListPartsRequest  listMultipartUploadPartsRequest = 50;
 
   optional ServiceListRequest               serviceListRequest             = 51;
 
@@ -165,6 +167,7 @@ message OMResponse {
   optional MultipartUploadCompleteResponse completeMultiPartUploadResponse = 47;
   optional MultipartUploadAbortResponse    abortMultiPartUploadResponse    = 48;
   optional GetS3SecretResponse               getS3SecretResponse           = 49;
+  optional MultipartUploadListPartsResponse listMultipartUploadPartsResponse = 50;
 
   optional ServiceListResponse               ServiceListResponse           = 51;
 
@@ -213,6 +216,7 @@ enum Status {
     INVALID_TOKEN = 34;
     TOKEN_EXPIRED = 35;
     TOKEN_ERROR_OTHER = 36;
+    LIST_MULTIPART_UPLOAD_PARTS_FAILED = 37;
 
 }
 
@@ -670,6 +674,30 @@ message MultipartUploadAbortRequest {
 
 message MultipartUploadAbortResponse {
     required Status status = 1;
+}
+message MultipartUploadListPartsRequest {
+    required string volume = 1;
+    required string bucket = 2;
+    required string key = 3;
+    required string uploadID = 4;
+    optional uint32 partNumbermarker = 5;
+    optional uint32 maxParts = 6;
+}
+
+message MultipartUploadListPartsResponse {
+    required Status status = 1;
+    optional hadoop.hdds.ReplicationType type = 2;
+    optional uint32 nextPartNumberMarker = 3;
+    optional bool isTruncated = 4;
+    repeated PartInfo partsList = 5;
+
+}
+
+message PartInfo {
+    required uint32 partNumber = 1;
+    required string partName = 2;
+    required uint64 modificationTime = 3;
+    required uint64 size = 4;
 }
 
 message GetDelegationTokenResponseProto{

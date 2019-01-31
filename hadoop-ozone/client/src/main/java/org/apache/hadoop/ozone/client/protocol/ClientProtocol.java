@@ -455,6 +455,22 @@ public interface ClientProtocol {
       String bucketName, String keyName, String uploadID) throws IOException;
 
   /**
+   * Returns list of parts of a multipart upload key.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param uploadID
+   * @param partNumberMarker - returns parts with part number which are greater
+   * than this partNumberMarker.
+   * @param maxParts
+   * @return OmMultipartUploadListParts
+   */
+  OzoneMultipartUploadPartListParts listParts(String volumeName,
+      String bucketName, String keyName, String uploadID, int partNumberMarker,
+      int maxParts)  throws IOException;
+
+
+  /**
    * Get a valid Delegation Token.
    *
    * @param renewer the designated renewer for the token

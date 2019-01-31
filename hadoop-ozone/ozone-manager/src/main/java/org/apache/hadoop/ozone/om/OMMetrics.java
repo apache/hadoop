@@ -92,6 +92,8 @@ public class OMMetrics {
   private @Metric MutableCounterLong numCompleteMultipartUploadFails;
   private @Metric MutableCounterLong numAbortMultipartUploads;
   private @Metric MutableCounterLong numAbortMultipartUploadFails;
+  private @Metric MutableCounterLong numListMultipartUploadParts;
+  private @Metric MutableCounterLong numListMultipartUploadPartFails;
 
   // Metrics for total number of volumes, buckets and keys
 
@@ -267,6 +269,15 @@ public class OMMetrics {
 
   public void incNumAbortMultipartUploadFails() {
     numAbortMultipartUploadFails.incr();
+  }
+
+  public void incNumListMultipartUploadParts() {
+    numKeyOps.incr();
+    numListMultipartUploadParts.incr();
+  }
+
+  public void incNumListMultipartUploadPartFails() {
+    numListMultipartUploadPartFails.incr();
   }
 
   public void incNumGetServiceLists() {
