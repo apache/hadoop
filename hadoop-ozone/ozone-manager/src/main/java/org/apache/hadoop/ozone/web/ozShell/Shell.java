@@ -78,7 +78,7 @@ public class Shell extends GenericCli {
 
   @Override
   public void execute(String[] argv) {
-    TracingUtil.initTrancing("shell");
+    TracingUtil.initTracing("shell");
     try (Scope scope = GlobalTracer.get().buildSpan("main").startActive(true)) {
       super.execute(argv);
     }

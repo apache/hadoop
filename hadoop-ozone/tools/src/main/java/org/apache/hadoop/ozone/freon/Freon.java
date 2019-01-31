@@ -35,7 +35,7 @@ public class Freon extends GenericCli {
 
   @Override
   public void execute(String[] argv) {
-    TracingUtil.initTrancing("freon");
+    TracingUtil.initTracing("freon");
     super.execute(argv);
   }
 

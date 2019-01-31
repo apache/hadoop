@@ -449,7 +449,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       System.exit(0);
     }
     try {
-      TracingUtil.initTrancing("StorageContainerManager");
+      TracingUtil.initTracing("StorageContainerManager");
       OzoneConfiguration conf = new OzoneConfiguration();
       GenericOptionsParser hParser = new GenericOptionsParser(conf, argv);
       if (!hParser.isParseSuccessful()) {

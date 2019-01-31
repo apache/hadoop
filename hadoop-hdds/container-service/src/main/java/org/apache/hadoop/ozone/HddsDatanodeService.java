@@ -153,7 +153,7 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
         datanodeDetails = initializeDatanodeDetails();
         datanodeDetails.setHostName(hostname);
         datanodeDetails.setIpAddress(ip);
-        TracingUtil.initTrancing(
+        TracingUtil.initTracing(
             "HddsDatanodeService." + datanodeDetails.getUuidString()
                 .substring(0, 8));
         LOG.info("HddsDatanodeService host:{} ip:{}", hostname, ip);

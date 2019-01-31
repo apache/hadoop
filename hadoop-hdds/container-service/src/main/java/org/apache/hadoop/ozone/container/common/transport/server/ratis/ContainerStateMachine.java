@@ -229,7 +229,7 @@ public class ContainerStateMachine extends BaseStateMachine {
         getRequestProto(request.getMessage().getContent());
     Preconditions.checkArgument(request.getRaftGroupId().equals(gid));
     try (Scope scope = TracingUtil
-        .initializeScope(proto.getCmdType().name(), proto.getTraceID())) {
+        .importAndCreateScope(proto.getCmdType().name(), proto.getTraceID())) {
       try {
         dispatcher.validateContainerCommand(proto);
       } catch (IOException ioe) {

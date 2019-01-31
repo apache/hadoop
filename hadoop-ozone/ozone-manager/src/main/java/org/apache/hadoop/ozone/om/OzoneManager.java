@@ -587,7 +587,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       System.exit(0);
     }
     try {
-      TracingUtil.initTrancing("OzoneManager");
+      TracingUtil.initTracing("OzoneManager");
       OzoneConfiguration conf = new OzoneConfiguration();
       GenericOptionsParser hParser = new GenericOptionsParser(conf, argv);
       if (!hParser.isParseSuccessful()) {

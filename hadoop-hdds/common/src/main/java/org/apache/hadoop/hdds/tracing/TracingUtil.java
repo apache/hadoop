@@ -39,7 +39,7 @@ public final class TracingUtil {
    *
    * @param serviceName
    */
-  public static void initTrancing(String serviceName) {
+  public static void initTracing(String serviceName) {
     Configuration config = Configuration.fromEnv(serviceName);
     JaegerTracer tracer = config.getTracerBuilder()
         .registerExtractor(StringCodec.FORMAT, new StringCodec())
@@ -62,8 +62,15 @@ public final class TracingUtil {
     return builder.toString();
   }
 
-
-  public static Scope initializeScope(String name, String encodedParent) {
+  /**
+   * Create a new scope and use the imported span as the parent.
+   *
+   * @param name          name of the newly created scope
+   * @param encodedParent Encoded parent span (could be null or empty)
+   *
+   * @return OpenTracing scope.
+   */
+  public static Scope importAndCreateScope(String name, String encodedParent) {
     Tracer.SpanBuilder spanBuilder;
     Tracer tracer = GlobalTracer.get();
     SpanContext parentSpan = null;
