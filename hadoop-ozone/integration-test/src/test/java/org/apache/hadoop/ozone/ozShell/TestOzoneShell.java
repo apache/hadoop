@@ -950,13 +950,7 @@ public class TestOzoneShell {
     execute(shell, args);
 
     // verify if key has been deleted in the bucket
-    try {
-      bucket.getKey(keyName);
-      fail("Get key should have thrown.");
-    } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains(
-          "Lookup key failed, error:KEY_NOT_FOUND", e);
-    }
+    assertKeyNotExists(bucket, keyName);
 
     // test delete key in a non-exist bucket
     args = new String[] {"key", "delete",
@@ -969,6 +963,29 @@ public class TestOzoneShell {
     args = new String[] {"key", "delete",
         url + "/" + volumeName + "/" + bucketName + "/invalid-key"};
     executeWithError(shell, args, "Delete key failed, error:KEY_NOT_FOUND");
+  }
+
+  @Test
+  public void testRenameKey() throws Exception {
+    LOG.info("Running testRenameKey");
+    OzoneBucket bucket = creatBucket();
+    OzoneKey oldKey = createTestKey(bucket);
+
+    String oldName = oldKey.getName();
+    String newName = oldName + ".new";
+    String[] args = new String[]{
+        "key", "rename",
+        String.format("%s/%s/%s",
+            url, oldKey.getVolumeName(), oldKey.getBucketName()),
+        oldName,
+        newName
+    };
+    execute(shell, args);
+
+    OzoneKey newKey = bucket.getKey(newName);
+    assertEquals(oldKey.getCreationTime(), newKey.getCreationTime());
+    assertEquals(oldKey.getDataSize(), newKey.getDataSize());
+    assertKeyNotExists(bucket, oldName);
   }
 
   @Test
@@ -1245,6 +1262,18 @@ public class TestOzoneShell {
     return bucketInfo;
   }
 
+  private OzoneKey createTestKey(OzoneBucket bucket) throws IOException {
+    String key = "key" + RandomStringUtils.randomNumeric(5);
+    String value = "value";
+
+    OzoneOutputStream keyOutputStream =
+        bucket.createKey(key, value.length());
+    keyOutputStream.write(value.getBytes());
+    keyOutputStream.close();
+
+    return bucket.getKey(key);
+  }
+
   @Test
   public void testTokenCommands() throws Exception {
     String omAdd = "--set=" + OZONE_OM_ADDRESS_KEY + "=" + getOmAddress();
@@ -1341,4 +1370,15 @@ public class TestOzoneShell {
         .map(s -> s.getServiceAddress(ServicePort.Type.RPC))
         .orElseThrow(IllegalStateException::new);
   }
+
+  private static void assertKeyNotExists(OzoneBucket bucket, String keyName) {
+    try {
+      bucket.getKey(keyName);
+      fail(String.format("Key %s should not exist, but it does", keyName));
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Lookup key failed, error:KEY_NOT_FOUND", e);
+    }
+  }
+
 }

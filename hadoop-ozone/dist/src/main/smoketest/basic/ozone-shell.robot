@@ -79,4 +79,7 @@ Test key handling
                     Should contain      ${result}       createdOn
     ${result} =     Execute             ozone sh key list ${protocol}${server}/${volume}/bb1 | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.keyName=="key1") | .keyName'
                     Should Be Equal     ${result}       key1
-                    Execute             ozone sh key delete ${protocol}${server}/${volume}/bb1/key1
+                    Execute             ozone sh key rename ${protocol}${server}/${volume}/bb1 key1 key2
+    ${result} =     Execute             ozone sh key list ${protocol}${server}/${volume}/bb1 | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[].keyName'
+                    Should Be Equal     ${result}       key2
+                    Execute             ozone sh key delete ${protocol}${server}/${volume}/bb1/key2
