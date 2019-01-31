@@ -47,6 +47,10 @@ public class OzoneMultipartUploadPartListParts {
     this.truncated = truncate;
   }
 
+  public void addAllParts(List<PartInfo> partInfos) {
+    partInfoList.addAll(partInfos);
+  }
+
   public void addPart(PartInfo partInfo) {
     this.partInfoList.add(partInfo);
   }

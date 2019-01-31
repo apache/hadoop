@@ -38,8 +38,10 @@ import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.client.OzoneMultipartUploadPartListParts.PartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.util.Time;
 
 /**
  * In-memory ozone bucket for testing.
@@ -234,6 +236,55 @@ public class OzoneBucketStub extends OzoneBucket {
     } else {
       multipartUploadIdMap.remove(keyName);
     }
+  }
+
+  @Override
+  public OzoneMultipartUploadPartListParts listParts(String key,
+      String uploadID, int partNumberMarker, int maxParts) throws IOException {
+    if (multipartUploadIdMap.get(key) == null) {
+      throw new IOException("NO_SUCH_MULTIPART_UPLOAD");
+    }
+    List<PartInfo> partInfoList = new ArrayList<>();
+
+    if (partList.get(key) == null) {
+      return new OzoneMultipartUploadPartListParts(ReplicationType.STAND_ALONE,
+          0, false);
+    } else {
+      Map<Integer, Part> partMap = partList.get(key);
+      Iterator<Map.Entry<Integer, Part>> partIterator =
+          partMap.entrySet().iterator();
+
+      int count = 0;
+      int nextPartNumberMarker = 0;
+      boolean truncated = false;
+      while (count < maxParts && partIterator.hasNext()) {
+        Map.Entry<Integer, Part> partEntry = partIterator.next();
+        nextPartNumberMarker = partEntry.getKey();
+        if (partEntry.getKey() > partNumberMarker) {
+          PartInfo partInfo = new PartInfo(partEntry.getKey(),
+              partEntry.getValue().getPartName(),
+              partEntry.getValue().getContent().length, Time.now());
+          partInfoList.add(partInfo);
+          count++;
+        }
+      }
+
+      if (partIterator.hasNext()) {
+        truncated = true;
+      } else {
+        truncated = false;
+        nextPartNumberMarker = 0;
+      }
+
+      OzoneMultipartUploadPartListParts ozoneMultipartUploadPartListParts =
+          new OzoneMultipartUploadPartListParts(ReplicationType.STAND_ALONE,
+              nextPartNumberMarker, truncated);
+      ozoneMultipartUploadPartListParts.addAllParts(partInfoList);
+
+      return ozoneMultipartUploadPartListParts;
+
+    }
+
   }
 
   /**

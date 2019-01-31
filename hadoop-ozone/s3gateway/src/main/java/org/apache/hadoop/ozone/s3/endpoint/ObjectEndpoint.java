@@ -50,6 +50,7 @@ import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKeyDetails;
+import org.apache.hadoop.ozone.client.OzoneMultipartUploadPartListParts;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
@@ -186,17 +187,34 @@ public class ObjectEndpoint extends EndpointBase {
   }
 
   /**
-   * Rest endpoint to download object from a bucket.
+   * Rest endpoint to download object from a bucket, if query param uploadId
+   * is specified, request for list parts of a multipart upload key with
+   * specific uploadId.
    * <p>
-   * See: https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectGET.html for
-   * more details.
+   * See: https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectGET.html
+   * https://docs.aws.amazon.com/AmazonS3/latest/API/mpUploadListParts.html
+   * for more details.
    */
   @GET
   public Response get(
       @PathParam("bucket") String bucketName,
       @PathParam("path") String keyPath,
+      @QueryParam("uploadId") String uploadId,
+      @QueryParam("max-parts") @DefaultValue("1000") int maxParts,
+      @QueryParam("part-number-marker") String partNumberMarker,
       InputStream body) throws IOException, OS3Exception {
     try {
+
+      if (uploadId != null) {
+        // When we have uploadId, this is the request for list Parts.
+        int partMarker = 0;
+        if (partNumberMarker != null) {
+          partMarker = Integer.parseInt(partNumberMarker);
+        }
+        return listParts(bucketName, keyPath, uploadId,
+            partMarker, maxParts);
+      }
+
       OzoneBucket bucket = getBucket(bucketName);
 
       OzoneKeyDetails keyDetails = bucket.getKey(keyPath);
@@ -548,6 +566,68 @@ public class ObjectEndpoint extends EndpointBase {
       throw ex;
     }
 
+  }
+
+  /**
+   * Returns response for the listParts request.
+   * See: https://docs.aws.amazon.com/AmazonS3/latest/API/mpUploadListParts.html
+   * @param bucket
+   * @param key
+   * @param uploadID
+   * @param partNumberMarker
+   * @param maxParts
+   * @return
+   * @throws IOException
+   * @throws OS3Exception
+   */
+  private Response listParts(String bucket, String key, String uploadID,
+      int partNumberMarker, int maxParts) throws IOException, OS3Exception {
+    ListPartsResponse listPartsResponse = new ListPartsResponse();
+    try {
+      OzoneBucket ozoneBucket = getBucket(bucket);
+      OzoneMultipartUploadPartListParts ozoneMultipartUploadPartListParts =
+          ozoneBucket.listParts(key, uploadID, partNumberMarker, maxParts);
+      listPartsResponse.setBucket(bucket);
+      listPartsResponse.setKey(key);
+      listPartsResponse.setUploadID(uploadID);
+      listPartsResponse.setMaxParts(maxParts);
+      listPartsResponse.setPartNumberMarker(partNumberMarker);
+      listPartsResponse.setTruncated(false);
+
+      if (ozoneMultipartUploadPartListParts.getReplicationType().toString()
+          .equals(ReplicationType.STAND_ALONE.toString())) {
+        listPartsResponse.setStorageClass(S3StorageType.REDUCED_REDUNDANCY
+            .toString());
+      } else {
+        listPartsResponse.setStorageClass(S3StorageType.STANDARD.toString());
+      }
+
+      if (ozoneMultipartUploadPartListParts.isTruncated()) {
+        listPartsResponse.setTruncated(
+            ozoneMultipartUploadPartListParts.isTruncated());
+        listPartsResponse.setNextPartNumberMarker(
+            ozoneMultipartUploadPartListParts.getNextPartNumberMarker());
+      }
+
+      ozoneMultipartUploadPartListParts.getPartInfoList().forEach(partInfo -> {
+        ListPartsResponse.Part part = new ListPartsResponse.Part();
+        part.setPartNumber(partInfo.getPartNumber());
+        part.setETag(partInfo.getPartName());
+        part.setSize(partInfo.getSize());
+        part.setLastModified(Instant.ofEpochMilli(
+            partInfo.getModificationTime()));
+        listPartsResponse.addPart(part);
+      });
+
+    } catch (IOException ex) {
+      if (ex.getMessage().contains("NO_SUCH_MULTIPART_UPLOAD_ERROR")) {
+        OS3Exception os3Exception = S3ErrorTable.newError(NO_SUCH_UPLOAD,
+            uploadID);
+        throw os3Exception;
+      }
+      throw ex;
+    }
+    return Response.status(Status.OK).entity(listPartsResponse).build();
   }
 
   @VisibleForTesting
