@@ -52,7 +52,7 @@ public class OmMultipartKeyInfo {
     return uploadID;
   }
 
-  public TreeMap<Integer, PartKeyInfo> getPartKeyInfoList() {
+  public TreeMap<Integer, PartKeyInfo> getPartKeyInfoMap() {
     return partKeyInfoList;
   }
 

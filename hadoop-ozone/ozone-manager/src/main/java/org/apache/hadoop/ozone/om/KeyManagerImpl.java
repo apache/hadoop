@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -31,6 +32,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
@@ -53,6 +55,8 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
+import org.apache.hadoop.ozone.om.helpers.OmPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .PartKeyInfo;
@@ -833,7 +837,7 @@ public class KeyManagerImpl implements KeyManager {
             ResultCodes.NO_SUCH_MULTIPART_UPLOAD);
       }
       TreeMap<Integer, PartKeyInfo> partKeyInfoMap = multipartKeyInfo
-          .getPartKeyInfoList();
+          .getPartKeyInfoMap();
 
       TreeMap<Integer, String> multipartMap = multipartUploadList
           .getMultipartMap();
@@ -991,7 +995,7 @@ public class KeyManagerImpl implements KeyManager {
       } else {
         // Move all the parts to delete table
         TreeMap<Integer, PartKeyInfo> partKeyInfoMap = multipartKeyInfo
-            .getPartKeyInfoList();
+            .getPartKeyInfoMap();
         DBStore store = metadataManager.getStore();
         try (BatchOperation batch = store.initBatchOperation()) {
           for (Map.Entry<Integer, PartKeyInfo> partKeyInfoEntry : partKeyInfoMap
@@ -1022,6 +1026,83 @@ public class KeyManagerImpl implements KeyManager {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
 
+  }
+
+
+  @Override
+  public OmMultipartUploadListParts listParts(String volumeName,
+      String bucketName, String keyName, String uploadID,
+      int partNumberMarker, int maxParts)  throws IOException {
+    Preconditions.checkNotNull(volumeName);
+    Preconditions.checkNotNull(bucketName);
+    Preconditions.checkNotNull(keyName);
+    Preconditions.checkNotNull(uploadID);
+    boolean isTruncated = false;
+    int nextPartNumberMarker = 0;
+
+    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    try {
+      String multipartKey = metadataManager.getMultipartKey(volumeName,
+          bucketName, keyName, uploadID);
+
+      OmMultipartKeyInfo multipartKeyInfo =
+          metadataManager.getMultipartInfoTable().get(multipartKey);
+
+      if (multipartKeyInfo == null) {
+        throw new OMException("No Such Multipart upload exists for this key.",
+                ResultCodes.NO_SUCH_MULTIPART_UPLOAD);
+      } else {
+        TreeMap<Integer, PartKeyInfo> partKeyInfoMap =
+            multipartKeyInfo.getPartKeyInfoMap();
+        Iterator<Map.Entry<Integer, PartKeyInfo>> partKeyInfoMapIterator =
+            partKeyInfoMap.entrySet().iterator();
+        HddsProtos.ReplicationType replicationType =
+            partKeyInfoMap.firstEntry().getValue().getPartKeyInfo().getType();
+        int count = 0;
+        List<OmPartInfo> omPartInfoList = new ArrayList<>();
+
+        while (count < maxParts && partKeyInfoMapIterator.hasNext()) {
+          Map.Entry<Integer, PartKeyInfo> partKeyInfoEntry =
+              partKeyInfoMapIterator.next();
+          nextPartNumberMarker = partKeyInfoEntry.getKey();
+          // As we should return only parts with part number greater
+          // than part number marker
+          if (partKeyInfoEntry.getKey() > partNumberMarker) {
+            PartKeyInfo partKeyInfo = partKeyInfoEntry.getValue();
+            OmPartInfo omPartInfo = new OmPartInfo(partKeyInfo.getPartNumber(),
+                partKeyInfo.getPartName(),
+                partKeyInfo.getPartKeyInfo().getModificationTime(),
+                partKeyInfo.getPartKeyInfo().getDataSize());
+            omPartInfoList.add(omPartInfo);
+            replicationType = partKeyInfo.getPartKeyInfo().getType();
+            count++;
+          }
+        }
+
+        if (partKeyInfoMapIterator.hasNext()) {
+          Map.Entry<Integer, PartKeyInfo> partKeyInfoEntry =
+              partKeyInfoMapIterator.next();
+          isTruncated = true;
+        } else {
+          isTruncated = false;
+          nextPartNumberMarker = 0;
+        }
+        OmMultipartUploadListParts omMultipartUploadListParts =
+            new OmMultipartUploadListParts(replicationType,
+                nextPartNumberMarker, isTruncated);
+        omMultipartUploadListParts.addPartList(omPartInfoList);
+        return omMultipartUploadListParts;
+      }
+    } catch (OMException ex) {
+      throw ex;
+    } catch (IOException ex){
+      LOG.error("List Multipart Upload Parts Failed: volume: " + volumeName +
+              "bucket: " + bucketName + "key: " + keyName, ex);
+      throw new OMException(ex.getMessage(), ResultCodes
+              .LIST_MULTIPART_UPLOAD_PARTS_FAILED);
+    } finally {
+      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+    }
   }
 
 }

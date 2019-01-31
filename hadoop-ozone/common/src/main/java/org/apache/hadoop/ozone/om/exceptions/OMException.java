@@ -130,6 +130,7 @@ public class OMException extends IOException {
     INVALID_TOKEN,
     TOKEN_EXPIRED,
     TOKEN_ERROR_OTHER,
-    UNKNOWN
+    UNKNOWN,
+    LIST_MULTIPART_UPLOAD_PARTS_FAILED;
   }
 }

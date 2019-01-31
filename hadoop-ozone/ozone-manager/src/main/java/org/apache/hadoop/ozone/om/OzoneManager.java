@@ -76,6 +76,7 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
@@ -2104,8 +2105,33 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
   }
 
-
-
+  @Override
+  public OmMultipartUploadListParts listParts(String volumeName,
+      String bucketName, String keyName, String uploadID, int partNumberMarker,
+      int maxParts)  throws IOException {
+    Map<String, String> auditMap = new HashMap<>();
+    auditMap.put(OzoneConsts.VOLUME, volumeName);
+    auditMap.put(OzoneConsts.BUCKET, bucketName);
+    auditMap.put(OzoneConsts.KEY, keyName);
+    auditMap.put(OzoneConsts.UPLOAD_ID, uploadID);
+    auditMap.put(OzoneConsts.PART_NUMBER_MARKER,
+        Integer.toString(partNumberMarker));
+    auditMap.put(OzoneConsts.MAX_PARTS, Integer.toString(maxParts));
+    metrics.incNumListMultipartUploadParts();
+    try {
+      OmMultipartUploadListParts omMultipartUploadListParts =
+          keyManager.listParts(volumeName, bucketName, keyName, uploadID,
+              partNumberMarker, maxParts);
+      AUDIT.logWriteSuccess(buildAuditMessageForSuccess(OMAction
+          .LIST_MULTIPART_UPLOAD_PARTS, auditMap));
+      return omMultipartUploadListParts;
+    } catch (IOException ex) {
+      metrics.incNumAbortMultipartUploadFails();
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction
+          .LIST_MULTIPART_UPLOAD_PARTS, auditMap, ex));
+      throw ex;
+    }
+  }
 
   /**
    * Startup options.

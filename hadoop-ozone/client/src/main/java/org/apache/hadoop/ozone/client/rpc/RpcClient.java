@@ -52,6 +52,8 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
+import org.apache.hadoop.ozone.om.helpers.OmPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
@@ -778,8 +780,8 @@ public class RpcClient implements ClientProtocol {
       throws IOException {
     HddsClientUtils.verifyResourceName(volumeName, bucketName);
     HddsClientUtils.checkNotNull(keyName, uploadID);
-    Preconditions.checkArgument(partNumber > 0, "Part number should be " +
-        "greater than zero");
+    Preconditions.checkArgument(partNumber > 0 && partNumber <=10000, "Part " +
+        "number should be greater than zero and less than or equal to 10000");
     Preconditions.checkArgument(size >=0, "size should be greater than or " +
         "equal to zero");
     String requestId = UUID.randomUUID().toString();
@@ -856,6 +858,37 @@ public class RpcClient implements ClientProtocol {
         .setMultipartUploadID(uploadID)
         .build();
     ozoneManagerClient.abortMultipartUpload(omKeyArgs);
+  }
+
+  @Override
+  public OzoneMultipartUploadPartListParts listParts(String volumeName,
+      String bucketName, String keyName, String uploadID, int partNumberMarker,
+      int maxParts)  throws IOException {
+    HddsClientUtils.verifyResourceName(volumeName, bucketName);
+    HddsClientUtils.checkNotNull(uploadID);
+    Preconditions.checkArgument(maxParts > 0, "Max Parts Should be greater " +
+        "than zero");
+    Preconditions.checkArgument(partNumberMarker >= 0, "Part Number Marker " +
+        "Should be greater than or equal to zero, as part numbers starts from" +
+        " 1 and ranges till 10000");
+    OmMultipartUploadListParts omMultipartUploadListParts =
+        ozoneManagerClient.listParts(volumeName, bucketName, keyName,
+            uploadID, partNumberMarker, maxParts);
+
+    OzoneMultipartUploadPartListParts ozoneMultipartUploadPartListParts =
+        new OzoneMultipartUploadPartListParts(ReplicationType.valueOf(
+            omMultipartUploadListParts.getReplicationType().toString()),
+            omMultipartUploadListParts.getNextPartNumberMarker(),
+            omMultipartUploadListParts.isTruncated());
+
+    for (OmPartInfo omPartInfo : omMultipartUploadListParts.getPartInfoList()) {
+      ozoneMultipartUploadPartListParts.addPart(
+          new OzoneMultipartUploadPartListParts.PartInfo(
+              omPartInfo.getPartNumber(), omPartInfo.getPartName(),
+              omPartInfo.getModificationTime(), omPartInfo.getSize()));
+    }
+    return ozoneMultipartUploadPartListParts;
+
   }
 
 }

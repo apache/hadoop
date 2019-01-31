@@ -407,6 +407,28 @@ public class OzoneBucket extends WithMetadata {
   }
 
   /**
+   * Returns list of parts of a multipart upload key.
+   * @param keyName
+   * @param uploadID
+   * @param partNumberMarker
+   * @param maxParts
+   * @return OzoneMultipartUploadPartListParts
+   */
+  public OzoneMultipartUploadPartListParts listParts(String keyName,
+      String uploadID, int partNumberMarker, int maxParts)  throws IOException {
+    // As at most we  can have 10000 parts for a key, not using iterator. If
+    // needed, it can be done later. So, if we send 10000 as max parts at
+    // most in a single rpc call, we return 0.6 mb, by assuming each part
+    // size as 60 bytes (ignored the replication type size during calculation)
+
+    return proxy.listParts(volumeName, name, keyName, uploadID,
+              partNumberMarker, maxParts);
+  }
+
+
+
+
+  /**
    * An Iterator to iterate over {@link OzoneKey} list.
    */
   private class KeyIterator implements Iterator<OzoneKey> {
