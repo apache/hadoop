@@ -188,7 +188,7 @@ public final class ReportHandlerHelper {
          */
         if (replicas.stream()
             .anyMatch(replica -> replica.getState() == State.CLOSED)) {
-          manager.  updateContainerState(
+          manager.updateContainerState(
               containerId, HddsProtos.LifeCycleEvent.FORCE_CLOSE);
           // TODO: remove container from OPEN pipeline, since the container is
           // closed we can go ahead and remove it from Ratis pipeline.
