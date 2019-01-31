@@ -84,6 +84,7 @@ $ yarn org.apache.hadoop.yarn.applications.distributedshell.Client -jar share/ha
 ```
 
 By change the value of `container_type` to `OPPORTUNISTIC` or `GUARANTEED` in the above command, we can specify the tasks to be running in opportunistic or guaranteed containers. The default type is `GUARANTEED`. By adding flag `-promote_opportunistic_after_start` to the above command, application master will attempt to promote all opportunistic containers to guaranteed once they are started.
+By adding flag '-enforce_execution_type' to the above command, scheduler will honor execution type of the containers.
 
 $H3 Opportunistic Containers in Web UI
 
