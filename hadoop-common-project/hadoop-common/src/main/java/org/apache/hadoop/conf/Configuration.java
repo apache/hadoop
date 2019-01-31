@@ -2610,7 +2610,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * If no such property is specified, then <code>defaultValue</code> is 
    * returned.
    * 
-   * @param name the class name.
+   * @param name the conf key name.
    * @param defaultValue default value.
    * @return property value as a <code>Class</code>, 
    *         or <code>defaultValue</code>. 
@@ -2636,7 +2636,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * An exception is thrown if the returned class does not implement the named
    * interface. 
    * 
-   * @param name the class name.
+   * @param name the conf key name.
    * @param defaultValue default value.
    * @param xface the interface implemented by the named class.
    * @return property value as a <code>Class</code>, 
