@@ -58,45 +58,16 @@ def teardown_module():
     ClusterUtils.cluster_destroy(FILE)
 
 
-def test_datanode_isolation_one_node():
+def test_scm_isolation_one_node():
     """
-    In this test, one of the datanodes (first datanode) cannot communicate
-    with other two datanodes.
-    All datanodes can communicate with SCM.
-    Expectation :
-    The container replica state in first datanode should be quasi-closed.
-    The container replica state in other datanodes should be closed.
-    """
-    first_set = [OM[0], SCM[0], DATANODES[0]]
-    second_set = [OM[0], SCM[0], DATANODES[1], DATANODES[2]]
-    Blockade.blockade_create_partition(first_set, second_set)
-    Blockade.blockade_status()
-    ClusterUtils.run_freon(FILE, 1, 1, 1, 10240, "RATIS", "THREE")
-    logger.info("Waiting for %s seconds before checking container status",
-                os.environ["CONTAINER_STATUS_SLEEP"])
-    time.sleep(int(os.environ["CONTAINER_STATUS_SLEEP"]))
-    all_datanodes_container_status = \
-        ClusterUtils.find_all_datanodes_container_status(FILE, SCALE)
-    first_datanode_status = all_datanodes_container_status[0]
-    count_closed_container_datanodes = filter(lambda x: x == 'CLOSED',
-                                              all_datanodes_container_status)
-    assert first_datanode_status == 'QUASI_CLOSED'
-    assert len(count_closed_container_datanodes) == 2, \
-        "The container should have three closed replicas."
-
-
-def test_datanode_isolation_all():
-    """
-    In this test, none of the datanodes can communicate with other two
-    datanodes.
-    All datanodes can communicate with SCM.
+    In this test, one of the datanodes cannot communicate with SCM.
+    Other datanodes can communicate with SCM.
     Expectation : The container should eventually have at least two closed
     replicas.
     """
-    first_set = [OM[0], SCM[0], DATANODES[0]]
-    second_set = [OM[0], SCM[0], DATANODES[1]]
-    third_set = [OM[0], SCM[0], DATANODES[2]]
-    Blockade.blockade_create_partition(first_set, second_set, third_set)
+    first_set = [OM[0], DATANODES[0], DATANODES[1], DATANODES[2]]
+    second_set = [OM[0], SCM[0], DATANODES[1], DATANODES[2]]
+    Blockade.blockade_create_partition(first_set, second_set)
     Blockade.blockade_status()
     ClusterUtils.run_freon(FILE, 1, 1, 1, 10240, "RATIS", "THREE")
     logger.info("Waiting for %s seconds before checking container status",
@@ -108,3 +79,32 @@ def test_datanode_isolation_all():
                                               all_datanodes_container_status)
     assert len(count_closed_container_datanodes) >= 2, \
         "The container should have at least two closed replicas."
+
+
+def test_scm_isolation_two_node():
+    """
+    In this test, two datanodes cannot communicate with SCM.
+    Expectation : The container should eventually have at three closed replicas
+     or, two open replicas and one quasi-closed replica.
+    """
+    first_set = [OM[0], DATANODES[0], DATANODES[1], DATANODES[2]]
+    second_set = [OM[0], SCM[0], DATANODES[1]]
+    Blockade.blockade_create_partition(first_set, second_set)
+    Blockade.blockade_status()
+    ClusterUtils.run_freon(FILE, 1, 1, 1, 10240, "RATIS", "THREE")
+    logger.info("Waiting for %s seconds before checking container status",
+                os.environ["CONTAINER_STATUS_SLEEP"])
+    time.sleep(int(os.environ["CONTAINER_STATUS_SLEEP"]))
+    all_datanodes_container_status = \
+        ClusterUtils.find_all_datanodes_container_status(FILE, SCALE)
+    count_closed_container_datanodes = filter(lambda x: x == 'CLOSED',
+                                              all_datanodes_container_status)
+    count_qausi_closed_container_datanodes = \
+        filter(lambda x: x == 'QUASI_CLOSED', all_datanodes_container_status)
+    count_open_container_datanodes = filter(lambda x: x == 'OPEN',
+                                            all_datanodes_container_status)
+    assert len(count_closed_container_datanodes) == 3 or \
+        (len(count_open_container_datanodes) == 2 and
+            len(count_qausi_closed_container_datanodes) == 1), \
+        "The container should have three closed replicas or two open " \
+        "replicas and one quasi_closed replica."

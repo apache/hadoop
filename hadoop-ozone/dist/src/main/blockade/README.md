@@ -18,9 +18,27 @@ Following python packages need to be installed before running the tests :
 1. blockade
 2. pytest==2.8.7
 
-You can execute the tests with following command-lines:
+You can execute all blockade tests with following command-lines:
 
 ```
 cd $DIRECTORY_OF_OZONE
 python -m pytest -s  blockade/
+```
+
+You can also execute fewer blockade tests with following command-lines:
+
+```
+cd $DIRECTORY_OF_OZONE
+python -m pytest -s  blockade/<PATH_TO_PYTHON_FILE>
+e.g: python -m pytest -s blockade/test_blockade_datanode_isolation.py
+```
+
+You can change the default 'sleep' interval in the tests with following
+command-lines:
+
+```
+cd $DIRECTORY_OF_OZONE
+python -m pytest -s  blockade/ --containerStatusSleep=<SECONDS>
+
+e.g: python -m pytest -s  blockade/ --containerStatusSleep=720
 ```
