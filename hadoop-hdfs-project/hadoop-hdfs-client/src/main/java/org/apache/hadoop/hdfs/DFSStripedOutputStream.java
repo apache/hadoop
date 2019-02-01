@@ -497,7 +497,10 @@ public class DFSStripedOutputStream extends DFSOutputStream
         // Set exception and close streamer as there is no block locations
         // found for the parity block.
         LOG.warn("Cannot allocate parity block(index={}, policy={}). " +
-            "Not enough datanodes? Exclude nodes={}", i,  ecPolicy.getName(),
+                "Exclude nodes={}. There may not be enough datanodes or " +
+                "racks. You can check if the cluster topology supports " +
+                "the enabled erasure coding policies by running the command " +
+                "'hdfs ec -verifyClusterSetup'.", i,  ecPolicy.getName(),
             excludedNodes);
         si.getLastException().set(
             new IOException("Failed to get parity block, index=" + i));
