@@ -59,6 +59,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.slf4j.event.Level;
 
 /**
  * Test DeadNodeHandler.
@@ -140,17 +141,25 @@ public class TestDeadNodeHandler {
         TestUtils.allocateContainer(containerManager);
     ContainerInfo container3 =
         TestUtils.allocateContainer(containerManager);
+    ContainerInfo container4 =
+        TestUtils.allocateContainer(containerManager);
 
-    registerReplicas(datanode1, container1, container2);
-    registerReplicas(datanode2, container1, container3);
+    registerContainers(datanode1, container1, container2, container4);
+    registerContainers(datanode2, container1, container2);
+    registerContainers(datanode3, container3);
 
     registerReplicas(containerManager, container1, datanode1, datanode2);
-    registerReplicas(containerManager, container2, datanode1);
-    registerReplicas(containerManager, container3, datanode2);
+    registerReplicas(containerManager, container2, datanode1, datanode2);
+    registerReplicas(containerManager, container3, datanode3);
+    registerReplicas(containerManager, container4, datanode1);
 
     TestUtils.closeContainer(containerManager, container1.containerID());
     TestUtils.closeContainer(containerManager, container2.containerID());
-    TestUtils.closeContainer(containerManager, container3.containerID());
+    TestUtils.quasiCloseContainer(containerManager, container3.containerID());
+
+    GenericTestUtils.setLogLevel(DeadNodeHandler.getLogger(), Level.DEBUG);
+    GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
+        .captureLogs(DeadNodeHandler.getLogger());
 
     deadNodeHandler.onMessage(datanode1, publisher);
 
@@ -162,13 +171,33 @@ public class TestDeadNodeHandler {
 
     Set<ContainerReplica> container2Replicas = containerManager
         .getContainerReplicas(new ContainerID(container2.getContainerID()));
-    Assert.assertEquals(0, container2Replicas.size());
+    Assert.assertEquals(1, container2Replicas.size());
+    Assert.assertEquals(datanode2,
+        container2Replicas.iterator().next().getDatanodeDetails());
 
     Set<ContainerReplica> container3Replicas = containerManager
             .getContainerReplicas(new ContainerID(container3.getContainerID()));
     Assert.assertEquals(1, container3Replicas.size());
-    Assert.assertEquals(datanode2,
+    Assert.assertEquals(datanode3,
         container3Replicas.iterator().next().getDatanodeDetails());
+
+    // Replicate should be fired for container 1 and container 2 as now
+    // datanode 1 is dead, these 2 will not match with expected replica count
+    // and their state is one of CLOSED/QUASI_CLOSE.
+    Assert.assertTrue(logCapturer.getOutput().contains(
+        "Replicate Request fired for container " +
+            container1.getContainerID()));
+    Assert.assertTrue(logCapturer.getOutput().contains(
+        "Replicate Request fired for container " +
+            container2.getContainerID()));
+
+    // as container4 is still in open state, replicate event should not have
+    // fired for this.
+    Assert.assertFalse(logCapturer.getOutput().contains(
+        "Replicate Request fired for container " +
+            container4.getContainerID()));
+
+
   }
 
   @Test
@@ -272,7 +301,13 @@ public class TestDeadNodeHandler {
     }
   }
 
-  private void registerReplicas(DatanodeDetails datanode,
+  /**
+   * Update containers available on the datanode.
+   * @param datanode
+   * @param containers
+   * @throws NodeNotFoundException
+   */
+  private void registerContainers(DatanodeDetails datanode,
       ContainerInfo... containers)
       throws NodeNotFoundException {
     nodeManager
