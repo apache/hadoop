@@ -157,7 +157,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
           try {
             TokenIdentifier id = tokenIdentifiers.next();
             tokenKindMap.put(id.getKind(), id.getClass());
-          } catch (ServiceConfigurationError e) {
+          } catch (ServiceConfigurationError | LinkageError e) {
             // failure to load a token implementation
             // log at debug and continue.
             LOG.debug("Failed to load token identifier implementation", e);
