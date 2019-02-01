@@ -1,1 +1,0 @@
-Apache Hadoop Ozone placeholder file

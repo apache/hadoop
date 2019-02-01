@@ -39,8 +39,10 @@
     <module>common</module>
     <module>client</module>
     <module>ozone-manager</module>
-    <module>tools</module>
     <module>ozonefs</module>
+    <module>ozonefs-lib</module>
+    <module>ozonefs-lib-legacy</module>
+    <module>tools</module>
     <module>integration-test</module>
     <module>objectstore-service</module>
     <module>datanode</module>
@@ -96,6 +98,16 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-ozone-filesystem</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-filesystem-lib</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-filesystem-lib-legacy</artifactId>
         <version>${ozone.version}</version>
       </dependency>
       <dependency>
@@ -203,6 +215,7 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdds-tools</artifactId>
     </dependency>
+
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>

@@ -110,10 +110,16 @@ public class OzoneFileSystem extends FileSystem {
           .setHost(authority).build();
       LOG.trace("Ozone URI for ozfs initialization is " + uri);
 
+      //isolated is the default for ozonefs-lib-legacy which includes the
+      // /ozonefs.txt, otherwise the default is false. It could be overridden.
+      boolean defaultValue =
+          OzoneFileSystem.class.getClassLoader().getResource("ozonefs.txt")
+              != null;
+
       //Use string here instead of the constant as constant may not be available
       //on the classpath of a hadoop 2.7
       boolean isolatedClassloader =
-          conf.getBoolean("ozone.fs.isolated-classloader", false);
+          conf.getBoolean("ozone.fs.isolated-classloader", defaultValue);
 
       if (isolatedClassloader) {
         this.adapter =

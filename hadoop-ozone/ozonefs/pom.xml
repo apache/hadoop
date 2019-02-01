@@ -60,16 +60,6 @@
               </outputFile>
             </configuration>
           </execution>
-          <execution>
-            <goals>
-              <goal>unpack-dependencies</goal>
-            </goals>
-            <phase>prepare-package</phase>
-            <configuration>
-              <outputDirectory>target/classes/libs</outputDirectory>
-              <includeScope>compile</includeScope>
-            </configuration>
-          </execution>
         </executions>
       </plugin>
       <plugin>

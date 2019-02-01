@@ -61,8 +61,9 @@ public class FilteredClassLoader extends URLClassLoader {
 
   @Override
   public Class<?> loadClass(String name) throws ClassNotFoundException {
-    if (delegatedClasses.contains(name) || name
-        .startsWith("org.apache.log4j")) {
+    if (delegatedClasses.contains(name) ||
+        name.startsWith("org.apache.log4j") ||
+        name.startsWith("org.slf4j")) {
       return delegate.loadClass(name);
     }
     return super.loadClass(name);
