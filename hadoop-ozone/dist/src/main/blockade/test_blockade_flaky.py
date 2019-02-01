@@ -15,7 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""This module has apis to create and remove a blockade cluster"""
 import os
 import time
 import logging
@@ -26,7 +25,8 @@ from clusterUtils.cluster_utils import ClusterUtils
 
 logger = logging.getLogger(__name__)
 parent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-FILE = os.path.join(parent_dir, "compose", "ozone", "docker-compose.yaml")
+FILE = os.path.join(parent_dir, "compose", "ozoneblockade",
+                    "docker-compose.yaml")
 SCALE = 6
 CONTAINER_LIST = []
 
@@ -36,7 +36,8 @@ def setup_module():
     Blockade.blockade_destroy()
     CONTAINER_LIST = ClusterUtils.cluster_setup(FILE, SCALE)
     exit_code, output = Blockade.blockade_status()
-    assert exit_code == 0, "blockade status command failed with output=[%s]" % output
+    assert exit_code == 0, "blockade status command failed with output=[%s]" % \
+                           output
 
 
 def teardown_module():
@@ -54,5 +55,6 @@ def teardown():
 def test_flaky(flaky_nodes):
     Blockade.make_flaky(flaky_nodes, CONTAINER_LIST)
     Blockade.blockade_status()
-    exit_code, output = ClusterUtils.run_freon(FILE, 1, 1, 1, 10240, "RATIS", "THREE")
+    exit_code, output = ClusterUtils.run_freon(FILE, 1, 1, 1, 10240, "RATIS",
+                                               "THREE")
     assert exit_code == 0, "freon run failed with output=[%s]" % output

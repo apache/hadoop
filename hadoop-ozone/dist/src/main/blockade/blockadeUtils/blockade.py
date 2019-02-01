@@ -30,6 +30,7 @@ class Blockade(object):
 
     @classmethod
     def blockade_destroy(cls):
+        logger.info("Running blockade destroy")
         call(["blockade", "destroy"])
 
     @classmethod
@@ -68,13 +69,16 @@ class Blockade(object):
         nodes = ""
         for node_list in args:
             nodes = nodes + ','.join(node_list) + " "
-        exit_code, output = ClusterUtils.run_cmd("blockade partition %s" % nodes)
-        assert exit_code == 0, "blockade partition command failed with exit code=[%s]" % output
+        exit_code, output = \
+            ClusterUtils.run_cmd("blockade partition %s" % nodes)
+        assert exit_code == 0, \
+            "blockade partition command failed with exit code=[%s]" % output
 
     @classmethod
     def blockade_join(cls):
         output = call(["blockade", "join"])
-        assert output == 0, "blockade join command failed with exit code=[%s]" % output
+        assert output == 0, "blockade join command failed with exit code=[%s]" \
+                            % output
 
     @classmethod
     def blockade_stop(cls, node, all_nodes=False):
@@ -82,7 +86,8 @@ class Blockade(object):
             output = call(["blockade", "stop", "--all"])
         else:
             output = call(["blockade", "stop", node])
-        assert output == 0, "blockade stop command failed with exit code=[%s]" % output
+        assert output == 0, "blockade stop command failed with exit code=[%s]" \
+                            % output
 
     @classmethod
     def blockade_start(cls, node, all_nodes=False):
@@ -90,4 +95,5 @@ class Blockade(object):
             output = call(["blockade", "start", "--all"])
         else:
             output = call(["blockade", "start", node])
-        assert output == 0, "blockade start command failed with exit code=[%s]" % output
+        assert output == 0, "blockade start command failed with " \
+                            "exit code=[%s]" % output
