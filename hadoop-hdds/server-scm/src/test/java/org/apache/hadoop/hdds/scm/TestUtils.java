@@ -446,4 +446,19 @@ public final class TestUtils {
         id, HddsProtos.LifeCycleEvent.CLOSE);
 
   }
+
+  /**
+   * Move the container to Quaise close state.
+   * @param containerManager
+   * @param id
+   * @throws IOException
+   */
+  public static void quasiCloseContainer(ContainerManager containerManager,
+      ContainerID id) throws IOException {
+    containerManager.updateContainerState(
+        id, HddsProtos.LifeCycleEvent.FINALIZE);
+    containerManager.updateContainerState(
+        id, HddsProtos.LifeCycleEvent.QUASI_CLOSE);
+
+  }
 }
