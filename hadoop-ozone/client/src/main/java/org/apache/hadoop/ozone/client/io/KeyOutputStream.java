@@ -338,8 +338,9 @@ public class KeyOutputStream extends OutputStream {
       ListIterator<BlockOutputStreamEntry> streamEntryIterator =
           streamEntries.listIterator(currentStreamIndex);
       while (streamEntryIterator.hasNext()) {
-        if (streamEntryIterator.next().getBlockID().getContainerID()
-            == containerID) {
+        BlockOutputStreamEntry streamEntry = streamEntryIterator.next();
+        if (streamEntry.getBlockID().getContainerID()
+            == containerID && streamEntry.getCurrentPosition() == 0) {
           streamEntryIterator.remove();
         }
       }
