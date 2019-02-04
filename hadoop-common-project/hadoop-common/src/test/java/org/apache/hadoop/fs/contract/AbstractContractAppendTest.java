@@ -133,6 +133,12 @@ public abstract class AbstractContractAppendTest extends AbstractFSContractTestB
     assertPathExists("original file does not exist", target);
     byte[] dataset = dataset(256, 'a', 'z');
     FSDataOutputStream outputStream = getFileSystem().append(target);
+    if (isSupported(CREATE_VISIBILITY_DELAYED)) {
+      // Some filesystems like WebHDFS doesn't assure sequential consistency.
+      // In such a case, delay is needed. Given that we can not check the lease
+      // because here is closed in client side package, simply add a sleep.
+      Thread.sleep(10);
+    }
     outputStream.write(dataset);
     Path renamed = new Path(testPath, "renamed");
     rename(target, renamed);
