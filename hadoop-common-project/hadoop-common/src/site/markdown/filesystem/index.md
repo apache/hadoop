@@ -36,3 +36,4 @@ HDFS as these are commonly expected by Hadoop client applications.
 1. [FSDataOutputStreamBuilder class](fsdataoutputstreambuilder.html)
 2. [Testing with the Filesystem specification](testing.html)
 2. [Extending the specification and its tests](extending.html)
+1. [Uploading a file using Multiple Parts](multipartuploader.html)
