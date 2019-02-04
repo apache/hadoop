@@ -441,9 +441,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     NodesInfo nodesInfo = new NodesInfo();
     for (RMNode rmNode : rmNodes) {
       NodeInfo nodeInfo = new NodeInfo(rmNode, sched);
-      if (EnumSet
-          .of(NodeState.LOST, NodeState.DECOMMISSIONED, NodeState.REBOOTED)
-          .contains(rmNode.getState())) {
+      if (rmNode.getState().isInactiveState()) {
         nodeInfo.setNodeHTTPAddress(RMWSConsts.EMPTY);
       }
       nodesInfo.add(nodeInfo);
