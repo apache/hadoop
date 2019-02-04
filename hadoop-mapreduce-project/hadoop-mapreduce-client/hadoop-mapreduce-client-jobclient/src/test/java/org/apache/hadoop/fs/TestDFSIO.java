@@ -453,6 +453,7 @@ public class TestDFSIO implements Tool {
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(Text.class);
     job.setNumReduceTasks(1);
+    job.setSpeculativeExecution(false);
     JobClient.runJob(job);
   }
 
