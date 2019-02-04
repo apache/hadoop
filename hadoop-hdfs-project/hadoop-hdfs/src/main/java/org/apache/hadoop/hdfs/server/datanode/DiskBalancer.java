@@ -57,9 +57,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
-
 /**
  * Worker class for Disk Balancer.
  * <p>
@@ -864,7 +861,8 @@ public class DiskBalancer {
      * @param item        DiskBalancerWorkItem
      * @return sleep delay in Milliseconds.
      */
-    private long computeDelay(long bytesCopied, long timeUsed,
+    @VisibleForTesting
+    public long computeDelay(long bytesCopied, long timeUsed,
                               DiskBalancerWorkItem item) {
 
       // we had an overflow, ignore this reading and continue.
@@ -872,11 +870,15 @@ public class DiskBalancer {
         return 0;
       }
       final int megaByte = 1024 * 1024;
+      if (bytesCopied < megaByte) {
+        return 0;
+      }
       long bytesInMB = bytesCopied / megaByte;
-      long lastThroughput = bytesInMB / SECONDS.convert(timeUsed,
-          TimeUnit.MILLISECONDS);
-      long delay = (bytesInMB / getDiskBandwidth(item)) - lastThroughput;
-      return (delay <= 0) ? 0 : MILLISECONDS.convert(delay, TimeUnit.SECONDS);
+
+      // converting disk bandwidth in MB/millisec
+      float bandwidth = getDiskBandwidth(item) / 1000f;
+      float delay = ((long) (bytesInMB / bandwidth) - timeUsed);
+      return (delay <= 0) ? 0 : (long) delay;
     }
 
     /**
@@ -1114,7 +1116,8 @@ public class DiskBalancer {
             // to make sure that our promise is good on average.
             // Because we sleep, if a shutdown or cancel call comes in
             // we exit via Thread Interrupted exception.
-            Thread.sleep(computeDelay(block.getNumBytes(), timeUsed, item));
+            Thread.sleep(computeDelay(block.getNumBytes(), TimeUnit.NANOSECONDS
+                .toMillis(timeUsed), item));
 
             // We delay updating the info to avoid confusing the user.
             // This way we report the copy only if it is under the
