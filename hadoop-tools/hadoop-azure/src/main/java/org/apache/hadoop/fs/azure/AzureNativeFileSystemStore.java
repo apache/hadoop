@@ -70,7 +70,7 @@ import com.microsoft.azure.storage.RetryNoRetry;
 import com.microsoft.azure.storage.StorageCredentials;
 import com.microsoft.azure.storage.StorageCredentialsAccountAndKey;
 import com.microsoft.azure.storage.StorageCredentialsSharedAccessSignature;
-import com.microsoft.azure.storage.StorageErrorCode;
+import com.microsoft.azure.storage.StorageErrorCodeStrings;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.Constants;
 import com.microsoft.azure.storage.StorageEvent;
@@ -1336,7 +1336,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         container.downloadAttributes(getInstrumentedContext());
         currentKnownContainerState = ContainerState.Unknown;
       } catch (StorageException ex) {
-        if (StorageErrorCode.RESOURCE_NOT_FOUND.toString()
+        if (StorageErrorCodeStrings.CONTAINER_NOT_FOUND.toString()
             .equals(ex.getErrorCode())) {
           currentKnownContainerState = ContainerState.DoesntExist;
         } else {
