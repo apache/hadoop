@@ -1191,6 +1191,14 @@
   </property>
 
   <property>
+    <description>The setting that controls whether yarn container events are
+      published to the timeline service or not by NM. This configuration setting
+      is for ATS V2.</description>
+    <name>yarn.nodemanager.emit-container-events</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <description>Interval in between cache cleanups.</description>
     <name>yarn.nodemanager.localizer.cache.cleanup.interval-ms</name>
     <value>600000</value>
