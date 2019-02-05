@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -43,12 +44,14 @@ import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
+import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -69,6 +72,7 @@ public class TestRouterMountTable {
   private static long startTime;
   private static FileSystem nnFs0;
   private static FileSystem nnFs1;
+  private static FileSystem routerFs;
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
@@ -92,6 +96,7 @@ public class TestRouterMountTable {
     nnFs0 = nnContext0.getFileSystem();
     nnFs1 = nnContext1.getFileSystem();
     routerContext = cluster.getRandomRouter();
+    routerFs = routerContext.getFileSystem();
     Router router = routerContext.getRouter();
     routerProtocol = routerContext.getClient().getNamenode();
     mountTable = (MountTableResolver) router.getSubclusterResolver();
@@ -136,7 +141,6 @@ public class TestRouterMountTable {
     assertTrue(addMountTable(regularEntry));
 
     // Create a folder which should show in all locations
-    final FileSystem routerFs = routerContext.getFileSystem();
     assertTrue(routerFs.mkdirs(new Path("/regular/newdir")));
 
     FileStatus dirStatusNn =
@@ -261,7 +265,7 @@ public class TestRouterMountTable {
     addEntry.setOwnerName("owner1");
     addEntry.setMode(FsPermission.createImmutable((short) 0775));
     assertTrue(addMountTable(addEntry));
-    FileStatus[] list = routerContext.getFileSystem().listStatus(new Path("/"));
+    FileStatus[] list = routerFs.listStatus(new Path("/"));
     assertEquals("group1", list[0].getGroup());
     assertEquals("owner1", list[0].getOwner());
     assertEquals((short) 0775, list[0].getPermission().toShort());
@@ -282,8 +286,7 @@ public class TestRouterMountTable {
       nnFs0.setOwner(new Path("/tmp/testdir"), "Aowner", "Agroup");
       nnFs0.setPermission(new Path("/tmp/testdir"),
           FsPermission.createImmutable((short) 775));
-      FileStatus[] list =
-          routerContext.getFileSystem().listStatus(new Path("/"));
+      FileStatus[] list = routerFs.listStatus(new Path("/"));
       assertEquals("Agroup", list[0].getGroup());
       assertEquals("Aowner", list[0].getOwner());
       assertEquals((short) 775, list[0].getPermission().toShort());
@@ -313,8 +316,7 @@ public class TestRouterMountTable {
       nnFs1.setOwner(new Path("/tmp/testdir01"), "Aowner", "Agroup");
       nnFs1.setPermission(new Path("/tmp/testdir01"),
           FsPermission.createImmutable((short) 775));
-      FileStatus[] list =
-          routerContext.getFileSystem().listStatus(new Path("/"));
+      FileStatus[] list = routerFs.listStatus(new Path("/"));
       assertEquals("Agroup", list[0].getGroup());
       assertEquals("Aowner", list[0].getOwner());
       assertEquals((short) 775, list[0].getPermission().toShort());
@@ -347,8 +349,7 @@ public class TestRouterMountTable {
       nnFs1.setOwner(new Path("/tmp/testdir01"), "Aowner01", "Agroup01");
       nnFs1.setPermission(new Path("/tmp/testdir01"),
           FsPermission.createImmutable((short) 755));
-      FileStatus[] list =
-          routerContext.getFileSystem().listStatus(new Path("/"));
+      FileStatus[] list = routerFs.listStatus(new Path("/"));
       assertTrue("Agroup".equals(list[0].getGroup())
           || "Agroup01".equals(list[0].getGroup()));
       assertTrue("Aowner".equals(list[0].getOwner())
@@ -374,8 +375,7 @@ public class TestRouterMountTable {
     addEntry.setOwnerName("owner1");
     assertTrue(addMountTable(addEntry));
     HdfsFileStatus finfo = routerProtocol.getFileInfo("/testdir");
-    FileStatus[] finfo1 =
-        routerContext.getFileSystem().listStatus(new Path("/"));
+    FileStatus[] finfo1 = routerFs.listStatus(new Path("/"));
     assertEquals("owner1", finfo.getOwner());
     assertEquals("owner1", finfo1[0].getOwner());
     assertEquals("group1", finfo.getGroup());
@@ -395,8 +395,7 @@ public class TestRouterMountTable {
       nnFs0.mkdirs(new Path("/tmp/testdir"));
       nnFs0.mkdirs(new Path("/tmp/testdir/1"));
       nnFs0.mkdirs(new Path("/tmp/testdir/2"));
-      FileStatus[] finfo1 =
-          routerContext.getFileSystem().listStatus(new Path("/"));
+      FileStatus[] finfo1 = routerFs.listStatus(new Path("/"));
       assertEquals(2, ((HdfsFileStatus) finfo1[0]).getChildrenNum());
     } finally {
       nnFs0.delete(new Path("/tmp"), true);
@@ -421,12 +420,26 @@ public class TestRouterMountTable {
       nnFs1.mkdirs(new Path("/tmp/testdir01"));
       nnFs0.mkdirs(new Path("/tmp/testdir/1"));
       nnFs1.mkdirs(new Path("/tmp/testdir01/1"));
-      FileStatus[] finfo1 =
-          routerContext.getFileSystem().listStatus(new Path("/"));
+      FileStatus[] finfo1 = routerFs.listStatus(new Path("/"));
       assertEquals(2, ((HdfsFileStatus) finfo1[0]).getChildrenNum());
     } finally {
       nnFs0.delete(new Path("/tmp"), true);
       nnFs0.delete(new Path("/tmp"), true);
     }
+  }
+
+  /**
+   * Validates the path in the exception. The path should be with respect to the
+   * mount not with respect to the sub cluster.
+   */
+  @Test
+  public void testPathInException() throws Exception {
+    MountTable addEntry = MountTable.newInstance("/mount",
+        Collections.singletonMap("ns0", "/tmp/testdir"));
+    addEntry.setDestOrder(DestinationOrder.HASH_ALL);
+    assertTrue(addMountTable(addEntry));
+    LambdaTestUtils.intercept(FileNotFoundException.class,
+        "Directory/File does not exist /mount/file",
+        () -> routerFs.setOwner(new Path("/mount/file"), "user", "group"));
   }
 }
