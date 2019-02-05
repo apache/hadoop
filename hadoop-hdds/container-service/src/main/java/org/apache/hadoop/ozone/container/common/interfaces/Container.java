@@ -50,10 +50,9 @@ public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
   /**
    * Deletes the container.
    *
-   * @param forceDelete   - whether this container should be deleted forcibly.
    * @throws StorageContainerException
    */
-  void delete(boolean forceDelete) throws StorageContainerException;
+  void delete() throws StorageContainerException;
 
   /**
    * Update the container.

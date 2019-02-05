@@ -928,26 +928,23 @@ public class KeyValueHandler extends Handler {
   }
 
   @Override
-  public void deleteContainer(Container container) throws IOException {
-    deleteInternal(container, true);
+  public void deleteContainer(Container container, boolean force)
+      throws IOException {
+    deleteInternal(container, force);
   }
 
   private void deleteInternal(Container container, boolean force)
       throws StorageContainerException {
     container.writeLock();
     try {
-      // Check if container is open
-      if (container.getContainerData().isOpen()) {
-        throw new StorageContainerException(
-            "Deletion of Open Container is not allowed.",
-            DELETE_ON_OPEN_CONTAINER);
-      }
-      if (!force && container.getContainerData().getKeyCount() > 0) {
-        // If the container is not empty and cannot be deleted forcibly,
-        // then throw a SCE to stop deleting.
-        throw new StorageContainerException(
-            "Container cannot be deleted because it is not empty.",
-            ContainerProtos.Result.ERROR_CONTAINER_NOT_EMPTY);
+    // If force is false, we check container state.
+      if (!force) {
+        // Check if container is open
+        if (container.getContainerData().isOpen()) {
+          throw new StorageContainerException(
+              "Deletion of Open Container is not allowed.",
+              DELETE_ON_OPEN_CONTAINER);
+        }
       }
       long containerId = container.getContainerData().getContainerID();
       containerSet.removeContainer(containerId);
@@ -955,6 +952,6 @@ public class KeyValueHandler extends Handler {
       container.writeUnlock();
     }
     // Avoid holding write locks for disk operations
-    container.delete(force);
+    container.delete();
   }
 }
