@@ -118,16 +118,14 @@ public class RetriableFileCopyCommand extends RetriableCommand {
   private long doCopy(CopyListingFileStatus source, Path target,
       Mapper.Context context, EnumSet<FileAttribute> fileAttributes)
       throws IOException {
-    final boolean toAppend = action == FileAction.APPEND;
-    final boolean useTmpTarget = !toAppend && !directWrite;
-    Path targetPath = useTmpTarget ? getTmpFile(target, context) : target;
+    LOG.info("Copying {} to {}", source.getPath(), target);
 
-    LOG.info("Copying " + source.getPath() + " to " + target);
-    if (useTmpTarget) {
-      LOG.info("Writing to temporary target file path " + targetPath);
-    } else {
-      LOG.info("Writing directly to target file path " + targetPath);
-    }
+    final boolean toAppend = action == FileAction.APPEND;
+    final boolean useTempTarget = !toAppend && !directWrite;
+    Path targetPath = useTempTarget ? getTempFile(target, context) : target;
+
+    LOG.info("Writing to {} target file path {}", useTempTarget ? "temporary"
+        : "direct", targetPath);
 
     final Configuration configuration = context.getConfiguration();
     FileSystem targetFS = target.getFileSystem(configuration);
@@ -157,18 +155,18 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       }
       // it's not append or direct write (preferred for s3a) case, thus we first
       // write to a temporary file, then rename it to the target path.
-      if (useTmpTarget) {
-        LOG.info("Renaming temporary target file path " + targetPath + " to " +
+      if (useTempTarget) {
+        LOG.info("Renaming temporary target file path {} to {}", targetPath,
             target);
         promoteTmpToTarget(targetPath, target, targetFS);
       }
-      LOG.info("Completed writing " + target + " (" + bytesRead + " bytes)");
+      LOG.info("Completed writing {} ({} bytes)", target, bytesRead);
       return bytesRead;
     } finally {
       // note that for append case, it is possible that we append partial data
       // and then fail. In that case, for the next retry, we either reuse the
       // partial appended data if it is good or we overwrite the whole file
-      if (useTmpTarget && targetFS.exists(targetPath)) {
+      if (useTempTarget) {
         targetFS.delete(targetPath, false);
       }
     }
@@ -276,7 +274,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
     }
   }
 
-  private Path getTmpFile(Path target, Mapper.Context context) {
+  private Path getTempFile(Path target, Mapper.Context context) {
     Path targetWorkPath = new Path(context.getConfiguration().
         get(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH));
 
@@ -284,7 +282,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
         : targetWorkPath;
     Path tempFile = new Path(root, ".distcp.tmp." +
         context.getTaskAttemptID().toString());
-    LOG.info("Creating temp file: " + tempFile);
+    LOG.info("Creating temp file: {}", tempFile);
     return tempFile;
   }
 
