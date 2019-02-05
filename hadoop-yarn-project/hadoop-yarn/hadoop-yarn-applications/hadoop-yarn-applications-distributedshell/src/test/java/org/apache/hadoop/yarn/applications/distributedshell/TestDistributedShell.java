@@ -1728,6 +1728,24 @@ public class TestDistributedShell {
     client.run();
   }
 
+  @Test(expected=IllegalArgumentException.class)
+  public void testDistributedShellNonExistentQueue()
+      throws Exception {
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "1",
+        "--shell_command",
+        Shell.WINDOWS ? "dir" : "ls",
+        "--queue",
+        "non-existent-queue"
+    };
+    Client client = new Client(new Configuration(yarnCluster.getConfig()));
+    client.init(args);
+    client.run();
+  }
+
   @Test
   public void testDistributedShellWithSingleFileLocalization()
       throws Exception {
