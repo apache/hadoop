@@ -123,6 +123,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>commons-validator</artifactId>
       <version>1.6</version>
     </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
