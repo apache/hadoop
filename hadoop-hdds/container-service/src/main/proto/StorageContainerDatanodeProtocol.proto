@@ -303,6 +303,7 @@ This command asks the datanode to delete a specific container.
 message DeleteContainerCommandProto {
   required int64 containerID = 1;
   required int64 cmdId = 2;
+  required bool force = 3 [default = false];
 }
 
 /**

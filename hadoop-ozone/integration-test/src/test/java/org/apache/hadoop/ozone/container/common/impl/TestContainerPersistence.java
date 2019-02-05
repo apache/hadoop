@@ -231,7 +231,7 @@ public class TestContainerPersistence {
     Assert.assertTrue(containerSet.getContainerMap()
         .containsKey(testContainerID2));
 
-    container1.delete(false);
+    container1.delete();
     containerSet.removeContainer(testContainerID1);
     Assert.assertFalse(containerSet.getContainerMap()
         .containsKey(testContainerID1));
@@ -253,7 +253,7 @@ public class TestContainerPersistence {
     exception.expect(StorageContainerException.class);
     exception.expectMessage(
         "Container cannot be deleted because it is not empty.");
-    container2.delete(false);
+    container2.delete();
     Assert.assertTrue(containerSet.getContainerMap()
         .containsKey(testContainerID1));
   }

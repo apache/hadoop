@@ -213,7 +213,7 @@ public class TestKeyValueContainer {
     }
 
     //delete the original one
-    keyValueContainer.delete(true);
+    keyValueContainer.delete();
 
     //create a new one
     KeyValueContainerData containerData =
@@ -294,7 +294,7 @@ public class TestKeyValueContainer {
     keyValueContainer = new KeyValueContainer(
         keyValueContainerData, conf);
     keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
-    keyValueContainer.delete(true);
+    keyValueContainer.delete();
 
     String containerMetaDataPath = keyValueContainerData
         .getMetadataPath();

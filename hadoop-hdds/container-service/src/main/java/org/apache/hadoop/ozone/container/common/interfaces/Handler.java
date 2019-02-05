@@ -151,9 +151,11 @@ public abstract class Handler {
    * Deletes the given container.
    *
    * @param container container to be deleted
+   * @param force if this is set to true, we delete container without checking
+   * state of the container.
    * @throws IOException
    */
-  public abstract void deleteContainer(Container container)
+  public abstract void deleteContainer(Container container, boolean force)
       throws IOException;
 
   public void setScmID(String scmId) {

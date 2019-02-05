@@ -126,7 +126,6 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
     case CONTAINER_UNHEALTHY:
     case CLOSED_CONTAINER_IO:
     case DELETE_ON_OPEN_CONTAINER:
-    case ERROR_CONTAINER_NOT_EMPTY:
       return true;
     default:
       return false;

@@ -410,10 +410,10 @@ public class TestOzoneContainer {
       Assert.assertTrue(
           putBlockRequest.getTraceID().equals(response.getTraceID()));
 
-      // Container cannot be deleted forcibly because
-      // the container is not closed.
+      // Container cannot be deleted because force flag is set to false and
+      // the container is still open
       request = ContainerTestHelper.getDeleteContainer(
-          client.getPipeline(), containerID, true);
+          client.getPipeline(), containerID, false);
       response = client.sendCommand(request);
 
       Assert.assertNotNull(response);
@@ -421,26 +421,7 @@ public class TestOzoneContainer {
           response.getResult());
       Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
 
-      // Close the container.
-      request = ContainerTestHelper.getCloseContainer(
-          client.getPipeline(), containerID);
-      response = client.sendCommand(request);
-      Assert.assertNotNull(response);
-      Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
-      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
-
-      // Container cannot be deleted because the container is not empty.
-      request = ContainerTestHelper.getDeleteContainer(
-          client.getPipeline(), containerID, false);
-      response = client.sendCommand(request);
-
-      Assert.assertNotNull(response);
-      Assert.assertEquals(ContainerProtos.Result.ERROR_CONTAINER_NOT_EMPTY,
-          response.getResult());
-      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
-
-      // Container can be deleted forcibly because
-      // it is closed and non-empty.
+      // Container can be deleted, by setting force flag, even with out closing
       request = ContainerTestHelper.getDeleteContainer(
           client.getPipeline(), containerID, true);
       response = client.sendCommand(request);
