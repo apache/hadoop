@@ -3195,7 +3195,7 @@ public class DistributedFileSystem extends FileSystem
     }
 
     @Override
-    protected HdfsDataOutputStreamBuilder getThisBuilder() {
+    public HdfsDataOutputStreamBuilder getThisBuilder() {
       return this;
     }
 

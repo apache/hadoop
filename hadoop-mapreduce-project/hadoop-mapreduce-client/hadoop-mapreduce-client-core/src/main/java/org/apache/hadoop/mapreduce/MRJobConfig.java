@@ -1226,4 +1226,18 @@ public interface MRJobConfig {
       MR_AM_STAGING_DIR + ".erasurecoding.enabled";
 
   boolean DEFAULT_MR_AM_STAGING_ERASURECODING_ENABLED = false;
+
+  /**
+   * Prefix for options which are passed in to the filesystem
+   * after converting the subsequent dotted element to the schema.
+   */
+  @Unstable
+  String INPUT_FILE_OPTION_PREFIX = "mapreduce.job.input.file.option.";
+
+  /**
+   * Prefix for mandatory options which are passed in to the filesystem
+   * after converting the subsequent dotted element to the schema.
+   */
+  @Unstable
+  String INPUT_FILE_MANDATORY_PREFIX = "mapreduce.job.input.file.must.";
 }

@@ -83,6 +83,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 
 /**
@@ -248,6 +249,12 @@ public final class S3AUtils {
       case 410:
         ioe = new FileNotFoundException(message);
         ioe.initCause(ase);
+        break;
+
+      // method not allowed; seen on S3 Select.
+      // treated as a bad request
+      case 405:
+        ioe = new AWSBadRequestException(message, s3Exception);
         break;
 
       // out of range. This may happen if an object is overwritten with
@@ -943,7 +950,7 @@ public final class S3AUtils {
       String key,
       String val,
       String defVal) throws IOException {
-    return StringUtils.isEmpty(val)
+    return isEmpty(val)
         ? lookupPassword(conf, key, defVal)
         : val;
   }

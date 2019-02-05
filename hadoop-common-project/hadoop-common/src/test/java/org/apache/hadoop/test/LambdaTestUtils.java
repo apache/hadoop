@@ -30,6 +30,10 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -688,6 +692,132 @@ public final class LambdaTestUtils {
   public static void doAs(UserGroupInformation user, VoidCallable eval)
       throws IOException, InterruptedException {
     user.doAs(new PrivilegedVoidOperation(eval));
+  }
+
+  /**
+   * Expect a future to raise a specific exception class when evaluated,
+   * <i>looking inside the raised {@code ExecutionException}</i> for it.
+   * @param clazz class of exception; the nested exception must be this class
+   * <i>or a subclass</i>.
+   *
+   * This is simply an unwrapping of the outcome of the future.
+   *
+   * If an exception is not raised, the return value of the {@code get()}
+   * call is included in the exception string.
+   *
+   * If the nested cause of the raised ExecutionException is not an
+   * Exception (i.e its an error), then the outer ExecutionException is
+   * rethrown.
+   * This keeps the operation signatures in sync.
+   *
+   * @param contained string which must be in the {@code toString()} value
+   * of the exception
+   * @param future future to get
+   * @param <T> return type of expression
+   * @param <E> exception class
+   * @return the caught exception if it was of the expected type and contents
+   * @throws AssertionError if the evaluation call didn't raise an exception.
+   * The error includes the {@code toString()} value of the result, if this
+   * can be determined.
+   * @throws CancellationException if the computation was cancelled
+   * @throws ExecutionException if the raised exception didn't contain an
+   * exception.
+   * @throws InterruptedException if the current thread was interrupted
+   * @throws TimeoutException if the wait timed out
+   * @throws Exception if the wrong exception was raised, or there was
+   * a text mismatch.
+   */
+  public static <T, E extends Throwable> E interceptFuture(
+      Class<E> clazz,
+      String contained,
+      Future<T> future) throws Exception {
+    return intercept(clazz,
+        contained,
+        () -> {
+          try {
+            return future.get();
+          } catch (ExecutionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof Exception) {
+              throw (Exception) cause;
+            } else {
+              throw e;
+            }
+          }
+        });
+  }
+
+  /**
+   * Expect a future to raise a specific exception class when evaluated,
+   * <i>looking inside the raised {@code ExecutionException}</i> for it.
+   * @param clazz class of exception; the nested exception must be this class
+   * <i>or a subclass</i>.
+   *
+   * This is simply an unwrapping of the outcome of the future.
+   *
+   * If an exception is not raised, the return value of the {@code get()}
+   * call is included in the exception string.
+   *
+   * If the nested cause of the raised ExecutionException is not an
+   * Exception (i.e its an error), then the outer ExecutionException is
+   * rethrown.
+   * This keeps the operation signatures in sync.
+   *
+   * @param contained string which must be in the {@code toString()} value
+   * of the exception
+   * @param future future to get
+   * @param <T> return type of expression
+   * @param <E> exception class
+   * @return the caught exception if it was of the expected type and contents
+   * @throws AssertionError if the evaluation call didn't raise an exception.
+   * The error includes the {@code toString()} value of the result, if this
+   * can be determined.
+   * @throws CancellationException if the computation was cancelled
+   * @throws ExecutionException if the raised exception didn't contain an
+   * exception.
+   * @throws InterruptedException if the current thread was interrupted
+   * @throws TimeoutException if the wait timed out
+   * @throws Exception if the wrong exception was raised, or there was
+   * a text mismatch.
+   */
+  public static <T, E extends Throwable> E interceptFuture(
+      final Class<E> clazz,
+      final String contained,
+      final long timeout,
+      final TimeUnit tu,
+      final Future<T> future) throws Exception {
+    return intercept(clazz,
+        contained,
+        () -> {
+          try {
+            return future.get(timeout, tu);
+          } catch (ExecutionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof Exception) {
+              throw (Exception) cause;
+            } else {
+              throw e;
+            }
+          }
+        });
+   }
+
+  /**
+   * Verify that the cause of an exception is of the given type.
+   * @param <E> exception class
+   * @param caught caught exception
+   * @return the extracted exception if it is of the expect type.
+   * @throws Exception the outer exception if there is no inner/wrong type
+   */
+  public static <E extends Throwable> E verifyCause(
+      Class<E> clazz,
+      final Throwable caught) throws Throwable {
+    Throwable cause = caught.getCause();
+    if (cause == null || !clazz.isAssignableFrom(cause.getClass())) {
+      throw caught;
+    } else {
+      return (E) caught;
+    }
   }
 
   /**

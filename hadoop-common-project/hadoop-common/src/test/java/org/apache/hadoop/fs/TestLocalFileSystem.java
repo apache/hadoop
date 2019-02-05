@@ -729,7 +729,7 @@ public class TestLocalFileSystem {
     }
 
     @Override
-    protected BuilderWithSupportedKeys getThisBuilder() {
+    public BuilderWithSupportedKeys getThisBuilder() {
       return this;
     }
 

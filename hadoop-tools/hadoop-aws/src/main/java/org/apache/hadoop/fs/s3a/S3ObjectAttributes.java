@@ -18,19 +18,24 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * This class is only a holder for bucket, key, SSE Algorithm and SSE key
- * attributes. It is only used in {@link S3AInputStream}
+ * attributes. It is used in {@link S3AInputStream} and the select equivalent.
  * as a way to reduce parameters being passed
  * to the constructor of such class.
  */
-class S3ObjectAttributes {
-  private String bucket;
-  private String key;
-  private S3AEncryptionMethods serverSideEncryptionAlgorithm;
-  private String serverSideEncryptionKey;
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
+public class S3ObjectAttributes {
+  private final String bucket;
+  private final String key;
+  private final S3AEncryptionMethods serverSideEncryptionAlgorithm;
+  private final String serverSideEncryptionKey;
 
-  S3ObjectAttributes(
+  public S3ObjectAttributes(
       String bucket,
       String key,
       S3AEncryptionMethods serverSideEncryptionAlgorithm,
@@ -41,19 +46,19 @@ class S3ObjectAttributes {
     this.serverSideEncryptionKey = serverSideEncryptionKey;
   }
 
-  String getBucket() {
+  public String getBucket() {
     return bucket;
   }
 
-  String getKey() {
+  public String getKey() {
     return key;
   }
 
-  S3AEncryptionMethods getServerSideEncryptionAlgorithm() {
+  public S3AEncryptionMethods getServerSideEncryptionAlgorithm() {
     return serverSideEncryptionAlgorithm;
   }
 
-  String getServerSideEncryptionKey() {
+  public String getServerSideEncryptionKey() {
     return serverSideEncryptionKey;
   }
 }
