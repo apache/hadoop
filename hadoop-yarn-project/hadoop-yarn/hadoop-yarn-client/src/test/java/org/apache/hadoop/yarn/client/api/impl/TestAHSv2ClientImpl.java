@@ -61,7 +61,10 @@ public class TestAHSv2ClientImpl {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
+    conf.set(YarnConfiguration.YARN_LOG_SERVER_URL,
+        "https://localhost:8188/ahs");
     client = new AHSv2ClientImpl();
+    client.init(conf);
     spyTimelineReaderClient = mock(TimelineReaderClient.class);
     client.setReaderClient(spyTimelineReaderClient);
   }
@@ -74,11 +77,17 @@ public class TestAHSv2ClientImpl {
     final ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
     when(spyTimelineReaderClient.getContainerEntity(containerId, "ALL", null))
         .thenReturn(createContainerEntity(containerId));
+    when(spyTimelineReaderClient.getApplicationEntity(appId, "ALL", null))
+        .thenReturn(createApplicationTimelineEntity(appId, true, false));
     ContainerReport report = client.getContainerReport(containerId);
     Assert.assertEquals(report.getContainerId(), containerId);
     Assert.assertEquals(report.getAssignedNode().getHost(), "test host");
     Assert.assertEquals(report.getAssignedNode().getPort(), 100);
     Assert.assertEquals(report.getAllocatedResource().getVirtualCores(), 8);
+    Assert.assertEquals(report.getCreationTime(), 123456);
+    Assert.assertEquals(report.getLogUrl(),
+        "https://localhost:8188/ahs/logs/test host:100/"
+            + "container_0_0001_01_000001/container_0_0001_01_000001/user1");
   }
 
   @Test
