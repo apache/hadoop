@@ -44,7 +44,7 @@ import static org.mockito.Mockito.when;
  */
 public class TestPartUpload {
 
-  private final static ObjectEndpoint REST = new ObjectEndpoint();;
+  private final static ObjectEndpoint REST = new ObjectEndpoint();
   private final static String BUCKET = "s3bucket";
   private final static String KEY = "key1";
 
