@@ -78,6 +78,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster.NameNodeInfo;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology.NNConf;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology.NSConf;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
@@ -87,6 +88,7 @@ import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.federation.router.RouterClient;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
@@ -489,6 +491,9 @@ public class MiniRouterDFSCluster {
             "0.0.0.0");
         conf.set(DFS_NAMENODE_HTTPS_ADDRESS_KEY + "." + suffix,
             "127.0.0.1:" + context.httpsPort);
+        conf.set(
+            HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX + "." + ns,
+            ConfiguredFailoverProxyProvider.class.getName());
 
         // If the service port is enabled by default, we need to set them up
         boolean servicePortEnabled = false;
