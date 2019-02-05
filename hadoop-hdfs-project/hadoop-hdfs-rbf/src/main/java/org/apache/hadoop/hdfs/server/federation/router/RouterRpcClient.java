@@ -1042,10 +1042,15 @@ public class RouterRpcClient {
       String ns = location.getNameserviceId();
       final List<? extends FederationNamenodeContext> namenodes =
           getNamenodesForNameservice(ns);
-      Class<?> proto = method.getProtocol();
-      Object[] paramList = method.getParams(location);
-      Object result = invokeMethod(ugi, namenodes, proto, m, paramList);
-      return Collections.singletonMap(location, (R) result);
+      try {
+        Class<?> proto = method.getProtocol();
+        Object[] paramList = method.getParams(location);
+        Object result = invokeMethod(ugi, namenodes, proto, m, paramList);
+        return Collections.singletonMap(location, (R) result);
+      } catch (IOException ioe) {
+        // Localize the exception
+        throw processException(ioe, location);
+      }
     }
 
     List<T> orderedLocations = new LinkedList<>();
