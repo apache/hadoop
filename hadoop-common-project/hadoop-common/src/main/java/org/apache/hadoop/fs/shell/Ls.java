@@ -33,6 +33,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.ContentSummary;
 
 /**
@@ -57,13 +58,15 @@ class Ls extends FsCommand {
   private static final String OPTION_ATIME = "u";
   private static final String OPTION_SIZE = "S";
   private static final String OPTION_ECPOLICY = "e";
+  private static final String OPTION_SPOLICY = "sp";
 
   public static final String NAME = "ls";
   public static final String USAGE = "[-" + OPTION_PATHONLY + "] [-" +
       OPTION_DIRECTORY + "] [-" + OPTION_HUMAN + "] [-" +
       OPTION_HIDENONPRINTABLE + "] [-" + OPTION_RECURSIVE + "] [-" +
       OPTION_MTIME + "] [-" + OPTION_SIZE + "] [-" + OPTION_REVERSE + "] [-" +
-      OPTION_ATIME + "] [-" + OPTION_ECPOLICY +"] [<path> ...]";
+      OPTION_ATIME + "] [-" + OPTION_ECPOLICY + "] [-" + OPTION_SPOLICY
+      + "] [<path> ...]";
 
   public static final String DESCRIPTION =
       "List the contents that match the specified file pattern. If " +
@@ -96,7 +99,9 @@ class Ls extends FsCommand {
           "  Use time of last access instead of modification for\n" +
           "      display and sorting.\n"+
           "  -" + OPTION_ECPOLICY +
-          "  Display the erasure coding policy of files and directories.\n";
+          "  Display the erasure coding policy of files and directories.\n" +
+          "  -" + OPTION_SPOLICY +
+          "  Display the storage policy of files and directories.\n";
 
   protected final SimpleDateFormat dateFormat =
     new SimpleDateFormat("yyyy-MM-dd HH:mm");
@@ -110,6 +115,7 @@ class Ls extends FsCommand {
   private boolean orderSize;
   private boolean useAtime;
   private boolean displayECPolicy;
+  private boolean displaySPolicy;
   private Comparator<PathData> orderComparator;
 
   protected boolean humanReadable = false;
@@ -135,7 +141,8 @@ class Ls extends FsCommand {
     CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE,
         OPTION_PATHONLY, OPTION_DIRECTORY, OPTION_HUMAN,
         OPTION_HIDENONPRINTABLE, OPTION_RECURSIVE, OPTION_REVERSE,
-        OPTION_MTIME, OPTION_SIZE, OPTION_ATIME, OPTION_ECPOLICY);
+        OPTION_MTIME, OPTION_SIZE, OPTION_ATIME, OPTION_ECPOLICY,
+        OPTION_SPOLICY);
     cf.parse(args);
     pathOnly = cf.getOpt(OPTION_PATHONLY);
     dirRecurse = !cf.getOpt(OPTION_DIRECTORY);
@@ -147,6 +154,7 @@ class Ls extends FsCommand {
     orderSize = !orderTime && cf.getOpt(OPTION_SIZE);
     useAtime = cf.getOpt(OPTION_ATIME);
     displayECPolicy = cf.getOpt(OPTION_ECPOLICY);
+    displaySPolicy = cf.getOpt(OPTION_SPOLICY);
     if (args.isEmpty()) args.add(Path.CUR_DIR);
 
     initialiseOrderComparator();
@@ -229,6 +237,16 @@ class Ls extends FsCommand {
     return this.displayECPolicy;
   }
 
+  /**
+   * Should storage policies be displayed.
+   * @return true display storage policies, false doesn't display storage
+   *         policies
+   */
+  @VisibleForTesting
+  boolean isDisplaySPolicy() {
+    return this.displaySPolicy;
+  }
+
   @Override
   protected void processPathArgument(PathData item) throws IOException {
     if (isDisplayECPolicy() && item.fs.getContentSummary(item.path)
@@ -298,6 +316,7 @@ class Ls extends FsCommand {
           stat.getOwner(),
           stat.getGroup(),
           contentSummary.getErasureCodingPolicy(),
+          displaySPolicy ? item.fs.getStoragePolicy(item.path).getName() : "",
           formatSize(stat.getLen()),
           dateFormat.format(new Date(isUseAtime()
               ? stat.getAccessTime()
@@ -311,6 +330,7 @@ class Ls extends FsCommand {
           (stat.isFile() ? stat.getReplication() : "-"),
           stat.getOwner(),
           stat.getGroup(),
+          displaySPolicy ? item.fs.getStoragePolicy(item.path).getName() : "",
           formatSize(stat.getLen()),
           dateFormat.format(new Date(isUseAtime()
               ? stat.getAccessTime()
@@ -349,6 +369,15 @@ class Ls extends FsCommand {
       }
       fmt.append((maxEC > 0) ? "%-" + maxEC + "s " : "%s");
     }
+    int maxSpolicy = 0;
+    if (displaySPolicy) {
+      if (items.length != 0) {
+        for (BlockStoragePolicySpi s : items[0].fs.getAllStoragePolicies()) {
+          maxSpolicy = maxLength(maxSpolicy, s.getName());
+        }
+      }
+    }
+    fmt.append((maxSpolicy > 0) ? "%-" + maxSpolicy + "s " : "%s");
     fmt.append("%"  + maxLen   + "s ");
     fmt.append("%s %s"); // mod time & path
     lineFormat = fmt.toString();

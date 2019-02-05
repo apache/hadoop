@@ -423,7 +423,7 @@ Return usage output.
 ls
 ----
 
-Usage: `hadoop fs -ls [-C] [-d] [-h] [-q] [-R] [-t] [-S] [-r] [-u] [-e] <args> `
+Usage: `hadoop fs -ls [-C] [-d] [-h] [-q] [-R] [-t] [-S] [-r] [-u] [-e] [-sp] <args> `
 
 Options:
 
@@ -437,6 +437,9 @@ Options:
 * -r: Reverse the sort order.
 * -u: Use access time rather than modification time for display and sorting.  
 * -e: Display the erasure coding policy of files and directories only.
+* -sp: Display the storage policy of files and directories.
+
+For a file/directory with no explicitly set storage policy the ls command with -sp returns the default storage policy.
 
 For a file ls returns stat on the file with the following format:
 
