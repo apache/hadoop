@@ -29,7 +29,7 @@ import org.apache.hadoop.security.KerberosInfo;
  * Protocol Buffers service interface to add Hadoop-specific annotations.
  */
 @ProtocolInfo(protocolName =
-    "org.apache.hadoop.ozone.protocol.ScmBlockLocationProtocol",
+    "org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol",
     protocolVersion = 1)
 @InterfaceAudience.Private
 @KerberosInfo(
