@@ -102,6 +102,8 @@ public enum Statistic {
   OBJECT_PUT_BYTES("object_put_bytes", "number of bytes uploaded"),
   OBJECT_PUT_BYTES_PENDING("object_put_bytes_pending",
       "number of bytes queued for upload/being actively uploaded"),
+  OBJECT_SELECT_REQUESTS("object_select_requests",
+      "Count of S3 Select requests issued"),
   STREAM_ABORTED("stream_aborted",
       "Count of times the TCP stream was aborted"),
   STREAM_BACKWARD_SEEK_OPERATIONS("stream_backward_seek_operations",

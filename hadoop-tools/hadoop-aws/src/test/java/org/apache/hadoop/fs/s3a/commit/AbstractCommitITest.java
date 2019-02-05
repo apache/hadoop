@@ -178,7 +178,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    * @return fork ID string in a format parseable by Jobs
    * @throws Exception failure
    */
-  protected String randomJobId() throws Exception {
+  public static String randomJobId() throws Exception {
     String testUniqueForkId = System.getProperty(TEST_UNIQUE_FORK_ID, "0001");
     int l = testUniqueForkId.length();
     String trailingDigits = testUniqueForkId.substring(l - 4, l);

@@ -84,4 +84,29 @@ public class S3AOpContext {
         dstFileStatus);
   }
 
+  public boolean isS3GuardEnabled() {
+    return isS3GuardEnabled;
+  }
+
+  public Invoker getInvoker() {
+    return invoker;
+  }
+
+  @Nullable
+  public FileSystem.Statistics getStats() {
+    return stats;
+  }
+
+  public S3AInstrumentation getInstrumentation() {
+    return instrumentation;
+  }
+
+  @Nullable
+  public Invoker getS3guardInvoker() {
+    return s3guardInvoker;
+  }
+
+  public FileStatus getDstFileStatus() {
+    return dstFileStatus;
+  }
 }

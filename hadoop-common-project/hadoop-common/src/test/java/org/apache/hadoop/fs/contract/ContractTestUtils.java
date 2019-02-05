@@ -1483,6 +1483,37 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
+   * Function which calls {@code InputStream.read()} and
+   * downgrades an IOE to a runtime exception.
+   * @param in input
+   * @return the read value
+   * @throws AssertionError on any IOException
+   */
+  public static int read(InputStream in) {
+    try {
+      return in.read();
+    } catch (IOException ex) {
+      throw new AssertionError(ex);
+    }
+  }
+
+  /**
+   * Read a whole stream; downgrades an IOE to a runtime exception.
+   * @param in input
+   * @return the number of bytes read.
+   * @throws AssertionError on any IOException
+   */
+  public static long readStream(InputStream in) {
+    long count = 0;
+
+    while (read(in) >= 0) {
+      count++;
+    }
+    return count;
+  }
+
+
+  /**
    * Results of recursive directory creation/scan operations.
    */
   public static final class TreeScanResults {

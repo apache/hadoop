@@ -200,6 +200,10 @@ Some FileSystems do not raise an exception if this condition is not met. They
 instead return -1 on any `read()` operation where, at the time of the read,
 `len(data(FSDIS)) < pos(FSDIS)`.
 
+After a failed seek, the value of `pos(FSDIS)` may change.
+As an example, seeking past the EOF may move the read position
+to the end of the file, *as well as raising an `EOFException`.*
+
 #### Postconditions
 
     FSDIS' = (s, data, True)
@@ -210,6 +214,16 @@ There is an implicit invariant: a seek to the current position is a no-op
 
 Implementations may recognise this operation and bypass all other precondition
 checks, leaving the input stream unchanged.
+
+The most recent connectors to object stores all implement some form
+of "lazy-seek": the `seek()` call may appear to update the stream, and the value
+of `getPos()` is updated, but the file is not opened/reopenend until
+data is actually read. Implementations of lazy seek MUST still validate
+the new seek position against the known length of the file.
+However the state of the file (i.e. does it exist, what
+its current length is) does not need to be refreshed at this point.
+The fact that a file has been deleted or truncated may not surface until
+that `read()` call.
 
 
 ### `Seekable.seekToNewSource(offset)`

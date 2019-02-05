@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +36,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getLandsatCSVPath;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 
 /**
@@ -152,12 +152,9 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
 
   @Test
   public void testMultiObjectDeleteNoPermissions() throws Throwable {
-    Configuration conf = getConfiguration();
-    String csvFile = conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE);
-    Assume.assumeTrue("CSV test file is not the default",
-        DEFAULT_CSVTEST_FILE.equals(csvFile));
-    Path testFile = new Path(csvFile);
-    S3AFileSystem fs = (S3AFileSystem)testFile.getFileSystem(conf);
+    Path testFile = getLandsatCSVPath(getConfiguration());
+    S3AFileSystem fs = (S3AFileSystem)testFile.getFileSystem(
+        getConfiguration());
     intercept(MultiObjectDeleteException.class,
         () -> removeKeys(fs, fs.pathToKey(testFile)));
   }
