@@ -16,6 +16,10 @@
 # limitations under the License.
 #
 
-add_library(fs_obj OBJECT filesystem.cc filesystem_sync.cc filehandle.cc bad_datanode_tracker.cc namenode_operations.cc)
-add_dependencies(fs_obj proto)
-add_library(fs $<TARGET_OBJECTS:fs_obj>)
+add_library(fs OBJECT
+   filesystem.cc
+   filesystem_sync.cc
+   filehandle.cc
+   bad_datanode_tracker.cc
+   namenode_operations.cc)
+add_dependencies(fs proto)

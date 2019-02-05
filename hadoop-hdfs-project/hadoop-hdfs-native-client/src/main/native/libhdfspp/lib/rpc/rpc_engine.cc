@@ -52,6 +52,10 @@ RpcEngine::RpcEngine(std::shared_ptr<IoService> io_service, const Options &optio
   }
 }
 
+RpcEngine::~RpcEngine() {
+  // PASS
+}
+
 void RpcEngine::Connect(const std::string &cluster_name,
                         const std::vector<ResolvedNamenodeInfo> servers,
                         RpcCallback &handler) {

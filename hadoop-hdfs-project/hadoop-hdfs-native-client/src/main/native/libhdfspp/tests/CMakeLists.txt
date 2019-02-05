@@ -16,33 +16,56 @@
 # limitations under the License.
 #
 
+cmake_minimum_required(VERSION 2.8.12)
+
+project (HDFSPP_TESTS)
+
+enable_testing()
+INCLUDE (CTest)
+
+find_package(Protobuf REQUIRED)
+find_package(HDFSPP REQUIRED)
+find_package(GTest REQUIRED)
+
+include(HdfsppCompilerOptions)
+
 # Delegate some functionality to libhdfs, until libhdfspp is complete.
-set (LIBHDFS_SRC_DIR ../../libhdfs)
-set (LIBHDFS_TESTS_DIR ../../libhdfs-tests)
-set (LIBHDFSPP_SRC_DIR ..)
-set (LIBHDFSPP_LIB_DIR ${LIBHDFSPP_SRC_DIR}/lib)
-set (LIBHDFSPP_BINDING_C ${LIBHDFSPP_LIB_DIR}/bindings/c)
+set (LIBHDFS_SRC_DIR ${CMAKE_SOURCE_DIR}/../../libhdfs)
+set (LIBHDFS_TESTS_DIR ${CMAKE_SOURCE_DIR}/../../libhdfs-tests)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-missing-field-initializers")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-missing-field-initializers")
 
+find_program(MEMORYCHECK_COMMAND valgrind HINTS ${VALGRIND_DIR} )
+set(MEMORYCHECK_COMMAND_OPTIONS
+  "--trace-children=no --leak-check=full --error-exitcode=1\
+   --suppressions=${LIBHDFS_SRC_DIR}/tests/memcheck.supp")
+message(STATUS "valgrind location: ${MEMORYCHECK_COMMAND}")
+
+if (REQUIRE_VALGRIND AND
+    MEMORYCHECK_COMMAND MATCHES "MEMORYCHECK_COMMAND-NOTFOUND" )
+  message(FATAL_ERROR "valgrind was required but not found."
+          "The path can be included via a -DVALGRIND_DIR=...\
+           flag passed to CMake.")
+endif ()
+
+# Set the rpath so that we find the shared libraries.
+if (BUILD_SHARED_LIBS AND APPLE)
+  include (RpathUtils)
+  set(CMAKE_BUILD_RPATH ${CMAKE_PREFIX_PATH})
+  appendToEach(CMAKE_BUILD_RPATH "/lib")
+endif ()
+
+# Put the protobuf stuff first, since the version has to match between
+# the library, generated code, and the include files.
+include_directories(BEFORE ${PROTOBUF_INCLUDE_DIR})
+
+install(TARGETS)
 include_directories(
     ${GENERATED_JAVAH}
-    ${CMAKE_CURRENT_LIST_DIR}
-    ${CMAKE_BINARY_DIR}
     ${JNI_INCLUDE_DIRS}
     ${LIBHDFS_SRC_DIR}/include
     ${LIBHDFS_SRC_DIR}/..
     ${LIBHDFS_SRC_DIR}
-    ${OS_DIR}
-)
-add_library(test_common_obj OBJECT mock_connection.cc)
-add_library(test_common $<TARGET_OBJECTS:test_common_obj>)
-
-set(PROTOBUF_IMPORT_DIRS ${PROTO_HADOOP_TEST_DIR})
-
-protobuf_generate_cpp(PROTO_TEST_SRCS PROTO_TEST_HDRS
-  ${PROTO_HADOOP_TEST_DIR}/test.proto
-  ${PROTO_HADOOP_TEST_DIR}/test_rpc_service.proto
 )
 
 # Shamelessly stolen from
@@ -59,82 +82,11 @@ endfunction(add_memcheck_test)
 
 #
 #
-#   UNIT TESTS - TEST SELECTED PARTS OF THE LIBRARY
-#
-#
-
-add_executable(uri_test uri_test.cc)
-target_link_libraries(uri_test common gmock_main ${CMAKE_THREAD_LIBS_INIT})
-add_memcheck_test(uri uri_test)
-
-add_executable(remote_block_reader_test remote_block_reader_test.cc)
-target_link_libraries(remote_block_reader_test test_common reader proto common connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
-add_memcheck_test(remote_block_reader remote_block_reader_test)
-
-add_executable(sasl_digest_md5_test sasl_digest_md5_test.cc)
-target_link_libraries(sasl_digest_md5_test common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
-add_memcheck_test(sasl_digest_md5 sasl_digest_md5_test)
-
-add_executable(retry_policy_test retry_policy_test.cc)
-target_link_libraries(retry_policy_test common gmock_main ${CMAKE_THREAD_LIBS_INIT})
-add_memcheck_test(retry_policy retry_policy_test)
-
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-add_executable(rpc_engine_test rpc_engine_test.cc ${PROTO_TEST_SRCS} ${PROTO_TEST_HDRS})
-target_link_libraries(rpc_engine_test test_common rpc proto common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
-add_memcheck_test(rpc_engine rpc_engine_test)
-
-add_executable(bad_datanode_test bad_datanode_test.cc)
-target_link_libraries(bad_datanode_test rpc reader proto fs bindings_c rpc proto common reader connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
-add_memcheck_test(bad_datanode bad_datanode_test)
-
-add_executable(node_exclusion_test node_exclusion_test.cc)
-target_link_libraries(node_exclusion_test fs gmock_main common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
-add_memcheck_test(node_exclusion node_exclusion_test)
-
-add_executable(configuration_test configuration_test.cc)
-target_link_libraries(configuration_test common gmock_main ${CMAKE_THREAD_LIBS_INIT})
-add_memcheck_test(configuration configuration_test)
-
-add_executable(hdfs_configuration_test hdfs_configuration_test.cc)
-target_link_libraries(hdfs_configuration_test common gmock_main ${CMAKE_THREAD_LIBS_INIT})
-add_memcheck_test(hdfs_configuration hdfs_configuration_test)
-
-add_executable(hdfspp_errors_test hdfspp_errors.cc)
-target_link_libraries(hdfspp_errors_test common gmock_main bindings_c fs rpc proto common reader connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
-add_memcheck_test(hdfspp_errors hdfspp_errors_test)
-
-add_executable(hdfs_builder_test hdfs_builder_test.cc)
-target_link_libraries(hdfs_builder_test test_common gmock_main bindings_c fs rpc proto common reader connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
-add_memcheck_test(hdfs_builder_test hdfs_builder_test)
-
-add_executable(logging_test logging_test.cc)
-target_link_libraries(logging_test common gmock_main bindings_c fs rpc proto common reader connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
-add_memcheck_test(logging_test logging_test)
-
-add_executable(hdfs_ioservice_test hdfs_ioservice_test.cc)
-target_link_libraries(hdfs_ioservice_test fs gmock_main common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
-add_memcheck_test(hdfs_ioservice hdfs_ioservice_test)
-
-add_executable(user_lock_test user_lock_test.cc)
-target_link_libraries(user_lock_test fs gmock_main common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
-add_memcheck_test(user_lock user_lock_test)
-
-add_executable(hdfs_config_connect_bugs_test hdfs_config_connect_bugs.cc)
-target_link_libraries(hdfs_config_connect_bugs_test common gmock_main bindings_c fs rpc proto common reader connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
-add_memcheck_test(hdfs_config_connect_bugs hdfs_config_connect_bugs_test)
-
-
-
-#
-#
 #   INTEGRATION TESTS - TESTS THE FULL LIBRARY AGAINST ACTUAL SERVERS
 #
 #
 # This test requires a great deal of Hadoop Java infrastructure to run.
 #
-if(HADOOP_BUILD)
-
 include_directories (
   #TODO: Put this in a variable up top and pull it out here
     ${CMAKE_CURRENT_SOURCE_DIR}/../../libhdfs-tests/
@@ -176,5 +128,3 @@ add_libhdfs_test  (hdfs_ext hdfspp_test_shim_static)
 #build_libhdfs_test(hdfs_config_connect_bugs hdfspp_test_shim_static ${CMAKE_CURRENT_LIST_DIR}/hdfs_config_connect_bugs.cc)
 #link_libhdfs_test (hdfs_config_connect_bugs hdfspp_test_shim_static hdfspp_static gmock_main native_mini_dfs ${JAVA_JVM_LIBRARY}  ${SASL_LIBRARIES})
 #add_libhdfs_test  (hdfs_config_connect_bugs hdfspp_test_shim_static)
-
-endif(HADOOP_BUILD)

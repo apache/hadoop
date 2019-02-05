@@ -19,7 +19,7 @@
 
 #include <hdfspp/uri.h>
 
-#include <uriparser2/uriparser/Uri.h>
+#include <uriparser/Uri.h>
 
 #include <string.h>
 #include <sstream>

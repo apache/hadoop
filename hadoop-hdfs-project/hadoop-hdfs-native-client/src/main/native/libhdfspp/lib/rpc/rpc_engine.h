@@ -32,7 +32,7 @@
 #include <google/protobuf/message_lite.h>
 
 #include <asio/ip/tcp.hpp>
-#include <asio/deadline_timer.hpp>
+#include <asio/steady_timer.hpp>
 
 #include <atomic>
 #include <memory>
@@ -111,6 +111,7 @@ class RpcEngine : public LockFreeRpcEngine, public std::enable_shared_from_this<
   RpcEngine(std::shared_ptr<IoService> service, const Options &options,
             const std::string &client_name, const std::string &user_name,
             const char *protocol_name, int protocol_version);
+  virtual ~RpcEngine();
 
   void Connect(const std::string & cluster_name,
                const std::vector<ResolvedNamenodeInfo> servers,
@@ -173,7 +174,7 @@ private:
   AuthInfo auth_info_;
   std::string cluster_name_;
   std::atomic_int call_id_;
-  ::asio::deadline_timer retry_timer;
+  ::asio::steady_timer retry_timer;
 
   std::shared_ptr<LibhdfsEvents> event_handlers_;
 

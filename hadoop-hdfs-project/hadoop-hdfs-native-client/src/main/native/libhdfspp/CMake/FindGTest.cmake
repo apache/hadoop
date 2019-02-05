@@ -12,4 +12,4 @@
 
 include(${CMAKE_CURRENT_LIST_DIR}/FindPackageExtension.cmake)
 
-findPackageExtension("gsasl.h" "gsasl" false)
+findPackageExtension("gmock/gmock.h" "gtest;gmock;gmock_main" true)

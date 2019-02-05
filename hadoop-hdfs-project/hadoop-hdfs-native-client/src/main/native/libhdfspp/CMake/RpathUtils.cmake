@@ -10,6 +10,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-include(${CMAKE_CURRENT_LIST_DIR}/FindPackageExtension.cmake)
-
-findPackageExtension("gsasl.h" "gsasl" false)
+# Append str to each item in the given list.
+# replaceable with list(TRANSFORM var APPEND ${str}) once we have cmake 3.10.
+function (appendToEach var str)
+  set(_result)
+  foreach (_elem ${${var}})
+    list(APPEND _result "${_elem}${str}")
+  endforeach ()
+  set(${var} ${_result} PARENT_SCOPE)
+endfunction (appendToEach)

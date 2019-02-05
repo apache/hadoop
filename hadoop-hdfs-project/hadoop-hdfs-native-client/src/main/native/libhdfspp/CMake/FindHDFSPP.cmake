@@ -12,4 +12,8 @@
 
 include(${CMAKE_CURRENT_LIST_DIR}/FindPackageExtension.cmake)
 
-findPackageExtension("gsasl.h" "gsasl" false)
+find_package(OpenSSL)
+find_package(Protobuf)
+find_package(URIparser)
+
+findPackageExtension("hdfspp/hdfspp.h" "hdfspp" true)

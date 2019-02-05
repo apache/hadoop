@@ -12,4 +12,15 @@
 
 include(${CMAKE_CURRENT_LIST_DIR}/FindPackageExtension.cmake)
 
-findPackageExtension("gsasl.h" "gsasl" false)
+if (NOT PROTOBUF_FOUND)
+  findPackageExtension("google/protobuf/io/coded_stream.h" "protobuf;protoc"
+                       false)
+
+  if (PROTOBUF_FOUND)
+    find_program(PROTOBUF_PROTOC_EXECUTABLE protoc
+      HINTS ${PROTOBUF_INCLUDE_DIR}/..
+      PATH_SUFFIXES "bin")
+    message (STATUS
+            "Found the Protobuf executable: ${PROTOBUF_PROTOC_EXECUTABLE}")
+  endif ()
+endif ()

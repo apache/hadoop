@@ -16,6 +16,6 @@
 # limitations under the License.
 #
 
-add_library(connection_obj OBJECT datanodeconnection.cc)
-add_dependencies(connection_obj proto)
-add_library(connection $<TARGET_OBJECTS:connection_obj>)
+add_library(connection OBJECT datanodeconnection.cc)
+add_dependencies(connection proto)
+
