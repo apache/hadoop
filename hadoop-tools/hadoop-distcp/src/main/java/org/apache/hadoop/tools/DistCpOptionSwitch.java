@@ -234,7 +234,7 @@ public enum DistCpOptionSwitch {
    * expensive copy-then-delete operations.
    */
   DIRECT_WRITE(DistCpConstants.CONF_LABEL_DIRECT_WRITE,
-      new Option("directwrite", false, "Write files directly to the"
+      new Option("direct", false, "Write files directly to the"
           + " target location, avoiding temporary file rename."));
 
 

@@ -636,7 +636,7 @@ public abstract class AbstractContractDistCpTest
   }
 
   /**
-   * Run distcp -directwrite srcDir destDir.
+   * Run distcp -direct srcDir destDir.
    * @param srcDir local source directory
    * @param destDir remote destination directory
    * @return the completed job
@@ -644,7 +644,7 @@ public abstract class AbstractContractDistCpTest
    */
   private Job runDistCpDirectWrite(final Path srcDir, final Path destDir)
           throws Exception {
-    describe("\nDistcp -directwrite from " + srcDir + " to " + destDir);
+    describe("\nDistcp -direct from " + srcDir + " to " + destDir);
     return runDistCp(buildWithStandardOptions(
             new DistCpOptions.Builder(
                     Collections.singletonList(srcDir), destDir)
