@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.client.api.AHSClient;
 import org.apache.hadoop.yarn.client.api.TimelineReaderClient;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.timeline.TimelineEntityV2Converter;
 
@@ -48,6 +49,7 @@ import java.util.Map;
 @InterfaceStability.Unstable
 public class AHSv2ClientImpl extends AHSClient {
   private TimelineReaderClient readerClient;
+  private String logServerUrl;
 
   public AHSv2ClientImpl() {
     super(AHSv2ClientImpl.class.getName());
@@ -55,6 +57,8 @@ public class AHSv2ClientImpl extends AHSClient {
 
   @Override
   public void serviceInit(Configuration conf) {
+    logServerUrl = conf.get(
+        YarnConfiguration.YARN_LOG_SERVER_URL);
     readerClient = TimelineReaderClient.createTimelineReaderClient();
     readerClient.init(conf);
   }
@@ -119,15 +123,19 @@ public class AHSv2ClientImpl extends AHSClient {
   @Override
   public ContainerReport getContainerReport(ContainerId containerId)
       throws YarnException, IOException {
+    ApplicationReport appReport = getApplicationReport(
+        containerId.getApplicationAttemptId().getApplicationId());
     TimelineEntity entity = readerClient.getContainerEntity(containerId,
         "ALL", null);
-    return TimelineEntityV2Converter.convertToContainerReport(entity);
+    return TimelineEntityV2Converter.convertToContainerReport(
+        entity, logServerUrl, appReport.getUser());
   }
 
   @Override
   public List<ContainerReport> getContainers(ApplicationAttemptId
       applicationAttemptId) throws  YarnException, IOException {
     ApplicationId appId = applicationAttemptId.getApplicationId();
+    ApplicationReport appReport = getApplicationReport(appId);
     Map<String, String> filters = new HashMap<>();
     filters.put("infofilters", "SYSTEM_INFO_PARENT_ENTITY eq {\"id\":\"" +
         applicationAttemptId.toString() +
@@ -140,7 +148,7 @@ public class AHSv2ClientImpl extends AHSClient {
       for (TimelineEntity entity : entities) {
         ContainerReport container =
             TimelineEntityV2Converter.convertToContainerReport(
-            entity);
+            entity, logServerUrl, appReport.getUser());
         containers.add(container);
       }
     }
