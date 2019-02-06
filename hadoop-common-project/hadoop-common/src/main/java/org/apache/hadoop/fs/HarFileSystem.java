@@ -83,7 +83,7 @@ public class HarFileSystem extends FileSystem {
 
   /**
    * Return the protocol scheme for the FileSystem.
-   * <p/>
+   * <p>
    *
    * @return <code>har</code>
    */

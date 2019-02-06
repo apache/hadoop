@@ -67,7 +67,7 @@ public class TestSchedulerNegotiator {
 //      return null;
 //    }
 //    @Override
-//    public void addApplication(ApplicationId applicationId,
+//    public void addApplicationIfAbsent(ApplicationId applicationId,
 //        ApplicationMaster master, String user, String queue, Priority priority,
 //        ApplicationStore store)
 //        throws IOException {

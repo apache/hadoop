@@ -175,16 +175,8 @@ public class UnitsConversionUtil {
    */
   public static int compare(String unitA, long valueA, String unitB,
       long valueB) {
-    if (unitA == null || unitB == null || !KNOWN_UNITS.contains(unitA)
-        || !KNOWN_UNITS.contains(unitB)) {
-      throw new IllegalArgumentException("Units cannot be null");
-    }
-    if (!KNOWN_UNITS.contains(unitA)) {
-      throw new IllegalArgumentException("Unknown unit '" + unitA + "'");
-    }
-    if (!KNOWN_UNITS.contains(unitB)) {
-      throw new IllegalArgumentException("Unknown unit '" + unitB + "'");
-    }
+    checkUnitArgument(unitA);
+    checkUnitArgument(unitB);
     if (unitA.equals(unitB)) {
       return Long.compare(valueA, valueB);
     }
@@ -217,5 +209,37 @@ public class UnitsConversionUtil {
       }
       return tmpA.compareTo(tmpB);
     }
+  }
+
+  private static void checkUnitArgument(String unit) {
+    if (unit == null) {
+      throw new IllegalArgumentException("Unit cannot be null");
+    } else if (!KNOWN_UNITS.contains(unit)) {
+      throw new IllegalArgumentException("Unknown unit '" + unit + "'");
+    }
+  }
+
+  /**
+   * Compare a unit to another unit.
+   * <br>
+   * Examples:<br>
+   * 1. 'm' (milli) is smaller than 'k' (kilo), so compareUnits("m", "k")
+   * will return -1.<br>
+   * 2. 'M' (MEGA) is greater than 'k' (kilo), so compareUnits("M", "k") will
+   * return 1.
+   *
+   * @param unitA first unit
+   * @param unitB second unit
+   * @return +1, 0 or -1 depending on whether the relationship between units
+   * is smaller than,
+   * equal to or lesser than.
+   */
+  public static int compareUnits(String unitA, String unitB) {
+    checkUnitArgument(unitA);
+    checkUnitArgument(unitB);
+    int unitAPos = SORTED_UNITS.indexOf(unitA);
+    int unitBPos = SORTED_UNITS.indexOf(unitB);
+
+    return Integer.compare(unitAPos, unitBPos);
   }
 }

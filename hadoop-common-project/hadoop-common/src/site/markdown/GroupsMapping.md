@@ -73,7 +73,7 @@ The cache invalidation is configurable via `hadoop.security.groups.negative-cach
 LDAP Groups Mapping
 --------
 This provider supports LDAP with simple password authentication using JNDI API.
-`hadoop.security.group.mapping.ldap.url` must be set. This refers to the URL of the LDAP server for resolving user groups.
+`hadoop.security.group.mapping.ldap.url` must be set. This refers to the URL of the LDAP server(s) for resolving user groups. It supports configuring multiple LDAP servers via a comma-separated list.
 
 `hadoop.security.group.mapping.ldap.base` configures the search base for the LDAP connection. This is a distinguished name, and will typically be the root of the LDAP directory.
 Get groups for a given username first looks up the user and then looks up the groups for the user result. If the directory setup has different user and group search bases, use `hadoop.security.group.mapping.ldap.userbase` and `hadoop.security.group.mapping.ldap.groupbase` configs.
@@ -111,6 +111,61 @@ Typically, Hadoop resolves a user's group names by making two LDAP queries: the 
 For some LDAP servers, such as Active Directory, the user object returned in the first query also contains the DN of the user's groups in its `memberOf` attribute, and the name of a group is its Relative Distinguished Name.
 Therefore, it is possible to infer the user's groups from the first query without sending the second one, and it may reduce group name resolution latency incurred by the second query. If it fails to get group names, it will fall back to the typical two-query scenario and send the second query to get group names.
 To enable this feature, set `hadoop.security.group.mapping.ldap.search.attr.memberof` to `memberOf`, and Hadoop will resolve group names using this attribute in the user object.
+
+If the LDAP server's certificate is not signed by a well known certificate authority, specify the path to the truststore in `hadoop.security.group.mapping.ldap.ssl.truststore`.
+Similar to keystore, specify the truststore password file in `hadoop.security.group.mapping.ldap.ssl.truststore.password.file`.
+
+### Configuring retries and multiple LDAP servers with failover ###
+If there are issues encountered when retrieving information from LDAP servers, the request will be retried. To configure the number of retries, use the following configuration:
+
+```<property>
+     <name>hadoop.security.group.mapping.ldap.num.attempts</name>
+     <value>3</value>
+     <description>
+       This property is the number of attempts to be made for LDAP operations.
+       If this limit is exceeded, LdapGroupsMapping will return an empty
+       group list.
+     </description>
+    </property>
+```
+
+LDAP Groups Mapping also supports configuring multiple LDAP servers and failover if a particular instance is not available or is misbehaving.
+The following configuration shows configuring 3 LDAP servers. Additionally, 2 attempts will be made for each server before failing over to the next one, with 6 attempts overall before failing.
+
+```
+<property>
+  <name>hadoop.security.group.mapping.ldap.url</name>
+  <value>ldap://server1,ldap://server2,ldap://server3</value>
+  <description>
+    The URL of the LDAP server(s) to use for resolving user groups when using
+    the LdapGroupsMapping user to group mapping. Supports configuring multiple
+    LDAP servers via a comma-separated list.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.num.attempts</name>
+  <value>6</value>
+  <description>
+    This property is the number of attempts to be made for LDAP operations.
+    If this limit is exceeded, LdapGroupsMapping will return an empty
+    group list.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.num.attempts.before.failover</name>
+  <value>2</value>
+  <description>
+    This property is the number of attempts to be made for LDAP operations
+    using a single LDAP instance. If multiple LDAP servers are configured
+    and this number of failed operations is reached, we will switch to the
+    next LDAP server. The configuration for the overall number of attempts
+    will still be respected, failover will thus be performed only if this
+    property is less than hadoop.security.group.mapping.ldap.num.attempts.
+  </description>
+</property>
+```
 
 Composite Groups Mapping
 --------

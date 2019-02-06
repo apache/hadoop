@@ -86,7 +86,7 @@ Usage:
               [-files [-blocks [-locations | -racks | -replicaDetails | -upgradedomains]]]
               [-includeSnapshots] [-showprogress]
               [-storagepolicies] [-maintenance]
-              [-blockId <blk_Id>]
+              [-blockId <blk_Id>] [-replicate]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -106,6 +106,7 @@ Usage:
 | `-storagepolicies` | Print out storage policy summary for the blocks. |
 | `-maintenance` | Print out maintenance state node details. |
 | `-blockId` | Print out information about the block. |
+| `-replicate` | Initiate replication work to make mis-replicated blocks satisfy block placement policy. |
 
 Runs the HDFS filesystem checking utility. See [fsck](./HdfsUserGuide.html#fsck) for more info.
 
@@ -352,6 +353,7 @@ Usage:
         hdfs dfsadmin [-clrSpaceQuota [-storageType <storagetype>] <dirname>...<dirname>]
         hdfs dfsadmin [-finalizeUpgrade]
         hdfs dfsadmin [-rollingUpgrade [<query> |<prepare> |<finalize>]]
+        hdfs dfsadmin [-upgrade [query | finalize]
         hdfs dfsadmin [-refreshServiceAcl]
         hdfs dfsadmin [-refreshUserToGroupsMappings]
         hdfs dfsadmin [-refreshSuperUserGroupsConfiguration]
@@ -389,6 +391,7 @@ Usage:
 | `-clrSpaceQuota` `[-storageType <storagetype>]` \<dirname\>...\<dirname\> | See [HDFS Quotas Guide](../hadoop-hdfs/HdfsQuotaAdminGuide.html#Administrative_Commands) for the detail. |
 | `-finalizeUpgrade` | Finalize upgrade of HDFS. Datanodes delete their previous version working directories, followed by Namenode doing the same. This completes the upgrade process. |
 | `-rollingUpgrade` [\<query\>\|\<prepare\>\|\<finalize\>] | See [Rolling Upgrade document](../hadoop-hdfs/HdfsRollingUpgrade.html#dfsadmin_-rollingUpgrade) for the detail. |
+| `-upgrade` query\|finalize | Query the current upgrade status.<br/>Finalize upgrade of HDFS (equivalent to -finalizeUpgrade). |
 | `-refreshServiceAcl` | Reload the service-level authorization policy file. |
 | `-refreshUserToGroupsMappings` | Refresh user-to-groups mappings. |
 | `-refreshSuperUserGroupsConfiguration` | Refresh superuser proxy groups mappings |
@@ -418,30 +421,36 @@ Runs a HDFS dfsadmin client.
 
 Usage: `hdfs dfsrouter`
 
-Runs the DFS router. See [Router](./HDFSRouterFederation.html#Router) for more info.
+Runs the DFS router. See [Router](../hadoop-hdfs-rbf/HDFSRouterFederation.html#Router) for more info.
 
 ### `dfsrouteradmin`
 
 Usage:
 
       hdfs dfsrouteradmin
-          [-add <source> <nameservice> <destination> [-readonly] -owner <owner> -group <group> -mode <mode>]
+          [-add <source> <nameservice1, nameservice2, ...> <destination> [-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
+          [-update <source> <nameservice1, nameservice2, ...> <destination> [-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
           [-rm <source>]
           [-ls <path>]
           [-setQuota <path> -nsQuota <nsQuota> -ssQuota <quota in bytes or quota size string>]
           [-clrQuota <path>]
           [-safemode enter | leave | get]
+          [-nameservice disable | enable <nameservice>]
+          [-getDisabledNameservices]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
-| `-add` *source* *nameservice* *destination* | Add a mount table entry or update if it exists. |
+| `-add` *source* *nameservices* *destination* | Add a mount table entry or update if it exists. |
+| `-update` *source* *nameservices* *destination* | Update a mount table entry or create one if it does not exist. |
 | `-rm` *source* | Remove mount point of specified path. |
 | `-ls` *path* | List mount points under specified path. |
 | `-setQuota` *path* `-nsQuota` *nsQuota* `-ssQuota` *ssQuota* | Set quota for specified path. See [HDFS Quotas Guide](./HdfsQuotaAdminGuide.html) for the quota detail. |
 | `-clrQuota` *path* | Clear quota of given mount point. See [HDFS Quotas Guide](./HdfsQuotaAdminGuide.html) for the quota detail. |
 | `-safemode` `enter` `leave` `get` | Manually set the Router entering or leaving safe mode. The option *get* will be used for verifying if the Router is in safe mode state. |
+| `-nameservice` `disable` `enable` *nameservice* | Disable/enable  a name service from the federation. If disabled, requests will not go to that name service. |
+| `-getDisabledNameservices` | Get the name services that are disabled in the federation. |
 
-The commands for managing Router-based federation. See [Mount table management](./HDFSRouterFederation.html#Mount_table_management) for more info.
+The commands for managing Router-based federation. See [Mount table management](../hadoop-hdfs-rbf/HDFSRouterFederation.html#Mount_table_management) for more info.
 
 ### `diskbalancer`
 
@@ -500,6 +509,7 @@ Usage:
 
         hdfs haadmin -transitionToActive <serviceId> [--forceactive]
         hdfs haadmin -transitionToStandby <serviceId>
+        hdfs haadmin -transitionToObserver <serviceId>
         hdfs haadmin -failover [--forcefence] [--forceactive] <serviceId> <serviceId>
         hdfs haadmin -getServiceState <serviceId>
         hdfs haadmin -getAllServiceState
@@ -515,6 +525,7 @@ Usage:
 | `-getAllServiceState` | returns the state of all the NameNodes | |
 | `-transitionToActive` | transition the state of the given NameNode to Active (Warning: No fencing is done) |
 | `-transitionToStandby` | transition the state of the given NameNode to Standby (Warning: No fencing is done) |
+| `-transitionToObserver` | transition the state of the given NameNode to Observer (Warning: No fencing is done) |
 | `-help` [cmd] | Displays help for the given command or all commands if none is specified. |
 
 See [HDFS HA with NFS](./HDFSHighAvailabilityWithNFS.html#Administrative_commands) or [HDFS HA with QJM](./HDFSHighAvailabilityWithQJM.html#Administrative_commands) for more information on this command.
@@ -607,6 +618,8 @@ Usage:
           [-setStoragePolicy -path <path> -policy <policy>]
           [-getStoragePolicy -path <path>]
           [-unsetStoragePolicy -path <path>]
+          [-satisfyStoragePolicy -path <path>]
+          [-isSatisfierRunning]
           [-help <command-name>]
 
 Lists out all/Gets/sets/unsets storage policies. See the [HDFS Storage Policy Documentation](./ArchivalStorage.html) for more information.

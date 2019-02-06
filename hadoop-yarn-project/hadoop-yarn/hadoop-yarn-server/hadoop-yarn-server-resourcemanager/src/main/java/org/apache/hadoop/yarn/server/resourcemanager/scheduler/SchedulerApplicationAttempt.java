@@ -33,9 +33,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.time.DateUtils;
-import org.apache.commons.lang.time.FastDateFormat;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.time.DateUtils;
+import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -418,7 +418,11 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
 
   protected void addReReservation(
       SchedulerRequestKey schedulerKey) {
-    reReservations.add(schedulerKey);
+    try {
+      reReservations.add(schedulerKey);
+    } catch (IllegalArgumentException e) {
+      // This happens when count = MAX_INT, ignore the exception
+    }
   }
 
   public int getReReservations(SchedulerRequestKey schedulerKey) {
@@ -781,6 +785,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       List<Container> returnContainerList = new ArrayList<>
           (recoveredPreviousAttemptContainers);
       recoveredPreviousAttemptContainers.clear();
+      updateNMTokens(returnContainerList);
       return returnContainerList;
     } finally {
       writeLock.unlock();
@@ -1006,8 +1011,13 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
 
   public int addMissedNonPartitionedRequestSchedulingOpportunity(
       SchedulerRequestKey schedulerKey) {
-    return missedNonPartitionedReqSchedulingOpportunity.add(
-        schedulerKey, 1) + 1;
+    try {
+      return missedNonPartitionedReqSchedulingOpportunity.add(
+          schedulerKey, 1) + 1;
+    } catch (IllegalArgumentException e) {
+      // This happens when count = MAX_INT, ignore the exception
+      return Integer.MAX_VALUE;
+    }
   }
 
   public void
@@ -1232,12 +1242,13 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       return;
     }
 
-    RMAppAttempt attempt =
-        rmContext.getRMApps().get(attemptId.getApplicationId())
-          .getCurrentAppAttempt();
-    if (attempt != null) {
-      attempt.getRMAppAttemptMetrics().incNumAllocatedContainers(containerType,
-        requestType);
+    RMApp app = rmContext.getRMApps().get(attemptId.getApplicationId());
+    if (app != null) {
+      RMAppAttempt attempt = app.getCurrentAppAttempt();
+      if (attempt != null) {
+        attempt.getRMAppAttemptMetrics()
+            .incNumAllocatedContainers(containerType, requestType);
+      }
     }
   }
 
@@ -1270,8 +1281,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   }
   
   @Private
-  public boolean hasPendingResourceRequest(ResourceCalculator rc,
-      String nodePartition, Resource cluster,
+  public boolean hasPendingResourceRequest(String nodePartition,
       SchedulingMode schedulingMode) {
     // We need to consider unconfirmed allocations
     if (schedulingMode == SchedulingMode.IGNORE_PARTITION_EXCLUSIVITY) {
@@ -1284,16 +1294,12 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     // To avoid too many allocation-proposals rejected for non-default
     // partition allocation
     if (StringUtils.equals(nodePartition, RMNodeLabelsManager.NO_LABEL)) {
-      pending = Resources.subtract(pending, Resources
+      pending = Resources.subtractNonNegative(pending, Resources
           .createResource(unconfirmedAllocatedMem.get(),
               unconfirmedAllocatedVcores.get()));
     }
 
-    if (Resources.greaterThan(rc, cluster, pending, Resources.none())) {
-      return true;
-    }
-
-    return false;
+    return !Resources.isNone(pending);
   }
 
   /*

@@ -42,8 +42,8 @@ import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobTaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobsInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobTaskAttemptCounterInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobTaskCounterInfo;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.MapTaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ReduceTaskAttemptInfo;
-import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskAttemptsInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskCounterGroupInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskCounterInfo;
@@ -62,9 +62,8 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
     AppInfo.class, CounterInfo.class, JobTaskAttemptCounterInfo.class,
     JobTaskCounterInfo.class, TaskCounterGroupInfo.class, ConfInfo.class,
     JobCounterInfo.class, TaskCounterInfo.class, CounterGroupInfo.class,
-    JobInfo.class, JobsInfo.class, ReduceTaskAttemptInfo.class,
-    TaskAttemptInfo.class, TaskInfo.class, TasksInfo.class,
-    TaskAttemptsInfo.class, ConfEntryInfo.class, RemoteExceptionData.class};
+    JobInfo.class, JobsInfo.class, MapTaskAttemptInfo.class, ReduceTaskAttemptInfo.class,
+    TaskInfo.class, TasksInfo.class, TaskAttemptsInfo.class, ConfEntryInfo.class, RemoteExceptionData.class};
 
   // these dao classes need root unwrapping
   private final Class[] rootUnwrappedTypes = {JobTaskAttemptState.class};

@@ -186,16 +186,18 @@ abstract public class LocalReplica extends ReplicaInfo {
     final FileIoProvider fileIoProvider = getFileIoProvider();
     final File tmpFile = DatanodeUtil.createFileWithExistsCheck(
         getVolume(), b, DatanodeUtil.getUnlinkTmpFile(file), fileIoProvider);
-    try (FileInputStream in = fileIoProvider.getFileInputStream(
-        getVolume(), file)) {
-      try (FileOutputStream out = fileIoProvider.getFileOutputStream(
-          getVolume(), tmpFile)) {
-        IOUtils.copyBytes(in, out, 16 * 1024);
+    try {
+      try (FileInputStream in = fileIoProvider.getFileInputStream(
+          getVolume(), file)) {
+        try (FileOutputStream out = fileIoProvider.getFileOutputStream(
+            getVolume(), tmpFile)) {
+          IOUtils.copyBytes(in, out, 16 * 1024);
+        }
       }
       if (file.length() != tmpFile.length()) {
-        throw new IOException("Copy of file " + file + " size " + file.length()+
-                              " into file " + tmpFile +
-                              " resulted in a size of " + tmpFile.length());
+        throw new IOException("Copy of file " + file + " size " + file.length()
+            + " into file " + tmpFile + " resulted in a size of "
+            + tmpFile.length());
       }
       fileIoProvider.replaceFile(getVolume(), tmpFile, file);
     } catch (IOException e) {

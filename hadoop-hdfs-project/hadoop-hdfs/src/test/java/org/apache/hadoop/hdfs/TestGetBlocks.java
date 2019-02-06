@@ -229,32 +229,48 @@ public class TestGetBlocks {
       NamenodeProtocol namenode = NameNodeProxies.createProxy(CONF,
           DFSUtilClient.getNNUri(addr), NamenodeProtocol.class).getProxy();
 
-      // get blocks of size fileLen from dataNodes[0]
+      // get blocks of size fileLen from dataNodes[0], with minBlockSize as
+      // fileLen
       BlockWithLocations[] locs;
-      locs = namenode.getBlocks(dataNodes[0], fileLen).getBlocks();
-      assertEquals(locs.length, 12);
+
+      // Should return all 13 blocks, as minBlockSize is not passed
+      locs = namenode.getBlocks(dataNodes[0], fileLen, 0)
+          .getBlocks();
+      assertEquals(13, locs.length);
+      assertEquals(locs[0].getStorageIDs().length, 2);
+      assertEquals(locs[1].getStorageIDs().length, 2);
+
+      // Should return 12 blocks, as minBlockSize is DEFAULT_BLOCK_SIZE
+      locs = namenode.getBlocks(dataNodes[0], fileLen, DEFAULT_BLOCK_SIZE)
+          .getBlocks();
+      assertEquals(12, locs.length);
       assertEquals(locs[0].getStorageIDs().length, 2);
       assertEquals(locs[1].getStorageIDs().length, 2);
 
       // get blocks of size BlockSize from dataNodes[0]
-      locs = namenode.getBlocks(dataNodes[0], DEFAULT_BLOCK_SIZE).getBlocks();
+      locs = namenode.getBlocks(dataNodes[0], DEFAULT_BLOCK_SIZE,
+          DEFAULT_BLOCK_SIZE).getBlocks();
       assertEquals(locs.length, 1);
       assertEquals(locs[0].getStorageIDs().length, 2);
 
       // get blocks of size 1 from dataNodes[0]
-      locs = namenode.getBlocks(dataNodes[0], 1).getBlocks();
+      locs = namenode.getBlocks(dataNodes[0], 1, 1).getBlocks();
       assertEquals(locs.length, 1);
       assertEquals(locs[0].getStorageIDs().length, 2);
 
       // get blocks of size 0 from dataNodes[0]
-      getBlocksWithException(namenode, dataNodes[0], 0);
+      getBlocksWithException(namenode, dataNodes[0], 0, 0);
 
       // get blocks of size -1 from dataNodes[0]
-      getBlocksWithException(namenode, dataNodes[0], -1);
+      getBlocksWithException(namenode, dataNodes[0], -1, 0);
+
+      // minBlockSize is -1
+      getBlocksWithException(namenode, dataNodes[0], DEFAULT_BLOCK_SIZE, -1);
 
       // get blocks of size BlockSize from a non-existent datanode
       DatanodeInfo info = DFSTestUtil.getDatanodeInfo("1.2.3.4");
-      getBlocksWithException(namenode, info, 2);
+      getBlocksWithIncorrectDatanodeException(namenode, info, 2, 0);
+
 
       testBlockIterator(cluster);
     } finally {
@@ -263,10 +279,24 @@ public class TestGetBlocks {
   }
 
   private void getBlocksWithException(NamenodeProtocol namenode,
-      DatanodeInfo datanode, long size) throws IOException {
+      DatanodeInfo datanode, long size, long minBlockSize) throws IOException {
     boolean getException = false;
     try {
-      namenode.getBlocks(DFSTestUtil.getLocalDatanodeInfo(), 2);
+      namenode.getBlocks(datanode, size, minBlockSize);
+    } catch (RemoteException e) {
+      getException = true;
+      assertTrue(e.getClassName().contains("IllegalArgumentException"));
+    }
+    assertTrue(getException);
+  }
+
+  private void getBlocksWithIncorrectDatanodeException(
+      NamenodeProtocol namenode, DatanodeInfo datanode, long size,
+      long minBlockSize)
+      throws IOException {
+    boolean getException = false;
+    try {
+      namenode.getBlocks(datanode, size, minBlockSize);
     } catch (RemoteException e) {
       getException = true;
       assertTrue(e.getClassName().contains("HadoopIllegalArgumentException"));

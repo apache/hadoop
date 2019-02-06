@@ -30,10 +30,7 @@ import static org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation.
 import static org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation.WASB_WEB_RESPONSES;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.argThat;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 
 import java.io.InputStream;
@@ -51,9 +48,8 @@ import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsTag;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
 import org.junit.Test;
+import org.mockito.ArgumentMatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -524,16 +520,16 @@ public class ITestAzureFileSystemInstrumentation extends AbstractWasbTestBase {
     }
 
     @Override
-    public void describeTo(Description desc) {
-      super.describeTo(desc);
-      desc.appendText(" with value " + tagValue);
+    public String toString() {
+      return super.toString() + " with value " + tagValue;
     }
   }
 
   /**
    * A matcher class for asserting that we got a tag with any value.
    */
-  private static class TagExistsMatcher extends BaseMatcher<MetricsTag> {
+  private static class TagExistsMatcher
+      implements ArgumentMatcher<MetricsTag> {
     private final String tagName;
 
     public TagExistsMatcher(String tagName) {
@@ -541,46 +537,13 @@ public class ITestAzureFileSystemInstrumentation extends AbstractWasbTestBase {
     }
 
     @Override
-    public boolean matches(Object toMatch) {
-      MetricsTag asTag = (MetricsTag)toMatch;
-      return asTag.name().equals(tagName) && matches(asTag);
-    }
-
-    protected boolean matches(MetricsTag toMatch) {
-      return true;
+    public boolean matches(MetricsTag asTag) {
+      return asTag.name().equals(tagName);
     }
 
     @Override
-    public void describeTo(Description desc) {
-      desc.appendText("Has tag " + tagName);
-    }
-  }
-
-  /**
-   * A matcher class for asserting that a long value is in a
-   * given range.
-   */
-  private static class InRange extends BaseMatcher<Long> {
-    private final long inclusiveLowerLimit;
-    private final long inclusiveUpperLimit;
-    private long obtained;
-
-    public InRange(long inclusiveLowerLimit, long inclusiveUpperLimit) {
-      this.inclusiveLowerLimit = inclusiveLowerLimit;
-      this.inclusiveUpperLimit = inclusiveUpperLimit;
-    }
-
-    @Override
-    public boolean matches(Object number) {
-      obtained = (Long)number;
-      return obtained >= inclusiveLowerLimit &&
-          obtained <= inclusiveUpperLimit;
-    }
-
-    @Override
-    public void describeTo(Description description) {
-      description.appendText("Between " + inclusiveLowerLimit +
-          " and " + inclusiveUpperLimit + " inclusively");
+    public String toString() {
+      return "Has tag " + tagName;
     }
   }
 }

@@ -26,9 +26,12 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -406,6 +409,11 @@ public abstract class FilterFs extends AbstractFileSystem {
   }
 
   @Override
+  public void satisfyStoragePolicy(final Path path) throws IOException {
+    myFs.satisfyStoragePolicy(path);
+  }
+
+  @Override
   public void setStoragePolicy(Path path, String policyName)
       throws IOException {
     myFs.setStoragePolicy(path, policyName);
@@ -428,4 +436,14 @@ public abstract class FilterFs extends AbstractFileSystem {
       throws IOException {
     return myFs.getAllStoragePolicies();
   }
+
+  @Override
+  public CompletableFuture<FSDataInputStream> openFileWithOptions(
+      final Path path,
+      final Set<String> mandatoryKeys,
+      final Configuration options,
+      final int bufferSize) throws IOException {
+    return myFs.openFileWithOptions(path, mandatoryKeys, options, bufferSize);
+  }
+
 }

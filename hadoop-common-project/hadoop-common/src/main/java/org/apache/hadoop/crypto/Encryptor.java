@@ -37,7 +37,7 @@ public interface Encryptor {
   
   /**
    * Indicate whether the encryption context is reset.
-   * <p/>
+   * <p>
    * Certain modes, like CTR, require a different IV depending on the
    * position in the stream. Generally, the encryptor maintains any necessary
    * context for calculating the IV and counter so that no reinit is necessary
@@ -48,22 +48,22 @@ public interface Encryptor {
   
   /**
    * This presents a direct interface encrypting with direct ByteBuffers.
-   * <p/>
+   * <p>
    * This function does not always encrypt the entire buffer and may potentially
    * need to be called multiple times to process an entire buffer. The object 
    * may hold the encryption context internally.
-   * <p/>
+   * <p>
    * Some implementations may require sufficient space in the destination 
    * buffer to encrypt the entire input buffer.
-   * <p/>
+   * <p>
    * Upon return, inBuffer.position() will be advanced by the number of bytes
    * read and outBuffer.position() by bytes written. Implementations should
    * not modify inBuffer.limit() and outBuffer.limit().
-   * <p/>
+   * <p>
    * @param inBuffer a direct {@link ByteBuffer} to read from. inBuffer may 
-   * not be null and inBuffer.remaining() must be > 0
+   * not be null and inBuffer.remaining() must be &gt; 0
    * @param outBuffer a direct {@link ByteBuffer} to write to. outBuffer may 
-   * not be null and outBuffer.remaining() must be > 0
+   * not be null and outBuffer.remaining() must be &gt; 0
    * @throws IOException if encryption fails
    */
   public void encrypt(ByteBuffer inBuffer, ByteBuffer outBuffer) 

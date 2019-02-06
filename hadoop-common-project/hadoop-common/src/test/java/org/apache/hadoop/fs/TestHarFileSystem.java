@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.util.Progressable;
 import org.junit.Assert;
 import org.junit.Test;
@@ -39,6 +40,8 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import static org.apache.hadoop.fs.Options.ChecksumOpt;
 import static org.apache.hadoop.fs.Options.CreateOpts;
@@ -145,6 +148,8 @@ public class TestHarFileSystem {
     public int getDefaultPort();
     public String getCanonicalServiceName();
     public Token<?> getDelegationToken(String renewer) throws IOException;
+    public DelegationTokenIssuer[] getAdditionalTokenIssuers()
+        throws IOException;
     public FileChecksum getFileChecksum(Path f) throws IOException;
     public boolean deleteOnExit(Path f) throws IOException;
     public boolean cancelDeleteOnExit(Path f) throws IOException;
@@ -210,6 +215,8 @@ public class TestHarFileSystem {
 
     public void access(Path path, FsAction mode) throws IOException;
 
+    void satisfyStoragePolicy(Path src) throws IOException;
+
     public void setStoragePolicy(Path src, String policyName)
         throws IOException;
 
@@ -225,6 +232,24 @@ public class TestHarFileSystem {
 
     public Collection<FileStatus> getTrashRoots(boolean allUsers) throws IOException;
     StorageStatistics getStorageStatistics();
+
+    FutureDataInputStreamBuilder openFile(Path path)
+        throws IOException, UnsupportedOperationException;
+
+    FutureDataInputStreamBuilder openFile(PathHandle pathHandle)
+        throws IOException, UnsupportedOperationException;
+
+    CompletableFuture<FSDataInputStream> openFileWithOptions(
+        PathHandle pathHandle,
+        Set<String> mandatoryKeys,
+        Configuration options,
+        int bufferSize) throws IOException;
+
+    CompletableFuture<FSDataInputStream> openFileWithOptions(
+        Path path,
+        Set<String> mandatoryKeys,
+        Configuration options,
+        int bufferSize) throws IOException;
   }
 
   @Test

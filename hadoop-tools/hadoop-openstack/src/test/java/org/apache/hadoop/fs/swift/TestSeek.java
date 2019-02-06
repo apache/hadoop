@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs.swift;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
@@ -48,8 +48,8 @@ import java.io.IOException;
  * to get confused.
  */
 public class TestSeek extends SwiftFileSystemBaseTest {
-  protected static final Log LOG =
-    LogFactory.getLog(TestSeek.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(TestSeek.class);
   public static final int SMALL_SEEK_FILE_LEN = 256;
 
   private Path testPath;

@@ -84,6 +84,13 @@ static int mock_update_cgroups_parameters(
   return 0;
 }
 
+static void clear_cgroups_parameters_invoked() {
+  for (std::vector<const char*>::size_type i = 0; i < cgroups_parameters_invoked.size(); i++) {
+    free((void *) cgroups_parameters_invoked[i]);
+  }
+  cgroups_parameters_invoked.clear();
+}
+
 static void verify_param_updated_to_cgroups(
     int argc, const char** argv) {
   ASSERT_EQ(argc, cgroups_parameters_invoked.size());
@@ -133,6 +140,9 @@ static void test_gpu_module_enabled_disabled(int enabled) {
     EXPECTED_RC = -1;
   }
   ASSERT_EQ(EXPECTED_RC, rc);
+
+  clear_cgroups_parameters_invoked();
+  free_executor_configurations();
 }
 
 TEST_F(TestGpuModule, test_verify_gpu_module_calls_cgroup_parameter) {
@@ -146,7 +156,7 @@ TEST_F(TestGpuModule, test_verify_gpu_module_calls_cgroup_parameter) {
                    container_id };
 
   /* Test case 1: block 2 devices */
-  cgroups_parameters_invoked.clear();
+  clear_cgroups_parameters_invoked();
   int rc = handle_gpu_request(&mock_update_cgroups_parameters,
      "gpu", 5, argv);
   ASSERT_EQ(0, rc) << "Should success.\n";
@@ -157,7 +167,7 @@ TEST_F(TestGpuModule, test_verify_gpu_module_calls_cgroup_parameter) {
   verify_param_updated_to_cgroups(8, expected_cgroups_argv);
 
   /* Test case 2: block 0 devices */
-  cgroups_parameters_invoked.clear();
+  clear_cgroups_parameters_invoked();
   char* argv_1[] = { (char*) "--module-gpu", (char*) "--container_id", container_id };
   rc = handle_gpu_request(&mock_update_cgroups_parameters,
      "gpu", 3, argv_1);
@@ -167,7 +177,7 @@ TEST_F(TestGpuModule, test_verify_gpu_module_calls_cgroup_parameter) {
   verify_param_updated_to_cgroups(0, NULL);
 
   /* Test case 3: block 2 non-sequential devices */
-  cgroups_parameters_invoked.clear();
+  clear_cgroups_parameters_invoked();
   char* argv_2[] = { (char*) "--module-gpu", (char*) "--excluded_gpus", (char*) "1,3",
                    (char*) "--container_id", container_id };
   rc = handle_gpu_request(&mock_update_cgroups_parameters,
@@ -178,6 +188,9 @@ TEST_F(TestGpuModule, test_verify_gpu_module_calls_cgroup_parameter) {
   const char* expected_cgroups_argv_2[] = { "devices", "deny", container_id, "c 195:1 rwm",
     "devices", "deny", container_id, "c 195:3 rwm"};
   verify_param_updated_to_cgroups(8, expected_cgroups_argv_2);
+
+  clear_cgroups_parameters_invoked();
+  free_executor_configurations();
 }
 
 TEST_F(TestGpuModule, test_illegal_cli_parameters) {
@@ -193,6 +206,7 @@ TEST_F(TestGpuModule, test_illegal_cli_parameters) {
   ASSERT_NE(0, rc) << "Should fail.\n";
 
   // Illegal container id - 2
+  clear_cgroups_parameters_invoked();
   char* argv_1[] = { (char*) "--module-gpu", (char*) "--excluded_gpus", (char*) "0,1",
                    (char*) "--container_id", (char*) "container_1" };
   rc = handle_gpu_request(&mock_update_cgroups_parameters,
@@ -200,10 +214,14 @@ TEST_F(TestGpuModule, test_illegal_cli_parameters) {
   ASSERT_NE(0, rc) << "Should fail.\n";
 
   // Illegal container id - 3
+  clear_cgroups_parameters_invoked();
   char* argv_2[] = { (char*) "--module-gpu", (char*) "--excluded_gpus", (char*) "0,1" };
   rc = handle_gpu_request(&mock_update_cgroups_parameters,
      "gpu", 3, argv_2);
   ASSERT_NE(0, rc) << "Should fail.\n";
+
+  clear_cgroups_parameters_invoked();
+  free_executor_configurations();
 }
 
 TEST_F(TestGpuModule, test_gpu_module_disabled) {

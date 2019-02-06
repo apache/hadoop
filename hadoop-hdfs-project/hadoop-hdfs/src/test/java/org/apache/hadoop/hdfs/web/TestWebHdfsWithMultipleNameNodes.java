@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.web;
 import java.net.InetSocketAddress;
 import java.net.URI;
 
-import org.apache.commons.logging.Log;
+import org.slf4j.Logger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -42,13 +42,13 @@ import org.junit.Test;
  * Test WebHDFS with multiple NameNodes
  */
 public class TestWebHdfsWithMultipleNameNodes {
-  static final Log LOG = WebHdfsTestUtil.LOG;
+  static final Logger LOG = WebHdfsTestUtil.LOG;
 
   static private void setLogLevel() {
-    GenericTestUtils.setLogLevel(LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(NamenodeWebHdfsMethods.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(NamenodeWebHdfsMethods.LOG, Level.TRACE);
 
-    DFSTestUtil.setNameNodeLogLevel(Level.ALL);
+    DFSTestUtil.setNameNodeLogLevel(org.apache.log4j.Level.TRACE);
   }
 
   private static final Configuration conf = new HdfsConfiguration();

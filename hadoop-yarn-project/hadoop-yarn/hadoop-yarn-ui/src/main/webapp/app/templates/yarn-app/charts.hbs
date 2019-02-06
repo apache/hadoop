@@ -26,6 +26,14 @@
       title=(concat 'Memory usage by nodes for: [' model.appId ']')}}
     </div>
     <hr>
+    <div class="row" id="stackd-bar-chart-vcore">
+      {{per-app-vcoreusage-by-nodes-stacked-barchart
+      nodes=model.nodes
+      rmContainers=model.rmContainers
+      parentId="stackd-bar-chart-vcore"
+      title=(concat 'VCore usage by nodes for: [' model.appId ']')}}
+    </div>
+    <hr>
     <div class="row" id="stackd-bar-chart-ncontainer">
       {{per-app-ncontainers-by-nodes-stacked-barchart
       nodes=model.nodes

@@ -541,6 +541,7 @@ public class TestSystemMetricsPublisher {
     when(app.getApplicationPriority()).thenReturn(Priority.newInstance(10));
     when(app.getCallerContext())
         .thenReturn(new CallerContext.Builder("context").build());
+    when(app.getState()).thenReturn(RMAppState.SUBMITTED);
     return app;
   }
 

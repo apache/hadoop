@@ -26,9 +26,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHEC
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
-import org.apache.commons.lang.text.StrBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.text.TextStringBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationUtil;
 import org.apache.hadoop.fs.ChecksumException;
@@ -56,17 +57,24 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.TestRefreshUserMappings;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Assert;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -83,7 +91,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.hamcrest.CoreMatchers.containsString;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -91,7 +99,7 @@ import static org.mockito.Mockito.when;
  * set/clrSpaceQuote are tested in {@link org.apache.hadoop.hdfs.TestQuota}.
  */
 public class TestDFSAdmin {
-  private static final Log LOG = LogFactory.getLog(TestDFSAdmin.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDFSAdmin.class);
   private Configuration conf = null;
   private MiniDFSCluster cluster;
   private DFSAdmin admin;
@@ -101,14 +109,19 @@ public class TestDFSAdmin {
   private final ByteArrayOutputStream err = new ByteArrayOutputStream();
   private static final PrintStream OLD_OUT = System.out;
   private static final PrintStream OLD_ERR = System.err;
+  private String tempResource = null;
+  private static final int NUM_DATANODES = 2;
 
   @Before
   public void setUp() throws Exception {
     conf = new Configuration();
     conf.setInt(IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 3);
+    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 512);
+    conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR,
+        GenericTestUtils.getRandomizedTempPath());
     restartCluster();
 
-    admin = new DFSAdmin();
+    admin = new DFSAdmin(conf);
   }
 
   private void redirectStream() {
@@ -137,13 +150,19 @@ public class TestDFSAdmin {
     }
 
     resetStream();
+    if (tempResource != null) {
+      File f = new File(tempResource);
+      FileUtils.deleteQuietly(f);
+      tempResource = null;
+    }
   }
 
   private void restartCluster() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
     }
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+    cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(NUM_DATANODES).build();
     cluster.waitActive();
     datanode = cluster.getDataNodes().get(0);
     namenode = cluster.getNameNode();
@@ -349,11 +368,14 @@ public class TestDFSAdmin {
           containsString("FAILED: Change property " +
               DFS_DATANODE_DATA_DIR_KEY));
     }
-    assertThat(outs.get(offset + 1),
-        is(allOf(containsString("From:"), containsString("data1"),
-            containsString("data2"))));
+    File dnDir0 = cluster.getInstanceStorageDir(0, 0);
+    File dnDir1 = cluster.getInstanceStorageDir(0, 1);
+    assertThat(outs.get(offset + 1), is(allOf(containsString("From:"),
+                containsString(dnDir0.getName()),
+                containsString(dnDir1.getName()))));
     assertThat(outs.get(offset + 2),
-        is(not(anyOf(containsString("data1"), containsString("data2")))));
+        is(not(anyOf(containsString(dnDir0.getName()),
+            containsString(dnDir1.getName())))));
     assertThat(outs.get(offset + 2),
         is(allOf(containsString("To"), containsString("data_new"))));
   }
@@ -372,7 +394,7 @@ public class TestDFSAdmin {
     final List<String> outs = Lists.newArrayList();
     final List<String> errs = Lists.newArrayList();
     getReconfigurableProperties("namenode", address, outs, errs);
-    assertEquals(6, outs.size());
+    assertEquals(7, outs.size());
     assertEquals(DFS_HEARTBEAT_INTERVAL_KEY, outs.get(1));
     assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, outs.get(2));
     assertEquals(errs.size(), 0);
@@ -496,7 +518,7 @@ public class TestDFSAdmin {
   }
 
   private static String scanIntoString(final ByteArrayOutputStream baos) {
-    final StrBuilder sb = new StrBuilder();
+    final TextStringBuilder sb = new TextStringBuilder();
     final Scanner scanner = new Scanner(baos.toString());
     while (scanner.hasNextLine()) {
       sb.appendln(scanner.nextLine());
@@ -557,7 +579,7 @@ public class TestDFSAdmin {
       // Verify report command for all counts to be zero
       resetStream();
       assertEquals(0, ToolRunner.run(dfsAdmin, new String[] {"-report"}));
-      verifyNodesAndCorruptBlocks(numDn, numDn, 0, 0, client);
+      verifyNodesAndCorruptBlocks(numDn, numDn, 0, 0, client, 0L, 0L);
 
       final short replFactor = 1;
       final long fileLength = 512L;
@@ -592,7 +614,7 @@ public class TestDFSAdmin {
       // Verify report command for all counts to be zero
       resetStream();
       assertEquals(0, ToolRunner.run(dfsAdmin, new String[] {"-report"}));
-      verifyNodesAndCorruptBlocks(numDn, numDn, 0, 0, client);
+      verifyNodesAndCorruptBlocks(numDn, numDn, 0, 0, client, 0L, 0L);
 
       // Choose a DataNode to shutdown
       final List<DataNode> datanodes = miniCluster.getDataNodes();
@@ -614,7 +636,7 @@ public class TestDFSAdmin {
 
       // Verify report command to show dead DataNode
       assertEquals(0, ToolRunner.run(dfsAdmin, new String[] {"-report"}));
-      verifyNodesAndCorruptBlocks(numDn, numDn - 1, 0, 0, client);
+      verifyNodesAndCorruptBlocks(numDn, numDn - 1, 0, 0, client, 0L, 1L);
 
       // Corrupt the replicated block
       final int blockFilesCorrupted = miniCluster
@@ -642,7 +664,7 @@ public class TestDFSAdmin {
       // verify report command for corrupt replicated block
       resetStream();
       assertEquals(0, ToolRunner.run(dfsAdmin, new String[] {"-report"}));
-      verifyNodesAndCorruptBlocks(numDn, numDn - 1, 1, 0, client);
+      verifyNodesAndCorruptBlocks(numDn, numDn - 1, 1, 0, client, 0L, 1L);
 
       lbs = miniCluster.getFileSystem().getClient().
           getNamenode().getBlockLocations(
@@ -667,7 +689,7 @@ public class TestDFSAdmin {
       // and EC block group
       resetStream();
       assertEquals(0, ToolRunner.run(dfsAdmin, new String[] {"-report"}));
-      verifyNodesAndCorruptBlocks(numDn, numDn - 1, 1, 1, client);
+      verifyNodesAndCorruptBlocks(numDn, numDn - 1, 1, 1, client, 0L, 0L);
     }
   }
 
@@ -796,12 +818,14 @@ public class TestDFSAdmin {
     if (closedFileSet != null) {
       for (Path closedFilePath : closedFileSet) {
         assertThat(outStr,
-            not(containsString(closedFilePath.toString() + "\n")));
+            not(containsString(closedFilePath.toString() +
+                System.lineSeparator())));
       }
     }
 
     for (Path openFilePath : openFilesMap.keySet()) {
-      assertThat(outStr, is(containsString(openFilePath.toString() + "\n")));
+      assertThat(outStr, is(containsString(openFilePath.toString() +
+          System.lineSeparator())));
     }
   }
 
@@ -810,7 +834,10 @@ public class TestDFSAdmin {
       final int numLiveDn,
       final int numCorruptBlocks,
       final int numCorruptECBlockGroups,
-      final DFSClient client) throws IOException {
+      final DFSClient client,
+      final Long highestPriorityLowRedundancyReplicatedBlocks,
+      final Long highestPriorityLowRedundancyECBlocks)
+      throws IOException {
 
     /* init vars */
     final String outStr = scanIntoString(out);
@@ -823,12 +850,23 @@ public class TestDFSAdmin {
     final String expectedCorruptedECBlockGroupsStr = String.format(
         "Block groups with corrupt internal blocks: %d",
         numCorruptECBlockGroups);
+    final String highestPriorityLowRedundancyReplicatedBlocksStr
+        = String.format(
+        "\tLow redundancy blocks with highest priority " +
+            "to recover: %d",
+        highestPriorityLowRedundancyReplicatedBlocks);
+    final String highestPriorityLowRedundancyECBlocksStr = String.format(
+        "\tLow redundancy blocks with highest priority " +
+            "to recover: %d",
+        highestPriorityLowRedundancyReplicatedBlocks);
 
     // verify nodes and corrupt blocks
     assertThat(outStr, is(allOf(
         containsString(expectedLiveNodesStr),
         containsString(expectedCorruptedBlocksStr),
-        containsString(expectedCorruptedECBlockGroupsStr))));
+        containsString(expectedCorruptedECBlockGroupsStr),
+        containsString(highestPriorityLowRedundancyReplicatedBlocksStr),
+        containsString(highestPriorityLowRedundancyECBlocksStr))));
 
     assertEquals(
         numDn,
@@ -843,8 +881,12 @@ public class TestDFSAdmin {
         client.getCorruptBlocksCount());
     assertEquals(numCorruptBlocks, client.getNamenode()
         .getReplicatedBlockStats().getCorruptBlocks());
+    assertEquals(highestPriorityLowRedundancyReplicatedBlocks, client.getNamenode()
+        .getReplicatedBlockStats().getHighestPriorityLowRedundancyBlocks());
     assertEquals(numCorruptECBlockGroups, client.getNamenode()
         .getECBlockGroupStats().getCorruptBlockGroups());
+    assertEquals(highestPriorityLowRedundancyECBlocks, client.getNamenode()
+        .getECBlockGroupStats().getHighestPriorityLowRedundancyBlocks());
   }
 
   @Test
@@ -881,5 +923,101 @@ public class TestDFSAdmin {
         new String[]{"-setBalancerBandwidth", "-10000"}));
     assertEquals(-1, ToolRunner.run(dfsAdmin,
         new String[]{"-setBalancerBandwidth", "-10m"}));
+  }
+
+  @Test(timeout = 300000L)
+  public void testCheckNumOfBlocksInReportCommand() throws Exception {
+    DistributedFileSystem dfs = cluster.getFileSystem();
+    Path path = new Path("/tmp.txt");
+
+    DatanodeInfo[] dn = dfs.getDataNodeStats();
+    assertEquals(dn.length, NUM_DATANODES);
+    // Block count should be 0, as no files are created
+    int actualBlockCount = 0;
+    for (DatanodeInfo d : dn) {
+      actualBlockCount += d.getNumBlocks();
+    }
+    assertEquals(0, actualBlockCount);
+
+    // Create a file with 2 blocks
+    DFSTestUtil.createFile(dfs, path, 1024, (short) 1, 0);
+    int expectedBlockCount = 2;
+
+    // Wait for One Heartbeat
+    Thread.sleep(3 * 1000);
+
+    dn = dfs.getDataNodeStats();
+    assertEquals(dn.length, NUM_DATANODES);
+
+    // Block count should be 2, as file is created with block count 2
+    actualBlockCount = 0;
+    for (DatanodeInfo d : dn) {
+      actualBlockCount += d.getNumBlocks();
+    }
+    assertEquals(expectedBlockCount, actualBlockCount);
+  }
+
+  @Test
+  public void testRefreshProxyUser() throws Exception {
+    Path dirPath = new Path("/testdir1");
+    Path subDirPath = new Path("/testdir1/subdir1");
+    UserGroupInformation loginUserUgi =  UserGroupInformation.getLoginUser();
+    String proxyUser = "fakeuser";
+    String realUser = loginUserUgi.getShortUserName();
+
+    UserGroupInformation proxyUgi =
+        UserGroupInformation.createProxyUserForTesting(proxyUser,
+            loginUserUgi, loginUserUgi.getGroupNames());
+
+    // create a directory as login user and re-assign it to proxy user
+    loginUserUgi.doAs(new PrivilegedExceptionAction<Integer>() {
+      @Override
+      public Integer run() throws Exception {
+        cluster.getFileSystem().mkdirs(dirPath);
+        cluster.getFileSystem().setOwner(dirPath, proxyUser,
+            proxyUgi.getPrimaryGroupName());
+        return 0;
+      }
+    });
+
+    // try creating subdirectory inside the directory as proxy user,
+    // This should fail because of the current user hasn't still been proxied
+    try {
+      proxyUgi.doAs(new PrivilegedExceptionAction<Integer>() {
+        @Override public Integer run() throws Exception {
+          cluster.getFileSystem().mkdirs(subDirPath);
+          return 0;
+        }
+      });
+    } catch (RemoteException re) {
+      Assert.assertTrue(re.unwrapRemoteException()
+          instanceof AccessControlException);
+      Assert.assertTrue(re.unwrapRemoteException().getMessage()
+          .equals("User: " + realUser +
+              " is not allowed to impersonate " + proxyUser));
+    }
+
+    // refresh will look at configuration on the server side
+    // add additional resource with the new value
+    // so the server side will pick it up
+    String userKeyGroups = DefaultImpersonationProvider.getTestProvider().
+        getProxySuperuserGroupConfKey(realUser);
+    String userKeyHosts = DefaultImpersonationProvider.getTestProvider().
+        getProxySuperuserIpConfKey(realUser);
+    String rsrc = "testGroupMappingRefresh_rsrc.xml";
+    tempResource = TestRefreshUserMappings.addNewConfigResource(rsrc,
+        userKeyGroups, "*", userKeyHosts, "*");
+
+    String[] args = new String[]{"-refreshSuperUserGroupsConfiguration"};
+    admin.run(args);
+
+    // After proxying the fakeuser, the mkdir should work
+    proxyUgi.doAs(new PrivilegedExceptionAction<Integer>() {
+      @Override
+      public Integer run() throws Exception {
+        cluster.getFileSystem().mkdirs(dirPath);
+        return 0;
+      }
+    });
   }
 }

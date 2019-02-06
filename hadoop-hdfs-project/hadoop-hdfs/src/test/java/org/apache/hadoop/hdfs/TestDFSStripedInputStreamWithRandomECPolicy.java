@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 
 /**
@@ -28,14 +28,14 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 public class TestDFSStripedInputStreamWithRandomECPolicy extends
     TestDFSStripedInputStream {
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       TestDFSStripedInputStreamWithRandomECPolicy.class.getName());
 
   private ErasureCodingPolicy ecPolicy;
 
   public TestDFSStripedInputStreamWithRandomECPolicy() {
     ecPolicy = StripedFileTestUtil.getRandomNonDefaultECPolicy();
-    LOG.info(ecPolicy);
+    LOG.info("{}", ecPolicy.toString());
   }
 
   @Override

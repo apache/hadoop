@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.PathIsDirectoryException;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.PathNotFoundException;
+import org.apache.hadoop.fs.RemoteIterator;
 
 /**
  * Encapsulates a Path (path), its FileStatus (stat), and its FileSystem (fs).
@@ -277,6 +278,32 @@ public class PathData implements Comparable<PathData> {
   }
 
   /**
+   * Returns a RemoteIterator for PathData objects of the items contained in the
+   * given directory.
+   * @return remote iterator of PathData objects for its children
+   * @throws IOException if anything else goes wrong...
+   */
+  public RemoteIterator<PathData> getDirectoryContentsIterator()
+      throws IOException {
+    checkIfExists(FileTypeRequirement.SHOULD_BE_DIRECTORY);
+    final RemoteIterator<FileStatus> stats = this.fs.listStatusIterator(path);
+    return new RemoteIterator<PathData>() {
+
+      @Override
+      public boolean hasNext() throws IOException {
+        return stats.hasNext();
+      }
+
+      @Override
+      public PathData next() throws IOException {
+        FileStatus file = stats.next();
+        String child = getStringForChildPath(file.getPath());
+        return new PathData(fs, child, file);
+      }
+    };
+  }
+
+  /**
    * Creates a new object for a child entry in this directory
    * @param child the basename will be appended to this object's path
    * @return PathData for the child
@@ -457,9 +484,9 @@ public class PathData implements Comparable<PathData> {
       return decodedRemainder;
     } else {
       StringBuilder buffer = new StringBuilder();
-      buffer.append(scheme);
-      buffer.append(":");
-      buffer.append(decodedRemainder);
+      buffer.append(scheme)
+          .append(":")
+          .append(decodedRemainder);
       return buffer.toString();
     }
   }

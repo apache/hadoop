@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -44,8 +44,8 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestMissingBlocksAlert {
   
-  private static final Log LOG = 
-                           LogFactory.getLog(TestMissingBlocksAlert.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestMissingBlocksAlert.class);
   
   @Test
   public void testMissingBlocksAlert()

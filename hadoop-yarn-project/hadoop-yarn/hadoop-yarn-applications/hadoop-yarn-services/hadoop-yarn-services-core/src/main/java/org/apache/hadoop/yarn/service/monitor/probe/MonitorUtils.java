@@ -61,20 +61,20 @@ public final class MonitorUtils {
   }
 
   public static Probe getProbe(ReadinessCheck readinessCheck) {
-    if (readinessCheck == null) {
-      return null;
-    }
-    if (readinessCheck.getType() == null) {
-      return null;
-    }
     try {
+      if (readinessCheck == null) {
+        return DefaultProbe.create();
+      }
+      if (readinessCheck.getType() == null) {
+        return DefaultProbe.create(readinessCheck.getProperties());
+      }
       switch (readinessCheck.getType()) {
       case HTTP:
         return HttpProbe.create(readinessCheck.getProperties());
       case PORT:
         return PortProbe.create(readinessCheck.getProperties());
       default:
-        return null;
+        return DefaultProbe.create(readinessCheck.getProperties());
       }
     } catch (Throwable t) {
       throw new IllegalArgumentException("Error creating readiness check " +

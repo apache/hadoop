@@ -29,8 +29,8 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Enumeration;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -49,11 +49,11 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.test.Whitebox;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.mockito.internal.util.reflection.Whitebox;
 
 public class TestDelegationTokenForProxyUser {
   private static MiniDFSCluster cluster;
@@ -67,7 +67,8 @@ public class TestDelegationTokenForProxyUser {
   private static UserGroupInformation ugi;
   private static UserGroupInformation proxyUgi;
   
-  private static final Log LOG = LogFactory.getLog(TestDoAsEffectiveUser.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDoAsEffectiveUser.class);
   
   private static void configureSuperUserIPAddresses(Configuration conf,
       String superUserShortName) throws IOException {

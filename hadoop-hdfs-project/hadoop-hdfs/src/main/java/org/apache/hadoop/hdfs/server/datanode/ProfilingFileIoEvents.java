@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -37,7 +37,8 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 @InterfaceAudience.Private
 class ProfilingFileIoEvents {
-  static final Log LOG = LogFactory.getLog(ProfilingFileIoEvents.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(ProfilingFileIoEvents.class);
 
   private final boolean isEnabled;
   private final int sampleRangeMax;

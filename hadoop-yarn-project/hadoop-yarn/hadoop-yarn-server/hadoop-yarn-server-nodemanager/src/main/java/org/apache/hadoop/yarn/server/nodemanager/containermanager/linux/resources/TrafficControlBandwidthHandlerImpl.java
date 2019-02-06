@@ -203,6 +203,12 @@ public class TrafficControlBandwidthHandlerImpl
     return null;
   }
 
+  @Override
+  public List<PrivilegedOperation> updateContainer(Container container)
+      throws ResourceHandlerException {
+    return null;
+  }
+
   /**
    * Returns total bytes sent per container to be used for metrics tracking
    * purposes.
@@ -235,7 +241,7 @@ public class TrafficControlBandwidthHandlerImpl
    * Cleanup operations once container is completed - deletes cgroup and
    * removes traffic shaping rule(s).
    * @param containerId of the container that was completed.
-   * @return
+   * @return null
    * @throws ResourceHandlerException
    */
   @Override
@@ -276,5 +282,10 @@ public class TrafficControlBandwidthHandlerImpl
     }
 
     return null;
+  }
+
+  @Override
+  public String toString() {
+    return TrafficControlBandwidthHandlerImpl.class.getName();
   }
 }

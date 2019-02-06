@@ -23,7 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.lang.math.LongRange;
+import org.apache.commons.lang3.Range;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.StringUtils;
@@ -51,8 +51,8 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   Set<String> users = null;
   Set<String> queues = null;
   long limit = Long.MAX_VALUE;
-  LongRange start = null;
-  LongRange finish = null;
+  Range<Long> start = null;
+  Range<Long> finish = null;
   private Set<String> applicationTags;
   private ApplicationsRequestScope scope;
 
@@ -65,7 +65,7 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
     viaProto = true;
   }
 
-  public GetApplicationsRequestProto getProto() {
+  public synchronized GetApplicationsRequestProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -103,12 +103,12 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
       builder.setScope(ProtoUtils.convertToProtoFormat(scope));
     }
     if (start != null) {
-      builder.setStartBegin(start.getMinimumLong());
-      builder.setStartEnd(start.getMaximumLong());
+      builder.setStartBegin(start.getMinimum());
+      builder.setStartEnd(start.getMaximum());
     }
     if (finish != null) {
-      builder.setFinishBegin(finish.getMinimumLong());
-      builder.setFinishEnd(finish.getMaximumLong());
+      builder.setFinishBegin(finish.getMinimum());
+      builder.setFinishEnd(finish.getMaximum());
     }
     if (limit != Long.MAX_VALUE) {
       builder.setLimit(limit);
@@ -175,13 +175,13 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   }
 
   @Override
-  public Set<String> getApplicationTypes() {
+  public synchronized Set<String> getApplicationTypes() {
     initApplicationTypes();
     return this.applicationTypes;
   }
 
   @Override
-  public void setApplicationTypes(Set<String> applicationTypes) {
+  public synchronized void setApplicationTypes(Set<String> applicationTypes) {
     maybeInitBuilder();
     if (applicationTypes == null)
       builder.clearApplicationTypes();
@@ -198,13 +198,13 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   }
 
   @Override
-  public Set<String> getApplicationTags() {
+  public synchronized Set<String> getApplicationTags() {
     initApplicationTags();
     return this.applicationTags;
   }
 
   @Override
-  public void setApplicationTags(Set<String> tags) {
+  public synchronized void setApplicationTags(Set<String> tags) {
     maybeInitBuilder();
     if (tags == null || tags.isEmpty()) {
       builder.clearApplicationTags();
@@ -219,7 +219,7 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   }
 
   @Override
-  public EnumSet<YarnApplicationState> getApplicationStates() {
+  public synchronized EnumSet<YarnApplicationState> getApplicationStates() {
     initApplicationStates();
     return this.applicationStates;
   }
@@ -233,12 +233,12 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   }
 
   @Override
-  public ApplicationsRequestScope getScope() {
+  public synchronized ApplicationsRequestScope getScope() {
     initScope();
     return this.scope;
   }
 
-  public void setScope(ApplicationsRequestScope scope) {
+  public synchronized void setScope(ApplicationsRequestScope scope) {
     maybeInitBuilder();
     if (scope == null) {
       builder.clearScope();
@@ -247,7 +247,7 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   }
 
   @Override
-  public void setApplicationStates(EnumSet<YarnApplicationState> applicationStates) {
+  public synchronized void setApplicationStates(EnumSet<YarnApplicationState> applicationStates) {
     maybeInitBuilder();
     if (applicationStates == null) {
       builder.clearApplicationStates();
@@ -256,7 +256,7 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   }
 
   @Override
-  public void setApplicationStates(Set<String> applicationStates) {
+  public synchronized void setApplicationStates(Set<String> applicationStates) {
     EnumSet<YarnApplicationState> appStates = null;
     for (YarnApplicationState state : YarnApplicationState.values()) {
       if (applicationStates.contains(
@@ -272,12 +272,12 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   }
 
   @Override
-  public Set<String> getUsers() {
+  public synchronized Set<String> getUsers() {
     initUsers();
     return this.users;
   }
 
-  public void setUsers(Set<String> users) {
+  public synchronized void setUsers(Set<String> users) {
     maybeInitBuilder();
     if (users == null) {
       builder.clearUsers();
@@ -286,13 +286,13 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   }
 
   @Override
-  public Set<String> getQueues() {
+  public synchronized Set<String> getQueues() {
     initQueues();
     return this.queues;
   }
 
   @Override
-  public void setQueues(Set<String> queues) {
+  public synchronized void setQueues(Set<String> queues) {
     maybeInitBuilder();
     if (queues == null) {
       builder.clearQueues();
@@ -301,7 +301,7 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   }
 
   @Override
-  public long getLimit() {
+  public synchronized long getLimit() {
     if (this.limit == Long.MAX_VALUE) {
       GetApplicationsRequestProtoOrBuilder p = viaProto ? proto : builder;
       this.limit = p.hasLimit() ? p.getLimit() : Long.MAX_VALUE;
@@ -310,64 +310,64 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   }
 
   @Override
-  public void setLimit(long limit) {
+  public synchronized void setLimit(long limit) {
     maybeInitBuilder();
     this.limit = limit;
   }
 
   @Override
-  public LongRange getStartRange() {
+  public synchronized Range<Long> getStartRange() {
     if (this.start == null) {
       GetApplicationsRequestProtoOrBuilder p = viaProto ? proto: builder;
       if (p.hasStartBegin() || p.hasStartEnd()) {
         long begin = p.hasStartBegin() ? p.getStartBegin() : 0L;
         long end = p.hasStartEnd() ? p.getStartEnd() : Long.MAX_VALUE;
-        this.start = new LongRange(begin, end);
+        this.start = Range.between(begin, end);
       }
     }
     return this.start;
   }
 
   @Override
-  public void setStartRange(LongRange range) {
+  public synchronized void setStartRange(Range<Long> range) {
     this.start = range;
   }
 
   @Override
-  public void setStartRange(long begin, long end)
+  public synchronized void setStartRange(long begin, long end)
       throws IllegalArgumentException {
     if (begin > end) {
       throw new IllegalArgumentException("begin > end in range (begin, " +
           "end): (" + begin + ", " + end + ")");
     }
-    this.start = new LongRange(begin, end);
+    this.start = Range.between(begin, end);
   }
 
   @Override
-  public LongRange getFinishRange() {
+  public synchronized Range<Long> getFinishRange() {
     if (this.finish == null) {
       GetApplicationsRequestProtoOrBuilder p = viaProto ? proto: builder;
       if (p.hasFinishBegin() || p.hasFinishEnd()) {
         long begin = p.hasFinishBegin() ? p.getFinishBegin() : 0L;
         long end = p.hasFinishEnd() ? p.getFinishEnd() : Long.MAX_VALUE;
-        this.finish = new LongRange(begin, end);
+        this.finish = Range.between(begin, end);
       }
     }
     return this.finish;
   }
 
   @Override
-  public void setFinishRange(LongRange range) {
+  public synchronized void setFinishRange(Range<Long> range) {
     this.finish = range;
   }
 
   @Override
-  public void setFinishRange(long begin, long end) {
+  public synchronized void setFinishRange(long begin, long end) {
     if (begin > end) {
       throw new IllegalArgumentException("begin > end in range (begin, " +
           "end): (" + begin + ", " + end + ")");
     }
-    this.finish = new LongRange(begin, end);
+    this.finish = Range.between(begin, end);
   }
 
   @Override

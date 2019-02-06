@@ -22,7 +22,6 @@ import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMeth
 import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod.SIMPLE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
 import java.io.File;
@@ -56,11 +55,11 @@ import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.security.token.Token;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.mockito.internal.util.reflection.Whitebox;
 
 public class TestWebHdfsTokens {
   private static Configuration conf;
@@ -323,7 +322,7 @@ public class TestWebHdfsTokens {
     fs.create(p, (short)1).close();
     verify(fs, times(1)).getDelegationToken();
     verify(fs, never()).replaceExpiredDelegationToken();
-    verify(fs, times(1)).getDelegationToken(anyString());
+    verify(fs, times(1)).getDelegationToken(any());
     verify(fs, times(1)).setDelegationToken(any());
     token = fs.getRenewToken();
     Assert.assertNotNull(token);      

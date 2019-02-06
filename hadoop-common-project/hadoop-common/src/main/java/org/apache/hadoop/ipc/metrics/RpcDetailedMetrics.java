@@ -66,7 +66,7 @@ public class RpcDetailedMetrics {
 
   /**
    * Add an RPC processing time sample
-   * @param name  of the RPC call
+   * @param name of the RPC call
    * @param processingTime  the processing time
    */
   //@Override // some instrumentation interface

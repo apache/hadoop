@@ -71,13 +71,19 @@ public interface CGroupsHandler {
     }
   }
 
-  String CGROUP_FILE_TASKS = "tasks";
+  String CGROUP_PROCS_FILE = "cgroup.procs";
   String CGROUP_PARAM_CLASSID = "classid";
   String CGROUP_PARAM_BLKIO_WEIGHT = "weight";
 
   String CGROUP_PARAM_MEMORY_HARD_LIMIT_BYTES = "limit_in_bytes";
+  String CGROUP_PARAM_MEMORY_SWAP_HARD_LIMIT_BYTES = "memsw.limit_in_bytes";
   String CGROUP_PARAM_MEMORY_SOFT_LIMIT_BYTES = "soft_limit_in_bytes";
+  String CGROUP_PARAM_MEMORY_OOM_CONTROL = "oom_control";
   String CGROUP_PARAM_MEMORY_SWAPPINESS = "swappiness";
+  String CGROUP_PARAM_MEMORY_USAGE_BYTES = "usage_in_bytes";
+  String CGROUP_PARAM_MEMORY_MEMSW_USAGE_BYTES = "memsw.usage_in_bytes";
+  String CGROUP_NO_LIMIT = "-1";
+  String UNDER_OOM = "under_oom 1";
 
 
   String CGROUP_CPU_PERIOD_US = "cfs_period_us";

@@ -78,9 +78,12 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
 
   public static final String NUM_INPUT_FILES =
     org.apache.hadoop.mapreduce.lib.input.FileInputFormat.NUM_INPUT_FILES;
-  
+
   public static final String INPUT_DIR_RECURSIVE = 
     org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR_RECURSIVE;
+
+  public static final String INPUT_DIR_NONRECURSIVE_IGNORE_SUBDIRS =
+    org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR_NONRECURSIVE_IGNORE_SUBDIRS;
 
 
   private static final double SPLIT_SLOP = 1.1;   // 10% slop
@@ -195,11 +198,15 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
     }
   }
   
-  /** List input directories.
+  /**
+   * List input directories.
    * Subclasses may override to, e.g., select only files matching a regular
    * expression. 
    * 
-   * @param job the job to list input paths for
+   * If security is enabled, this method collects
+   * delegation tokens from the input paths and adds them to the job's
+   * credentials.
+   * @param job the job to list input paths for and attach tokens to.
    * @return array of FileStatus objects
    * @throws IOException if zero items.
    */
@@ -319,16 +326,24 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
   public InputSplit[] getSplits(JobConf job, int numSplits)
     throws IOException {
     StopWatch sw = new StopWatch().start();
-    FileStatus[] files = listStatus(job);
-    
+    FileStatus[] stats = listStatus(job);
+
     // Save the number of input files for metrics/loadgen
-    job.setLong(NUM_INPUT_FILES, files.length);
+    job.setLong(NUM_INPUT_FILES, stats.length);
     long totalSize = 0;                           // compute total size
-    for (FileStatus file: files) {                // check we have valid files
+    boolean ignoreDirs = !job.getBoolean(INPUT_DIR_RECURSIVE, false)
+      && job.getBoolean(INPUT_DIR_NONRECURSIVE_IGNORE_SUBDIRS, false);
+
+    List<FileStatus> files = new ArrayList<>(stats.length);
+    for (FileStatus file: stats) {                // check we have valid files
       if (file.isDirectory()) {
-        throw new IOException("Not a file: "+ file.getPath());
+        if (!ignoreDirs) {
+          throw new IOException("Not a file: "+ file.getPath());
+        }
+      } else {
+        files.add(file);
+        totalSize += file.getLen();
       }
-      totalSize += file.getLen();
     }
 
     long goalSize = totalSize / (numSplits == 0 ? 1 : numSplits);

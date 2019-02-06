@@ -46,8 +46,6 @@ export default StackedBarchart.extend({
       arr.push(subArr);
     }
 
-    console.log(arr);
-
     return arr;
   },
 

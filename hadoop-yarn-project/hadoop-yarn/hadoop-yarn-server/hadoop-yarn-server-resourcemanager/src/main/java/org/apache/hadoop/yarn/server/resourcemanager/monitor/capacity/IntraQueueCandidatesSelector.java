@@ -28,6 +28,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.AbstractComparatorOrderingPolicy;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.io.Serializable;
@@ -64,6 +66,44 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
     }
   }
 
+  /*
+   * Order first by amount used from least to most. Then order from oldest to
+   * youngest if amount used is the same.
+   */
+  static class TAFairOrderingComparator
+      implements Comparator<TempAppPerPartition> {
+
+    private ResourceCalculator rc;
+    private Resource clusterRes;
+
+    TAFairOrderingComparator(ResourceCalculator rc, Resource clusterRes) {
+      this.rc = rc;
+      this.clusterRes = clusterRes;
+    }
+
+    @Override
+    public int compare(TempAppPerPartition ta1, TempAppPerPartition ta2) {
+      if (ta1.getUser().equals(ta2.getUser())) {
+        AbstractComparatorOrderingPolicy<FiCaSchedulerApp> acop =
+            (AbstractComparatorOrderingPolicy<FiCaSchedulerApp>)
+            ta1.getFiCaSchedulerApp().getCSLeafQueue().getOrderingPolicy();
+        return acop.getComparator()
+                  .compare(ta1.getFiCaSchedulerApp(), ta2.getFiCaSchedulerApp());
+      } else {
+        Resource usedByUser1 = ta1.getTempUserPerPartition().getUsedDeductAM();
+        Resource usedByUser2 = ta2.getTempUserPerPartition().getUsedDeductAM();
+        if (Resources.equals(usedByUser1, usedByUser2)) {
+          return ta1.getApplicationId().compareTo(ta2.getApplicationId());
+        }
+        if (Resources.lessThan(rc, clusterRes, usedByUser1, usedByUser2)) {
+          return -1;
+        } else {
+          return 1;
+        }
+      }
+    }
+  }
+
   IntraQueuePreemptionComputePlugin fifoPreemptionComputePlugin = null;
   final CapacitySchedulerPreemptionContext context;
 
@@ -82,7 +122,7 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
   public Map<ApplicationAttemptId, Set<RMContainer>> selectCandidates(
       Map<ApplicationAttemptId, Set<RMContainer>> selectedCandidates,
       Resource clusterResource, Resource totalPreemptedResourceAllowed) {
-
+    Map<ApplicationAttemptId, Set<RMContainer>> curCandidates = new HashMap<>();
     // 1. Calculate the abnormality within each queue one by one.
     computeIntraQueuePreemptionDemand(
         clusterResource, totalPreemptedResourceAllowed, selectedCandidates);
@@ -114,8 +154,8 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
           continue;
         }
 
-        // Don't preempt if disabled for this queue.
-        if (leafQueue.getPreemptionDisabled()) {
+        // Don't preempt if intra-queue preemption is disabled for this queue.
+        if (leafQueue.getIntraQueuePreemptionDisabled()) {
           continue;
         }
 
@@ -142,7 +182,7 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
           leafQueue.getReadLock().lock();
           for (FiCaSchedulerApp app : apps) {
             preemptFromLeastStarvedApp(leafQueue, app, selectedCandidates,
-                clusterResource, totalPreemptedResourceAllowed,
+                curCandidates, clusterResource, totalPreemptedResourceAllowed,
                 resToObtainByPartition, rollingResourceUsagePerUser);
           }
         } finally {
@@ -151,7 +191,7 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
       }
     }
 
-    return selectedCandidates;
+    return curCandidates;
   }
 
   private void initializeUsageAndUserLimitForCompute(Resource clusterResource,
@@ -171,6 +211,7 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
   private void preemptFromLeastStarvedApp(LeafQueue leafQueue,
       FiCaSchedulerApp app,
       Map<ApplicationAttemptId, Set<RMContainer>> selectedCandidates,
+      Map<ApplicationAttemptId, Set<RMContainer>> curCandidates,
       Resource clusterResource, Resource totalPreemptedResourceAllowed,
       Map<String, Resource> resToObtainByPartition,
       Map<String, Resource> rollingResourceUsagePerUser) {
@@ -230,7 +271,7 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
       boolean ret = CapacitySchedulerPreemptionUtils
           .tryPreemptContainerAndDeductResToObtain(rc, preemptionContext,
               resToObtainByPartition, c, clusterResource, selectedCandidates,
-              totalPreemptedResourceAllowed);
+              curCandidates, totalPreemptedResourceAllowed, true);
 
       // Subtract from respective user's resource usage once a container is
       // selected for preemption.

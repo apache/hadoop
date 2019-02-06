@@ -88,6 +88,7 @@ class FSDirDeleteOp {
    * For small directory or file the deletion is done in one shot.
    *
    * @param fsn namespace
+   * @param pc FS permission checker
    * @param src path name to be deleted
    * @param recursive boolean true to apply to all sub-directories recursively
    * @param logRetryCache whether to record RPC ids in editlog for retry cache
@@ -96,10 +97,9 @@ class FSDirDeleteOp {
    * @throws IOException
    */
   static BlocksMapUpdateInfo delete(
-      FSNamesystem fsn, String src, boolean recursive, boolean logRetryCache)
-      throws IOException {
+      FSNamesystem fsn, FSPermissionChecker pc, String src, boolean recursive,
+      boolean logRetryCache) throws IOException {
     FSDirectory fsd = fsn.getFSDirectory();
-    FSPermissionChecker pc = fsd.getPermissionChecker();
 
     if (FSDirectory.isExactReservedName(src)) {
       throw new InvalidPathException(src);
@@ -130,7 +130,7 @@ class FSDirDeleteOp {
    * <br>
    *
    * @param fsd the FSDirectory instance
-   * @param src a string representation of a path to an inode
+   * @param iip inodes of a path to be deleted
    * @param mtime the time the inode is removed
    */
   static void deleteForEditLog(FSDirectory fsd, INodesInPath iip, long mtime)

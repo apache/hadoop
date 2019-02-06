@@ -24,7 +24,15 @@ import ColumnDef from 'em-table/utils/column-definition';
 import YarnConf from '../../models/yarn-conf';
 
 export default Ember.Controller.extend({
-  tableDefinition: TableDef.create({
+  coreTableDefinition: TableDef.create({
+    searchType: 'manual',
+  }),
+
+  mapredTableDefinition: TableDef.create({
+    searchType: 'manual',
+  }),
+
+  yarnTableDefinition: TableDef.create({
     searchType: 'manual',
   }),
 

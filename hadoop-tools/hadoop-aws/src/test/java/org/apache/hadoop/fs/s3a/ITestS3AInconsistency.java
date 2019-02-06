@@ -22,16 +22,22 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
+import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
+import org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Test;
 
 import java.io.FileNotFoundException;
-import java.util.concurrent.Callable;
+import java.io.InputStream;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.InconsistentAmazonS3Client.*;
+import static org.apache.hadoop.fs.s3a.FailureInjectionPolicy.*;
+import static org.apache.hadoop.test.LambdaTestUtils.eventually;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Tests S3A behavior under forced inconsistency via {@link
@@ -42,6 +48,8 @@ import static org.apache.hadoop.fs.s3a.InconsistentAmazonS3Client.*;
  * consistency features, see {@link ITestS3GuardListConsistency}.
  */
 public class ITestS3AInconsistency extends AbstractS3ATestBase {
+
+  private static final int OPEN_READ_ITERATIONS = 20;
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
@@ -86,15 +94,103 @@ public class ITestS3AInconsistency extends AbstractS3ATestBase {
     }
   }
 
+
+  /**
+   * Ensure that deleting a file with an open read stream does eventually cause
+   * readers to get a FNFE, even with S3Guard and its retries enabled.
+   * In real usage, S3Guard should be enabled for all clients that modify the
+   * file, so the delete would be immediately recorded in the MetadataStore.
+   * Here, however, we test deletion from under S3Guard to make sure it still
+   * eventually propagates the FNFE after any retry policies are exhausted.
+   */
+  @Test
+  public void testOpenDeleteRead() throws Exception {
+    S3AFileSystem fs = getFileSystem();
+    Path p = path("testOpenDeleteRead.txt");
+    writeTextFile(fs, p, "1337c0d3z", true);
+    try (InputStream s = fs.open(p)) {
+      // Disable s3guard, delete file underneath it, re-enable s3guard
+      MetadataStore metadataStore = fs.getMetadataStore();
+      fs.setMetadataStore(new NullMetadataStore());
+      fs.delete(p, false);
+      fs.setMetadataStore(metadataStore);
+      eventually(1000, 200, () -> {
+        intercept(FileNotFoundException.class, () -> s.read());
+      });
+    }
+  }
+
+  /**
+   * Test read() path behavior when getFileStatus() succeeds but subsequent
+   * read() on the input stream fails due to eventual consistency.
+   * There are many points in the InputStream codepaths that can fail. We set
+   * a probability of failure and repeat the test multiple times to achieve
+   * decent coverage.
+   */
+  @Test
+  public void testOpenFailOnRead() throws Exception {
+
+    S3AFileSystem fs = getFileSystem();
+
+    // 1. Patch in a different failure injection policy with <1.0 probability
+    Configuration conf = fs.getConf();
+    conf.setFloat(FAIL_INJECT_INCONSISTENCY_PROBABILITY, 0.5f);
+    InconsistentAmazonS3Client.setFailureInjectionPolicy(fs,
+        new FailureInjectionPolicy(conf));
+
+    // 2. Make sure no ancestor dirs exist
+    Path dir = path("ancestor");
+    fs.delete(dir, true);
+    waitUntilDeleted(dir);
+
+    // 3. Create a descendant file, which implicitly creates ancestors
+    // This file has delayed visibility.
+    describe("creating test file");
+    Path path = path("ancestor/file-to-read-" + DEFAULT_DELAY_KEY_SUBSTRING);
+    writeTextFile(getFileSystem(), path, "Reading is fun", false);
+
+    // 4. Clear inconsistency so the first getFileStatus() can succeed, if we
+    // are not using S3Guard. If we are using S3Guard, it should tolerate the
+    // delayed visibility.
+    if (!fs.hasMetadataStore()) {
+      InconsistentAmazonS3Client.clearInconsistency(fs);
+    }
+
+    // ? Do we need multiple iterations when S3Guard is disabled?  For now,
+    // leaving it in
+    for (int i = 0; i < OPEN_READ_ITERATIONS; i++) {
+      doOpenFailOnReadTest(fs, path, i);
+    }
+  }
+
+  private void doOpenFailOnReadTest(S3AFileSystem fs, Path path, int iteration)
+      throws Exception {
+
+    // 4. Open the file
+    describe(String.format("i=%d: opening test file", iteration));
+    try(InputStream in = fs.open(path)) {
+      // 5. Assert expected behavior on read() failure.
+      int l = 4;
+      byte[] buf = new byte[l];
+      describe("reading test file");
+      // Use both read() variants
+      if ((iteration % 2) == 0) {
+        assertEquals(l, in.read(buf, 0, l));
+      } else {
+        in.read();
+      }
+    } catch (FileNotFoundException e) {
+      if (fs.hasMetadataStore()) {
+        LOG.error("Error:", e);
+        ContractTestUtils.fail("S3Guard failed to handle fail-on-read", e);
+      } else {
+        LOG.info("File not found on read(), as expected.");
+      }
+    }
+  }
+
   private void waitUntilDeleted(final Path p) throws Exception {
     LambdaTestUtils.eventually(30 * 1000, 1000,
-        new Callable<Void>() {
-          @Override
-          public Void call() throws Exception {
-            assertPathDoesNotExist("Dir should be deleted", p);
-            return null;
-          }
-        }
-    );
+        () -> assertPathDoesNotExist("Dir should be deleted", p));
   }
 }

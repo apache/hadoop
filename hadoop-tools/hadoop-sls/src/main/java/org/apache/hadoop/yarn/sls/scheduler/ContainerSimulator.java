@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.Resource;
 
 @Private
@@ -43,21 +44,33 @@ public class ContainerSimulator implements Delayed {
   private int priority;
   // type 
   private String type;
+  // execution type
+  private ExecutionType executionType = ExecutionType.GUARANTEED;
 
   /**
-   * invoked when AM schedules containers to allocate
+   * invoked when AM schedules containers to allocate.
    */
   public ContainerSimulator(Resource resource, long lifeTime,
       String hostname, int priority, String type) {
+    this(resource, lifeTime, hostname, priority, type,
+        ExecutionType.GUARANTEED);
+  }
+
+  /**
+   * invoked when AM schedules containers to allocate.
+   */
+  public ContainerSimulator(Resource resource, long lifeTime,
+      String hostname, int priority, String type, ExecutionType executionType) {
     this.resource = resource;
     this.lifeTime = lifeTime;
     this.hostname = hostname;
     this.priority = priority;
     this.type = type;
+    this.executionType = executionType;
   }
 
   /**
-   * invoke when NM schedules containers to run
+   * invoke when NM schedules containers to run.
    */
   public ContainerSimulator(ContainerId id, Resource resource, long endTime,
       long lifeTime) {
@@ -113,5 +126,9 @@ public class ContainerSimulator implements Delayed {
   
   public void setPriority(int p) {
     priority = p;
+  }
+
+  public ExecutionType getExecutionType() {
+    return executionType;
   }
 }

@@ -33,12 +33,12 @@ import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
+import org.apache.hadoop.test.Whitebox;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
-import org.mockito.internal.util.reflection.Whitebox;
 
 /**
  * Test BootstrapStandby when QJM is used for shared edits. 

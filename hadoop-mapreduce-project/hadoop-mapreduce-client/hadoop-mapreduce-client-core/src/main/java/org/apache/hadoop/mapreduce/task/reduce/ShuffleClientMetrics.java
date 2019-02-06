@@ -17,23 +17,41 @@
  */
 package org.apache.hadoop.mapreduce.task.reduce;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
+
+import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
+
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableCounterInt;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
+import org.apache.hadoop.metrics2.lib.MetricsRegistry;
+
 
 import java.util.concurrent.ThreadLocalRandom;
 
+import static org.apache.hadoop.metrics2.lib.Interns.info;
+
+/**
+ * Metric for Shuffle client.
+ */
+@SuppressWarnings("checkstyle:finalclass")
 @InterfaceAudience.LimitedPrivate({"MapReduce"})
 @InterfaceStability.Unstable
 @Metrics(name="ShuffleClientMetrics", context="mapred")
 public class ShuffleClientMetrics {
+
+  private static final MetricsInfo RECORD_INFO =
+      info("ShuffleClientMetrics", "Metrics for Shuffle client");
 
   @Metric
   private MutableCounterInt numFailedFetches;
@@ -44,14 +62,23 @@ public class ShuffleClientMetrics {
   @Metric
   private MutableGaugeInt numThreadsBusy;
 
+  private final MetricsRegistry metricsRegistry =
+      new MetricsRegistry(RECORD_INFO);
+
   private ShuffleClientMetrics() {
   }
 
-  public static ShuffleClientMetrics create() {
+  public static ShuffleClientMetrics create(
+      TaskAttemptID reduceId,
+      JobConf jobConf) {
     MetricsSystem ms = DefaultMetricsSystem.initialize("JobTracker");
+
+    ShuffleClientMetrics shuffleClientMetrics = new ShuffleClientMetrics();
+    shuffleClientMetrics.addTags(reduceId, jobConf);
+
     return ms.register("ShuffleClientMetrics-" +
         ThreadLocalRandom.current().nextInt(), null,
-        new ShuffleClientMetrics());
+            shuffleClientMetrics);
   }
 
   public void inputBytes(long bytes) {
@@ -68,5 +95,17 @@ public class ShuffleClientMetrics {
   }
   public void threadFree() {
     numThreadsBusy.decr();
+  }
+
+  private void addTags(TaskAttemptID reduceId, JobConf jobConf) {
+    metricsRegistry.tag("user", "", jobConf.getUser())
+        .tag("jobName", "", jobConf.getJobName())
+        .tag("jobId", "", reduceId.getJobID().toString())
+        .tag("taskId", "", reduceId.toString());
+  }
+
+  @VisibleForTesting
+  MetricsRegistry getMetricsRegistry() {
+    return metricsRegistry;
   }
 }

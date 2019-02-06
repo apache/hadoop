@@ -36,19 +36,30 @@ public class NativeXORRawEncoder extends AbstractNativeRawEncoder {
 
   public NativeXORRawEncoder(ErasureCoderOptions coderOptions) {
     super(coderOptions);
-    initImpl(coderOptions.getNumDataUnits(), coderOptions.getNumParityUnits());
+    encoderLock.writeLock().lock();
+    try {
+      initImpl(coderOptions.getNumDataUnits(),
+          coderOptions.getNumParityUnits());
+    } finally {
+      encoderLock.writeLock().unlock();
+    }
   }
 
   @Override
-  protected synchronized void performEncodeImpl(
+  protected void performEncodeImpl(
       ByteBuffer[] inputs, int[] inputOffsets, int dataLen,
       ByteBuffer[] outputs, int[] outputOffsets) throws IOException {
     encodeImpl(inputs, inputOffsets, dataLen, outputs, outputOffsets);
   }
 
   @Override
-  public synchronized void release() {
-    destroyImpl();
+  public void release() {
+    encoderLock.writeLock().lock();
+    try {
+      destroyImpl();
+    } finally {
+      encoderLock.writeLock().unlock();
+    }
   }
 
   private native void initImpl(int numDataUnits, int numParityUnits);

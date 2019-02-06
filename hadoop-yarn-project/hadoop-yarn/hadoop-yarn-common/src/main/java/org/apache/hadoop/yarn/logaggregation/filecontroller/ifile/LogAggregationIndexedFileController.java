@@ -43,7 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import org.apache.commons.lang.SerializationUtils;
+import org.apache.commons.lang3.SerializationUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -404,7 +404,7 @@ public class LogAggregationIndexedFileController
         meta.setStartIndex(outputStreamState.getStartPos());
         meta.setFileSize(fileLength);
       }
-      meta.setLastModificatedTime(logFile.lastModified());
+      meta.setLastModifiedTime(logFile.lastModified());
       metas.add(meta);
     }
     logsMetaInThisCycle.addContainerLogMeta(containerId, metas);
@@ -495,16 +495,21 @@ public class LogAggregationIndexedFileController
     boolean getAllContainers = (containerIdStr == null
         || containerIdStr.isEmpty());
     long size = logRequest.getBytes();
-    List<FileStatus> nodeFiles = LogAggregationUtils
-        .getRemoteNodeFileList(conf, appId, logRequest.getAppOwner(),
+    RemoteIterator<FileStatus> nodeFiles = LogAggregationUtils
+        .getRemoteNodeFileDir(conf, appId, logRequest.getAppOwner(),
         this.remoteRootLogDir, this.remoteRootLogDirSuffix);
-    if (nodeFiles.isEmpty()) {
-      throw new IOException("There is no available log fils for "
+    if (!nodeFiles.hasNext()) {
+      throw new IOException("There is no available log file for "
           + "application:" + appId);
     }
-    Map<String, Long> checkSumFiles = parseCheckSumFiles(nodeFiles);
+    List<FileStatus> allFiles = getAllNodeFiles(nodeFiles, appId);
+    if (allFiles.isEmpty()) {
+      throw new IOException("There is no available log file for "
+          + "application:" + appId);
+    }
+    Map<String, Long> checkSumFiles = parseCheckSumFiles(allFiles);
     List<FileStatus> fileToRead = getNodeLogFileToRead(
-        nodeFiles, nodeIdStr, appId);
+        allFiles, nodeIdStr, appId);
     byte[] buf = new byte[65535];
     for (FileStatus thisNodeFile : fileToRead) {
       String nodeName = thisNodeFile.getPath().getName();
@@ -576,7 +581,7 @@ public class LogAggregationIndexedFileController
               decompressor, getFSInputBufferSize(conf));
           LogToolUtils.outputContainerLog(candidate.getContainerId(),
               nodeName, candidate.getFileName(), candidate.getFileSize(), size,
-              Times.format(candidate.getLastModificatedTime()),
+              Times.format(candidate.getLastModifiedTime()),
               in, os, buf, ContainerLogAggregationType.AGGREGATED);
           byte[] b = aggregatedLogSuffix(candidate.getFileName())
               .getBytes(Charset.forName("UTF-8"));
@@ -609,16 +614,21 @@ public class LogAggregationIndexedFileController
         containerIdStr.isEmpty());
     String nodeIdStr = (nodeId == null || nodeId.isEmpty()) ? null
         : LogAggregationUtils.getNodeString(nodeId);
-    List<FileStatus> nodeFiles = LogAggregationUtils
-        .getRemoteNodeFileList(conf, appId, appOwner, this.remoteRootLogDir,
+    RemoteIterator<FileStatus> nodeFiles = LogAggregationUtils
+        .getRemoteNodeFileDir(conf, appId, appOwner, this.remoteRootLogDir,
         this.remoteRootLogDirSuffix);
-    if (nodeFiles.isEmpty()) {
-      throw new IOException("There is no available log fils for "
+    if (!nodeFiles.hasNext()) {
+      throw new IOException("There is no available log file for "
           + "application:" + appId);
     }
-    Map<String, Long> checkSumFiles = parseCheckSumFiles(nodeFiles);
+    List<FileStatus> allFiles = getAllNodeFiles(nodeFiles, appId);
+    if (allFiles.isEmpty()) {
+      throw new IOException("There is no available log file for "
+          + "application:" + appId);
+    }
+    Map<String, Long> checkSumFiles = parseCheckSumFiles(allFiles);
     List<FileStatus> fileToRead = getNodeLogFileToRead(
-        nodeFiles, nodeIdStr, appId);
+        allFiles, nodeIdStr, appId);
     for(FileStatus thisNodeFile : fileToRead) {
       try {
         Long checkSumIndex = checkSumFiles.get(
@@ -650,7 +660,7 @@ public class LogAggregationIndexedFileController
             for (IndexedFileLogMeta aMeta : log.getValue()) {
               meta.addLogMeta(aMeta.getFileName(), Long.toString(
                   aMeta.getFileSize()),
-                  Times.format(aMeta.getLastModificatedTime()));
+                  Times.format(aMeta.getLastModifiedTime()));
             }
             containersLogMeta.add(meta);
           }
@@ -661,7 +671,7 @@ public class LogAggregationIndexedFileController
               logMeta.getContainerLogMeta(containerIdStr)) {
             meta.addLogMeta(log.getFileName(), Long.toString(
                 log.getFileSize()),
-                Times.format(log.getLastModificatedTime()));
+                Times.format(log.getLastModifiedTime()));
           }
           containersLogMeta.add(meta);
         }
@@ -727,21 +737,33 @@ public class LogAggregationIndexedFileController
       List<FileStatus> nodeFiles, String nodeId, ApplicationId appId)
       throws IOException {
     List<FileStatus> listOfFiles = new ArrayList<>();
-    List<FileStatus> files = new ArrayList<>(nodeFiles);
-    for (FileStatus file : files) {
-      String nodeName = file.getPath().getName();
+    for (FileStatus thisNodeFile : nodeFiles) {
+      String nodeName = thisNodeFile.getPath().getName();
       if ((nodeId == null || nodeId.isEmpty()
           || nodeName.contains(LogAggregationUtils
           .getNodeString(nodeId))) && !nodeName.endsWith(
               LogAggregationUtils.TMP_FILE_SUFFIX) &&
           !nodeName.endsWith(CHECK_SUM_FILE_SUFFIX)) {
-        if (nodeName.equals(appId + ".har")) {
-          Path p = new Path("har:///" + file.getPath().toUri().getRawPath());
-          files = Arrays.asList(HarFs.get(p.toUri(), conf).listStatus(p));
-          continue;
-        }
-        listOfFiles.add(file);
+        listOfFiles.add(thisNodeFile);
       }
+    }
+    return listOfFiles;
+  }
+
+  private List<FileStatus> getAllNodeFiles(
+      RemoteIterator<FileStatus> nodeFiles, ApplicationId appId)
+      throws IOException {
+    List<FileStatus> listOfFiles = new ArrayList<>();
+    while (nodeFiles != null && nodeFiles.hasNext()) {
+      FileStatus thisNodeFile = nodeFiles.next();
+      String nodeName = thisNodeFile.getPath().getName();
+      if (nodeName.equals(appId + ".har")) {
+        Path p = new Path("har:///"
+            + thisNodeFile.getPath().toUri().getRawPath());
+        nodeFiles = HarFs.get(p.toUri(), conf).listStatusIterator(p);
+        continue;
+      }
+      listOfFiles.add(thisNodeFile);
     }
     return listOfFiles;
   }
@@ -843,7 +865,8 @@ public class LogAggregationIndexedFileController
       byte[] array = new byte[offset];
       fsDataIStream.seek(
           fileLength - offset - Integer.SIZE/ Byte.SIZE - UUID_LENGTH);
-      int actual = fsDataIStream.read(array);
+      fsDataIStream.readFully(array);
+      int actual = array.length;
       if (actual != offset) {
         throw new IOException("Error on loading log meta from "
             + remoteLogPath);
@@ -979,7 +1002,7 @@ public class LogAggregationIndexedFileController
     private String fileName;
     private long fileSize;
     private long fileCompressedSize;
-    private long lastModificatedTime;
+    private long lastModifiedTime;
     private long startIndex;
 
     public String getFileName() {
@@ -1003,11 +1026,11 @@ public class LogAggregationIndexedFileController
       this.fileCompressedSize = fileCompressedSize;
     }
 
-    public long getLastModificatedTime() {
-      return lastModificatedTime;
+    public long getLastModifiedTime() {
+      return lastModifiedTime;
     }
-    public void setLastModificatedTime(long lastModificatedTime) {
-      this.lastModificatedTime = lastModificatedTime;
+    public void setLastModifiedTime(long lastModifiedTime) {
+      this.lastModifiedTime = lastModifiedTime;
     }
 
     public long getStartIndex() {

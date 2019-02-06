@@ -79,20 +79,24 @@ public final class AdlStorageConfiguration {
     if (conf == null) {
       conf = getConfiguration();
     }
+    return createStorageConnector(conf);
+  }
 
+  public synchronized static FileSystem createStorageConnector(
+      Configuration fsConfig) throws URISyntaxException, IOException {
     if (!isContractTestEnabled()) {
       return null;
     }
 
-    String fileSystem = conf.get(FILE_SYSTEM_KEY);
+    String fileSystem = fsConfig.get(FILE_SYSTEM_KEY);
     if (fileSystem == null || fileSystem.trim().length() == 0) {
       throw new IOException("Default file system not configured.");
     }
 
-    Class<?> clazz = conf.getClass(FILE_SYSTEM_IMPL_KEY,
+    Class<?> clazz = fsConfig.getClass(FILE_SYSTEM_IMPL_KEY,
         FILE_SYSTEM_IMPL_DEFAULT);
-    FileSystem fs = (FileSystem) ReflectionUtils.newInstance(clazz, conf);
-    fs.initialize(new URI(fileSystem), conf);
+    FileSystem fs = (FileSystem) ReflectionUtils.newInstance(clazz, fsConfig);
+    fs.initialize(new URI(fileSystem), fsConfig);
     return fs;
   }
 }

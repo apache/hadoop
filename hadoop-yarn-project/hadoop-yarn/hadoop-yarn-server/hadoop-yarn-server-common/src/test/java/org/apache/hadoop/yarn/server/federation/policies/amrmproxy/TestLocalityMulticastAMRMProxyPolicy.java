@@ -32,11 +32,13 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.BaseFederationPoliciesTest;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
@@ -67,12 +69,12 @@ public class TestLocalityMulticastAMRMProxyPolicy
 
   @Before
   public void setUp() throws Exception {
-    setPolicy(new LocalityMulticastAMRMProxyPolicy());
+    setPolicy(new TestableLocalityMulticastAMRMProxyPolicy());
     setPolicyInfo(new WeightedPolicyInfo());
     Map<SubClusterIdInfo, Float> routerWeights = new HashMap<>();
     Map<SubClusterIdInfo, Float> amrmWeights = new HashMap<>();
 
-    // simulate 20 subclusters with a 5% chance of being inactive
+    // Six sub-clusters with one inactive and one disabled
     for (int i = 0; i < 6; i++) {
       SubClusterIdInfo sc = new SubClusterIdInfo("subcluster" + i);
       // sub-cluster 3 is not active
@@ -106,6 +108,10 @@ public class TestLocalityMulticastAMRMProxyPolicy
   }
 
   private void initializePolicy() throws YarnException {
+    initializePolicy(new YarnConfiguration());
+  }
+
+  private void initializePolicy(Configuration conf) throws YarnException {
     setFederationPolicyContext(new FederationPolicyInitializationContext());
     SubClusterResolver resolver = FederationPoliciesTestUtil.initResolver();
     getFederationPolicyContext().setFederationSubclusterResolver(resolver);
@@ -116,7 +122,7 @@ public class TestLocalityMulticastAMRMProxyPolicy
     getFederationPolicyContext().setHomeSubcluster(getHomeSubCluster());
     FederationPoliciesTestUtil.initializePolicyContext(
         getFederationPolicyContext(), getPolicy(), getPolicyInfo(),
-        getActiveSubclusters());
+        getActiveSubclusters(), conf);
   }
 
   @Test(expected = FederationPolicyInitializationException.class)
@@ -145,11 +151,11 @@ public class TestLocalityMulticastAMRMProxyPolicy
     initializePolicy();
     List<ResourceRequest> resourceRequests = createSimpleRequest();
 
-    prepPolicyWithHeadroom();
+    prepPolicyWithHeadroom(true);
 
     Map<SubClusterId, List<ResourceRequest>> response =
-        ((FederationAMRMProxyPolicy) getPolicy())
-            .splitResourceRequests(resourceRequests);
+        ((FederationAMRMProxyPolicy) getPolicy()).splitResourceRequests(
+            resourceRequests, new HashSet<SubClusterId>());
 
     // pretty print requests
     LOG.info("Initial headroom");
@@ -174,7 +180,7 @@ public class TestLocalityMulticastAMRMProxyPolicy
     ((FederationAMRMProxyPolicy) getPolicy())
         .notifyOfResponse(SubClusterId.newInstance("subcluster2"), ar);
     response = ((FederationAMRMProxyPolicy) getPolicy())
-        .splitResourceRequests(resourceRequests);
+        .splitResourceRequests(resourceRequests, new HashSet<SubClusterId>());
 
     LOG.info("After headroom update");
     prettyPrintRequests(response);
@@ -201,18 +207,19 @@ public class TestLocalityMulticastAMRMProxyPolicy
     getPolicyInfo().setHeadroomAlpha(1.0f);
 
     initializePolicy();
+    addHomeSubClusterAsActive();
 
     int numRR = 1000;
     List<ResourceRequest> resourceRequests = createLargeRandomList(numRR);
 
-    prepPolicyWithHeadroom();
+    prepPolicyWithHeadroom(true);
 
     int numIterations = 1000;
     long tstart = System.currentTimeMillis();
     for (int i = 0; i < numIterations; i++) {
       Map<SubClusterId, List<ResourceRequest>> response =
-          ((FederationAMRMProxyPolicy) getPolicy())
-              .splitResourceRequests(resourceRequests);
+          ((FederationAMRMProxyPolicy) getPolicy()).splitResourceRequests(
+              resourceRequests, new HashSet<SubClusterId>());
       validateSplit(response, resourceRequests);
     }
     long tend = System.currentTimeMillis();
@@ -233,11 +240,11 @@ public class TestLocalityMulticastAMRMProxyPolicy
     List<ResourceRequest> resourceRequests = createZeroSizedANYRequest();
 
     // this receives responses from sc0,sc1,sc2
-    prepPolicyWithHeadroom();
+    prepPolicyWithHeadroom(true);
 
     Map<SubClusterId, List<ResourceRequest>> response =
-        ((FederationAMRMProxyPolicy) getPolicy())
-            .splitResourceRequests(resourceRequests);
+        ((FederationAMRMProxyPolicy) getPolicy()).splitResourceRequests(
+            resourceRequests, new HashSet<SubClusterId>());
 
     // we expect all three to appear for a zero-sized ANY
 
@@ -269,11 +276,11 @@ public class TestLocalityMulticastAMRMProxyPolicy
     initializePolicy();
     List<ResourceRequest> resourceRequests = createSimpleRequest();
 
-    prepPolicyWithHeadroom();
+    prepPolicyWithHeadroom(true);
 
     Map<SubClusterId, List<ResourceRequest>> response =
-        ((FederationAMRMProxyPolicy) getPolicy())
-            .splitResourceRequests(resourceRequests);
+        ((FederationAMRMProxyPolicy) getPolicy()).splitResourceRequests(
+            resourceRequests, new HashSet<SubClusterId>());
 
     // pretty print requests
     prettyPrintRequests(response);
@@ -292,10 +299,14 @@ public class TestLocalityMulticastAMRMProxyPolicy
     checkTotalContainerAllocation(response, 100);
   }
 
-  private void prepPolicyWithHeadroom() throws YarnException {
+  private void prepPolicyWithHeadroom(boolean setSubCluster0)
+      throws YarnException {
     AllocateResponse ar = getAllocateResponseWithTargetHeadroom(40);
-    ((FederationAMRMProxyPolicy) getPolicy())
-        .notifyOfResponse(SubClusterId.newInstance("subcluster0"), ar);
+
+    if (setSubCluster0) {
+      ((FederationAMRMProxyPolicy) getPolicy())
+          .notifyOfResponse(SubClusterId.newInstance("subcluster0"), ar);
+    }
 
     ar = getAllocateResponseWithTargetHeadroom(0);
     ((FederationAMRMProxyPolicy) getPolicy())
@@ -314,14 +325,11 @@ public class TestLocalityMulticastAMRMProxyPolicy
         null, Collections.<NMToken> emptyList());
   }
 
-  @Test
-  public void testSplitAllocateRequest() throws Exception {
-
-    // Test a complex List<ResourceRequest> is split correctly
-    initializePolicy();
-
-    // modify default initialization to include a "homesubcluster"
-    // which we will use as the default for when nodes or racks are unknown
+  /**
+   * modify default initialization to include a "homesubcluster" which we will
+   * use as the default for when nodes or racks are unknown.
+   */
+  private void addHomeSubClusterAsActive() {
     SubClusterInfo sci = mock(SubClusterInfo.class);
     when(sci.getState()).thenReturn(SubClusterState.SC_RUNNING);
     when(sci.getSubClusterId()).thenReturn(getHomeSubCluster());
@@ -330,16 +338,24 @@ public class TestLocalityMulticastAMRMProxyPolicy
 
     getPolicyInfo().getRouterPolicyWeights().put(sc, 0.1f);
     getPolicyInfo().getAMRMPolicyWeights().put(sc, 0.1f);
+  }
+
+  @Test
+  public void testSplitAllocateRequest() throws Exception {
+
+    // Test a complex List<ResourceRequest> is split correctly
+    initializePolicy();
+    addHomeSubClusterAsActive();
 
     FederationPoliciesTestUtil.initializePolicyContext(
         getFederationPolicyContext(), getPolicy(), getPolicyInfo(),
-        getActiveSubclusters());
+        getActiveSubclusters(), new Configuration());
 
     List<ResourceRequest> resourceRequests = createComplexRequest();
 
     Map<SubClusterId, List<ResourceRequest>> response =
-        ((FederationAMRMProxyPolicy) getPolicy())
-            .splitResourceRequests(resourceRequests);
+        ((FederationAMRMProxyPolicy) getPolicy()).splitResourceRequests(
+            resourceRequests, new HashSet<SubClusterId>());
 
     validateSplit(response, resourceRequests);
     prettyPrintRequests(response);
@@ -492,7 +508,8 @@ public class TestLocalityMulticastAMRMProxyPolicy
 
     // Test target Ids
     for (SubClusterId targetId : split.keySet()) {
-      Assert.assertTrue("Target subclusters should be in the active set",
+      Assert.assertTrue(
+          "Target subcluster " + targetId + " should be in the active set",
           getActiveSubclusters().containsKey(targetId));
       Assert.assertTrue(
           "Target subclusters (" + targetId + ") should have weight >0 in "
@@ -669,7 +686,7 @@ public class TestLocalityMulticastAMRMProxyPolicy
     List<ResourceRequest> resourceRequests = new ArrayList<>();
 
     // Initialize the headroom map
-    prepPolicyWithHeadroom();
+    prepPolicyWithHeadroom(true);
 
     // Cancel at ANY level only
     resourceRequests.add(FederationPoliciesTestUtil.createResourceRequest(0L,
@@ -680,8 +697,8 @@ public class TestLocalityMulticastAMRMProxyPolicy
         ResourceRequest.ANY, 1024, 1, 1, 0, null, false));
 
     Map<SubClusterId, List<ResourceRequest>> response =
-        ((FederationAMRMProxyPolicy) getPolicy())
-            .splitResourceRequests(resourceRequests);
+        ((FederationAMRMProxyPolicy) getPolicy()).splitResourceRequests(
+            resourceRequests, new HashSet<SubClusterId>());
 
     checkExpectedAllocation(response, "subcluster0", 3, 1);
     checkExpectedAllocation(response, "subcluster1", 1, 0);
@@ -700,7 +717,7 @@ public class TestLocalityMulticastAMRMProxyPolicy
         ResourceRequest.ANY, 1024, 1, 1, 100, null, false));
 
     response = ((FederationAMRMProxyPolicy) getPolicy())
-        .splitResourceRequests(resourceRequests);
+        .splitResourceRequests(resourceRequests, new HashSet<SubClusterId>());
 
     /*
      * Since node request is a cancel, it should not be considered associated
@@ -715,5 +732,91 @@ public class TestLocalityMulticastAMRMProxyPolicy
     checkExpectedAllocation(response, "subcluster2", 1, 15);
     checkExpectedAllocation(response, "subcluster5", 1, 25);
     checkTotalContainerAllocation(response, 100);
+  }
+
+  @Test
+  public void testSubClusterExpiry() throws Exception {
+
+    // Tests how the headroom info are used to split based on the capacity
+    // each RM claims to give us.
+    // Configure policy to be 100% headroom based
+    getPolicyInfo().setHeadroomAlpha(1.0f);
+
+    YarnConfiguration conf = new YarnConfiguration();
+    // Set expiry to 500ms
+    conf.setLong(YarnConfiguration.FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT,
+        500);
+
+    initializePolicy(conf);
+    List<ResourceRequest> resourceRequests = createSimpleRequest();
+
+    prepPolicyWithHeadroom(true);
+
+    // For first time, no sub-cluster expired
+    Set<SubClusterId> expiredSCList = new HashSet<>();
+    Map<SubClusterId, List<ResourceRequest>> response =
+        ((FederationAMRMProxyPolicy) getPolicy())
+            .splitResourceRequests(resourceRequests, expiredSCList);
+
+    // pretty print requests
+    prettyPrintRequests(response);
+
+    validateSplit(response, resourceRequests);
+
+    /*
+     * based on headroom, we expect 75 containers to got to subcluster0 (60) and
+     * subcluster2 (15) according to the advertised headroom (40 and 10), no
+     * containers for sublcuster1 as it advertise zero headroom, and 25 to
+     * subcluster5 which has unknown headroom, and so it gets 1/4th of the load
+     */
+    checkExpectedAllocation(response, "subcluster0", 1, 60);
+    checkExpectedAllocation(response, "subcluster1", 1, -1);
+    checkExpectedAllocation(response, "subcluster2", 1, 15);
+    checkExpectedAllocation(response, "subcluster5", 1, 25);
+    checkTotalContainerAllocation(response, 100);
+
+    Thread.sleep(800);
+
+    // For the second time, sc0 and sc5 expired
+    expiredSCList.add(SubClusterId.newInstance("subcluster0"));
+    expiredSCList.add(SubClusterId.newInstance("subcluster5"));
+    response = ((FederationAMRMProxyPolicy) getPolicy())
+        .splitResourceRequests(resourceRequests, expiredSCList);
+
+    // pretty print requests
+    prettyPrintRequests(response);
+
+    validateSplit(response, resourceRequests);
+
+    checkExpectedAllocation(response, "subcluster0", 1, -1);
+    checkExpectedAllocation(response, "subcluster1", 1, -1);
+    checkExpectedAllocation(response, "subcluster2", 1, 100);
+    checkExpectedAllocation(response, "subcluster5", 1, -1);
+    checkTotalContainerAllocation(response, 100);
+  }
+
+  /**
+   * A testable version of LocalityMulticastAMRMProxyPolicy that
+   * deterministically falls back to home sub-cluster for unresolved requests.
+   */
+  private class TestableLocalityMulticastAMRMProxyPolicy
+      extends LocalityMulticastAMRMProxyPolicy {
+    @Override
+    protected SubClusterId getSubClusterForUnResolvedRequest(
+        AllocationBookkeeper bookkeeper, long allocationId) {
+      SubClusterId originalResult =
+          super.getSubClusterForUnResolvedRequest(bookkeeper, allocationId);
+      Map<SubClusterId, SubClusterInfo> activeClusters = null;
+      try {
+        activeClusters = getActiveSubclusters();
+      } catch (YarnException e) {
+        throw new RuntimeException(e);
+      }
+      // The randomly selected sub-cluster should at least be active
+      Assert.assertTrue(activeClusters.containsKey(originalResult));
+
+      // Alwasy use home sub-cluster so that unit test is deterministic
+      return getHomeSubCluster();
+    }
   }
 }

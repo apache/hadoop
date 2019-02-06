@@ -18,7 +18,6 @@
 package org.apache.hadoop.security;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.StringTokenizer;
@@ -26,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -52,7 +51,8 @@ public class ShellBasedUnixGroupsMapping extends Configured
   protected static final Logger LOG =
       LoggerFactory.getLogger(ShellBasedUnixGroupsMapping.class);
 
-  private long timeout = 0L;
+  private long timeout = CommonConfigurationKeys.
+      HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_DEFAULT;
   private static final List<String> EMPTY_GROUPS = new LinkedList<>();
 
   @Override
@@ -61,10 +61,10 @@ public class ShellBasedUnixGroupsMapping extends Configured
     if (conf != null) {
       timeout = conf.getTimeDuration(
           CommonConfigurationKeys.
-              HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_SECS,
+              HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_KEY,
           CommonConfigurationKeys.
-              HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_SECS_DEFAULT,
-          TimeUnit.SECONDS);
+              HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_DEFAULT,
+          TimeUnit.MILLISECONDS);
     }
   }
 

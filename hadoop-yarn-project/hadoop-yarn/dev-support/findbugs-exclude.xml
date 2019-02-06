@@ -67,11 +67,6 @@
   </Match>
   <Match>
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics" />
-    <Method name="getLocalityStatistics" />
-    <Bug pattern="EI_EXPOSE_REP" />
-  </Match>
-  <Match>
-    <Class name="org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics" />
     <Method name="incNumAllocatedContainers"/>
     <Bug pattern="VO_VOLATILE_INCREMENT" />
   </Match>
@@ -116,6 +111,18 @@
     <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncher" />
     <Method name="handle" />
     <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+
+  <!-- Ignore exposed internal representations -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.api.records.Resource" />
+    <Method name="getResources" />
+    <Bug pattern="EI_EXPOSE_REP" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics" />
+    <Method name="getLocalityStatistics" />
+    <Bug pattern="EI_EXPOSE_REP" />
   </Match>
 
   <!-- Object cast is based on the event type -->
@@ -461,6 +468,10 @@
       <Bug pattern="DC_DOUBLECHECK" />
   </Match>
 
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProvider"/>
+    <Bug pattern="DC_DOUBLECHECK" />
+  </Match>
   <!-- ApplicationClassLoader is deprecated and moved to hadoop-common; ignore
        warning on the identical name as it should be removed later -->
   <Match>
@@ -628,22 +639,6 @@
     <Bug pattern="MS_EXPOSE_REP" />
   </Match>
 
-  <Match>
-    <Class name="org.apache.hadoop.registry.server.dns.RegistryDNS" />
-    <Method name="addNIOTCP" />
-    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
-  </Match>
-  <Match>
-    <Class name="org.apache.hadoop.registry.server.dns.RegistryDNS" />
-    <Method name="addNIOUDP" />
-    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
-  </Match>
-  <Match>
-    <Class name="org.apache.hadoop.registry.server.dns.RegistryDNS" />
-    <Method name="serveNIOTCP" />
-    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
-  </Match>
-
   <!-- EQ_OVERRIDING_EQUALS_NOT_SYMMETRIC -->
   <Match>
     <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.AssignedGpuDevice" />
@@ -656,6 +651,13 @@
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SingleConstraintAppPlacementAllocator" />
     <Method name="validateAndSetSchedulingRequest" />
     <Bug pattern="NP_NULL_ON_SOME_PATH" />
+  </Match>
+
+  <!-- Expose the reference to avoid performance overhead -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.api.records.Resource" />
+    <Method name="getResources" />
+    <Bug pattern="EI_EXPOSE_REP" />
   </Match>
 
 </FindBugsFilter>

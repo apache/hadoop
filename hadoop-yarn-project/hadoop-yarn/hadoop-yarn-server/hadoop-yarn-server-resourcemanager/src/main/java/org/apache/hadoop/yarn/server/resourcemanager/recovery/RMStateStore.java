@@ -18,6 +18,15 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
+import java.io.ByteArrayInputStream;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -47,6 +56,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerLaunchContextPBImpl;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -65,6 +75,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.Applicatio
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
@@ -99,9 +110,13 @@ public abstract class RMStateStore extends AbstractService {
       "AMRMTokenSecretManagerRoot";
   protected static final String RESERVATION_SYSTEM_ROOT =
       "ReservationSystemRoot";
+  protected static final String PROXY_CA_ROOT = "ProxyCARoot";
+  protected static final String PROXY_CA_CERT_NODE = "caCert";
+  protected static final String PROXY_CA_PRIVATE_KEY_NODE = "caPrivateKey";
   protected static final String VERSION_NODE = "RMVersionNode";
   protected static final String EPOCH_NODE = "EpochNode";
   protected long baseEpoch;
+  private long epochRange;
   protected ResourceManager resourceManager;
   private final ReadLock readLock;
   private final WriteLock writeLock;
@@ -180,6 +195,10 @@ public abstract class RMStateStore extends AbstractService {
           new RemoveReservationAllocationTransition())
       .addTransition(RMStateStoreState.ACTIVE, RMStateStoreState.FENCED,
           RMStateStoreEventType.FENCED)
+      .addTransition(RMStateStoreState.ACTIVE,
+          EnumSet.of(RMStateStoreState.ACTIVE, RMStateStoreState.FENCED),
+          RMStateStoreEventType.STORE_PROXY_CA_CERT,
+          new StoreProxyCACertTransition())
       .addTransition(RMStateStoreState.FENCED, RMStateStoreState.FENCED,
           EnumSet.of(
           RMStateStoreEventType.STORE_APP,
@@ -195,7 +214,8 @@ public abstract class RMStateStore extends AbstractService {
           RMStateStoreEventType.UPDATE_DELEGATION_TOKEN,
           RMStateStoreEventType.UPDATE_AMRM_TOKEN,
           RMStateStoreEventType.STORE_RESERVATION,
-          RMStateStoreEventType.REMOVE_RESERVATION));
+          RMStateStoreEventType.REMOVE_RESERVATION,
+          RMStateStoreEventType.STORE_PROXY_CA_CERT));
 
   private final StateMachine<RMStateStoreState,
                              RMStateStoreEventType,
@@ -257,6 +277,9 @@ public abstract class RMStateStore extends AbstractService {
           appState.getApplicationSubmissionContext().getApplicationId();
       LOG.info("Updating info for app: " + appId);
       try {
+        if (isAppStateFinal(appState)) {
+          pruneAppState(appState);
+        }
         store.updateApplicationStateInternal(appId, appState);
         if (((RMStateUpdateAppEvent) event).isNotifyApplication()) {
           store.notifyApplication(new RMAppEvent(appId,
@@ -276,7 +299,39 @@ public abstract class RMStateStore extends AbstractService {
         }
       }
       return finalState(isFenced);
-    };
+    }
+
+    private boolean isAppStateFinal(ApplicationStateData appState) {
+      RMAppState state = appState.getState();
+      return state == RMAppState.FINISHED || state == RMAppState.FAILED ||
+          state == RMAppState.KILLED;
+    }
+
+    private void pruneAppState(ApplicationStateData appState) {
+      ApplicationSubmissionContext srcCtx =
+          appState.getApplicationSubmissionContext();
+      ApplicationSubmissionContextPBImpl context =
+          new ApplicationSubmissionContextPBImpl();
+      // most fields in the ApplicationSubmissionContext are not needed,
+      // but the following few need to be present for recovery to succeed
+      context.setApplicationId(srcCtx.getApplicationId());
+      context.setResource(srcCtx.getResource());
+      context.setQueue(srcCtx.getQueue());
+      context.setAMContainerResourceRequests(
+          srcCtx.getAMContainerResourceRequests());
+      context.setApplicationName(srcCtx.getApplicationName());
+      context.setPriority(srcCtx.getPriority());
+      context.setApplicationTags(srcCtx.getApplicationTags());
+      context.setApplicationType(srcCtx.getApplicationType());
+      context.setUnmanagedAM(srcCtx.getUnmanagedAM());
+      context.setNodeLabelExpression(srcCtx.getNodeLabelExpression());
+      ContainerLaunchContextPBImpl amContainerSpec =
+              new ContainerLaunchContextPBImpl();
+      amContainerSpec.setApplicationACLs(
+              srcCtx.getAMContainerSpec().getApplicationACLs());
+      context.setAMContainerSpec(amContainerSpec);
+      appState.setApplicationSubmissionContext(context);
+    }
   }
 
   private static class RemoveAppTransition implements
@@ -577,6 +632,31 @@ public abstract class RMStateStore extends AbstractService {
     }
   }
 
+  private static class StoreProxyCACertTransition implements
+      MultipleArcTransition<RMStateStore, RMStateStoreEvent,
+          RMStateStoreState> {
+    @Override
+    public RMStateStoreState transition(RMStateStore store,
+        RMStateStoreEvent event) {
+      if (!(event instanceof RMStateStoreProxyCAEvent)) {
+        // should never happen
+        LOG.error("Illegal event type: " + event.getClass());
+        return RMStateStoreState.ACTIVE;
+      }
+      boolean isFenced = false;
+      RMStateStoreProxyCAEvent caEvent = (RMStateStoreProxyCAEvent) event;
+      try {
+        LOG.info("Storing CA Certificate and Private Key");
+        store.storeProxyCACertState(
+            caEvent.getCaCert(), caEvent.getCaPrivateKey());
+      } catch (Exception e) {
+        LOG.error("Error While Storing CA Certificate and Private Key", e);
+        isFenced = store.notifyStoreOperationFailedInternal(e);
+      }
+      return finalState(isFenced);
+    }
+  }
+
   private static RMStateStoreState finalState(boolean isFenced) {
     return isFenced ? RMStateStoreState.FENCED : RMStateStoreState.ACTIVE;
   }
@@ -638,6 +718,39 @@ public abstract class RMStateStore extends AbstractService {
     }
   }
 
+  public static class ProxyCAState {
+    private X509Certificate caCert;
+    private PrivateKey caPrivateKey;
+
+    public X509Certificate getCaCert() {
+      return caCert;
+    }
+
+    public PrivateKey getCaPrivateKey() {
+      return caPrivateKey;
+    }
+
+    public void setCaCert(X509Certificate caCert) {
+      this.caCert = caCert;
+    }
+
+    public void setCaPrivateKey(PrivateKey caPrivateKey) {
+      this.caPrivateKey = caPrivateKey;
+    }
+
+    public void setCaCert(byte[] caCertData) throws CertificateException {
+      ByteArrayInputStream bais = new ByteArrayInputStream(caCertData);
+      caCert = (X509Certificate)
+          CertificateFactory.getInstance("X.509").generateCertificate(bais);
+    }
+
+    public void setCaPrivateKey(byte[] caPrivateKeyData)
+        throws NoSuchAlgorithmException, InvalidKeySpecException {
+      caPrivateKey = KeyFactory.getInstance("RSA").generatePrivate(
+          new PKCS8EncodedKeySpec(caPrivateKeyData));
+    }
+  }
+
   /**
    * State of the ResourceManager
    */
@@ -651,6 +764,8 @@ public abstract class RMStateStore extends AbstractService {
 
     private Map<String, Map<ReservationId, ReservationAllocationStateProto>>
         reservationState = new TreeMap<>();
+
+    ProxyCAState proxyCAState = new ProxyCAState();
 
     public Map<ApplicationId, ApplicationStateData> getApplicationState() {
       return appState;
@@ -667,6 +782,10 @@ public abstract class RMStateStore extends AbstractService {
     public Map<String, Map<ReservationId, ReservationAllocationStateProto>>
         getReservationState() {
       return reservationState;
+    }
+
+    public ProxyCAState getProxyCAState() {
+      return proxyCAState;
     }
   }
     
@@ -697,6 +816,8 @@ public abstract class RMStateStore extends AbstractService {
     // read the base epoch value from conf
     baseEpoch = conf.getLong(YarnConfiguration.RM_EPOCH,
         YarnConfiguration.DEFAULT_RM_EPOCH);
+    epochRange = conf.getLong(YarnConfiguration.RM_EPOCH_RANGE,
+        YarnConfiguration.DEFAULT_RM_EPOCH_RANGE);
     initInternal(conf);
   }
 
@@ -783,7 +904,20 @@ public abstract class RMStateStore extends AbstractService {
    * Get the current epoch of RM and increment the value.
    */
   public abstract long getAndIncrementEpoch() throws Exception;
-  
+
+  /**
+   * Compute the next epoch value by incrementing by one.
+   * Wraps around if the epoch range is exceeded so that
+   * when federation is enabled epoch collisions can be avoided.
+   */
+  protected long nextEpoch(long epoch){
+    long epochVal = epoch - baseEpoch + 1;
+    if (epochRange > 0) {
+      epochVal %= epochRange;
+    }
+    return  epochVal + baseEpoch;
+  }
+
   /**
    * Blocking API
    * The derived class must recover state from the store and return a new 
@@ -1220,4 +1354,21 @@ public abstract class RMStateStore extends AbstractService {
   protected EventHandler getRMStateStoreEventHandler() {
     return dispatcher.getEventHandler();
   }
+
+  /**
+   * ProxyCAManager calls this to store the CA Certificate and Private Key.
+   */
+  public void storeProxyCACert(X509Certificate caCert,
+      PrivateKey caPrivateKey) {
+    handleStoreEvent(new RMStateStoreProxyCAEvent(caCert, caPrivateKey,
+        RMStateStoreEventType.STORE_PROXY_CA_CERT));
+  }
+
+  /**
+   * Blocking API
+   * Derived classes must implement this method to store the CA Certificate
+   * and Private Key
+   */
+  protected abstract void storeProxyCACertState(
+      X509Certificate caCert, PrivateKey caPrivateKey) throws Exception;
 }

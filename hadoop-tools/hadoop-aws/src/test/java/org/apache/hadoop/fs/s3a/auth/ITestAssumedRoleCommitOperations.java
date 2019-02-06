@@ -72,15 +72,15 @@ public class ITestAssumedRoleCommitOperations extends ITestCommitOperations {
     Configuration conf = newAssumedRoleConfig(getConfiguration(),
         getAssumedRoleARN());
     bindRolePolicyStatements(conf,
-        STATEMENT_ALL_DDB,
-        statement(true, S3_ALL_BUCKETS, S3_ROOT_READ_OPERATIONS),
+        STATEMENT_S3GUARD_CLIENT,
+        STATEMENT_ALLOW_SSE_KMS_RW,
+        statement(true, S3_ALL_BUCKETS, S3_BUCKET_READ_OPERATIONS),
         new RoleModel.Statement(RoleModel.Effects.Allow)
             .addActions(S3_PATH_RW_OPERATIONS)
             .addResources(directory(restrictedDir))
     );
     roleFS = (S3AFileSystem) restrictedDir.getFileSystem(conf);
   }
-
 
   @Override
   public void teardown() throws Exception {
@@ -121,7 +121,6 @@ public class ITestAssumedRoleCommitOperations extends ITestCommitOperations {
   protected Path path(String filepath) throws IOException {
     return new Path(restrictedDir, filepath);
   }
-
 
   private String getAssumedRoleARN() {
     return getContract().getConf().getTrimmed(ASSUMED_ROLE_ARN, "");

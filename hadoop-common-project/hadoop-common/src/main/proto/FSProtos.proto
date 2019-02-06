@@ -68,3 +68,11 @@ message FileStatusProto {
   optional bytes ec_data                = 17;
   optional uint32 flags                 = 18 [default = 0];
 }
+
+/**
+ * Placeholder type for consistent basic FileSystem operations.
+ */
+message LocalFileSystemPathHandleProto {
+    optional uint64 mtime = 1;
+    optional string path = 2;
+}

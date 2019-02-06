@@ -69,7 +69,7 @@ public abstract class AbstractContractRenameTest extends
       } else {
         // at least one FS only returns false here, if that is the case
         // warn but continue
-        getLog().warn("Rename returned {} renaming a nonexistent file", renamed);
+        getLogger().warn("Rename returned {} renaming a nonexistent file", renamed);
         assertFalse("Renaming a missing file returned true", renamed);
       }
     } catch (FileNotFoundException e) {
@@ -118,7 +118,7 @@ public abstract class AbstractContractRenameTest extends
         if (renamed && !renameReturnsFalseOnRenameDestExists) {
           //expected an exception
           String destDirLS = generateAndLogErrorListing(srcFile, destFile);
-          getLog().error("dest dir {}", destDirLS);
+          getLogger().error("dest dir {}", destDirLS);
           fail("expected rename(" + srcFile + ", " + destFile + " ) to fail," +
                " but got success and destination of " + destDirLS);
         }

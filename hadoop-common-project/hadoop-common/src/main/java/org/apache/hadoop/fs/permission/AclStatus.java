@@ -69,7 +69,7 @@ public class AclStatus {
   /**
    * Returns the list of all ACL entries, ordered by their natural ordering.
    *
-   * @return List<AclEntry> unmodifiable ordered list of all ACL entries
+   * @return List&lt;AclEntry&gt; unmodifiable ordered list of all ACL entries
    */
   public List<AclEntry> getEntries() {
     return entries;

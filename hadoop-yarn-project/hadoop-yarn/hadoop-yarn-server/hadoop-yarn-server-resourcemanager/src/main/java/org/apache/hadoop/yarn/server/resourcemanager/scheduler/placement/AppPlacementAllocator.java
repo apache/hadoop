@@ -192,4 +192,10 @@ public abstract class AppPlacementAllocator<N extends SchedulerNode> {
     this.rmContext = rmContext;
     this.schedulerRequestKey = schedulerRequestKey;
   }
+
+  /**
+   * Get pending SchedulingRequest.
+   * @return SchedulingRequest
+   */
+  public abstract SchedulingRequest getSchedulingRequest();
 }

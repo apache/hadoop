@@ -162,6 +162,10 @@ public class TimelineWebServices {
           parseStr(entityId),
           parseFieldsStr(fields, ","),
           getUser(req));
+    } catch (YarnException e) {
+      // The user doesn't have the access to override the existing domain.
+      LOG.info(e.getMessage(), e);
+      throw new ForbiddenException(e);
     } catch (IllegalArgumentException e) {
       throw new BadRequestException(e);
     } catch (Exception e) {

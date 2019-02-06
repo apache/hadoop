@@ -75,9 +75,9 @@ public class DefaultImpersonationProvider implements ImpersonationProvider {
     //   $configPrefix.[ANY].hosts
     //
     String prefixRegEx = configPrefix.replace(".", "\\.");
-    String usersGroupsRegEx = prefixRegEx + "[^.]*(" +
+    String usersGroupsRegEx = prefixRegEx + "[\\S]*(" +
         Pattern.quote(CONF_USERS) + "|" + Pattern.quote(CONF_GROUPS) + ")";
-    String hostsRegEx = prefixRegEx + "[^.]*" + Pattern.quote(CONF_HOSTS);
+    String hostsRegEx = prefixRegEx + "[\\S]*" + Pattern.quote(CONF_HOSTS);
 
   // get list of users and groups per proxyuser
     Map<String,String> allMatchKeys = 

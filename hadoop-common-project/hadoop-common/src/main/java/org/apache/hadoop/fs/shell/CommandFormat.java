@@ -162,7 +162,7 @@ public class CommandFormat {
 
   /** Returns all the options that are set
    * 
-   * @return Set<String> of the enabled options
+   * @return Set{@literal <}String{@literal >} of the enabled options
    */
   public Set<String> getOpts() {
     Set<String> optSet = new HashSet<String>();

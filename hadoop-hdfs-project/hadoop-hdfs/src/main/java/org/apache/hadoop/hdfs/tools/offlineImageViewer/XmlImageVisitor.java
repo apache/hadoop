@@ -18,16 +18,17 @@
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
 import java.io.IOException;
-import java.util.LinkedList;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 import org.apache.hadoop.hdfs.util.XMLUtils;
+
 /**
  * An XmlImageVisitor walks over an fsimage structure and writes out
  * an equivalent XML document that contains the fsimage's components.
  */
 public class XmlImageVisitor extends TextWriterImageVisitor {
-  final private LinkedList<ImageElement> tagQ =
-                                          new LinkedList<ImageElement>();
+  final private Deque<ImageElement> tagQ = new ArrayDeque<>();
 
   public XmlImageVisitor(String filename) throws IOException {
     super(filename, false);
@@ -51,9 +52,10 @@ public class XmlImageVisitor extends TextWriterImageVisitor {
 
   @Override
   void leaveEnclosingElement() throws IOException {
-    if(tagQ.size() == 0)
+    if (tagQ.isEmpty()) {
       throw new IOException("Tried to exit non-existent enclosing element " +
-                "in FSImage file");
+          "in FSImage file");
+    }
 
     ImageElement element = tagQ.pop();
     write("</" + element.toString() + ">\n");
@@ -71,7 +73,7 @@ public class XmlImageVisitor extends TextWriterImageVisitor {
 
   @Override
   void visitEnclosingElement(ImageElement element) throws IOException {
-    write("<" + element.toString() + ">\n");
+    write('<' + element.toString() + ">\n");
     tagQ.push(element);
   }
 
@@ -79,12 +81,12 @@ public class XmlImageVisitor extends TextWriterImageVisitor {
   void visitEnclosingElement(ImageElement element,
       ImageElement key, String value)
        throws IOException {
-    write("<" + element.toString() + " " + key + "=\"" + value +"\">\n");
+    write('<' + element.toString() + ' ' + key + "=\"" + value +"\">\n");
     tagQ.push(element);
   }
 
   private void writeTag(String tag, String value) throws IOException {
-    write("<" + tag + ">" +
+    write('<' + tag + '>' +
         XMLUtils.mangleXmlString(value, true) + "</" + tag + ">\n");
   }
 }

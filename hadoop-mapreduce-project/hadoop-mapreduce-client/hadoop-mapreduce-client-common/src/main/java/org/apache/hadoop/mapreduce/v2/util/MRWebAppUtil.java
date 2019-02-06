@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.net.NetUtils;
@@ -178,6 +179,9 @@ public class MRWebAppUtil {
   }
 
   public static String getAMWebappScheme(Configuration conf) {
-    return "http://";
+    return conf.getBoolean(
+        MRJobConfig.MR_AM_WEBAPP_HTTPS_ENABLED,
+        MRJobConfig.DEFAULT_MR_AM_WEBAPP_HTTPS_ENABLED)
+        ? "https://" : "http://";
   }
 }

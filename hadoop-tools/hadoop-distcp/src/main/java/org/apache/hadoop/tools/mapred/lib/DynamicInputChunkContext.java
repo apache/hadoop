@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.tools.mapred.lib;
 
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.Log;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,7 +34,7 @@ import java.io.IOException;
  */
 class DynamicInputChunkContext<K, V> {
 
-  private static Log LOG = LogFactory.getLog(DynamicInputChunkContext.class);
+  private static Logger LOG = LoggerFactory.getLogger(DynamicInputChunkContext.class);
   private Configuration configuration;
   private Path chunkRootPath = null;
   private String chunkFilePrefix;

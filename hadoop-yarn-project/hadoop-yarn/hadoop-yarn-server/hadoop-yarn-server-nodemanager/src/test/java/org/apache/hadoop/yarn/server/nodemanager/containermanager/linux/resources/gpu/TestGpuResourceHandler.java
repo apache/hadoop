@@ -38,8 +38,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resource
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDevice;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDiscoverer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
-import org.apache.hadoop.yarn.util.resource.TestResourceUtils;
+import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -53,10 +54,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyList;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -73,14 +74,18 @@ public class TestGpuResourceHandler {
 
   @Before
   public void setup() {
-    TestResourceUtils.addNewTypesToResources(ResourceInformation.GPU_URI);
+    CustomResourceTypesConfigurationProvider.
+        initResourceTypes(ResourceInformation.GPU_URI);
 
     mockCGroupsHandler = mock(CGroupsHandler.class);
     mockPrivilegedExecutor = mock(PrivilegedOperationExecutor.class);
     mockNMStateStore = mock(NMStateStoreService.class);
 
+    Configuration conf = new Configuration();
+
     Context nmctx = mock(Context.class);
     when(nmctx.getNMStateStore()).thenReturn(mockNMStateStore);
+    when(nmctx.getConf()).thenReturn(conf);
     runningContainersMap = new ConcurrentHashMap<>();
     when(nmctx.getContainers()).thenReturn(runningContainersMap);
 
@@ -120,7 +125,8 @@ public class TestGpuResourceHandler {
     ContainerLaunchContext clc = mock(ContainerLaunchContext.class);
     Map<String, String> env = new HashMap<>();
     if (dockerContainerEnabled) {
-      env.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "docker");
+      env.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE,
+          ContainerRuntimeConstants.CONTAINER_RUNTIME_DOCKER);
     }
     when(clc.getEnvironment()).thenReturn(env);
     when(c.getLaunchContext()).thenReturn(clc);
@@ -343,6 +349,37 @@ public class TestGpuResourceHandler {
   }
 
   @Test
+  public void testAllocationStoredWithNULLStateStore() throws Exception {
+    NMNullStateStoreService mockNMNULLStateStore = mock(NMNullStateStoreService.class);
+
+    Configuration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:3,3:4");
+
+    Context nmnctx = mock(Context.class);
+    when(nmnctx.getNMStateStore()).thenReturn(mockNMNULLStateStore);
+    when(nmnctx.getConf()).thenReturn(conf);
+
+    GpuResourceHandlerImpl gpuNULLStateResourceHandler =
+        new GpuResourceHandlerImpl(nmnctx, mockCGroupsHandler,
+        mockPrivilegedExecutor);
+
+    GpuDiscoverer.getInstance().initialize(conf);
+
+    gpuNULLStateResourceHandler.bootstrap(conf);
+    Assert.assertEquals(4,
+        gpuNULLStateResourceHandler.getGpuAllocator().getAvailableGpus());
+
+    /* Start container 1, asks 3 containers */
+    Container container = mockContainerWithGpuRequest(1, 3);
+    gpuNULLStateResourceHandler.preStart(container);
+
+    verify(nmnctx.getNMStateStore()).storeAssignedResources(container,
+        ResourceInformation.GPU_URI, Arrays
+            .asList(new GpuDevice(0, 0), new GpuDevice(1, 1),
+                new GpuDevice(2, 3)));
+  }
+
+  @Test
   public void testRecoverResourceAllocation() throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:3,3:4");
@@ -429,7 +466,7 @@ public class TestGpuResourceHandler {
       caughtException = true;
     }
     Assert.assertTrue(
-        "Should fail since requested device Id is not in allowed list",
+        "Should fail since requested device Id is already assigned",
         caughtException);
 
     // Make sure internal state not changed.

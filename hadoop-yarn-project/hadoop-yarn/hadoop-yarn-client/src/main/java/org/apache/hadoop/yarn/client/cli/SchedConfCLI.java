@@ -132,25 +132,35 @@ public class SchedConfCLI extends Configured implements Tool {
     }
 
     Client webServiceClient = Client.create();
-    WebResource webResource = webServiceClient.resource(WebAppUtils.
-        getRMWebAppURLWithScheme(getConf()));
-    ClientResponse response = webResource.path("ws").path("v1").path("cluster")
-        .path("scheduler-conf").accept(MediaType.APPLICATION_JSON)
-        .entity(YarnWebServiceUtils.toJson(updateInfo,
-            SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-        .put(ClientResponse.class);
-    if (response != null) {
-      if (response.getStatus() == Status.OK.getStatusCode()) {
-        System.out.println("Configuration changed successfully.");
-        return 0;
+    WebResource webResource = webServiceClient
+        .resource(WebAppUtils.getRMWebAppURLWithScheme(getConf()));
+    ClientResponse response = null;
+
+    try {
+      response =
+          webResource.path("ws").path("v1").path("cluster")
+              .path("scheduler-conf").accept(MediaType.APPLICATION_JSON)
+              .entity(YarnWebServiceUtils.toJson(updateInfo,
+                  SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+              .put(ClientResponse.class);
+      if (response != null) {
+        if (response.getStatus() == Status.OK.getStatusCode()) {
+          System.out.println("Configuration changed successfully.");
+          return 0;
+        } else {
+          System.err.println("Configuration change unsuccessful: "
+              + response.getEntity(String.class));
+        }
       } else {
-        System.err.println("Configuration change unsuccessful: "
-            + response.getEntity(String.class));
+        System.err.println("Configuration change unsuccessful: null response");
       }
-    } else {
-      System.err.println("Configuration change unsuccessful: null response");
+      return -1;
+    } finally {
+      if (response != null) {
+        response.close();
+      }
+      webServiceClient.destroy();
     }
-    return -1;
   }
 
   @VisibleForTesting

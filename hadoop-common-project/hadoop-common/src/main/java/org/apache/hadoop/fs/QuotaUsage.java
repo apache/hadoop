@@ -229,8 +229,8 @@ public class QuotaUsage {
 
   /**
    * Output format:
-   * <----12----> <----15----> <----15----> <----15----> <-------18------->
-   *    QUOTA   REMAINING_QUATA SPACE_QUOTA SPACE_QUOTA_REM FILE_NAME
+   * |----12----| |----15----| |----15----| |----15----| |-------18-------|
+   *    QUOTA   REMAINING_QUOTA SPACE_QUOTA SPACE_QUOTA_REM FILE_NAME
    */
   protected static final String QUOTA_STRING_FORMAT = "%12s %15s ";
   protected static final String SPACE_QUOTA_STRING_FORMAT = "%15s %15s ";
@@ -244,9 +244,9 @@ public class QuotaUsage {
 
   /**
    * Output format:
-   * <----12----> <------15-----> <------15-----> <------15----->
+   * |----12----| |------15-----| |------15-----| |------15-----|
    *        QUOTA       REM_QUOTA     SPACE_QUOTA REM_SPACE_QUOTA
-   * <----12----> <----12----> <-------18------->
+   * |----12----| |----12----| |-------18-------|
    *    DIR_COUNT   FILE_COUNT       CONTENT_SIZE
    */
   private static final String STORAGE_TYPE_SUMMARY_FORMAT = "%13s %17s ";

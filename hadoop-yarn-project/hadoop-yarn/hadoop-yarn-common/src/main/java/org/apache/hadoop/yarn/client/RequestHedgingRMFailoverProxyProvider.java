@@ -49,7 +49,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
  * underlying proxies simultaneously. Each proxy inside the wrapper proxy will
  * retry the corresponding target. It assumes the in an HA setup, there will be
  * only one Active, and the active should respond faster than any configured
- * standbys. Once it receives a response from any one of the configred proxies,
+ * standbys. Once it receives a response from any one of the configured proxies,
  * outstanding requests to other proxies are immediately cancelled.
  */
 public class RequestHedgingRMFailoverProxyProvider<T>

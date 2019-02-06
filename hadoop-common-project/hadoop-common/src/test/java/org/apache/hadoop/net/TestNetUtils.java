@@ -32,14 +32,16 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.nio.charset.CharacterCodingException;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.KerberosAuthException;
 import org.apache.hadoop.security.NetUtilsTestResolver;
 import org.junit.Assume;
 import org.junit.Before;
@@ -260,6 +262,44 @@ public class TestNetUtils {
     assertInException(wrapped, "localhost");
     assertRemoteDetailsIncluded(wrapped);
     assertInException(wrapped, "/EOFException");
+  }
+
+  @Test
+  public void testWrapKerbAuthException() throws Throwable {
+    IOException e = new KerberosAuthException("socket timeout on connection");
+    IOException wrapped = verifyExceptionClass(e, KerberosAuthException.class);
+    assertInException(wrapped, "socket timeout on connection");
+    assertInException(wrapped, "localhost");
+    assertInException(wrapped, "DestHost:destPort ");
+    assertInException(wrapped, "LocalHost:localPort");
+    assertRemoteDetailsIncluded(wrapped);
+    assertInException(wrapped, "KerberosAuthException");
+  }
+
+  @Test
+  public void testWrapIOEWithNoStringConstructor() throws Throwable {
+    IOException e = new CharacterCodingException();
+    IOException wrapped = verifyExceptionClass(e, IOException.class);
+    assertInException(wrapped, "Failed on local exception");
+    assertNotInException(wrapped, NetUtils.HADOOP_WIKI);
+    assertInException(wrapped, "Host Details ");
+    assertRemoteDetailsIncluded(wrapped);
+  }
+
+  @Test
+  public void testWrapIOEWithPrivateStringConstructor() throws Throwable {
+    class TestIOException extends CharacterCodingException{
+      private  TestIOException(String cause){
+      }
+      TestIOException(){
+      }
+    }
+    IOException e = new TestIOException();
+    IOException wrapped = verifyExceptionClass(e, IOException.class);
+    assertInException(wrapped, "Failed on local exception");
+    assertNotInException(wrapped, NetUtils.HADOOP_WIKI);
+    assertInException(wrapped, "Host Details ");
+    assertRemoteDetailsIncluded(wrapped);
   }
 
   @Test
@@ -665,6 +705,14 @@ public class TestNetUtils {
     InetSocketAddress addr = NetUtils.createSocketAddr(defaultAddr);
     conf.setSocketAddr("myAddress", addr);
     assertEquals(defaultAddr.trim(), NetUtils.getHostPortString(addr));
+  }
+
+  @Test
+  public void testBindToLocalAddress() throws Exception {
+    assertNotNull(NetUtils
+        .bindToLocalAddress(NetUtils.getLocalInetAddress("127.0.0.1"), false));
+    assertNull(NetUtils
+        .bindToLocalAddress(NetUtils.getLocalInetAddress("127.0.0.1"), true));
   }
 
   private <T> void assertBetterArrayEquals(T[] expect, T[]got) {

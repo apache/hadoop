@@ -93,7 +93,6 @@ import org.fusesource.leveldbjni.JniDBFactory;
 import org.fusesource.leveldbjni.internal.NativeDB;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBException;
-import org.iq80.leveldb.Logger;
 import org.iq80.leveldb.Options;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -282,6 +281,7 @@ public class ShuffleHandler extends AuxiliaryService {
     }
   }
 
+  private final MetricsSystem ms;
   final ShuffleMetrics metrics;
 
   class ReduceMapFileCount implements ChannelFutureListener {
@@ -398,6 +398,7 @@ public class ShuffleHandler extends AuxiliaryService {
 
   ShuffleHandler(MetricsSystem ms) {
     super(MAPREDUCE_SHUFFLE_SERVICEID);
+    this.ms = ms;
     metrics = ms.register(new ShuffleMetrics());
   }
 
@@ -580,6 +581,7 @@ public class ShuffleHandler extends AuxiliaryService {
     if (stateDb != null) {
       stateDb.close();
     }
+    ms.unregisterSource(ShuffleMetrics.class.getSimpleName());
     super.serviceStop();
   }
 
@@ -628,7 +630,6 @@ public class ShuffleHandler extends AuxiliaryService {
   private void startStore(Path recoveryRoot) throws IOException {
     Options options = new Options();
     options.createIfMissing(false);
-    options.logger(new LevelDBLogger());
     Path dbPath = new Path(recoveryRoot, STATE_DB_NAME);
     LOG.info("Using state database at " + dbPath + " for recovery");
     File dbfile = new File(dbPath.toString());
@@ -774,16 +775,6 @@ public class ShuffleHandler extends AuxiliaryService {
     }
   }
 
-  private static class LevelDBLogger implements Logger {
-    private static final org.slf4j.Logger LOG =
-        LoggerFactory.getLogger(LevelDBLogger.class);
-
-    @Override
-    public void log(String message) {
-      LOG.info(message);
-    }
-  }
-
   static class TimeoutHandler extends IdleStateAwareChannelHandler {
 
     private boolean enabledTimeout;
@@ -922,6 +913,8 @@ public class ShuffleHandler extends AuxiliaryService {
     @Override
     public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent evt) 
         throws Exception {
+      super.channelOpen(ctx, evt);
+
       if ((maxShuffleConnections > 0) && (accepted.size() >= maxShuffleConnections)) {
         LOG.info(String.format("Current number of shuffle connections (%d) is " + 
             "greater than or equal to the max allowed shuffle connections (%d)", 
@@ -937,8 +930,6 @@ public class ShuffleHandler extends AuxiliaryService {
         return;
       }
       accepted.add(evt.getChannel());
-      super.channelOpen(ctx, evt);
-     
     }
 
     @Override

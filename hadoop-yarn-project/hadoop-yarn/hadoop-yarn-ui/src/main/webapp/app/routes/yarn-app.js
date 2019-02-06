@@ -37,6 +37,18 @@ export default AbstractRoute.extend(AppAttemptMixin, {
         return [];
       }, function () {
         return [];
+      }),
+
+      serviceInfo: new Ember.RSVP.Promise(resolve => {
+        if (service) {
+          this.store.queryRecord('yarn-service', {serviceName: service}).then(function(info) {
+            resolve(info);
+          }, function() {
+            resolve(null);
+          });
+        } else {
+          resolve(null);
+        }
       })
     });
   },

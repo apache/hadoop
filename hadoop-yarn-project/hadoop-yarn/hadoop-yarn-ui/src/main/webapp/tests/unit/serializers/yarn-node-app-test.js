@@ -48,7 +48,7 @@ test('normalizeArrayResponse test', function(assert) {
   };
   assert.expect(15);
   var response =
-      serializer.normalizeArrayResponse({}, modelClass, payload, null, null);
+      serializer.normalizeArrayResponse({}, modelClass, payload);
   assert.ok(response.data);
   assert.equal(response.data.length, 2);
   assert.equal(response.data[0].attributes.containers, undefined);
@@ -70,14 +70,11 @@ test('normalizeArrayResponse no apps test', function(assert) {
     modelName: "yarn-node-app"
   },
   payload = { apps: null };
-  assert.expect(5);
+  assert.expect(2);
   var response =
-      serializer.normalizeArrayResponse({}, modelClass, payload, null, null);
+      serializer.normalizeArrayResponse({}, modelClass, payload);
   assert.ok(response.data);
-  assert.equal(response.data.length, 1);
-  assert.equal(response.data[0].type, modelClass.modelName);
-  assert.equal(response.data[0].id, "dummy");
-  assert.equal(response.data[0].attributes.appId, undefined);
+  assert.equal(response.data.length, 0);
 });
 
 test('normalizeSingleResponse test', function(assert) {
@@ -90,7 +87,7 @@ test('normalizeSingleResponse test', function(assert) {
   };
   assert.expect(7);
   var response =
-      serializer.normalizeSingleResponse({}, modelClass, payload, null, null);
+      serializer.normalizeSingleResponse({}, modelClass, payload);
   assert.ok(response.data);
   assert.equal(payload.app.id, response.data.id);
   assert.equal(modelClass.modelName, response.data.type);

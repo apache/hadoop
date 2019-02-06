@@ -21,6 +21,8 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import javax.xml.bind.annotation.XmlElement;
@@ -37,7 +39,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 @ApiModel(description = "An instance of a running service container")
-@javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
 @XmlRootElement
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Container extends BaseResource {
@@ -53,6 +54,8 @@ public class Container extends BaseResource {
   private Resource resource = null;
   private Artifact artifact = null;
   private Boolean privilegedContainer = null;
+  private Map<String, List<Map<String, String>>> exposedPorts = null;
+  private List<LocalizationStatus> localizationStatuses = null;
 
   /**
    * Unique container id of a running service, e.g.
@@ -173,20 +176,20 @@ public class Container extends BaseResource {
   }
 
   /**
-   * Name of the component that this container instance belongs to.
+   * Name of the component instance that this container instance belongs to.
    **/
-  public Container componentName(String componentName) {
-    this.componentInstanceName = componentName;
+  public Container componentInstanceName(String componentInstanceName) {
+    this.componentInstanceName = componentInstanceName;
     return this;
   }
 
-  @ApiModelProperty(example = "null", value = "Name of the component that this container instance belongs to.")
-  @JsonProperty("component_name")
+  @ApiModelProperty(example = "null", value = "Name of the component instance that this container instance belongs to.")
+  @JsonProperty("component_instance_name")
   public String getComponentInstanceName() {
     return componentInstanceName;
   }
 
-  @XmlElement(name = "component_name")
+  @XmlElement(name = "component_instance_name")
   public void setComponentInstanceName(String componentInstanceName) {
     this.componentInstanceName = componentInstanceName;
   }
@@ -243,6 +246,46 @@ public class Container extends BaseResource {
 
   public void setPrivilegedContainer(Boolean privilegedContainer) {
     this.privilegedContainer = privilegedContainer;
+  }
+
+  @ApiModelProperty(example = "null",
+      value = "Ports exposed for this container.")
+  @JsonProperty("exposed_ports")
+  public Map<String, List<Map<String, String>>> getExposedPorts() {
+    return exposedPorts;
+  }
+
+  public void setExposedPorts(Map<String, List<Map<String, String>>> ports) {
+    this.exposedPorts = ports;
+  }
+
+  /**
+   * Localization statuses.
+   */
+  @ApiModelProperty(example = "null", value =
+      "Localization statuses of a container.")
+  @JsonProperty("localization_statuses")
+  public List<LocalizationStatus> getLocalizationStatuses() {
+    return localizationStatuses;
+  }
+
+  /**
+   * Sets the localization statuses.
+   * @param statuses localization statuses.
+   */
+  @XmlElement(name = "localization_statuses")
+  public void setLocalizationStatuses(List<LocalizationStatus> statuses) {
+    this.localizationStatuses = statuses;
+  }
+
+  /**
+   * Sets the localization statuses and returns the container.
+   * @param statuses
+   * @return
+   */
+  public Container localizationStatuses(List<LocalizationStatus> statuses) {
+    this.localizationStatuses = statuses;
+    return this;
   }
 
   @Override

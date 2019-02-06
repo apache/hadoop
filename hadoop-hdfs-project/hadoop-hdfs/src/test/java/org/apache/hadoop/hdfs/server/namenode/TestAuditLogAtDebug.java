@@ -19,9 +19,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -35,15 +34,17 @@ import org.junit.rules.Timeout;
 import java.net.Inet4Address;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
-import static org.mockito.Matchers.anyString;
+
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
  * Test that the HDFS Audit logger respects DFS_NAMENODE_AUDIT_LOG_DEBUG_CMDLIST. 
  */
 public class TestAuditLogAtDebug {
-  static final Log LOG = LogFactory.getLog(TestAuditLogAtDebug.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestAuditLogAtDebug.class);
 
   @Rule
   public Timeout timeout = new Timeout(300000);
@@ -122,8 +123,7 @@ public class TestAuditLogAtDebug {
   
   @Test
   public void testEmptyDebugCommands() {
-    DefaultAuditLogger logger = makeSpyLogger(
-        Level.INFO, Optional.<List<String>>absent());
+    DefaultAuditLogger logger = makeSpyLogger(Level.INFO, Optional.empty());
     logDummyCommandToAuditLog(logger, DUMMY_COMMAND_1);
     logDummyCommandToAuditLog(logger, DUMMY_COMMAND_2);
     verify(logger, times(2)).logAuditMessage(anyString());

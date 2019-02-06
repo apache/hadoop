@@ -21,7 +21,14 @@ import AbstractRoute from './abstract';
 
 export default AbstractRoute.extend({
   model() {
-    return this.store.findAll('ClusterInfo', {reload: true});
+    return Ember.RSVP.hash({
+      clusterInfo: this.store.findAll('ClusterInfo', {reload: true}).catch(function() {
+        return null;
+      }),
+      userInfo: this.store.findAll('cluster-user-info', {reload: true}).catch(function() {
+        return null;
+      })
+    });
   },
 
   actions: {
@@ -32,7 +39,9 @@ export default AbstractRoute.extend({
      * error handler page.
      */
     error: function (error) {
-      Ember.Logger.log(error.stack);
+      if (error && error.stack) {
+        Ember.Logger.log(error.stack);
+      }
 
       if (error && error.errors[0] && parseInt(error.errors[0].status) === 404) {
         this.intermediateTransitionTo('/notfound');
@@ -46,5 +55,6 @@ export default AbstractRoute.extend({
 
   unloadAll: function() {
     this.store.unloadAll('ClusterInfo');
+    this.store.unloadAll('cluster-user-info');
   },
 });

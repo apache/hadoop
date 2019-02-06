@@ -66,6 +66,9 @@ public abstract class OutputFormat<K, V> {
    * throwing an exception when it already exists, so that output is not
    * overwritten.</p>
    *
+   * Implementations which write to filesystems which support delegation
+   * tokens usually collect the tokens for the destination path(s)
+   * and attach them to the job context's JobConf.
    * @param context information about the job
    * @throws IOException when output should not be attempted
    */

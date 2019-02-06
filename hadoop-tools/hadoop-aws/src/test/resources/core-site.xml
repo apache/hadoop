@@ -150,6 +150,16 @@
     <value>simple</value>
   </property>
 
+  <!-- Reduce DDB capacity on auto-created tables, to keep bills down. -->
+  <property>
+    <name>fs.s3a.s3guard.ddb.table.capacity.read</name>
+    <value>10</value>
+  </property>
+  <property>
+    <name>fs.s3a.s3guard.ddb.table.capacity.write</name>
+    <value>10</value>
+  </property>
+
   <!--
   To run these tests.
 

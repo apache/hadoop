@@ -80,14 +80,17 @@ class FSDirSnapshotOp {
 
   /**
    * Create a snapshot
+   * @param fsd FS directory
+   * @param pc FS permission checker
    * @param snapshotRoot The directory path where the snapshot is taken
    * @param snapshotName The name of the snapshot
+   * @param logRetryCache whether to record RPC ids in editlog for retry cache
+   *                      rebuilding.
    */
   static String createSnapshot(
-      FSDirectory fsd, SnapshotManager snapshotManager, String snapshotRoot,
-      String snapshotName, boolean logRetryCache)
+      FSDirectory fsd, FSPermissionChecker pc, SnapshotManager snapshotManager,
+      String snapshotRoot, String snapshotName, boolean logRetryCache)
       throws IOException {
-    FSPermissionChecker pc = fsd.getPermissionChecker();
     final INodesInPath iip = fsd.resolvePath(pc, snapshotRoot, DirOp.WRITE);
     if (fsd.isPermissionEnabled()) {
       fsd.checkOwner(pc, iip);
@@ -115,10 +118,9 @@ class FSDirSnapshotOp {
     return snapshotPath;
   }
 
-  static void renameSnapshot(FSDirectory fsd, SnapshotManager snapshotManager,
-      String path, String snapshotOldName, String snapshotNewName,
-      boolean logRetryCache) throws IOException {
-    FSPermissionChecker pc = fsd.getPermissionChecker();
+  static void renameSnapshot(FSDirectory fsd, FSPermissionChecker pc,
+      SnapshotManager snapshotManager, String path, String snapshotOldName,
+      String snapshotNewName, boolean logRetryCache) throws IOException {
     final INodesInPath iip = fsd.resolvePath(pc, path, DirOp.WRITE);
     if (fsd.isPermissionEnabled()) {
       fsd.checkOwner(pc, iip);
@@ -136,8 +138,8 @@ class FSDirSnapshotOp {
   }
 
   static SnapshottableDirectoryStatus[] getSnapshottableDirListing(
-      FSDirectory fsd, SnapshotManager snapshotManager) throws IOException {
-    FSPermissionChecker pc = fsd.getPermissionChecker();
+      FSDirectory fsd, FSPermissionChecker pc, SnapshotManager snapshotManager)
+      throws IOException {
     fsd.readLock();
     try {
       final String user = pc.isSuperUser()? null : pc.getUser();
@@ -148,10 +150,9 @@ class FSDirSnapshotOp {
   }
 
   static SnapshotDiffReport getSnapshotDiffReport(FSDirectory fsd,
-      SnapshotManager snapshotManager, String path,
+      FSPermissionChecker pc, SnapshotManager snapshotManager, String path,
       String fromSnapshot, String toSnapshot) throws IOException {
     SnapshotDiffReport diffs;
-    final FSPermissionChecker pc = fsd.getPermissionChecker();
     fsd.readLock();
     try {
       INodesInPath iip = fsd.resolvePath(pc, path, DirOp.READ);
@@ -167,11 +168,10 @@ class FSDirSnapshotOp {
   }
 
   static SnapshotDiffReportListing getSnapshotDiffReportListing(FSDirectory fsd,
-      SnapshotManager snapshotManager, String path, String fromSnapshot,
-      String toSnapshot, byte[] startPath, int index,
+      FSPermissionChecker pc, SnapshotManager snapshotManager, String path,
+      String fromSnapshot, String toSnapshot, byte[] startPath, int index,
       int snapshotDiffReportLimit) throws IOException {
     SnapshotDiffReportListing diffs;
-    final FSPermissionChecker pc = fsd.getPermissionChecker();
     fsd.readLock();
     try {
       INodesInPath iip = fsd.resolvePath(pc, path, DirOp.READ);
@@ -226,15 +226,19 @@ class FSDirSnapshotOp {
 
   /**
    * Delete a snapshot of a snapshottable directory
+   * @param fsd The FS directory
+   * @param pc The permission checker
+   * @param snapshotManager The snapshot manager
    * @param snapshotRoot The snapshottable directory
    * @param snapshotName The name of the to-be-deleted snapshot
+   * @param logRetryCache whether to record RPC ids in editlog for retry cache
+   *                      rebuilding.
    * @throws IOException
    */
   static INode.BlocksMapUpdateInfo deleteSnapshot(
-      FSDirectory fsd, SnapshotManager snapshotManager, String snapshotRoot,
-      String snapshotName, boolean logRetryCache)
+      FSDirectory fsd, FSPermissionChecker pc, SnapshotManager snapshotManager,
+      String snapshotRoot, String snapshotName, boolean logRetryCache)
       throws IOException {
-    FSPermissionChecker pc = fsd.getPermissionChecker();
     final INodesInPath iip = fsd.resolvePath(pc, snapshotRoot, DirOp.WRITE);
     if (fsd.isPermissionEnabled()) {
       fsd.checkOwner(pc, iip);

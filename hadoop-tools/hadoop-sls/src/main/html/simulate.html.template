@@ -36,19 +36,19 @@
     </div>
     <div class="row">
       <div class="divborder span8" style="margin-left:50px" id="area1"></div>
-      <div class="divborder span8" id="area2"></div>
+      <div class="divborder span8" style="margin-left:50px" id="area2"></div>
     </div>
     <div class="row">
       <div class="divborder span8" style="margin-left:50px" id="area3"></div>
-      <div class="divborder span8" id="area4"></div>
+      <div class="divborder span8" style="margin-left:50px" id="area4"></div>
     </div>
     <div class="row">
       <div class="divborder span8" style="margin-left:50px" id="area5"></div>
-      <div class="divborder span8" id="area6"></div>
+      <div class="divborder span8" style="margin-left:50px" id="area6"></div>
     </div>
     <div class="row">
       <div class="divborder span8" style="margin-left:50px" id="area7"></div>
-      <div class="span8" id="area8"></div>
+      <div class="divborder span8" style="margin-left:50px" id="area8"></div>
     </div><br/><br/>
 
     <script>
@@ -82,7 +82,11 @@
                     ''scheduler.handle-NODE_UPDATE.timecost'',
                     ''scheduler.handle-APP_ADDED.timecost'',
                     ''scheduler.handle-APP_REMOVED.timecost'',
-                    ''scheduler.handle-CONTAINER_EXPIRED.timecost''];
+                    ''scheduler.handle-CONTAINER_EXPIRED.timecost'',
+                    ''scheduler.commit.success.timecost'',
+                    ''scheduler.commit.failure.timecost''];
+      legends[7] = [''scheduler.commit.success.throughput'',
+                    ''scheduler.commit.failure.throughput''];
 
       // title
       titles[0] = ''Cluster running applications & containers'';
@@ -91,7 +95,8 @@
       titles[3] = ''Cluster allocated & available vcores'';
       titles[4] = ''Queue allocated memory'';
       titles[5] = ''Queue allocated vcores'';
-      titles[6] = ''Scheduler allocate & handle operation timecost'';
+      titles[6] = ''Scheduler allocate & handle & commit operation timecost'';
+      titles[7] = ''Scheduler commit success/failure operation throughput'';
 
       // ylabels
       yLabels[0] = ''Number'';
@@ -101,12 +106,13 @@
       yLabels[4] = ''Memory (GB)'';
       yLabels[5] = ''Number'';
       yLabels[6] = ''Timecost (ms)'';
+      yLabels[7] = ''Number'';
 
       // is area?
-      isAreas = [0, 0, 0, 0, 1, 1, 0];
+      isAreas = [0, 0, 0, 0, 1, 1, 0, 0];
 
       // draw all charts
-      for (var i = 0; i < 7; i ++) '{'
+      for (var i = 0; i < 8; i ++) '{'
         drawEachChart(i);
       '}'
 
@@ -174,7 +180,7 @@
           data.push(point);
 
           // clear old
-          for (var i = 0; i < 7; i ++) '{'
+          for (var i = 0; i < 8; i ++) '{'
             svgs[i].selectAll(''g.tick'').remove();
             svgs[i].selectAll(''g'').remove();
             var color = d3.scale.category10();

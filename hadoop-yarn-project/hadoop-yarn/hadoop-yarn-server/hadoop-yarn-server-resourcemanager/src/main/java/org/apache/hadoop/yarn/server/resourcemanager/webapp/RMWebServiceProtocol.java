@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmi
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
@@ -53,6 +54,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
@@ -86,6 +88,15 @@ public interface RMWebServiceProtocol {
    * @return the cluster information
    */
   ClusterInfo getClusterInfo();
+
+
+  /**
+   * This method retrieves the cluster user information, and it is reachable by using
+   * {@link RMWSConsts#CLUSTER_USER_INFO}.
+   *
+   * @return the cluster user information
+   */
+  ClusterUserInfo getClusterUserInfo(HttpServletRequest hsr);
 
   /**
    * This method retrieves the cluster metrics information, and it is reachable
@@ -658,4 +669,22 @@ public interface RMWebServiceProtocol {
    * @return all the attempts info for a specific application
    */
   AppAttemptsInfo getAppAttempts(HttpServletRequest hsr, String appId);
+
+  /**
+   * This method verifies if an user has access to a specified queue.
+   *
+   * @return Response containing the status code.
+   *
+   * @param queue queue
+   * @param username user
+   * @param queueAclType acl type of queue, it could be
+   *                     SUBMIT_APPLICATIONS/ADMINISTER_QUEUE
+   * @param hsr request
+   *
+   * @throws AuthorizationException if the user is not authorized to invoke this
+   *                                method.
+   */
+  RMQueueAclInfo checkUserAccessToQueue(String queue, String username,
+      String queueAclType, HttpServletRequest hsr)
+      throws AuthorizationException;
 }

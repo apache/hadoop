@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.azure;
 
-import org.apache.commons.lang.Validate;
+import org.apache.commons.lang3.Validate;
 import org.apache.hadoop.fs.azure.security.Constants;
 import org.apache.hadoop.fs.azure.security.SpnegoToken;
 import org.apache.hadoop.fs.azure.security.WasbDelegationTokenIdentifier;

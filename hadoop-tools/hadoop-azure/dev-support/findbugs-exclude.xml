@@ -47,4 +47,14 @@
        <Bug pattern="WMI_WRONG_MAP_ITERATOR" />
        <Priority value="2" />
      </Match>
+
+    <!-- FileMetadata is used internally for storing metadata but also
+    subclasses FileStatus to reduce allocations when listing a large number
+    of files.  When it is returned to an external caller as a FileStatus, the
+    extra metadata is no longer useful and we want the equals and hashCode
+    methods of FileStatus to be used. -->
+    <Match>
+        <Class name="org.apache.hadoop.fs.azure.FileMetadata" />
+        <Bug pattern="EQ_DOESNT_OVERRIDE_EQUALS" />
+    </Match>
  </FindBugsFilter>

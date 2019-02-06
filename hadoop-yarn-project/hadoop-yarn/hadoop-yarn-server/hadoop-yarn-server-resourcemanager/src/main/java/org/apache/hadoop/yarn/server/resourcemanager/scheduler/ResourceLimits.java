@@ -38,6 +38,9 @@ public class ResourceLimits {
   // containers.
   private volatile Resource headroom;
 
+  // How much resource should be reserved for high-priority blocked queues
+  private Resource blockedHeadroom;
+
   private boolean allowPreempt = false;
 
   public ResourceLimits(Resource limit) {
@@ -80,5 +83,26 @@ public class ResourceLimits {
 
   public void setIsAllowPreemption(boolean allowPreempt) {
    this.allowPreempt = allowPreempt;
+  }
+
+  public void addBlockedHeadroom(Resource resource) {
+    if (blockedHeadroom == null) {
+      blockedHeadroom = Resource.newInstance(0, 0);
+    }
+    Resources.addTo(blockedHeadroom, resource);
+  }
+
+  public Resource getBlockedHeadroom() {
+    if (blockedHeadroom == null) {
+      return Resources.none();
+    }
+    return blockedHeadroom;
+  }
+
+  public Resource getNetLimit() {
+    if (blockedHeadroom != null) {
+      return Resources.subtract(limit, blockedHeadroom);
+    }
+    return limit;
   }
 }

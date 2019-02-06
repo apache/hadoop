@@ -76,5 +76,15 @@ public class MultipleIOException extends IOException {
     public IOException build() {
       return createIOException(exceptions);
     }
+
+    /**
+     * @return whether any exception was added.
+     */
+    public boolean isEmpty() {
+      if (exceptions == null) {
+        return true;
+      }
+      return exceptions.isEmpty();
+    }
   }
 }

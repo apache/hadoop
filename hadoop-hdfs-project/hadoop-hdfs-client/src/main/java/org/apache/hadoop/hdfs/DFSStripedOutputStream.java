@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -496,7 +497,10 @@ public class DFSStripedOutputStream extends DFSOutputStream
         // Set exception and close streamer as there is no block locations
         // found for the parity block.
         LOG.warn("Cannot allocate parity block(index={}, policy={}). " +
-            "Not enough datanodes? Exclude nodes={}", i,  ecPolicy.getName(),
+                "Exclude nodes={}. There may not be enough datanodes or " +
+                "racks. You can check if the cluster topology supports " +
+                "the enabled erasure coding policies by running the command " +
+                "'hdfs ec -verifyClusterSetup'.", i,  ecPolicy.getName(),
             excludedNodes);
         si.getLastException().set(
             new IOException("Failed to get parity block, index=" + i));
@@ -956,11 +960,22 @@ public class DFSStripedOutputStream extends DFSOutputStream
   @Override
   public void hflush() {
     // not supported yet
+    LOG.debug("DFSStripedOutputStream does not support hflush. "
+        + "Caller should check StreamCapabilities before calling.");
   }
 
   @Override
   public void hsync() {
     // not supported yet
+    LOG.debug("DFSStripedOutputStream does not support hsync. "
+        + "Caller should check StreamCapabilities before calling.");
+  }
+
+  @Override
+  public void hsync(EnumSet<SyncFlag> syncFlags) {
+    // not supported yet
+    LOG.debug("DFSStripedOutputStream does not support hsync {}. "
+        + "Caller should check StreamCapabilities before calling.", syncFlags);
   }
 
   @Override

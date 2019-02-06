@@ -58,11 +58,18 @@ public final class YarnWebServiceUtils {
 
     WebResource webResource = webServiceClient.resource(webAppAddress);
 
-    ClientResponse response = webResource.path("ws").path("v1")
-        .path("cluster").path("nodes")
-        .path(nodeId).accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
-    return response.getEntity(JSONObject.class);
+    ClientResponse response = null;
+    try {
+      response = webResource.path("ws").path("v1").path("cluster")
+          .path("nodes").path(nodeId).accept(MediaType.APPLICATION_JSON)
+          .get(ClientResponse.class);
+      return response.getEntity(JSONObject.class);
+    } finally {
+      if (response != null) {
+        response.close();
+      }
+      webServiceClient.destroy();
+    }
   }
 
   @SuppressWarnings("rawtypes")

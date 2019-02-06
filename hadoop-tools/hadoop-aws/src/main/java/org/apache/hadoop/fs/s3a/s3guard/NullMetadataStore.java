@@ -100,6 +100,10 @@ public class NullMetadataStore implements MetadataStore {
   }
 
   @Override
+  public void prune(long modTime, String keyPrefix) {
+  }
+
+  @Override
   public String toString() {
     return "NullMetadataStore";
   }

@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.util.Collection;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClientAdapter;
@@ -44,7 +44,8 @@ import org.junit.Test;
 
 /** Test transferring RBW between datanodes */
 public class TestTransferRbw {
-  private static final Log LOG = LogFactory.getLog(TestTransferRbw.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestTransferRbw.class);
   
   {
     GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);

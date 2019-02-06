@@ -70,11 +70,11 @@ import org.slf4j.LoggerFactory;
  * to renew the leases.
  * </li>
  * </ul>
- * </p>
+ * <p>
  */
 @InterfaceAudience.Private
 public class LeaseRenewer {
-  static final Logger LOG = LoggerFactory.getLogger(LeaseRenewer.class);
+  public static final Logger LOG = LoggerFactory.getLogger(LeaseRenewer.class);
 
   private static long leaseRenewerGraceDefault = 60*1000L;
   static final long LEASE_RENEWER_SLEEP_DEFAULT = 1000L;

@@ -736,6 +736,13 @@ Add new flag to allow supporting path style addressing for s3a
 
 ---
 
+* [HDFS-9412](https://issues.apache.org/jira/browse/HDFS-9412) | *Major* | **getBlocks occupies FSLock and takes too long to complete**
+
+Skip blocks with size below dfs.balancer.getBlocks.min-block-size (default 10MB) when a balancer asks for a list of blocks.
+
+
+---
+
 * [HDFS-3702](https://issues.apache.org/jira/browse/HDFS-3702) | *Minor* | **Add an option for NOT writing the blocks locally if there is a datanode on the same box as the client**
 
 This patch will attempt to allocate all replicas to remote DataNodes, by adding local DataNode to the excluded DataNodes. If no sufficient replicas can be obtained, it will fall back to default block placement policy, which writes one replica to local DataNode.

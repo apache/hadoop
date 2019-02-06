@@ -37,7 +37,7 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 
 import org.apache.commons.collections.map.LRUMap;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -413,6 +413,9 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       EnumSet<Field> fields) throws IOException {
     Long revStartTime = getStartTimeLong(entityId, entityType);
     if (revStartTime == null) {
+      if ( LOG.isDebugEnabled()) {
+        LOG.debug("Could not find start time for {} {} ", entityType, entityId);
+      }
       return null;
     }
     byte[] prefix = KeyBuilder.newInstance().add(entityType)
@@ -421,6 +424,9 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
 
     DB db = entitydb.getDBForStartTime(revStartTime);
     if (db == null) {
+      if ( LOG.isDebugEnabled()) {
+        LOG.debug("Could not find db for {} {} ", entityType, entityId);
+      }
       return null;
     }
     try (DBIterator iterator = db.iterator()) {

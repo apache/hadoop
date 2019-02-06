@@ -20,8 +20,8 @@ package org.apache.hadoop.cli;
 
 import static org.junit.Assert.assertTrue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.cli.util.CLICommand;
 import org.apache.hadoop.cli.util.CLICommandCacheAdmin;
 import org.apache.hadoop.cli.util.CLICommandTypes;
@@ -44,7 +44,8 @@ import org.xml.sax.SAXException;
 
 public class TestCacheAdminCLI extends CLITestHelper {
 
-  public static final Log LOG = LogFactory.getLog(TestCacheAdminCLI.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestCacheAdminCLI.class);
 
   protected MiniDFSCluster dfsCluster = null;
   protected FileSystem fs = null;

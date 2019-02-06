@@ -87,8 +87,10 @@ final class NativeAzureFileSystemHelper {
     if (errorCode != null
         && (errorCode.equals(StorageErrorCodeStrings.BLOB_NOT_FOUND)
             || errorCode.equals(StorageErrorCodeStrings.RESOURCE_NOT_FOUND)
+            || errorCode.equals(StorageErrorCodeStrings.CONTAINER_NOT_FOUND)
             || errorCode.equals(StorageErrorCode.BLOB_NOT_FOUND.toString())
-            || errorCode.equals(StorageErrorCode.RESOURCE_NOT_FOUND.toString()))) {
+            || errorCode.equals(StorageErrorCode.RESOURCE_NOT_FOUND.toString())
+            || errorCode.equals(StorageErrorCode.CONTAINER_NOT_FOUND.toString()))) {
 
       return true;
     }

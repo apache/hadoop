@@ -53,6 +53,7 @@ public class QueueProperties {
   private final Set<String> reservableQueues;
   private final Set<String> nonPreemptableQueues;
   private final Map<FSQueueType, Set<String>> configuredQueues;
+  private final Map<String, Resource> queueMaxContainerAllocation;
 
   QueueProperties(Builder builder) {
     this.reservableQueues = builder.reservableQueues;
@@ -70,6 +71,7 @@ public class QueueProperties {
     this.maxChildQueueResources = builder.maxChildQueueResources;
     this.reservationAcls = builder.reservationAcls;
     this.queueAcls = builder.queueAcls;
+    this.queueMaxContainerAllocation = builder.queueMaxContainerAllocation;
   }
 
   public Map<FSQueueType, Set<String>> getConfiguredQueues() {
@@ -133,7 +135,11 @@ public class QueueProperties {
     return nonPreemptableQueues;
   }
 
-  /**
+  public Map<String, Resource> getMaxContainerAllocation() {
+    return queueMaxContainerAllocation;
+  }
+
+    /**
    * Builder class for {@link QueueProperties}.
    * All methods are adding queue properties to the maps of this builder
    * keyed by the queue's name except some methods
@@ -149,6 +155,7 @@ public class QueueProperties {
         new HashMap<>();
     private Map<String, Integer> queueMaxApps = new HashMap<>();
     private Map<String, Float> queueMaxAMShares = new HashMap<>();
+    private Map<String, Resource> queueMaxContainerAllocation = new HashMap<>();
     private Map<String, Float> queueWeights = new HashMap<>();
     private Map<String, SchedulingPolicy> queuePolicies = new HashMap<>();
     private Map<String, Long> minSharePreemptionTimeouts = new HashMap<>();
@@ -253,6 +260,12 @@ public class QueueProperties {
       return this;
     }
 
+    public Builder queueMaxContainerAllocation(String queueName,
+        Resource value) {
+      queueMaxContainerAllocation.put(queueName, value);
+      return this;
+    }
+
     public void configuredQueues(FSQueueType queueType, String queueName) {
       this.configuredQueues.get(queueType).add(queueName);
     }
@@ -275,6 +288,5 @@ public class QueueProperties {
     public QueueProperties build() {
       return new QueueProperties(this);
     }
-
   }
 }

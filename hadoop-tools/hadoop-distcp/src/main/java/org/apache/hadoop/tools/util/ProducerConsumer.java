@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.tools.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * WorkReport{@literal <R>} to the outputQueue.
  */
 public class ProducerConsumer<T, R> {
-  private Log LOG = LogFactory.getLog(ProducerConsumer.class);
+  private Logger LOG = LoggerFactory.getLogger(ProducerConsumer.class);
   private LinkedBlockingQueue<WorkRequest<T>> inputQueue;
   private LinkedBlockingQueue<WorkReport<R>> outputQueue;
   private ExecutorService executor;

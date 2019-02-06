@@ -19,12 +19,40 @@
 import { moduleFor, test } from 'ember-qunit';
 
 moduleFor('adapter:yarn-app', 'Unit | Adapter | yarn app', {
-  // Specify the other units that are required for this test.
-  // needs: ['serializer:foo']
+  unit: true
 });
 
 // Replace this with your real tests.
-test('it exists', function(assert) {
-  var adapter = this.subject();
+test('Basic creation test', function(assert) {
+  var adapter = this.subject({
+    host: "localhost:8088",
+    namespace: "ws/v1/cluster"
+  });
   assert.ok(adapter);
+  assert.ok(adapter.urlForQuery);
+  assert.ok(adapter.urlForFindRecord);
+  assert.ok(adapter.host);
+  assert.ok(adapter.namespace);
+  assert.equal(adapter.namespace, "ws/v1/cluster");
+});
+
+test("urlForQuery test", function(assert) {
+	var adapter = this.subject({
+    host: "localhost:8088",
+    namespace: "ws/v1/cluster"
+  });
+  var host = adapter.host;
+  assert.equal(adapter.urlForQuery({state: "RUNNING"}),
+    host + "/ws/v1/cluster/apps/?state=RUNNING");
+});
+
+test("urlForFindRecord test", function(assert) {
+	var adapter = this.subject({
+    host: "localhost:8088",
+    namespace: "ws/v1/cluster"
+  });
+  var host = adapter.host;
+  var appId= "application_1111111111_1111";
+  assert.equal(adapter.urlForFindRecord(appId),
+    host + "/ws/v1/cluster/apps/" + appId);
 });

@@ -18,8 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import com.google.common.util.concurrent.Uninterruptibles;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -41,7 +41,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -62,7 +62,7 @@ import static org.junit.Assert.*;
  * and failback between two namenodes.
  */
 public class TestHAStateTransitions {
-  protected static final Log LOG = LogFactory.getLog(
+  protected static final Logger LOG = LoggerFactory.getLogger(
       TestStandbyIsHot.class);
   private static final Path TEST_DIR = new Path("/test");
   private static final Path TEST_FILE_PATH = new Path(TEST_DIR, "foo");
@@ -73,7 +73,7 @@ public class TestHAStateTransitions {
       RequestSource.REQUEST_BY_USER_FORCED);
   
   static {
-    GenericTestUtils.setLogLevel(EditLogTailer.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(EditLogTailer.LOG, Level.TRACE);
   }
 
   /**
@@ -420,7 +420,7 @@ public class TestHAStateTransitions {
       createEmptyInProgressEditLog(cluster, nn0, writeHeader);
       cluster.transitionToActive(1);
     } finally {
-      IOUtils.cleanup(LOG, fs);
+      IOUtils.cleanupWithLogger(LOG, fs);
       cluster.shutdown();
     }
   }

@@ -85,5 +85,26 @@ public class TestUserGroupMappingPlacementRule {
     // if overwritten not specified, it should be which user specified
     verifyQueueMapping(new QueueMapping(MappingType.USER, "user", "q1"),
         "user", "q2", "q2", false);
+
+    // if overwritten not specified, it should be which user specified
+    verifyQueueMapping(new QueueMapping(MappingType.GROUP, "usergroup",
+            "%user", "usergroup"),
+        "user", "default", "user", false);
+
+    // if overwritten not specified, it should be which user specified
+    verifyQueueMapping(new QueueMapping(MappingType.GROUP, "usergroup",
+            "%user", "usergroup"),
+        "user", "agroup", "user", true);
+
+    //If user specific queue is enabled for a specified group under a given
+    // parent queue
+    verifyQueueMapping(new QueueMapping(MappingType.GROUP, "agroup",
+            "%user", "parent1"),
+        "a", "a");
+
+    //If user specific queue is enabled for a specified group without parent
+    // queue
+    verifyQueueMapping(new QueueMapping(MappingType.GROUP, "agroup", "%user"),
+        "a", "a");
   }
 }

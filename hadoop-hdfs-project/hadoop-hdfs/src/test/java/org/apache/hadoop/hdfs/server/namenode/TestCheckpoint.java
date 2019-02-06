@@ -45,8 +45,8 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -85,11 +85,10 @@ import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -107,10 +106,10 @@ import com.google.common.primitives.Ints;
 public class TestCheckpoint {
 
   static {
-    GenericTestUtils.setLogLevel(FSImage.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(FSImage.LOG, Level.TRACE);
   }
 
-  static final Log LOG = LogFactory.getLog(TestCheckpoint.class); 
+  static final Logger LOG = LoggerFactory.getLogger(TestCheckpoint.class);
   static final String NN_METRICS = "NameNodeActivity";
   
   static final long seed = 0xDEADBEEFL;
@@ -621,14 +620,7 @@ public class TestCheckpoint {
   }
 
   private File filePathContaining(final String substring) {
-    return Mockito.argThat(
-        new ArgumentMatcher<File>() {
-          @Override
-          public boolean matches(Object argument) {
-            String path = ((File) argument).getAbsolutePath();
-            return path.contains(substring);
-          }
-        });
+    return Mockito.argThat(arg -> arg.getAbsolutePath().contains(substring));
   }
 
   private void checkTempImages(NNStorage storage) throws IOException {
@@ -871,7 +863,7 @@ public class TestCheckpoint {
       }
       
       LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
-          LogFactory.getLog(Storage.class));
+          LoggerFactory.getLogger(Storage.class));
       try {
         // try to lock the storage that's already locked
         savedSd.lock();
@@ -1993,7 +1985,7 @@ public class TestCheckpoint {
       NNStorage dstImage = Mockito.mock(NNStorage.class);
       Mockito.doReturn(Lists.newArrayList(new File("/wont-be-written")))
         .when(dstImage).getFiles(
-            Mockito.<NameNodeDirType>anyObject(), Mockito.anyString());
+            Mockito.<NameNodeDirType>any(), Mockito.anyString());
 
       File mockImageFile = File.createTempFile("image", "");
       FileOutputStream imageFile = new FileOutputStream(mockImageFile);

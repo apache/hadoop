@@ -269,4 +269,19 @@ public class RegisterNodeManagerResponsePBImpl
     maybeInitBuilder();
     this.builder.setAreNodeLabelsAcceptedByRM(areNodeLabelsAcceptedByRM);
   }
+
+  @Override
+  public boolean getAreNodeAttributesAcceptedByRM() {
+    RegisterNodeManagerResponseProtoOrBuilder p =
+        this.viaProto ? this.proto : this.builder;
+    return p.getAreNodeAttributesAcceptedByRM();
+  }
+
+  @Override
+  public void setAreNodeAttributesAcceptedByRM(
+      boolean areNodeAttributesAcceptedByRM) {
+    maybeInitBuilder();
+    this.builder
+        .setAreNodeAttributesAcceptedByRM(areNodeAttributesAcceptedByRM);
+  }
 }  

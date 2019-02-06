@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
@@ -30,6 +34,8 @@ import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -98,5 +104,49 @@ public class TestMutableCSConfigurationProvider {
     confProvider.confirmPendingMutation(false);
     assertNull(confProvider.loadConfiguration(conf).get(
         "yarn.scheduler.capacity.root.a.badKey"));
+  }
+
+  @Test
+  public void testHDFSBackedProvider() throws Exception {
+    File testSchedulerConfigurationDir = new File(
+        TestMutableCSConfigurationProvider.class.getResource("").getPath()
+            + TestMutableCSConfigurationProvider.class.getSimpleName());
+    FileUtils.deleteDirectory(testSchedulerConfigurationDir);
+    testSchedulerConfigurationDir.mkdirs();
+
+    Configuration conf = new Configuration(false);
+    conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+        YarnConfiguration.FS_CONFIGURATION_STORE);
+    conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_FS_PATH,
+        testSchedulerConfigurationDir.getAbsolutePath());
+    writeConf(conf, testSchedulerConfigurationDir.getAbsolutePath());
+
+    confProvider.init(conf);
+    assertNull(confProvider.loadConfiguration(conf)
+        .get("yarn.scheduler.capacity.root.a.goodKey"));
+
+    confProvider.logAndApplyMutation(TEST_USER, goodUpdate);
+    confProvider.confirmPendingMutation(true);
+    assertEquals("goodVal", confProvider.loadConfiguration(conf)
+        .get("yarn.scheduler.capacity.root.a.goodKey"));
+
+    assertNull(confProvider.loadConfiguration(conf).get(
+        "yarn.scheduler.capacity.root.a.badKey"));
+    confProvider.logAndApplyMutation(TEST_USER, badUpdate);
+    confProvider.confirmPendingMutation(false);
+    assertNull(confProvider.loadConfiguration(conf).get(
+        "yarn.scheduler.capacity.root.a.badKey"));
+
+  }
+
+  private void writeConf(Configuration conf, String storePath)
+      throws IOException {
+    FileSystem fileSystem = FileSystem.get(new Configuration(conf));
+    String schedulerConfigurationFile = YarnConfiguration.CS_CONFIGURATION_FILE
+        + "." + System.currentTimeMillis();
+    try (FSDataOutputStream outputStream = fileSystem.create(
+        new Path(storePath, schedulerConfigurationFile))) {
+      conf.writeXml(outputStream);
+    }
   }
 }

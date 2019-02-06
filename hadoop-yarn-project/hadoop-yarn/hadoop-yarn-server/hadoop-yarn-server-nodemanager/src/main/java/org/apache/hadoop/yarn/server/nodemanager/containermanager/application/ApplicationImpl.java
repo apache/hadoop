@@ -25,6 +25,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +68,6 @@ import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * The state machine for the representation of an Application
@@ -211,6 +212,9 @@ public class ApplicationImpl implements Application {
   private static final ContainerDoneTransition CONTAINER_DONE_TRANSITION =
       new ContainerDoneTransition();
 
+  private static final InitContainerTransition INIT_CONTAINER_TRANSITION =
+      new InitContainerTransition();
+
   private static StateMachineFactory<ApplicationImpl, ApplicationState,
           ApplicationEventType, ApplicationEvent> stateMachineFactory =
       new StateMachineFactory<ApplicationImpl, ApplicationState,
@@ -221,12 +225,12 @@ public class ApplicationImpl implements Application {
                ApplicationEventType.INIT_APPLICATION, new AppInitTransition())
            .addTransition(ApplicationState.NEW, ApplicationState.NEW,
                ApplicationEventType.INIT_CONTAINER,
-               new InitContainerTransition())
+               INIT_CONTAINER_TRANSITION)
 
            // Transitions from INITING state
            .addTransition(ApplicationState.INITING, ApplicationState.INITING,
                ApplicationEventType.INIT_CONTAINER,
-               new InitContainerTransition())
+               INIT_CONTAINER_TRANSITION)
            .addTransition(ApplicationState.INITING,
                EnumSet.of(ApplicationState.FINISHING_CONTAINERS_WAIT,
                    ApplicationState.APPLICATION_RESOURCES_CLEANINGUP),
@@ -249,7 +253,7 @@ public class ApplicationImpl implements Application {
            .addTransition(ApplicationState.RUNNING,
                ApplicationState.RUNNING,
                ApplicationEventType.INIT_CONTAINER,
-               new InitContainerTransition())
+               INIT_CONTAINER_TRANSITION)
            .addTransition(ApplicationState.RUNNING,
                ApplicationState.RUNNING,
                ApplicationEventType.APPLICATION_CONTAINER_FINISHED,
@@ -270,6 +274,10 @@ public class ApplicationImpl implements Application {
                new AppFinishTransition())
           .addTransition(ApplicationState.FINISHING_CONTAINERS_WAIT,
               ApplicationState.FINISHING_CONTAINERS_WAIT,
+              ApplicationEventType.INIT_CONTAINER,
+              INIT_CONTAINER_TRANSITION)
+          .addTransition(ApplicationState.FINISHING_CONTAINERS_WAIT,
+              ApplicationState.FINISHING_CONTAINERS_WAIT,
               EnumSet.of(
                   ApplicationEventType.APPLICATION_LOG_HANDLING_INITED,
                   ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED,
@@ -286,6 +294,10 @@ public class ApplicationImpl implements Application {
                new AppCompletelyDoneTransition())
           .addTransition(ApplicationState.APPLICATION_RESOURCES_CLEANINGUP,
               ApplicationState.APPLICATION_RESOURCES_CLEANINGUP,
+              ApplicationEventType.INIT_CONTAINER,
+              INIT_CONTAINER_TRANSITION)
+          .addTransition(ApplicationState.APPLICATION_RESOURCES_CLEANINGUP,
+              ApplicationState.APPLICATION_RESOURCES_CLEANINGUP,
               EnumSet.of(
                   ApplicationEventType.APPLICATION_LOG_HANDLING_INITED,
                   ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED,
@@ -300,9 +312,14 @@ public class ApplicationImpl implements Application {
                    ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED,
                    ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED),
                new AppLogsAggregatedTransition())
+          .addTransition(ApplicationState.FINISHED,
+              ApplicationState.FINISHED,
+              ApplicationEventType.INIT_CONTAINER,
+              INIT_CONTAINER_TRANSITION)
            .addTransition(ApplicationState.FINISHED, ApplicationState.FINISHED,
                EnumSet.of(
                   ApplicationEventType.APPLICATION_LOG_HANDLING_INITED,
+                  ApplicationEventType.APPLICATION_CONTAINER_FINISHED,
                   ApplicationEventType.FINISH_APPLICATION))
            // create the topology tables
            .installTopology();
@@ -445,8 +462,9 @@ public class ApplicationImpl implements Application {
       app.containers.put(container.getContainerId(), container);
       LOG.info("Adding " + container.getContainerId()
           + " to application " + app.toString());
-      
-      switch (app.getApplicationState()) {
+
+      ApplicationState appState = app.getApplicationState();
+      switch (appState) {
       case RUNNING:
         app.dispatcher.getEventHandler().handle(new ContainerInitEvent(
             container.getContainerId()));
@@ -456,8 +474,13 @@ public class ApplicationImpl implements Application {
         // these get queued up and sent out in AppInitDoneTransition
         break;
       default:
-        assert false : "Invalid state for InitContainerTransition: " +
-            app.getApplicationState();
+        LOG.warn("Killing {} because {} is in state {}",
+            container.getContainerId(), app, appState);
+        app.dispatcher.getEventHandler().handle(new ContainerKillEvent(
+            container.getContainerId(),
+            ContainerExitStatus.KILLED_AFTER_APP_COMPLETION,
+            "Application no longer running.\n"));
+        break;
       }
     }
   }
@@ -665,5 +688,9 @@ public class ApplicationImpl implements Application {
   @Override
   public long getFlowRunId() {
     return flowContext == null ? 0L : flowContext.getFlowRunId();
+  }
+
+  public void setFlowContext(FlowContext fc) {
+    this.flowContext = fc;
   }
 }

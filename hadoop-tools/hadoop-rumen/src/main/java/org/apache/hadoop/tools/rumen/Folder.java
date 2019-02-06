@@ -30,8 +30,8 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -52,7 +52,7 @@ public class Folder extends Configured implements Tool {
   private int skewBufferLength = 0;
   private long startsAfter = -1;
 
-  static final private Log LOG = LogFactory.getLog(Folder.class);
+  static final private Logger LOG = LoggerFactory.getLogger(Folder.class);
 
   private DeskewedJobTraceReader reader = null;
   private Outputter<LoggedJob> outGen = null;

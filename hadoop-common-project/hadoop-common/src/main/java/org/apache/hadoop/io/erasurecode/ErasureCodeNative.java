@@ -46,7 +46,7 @@ public final class ErasureCodeNative {
         loadLibrary();
       } catch (Throwable t) {
         problem = "Loading ISA-L failed: " + t.getMessage();
-        LOG.error("Loading ISA-L failed", t);
+        LOG.warn(problem);
       }
       LOADING_FAILURE_REASON = problem;
     }

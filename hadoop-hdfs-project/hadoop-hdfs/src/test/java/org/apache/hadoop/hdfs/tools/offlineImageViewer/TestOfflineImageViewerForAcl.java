@@ -37,8 +37,8 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -79,8 +79,8 @@ import com.google.common.collect.Maps;
  */
 public class TestOfflineImageViewerForAcl {
 
-  private static final Log LOG =
-      LogFactory.getLog(TestOfflineImageViewerForAcl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestOfflineImageViewerForAcl.class);
 
   private static File originalFsimage = null;
 

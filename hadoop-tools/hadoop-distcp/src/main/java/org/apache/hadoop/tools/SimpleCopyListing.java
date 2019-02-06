@@ -20,8 +20,8 @@ package org.apache.hadoop.tools;
 
 import com.google.common.collect.Lists;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
@@ -60,7 +60,7 @@ import static org.apache.hadoop.tools.DistCpConstants
  * Note: The SimpleCopyListing doesn't handle wild-cards in the input-paths.
  */
 public class SimpleCopyListing extends CopyListing {
-  private static final Log LOG = LogFactory.getLog(SimpleCopyListing.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SimpleCopyListing.class);
 
   public static final int DEFAULT_FILE_STATUS_SIZE = 1000;
   public static final boolean DEFAULT_RANDOMIZE_FILE_LISTING = true;
@@ -309,7 +309,7 @@ public class SimpleCopyListing extends CopyListing {
       fileListWriter.close();
       fileListWriter = null;
     } finally {
-      IOUtils.cleanup(LOG, fileListWriter);
+      IOUtils.cleanupWithLogger(LOG, fileListWriter);
     }
   }
 
@@ -402,7 +402,7 @@ public class SimpleCopyListing extends CopyListing {
       LOG.info("Build file listing completed.");
       fileListWriter = null;
     } finally {
-      IOUtils.cleanup(LOG, fileListWriter);
+      IOUtils.cleanupWithLogger(LOG, fileListWriter);
     }
   }
 

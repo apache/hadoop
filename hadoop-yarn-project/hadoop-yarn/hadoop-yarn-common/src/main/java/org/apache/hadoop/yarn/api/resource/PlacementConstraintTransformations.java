@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.api.resource;
 import java.util.ListIterator;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.And;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.CardinalityConstraint;
@@ -162,7 +163,8 @@ public class PlacementConstraintTransformations {
     public AbstractConstraint visit(CardinalityConstraint constraint) {
       return new SingleConstraint(constraint.getScope(),
           constraint.getMinCardinality(), constraint.getMaxCardinality(),
-          new TargetExpression(TargetExpression.TargetType.ALLOCATION_TAG, null,
+          new TargetExpression(TargetExpression.TargetType.ALLOCATION_TAG,
+              AllocationTagNamespaceType.SELF.toString(),
               constraint.getAllocationTags()));
     }
   }

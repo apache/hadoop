@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.ipc.metrics;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -50,7 +52,9 @@ public class RpcMetrics {
     String port = String.valueOf(server.getListenerAddress().getPort());
     name = "RpcActivityForPort" + port;
     this.server = server;
-    registry = new MetricsRegistry("rpc").tag("port", "RPC port", port);
+    registry = new MetricsRegistry("rpc")
+        .tag("port", "RPC port", port)
+        .tag("serverName", "Name of the RPC server", server.getServerName());
     int[] intervals = conf.getInts(
         CommonConfigurationKeys.RPC_METRICS_PERCENTILES_INTERVALS_KEY);
     rpcQuantileEnable = (intervals.length > 0) && conf.getBoolean(
@@ -291,5 +295,10 @@ public class RpcMetrics {
 
   public double getDeferredRpcProcessingStdDev() {
     return deferredRpcProcessingTime.lastStat().stddev();
+  }
+
+  @VisibleForTesting
+  public MetricsTag getTag(String tagName) {
+    return registry.getTag(tagName);
   }
 }

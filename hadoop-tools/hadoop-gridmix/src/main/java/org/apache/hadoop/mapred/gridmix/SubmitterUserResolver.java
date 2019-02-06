@@ -21,14 +21,14 @@ import java.io.IOException;
 import java.net.URI;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Resolves all UGIs to the submitting user.
  */
 public class SubmitterUserResolver implements UserResolver {
-  public static final Log LOG = LogFactory.getLog(SubmitterUserResolver.class);
+  public static final Logger LOG = LoggerFactory.getLogger(SubmitterUserResolver.class);
   
   private UserGroupInformation ugi = null;
 

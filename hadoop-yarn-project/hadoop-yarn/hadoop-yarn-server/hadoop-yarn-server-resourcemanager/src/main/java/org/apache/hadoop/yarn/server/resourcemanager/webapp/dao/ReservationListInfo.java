@@ -50,4 +50,8 @@ public class ReservationListInfo {
               includeResourceAllocations));
     }
   }
+
+  public List<ReservationInfo> getReservations() {
+    return reservations;
+  }
 }

@@ -52,18 +52,19 @@ public interface HasEnhancedByteBufferAccess {
    * @return
    *            We will always return an empty buffer if maxLength was 0,
    *            whether or not we are at EOF.
-   *            If maxLength > 0, we will return null if the stream has
-   *            reached EOF.
+   *            If maxLength &gt; 0, we will return null if the stream
+   *            has reached EOF.
    *            Otherwise, we will return a ByteBuffer containing at least one 
    *            byte.  You must free this ByteBuffer when you are done with it 
    *            by calling releaseBuffer on it.  The buffer will continue to be
    *            readable until it is released in this manner.  However, the
    *            input stream's close method may warn about unclosed buffers.
-   * @throws
-   *            IOException: if there was an error reading.
-   *            UnsupportedOperationException: if factory was null, and we
-   *            needed an external byte buffer.  UnsupportedOperationException
-   *            will never be thrown unless the factory argument is null.
+   * @throws    IOException if there was an error reading.
+   * @throws    UnsupportedOperationException  if factory was null,
+   *             and we needed an external byte buffer.
+   * @throws    UnsupportedOperationException  will never be thrown
+   *             unless the factory argument is null.
+   *
    */
   public ByteBuffer read(ByteBufferPool factory, int maxLength,
       EnumSet<ReadOption> opts)

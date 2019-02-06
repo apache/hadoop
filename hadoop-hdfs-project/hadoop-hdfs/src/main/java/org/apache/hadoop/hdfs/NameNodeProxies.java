@@ -25,16 +25,19 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocolPB.AliasMapProtocolPB;
+import org.apache.hadoop.hdfs.protocolPB.InMemoryAliasMapProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.JournalProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.JournalProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
+import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMapProtocol;
 import org.apache.hadoop.hdfs.server.namenode.ha.AbstractNNFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.namenode.ha.NameNodeHAProxyFactory;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
@@ -70,7 +73,8 @@ import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
 @InterfaceAudience.Private
 public class NameNodeProxies {
   
-  private static final Log LOG = LogFactory.getLog(NameNodeProxies.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NameNodeProxies.class);
 
   /**
    * Creates the namenode proxy with the passed protocol. This will handle
@@ -184,6 +188,8 @@ public class NameNodeProxies {
           conf, ugi);
     } else if (xface == RefreshCallQueueProtocol.class) {
       proxy = (T) createNNProxyWithRefreshCallQueueProtocol(nnAddr, conf, ugi);
+    } else if (xface == InMemoryAliasMapProtocol.class) {
+      proxy = (T) createNNProxyWithInMemoryAliasMapProtocol(nnAddr, conf, ugi);
     } else {
       String message = "Unsupported protocol found when creating the proxy " +
           "connection to NameNode: " +
@@ -194,7 +200,15 @@ public class NameNodeProxies {
 
     return new ProxyAndInfo<T>(proxy, dtService, nnAddr);
   }
-  
+
+  private static InMemoryAliasMapProtocol createNNProxyWithInMemoryAliasMapProtocol(
+      InetSocketAddress address, Configuration conf, UserGroupInformation ugi)
+      throws IOException {
+    AliasMapProtocolPB proxy = (AliasMapProtocolPB) createNameNodeProxy(
+        address, conf, ugi, AliasMapProtocolPB.class, 30000);
+    return new InMemoryAliasMapProtocolClientSideTranslatorPB(proxy);
+  }
+
   private static JournalProtocol createNNProxyWithJournalProtocol(
       InetSocketAddress address, Configuration conf, UserGroupInformation ugi)
       throws IOException {

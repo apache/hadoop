@@ -25,21 +25,19 @@ import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtilClient;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockUnderConstructionFeature;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.DstReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
@@ -58,7 +56,7 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
-  public static final Log LOG = LogFactory.getLog(INode.class);
+  public static final Logger LOG = LoggerFactory.getLogger(INode.class);
 
   /** parent is either an {@link INodeDirectory} or an {@link INodeReference}.*/
   private INode parent = null;
@@ -471,21 +469,10 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
 
   /**
    * Check and add namespace/storagespace/storagetype consumed to itself and the ancestors.
-   * @throws QuotaExceededException if quote is violated.
    */
-  public void addSpaceConsumed(QuotaCounts counts, boolean verify)
-    throws QuotaExceededException {
-    addSpaceConsumed2Parent(counts, verify);
-  }
-
-  /**
-   * Check and add namespace/storagespace/storagetype consumed to itself and the ancestors.
-   * @throws QuotaExceededException if quote is violated.
-   */
-  void addSpaceConsumed2Parent(QuotaCounts counts, boolean verify)
-    throws QuotaExceededException {
+  public void addSpaceConsumed(QuotaCounts counts) {
     if (parent != null) {
-      parent.addSpaceConsumed(counts, verify);
+      parent.addSpaceConsumed(counts);
     }
   }
 
@@ -536,8 +523,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * 2. For a {@link WithName} node, since the node must be in a snapshot, we 
    * only count the quota usage for those nodes that still existed at the 
    * creation time of the snapshot associated with the {@link WithName} node.
-   * We do not count in the size of the diff list.  
-   * <pre>
+   * We do not count in the size of the diff list.
+   * </pre>
    *
    * @param bsps Block storage policy suite to calculate intended storage type usage
    * @param blockStoragePolicyId block storage policy id of the current INode
@@ -1066,12 +1053,11 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
       if(uc == null) {
         return;
       }
-      Block truncateBlock = uc.getTruncateBlock();
+      BlockInfo truncateBlock = uc.getTruncateBlock();
       if(truncateBlock == null || truncateBlock.equals(toDelete)) {
         return;
       }
-      assert truncateBlock instanceof BlockInfo : "should be BlockInfo";
-      addDeleteBlock((BlockInfo) truncateBlock);
+      addDeleteBlock(truncateBlock);
     }
 
     public void addUpdateReplicationFactor(BlockInfo block, short targetRepl) {

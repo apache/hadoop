@@ -13,4 +13,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+org.apache.hadoop.fs.azurebfs.security.AbfsTokenRenewer
 org.apache.hadoop.fs.azure.security.WasbTokenRenewer

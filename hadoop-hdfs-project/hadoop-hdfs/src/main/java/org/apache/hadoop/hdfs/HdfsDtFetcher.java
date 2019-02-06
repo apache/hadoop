@@ -21,8 +21,8 @@ package org.apache.hadoop.hdfs;
 import java.io.IOException;
 import java.net.URI;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,7 +40,8 @@ import org.apache.hadoop.security.token.Token;
  *  compilation units.  Resolution of fetcher impl will be done at runtime.
  */
 public class HdfsDtFetcher implements DtFetcher {
-  private static final Log LOG = LogFactory.getLog(HdfsDtFetcher.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(HdfsDtFetcher.class);
 
   private static final String SERVICE_NAME = HdfsConstants.HDFS_URI_SCHEME;
 

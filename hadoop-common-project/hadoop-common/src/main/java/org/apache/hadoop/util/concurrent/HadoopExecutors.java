@@ -27,7 +27,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-
+import org.slf4j.Logger;
 
 /** Factory methods for ExecutorService, ScheduledExecutorService instances.
  * These executor service instances provide additional functionality (e.g
@@ -89,6 +89,38 @@ public final class HadoopExecutors {
   public static ScheduledExecutorService newSingleThreadScheduledExecutor(
       ThreadFactory threadFactory) {
     return Executors.newSingleThreadScheduledExecutor(threadFactory);
+  }
+
+  /**
+   * Helper routine to shutdown a executorService.
+   *
+   * @param executorService - executorService
+   * @param logger          - Logger
+   * @param timeout         - Timeout
+   * @param unit            - TimeUnits, generally seconds.
+   */
+  public static void shutdown(ExecutorService executorService, Logger logger,
+      long timeout, TimeUnit unit) {
+    try {
+      if (executorService != null) {
+        executorService.shutdown();
+        try {
+          if (!executorService.awaitTermination(timeout, unit)) {
+            executorService.shutdownNow();
+          }
+
+          if (!executorService.awaitTermination(timeout, unit)) {
+            logger.error("Unable to shutdown properly.");
+          }
+        } catch (InterruptedException e) {
+          logger.error("Error attempting to shutdown.", e);
+          executorService.shutdownNow();
+        }
+      }
+    } catch (Exception e) {
+      logger.error("Error during shutdown: ", e);
+      throw e;
+    }
   }
 
   //disable instantiation

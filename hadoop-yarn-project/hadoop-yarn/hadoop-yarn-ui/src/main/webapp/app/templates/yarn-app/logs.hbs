@@ -28,7 +28,7 @@
           {{model.app.logAggregationStatus}}
         </span>
         {{#if _isLoadingTopPanel}}
-          <div class="text-center" style="z-index: 100; position: absolute; left: 46%;">
+          <div class="text-center" style="z-index: 100; position: absolute; left: 46%; top: 45px;">
             <img src="assets/images/spinner.gif" alt="Loading...">
           </div>
         {{/if}}
@@ -36,22 +36,26 @@
           <div class="row">
             <div class="col-md-6">
               <label>Choose attempt to fetch containers</label>
-              <select class="js-fetch-attempt-containers" onchange={{action "showContainersForAttemptId" value="target.value"}} style="max-width:350px;">
-                <option value="" selected={{eq selectedAttemptId ''}}>None</option>
-                {{#each attemptList as |attempt|}}
-                  <option value="{{attempt.id}}" selected={{eq selectedAttemptId attempt.id}}>{{attempt.id}}</option>
-                {{/each}}
-              </select>
+              <div>
+                <select class="js-fetch-attempt-containers" onchange={{action "showContainersForAttemptId" value="target.value"}} style="max-width:350px;">
+                  <option value="" selected={{eq selectedAttemptId ''}}>None</option>
+                  {{#each attemptList as |attempt|}}
+                    <option value="{{attempt.id}}" selected={{eq selectedAttemptId attempt.id}}>{{attempt.id}}</option>
+                  {{/each}}
+                </select>
+              </div>
             </div>
             {{#if attemptContainerList}}
               <div class="col-md-6">
                 <label>Choose container to fetch logs</label>
-                <select class="js-fetch-logs-containers" onchange={{action "showLogFilesForContainerId" value="target.value"}} style="max-width:350px">
-                  <option value="" selected={{eq selectedContainerId ''}}>None</option>
-                  {{#each attemptContainerList as |container|}}
-                    <option value="{{container.id}}" selected={{eq selectedContainerId container.id}}>{{container.id}}</option>
-                  {{/each}}
-                </select>
+                <div>
+                  <select class="js-fetch-logs-containers" onchange={{action "showLogFilesForContainerId" value="target.value"}} style="max-width:350px">
+                    <option value="" selected={{eq selectedContainerId ''}}>None</option>
+                    {{#each attemptContainerList as |container|}}
+                      <option value="{{container.id}}" selected={{eq selectedContainerId container.id}}>{{container.id}}</option>
+                    {{/each}}
+                  </select>
+                </div>
               </div>
             {{else}}
               {{#if (and selectedAttemptId (not _isLoadingTopPanel))}}
@@ -88,12 +92,14 @@
             <div class="row">
               <div class="col-md-6" style="margin-bottom:20px;">
                 <label>Choose log for {{selectedContainerId}}</label>
-                <select class="js-fetch-log-for-container" onchange={{action "showContentForLogFile" value="target.value"}} style="max-width:350px">
-                  <option value="" selected={{eq selectedLogFileName ''}}>None</option>
-                  {{#each containerLogFiles as |file|}}
-                    <option value="{{file.fileName}}" selected={{eq selectedLogFileName file.fileName}}>{{file.fileName}} - {{file.fileSize}} bytes</option>
-                  {{/each}}
-                </select>
+                <div>
+                  <select class="js-fetch-log-for-container" onchange={{action "showContentForLogFile" value="target.value"}} style="max-width:350px">
+                    <option value="" selected={{eq selectedLogFileName ''}}>None</option>
+                    {{#each containerLogFiles as |file|}}
+                      <option value="{{file.fileName}}" selected={{eq selectedLogFileName file.fileName}}>{{file.fileName}} - {{file.fileSize}} bytes</option>
+                    {{/each}}
+                  </select>
+                </div>
               </div>
               {{#if selectedLogFileName}}
                 <div class="col-md-6">
@@ -125,7 +131,10 @@
           {{else}}
             {{#unless _isLoadingBottomPanel}}
               <div class="col-md-12" style="margin-top:20px;">
-                <h4 class="text-center">No log data available!</h4>
+                <h4 class="text-center">Logs are not available!</h4>
+                {{#if isLogAggregationNotSucceeded}}
+                  <h4 class="text-center">Log aggregation may not be complete, check back later!</h4>
+                {{/if}}
               </div>
             {{/unless}}
           {{/if}}

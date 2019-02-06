@@ -254,13 +254,18 @@ public class TestAggregatedLogFormat {
     // Since we could not open the fileInputStream for stderr, this file is not
     // aggregated.
     String s = writer.toString();
-    int expectedLength =
-        "LogType:stdout".length()
-            + (logUploadedTime ? ("\nLog Upload Time:" + Times.format(System
-              .currentTimeMillis())).length() : 0)
-            + ("\nLogLength:" + numChars).length()
-            + "\nLog Contents:\n".length() + numChars + "\n".length()
-            + "\nEnd of LogType:stdout\n".length();
+
+    int expectedLength = "LogType:stdout".length()
+        + (logUploadedTime
+            ? (System.lineSeparator() + "Log Upload Time:"
+                + Times.format(System.currentTimeMillis())).length()
+            : 0)
+        + (System.lineSeparator() + "LogLength:" + numChars).length()
+        + (System.lineSeparator() + "Log Contents:" + System.lineSeparator())
+            .length()
+        + numChars + ("\n").length() + ("End of LogType:stdout"
+            + System.lineSeparator() + System.lineSeparator()).length();
+
     Assert.assertTrue("LogType not matched", s.contains("LogType:stdout"));
     Assert.assertTrue("log file:stderr should not be aggregated.", !s.contains("LogType:stderr"));
     Assert.assertTrue("log file:logs should not be aggregated.", !s.contains("LogType:logs"));

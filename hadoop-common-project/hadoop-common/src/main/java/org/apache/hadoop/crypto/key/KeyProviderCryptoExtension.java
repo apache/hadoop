@@ -149,7 +149,7 @@ public class KeyProviderCryptoExtension extends
      * Derive the initialization vector (IV) for the encryption key from the IV
      * of the encrypted key. This derived IV is used with the encryption key to
      * decrypt the encrypted key.
-     * <p/>
+     * <p>
      * The alternative to this is using the same IV for both the encryption key
      * and the encrypted key. Even a simple symmetric transformation like this
      * improves security by avoiding IV re-use. IVs will also be fairly unique
@@ -195,7 +195,7 @@ public class KeyProviderCryptoExtension extends
      * The generated key material is of the same
      * length as the <code>KeyVersion</code> material of the latest key version
      * of the key and is encrypted using the same cipher.
-     * <p/>
+     * <p>
      * NOTE: The generated key is not stored by the <code>KeyProvider</code>
      * 
      * @param encryptionKeyName
@@ -498,7 +498,7 @@ public class KeyProviderCryptoExtension extends
    * and initialization vector. The generated key material is of the same
    * length as the <code>KeyVersion</code> material and is encrypted using the
    * same cipher.
-   * <p/>
+   * <p>
    * NOTE: The generated key is not stored by the <code>KeyProvider</code>
    *
    * @param encryptionKeyName The latest KeyVersion of this key's material will
@@ -576,7 +576,6 @@ public class KeyProviderCryptoExtension extends
    * NOTE: The generated key is not stored by the <code>KeyProvider</code>
    *
    * @param  ekvs List containing the EncryptedKeyVersion's
-   * @return      The re-encrypted EncryptedKeyVersion's, in the same order.
    * @throws IOException If any EncryptedKeyVersion could not be re-encrypted
    * @throws GeneralSecurityException If any EncryptedKeyVersion could not be
    *                            re-encrypted because of a cryptographic issue.
@@ -589,7 +588,7 @@ public class KeyProviderCryptoExtension extends
   /**
    * Creates a <code>KeyProviderCryptoExtension</code> using a given
    * {@link KeyProvider}.
-   * <p/>
+   * <p>
    * If the given <code>KeyProvider</code> implements the
    * {@link CryptoExtension} interface the <code>KeyProvider</code> itself
    * will provide the extension functionality.

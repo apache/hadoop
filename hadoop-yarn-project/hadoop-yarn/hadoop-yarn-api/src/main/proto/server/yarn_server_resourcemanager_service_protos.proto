@@ -130,6 +130,22 @@ enum DecommissionTypeProto {
   GRACEFUL = 2;
   FORCEFUL = 3;
 }
+
+
+enum AttributeMappingOperationTypeProto {
+  REPLACE = 1;
+  ADD = 2;
+  REMOVE = 3;
+}
+
+message NodesToAttributesMappingRequestProto {
+  optional AttributeMappingOperationTypeProto operation = 1 [default = REPLACE];
+  repeated NodeToAttributesProto nodeToAttributes = 2;
+  optional bool failOnUnknownNodes = 3;
+}
+
+message NodesToAttributesMappingResponseProto {
+}
 //////////////////////////////////////////////////////////////////
 ///////////// RM Failover related records ////////////////////////
 //////////////////////////////////////////////////////////////////

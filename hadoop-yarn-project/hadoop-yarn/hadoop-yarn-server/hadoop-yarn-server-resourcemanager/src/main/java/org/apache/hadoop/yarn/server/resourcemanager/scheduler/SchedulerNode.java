@@ -34,11 +34,13 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
@@ -74,8 +76,11 @@ public abstract class SchedulerNode {
 
   private final RMNode rmNode;
   private final String nodeName;
+  private final RMContext rmContext;
 
   private volatile Set<String> labels = null;
+
+  private volatile Set<NodeAttribute> nodeAttributes = null;
 
   // Last updated time
   private volatile long lastHeartbeatMonotonicTime;
@@ -83,6 +88,7 @@ public abstract class SchedulerNode {
   public SchedulerNode(RMNode node, boolean usePortForNodeName,
       Set<String> labels) {
     this.rmNode = node;
+    this.rmContext = node.getRMContext();
     this.unallocatedResource = Resources.clone(node.getTotalCapability());
     this.totalResource = Resources.clone(node.getTotalCapability());
     if (usePortForNodeName) {
@@ -242,6 +248,18 @@ public abstract class SchedulerNode {
 
     launchedContainers.remove(containerId);
     Container container = info.container.getContainer();
+
+    // We remove allocation tags when a container is actually
+    // released on NM. This is to avoid running into situation
+    // when AM releases a container and NM has some delay to
+    // actually release it, then the tag can still be visible
+    // at RM so that RM can respect it during scheduling new containers.
+    if (rmContext != null && rmContext.getAllocationTagsManager() != null) {
+      rmContext.getAllocationTagsManager()
+          .removeContainer(container.getNodeId(),
+              container.getId(), container.getAllocationTags());
+    }
+
     updateResourceForReleasedContainer(container);
 
     if (LOG.isDebugEnabled()) {
@@ -486,6 +504,14 @@ public abstract class SchedulerNode {
   @Override
   public int hashCode() {
     return getNodeID().hashCode();
+  }
+
+  public Set<NodeAttribute> getNodeAttributes() {
+    return nodeAttributes;
+  }
+
+  public void updateNodeAttributes(Set<NodeAttribute> attributes) {
+    this.nodeAttributes = attributes;
   }
 
   private static class ContainerInfo {

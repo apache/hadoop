@@ -102,7 +102,22 @@ public class TestFileInputFormat {
         1, mockFs.numListLocatedStatusCalls);
     FileSystem.closeAll();
   }
-  
+
+  @Test
+  public void testIgnoreDirs() throws Exception {
+    Configuration conf = getConfiguration();
+    conf.setBoolean(FileInputFormat.INPUT_DIR_NONRECURSIVE_IGNORE_SUBDIRS, true);
+    conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);
+    conf.set(org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR, "test:///a1");
+    MockFileSystem mockFs = (MockFileSystem) new Path("test:///").getFileSystem(conf);
+    JobConf job = new JobConf(conf);
+    TextInputFormat fileInputFormat = new TextInputFormat();
+    fileInputFormat.configure(job);
+    InputSplit[] splits = fileInputFormat.getSplits(job, 1);
+    Assert.assertEquals("Input splits are not correct", 1, splits.length);
+    FileSystem.closeAll();
+  }
+
   @Test
   public void testSplitLocationInfo() throws Exception {
     Configuration conf = getConfiguration();

@@ -21,12 +21,14 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
 import java.io.File;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 public class DockerRunCommand extends DockerCommand {
   private static final String RUN_COMMAND = "run";
+  private final Map<String, String> userEnv;
 
   /** The following are mandatory: */
   public DockerRunCommand(String containerId, String user, String image) {
@@ -34,6 +36,7 @@ public class DockerRunCommand extends DockerCommand {
     super.addCommandArguments("name", containerId);
     super.addCommandArguments("user", user);
     super.addCommandArguments("image", image);
+    this.userEnv = new LinkedHashMap<String, String>();
   }
 
   public DockerRunCommand removeContainerOnExit() {
@@ -62,19 +65,15 @@ public class DockerRunCommand extends DockerCommand {
   }
 
   public DockerRunCommand addMountLocation(String sourcePath, String
-      destinationPath, boolean createSource) {
-    boolean sourceExists = new File(sourcePath).exists();
-    if (!sourceExists && !createSource) {
-      return this;
-    }
-    super.addCommandArguments("rw-mounts", sourcePath + ":" + destinationPath);
+      destinationPath, String mode) {
+    super.addCommandArguments("mounts", sourcePath + ":" +
+        destinationPath + ":" + mode);
     return this;
   }
 
   public DockerRunCommand addReadWriteMountLocation(String sourcePath, String
       destinationPath) {
-    super.addCommandArguments("rw-mounts", sourcePath + ":" + destinationPath);
-    return this;
+    return addMountLocation(sourcePath, destinationPath, "rw");
   }
 
   public DockerRunCommand addAllReadWriteMountLocations(List<String> paths) {
@@ -90,20 +89,23 @@ public class DockerRunCommand extends DockerCommand {
     if (!sourceExists && !createSource) {
       return this;
     }
-    super.addCommandArguments("ro-mounts", sourcePath + ":" + destinationPath);
-    return this;
+    return addReadOnlyMountLocation(sourcePath, destinationPath);
   }
 
   public DockerRunCommand addReadOnlyMountLocation(String sourcePath, String
       destinationPath) {
-    super.addCommandArguments("ro-mounts", sourcePath + ":" + destinationPath);
-    return this;
+    return addMountLocation(sourcePath, destinationPath, "ro");
   }
 
   public DockerRunCommand addAllReadOnlyMountLocations(List<String> paths) {
     for (String dir: paths) {
       this.addReadOnlyMountLocation(dir, dir);
     }
+    return this;
+  }
+
+  public DockerRunCommand addTmpfsMount(String mount) {
+    super.addCommandArguments("tmpfs", mount);
     return this;
   }
 
@@ -157,6 +159,17 @@ public class DockerRunCommand extends DockerCommand {
     return this;
   }
 
+  /* Ports mapping for bridge network, -p */
+  public DockerRunCommand addPortsMapping(String mapping) {
+    super.addCommandArguments("ports-mapping", mapping);
+    return this;
+  }
+
+  public DockerRunCommand addRuntime(String runtime) {
+    super.addCommandArguments("runtime", runtime);
+    return this;
+  }
+
   public DockerRunCommand groupAdd(String[] groups) {
     super.addCommandArguments("group-add", String.join(",", groups));
     return this;
@@ -173,5 +186,52 @@ public class DockerRunCommand extends DockerCommand {
   @Override
   public Map<String, List<String>> getDockerCommandWithArguments() {
     return super.getDockerCommandWithArguments();
+  }
+
+  public DockerRunCommand setOverrideDisabled(boolean toggle) {
+    String value = Boolean.toString(toggle);
+    super.addCommandArguments("use-entry-point", value);
+    return this;
+  }
+
+  public DockerRunCommand setLogDir(String logDir) {
+    super.addCommandArguments("log-dir", logDir);
+    return this;
+  }
+
+  /**
+   * Check if user defined environment variables are empty.
+   *
+   * @return true if user defined environment variables are not empty.
+   */
+  public boolean containsEnv() {
+    if (userEnv.size() > 0) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Get user defined environment variables.
+   *
+   * @return a map of user defined environment variables
+   */
+  public Map<String, String> getEnv() {
+    return userEnv;
+  }
+
+  /**
+   * Add user defined environment variables.
+   *
+   * @param environment A map of user defined environment variables
+   */
+  public final void addEnv(Map<String, String> environment) {
+    userEnv.putAll(environment);
+  }
+
+  public DockerRunCommand setYarnSysFS(boolean toggle) {
+    String value = Boolean.toString(toggle);
+    super.addCommandArguments("use-yarn-sysfs", value);
+    return this;
   }
 }

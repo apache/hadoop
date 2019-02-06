@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
@@ -50,7 +51,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
-import org.mockito.internal.util.reflection.Whitebox;
 
 import javax.annotation.Nonnull;
 
@@ -689,17 +689,18 @@ public class TestLocalFileSystem {
     // and permission
     FSDataOutputStreamBuilder builder =
         fileSys.createFile(path);
-    builder.build();
-    Assert.assertEquals("Should be default block size",
-        builder.getBlockSize(), fileSys.getDefaultBlockSize());
-    Assert.assertEquals("Should be default replication factor",
-        builder.getReplication(), fileSys.getDefaultReplication());
-    Assert.assertEquals("Should be default buffer size",
-        builder.getBufferSize(),
-        fileSys.getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
-            IO_FILE_BUFFER_SIZE_DEFAULT));
-    Assert.assertEquals("Should be default permission",
-        builder.getPermission(), FsPermission.getFileDefault());
+    try (FSDataOutputStream stream = builder.build()) {
+      Assert.assertEquals("Should be default block size",
+          builder.getBlockSize(), fileSys.getDefaultBlockSize());
+      Assert.assertEquals("Should be default replication factor",
+          builder.getReplication(), fileSys.getDefaultReplication());
+      Assert.assertEquals("Should be default buffer size",
+          builder.getBufferSize(),
+          fileSys.getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
+              IO_FILE_BUFFER_SIZE_DEFAULT));
+      Assert.assertEquals("Should be default permission",
+          builder.getPermission(), FsPermission.getFileDefault());
+    }
 
     // Test set 0 to replication, block size and buffer size
     builder = fileSys.createFile(path);
@@ -728,7 +729,7 @@ public class TestLocalFileSystem {
     }
 
     @Override
-    protected BuilderWithSupportedKeys getThisBuilder() {
+    public BuilderWithSupportedKeys getThisBuilder() {
       return this;
     }
 

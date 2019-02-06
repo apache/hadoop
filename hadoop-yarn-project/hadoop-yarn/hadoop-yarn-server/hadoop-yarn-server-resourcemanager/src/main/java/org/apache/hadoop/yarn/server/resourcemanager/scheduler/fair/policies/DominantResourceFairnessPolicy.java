@@ -48,7 +48,7 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
   public static final String NAME = "DRF";
 
   private static final int NUM_RESOURCES =
-      ResourceUtils.getNumberOfKnownResourceTypes();
+      ResourceUtils.getNumberOfCountableResourceTypes();
   private static final DominantResourceFairnessComparator COMPARATORN =
       new DominantResourceFairnessComparatorN();
   private static final DominantResourceFairnessComparator COMPARATOR2 =

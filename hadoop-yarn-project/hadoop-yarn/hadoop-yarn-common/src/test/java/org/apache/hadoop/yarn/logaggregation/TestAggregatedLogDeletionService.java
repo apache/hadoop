@@ -160,7 +160,7 @@ public class TestAggregatedLogDeletionService {
     AggregatedLogDeletionService deletionService =
         new AggregatedLogDeletionService() {
           @Override
-          protected ApplicationClientProtocol creatRMClient()
+          protected ApplicationClientProtocol createRMClient()
               throws IOException {
             try {
               return createMockRMClient(finishedApplications,
@@ -262,7 +262,7 @@ public class TestAggregatedLogDeletionService {
         return conf;
       }
       @Override
-      protected ApplicationClientProtocol creatRMClient()
+      protected ApplicationClientProtocol createRMClient()
           throws IOException {
         try {
           return createMockRMClient(finishedApplications, null);
@@ -353,7 +353,7 @@ public class TestAggregatedLogDeletionService {
     AggregatedLogDeletionService deletionSvc =
         new AggregatedLogDeletionService() {
       @Override
-      protected ApplicationClientProtocol creatRMClient()
+      protected ApplicationClientProtocol createRMClient()
           throws IOException {
         try {
           return createMockRMClient(finishedApplications, null);

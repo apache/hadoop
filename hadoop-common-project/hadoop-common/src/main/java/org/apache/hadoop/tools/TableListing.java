@@ -20,8 +20,7 @@ package org.apache.hadoop.tools;
 import java.util.ArrayList;
 import java.util.LinkedList;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.WordUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
@@ -103,7 +102,8 @@ public class TableListing {
       // Line-wrap if it's too long
       String[] lines = new String[] {raw};
       if (wrap) {
-        lines = WordUtils.wrap(lines[0], wrapWidth, "\n", true).split("\n");
+        lines = org.apache.hadoop.util.StringUtils.wrap(lines[0], wrapWidth,
+            "\n", true).split("\n");
       }
       for (int i=0; i<lines.length; i++) {
         if (justification == Justification.LEFT) {

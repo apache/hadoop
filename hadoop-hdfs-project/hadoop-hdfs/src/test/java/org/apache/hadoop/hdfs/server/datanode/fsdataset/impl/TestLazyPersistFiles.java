@@ -151,7 +151,7 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
  /**
   * If NN restarted then lazyPersist files should not deleted
   */
-  @Test
+  @Test(timeout = 20000)
   public void testFileShouldNotDiscardedIfNNRestarted()
       throws IOException, InterruptedException, TimeoutException {
     getClusterBuilder().setRamDiskReplicaCapacity(2).build();
@@ -165,13 +165,12 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
     cluster.restartNameNodes();
 
     // wait for the redundancy monitor to mark the file as corrupt.
-    Thread.sleep(2 * DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_DEFAULT * 1000);
-
-    Long corruptBlkCount = (long) Iterators.size(cluster.getNameNode()
-        .getNamesystem().getBlockManager().getCorruptReplicaBlockIterator());
-
-    // Check block detected as corrupted
-    assertThat(corruptBlkCount, is(1L));
+    Long corruptBlkCount;
+    do {
+      Thread.sleep(DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_DEFAULT * 1000);
+      corruptBlkCount = (long) Iterators.size(cluster.getNameNode()
+          .getNamesystem().getBlockManager().getCorruptReplicaBlockIterator());
+    } while (corruptBlkCount != 1L);
 
     // Ensure path1 exist.
     Assert.assertTrue(fs.exists(path1));

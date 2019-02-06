@@ -19,12 +19,14 @@
 import { moduleFor, test } from 'ember-qunit';
 
 moduleFor('adapter:yarn-rm-node', 'Unit | Adapter | RMNode', {
-  // Specify the other units that are required for this test.
-  // needs: ['serializer:foo']
+  unit: true
 });
 
 test('Basic creation', function(assert) {
-  let adapter = this.subject();
+  let adapter = this.subject({
+    host: "localhost:4200",
+    namespace: "ws/v1/cluster"
+  });
 
   assert.ok(adapter);
   assert.ok(adapter.urlForFindRecord);
@@ -37,7 +39,10 @@ test('Basic creation', function(assert) {
 });
 
 test('urlForFindRecord test', function(assert) {
-  let adapter = this.subject();
+  let adapter = this.subject({
+    host: "localhost:4200",
+    namespace: "ws/v1/cluster"
+  });
   let host = adapter.host;
   assert.equal(adapter.urlForFindRecord("localhost:8042"),
       host + "/ws/v1/cluster/nodes/localhost:8042");

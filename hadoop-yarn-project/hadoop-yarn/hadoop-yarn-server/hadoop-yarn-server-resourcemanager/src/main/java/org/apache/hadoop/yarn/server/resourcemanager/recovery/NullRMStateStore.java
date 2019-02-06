@@ -31,6 +31,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.AMRMTokenS
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
+
 @Unstable
 public class NullRMStateStore extends RMStateStore {
 
@@ -172,6 +175,12 @@ public class NullRMStateStore extends RMStateStore {
 
   @Override
   public void removeApplication(ApplicationId removeAppId) throws Exception {
+    // Do nothing
+  }
+
+  @Override
+  protected void storeProxyCACertState(
+      X509Certificate caCert, PrivateKey caPrivateKey) throws Exception {
     // Do nothing
   }
 }

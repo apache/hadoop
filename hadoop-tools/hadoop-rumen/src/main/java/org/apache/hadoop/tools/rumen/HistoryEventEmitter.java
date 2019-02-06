@@ -22,13 +22,13 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.jobhistory.HistoryEvent;
 
 abstract class HistoryEventEmitter {
-  static final private Log LOG = LogFactory.getLog(HistoryEventEmitter.class);
+  static final private Logger LOG = LoggerFactory.getLogger(HistoryEventEmitter.class);
 
   abstract List<SingleEventEmitter> nonFinalSEEs();
 

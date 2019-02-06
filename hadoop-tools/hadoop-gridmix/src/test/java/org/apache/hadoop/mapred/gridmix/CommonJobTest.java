@@ -33,8 +33,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
@@ -57,7 +57,7 @@ import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.util.ToolRunner;
 
 public class CommonJobTest {
-  public static final Log LOG = LogFactory.getLog(Gridmix.class);
+  public static final Logger LOG = LoggerFactory.getLogger(Gridmix.class);
 
   protected static int NJOBS = 2;
   protected static final long GENDATA = 1; // in megabytes

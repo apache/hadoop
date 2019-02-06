@@ -1,0 +1,44 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#
+# This script instruments hadoop rpc layer to print out all the request/response messages to the standard output.
+#
+
+RULE Hadoop RPC request
+INTERFACE ^com.google.protobuf.BlockingService
+METHOD callBlockingMethod
+IF true
+DO traceln("--> RPC message request: " + $3.getClass().getSimpleName() + " from " + linked(Thread.currentThread(), "source")); 
+   traceln($3.toString())
+ENDRULE
+
+
+RULE Hadoop RPC response
+INTERFACE ^com.google.protobuf.BlockingService
+METHOD callBlockingMethod
+AT EXIT
+IF true
+DO traceln("--> RPC message response: " + $3.getClass().getSimpleName() + " to " + unlink(Thread.currentThread(), "source")); 
+   traceln($!.toString())
+ENDRULE
+
+
+RULE Hadoop RPC source IP
+CLASS org.apache.hadoop.ipc.Server$RpcCall
+METHOD run
+IF true
+DO link(Thread.currentThread(), "source", $0.connection.toString())
+ENDRULE

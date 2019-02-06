@@ -70,7 +70,7 @@ test('normalizeArrayResponse test', function(assert) {
   };
   assert.expect(12);
   var response =
-      serializer.normalizeArrayResponse({}, modelClass, payload, null, null);
+      serializer.normalizeArrayResponse({}, modelClass, payload);
   assert.ok(response.data);
   assert.equal(response.data.length, 2);
   assert.equal(response.data[0].id, "192.168.1.1:64318");
@@ -92,15 +92,11 @@ test('normalizeArrayResponse no nodes test', function(assert) {
     modelName: "yarn-rm-node"
   },
   payload = { nodes: null };
-  assert.expect(5);
+  assert.expect(2);
   var response =
-      serializer.normalizeArrayResponse({}, modelClass, payload, null, null);
-  console.log(response);
+      serializer.normalizeArrayResponse({}, modelClass, payload);
   assert.ok(response.data);
-  assert.equal(response.data.length, 1);
-  assert.equal(response.data[0].type, modelClass.modelName);
-  assert.equal(response.data[0].id, "dummy");
-  assert.equal(response.data[0].attributes.nodeHostName, undefined);
+  assert.equal(response.data.length, 0);
 });
 
 test('normalizeSingleResponse test', function(assert) {
@@ -128,7 +124,7 @@ test('normalizeSingleResponse test', function(assert) {
   assert.expect(13);
   var id = "localhost:64318";
   var response =
-      serializer.normalizeSingleResponse({}, modelClass, payload, id, null);
+      serializer.normalizeSingleResponse({}, modelClass, payload, id);
   assert.ok(response.data);
   assert.equal(response.data.id, id);
   assert.equal(response.data.type, modelClass.modelName);

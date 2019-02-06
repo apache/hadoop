@@ -49,7 +49,7 @@ public class TestSwiftFileSystemBlockLocation extends SwiftFileSystemBaseTest {
 
   private void assertLocationValid(BlockLocation location) throws
                                                            IOException {
-    LOG.info(location);
+    LOG.info("{}", location);
     String[] hosts = location.getHosts();
     String[] names = location.getNames();
     assertNotEqual("No hosts supplied for " + location, 0, hosts.length);

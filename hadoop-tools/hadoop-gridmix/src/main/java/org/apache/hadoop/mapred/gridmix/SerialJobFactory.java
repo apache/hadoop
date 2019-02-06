@@ -24,8 +24,8 @@ import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.JobStoryProducer;
 import org.apache.hadoop.mapred.gridmix.Statistics.JobStats;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
@@ -33,7 +33,7 @@ import java.util.concurrent.locks.Condition;
 
 public class SerialJobFactory extends JobFactory<JobStats> {
 
-  public static final Log LOG = LogFactory.getLog(SerialJobFactory.class);
+  public static final Logger LOG = LoggerFactory.getLogger(SerialJobFactory.class);
   private final Condition jobCompleted = lock.newCondition();
 
   /**

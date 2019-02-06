@@ -34,6 +34,9 @@ import org.apache.hadoop.fs.Path;
  * {@code MetadataStore} defines the set of operations that any metadata store
  * implementation must provide.  Note that all {@link Path} objects provided
  * to methods must be absolute, not relative paths.
+ * Implementations must implement any retries needed internally, such that
+ * transient errors are generally recovered from without throwing exceptions
+ * from this API.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -221,9 +224,21 @@ public interface MetadataStore extends Closeable {
   void prune(long modTime) throws IOException, UnsupportedOperationException;
 
   /**
+   * Same as {@link MetadataStore#prune(long)}, but with an additional
+   * keyPrefix parameter to filter the pruned keys with a prefix.
+   *
+   * @param modTime Oldest modification time to allow
+   * @param keyPrefix The prefix for the keys that should be removed
+   * @throws IOException if there is an error
+   * @throws UnsupportedOperationException if not implemented
+   */
+  void prune(long modTime, String keyPrefix)
+      throws IOException, UnsupportedOperationException;
+
+  /**
    * Get any diagnostics information from a store, as a list of (key, value)
    * tuples for display. Arbitrary values; no guarantee of stability.
-   * These are for debugging only.
+   * These are for debugging and testing only.
    * @return a map of strings.
    * @throws IOException if there is an error
    */

@@ -18,7 +18,10 @@ package org.apache.hadoop.security;
 
 
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.any;
+
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
 import org.junit.Test;
@@ -40,13 +43,15 @@ public class TestAuthenticationFilter {
     
     FilterContainer container = Mockito.mock(FilterContainer.class);
     Mockito.doAnswer(
-        new Answer() {
+      new Answer() {
         @Override
         public Object answer(InvocationOnMock invocationOnMock)
           throws Throwable {
           Object[] args = invocationOnMock.getArguments();
 
           assertEquals("authentication", args[0]);
+
+          assertEquals(AuthenticationFilter.class.getName(), args[1]);
 
           Map<String, String> conf = (Map<String, String>) args[2];
           assertEquals("/", conf.get("cookie.path"));
@@ -62,10 +67,8 @@ public class TestAuthenticationFilter {
           assertEquals("bar", conf.get("foo"));
 
           return null;
-        }}
-        ).when(container).addFilter(Mockito.<String>anyObject(),
-                                Mockito.<String>anyObject(),
-                                Mockito.<Map<String, String>>anyObject());
+        }
+      }).when(container).addFilter(any(), any(), any());
 
     new AuthenticationFilterInitializer().initFilter(container, conf);
   }

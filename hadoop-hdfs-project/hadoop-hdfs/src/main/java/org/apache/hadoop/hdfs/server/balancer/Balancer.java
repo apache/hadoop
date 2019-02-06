@@ -36,8 +36,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -78,7 +78,7 @@ import com.google.common.base.Preconditions;
  * <p>SYNOPSIS
  * <pre>
  * To start:
- *      bin/start-balancer.sh [-threshold <threshold>]
+ *      bin/start-balancer.sh [-threshold {@literal <threshold>}]
  *      Example: bin/ start-balancer.sh 
  *                     start the balancer with a default threshold of 10%
  *               bin/ start-balancer.sh -threshold 5
@@ -113,13 +113,14 @@ import com.google.common.base.Preconditions;
  * <p>A system property that limits the balancer's use of bandwidth is 
  * defined in the default configuration file:
  * <pre>
- * <property>
- *   <name>dfs.datanode.balance.bandwidthPerSec</name>
- *   <value>1048576</value>
- * <description>  Specifies the maximum bandwidth that each datanode 
+ * &lt;property&gt;
+ *   &lt;name&gt;dfs.datanode.balance.bandwidthPerSec&lt;/name&gt;
+ *   &lt;value&gt;1048576&lt;/value&gt;
+ * &lt;description&gt;  Specifies the maximum bandwidth that each datanode
  * can utilize for the balancing purpose in term of the number of bytes 
- * per second. </description>
- * </property>
+ * per second.
+ * &lt;/description&gt;
+ * &lt;/property&gt;
  * </pre>
  * 
  * <p>This property determines the maximum speed at which a block will be 
@@ -172,7 +173,7 @@ import com.google.common.base.Preconditions;
 
 @InterfaceAudience.Private
 public class Balancer {
-  static final Log LOG = LogFactory.getLog(Balancer.class);
+  static final Logger LOG = LoggerFactory.getLogger(Balancer.class);
 
   static final Path BALANCER_ID_PATH = new Path("/system/balancer.id");
 
@@ -289,13 +290,17 @@ public class Balancer {
     final int maxNoMoveInterval = conf.getInt(
         DFSConfigKeys.DFS_BALANCER_MAX_NO_MOVE_INTERVAL_KEY,
         DFSConfigKeys.DFS_BALANCER_MAX_NO_MOVE_INTERVAL_DEFAULT);
+    final long maxIterationTime = conf.getLong(
+        DFSConfigKeys.DFS_BALANCER_MAX_ITERATION_TIME_KEY,
+        DFSConfigKeys.DFS_BALANCER_MAX_ITERATION_TIME_DEFAULT);
 
     this.nnc = theblockpool;
     this.dispatcher =
         new Dispatcher(theblockpool, p.getIncludedNodes(),
             p.getExcludedNodes(), movedWinWidth, moverThreads,
             dispatcherThreads, maxConcurrentMovesPerNode, getBlocksSize,
-            getBlocksMinBlockSize, blockMoveTimeout, maxNoMoveInterval, conf);
+            getBlocksMinBlockSize, blockMoveTimeout, maxNoMoveInterval,
+            maxIterationTime, conf);
     this.threshold = p.getThreshold();
     this.policy = p.getBalancingPolicy();
     this.sourceNodes = p.getSourceNodes();
@@ -720,7 +725,7 @@ public class Balancer {
       }
     } finally {
       for(NameNodeConnector nnc : connectors) {
-        IOUtils.cleanup(LOG, nnc);
+        IOUtils.cleanupWithLogger(LOG, nnc);
       }
     }
     return ExitStatus.SUCCESS.getExitCode();

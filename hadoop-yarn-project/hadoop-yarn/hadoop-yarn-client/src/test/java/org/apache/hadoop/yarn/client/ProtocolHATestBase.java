@@ -626,7 +626,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
           ApplicationReport.newInstance(appId, attemptId, "fakeUser",
               "fakeQueue", "fakeApplicationName", "localhost", 0, null,
               YarnApplicationState.FINISHED, "fake an application report", "",
-              1000L, 1200L, FinalApplicationStatus.FAILED, null, "", 50f,
+              1000L, 1000L, 1200L, FinalApplicationStatus.FAILED, null, "", 50f,
               "fakeApplicationType", null);
       return report;
     }
@@ -665,7 +665,8 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
 
     public QueueInfo createFakeQueueInfo() {
       return QueueInfo.newInstance("root", 100f, 100f, 50f, null,
-          createFakeAppReports(), QueueState.RUNNING, null, null, null, false);
+          createFakeAppReports(), QueueState.RUNNING, null, null, null, false,
+          null, false);
     }
 
     public List<QueueUserACLInfo> createFakeQueueUserACLInfoList() {

@@ -238,7 +238,12 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   @Override
   public synchronized void flush() throws IOException {
-    checkOpen();
+    try {
+      checkOpen();
+    } catch (IOException e) {
+      LOG.warn("Stream closed: " + e.getMessage());
+      return;
+    }
     S3ADataBlocks.DataBlock dataBlock = getActiveBlock();
     if (dataBlock != null) {
       dataBlock.flush();

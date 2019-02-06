@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -34,8 +34,10 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.QueueMapping.MappingType;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
@@ -104,6 +106,10 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
       return parentQueue;
     }
 
+    public boolean hasParentQueue() {
+      return parentQueue != null;
+    }
+
     public MappingType getType() {
       return type;
     }
@@ -137,6 +143,10 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
     }
   }
 
+  public UserGroupMappingPlacementRule(){
+    this(false, null, null);
+  }
+
   public UserGroupMappingPlacementRule(boolean overrideWithQueueMappings,
       List<QueueMapping> newMappings, Groups groups) {
     this.mappings = newMappings;
@@ -164,6 +174,9 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
       if (mapping.type == MappingType.GROUP) {
         for (String userGroups : groups.getGroups(user)) {
           if (userGroups.equals(mapping.source)) {
+            if (mapping.queue.equals(CURRENT_USER_MAPPING)) {
+              return getPlacementContext(mapping, user);
+            }
             return getPlacementContext(mapping);
           }
         }
@@ -218,8 +231,16 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
   }
 
   @VisibleForTesting
-  public static UserGroupMappingPlacementRule get(
-      CapacitySchedulerContext schedulerContext) throws IOException {
+  @Override
+  public boolean initialize(ResourceScheduler scheduler)
+      throws IOException {
+    if (!(scheduler instanceof CapacityScheduler)) {
+      throw new IOException(
+          "UserGroupMappingPlacementRule can be configured only for "
+              + "CapacityScheduler");
+    }
+    CapacitySchedulerContext schedulerContext =
+        (CapacitySchedulerContext) scheduler;
     CapacitySchedulerConfiguration conf = schedulerContext.getConfiguration();
     boolean overrideWithQueueMappings = conf.getOverrideWithQueueMappings();
     LOG.info(
@@ -294,11 +315,12 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
     // initialize groups if mappings are present
     if (newMappings.size() > 0) {
       Groups groups = new Groups(conf);
-      return new UserGroupMappingPlacementRule(overrideWithQueueMappings,
-          newMappings, groups);
+      this.mappings = newMappings;
+      this.groups = groups;
+      this.overrideWithQueueMappings = overrideWithQueueMappings;
+      return true;
     }
-
-    return null;
+    return false;
   }
 
   private static QueueMapping validateAndGetQueueMapping(

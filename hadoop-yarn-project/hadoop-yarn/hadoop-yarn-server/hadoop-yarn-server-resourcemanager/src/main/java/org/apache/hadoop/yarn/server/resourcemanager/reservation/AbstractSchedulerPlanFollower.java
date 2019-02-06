@@ -263,7 +263,10 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
         if (shouldMove) {
           moveAppsInQueueSync(expiredReservation, defReservationQueue);
         }
-        if (scheduler.getAppsInQueue(expiredReservation).size() > 0) {
+        List<ApplicationAttemptId> appsInQueue = scheduler.
+              getAppsInQueue(expiredReservation);
+        int size = (appsInQueue == null ? 0 : appsInQueue.size());
+        if (size > 0) {
           scheduler.killAllAppsInQueue(expiredReservation);
           LOG.info("Killing applications in queue: {}", expiredReservation);
         } else {

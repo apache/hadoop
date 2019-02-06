@@ -309,7 +309,7 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
     "dr.who";
 
   /**
-   * User->groups static mapping to override the groups lookup
+   * User{@literal ->}groups static mapping to override the groups lookup
    */
   public static final String HADOOP_USER_GROUP_STATIC_OVERRIDES = 
       "hadoop.user.group.static.mapping.overrides";
@@ -341,6 +341,10 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String  IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY = "ipc.client.fallback-to-simple-auth-allowed";
   public static final boolean IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT = false;
 
+  public static final String  IPC_CLIENT_BIND_WILDCARD_ADDR_KEY = "ipc.client"
+      + ".bind.wildcard.addr";
+  public static final boolean IPC_CLIENT_BIND_WILDCARD_ADDR_DEFAULT = false;
+
   public static final String IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY =
     "ipc.client.connect.max.retries.on.sasl";
   public static final int    IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_DEFAULT = 5;
@@ -354,17 +358,6 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
 
   public static final String HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS =
     "hadoop.user.group.metrics.percentiles.intervals";
-
-  /* When creating UGI with UserGroupInformation(Subject), treat the passed
-   * subject external if set to true, and assume the owner of the subject
-   * should do the credential renewal.
-   *
-   * This is a temporary config to solve the compatibility issue with
-   * HADOOP-13558 and HADOOP-13805 fix, see the jiras for discussions.
-   */
-  public static final String HADOOP_TREAT_SUBJECT_EXTERNAL_KEY =
-      "hadoop.treat.subject.external";
-  public static final boolean HADOOP_TREAT_SUBJECT_EXTERNAL_DEFAULT = false;
 
   public static final String RPC_METRICS_QUANTILE_ENABLE =
       "rpc.metrics.quantile.enable";

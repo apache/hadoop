@@ -18,20 +18,26 @@
 
 package org.apache.hadoop.yarn.security;
 
+import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
 import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.AMRMTokenIdentifierProto;
 
@@ -44,6 +50,8 @@ import com.google.protobuf.TextFormat;
 @Public
 @Evolving
 public class AMRMTokenIdentifier extends TokenIdentifier {
+
+  private static final Log LOG = LogFactory.getLog(AMRMTokenIdentifier.class);
 
   public static final Text KIND_NAME = new Text("YARN_AM_RM_TOKEN");
   private AMRMTokenIdentifierProto proto;
@@ -78,7 +86,30 @@ public class AMRMTokenIdentifier extends TokenIdentifier {
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    proto = AMRMTokenIdentifierProto.parseFrom((DataInputStream)in);
+    byte[] data = IOUtils.readFullyToByteArray(in);
+    try {
+      proto = AMRMTokenIdentifierProto.parseFrom(data);
+    } catch (InvalidProtocolBufferException e) {
+      LOG.warn("Recovering old formatted token");
+      readFieldsInOldFormat(
+          new DataInputStream(new ByteArrayInputStream(data)));
+    }
+  }
+
+  private void readFieldsInOldFormat(DataInputStream in) throws IOException {
+    AMRMTokenIdentifierProto.Builder builder =
+        AMRMTokenIdentifierProto.newBuilder();
+    long clusterTimeStamp = in.readLong();
+    int appId = in.readInt();
+    int attemptId = in.readInt();
+    ApplicationId applicationId =
+        ApplicationId.newInstance(clusterTimeStamp, appId);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(applicationId, attemptId);
+    builder.setAppAttemptId(
+        ((ApplicationAttemptIdPBImpl)appAttemptId).getProto());
+    builder.setKeyId(in.readInt());
+    proto = builder.build();
   }
 
   @Override

@@ -38,7 +38,7 @@
   <body>
     <links position="left">
       <item name="Wiki" href="http://wiki.apache.org/hadoop" />
-      <item name="git" href="https://git-wip-us.apache.org/repos/asf/hadoop.git" />
+      <item name="git" href="https://gitbox.apache.org/repos/asf/hadoop.git" />
     </links>
 
     <breadcrumbs position="left">
@@ -54,6 +54,7 @@
       <item name="FileSystem Shell" href="hadoop-project-dist/hadoop-common/FileSystemShell.html"/>
       <item name="Compatibility Specification" href="hadoop-project-dist/hadoop-common/Compatibility.html"/>
       <item name="Downstream Developer's Guide" href="hadoop-project-dist/hadoop-common/DownstreamDev.html"/>
+      <item name="Admin Compatibility Guide" href="hadoop-project-dist/hadoop-common/AdminCompatibilityGuide.html"/>
       <item name="Interface Classification" href="hadoop-project-dist/hadoop-common/InterfaceClassification.html"/>
       <item name="FileSystem Specification"
         href="hadoop-project-dist/hadoop-common/filesystem/index.html"/>
@@ -104,7 +105,17 @@
       <item name="Disk Balancer" href="hadoop-project-dist/hadoop-hdfs/HDFSDiskbalancer.html"/>
       <item name="Upgrade Domain" href="hadoop-project-dist/hadoop-hdfs/HdfsUpgradeDomain.html"/>
       <item name="DataNode Admin" href="hadoop-project-dist/hadoop-hdfs/HdfsDataNodeAdminGuide.html"/>
-      <item name="Router Federation" href="hadoop-project-dist/hadoop-hdfs/HDFSRouterFederation.html"/>
+      <item name="Router Federation" href="hadoop-project-dist/hadoop-hdfs-rbf/HDFSRouterFederation.html"/>
+      <item name="Provided Storage" href="hadoop-project-dist/hadoop-hdfs/HdfsProvidedStorage.html"/>
+    </menu>
+
+    <menu name="Ozone" inherit="top">
+      <item name="Getting Started" href="hadoop-project-dist/hadoop-hdfs/OzoneGettingStarted.html"/>
+      <item name="Ozone Overview"
+            href="hadoop-project-dist/hadoop-hdfs/OzoneOverview.html"/>
+      <item name="Commands Reference" href="hadoop-project-dist/hadoop-hdfs/OzoneCommandShell.html"/>
+      <item name="Ozone Rest API" href="hadoop-project-dist/hadoop-hdfs/OzoneRest.html"/>
+      <item name="Ozone Metrics" href="hadoop-project-dist/hadoop-hdfs/OzoneMetrics.html"/>
     </menu>
 
     <menu name="MapReduce" inherit="top">
@@ -131,6 +142,7 @@
       <item name="ResourceManager HA" href="hadoop-yarn/hadoop-yarn-site/ResourceManagerHA.html"/>
       <item name="Resource Model" href="hadoop-yarn/hadoop-yarn-site/ResourceModel.html"/>
       <item name="Node Labels" href="hadoop-yarn/hadoop-yarn-site/NodeLabel.html"/>
+      <item name="Node Attributes" href="hadoop-yarn/hadoop-yarn-site/NodeAttributes.html"/>
       <item name="Web Application Proxy" href="hadoop-yarn/hadoop-yarn-site/WebApplicationProxy.html"/>
       <item name="Timeline Server" href="hadoop-yarn/hadoop-yarn-site/TimelineServer.html"/>
       <item name="Timeline Service V.2" href="hadoop-yarn/hadoop-yarn-site/TimelineServiceV2.html"/>
@@ -146,6 +158,9 @@
       <item name="Opportunistic Containers" href="hadoop-yarn/hadoop-yarn-site/OpportunisticContainers.html"/>
       <item name="YARN Federation" href="hadoop-yarn/hadoop-yarn-site/Federation.html"/>
       <item name="Shared Cache" href="hadoop-yarn/hadoop-yarn-site/SharedCache.html"/>
+      <item name="Using GPU" href="hadoop-yarn/hadoop-yarn-site/UsingGpus.html"/>
+      <item name="Using FPGA" href="hadoop-yarn/hadoop-yarn-site/UsingFPGA.html"/>
+      <item name="Placement Constraints" href="hadoop-yarn/hadoop-yarn-site/PlacementConstraints.html"/>
     </menu>
 
     <menu name="YARN REST APIs" inherit="top">
@@ -162,6 +177,13 @@
       <item name="Concepts" href="hadoop-yarn/hadoop-yarn-site/yarn-service/Concepts.html"/>
       <item name="Yarn Service API" href="hadoop-yarn/hadoop-yarn-site/yarn-service/YarnServiceAPI.html"/>
       <item name="Service Discovery" href="hadoop-yarn/hadoop-yarn-site/yarn-service/ServiceDiscovery.html"/>
+      <item name="System Services" href="hadoop-yarn/hadoop-yarn-site/yarn-service/SystemServices.html"/>
+    </menu>
+
+    <menu name="Submarine" inherit="top">
+      <item name="Index" href="hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-submarine/Index.html"/>
+      <item name="QuickStart" href="hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-submarine/QuickStart.html"/>
+      <item name="Examples" href="hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-submarine/Examples.html"/>
     </menu>
 
     <menu name="Hadoop Compatible File Systems" inherit="top">
@@ -202,6 +224,7 @@
     <menu name="Configuration" inherit="top">
       <item name="core-default.xml" href="hadoop-project-dist/hadoop-common/core-default.xml"/>
       <item name="hdfs-default.xml" href="hadoop-project-dist/hadoop-hdfs/hdfs-default.xml"/>
+      <item name="hdfs-rbf-default.xml" href="hadoop-project-dist/hadoop-hdfs-rbf/hdfs-rbf-default.xml"/>
       <item name="mapred-default.xml" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml"/>
       <item name="yarn-default.xml" href="hadoop-yarn/hadoop-yarn-common/yarn-default.xml"/>
       <item name="Deprecated Properties" href="hadoop-project-dist/hadoop-common/DeprecatedProperties.html"/>

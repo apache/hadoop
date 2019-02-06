@@ -24,6 +24,7 @@ import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEdit
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 
@@ -33,8 +34,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.cli.CLITestCmdDFS;
 import org.apache.hadoop.cli.util.CLICommandDFSAdmin;
 import org.apache.hadoop.cli.util.CommandExecutor;
@@ -50,7 +51,6 @@ import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.util.Shell;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import com.google.common.collect.ImmutableSet;
 /**
@@ -60,8 +60,8 @@ import com.google.common.collect.ImmutableSet;
 public class TestStorageRestore {
   public static final String NAME_NODE_HOST = "localhost:";
   public static final String NAME_NODE_HTTP_HOST = "0.0.0.0:";
-  private static final Log LOG =
-    LogFactory.getLog(TestStorageRestore.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestStorageRestore.class.getName());
   private Configuration config;
   private File hdfsDir=null;
   static final long seed = 0xAAAAEEFL;
@@ -128,7 +128,7 @@ public class TestStorageRestore {
           EditLogOutputStream mockStream = spy(j.getCurrentStream());
           j.setCurrentStreamForTests(mockStream);
           doThrow(new IOException("Injected fault: write")).
-            when(mockStream).write(Mockito.<FSEditLogOp>anyObject());
+            when(mockStream).write(any());
         }
       }
     }

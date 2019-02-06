@@ -18,12 +18,11 @@
 
 package org.apache.hadoop.hdfs.server.common;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
@@ -53,7 +52,7 @@ public class JspHelper {
   public static final String CURRENT_CONF = "current.conf";
   public static final String DELEGATION_PARAMETER_NAME = DelegationParam.NAME;
   public static final String NAMENODE_ADDRESS = "nnaddr";
-  private static final Log LOG = LogFactory.getLog(JspHelper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JspHelper.class);
 
   /** Private constructor for preventing creating JspHelper object. */
   private JspHelper() {}
@@ -176,10 +175,11 @@ public class JspHelper {
     DelegationTokenIdentifier id = new DelegationTokenIdentifier();
     id.readFields(in);
     if (context != null) {
-      final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
-      if (nn != null) {
+      final TokenVerifier<DelegationTokenIdentifier> tokenVerifier =
+          NameNodeHttpServer.getTokenVerifierFromContext(context);
+      if (tokenVerifier != null) {
         // Verify the token.
-        nn.getNamesystem().verifyToken(id, token.getPassword());
+        tokenVerifier.verifyToken(id, token.getPassword());
       }
     }
     UserGroupInformation ugi = id.getUser();

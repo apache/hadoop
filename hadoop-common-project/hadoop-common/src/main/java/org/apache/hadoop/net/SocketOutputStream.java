@@ -32,7 +32,6 @@ import java.nio.channels.WritableByteChannel;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.metrics2.lib.MutableRate;
 
 /**
  * This implements an output stream that can have a timeout while writing.
@@ -187,7 +186,7 @@ public class SocketOutputStream extends OutputStream
    * @param count number of bytes to transfer.
    * @param waitForWritableTime nanoseconds spent waiting for the socket 
    *        to become writable
-   * @param transferTime nanoseconds spent transferring data
+   * @param transferToTime nanoseconds spent transferring data
    * 
    * @throws EOFException 
    *         If end of input file is reached before requested number of 
@@ -253,7 +252,8 @@ public class SocketOutputStream extends OutputStream
 
   /**
    * Call
-   * {@link #transferToFully(FileChannel, long, int, MutableRate, MutableRate)}
+   * {@link #transferToFully(FileChannel, long, int, LongWritable, LongWritable)
+   * }
    * with null <code>waitForWritableTime</code> and <code>transferToTime</code>
    */
   public void transferToFully(FileChannel fileCh, long position, int count)

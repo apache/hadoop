@@ -62,7 +62,7 @@ public final class TimelineServerUtils {
     }
     target.addAll(defaultInitializers);
     String actualInitializers =
-        org.apache.commons.lang.StringUtils.join(target, ",");
+        org.apache.commons.lang3.StringUtils.join(target, ",");
     LOG.info("Filter initializers set for timeline service: " +
         actualInitializers);
     conf.set("hadoop.http.filter.initializers", actualInitializers);

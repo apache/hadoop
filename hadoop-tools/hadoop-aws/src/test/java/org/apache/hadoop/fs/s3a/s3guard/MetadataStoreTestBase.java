@@ -27,7 +27,6 @@ import java.util.Set;
 
 import com.google.common.collect.Sets;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
@@ -42,6 +41,10 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.HadoopTestBase;
+
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.isMetadataStoreAuthoritative;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthoritativeBit;
 
 /**
  * Main test class for MetadataStore implementations.
@@ -50,7 +53,7 @@ import org.apache.hadoop.io.IOUtils;
  * If your implementation may return missing results for recently set paths,
  * override {@link MetadataStoreTestBase#allowMissing()}.
  */
-public abstract class MetadataStoreTestBase extends Assert {
+public abstract class MetadataStoreTestBase extends HadoopTestBase {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(MetadataStoreTestBase.class);
@@ -503,12 +506,32 @@ public abstract class MetadataStoreTestBase extends Assert {
       assertListingsEqual(dirMeta.getListing(), "/a1/b1", "/a1/b2");
     }
 
-    // TODO HADOOP-14756 instrument MetadataStore for asserting & testing
     dirMeta = ms.listChildren(strToPath("/a1/b1"));
     if (!allowMissing() || dirMeta != null) {
       assertListingsEqual(dirMeta.getListing(), "/a1/b1/file1", "/a1/b1/file2",
           "/a1/b1/c1");
     }
+  }
+
+
+
+  @Test
+  public void testListChildrenAuthoritative() throws IOException {
+    Assume.assumeTrue("MetadataStore should be capable for authoritative "
+        + "storage of directories to run this test.",
+        metadataStorePersistsAuthoritativeBit(ms));
+
+    setupListStatus();
+
+    DirListingMetadata dirMeta = ms.listChildren(strToPath("/a1/b1"));
+    dirMeta.setAuthoritative(true);
+    dirMeta.put(makeFileStatus("/a1/b1/file_new", 100));
+    ms.put(dirMeta);
+
+    dirMeta = ms.listChildren(strToPath("/a1/b1"));
+    assertListingsEqual(dirMeta.getListing(), "/a1/b1/file1", "/a1/b1/file2",
+        "/a1/b1/c1", "/a1/b1/file_new");
+    assertTrue(dirMeta.isAuthoritative());
   }
 
   @Test
@@ -698,6 +721,13 @@ public abstract class MetadataStoreTestBase extends Assert {
         new FileStatus(0, false, 0, 0, time + 1, strToPath(freshFile)),
         Tristate.FALSE, false));
 
+    // set parent dir as authoritative
+    if (!allowMissing()) {
+      DirListingMetadata parentDirMd = ms.listChildren(strToPath(parentDir));
+      parentDirMd.setAuthoritative(true);
+      ms.put(parentDirMd);
+    }
+
     ms.prune(time);
     DirListingMetadata listing;
     for (String directory : directories) {
@@ -706,6 +736,90 @@ public abstract class MetadataStoreTestBase extends Assert {
         listing = ms.listChildren(path);
         assertFalse(listing.isAuthoritative());
       }
+    }
+  }
+
+  @Test
+  public void testPrunePreservesAuthoritative() throws Exception {
+    String rootDir = "/unpruned-root-dir";
+    String grandparentDir = rootDir + "/pruned-grandparent-dir";
+    String parentDir = grandparentDir + "/pruned-parent-dir";
+    String staleFile = parentDir + "/stale-file";
+    String freshFile = rootDir + "/fresh-file";
+    String[] directories = {rootDir, grandparentDir, parentDir};
+
+    // create dirs
+    createNewDirs(rootDir, grandparentDir, parentDir);
+    long time = System.currentTimeMillis();
+    ms.put(new PathMetadata(
+        new FileStatus(0, false, 0, 0, time + 1, strToPath(staleFile)),
+        Tristate.FALSE, false));
+    ms.put(new PathMetadata(
+        new FileStatus(0, false, 0, 0, time + 1, strToPath(freshFile)),
+        Tristate.FALSE, false));
+
+    if (!allowMissing()) {
+      // set parent dir as authoritative
+      DirListingMetadata parentDirMd = ms.listChildren(strToPath(parentDir));
+      parentDirMd.setAuthoritative(true);
+      ms.put(parentDirMd);
+
+      // prune the ms
+      ms.prune(time);
+
+      // get the directory listings
+      DirListingMetadata rootDirMd = ms.listChildren(strToPath(rootDir));
+      DirListingMetadata grandParentDirMd =
+          ms.listChildren(strToPath(grandparentDir));
+      parentDirMd = ms.listChildren(strToPath(parentDir));
+
+      // assert that parent dir is still authoritative (no removed elements
+      // during prune)
+      assertFalse(rootDirMd.isAuthoritative());
+      assertFalse(grandParentDirMd.isAuthoritative());
+      assertTrue(parentDirMd.isAuthoritative());
+    }
+  }
+
+  @Test
+  public void testPutDirListingMetadataPutsFileMetadata()
+      throws IOException {
+    boolean authoritative = true;
+    String[] filenames = {"/dir1/file1", "/dir1/file2", "/dir1/file3"};
+    String dirPath = "/dir1";
+
+    ArrayList<PathMetadata> metas = new ArrayList<>(filenames.length);
+    for (String filename : filenames) {
+      metas.add(new PathMetadata(makeFileStatus(filename, 100)));
+    }
+    DirListingMetadata dirMeta =
+        new DirListingMetadata(strToPath(dirPath), metas, authoritative);
+    ms.put(dirMeta);
+
+    if (!allowMissing()) {
+      assertDirectorySize(dirPath, filenames.length);
+      PathMetadata metadata;
+      for(String fileName : filenames){
+        metadata = ms.get(strToPath(fileName));
+        assertNotNull(String.format(
+            "PathMetadata for file %s should not be null.", fileName),
+            metadata);
+      }
+    }
+  }
+
+  @Test
+  public void testPutRetainsIsDeletedInParentListing() throws Exception {
+    final Path path = strToPath("/a/b");
+    final FileStatus fileStatus = basicFileStatus(path, 0, false);
+    PathMetadata pm = new PathMetadata(fileStatus);
+    pm.setIsDeleted(true);
+    ms.put(pm);
+    if(!allowMissing()) {
+      final PathMetadata pathMetadata =
+          ms.listChildren(path.getParent()).get(path);
+      assertTrue("isDeleted should be true on the parent listing",
+          pathMetadata.isDeleted());
     }
   }
 
@@ -780,7 +894,7 @@ public abstract class MetadataStoreTestBase extends Assert {
       throws IOException {
     DirListingMetadata dirMeta = ms.listChildren(strToPath(pathStr));
     if (!allowMissing()) {
-      assertNotNull("Directory " + pathStr + " in cache", dirMeta);
+      assertNotNull("Directory " + pathStr + " is null in cache", dirMeta);
     }
     if (!allowMissing() || dirMeta != null) {
       dirMeta = dirMeta.withoutTombstones();
@@ -839,7 +953,7 @@ public abstract class MetadataStoreTestBase extends Assert {
     return basicFileStatus(path, size, isDir, modTime, accessTime);
   }
 
-  FileStatus basicFileStatus(Path path, int size, boolean isDir,
+  public static FileStatus basicFileStatus(Path path, int size, boolean isDir,
       long newModTime, long newAccessTime) throws IOException {
     return new FileStatus(size, isDir, REPLICATION, BLOCK_SIZE, newModTime,
         newAccessTime, PERMISSION, OWNER, GROUP, path);

@@ -134,8 +134,8 @@ public class Find extends FsCommand {
     for (String line : HELP) {
       sb.append(line).append("\n");
     }
-    sb.append("\n");
-    sb.append("The following primary expressions are recognised:\n");
+    sb.append("\n")
+        .append("The following primary expressions are recognised:\n");
     for (Expression expr : primaries) {
       for (String line : expr.getUsage()) {
         sb.append("  ").append(line).append("\n");

@@ -1,6 +1,6 @@
 For the latest information about Hadoop, please visit our website at:
 
-   http://hadoop.apache.org/core/
+   http://hadoop.apache.org/
 
 and our wiki, at:
 
@@ -29,3 +29,5 @@ The following provides more details on the included cryptographic
 software:
   Hadoop Core uses the SSL libraries from the Jetty project written 
 by mortbay.org.
+  Hadoop Yarn Server Web Proxy uses the BouncyCastle Java
+cryptography APIs written by the Legion of the Bouncy Castle Inc.

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.service.provider.docker;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
@@ -35,19 +35,20 @@ public class DockerClientProvider extends AbstractClientProvider
   }
 
   @Override
-  public void validateArtifact(Artifact artifact, FileSystem fileSystem) {
+  public void validateArtifact(Artifact artifact, String compName,
+      FileSystem fileSystem) {
     if (artifact == null) {
-      throw new IllegalArgumentException(
-          RestApiErrorMessages.ERROR_ARTIFACT_INVALID);
+      throw new IllegalArgumentException(String.format(
+          RestApiErrorMessages.ERROR_ARTIFACT_FOR_COMP_INVALID, compName));
     }
     if (StringUtils.isEmpty(artifact.getId())) {
-      throw new IllegalArgumentException(
-          RestApiErrorMessages.ERROR_ARTIFACT_ID_INVALID);
+      throw new IllegalArgumentException(String.format(
+          RestApiErrorMessages.ERROR_ARTIFACT_ID_FOR_COMP_INVALID, compName));
     }
   }
 
   @Override
-  protected void validateConfigFile(ConfigFile configFile, FileSystem
-      fileSystem) throws IOException {
+  protected void validateConfigFile(ConfigFile configFile, String compName,
+      FileSystem fileSystem) throws IOException {
   }
 }

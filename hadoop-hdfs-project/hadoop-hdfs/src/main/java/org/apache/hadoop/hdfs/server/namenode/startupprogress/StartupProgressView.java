@@ -179,7 +179,7 @@ public class StartupProgressView {
   /**
    * Returns all phases.
    * 
-   * @return Iterable<Phase> containing all phases
+   * @return {@code Iterable<Phase>} containing all phases
    */
   public Iterable<Phase> getPhases() {
     return EnumSet.allOf(Phase.class);
@@ -189,7 +189,7 @@ public class StartupProgressView {
    * Returns all steps within a phase.
    * 
    * @param phase Phase to get
-   * @return Iterable<Step> all steps
+   * @return {@code Iterable<Step>} all steps
    */
   public Iterable<Step> getSteps(Phase phase) {
     return new TreeSet<Step>(phases.get(phase).steps.keySet());

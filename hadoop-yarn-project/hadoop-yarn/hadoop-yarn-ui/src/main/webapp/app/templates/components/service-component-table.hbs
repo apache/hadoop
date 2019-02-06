@@ -90,18 +90,12 @@
           {{input type="number" min="0" class="form-control" value=currentComponent.numOfContainers}}
         </div>
         <div class="form-group">
-          <label class="required">Artifact Id</label>
+          <label>Artifact Id</label>
           {{input type="text" class="form-control" value=currentComponent.artifactId}}
         </div>
         <div class="form-group">
           <label class="required">Launch Command</label>
           {{input type="text" class="form-control" value=currentComponent.launchCommand}}
-        </div>
-        <div class="form-group">
-          <label class="checkbox-inline">
-            {{input type="checkbox" checked=currentComponent.uniqueComponentSupport}}
-            Unique Component Support
-          </label>
         </div>
       </div>
       <div class="modal-footer">

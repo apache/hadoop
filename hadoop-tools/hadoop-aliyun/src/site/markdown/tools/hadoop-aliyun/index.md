@@ -111,10 +111,25 @@ please raise your issues with them.
 ### Other properties
 
     <property>
+      <name>fs.AbstractFileSystem.oss.impl</name>
+      <value>org.apache.hadoop.fs.aliyun.oss.OSS</value>
+      <description>The implementation class of the OSS AbstractFileSystem.
+        If you want to use OSS as YARN’s resource storage dir via the
+        fs.defaultFS configuration property in Hadoop’s core-site.xml,
+        you should add this configuration to Hadoop's core-site.xml
+      </description>
+    </property>
+
+    <property>
       <name>fs.oss.endpoint</name>
       <description>Aliyun OSS endpoint to connect to. An up-to-date list is
         provided in the Aliyun OSS Documentation.
        </description>
+    </property>
+
+    <property>
+       <name>fs.oss.impl</name>
+       <value>org.apache.hadoop.fs.aliyun.oss.AliyunOSSFileSystem</value>
     </property>
 
     <property>
@@ -179,9 +194,47 @@ please raise your issues with them.
     </property>
 
     <property>
+      <name>fs.oss.upload.active.blocks</name>
+      <value>4</value>
+      <description>Active(Concurrent) upload blocks when uploading a file.</description>
+    </property>
+
+    <property>
+      <name>fs.oss.multipart.download.threads</name>
+      <value>10</value>
+      <description>The maximum number of threads allowed in the pool for multipart download and upload.</description>
+    </property>
+
+    <property>
+      <name>fs.oss.multipart.download.ahead.part.max.number</name>
+      <value>4</value>
+      <description>The maximum number of read ahead parts when reading a file.</description>
+    </property>
+
+    <property>
+      <name>fs.oss.max.total.tasks</name>
+      <value>128</value>
+      <description>The maximum queue number for multipart download and upload.</description>
+    </property>
+
+    <property>
+      <name>fs.oss.max.copy.threads</name>
+      <value>25</value>
+      <description>The maximum number of threads allowed in the pool for copy operations.</description>
+    </property>
+
+    <property>
+      <name>fs.oss.max.copy.tasks.per.dir</name>
+      <value>5</value>
+      <description>The maximum number of concurrent tasks allowed when copying a directory.</description>
+    </property>
+
+    <property>
       <name>fs.oss.multipart.upload.threshold</name>
       <value>20971520</value>
-      <description>Minimum size in bytes before we start a multipart uploads or copy.</description>
+      <description>Minimum size in bytes before we start a multipart uploads or copy.
+        Notice: This property is deprecated and will be removed in further version.
+      </description>
     </property>
 
     <property>

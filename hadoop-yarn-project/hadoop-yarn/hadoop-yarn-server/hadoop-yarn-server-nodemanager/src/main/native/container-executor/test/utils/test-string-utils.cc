@@ -59,6 +59,7 @@
    ASSERT_EQ(1, numbers[0]);
    ASSERT_EQ(-1, numbers[3]);
    ASSERT_EQ(0, numbers[5]);
+   free(numbers);
 
    input = "3";
    rc = get_numbers_split_by_comma(input, &numbers, &n_numbers);
@@ -66,28 +67,33 @@
    ASSERT_EQ(0, rc) << "Should succeeded\n";
    ASSERT_EQ(1, n_numbers);
    ASSERT_EQ(3, numbers[0]);
+   free(numbers);
 
    input = "";
    rc = get_numbers_split_by_comma(input, &numbers, &n_numbers);
    std::cout << "Testing input=" << input << "\n";
    ASSERT_EQ(0, rc) << "Should succeeded\n";
    ASSERT_EQ(0, n_numbers);
+   free(numbers);
 
    input = ",,";
    rc = get_numbers_split_by_comma(input, &numbers, &n_numbers);
    std::cout << "Testing input=" << input << "\n";
    ASSERT_EQ(0, rc) << "Should succeeded\n";
    ASSERT_EQ(0, n_numbers);
+   free(numbers);
 
    input = "1,2,aa,bb";
    rc = get_numbers_split_by_comma(input, &numbers, &n_numbers);
    std::cout << "Testing input=" << input << "\n";
    ASSERT_TRUE(0 != rc) << "Should failed\n";
+   free(numbers);
 
    input = "1,2,3,-12312312312312312312321311231231231";
    rc = get_numbers_split_by_comma(input, &numbers, &n_numbers);
    std::cout << "Testing input=" << input << "\n";
    ASSERT_TRUE(0 != rc) << "Should failed\n";
+   free(numbers);
  }
 
    TEST_F(TestStringUtils, test_validate_container_id) {

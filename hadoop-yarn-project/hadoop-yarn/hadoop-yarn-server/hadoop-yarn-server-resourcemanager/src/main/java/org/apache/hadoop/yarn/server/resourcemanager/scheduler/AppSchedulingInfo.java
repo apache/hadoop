@@ -93,7 +93,7 @@ public class AppSchedulingInfo {
   private final ReentrantReadWriteLock.WriteLock writeLock;
 
   public final ContainerUpdateContext updateContext;
-  public final Map<String, String> applicationSchedulingEnvs = new HashMap<>();
+  private final Map<String, String> applicationSchedulingEnvs = new HashMap<>();
   private final RMContext rmContext;
 
   public AppSchedulingInfo(ApplicationAttemptId appAttemptId, String user,
@@ -476,6 +476,23 @@ public class AppSchedulingInfo {
     return ret;
   }
 
+  /**
+   * Fetch SchedulingRequests.
+   * @return All pending SchedulingRequests.
+   */
+  public List<SchedulingRequest> getAllSchedulingRequests() {
+    List<SchedulingRequest> ret = new ArrayList<>();
+    try {
+      this.readLock.lock();
+      schedulerKeyToAppPlacementAllocator.values().stream()
+          .filter(ap -> ap.getSchedulingRequest() != null)
+          .forEach(ap -> ret.add(ap.getSchedulingRequest()));
+    } finally {
+      this.readLock.unlock();
+    }
+    return ret;
+  }
+
   public PendingAsk getNextPendingAsk() {
     try {
       readLock.lock();
@@ -578,7 +595,9 @@ public class AppSchedulingInfo {
       newMetrics.moveAppTo(this);
       abstractUsersManager.deactivateApplication(user, applicationId);
       abstractUsersManager = newQueue.getAbstractUsersManager();
-      abstractUsersManager.activateApplication(user, applicationId);
+      if (!schedulerKeys.isEmpty()) {
+        abstractUsersManager.activateApplication(user, applicationId);
+      }
       this.queue = newQueue;
     } finally {
       this.writeLock.unlock();
@@ -762,5 +781,14 @@ public class AppSchedulingInfo {
     } finally {
       this.readLock.unlock();
     }
+  }
+
+  /**
+   * Get scheduling envs configured for this application.
+   *
+   * @return a map of applicationSchedulingEnvs
+   */
+  public Map<String, String> getApplicationSchedulingEnvs() {
+    return applicationSchedulingEnvs;
   }
 }

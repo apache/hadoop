@@ -23,10 +23,13 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.Iterator;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.NodeAttributeOpCode;
 
 /**
  * {@code PlacementConstraint} represents a placement constraint for a resource
@@ -43,6 +46,11 @@ public class PlacementConstraint {
 
   public PlacementConstraint(AbstractConstraint constraintExpr) {
     this.constraintExpr = constraintExpr;
+  }
+
+  @Override
+  public String toString() {
+    return this.constraintExpr.toString();
   }
 
   /**
@@ -123,6 +131,11 @@ public class PlacementConstraint {
     public PlacementConstraint build() {
       return new PlacementConstraint(this);
     }
+
+    @Override
+    public String toString() {
+      return super.toString();
+    }
   }
 
   static final String NODE_SCOPE = "node";
@@ -143,18 +156,34 @@ public class PlacementConstraint {
     private int minCardinality;
     private int maxCardinality;
     private Set<TargetExpression> targetExpressions;
+    private NodeAttributeOpCode attributeOpCode;
 
     public SingleConstraint(String scope, int minCardinality,
-        int maxCardinality, Set<TargetExpression> targetExpressions) {
+        int maxCardinality, NodeAttributeOpCode opCode,
+        Set<TargetExpression> targetExpressions) {
       this.scope = scope;
       this.minCardinality = minCardinality;
       this.maxCardinality = maxCardinality;
       this.targetExpressions = targetExpressions;
+      this.attributeOpCode = opCode;
+    }
+
+    public SingleConstraint(String scope, int minCardinality,
+        int maxCardinality, Set<TargetExpression> targetExpressions) {
+      this(scope, minCardinality, maxCardinality, NodeAttributeOpCode.NO_OP,
+          targetExpressions);
     }
 
     public SingleConstraint(String scope, int minC, int maxC,
         TargetExpression... targetExpressions) {
       this(scope, minC, maxC, new HashSet<>(Arrays.asList(targetExpressions)));
+    }
+
+    public SingleConstraint(String scope, int minC, int maxC,
+        NodeAttributeOpCode opCode,
+        TargetExpression... targetExpressions) {
+      this(scope, minC, maxC, opCode,
+          new HashSet<>(Arrays.asList(targetExpressions)));
     }
 
     /**
@@ -193,6 +222,15 @@ public class PlacementConstraint {
       return targetExpressions;
     }
 
+    /**
+     * Get the NodeAttributeOpCode of the constraint.
+     *
+     * @return nodeAttribute Op Code
+     */
+    public NodeAttributeOpCode getNodeAttributeOpCode() {
+      return attributeOpCode;
+    }
+
     @Override
     public boolean equals(Object o) {
       if (this == o) {
@@ -213,6 +251,10 @@ public class PlacementConstraint {
       if (!getScope().equals(that.getScope())) {
         return false;
       }
+      if (getNodeAttributeOpCode() != null && !getNodeAttributeOpCode()
+          .equals(that.getNodeAttributeOpCode())) {
+        return false;
+      }
       return getTargetExpressions().equals(that.getTargetExpressions());
     }
 
@@ -221,8 +263,52 @@ public class PlacementConstraint {
       int result = getScope().hashCode();
       result = 31 * result + getMinCardinality();
       result = 31 * result + getMaxCardinality();
+      result = 31 * result + getNodeAttributeOpCode().hashCode();
       result = 31 * result + getTargetExpressions().hashCode();
       return result;
+    }
+
+    @Override
+    public String toString() {
+      int max = getMaxCardinality();
+      int min = getMinCardinality();
+      List<String> targetExprList = getTargetExpressions().stream()
+          .map(TargetExpression::toString).collect(Collectors.toList());
+      List<String> targetConstraints = new ArrayList<>();
+      for (String targetExpr : targetExprList) {
+        if (min == 0 && max == 0) {
+          // anti-affinity
+          targetConstraints.add(new StringBuilder()
+              .append("notin").append(",")
+              .append(getScope()).append(",")
+              .append(targetExpr)
+              .toString());
+        } else if (min == 1 && max == Integer.MAX_VALUE) {
+          // affinity
+          targetConstraints.add(new StringBuilder()
+              .append("in").append(",")
+              .append(getScope()).append(",")
+              .append(targetExpr)
+              .toString());
+        } else if (min == -1 && max == -1) {
+          // node attribute
+          targetConstraints.add(new StringBuilder()
+              .append(getScope()).append(",")
+              .append(getNodeAttributeOpCode()).append(",")
+              .append(targetExpr)
+              .toString());
+        } else {
+          // cardinality
+          targetConstraints.add(new StringBuilder()
+              .append("cardinality").append(",")
+              .append(getScope()).append(",")
+              .append(targetExpr).append(",")
+              .append(min).append(",")
+              .append(max)
+              .toString());
+        }
+      }
+      return String.join(":", targetConstraints);
     }
 
     @Override
@@ -326,6 +412,23 @@ public class PlacementConstraint {
     }
 
     @Override
+    public String toString() {
+      StringBuffer sb = new StringBuffer();
+      if (TargetType.ALLOCATION_TAG == this.targetType) {
+        // following by a comma separated tags
+        sb.append(String.join(",", getTargetValues()));
+      } else if (TargetType.NODE_ATTRIBUTE == this.targetType) {
+        // following by a comma separated key value pairs
+        if (this.getTargetValues() != null) {
+          String attributeName = this.getTargetKey();
+          String attributeValues = String.join(":", this.getTargetValues());
+          sb.append(attributeName + "=[" + attributeValues + "]");
+        }
+      }
+      return sb.toString();
+    }
+
+    @Override
     public <T> T accept(Visitor<T> visitor) {
       return visitor.visit(this);
     }
@@ -345,7 +448,16 @@ public class PlacementConstraint {
      * TargetOperator enum helps to specify type.
      */
     enum TargetOperator {
-      IN, NOT_IN
+      IN("in"), NOT_IN("notin");
+
+      private String operator;
+      TargetOperator(String op) {
+        this.operator = op;
+      }
+
+      String getOperator() {
+        return this.operator;
+      }
     }
 
     private TargetOperator op;
@@ -412,6 +524,17 @@ public class PlacementConstraint {
       result = 31 * result + getScope().hashCode();
       result = 31 * result + getTargetExpressions().hashCode();
       return result;
+    }
+
+    @Override
+    public String toString() {
+      List<String> targetExprs = getTargetExpressions().stream().map(
+          targetExpression -> new StringBuilder()
+              .append(op.getOperator()).append(",")
+              .append(scope).append(",")
+              .append(targetExpression.toString())
+              .toString()).collect(Collectors.toList());
+      return String.join(":", targetExprs);
     }
 
     @Override
@@ -517,6 +640,17 @@ public class PlacementConstraint {
           + (allocationTags != null ? allocationTags.hashCode() : 0);
       return result;
     }
+
+    @Override
+    public String toString() {
+      StringBuffer sb = new StringBuffer();
+      sb.append("cardinality").append(",").append(getScope()).append(",");
+      for (String tag : getAllocationTags()) {
+        sb.append(tag).append(",");
+      }
+      sb.append(minCardinality).append(",").append(maxCardinality);
+      return sb.toString();
+    }
   }
 
   /**
@@ -580,6 +714,22 @@ public class PlacementConstraint {
     public <T> T accept(Visitor<T> visitor) {
       return visitor.visit(this);
     }
+
+    @Override
+    public String toString() {
+      StringBuffer sb = new StringBuffer();
+      sb.append("and(");
+      Iterator<AbstractConstraint> it = getChildren().iterator();
+      while (it.hasNext()) {
+        AbstractConstraint child = it.next();
+        sb.append(child.toString());
+        if (it.hasNext()) {
+          sb.append(":");
+        }
+      }
+      sb.append(")");
+      return sb.toString();
+    }
   }
 
   /**
@@ -605,6 +755,22 @@ public class PlacementConstraint {
     @Override
     public <T> T accept(Visitor<T> visitor) {
       return visitor.visit(this);
+    }
+
+    @Override
+    public String toString() {
+      StringBuffer sb = new StringBuffer();
+      sb.append("or(");
+      Iterator<AbstractConstraint> it = getChildren().iterator();
+      while (it.hasNext()) {
+        AbstractConstraint child = it.next();
+        sb.append(child.toString());
+        if (it.hasNext()) {
+          sb.append(":");
+        }
+      }
+      sb.append(")");
+      return sb.toString();
     }
   }
 
@@ -635,6 +801,22 @@ public class PlacementConstraint {
     @Override
     public <T> T accept(Visitor<T> visitor) {
       return visitor.visit(this);
+    }
+
+    @Override
+    public String toString() {
+      StringBuffer sb = new StringBuffer();
+      sb.append("DelayedOr(");
+      Iterator<TimedPlacementConstraint> it = getChildren().iterator();
+      while (it.hasNext()) {
+        TimedPlacementConstraint child = it.next();
+        sb.append(child.toString());
+        if (it.hasNext()) {
+          sb.append(",");
+        }
+      }
+      sb.append(")");
+      return sb.toString();
     }
   }
 

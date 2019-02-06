@@ -27,8 +27,12 @@
 #ifdef UNIX
 static EVP_CIPHER_CTX * (*dlsym_EVP_CIPHER_CTX_new)(void);
 static void (*dlsym_EVP_CIPHER_CTX_free)(EVP_CIPHER_CTX *);
+#if OPENSSL_API_COMPAT < 0x10100000L && OPENSSL_VERSION_NUMBER >= 0x10100000L
+static int (*dlsym_EVP_CIPHER_CTX_reset)(EVP_CIPHER_CTX *);
+#else
 static int (*dlsym_EVP_CIPHER_CTX_cleanup)(EVP_CIPHER_CTX *);
 static void (*dlsym_EVP_CIPHER_CTX_init)(EVP_CIPHER_CTX *);
+#endif
 static int (*dlsym_EVP_CIPHER_CTX_set_padding)(EVP_CIPHER_CTX *, int);
 static int (*dlsym_EVP_CIPHER_CTX_test_flags)(const EVP_CIPHER_CTX *, int);
 static int (*dlsym_EVP_CIPHER_CTX_block_size)(const EVP_CIPHER_CTX *);
@@ -123,10 +127,16 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_initIDs
                       "EVP_CIPHER_CTX_new");
   LOAD_DYNAMIC_SYMBOL(dlsym_EVP_CIPHER_CTX_free, env, openssl,  \
                       "EVP_CIPHER_CTX_free");
+#if OPENSSL_API_COMPAT < 0x10100000L && OPENSSL_VERSION_NUMBER >= 0x10100000L
+  LOAD_DYNAMIC_SYMBOL(dlsym_EVP_CIPHER_CTX_reset, env, openssl,  \
+                      "EVP_CIPHER_CTX_reset");
+#else
   LOAD_DYNAMIC_SYMBOL(dlsym_EVP_CIPHER_CTX_cleanup, env, openssl,  \
                       "EVP_CIPHER_CTX_cleanup");
   LOAD_DYNAMIC_SYMBOL(dlsym_EVP_CIPHER_CTX_init, env, openssl,  \
                       "EVP_CIPHER_CTX_init");
+#endif
+
   LOAD_DYNAMIC_SYMBOL(dlsym_EVP_CIPHER_CTX_set_padding, env, openssl,  \
                       "EVP_CIPHER_CTX_set_padding");
   LOAD_DYNAMIC_SYMBOL(dlsym_EVP_CIPHER_CTX_test_flags, env, openssl,  \
@@ -271,7 +281,11 @@ JNIEXPORT jlong JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_init
   (*env)->ReleaseByteArrayElements(env, key, jKey, 0);
   (*env)->ReleaseByteArrayElements(env, iv, jIv, 0);
   if (rc == 0) {
+#if OPENSSL_API_COMPAT < 0x10100000L && OPENSSL_VERSION_NUMBER >= 0x10100000L
+    dlsym_EVP_CIPHER_CTX_reset(context);
+#else
     dlsym_EVP_CIPHER_CTX_cleanup(context);
+#endif
     THROW(env, "java/lang/InternalError", "Error in EVP_CipherInit_ex.");
     return (jlong)0;
   }
@@ -334,7 +348,11 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_update
   int output_len = 0;
   if (!dlsym_EVP_CipherUpdate(context, output_bytes, &output_len,  \
       input_bytes, input_len)) {
+#if OPENSSL_API_COMPAT < 0x10100000L && OPENSSL_VERSION_NUMBER >= 0x10100000L
+    dlsym_EVP_CIPHER_CTX_reset(context);
+#else
     dlsym_EVP_CIPHER_CTX_cleanup(context);
+#endif
     THROW(env, "java/lang/InternalError", "Error in EVP_CipherUpdate.");
     return 0;
   }
@@ -376,7 +394,11 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_doFinal
   
   int output_len = 0;
   if (!dlsym_EVP_CipherFinal_ex(context, output_bytes, &output_len)) {
+#if OPENSSL_API_COMPAT < 0x10100000L && OPENSSL_VERSION_NUMBER >= 0x10100000L
+    dlsym_EVP_CIPHER_CTX_reset(context);
+#else
     dlsym_EVP_CIPHER_CTX_cleanup(context);
+#endif
     THROW(env, "java/lang/InternalError", "Error in EVP_CipherFinal_ex.");
     return 0;
   }
@@ -396,6 +418,16 @@ JNIEXPORT jstring JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_getLibrary
     (JNIEnv *env, jclass clazz) 
 {
 #ifdef UNIX
+#if OPENSSL_API_COMPAT < 0x10100000L && OPENSSL_VERSION_NUMBER >= 0x10100000L
+  if (dlsym_EVP_CIPHER_CTX_reset) {
+    Dl_info dl_info;
+    if(dladdr(
+        dlsym_EVP_CIPHER_CTX_reset,
+        &dl_info)) {
+      return (*env)->NewStringUTF(env, dl_info.dli_fname);
+    }
+  }
+#else
   if (dlsym_EVP_CIPHER_CTX_init) {
     Dl_info dl_info;
     if(dladdr(
@@ -404,6 +436,7 @@ JNIEXPORT jstring JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_getLibrary
       return (*env)->NewStringUTF(env, dl_info.dli_fname);
     }
   }
+#endif
 
   return (*env)->NewStringUTF(env, HADOOP_OPENSSL_LIBRARY);
 #endif

@@ -22,8 +22,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.lang.builder.EqualsBuilder;
-import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -187,10 +187,10 @@ public final class ECSchema implements Serializable {
   public String toString() {
     StringBuilder sb = new StringBuilder("ECSchema=[");
 
-    sb.append("Codec=" + codecName + ", ");
-    sb.append(NUM_DATA_UNITS_KEY + "=" + numDataUnits + ", ");
-    sb.append(NUM_PARITY_UNITS_KEY + "=" + numParityUnits);
-    sb.append((extraOptions.isEmpty() ? "" : ", "));
+    sb.append("Codec=" + codecName + ", ")
+        .append(NUM_DATA_UNITS_KEY + "=" + numDataUnits + ", ")
+        .append(NUM_PARITY_UNITS_KEY + "=" + numParityUnits)
+        .append((extraOptions.isEmpty() ? "" : ", "));
 
     int i = 0;
     for (Map.Entry<String, String> entry : extraOptions.entrySet()) {

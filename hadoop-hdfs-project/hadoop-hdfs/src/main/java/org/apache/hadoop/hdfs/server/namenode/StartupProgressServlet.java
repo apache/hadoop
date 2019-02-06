@@ -103,7 +103,7 @@ public class StartupProgressServlet extends DfsServlet {
       json.writeEndArray();
       json.writeEndObject();
     } finally {
-      IOUtils.cleanup(LOG, json);
+      IOUtils.cleanupWithLogger(LOG, json);
     }
   }
 

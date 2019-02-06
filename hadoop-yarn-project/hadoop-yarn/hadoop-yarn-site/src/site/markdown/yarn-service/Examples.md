@@ -20,7 +20,7 @@ This document describes some example service definitions (`Yarnfile`).
 
 ## Apache web server - httpd (with registry DNS)
 
-For this example to work, centos/httpd-24-centos7 image must be included in `docker.privileged-containers.registries`.
+For this example to work, centos/httpd-24-centos7 image must be included in `docker.trusted.registries`.
 For server side configuration, please refer to [Running Applications in Docker Containers](../DockerContainers.html) document.
 
 Below is the `Yarnfile` for a service called `httpd-service` with two `httpd` instances.
@@ -30,6 +30,7 @@ Note this example requires registry DNS.
 ```
 {
   "name": "httpd-service",
+  "version": "1.0",
   "lifetime": "3600",
   "components": [
     {
@@ -47,7 +48,7 @@ Note this example requires registry DNS.
       "configuration": {
         "files": [
           {
-            "type": "ENV",
+            "type": "TEMPLATE",
             "dest_file": "/var/www/html/index.html",
             "properties": {
               "content": "<html><header><title>Title</title></header><body>Hello from ${COMPONENT_INSTANCE_NAME}!</body></html>"
@@ -163,3 +164,40 @@ where `service-name` is optional. If omitted, it uses the name defined in the `Y
 
 Look up your IPs at the RM REST endpoint `http://<RM host>:8088/app/v1/services/httpd-service`.
 Then visit port 8080 for each IP to view the pages.
+
+## Docker image ENTRYPOINT support
+
+Docker images may have built with ENTRYPOINT to enable start up of docker image without any parameters.
+When passing parameters to ENTRYPOINT enabled image, `launch_command` is delimited by comma (,).
+
+```
+{
+  "name": "sleeper-service",
+  "version": "1.0",
+  "components" :
+  [
+    {
+      "name": "sleeper",
+      "number_of_containers": 2,
+      "artifact": {
+        "id": "hadoop/centos:latest",
+        "type": "DOCKER"
+      },
+      "launch_command": "sleep,90000",
+      "resource": {
+        "cpus": 1,
+        "memory": "256"
+      },
+      "restart_policy": "ON_FAILURE",
+      "configuration": {
+        "env": {
+          "YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE":"true"
+        },
+        "properties": {
+          "docker.network": "host"
+        }
+      }
+    }
+  ]
+}
+```

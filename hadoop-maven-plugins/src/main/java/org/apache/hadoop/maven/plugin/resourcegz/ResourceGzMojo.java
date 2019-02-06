@@ -13,7 +13,7 @@
  */
 package org.apache.hadoop.maven.plugin.resourcegz;
 
-import com.google.inject.internal.util.Lists;
+import com.google.common.collect.Lists;
 import org.apache.commons.io.IOUtils;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;

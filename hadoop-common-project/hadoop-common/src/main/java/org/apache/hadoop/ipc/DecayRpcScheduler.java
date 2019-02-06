@@ -39,7 +39,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.AtomicDoubleArray;
-import org.apache.commons.lang.exception.ExceptionUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -76,7 +76,8 @@ public class DecayRpcScheduler implements RpcScheduler,
 
   /**
    * Decay factor controls how much each count is suppressed by on each sweep.
-   * Valid numbers are > 0 and < 1. Decay factor works in tandem with period
+   * Valid numbers are &gt; 0 and &lt; 1. Decay factor works in tandem with
+   * period
    * to control how long the scheduler remembers an identity.
    */
   public static final String IPC_SCHEDULER_DECAYSCHEDULER_FACTOR_KEY =
@@ -232,7 +233,7 @@ public class DecayRpcScheduler implements RpcScheduler,
         "the number of top users for scheduler metrics must be at least 1");
 
     // Setup delay timer
-    Timer timer = new Timer();
+    Timer timer = new Timer(true);
     DecayTask task = new DecayTask(this, timer);
     timer.scheduleAtFixedRate(task, decayPeriodMillis, decayPeriodMillis);
 
@@ -391,6 +392,7 @@ public class DecayRpcScheduler implements RpcScheduler,
    * counts current.
    */
   private void decayCurrentCounts() {
+    LOG.debug("Start to decay current counts.");
     try {
       long totalDecayedCount = 0;
       long totalRawCount = 0;
@@ -410,7 +412,12 @@ public class DecayRpcScheduler implements RpcScheduler,
         totalDecayedCount += nextValue;
         decayedCount.set(nextValue);
 
+        LOG.debug("Decaying counts for the user: {}, " +
+            "its decayedCount: {}, rawCount: {}", entry.getKey(),
+            nextValue, rawCount.get());
         if (nextValue == 0) {
+          LOG.debug("The decayed count for the user {} is zero " +
+              "and being cleaned.", entry.getKey());
           // We will clean up unused keys here. An interesting optimization
           // might be to have an upper bound on keyspace in callCounts and only
           // clean once we pass it.
@@ -422,6 +429,8 @@ public class DecayRpcScheduler implements RpcScheduler,
       totalDecayedCallCount.set(totalDecayedCount);
       totalRawCallCount.set(totalRawCount);
 
+      LOG.debug("After decaying the stored counts, totalDecayedCount: {}, " +
+          "totalRawCallCount: {}.", totalDecayedCount, totalRawCount);
       // Now refresh the cache of scheduling decisions
       recomputeScheduleCache();
 
@@ -429,7 +438,7 @@ public class DecayRpcScheduler implements RpcScheduler,
       updateAverageResponseTime(true);
     } catch (Exception ex) {
       LOG.error("decayCurrentCounts exception: " +
-          ExceptionUtils.getFullStackTrace(ex));
+          ExceptionUtils.getStackTrace(ex));
       throw ex;
     }
   }

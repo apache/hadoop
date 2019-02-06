@@ -69,7 +69,7 @@ public class QueueCLI extends YarnCLI {
       printUsage(opts);
       return -1;
     }
-
+    createAndStartYarnClient();
     if (cliParser.hasOption(STATUS_CMD)) {
       if (args.length != 2) {
         printUsage(opts);
@@ -157,6 +157,12 @@ public class QueueCLI extends YarnCLI {
     if (preemptStatus != null) {
       writer.print("\tPreemption : ");
       writer.println(preemptStatus ? "disabled" : "enabled");
+    }
+
+    Boolean intraQueuePreemption = queueInfo.getIntraQueuePreemptionDisabled();
+    if (intraQueuePreemption != null) {
+      writer.print("\tIntra-queue Preemption : ");
+      writer.println(intraQueuePreemption ? "disabled" : "enabled");
     }
   }
 }

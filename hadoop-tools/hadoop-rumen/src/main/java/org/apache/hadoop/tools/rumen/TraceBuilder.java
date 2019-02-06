@@ -30,8 +30,8 @@ import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
@@ -49,7 +49,7 @@ import org.apache.hadoop.util.ToolRunner;
  * The main driver of the Rumen Parser.
  */
 public class TraceBuilder extends Configured implements Tool {
-  static final private Log LOG = LogFactory.getLog(TraceBuilder.class);
+  static final private Logger LOG = LoggerFactory.getLogger(TraceBuilder.class);
 
   static final int RUN_METHOD_FAILED_EXIT_CODE = 3;
 
@@ -310,6 +310,6 @@ public class TraceBuilder extends Configured implements Tool {
   }
 
   void finish() {
-    IOUtils.cleanup(LOG, traceWriter, topologyWriter);
+    IOUtils.cleanupWithLogger(LOG, traceWriter, topologyWriter);
   }
 }

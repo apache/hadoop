@@ -51,6 +51,8 @@ public class AllocationFileQueueParser {
   private static final String MAX_CHILD_RESOURCES = "maxChildResources";
   private static final String MAX_RUNNING_APPS = "maxRunningApps";
   private static final String MAX_AMSHARE = "maxAMShare";
+  public static final String MAX_CONTAINER_ALLOCATION =
+      "maxContainerAllocation";
   private static final String WEIGHT = "weight";
   private static final String MIN_SHARE_PREEMPTION_TIMEOUT =
       "minSharePreemptionTimeout";
@@ -134,7 +136,7 @@ public class AllocationFileQueueParser {
       if (MIN_RESOURCES.equals(field.getTagName())) {
         String text = getTrimmedTextData(field);
         ConfigurableResource val =
-            FairSchedulerConfiguration.parseResourceConfigValue(text);
+            FairSchedulerConfiguration.parseResourceConfigValue(text, 0L);
         builder.minQueueResources(queueName, val.getResource());
       } else if (MAX_RESOURCES.equals(field.getTagName())) {
         String text = getTrimmedTextData(field);
@@ -155,6 +157,11 @@ public class AllocationFileQueueParser {
         float val = Float.parseFloat(text);
         val = Math.min(val, 1.0f);
         builder.queueMaxAMShares(queueName, val);
+      } else if (MAX_CONTAINER_ALLOCATION.equals(field.getTagName())) {
+        String text = getTrimmedTextData(field);
+        ConfigurableResource val =
+            FairSchedulerConfiguration.parseResourceConfigValue(text);
+        builder.queueMaxContainerAllocation(queueName, val.getResource());
       } else if (WEIGHT.equals(field.getTagName())) {
         String text = getTrimmedTextData(field);
         double val = Double.parseDouble(text);
@@ -217,7 +224,10 @@ public class AllocationFileQueueParser {
     // if a leaf in the alloc file is marked as type='parent'
     // then store it as a parent queue
     if (isLeaf && !"parent".equals(element.getAttribute("type"))) {
-      builder.configuredQueues(FSQueueType.LEAF, queueName);
+      // reservable queue has been already configured as parent
+      if (!isReservable) {
+        builder.configuredQueues(FSQueueType.LEAF, queueName);
+      }
     } else {
       if (isReservable) {
         throw new AllocationConfigurationException("The configuration settings"

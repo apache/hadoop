@@ -20,23 +20,27 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HAUtil;
@@ -76,7 +80,8 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 public class BootstrapStandby implements Tool, Configurable {
-  private static final Log LOG = LogFactory.getLog(BootstrapStandby.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(BootstrapStandby.class);
   private String nsId;
   private String nnId;
   private List<RemoteNameNodeInfo> remoteNNs;
@@ -89,6 +94,9 @@ public class BootstrapStandby implements Tool, Configurable {
   private boolean force = false;
   private boolean interactive = true;
   private boolean skipSharedEditsCheck = false;
+
+  private boolean inMemoryAliasMapEnabled;
+  private String aliasMapPath;
 
   // Exit/return codes.
   static final int ERR_CODE_FAILED_CONNECT = 2;
@@ -182,14 +190,14 @@ public class BootstrapStandby implements Tool, Configurable {
     }
 
     if (nsInfo == null) {
-      LOG.fatal(
+      LOG.error(
           "Unable to fetch namespace information from any remote NN. Possible NameNodes: "
               + remoteNNs);
       return ERR_CODE_FAILED_CONNECT;
     }
 
     if (!checkLayoutVersion(nsInfo)) {
-      LOG.fatal("Layout version on remote node (" + nsInfo.getLayoutVersion()
+      LOG.error("Layout version on remote node (" + nsInfo.getLayoutVersion()
           + ") does not match " + "this node's layout version ("
           + HdfsServerConstants.NAMENODE_LAYOUT_VERSION + ")");
       return ERR_CODE_INVALID_VERSION;
@@ -233,6 +241,12 @@ public class BootstrapStandby implements Tool, Configurable {
     // finish the upgrade: rename previous.tmp to previous
     if (!isUpgradeFinalized) {
       doUpgrade(storage);
+    }
+
+    if (inMemoryAliasMapEnabled) {
+      return formatAndDownloadAliasMap(aliasMapPath, proxyInfo);
+    } else {
+      LOG.info("Skipping InMemoryAliasMap bootstrap as it was not configured");
     }
     return 0;
   }
@@ -382,7 +396,7 @@ public class BootstrapStandby implements Tool, Configurable {
           "Please copy these logs into the shared edits storage " + 
           "or call saveNamespace on the active node.\n" +
           "Error: " + e.getLocalizedMessage();
-      LOG.fatal(msg, e);
+      LOG.error(msg, e);
 
       return false;
     }
@@ -391,7 +405,7 @@ public class BootstrapStandby implements Tool, Configurable {
   private boolean checkLayoutVersion(NamespaceInfo nsInfo) throws IOException {
     return (nsInfo.getLayoutVersion() == HdfsServerConstants.NAMENODE_LAYOUT_VERSION);
   }
-  
+
   private void parseConfAndFindOtherNN() throws IOException {
     Configuration conf = getConf();
     nsId = DFSUtil.getNamenodeNameServiceId(conf);
@@ -432,6 +446,82 @@ public class BootstrapStandby implements Tool, Configurable {
     editUrisToFormat = FSNamesystem.getNamespaceEditsDirs(
         conf, false);
     sharedEditsUris = FSNamesystem.getSharedEditsDirs(conf);
+
+    parseProvidedConfigurations(conf);
+  }
+
+  private void parseProvidedConfigurations(Configuration configuration)
+      throws IOException {
+    // if provided and in-memory aliasmap are enabled,
+    // get the aliasmap location.
+    boolean providedEnabled = configuration.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_PROVIDED_ENABLED,
+        DFSConfigKeys.DFS_NAMENODE_PROVIDED_ENABLED_DEFAULT);
+    boolean inmemoryAliasmapConfigured = configuration.getBoolean(
+        DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED,
+        DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED_DEFAULT);
+    if (providedEnabled && inmemoryAliasmapConfigured) {
+      inMemoryAliasMapEnabled = true;
+      aliasMapPath = configuration.get(
+          DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR);
+    } else {
+      inMemoryAliasMapEnabled = false;
+      aliasMapPath = null;
+    }
+  }
+
+  /**
+   * A storage directory for aliasmaps. This is primarily used for the
+   * StorageDirectory#hasSomeData for formatting aliasmap directories.
+   */
+  private static class AliasMapStorageDirectory extends StorageDirectory {
+
+    AliasMapStorageDirectory(File aliasMapDir) {
+      super(aliasMapDir);
+    }
+
+    @Override
+    public String toString() {
+      return "AliasMap directory = " + this.getRoot();
+    }
+  }
+
+  /**
+   * Format, if needed, and download the aliasmap.
+   * @param pathAliasMap the path where the aliasmap should be downloaded.
+   * @param proxyInfo remote namenode to get the aliasmap from.
+   * @return 0 on a successful transfer, and error code otherwise.
+   * @throws IOException
+   */
+  private int formatAndDownloadAliasMap(String pathAliasMap,
+      RemoteNameNodeInfo proxyInfo) throws IOException {
+    LOG.info("Bootstrapping the InMemoryAliasMap from "
+        + proxyInfo.getHttpAddress());
+    if (pathAliasMap == null) {
+      throw new IOException("InMemoryAliasMap enabled with null location");
+    }
+    File aliasMapFile = new File(pathAliasMap);
+    if (aliasMapFile.exists()) {
+      AliasMapStorageDirectory aliasMapSD =
+          new AliasMapStorageDirectory(aliasMapFile);
+      if (!Storage.confirmFormat(
+          Arrays.asList(aliasMapSD), force, interactive)) {
+        return ERR_CODE_ALREADY_FORMATTED;
+      } else {
+        if (!FileUtil.fullyDelete(aliasMapFile)) {
+          throw new IOException(
+              "Cannot remove current alias map: " + aliasMapFile);
+        }
+      }
+    }
+
+    // create the aliasmap location.
+    if (!aliasMapFile.mkdirs()) {
+      throw new IOException("Cannot create directory " + aliasMapFile);
+    }
+    TransferFsImage.downloadAliasMap(proxyInfo.getHttpAddress(), aliasMapFile,
+        true);
+    return 0;
   }
 
   @Override

@@ -22,8 +22,8 @@ import com.fasterxml.jackson.databind.type.CollectionType;
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
 import org.apache.http.message.BasicHeader;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
@@ -65,8 +65,8 @@ import java.util.regex.Pattern;
 public class SwiftNativeFileSystemStore {
   private static final Pattern URI_PATTERN = Pattern.compile("\"\\S+?\"");
   private static final String PATTERN = "EEE, d MMM yyyy hh:mm:ss zzz";
-  private static final Log LOG =
-          LogFactory.getLog(SwiftNativeFileSystemStore.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SwiftNativeFileSystemStore.class);
   private URI uri;
   private SwiftRestClient swiftRestClient;
 
@@ -720,7 +720,7 @@ public class SwiftNativeFileSystemStore {
     if (LOG.isDebugEnabled()) {
       LOG.debug(message + ": listing of " + objectPath);
       for (FileStatus fileStatus : statuses) {
-        LOG.debug(fileStatus.getPath());
+        LOG.debug(fileStatus.getPath().toString());
       }
     }
   }

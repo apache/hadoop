@@ -30,7 +30,6 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
-import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.Content;
@@ -44,7 +43,6 @@ import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
-import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Time;
@@ -121,14 +119,14 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    */
   public void renameSnapshot(String path, String oldName, String newName)
       throws SnapshotException {
-    if (newName.equals(oldName)) {
-      return;
-    }
     final int indexOfOld = searchSnapshot(DFSUtil.string2Bytes(oldName));
     if (indexOfOld < 0) {
       throw new SnapshotException("The snapshot " + oldName
           + " does not exist for directory " + path);
     } else {
+      if (newName.equals(oldName)) {
+        return;
+      }
       final byte[] newNameBytes = DFSUtil.string2Bytes(newName);
       int indexOfNew = searchSnapshot(newNameBytes);
       if (indexOfNew >= 0) {
@@ -172,7 +170,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
   public Snapshot addSnapshot(INodeDirectory snapshotRoot, int id, String name,
       final LeaseManager leaseManager, final boolean captureOpenFiles,
       int maxSnapshotLimit)
-      throws SnapshotException, QuotaExceededException {
+      throws SnapshotException {
     //check snapshot quota
     final int n = getNumSnapshots();
     if (n + 1 > snapshotQuota) {
@@ -279,7 +277,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
     Snapshot fromSnapshot = getSnapshotByName(snapshotRootDir, from);
     Snapshot toSnapshot = getSnapshotByName(snapshotRootDir, to);
     // if the start point is equal to the end point, return null
-    if (from.equals(to)) {
+    if (from != null && from.equals(to)) {
       return null;
     }
     SnapshotDiffInfo diffs = new SnapshotDiffInfo(snapshotRootDir,
@@ -391,12 +389,16 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
         if (change) {
           diffReport.addDirDiff(dir, relativePath, diff);
         }
+      } else {
+        diffReport.incrementDirsProcessed();
       }
+      long startTime = Time.monotonicNow();
       ReadOnlyList<INode> children = dir.getChildrenList(earlierSnapshot
           .getId());
+      diffReport.addChildrenListingTime(Time.monotonicNow() - startTime);
       for (INode child : children) {
         final byte[] name = child.getLocalNameBytes();
-        boolean toProcess = diff.searchIndex(ListType.DELETED, name) < 0;
+        boolean toProcess = !diff.containsDeleted(name);
         if (!toProcess && child instanceof INodeReference.WithName) {
           byte[][] renameTargetPath = findRenameTargetPath(
               snapshotDir, (WithName) child,
@@ -420,6 +422,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
       if (change) {
         diffReport.addFileDiff(file, relativePath);
       }
+      diffReport.incrementFilesProcessed();
     }
   }
 
@@ -476,7 +479,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
         }
         iterate = true;
         level = level + 1;
-        boolean toProcess = diff.searchIndex(ListType.DELETED, name) < 0;
+        boolean toProcess = !diff.containsDeleted(name);
         if (!toProcess && child instanceof INodeReference.WithName) {
           byte[][] renameTargetPath = findRenameTargetPath(snapshotDir,
               (WithName) child, Snapshot.getSnapshotId(later));

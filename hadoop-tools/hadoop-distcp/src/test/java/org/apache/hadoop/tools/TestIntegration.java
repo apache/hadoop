@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.tools;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -43,7 +43,7 @@ import java.util.List;
 
 @RunWith(value = Parameterized.class)
 public class TestIntegration {
-  private static final Log LOG = LogFactory.getLog(TestIntegration.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestIntegration.class);
 
   private static FileSystem fs;
 

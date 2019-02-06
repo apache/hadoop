@@ -27,8 +27,8 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
@@ -87,10 +87,14 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
         .h3("Total Outstanding Resource Requests: "
             + getTotalResource(resourceRequests))
         .table("#resourceRequests").thead().tr().th(".priority", "Priority")
+        .th(".allocationRequestId", "AllocationRequestId")
         .th(".resource", "ResourceName").th(".capacity", "Capability")
         .th(".containers", "NumContainers")
         .th(".relaxlocality", "RelaxLocality")
-        .th(".labelexpression", "NodeLabelExpression").__().__().tbody();
+        .th(".labelexpression", "NodeLabelExpression")
+        .th(".executiontype", "ExecutionType")
+        .th(".allocationTags", "AllocationTags")
+        .th(".placementConstraint", "PlacementConstraint").__().__().tbody();
 
     StringBuilder resourceRequestTableData = new StringBuilder("[\n");
     for (ResourceRequestInfo resourceRequest  : resourceRequests) {
@@ -99,9 +103,13 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
       }
       resourceRequestTableData.append("[\"")
           .append(String.valueOf(resourceRequest.getPriority())).append("\",\"")
-          .append(resourceRequest.getResourceName()).append("\",\"")
-          .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils
-              .escapeHtml(String.valueOf(resourceRequest.getCapability()))))
+          .append(String.valueOf(resourceRequest.getAllocationRequestId()))
+          .append("\",\"")
+          .append(resourceRequest.getResourceName() == null ? "N/A"
+              : resourceRequest.getResourceName())
+          .append("\",\"")
+          .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils
+              .escapeHtml4(String.valueOf(resourceRequest.getCapability()))))
           .append("\",\"")
           .append(String.valueOf(resourceRequest.getNumContainers()))
           .append("\",\"")
@@ -109,6 +117,15 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
           .append("\",\"")
           .append(resourceRequest.getNodeLabelExpression() == null ? "N/A"
               : resourceRequest.getNodeLabelExpression())
+          .append("\",\"")
+          .append(resourceRequest.getExecutionTypeRequest() == null ? "N/A"
+              : resourceRequest.getExecutionTypeRequest().getExecutionType())
+          .append("\",\"")
+          .append(resourceRequest.getAllocationTags() == null ? "N/A" :
+              StringUtils.join(resourceRequest.getAllocationTags(), ","))
+          .append("\",\"")
+          .append(resourceRequest.getPlacementConstraint() == null ? "N/A"
+              : resourceRequest.getPlacementConstraint())
           .append("\"],\n");
     }
     if (resourceRequestTableData
@@ -132,7 +149,8 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
       if (request.getNumContainers() == 0) {
         continue;
       }
-      if (request.getResourceName().equals(ResourceRequest.ANY)) {
+      if (request.getResourceName() == null || request.getResourceName()
+          .equals(ResourceRequest.ANY)) {
         Resources.addTo(
             totalResource,
             Resources.multiply(request.getCapability().getResource(),

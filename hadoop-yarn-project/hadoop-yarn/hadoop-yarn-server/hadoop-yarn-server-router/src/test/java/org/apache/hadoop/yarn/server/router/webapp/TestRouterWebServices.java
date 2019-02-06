@@ -19,10 +19,12 @@
 package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
@@ -49,11 +51,16 @@ import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test class to validate the WebService interceptor model inside the Router.
  */
 public class TestRouterWebServices extends BaseRouterWebServicesTest {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRouterWebServices.class);
 
   private String user = "test1";
 
@@ -264,6 +271,64 @@ public class TestRouterWebServices extends BaseRouterWebServicesTest {
 
     chain = pipelines.get("test2");
     Assert.assertNull("test2 should have been evicted", chain);
+  }
+
+  /**
+   * This test validates if the RESTRequestInterceptor chain for the user
+   * can build and init correctly when a multi-client process begins to
+   * request RouterWebServices for the same user simultaneously.
+   */
+  @Test
+  public void testWebPipelineConcurrent() throws InterruptedException {
+    final String user = "test1";
+
+    /*
+     * ClientTestThread is a thread to simulate a client request to get a
+     * RESTRequestInterceptor for the user.
+     */
+    class ClientTestThread extends Thread {
+      private RESTRequestInterceptor interceptor;
+      @Override public void run() {
+        try {
+          interceptor = pipeline();
+        } catch (IOException | InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+      private RESTRequestInterceptor pipeline()
+          throws IOException, InterruptedException {
+        return UserGroupInformation.createRemoteUser(user).doAs(
+            new PrivilegedExceptionAction<RESTRequestInterceptor>() {
+              @Override
+              public RESTRequestInterceptor run() throws Exception {
+                RequestInterceptorChainWrapper wrapper =
+                    getInterceptorChain(user);
+                RESTRequestInterceptor interceptor =
+                    wrapper.getRootInterceptor();
+                Assert.assertNotNull(interceptor);
+                LOG.info("init web interceptor success for user" + user);
+                return interceptor;
+              }
+            });
+      }
+    }
+
+    /*
+     * We start the first thread. It should not finish initing a chainWrapper
+     * before the other thread starts. In this way, the second thread can
+     * init at the same time of the first one. In the end, we validate that
+     * the 2 threads get the same chainWrapper without going into error.
+     */
+    ClientTestThread client1 = new ClientTestThread();
+    ClientTestThread client2 = new ClientTestThread();
+    client1.start();
+    client2.start();
+    client1.join();
+    client2.join();
+
+    Assert.assertNotNull(client1.interceptor);
+    Assert.assertNotNull(client2.interceptor);
+    Assert.assertTrue(client1.interceptor == client2.interceptor);
   }
 
 }

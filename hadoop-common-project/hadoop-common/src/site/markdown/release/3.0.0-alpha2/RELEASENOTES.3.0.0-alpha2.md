@@ -280,7 +280,7 @@ An unnecessary dependency on hadoop-mapreduce-client-shuffle in hadoop-mapreduce
 
 * [HADOOP-7352](https://issues.apache.org/jira/browse/HADOOP-7352) | *Major* | **FileSystem#listStatus should throw IOE upon access error**
 
-Change FileSystem#listStatus contract to never return null. Local filesystems prior to 3.0.0 returned null upon access	error. It is considered erroneous. We should expect FileSystem#listStatus to throw IOException upon access error.
+Change FileSystem#listStatus contract to never return null. Local filesystems prior to 3.0.0 returned null upon access error. It is considered erroneous. We should expect FileSystem#listStatus to throw IOException upon access error.
 
 
 ---
@@ -633,3 +633,18 @@ Skip instantiating a Timeline Service client if encountering NoClassDefFoundErro
 
 Hadoop now supports integration with Azure Data Lake as an alternative Hadoop-compatible file system. Please refer to the Hadoop site documentation of Azure Data Lake for details on usage and configuration.
 
+
+---
+
+* [YARN-2877](https://issues.apache.org/jira/browse/YARN-2877) | *Major* | **Extend YARN to support distributed scheduling**
+
+With this JIRA we are introducing distributed scheduling in YARN.
+In particular, we make the following contributions:
+- Introduce the notion of container types. GUARANTEED containers follow the semantics of the existing YARN containers. OPPORTUNISTIC ones can be seen as lower priority containers, and can be preempted in order to make space for GUARANTEED containers to run.
+- Queuing of tasks at the NMs. This enables us to send more containers in an NM than its available resources. At the moment we are allowing queuing of OPPORTUNISTIC containers. Once resources become available at the NM, such containers can immediately start their execution.
+- Introduce the AMRMProxy. This is a service running at each node, intercepting the requests between the AM and the RM. It is instrumental for both distributed scheduling and YARN Federation (YARN-2915).
+- Enable distributed scheduling. To minimize their allocation latency, OPPORTUNISTIC containers are dispatched immediately to NMs in a distributed fashion by using the AMRMProxy of the node where the corresponding AM resides, without needing to go through the ResourceManager.
+
+All the functionality introduced in this JIRA is disabled by default, so it will not affect the behavior of existing applications.
+We have introduced parameters in YarnConfiguration to enable NM queuing (yarn.nodemanager.container-queuing-enabled), distributed scheduling (yarn.distributed-scheduling.enabled) and the AMRMProxy service (yarn.nodemanager.amrmproxy.enable).
+AMs currently need to specify the type of container to be requested for each task. We are in the process of adding in the MapReduce AM the ability to randomly request OPPORTUNISTIC containers for a specified percentage of a job's tasks, so that users can experiment with the new features.

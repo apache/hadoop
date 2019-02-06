@@ -99,6 +99,23 @@ Usage: `hadoop classpath [--glob |--jar <path> |-h |--help]`
 
 Prints the class path needed to get the Hadoop jar and the required libraries. If called without arguments, then prints the classpath set up by the command scripts, which is likely to contain wildcards in the classpath entries. Additional options print the classpath after wildcard expansion or write the classpath into the manifest of a jar file. The latter is useful in environments where wildcards cannot be used and the expanded classpath exceeds the maximum supported command line length.
 
+### `conftest`
+
+Usage: `hadoop conftest [-conffile <path>]...`
+
+| COMMAND\_OPTION | Description |
+|:---- |:---- |
+| `-conffile` | Path of a configuration file or directory to validate |
+| `-h`, `--help` | print help |
+
+Validates configuration XML files.
+If the `-conffile` option is not specified, the files in `${HADOOP_CONF_DIR}` whose name end with .xml will be verified. If specified, that path will be verified. You can specify either a file or directory, and if a directory specified, the files in that directory whose name end with `.xml` will be verified.
+You can specify `-conffile` option multiple times.
+
+The validation is fairly minimal: the XML is parsed and duplicate and empty
+property names are checked for. The command does not support XInclude; if you
+using that to pull in configuration items, it will declare the XML file invalid.
+
 ### `credential`
 
 Usage: `hadoop credential <subcommand> [options]`
@@ -155,6 +172,7 @@ For every subcommand that connects to a service, convenience flags are provided 
 | `remove -alias` *alias* <br/>&nbsp;&nbsp; `[-format (java|protobuf)]` <br/>&nbsp;&nbsp; *filename* `[` *filename2* `...]` | From each file specified, remove the tokens matching *alias* and write out each file using specified format. <br/>  *alias* must be specified. |
 | `cancel -alias` *alias* <br/>&nbsp;&nbsp; `[-format (java|protobuf)]` <br/>&nbsp;&nbsp;  *filename* `[` *filename2* `...]` | Just like `remove`, except the tokens are also cancelled using the service specified in the token object. <br/> *alias* must be specified. |
 | `renew -alias` *alias* <br/>&nbsp;&nbsp; `[-format (java|protobuf)]` <br/>&nbsp;&nbsp;  *filename* `[` *filename2* `...]` | For each file specified, renew the tokens matching *alias* and write out each file using specified format. <br/> *alias* must be specified. |
+| `import` *base64* <br/>&nbsp;&nbsp;  `[-alias` *alias* `]` <br/>&nbsp;&nbsp; *filename* | Import a token from a base64 token. <br/> *alias* will overwrite the service field in the token. |
 
 ### `fs`
 

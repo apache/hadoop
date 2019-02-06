@@ -220,7 +220,7 @@ The following properties are not required, but may be specified for tuning:
 
     The NameNode will use this as the amount of milliseconds between subsequent path cache rescans. This calculates the blocks to cache and each DataNode containing a replica of the block that should cache it.
 
-    By default, this parameter is set to 300000, which is five minutes.
+    By default, this parameter is set to 30000, which is thirty seconds.
 
 *   dfs.datanode.fsdatasetcache.max.threads.per.volume
 
@@ -237,6 +237,11 @@ The following properties are not required, but may be specified for tuning:
 *   dfs.namenode.path.based.cache.block.map.allocation.percent
 
     The percentage of the Java heap which we will allocate to the cached blocks map. The cached blocks map is a hash map which uses chained hashing. Smaller maps may be accessed more slowly if the number of cached blocks is large; larger maps will consume more memory. The default is 0.25 percent.
+
+*   dfs.namenode.caching.enabled
+
+    This parameter can be used to enable/disable the centralized caching in NameNode. When centralized caching is disabled, NameNode will not process cache reports or store information about block cache locations on the cluster. Note that NameNode will continute to store the path based cache locations in the file-system metadata, even though it will not act on this information until the caching is enabled. The default value for this parameter is true (i.e. centralized caching is enabled).
+
 
 ### OS Limits
 

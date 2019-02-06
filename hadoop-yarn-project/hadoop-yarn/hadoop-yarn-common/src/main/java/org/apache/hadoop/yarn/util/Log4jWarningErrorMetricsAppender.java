@@ -153,7 +153,7 @@ public class Log4jWarningErrorMetricsAppender extends AppenderSkeleton {
     if (throwableStr != null) {
       message = message + "\n" + StringUtils.join("\n", throwableStr);
       message =
-          org.apache.commons.lang.StringUtils.left(message, MAX_MESSAGE_SIZE);
+          org.apache.commons.lang3.StringUtils.left(message, MAX_MESSAGE_SIZE);
     }
     int level = event.getLevel().toInt();
 

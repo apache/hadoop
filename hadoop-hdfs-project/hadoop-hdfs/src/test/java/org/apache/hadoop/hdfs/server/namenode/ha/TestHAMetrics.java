@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -44,7 +44,8 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestHAMetrics {
   
-  private static final Log LOG = LogFactory.getLog(TestHAMetrics.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestHAMetrics.class);
 
   @Test(timeout = 300000)
   public void testHAMetrics() throws Exception {
@@ -117,7 +118,7 @@ public class TestHAMetrics {
           newMillisSinceLastLoadedEdits,
           millisSinceLastLoadedEdits > newMillisSinceLastLoadedEdits);
     } finally {
-      IOUtils.cleanup(LOG, fs);
+      IOUtils.cleanupWithLogger(LOG, fs);
       cluster.shutdown();
     }
   }
@@ -170,7 +171,7 @@ public class TestHAMetrics {
       nn0 = cluster.getNamesystem(0);
       assertEquals(5, nn0.getFilesTotal());
     } finally {
-      IOUtils.cleanup(LOG, fs);
+      IOUtils.cleanupWithLogger(LOG, fs);
       cluster.shutdown();
     }
 

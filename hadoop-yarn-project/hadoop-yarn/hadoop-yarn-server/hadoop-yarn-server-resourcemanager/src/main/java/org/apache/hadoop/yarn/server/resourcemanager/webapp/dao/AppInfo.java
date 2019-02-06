@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -87,6 +88,7 @@ public class AppInfo {
 
   // these are only allowed if acls allow
   protected long startedTime;
+  private long launchTime;
   protected long finishedTime;
   protected long elapsedTime;
   protected String amContainerLogs;
@@ -181,6 +183,7 @@ public class AppInfo {
       this.clusterId = ResourceManager.getClusterTimeStamp();
       if (hasAccess) {
         this.startedTime = app.getStartTime();
+        this.launchTime = app.getLaunchTime();
         this.finishedTime = app.getFinishTime();
         this.elapsedTime =
             Times.elapsed(app.getStartTime(), app.getFinishTime());
@@ -225,6 +228,15 @@ public class AppInfo {
 
             if (resourceRequestsRaw != null) {
               for (ResourceRequest req : resourceRequestsRaw) {
+                resourceRequests.add(new ResourceRequestInfo(req));
+              }
+            }
+
+            List<SchedulingRequest> schedulingRequestsRaw = rm.getRMContext()
+                .getScheduler().getPendingSchedulingRequestsForAttempt(
+                    attempt.getAppAttemptId());
+            if (schedulingRequestsRaw != null) {
+              for (SchedulingRequest req : schedulingRequestsRaw) {
                 resourceRequests.add(new ResourceRequestInfo(req));
               }
             }
@@ -394,6 +406,10 @@ public class AppInfo {
     return this.startedTime;
   }
 
+  public long getLaunchTime() {
+    return this.launchTime;
+  }
+
   public long getFinishTime() {
     return this.finishedTime;
   }
@@ -473,7 +489,7 @@ public class AppInfo {
   public int getNumNonAMContainersPreempted() {
     return numNonAMContainerPreempted;
   }
-  
+
   public int getNumAMContainersPreempted() {
     return numAMContainerPreempted;
   }

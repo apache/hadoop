@@ -20,7 +20,6 @@ package org.apache.hadoop.test;
 
 import static com.google.common.base.Preconditions.*;
 
-import org.hamcrest.Description;
 import org.junit.Assert;
 
 import static org.mockito.AdditionalMatchers.geq;
@@ -104,19 +103,22 @@ public class MetricsAsserts {
     return getMetrics(source, true);
   }
 
-  private static class InfoWithSameName extends ArgumentMatcher<MetricsInfo> {
+  private static class InfoWithSameName
+      implements ArgumentMatcher<MetricsInfo>{
     private final String expected;
 
     InfoWithSameName(MetricsInfo info) {
       expected = checkNotNull(info.name(), "info name");
     }
 
-    @Override public boolean matches(Object info) {
-      return expected.equals(((MetricsInfo)info).name());
+    @Override
+    public boolean matches(MetricsInfo info) {
+      return expected.equals(info.name());
     }
 
-    @Override public void describeTo(Description desc) {
-      desc.appendText("Info with name="+ expected);
+    @Override
+    public String toString() {
+      return "Info with name=" + expected;
     }
   }
 
@@ -129,9 +131,10 @@ public class MetricsAsserts {
     return argThat(new InfoWithSameName(info));
   }
 
-  private static class AnyInfo extends ArgumentMatcher<MetricsInfo> {
-    @Override public boolean matches(Object info) {
-      return info instanceof MetricsInfo;  // not null as well
+  private static class AnyInfo implements ArgumentMatcher<MetricsInfo> {
+    @Override
+    public boolean matches(MetricsInfo info) {
+      return info != null;
     }
   }
 
@@ -367,17 +370,31 @@ public class MetricsAsserts {
   }
   
   /**
-   * Asserts that the NumOps and quantiles for a metric have been changed at
-   * some point to a non-zero value.
+   * Asserts that the NumOps and quantiles for a metric with value name
+   * "Latency" have been changed at some point to a non-zero value.
    * 
    * @param prefix of the metric
    * @param rb MetricsRecordBuilder with the metric
    */
-  public static void assertQuantileGauges(String prefix, 
+  public static void assertQuantileGauges(String prefix,
       MetricsRecordBuilder rb) {
+    assertQuantileGauges(prefix, rb, "Latency");
+  }
+
+  /**
+   * Asserts that the NumOps and quantiles for a metric have been changed at
+   * some point to a non-zero value, for the specified value name of the
+   * metrics (e.g., "Latency", "Count").
+   *
+   * @param prefix of the metric
+   * @param rb MetricsRecordBuilder with the metric
+   * @param valueName the value name for the metric
+   */
+  public static void assertQuantileGauges(String prefix,
+      MetricsRecordBuilder rb, String valueName) {
     verify(rb).addGauge(eqName(info(prefix + "NumOps", "")), geq(0l));
     for (Quantile q : MutableQuantiles.quantiles) {
-      String nameTemplate = prefix + "%dthPercentileLatency";
+      String nameTemplate = prefix + "%dthPercentile" + valueName;
       int percentile = (int) (100 * q.quantile);
       verify(rb).addGauge(
           eqName(info(String.format(nameTemplate, percentile), "")),

@@ -370,7 +370,7 @@ public class IOUtils {
   }
 
   /**
-   * Return the complete list of files in a directory as strings.<p/>
+   * Return the complete list of files in a directory as strings.<p>
    *
    * This is better than File#listDir because it does not ignore IOExceptions.
    *
@@ -414,6 +414,13 @@ public class IOUtils {
           "File/Directory " + fileToSync.getAbsolutePath() + " does not exist");
     }
     boolean isDir = fileToSync.isDirectory();
+
+    // HDFS-13586, FileChannel.open fails with AccessDeniedException
+    // for any directory, ignore.
+    if (isDir && Shell.WINDOWS) {
+      return;
+    }
+
     // If the file is a directory we have to open read-only, for regular files
     // we must open r/w for the fsync to have an effect. See
     // http://blog.httrack.com/blog/2013/11/15/
@@ -505,5 +512,25 @@ public class IOUtils {
           clazz + ": it has no (String) constructor", e);
       throw exception;
     }
+  }
+
+  /**
+   * Reads a DataInput until EOF and returns a byte array.  Make sure not to
+   * pass in an infinite DataInput or this will never return.
+   *
+   * @param in A DataInput
+   * @return a byte array containing the data from the DataInput
+   * @throws IOException on I/O error, other than EOF
+   */
+  public static byte[] readFullyToByteArray(DataInput in) throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    try {
+      while (true) {
+        baos.write(in.readByte());
+      }
+    } catch (EOFException eof) {
+      // finished reading, do nothing
+    }
+    return baos.toByteArray();
   }
 }

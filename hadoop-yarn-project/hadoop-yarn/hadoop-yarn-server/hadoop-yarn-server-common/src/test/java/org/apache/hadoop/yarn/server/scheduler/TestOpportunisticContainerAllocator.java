@@ -596,4 +596,41 @@ public class TestOpportunisticContainerAllocator {
     }
     Assert.assertEquals(100, containers.size());
   }
+
+  @Test
+  public void testAllocationWithNodeLabels() throws Exception {
+    ResourceBlacklistRequest blacklistRequest =
+        ResourceBlacklistRequest.newInstance(
+            new ArrayList<>(), new ArrayList<>());
+    List<ResourceRequest> reqs =
+        Arrays.asList(ResourceRequest.newInstance(Priority.newInstance(1),
+            "*", Resources.createResource(1 * GB), 1, true, "label",
+            ExecutionTypeRequest.newInstance(
+                ExecutionType.OPPORTUNISTIC, true)));
+    ApplicationAttemptId appAttId = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(0L, 1), 1);
+
+    oppCntxt.updateNodeList(
+        Arrays.asList(
+            RemoteNode.newInstance(
+                NodeId.newInstance("h1", 1234), "h1:1234", "/r1")));
+    List<Container> containers = allocator.allocateContainers(
+        blacklistRequest, reqs, appAttId, oppCntxt, 1L, "luser");
+    /* Since there is no node satisfying node label constraints, requests
+       won't get fulfilled.
+    */
+    Assert.assertEquals(0, containers.size());
+    Assert.assertEquals(1, oppCntxt.getOutstandingOpReqs().size());
+
+    oppCntxt.updateNodeList(
+        Arrays.asList(
+            RemoteNode.newInstance(
+                NodeId.newInstance("h1", 1234), "h1:1234", "/r1",
+                "label")));
+
+    containers = allocator.allocateContainers(
+        blacklistRequest, reqs, appAttId, oppCntxt, 1L, "luser");
+    Assert.assertEquals(1, containers.size());
+    Assert.assertEquals(0, oppCntxt.getOutstandingOpReqs().size());
+  }
 }

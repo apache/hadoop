@@ -61,8 +61,13 @@ public class JHAdminConfig {
     MR_HISTORY_PREFIX + "cleaner.interval-ms";
   public static final long DEFAULT_MR_HISTORY_CLEANER_INTERVAL_MS = 
     1 * 24 * 60 * 60 * 1000l; //1 day
-  
-  
+
+  /** Always scan user dir, irrespective of dir modification time.*/
+  public static final String MR_HISTORY_ALWAYS_SCAN_USER_DIR =
+      MR_HISTORY_PREFIX + "always-scan-user-dir";
+  public static final boolean DEFAULT_MR_HISTORY_ALWAYS_SCAN_USER_DIR =
+      false;
+
   /** The number of threads to handle client API requests.*/
   public static final String MR_HISTORY_CLIENT_THREAD_COUNT = 
     MR_HISTORY_PREFIX + "client.thread-count";
@@ -93,6 +98,10 @@ public class JHAdminConfig {
    **/
   public static final String MR_HISTORY_INTERMEDIATE_DONE_DIR =
     MR_HISTORY_PREFIX + "intermediate-done-dir";
+  public static final String MR_HISTORY_INTERMEDIATE_USER_DONE_DIR_PERMISSIONS =
+      MR_HISTORY_PREFIX + "intermediate-user-done-dir.permissions";
+  public static final short
+      DEFAULT_MR_HISTORY_INTERMEDIATE_USER_DONE_DIR_PERMISSIONS = 0770;
   
   /** Size of the job list cache.*/
   public static final String MR_HISTORY_JOBLIST_CACHE_SIZE =

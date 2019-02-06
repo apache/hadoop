@@ -337,8 +337,8 @@ public class CryptoAdmin extends Configured implements Tool {
         action = ReencryptAction.CANCEL;
       }
 
-      final HdfsAdmin admin =
-          new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+      Path p = new Path(path);
+      final HdfsAdmin admin = new HdfsAdmin(p.toUri(), conf);
       try {
         admin.reencryptEncryptionZone(new Path(path), action);
         System.out.println("re-encrypt command successfully submitted for "

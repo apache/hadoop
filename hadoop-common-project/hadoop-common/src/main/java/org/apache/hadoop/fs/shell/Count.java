@@ -23,7 +23,7 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -202,8 +202,8 @@ public class Count extends FsCommand {
       if(!summary.getErasureCodingPolicy().equals("Replicated")){
         outputString.append("EC:");
       }
-      outputString.append(summary.getErasureCodingPolicy());
-      outputString.append(" ");
+      outputString.append(summary.getErasureCodingPolicy())
+          .append(" ");
     }
     outputString.append(src);
     out.println(outputString.toString());

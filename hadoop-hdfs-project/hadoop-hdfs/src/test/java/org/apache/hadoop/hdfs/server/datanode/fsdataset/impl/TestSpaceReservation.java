@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import com.google.common.base.Supplier;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.hamcrest.core.Is.is;
@@ -69,7 +69,7 @@ import javax.management.ObjectName;
  * replica being written (RBW) & Replica being copied from another DN.
  */
 public class TestSpaceReservation {
-  static final Log LOG = LogFactory.getLog(TestSpaceReservation.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestSpaceReservation.class);
 
   private static final int DU_REFRESH_INTERVAL_MSEC = 500;
   private static final int STORAGES_PER_DATANODE = 1;

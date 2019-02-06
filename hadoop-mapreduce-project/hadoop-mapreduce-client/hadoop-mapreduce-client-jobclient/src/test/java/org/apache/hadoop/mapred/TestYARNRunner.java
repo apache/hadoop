@@ -24,7 +24,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -33,12 +33,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -48,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -70,7 +69,6 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -104,12 +102,12 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.api.impl.YarnClientImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.log4j.Appender;
 import org.apache.log4j.AppenderSkeleton;
@@ -143,30 +141,7 @@ public class TestYARNRunner {
   private static final String PROFILE_PARAMS =
       MRJobConfig.DEFAULT_TASK_PROFILE_PARAMS.substring(0,
           MRJobConfig.DEFAULT_TASK_PROFILE_PARAMS.lastIndexOf("%"));
-
-  private static class CustomResourceTypesConfigurationProvider
-      extends LocalConfigurationProvider {
-
-    @Override
-    public InputStream getConfigurationInputStream(Configuration bootstrapConf,
-        String name) throws YarnException, IOException {
-      if (YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE.equals(name)) {
-        return new ByteArrayInputStream(
-            ("<configuration>\n" +
-            " <property>\n" +
-            "   <name>yarn.resource-types</name>\n" +
-            "   <value>a-custom-resource</value>\n" +
-            " </property>\n" +
-            " <property>\n" +
-            "   <name>yarn.resource-types.a-custom-resource.units</name>\n" +
-            "   <value>G</value>\n" +
-            " </property>\n" +
-            "</configuration>\n").getBytes());
-      } else {
-        return super.getConfigurationInputStream(bootstrapConf, name);
-      }
-    }
-  }
+  private static final String CUSTOM_RESOURCE_NAME = "a-custom-resource";
 
   private static class TestAppender extends AppenderSkeleton {
 
@@ -272,7 +247,8 @@ public class TestYARNRunner {
         .thenReturn(
             ApplicationReport.newInstance(appId, null, "tmp", "tmp", "tmp",
                 "tmp", 0, null, YarnApplicationState.FINISHED, "tmp", "tmp",
-                0l, 0l, FinalApplicationStatus.SUCCEEDED, null, null, 0f,
+                0L, 0L, 0L,
+                 FinalApplicationStatus.SUCCEEDED, null, null, 0f,
                 "tmp", null));
     yarnRunner.killJob(jobId);
     verify(clientDelegate).killJob(jobId);
@@ -811,15 +787,22 @@ public class TestYARNRunner {
 
   @Test
   public void testAMStandardEnvWithDefaultLibPath() throws Exception {
-    testAMStandardEnv(false);
+    testAMStandardEnv(false, false);
   }
 
   @Test
   public void testAMStandardEnvWithCustomLibPath() throws Exception {
-    testAMStandardEnv(true);
+    testAMStandardEnv(true, false);
   }
 
-  private void testAMStandardEnv(boolean customLibPath) throws Exception {
+  @Test
+  public void testAMStandardEnvWithCustomLibPathWithSeparateEnvProps()
+      throws Exception {
+    testAMStandardEnv(true, true);
+  }
+
+  private void testAMStandardEnv(boolean customLibPath,
+      boolean useSeparateEnvProps) throws Exception {
     // the Windows behavior is different and this test currently doesn't really
     // apply
     // MAPREDUCE-6588 should revisit this test
@@ -832,9 +815,16 @@ public class TestYARNRunner {
     String pathKey = Environment.LD_LIBRARY_PATH.name();
 
     if (customLibPath) {
-      jobConf.set(MRJobConfig.MR_AM_ADMIN_USER_ENV, pathKey + "=" +
-          ADMIN_LIB_PATH);
-      jobConf.set(MRJobConfig.MR_AM_ENV, pathKey + "=" + USER_LIB_PATH);
+      if (useSeparateEnvProps) {
+        // Specify these as individual variables instead of k=v lists
+        jobConf.set(MRJobConfig.MR_AM_ADMIN_USER_ENV + "." + pathKey,
+            ADMIN_LIB_PATH);
+        jobConf.set(MRJobConfig.MR_AM_ENV + "." + pathKey, USER_LIB_PATH);
+      } else {
+        jobConf.set(MRJobConfig.MR_AM_ADMIN_USER_ENV, pathKey + "=" +
+            ADMIN_LIB_PATH);
+        jobConf.set(MRJobConfig.MR_AM_ENV, pathKey + "=" + USER_LIB_PATH);
+      }
     }
     jobConf.set(MRJobConfig.MAPRED_ADMIN_USER_SHELL, USER_SHELL);
 
@@ -952,12 +942,11 @@ public class TestYARNRunner {
   @Test
   public void testCustomAMRMResourceType() throws Exception {
     initResourceTypes();
-    String customResourceName = "a-custom-resource";
 
     JobConf jobConf = new JobConf();
 
     jobConf.setInt(MRJobConfig.MR_AM_RESOURCE_PREFIX +
-        customResourceName, 5);
+        CUSTOM_RESOURCE_NAME, 5);
     jobConf.setInt(MRJobConfig.MR_AM_CPU_VCORES, 3);
 
     yarnRunner = new YARNRunner(jobConf);
@@ -971,7 +960,7 @@ public class TestYARNRunner {
     ResourceRequest resourceRequest = resourceRequests.get(0);
 
     ResourceInformation resourceInformation = resourceRequest.getCapability()
-        .getResourceInformation(customResourceName);
+        .getResourceInformation(CUSTOM_RESOURCE_NAME);
     Assert.assertEquals("Expecting the default unit (G)",
         "G", resourceInformation.getUnits());
     Assert.assertEquals(5L, resourceInformation.getValue());
@@ -1039,9 +1028,9 @@ public class TestYARNRunner {
   }
 
   private void initResourceTypes() {
-    Configuration configuration = new Configuration();
-    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
-        CustomResourceTypesConfigurationProvider.class.getName());
-    ResourceUtils.resetResourceTypes(configuration);
+    CustomResourceTypesConfigurationProvider.initResourceTypes(
+        ImmutableMap.<String, String>builder()
+        .put(CUSTOM_RESOURCE_NAME, "G")
+        .build());
   }
 }

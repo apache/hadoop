@@ -27,7 +27,7 @@ import java.net.URISyntaxException;
 import java.util.regex.Pattern;
 
 import org.apache.avro.reflect.Stringable;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -452,12 +452,12 @@ public class Path implements Comparable, Serializable, ObjectInputValidation {
     // illegal characters unescaped in the string, for glob processing, etc.
     StringBuilder buffer = new StringBuilder();
     if (uri.getScheme() != null) {
-      buffer.append(uri.getScheme());
-      buffer.append(":");
+      buffer.append(uri.getScheme())
+          .append(":");
     }
     if (uri.getAuthority() != null) {
-      buffer.append("//");
-      buffer.append(uri.getAuthority());
+      buffer.append("//")
+          .append(uri.getAuthority());
     }
     if (uri.getPath() != null) {
       String path = uri.getPath();
@@ -469,8 +469,8 @@ public class Path implements Comparable, Serializable, ObjectInputValidation {
       buffer.append(path);
     }
     if (uri.getFragment() != null) {
-      buffer.append("#");
-      buffer.append(uri.getFragment());
+      buffer.append("#")
+          .append(uri.getFragment());
     }
     return buffer.toString();
   }

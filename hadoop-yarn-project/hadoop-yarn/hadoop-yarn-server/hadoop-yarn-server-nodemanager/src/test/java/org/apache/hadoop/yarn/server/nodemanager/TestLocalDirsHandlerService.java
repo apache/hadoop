@@ -150,9 +150,9 @@ public class TestLocalDirsHandlerService {
     Assert
       .assertEquals(utilizationPerc, nm.getGoodLogDirsDiskUtilizationPerc());
 
-    Assert.assertEquals(localDir2,
+    Assert.assertEquals(new Path(localDir2).toString(),
         dirSvc.getConfig().get(LocalDirsHandlerService.NM_GOOD_LOCAL_DIRS));
-    Assert.assertEquals(logDir2,
+    Assert.assertEquals(new Path(logDir2).toString(),
         dirSvc.getConfig().get(LocalDirsHandlerService.NM_GOOD_LOG_DIRS));
     Assert.assertEquals(localDir1 + "," + localDir2,
         dirSvc.getConfig().get(YarnConfiguration.NM_LOCAL_DIRS));

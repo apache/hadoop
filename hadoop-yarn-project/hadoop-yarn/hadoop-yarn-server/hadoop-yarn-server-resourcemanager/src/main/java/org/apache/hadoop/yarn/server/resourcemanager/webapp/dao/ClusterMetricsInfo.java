@@ -101,7 +101,7 @@ public class ClusterMetricsInfo {
       CapacityScheduler cs = (CapacityScheduler) rs;
       this.totalMB = availableMB + allocatedMB + reservedMB;
       this.totalVirtualCores =
-          availableVirtualCores + allocatedVirtualCores + containersReserved;
+          availableVirtualCores + allocatedVirtualCores + reservedVirtualCores;
       // TODO, add support of other schedulers to get total used resources
       // across partition.
       if (cs.getRootQueue() != null

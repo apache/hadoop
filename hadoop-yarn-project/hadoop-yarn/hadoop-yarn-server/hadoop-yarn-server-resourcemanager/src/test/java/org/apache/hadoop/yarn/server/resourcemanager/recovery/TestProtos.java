@@ -18,7 +18,15 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
+import static org.junit.Assert.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.AllocateResponsePBImpl;
+import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.EpochProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateResponseProto;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -32,5 +40,17 @@ public class TestProtos {
     EpochProto proto = EpochProto.newBuilder().setEpoch(100).build();
     String protoString = proto.toString();
     Assert.assertNotNull(protoString);
+  }
+
+  @Test
+  public void testProtoAllocateResponse() {
+    AllocateResponseProto proto = AllocateResponseProto.getDefaultInstance();
+    AllocateResponsePBImpl alloc = new AllocateResponsePBImpl(proto);
+    List<NMToken> nmTokens = new ArrayList<NMToken>();
+    try {
+      alloc.setNMTokens(nmTokens);
+    } catch (Exception ex) {
+      fail();
+    }
   }
 }

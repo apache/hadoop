@@ -20,6 +20,9 @@ import static org.apache.hadoop.security.authentication.server.KerberosAuthentic
 import static org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler.KEYTAB;
 import static org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler.NAME_RULES;
 
+import java.io.IOException;
+import java.nio.charset.CharacterCodingException;
+import javax.security.sasl.AuthenticationException;
 import org.apache.hadoop.minikdc.KerberosSecurityTestcase;
 import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
@@ -62,6 +65,7 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
     props.setProperty(KerberosAuthenticationHandler.KEYTAB, KerberosTestUtils.getKeytabFile());
     props.setProperty(KerberosAuthenticationHandler.NAME_RULES,
                       "RULE:[1:$1@$0](.*@" + KerberosTestUtils.getRealm()+")s/@.*//\n");
+    props.setProperty(KerberosAuthenticationHandler.RULE_MECHANISM, "hadoop");
     return props;
   }
 
@@ -216,6 +220,32 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
         return null;
       }
     });
+  }
+
+  @Test(timeout = 60000)
+  public void testWrapExceptionWithMessage() {
+    IOException ex;
+    ex = new IOException("Induced exception");
+    ex = KerberosAuthenticator.wrapExceptionWithMessage(ex, "Error while "
+        + "authenticating with endpoint: localhost");
+    Assert.assertEquals("Induced exception", ex.getCause().getMessage());
+    Assert.assertEquals("Error while authenticating with endpoint: localhost",
+        ex.getMessage());
+
+    ex = new AuthenticationException("Auth exception");
+    ex = KerberosAuthenticator.wrapExceptionWithMessage(ex, "Error while "
+        + "authenticating with endpoint: localhost");
+    Assert.assertEquals("Auth exception", ex.getCause().getMessage());
+    Assert.assertEquals("Error while authenticating with endpoint: localhost",
+        ex.getMessage());
+
+    // Test for Exception with  no (String) constructor
+    // redirect the LOG to and check log message
+    ex = new CharacterCodingException();
+    Exception ex2 = KerberosAuthenticator.wrapExceptionWithMessage(ex,
+        "Error while authenticating with endpoint: localhost");
+    Assert.assertTrue(ex instanceof CharacterCodingException);
+    Assert.assertTrue(ex.equals(ex2));
   }
 
 }

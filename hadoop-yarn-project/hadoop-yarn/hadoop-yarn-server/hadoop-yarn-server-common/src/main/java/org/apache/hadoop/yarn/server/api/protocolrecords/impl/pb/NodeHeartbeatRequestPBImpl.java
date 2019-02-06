@@ -27,6 +27,9 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
+import org.apache.hadoop.yarn.api.records.impl.pb.NodeAttributePBImpl;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
@@ -36,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.NodeLabelPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.TokenPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeLabelProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppCollectorDataProto;
@@ -60,6 +64,7 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
   private MasterKey lastKnownContainerTokenMasterKey = null;
   private MasterKey lastKnownNMTokenMasterKey = null;
   private Set<NodeLabel> labels = null;
+  private Set<NodeAttribute> attributes = null;
   private List<LogAggregationReport> logAggregationReportsForApps = null;
 
   private Map<ApplicationId, AppCollectorData> registeringCollectors = null;
@@ -114,6 +119,15 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
         newBuilder.addNodeLabels(convertToProtoFormat(label));
       }
       builder.setNodeLabels(newBuilder.build());
+    }
+    if (this.attributes != null) {
+      builder.clearNodeAttributes();
+      YarnServerCommonServiceProtos.NodeAttributesProto.Builder attBuilder =
+          YarnServerCommonServiceProtos.NodeAttributesProto.newBuilder();
+      for (NodeAttribute attribute : attributes) {
+        attBuilder.addNodeAttributes(convertToProtoFormat(attribute));
+      }
+      builder.setNodeAttributes(attBuilder.build());
     }
     if (this.logAggregationReportsForApps != null) {
       addLogAggregationStatusForAppsToProto();
@@ -372,6 +386,44 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
   }
 
   @Override
+  public Set<NodeAttribute> getNodeAttributes() {
+    initNodeAttributes();
+    return this.attributes;
+  }
+
+  private void initNodeAttributes() {
+    if (this.attributes != null) {
+      return;
+    }
+    NodeHeartbeatRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasNodeAttributes()) {
+      return;
+    }
+    YarnServerCommonServiceProtos.NodeAttributesProto nodeAttributes =
+        p.getNodeAttributes();
+    attributes = new HashSet<>();
+    for (NodeAttributeProto attributeProto :
+        nodeAttributes.getNodeAttributesList()) {
+      attributes.add(convertFromProtoFormat(attributeProto));
+    }
+  }
+
+  @Override
+  public void setNodeAttributes(Set<NodeAttribute> nodeAttributes) {
+    maybeInitBuilder();
+    builder.clearNodeAttributes();
+    this.attributes = nodeAttributes;
+  }
+
+  private NodeAttributePBImpl convertFromProtoFormat(NodeAttributeProto p) {
+    return new NodeAttributePBImpl(p);
+  }
+
+  private NodeAttributeProto convertToProtoFormat(NodeAttribute attribute) {
+    return ((NodeAttributePBImpl) attribute).getProto();
+  }
+
+  @Override
   public List<LogAggregationReport> getLogAggregationReportsForApps() {
     if (this.logAggregationReportsForApps != null) {
       return this.logAggregationReportsForApps;
@@ -402,5 +454,18 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
       builder.clearLogAggregationReportsForApps();
     }
     this.logAggregationReportsForApps = logAggregationStatusForApps;
+  }
+
+  @Override
+  public void setTokenSequenceNo(long tokenSequenceNo) {
+    maybeInitBuilder();
+    this.builder.setTokenSequenceNo(tokenSequenceNo);
+  }
+
+  @Override
+  public long getTokenSequenceNo() {
+    NodeHeartbeatRequestProtoOrBuilder p =
+        this.viaProto ? this.proto : this.builder;
+    return p.getTokenSequenceNo();
   }
 }  

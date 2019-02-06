@@ -44,36 +44,17 @@ import java.util.Date;
  * constructor.
  */
 public class PBImageDelimitedTextWriter extends PBImageTextWriter {
-  static final String DEFAULT_DELIMITER = "\t";
   private static final String DATE_FORMAT="yyyy-MM-dd HH:mm";
   private final SimpleDateFormat dateFormatter =
       new SimpleDateFormat(DATE_FORMAT);
 
-  private final String delimiter;
-
   PBImageDelimitedTextWriter(PrintStream out, String delimiter, String tempPath)
       throws IOException {
-    super(out, tempPath);
-    this.delimiter = delimiter;
+    super(out, delimiter, tempPath);
   }
 
   private String formatDate(long date) {
     return dateFormatter.format(new Date(date));
-  }
-
-  private void append(StringBuffer buffer, int field) {
-    buffer.append(delimiter);
-    buffer.append(field);
-  }
-
-  private void append(StringBuffer buffer, long field) {
-    buffer.append(delimiter);
-    buffer.append(field);
-  }
-
-  private void append(StringBuffer buffer, String field) {
-    buffer.append(delimiter);
-    buffer.append(field);
   }
 
   @Override
@@ -82,7 +63,7 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
     String inodeName = inode.getName().toStringUtf8();
     Path path = new Path(parent.isEmpty() ? "/" : parent,
       inodeName.isEmpty() ? "/" : inodeName);
-    buffer.append(path.toString());
+    append(buffer, path.toString());
     PermissionStatus p = null;
     boolean isDir = false;
     boolean hasAcl = false;
@@ -136,7 +117,7 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
     append(buffer, dirString + p.getPermission().toString() + aclString);
     append(buffer, p.getUserName());
     append(buffer, p.getGroupName());
-    return buffer.toString();
+    return buffer.substring(1);
   }
 
   @Override
@@ -155,5 +136,10 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
     append(buffer, "UserName");
     append(buffer, "GroupName");
     return buffer.toString();
+  }
+
+  @Override
+  public void afterOutput() {
+    // do nothing
   }
 }

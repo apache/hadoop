@@ -100,7 +100,52 @@ More settings will may be added in the future.
 Currently the only Metadata Store-independent setting, besides the
 implementation class above, is the *allow authoritative* flag.
 
-It is recommended that you leave the default setting here:
+The _authoritative_ expression in S3Guard is present in two different layers, for
+two different reasons:
+
+* Authoritative S3Guard
+    * S3Guard can be set as authoritative, which means that an S3A client will
+    avoid round-trips to S3 when **getting directory listings** if there is a fully
+    cached version of the directory stored in metadata store.
+    * This mode can be set as a configuration property
+    `fs.s3a.metadatastore.authoritative`
+    * All interactions with the S3 bucket(s) must be through S3A clients sharing
+    the same metadata store.
+    * This is independent from which metadata store implementation is used.
+
+* Authoritative directory listings (isAuthoritative bit)
+    * Tells if the stored directory listing metadata is complete.
+    * This is set by the FileSystem client (e.g. s3a) via the `DirListingMetadata`
+    class (`org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata`).
+    (The MetadataStore only knows what the FS client tells it.)
+    * If set to `TRUE`, we know that the directory listing
+    (`DirListingMetadata`) is full, and complete.
+    * If set to `FALSE` the listing may not be complete.
+    * Metadata store may persist the isAuthoritative bit on the metadata store.
+    * Currently `org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore` and
+    `org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore` implementation
+    supports authoritative bit.
+
+More on Authoritative S3Guard:
+
+* It is not treating the MetadataStore (e.g. dynamodb) as the source of truth
+ in general.
+* It is the ability to short-circuit S3 list objects and serve listings from
+the MetadataStore in some circumstances.
+* For S3A to skip S3's list objects on some path, and serve it directly from
+the MetadataStore, the following things must all be true:
+    1. The MetadataStore implementation persists the bit
+    `DirListingMetadata.isAuthorititative` set when calling
+    `MetadataStore#put` (`DirListingMetadata`)
+    1. The S3A client is configured to allow metadatastore to be authoritative
+    source of a directory listing (`fs.s3a.metadatastore.authoritative=true`).
+    1. The MetadataStore has a **full listing for path** stored in it.  This only
+    happens if the FS client (s3a) explicitly has stored a full directory
+    listing with `DirListingMetadata.isAuthorititative=true` before the said
+    listing request happens.
+
+This configuration only enables authoritative mode in the client layer. It is
+recommended that you leave the default setting here:
 
 ```xml
 <property>
@@ -109,9 +154,8 @@ It is recommended that you leave the default setting here:
 </property>
 ```
 
-Setting this to `true` is currently an experimental feature.  When true, the
-S3A client will avoid round-trips to S3 when getting directory listings, if
-there is a fully-cached version of the directory stored in the Metadata Store.
+Note that a MetadataStore MAY persist this bit. (Not MUST).
+Setting this to `true` is currently an experimental feature.
 
 Note that if this is set to true, it may exacerbate or persist existing race
 conditions around multiple concurrent modifications and listings of a given
@@ -121,6 +165,17 @@ In particular: **If the Metadata Store is declared as authoritative,
 all interactions with the S3 bucket(s) must be through S3A clients sharing
 the same Metadata Store**
 
+It can be configured how long a directory listing in the MetadataStore is
+considered as authoritative. If `((lastUpdated + ttl) <= now)` is false, the
+directory  listing is no longer considered authoritative, so the flag will be
+removed on `S3AFileSystem` level.
+
+```xml
+<property>
+    <name>fs.s3a.metadatastore.authoritative.dir.ttl</name>
+    <value>3600000</value>
+</property>
+```
 
 ### 3. Configure the Metadata Store.
 
@@ -254,8 +309,9 @@ rates.
 </property>
 ```
 
-Attempting to perform more IO than the capacity requested simply throttles the
-IO; small capacity numbers are recommended when initially experimenting
+Attempting to perform more IO than the capacity requested throttles the
+IO, and may result in operations failing. Larger IO capacities cost more.
+We recommending using small read and write capacities when initially experimenting
 with S3Guard.
 
 ## Authenticating with S3Guard
@@ -283,7 +339,7 @@ to the options `fs.s3a.KEY` *for that bucket only*.
 As an example, here is a configuration to use different metadata stores
 and tables for different buckets
 
-First, we define shortcuts for the metadata store classnames
+First, we define shortcuts for the metadata store classnames:
 
 
 ```xml
@@ -299,7 +355,7 @@ First, we define shortcuts for the metadata store classnames
 ```
 
 Next, Amazon's public landsat database is configured with no
-metadata store
+metadata store:
 
 ```xml
 <property>
@@ -311,7 +367,7 @@ metadata store
 ```
 
 Next the `ireland-2` and `ireland-offline` buckets are configured with
-DynamoDB as the store, and a shared table `production-table`
+DynamoDB as the store, and a shared table `production-table`:
 
 
 ```xml
@@ -371,6 +427,13 @@ pertaining to [Provisioned Throughput](http://docs.aws.amazon.com/amazondynamodb
 [-write PROVISIONED_WRITES] [-read PROVISIONED_READS]
 ```
 
+Tag argument can be added with a key=value list of tags. The table for the
+metadata store will be created with these tags in DynamoDB.
+
+```bash
+[-tag key=value;]
+```
+
 Example 1
 
 ```bash
@@ -389,6 +452,14 @@ hadoop s3guard init -meta dynamodb://ireland-team -region eu-west-1
 
 Creates a table "ireland-team" in the region "eu-west-1.amazonaws.com"
 
+
+Example 3
+
+```bash
+hadoop s3guard init -meta dynamodb://ireland-team -tag tag1=first;tag2=second;
+```
+
+Creates a table "ireland-team" with tags "first" and "second".
 
 ### Import a bucket: `s3guard import`
 
@@ -434,7 +505,7 @@ Options
 | argument | meaning |
 |-----------|-------------|
 | `-guarded` | Require S3Guard to be enabled |
-| `-unguarded` | Require S3Guard to be disabled |
+| `-unguarded` | Force S3Guard to be disabled |
 | `-auth` | Require the S3Guard mode to be "authoritative" |
 | `-nonauth` | Require the S3Guard mode to be "non-authoritative" |
 | `-magic` | Require the S3 filesystem to be support the "magic" committer |
@@ -506,7 +577,7 @@ Input seek policy: fs.s3a.experimental.input.fadvise=normal
 
 Note that other clients may have a S3Guard table set up to store metadata
 on this bucket; the checks are all done from the perspective of the configuration
-setttings of the current client.
+settings of the current client.
 
 ```bash
 hadoop s3guard bucket-info -guarded -auth s3a://landsat-pds
@@ -592,8 +663,8 @@ A time value of hours, minutes and/or seconds must be supplied.
 1. This does not delete the entries in the bucket itself.
 1. The modification time is effectively the creation time of the objects
 in the S3 Bucket.
-1. Even when an S3A URI is supplied, all entries in the table older than
-a specific age are deleted &mdash; even those from other buckets.
+1. If an S3A URI is supplied, only the entries in the table specified by the
+URI and older than a specific age are deleted.
 
 Example
 
@@ -603,6 +674,13 @@ hadoop s3guard prune -days 7 s3a://ireland-1
 
 Deletes all entries in the S3Guard table for files older than seven days from
 the table associated with `s3a://ireland-1`.
+
+```bash
+hadoop s3guard prune -days 7 s3a://ireland-1/path_prefix/
+```
+
+Deletes all entries in the S3Guard table for files older than seven days from
+the table associated with `s3a://ireland-1` and with the prefix "path_prefix"
 
 ```bash
 hadoop s3guard prune -hours 1 -minutes 30 -meta dynamodb://ireland-team -region eu-west-1
@@ -650,10 +728,10 @@ Metadata Store Diagnostics:
 ```
 
 After the update, the table status changes to `UPDATING`; this is a sign that
-the capacity has been changed
+the capacity has been changed.
 
 Repeating the same command will not change the capacity, as both read and
-write values match that already in use
+write values match that already in use.
 
 ```
 2017-08-30 16:24:35,337 [main] INFO  s3guard.DynamoDBMetadataStore (DynamoDBMetadataStore.java:updateParameters(1090)) - Table capacity unchanged at read: 20, write: 20
@@ -669,6 +747,9 @@ Metadata Store Diagnostics:
   table={ ... }
   write-capacity=20
 ```
+
+*Note*: There is a limit to how many times in a 24 hour period the capacity
+of a bucket can be changed, either through this command or the AWS console.
 
 ## Debugging and Error Handling
 
@@ -751,6 +832,97 @@ are only made after successful file creation, deletion and rename, the
 store is *unlikely* to get out of sync, it is still something which
 merits more testing before it could be considered reliable.
 
+## Managing DynamoDB IO Capacity
+
+DynamoDB is not only billed on use (data and IO requests), it is billed
+on allocated IO Capacity.
+
+When an application makes more requests than
+the allocated capacity permits, the request is rejected; it is up to
+the calling application to detect when it is being so throttled and
+react. S3Guard does this, but as a result: when the client is being
+throttled, operations are slower. This capacity throttling is averaged
+over a few minutes: a briefly overloaded table will not be throttled,
+but the rate cannot be sustained.
+
+The load on a table isvisible in the AWS console: go to the
+DynamoDB page for the table and select the "metrics" tab.
+If the graphs of throttled read or write
+requests show that a lot of throttling has taken place, then there is not
+enough allocated capacity for the applications making use of the table.
+
+Similarly, if the capacity graphs show that the read or write loads are
+low compared to the allocated capacities, then the table *may* be overprovisioned
+for the current workload.
+
+The S3Guard connector to DynamoDB can be configured to make
+multiple attempts to repeat a throttled request, with an exponential
+backoff between them.
+
+The relevant settings for managing retries in the connector are:
+
+```xml
+
+<property>
+  <name>fs.s3a.s3guard.ddb.max.retries</name>
+  <value>9</value>
+    <description>
+      Max retries on throttled/incompleted DynamoDB operations
+      before giving up and throwing an IOException.
+      Each retry is delayed with an exponential
+      backoff timer which starts at 100 milliseconds and approximately
+      doubles each time.  The minimum wait before throwing an exception is
+      sum(100, 200, 400, 800, .. 100*2^N-1 ) == 100 * ((2^N)-1)
+    </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.ddb.throttle.retry.interval</name>
+  <value>100ms</value>
+    <description>
+      Initial interval to retry after a request is throttled events;
+      the back-off policy is exponential until the number of retries of
+      fs.s3a.s3guard.ddb.max.retries is reached.
+    </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.ddb.background.sleep</name>
+  <value>25ms</value>
+  <description>
+    Length (in milliseconds) of pause between each batch of deletes when
+    pruning metadata.  Prevents prune operations (which can typically be low
+    priority background operations) from overly interfering with other I/O
+    operations.
+  </description>
+</property>
+```
+
+Having a large value for `fs.s3a.s3guard.ddb.max.retries` will ensure
+that clients of an overloaded table will not fail immediately. However
+queries may be unexpectedly slow.
+
+If operations, especially directory operations, are slow, check the AWS
+console. It is also possible to set up AWS alerts for capacity limits
+being exceeded.
+
+[DynamoDB Auto Scaling](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/AutoScaling.html)
+can automatically increase and decrease the allocated capacity.
+This is good for keeping capacity high when needed, but avoiding large
+bills when it is not.
+
+Experiments with S3Guard and DynamoDB Auto Scaling have shown that any Auto Scaling
+operation will only take place after callers have been throttled for a period of
+time. The clients will still need to be configured to retry when overloaded
+until any extra capacity is allocated. Furthermore, as this retrying will
+block the threads from performing other operations -including more IO, the
+the autoscale may not scale fast enough.
+
+We recommend experimenting with this, based on usage information collected
+from previous days, and and choosing a combination of
+retry counts and an interval which allow for the clients to cope with
+some throttling, but not to time out other applications.
+
 ## Troubleshooting
 
 ### Error: `S3Guard table lacks version marker.`
@@ -791,13 +963,64 @@ or the configuration is preventing S3Guard from finding the table.
 region as the bucket being used.
 1. Create the table if necessary.
 
+
 ### Error `"The level of configured provisioned throughput for the table was exceeded"`
 
+```
+org.apache.hadoop.fs.s3a.AWSServiceThrottledException: listFiles on s3a://bucket/10/d1/d2/d3:
+com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputExceededException:
+The level of configured provisioned throughput for the table was exceeded.
+Consider increasing your provisioning level with the UpdateTable API.
+(Service: AmazonDynamoDBv2; Status Code: 400;
+Error Code: ProvisionedThroughputExceededException;
+```
 The IO load of clients of the (shared) DynamoDB table was exceeded.
 
-Currently S3Guard doesn't do any throttling and retries here; the way to address
-this is to increase capacity via the AWS console or the `set-capacity` command.
+1. Increase the capacity of the DynamoDB table.
+1. Increase the retry count and/or sleep time of S3Guard on throttle events.
+1. Enable capacity autoscaling for the table in the AWS console.
 
-## Other Topis
+### Error `Max retries exceeded`
+
+The I/O load of clients of the (shared) DynamoDB table was exceeded, and
+the number of attempts to retry the operation exceeded the configured amount.
+
+1. Increase the capacity of the DynamoDB table.
+1. Increase the retry count and/or sleep time of S3Guard on throttle events.
+1. Enable capacity autoscaling for the table in the AWS console.
+
+
+### Error when running `set-capacity`: `org.apache.hadoop.fs.s3a.AWSServiceThrottledException: ProvisionTable`
+
+```
+org.apache.hadoop.fs.s3a.AWSServiceThrottledException: ProvisionTable on s3guard-example:
+com.amazonaws.services.dynamodbv2.model.LimitExceededException:
+Subscriber limit exceeded: Provisioned throughput decreases are limited within a given UTC day.
+After the first 4 decreases, each subsequent decrease in the same UTC day can be performed at most once every 3600 seconds.
+Number of decreases today: 6.
+Last decrease at Wednesday, July 25, 2018 8:48:14 PM UTC.
+Next decrease can be made at Wednesday, July 25, 2018 9:48:14 PM UTC
+```
+
+There's are limit on how often you can change the capacity of an DynamoDB table;
+if you call set-capacity too often, it fails. Wait until the after the time indicated
+and try again.
+
+### Error `Invalid region specified`
+
+```
+java.io.IOException: Invalid region specified "iceland-2":
+  Region can be configured with fs.s3a.s3guard.ddb.region:
+  us-gov-west-1, us-east-1, us-east-2, us-west-1, us-west-2,
+  eu-west-1, eu-west-2, eu-west-3, eu-central-1, ap-south-1,
+  ap-southeast-1, ap-southeast-2, ap-northeast-1, ap-northeast-2,
+  sa-east-1, cn-north-1, cn-northwest-1, ca-central-1
+  at org.apache.hadoop.fs.s3a.s3guard.DynamoDBClientFactory$DefaultDynamoDBClientFactory.getRegion
+  at org.apache.hadoop.fs.s3a.s3guard.DynamoDBClientFactory$DefaultDynamoDBClientFactory.createDynamoDBClient
+```
+
+The region specified in `fs.s3a.s3guard.ddb.region` is invalid.
+
+## Other Topics
 
 For details on how to test S3Guard, see [Testing S3Guard](./testing.html#s3guard)

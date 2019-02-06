@@ -272,20 +272,20 @@ public class TestFileSystemApplicationHistoryStore extends
     tearDown();
 
     // Setup file system to inject startup conditions
-    FileSystem fs = spy(new RawLocalFileSystem());
+    FileSystem fileSystem = spy(new RawLocalFileSystem());
     FileStatus fileStatus = Mockito.mock(FileStatus.class);
     doReturn(true).when(fileStatus).isDirectory();
-    doReturn(fileStatus).when(fs).getFileStatus(any(Path.class));
+    doReturn(fileStatus).when(fileSystem).getFileStatus(any(Path.class));
 
     try {
-      initAndStartStore(fs);
+      initAndStartStore(fileSystem);
     } catch (Exception e) {
       Assert.fail("Exception should not be thrown: " + e);
     }
 
     // Make sure that directory creation was not attempted
     verify(fileStatus, never()).isDirectory();
-    verify(fs, times(1)).mkdirs(any(Path.class));
+    verify(fileSystem, times(1)).mkdirs(any(Path.class));
   }
 
   @Test
@@ -294,14 +294,14 @@ public class TestFileSystemApplicationHistoryStore extends
     tearDown();
 
     // Setup file system to inject startup conditions
-    FileSystem fs = spy(new RawLocalFileSystem());
+    FileSystem fileSystem = spy(new RawLocalFileSystem());
     FileStatus fileStatus = Mockito.mock(FileStatus.class);
     doReturn(false).when(fileStatus).isDirectory();
-    doReturn(fileStatus).when(fs).getFileStatus(any(Path.class));
-    doThrow(new IOException()).when(fs).mkdirs(any(Path.class));
+    doReturn(fileStatus).when(fileSystem).getFileStatus(any(Path.class));
+    doThrow(new IOException()).when(fileSystem).mkdirs(any(Path.class));
 
     try {
-      initAndStartStore(fs);
+      initAndStartStore(fileSystem);
       Assert.fail("Exception should have been thrown");
     } catch (Exception e) {
       // Expected failure
@@ -309,6 +309,6 @@ public class TestFileSystemApplicationHistoryStore extends
 
     // Make sure that directory creation was attempted
     verify(fileStatus, never()).isDirectory();
-    verify(fs, times(1)).mkdirs(any(Path.class));
+    verify(fileSystem, times(1)).mkdirs(any(Path.class));
   }
 }

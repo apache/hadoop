@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
+
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  * This interface defines the methods used to store and manage InodeDiffs.
@@ -82,6 +85,12 @@ public interface DiffList<T extends Comparable<Integer>> extends Iterable<T> {
       public Iterator<T> iterator() {
         return diffs.iterator();
       }
+
+      @Override
+      public List<T> getMinListForRange(int startIndex, int endIndex,
+          INodeDirectory dir) {
+        return diffs.getMinListForRange(startIndex, endIndex, dir);
+      }
     };
   }
 
@@ -136,5 +145,14 @@ public interface DiffList<T extends Comparable<Integer>> extends Iterable<T> {
    *         otherwise, (-insertion point - 1).
    */
   int binarySearch(int key);
+
+  /**
+   * Returns the list of minimal list of elements need to combine to generate
+   * cumulative sum from startIndex to endIndex.
+   * @param startIndex
+   * @param endIndex
+   * @return list of T
+   */
+  List<T> getMinListForRange(int startIndex, int endIndex, INodeDirectory dir);
 
 }

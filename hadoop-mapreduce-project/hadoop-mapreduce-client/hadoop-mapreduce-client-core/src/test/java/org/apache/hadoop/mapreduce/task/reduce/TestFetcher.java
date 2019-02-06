@@ -33,7 +33,6 @@ import org.junit.Rule;
 import org.junit.rules.TestName;
 
 import static org.junit.Assert.*;
-import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
 import java.io.ByteArrayInputStream;

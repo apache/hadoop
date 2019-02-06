@@ -43,9 +43,11 @@ public class TestCopyPreserveFlag {
   private static final int MODIFICATION_TIME = 12345000;
   private static final int ACCESS_TIME = 23456000;
   private static final Path DIR_FROM = new Path("d0");
+  private static final Path DIR_FROM_SPL = new Path("d0 space");
   private static final Path DIR_TO1 = new Path("d1");
   private static final Path DIR_TO2 = new Path("d2");
   private static final Path FROM = new Path(DIR_FROM, "f0");
+  private static final Path FROM_SPL = new Path(DIR_FROM_SPL, "f0");
   private static final Path TO = new Path(DIR_TO1, "f1");
   private static final FsPermission PERMISSIONS = new FsPermission(
     FsAction.ALL,
@@ -117,6 +119,14 @@ public class TestCopyPreserveFlag {
   @Test(timeout = 10000)
   public void testPutWithoutP() throws Exception {
     run(new Put(), FROM.toString(), TO.toString());
+    assertAttributesChanged(TO);
+  }
+
+  @Test(timeout = 10000)
+  public void testPutWithSplCharacter() throws Exception {
+    fs.mkdirs(DIR_FROM_SPL);
+    fs.createNewFile(FROM_SPL);
+    run(new Put(), FROM_SPL.toString(), TO.toString());
     assertAttributesChanged(TO);
   }
 

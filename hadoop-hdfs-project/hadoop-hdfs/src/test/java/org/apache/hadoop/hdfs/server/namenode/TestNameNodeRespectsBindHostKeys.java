@@ -33,8 +33,8 @@ import org.apache.hadoop.test.GenericTestUtils;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.junit.Assert.assertTrue;
@@ -52,7 +52,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
  *  - DFS_NAMENODE_HTTPS_BIND_HOST_KEY
  */
 public class TestNameNodeRespectsBindHostKeys {
-  public static final Log LOG = LogFactory.getLog(TestNameNodeRespectsBindHostKeys.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestNameNodeRespectsBindHostKeys.class);
   private static final String WILDCARD_ADDRESS = "0.0.0.0";
   private static final String LOCALHOST_SERVER_ADDRESS = "127.0.0.1:0";
   private static String keystoresDir;

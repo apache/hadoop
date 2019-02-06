@@ -54,7 +54,7 @@ public class TestHdfsFileStatusMethods {
     assertEquals(fsM.stream()
             .map(MethodSignature::toString)
             .collect(joining("\n")),
-        Collections.EMPTY_SET, fsM);
+        Collections.emptySet(), fsM);
   }
 
   /** Map non-static, declared methods for this class to signatures. */

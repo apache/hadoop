@@ -19,7 +19,8 @@
 import Ember from 'ember';
 
 export default Ember.Controller.extend({
-  queryParams: ["appid", "service"],
+  queryParams: ["appid", "service", "containerid"],
   appid: undefined,
-  service: undefined
+  service: undefined,
+  containerid: undefined
 });

@@ -198,6 +198,12 @@ public class FileUtil {
      * use getCanonicalPath in File to get the target of the symlink but that
      * does not indicate if the given path refers to a symlink.
      */
+
+    if (f == null) {
+      LOG.warn("Can not read a null symLink");
+      return "";
+    }
+
     try {
       return Shell.execCommand(
           Shell.getReadlinkCommand(f.toString())).trim();
@@ -361,8 +367,8 @@ public class FileUtil {
           returnVal = false;
       } catch (IOException e) {
         gotException = true;
-        exceptions.append(e.getMessage());
-        exceptions.append("\n");
+        exceptions.append(e.getMessage())
+            .append("\n");
       }
     }
     if (gotException) {
@@ -617,11 +623,16 @@ public class FileUtil {
       throws IOException {
     try (ZipInputStream zip = new ZipInputStream(inputStream)) {
       int numOfFailedLastModifiedSet = 0;
+      String targetDirPath = toDir.getCanonicalPath() + File.separator;
       for(ZipEntry entry = zip.getNextEntry();
           entry != null;
           entry = zip.getNextEntry()) {
         if (!entry.isDirectory()) {
           File file = new File(toDir, entry.getName());
+          if (!file.getCanonicalPath().startsWith(targetDirPath)) {
+            throw new IOException("expanding " + entry.getName()
+                + " would create file outside of " + toDir);
+          }
           File parent = file.getParentFile();
           if (!parent.mkdirs() &&
               !parent.isDirectory()) {
@@ -656,12 +667,17 @@ public class FileUtil {
 
     try {
       entries = zipFile.entries();
+      String targetDirPath = unzipDir.getCanonicalPath() + File.separator;
       while (entries.hasMoreElements()) {
         ZipEntry entry = entries.nextElement();
         if (!entry.isDirectory()) {
           InputStream in = zipFile.getInputStream(entry);
           try {
             File file = new File(unzipDir, entry.getName());
+            if (!file.getCanonicalPath().startsWith(targetDirPath)) {
+              throw new IOException("expanding " + entry.getName()
+                  + " would create file outside of " + unzipDir);
+            }
             if (!file.getParentFile().mkdirs()) {
               if (!file.getParentFile().isDirectory()) {
                 throw new IOException("Mkdirs failed to create " +
@@ -857,10 +873,10 @@ public class FileUtil {
     if (gzipped) {
       untarCommand.append("gzip -dc | (");
     }
-    untarCommand.append("cd '");
-    untarCommand.append(FileUtil.makeSecureShellPath(untarDir));
-    untarCommand.append("' && ");
-    untarCommand.append("tar -x ");
+    untarCommand.append("cd '")
+        .append(FileUtil.makeSecureShellPath(untarDir))
+        .append("' && ")
+        .append("tar -x ");
 
     if (gzipped) {
       untarCommand.append(")");
@@ -872,14 +888,14 @@ public class FileUtil {
       boolean gzipped) throws IOException {
     StringBuffer untarCommand = new StringBuffer();
     if (gzipped) {
-      untarCommand.append(" gzip -dc '");
-      untarCommand.append(FileUtil.makeSecureShellPath(inFile));
-      untarCommand.append("' | (");
+      untarCommand.append(" gzip -dc '")
+          .append(FileUtil.makeSecureShellPath(inFile))
+          .append("' | (");
     }
-    untarCommand.append("cd '");
-    untarCommand.append(FileUtil.makeSecureShellPath(untarDir));
-    untarCommand.append("' && ");
-    untarCommand.append("tar -xf ");
+    untarCommand.append("cd '")
+        .append(FileUtil.makeSecureShellPath(untarDir))
+        .append("' && ")
+        .append("tar -xf ");
 
     if (gzipped) {
       untarCommand.append(" -)");
@@ -902,11 +918,12 @@ public class FileUtil {
     TarArchiveInputStream tis = null;
     try {
       if (gzipped) {
-        inputStream = new BufferedInputStream(new GZIPInputStream(
-            new FileInputStream(inFile)));
+        inputStream = new GZIPInputStream(new FileInputStream(inFile));
       } else {
-        inputStream = new BufferedInputStream(new FileInputStream(inFile));
+        inputStream = new FileInputStream(inFile);
       }
+
+      inputStream = new BufferedInputStream(inputStream);
 
       tis = new TarArchiveInputStream(inputStream);
 
@@ -924,13 +941,9 @@ public class FileUtil {
     TarArchiveInputStream tis = null;
     try {
       if (gzipped) {
-        inputStream = new BufferedInputStream(new GZIPInputStream(
-            inputStream));
-      } else {
-        inputStream =
-            new BufferedInputStream(inputStream);
+        inputStream = new GZIPInputStream(inputStream);
       }
-
+      inputStream = new BufferedInputStream(inputStream);
       tis = new TarArchiveInputStream(inputStream);
 
       for (TarArchiveEntry entry = tis.getNextTarEntry(); entry != null;) {
@@ -944,6 +957,13 @@ public class FileUtil {
 
   private static void unpackEntries(TarArchiveInputStream tis,
       TarArchiveEntry entry, File outputDir) throws IOException {
+    String targetDirPath = outputDir.getCanonicalPath() + File.separator;
+    File outputFile = new File(outputDir, entry.getName());
+    if (!outputFile.getCanonicalPath().startsWith(targetDirPath)) {
+      throw new IOException("expanding " + entry.getName()
+          + " would create entry outside of " + outputDir);
+    }
+
     if (entry.isDirectory()) {
       File subDir = new File(outputDir, entry.getName());
       if (!subDir.mkdirs() && !subDir.isDirectory()) {
@@ -966,7 +986,6 @@ public class FileUtil {
       return;
     }
 
-    File outputFile = new File(outputDir, entry.getName());
     if (!outputFile.getParentFile().exists()) {
       if (!outputFile.getParentFile().mkdirs()) {
         throw new IOException("Mkdirs failed to create tar internal dir "
@@ -980,17 +999,7 @@ public class FileUtil {
       return;
     }
 
-    int count;
-    byte data[] = new byte[2048];
-    try (BufferedOutputStream outputStream = new BufferedOutputStream(
-        new FileOutputStream(outputFile));) {
-
-      while ((count = tis.read(data)) != -1) {
-        outputStream.write(data, 0, count);
-      }
-
-      outputStream.flush();
-    }
+    org.apache.commons.io.FileUtils.copyToFile(tis, outputFile);
   }
 
   /**
@@ -1017,6 +1026,13 @@ public class FileUtil {
    * @return 0 on success
    */
   public static int symLink(String target, String linkname) throws IOException{
+
+    if (target == null || linkname == null) {
+      LOG.warn("Can not create a symLink with a target = " + target
+          + " and link =" + linkname);
+      return 1;
+    }
+
     // Run the input paths through Java's File so that they are converted to the
     // native OS form
     File targetFile = new File(
@@ -1445,8 +1461,8 @@ public class FileUtil {
    * @param inputClassPath String input classpath to bundle into the jar manifest
    * @param pwd Path to working directory to save jar
    * @param targetDir path to where the jar execution will have its working dir
-   * @param callerEnv Map<String, String> caller's environment variables to use
-   *   for expansion
+   * @param callerEnv Map {@literal <}String, String{@literal >} caller's
+   * environment variables to use for expansion
    * @return String[] with absolute path to new jar in position 0 and
    *   unexpanded wild card entry path in position 1
    * @throws IOException if there is an I/O error while writing the jar file
@@ -1488,8 +1504,8 @@ public class FileUtil {
             classPathEntryList.add(jar.toUri().toURL().toExternalForm());
           }
         } else {
-          unexpandedWildcardClasspath.append(File.pathSeparator);
-          unexpandedWildcardClasspath.append(classPathEntry);
+          unexpandedWildcardClasspath.append(File.pathSeparator)
+              .append(classPathEntry);
         }
       } else {
         // Append just this entry

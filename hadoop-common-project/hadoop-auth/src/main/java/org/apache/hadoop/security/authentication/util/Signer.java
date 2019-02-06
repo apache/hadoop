@@ -14,8 +14,11 @@
 package org.apache.hadoop.security.authentication.util;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.binary.StringUtils;
 
-import java.nio.charset.Charset;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -24,6 +27,7 @@ import java.security.NoSuchAlgorithmException;
  */
 public class Signer {
   private static final String SIGNATURE = "&s=";
+  private static final String SIGNING_ALGORITHM = "HmacSHA256";
 
   private SignerSecretProvider secretProvider;
 
@@ -86,25 +90,27 @@ public class Signer {
    */
   protected String computeSignature(byte[] secret, String str) {
     try {
-      MessageDigest md = MessageDigest.getInstance("SHA");
-      md.update(str.getBytes(Charset.forName("UTF-8")));
-      md.update(secret);
-      byte[] digest = md.digest();
-      return new Base64(0).encodeToString(digest);
-    } catch (NoSuchAlgorithmException ex) {
+      SecretKeySpec key = new SecretKeySpec((secret), SIGNING_ALGORITHM);
+      Mac mac = Mac.getInstance(SIGNING_ALGORITHM);
+      mac.init(key);
+      byte[] sig = mac.doFinal(StringUtils.getBytesUtf8(str));
+      return new Base64(0).encodeToString(sig);
+    } catch (NoSuchAlgorithmException | InvalidKeyException ex) {
       throw new RuntimeException("It should not happen, " + ex.getMessage(), ex);
     }
   }
 
   protected void checkSignatures(String rawValue, String originalSignature)
       throws SignerException {
+    byte[] orginalSignatureBytes = StringUtils.getBytesUtf8(originalSignature);
     boolean isValid = false;
     byte[][] secrets = secretProvider.getAllSecrets();
     for (int i = 0; i < secrets.length; i++) {
       byte[] secret = secrets[i];
       if (secret != null) {
         String currentSignature = computeSignature(secret, rawValue);
-        if (originalSignature.equals(currentSignature)) {
+        if (MessageDigest.isEqual(orginalSignatureBytes,
+            StringUtils.getBytesUtf8(currentSignature))) {
           isValid = true;
           break;
         }

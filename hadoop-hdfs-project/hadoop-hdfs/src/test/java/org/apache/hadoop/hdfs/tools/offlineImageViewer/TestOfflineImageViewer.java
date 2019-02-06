@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
 import com.google.common.collect.ImmutableMap;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
 import static org.apache.hadoop.fs.permission.AclEntryType.OTHER;
@@ -25,6 +27,8 @@ import static org.apache.hadoop.fs.permission.AclEntryType.USER;
 import static org.apache.hadoop.fs.permission.FsAction.ALL;
 import static org.apache.hadoop.fs.permission.FsAction.EXECUTE;
 import static org.apache.hadoop.fs.permission.FsAction.READ_EXECUTE;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
@@ -39,6 +43,7 @@ import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.E
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedReader;
@@ -47,6 +52,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
@@ -56,11 +62,13 @@ import java.io.StringReader;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -72,11 +80,15 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.output.NullOutputStream;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -100,9 +112,11 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.slf4j.event.Level;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -120,13 +134,18 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 public class TestOfflineImageViewer {
-  private static final Log LOG = LogFactory.getLog(OfflineImageViewerPB.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(OfflineImageViewerPB.class);
   private static final int NUM_DIRS = 3;
   private static final int FILES_PER_DIR = 4;
   private static final String TEST_RENEWER = "JobTracker";
   private static File originalFsimage = null;
   private static int filesECCount = 0;
   private static String addedErasureCodingPolicyName = null;
+  private static final long FILE_NODE_ID_1 = 16388;
+  private static final long FILE_NODE_ID_2 = 16389;
+  private static final long FILE_NODE_ID_3 = 16394;
+  private static final long DIR_NODE_ID = 16391;
 
   // namespace as written to dfs, to be compared with viewer's output
   final static HashMap<String, FileStatus> writtenFiles = Maps.newHashMap();
@@ -194,10 +213,30 @@ public class TestOfflineImageViewer {
       dirCount++;
       writtenFiles.put(emptydir.toString(), hdfs.getFileStatus(emptydir));
 
-      //Create a directory whose name should be escaped in XML
+      //Create directories whose name should be escaped in XML
       Path invalidXMLDir = new Path("/dirContainingInvalidXMLChar\u0000here");
       hdfs.mkdirs(invalidXMLDir);
       dirCount++;
+      Path entityRefXMLDir = new Path("/dirContainingEntityRef&here");
+      hdfs.mkdirs(entityRefXMLDir);
+      dirCount++;
+      writtenFiles.put(entityRefXMLDir.toString(),
+          hdfs.getFileStatus(entityRefXMLDir));
+
+      //Create directories with new line characters
+      Path newLFDir = new Path("/dirContainingNewLineChar"
+          + StringUtils.LF + "here");
+      hdfs.mkdirs(newLFDir);
+      dirCount++;
+      writtenFiles.put("\"/dirContainingNewLineChar%x0Ahere\"",
+          hdfs.getFileStatus(newLFDir));
+
+      Path newCRLFDir = new Path("/dirContainingNewLineChar"
+          + PBImageDelimitedTextWriter.CRLF + "here");
+      hdfs.mkdirs(newCRLFDir);
+      dirCount++;
+      writtenFiles.put("\"/dirContainingNewLineChar%x0D%x0Ahere\"",
+          hdfs.getFileStatus(newCRLFDir));
 
       //Create a directory with sticky bits
       Path stickyBitDir = new Path("/stickyBit");
@@ -328,8 +367,10 @@ public class TestOfflineImageViewer {
     File truncatedFile = new File(tempDir, "truncatedFsImage");
     PrintStream output = new PrintStream(NullOutputStream.NULL_OUTPUT_STREAM);
     copyPartOfFile(originalFsimage, truncatedFile);
-    new FileDistributionCalculator(new Configuration(), 0, 0, false, output)
-        .visit(new RandomAccessFile(truncatedFile, "r"));
+    try (RandomAccessFile r = new RandomAccessFile(truncatedFile, "r")) {
+      new FileDistributionCalculator(new Configuration(), 0, 0, false, output)
+        .visit(r);
+    }
   }
 
   private void copyPartOfFile(File src, File dest) throws IOException {
@@ -350,38 +391,41 @@ public class TestOfflineImageViewer {
 
   @Test
   public void testFileDistributionCalculator() throws IOException {
-    ByteArrayOutputStream output = new ByteArrayOutputStream();
-    PrintStream o = new PrintStream(output);
-    new FileDistributionCalculator(new Configuration(), 0, 0, false, o)
-        .visit(new RandomAccessFile(originalFsimage, "r"));
-    o.close();
+    try (ByteArrayOutputStream output = new ByteArrayOutputStream();
+        PrintStream o = new PrintStream(output);
+        RandomAccessFile r = new RandomAccessFile(originalFsimage, "r")) {
+      new FileDistributionCalculator(new Configuration(), 0, 0, false, o)
+        .visit(r);
+      o.close();
 
-    String outputString = output.toString();
-    Pattern p = Pattern.compile("totalFiles = (\\d+)\n");
-    Matcher matcher = p.matcher(outputString);
-    assertTrue(matcher.find() && matcher.groupCount() == 1);
-    int totalFiles = Integer.parseInt(matcher.group(1));
-    assertEquals(NUM_DIRS * FILES_PER_DIR + filesECCount + 1, totalFiles);
+      String outputString = output.toString();
+      Pattern p = Pattern.compile("totalFiles = (\\d+)\n");
+      Matcher matcher = p.matcher(outputString);
+      assertTrue(matcher.find() && matcher.groupCount() == 1);
+      int totalFiles = Integer.parseInt(matcher.group(1));
+      assertEquals(NUM_DIRS * FILES_PER_DIR + filesECCount + 1, totalFiles);
 
-    p = Pattern.compile("totalDirectories = (\\d+)\n");
-    matcher = p.matcher(outputString);
-    assertTrue(matcher.find() && matcher.groupCount() == 1);
-    int totalDirs = Integer.parseInt(matcher.group(1));
-    // totalDirs includes root directory
-    assertEquals(dirCount + 1, totalDirs);
+      p = Pattern.compile("totalDirectories = (\\d+)\n");
+      matcher = p.matcher(outputString);
+      assertTrue(matcher.find() && matcher.groupCount() == 1);
+      int totalDirs = Integer.parseInt(matcher.group(1));
+      // totalDirs includes root directory
+      assertEquals(dirCount + 1, totalDirs);
 
-    FileStatus maxFile = Collections.max(writtenFiles.values(),
-        new Comparator<FileStatus>() {
-      @Override
-      public int compare(FileStatus first, FileStatus second) {
-        return first.getLen() < second.getLen() ? -1 :
-            ((first.getLen() == second.getLen()) ? 0 : 1);
-      }
-    });
-    p = Pattern.compile("maxFileSize = (\\d+)\n");
-    matcher = p.matcher(output.toString("UTF-8"));
-    assertTrue(matcher.find() && matcher.groupCount() == 1);
-    assertEquals(maxFile.getLen(), Long.parseLong(matcher.group(1)));
+      FileStatus maxFile = Collections.max(writtenFiles.values(),
+          new Comparator<FileStatus>() {
+            @Override
+            public int compare(FileStatus first, FileStatus second) {
+              return first.getLen() < second.getLen() ?
+                  -1 :
+                  ((first.getLen() == second.getLen()) ? 0 : 1);
+            }
+          });
+      p = Pattern.compile("maxFileSize = (\\d+)\n");
+      matcher = p.matcher(output.toString("UTF-8"));
+      assertTrue(matcher.find() && matcher.groupCount() == 1);
+      assertEquals(maxFile.getLen(), Long.parseLong(matcher.group(1)));
+    }
   }
 
   @Test
@@ -487,7 +531,9 @@ public class TestOfflineImageViewer {
     ByteArrayOutputStream output = new ByteArrayOutputStream();
     PrintStream o = new PrintStream(output);
     PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), o);
-    v.visit(new RandomAccessFile(originalFsimage, "r"));
+    try (RandomAccessFile r = new RandomAccessFile(originalFsimage, "r")) {
+      v.visit(r);
+    }
     SAXParserFactory spf = SAXParserFactory.newInstance();
     SAXParser parser = spf.newSAXParser();
     final String xml = output.toString();
@@ -579,10 +625,59 @@ public class TestOfflineImageViewer {
   }
 
   @Test
+  public void testWebImageViewerSecureMode() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    try (WebImageViewer viewer =
+        new WebImageViewer(
+            NetUtils.createSocketAddr("localhost:0"), conf)) {
+      RuntimeException ex = LambdaTestUtils.intercept(RuntimeException.class,
+          "WebImageViewer does not support secure mode.",
+          () -> viewer.start("foo"));
+    } finally {
+      conf.set(HADOOP_SECURITY_AUTHENTICATION, "simple");
+      UserGroupInformation.setConfiguration(conf);
+    }
+  }
+
+  @Test
   public void testPBDelimitedWriter() throws IOException, InterruptedException {
     testPBDelimitedWriter("");  // Test in memory db.
     testPBDelimitedWriter(
         new FileSystemTestHelper().getTestRootDir() + "/delimited.db");
+  }
+
+  @Test
+  public void testOutputEntryBuilder() throws IOException {
+    PBImageCorruptionDetector corrDetector =
+        new PBImageCorruptionDetector(null, ",", "");
+    PBImageCorruption c1 = new PBImageCorruption(342, true, false, 3);
+    PBImageCorruptionDetector.OutputEntryBuilder entryBuilder1 =
+        new PBImageCorruptionDetector.OutputEntryBuilder(corrDetector, false);
+    entryBuilder1.setParentId(1)
+        .setCorruption(c1)
+        .setParentPath("/dir1/dir2/");
+    assertEquals(entryBuilder1.build(),
+        "MissingChild,342,false,/dir1/dir2/,1,,,3");
+
+    corrDetector = new PBImageCorruptionDetector(null, "\t", "");
+    PBImageCorruption c2 = new PBImageCorruption(781, false, true, 0);
+    PBImageCorruptionDetector.OutputEntryBuilder entryBuilder2 =
+        new PBImageCorruptionDetector.OutputEntryBuilder(corrDetector, true);
+    entryBuilder2.setParentPath("/dir3/")
+        .setCorruption(c2)
+        .setName("folder")
+        .setNodeType("Node");
+    assertEquals(entryBuilder2.build(),
+        "CorruptNode\t781\ttrue\t/dir3/\tMissing\tfolder\tNode\t0");
+  }
+
+  @Test
+  public void testPBCorruptionDetector() throws IOException,
+      InterruptedException {
+    testPBCorruptionDetector("");  // Test in memory db.
+    testPBCorruptionDetector(
+        new FileSystemTestHelper().getTestRootDir() + "/corruption.db");
   }
 
   @Test
@@ -619,15 +714,35 @@ public class TestOfflineImageViewer {
     }
   }
 
+  @Test(expected = IOException.class)
+  public void testDelimitedWithExistingFolder() throws IOException,
+      InterruptedException {
+    File tempDelimitedDir = null;
+    try {
+      String tempDelimitedDirName = "tempDirDelimited";
+      String tempDelimitedDirPath = new FileSystemTestHelper().
+          getTestRootDir() + "/" + tempDelimitedDirName;
+      tempDelimitedDir = new File(tempDelimitedDirPath);
+      Assert.assertTrue("Couldn't create temp directory!",
+          tempDelimitedDir.mkdirs());
+      testPBDelimitedWriter(tempDelimitedDirPath);
+    } finally {
+      if (tempDelimitedDir != null) {
+        FileUtils.deleteDirectory(tempDelimitedDir);
+      }
+    }
+  }
+
   private void testPBDelimitedWriter(String db)
       throws IOException, InterruptedException {
     final String DELIMITER = "\t";
     ByteArrayOutputStream output = new ByteArrayOutputStream();
 
-    try (PrintStream o = new PrintStream(output)) {
+    try (PrintStream o = new PrintStream(output);
+        RandomAccessFile r = new RandomAccessFile(originalFsimage, "r")) {
       PBImageDelimitedTextWriter v =
           new PBImageDelimitedTextWriter(o, DELIMITER, db);
-      v.visit(new RandomAccessFile(originalFsimage, "r"));
+      v.visit(r);
     }
 
     Set<String> fileNames = new HashSet<>();
@@ -650,7 +765,7 @@ public class TestOfflineImageViewer {
     }
 
     // writtenFiles does not contain root directory and "invalid XML char" dir.
-    for (Iterator<String> it = fileNames.iterator(); it.hasNext(); ) {
+    for (Iterator<String> it = fileNames.iterator(); it.hasNext();) {
       String filename = it.next();
       if (filename.startsWith("/dirContainingInvalidXMLChar")) {
         it.remove();
@@ -659,6 +774,178 @@ public class TestOfflineImageViewer {
       }
     }
     assertEquals(writtenFiles.keySet(), fileNames);
+  }
+
+  private void testPBCorruptionDetector(String db)
+      throws IOException, InterruptedException {
+    final String delimiter = "\t";
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+    try (PrintStream o = new PrintStream(output)) {
+      PBImageCorruptionDetector v =
+          new PBImageCorruptionDetector(o, delimiter, db);
+      v.visit(new RandomAccessFile(originalFsimage, "r"));
+    }
+
+    try (
+        ByteArrayInputStream input =
+            new ByteArrayInputStream(output.toByteArray());
+        BufferedReader reader =
+            new BufferedReader(new InputStreamReader(input))) {
+      String line = reader.readLine();
+      System.out.println(line);
+      String[] fields = line.split(delimiter);
+      assertEquals(8, fields.length);
+      PBImageCorruptionDetector v =
+          new PBImageCorruptionDetector(null, delimiter, "");
+      assertEquals(line, v.getHeader());
+      line = reader.readLine();
+      assertNull(line);
+    }
+  }
+
+  private void properINodeDelete(List<Long> idsToDelete, Document doc)
+      throws IOException {
+    NodeList inodes = doc.getElementsByTagName("id");
+    if (inodes.getLength() < 1) {
+      throw new IOException("No id tags found in the image xml.");
+    }
+    for (long idToDelete : idsToDelete) {
+      boolean found = false;
+      for (int i = 0; i < inodes.getLength(); i++) {
+        Node id = inodes.item(i);
+        if (id.getTextContent().equals(String.valueOf(idToDelete))) {
+          found = true;
+          Node inode = id.getParentNode();
+          Node inodeSection = inode.getParentNode();
+          inodeSection.removeChild(inode);
+          break;
+        }
+      }
+      if (!found) {
+        throw new IOException("Couldn't find the id in the image.");
+      }
+    }
+    NodeList numInodesNodes = doc.getElementsByTagName("numInodes");
+    if (numInodesNodes.getLength() != 1) {
+      throw new IOException("More than one numInodes tag found.");
+    }
+    Node numInodesNode = numInodesNodes.item(0);
+    int numberOfINodes = Integer.parseInt(numInodesNode.getTextContent());
+    numberOfINodes -= idsToDelete.size();
+    numInodesNode.setTextContent(String.valueOf(numberOfINodes));
+  }
+
+  private void deleteINodeFromXML(File inputFile, File outputFile,
+      List<Long> corruptibleIds) throws Exception {
+    DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+    DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
+    Document doc = docBuilder.parse(inputFile);
+
+    properINodeDelete(corruptibleIds, doc);
+
+    TransformerFactory transformerFactory = TransformerFactory.newInstance();
+    Transformer transformer = transformerFactory.newTransformer();
+    DOMSource source = new DOMSource(doc);
+    StreamResult result = new StreamResult(outputFile);
+    transformer.transform(source, result);
+  }
+
+  private void generateMissingNodeCorruption(File goodImageXml,
+      File corruptedImageXml, File corruptedImage, List<Long> corruptibleIds)
+      throws Exception {
+    if (OfflineImageViewerPB.run(new String[] {"-p", "XML",
+        "-i", originalFsimage.getAbsolutePath(),
+        "-o", goodImageXml.getAbsolutePath() }) != 0) {
+      throw new IOException("Couldn't create XML!");
+    }
+    deleteINodeFromXML(goodImageXml, corruptedImageXml, corruptibleIds);
+    if (OfflineImageViewerPB.run(new String[] {"-p", "ReverseXML",
+        "-i", corruptedImageXml.getAbsolutePath(),
+        "-o", corruptedImage.getAbsolutePath() }) != 0) {
+      throw new IOException("Couldn't create from XML!");
+    }
+  }
+
+  private String testCorruptionDetectorRun(int runNumber,
+      List<Long> corruptions, String db) throws Exception {
+    File goodImageXml = new File(tempDir, "goodImage" + runNumber +".xml");
+    File corruptedImageXml = new File(tempDir,
+        "corruptedImage" + runNumber + ".xml");
+    File corruptedImage = new File(originalFsimage.getParent(),
+        "fsimage_corrupted" + runNumber);
+    generateMissingNodeCorruption(goodImageXml, corruptedImageXml,
+        corruptedImage, corruptions);
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+    try (PrintStream o = new PrintStream(output)) {
+      PBImageCorruptionDetector v =
+          new PBImageCorruptionDetector(o, ",", db);
+      v.visit(new RandomAccessFile(corruptedImage, "r"));
+    }
+    return output.toString();
+  }
+
+  private String readExpectedFile(String fileName) throws IOException {
+    File file = new File(System.getProperty(
+        "test.cache.data", "build/test/cache"), fileName);
+    BufferedReader reader = new BufferedReader(new FileReader(file));
+    String line;
+    StringBuilder s = new StringBuilder();
+    while ((line = reader.readLine()) != null) {
+      line = line.trim();
+      if (line.length() <= 0 || line.startsWith("#")) {
+        continue;
+      }
+      s.append(line);
+      s.append("\n");
+    }
+    return s.toString();
+  }
+
+  @Test
+  public void testCorruptionDetectionSingleFileCorruption() throws Exception {
+    List<Long> corruptions = Collections.singletonList(FILE_NODE_ID_1);
+    String result = testCorruptionDetectorRun(1, corruptions, "");
+    String expected = readExpectedFile("testSingleFileCorruption.csv");
+    assertEquals(expected, result);
+    result = testCorruptionDetectorRun(2, corruptions,
+        new FileSystemTestHelper().getTestRootDir() + "/corruption2.db");
+    assertEquals(expected, result);
+  }
+
+  @Test
+  public void testCorruptionDetectionMultipleFileCorruption() throws Exception {
+    List<Long> corruptions = Arrays.asList(FILE_NODE_ID_1, FILE_NODE_ID_2,
+        FILE_NODE_ID_3);
+    String result = testCorruptionDetectorRun(3, corruptions, "");
+    String expected = readExpectedFile("testMultipleFileCorruption.csv");
+    assertEquals(expected, result);
+    result = testCorruptionDetectorRun(4, corruptions,
+        new FileSystemTestHelper().getTestRootDir() + "/corruption4.db");
+    assertEquals(expected, result);
+  }
+
+  @Test
+  public void testCorruptionDetectionSingleFolderCorruption() throws Exception {
+    List<Long> corruptions = Collections.singletonList(DIR_NODE_ID);
+    String result = testCorruptionDetectorRun(5, corruptions, "");
+    String expected = readExpectedFile("testSingleFolderCorruption.csv");
+    assertEquals(expected, result);
+    result = testCorruptionDetectorRun(6, corruptions,
+        new FileSystemTestHelper().getTestRootDir() + "/corruption6.db");
+    assertEquals(expected, result);
+  }
+
+  @Test
+  public void testCorruptionDetectionMultipleCorruption() throws Exception {
+    List<Long> corruptions = Arrays.asList(FILE_NODE_ID_1, FILE_NODE_ID_2,
+        FILE_NODE_ID_3, DIR_NODE_ID);
+    String result = testCorruptionDetectorRun(7, corruptions, "");
+    String expected = readExpectedFile("testMultipleCorruption.csv");
+    assertEquals(expected, result);
+    result = testCorruptionDetectorRun(8, corruptions,
+        new FileSystemTestHelper().getTestRootDir() + "/corruption8.db");
+    assertEquals(expected, result);
   }
 
   private static void compareFile(FileStatus expected, FileStatus status) {

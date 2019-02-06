@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -129,7 +128,7 @@ public class FileDiffList extends
     }
     // Check if last block is part of truncate recovery
     BlockInfo lastBlock = file.getLastBlock();
-    Block dontRemoveBlock = null;
+    BlockInfo dontRemoveBlock = null;
     if (lastBlock != null && lastBlock.getBlockUCState().equals(
         HdfsServerConstants.BlockUCState.UNDER_RECOVERY)) {
       dontRemoveBlock = lastBlock.getUnderConstructionFeature()

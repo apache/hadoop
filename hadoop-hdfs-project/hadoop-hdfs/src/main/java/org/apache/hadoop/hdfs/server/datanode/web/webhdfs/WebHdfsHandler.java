@@ -29,8 +29,8 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.stream.ChunkedStream;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
@@ -58,6 +58,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
@@ -86,8 +87,8 @@ import static org.apache.hadoop.hdfs.protocol.HdfsConstants.HDFS_URI_SCHEME;
 import static org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier.HDFS_DELEGATION_KIND;
 
 public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
-  static final Log LOG = LogFactory.getLog(WebHdfsHandler.class);
-  static final Log REQLOG = LogFactory.getLog("datanode.webhdfs");
+  static final Logger LOG = LoggerFactory.getLogger(WebHdfsHandler.class);
+  static final Logger REQLOG = LoggerFactory.getLogger("datanode.webhdfs");
   public static final String WEBHDFS_PREFIX = WebHdfsFileSystem.PATH_PREFIX;
   public static final int WEBHDFS_PREFIX_LENGTH = WEBHDFS_PREFIX.length();
   public static final String APPLICATION_OCTET_STREAM =
@@ -127,7 +128,7 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
     params = new ParameterParser(queryString, conf);
     DataNodeUGIProvider ugiProvider = new DataNodeUGIProvider(params);
     ugi = ugiProvider.ugi();
-    path = params.path();
+    path = URLDecoder.decode(params.path(), "UTF-8");
 
     injectToken();
     ugi.doAs(new PrivilegedExceptionAction<Void>() {
@@ -294,7 +295,7 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
       dfsclient.close();
       dfsclient = null;
     } finally {
-      IOUtils.cleanup(LOG, dfsclient);
+      IOUtils.cleanupWithLogger(LOG, dfsclient);
     }
     final byte[] js =
         JsonUtil.toJsonString(checksum).getBytes(StandardCharsets.UTF_8);

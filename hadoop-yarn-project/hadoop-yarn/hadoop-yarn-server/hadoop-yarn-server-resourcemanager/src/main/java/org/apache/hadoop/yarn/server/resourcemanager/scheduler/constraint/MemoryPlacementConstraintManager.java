@@ -184,8 +184,10 @@ public class MemoryPlacementConstraintManager
     try {
       readLock.lock();
       if (appConstraints.get(appId) == null) {
-        LOG.info("Application {} is not registered in the Placement "
-            + "Constraint Manager.", appId);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Application {} is not registered in the Placement "
+              + "Constraint Manager.", appId);
+        }
         return null;
       }
 
@@ -213,8 +215,10 @@ public class MemoryPlacementConstraintManager
     try {
       readLock.lock();
       if (appConstraints.get(appId) == null) {
-        LOG.info("Application {} is not registered in the Placement "
-            + "Constraint Manager.", appId);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Application {} is not registered in the Placement "
+              + "Constraint Manager.", appId);
+        }
         return null;
       }
       // TODO: Merge this constraint with the global one for this tag, if one

@@ -47,6 +47,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -86,6 +88,8 @@ public abstract class AMSimulator extends TaskRunner.Task {
   private int responseId = 0;
   // user name
   private String user;
+  // nodelabel expression
+  private String nodeLabelExpression;
   // queue name
   protected String queue;
   // am type
@@ -121,7 +125,8 @@ public abstract class AMSimulator extends TaskRunner.Task {
       List<ContainerSimulator> containerList, ResourceManager resourceManager,
       SLSRunner slsRunnner, long startTime, long finishTime, String simUser,
       String simQueue, boolean tracked, String oldApp, long baseTimeMS,
-      Resource amResource) {
+      Resource amResource, String nodeLabelExpr,
+      Map<String, String> params) {
     super.init(startTime, startTime + 1000000L * heartbeatInterval,
         heartbeatInterval);
     this.user = simUser;
@@ -134,6 +139,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
     this.traceStartTimeMS = startTime;
     this.traceFinishTimeMS = finishTime;
     this.amContainerResource = amResource;
+    this.nodeLabelExpression = nodeLabelExpr;
   }
 
   /**
@@ -259,13 +265,16 @@ public abstract class AMSimulator extends TaskRunner.Task {
     }
   }
 
-  protected ResourceRequest createResourceRequest(
-          Resource resource, String host, int priority, int numContainers) {
+  protected ResourceRequest createResourceRequest(Resource resource,
+      ExecutionType executionType, String host, int priority, int
+      numContainers) {
     ResourceRequest request = recordFactory
         .newRecordInstance(ResourceRequest.class);
     request.setCapability(resource);
     request.setResourceName(host);
     request.setNumContainers(numContainers);
+    request.setExecutionTypeRequest(
+        ExecutionTypeRequest.newInstance(executionType));
     Priority prio = recordFactory.newRecordInstance(Priority.class);
     prio.setPriority(priority);
     request.setPriority(prio);
@@ -322,6 +331,9 @@ public abstract class AMSimulator extends TaskRunner.Task {
     conLauContext.setServiceData(new HashMap<>());
     appSubContext.setAMContainerSpec(conLauContext);
     appSubContext.setResource(amContainerResource);
+    if (nodeLabelExpression != null) {
+      appSubContext.setNodeLabelExpression(nodeLabelExpression);
+    }
 
     if(reservationId != null) {
       appSubContext.setReservationID(reservationId);
@@ -400,8 +412,8 @@ public abstract class AMSimulator extends TaskRunner.Task {
           rackLocalRequestMap.get(rackname).setNumContainers(
               rackLocalRequestMap.get(rackname).getNumContainers() + 1);
         } else {
-          ResourceRequest request =
-              createResourceRequest(cs.getResource(), rackname, priority, 1);
+          ResourceRequest request = createResourceRequest(cs.getResource(),
+              cs.getExecutionType(), rackname, priority, 1);
           rackLocalRequestMap.put(rackname, request);
         }
         // check node local
@@ -410,15 +422,15 @@ public abstract class AMSimulator extends TaskRunner.Task {
           nodeLocalRequestMap.get(hostname).setNumContainers(
               nodeLocalRequestMap.get(hostname).getNumContainers() + 1);
         } else {
-          ResourceRequest request =
-              createResourceRequest(cs.getResource(), hostname, priority, 1);
+          ResourceRequest request = createResourceRequest(cs.getResource(),
+              cs.getExecutionType(), hostname, priority, 1);
           nodeLocalRequestMap.put(hostname, request);
         }
       }
       // any
       if (anyRequest == null) {
-        anyRequest = createResourceRequest(
-                cs.getResource(), ResourceRequest.ANY, priority, 1);
+        anyRequest = createResourceRequest(cs.getResource(),
+            cs.getExecutionType(), ResourceRequest.ANY, priority, 1);
       } else {
         anyRequest.setNumContainers(anyRequest.getNumContainers() + 1);
       }

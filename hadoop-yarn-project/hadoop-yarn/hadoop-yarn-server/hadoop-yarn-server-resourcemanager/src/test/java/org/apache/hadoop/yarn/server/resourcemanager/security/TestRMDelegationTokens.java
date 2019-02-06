@@ -26,13 +26,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.base.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -97,7 +100,17 @@ public class TestRMDelegationTokens {
     RMDelegationTokenSecretManager dtSecretManager =
         rm1.getRMContext().getRMDelegationTokenSecretManager();
     // assert all master keys are saved
-    Assert.assertEquals(dtSecretManager.getAllMasterKeys(), rmDTMasterKeyState);
+    dtSecretManager.getAllMasterKeys().forEach(managerKey -> {
+      int keyId = managerKey.getKeyId();
+      boolean found = false;
+      for (DelegationKey stateKey: rmDTMasterKeyState) {
+        if (stateKey.getKeyId() == keyId) {
+          found = true;
+          break;
+        }
+      }
+      Assert.assertTrue("Master key not found: " + keyId, found);
+    });
 
     // request to generate a RMDelegationToken
     GetDelegationTokenRequest request = mock(GetDelegationTokenRequest.class);
@@ -161,6 +174,66 @@ public class TestRMDelegationTokens {
         break;
       Thread.sleep(500);
     }
+    rm1.stop();
+  }
+
+  // Test removing token without key from state-store.
+  @Test(timeout = 15000)
+  public void testUnknownKeyTokensOnRecover() throws Exception {
+    final int masterID = 1234;
+    final int sequenceNumber = 1000;
+
+    MemoryRMStateStore memStore = new MockMemoryRMStateStore();
+    memStore.init(testConf);
+    // Need RM to get the secret manager and call recover
+    MockRM rm1 = new MyMockRM(testConf, memStore);
+    rm1.start();
+    RMDelegationTokenSecretManager dtSecretManager =
+        rm1.getRMContext().getRMDelegationTokenSecretManager();
+    RMState rmState = memStore.getState();
+    // short cut to generate a basic token with unknown key
+    RMDelegationTokenIdentifier rmDT = new RMDelegationTokenIdentifier(
+        new Text("owner"), new Text("renewer"), new Text("realuser"));
+    // set a master key which is not used
+    rmDT.setMasterKeyId(masterID);
+    rmDT.setSequenceNumber(sequenceNumber);
+    final long tokenTime = Time.now() + 60000;
+    rmDT.setMaxDate(tokenTime);
+    dtSecretManager.storeNewToken(rmDT, tokenTime);
+    // give it time to process
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      public Boolean get() {
+        return rmState.getRMDTSecretManagerState().getTokenState().
+            containsKey(rmDT);
+      }
+    }, 10, 2000);
+    // Cannot recover while running: stop and clear
+    dtSecretManager.stopThreads();
+    dtSecretManager.reset();
+    Assert.assertEquals("Secret manager should have no tokens",
+        dtSecretManager.getAllTokens().size(), 0);
+    Assert.assertEquals("Secret manager should have no keys",
+        dtSecretManager.getAllMasterKeys().size(), 0);
+    dtSecretManager.recover(rmState);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      public Boolean get() {
+        return
+            rmState.getRMDTSecretManagerState().getTokenState().
+                containsKey(rmDT);
+      }
+    }, 10, 2000);
+    Assert.assertEquals("Token should have been expired but is not", 0L,
+        dtSecretManager.getRenewDate(rmDT));
+    // The remover thread should immediately do its work,
+    // still give it some time to process
+    dtSecretManager.startThreads();
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      public Boolean get() {
+        return
+            !rmState.getRMDTSecretManagerState().getTokenState().
+                containsKey(rmDT);
+      }
+    }, 10, 2000);
     rm1.stop();
   }
 

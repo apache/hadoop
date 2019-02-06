@@ -34,8 +34,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -62,7 +62,8 @@ public class TestAppendSnapshotTruncate {
   static {
     GenericTestUtils.setLogLevel(NameNode.stateChangeLog, Level.ALL);
   }
-  private static final Log LOG = LogFactory.getLog(TestAppendSnapshotTruncate.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestAppendSnapshotTruncate.class);
   private static final int BLOCK_SIZE = 1024;
   private static final int DATANODE_NUM = 4;
   private static final short REPLICATION = 3;

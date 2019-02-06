@@ -37,6 +37,9 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -46,9 +49,11 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 
@@ -63,7 +68,10 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
-class JsonUtilClient {
+/**
+ * Utility methods used in WebHDFS/HttpFS JSON conversion.
+ */
+public class JsonUtilClient {
   static final DatanodeInfo[] EMPTY_DATANODE_INFO_ARRAY = {};
   static final String UNSUPPPORTED_EXCEPTION_STR =
       UnsupportedOperationException.class.getName();
@@ -128,6 +136,7 @@ class JsonUtilClient {
     Boolean aclBit = (Boolean) m.get("aclBit");
     Boolean encBit = (Boolean) m.get("encBit");
     Boolean erasureBit  = (Boolean) m.get("ecBit");
+    Boolean snapshotEnabledBit  = (Boolean) m.get("snapshotEnabled");
     EnumSet<HdfsFileStatus.Flags> f =
         EnumSet.noneOf(HdfsFileStatus.Flags.class);
     if (aclBit != null && aclBit) {
@@ -138,6 +147,22 @@ class JsonUtilClient {
     }
     if (erasureBit != null && erasureBit) {
       f.add(HdfsFileStatus.Flags.HAS_EC);
+    }
+    if (snapshotEnabledBit != null && snapshotEnabledBit) {
+      f.add(HdfsFileStatus.Flags.SNAPSHOT_ENABLED);
+    }
+
+    Map<String, Object> ecPolicyObj = (Map) m.get("ecPolicyObj");
+    ErasureCodingPolicy ecPolicy = null;
+    if (ecPolicyObj != null) {
+      Map<String, String> extraOptions = (Map) ecPolicyObj.get("extraOptions");
+      ECSchema ecSchema = new ECSchema((String) ecPolicyObj.get("codecName"),
+          (int) ecPolicyObj.get("numDataUnits"),
+          (int) ecPolicyObj.get("numParityUnits"), extraOptions);
+      ecPolicy = new ErasureCodingPolicy((String) ecPolicyObj.get("name"),
+          ecSchema, (int) ecPolicyObj.get("cellSize"),
+          (byte) (int) ecPolicyObj.get("id"));
+
     }
 
     final long aTime = ((Number) m.get("accessTime")).longValue();
@@ -167,6 +192,7 @@ class JsonUtilClient {
       .fileId(fileId)
       .children(childrenNum)
       .storagePolicy(storagePolicy)
+      .ecPolicy(ecPolicy)
       .build();
   }
 
@@ -649,6 +675,17 @@ class JsonUtilClient {
         replicationFallbacks, copyOnCreateFile.booleanValue());
   }
 
+  public static ErasureCodingPolicy toECPolicy(Map<?, ?> m) {
+    byte id = ((Number) m.get("id")).byteValue();
+    String name = (String) m.get("name");
+    String codec = (String) m.get("codecName");
+    int cellsize = ((Number) m.get("cellSize")).intValue();
+    int dataunits = ((Number) m.get("numDataUnits")).intValue();
+    int parityunits = ((Number) m.get("numParityUnits")).intValue();
+    ECSchema ecs = new ECSchema(codec, dataunits, parityunits);
+    return new ErasureCodingPolicy(name, ecs, cellsize, id);
+  }
+
   private static StorageType[] toStorageTypes(List<?> list) {
     if (list == null) {
       return null;
@@ -692,5 +729,85 @@ class JsonUtilClient {
         writePacketSize, replication, fileBufferSize,
         encryptDataTransfer, trashInterval, type, keyProviderUri,
         storagepolicyId);
+  }
+
+  public static SnapshotDiffReport toSnapshotDiffReport(final Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+    Map<?, ?> m =
+        (Map<?, ?>) json.get(SnapshotDiffReport.class.getSimpleName());
+    String snapshotRoot = (String) m.get("snapshotRoot");
+    String fromSnapshot = (String) m.get("fromSnapshot");
+    String toSnapshot = (String) m.get("toSnapshot");
+    List<SnapshotDiffReport.DiffReportEntry> diffList =
+        toDiffList(getList(m, "diffList"));
+    return new SnapshotDiffReport(snapshotRoot, fromSnapshot, toSnapshot,
+        diffList);
+  }
+
+  private static List<SnapshotDiffReport.DiffReportEntry> toDiffList(
+      List<?> objs) {
+    if (objs == null) {
+      return null;
+    }
+    List<SnapshotDiffReport.DiffReportEntry> diffList =
+        new ChunkedArrayList<>();
+    for (int i = 0; i < objs.size(); i++) {
+      diffList.add(toDiffReportEntry((Map<?, ?>) objs.get(i)));
+    }
+    return diffList;
+  }
+
+  private static SnapshotDiffReport.DiffReportEntry toDiffReportEntry(
+      Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+    SnapshotDiffReport.DiffType type =
+        SnapshotDiffReport.DiffType.parseDiffType((String) json.get("type"));
+    byte[] sourcePath = toByteArray((String) json.get("sourcePath"));
+    byte[] targetPath = toByteArray((String) json.get("targetPath"));
+    return new SnapshotDiffReport.DiffReportEntry(type, sourcePath, targetPath);
+  }
+
+  private static byte[] toByteArray(String str) {
+    if (str == null) {
+      return null;
+    }
+    return DFSUtilClient.string2Bytes(str);
+  }
+
+  public static SnapshottableDirectoryStatus[] toSnapshottableDirectoryList(
+      final Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+    List<?> list = (List<?>) json.get("SnapshottableDirectoryList");
+    if (list == null) {
+      return null;
+    }
+    SnapshottableDirectoryStatus[] statuses =
+        new SnapshottableDirectoryStatus[list.size()];
+    for (int i = 0; i < list.size(); i++) {
+      statuses[i] = toSnapshottableDirectoryStatus((Map<?, ?>) list.get(i));
+    }
+    return statuses;
+  }
+
+  private static SnapshottableDirectoryStatus toSnapshottableDirectoryStatus(
+      Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+    int snapshotNumber = getInt(json, "snapshotNumber", 0);
+    int snapshotQuota = getInt(json, "snapshotQuota", 0);
+    byte[] parentFullPath = toByteArray((String) json.get("parentFullPath"));
+    HdfsFileStatus dirStatus =
+        toFileStatus((Map<?, ?>) json.get("dirStatus"), false);
+    SnapshottableDirectoryStatus snapshottableDirectoryStatus =
+        new SnapshottableDirectoryStatus(dirStatus, snapshotNumber,
+            snapshotQuota, parentFullPath);
+    return snapshottableDirectoryStatus;
   }
 }

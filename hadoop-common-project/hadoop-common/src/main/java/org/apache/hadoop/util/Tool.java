@@ -69,7 +69,7 @@ import org.apache.hadoop.conf.Configurable;
  *         System.exit(res);
  *       }
  *     }
- * </pre></blockquote></p>
+ * </pre></blockquote><p>
  * 
  * @see GenericOptionsParser
  * @see ToolRunner

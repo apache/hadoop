@@ -31,12 +31,13 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 
 static void display_usage(FILE *stream) {
   fprintf(stream,
     "Usage: container-executor --checksetup\n"
     "       container-executor --mount-cgroups <hierarchy> "
-    "<controller=path>...\n" );
+    "<controller=path>\n" );
 
   if(is_tc_support_enabled()) {
     fprintf(stream,
@@ -52,10 +53,25 @@ static void display_usage(FILE *stream) {
 
   if(is_docker_support_enabled()) {
     fprintf(stream,
-      "       container-executor --run-docker <command-file>\n");
+      "       container-executor --run-docker <command-file>\n"
+      "       container-executor --remove-docker-container [hierarchy] "
+      "<container_id>\n"
+      "       container-executor --inspect-docker-container <container_id>\n");
   } else {
     fprintf(stream,
-      "[DISABLED] container-executor --run-docker <command-file>\n");
+      "[DISABLED] container-executor --run-docker <command-file>\n"
+      "[DISABLED] container-executor --remove-docker-container [hierarchy] "
+      "<container_id>\n"
+      "[DISABLED] container-executor --inspect-docker-container "
+      "<format> ... <container_id>\n");
+  }
+
+  if (is_terminal_support_enabled()) {
+    fprintf(stream,
+      "       container-executor --exec-container <command-file>\n");
+  } else {
+    fprintf(stream,
+      "[DISABLED] container-executor --exec-container <command-file>\n");
   }
 
   fprintf(stream,
@@ -91,11 +107,22 @@ static void display_usage(FILE *stream) {
     fprintf(stream, "\n");
   }
 
-   fprintf(stream,
+  fprintf(stream,
       "            signal container:      %2d container-pid signal\n"
       "            delete as user:        %2d relative-path\n"
       "            list as user:          %2d relative-path\n",
       SIGNAL_CONTAINER, DELETE_AS_USER, LIST_AS_USER);
+
+  if(is_yarn_sysfs_support_enabled()) {
+    fprintf(stream,
+        "            sync yarn sysfs:       %2d app-id nm-local-dirs\n",
+        SYNC_YARN_SYSFS);
+  } else {
+    fprintf(stream,
+        "[DISABLED]  sync yarn sysfs:       %2d app-id nm-local-dirs\n",
+        SYNC_YARN_SYSFS);
+  }
+  fflush(stream);
 }
 
 /* Sets up log files for normal/error logging */
@@ -107,6 +134,11 @@ static void open_log_files() {
   if (ERRORFILE == NULL) {
     ERRORFILE = stderr;
   }
+
+  // There may be a process reading from stdout/stderr, and if it
+  // exits, we will crash on a SIGPIPE when we try to write to them.
+  // By ignoring SIGPIPE, we can handle the EPIPE instead of crashing.
+  signal(SIGPIPE, SIG_IGN);
 }
 
 /* Flushes and closes log files */
@@ -117,11 +149,13 @@ static void flush_and_close_log_files() {
     LOGFILE = NULL;
   }
 
-if (ERRORFILE != NULL) {
+  if (ERRORFILE != NULL) {
     fflush(ERRORFILE);
     fclose(ERRORFILE);
     ERRORFILE = NULL;
   }
+
+  free_executor_configurations();
 }
 
 /** Validates the current container-executor setup. Causes program exit
@@ -197,6 +231,7 @@ static void assert_valid_setup(char *argv0) {
 
 static void display_feature_disabled_message(const char* name) {
     fprintf(ERRORFILE, "Feature disabled: %s\n", name);
+    fflush(ERRORFILE);
 }
 
 /* Use to store parsed input parmeters for various operations */
@@ -212,6 +247,9 @@ static struct {
   char **resources_values;
   const char *app_id;
   const char *container_id;
+  int https;
+  const char *keystore_file;
+  const char *truststore_file;
   const char *cred_file;
   const char *script_file;
   const char *current_dir;
@@ -219,7 +257,7 @@ static struct {
   const char *target_dir;
   int container_pid;
   int signal;
-  const char *docker_command_file;
+  const char *command_file;
 } cmd_input;
 
 static int validate_run_as_user_commands(int argc, char **argv, int *operation);
@@ -257,14 +295,19 @@ static int validate_arguments(int argc, char **argv , int *operation) {
   }
 
   if (strcmp("--mount-cgroups", argv[1]) == 0) {
-    if (argc < 4) {
-      display_usage(stdout);
-      return INVALID_ARGUMENT_NUMBER;
+    if (is_mount_cgroups_support_enabled()) {
+      if (argc < 4) {
+        display_usage(stdout);
+        return INVALID_ARGUMENT_NUMBER;
+      }
+      optind++;
+      cmd_input.cgroups_hierarchy = argv[optind++];
+      *operation = MOUNT_CGROUPS;
+      return 0;
+    } else {
+      display_feature_disabled_message("mount cgroup");
+      return FEATURE_DISABLED;
     }
-    optind++;
-    cmd_input.cgroups_hierarchy = argv[optind++];
-    *operation = MOUNT_CGROUPS;
-    return 0;
   }
 
   if (strcmp("--tc-modify-state", argv[1]) == 0) {
@@ -315,6 +358,22 @@ static int validate_arguments(int argc, char **argv , int *operation) {
     }
   }
 
+  if (strcmp("--exec-container", argv[1]) == 0) {
+    if(is_terminal_support_enabled()) {
+      if (argc != 3) {
+        display_usage(stdout);
+        return INVALID_ARGUMENT_NUMBER;
+      }
+      optind++;
+      cmd_input.command_file = argv[optind++];
+      *operation = EXEC_CONTAINER;
+      return 0;
+    } else {
+        display_feature_disabled_message("feature.terminal.enabled");
+        return FEATURE_DISABLED;
+    }
+  }
+
   if (strcmp("--run-docker", argv[1]) == 0) {
     if(is_docker_support_enabled()) {
       if (argc != 3) {
@@ -322,8 +381,38 @@ static int validate_arguments(int argc, char **argv , int *operation) {
         return INVALID_ARGUMENT_NUMBER;
       }
       optind++;
-      cmd_input.docker_command_file = argv[optind++];
+      cmd_input.command_file = argv[optind++];
       *operation = RUN_DOCKER;
+      return 0;
+    } else {
+        display_feature_disabled_message("docker");
+        return FEATURE_DISABLED;
+    }
+  }
+
+  if (strcmp("--remove-docker-container", argv[1]) == 0) {
+    if(is_docker_support_enabled()) {
+      if ((argc != 3) && (argc != 4)) {
+        display_usage(stdout);
+        return INVALID_ARGUMENT_NUMBER;
+      }
+      optind++;
+      *operation = REMOVE_DOCKER_CONTAINER;
+      return 0;
+    } else {
+        display_feature_disabled_message("docker");
+        return FEATURE_DISABLED;
+    }
+  }
+
+  if (strcmp("--inspect-docker-container", argv[1]) == 0) {
+    if(is_docker_support_enabled()) {
+      if (argc != 4) {
+        display_usage(stdout);
+        return INVALID_ARGUMENT_NUMBER;
+      }
+      optind++;
+      *operation = INSPECT_DOCKER_CONTAINER;
       return 0;
     } else {
         display_feature_disabled_message("docker");
@@ -371,6 +460,7 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
     cmd_input.container_id = argv[optind++];
     if (!validate_container_id(cmd_input.container_id)) {
       fprintf(ERRORFILE, "Invalid container id %s\n", cmd_input.container_id);
+      fflush(ERRORFILE);
       return INVALID_CONTAINER_ID;
     }
     cmd_input.cred_file = argv[optind++];
@@ -382,8 +472,8 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
  case LAUNCH_DOCKER_CONTAINER:
    if(is_docker_support_enabled()) {
       //kill me now.
-      if (!(argc == 14 || argc == 15)) {
-        fprintf(ERRORFILE, "Wrong number of arguments (%d vs 14 or 15) for"
+      if (!(argc >= 14 && argc <= 17)) {
+        fprintf(ERRORFILE, "Wrong number of arguments (%d vs 14 - 17) for"
           " launch docker container\n", argc);
         fflush(ERRORFILE);
         return INVALID_ARGUMENT_NUMBER;
@@ -394,27 +484,21 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
       cmd_input.current_dir = argv[optind++];
       cmd_input.script_file = argv[optind++];
       cmd_input.cred_file = argv[optind++];
+      if (strcmp("--https", argv[optind++]) == 0) {
+        cmd_input.https = 1;
+        cmd_input.keystore_file = argv[optind++];
+        cmd_input.truststore_file = argv[optind++];
+      } else {
+        cmd_input.https = 0;
+      }
       cmd_input.pid_file = argv[optind++];
       // good local dirs as a comma separated list
       cmd_input.local_dirs = argv[optind++];
       // good log dirs as a comma separated list
       cmd_input.log_dirs = argv[optind++];
-      cmd_input.docker_command_file = argv[optind++];
-      // key,value pair describing resources
-      resources = argv[optind++];
-      resources_key = malloc(strlen(resources));
-      resources_value = malloc(strlen(resources));
-      if (get_kv_key(resources, resources_key, strlen(resources)) < 0 ||
-        get_kv_value(resources, resources_value, strlen(resources)) < 0) {
-        fprintf(ERRORFILE, "Invalid arguments for cgroups resources: %s",
-                           resources);
-        fflush(ERRORFILE);
-        free(resources_key);
-        free(resources_value);
-        return INVALID_ARGUMENT_NUMBER;
-      }
+      cmd_input.command_file = argv[optind++];
       //network isolation through tc
-      if (argc == 15) {
+      if ((argc == 15 && !cmd_input.https) || (argc == 17 && cmd_input.https)) {
         if(is_tc_support_enabled()) {
           cmd_input.traffic_control_command_file = argv[optind++];
         } else {
@@ -423,9 +507,6 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
         }
       }
 
-      cmd_input.resources_key = resources_key;
-      cmd_input.resources_value = resources_value;
-      cmd_input.resources_values = split(resources_value);
       *operation = RUN_AS_USER_LAUNCH_DOCKER_CONTAINER;
       return 0;
    } else {
@@ -435,8 +516,8 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
 
   case LAUNCH_CONTAINER:
     //kill me now.
-    if (!(argc == 13 || argc == 14)) {
-      fprintf(ERRORFILE, "Wrong number of arguments (%d vs 13 or 14)"
+    if (!(argc >= 14 && argc <= 17)) {
+      fprintf(ERRORFILE, "Wrong number of arguments (%d vs 14 - 17)"
         " for launch container\n", argc);
       fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
@@ -447,6 +528,13 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
     cmd_input.current_dir = argv[optind++];
     cmd_input.script_file = argv[optind++];
     cmd_input.cred_file = argv[optind++];
+    if (strcmp("--https", argv[optind++]) == 0) {
+      cmd_input.https = 1;
+      cmd_input.keystore_file = argv[optind++];
+      cmd_input.truststore_file = argv[optind++];
+    } else {
+      cmd_input.https = 0;
+    }
     cmd_input.pid_file = argv[optind++];
     cmd_input.local_dirs = argv[optind++];// good local dirs as a comma separated list
     cmd_input.log_dirs = argv[optind++];// good log dirs as a comma separated list
@@ -465,7 +553,7 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
     }
 
     //network isolation through tc
-    if (argc == 14) {
+    if ((argc == 15 && !cmd_input.https) || (argc == 17 && cmd_input.https)) {
       if(is_tc_support_enabled()) {
         cmd_input.traffic_control_command_file = argv[optind++];
       } else {
@@ -515,6 +603,11 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
     cmd_input.target_dir = argv[optind++];
     *operation = RUN_AS_USER_LIST;
     return 0;
+  case SYNC_YARN_SYSFS:
+    cmd_input.app_id = argv[optind++];
+    cmd_input.local_dirs = argv[optind++];
+    *operation = RUN_AS_USER_SYNC_YARN_SYSFS;
+    return 0;
   default:
     fprintf(ERRORFILE, "Invalid command %d not supported.",command);
     fflush(ERRORFILE);
@@ -558,8 +651,17 @@ int main(int argc, char **argv) {
   case TRAFFIC_CONTROL_READ_STATS:
     exit_code = traffic_control_read_stats(cmd_input.traffic_control_command_file);
     break;
+  case EXEC_CONTAINER:
+    exit_code = exec_container(cmd_input.command_file);
+    break;
   case RUN_DOCKER:
-    exit_code = run_docker(cmd_input.docker_command_file);
+    exit_code = run_docker(cmd_input.command_file);
+    break;
+  case REMOVE_DOCKER_CONTAINER:
+    exit_code = remove_docker_container(argv + optind, argc - optind);
+    break;
+  case INSPECT_DOCKER_CONTAINER:
+    exit_code = exec_docker_command("inspect", argv + optind, argc - optind);
     break;
   case RUN_AS_USER_INITIALIZE_CONTAINER:
     exit_code = set_user(cmd_input.run_as_user_name);
@@ -596,12 +698,13 @@ int main(int argc, char **argv) {
                       cmd_input.current_dir,
                       cmd_input.script_file,
                       cmd_input.cred_file,
+                      cmd_input.https,
+                      cmd_input.keystore_file,
+                      cmd_input.truststore_file,
                       cmd_input.pid_file,
                       split(cmd_input.local_dirs),
                       split(cmd_input.log_dirs),
-                      cmd_input.docker_command_file,
-                      cmd_input.resources_key,
-                      cmd_input.resources_values);
+                      cmd_input.command_file);
       break;
   case RUN_AS_USER_LAUNCH_CONTAINER:
     if (cmd_input.traffic_control_command_file != NULL) {
@@ -624,6 +727,9 @@ int main(int argc, char **argv) {
                     cmd_input.current_dir,
                     cmd_input.script_file,
                     cmd_input.cred_file,
+                    cmd_input.https,
+                    cmd_input.keystore_file,
+                    cmd_input.truststore_file,
                     cmd_input.pid_file,
                     split(cmd_input.local_dirs),
                     split(cmd_input.log_dirs),
@@ -661,6 +767,19 @@ int main(int argc, char **argv) {
     }
 
     exit_code = list_as_user(cmd_input.target_dir);
+    break;
+  case RUN_AS_USER_SYNC_YARN_SYSFS:
+    exit_code = set_user(cmd_input.run_as_user_name);
+    if (exit_code != 0) {
+      break;
+    }
+    if (is_yarn_sysfs_support_enabled()) {
+      exit_code = sync_yarn_sysfs(split(cmd_input.local_dirs),
+          cmd_input.run_as_user_name, cmd_input.yarn_user_name,
+          cmd_input.app_id);
+    } else {
+      exit_code = FEATURE_DISABLED;
+    }
     break;
   }
 

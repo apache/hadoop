@@ -24,8 +24,8 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
 import org.apache.hadoop.hdfs.qjournal.client.AsyncLogger;
@@ -41,7 +41,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 
 
 public class TestEpochsAreUnique {
-  private static final Log LOG = LogFactory.getLog(TestEpochsAreUnique.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestEpochsAreUnique.class);
   private static final String JID = "testEpochsAreUnique-jid";
   private static final NamespaceInfo FAKE_NSINFO = new NamespaceInfo(
       12345, "mycluster", "my-bp", 0L);
@@ -56,7 +57,7 @@ public class TestEpochsAreUnique {
     QuorumJournalManager qjm = new QuorumJournalManager(
         conf, uri, FAKE_NSINFO);
     try {
-      qjm.format(FAKE_NSINFO);
+      qjm.format(FAKE_NSINFO, false);
     } finally {
       qjm.close();
     }

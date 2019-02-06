@@ -37,6 +37,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.InvalidRequestException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.net.ConnectTimeoutException;
@@ -76,9 +77,29 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ErrorBestPractices.html">Amazon S3 Error Best Practices</a>
  * @see <a href="http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/CommonErrors.html">Dynamo DB Commmon errors</a>
  */
+@SuppressWarnings("visibilitymodifier")  // I want a struct of finals, for real.
 public class S3ARetryPolicy implements RetryPolicy {
 
+  /** Final retry policy we end up with. */
   private final RetryPolicy retryPolicy;
+
+  // Retry policies for mapping exceptions to
+
+  /** Base policy from configuration. */
+  protected final RetryPolicy fixedRetries;
+
+  /** Rejection of all non-idempotent calls except specific failures. */
+  protected final RetryPolicy retryIdempotentCalls;
+
+  /** Policy for throttle requests, which are considered repeatable, even for
+   * non-idempotent calls, as the service rejected the call entirely. */
+  protected final RetryPolicy throttlePolicy;
+
+  /** No retry on network and tangible API issues. */
+  protected final RetryPolicy fail = RetryPolicies.TRY_ONCE_THEN_FAIL;
+
+  /** Client connectivity: fixed retries without care for idempotency. */
+  protected final RetryPolicy connectivityFailure;
 
   /**
    * Instantiate.
@@ -88,7 +109,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     Preconditions.checkArgument(conf != null, "Null configuration");
 
     // base policy from configuration
-    RetryPolicy fixedRetries = retryUpToMaximumCountWithFixedSleep(
+    fixedRetries = retryUpToMaximumCountWithFixedSleep(
         conf.getInt(RETRY_LIMIT, RETRY_LIMIT_DEFAULT),
         conf.getTimeDuration(RETRY_INTERVAL,
             RETRY_INTERVAL_DEFAULT,
@@ -97,25 +118,44 @@ public class S3ARetryPolicy implements RetryPolicy {
 
     // which is wrapped by a rejection of all non-idempotent calls except
     // for specific failures.
-    RetryPolicy retryIdempotentCalls = new FailNonIOEs(
+    retryIdempotentCalls = new FailNonIOEs(
         new IdempotencyRetryFilter(fixedRetries));
 
     // and a separate policy for throttle requests, which are considered
     // repeatable, even for non-idempotent calls, as the service
     // rejected the call entirely
-    RetryPolicy throttlePolicy = exponentialBackoffRetry(
+    throttlePolicy = createThrottleRetryPolicy(conf);
+
+    // client connectivity: fixed retries without care for idempotency
+    connectivityFailure = fixedRetries;
+
+    Map<Class<? extends Exception>, RetryPolicy> policyMap =
+        createExceptionMap();
+    retryPolicy = retryByException(retryIdempotentCalls, policyMap);
+  }
+
+  /**
+   * Create the throttling policy.
+   * This will be called from the S3ARetryPolicy constructor, so
+   * subclasses must assume they are not initialized.
+   * @param conf configuration to use.
+   * @return the retry policy for throttling events.
+   */
+  protected RetryPolicy createThrottleRetryPolicy(final Configuration conf) {
+    return exponentialBackoffRetry(
         conf.getInt(RETRY_THROTTLE_LIMIT, RETRY_THROTTLE_LIMIT_DEFAULT),
         conf.getTimeDuration(RETRY_THROTTLE_INTERVAL,
             RETRY_THROTTLE_INTERVAL_DEFAULT,
             TimeUnit.MILLISECONDS),
         TimeUnit.MILLISECONDS);
+  }
 
-    // no retry on network and tangible API issues
-    RetryPolicy fail = RetryPolicies.TRY_ONCE_THEN_FAIL;
-
-    // client connectivity: fixed retries without care for idempotency
-    RetryPolicy connectivityFailure = fixedRetries;
-
+  /**
+   * Subclasses can override this like a constructor to change behavior: call
+   * superclass method, then modify it as needed, and return it.
+   * @return Map from exception type to RetryPolicy
+   */
+  protected Map<Class<? extends Exception>, RetryPolicy> createExceptionMap() {
     // the policy map maps the exact classname; subclasses do not
     // inherit policies.
     Map<Class<? extends Exception>, RetryPolicy> policyMap = new HashMap<>();
@@ -126,9 +166,9 @@ public class S3ARetryPolicy implements RetryPolicy {
     policyMap.put(InterruptedException.class, fail);
     // note this does not pick up subclasses (like socket timeout)
     policyMap.put(InterruptedIOException.class, fail);
-    policyMap.put(AWSRedirectException.class, fail);
-    // interesting question: should this be retried ever?
+    // Access denial and auth exceptions are not retried
     policyMap.put(AccessDeniedException.class, fail);
+    policyMap.put(NoAuthWithAWSException.class, fail);
     policyMap.put(FileNotFoundException.class, fail);
     policyMap.put(InvalidRequestException.class, fail);
 
@@ -148,9 +188,9 @@ public class S3ARetryPolicy implements RetryPolicy {
     // which isn't going to be recovered from
     policyMap.put(EOFException.class, retryIdempotentCalls);
 
-    // policy on a 400/bad request still ambiguous. Given it
-    // comes and goes on test runs: try again
-    policyMap.put(AWSBadRequestException.class, connectivityFailure);
+    // policy on a 400/bad request still ambiguous.
+    // Treated as an immediate failure
+    policyMap.put(AWSBadRequestException.class, fail);
 
     // Status 500 error code is also treated as a connectivity problem
     policyMap.put(AWSStatus500Exception.class, connectivityFailure);
@@ -169,7 +209,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     // trigger sleep
     policyMap.put(ProvisionedThroughputExceededException.class, throttlePolicy);
 
-    retryPolicy = retryByException(retryIdempotentCalls, policyMap);
+    return policyMap;
   }
 
   @Override
@@ -177,6 +217,7 @@ public class S3ARetryPolicy implements RetryPolicy {
       int retries,
       int failovers,
       boolean idempotent) throws Exception {
+    Preconditions.checkArgument(exception != null, "Null exception");
     Exception ex = exception;
     if (exception instanceof AmazonClientException) {
       // uprate the amazon client exception for the purpose of exception

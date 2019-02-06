@@ -149,18 +149,21 @@ credentials, through a command such as:
 Note the trailing "/" here; without that the shell thinks you are trying to list
 your home directory under the bucket, which will only exist if explicitly created.
 
-Attempting to list a bucket using inline credentials is a
-means of verifying that the key and secret can access a bucket;
-
-    hadoop fs -ls s3a://key:secret@my-bucket/
-
-Do escape any `+` or `/` symbols in the secret, as discussed below, and never
-share the URL, logs generated using it, or use such an inline authentication
-mechanism in production.
-
 Finally, if you set the environment variables, you can take advantage of S3A's
 support of environment-variable authentication by attempting the same ls operation.
 That is: unset the `fs.s3a` secrets and rely on the environment variables.
+
+
+### Authentication failure "The Filesystem URI contains login details."
+
+```
+The Filesystem URI contains login details. This authentication mechanism is no longer supported.
+```
+
+The S3A connector no longer supports the dangerously insecure mechanism of
+passing login details within the S3A URLs.
+
+Fix: use a more secure mechanism to pass down the secrets.
 
 ### Authentication failure due to clock skew
 
@@ -172,29 +175,6 @@ This can surface as the situation where
 read requests are allowed, but operations which write to the bucket are denied.
 
 Check the system clock.
-
-### Authentication failure when using URLs with embedded secrets
-
-If using the (strongly discouraged) mechanism of including the
-AWS Key and secret in a URL, then both "+" and "/" symbols need
-to encoded in the URL. As many AWS secrets include these characters,
-encoding problems are not uncommon.
-
-| symbol | encoded  value|
-|-----------|-------------|
-| `+` | `%2B` |
-| `/` | `%2F` |
-
-
-As an example, a URL for `bucket` with AWS ID `user1` and secret `a+b/c` would
-be represented as
-
-```
-s3a://user1:a%2Bb%2Fc@bucket/
-```
-
-This technique is only needed when placing secrets in the URL. Again,
-this is something users are strongly advised against using.
 
 ### <a name="bad_request"></a> "Bad Request" exception when working with AWS S3 Frankfurt, Seoul, or other "V4" endpoint
 
@@ -255,7 +235,23 @@ As an example, the endpoint for S3 Frankfurt is `s3.eu-central-1.amazonaws.com`:
 </property>
 ```
 
-## <a name="access_denied"></a> `AccessDeniedException` "Access Denied"
+## <a name="access_denied"></a> "The security token included in the request is invalid"
+
+You are trying to use session/temporary credentials and the session token
+supplied is considered invalid.
+
+```
+org.apache.hadoop.fs.s3a.AWSBadRequestException: initTable on bucket:
+  com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException:
+  The security token included in the request is invalid
+  (Service: AmazonDynamoDBv2; Status Code: 400; Error Code: UnrecognizedClientException)
+```
+
+This can surface if your configuration is setting the `fs.s3a.secret.key`,
+`fs.s3a.access.key` and `fs.s3a.session.key` correctly, but the
+AWS credential provider list set in `AWS_CREDENTIALS_PROVIDER` does not include
+`org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider`.
+
 
 ### <a name="access_denied_unknown-ID"></a> AccessDeniedException "The AWS Access Key Id you provided does not exist in our records."
 
@@ -967,7 +963,7 @@ Again, this is due to the fact that the data is cached locally until the
 `close()` operation. The S3A filesystem cannot be used as a store of data
 if it is required that the data is persisted durably after every
 `Syncable.hflush()` or `Syncable.hsync()` call.
-This includes resilient logging, HBase-style journalling
+This includes resilient logging, HBase-style journaling
 and the like. The standard strategy here is to save to HDFS and then copy to S3.
 
 ## <a name="encryption"></a> S3 Server Side Encryption

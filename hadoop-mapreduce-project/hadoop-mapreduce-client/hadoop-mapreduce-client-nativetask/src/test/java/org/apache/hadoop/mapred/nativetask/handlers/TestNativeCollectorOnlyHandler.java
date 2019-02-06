@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapred.nativetask.handlers;
 
+import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -33,12 +34,15 @@ import org.apache.hadoop.mapred.nativetask.buffer.InputBuffer;
 import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
 import org.apache.hadoop.mapred.nativetask.util.OutputUtil;
 import org.apache.hadoop.mapred.nativetask.util.ReadWriteBuffer;
+import org.apache.hadoop.util.StringUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Matchers;
 import org.mockito.Mockito;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 
 @SuppressWarnings({ "rawtypes", "unchecked", "deprecation" })
 public class TestNativeCollectorOnlyHandler {
@@ -82,8 +86,8 @@ public class TestNativeCollectorOnlyHandler {
     handler.close();
     handler.close();
 
-    Mockito.verify(pusher, Mockito.times(1)).collect(Matchers.any(BytesWritable.class),
-        Matchers.any(BytesWritable.class), Matchers.anyInt());
+    Mockito.verify(pusher, Mockito.times(1)).collect(any(BytesWritable.class),
+        any(BytesWritable.class), anyInt());
 
     Mockito.verify(pusher, Mockito.times(1)).close();
     Mockito.verify(combiner, Mockito.times(1)).close();
@@ -110,9 +114,12 @@ public class TestNativeCollectorOnlyHandler {
     }
     Assert.assertTrue("exception thrown", thrown);
 
-    final String expectedOutputPath = LOCAL_DIR + "/output/file.out";
-    final String expectedOutputIndexPath = LOCAL_DIR + "/output/file.out.index";
-    final String expectedSpillPath = LOCAL_DIR + "/output/spill0.out";
+    final String expectedOutputPath = StringUtils.join(File.separator,
+        new String[] {LOCAL_DIR, "output", "file.out"});
+    final String expectedOutputIndexPath = StringUtils.join(File.separator,
+        new String[] {LOCAL_DIR, "output", "file.out.index"});
+    final String expectedSpillPath = StringUtils.join(File.separator,
+        new String[] {LOCAL_DIR, "output", "spill0.out"});
 
     final String outputPath = handler.onCall(
       NativeCollectorOnlyHandler.GET_OUTPUT_PATH, null).readString();

@@ -73,6 +73,7 @@ import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembership
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils;
 import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.zookeeper.data.ACL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -133,9 +134,10 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
     // Create base znode for each entity
     try {
-      zkManager.createRootDirRecursively(membershipZNode);
-      zkManager.createRootDirRecursively(appsZNode);
-      zkManager.createRootDirRecursively(policiesZNode);
+      List<ACL> zkAcl = ZKCuratorManager.getZKAcls(conf);
+      zkManager.createRootDirRecursively(membershipZNode, zkAcl);
+      zkManager.createRootDirRecursively(appsZNode, zkAcl);
+      zkManager.createRootDirRecursively(policiesZNode, zkAcl);
     } catch (Exception e) {
       String errMsg = "Cannot create base directories: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);

@@ -55,11 +55,11 @@ public class FpgaResourceHandlerImpl implements ResourceHandler {
 
   private final String REQUEST_FPGA_IP_ID_KEY = "REQUESTED_FPGA_IP_ID";
 
-  private AbstractFpgaVendorPlugin vendorPlugin;
+  private final AbstractFpgaVendorPlugin vendorPlugin;
 
-  private FpgaResourceAllocator allocator;
+  private final FpgaResourceAllocator allocator;
 
-  private CGroupsHandler cGroupsHandler;
+  private final CGroupsHandler cGroupsHandler;
 
   public static final String EXCLUDED_FPGAS_CLI_OPTION = "--excluded_fpgas";
   public static final String CONTAINER_ID_CLI_OPTION = "--container_id";
@@ -206,6 +206,12 @@ public class FpgaResourceHandlerImpl implements ResourceHandler {
   }
 
   @Override
+  public List<PrivilegedOperation> updateContainer(Container container)
+      throws ResourceHandlerException {
+    return null;
+  }
+
+  @Override
   public List<PrivilegedOperation> postComplete(ContainerId containerId) throws ResourceHandlerException {
     allocator.cleanupAssignFpgas(containerId.toString());
     cGroupsHandler.deleteCGroup(CGroupsHandler.CGroupController.DEVICES,
@@ -216,5 +222,13 @@ public class FpgaResourceHandlerImpl implements ResourceHandler {
   @Override
   public List<PrivilegedOperation> teardown() throws ResourceHandlerException {
     return null;
+  }
+
+  @Override
+  public String toString() {
+    return FpgaResourceHandlerImpl.class.getName() + "{" +
+        "vendorPlugin=" + vendorPlugin +
+        ", allocator=" + allocator +
+        '}';
   }
 }

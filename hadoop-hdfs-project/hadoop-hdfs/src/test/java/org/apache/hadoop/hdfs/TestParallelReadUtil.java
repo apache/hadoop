@@ -25,8 +25,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.impl.BlockReaderTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -46,7 +46,7 @@ import org.junit.Test;
 @Ignore
 public class TestParallelReadUtil {
 
-  static final Log LOG = LogFactory.getLog(TestParallelReadUtil.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestParallelReadUtil.class);
   static BlockReaderTestUtil util = null;
   static DFSClient dfsClient = null;
   static final int FILE_SIZE_K = 256;

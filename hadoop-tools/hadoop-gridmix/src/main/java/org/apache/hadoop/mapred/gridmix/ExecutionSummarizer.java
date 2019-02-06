@@ -19,9 +19,9 @@ package org.apache.hadoop.mapred.gridmix;
 
 import java.io.IOException;
 
-import org.apache.commons.lang.time.FastDateFormat;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.time.FastDateFormat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -47,7 +47,7 @@ import org.apache.hadoop.util.StringUtils;
  * </ul>
  */
 class ExecutionSummarizer implements StatListener<JobStats> {
-  static final Log LOG = LogFactory.getLog(ExecutionSummarizer.class);
+  static final Logger LOG = LoggerFactory.getLogger(ExecutionSummarizer.class);
   private static final FastDateFormat UTIL = FastDateFormat.getInstance();
   
   private int numJobsInInputTrace;
@@ -76,7 +76,7 @@ class ExecutionSummarizer implements StatListener<JobStats> {
     startTime = System.currentTimeMillis();
     // flatten the args string and store it
     commandLineArgs = 
-      org.apache.commons.lang.StringUtils.join(args, ' '); 
+      org.apache.commons.lang3.StringUtils.join(args, ' ');
   }
   
   /**

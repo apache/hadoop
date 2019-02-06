@@ -61,6 +61,7 @@ public class MockDefaultRequestInterceptorREST
   // down e.g. network issue, failover.
   private boolean isRunning = true;
   private HashSet<ApplicationId> applicationMap = new HashSet<>();
+  public static final String APP_STATE_RUNNING = "RUNNING";
 
   private void validateRunning() throws ConnectException {
     if (!isRunning) {
@@ -190,6 +191,21 @@ public class MockDefaultRequestInterceptorREST
     metrics.setAppsKilled(Integer.valueOf(getSubClusterId().getId()));
 
     return metrics;
+  }
+
+  @Override
+  public AppState getAppState(HttpServletRequest hsr, String appId)
+      throws AuthorizationException {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    ApplicationId applicationId = ApplicationId.fromString(appId);
+    if (!applicationMap.contains(applicationId)) {
+      throw new NotFoundException("app with id: " + appId + " not found");
+    }
+
+    return new AppState(APP_STATE_RUNNING);
   }
 
   public void setSubClusterId(int subClusterId) {

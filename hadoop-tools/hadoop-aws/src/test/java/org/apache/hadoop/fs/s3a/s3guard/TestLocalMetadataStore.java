@@ -19,9 +19,11 @@
 package org.apache.hadoop.fs.s3a.s3guard;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Ticker;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -35,7 +37,6 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
  */
 public class TestLocalMetadataStore extends MetadataStoreTestBase {
 
-  private static final String MAX_ENTRIES_STR = "16";
 
   private final static class LocalMSContract extends AbstractMSContract {
 
@@ -46,7 +47,6 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
     }
 
     private LocalMSContract(Configuration config) throws IOException {
-      config.set(LocalMetadataStore.CONF_MAX_RECORDS, MAX_ENTRIES_STR);
       fs = FileSystem.getLocal(config);
     }
 
@@ -74,54 +74,118 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
   }
 
   @Test
-  public void testClearByAncestor() {
-    Map<Path, PathMetadata> map = new HashMap<>();
+  public void testClearByAncestor() throws Exception {
+    Cache<Path, LocalMetadataEntry> cache = CacheBuilder.newBuilder().build();
 
     // 1. Test paths without scheme/host
-    assertClearResult(map, "", "/", 0);
-    assertClearResult(map, "", "/dirA/dirB", 2);
-    assertClearResult(map, "", "/invalid", 5);
+    assertClearResult(cache, "", "/", 0);
+    assertClearResult(cache, "", "/dirA/dirB", 2);
+    assertClearResult(cache, "", "/invalid", 5);
 
 
     // 2. Test paths w/ scheme/host
     String p = "s3a://fake-bucket-name";
-    assertClearResult(map, p, "/", 0);
-    assertClearResult(map, p, "/dirA/dirB", 2);
-    assertClearResult(map, p, "/invalid", 5);
+    assertClearResult(cache, p, "/", 0);
+    assertClearResult(cache, p, "/dirA/dirB", 2);
+    assertClearResult(cache, p, "/invalid", 5);
   }
 
-  private static void populateMap(Map<Path, PathMetadata> map,
-      String prefix) {
-    populateEntry(map, new Path(prefix + "/dirA/dirB/"));
-    populateEntry(map, new Path(prefix + "/dirA/dirB/dirC"));
-    populateEntry(map, new Path(prefix + "/dirA/dirB/dirC/file1"));
-    populateEntry(map, new Path(prefix + "/dirA/dirB/dirC/file2"));
-    populateEntry(map, new Path(prefix + "/dirA/file1"));
-  }
-
-  private static void populateEntry(Map<Path, PathMetadata> map,
-      Path path) {
-    map.put(path, new PathMetadata(new FileStatus(0, true, 0, 0, 0, path)));
-  }
-
-  private static int sizeOfMap(Map<Path, PathMetadata> map) {
-    int count = 0;
-    for (PathMetadata meta : map.values()) {
-      if (!meta.isDeleted()) {
-        count++;
-      }
+  static class TestTicker extends Ticker {
+    private long myTicker = 0;
+    @Override public long read() {
+      return myTicker;
     }
-    return count;
+    public void set(long val) {
+      this.myTicker = val;
+    }
+
   }
 
-  private static void assertClearResult(Map <Path, PathMetadata> map,
-      String prefixStr, String pathStr, int leftoverSize) {
-    populateMap(map, prefixStr);
-    LocalMetadataStore.deleteHashByAncestor(new Path(prefixStr + pathStr), map,
-        true);
-    assertEquals(String.format("Map should have %d entries", leftoverSize),
-        leftoverSize, sizeOfMap(map));
-    map.clear();
+  /**
+   * Test that time eviction in cache used in {@link LocalMetadataStore}
+   * implementation working properly.
+   *
+   * The test creates a Ticker instance, which will be used to control the
+   * internal clock of the cache to achieve eviction without having to wait
+   * for the system clock.
+   * The test creates 3 entry: 2nd and 3rd entry will survive the eviction,
+   * because it will be created later than the 1st - using the ticker.
+   */
+  @Test
+  public void testCacheTimedEvictionAfterWrite() {
+    TestTicker testTicker = new TestTicker();
+    final long t0 = testTicker.read();
+    final long t1 = t0 + 100;
+    final long t2 = t1 + 100;
+
+    final long ttl = t1 + 50; // between t1 and t2
+
+    Cache<Path, LocalMetadataEntry> cache = CacheBuilder.newBuilder()
+        .expireAfterWrite(ttl,
+            TimeUnit.NANOSECONDS /* nanos to avoid conversions */)
+        .ticker(testTicker)
+        .build();
+
+    String p = "s3a://fake-bucket-name";
+    Path path1 = new Path(p + "/dirA/dirB/file1");
+    Path path2 = new Path(p + "/dirA/dirB/file2");
+    Path path3 = new Path(p + "/dirA/dirB/file3");
+
+    // Test time is t0
+    populateEntry(cache, path1);
+
+    // set new value on the ticker, so the next two entries will be added later
+    testTicker.set(t1);  // Test time is now t1
+    populateEntry(cache, path2);
+    populateEntry(cache, path3);
+
+    assertEquals("Cache should contain 3 records before eviction",
+        3, cache.size());
+    LocalMetadataEntry pm1 = cache.getIfPresent(path1);
+    assertNotNull("PathMetadata should not be null before eviction", pm1);
+
+    // set the ticker to a time when timed eviction should occur
+    // for the first entry
+    testTicker.set(t2);
+
+    // call cleanup explicitly, as timed expiration is performed with
+    // periodic maintenance during writes and occasionally during reads only
+    cache.cleanUp();
+
+    assertEquals("Cache size should be 2 after eviction", 2, cache.size());
+    pm1 = cache.getIfPresent(path1);
+    assertNull("PathMetadata should be null after eviction", pm1);
+  }
+
+  private static void populateMap(Cache<Path, LocalMetadataEntry> cache,
+      String prefix) {
+    populateEntry(cache, new Path(prefix + "/dirA/dirB/"));
+    populateEntry(cache, new Path(prefix + "/dirA/dirB/dirC"));
+    populateEntry(cache, new Path(prefix + "/dirA/dirB/dirC/file1"));
+    populateEntry(cache, new Path(prefix + "/dirA/dirB/dirC/file2"));
+    populateEntry(cache, new Path(prefix + "/dirA/file1"));
+  }
+
+  private static void populateEntry(Cache<Path, LocalMetadataEntry> cache,
+      Path path) {
+    FileStatus fileStatus = new FileStatus(0, true, 0, 0, 0, path);
+    cache.put(path, new LocalMetadataEntry(new PathMetadata(fileStatus)));
+  }
+
+  private static long sizeOfMap(Cache<Path, LocalMetadataEntry> cache) {
+    return cache.asMap().values().stream()
+        .filter(entry -> !entry.getFileMeta().isDeleted())
+        .count();
+  }
+
+  private static void assertClearResult(Cache<Path, LocalMetadataEntry> cache,
+      String prefixStr, String pathStr, int leftoverSize) throws IOException {
+    populateMap(cache, prefixStr);
+    LocalMetadataStore.deleteEntryByAncestor(new Path(prefixStr + pathStr),
+        cache, true);
+    assertEquals(String.format("Cache should have %d entries", leftoverSize),
+        leftoverSize, sizeOfMap(cache));
+    cache.invalidateAll();
   }
 
   @Override

@@ -26,8 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -50,7 +50,7 @@ public class TestInjectionForSimulatedStorage {
   private final int numBlocks = 4;
   private final int filesize = blockSize*numBlocks;
   private final int numDataNodes = 4;
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       "org.apache.hadoop.hdfs.TestInjectionForSimulatedStorage");
 
 

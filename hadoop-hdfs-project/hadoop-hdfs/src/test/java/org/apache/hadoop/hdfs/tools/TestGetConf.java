@@ -388,7 +388,7 @@ public class TestGetConf {
       }
       buffer.append(val);
     }
-    buffer.append("\n");
+    buffer.append(System.lineSeparator());
     expected1 = buffer.toString();
 
     Set<String> actual = DFSUtil.getJournalNodeAddresses(conf);
@@ -462,7 +462,7 @@ public class TestGetConf {
     actual = DFSUtil.getJournalNodeAddresses(conf);
     assertEquals(expected.toString(), actual.toString());
 
-    actual1 = "\n";
+    actual1 = System.lineSeparator();
     expected1 = getAddressListFromTool(TestType.JOURNALNODE,
         conf, true);
     assertEquals(expected1, actual1);
@@ -479,7 +479,7 @@ public class TestGetConf {
 
     expected1 = getAddressListFromTool(TestType.JOURNALNODE,
         conf, true);
-    actual1 = "\n";
+    actual1 = System.lineSeparator();
     assertEquals(expected1, actual1);
     conf.clear();
   }

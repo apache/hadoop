@@ -193,15 +193,8 @@ public class TestHistoryServerFileSystemStateStoreService {
     final FileSystem spyfs = spy(fs);
     // make the update token process fail halfway through where we're left
     // with just the temporary update file and no token file
-    ArgumentMatcher<Path> updateTmpMatcher = new ArgumentMatcher<Path>() {
-      @Override
-      public boolean matches(Object argument) {
-        if (argument instanceof Path) {
-          return ((Path) argument).getName().startsWith("update");
-        }
-        return false;
-      }
-    };
+    ArgumentMatcher<Path> updateTmpMatcher =
+        arg -> arg.getName().startsWith("update");
     doThrow(intentionalErr)
         .when(spyfs).rename(argThat(updateTmpMatcher), isA(Path.class));
 

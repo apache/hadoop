@@ -28,6 +28,7 @@ import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetNot
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets.allocationTag;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets.nodeAttribute;
 
+import org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.And;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.SingleConstraint;
@@ -55,7 +56,8 @@ public class TestPlacementConstraints {
     Assert.assertEquals(1, sConstraint.getTargetExpressions().size());
     TargetExpression tExpr =
         sConstraint.getTargetExpressions().iterator().next();
-    Assert.assertNull(tExpr.getTargetKey());
+    Assert.assertEquals(AllocationTagNamespaceType.SELF.toString(),
+        tExpr.getTargetKey());
     Assert.assertEquals(TargetType.ALLOCATION_TAG, tExpr.getTargetType());
     Assert.assertEquals(1, tExpr.getTargetValues().size());
     Assert.assertEquals("hbase-m", tExpr.getTargetValues().iterator().next());

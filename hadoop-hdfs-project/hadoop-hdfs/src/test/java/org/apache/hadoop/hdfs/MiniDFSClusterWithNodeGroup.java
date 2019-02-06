@@ -21,8 +21,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
@@ -39,7 +39,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
 
   private static String[] NODE_GROUPS = null;
-  private static final Log LOG = LogFactory.getLog(MiniDFSClusterWithNodeGroup.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MiniDFSClusterWithNodeGroup.class);
   
   public MiniDFSClusterWithNodeGroup(Builder builder) throws IOException {
     super(builder);

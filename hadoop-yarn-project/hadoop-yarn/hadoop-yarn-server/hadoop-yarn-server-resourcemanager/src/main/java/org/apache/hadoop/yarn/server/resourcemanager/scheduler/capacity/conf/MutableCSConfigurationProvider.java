@@ -77,6 +77,9 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     case YarnConfiguration.ZK_CONFIGURATION_STORE:
       this.confStore = new ZKConfigurationStore();
       break;
+    case YarnConfiguration.FS_CONFIGURATION_STORE:
+      this.confStore = new FSSchedulerConfigurationStore();
+      break;
     default:
       this.confStore = YarnConfigurationStoreFactory.getStore(config);
       break;
@@ -120,6 +123,11 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     Configuration loadedConf = new Configuration(schedConf);
     loadedConf.addResource(configuration);
     return new CapacitySchedulerConfiguration(loadedConf, false);
+  }
+
+  @Override
+  public Configuration getConfiguration() {
+    return new Configuration(schedConf);
   }
 
   @Override

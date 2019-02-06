@@ -92,6 +92,7 @@ message AllocateRequestProto {
   optional float progress = 5;
   repeated UpdateContainerRequestProto update_requests = 7;
   repeated SchedulingRequestProto scheduling_requests = 10;
+  optional string tracking_url = 11;
 }
 
 message NMTokenProto {
@@ -257,6 +258,29 @@ message GetClusterNodeLabelsRequestProto {
 message GetClusterNodeLabelsResponseProto {
   repeated string deprecatedNodeLabels = 1;
   repeated NodeLabelProto nodeLabels = 2;
+}
+
+message GetClusterNodeAttributesRequestProto {
+}
+
+message GetClusterNodeAttributesResponseProto {
+  repeated NodeAttributeInfoProto nodeAttributes = 1;
+}
+
+message GetAttributesToNodesRequestProto {
+  repeated NodeAttributeKeyProto nodeAttributes = 1;
+}
+
+message GetAttributesToNodesResponseProto {
+  repeated AttributeToNodesProto attributesToNodes = 1;
+}
+
+message GetNodesToAttributesRequestProto {
+  repeated string hostnames = 1;
+}
+
+message GetNodesToAttributesResponseProto {
+  repeated NodeToAttributesProto nodesToAttributes = 1;
 }
 
 message UpdateApplicationPriorityRequestProto {
@@ -518,4 +542,32 @@ message RunSharedCacheCleanerTaskRequestProto {
 
 message RunSharedCacheCleanerTaskResponseProto {
   optional bool accepted = 1;
+}
+
+// Localization
+message GetLocalizationStatusesRequestProto {
+  repeated ContainerIdProto container_id = 1;
+}
+
+message GetLocalizationStatusesResponseProto {
+  repeated ContainerLocalizationStatusesProto cntn_localization_statuses = 1;
+  repeated ContainerExceptionMapProto failed_requests = 2;
+}
+
+enum LocalizationStateProto {
+  L_PENDING = 1;
+  L_COMPLETED = 2;
+  L_FAILED = 3;
+}
+
+
+message LocalizationStatusProto {
+  optional string resource_key = 1;
+  optional LocalizationStateProto localization_state= 2;
+  optional string diagnostics = 3;
+}
+
+message ContainerLocalizationStatusesProto {
+  optional ContainerIdProto container_id = 1;
+  repeated LocalizationStatusProto localization_statuses = 2;
 }

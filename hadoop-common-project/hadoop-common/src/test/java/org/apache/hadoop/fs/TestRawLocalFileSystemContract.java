@@ -42,7 +42,7 @@ public class TestRawLocalFileSystemContract extends FileSystemContractBaseTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRawLocalFileSystemContract.class);
   private final static Path TEST_BASE_DIR =
-      new Path(GenericTestUtils.getTempPath(""));
+      new Path(GenericTestUtils.getRandomizedTestDir().getAbsolutePath());
 
   @Before
   public void setUp() throws Exception {

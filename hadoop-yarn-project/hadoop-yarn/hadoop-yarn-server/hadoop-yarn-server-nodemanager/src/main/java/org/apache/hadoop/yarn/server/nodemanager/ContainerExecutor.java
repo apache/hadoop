@@ -24,8 +24,10 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -34,6 +36,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,9 +54,11 @@ import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch.ShellScriptBuilder;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerPrepareContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerLivenessContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReacquisitionContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
@@ -75,6 +81,7 @@ public abstract class ContainerExecutor implements Configurable {
   private static final Logger LOG =
        LoggerFactory.getLogger(ContainerExecutor.class);
   protected static final String WILDCARD = "*";
+  public static final String TOKEN_FILE_NAME_FMT = "%s.tokens";
 
   /**
    * The permissions to use when creating the launch script.
@@ -85,7 +92,7 @@ public abstract class ContainerExecutor implements Configurable {
   /**
    * The relative path to which debug information will be written.
    *
-   * @see ContainerLaunch.ShellScriptBuilder#listDebugInformation
+   * @see ShellScriptBuilder#listDebugInformation
    */
   public static final String DIRECTORY_CONTENTS = "directory.info";
 
@@ -182,6 +189,17 @@ public abstract class ContainerExecutor implements Configurable {
       IOException, ConfigurationException;
 
   /**
+   * Relaunch the container on the node. This is a blocking call and returns
+   * only when the container exits.
+   * @param ctx Encapsulates information necessary for relaunching containers.
+   * @return the return status of the relaunch
+   * @throws IOException if the container relaunch fails
+   * @throws ConfigurationException if config error was found
+   */
+  public abstract int relaunchContainer(ContainerStartContext ctx) throws
+      IOException, ConfigurationException;
+
+  /**
    * Signal container with the specified signal.
    *
    * @param ctx Encapsulates information necessary for signaling containers.
@@ -200,6 +218,16 @@ public abstract class ContainerExecutor implements Configurable {
    */
   public abstract boolean reapContainer(ContainerReapContext ctx)
       throws IOException;
+
+  /**
+   * Perform interactive docker command into running container.
+   *
+   * @param ctx Encapsulates information necessary for exec containers.
+   * @return return input/output stream if the operation succeeded.
+   * @throws ContainerExecutionException if container exec fails.
+   */
+  public abstract IOStreamPair execContainer(ContainerExecContext ctx)
+      throws ContainerExecutionException;
 
   /**
    * Delete specified directories as a given user.
@@ -230,6 +258,18 @@ public abstract class ContainerExecutor implements Configurable {
    */
   public abstract boolean isContainerAlive(ContainerLivenessContext ctx)
       throws IOException;
+
+  /**
+   * Update cluster information inside container.
+   *
+   * @param ctx ContainerRuntimeContext
+   * @param user Owner of application
+   * @param appId YARN application ID
+   * @param spec Service Specification
+   * @throws IOException if there is a failure while writing spec to disk
+   */
+  public abstract void updateYarnSysFS(Context ctx, String user,
+      String appId, String spec) throws IOException;
 
   /**
    * Recover an already existing container. This is a blocking call and returns
@@ -298,7 +338,8 @@ public abstract class ContainerExecutor implements Configurable {
     }
 
     try {
-      return Integer.parseInt(FileUtils.readFileToString(file).trim());
+      return Integer.parseInt(
+          FileUtils.readFileToString(file, Charset.defaultCharset()).trim());
     } catch (NumberFormatException e) {
       throw new IOException("Error parsing exit code from pid " + pid, e);
     }
@@ -384,7 +425,8 @@ public abstract class ContainerExecutor implements Configurable {
         sb.env(nmEnvVar, environment.get(nmEnvVar));
       }
       // Now write the remaining environment variables.
-      for (Map.Entry<String, String> env : environment.entrySet()) {
+      for (Map.Entry<String, String> env :
+           sb.orderEnvByDependencies(environment).entrySet()) {
         if (!nmVars.contains(env.getKey())) {
           sb.env(env.getKey(), env.getValue());
         }
@@ -403,20 +445,9 @@ public abstract class ContainerExecutor implements Configurable {
 
     if (resources != null) {
       sb.echo("Setting up job resources");
-      for (Map.Entry<Path, List<String>> resourceEntry :
-          resources.entrySet()) {
-        for (String linkName : resourceEntry.getValue()) {
-          if (new Path(linkName).getName().equals(WILDCARD)) {
-            // If this is a wildcarded path, link to everything in the
-            // directory from the working directory
-            for (File wildLink : readDirAsUser(user, resourceEntry.getKey())) {
-              sb.symlink(new Path(wildLink.toString()),
-                  new Path(wildLink.getName()));
-            }
-          } else {
-            sb.symlink(resourceEntry.getKey(), new Path(linkName));
-          }
-        }
+      Map<Path, Path> symLinks = resolveSymLinks(resources, user);
+      for (Map.Entry<Path, Path> symLink : symLinks.entrySet()) {
+        sb.symlink(symLink.getKey(), symLink.getValue());
       }
     }
 
@@ -778,6 +809,28 @@ public abstract class ContainerExecutor implements Configurable {
   }
 
   /**
+   * Perform any cleanup before the next launch of the container.
+   * @param container         container
+   */
+  public void cleanupBeforeRelaunch(Container container)
+      throws IOException, InterruptedException {
+    if (container.getLocalizedResources() != null) {
+
+      Map<Path, Path> symLinks = resolveSymLinks(
+          container.getLocalizedResources(), container.getUser());
+
+      for (Map.Entry<Path, Path> symLink : symLinks.entrySet()) {
+        LOG.debug("{} deleting {}", container.getContainerId(),
+            symLink.getValue());
+        deleteAsUser(new DeletionAsUserContext.Builder()
+            .setUser(container.getUser())
+            .setSubDir(symLink.getValue())
+            .build());
+      }
+    }
+  }
+
+  /**
    * Get the process-identifier for the container.
    *
    * @param containerID the container ID
@@ -855,5 +908,31 @@ public abstract class ContainerExecutor implements Configurable {
             container.getContainerId(), message));
       }
     }
+  }
+
+  private Map<Path, Path> resolveSymLinks(Map<Path,
+      List<String>> resources, String user) {
+    Map<Path, Path> symLinks = new HashMap<>();
+    for (Map.Entry<Path, List<String>> resourceEntry :
+        resources.entrySet()) {
+      for (String linkName : resourceEntry.getValue()) {
+        if (new Path(linkName).getName().equals(WILDCARD)) {
+          // If this is a wildcarded path, link to everything in the
+          // directory from the working directory
+          for (File wildLink : readDirAsUser(user, resourceEntry.getKey())) {
+            symLinks.put(new Path(wildLink.toString()),
+                new Path(wildLink.getName()));
+          }
+        } else {
+          symLinks.put(resourceEntry.getKey(), new Path(linkName));
+        }
+      }
+    }
+    return symLinks;
+  }
+
+  public String getExposedPorts(Container container)
+      throws ContainerExecutionException {
+    return null;
   }
 }

@@ -83,17 +83,18 @@ public class FairSharePolicy extends SchedulingPolicy {
   private static class FairShareComparator implements Comparator<Schedulable>,
       Serializable {
     private static final long serialVersionUID = 5564969375856699313L;
-    private static final Resource ONE = Resources.createResource(1);
 
     @Override
     public int compare(Schedulable s1, Schedulable s2) {
       int res = compareDemand(s1, s2);
 
-      // Pre-compute resource usages to avoid duplicate calculation
-      Resource resourceUsage1 = s1.getResourceUsage();
-      Resource resourceUsage2 = s2.getResourceUsage();
+      // Share resource usages to avoid duplicate calculation
+      Resource resourceUsage1 = null;
+      Resource resourceUsage2 = null;
 
       if (res == 0) {
+        resourceUsage1 = s1.getResourceUsage();
+        resourceUsage2 = s2.getResourceUsage();
         res = compareMinShareUsage(s1, s2, resourceUsage1, resourceUsage2);
       }
 
@@ -116,41 +117,44 @@ public class FairSharePolicy extends SchedulingPolicy {
 
     private int compareDemand(Schedulable s1, Schedulable s2) {
       int res = 0;
-      Resource demand1 = s1.getDemand();
-      Resource demand2 = s2.getDemand();
-      if (demand1.equals(Resources.none()) && Resources.greaterThan(
-          RESOURCE_CALCULATOR, null, demand2, Resources.none())) {
+      long demand1 = s1.getDemand().getMemorySize();
+      long demand2 = s2.getDemand().getMemorySize();
+
+      if ((demand1 == 0) && (demand2 > 0)) {
         res = 1;
-      } else if (demand2.equals(Resources.none()) && Resources.greaterThan(
-          RESOURCE_CALCULATOR, null, demand1, Resources.none())) {
+      } else if ((demand2 == 0) && (demand1 > 0)) {
         res = -1;
       }
+
       return res;
     }
 
     private int compareMinShareUsage(Schedulable s1, Schedulable s2,
         Resource resourceUsage1, Resource resourceUsage2) {
       int res;
-      Resource minShare1 = Resources.min(RESOURCE_CALCULATOR, null,
-          s1.getMinShare(), s1.getDemand());
-      Resource minShare2 = Resources.min(RESOURCE_CALCULATOR, null,
-          s2.getMinShare(), s2.getDemand());
-      boolean s1Needy = Resources.lessThan(RESOURCE_CALCULATOR, null,
-          resourceUsage1, minShare1);
-      boolean s2Needy = Resources.lessThan(RESOURCE_CALCULATOR, null,
-          resourceUsage2, minShare2);
+      long minShare1 = Math.min(s1.getMinShare().getMemorySize(),
+          s1.getDemand().getMemorySize());
+      long minShare2 = Math.min(s2.getMinShare().getMemorySize(),
+          s2.getDemand().getMemorySize());
+      boolean s1Needy = resourceUsage1.getMemorySize() < minShare1;
+      boolean s2Needy = resourceUsage2.getMemorySize() < minShare2;
 
       if (s1Needy && !s2Needy) {
         res = -1;
       } else if (s2Needy && !s1Needy) {
         res = 1;
       } else if (s1Needy && s2Needy) {
-        double minShareRatio1 = (double) resourceUsage1.getMemorySize() /
-            Resources.max(RESOURCE_CALCULATOR, null, minShare1, ONE)
-                .getMemorySize();
-        double minShareRatio2 = (double) resourceUsage2.getMemorySize() /
-            Resources.max(RESOURCE_CALCULATOR, null, minShare2, ONE)
-                .getMemorySize();
+        double minShareRatio1 = (double) resourceUsage1.getMemorySize();
+        double minShareRatio2 = (double) resourceUsage2.getMemorySize();
+
+        if (minShare1 > 1) {
+          minShareRatio1 /= minShare1;
+        }
+
+        if (minShare2 > 1) {
+          minShareRatio2 /= minShare2;
+        }
+
         res = (int) Math.signum(minShareRatio1 - minShareRatio2);
       } else {
         res = 0;
@@ -173,18 +177,16 @@ public class FairSharePolicy extends SchedulingPolicy {
       if (weight1 > 0.0 && weight2 > 0.0) {
         useToWeightRatio1 = resourceUsage1.getMemorySize() / weight1;
         useToWeightRatio2 = resourceUsage2.getMemorySize() / weight2;
-      } else { // Either weight1 or weight2 equals to 0
-        if (weight1 == weight2) {
-          // If they have same weight, just compare usage
-          useToWeightRatio1 = resourceUsage1.getMemorySize();
-          useToWeightRatio2 = resourceUsage2.getMemorySize();
-        } else {
-          // By setting useToWeightRatios to negative weights, we give the
-          // zero-weight one less priority, so the non-zero weight one will
-          // be given slots.
-          useToWeightRatio1 = -weight1;
-          useToWeightRatio2 = -weight2;
-        }
+      } else if (weight1 == weight2) { // Either weight1 or weight2 equals to 0
+        // If they have same weight, just compare usage
+        useToWeightRatio1 = resourceUsage1.getMemorySize();
+        useToWeightRatio2 = resourceUsage2.getMemorySize();
+      } else {
+        // By setting useToWeightRatios to negative weights, we give the
+        // zero-weight one less priority, so the non-zero weight one will
+        // be given slots.
+        useToWeightRatio1 = -weight1;
+        useToWeightRatio2 = -weight2;
       }
 
       return (int) Math.signum(useToWeightRatio1 - useToWeightRatio2);
@@ -226,7 +228,7 @@ public class FairSharePolicy extends SchedulingPolicy {
 
   @Override
   public boolean checkIfUsageOverFairShare(Resource usage, Resource fairShare) {
-    return Resources.greaterThan(RESOURCE_CALCULATOR, null, usage, fairShare);
+    return usage.getMemorySize() > fairShare.getMemorySize();
   }
 
   @Override

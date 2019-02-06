@@ -27,6 +27,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.Timer;
@@ -64,12 +66,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.AM
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.fusesource.leveldbjni.internal.NativeDB;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBException;
-import org.iq80.leveldb.Logger;
 import org.iq80.leveldb.Options;
 import org.iq80.leveldb.WriteBatch;
 
@@ -131,6 +131,14 @@ public class LeveldbRMStateStore extends RMStateStore {
         + reservationId;
   }
 
+  private String getProxyCACertNodeKey() {
+    return PROXY_CA_ROOT + SEPARATOR + PROXY_CA_CERT_NODE;
+  }
+
+  private String getProxyCAPrivateKeyNodeKey() {
+    return PROXY_CA_ROOT + SEPARATOR + PROXY_CA_PRIVATE_KEY_NODE;
+  }
+
   @Override
   protected void initInternal(Configuration conf) throws Exception {
     compactionIntervalMsec = conf.getLong(
@@ -165,7 +173,6 @@ public class LeveldbRMStateStore extends RMStateStore {
     Path storeRoot = createStorageDir();
     Options options = new Options();
     options.createIfMissing(false);
-    options.logger(new LeveldbLogger());
     LOG.info("Using state database at " + storeRoot + " for recovery");
     File dbfile = new File(storeRoot.toString());
     try {
@@ -262,7 +269,7 @@ public class LeveldbRMStateStore extends RMStateStore {
       if (data != null) {
         currentEpoch = EpochProto.parseFrom(data).getEpoch();
       }
-      EpochProto proto = Epoch.newInstance(currentEpoch + 1).getProto();
+      EpochProto proto = Epoch.newInstance(nextEpoch(currentEpoch)).getProto();
       db.put(dbKeyBytes, proto.toByteArray());
     } catch (DBException e) {
       throw new IOException(e);
@@ -277,6 +284,7 @@ public class LeveldbRMStateStore extends RMStateStore {
      loadRMApps(rmState);
      loadAMRMTokenSecretManagerState(rmState);
     loadReservationState(rmState);
+    loadProxyCAManagerState(rmState);
     return rmState;
    }
 
@@ -581,6 +589,34 @@ public class LeveldbRMStateStore extends RMStateStore {
     }
   }
 
+  private void loadProxyCAManagerState(RMState rmState) throws Exception {
+    byte[] caCertData;
+    byte[] caPrivateKeyData;
+
+    String caCertKey = getProxyCACertNodeKey();
+    String caPrivateKeyKey = getProxyCAPrivateKeyNodeKey();
+
+    try {
+      caCertData = db.get(bytes(caCertKey));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+
+    try {
+      caPrivateKeyData = db.get(bytes(caPrivateKeyKey));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+
+    if (caCertData == null || caPrivateKeyData == null) {
+      LOG.warn("Couldn't find Proxy CA data");
+      return;
+    }
+
+    rmState.proxyCAState.setCaCert(caCertData);
+    rmState.proxyCAState.setCaPrivateKey(caPrivateKeyData);
+  }
+
   @Override
   protected void storeApplicationStateInternal(ApplicationId appId,
       ApplicationStateData appStateData) throws IOException {
@@ -815,6 +851,29 @@ public class LeveldbRMStateStore extends RMStateStore {
   }
 
   @Override
+  protected void storeProxyCACertState(
+      X509Certificate caCert, PrivateKey caPrivateKey) throws Exception {
+    byte[] caCertData = caCert.getEncoded();
+    byte[] caPrivateKeyData = caPrivateKey.getEncoded();
+
+    String caCertKey = getProxyCACertNodeKey();
+    String caPrivateKeyKey = getProxyCAPrivateKeyNodeKey();
+
+    try {
+      WriteBatch batch = db.createWriteBatch();
+      try {
+        batch.put(bytes(caCertKey), caCertData);
+        batch.put(bytes(caPrivateKeyKey), caPrivateKeyData);
+        db.write(batch);
+      } finally {
+        batch.close();
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
   public void deleteStore() throws IOException {
     Path root = getStorageDir();
     LOG.info("Deleting state database at " + root);
@@ -870,15 +929,6 @@ public class LeveldbRMStateStore extends RMStateStore {
       }
       long duration = Time.monotonicNow() - start;
       LOG.info("Full compaction cycle completed in " + duration + " msec");
-    }
-  }
-
-  private static class LeveldbLogger implements Logger {
-    private static final Log LOG = LogFactory.getLog(LeveldbLogger.class);
-
-    @Override
-    public void log(String message) {
-      LOG.info(message);
     }
   }
 }

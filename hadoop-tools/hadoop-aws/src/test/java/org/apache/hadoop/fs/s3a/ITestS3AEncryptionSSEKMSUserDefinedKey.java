@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 
 /**

@@ -130,8 +130,9 @@ public class Invoker {
   }
 
   /**
-   * Execute an operation and ignore all raised IOExceptions; log at INFO.
-   * @param log log to log at info.
+   * Execute an operation and ignore all raised IOExceptions; log at INFO;
+   * full stack only at DEBUG.
+   * @param log log to use.
    * @param action action to include in log
    * @param path optional path to include in log
    * @param operation operation to execute
@@ -145,13 +146,17 @@ public class Invoker {
     try {
       once(action, path, operation);
     } catch (IOException e) {
-      log.info("{}: {}", toDescription(action, path), e.toString(), e);
+      String description = toDescription(action, path);
+      String error = e.toString();
+      log.info("{}: {}", description, error);
+      log.debug("{}", description, e);
     }
   }
 
   /**
-   * Execute an operation and ignore all raised IOExceptions; log at INFO.
-   * @param log log to log at info.
+   * Execute an operation and ignore all raised IOExceptions; log at INFO;
+   * full stack only at DEBUG.
+   * @param log log to use.
    * @param action action to include in log
    * @param path optional path to include in log
    * @param operation operation to execute
@@ -310,6 +315,9 @@ public class Invoker {
     boolean shouldRetry;
     do {
       try {
+        if (retryCount > 0) {
+          LOG.debug("retry #{}", retryCount);
+        }
         // execute the operation, returning if successful
         return operation.execute();
       } catch (IOException | SdkBaseException e) {
@@ -327,8 +335,6 @@ public class Invoker {
             (SdkBaseException)caught);
       }
 
-
-      int attempts = retryCount + 1;
       try {
         // decide action base on operation, invocation count, etc
         retryAction = retryPolicy.shouldRetry(translated, retryCount, 0,
@@ -470,7 +476,7 @@ public class Invoker {
   };
 
   /**
-   * Log summary at info, full stack at debug.
+   * Log retries at debug.
    */
   public static final Retried LOG_EVENT = new Retried() {
     @Override

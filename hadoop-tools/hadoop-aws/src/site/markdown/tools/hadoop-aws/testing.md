@@ -28,7 +28,7 @@ be ignored.
 
 ## <a name="policy"></a> Policy for submitting patches which affect the `hadoop-aws` module.
 
-The Apache Jenkins infrastucture does not run any S3 integration tests,
+The Apache Jenkins infrastructure does not run any S3 integration tests,
 due to the need to keep credentials secure.
 
 ### The submitter of any patch is required to run all the integration tests and declare which S3 region/implementation they used.
@@ -300,6 +300,11 @@ By their very nature they are slow. And, as their execution time is often
 limited by bandwidth between the computer running the tests and the S3 endpoint,
 parallel execution does not speed these tests up.
 
+***Note: Running scale tests with -Ds3guard and -Ddynamo requires that
+you use a private, testing-only DynamoDB table.*** The tests do disruptive
+things such as deleting metadata and setting the provisioned throughput
+to very low values.
+
 ### <a name="enabling-scale"></a> Enabling the Scale Tests
 
 The tests are enabled if the `scale` property is set in the maven build
@@ -314,10 +319,10 @@ mvn verify -Dparallel-tests -Dscale -DtestsThreadCount=8
 
 The most bandwidth intensive tests (those which upload data) always run
 sequentially; those which are slow due to HTTPS setup costs or server-side
-actionsare included in the set of parallelized tests.
+actions are included in the set of parallelized tests.
 
 
-### <a name="tuning_scale"></a> Tuning scale optins from Maven
+### <a name="tuning_scale"></a> Tuning scale options from Maven
 
 
 Some of the tests can be tuned from the maven build or from the
@@ -339,7 +344,7 @@ then the configuration value is used. The `unset` option is used to
 
 Only a few properties can be set this way; more will be added.
 
-| Property | Meaninging |
+| Property | Meaning |
 |-----------|-------------|
 | `fs.s3a.scale.test.timeout`| Timeout in seconds for scale tests |
 | `fs.s3a.scale.test.huge.filesize`| Size for huge file uploads |
@@ -473,13 +478,30 @@ the `fs.s3a.scale.test.csvfile` option set to its path.
 (yes, the space is necessary. The Hadoop `Configuration` class treats an empty
 value as "do not override the default").
 
+### Turning off S3 Select
+
+The S3 select tests are skipped when the S3 endpoint doesn't support S3 Select.
+
+```xml
+<property>
+  <name>fs.s3a.select.enabled</name>
+  <value>false</value>
+</property>
+```
+
+If your endpoint doesn't support that feature, this option should be in
+your `core-site.xml` file, so that trying to use S3 select fails fast with
+a meaningful error ("S3 Select not supported") rather than a generic Bad Request
+exception.
+
 
 ### Testing Session Credentials
 
-The test `TestS3ATemporaryCredentials` requests a set of temporary
-credentials from the STS service, then uses them to authenticate with S3.
+Some tests requests a session credentials and assumed role credentials from the
+AWS Secure Token Service, then use them to authenticate with S3 either directly
+or via delegation tokens.
 
-If an S3 implementation does not support STS, then the functional test
+If an S3 implementation does not support STS, then these functional test
 cases must be disabled:
 
 ```xml
@@ -487,18 +509,30 @@ cases must be disabled:
   <name>test.fs.s3a.sts.enabled</name>
   <value>false</value>
 </property>
+
 ```
-These tests reqest a temporary set of credentials from the STS service endpoint.
-An alternate endpoint may be defined in `test.fs.s3a.sts.endpoint`.
+These tests request a temporary set of credentials from the STS service endpoint.
+An alternate endpoint may be defined in `fs.s3a.assumed.role.sts.endpoint`.
+If this is set, a delegation token region must also be defined:
+in `fs.s3a.assumed.role.sts.endpoint.region`.
+This is useful not just for testing alternative infrastructures,
+but to reduce latency on tests executed away from the central
+service.
 
 ```xml
 <property>
-  <name>test.fs.s3a.sts.endpoint</name>
-  <value>https://sts.example.org/</value>
+  <name>fs.s3a.delegation.token.endpoint</name>
+  <value>fs.s3a.assumed.role.sts.endpoint</value>
+</property>
+<property>
+  <name>fs.s3a.assumed.role.sts.endpoint.region</name>
+  <value>eu-west-2</value>
 </property>
 ```
-The default is ""; meaning "use the amazon default value".
+The default is ""; meaning "use the amazon default endpoint" (`sts.amazonaws.com`).
 
+Consult the [AWS documentation](https://docs.aws.amazon.com/general/latest/gr/rande.html#sts_region)
+for the full list of locations.
 
 ## <a name="debugging"></a> Debugging Test failures
 
@@ -565,9 +599,22 @@ rather than write new tests. When doing this, make sure that the new predicates
 fail with meaningful diagnostics, so any new problems can be easily debugged
 from test logs.
 
+***Effective use of FS instances during S3A integration tests.*** Tests using
+`FileSystem` instances are fastest if they can recycle the existing FS
+instance from the same JVM.
+
+If you do that, you MUST NOT close or do unique configuration on them.
+If you want a guarantee of 100% isolation or an instance with unique config,
+create a new instance which you MUST close in the teardown to avoid leakage
+of resources.
+
+Do NOT add `FileSystem` instances manually
+(with e.g `org.apache.hadoop.fs.FileSystem#addFileSystemForTesting`) to the
+cache that will be modified or closed during the test runs. This can cause
+other tests to fail when using the same modified or closed FS instance.
+For more details see HADOOP-15819.
 
 ## <a name="requirements"></a> Requirements of new Tests
-
 
 This is what we expect from new tests; they're an extension of the normal
 Hadoop requirements, based on the need to work with remote servers whose
@@ -636,7 +683,7 @@ to support the declaration of a specific large test file on alternate filesystem
 
 ### Works Over Long-haul Links
 
-As well as making file size and operation counts scaleable, this includes
+As well as making file size and operation counts scalable, this includes
 making test timeouts adequate. The Scale tests make this configurable; it's
 hard coded to ten minutes in `AbstractS3ATestBase()`; subclasses can
 change this by overriding `getTestTimeoutMillis()`.
@@ -672,7 +719,7 @@ Tests can overrun `createConfiguration()` to add new options to the configuratio
 file for the S3A Filesystem instance used in their tests.
 
 However, filesystem caching may mean that a test suite may get a cached
-instance created with an differennnt configuration. For tests which don't need
+instance created with an different configuration. For tests which don't need
 specific configurations caching is good: it reduces test setup time.
 
 For those tests which do need unique options (encryption, magic files),
@@ -737,6 +784,54 @@ sequential one afterwards. The IO heavy ones must also be subclasses of
 
 This is invaluable for debugging test failures.
 
+### Keeping AWS Costs down
+
+Most of the base S3 tests are designed to use public AWS data
+(the landsat-pds bucket) for read IO, so you don't have to pay for bytes
+downloaded or long term storage costs. The scale tests do work with more data
+so will cost more as well as generally take more time to execute.
+
+You are however billed for
+
+1. Data left in S3 after test runs.
+2. DynamoDB capacity reserved by S3Guard tables.
+3. HTTP operations on files (HEAD, LIST, GET).
+4. In-progress multipart uploads from bulk IO or S3A committer tests.
+5. Encryption/decryption using AWS KMS keys.
+
+The GET/decrypt costs are incurred on each partial read of a file,
+so random IO can cost more than sequential IO; the speedup of queries with
+columnar data usually justifies this.
+
+The DynamoDB costs come from the number of entries stores and the allocated capacity.
+
+How to keep costs down
+
+* Don't run the scale tests with large datasets; keep `fs.s3a.scale.test.huge.filesize` unset, or a few MB (minimum: 5).
+* Remove all files in the filesystem. The root tests usually do this, but
+it can be manually done:
+
+      hadoop fs -rm -r -f -skipTrash s3a://test-bucket/\*
+* Abort all outstanding uploads:
+
+      hadoop s3guard uploads -abort -force s3a://test-bucket/
+* If you don't need it, destroy the S3Guard DDB table.
+
+      hadoop s3guard destroy s3a://hwdev-steve-ireland-new/
+
+The S3Guard tests will automatically create the Dynamo DB table in runs with
+`-Ds3guard -Ddynamo` set; default capacity of these buckets
+tests is very small; it keeps costs down at the expense of IO performance
+and, for test runs in or near the S3/DDB stores, throttling events.
+
+If you want to manage capacity, use `s3guard set-capacity` to increase it
+(performance) or decrease it (costs).
+For remote `hadoop-aws` test runs, the read/write capacities of "10" each should suffice;
+increase it if parallel test run logs warn of throttling.
+
+Tip: for agility, use DynamoDB autoscaling, setting the minimum to something very low (e.g 5 units), the maximum to the largest amount you are willing to pay.
+This will automatically reduce capacity when you are not running tests against
+the bucket, slowly increase it over multiple test runs, if the load justifies it.
 
 ## <a name="tips"></a> Tips
 
@@ -883,7 +978,7 @@ s3a://bucket/a/b/c/DELAY_LISTING_ME
 ```
 
 In real-life S3 inconsistency, however, we expect that all the above paths
-(including `a` and `b`) will be subject to delayed visiblity.
+(including `a` and `b`) will be subject to delayed visibility.
 
 ### Using the `InconsistentAmazonS3CClient` in downstream integration tests
 
@@ -943,11 +1038,7 @@ When the `s3guard` profile is enabled, following profiles can be specified:
 
 * `dynamo`: use an AWS-hosted DynamoDB table; creating the table if it does
   not exist. You will have to pay the bills for DynamoDB web service.
-* `dynamodblocal`: use an in-memory DynamoDBLocal server instead of real AWS
-  DynamoDB web service; launch the server and creating the table.
-  You won't be charged bills for using DynamoDB in test. As it runs in-JVM,
-  the table isn't shared across other tests running in parallel.
-* `non-auth`: treat the S3Guard metadata as authorative.
+* `auth`: treat the S3Guard metadata as authoritative.
 
 ```bash
 mvn -T 1C verify -Dparallel-tests -DtestsThreadCount=6 -Ds3guard -Ddynamo -Dauth
@@ -969,6 +1060,10 @@ If the `s3guard` profile *is* set,
 1. The S3Guard options from maven (the dynamo and authoritative flags)
   overwrite any previously set in the configuration files.
 1. DynamoDB will be configured to create any missing tables.
+1. When using DynamoDB and running ITestDynamoDBMetadataStore, the fs.s3a.s3guard.ddb.test.table
+property should be configured, and the name of that table should be different
+ than what is used for fs.s3a.s3guard.ddb.table. The test table is destroyed
+ and modified multiple times during the test.
 
 
 ### Scale Testing MetadataStore Directly
@@ -979,10 +1074,14 @@ throttling, and compare performance for different implementations. These
 are included in the scale tests executed when `-Dscale` is passed to
 the maven command line.
 
-The two S3Guard scale testse are `ITestDynamoDBMetadataStoreScale` and
-`ITestLocalMetadataStoreScale`.  To run the DynamoDB test, you will need to
-define your table name and region in your test configuration.  For example,
-the following settings allow us to run `ITestDynamoDBMetadataStoreScale` with
+The two S3Guard scale tests are `ITestDynamoDBMetadataStoreScale` and
+`ITestLocalMetadataStoreScale`.
+
+To run these tests, your DynamoDB table needs to be of limited capacity;
+the values in `ITestDynamoDBMetadataStoreScale` currently require a read capacity
+of 10 or less. a write capacity of 15 or more.
+
+The following settings allow us to run `ITestDynamoDBMetadataStoreScale` with
 artificially low read and write capacity provisioned, so we can judge the
 effects of being throttled by the DynamoDB service:
 
@@ -1004,22 +1103,47 @@ effects of being throttled by the DynamoDB service:
   <value>my-scale-test</value>
 </property>
 <property>
-  <name>fs.s3a.s3guard.ddb.region</name>
-  <value>us-west-2</value>
-</property>
-<property>
   <name>fs.s3a.s3guard.ddb.table.create</name>
   <value>true</value>
 </property>
 <property>
   <name>fs.s3a.s3guard.ddb.table.capacity.read</name>
-  <value>10</value>
+  <value>5</value>
 </property>
 <property>
   <name>fs.s3a.s3guard.ddb.table.capacity.write</name>
-  <value>10</value>
+  <value>5</value>
 </property>
 ```
+
+These tests verify that the invoked operations can trigger retries in the
+S3Guard code, rather than just in the AWS SDK level, so showing that if
+SDK operations fail, they get retried. They also verify that the filesystem
+statistics are updated to record that throttling took place.
+
+*Do not panic if these tests fail to detect throttling!*
+
+These tests are unreliable as they need certain conditions to be met
+to repeatedly fail:
+
+1. You must have a low-enough latency connection to the DynamoDB store that,
+for the capacity allocated, you can overload it.
+1. The AWS Console can give you a view of what is happening here.
+1. Running a single test on its own is less likely to trigger an overload
+than trying to run the whole test suite.
+1. And running the test suite more than once, back-to-back, can also help
+overload the cluster.
+1. Stepping through with a debugger will reduce load, so may not trigger
+failures.
+
+If the tests fail, it *probably* just means you aren't putting enough load
+on the table.
+
+These tests do not verify that the entire set of DynamoDB calls made
+during the use of a S3Guarded S3A filesystem are wrapped by retry logic.
+
+*The best way to verify resilience is to run the entire `hadoop-aws` test suite,
+or even a real application, with throttling enabled.
 
 ### Testing only: Local Metadata Store
 
@@ -1039,16 +1163,25 @@ This is not for use in production.
 Tests for the AWS Assumed Role credential provider require an assumed
 role to request.
 
-If this role is not set, the tests which require it will be skipped.
+If this role is not declared in `fs.s3a.assumed.role.arn`,
+the tests which require it will be skipped.
 
-To run the tests in `ITestAssumeRole`, you need:
+The specific tests an Assumed Role ARN is required for are
+
+- `ITestAssumeRole`.
+- `ITestRoleDelegationTokens`.
+- One of the parameterized test cases in `ITestDelegatedMRJob`.
+
+To run these tests you need:
 
 1. A role in your AWS account will full read and write access rights to
-the S3 bucket used in the tests, and ideally DynamoDB, for S3Guard.
+the S3 bucket used in the tests, DynamoDB, for S3Guard, and KMS for any
+SSE-KMS tests.
+
 If your bucket is set up by default to use S3Guard, the role must have access
 to that service.
 
-1.  Your IAM User to have the permissions to adopt that role.
+1. Your IAM User to have the permissions to "assume" that role.
 
 1. The role ARN must be set in `fs.s3a.assumed.role.arn`.
 
@@ -1076,3 +1209,161 @@ thorough test, by switching to the credentials provider.
 The usual credentials needed to log in to the bucket will be used, but now
 the credentials used to interact with S3 and DynamoDB will be temporary
 role credentials, rather than the full credentials.
+
+## <a name="qualifiying_sdk_updates"></a> Qualifying an AWS SDK Update
+
+Updating the AWS SDK is something which does need to be done regularly,
+but is rarely without complications, major or minor.
+
+Assume that the version of the SDK will remain constant for an X.Y release,
+excluding security fixes, so it's good to have an update before each release
+&mdash; as long as that update works doesn't trigger any regressions.
+
+
+1. Don't make this a last minute action.
+1. The upgrade patch should focus purely on the SDK update, so it can be cherry
+picked and reverted easily.
+1. Do not mix in an SDK update with any other piece of work, for the same reason.
+1. Plan for an afternoon's work, including before/after testing, log analysis
+and any manual tests.
+1. Make sure all the integration tests are running (including s3guard, ARN, encryption, scale)
+  *before you start the upgrade*.
+1. Create a JIRA for updating the SDK. Don't include the version (yet),
+as it may take a couple of SDK updates before it is ready.
+1. Identify the latest AWS SDK [available for download](https://aws.amazon.com/sdk-for-java/).
+1. Create a private git branch of trunk for JIRA, and in
+  `hadoop-project/pom.xml` update the `aws-java-sdk.version` to the new SDK version.
+1. Update AWS SDK versions in NOTICE.txt.
+1. Do a clean build and rerun all the `hadoop-aws` tests, with and without the `-Ds3guard -Ddynamo` options.
+  This includes the `-Pscale` set, with a role defined for the assumed role tests.
+  in `fs.s3a.assumed.role.arn` for testing assumed roles,
+  and `fs.s3a.server-side-encryption.key` for encryption, for full coverage.
+  If you can, scale up the scale tests.
+1. Create the site with `mvn site -DskipTests`; look in `target/site` for the report.
+1. Review *every single `-output.txt` file in `hadoop-tools/hadoop-aws/target/failsafe-reports`,
+  paying particular attention to
+  `org.apache.hadoop.fs.s3a.scale.ITestS3AInputStreamPerformance-output.txt`,
+  as that is where changes in stream close/abort logic will surface.
+1. Run `mvn install` to install the artifacts, then in
+  `hadoop-cloud-storage-project/hadoop-cloud-storage` run
+  `mvn dependency:tree -Dverbose > target/dependencies.txt`.
+  Examine the `target/dependencies.txt` file to verify that no new
+  artifacts have unintentionally been declared as dependencies
+  of the shaded `aws-java-sdk-bundle` artifact.
+
+### Basic command line regression testing
+
+We need a run through of the CLI to see if there have been changes there
+which cause problems, especially whether new log messages have surfaced,
+or whether some packaging change breaks that CLI
+
+From the root of the project, create a command line release `mvn package -Pdist -DskipTests -Dmaven.javadoc.skip=true  -DskipShade`;
+
+1. Change into the `hadoop-dist/target/hadoop-x.y.z-SNAPSHOT` dir.
+1. Copy a `core-site.xml` file into `etc/hadoop`.
+1. Set the `HADOOP_OPTIONAL_TOOLS` env var on the command line or `~/.hadoop-env`.
+
+```bash
+export HADOOP_OPTIONAL_TOOLS="hadoop-aws"
+```
+
+Run some basic s3guard commands as well as file operations.
+
+```bash
+export BUCKET=s3a://example-bucket-name
+
+bin/hadoop s3guard bucket-info $BUCKET
+bin/hadoop s3guard set-capacity $BUCKET
+bin/hadoop s3guard set-capacity -read 15 -write 15 $BUCKET
+bin/hadoop s3guard uploads $BUCKET
+bin/hadoop s3guard diff $BUCKET/
+bin/hadoop s3guard prune -minutes 10 $BUCKET/
+bin/hadoop s3guard import $BUCKET/
+bin/hadoop fs -ls $BUCKET/
+bin/hadoop fs -ls $BUCKET/file
+bin/hadoop fs -rm -R -f $BUCKET/dir-no-trailing
+bin/hadoop fs -rm -R -f $BUCKET/dir-trailing/
+bin/hadoop fs -rm $BUCKET/
+bin/hadoop fs -touchz $BUCKET/file
+# expect I/O error as root dir is not empty
+bin/hadoop fs -rm -r $BUCKET/
+bin/hadoop fs -rm -r $BUCKET/\*
+# now success
+bin/hadoop fs -rm -r $BUCKET/
+
+bin/hadoop fs -mkdir $BUCKET/dir-no-trailing
+# fails with S3Guard
+bin/hadoop fs -mkdir $BUCKET/dir-trailing/
+bin/hadoop fs -touchz $BUCKET/file
+bin/hadoop fs -ls $BUCKET/
+bin/hadoop fs -mv $BUCKET/file $BUCKET/file2
+# expect "No such file or directory"
+bin/hadoop fs -stat $BUCKET/file
+bin/hadoop fs -stat $BUCKET/file2
+bin/hadoop fs -mv $BUCKET/file2 $BUCKET/dir-no-trailing
+bin/hadoop fs -stat $BUCKET/dir-no-trailing/file2
+# treated the same as the file stat
+bin/hadoop fs -stat $BUCKET/dir-no-trailing/file2/
+bin/hadoop fs -ls $BUCKET/dir-no-trailing/file2/
+bin/hadoop fs -ls $BUCKET/dir-no-trailing
+# expect a "0" here:
+bin/hadoop fs -test -d  $BUCKET/dir-no-trailing ; echo $?
+# expect a "1" here:
+bin/hadoop fs -test -d  $BUCKET/dir-no-trailing/file2 ; echo $?
+# will return NONE unless bucket has checksums enabled
+bin/hadoop fs -checksum $BUCKET/dir-no-trailing/file2
+# expect "etag" + a long string
+bin/hadoop fs -D fs.s3a.etag.checksum.enabled=true -checksum $BUCKET/dir-no-trailing/file2
+```
+
+### Other tests
+
+* Whatever applications you have which use S3A: build and run them before the upgrade,
+Then see if complete successfully in roughly the same time once the upgrade is applied.
+* Test any third-party endpoints you have access to.
+* Try different regions (especially a v4 only region), and encryption settings.
+* Any performance tests you have can identify slowdowns, which can be a sign
+  of changed behavior in the SDK (especially on stream reads and writes).
+* If you can, try to test in an environment where a proxy is needed to talk
+to AWS services.
+* Try and get other people, especially anyone with their own endpoints,
+  apps or different deployment environments, to run their own tests.
+
+### Dealing with Deprecated APIs and New Features
+
+A Jenkins run should tell you if there are new deprecations.
+If so, you should think about how to deal with them.
+
+Moving to methods and APIs which weren't in the previous SDK release makes it
+harder to roll back if there is a problem; but there may be good reasons
+for the deprecation.
+
+At the same time, there may be good reasons for staying with the old code.
+
+* AWS have embraced the builder pattern for new operations; note that objects
+constructed this way often have their (existing) setter methods disabled; this
+may break existing code.
+* New versions of S3 calls (list v2, bucket existence checks, bulk operations)
+may be better than the previous HTTP operations & APIs, but they may not work with
+third-party endpoints, so can only be adopted if made optional, which then
+adds a new configuration option (with docs, testing, ...). A change like that
+must be done in its own patch, with its new tests which compare the old
+vs new operations.
+
+### Committing the patch
+
+When the patch is committed: update the JIRA to the version number actually
+used; use that title in the commit message.
+
+Be prepared to roll-back, re-iterate or code your way out of a regression.
+
+There may be some problem which surfaces with wider use, which can get
+fixed in a new AWS release, rolling back to an older one,
+or just worked around [HADOOP-14596](https://issues.apache.org/jira/browse/HADOOP-14596).
+
+Don't be surprised if this happens, don't worry too much, and,
+while that rollback option is there to be used, ideally try to work forwards.
+
+If the problem is with the SDK, file issues with the
+ [AWS SDK Bug tracker](https://github.com/aws/aws-sdk-java/issues).
+If the problem can be fixed or worked around in the Hadoop code, do it there too.

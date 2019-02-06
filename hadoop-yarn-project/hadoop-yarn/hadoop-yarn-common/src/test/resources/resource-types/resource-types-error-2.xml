@@ -18,7 +18,7 @@ limitations under the License. See accompanying LICENSE file.
 
  <property>
    <name>yarn.resource-types</name>
-   <value>vcores,resource1</value>
+   <value>resource1,resource2</value>
  </property>
 
  <property>
@@ -27,7 +27,7 @@ limitations under the License. See accompanying LICENSE file.
  </property>
 
  <property>
-   <name>yarn.resource-types.vcores.units</name>
+   <name>yarn.resource-types.resource2.units</name>
    <value>Az</value>
  </property>
 </configuration>

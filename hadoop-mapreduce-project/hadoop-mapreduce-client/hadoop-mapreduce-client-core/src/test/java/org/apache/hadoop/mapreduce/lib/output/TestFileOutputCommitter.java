@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.NullWritable;
@@ -56,6 +57,10 @@ import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 @SuppressWarnings("unchecked")
 public class TestFileOutputCommitter {
@@ -434,6 +439,35 @@ public class TestFileOutputCommitter {
   }
 
   @Test
+  public void testProgressDuringMerge() throws Exception {
+    Job job = Job.getInstance();
+    FileOutputFormat.setOutputPath(job, outDir);
+    Configuration conf = job.getConfiguration();
+    conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
+    conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
+        2);
+    JobContext jContext = new JobContextImpl(conf, taskID.getJobID());
+    TaskAttemptContext tContext = spy(new TaskAttemptContextImpl(conf, taskID));
+    FileOutputCommitter committer = new FileOutputCommitter(outDir, tContext);
+
+    // setup
+    committer.setupJob(jContext);
+    committer.setupTask(tContext);
+
+    // write output
+    MapFileOutputFormat theOutputFormat = new MapFileOutputFormat();
+    RecordWriter theRecordWriter = theOutputFormat.getRecordWriter(tContext);
+    writeMapFileOutput(theRecordWriter, tContext);
+
+    // do commit
+    committer.commitTask(tContext);
+    //make sure progress flag was set.
+    // The first time it is set is during commit but ensure that
+    // mergePaths call makes it go again.
+    verify(tContext, atLeast(2)).progress();
+  }
+
+  @Test
   public void testCommitterRepeatableV1() throws Exception {
     testCommitterRetryInternal(1);
   }
@@ -526,16 +560,15 @@ public class TestFileOutputCommitter {
 
     // Ensure getReaders call works and also ignores
     // hidden filenames (_ or . prefixes)
+    MapFile.Reader[] readers = {};
     try {
-      MapFileOutputFormat.getReaders(outDir, conf);
-    } catch (Exception e) {
-      fail("Fail to read from MapFileOutputFormat: " + e);
-      e.printStackTrace();
+      readers = MapFileOutputFormat.getReaders(outDir, conf);
+      // validate output
+      validateMapFileOutputContent(FileSystem.get(job.getConfiguration()), outDir);
+    } finally {
+      IOUtils.cleanupWithLogger(null, readers);
+      FileUtil.fullyDelete(new File(outDir.toString()));
     }
-
-    // validate output
-    validateMapFileOutputContent(FileSystem.get(job.getConfiguration()), outDir);
-    FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
   @Test

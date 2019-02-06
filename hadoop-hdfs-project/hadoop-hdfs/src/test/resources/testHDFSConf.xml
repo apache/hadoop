@@ -6183,11 +6183,11 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>mkdir: `dir0/dir1': No such file or directory</expected-output>
+          <expected-output>.*mkdir:.*dir0': No such file or directory$</expected-output>
         </comparator>
       </comparators>
     </test>
-    
+
     <test> <!-- TESTED -->
       <description>mkdir: Test recreate of existing directory fails</description>
       <test-commands>
@@ -16549,6 +16549,10 @@
         <comparator>
           <type>RegexpComparator</type>
           <expected-output>Last contact: [a-zA-Z]+ [a-zA-Z]+ [0-9]+ [0-9:]+ [A-Z\-\+\:0-9]+ [0-9]+</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>Num of Blocks: [0-9]+</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>

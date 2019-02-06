@@ -23,10 +23,12 @@ import AbstractRoute from './abstract';
 export default AbstractRoute.extend({
   model(param) {
     // Fetches data from both NM and RM. RM is queried to get node usage info.
+    var address = decodeURIComponent(param.node_addr);
+    address = address.replace(/(^\w+:|^)\/\//, '');
     return Ember.RSVP.hash({
-      nodeInfo: { id: param.node_id, addr: param.node_addr },
-      nmGpuInfo: this.store.findRecord('yarn-nm-gpu', param.node_addr, {reload:true}),
-      node: this.store.findRecord('yarn-node', param.node_addr, {reload: true}),
+      nodeInfo: { id: param.node_id, addr: address },
+      nmGpuInfo: this.store.findRecord('yarn-nm-gpu', address, {reload:true}),
+      node: this.store.findRecord('yarn-node', address, {reload: true}),
       rmNode: this.store.findRecord('yarn-rm-node', param.node_id, {reload: true})
     });
   },

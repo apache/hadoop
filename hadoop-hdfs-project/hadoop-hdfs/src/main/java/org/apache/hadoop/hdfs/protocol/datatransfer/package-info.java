@@ -15,10 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@InterfaceStability.Evolving
-package org.apache.hadoop.hdfs.protocol.datatransfer;
-import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * This package contains classes related to hdfs data transfer protocol.
  */
+@InterfaceStability.Evolving
+package org.apache.hadoop.hdfs.protocol.datatransfer;
+import org.apache.hadoop.classification.InterfaceStability;

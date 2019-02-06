@@ -40,8 +40,10 @@ import org.junit.rules.Timeout;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_REGION_KEY;
 
@@ -80,81 +82,102 @@ public class ITestS3GuardConcurrentOps extends AbstractS3ATestBase {
 
   @Test
   public void testConcurrentTableCreations() throws Exception {
-    final Configuration conf = getConfiguration();
+    S3AFileSystem fs = getFileSystem();
+    final Configuration conf = fs.getConf();
     Assume.assumeTrue("Test only applies when DynamoDB is used for S3Guard",
         conf.get(Constants.S3_METADATA_STORE_IMPL).equals(
             Constants.S3GUARD_METASTORE_DYNAMO));
 
+    AWSCredentialProviderList sharedCreds =
+        fs.shareCredentials("testConcurrentTableCreations");
+    // close that shared copy.
+    sharedCreds.close();
+    // this is the original reference count.
+    int originalRefCount = sharedCreds.getRefCount();
+
+    //now init the store; this should increment the ref count.
     DynamoDBMetadataStore ms = new DynamoDBMetadataStore();
-    ms.initialize(getFileSystem());
-    DynamoDB db = ms.getDynamoDB();
+    ms.initialize(fs);
 
-    String tableName = "testConcurrentTableCreations" + new Random().nextInt();
-    conf.setBoolean(Constants.S3GUARD_DDB_TABLE_CREATE_KEY, true);
-    conf.set(Constants.S3GUARD_DDB_TABLE_NAME_KEY, tableName);
+    // the ref count should have gone up
+    assertEquals("Credential Ref count unchanged after initializing metastore "
+        + sharedCreds,
+        originalRefCount + 1, sharedCreds.getRefCount());
+    try {
+      DynamoDB db = ms.getDynamoDB();
 
-    String region = conf.getTrimmed(S3GUARD_DDB_REGION_KEY);
-    if (StringUtils.isEmpty(region)) {
-      // no region set, so pick it up from the test bucket
-      conf.set(S3GUARD_DDB_REGION_KEY, getFileSystem().getBucketLocation());
-    }
-    int concurrentOps = 16;
-    int iterations = 4;
+      String tableName = "testConcurrentTableCreations" + new Random().nextInt();
+      conf.setBoolean(Constants.S3GUARD_DDB_TABLE_CREATE_KEY, true);
+      conf.set(Constants.S3GUARD_DDB_TABLE_NAME_KEY, tableName);
 
-    failIfTableExists(db, tableName);
+      String region = conf.getTrimmed(S3GUARD_DDB_REGION_KEY);
+      if (StringUtils.isEmpty(region)) {
+        // no region set, so pick it up from the test bucket
+        conf.set(S3GUARD_DDB_REGION_KEY, fs.getBucketLocation());
+      }
+      int concurrentOps = 16;
+      int iterations = 4;
 
-    for (int i = 0; i < iterations; i++) {
-      ExecutorService executor = Executors.newFixedThreadPool(
-          concurrentOps, new ThreadFactory() {
-            private AtomicInteger count = new AtomicInteger(0);
+      failIfTableExists(db, tableName);
 
-            public Thread newThread(Runnable r) {
-              return new Thread(r,
-                  "testConcurrentTableCreations" + count.getAndIncrement());
+      for (int i = 0; i < iterations; i++) {
+        ExecutorService executor = Executors.newFixedThreadPool(
+            concurrentOps, new ThreadFactory() {
+              private AtomicInteger count = new AtomicInteger(0);
+
+              public Thread newThread(Runnable r) {
+                return new Thread(r,
+                    "testConcurrentTableCreations" + count.getAndIncrement());
+              }
+            });
+        ((ThreadPoolExecutor) executor).prestartAllCoreThreads();
+        Future<Exception>[] futures = new Future[concurrentOps];
+        for (int f = 0; f < concurrentOps; f++) {
+          final int index = f;
+          futures[f] = executor.submit(new Callable<Exception>() {
+            @Override
+            public Exception call() throws Exception {
+
+              ContractTestUtils.NanoTimer timer =
+                  new ContractTestUtils.NanoTimer();
+
+              Exception result = null;
+              try (DynamoDBMetadataStore store = new DynamoDBMetadataStore()) {
+                store.initialize(conf);
+              } catch (Exception e) {
+                LOG.error(e.getClass() + ": " + e.getMessage());
+                result = e;
+              }
+
+              timer.end("Parallel DynamoDB client creation %d", index);
+              LOG.info("Parallel DynamoDB client creation {} ran from {} to {}",
+                  index, timer.getStartTime(), timer.getEndTime());
+              return result;
             }
           });
-      ((ThreadPoolExecutor) executor).prestartAllCoreThreads();
-      Future<Exception>[] futures = new Future[concurrentOps];
-      for (int f = 0; f < concurrentOps; f++) {
-        final int index = f;
-        futures[f] = executor.submit(new Callable<Exception>() {
-          @Override
-          public Exception call() throws Exception {
-
-            ContractTestUtils.NanoTimer timer =
-                new ContractTestUtils.NanoTimer();
-
-            Exception result = null;
-            try (DynamoDBMetadataStore store = new DynamoDBMetadataStore()) {
-              store.initialize(conf);
-            } catch (Exception e) {
-              LOG.error(e.getClass() + ": " + e.getMessage());
-              result = e;
-            }
-
-            timer.end("Parallel DynamoDB client creation %d", index);
-            LOG.info("Parallel DynamoDB client creation {} ran from {} to {}",
-                index, timer.getStartTime(), timer.getEndTime());
-            return result;
+        }
+        List<Exception> exceptions = new ArrayList<>(concurrentOps);
+        for (int f = 0; f < concurrentOps; f++) {
+          Exception outcome = futures[f].get();
+          if (outcome != null) {
+            exceptions.add(outcome);
           }
-        });
-      }
-      List<Exception> exceptions = new ArrayList<>(concurrentOps);
-      for (int f = 0; f < concurrentOps; f++) {
-        Exception outcome = futures[f].get();
-        if (outcome != null) {
-          exceptions.add(outcome);
+        }
+        deleteTable(db, tableName);
+        int exceptionsThrown = exceptions.size();
+        if (exceptionsThrown > 0) {
+          // at least one exception was thrown. Fail the test & nest the first
+          // exception caught
+          throw new AssertionError(exceptionsThrown + "/" + concurrentOps +
+              " threads threw exceptions while initializing on iteration " + i,
+              exceptions.get(0));
         }
       }
-      deleteTable(db, tableName);
-      int exceptionsThrown = exceptions.size();
-      if (exceptionsThrown > 0) {
-        // at least one exception was thrown. Fail the test & nest the first
-        // exception caught
-        throw new AssertionError(exceptionsThrown + "/" + concurrentOps +
-            " threads threw exceptions while initializing on iteration " + i,
-            exceptions.get(0));
-      }
+    } finally {
+      ms.close();
     }
+    assertEquals("Credential Ref count unchanged after closing metastore: "
+            + sharedCreds,
+        originalRefCount, sharedCreds.getRefCount());
   }
 }

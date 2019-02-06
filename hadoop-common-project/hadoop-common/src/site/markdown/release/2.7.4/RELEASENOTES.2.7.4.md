@@ -47,6 +47,13 @@ The Code Changes include following:
 
 ---
 
+* [HDFS-9412](https://issues.apache.org/jira/browse/HDFS-9412) | *Major* | **getBlocks occupies FSLock and takes too long to complete**
+
+Skip blocks with size below dfs.balancer.getBlocks.min-block-size (default 10MB) when a balancer asks for a list of blocks.
+
+
+---
+
 * [HDFS-9902](https://issues.apache.org/jira/browse/HDFS-9902) | *Major* | **Support different values of dfs.datanode.du.reserved per storage type**
 
 Reserved space can be configured independently for different storage types for clusters with heterogeneous storage. The 'dfs.datanode.du.reserved' property name can be suffixed with a storage types (i.e. one of ssd, disk, archival or ram\_disk). e.g. reserved space for RAM\_DISK storage can be configured using the property 'dfs.datanode.du.reserved.ram\_disk'. If specific storage type reservation is not configured then the value specified by 'dfs.datanode.du.reserved' will be used for all volumes.
@@ -106,6 +113,13 @@ The fix for HDFS-11056 reads meta file to load last partial chunk checksum when 
 * [HDFS-11160](https://issues.apache.org/jira/browse/HDFS-11160) | *Major* | **VolumeScanner reports write-in-progress replicas as corrupt incorrectly**
 
 Fixed a race condition that caused VolumeScanner to recognize a good replica as a bad one if the replica is also being written concurrently.
+
+
+---
+
+* [HADOOP-13119](https://issues.apache.org/jira/browse/HADOOP-13119) | *Major* | **Add ability to secure log servlet using proxy users**
+
+**WARNING: No release note provided for this change.**
 
 
 ---

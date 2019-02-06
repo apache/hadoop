@@ -103,7 +103,7 @@ public class Log4Json extends Layout {
   /**
    * Jackson factories are thread safe when constructing parsers and generators.
    * They are not thread safe in configure methods; if there is to be any
-   * configuration it must be done in a static intializer block.
+   * configuration it must be done in a static initializer block.
    */
   private static final JsonFactory factory = new MappingJsonFactory();
   private static final ObjectReader READER = new ObjectMapper(factory).reader();

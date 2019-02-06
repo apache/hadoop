@@ -29,6 +29,7 @@ import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import com.google.common.base.Preconditions;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -40,6 +41,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.mockito.Mockito;
 
 import static com.amazonaws.services.dynamodbv2.model.KeyType.HASH;
 import static com.amazonaws.services.dynamodbv2.model.KeyType.RANGE;
@@ -50,6 +52,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.VERSION_MARKER;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.VERSION;
+import static org.mockito.Mockito.never;
 
 /**
  * Test the PathMetadataDynamoDBTranslation is able to translate between domain
@@ -59,28 +62,30 @@ public class TestPathMetadataDynamoDBTranslation extends Assert {
 
   private static final Path TEST_DIR_PATH = new Path("s3a://test-bucket/myDir");
   private static final Item TEST_DIR_ITEM = new Item();
-  private static PathMetadata testDirPathMetadata;
+  private static DDBPathMetadata testDirPathMetadata;
 
   private static final long TEST_FILE_LENGTH = 100;
   private static final long TEST_MOD_TIME = 9999;
   private static final long TEST_BLOCK_SIZE = 128;
   private static final Path TEST_FILE_PATH = new Path(TEST_DIR_PATH, "myFile");
   private static final Item TEST_FILE_ITEM = new Item();
-  private static PathMetadata testFilePathMetadata;
+  private static DDBPathMetadata testFilePathMetadata;
 
   @BeforeClass
   public static void setUpBeforeClass() throws IOException {
     String username = UserGroupInformation.getCurrentUser().getShortUserName();
 
-    testDirPathMetadata =
-        new PathMetadata(new S3AFileStatus(false, TEST_DIR_PATH, username));
+    testDirPathMetadata = new DDBPathMetadata(new S3AFileStatus(false,
+        TEST_DIR_PATH, username));
+
     TEST_DIR_ITEM
         .withPrimaryKey(PARENT, "/test-bucket", CHILD, TEST_DIR_PATH.getName())
         .withBoolean(IS_DIR, true);
 
-    testFilePathMetadata = new PathMetadata(
+    testFilePathMetadata = new DDBPathMetadata(
         new S3AFileStatus(TEST_FILE_LENGTH, TEST_MOD_TIME, TEST_FILE_PATH,
             TEST_BLOCK_SIZE, username));
+
     TEST_FILE_ITEM
         .withPrimaryKey(PARENT, pathToParentKey(TEST_FILE_PATH.getParent()),
             CHILD, TEST_FILE_PATH.getName())
@@ -108,6 +113,11 @@ public class TestPathMetadataDynamoDBTranslation extends Assert {
       assertThat(element.getKeyType(),
           anyOf(is(HASH.toString()), is(RANGE.toString())));
     }
+  }
+
+  @After
+  public void tearDown() {
+    PathMetadataDynamoDBTranslation.IGNORED_FIELDS.clear();
   }
 
   @Test
@@ -233,6 +243,77 @@ public class TestPathMetadataDynamoDBTranslation extends Assert {
     final Item marker = createVersionMarker(VERSION_MARKER, VERSION, 0);
     assertNull("Path metadata fromfrom " + marker,
         itemToPathMetadata(marker, "alice"));
+  }
+
+  /**
+   * Test when translating an {@link Item} to {@link DDBPathMetadata} works
+   * if {@code IS_AUTHORITATIVE} flag is ignored.
+   */
+  @Test
+  public void testIsAuthoritativeCompatibilityItemToPathMetadata()
+      throws Exception {
+    Item item = Mockito.spy(TEST_DIR_ITEM);
+    item.withBoolean(IS_AUTHORITATIVE, true);
+    PathMetadataDynamoDBTranslation.IGNORED_FIELDS.add(IS_AUTHORITATIVE);
+
+    final String user =
+        UserGroupInformation.getCurrentUser().getShortUserName();
+    DDBPathMetadata meta = itemToPathMetadata(item, user);
+
+    Mockito.verify(item, Mockito.never()).getBoolean(IS_AUTHORITATIVE);
+    assertFalse(meta.isAuthoritativeDir());
+  }
+
+  /**
+   * Test when translating an {@link DDBPathMetadata} to {@link Item} works
+   * if {@code IS_AUTHORITATIVE} flag is ignored.
+   */
+  @Test
+  public void testIsAuthoritativeCompatibilityPathMetadataToItem() {
+    DDBPathMetadata meta = Mockito.spy(testFilePathMetadata);
+    meta.setAuthoritativeDir(true);
+    PathMetadataDynamoDBTranslation.IGNORED_FIELDS.add(IS_AUTHORITATIVE);
+
+    Item item = pathMetadataToItem(meta);
+
+    Mockito.verify(meta, never()).isAuthoritativeDir();
+    assertFalse(item.hasAttribute(IS_AUTHORITATIVE));
+  }
+
+
+  /**
+   * Test when translating an {@link Item} to {@link DDBPathMetadata} works
+   * if {@code LAST_UPDATED} flag is ignored.
+   */
+  @Test
+  public void testIsLastUpdatedCompatibilityItemToPathMetadata()
+      throws Exception {
+    Item item = Mockito.spy(TEST_DIR_ITEM);
+    item.withLong(LAST_UPDATED, 100);
+    PathMetadataDynamoDBTranslation.IGNORED_FIELDS.add(LAST_UPDATED);
+
+    final String user =
+        UserGroupInformation.getCurrentUser().getShortUserName();
+    DDBPathMetadata meta = itemToPathMetadata(item, user);
+
+    Mockito.verify(item, Mockito.never()).getLong(LAST_UPDATED);
+    assertFalse(meta.isAuthoritativeDir());
+  }
+
+  /**
+   * Test when translating an {@link DDBPathMetadata} to {@link Item} works
+   * if {@code LAST_UPDATED} flag is ignored.
+   */
+  @Test
+  public void testIsLastUpdatedCompatibilityPathMetadataToItem() {
+    DDBPathMetadata meta = Mockito.spy(testFilePathMetadata);
+    meta.setLastUpdated(100);
+    PathMetadataDynamoDBTranslation.IGNORED_FIELDS.add(LAST_UPDATED);
+
+    Item item = pathMetadataToItem(meta);
+
+    Mockito.verify(meta, never()).getLastUpdated();
+    assertFalse(item.hasAttribute(LAST_UPDATED));
   }
 
 }

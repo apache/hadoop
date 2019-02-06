@@ -17,10 +17,13 @@
  */
 
 import Ember from 'ember';
+import Constants from 'yarn-ui/constants';
 
 export default Ember.Controller.extend({
-  queryParams: ["service"],
+  queryParams: ["service", "attempt", "containerid"],
   service: undefined,
+  attempt: undefined,
+  containerid: undefined,
 
   selectedAttemptId: "",
   attemptContainerList: null,
@@ -39,7 +42,7 @@ export default Ember.Controller.extend({
   },
 
   actions: {
-    showContainersForAttemptId(attemptId) {
+    showContainersForAttemptId(attemptId, containerId = "") {
       this.set("selectedAttemptId", "");
       if (attemptId) {
         this.set("_isLoadingTopPanel", true);
@@ -74,6 +77,9 @@ export default Ember.Controller.extend({
             }
             this.set("attemptContainerList", containers);
             this.initializeSelect(".js-fetch-logs-containers");
+            if (containerId) {
+              this.send("showLogFilesForContainerId", containerId);
+            }
           })
           .finally(() => {
             this.set("_isLoadingTopPanel", false);
@@ -118,16 +124,17 @@ export default Ember.Controller.extend({
       if (logFile) {
         this.set("_isLoadingBottomPanel", true);
         this.set("selectedLogFileName", logFile);
-        this.fetchContentForLogFile(this.get("selectedContainerId"), logFile)
+        var id = this.get("selectedContainerId") + Constants.PARAM_SEPARATOR + logFile;
+        this.fetchContentForLogFile(id)
           .then(
-            content => {
-              this.set("selectedLogFileContent", content.trim());
+            hash => {
+              this.set("selectedLogFileContent", hash.logs.get('logs').trim());
             },
             () => {
               this.set("selectedLogFileContent", "");
             }
           )
-          .always(() => {
+          .then(() => {
             this.set("_isLoadingBottomPanel", false);
           });
       } else {
@@ -224,9 +231,10 @@ export default Ember.Controller.extend({
     });
   },
 
-  fetchContentForLogFile(containerId, logFile) {
-    let logAdapter = this.store.adapterFor("yarn-log");
-    return logAdapter.fetchLogFileContent(containerId, logFile);
+  fetchContentForLogFile(id) {
+    return Ember.RSVP.hash({
+      logs: this.store.findRecord('yarn-app-log', id)
+    });
   },
 
   resetAfterRefresh() {
@@ -250,5 +258,10 @@ export default Ember.Controller.extend({
       }
       return lines.slice(lines.length - 10).join("\n");
     }
-  )
+  ),
+
+  isLogAggregationNotSucceeded: Ember.computed("model.app", function() {
+    const logAggregationStatus = this.get("model.app.logAggregationStatus");
+    return logAggregationStatus !== "SUCCEEDED";
+  })
 });

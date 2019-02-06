@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -52,6 +53,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preempti
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.OrderingPolicy;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
@@ -59,9 +61,11 @@ import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.mockito.ArgumentMatcher;
+import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -77,10 +81,10 @@ import java.util.TreeSet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.yarn.event.Event;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isA;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -104,10 +108,32 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
   EventHandler<Event> mDisp = null;
   ProportionalCapacityPreemptionPolicy policy = null;
   Resource clusterResource = null;
+  // Initialize resource map
+  Map<String, ResourceInformation> riMap = new HashMap<>();
+
+  private void resetResourceInformationMap() {
+    // Initialize mandatory resources
+    ResourceInformation memory = ResourceInformation.newInstance(
+        ResourceInformation.MEMORY_MB.getName(),
+        ResourceInformation.MEMORY_MB.getUnits(),
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
+    ResourceInformation vcores = ResourceInformation.newInstance(
+        ResourceInformation.VCORES.getName(),
+        ResourceInformation.VCORES.getUnits(),
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
+    riMap.put(ResourceInformation.MEMORY_URI, memory);
+    riMap.put(ResourceInformation.VCORES_URI, vcores);
+
+    ResourceUtils.initializeResourcesFromResourceInformationMap(riMap);
+  }
 
   @SuppressWarnings("unchecked")
   @Before
   public void setup() {
+    resetResourceInformationMap();
+
     org.apache.log4j.Logger.getRootLogger().setLevel(
         org.apache.log4j.Level.DEBUG);
 
@@ -142,6 +168,12 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
     partitionToResource = new HashMap<>();
     nodeIdToSchedulerNodes = new HashMap<>();
     nameToCSQueues = new HashMap<>();
+    clusterResource = Resource.newInstance(0, 0);
+  }
+
+  @After
+  public void cleanup() {
+    resetResourceInformationMap();
   }
 
   public void buildEnv(String labelsConfig, String nodesConfig,
@@ -172,6 +204,11 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
 
     policy = new ProportionalCapacityPreemptionPolicy(rmContext, cs,
         mClock);
+  }
+
+  public void updateQueueConfig(String queuesConfig) {
+    ParentQueue root = mockQueueHierarchy(queuesConfig);
+    when(cs.getRootQueue()).thenReturn(root);
   }
 
   private void mockContainers(String containersConfig, FiCaSchedulerApp app,
@@ -307,9 +344,11 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
           .thenReturn(pendingForDefaultPartition);
 
       // need to set pending resource in resource usage as well
-      ResourceUsage ru = new ResourceUsage();
+      ResourceUsage ru = Mockito.spy(new ResourceUsage());
       ru.setUsed(label, used);
+      when(ru.getCachedUsed(anyString())).thenReturn(used);
       when(app.getAppAttemptResourceUsage()).thenReturn(ru);
+      when(app.getSchedulingResourceUsage()).thenReturn(ru);
 
       start = end + 1;
     }
@@ -607,6 +646,12 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
         when(leafQueue.getApplications()).thenReturn(apps);
         when(leafQueue.getAllApplications()).thenReturn(apps);
         OrderingPolicy<FiCaSchedulerApp> so = mock(OrderingPolicy.class);
+        String opName = conf.get(CapacitySchedulerConfiguration.PREFIX
+            + CapacitySchedulerConfiguration.ROOT + "." + getQueueName(q)
+            + ".ordering-policy", "fifo");
+        if (opName.equals("fair")) {
+          so = Mockito.spy(new FairOrderingPolicy<FiCaSchedulerApp>());
+        }
         when(so.getPreemptionIterator()).thenAnswer(new Answer() {
           public Object answer(InvocationOnMock invocation) {
             return apps.descendingIterator();
@@ -781,7 +826,7 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
       }
     }
 
-    return Collections.EMPTY_MAP;
+    return Collections.emptyMap();
   }
 
   /**
@@ -904,7 +949,7 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
   }
 
   static class IsPreemptionRequestForQueueAndNode
-      extends ArgumentMatcher<ContainerPreemptEvent> {
+      implements ArgumentMatcher<ContainerPreemptEvent> {
     private final ApplicationAttemptId appAttId;
     private final String queueName;
     private final NodeId nodeId;
@@ -916,9 +961,7 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
       this.nodeId = nodeId;
     }
     @Override
-    public boolean matches(Object o) {
-      ContainerPreemptEvent cpe = (ContainerPreemptEvent)o;
-
+    public boolean matches(ContainerPreemptEvent cpe) {
       return appAttId.equals(cpe.getAppId())
           && queueName.equals(cpe.getContainer().getQueueName())
           && nodeId.equals(cpe.getContainer().getAllocatedNode());

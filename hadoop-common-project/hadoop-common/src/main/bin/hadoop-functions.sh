@@ -596,6 +596,12 @@ function hadoop_bootstrap
   YARN_LIB_JARS_DIR=${YARN_LIB_JARS_DIR:-"share/hadoop/yarn/lib"}
   MAPRED_DIR=${MAPRED_DIR:-"share/hadoop/mapreduce"}
   MAPRED_LIB_JARS_DIR=${MAPRED_LIB_JARS_DIR:-"share/hadoop/mapreduce/lib"}
+  HDDS_DIR=${HDDS_DIR:-"share/hadoop/hdds"}
+  HDDS_LIB_JARS_DIR=${HDDS_LIB_JARS_DIR:-"share/hadoop/hdds/lib"}
+  OZONE_DIR=${OZONE_DIR:-"share/hadoop/ozone"}
+  OZONE_LIB_JARS_DIR=${OZONE_LIB_JARS_DIR:-"share/hadoop/ozone/lib"}
+  OZONEFS_DIR=${OZONEFS_DIR:-"share/hadoop/ozonefs"}
+
   HADOOP_TOOLS_HOME=${HADOOP_TOOLS_HOME:-${HADOOP_HOME}}
   HADOOP_TOOLS_DIR=${HADOOP_TOOLS_DIR:-"share/hadoop/tools"}
   HADOOP_TOOLS_LIB_JARS_DIR=${HADOOP_TOOLS_LIB_JARS_DIR:-"${HADOOP_TOOLS_DIR}/lib"}
@@ -1725,11 +1731,16 @@ function hadoop_status_daemon
   shift
 
   local pid
+  local pspid
 
   if [[ -f "${pidfile}" ]]; then
     pid=$(cat "${pidfile}")
-    if ps -p "${pid}" > /dev/null 2>&1; then
-      return 0
+    if pspid=$(ps -o args= -p"${pid}" 2>/dev/null); then
+      # this is to check that the running process we found is actually the same
+      # daemon that we're interested in
+      if [[ ${pspid} =~ -Dproc_${daemonname} ]]; then
+        return 0
+      fi
     fi
     return 1
   fi
@@ -2030,6 +2041,35 @@ function hadoop_start_secure_daemon_wrapper
   return 0
 }
 
+## @description  Wait till process dies or till timeout
+## @audience     private
+## @stability    evolving
+## @param        pid
+## @param        timeout
+function wait_process_to_die_or_timeout
+{
+  local pid=$1
+  local timeout=$2
+
+  # Normalize timeout
+  # Round up or down
+  timeout=$(printf "%.0f\n" "${timeout}")
+  if [[ ${timeout} -lt 1  ]]; then
+    # minimum 1 second
+    timeout=1
+  fi
+
+  # Wait to see if it's still alive
+  for (( i=0; i < "${timeout}"; i++ ))
+  do
+    if kill -0 "${pid}" > /dev/null 2>&1; then
+      sleep 1
+    else
+      break
+    fi
+  done
+}
+
 ## @description  Stop the non-privileged `command` daemon with that
 ## @description  that is running at `pidfile`.
 ## @audience     public
@@ -2050,11 +2090,14 @@ function hadoop_stop_daemon
     pid=$(cat "$pidfile")
 
     kill "${pid}" >/dev/null 2>&1
-    sleep "${HADOOP_STOP_TIMEOUT}"
+
+    wait_process_to_die_or_timeout "${pid}" "${HADOOP_STOP_TIMEOUT}"
+
     if kill -0 "${pid}" > /dev/null 2>&1; then
       hadoop_error "WARNING: ${cmd} did not stop gracefully after ${HADOOP_STOP_TIMEOUT} seconds: Trying to kill with kill -9"
       kill -9 "${pid}" >/dev/null 2>&1
     fi
+    wait_process_to_die_or_timeout "${pid}" "${HADOOP_STOP_TIMEOUT}"
     if ps -p "${pid}" > /dev/null 2>&1; then
       hadoop_error "ERROR: Unable to kill ${pid}"
     else

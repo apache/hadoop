@@ -81,6 +81,9 @@ public class TestGetContentSummaryWithSnapshot {
    * 3. create a 10 byte file /foo/bar/baz
    * Make sure for "/foo/bar" and "/foo/.snapshot/s1/bar" have correct results:
    * the 1 byte file is not included in snapshot s1.
+   * 4. create another snapshot, append to the file /foo/bar/baz,
+   * and make sure file count, directory count and file length is good.
+   * 5. delete the file, ensure contentSummary output too.
    */
   @Test
   public void testGetContentSummary() throws IOException {
@@ -117,6 +120,29 @@ public class TestGetContentSummaryWithSnapshot {
     Assert.assertEquals(2, summary.getDirectoryCount());
     Assert.assertEquals(0, summary.getFileCount());
     Assert.assertEquals(0, summary.getLength());
+
+    // create a new snapshot s2 and update the file
+    dfs.createSnapshot(foo, "s2");
+    DFSTestUtil.appendFile(dfs, baz, 10);
+    summary = cluster.getNameNodeRpc().getContentSummary(
+        bar.toString());
+    Assert.assertEquals(1, summary.getDirectoryCount());
+    Assert.assertEquals(1, summary.getFileCount());
+    Assert.assertEquals(20, summary.getLength());
+
+    final Path fooS2 = SnapshotTestHelper.getSnapshotRoot(foo, "s2");
+    summary = cluster.getNameNodeRpc().getContentSummary(fooS2.toString());
+    Assert.assertEquals(2, summary.getDirectoryCount());
+    Assert.assertEquals(1, summary.getFileCount());
+    Assert.assertEquals(10, summary.getLength());
+
+    cluster.getNameNodeRpc().delete(baz.toString(), false);
+
+    summary = cluster.getNameNodeRpc().getContentSummary(
+        foo.toString());
+    Assert.assertEquals(0, summary.getSnapshotDirectoryCount());
+    Assert.assertEquals(1, summary.getSnapshotFileCount());
+    Assert.assertEquals(20, summary.getSnapshotLength());
 
     final Path bazS1 = SnapshotTestHelper.getSnapshotPath(foo, "s1", "bar/baz");
     try {

@@ -38,7 +38,6 @@ import javax.management.RuntimeMBeanException;
 import javax.management.openmbean.CompositeData;
 import javax.management.openmbean.CompositeType;
 import javax.management.openmbean.TabularData;
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -71,7 +70,7 @@ import java.util.Set;
  * <p>
  * The optional <code>get</code> parameter is used to query an specific 
  * attribute of a JMX bean.  The format of the URL is
- * <code>http://.../jmx?get=MXBeanName::AttributeName<code>
+ * <code>http://.../jmx?get=MXBeanName::AttributeName</code>
  * <p>
  * For example 
  * <code>
@@ -86,7 +85,7 @@ import java.util.Set;
  * <p>
  * The return format is JSON and in the form
  * <p>
- *  <code><pre>
+ *  <pre><code>
  *  {
  *    "beans" : [
  *      {
@@ -95,7 +94,7 @@ import java.util.Set;
  *      }
  *    ]
  *  }
- *  </pre></code>
+ *  </code></pre>
  *  <p>
  *  The servlet attempts to convert the the JMXBeans into JSON. Each
  *  bean's attributes will be converted to a JSON object member.
@@ -170,12 +169,7 @@ public class JMXJsonServlet extends HttpServlet {
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response) {
     try {
-      // If user is a static user and auth Type is null, that means
-      // there is a non-security environment and no need authorization,
-      // otherwise, do the authorization.
-      final ServletContext servletContext = getServletContext();
-      if (!HttpServer2.isStaticUserAndNoneAuthType(servletContext, request) &&
-          !isInstrumentationAccessAllowed(request, response)) {
+      if (!isInstrumentationAccessAllowed(request, response)) {
         return;
       }
       JsonGenerator jg = null;

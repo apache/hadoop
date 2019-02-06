@@ -23,8 +23,8 @@ import java.util.TreeMap;
 import java.util.Map.Entry;
 import java.util.Iterator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.Reducer;
@@ -36,7 +36,7 @@ import org.apache.hadoop.mapred.Reducer;
  */
 public abstract class JobBase implements Mapper, Reducer {
 
-  public static final Log LOG = LogFactory.getLog("datajoin.job");
+  public static final Logger LOG = LoggerFactory.getLogger("datajoin.job");
 
   private SortedMap<Object, Long> longCounters = null;
 

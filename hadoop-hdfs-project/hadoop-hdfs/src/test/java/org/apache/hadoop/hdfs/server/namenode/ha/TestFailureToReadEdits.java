@@ -20,9 +20,9 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyObject;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 
@@ -33,8 +33,8 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -48,7 +48,6 @@ import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster.Builder;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
-import org.apache.hadoop.hdfs.server.namenode.MetaRecoveryContext;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -66,8 +65,8 @@ import com.google.common.collect.ImmutableList;
 
 @RunWith(Parameterized.class)
 public class TestFailureToReadEdits {
-  private static final Log LOG =
-      LogFactory.getLog(TestFailureToReadEdits.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestFailureToReadEdits.class);
 
   private static final String TEST_DIR1 = "/test1";
   private static final String TEST_DIR2 = "/test2";
@@ -340,8 +339,7 @@ public class TestFailureToReadEdits {
     FSEditLog spyEditLog = NameNodeAdapter.spyOnEditLog(nn1);
     LimitedEditLogAnswer answer = new LimitedEditLogAnswer(); 
     doAnswer(answer).when(spyEditLog).selectInputStreams(
-        anyLong(), anyLong(), (MetaRecoveryContext)anyObject(), anyBoolean(),
-        anyBoolean());
+        anyLong(), anyLong(), any(), anyBoolean(), anyBoolean());
     return answer;
   }
   

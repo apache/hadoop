@@ -37,7 +37,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicat
  * constraints
  */
 public class MaxRunningAppsEnforcer {
-  private static final Log LOG = LogFactory.getLog(FairScheduler.class);
+  private static final Log LOG = LogFactory.getLog(
+      MaxRunningAppsEnforcer.class);
   
   private final FairScheduler scheduler;
 

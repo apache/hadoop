@@ -28,8 +28,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collection;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
@@ -49,18 +49,19 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.hdfs.util.BestEffortLongFile;
 import org.apache.hadoop.hdfs.util.PersistentLongFile;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.Whitebox;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.base.Joiner;
-import org.mockito.internal.util.reflection.Whitebox;
 
 /**
  * Tests for upgrading with HA enabled.
  */
 public class TestDFSUpgradeWithHA {
 
-  private static final Log LOG = LogFactory.getLog(TestDFSUpgradeWithHA.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDFSUpgradeWithHA.class);
   
   private Configuration conf;
   

@@ -42,7 +42,6 @@ import java.util.Objects;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 @ApiModel(description = "A config file that needs to be created and made available as a volume in an service component container.")
-@javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
 @XmlRootElement
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ConfigFile implements Serializable {
@@ -55,7 +54,8 @@ public class ConfigFile implements Serializable {
   @XmlEnum
   public enum TypeEnum {
     XML("XML"), PROPERTIES("PROPERTIES"), JSON("JSON"), YAML("YAML"), TEMPLATE(
-        "TEMPLATE"), HADOOP_XML("HADOOP_XML"),;
+        "TEMPLATE"), HADOOP_XML("HADOOP_XML"), STATIC("STATIC"), ARCHIVE(
+        "ARCHIVE");
 
     private String value;
 
@@ -199,7 +199,8 @@ public class ConfigFile implements Serializable {
     ConfigFile configFile = (ConfigFile) o;
     return Objects.equals(this.type, configFile.type)
         && Objects.equals(this.destFile, configFile.destFile)
-        && Objects.equals(this.srcFile, configFile.srcFile);
+        && Objects.equals(this.srcFile, configFile.srcFile)
+        && Objects.equals(this.properties, configFile.properties);
   }
 
   @Override

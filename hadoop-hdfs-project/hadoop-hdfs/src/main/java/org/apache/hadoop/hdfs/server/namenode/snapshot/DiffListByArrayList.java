@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -76,5 +78,11 @@ public class DiffListByArrayList<T extends Comparable<Integer>>
   @Override
   public Iterator<T> iterator() {
     return list.iterator();
+  }
+
+  @Override
+  public List<T> getMinListForRange(int startIndex, int endIndex,
+      INodeDirectory dir) {
+    return list.subList(startIndex, endIndex);
   }
 }

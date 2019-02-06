@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -25,11 +30,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 /**
  * Calculate how much resources need to be preempted for each queue,
@@ -41,8 +41,6 @@ public class PreemptableResourceCalculator
   private static final Log LOG =
       LogFactory.getLog(PreemptableResourceCalculator.class);
 
-  private boolean isReservedPreemptionCandidatesSelector;
-
   /**
    * PreemptableResourceCalculator constructor
    *
@@ -50,11 +48,14 @@ public class PreemptableResourceCalculator
    * @param isReservedPreemptionCandidatesSelector this will be set by
    * different implementation of candidate selectors, please refer to
    * TempQueuePerPartition#offer for details.
+   * @param allowQueuesBalanceAfterAllQueuesSatisfied
    */
   public PreemptableResourceCalculator(
       CapacitySchedulerPreemptionContext preemptionContext,
-      boolean isReservedPreemptionCandidatesSelector) {
-    super(preemptionContext, isReservedPreemptionCandidatesSelector);
+      boolean isReservedPreemptionCandidatesSelector,
+      boolean allowQueuesBalanceAfterAllQueuesSatisfied) {
+    super(preemptionContext, isReservedPreemptionCandidatesSelector,
+        allowQueuesBalanceAfterAllQueuesSatisfied);
   }
 
   /**
@@ -70,7 +71,7 @@ public class PreemptableResourceCalculator
    * @param totalPreemptionAllowed total amount of preemption we allow
    * @param tot_guarant the amount of capacity assigned to this pool of queues
    */
-  private void computeIdealResourceDistribution(ResourceCalculator rc,
+  protected void computeIdealResourceDistribution(ResourceCalculator rc,
       List<TempQueuePerPartition> queues, Resource totalPreemptionAllowed,
       Resource tot_guarant) {
 
@@ -95,8 +96,8 @@ public class PreemptableResourceCalculator
     }
 
     // first compute the allocation as a fixpoint based on guaranteed capacity
-    computeFixpointAllocation(tot_guarant, nonZeroGuarQueues, unassigned,
-        false);
+    computeFixpointAllocation(tot_guarant, new HashSet<>(nonZeroGuarQueues),
+        unassigned, false);
 
     // if any capacity is left unassigned, distributed among zero-guarantee
     // queues uniformly (i.e., not based on guaranteed capacity, as this is zero)
@@ -138,14 +139,13 @@ public class PreemptableResourceCalculator
   /**
    * This method recursively computes the ideal assignment of resources to each
    * level of the hierarchy. This ensures that leafs that are over-capacity but
-   * with parents within capacity will not be preemptionCandidates. Preemptions are allowed
-   * within each subtree according to local over/under capacity.
+   * with parents within capacity will not be preemptionCandidates. Preemptions
+   * are allowed within each subtree according to local over/under capacity.
    *
    * @param root the root of the cloned queue hierachy
    * @param totalPreemptionAllowed maximum amount of preemption allowed
-   * @return a list of leaf queues updated with preemption targets
    */
-  private void recursivelyComputeIdealAssignment(
+  protected void recursivelyComputeIdealAssignment(
       TempQueuePerPartition root, Resource totalPreemptionAllowed) {
     if (root.getChildren() != null &&
         root.getChildren().size() > 0) {
@@ -198,8 +198,11 @@ public class PreemptableResourceCalculator
            */
           Resource resToObtain = qT.toBePreempted;
           if (!isReservedPreemptionCandidatesSelector) {
-            resToObtain = Resources.multiply(qT.toBePreempted,
-                context.getNaturalTerminationFactor());
+            if (Resources.greaterThan(rc, clusterResource, resToObtain,
+                Resource.newInstance(0, 0))) {
+              resToObtain = Resources.multiplyAndNormalizeUp(rc, qT.toBePreempted,
+                  context.getNaturalTerminationFactor(), Resource.newInstance(1, 1));
+            }
           }
 
           // Only add resToObtain when it >= 0
@@ -242,7 +245,7 @@ public class PreemptableResourceCalculator
 
       // compute the ideal distribution of resources among queues
       // updates cloned queues state accordingly
-      tRoot.idealAssigned = tRoot.getGuaranteed();
+      tRoot.initializeRootIdealWithGuarangeed();
       recursivelyComputeIdealAssignment(tRoot, totalPreemptionAllowed);
     }
 

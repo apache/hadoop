@@ -97,8 +97,12 @@ export default DS.Model.extend({
       label: "Decomissioned",
       value: this.get("decommissionedNodes")
     });
+    arr.push({
+      label: "Lost",
+      value: this.get("lostNodes")
+    });
     return arr;
-  }.property("activeNodes", "unhealthyNodes", "decommissioningNodes", "decommissionedNodes"),
+  }.property("activeNodes", "unhealthyNodes", "decommissioningNodes", "decommissionedNodes", "lostNodes"),
 
   getMemoryDataForDonutChart: function() {
     var type = "MB";

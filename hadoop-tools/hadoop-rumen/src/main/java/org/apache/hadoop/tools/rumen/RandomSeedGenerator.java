@@ -21,8 +21,8 @@ import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The purpose of this class is to generate new random seeds from a master
@@ -42,7 +42,7 @@ import org.apache.commons.logging.LogFactory;
  * http://www.iro.umontreal.ca/~lecuyer/myftp/streams00/
  */
 public class RandomSeedGenerator {
-  private static Log LOG = LogFactory.getLog(RandomSeedGenerator.class);
+  private static Logger LOG = LoggerFactory.getLogger(RandomSeedGenerator.class);
   private static final Charset UTF_8 = Charset.forName("UTF-8");
   
   /** MD5 algorithm instance, one for each thread. */

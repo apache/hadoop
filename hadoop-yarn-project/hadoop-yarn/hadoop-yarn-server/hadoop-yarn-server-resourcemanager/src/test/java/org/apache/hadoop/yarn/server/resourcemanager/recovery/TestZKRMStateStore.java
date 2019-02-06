@@ -25,6 +25,7 @@ import org.apache.curator.test.TestingServer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.io.Text;
@@ -35,7 +36,9 @@ import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerLaunchContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Event;
@@ -49,6 +52,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -83,6 +87,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -202,10 +207,11 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
 
     private RMStateStore createStore(Configuration conf) throws Exception {
       workingZnode = "/jira/issue/3077/rmstore";
-      conf.set(YarnConfiguration.RM_ZK_ADDRESS,
+      conf.set(CommonConfigurationKeys.ZK_ADDRESS,
           curatorTestingServer.getConnectString());
       conf.set(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH, workingZnode);
       conf.setLong(YarnConfiguration.RM_EPOCH, epoch);
+      conf.setLong(YarnConfiguration.RM_EPOCH_RANGE, getEpochRange());
       this.store = new TestZKRMStateStoreInternal(conf, workingZnode);
       return this.store;
     }
@@ -283,6 +289,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     testReservationStateStore(zkTester);
     ((TestZKRMStateStoreTester.TestZKRMStateStoreInternal)
         zkTester.getRMStateStore()).testRetryingCreateRootDir();
+    testProxyCA(zkTester);
   }
 
   @Test
@@ -334,7 +341,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
       public RMStateStore getRMStateStore() throws Exception {
         YarnConfiguration conf = new YarnConfiguration();
         workingZnode = "/jira/issue/3077/rmstore";
-        conf.set(YarnConfiguration.RM_ZK_ADDRESS,
+        conf.set(CommonConfigurationKeys.ZK_ADDRESS,
             curatorTestingServer.getConnectString());
         conf.set(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH, workingZnode);
         this.store = new TestZKRMStateStoreInternal(conf, workingZnode) {
@@ -375,9 +382,9 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     conf.set(YarnConfiguration.RM_HA_IDS, rmIds);
     conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
     conf.set(YarnConfiguration.RM_STORE, ZKRMStateStore.class.getName());
-    conf.set(YarnConfiguration.RM_ZK_ADDRESS,
+    conf.set(CommonConfigurationKeys.ZK_ADDRESS,
         curatorTestServer.getConnectString());
-    conf.setInt(YarnConfiguration.RM_ZK_TIMEOUT_MS, ZK_TIMEOUT_MS);
+    conf.setInt(CommonConfigurationKeys.ZK_TIMEOUT_MS, ZK_TIMEOUT_MS);
     conf.set(YarnConfiguration.RM_HA_ID, rmId);
     conf.set(YarnConfiguration.RM_WEBAPP_ADDRESS, "localhost:0");
     conf.setBoolean(
@@ -414,31 +421,37 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
   public void testZKRootPathAcls() throws Exception {
     StateChangeRequestInfo req = new StateChangeRequestInfo(
         HAServiceProtocol.RequestSource.REQUEST_BY_USER);
-    String rootPath =
-        YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_PARENT_PATH + "/" +
-            ZKRMStateStore.ROOT_ZNODE_NAME;
+    String parentPath = YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_PARENT_PATH;
+    String rootPath = parentPath + "/" + ZKRMStateStore.ROOT_ZNODE_NAME;
 
     // Start RM with HA enabled
     Configuration conf =
         createHARMConf("rm1,rm2", "rm1", 1234, false, curatorTestingServer);
+    conf.set(YarnConfiguration.RM_ZK_ACL, "world:anyone:rwca");
+    int perm = 23;// rwca=1+2+4+16
     ResourceManager rm = new MockRM(conf);
     rm.start();
     rm.getRMContext().getRMAdminService().transitionToActive(req);
-    List<ACL> acls =
-        ((ZKRMStateStore)rm.getRMContext().getStateStore()).getACL(rootPath);
+    ZKRMStateStore stateStore = (ZKRMStateStore) rm.getRMContext().getStateStore();
+    List<ACL> acls = stateStore.getACL(rootPath);
     assertEquals(acls.size(), 2);
     // CREATE and DELETE permissions for root node based on RM ID
     verifyZKACL("digest", "localhost", Perms.CREATE | Perms.DELETE, acls);
     verifyZKACL(
         "world", "anyone", Perms.ALL ^ (Perms.CREATE | Perms.DELETE), acls);
+
+    acls = stateStore.getACL(parentPath);
+    assertEquals(1, acls.size());
+    assertEquals(perm, acls.get(0).getPerms());
     rm.close();
 
     // Now start RM with HA disabled. NoAuth Exception should not be thrown.
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, false);
+    conf.set(YarnConfiguration.RM_ZK_ACL, YarnConfiguration.DEFAULT_RM_ZK_ACL);
     rm = new MockRM(conf);
     rm.start();
     rm.getRMContext().getRMAdminService().transitionToActive(req);
-    acls = ((ZKRMStateStore)rm.getRMContext().getStateStore()).getACL(rootPath);
+    acls = stateStore.getACL(rootPath);
     assertEquals(acls.size(), 1);
     verifyZKACL("world", "anyone", Perms.ALL, acls);
     rm.close();
@@ -448,7 +461,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     rm = new MockRM(conf);
     rm.start();
     rm.getRMContext().getRMAdminService().transitionToActive(req);
-    acls = ((ZKRMStateStore)rm.getRMContext().getStateStore()).getACL(rootPath);
+    acls = stateStore.getACL(rootPath);
     assertEquals(acls.size(), 2);
     verifyZKACL("digest", "localhost", Perms.CREATE | Perms.DELETE, acls);
     verifyZKACL(
@@ -786,7 +799,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
       long finishTime, boolean isFinished) {
     return ApplicationStateData.newInstance(submitTime, startTime, "test",
         ctxt, isFinished ? RMAppState.FINISHED : null, isFinished ?
-        "appDiagnostics" : "", isFinished ? finishTime : 0, null);
+        "appDiagnostics" : "", 0, isFinished ? finishTime : 0, null);
   }
 
   private static ApplicationAttemptStateData createFinishedAttempt(
@@ -845,6 +858,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
       ApplicationSubmissionContext context =
           new ApplicationSubmissionContextPBImpl();
       context.setApplicationId(appId);
+      context.setAMContainerSpec(new ContainerLaunchContextPBImpl());
       appStateNew = createAppState(context, submitTime, startTime, finishTime,
           true);
     } else {
@@ -1486,6 +1500,67 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     sequenceNumber++;
     storeUpdateAndVerifyDelegationToken(zkTester, tokensWithRenewal,
         tokensWithIndex, sequenceNumber, 3);
+    store.close();
+  }
+
+  @Test
+  public void testAppSubmissionContextIsPrunedInFinalApplicationState()
+      throws Exception {
+    TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester();
+    ApplicationId appId = ApplicationId.fromString("application_1234_0010");
+
+    Configuration conf = createConfForDelegationTokenNodeSplit(1);
+    RMStateStore store = zkTester.getRMStateStore(conf);
+    ApplicationSubmissionContext ctx =
+        new ApplicationSubmissionContextPBImpl();
+    ctx.setApplicationId(appId);
+    ctx.setQueue("a_queue");
+    ContainerLaunchContextPBImpl containerLaunchCtx =
+        new ContainerLaunchContextPBImpl();
+    containerLaunchCtx.setCommands(Collections.singletonList("a_command"));
+    ctx.setAMContainerSpec(containerLaunchCtx);
+    Resource resource = new ResourcePBImpl();
+    resource.setMemorySize(17L);
+    ctx.setResource(resource);
+    Map<String, String> schedulingPropertiesMap =
+        Collections.singletonMap("a_key", "a_value");
+    ctx.setApplicationSchedulingPropertiesMap(schedulingPropertiesMap);
+    ApplicationStateDataPBImpl appState = new ApplicationStateDataPBImpl();
+    appState.setState(RMAppState.RUNNING);
+    appState.setApplicationSubmissionContext(ctx);
+    store.storeApplicationStateInternal(appId, appState);
+
+    RMState rmState = store.loadState();
+    assertEquals(1, rmState.getApplicationState().size());
+    ctx = rmState.getApplicationState().get(appId)
+        .getApplicationSubmissionContext();
+
+    appState.setState(RMAppState.RUNNING);
+    store.handleStoreEvent(new RMStateUpdateAppEvent(appState, false, null));
+
+    rmState = store.loadState();
+    ctx = rmState.getApplicationState().get(appId)
+        .getApplicationSubmissionContext();
+
+    assertEquals("ApplicationSchedulingPropertiesMap should not have been "
+        + "pruned from the application submission context before the "
+        + "FINISHED state",
+        schedulingPropertiesMap, ctx.getApplicationSchedulingPropertiesMap());
+
+    appState.setState(RMAppState.FINISHED);
+    store.handleStoreEvent(new RMStateUpdateAppEvent(appState, false, null));
+
+    rmState = store.loadState();
+    ctx = rmState.getApplicationState().get(appId)
+        .getApplicationSubmissionContext();
+
+    assertEquals(appId, ctx.getApplicationId());
+    assertEquals("a_queue", ctx.getQueue());
+    assertNotNull(ctx.getAMContainerSpec());
+    assertEquals(17L, ctx.getResource().getMemorySize());
+    assertEquals("ApplicationSchedulingPropertiesMap should have been pruned"
+        + " from the application submission context when in FINISHED STATE",
+        Collections.emptyMap(), ctx.getApplicationSchedulingPropertiesMap());
     store.close();
   }
 }

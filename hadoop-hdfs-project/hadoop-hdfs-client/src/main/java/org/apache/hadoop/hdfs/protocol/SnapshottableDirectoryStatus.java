@@ -79,6 +79,14 @@ public class SnapshottableDirectoryStatus {
     this.parentFullPath = parentFullPath;
   }
 
+  public SnapshottableDirectoryStatus(HdfsFileStatus dirStatus,
+      int snapshotNumber, int snapshotQuota, byte[] parentFullPath) {
+    this.dirStatus = dirStatus;
+    this.snapshotNumber = snapshotNumber;
+    this.snapshotQuota = snapshotQuota;
+    this.parentFullPath = parentFullPath;
+  }
+
   /**
    * @return Number of snapshots that have been taken for the directory
    */

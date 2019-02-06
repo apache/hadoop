@@ -54,9 +54,10 @@ public abstract class TimelineV2Client extends CompositeService {
 
   /**
    * <p>
-   * Send the information of a number of conceptual entities to the timeline
-   * service v.2 collector. It is a blocking API. The method will not return
-   * until all the put entities have been persisted.
+   * Send the information of a number of conceptual entities within the scope
+   * of YARN application to the timeline service v.2 collector. It is a blocking
+   * API. The method will not return until all the put entities have been
+   * persisted.
    * </p>
    *
    * @param entities the collection of {@link TimelineEntity}
@@ -69,9 +70,10 @@ public abstract class TimelineV2Client extends CompositeService {
 
   /**
    * <p>
-   * Send the information of a number of conceptual entities to the timeline
-   * service v.2 collector. It is an asynchronous API. The method will return
-   * once all the entities are received.
+   * Send the information of a number of conceptual entities within the scope
+   * of YARN application to the timeline service v.2 collector. It is an
+   * asynchronous API. The method will return once all the entities are
+   * received.
    * </p>
    *
    * @param entities the collection of {@link TimelineEntity}
@@ -93,4 +95,37 @@ public abstract class TimelineV2Client extends CompositeService {
    * address and timeline delegation token.
    */
   public abstract void setTimelineCollectorInfo(CollectorInfo collectorInfo);
+
+
+  /**
+   * <p>
+   * Send the information of a number of conceptual entities within the scope of
+   * a sub-application to the timeline service v.2 collector. It is a blocking
+   * API. The method will not return until all the put entities have been
+   * persisted.
+   * </p>
+   *
+   * @param entities the collection of {@link TimelineEntity}
+   * @throws IOException  if there are I/O errors
+   * @throws YarnException if entities are incomplete/invalid
+   */
+  @Public
+  public abstract void putSubAppEntities(TimelineEntity... entities)
+      throws IOException, YarnException;
+
+  /**
+   * <p>
+   * Send the information of a number of conceptual entities within the scope of
+   * a sub-application to the timeline service v.2 collector. It is an
+   * asynchronous API. The method will return once all the entities are received
+   * .
+   * </p>
+   *
+   * @param entities the collection of {@link TimelineEntity}
+   * @throws IOException  if there are I/O errors
+   * @throws YarnException if entities are incomplete/invalid
+   */
+  @Public
+  public abstract void putSubAppEntitiesAsync(TimelineEntity... entities)
+      throws IOException, YarnException;
 }

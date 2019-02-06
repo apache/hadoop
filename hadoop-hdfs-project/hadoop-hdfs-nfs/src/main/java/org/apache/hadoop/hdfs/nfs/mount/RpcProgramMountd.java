@@ -26,8 +26,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.HashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
@@ -61,7 +61,8 @@ import com.google.common.annotations.VisibleForTesting;
  * RPC program corresponding to mountd daemon. See {@link Mountd}.
  */
 public class RpcProgramMountd extends RpcProgram implements MountInterface {
-  private static final Log LOG = LogFactory.getLog(RpcProgramMountd.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RpcProgramMountd.class);
   public static final int PROGRAM = 100005;
   public static final int VERSION_1 = 1;
   public static final int VERSION_2 = 2;

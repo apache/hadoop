@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azure;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -65,7 +66,8 @@ public class TestShellDecryptionKeyProvider
     // Create a simple script which echoes the given key plus the given
     // expected result (so that we validate both script input and output)
     File scriptFile = new File(TEST_ROOT_DIR, "testScript.cmd");
-    FileUtils.writeStringToFile(scriptFile, "@echo %1 " + expectedResult);
+    FileUtils.writeStringToFile(scriptFile, "@echo %1 " + expectedResult,
+            StandardCharsets.UTF_8);
 
     ShellDecryptionKeyProvider provider = new ShellDecryptionKeyProvider();
     Configuration conf = new Configuration();

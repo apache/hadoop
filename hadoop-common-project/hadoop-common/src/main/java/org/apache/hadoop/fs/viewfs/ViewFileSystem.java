@@ -811,6 +811,13 @@ public class ViewFileSystem extends FileSystem {
   }
 
   @Override
+  public void satisfyStoragePolicy(Path src) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res =
+        fsState.resolve(getUriPath(src), true);
+    res.targetFileSystem.satisfyStoragePolicy(res.remainingPath);
+  }
+
+  @Override
   public void setStoragePolicy(Path src, String policyName) throws IOException {
     InodeTree.ResolveResult<FileSystem> res = fsState.resolve(getUriPath(src),
         true);
@@ -1243,6 +1250,12 @@ public class ViewFileSystem extends FileSystem {
     @Override
     public QuotaUsage getQuotaUsage(Path f) throws IOException {
       throw new NotInMountpointException(f, "getQuotaUsage");
+    }
+
+    @Override
+    public void satisfyStoragePolicy(Path src) throws IOException {
+      checkPathIsSlash(src);
+      throw readOnlyMountTable("satisfyStoragePolicy", src);
     }
 
     @Override

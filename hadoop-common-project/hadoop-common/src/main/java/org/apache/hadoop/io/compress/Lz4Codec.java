@@ -61,9 +61,9 @@ public class Lz4Codec implements Configurable, CompressionCodec {
   }
 
   /**
-   * Are the native lz4 libraries loaded & initialized?
+   * Are the native lz4 libraries loaded &amp; initialized?
    *
-   * @return true if loaded & initialized, otherwise false
+   * @return true if loaded &amp; initialized, otherwise false
    */
   public static boolean isNativeCodeLoaded() {
     return NativeCodeLoader.isNativeCodeLoaded();

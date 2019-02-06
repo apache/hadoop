@@ -94,6 +94,26 @@ public abstract class QueueInfo {
     return queueInfo;
   }
 
+  @Private
+  @Unstable
+  public static QueueInfo newInstance(String queueName, float capacity,
+      float maximumCapacity, float currentCapacity,
+      List<QueueInfo> childQueues, List<ApplicationReport> applications,
+      QueueState queueState, Set<String> accessibleNodeLabels,
+      String defaultNodeLabelExpression, QueueStatistics queueStatistics,
+      boolean preemptionDisabled,
+      Map<String, QueueConfigurations> queueConfigurations,
+      boolean intraQueuePreemptionDisabled) {
+    QueueInfo queueInfo = QueueInfo.newInstance(queueName, capacity,
+        maximumCapacity, currentCapacity,
+        childQueues, applications,
+        queueState, accessibleNodeLabels,
+        defaultNodeLabelExpression, queueStatistics,
+        preemptionDisabled, queueConfigurations);
+    queueInfo.setIntraQueuePreemptionDisabled(intraQueuePreemptionDisabled);
+    return queueInfo;
+  }
+
   /**
    * Get the <em>name</em> of the queue.
    * @return <em>name</em> of the queue
@@ -261,4 +281,19 @@ public abstract class QueueInfo {
   @Unstable
   public abstract void setQueueConfigurations(
       Map<String, QueueConfigurations> queueConfigurations);
+
+
+  /**
+   * Get the intra-queue preemption status of the queue.
+   * @return if property is not in proto, return null;
+   *        otherwise, return intra-queue preemption status of the queue
+   */
+  @Public
+  @Stable
+  public abstract Boolean getIntraQueuePreemptionDisabled();
+
+  @Private
+  @Unstable
+  public abstract void setIntraQueuePreemptionDisabled(
+      boolean intraQueuePreemptionDisabled);
 }

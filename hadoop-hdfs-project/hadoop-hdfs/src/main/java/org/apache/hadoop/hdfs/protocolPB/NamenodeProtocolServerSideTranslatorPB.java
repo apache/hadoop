@@ -35,6 +35,8 @@ import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetEditLogMa
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetEditLogManifestResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetMostRecentCheckpointTxIdRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetMostRecentCheckpointTxIdResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetNextSPSPathRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetNextSPSPathResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetTransactionIdRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetTransactionIdResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.IsRollingUpgradeRequestProto;
@@ -86,7 +88,8 @@ public class NamenodeProtocolServerSideTranslatorPB implements
         .build();
     BlocksWithLocations blocks;
     try {
-      blocks = impl.getBlocks(dnInfo, request.getSize());
+      blocks = impl.getBlocks(dnInfo, request.getSize(),
+          request.getMinBlockSize());
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -255,5 +258,21 @@ public class NamenodeProtocolServerSideTranslatorPB implements
     }
     return IsRollingUpgradeResponseProto.newBuilder()
         .setIsRollingUpgrade(isRollingUpgrade).build();
+  }
+
+  @Override
+  public GetNextSPSPathResponseProto getNextSPSPath(
+      RpcController controller, GetNextSPSPathRequestProto request)
+          throws ServiceException {
+    try {
+      Long nextSPSPath = impl.getNextSPSPath();
+      if (nextSPSPath == null) {
+        return GetNextSPSPathResponseProto.newBuilder().build();
+      }
+      return GetNextSPSPathResponseProto.newBuilder().setSpsPath(nextSPSPath)
+          .build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 }

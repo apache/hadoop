@@ -18,22 +18,20 @@
 
 package org.apache.hadoop.fs;
 
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertNotSame;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+
 import org.junit.Test;
 import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.Semaphore;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
@@ -42,14 +40,13 @@ public class TestFileSystemCaching {
 
   @Test
   public void testCacheEnabled() throws Exception {
-    Configuration conf = new Configuration();
-    conf.set("fs.cachedfile.impl", FileSystem.getFileSystemClass("file", null).getName());
+    Configuration conf = newConf();
     FileSystem fs1 = FileSystem.get(new URI("cachedfile://a"), conf);
     FileSystem fs2 = FileSystem.get(new URI("cachedfile://a"), conf);
     assertSame(fs1, fs2);
   }
 
-  static class DefaultFs extends LocalFileSystem {
+  private static class DefaultFs extends LocalFileSystem {
     URI uri;
     @Override
     public void initialize(URI uri, Configuration conf) {
@@ -67,43 +64,30 @@ public class TestFileSystemCaching {
     conf.set("fs.defaultfs.impl", DefaultFs.class.getName());
     final URI defaultUri = URI.create("defaultfs://host");
     FileSystem.setDefaultUri(conf, defaultUri);
-    FileSystem fs = null;
-    
+
     // sanity check default fs
     final FileSystem defaultFs = FileSystem.get(conf);
     assertEquals(defaultUri, defaultFs.getUri());
     
     // has scheme, no auth
-    fs = FileSystem.get(URI.create("defaultfs:/"), conf);
-    assertSame(defaultFs, fs);
-    fs = FileSystem.get(URI.create("defaultfs:///"), conf);
-    assertSame(defaultFs, fs);
+    assertSame(defaultFs, FileSystem.get(URI.create("defaultfs:/"), conf));
+    assertSame(defaultFs, FileSystem.get(URI.create("defaultfs:///"), conf));
     
     // has scheme, same auth
-    fs = FileSystem.get(URI.create("defaultfs://host"), conf);
-    assertSame(defaultFs, fs);
+    assertSame(defaultFs, FileSystem.get(URI.create("defaultfs://host"), conf));
     
     // has scheme, different auth
-    fs = FileSystem.get(URI.create("defaultfs://host2"), conf);
-    assertNotSame(defaultFs, fs);
+    assertNotSame(defaultFs,
+        FileSystem.get(URI.create("defaultfs://host2"), conf));
     
     // no scheme, no auth
-    fs = FileSystem.get(URI.create("/"), conf);
-    assertSame(defaultFs, fs);
+    assertSame(defaultFs, FileSystem.get(URI.create("/"), conf));
     
     // no scheme, same auth
-    try {
-      fs = FileSystem.get(URI.create("//host"), conf);
-      fail("got fs with auth but no scheme");
-    } catch (UnsupportedFileSystemException e) {
-    }
-
-    // no scheme, different auth
-    try {
-      fs = FileSystem.get(URI.create("//host2"), conf);
-      fail("got fs with auth but no scheme");
-    } catch (UnsupportedFileSystemException e) {
-    }
+    intercept(UnsupportedFileSystemException.class,
+        () -> FileSystem.get(URI.create("//host"), conf));
+    intercept(UnsupportedFileSystemException.class,
+        () -> FileSystem.get(URI.create("//host2"), conf));
   }
   
   public static class InitializeForeverFileSystem extends LocalFileSystem {
@@ -132,9 +116,7 @@ public class TestFileSystemCaching {
          "TestFileSystemCaching$InitializeForeverFileSystem");
         try {
           FileSystem.get(new URI("localfs1://a"), conf);
-        } catch (IOException e) {
-          e.printStackTrace();
-        } catch (URISyntaxException e) {
+        } catch (IOException | URISyntaxException e) {
           e.printStackTrace();
         }
       }
@@ -162,31 +144,15 @@ public class TestFileSystemCaching {
   @SuppressWarnings("unchecked")
   @Test
   public <T extends TokenIdentifier> void testCacheForUgi() throws Exception {
-    final Configuration conf = new Configuration();
-    conf.set("fs.cachedfile.impl", FileSystem.getFileSystemClass("file", null).getName());
+    final Configuration conf = newConf();
     UserGroupInformation ugiA = UserGroupInformation.createRemoteUser("foo");
     UserGroupInformation ugiB = UserGroupInformation.createRemoteUser("bar");
-    FileSystem fsA = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
-      @Override
-      public FileSystem run() throws Exception {
-        return FileSystem.get(new URI("cachedfile://a"), conf);
-      }
-    });
-    FileSystem fsA1 = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
-      @Override
-      public FileSystem run() throws Exception {
-        return FileSystem.get(new URI("cachedfile://a"), conf);
-      }
-    });
+    FileSystem fsA = getCachedFS(ugiA, conf);
+    FileSystem fsA1 = getCachedFS(ugiA, conf);
     //Since the UGIs are the same, we should have the same filesystem for both
     assertSame(fsA, fsA1);
     
-    FileSystem fsB = ugiB.doAs(new PrivilegedExceptionAction<FileSystem>() {
-      @Override
-      public FileSystem run() throws Exception {
-        return FileSystem.get(new URI("cachedfile://a"), conf);
-      }
-    });
+    FileSystem fsB = getCachedFS(ugiB, conf);
     //Since the UGIs are different, we should end up with different filesystems
     //corresponding to the two UGIs
     assertNotSame(fsA, fsB);
@@ -194,47 +160,56 @@ public class TestFileSystemCaching {
     Token<T> t1 = mock(Token.class);
     UserGroupInformation ugiA2 = UserGroupInformation.createRemoteUser("foo");
     
-    fsA = ugiA2.doAs(new PrivilegedExceptionAction<FileSystem>() {
-      @Override
-      public FileSystem run() throws Exception {
-        return FileSystem.get(new URI("cachedfile://a"), conf);
-      }
-    });
+    fsA = getCachedFS(ugiA2, conf);
     // Although the users in the UGI are same, they have different subjects
     // and so are different.
     assertNotSame(fsA, fsA1);
     
     ugiA.addToken(t1);
     
-    fsA = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
-      @Override
-      public FileSystem run() throws Exception {
-        return FileSystem.get(new URI("cachedfile://a"), conf);
-      }
-    });
+    fsA = getCachedFS(ugiA, conf);
     // Make sure that different UGI's with the same subject lead to the same
     // file system.
     assertSame(fsA, fsA1);
   }
-  
+
+  /**
+   * Get the cached filesystem for "cachedfile://a" for the supplied user
+   * @param ugi user
+   * @param conf configuration
+   * @return the filesystem
+   * @throws IOException failure to get/init
+   * @throws InterruptedException part of the signature of UGI.doAs()
+   */
+  private FileSystem getCachedFS(UserGroupInformation ugi, Configuration conf)
+      throws IOException, InterruptedException {
+    return ugi.doAs((PrivilegedExceptionAction<FileSystem>)
+            () -> FileSystem.get(new URI("cachedfile://a"), conf));
+  }
+
   @Test
   public void testUserFS() throws Exception {
-    final Configuration conf = new Configuration();
-    conf.set("fs.cachedfile.impl", FileSystem.getFileSystemClass("file", null).getName());
+    final Configuration conf = newConf();
     FileSystem fsU1 = FileSystem.get(new URI("cachedfile://a"), conf, "bar");
     FileSystem fsU2 = FileSystem.get(new URI("cachedfile://a"), conf, "foo");
     
     assertNotSame(fsU1, fsU2);   
   }
-  
+
+  private Configuration newConf() throws IOException {
+    final Configuration conf = new Configuration();
+    conf.set("fs.cachedfile.impl",
+        FileSystem.getFileSystemClass("file", null).getName());
+    return conf;
+  }
+
   @Test
   public void testFsUniqueness() throws Exception {
-    final Configuration conf = new Configuration();
-    conf.set("fs.cachedfile.impl", FileSystem.getFileSystemClass("file", null).getName());
+    final Configuration conf = newConf();
     // multiple invocations of FileSystem.get return the same object.
     FileSystem fs1 = FileSystem.get(conf);
     FileSystem fs2 = FileSystem.get(conf);
-    assertTrue(fs1 == fs2);
+    assertSame(fs1, fs2);
 
     // multiple invocations of FileSystem.newInstance return different objects
     fs1 = FileSystem.newInstance(new URI("cachedfile://a"), conf, "bar");
@@ -246,33 +221,17 @@ public class TestFileSystemCaching {
   
   @Test
   public void testCloseAllForUGI() throws Exception {
-    final Configuration conf = new Configuration();
-    conf.set("fs.cachedfile.impl", FileSystem.getFileSystemClass("file", null).getName());
+    final Configuration conf = newConf();
     UserGroupInformation ugiA = UserGroupInformation.createRemoteUser("foo");
-    FileSystem fsA = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
-      @Override
-      public FileSystem run() throws Exception {
-        return FileSystem.get(new URI("cachedfile://a"), conf);
-      }
-    });
+    FileSystem fsA = getCachedFS(ugiA, conf);
     //Now we should get the cached filesystem
-    FileSystem fsA1 = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
-      @Override
-      public FileSystem run() throws Exception {
-        return FileSystem.get(new URI("cachedfile://a"), conf);
-      }
-    });
+    FileSystem fsA1 = getCachedFS(ugiA, conf);
     assertSame(fsA, fsA1);
     
     FileSystem.closeAllForUGI(ugiA);
     
     //Now we should get a different (newly created) filesystem
-    fsA1 = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
-      @Override
-      public FileSystem run() throws Exception {
-        return FileSystem.get(new URI("cachedfile://a"), conf);
-      }
-    });
+    fsA1 = getCachedFS(ugiA, conf);
     assertNotSame(fsA, fsA1);
   }
   
@@ -292,16 +251,17 @@ public class TestFileSystemCaching {
   @Test
   public void testDeleteOnExit() throws IOException {
     FileSystem mockFs = mock(FileSystem.class);
-    FileSystem fs = new FilterFileSystem(mockFs);
     Path path = new Path("/a");
+    try (FileSystem fs = new FilterFileSystem(mockFs)) {
 
-    // delete on close if path does exist
-    when(mockFs.getFileStatus(eq(path))).thenReturn(new FileStatus());
-    assertTrue(fs.deleteOnExit(path));
-    verify(mockFs).getFileStatus(eq(path));
-    reset(mockFs);
-    when(mockFs.getFileStatus(eq(path))).thenReturn(new FileStatus());
-    fs.close();
+      // delete on close if path does exist
+      when(mockFs.getFileStatus(eq(path))).thenReturn(new FileStatus());
+      assertTrue(fs.deleteOnExit(path));
+      verify(mockFs).getFileStatus(eq(path));
+      reset(mockFs);
+      when(mockFs.getFileStatus(eq(path))).thenReturn(new FileStatus());
+      fs.close();
+    }
     verify(mockFs).getFileStatus(eq(path));
     verify(mockFs).delete(eq(path), eq(true));
   }
@@ -309,14 +269,16 @@ public class TestFileSystemCaching {
   @Test
   public void testDeleteOnExitFNF() throws IOException {
     FileSystem mockFs = mock(FileSystem.class);
-    FileSystem fs = new FilterFileSystem(mockFs);
-    Path path = new Path("/a");
+    Path path;
+    try (FileSystem fs = new FilterFileSystem(mockFs)) {
+      path = new Path("/a");
 
-    // don't delete on close if path doesn't exist
-    assertFalse(fs.deleteOnExit(path));
-    verify(mockFs).getFileStatus(eq(path));
-    reset(mockFs);
-    fs.close();
+      // don't delete on close if path doesn't exist
+      assertFalse(fs.deleteOnExit(path));
+      verify(mockFs).getFileStatus(eq(path));
+      reset(mockFs);
+      fs.close();
+    }
     verify(mockFs, never()).getFileStatus(eq(path));
     verify(mockFs, never()).delete(any(Path.class), anyBoolean());
   }
@@ -325,15 +287,17 @@ public class TestFileSystemCaching {
   @Test
   public void testDeleteOnExitRemoved() throws IOException {
     FileSystem mockFs = mock(FileSystem.class);
-    FileSystem fs = new FilterFileSystem(mockFs);
-    Path path = new Path("/a");
+    Path path;
+    try (FileSystem fs = new FilterFileSystem(mockFs)) {
+      path = new Path("/a");
 
-    // don't delete on close if path existed, but later removed
-    when(mockFs.getFileStatus(eq(path))).thenReturn(new FileStatus());
-    assertTrue(fs.deleteOnExit(path));
-    verify(mockFs).getFileStatus(eq(path));
-    reset(mockFs);
-    fs.close();
+      // don't delete on close if path existed, but later removed
+      when(mockFs.getFileStatus(eq(path))).thenReturn(new FileStatus());
+      assertTrue(fs.deleteOnExit(path));
+      verify(mockFs).getFileStatus(eq(path));
+      reset(mockFs);
+      fs.close();
+    }
     verify(mockFs).getFileStatus(eq(path));
     verify(mockFs, never()).delete(any(Path.class), anyBoolean());
   }
@@ -341,18 +305,35 @@ public class TestFileSystemCaching {
   @Test
   public void testCancelDeleteOnExit() throws IOException {
     FileSystem mockFs = mock(FileSystem.class);
-    FileSystem fs = new FilterFileSystem(mockFs);
-    Path path = new Path("/a");
+    try (FileSystem fs = new FilterFileSystem(mockFs)) {
+      Path path = new Path("/a");
 
-    // don't delete on close if path existed, but later cancelled
-    when(mockFs.getFileStatus(eq(path))).thenReturn(new FileStatus());
-    assertTrue(fs.deleteOnExit(path));
-    verify(mockFs).getFileStatus(eq(path));
-    assertTrue(fs.cancelDeleteOnExit(path));
-    assertFalse(fs.cancelDeleteOnExit(path)); // false because not registered
-    reset(mockFs);
-    fs.close();
+      // don't delete on close if path existed, but later cancelled
+      when(mockFs.getFileStatus(eq(path))).thenReturn(new FileStatus());
+      assertTrue(fs.deleteOnExit(path));
+      verify(mockFs).getFileStatus(eq(path));
+      assertTrue(fs.cancelDeleteOnExit(path));
+      assertFalse(fs.cancelDeleteOnExit(path)); // false because not registered
+      reset(mockFs);
+      fs.close();
+    }
     verify(mockFs, never()).getFileStatus(any(Path.class));
     verify(mockFs, never()).delete(any(Path.class), anyBoolean());
+  }
+
+  @Test
+  public void testCacheIncludesURIUserInfo() throws Throwable {
+    URI containerA = new URI("wasb://a@account.blob.core.windows.net");
+    URI containerB = new URI("wasb://b@account.blob.core.windows.net");
+    Configuration conf = new Configuration(false);
+    FileSystem.Cache.Key keyA = new FileSystem.Cache.Key(containerA, conf);
+    FileSystem.Cache.Key keyB = new FileSystem.Cache.Key(containerB, conf);
+    assertNotEquals(keyA, keyB);
+    assertNotEquals(keyA, new FileSystem.Cache.Key(
+        new URI("wasb://account.blob.core.windows.net"), conf));
+    assertEquals(keyA, new FileSystem.Cache.Key(
+        new URI("wasb://A@account.blob.core.windows.net"), conf));
+    assertNotEquals(keyA, new FileSystem.Cache.Key(
+        new URI("wasb://a:password@account.blob.core.windows.net"), conf));
   }
 }

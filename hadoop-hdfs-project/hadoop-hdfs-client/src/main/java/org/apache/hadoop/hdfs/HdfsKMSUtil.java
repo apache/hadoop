@@ -35,14 +35,12 @@ import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
-import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
 import org.apache.hadoop.crypto.key.KeyProviderTokenIssuer;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.KMSUtil;
 
 /**
@@ -69,32 +67,6 @@ public final class HdfsKMSUtil {
   public static KeyProvider createKeyProvider(
       final Configuration conf) throws IOException {
     return KMSUtil.createKeyProvider(conf, keyProviderUriKeyName);
-  }
-
-  public static Token<?>[] addDelegationTokensForKeyProvider(
-      KeyProviderTokenIssuer kpTokenIssuer, final String renewer,
-      Credentials credentials, URI namenodeUri, Token<?>[] tokens)
-          throws IOException {
-    KeyProvider keyProvider = kpTokenIssuer.getKeyProvider();
-    if (keyProvider != null) {
-      KeyProviderDelegationTokenExtension keyProviderDelegationTokenExtension
-          = KeyProviderDelegationTokenExtension.
-              createKeyProviderDelegationTokenExtension(keyProvider);
-      Token<?>[] kpTokens = keyProviderDelegationTokenExtension.
-          addDelegationTokens(renewer, credentials);
-      credentials.addSecretKey(getKeyProviderMapKey(namenodeUri),
-          DFSUtilClient.string2Bytes(
-              kpTokenIssuer.getKeyProviderUri().toString()));
-      if (tokens != null && kpTokens != null) {
-        Token<?>[] all = new Token<?>[tokens.length + kpTokens.length];
-        System.arraycopy(tokens, 0, all, 0, tokens.length);
-        System.arraycopy(kpTokens, 0, all, tokens.length, kpTokens.length);
-        tokens = all;
-      } else {
-        tokens = (tokens != null) ? tokens : kpTokens;
-      }
-    }
-    return tokens;
   }
 
   /**
@@ -161,28 +133,36 @@ public final class HdfsKMSUtil {
     URI keyProviderUri = null;
     // Lookup the secret in credentials object for namenodeuri.
     Credentials credentials = ugi.getCredentials();
+    Text credsKey = getKeyProviderMapKey(namenodeUri);
     byte[] keyProviderUriBytes =
-        credentials.getSecretKey(getKeyProviderMapKey(namenodeUri));
+        credentials.getSecretKey(credsKey);
     if(keyProviderUriBytes != null) {
       keyProviderUri =
           URI.create(DFSUtilClient.bytes2String(keyProviderUriBytes));
-      return keyProviderUri;
     }
-
-    if (keyProviderUriStr != null) {
-      if (!keyProviderUriStr.isEmpty()) {
+    if (keyProviderUri == null) {
+      // NN is old and doesn't report provider, so use conf.
+      if (keyProviderUriStr == null) {
+        keyProviderUri = KMSUtil.getKeyProviderUri(conf, keyProviderUriKeyName);
+      } else if (!keyProviderUriStr.isEmpty()) {
         keyProviderUri = URI.create(keyProviderUriStr);
       }
-      return keyProviderUri;
-    }
-
-    // Last thing is to trust its own conf to be backwards compatible.
-    String keyProviderUriFromConf = conf.getTrimmed(
-        CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH);
-    if (keyProviderUriFromConf != null && !keyProviderUriFromConf.isEmpty()) {
-      keyProviderUri = URI.create(keyProviderUriFromConf);
+      if (keyProviderUri != null) {
+        credentials.addSecretKey(
+            credsKey, DFSUtilClient.string2Bytes(keyProviderUri.toString()));
+      }
     }
     return keyProviderUri;
+  }
+
+  public static KeyProvider getKeyProvider(KeyProviderTokenIssuer issuer,
+                                           Configuration conf)
+      throws IOException {
+    URI keyProviderUri = issuer.getKeyProviderUri();
+    if (keyProviderUri != null) {
+      return KMSUtil.createKeyProviderFromUri(conf, keyProviderUri);
+    }
+    return null;
   }
 
   /**

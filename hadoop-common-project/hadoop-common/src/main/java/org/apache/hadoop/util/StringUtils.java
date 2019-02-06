@@ -35,8 +35,8 @@ import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.lang.SystemUtils;
-import org.apache.commons.lang.time.FastDateFormat;
+import org.apache.commons.lang3.SystemUtils;
+import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
@@ -428,7 +428,7 @@ public class StringUtils {
    * Splits a comma separated value <code>String</code>, trimming leading and
    * trailing whitespace on each value. Duplicate and empty values are removed.
    *
-   * @param str a comma separated <String> with values, may be null
+   * @param str a comma separated <code>String</code> with values, may be null
    * @return a <code>Collection</code> of <code>String</code> values, empty
    *         Collection if null String input
    */
@@ -743,7 +743,7 @@ public class StringUtils {
     return toStartupShutdownString("STARTUP_MSG: ", new String[] {
         "Starting " + classname,
         "  host = " + hostname,
-        "  args = " + Arrays.asList(args),
+        "  args = " + (args != null ? Arrays.asList(args) : new ArrayList<>()),
         "  version = " + VersionInfo.getVersion(),
         "  classpath = " + System.getProperty("java.class.path"),
         "  build = " + VersionInfo.getUrl() + " -r "
@@ -987,7 +987,7 @@ public class StringUtils {
     String[] words = split(StringUtils.toLowerCase(s), ESCAPE_CHAR,  '_');
 
     for (String word : words)
-      sb.append(org.apache.commons.lang.StringUtils.capitalize(word));
+      sb.append(org.apache.commons.lang3.StringUtils.capitalize(word));
 
     return sb.toString();
   }
@@ -1006,8 +1006,8 @@ public class StringUtils {
    * @param template String template to receive replacements
    * @param pattern Pattern to match for identifying tokens, must use a capturing
    *   group
-   * @param replacements Map<String, String> mapping tokens identified by the
-   *   capturing group to their replacement values
+   * @param replacements Map&lt;String, String&gt; mapping tokens identified by
+   * the capturing group to their replacement values
    * @return String template with replacements
    */
   public static String replaceTokens(String template, Pattern pattern,
@@ -1183,4 +1183,64 @@ public class StringUtils {
     return true;
   }
 
+  /**
+   * Same as WordUtils#wrap in commons-lang 2.6. Unlike commons-lang3, leading
+   * spaces on the first line are NOT stripped.
+   *
+   * @param str  the String to be word wrapped, may be null
+   * @param wrapLength  the column to wrap the words at, less than 1 is treated
+   *                   as 1
+   * @param newLineStr  the string to insert for a new line,
+   *  <code>null</code> uses the system property line separator
+   * @param wrapLongWords  true if long words (such as URLs) should be wrapped
+   * @return a line with newlines inserted, <code>null</code> if null input
+   */
+  public static String wrap(String str, int wrapLength, String newLineStr,
+      boolean wrapLongWords) {
+    if(str == null) {
+      return null;
+    } else {
+      if(newLineStr == null) {
+        newLineStr = System.lineSeparator();
+      }
+
+      if(wrapLength < 1) {
+        wrapLength = 1;
+      }
+
+      int inputLineLength = str.length();
+      int offset = 0;
+      StringBuffer wrappedLine = new StringBuffer(inputLineLength + 32);
+
+      while(inputLineLength - offset > wrapLength) {
+        if(str.charAt(offset) == 32) {
+          ++offset;
+        } else {
+          int spaceToWrapAt = str.lastIndexOf(32, wrapLength + offset);
+          if(spaceToWrapAt >= offset) {
+            wrappedLine.append(str.substring(offset, spaceToWrapAt));
+            wrappedLine.append(newLineStr);
+            offset = spaceToWrapAt + 1;
+          } else if(wrapLongWords) {
+            wrappedLine.append(str.substring(offset, wrapLength + offset));
+            wrappedLine.append(newLineStr);
+            offset += wrapLength;
+          } else {
+            spaceToWrapAt = str.indexOf(32, wrapLength + offset);
+            if(spaceToWrapAt >= 0) {
+              wrappedLine.append(str.substring(offset, spaceToWrapAt));
+              wrappedLine.append(newLineStr);
+              offset = spaceToWrapAt + 1;
+            } else {
+              wrappedLine.append(str.substring(offset));
+              offset = inputLineLength;
+            }
+          }
+        }
+      }
+
+      wrappedLine.append(str.substring(offset));
+      return wrappedLine.toString();
+    }
+  }
 }

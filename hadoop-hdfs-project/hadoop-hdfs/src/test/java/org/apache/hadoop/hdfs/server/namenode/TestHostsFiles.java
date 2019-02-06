@@ -22,8 +22,8 @@ import static org.junit.Assert.assertTrue;
 import java.lang.management.ManagementFactory;
 import java.util.Arrays;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
@@ -50,8 +50,8 @@ import javax.management.ObjectName;
  */
 @RunWith(Parameterized.class)
 public class TestHostsFiles {
-  private static final Log LOG =
-    LogFactory.getLog(TestHostsFiles.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestHostsFiles.class.getName());
   private Class hostFileMgrClass;
 
   public TestHostsFiles(Class hostFileMgrClass) {

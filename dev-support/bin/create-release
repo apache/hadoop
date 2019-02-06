@@ -169,11 +169,6 @@ function run()
   fi
 }
 
-function domd5()
-{
-  run "${MD5SUM}" "${1}" > "${1}.md5"
-}
-
 function header()
 {
   echo
@@ -235,11 +230,6 @@ function set_defaults
     fi
   fi
 
-  MD5SUM=$(command -v md5sum)
-  if [[ -z "${MD5SUM}" ]]; then
-    MD5SUM=$(command -v md5)
-  fi
-
   NATIVE=false
   OSNAME=$(uname -s)
 
@@ -253,7 +243,8 @@ function startgpgagent
   if [[ "${SIGN}" = true ]]; then
     if [[ -n "${GPGAGENT}" && -z "${GPG_AGENT_INFO}" ]]; then
       echo "starting gpg agent"
-      echo "default-cache-ttl 14400" > "${LOGDIR}/gpgagent.conf"
+      echo "default-cache-ttl 36000" > "${LOGDIR}/gpgagent.conf"
+      echo "max-cache-ttl 36000" >> "${LOGDIR}/gpgagent.conf"
       # shellcheck disable=2046
       eval $("${GPGAGENT}" --daemon \
         --options "${LOGDIR}/gpgagent.conf" \
@@ -389,7 +380,7 @@ function option_parse
     hadoop_error "ERROR: Cannot set --mvncache and --dockercache simultaneously."
     exit 1
   else
-    MVNCACHE=${MVNCACHE:-"${HOME}/.m2"}
+    MVNCACHE=${MVNCACHE:-"${HOME}/.m2/repository"}
   fi
 
   if [[ "${ASFRELEASE}" = true ]]; then
@@ -533,7 +524,7 @@ function makearelease
   big_console_header "Cleaning the Source Tree"
 
   # git clean to clear any remnants from previous build
-  run "${GIT}" clean -xdf
+  run "${GIT}" clean -xdf -e /patchprocess
 
   mkdir -p "${LOGDIR}"
 
@@ -617,8 +608,8 @@ function makearelease
   #shellcheck disable=SC2038
   find . -name rat.txt | xargs -I% cat % > "${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}-rat.txt"
 
-  # Stage CHANGES and RELEASENOTES files
-  for i in CHANGES RELEASENOTES; do
+  # Stage CHANGELOG and RELEASENOTES files
+  for i in CHANGELOG RELEASENOTES; do
     run cp -p \
         "${BASEDIR}/hadoop-common-project/hadoop-common/src/site/markdown/release/${HADOOP_VERSION}"/${i}*.md \
         "${ARTIFACTS_DIR}/${i}.md"
@@ -640,9 +631,6 @@ function signartifacts
   declare ret
 
   if [[ "${SIGN}" = false ]]; then
-    for i in ${ARTIFACTS_DIR}/*; do
-      domd5 "${i}"
-    done
     echo ""
     echo "Remember to sign the artifacts before staging them on the open"
     echo ""
@@ -654,7 +642,6 @@ function signartifacts
   for i in ${ARTIFACTS_DIR}/*; do
     ${GPG} --use-agent --armor --output "${i}.asc" --detach-sig "${i}"
     ${GPG} --print-mds "${i}" > "${i}.mds"
-    domd5 "${i}"
   done
 
   if [[ "${ASFRELEASE}" = true ]]; then

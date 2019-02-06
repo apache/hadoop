@@ -85,15 +85,15 @@ public class CompressionCodecFactory {
     buf.append("{ ");
     if (itr.hasNext()) {
       Map.Entry<String, CompressionCodec> entry = itr.next();
-      buf.append(entry.getKey());
-      buf.append(": ");
-      buf.append(entry.getValue().getClass().getName());
+      buf.append(entry.getKey())
+          .append(": ")
+          .append(entry.getValue().getClass().getName());
       while (itr.hasNext()) {
         entry = itr.next();
-        buf.append(", ");
-        buf.append(entry.getKey());
-        buf.append(": ");
-        buf.append(entry.getValue().getClass().getName());
+        buf.append(", ")
+            .append(entry.getKey())
+            .append(": ")
+            .append(entry.getValue().getClass().getName());
       }
     }
     buf.append(" }");
@@ -161,8 +161,8 @@ public class CompressionCodecFactory {
       Class cls = itr.next();
       buf.append(cls.getName());
       while(itr.hasNext()) {
-        buf.append(',');
-        buf.append(itr.next().getName());
+        buf.append(',')
+            .append(itr.next().getName());
       }
     }
     conf.set(CommonConfigurationKeys.IO_COMPRESSION_CODECS_KEY, buf.toString());
@@ -227,9 +227,9 @@ public class CompressionCodecFactory {
     /**
      * Find the relevant compression codec for the codec's canonical class name
      * or by codec alias.
-     * <p/>
+     * <p>
      * Codec aliases are case insensitive.
-     * <p/>
+     * <p>
      * The code alias is the short class name (without the package name).
      * If the short class name ends with 'Codec', then there are two aliases for
      * the codec, the complete short class name and the short class name without
@@ -255,9 +255,9 @@ public class CompressionCodecFactory {
     /**
      * Find the relevant compression codec for the codec's canonical class name
      * or by codec alias and returns its implemetation class.
-     * <p/>
+     * <p>
      * Codec aliases are case insensitive.
-     * <p/>
+     * <p>
      * The code alias is the short class name (without the package name).
      * If the short class name ends with 'Codec', then there are two aliases for
      * the codec, the complete short class name and the short class name without

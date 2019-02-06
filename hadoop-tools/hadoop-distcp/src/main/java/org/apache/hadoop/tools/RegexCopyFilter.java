@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.tools;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 
@@ -43,7 +43,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class RegexCopyFilter extends CopyFilter {
 
-  private static final Log LOG = LogFactory.getLog(RegexCopyFilter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegexCopyFilter.class);
   private File filtersFile;
   private List<Pattern> filters;
 
@@ -77,7 +77,7 @@ public class RegexCopyFilter extends CopyFilter {
       LOG.error("An error occurred while attempting to read from " +
           filtersFile);
     } finally {
-      IOUtils.cleanup(LOG, reader);
+      IOUtils.cleanupWithLogger(LOG, reader);
     }
   }
 

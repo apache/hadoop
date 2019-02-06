@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -29,8 +31,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -53,9 +55,6 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
-import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
@@ -69,7 +68,7 @@ import org.mockito.invocation.InvocationOnMock;
 
 public class TestDNFencing {
   
-  protected static final Log LOG = LogFactory.getLog(TestDNFencing.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(TestDNFencing.class);
   private static final String TEST_FILE = "/testStandbyIsHot";
   private static final Path TEST_FILE_PATH = new Path(TEST_FILE);
   private static final int SMALL_BLOCK = 1024;
@@ -545,10 +544,10 @@ public class TestDNFencing {
 
       Mockito.doAnswer(delayer)
         .when(spy).blockReport(
-          Mockito.<DatanodeRegistration>anyObject(),
-          Mockito.anyString(),
-          Mockito.<StorageBlockReport[]>anyObject(),
-          Mockito.<BlockReportContext>anyObject());
+          any(),
+          anyString(),
+          any(),
+          any());
       dn.scheduleAllBlockReport(0);
       delayer.waitForCall();
       

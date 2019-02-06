@@ -24,12 +24,14 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode
@@ -144,9 +146,8 @@ public class RMNodeWrapper implements RMNode {
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public List<UpdatedContainerInfo> pullContainerUpdates() {
-    List<UpdatedContainerInfo> list = Collections.EMPTY_LIST;
+    List<UpdatedContainerInfo> list = Collections.emptyList();
     if (! pulled) {
       list = updates;
       pulled = true;
@@ -168,11 +169,10 @@ public class RMNodeWrapper implements RMNode {
     return RMNodeLabelsManager.EMPTY_STRING_SET;
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public List<Container> pullNewlyIncreasedContainers() {
     // TODO Auto-generated method stub
-    return Collections.EMPTY_LIST;
+    return Collections.emptyList();
   }
 
   public OpportunisticContainersStatus getOpportunisticContainersStatus() {
@@ -206,6 +206,16 @@ public class RMNodeWrapper implements RMNode {
   @Override
   public Map<String, Long> getAllocationTagsWithCount() {
     return node.getAllocationTagsWithCount();
+  }
+
+  @Override
+  public Set<NodeAttribute> getAllNodeAttributes() {
+    return node.getAllNodeAttributes();
+  }
+
+  @Override
+  public RMContext getRMContext() {
+    return node.getRMContext();
   }
 
   @Override

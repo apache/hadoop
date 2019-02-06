@@ -41,7 +41,7 @@ public class ITestS3AContractGetFileStatusV1List
 
   @Override
   public void teardown() throws Exception {
-    getLog().info("FS details {}", getFileSystem());
+    getLogger().info("FS details {}", getFileSystem());
     super.teardown();
   }
 

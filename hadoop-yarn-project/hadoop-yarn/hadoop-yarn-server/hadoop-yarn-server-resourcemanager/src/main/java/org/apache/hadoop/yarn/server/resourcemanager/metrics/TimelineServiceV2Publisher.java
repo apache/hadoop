@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.metrics;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -139,6 +140,8 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
         app.getApplicationSubmissionContext().getAMContainerSpec();
     entityInfo.put(ApplicationMetricsConstants.AM_CONTAINER_LAUNCH_COMMAND,
         amContainerSpec.getCommands());
+    entityInfo.put(ApplicationMetricsConstants.STATE_EVENT_INFO,
+        RMServerUtils.createApplicationState(app.getState()).toString());
 
     entity.setInfo(entityInfo);
     TimelineEvent tEvent = new TimelineEvent();
@@ -316,6 +319,10 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
     if (appAttempt.getMasterContainer() != null) {
       entityInfo.put(AppAttemptMetricsConstants.MASTER_CONTAINER_INFO,
           appAttempt.getMasterContainer().getId().toString());
+      entityInfo.put(AppAttemptMetricsConstants.MASTER_NODE_ADDRESS,
+          appAttempt.getMasterContainer().getNodeHttpAddress());
+      entityInfo.put(AppAttemptMetricsConstants.MASTER_NODE_ID,
+          appAttempt.getMasterContainer().getNodeId().toString());
     }
     entity.setInfo(entityInfo);
     entity.setIdPrefix(
@@ -392,6 +399,9 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
       entityInfo.put(ContainerMetricsConstants.ALLOCATED_PRIORITY_INFO,
           container.getAllocatedPriority().getPriority());
       entityInfo.put(
+          ContainerMetricsConstants.ALLOCATED_EXPOSED_PORTS,
+          container.getExposedPorts());
+      entityInfo.put(
           ContainerMetricsConstants.ALLOCATED_HOST_HTTP_ADDRESS_INFO,
           container.getNodeHttpAddress());
       entity.setInfo(entityInfo);
@@ -451,8 +461,11 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
       entities.addEntity(entity);
       timelineCollector.putEntities(entities,
           UserGroupInformation.getCurrentUser());
-    } catch (Exception e) {
-      LOG.error("Error when publishing entity " + entity, e);
+    } catch (IOException e) {
+      LOG.error("Error when publishing entity " + entity);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Error when publishing entity " + entity, e);
+      }
     }
   }
 

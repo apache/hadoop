@@ -73,7 +73,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class Groups {
-  private static final Logger LOG = LoggerFactory.getLogger(Groups.class);
+  @VisibleForTesting
+  static final Logger LOG = LoggerFactory.getLogger(Groups.class);
   
   private final GroupMappingServiceProvider impl;
 
@@ -308,6 +309,7 @@ public class Groups {
      */
     @Override
     public List<String> load(String user) throws Exception {
+      LOG.debug("GroupCacheLoader - load.");
       TraceScope scope = null;
       Tracer tracer = Tracer.curThreadTracer();
       if (tracer != null) {
@@ -346,6 +348,7 @@ public class Groups {
     public ListenableFuture<List<String>> reload(final String key,
                                                  List<String> oldValue)
         throws Exception {
+      LOG.debug("GroupCacheLoader - reload (async).");
       if (!reloadGroupsInBackground) {
         return super.reload(key, oldValue);
       }

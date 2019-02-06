@@ -92,7 +92,12 @@ public abstract class MockAsm extends MockApps {
     public long getSubmitTime() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
-    
+
+    @Override
+    public long getLaunchTime() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+
     @Override
     public long getFinishTime() {
       throw new UnsupportedOperationException("Not supported yet.");
@@ -141,6 +146,17 @@ public abstract class MockAsm extends MockApps {
     public int getMaxAppAttempts() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
+
+    @Override
+    public boolean isLogAggregationEnabled() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean isLogAggregationFinished() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+
     @Override
     public ApplicationReport createAndGetApplicationReport(
         String clientUserName,boolean allowAccess) {
@@ -272,6 +288,8 @@ public abstract class MockAsm extends MockApps {
     final String name = newAppName();
     final String queue = newQueue();
     final long start = 123456 + i * 1000;
+    final long submit = start + i * 50;
+    final long launch = start + i * 100;
     final long finish = 234567 + i * 1000;
     final String type = YarnConfiguration.DEFAULT_APPLICATION_TYPE;
     YarnApplicationState[] allStates = YarnApplicationState.values();
@@ -305,6 +323,16 @@ public abstract class MockAsm extends MockApps {
       @Override
       public long getStartTime() {
         return start;
+      }
+
+      @Override
+      public long getSubmitTime() {
+        return submit;
+      }
+
+      @Override
+      public long getLaunchTime() {
+        return launch;
       }
 
       @Override
@@ -357,9 +385,9 @@ public abstract class MockAsm extends MockApps {
         ApplicationReport report = ApplicationReport.newInstance(
             getApplicationId(), appAttemptId, getUser(), getQueue(), 
             getName(), null, 0, null, null, getDiagnostics().toString(), 
-            getTrackingUrl(), getStartTime(), getFinishTime(), 
-            getFinalApplicationStatus(), usageReport , null, getProgress(),
-            type, null);
+            getTrackingUrl(), getStartTime(), getSubmitTime(), getLaunchTime(),
+            getFinishTime(), getFinalApplicationStatus(), usageReport, null,
+            getProgress(), type, null);
         return report;
       }
 

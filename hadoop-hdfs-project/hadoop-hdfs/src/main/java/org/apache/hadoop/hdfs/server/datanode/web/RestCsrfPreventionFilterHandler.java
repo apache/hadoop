@@ -30,7 +30,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
 
-import org.apache.commons.logging.Log;
+import org.slf4j.Logger;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
@@ -46,7 +46,7 @@ import org.apache.hadoop.security.http.RestCsrfPreventionFilter.HttpInteraction;
 final class RestCsrfPreventionFilterHandler
     extends SimpleChannelInboundHandler<HttpRequest> {
 
-  private static final Log LOG = DatanodeHttpServer.LOG;
+  private static final Logger LOG = DatanodeHttpServer.LOG;
 
   private final RestCsrfPreventionFilter restCsrfPreventionFilter;
 

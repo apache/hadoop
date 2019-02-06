@@ -62,6 +62,8 @@ message ResourceInformationProto {
   optional int64 value = 2;
   optional string units = 3;
   optional ResourceTypesProto type = 4;
+  repeated string tags = 5;
+  repeated StringStringMapProto attributes = 6;
 }
 
 message ResourceTypeInfoProto {
@@ -153,6 +155,7 @@ message ContainerProto {
   optional int64 allocation_request_id = 8 [default = -1];
   optional int32 version = 9 [default = 0];
   repeated string allocation_tags = 10;
+  optional string exposed_ports = 11;
 }
 
 message ContainerReportProto {
@@ -168,6 +171,7 @@ message ContainerReportProto {
   optional ContainerStateProto container_state = 10;
   optional string node_http_address = 11;
   optional ExecutionTypeProto executionType = 12 [default = GUARANTEED];
+  optional string exposed_ports = 13;
 }
 
 enum YarnApplicationStateProto {
@@ -281,6 +285,8 @@ message ApplicationReportProto {
   optional string appNodeLabelExpression = 24;
   optional string amNodeLabelExpression = 25;
   repeated AppTimeoutsMapProto appTimeouts = 26;
+  optional int64 launchTime = 27;
+  optional int64 submitTime = 28;
 }
 
 message AppTimeoutsMapProto {
@@ -354,6 +360,7 @@ message NodeReportProto {
   optional ResourceUtilizationProto node_utilization = 12;
   optional uint32 decommissioning_timeout = 13;
   optional NodeUpdateTypeProto node_update_type = 14;
+  repeated NodeAttributeProto node_attributes = 15;
 }
 
 message NodeIdToLabelsProto {
@@ -369,6 +376,42 @@ message LabelsToNodeIdsProto {
 message NodeLabelProto {
   optional string name = 1;
   optional bool isExclusive = 2 [default = true]; 
+}
+
+enum NodeAttributeTypeProto {
+  STRING = 1;
+}
+
+message NodeAttributeKeyProto {
+  optional string attributePrefix = 1 [default="rm.yarn.io"];
+  required string attributeName = 2;
+}
+
+message NodeAttributeProto {
+  required NodeAttributeKeyProto attributeKey = 1;
+  optional NodeAttributeTypeProto attributeType = 2 [default = STRING];
+  optional string attributeValue = 3 [default=""];
+}
+
+
+message NodeAttributeInfoProto {
+  required NodeAttributeKeyProto attributeKey = 1;
+  required NodeAttributeTypeProto attributeType = 2;
+}
+
+message NodeToAttributeValueProto {
+  required string hostname = 1;
+  required string attributeValue = 2;
+}
+
+message AttributeToNodesProto {
+  required NodeAttributeKeyProto nodeAttribute = 1;
+  repeated NodeToAttributeValueProto nodeValueMap = 2;
+}
+
+message NodeToAttributesProto {
+  optional string node = 1;
+  repeated NodeAttributeProto nodeAttributes = 2;
 }
 
 enum ContainerTypeProto {
@@ -563,6 +606,7 @@ message QueueInfoProto {
   optional QueueStatisticsProto queueStatistics = 10;
   optional bool preemptionDisabled = 11;
   repeated QueueConfigurationsMapProto queueConfigurationsMap = 12;
+  optional bool intraQueuePreemptionDisabled = 13;
 }
 
 message QueueConfigurationsProto {
@@ -607,11 +651,18 @@ message PlacementConstraintProto {
   optional CompositePlacementConstraintProto compositeConstraint = 2;
 }
 
+enum NodeAttributeOpCodeProto {
+  NO_OP = 1;
+  EQ = 2;
+  NE = 3;
+}
+
 message SimplePlacementConstraintProto {
   required string scope = 1;
   repeated PlacementConstraintTargetProto targetExpressions = 2;
   optional int32 minCardinality = 3;
   optional int32 maxCardinality = 4;
+  optional NodeAttributeOpCodeProto attributeOpCode = 5;
 }
 
 message PlacementConstraintTargetProto {
@@ -753,6 +804,7 @@ message ContainerRetryContextProto {
   repeated int32 error_codes = 2;
   optional int32 max_retries = 3 [default = 0];
   optional int32 retry_interval = 4 [default = 0];
+  optional int64 failures_validity_interval = 5 [default = -1];
 }
 
 enum ContainerRetryPolicyProto {

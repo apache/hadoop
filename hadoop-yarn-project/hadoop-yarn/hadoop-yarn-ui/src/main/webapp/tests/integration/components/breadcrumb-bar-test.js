@@ -24,20 +24,27 @@ moduleForComponent('breadcrumb-bar', 'Integration | Component | breadcrumb bar',
 });
 
 test('it renders', function(assert) {
+	var breadcrumbs = [{
+		text: "Home",
+		routeName: "application"
+	}, {
+		text: "Test"
+	}];
 
-  // Set any properties with this.set('myProperty', 'value');
-  // Handle any actions with this.on('myAction', function(val) { ... });" + EOL + EOL +
+	this.set("breadcrumbs", breadcrumbs);
 
-  this.render(hbs`{{breadcrumb-bar}}`);
+  this.render(hbs`{{breadcrumb-bar breadcrumbs=breadcrumbs}}`);
 
-  assert.equal(this.$().text().trim(), '');
+  assert.equal(this.$('ol.breadcrumb li').length, 2);
+  assert.equal(this.$('button.refresh').text(), 'Refresh');
+});
 
-  // Template block usage:" + EOL +
-  this.render(hbs`
-    {{#breadcrumb-bar}}
-      template block text
-    {{/breadcrumb-bar}}
-  `);
+test('should trigger refresh action', function(assert) {
+	this.on('refresh', function() {
+		assert.ok("refresh action");
+	});
 
-  assert.equal(this.$().text().trim(), 'template block text');
+	this.render(hbs`{{breadcrumb-bar action="refresh"}}`);
+
+	this.$('button.refresh').click();
 });

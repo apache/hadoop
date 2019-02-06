@@ -26,8 +26,9 @@ import static org.junit.Assert.*;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.UUID;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -45,7 +46,6 @@ import org.apache.hadoop.hdfs.server.protocol.*;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -61,7 +61,8 @@ import org.junit.Test;
  *  in the future).
  */
 public class TestIncrementalBrVariations {
-  public static final Log LOG = LogFactory.getLog(TestIncrementalBrVariations.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestIncrementalBrVariations.class);
 
   private static final short NUM_DATANODES = 1;
   static final int BLOCK_SIZE = 1024;
@@ -79,13 +80,13 @@ public class TestIncrementalBrVariations {
   private DatanodeRegistration dn0Reg;  // DataNodeRegistration for dn0
 
   static {
-    GenericTestUtils.setLogLevel(NameNode.stateChangeLog, Level.ALL);
-    GenericTestUtils.setLogLevel(BlockManager.blockLog, Level.ALL);
-    GenericTestUtils.setLogLevel(NameNode.blockStateChangeLog, Level.ALL);
+    GenericTestUtils.setLogLevel(NameNode.stateChangeLog, Level.TRACE);
+    GenericTestUtils.setLogLevel(BlockManager.blockLog, Level.TRACE);
+    GenericTestUtils.setLogLevel(NameNode.blockStateChangeLog, Level.TRACE);
     GenericTestUtils
-        .setLogLevel(LogFactory.getLog(FSNamesystem.class), Level.ALL);
-    GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(TestIncrementalBrVariations.LOG, Level.ALL);
+        .setLogLevel(LoggerFactory.getLogger(FSNamesystem.class), Level.TRACE);
+    GenericTestUtils.setLogLevel(DataNode.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(TestIncrementalBrVariations.LOG, Level.TRACE);
   }
 
   @Before

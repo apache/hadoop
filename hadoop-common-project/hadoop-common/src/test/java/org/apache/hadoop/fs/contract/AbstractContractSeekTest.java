@@ -132,7 +132,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
   @Test
   public void testSeekReadClosedFile() throws Throwable {
     instream = getFileSystem().open(smallSeekFile);
-    getLog().debug(
+    getLogger().debug(
       "Stream is of type " + instream.getClass().getCanonicalName());
     instream.close();
     try {

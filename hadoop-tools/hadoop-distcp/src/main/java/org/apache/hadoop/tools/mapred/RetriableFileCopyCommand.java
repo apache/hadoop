@@ -23,8 +23,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.EnumSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -53,7 +53,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class RetriableFileCopyCommand extends RetriableCommand {
 
-  private static Log LOG = LogFactory.getLog(RetriableFileCopyCommand.class);
+  private static Logger LOG = LoggerFactory.getLogger(RetriableFileCopyCommand.class);
   private boolean skipCrc = false;
   private FileAction action;
 
@@ -210,15 +210,30 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       throws IOException {
     if (!DistCpUtils.checksumsAreEqual(sourceFS, source, sourceChecksum,
         targetFS, target)) {
-      StringBuilder errorMessage = new StringBuilder("Check-sum mismatch between ")
-          .append(source).append(" and ").append(target).append(".");
-      if (sourceFS.getFileStatus(source).getBlockSize() !=
+      StringBuilder errorMessage =
+          new StringBuilder("Checksum mismatch between ")
+              .append(source).append(" and ").append(target).append(".");
+      boolean addSkipHint = false;
+      String srcScheme = sourceFS.getScheme();
+      String targetScheme = targetFS.getScheme();
+      if (!srcScheme.equals(targetScheme)
+          && !(srcScheme.contains("hdfs") && targetScheme.contains("hdfs"))) {
+        // the filesystems are different and they aren't both hdfs connectors
+        errorMessage.append("Source and destination filesystems are of"
+            + " different types\n")
+            .append("Their checksum algorithms may be incompatible");
+        addSkipHint = true;
+      } else if (sourceFS.getFileStatus(source).getBlockSize() !=
           targetFS.getFileStatus(target).getBlockSize()) {
-        errorMessage.append(" Source and target differ in block-size.")
-            .append(" Use -pb to preserve block-sizes during copy.")
-            .append(" Alternatively, skip checksum-checks altogether, using -skipCrc.")
+        errorMessage.append(" Source and target differ in block-size.\n")
+            .append(" Use -pb to preserve block-sizes during copy.");
+        addSkipHint = true;
+      }
+      if (addSkipHint) {
+        errorMessage.append(" You can skip checksum-checks altogether "
+            + " with -skipcrccheck.\n")
             .append(" (NOTE: By skipping checksums, one runs the risk of " +
-                "masking data-corruption during file-transfer.)");
+                "masking data-corruption during file-transfer.)\n");
       }
       throw new IOException(errorMessage.toString());
     }
@@ -260,7 +275,8 @@ public class RetriableFileCopyCommand extends RetriableCommand {
     boolean finished = false;
     try {
       inStream = getInputStream(source, context.getConfiguration());
-      int bytesRead = readBytes(inStream, buf, sourceOffset);
+      seekIfRequired(inStream, sourceOffset);
+      int bytesRead = readBytes(inStream, buf);
       while (bytesRead >= 0) {
         if (chunkLength > 0 &&
             (totalBytesRead + bytesRead) >= chunkLength) {
@@ -276,12 +292,12 @@ public class RetriableFileCopyCommand extends RetriableCommand {
         if (finished) {
           break;
         }
-        bytesRead = readBytes(inStream, buf, sourceOffset);
+        bytesRead = readBytes(inStream, buf);
       }
       outStream.close();
       outStream = null;
     } finally {
-      IOUtils.cleanup(LOG, outStream, inStream);
+      IOUtils.cleanupWithLogger(LOG, outStream, inStream);
     }
     return totalBytesRead;
   }
@@ -299,13 +315,20 @@ public class RetriableFileCopyCommand extends RetriableCommand {
     context.setStatus(message.toString());
   }
 
-  private static int readBytes(ThrottledInputStream inStream, byte buf[],
-      long position) throws IOException {
+  private static int readBytes(ThrottledInputStream inStream, byte buf[])
+      throws IOException {
     try {
-      if (position == 0) {
-        return inStream.read(buf);
-      } else {
-        return inStream.read(position, buf, 0, buf.length);
+      return inStream.read(buf);
+    } catch (IOException e) {
+      throw new CopyReadException(e);
+    }
+  }
+
+  private static void seekIfRequired(ThrottledInputStream inStream,
+      long sourceOffset) throws IOException {
+    try {
+      if (sourceOffset != inStream.getPos()) {
+        inStream.seek(sourceOffset);
       }
     } catch (IOException e) {
       throw new CopyReadException(e);

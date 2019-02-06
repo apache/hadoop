@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapred;
 
 import java.net.InetSocketAddress;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
@@ -28,7 +27,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskLog.LogName;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskType;
-import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -42,50 +40,53 @@ public class MapReduceChildJVM {
         filter.toString();
   }
 
-  private static String getChildEnv(JobConf jobConf, boolean isMap) {
+  private static String getChildEnvProp(JobConf jobConf, boolean isMap) {
     if (isMap) {
-      return jobConf.get(JobConf.MAPRED_MAP_TASK_ENV,
-          jobConf.get(JobConf.MAPRED_TASK_ENV));
+      return JobConf.MAPRED_MAP_TASK_ENV;
     }
-    return jobConf.get(JobConf.MAPRED_REDUCE_TASK_ENV,
-        jobConf.get(JobConf.MAPRED_TASK_ENV));
+    return JobConf.MAPRED_REDUCE_TASK_ENV;
+  }
+
+  private static String getChildEnvDefaultValue(JobConf jobConf) {
+    // There is no default value for these - use the fallback value instead.
+    return jobConf.get(JobConf.MAPRED_TASK_ENV);
   }
 
   public static void setVMEnv(Map<String, String> environment,
       Task task) {
 
     JobConf conf = task.conf;
-    // Add the env variables passed by the user
-    String mapredChildEnv = getChildEnv(conf, task.isMapTask());
-    MRApps.setEnvFromInputString(environment, mapredChildEnv, conf);
+    boolean isMap = task.isMapTask();
 
-    // Set logging level in the environment.
-    // This is so that, if the child forks another "bin/hadoop" (common in
-    // streaming) it will have the correct loglevel.
-    environment.put(
-        "HADOOP_ROOT_LOGGER", 
-        MRApps.getChildLogLevel(conf, task.isMapTask()) + ",console");
+    // Remove these before adding the user variables to prevent
+    // MRApps.setEnvFromInputProperty() from appending to them.
+    String hadoopRootLoggerKey = "HADOOP_ROOT_LOGGER";
+    String hadoopClientOptsKey = "HADOOP_CLIENT_OPTS";
+    environment.remove(hadoopRootLoggerKey);
+    environment.remove(hadoopClientOptsKey);
 
-    // TODO: The following is useful for instance in streaming tasks. Should be
-    // set in ApplicationMaster's env by the RM.
-    String hadoopClientOpts = System.getenv("HADOOP_CLIENT_OPTS");
-    if (hadoopClientOpts == null) {
-      hadoopClientOpts = "";
-    } else {
-      hadoopClientOpts = hadoopClientOpts + " ";
+    // Add the environment variables passed by the user
+    MRApps.setEnvFromInputProperty(environment, getChildEnvProp(conf, isMap),
+        getChildEnvDefaultValue(conf), conf);
+
+    // Set HADOOP_ROOT_LOGGER and HADOOP_CLIENTS if the user did not set them.
+    if (!environment.containsKey(hadoopRootLoggerKey)) {
+      // Set the value for logging level in the environment.
+      // This is so that, if the child forks another "bin/hadoop" (common in
+      // streaming) it will have the correct loglevel.
+      environment.put(hadoopRootLoggerKey,
+          MRApps.getChildLogLevel(conf, task.isMapTask()) + ",console");
     }
-    environment.put("HADOOP_CLIENT_OPTS", hadoopClientOpts);
-    
-    // setEnvFromInputString above will add env variable values from
-    // mapredChildEnv to existing variables. We want to overwrite
-    // HADOOP_ROOT_LOGGER and HADOOP_CLIENT_OPTS if the user set it explicitly.
-    Map<String, String> tmpEnv = new HashMap<String, String>();
-    MRApps.setEnvFromInputString(tmpEnv, mapredChildEnv, conf);
-    String[] keys = { "HADOOP_ROOT_LOGGER", "HADOOP_CLIENT_OPTS" };
-    for (String key : keys) {
-      if (tmpEnv.containsKey(key)) {
-        environment.put(key, tmpEnv.get(key));
+    if (!environment.containsKey(hadoopClientOptsKey)) {
+      // TODO: The following is useful for instance in streaming tasks.
+      // Should be set in ApplicationMaster's env by the RM.
+      String hadoopClientOptsValue = System.getenv(hadoopClientOptsKey);
+      if (hadoopClientOptsValue == null) {
+        hadoopClientOptsValue = "";
+      } else {
+        hadoopClientOptsValue = hadoopClientOptsValue + " ";
       }
+      environment.put(hadoopClientOptsKey, hadoopClientOptsValue);
     }
 
     // Add stdout/stderr env

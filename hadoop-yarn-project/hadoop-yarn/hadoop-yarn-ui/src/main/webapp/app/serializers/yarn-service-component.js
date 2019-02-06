@@ -52,7 +52,7 @@ export default DS.JSONAPISerializer.extend({
         vcores: info.RESOURCE_CPU,
         memory: info.RESOURCE_MEMORY,
         priority: 'N/A',
-        instances: 'N/A',
+        instances: '0',
         createdTimestamp: payload.createdtime,
         configs: newConfigs,
         metrics: newMetrics

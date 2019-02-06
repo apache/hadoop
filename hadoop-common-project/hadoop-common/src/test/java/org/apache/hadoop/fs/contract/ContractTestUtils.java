@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
 import org.junit.internal.AssumptionViolatedException;
@@ -186,8 +187,11 @@ public class ContractTestUtils extends Assert {
           (short) 1,
           buffersize);
     }
-    out.write(src, 0, len);
-    out.close();
+    try {
+      out.write(src, 0, len);
+    } finally {
+      out.close();
+    }
     assertFileHasLength(fs, path, len);
   }
 
@@ -228,9 +232,9 @@ public class ContractTestUtils extends Assert {
   public static void verifyFileContents(FileSystem fs,
                                         Path path,
                                         byte[] original) throws IOException {
+    assertIsFile(fs, path);
     FileStatus stat = fs.getFileStatus(path);
     String statText = stat.toString();
-    assertTrue("not a file " + statText, stat.isFile());
     assertEquals("wrong length " + statText, original.length, stat.getLen());
     byte[] bytes = readDataset(fs, path, original.length);
     compareByteArrays(original, bytes, original.length);
@@ -854,6 +858,36 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
+   * Assert that a varargs list of paths exist.
+   * @param fs filesystem
+   * @param message message for exceptions
+   * @param paths paths
+   * @throws IOException IO failure
+   */
+  public static void assertPathsExist(FileSystem fs,
+      String message,
+      Path... paths) throws IOException {
+    for (Path path : paths) {
+      assertPathExists(fs, message, path);
+    }
+  }
+
+  /**
+   * Assert that a varargs list of paths do not exist.
+   * @param fs filesystem
+   * @param message message for exceptions
+   * @param paths paths
+   * @throws IOException IO failure
+   */
+  public static void assertPathsDoNotExist(FileSystem fs,
+      String message,
+      Path... paths) throws IOException {
+    for (Path path : paths) {
+      assertPathDoesNotExist(fs, message, path);
+    }
+  }
+
+  /**
    * Create a dataset for use in the tests; all data is in the range
    * base to (base+modulo-1) inclusive.
    * @param len length of data
@@ -988,6 +1022,18 @@ public class ContractTestUtils extends Assert {
     assertTrue("Path " + subdir
                       + " not found in directory " + dir + ":" + builder,
                       found);
+  }
+
+  /**
+   * Execute {@link FileSystem#mkdirs(Path)}; expect {@code true} back.
+   * (Note: does not work for localFS if the directory already exists)
+   * Does not perform any validation of the created directory.
+   * @param fs filesystem
+   * @param dir directory to create
+   * @throws IOException IO Problem
+   */
+  public static void assertMkdirs(FileSystem fs, Path dir) throws IOException {
+    assertTrue("mkdirs(" + dir + ") returned false", fs.mkdirs(dir));
   }
 
   /**
@@ -1405,6 +1451,65 @@ public class ContractTestUtils extends Assert {
       // ignored
     }
     return list;
+  }
+
+  /**
+   * Custom assert to test {@link StreamCapabilities}.
+   *
+   * @param stream The stream to test for StreamCapabilities
+   * @param shouldHaveCapabilities The array of expected capabilities
+   * @param shouldNotHaveCapabilities The array of unexpected capabilities
+   */
+  public static void assertCapabilities(
+      Object stream, String[] shouldHaveCapabilities,
+      String[] shouldNotHaveCapabilities) {
+    assertTrue("Stream should be instanceof StreamCapabilities",
+        stream instanceof StreamCapabilities);
+
+    if (shouldHaveCapabilities!=null) {
+      for (String shouldHaveCapability : shouldHaveCapabilities) {
+        assertTrue("Should have capability: " + shouldHaveCapability,
+            ((StreamCapabilities) stream).hasCapability(shouldHaveCapability));
+      }
+    }
+
+    if (shouldNotHaveCapabilities!=null) {
+      for (String shouldNotHaveCapability : shouldNotHaveCapabilities) {
+        assertFalse("Should not have capability: " + shouldNotHaveCapability,
+            ((StreamCapabilities) stream)
+                .hasCapability(shouldNotHaveCapability));
+      }
+    }
+  }
+
+  /**
+   * Function which calls {@code InputStream.read()} and
+   * downgrades an IOE to a runtime exception.
+   * @param in input
+   * @return the read value
+   * @throws AssertionError on any IOException
+   */
+  public static int read(InputStream in) {
+    try {
+      return in.read();
+    } catch (IOException ex) {
+      throw new AssertionError(ex);
+    }
+  }
+
+  /**
+   * Read a whole stream; downgrades an IOE to a runtime exception.
+   * @param in input
+   * @return the number of bytes read.
+   * @throws AssertionError on any IOException
+   */
+  public static long readStream(InputStream in) {
+    long count = 0;
+
+    while (read(in) >= 0) {
+      count++;
+    }
+    return count;
   }
 
 

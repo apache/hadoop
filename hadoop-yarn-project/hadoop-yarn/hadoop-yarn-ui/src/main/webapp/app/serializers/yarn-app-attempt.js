@@ -36,11 +36,13 @@ export default DS.JSONAPISerializer.extend({
           containerId: payload.containerId,
           amContainerId: payload.amContainerId,
           nodeHttpAddress: payload.nodeHttpAddress,
+          exposedPorts: payload.exposedPorts,
           nodeId: payload.nodeId,
           hosts: payload.host,
           state: payload.appAttemptState,
           logsLink: payload.logsLink,
-          appAttemptId: payload.appAttemptId
+          appAttemptId: payload.appAttemptId,
+          diagnosticsInfo: payload.diagnosticsInfo
         }
       };
 

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.web;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
@@ -134,6 +135,12 @@ public class JsonUtil {
     }
     if (status.isErasureCoded()) {
       m.put("ecBit", true);
+      if (status.getErasureCodingPolicy() != null) {
+        // to maintain backward comparability
+        m.put("ecPolicy", status.getErasureCodingPolicy().getName());
+        // to re-construct HdfsFileStatus object via WebHdfs
+        m.put("ecPolicyObj", getEcPolicyAsMap(status.getErasureCodingPolicy()));
+      }
     }
     if (status.isSnapshotEnabled()) {
       m.put("snapshotEnabled", status.isSnapshotEnabled());
@@ -147,6 +154,21 @@ public class JsonUtil {
     m.put("childrenNum", status.getChildrenNum());
     m.put("storagePolicy", status.getStoragePolicy());
     return m;
+  }
+
+  private static Map<String, Object> getEcPolicyAsMap(
+      final ErasureCodingPolicy ecPolicy) {
+    /** Convert an ErasureCodingPolicy to a map. */
+    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+    builder.put("name", ecPolicy.getName())
+        .put("cellSize", ecPolicy.getCellSize())
+        .put("numDataUnits", ecPolicy.getNumDataUnits())
+        .put("numParityUnits", ecPolicy.getNumParityUnits())
+        .put("codecName", ecPolicy.getCodecName())
+        .put("id", ecPolicy.getId())
+        .put("extraOptions", ecPolicy.getSchema().getExtraOptions());
+    return builder.build();
+
   }
 
   /** Convert an ExtendedBlock to a Json map. */
@@ -493,5 +515,93 @@ public class JsonUtil {
     m.put("keyProviderUri", serverDefaults.getKeyProviderUri());
     m.put("defaultStoragePolicyId", serverDefaults.getDefaultStoragePolicyId());
     return m;
+  }
+
+  public static String toJsonString(SnapshotDiffReport diffReport) {
+    return toJsonString(SnapshotDiffReport.class.getSimpleName(),
+        toJsonMap(diffReport));
+  }
+
+  private static Object toJsonMap(SnapshotDiffReport diffReport) {
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("snapshotRoot", diffReport.getSnapshotRoot());
+    m.put("fromSnapshot", diffReport.getFromSnapshot());
+    m.put("toSnapshot", diffReport.getLaterSnapshotName());
+    Object[] diffList = new Object[diffReport.getDiffList().size()];
+    for (int i = 0; i < diffReport.getDiffList().size(); i++) {
+      diffList[i] = toJsonMap(diffReport.getDiffList().get(i));
+    }
+    m.put("diffList", diffList);
+    return m;
+  }
+
+  private static Object toJsonMap(
+      SnapshotDiffReport.DiffReportEntry diffReportEntry) {
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("type", diffReportEntry.getType());
+    if (diffReportEntry.getSourcePath() != null) {
+      m.put("sourcePath",
+          DFSUtilClient.bytes2String(diffReportEntry.getSourcePath()));
+    }
+    if (diffReportEntry.getTargetPath() != null) {
+      m.put("targetPath",
+          DFSUtilClient.bytes2String(diffReportEntry.getTargetPath()));
+    }
+    return m;
+  }
+
+  public static String toJsonString(
+      SnapshottableDirectoryStatus[] snapshottableDirectoryList) {
+    if (snapshottableDirectoryList == null) {
+      return toJsonString("SnapshottableDirectoryList", null);
+    }
+    Object[] a = new Object[snapshottableDirectoryList.length];
+    for (int i = 0; i < snapshottableDirectoryList.length; i++) {
+      a[i] = toJsonMap(snapshottableDirectoryList[i]);
+    }
+    return toJsonString("SnapshottableDirectoryList", a);
+  }
+
+  private static Object toJsonMap(
+      SnapshottableDirectoryStatus snapshottableDirectoryStatus) {
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("snapshotNumber", snapshottableDirectoryStatus.getSnapshotNumber());
+    m.put("snapshotQuota", snapshottableDirectoryStatus.getSnapshotQuota());
+    m.put("parentFullPath", DFSUtilClient
+        .bytes2String(snapshottableDirectoryStatus.getParentFullPath()));
+    m.put("dirStatus", toJsonMap(snapshottableDirectoryStatus.getDirStatus()));
+    return m;
+  }
+
+  private static Map<String, Object> toJsonMap(
+      final BlockLocation blockLocation) throws IOException {
+    if (blockLocation == null) {
+      return null;
+    }
+
+    final Map<String, Object> m = new HashMap<>();
+    m.put("length", blockLocation.getLength());
+    m.put("offset", blockLocation.getOffset());
+    m.put("corrupt", blockLocation.isCorrupt());
+    m.put("storageTypes", toJsonArray(blockLocation.getStorageTypes()));
+    m.put("cachedHosts", blockLocation.getCachedHosts());
+    m.put("hosts", blockLocation.getHosts());
+    m.put("names", blockLocation.getNames());
+    m.put("topologyPaths", blockLocation.getTopologyPaths());
+    return m;
+  }
+
+  public static String toJsonString(BlockLocation[] locations)
+      throws IOException {
+    if (locations == null) {
+      return null;
+    }
+    final Map<String, Object> m = new HashMap<>();
+    Object[] blockLocations = new Object[locations.length];
+    for(int i=0; i<locations.length; i++) {
+      blockLocations[i] = toJsonMap(locations[i]);
+    }
+    m.put(BlockLocation.class.getSimpleName(), blockLocations);
+    return toJsonString("BlockLocations", m);
   }
 }

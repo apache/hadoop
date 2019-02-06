@@ -204,10 +204,10 @@ class JNStorage extends Storage {
     }
   }
 
-  void format(NamespaceInfo nsInfo) throws IOException {
+  void format(NamespaceInfo nsInfo, boolean force) throws IOException {
     unlockAll();
     try {
-      sd.analyzeStorage(StartupOption.FORMAT, this, true);
+      sd.analyzeStorage(StartupOption.FORMAT, this, !force);
     } finally {
       sd.unlock();
     }

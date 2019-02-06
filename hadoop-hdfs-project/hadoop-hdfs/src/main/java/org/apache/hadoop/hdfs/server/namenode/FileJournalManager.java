@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,7 +60,8 @@ import com.google.common.collect.ComparisonChain;
  */
 @InterfaceAudience.Private
 public class FileJournalManager implements JournalManager {
-  private static final Log LOG = LogFactory.getLog(FileJournalManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FileJournalManager.class);
 
   private final Configuration conf;
   private final StorageDirectory sd;
@@ -100,7 +101,7 @@ public class FileJournalManager implements JournalManager {
   public void close() throws IOException {}
   
   @Override
-  public void format(NamespaceInfo ns) throws IOException {
+  public void format(NamespaceInfo ns, boolean force) throws IOException {
     // Formatting file journals is done by the StorageDirectory
     // format code, since they may share their directory with
     // checkpoints, etc.

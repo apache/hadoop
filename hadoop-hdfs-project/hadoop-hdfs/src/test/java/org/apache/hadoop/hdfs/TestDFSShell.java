@@ -37,9 +37,9 @@ import java.util.zip.GZIPOutputStream;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
-import org.apache.commons.lang.RandomStringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.log4j.Level;
 import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
@@ -87,7 +87,7 @@ import static org.hamcrest.core.StringContains.containsString;
  * This class tests commands from DFSShell.
  */
 public class TestDFSShell {
-  private static final Log LOG = LogFactory.getLog(TestDFSShell.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDFSShell.class);
   private static final AtomicInteger counter = new AtomicInteger();
   private final int SUCCESS = 0;
   private final int ERROR = 1;
@@ -720,6 +720,14 @@ public class TestDFSShell {
       assertEquals(" -mkdir returned 1", 1, ret);
       assertTrue(" -mkdir returned this is a file ",
           (returned.lastIndexOf("not a directory") != -1));
+      out.reset();
+      argv[0] = "-mkdir";
+      argv[1] = "/testParent/testChild";
+      ret = ToolRunner.run(shell, argv);
+      returned = out.toString();
+      assertEquals(" -mkdir returned 1", 1, ret);
+      assertTrue(" -mkdir returned there is No file or directory but has testChild in the path",
+          (returned.lastIndexOf("testChild") == -1));
       out.reset();
       argv = new String[3];
       argv[0] = "-mv";
@@ -2829,11 +2837,11 @@ public class TestDFSShell {
         System.setErr(origErr);
       }
 
-      assertEquals("Error message is not the expected error message",
-          "setrep: Requested replication factor of 1 is less than "
-              + "the required minimum of 2 for /tmp/TestDFSShell-"
-              + "testSetrepLow/testFileForSetrepLow\n",
-          bao.toString());
+      assertTrue("Error message is not the expected error message"
+          + bao.toString(), bao.toString().startsWith(
+              "setrep: Requested replication factor of 1 is less than "
+                  + "the required minimum of 2 for /tmp/TestDFSShell-"
+                  + "testSetrepLow/testFileForSetrepLow"));
     } finally {
       shell.close();
       cluster.shutdown();

@@ -28,11 +28,12 @@ import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -44,7 +45,8 @@ import org.apache.hadoop.util.StringUtils;
 public class OfflineImageViewerPB {
   private static final String HELP_OPT = "-h";
   private static final String HELP_LONGOPT = "--help";
-  public static final Log LOG = LogFactory.getLog(OfflineImageViewerPB.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(OfflineImageViewerPB.class);
 
   private final static String usage = "Usage: bin/hdfs oiv [OPTIONS] -i INPUTFILE -o OUTPUTFILE\n"
       + "Offline Image Viewer\n"
@@ -72,10 +74,17 @@ public class OfflineImageViewerPB {
       + "     rather than a number of bytes. (false by default)\n"
       + "  * Web: Run a viewer to expose read-only WebHDFS API.\n"
       + "    -addr specifies the address to listen. (localhost:5978 by default)\n"
+      + "    It does not support secure mode nor HTTPS.\n"
       + "  * Delimited (experimental): Generate a text file with all of the elements common\n"
       + "    to both inodes and inodes-under-construction, separated by a\n"
       + "    delimiter. The default delimiter is \\t, though this may be\n"
       + "    changed via the -delimiter argument.\n"
+      + "  * DetectCorruption: Detect potential corruption of the image by\n"
+      + "    selectively loading parts of it and actively searching for\n"
+      + "    inconsistencies. Outputs a summary of the found corruptions\n"
+      + "    in a delimited format.\n"
+      + "    Note that the check is not exhaustive, and only catches\n"
+      + "    missing nodes during the namespace reconstruction.\n"
       + "\n"
       + "Required command line arguments:\n"
       + "-i,--inputFile <arg>   FSImage or XML file to process.\n"
@@ -88,12 +97,15 @@ public class OfflineImageViewerPB {
       + "                       will also create an <outputFile>.md5 file.\n"
       + "-p,--processor <arg>   Select which type of processor to apply\n"
       + "                       against image file. (XML|FileDistribution|\n"
-      + "                       ReverseXML|Web|Delimited)\n"
+      + "                       ReverseXML|Web|Delimited|DetectCorruption)\n"
       + "                       The default is Web.\n"
-      + "-delimiter <arg>       Delimiting string to use with Delimited processor.  \n"
-      + "-t,--temp <arg>        Use temporary dir to cache intermediate result to generate\n"
-      + "                       Delimited outputs. If not set, Delimited processor constructs\n"
-      + "                       the namespace in memory before outputting text.\n"
+      + "-delimiter <arg>       Delimiting string to use with Delimited or \n"
+      + "                       DetectCorruption processor. \n"
+      + "-t,--temp <arg>        Use temporary dir to cache intermediate\n"
+      + "                       result to generate DetectCorruption or\n"
+      + "                       Delimited outputs. If not set, the processor\n"
+      + "                       constructs the namespace in memory \n"
+      + "                       before outputting text.\n"
       + "-h,--help              Display usage information and exit\n";
 
   /**
@@ -133,7 +145,7 @@ public class OfflineImageViewerPB {
    */
   public static void main(String[] args) throws Exception {
     int status = run(args);
-    System.exit(status);
+    ExitUtil.terminate(status);
   }
 
   public static int run(String[] args) throws Exception {
@@ -169,23 +181,28 @@ public class OfflineImageViewerPB {
     String processor = cmd.getOptionValue("p", "Web");
     String outputFile = cmd.getOptionValue("o", "-");
     String delimiter = cmd.getOptionValue("delimiter",
-        PBImageDelimitedTextWriter.DEFAULT_DELIMITER);
+        PBImageTextWriter.DEFAULT_DELIMITER);
     String tempPath = cmd.getOptionValue("t", "");
 
     Configuration conf = new Configuration();
-    try (PrintStream out = outputFile.equals("-") ?
-        System.out : new PrintStream(outputFile, "UTF-8")) {
+    PrintStream out = null;
+    try {
+      out = outputFile.equals("-") || "REVERSEXML".equalsIgnoreCase(processor) ?
+        System.out : new PrintStream(outputFile, "UTF-8");
       switch (StringUtils.toUpperCase(processor)) {
       case "FILEDISTRIBUTION":
         long maxSize = Long.parseLong(cmd.getOptionValue("maxSize", "0"));
         int step = Integer.parseInt(cmd.getOptionValue("step", "0"));
         boolean formatOutput = cmd.hasOption("format");
-        new FileDistributionCalculator(conf, maxSize, step, formatOutput, out)
-            .visit(new RandomAccessFile(inputFile, "r"));
+        try (RandomAccessFile r = new RandomAccessFile(inputFile, "r")) {
+          new FileDistributionCalculator(conf, maxSize, step, formatOutput, out)
+            .visit(r);
+        }
         break;
       case "XML":
-        new PBImageXmlWriter(conf, out).visit(new RandomAccessFile(inputFile,
-            "r"));
+        try (RandomAccessFile r = new RandomAccessFile(inputFile, "r")) {
+          new PBImageXmlWriter(conf, out).visit(r);
+        }
         break;
       case "REVERSEXML":
         try {
@@ -194,20 +211,27 @@ public class OfflineImageViewerPB {
           System.err.println("OfflineImageReconstructor failed: "
               + e.getMessage());
           e.printStackTrace(System.err);
-          System.exit(1);
+          ExitUtil.terminate(1);
         }
         break;
       case "WEB":
         String addr = cmd.getOptionValue("addr", "localhost:5978");
         try (WebImageViewer viewer =
-            new WebImageViewer(NetUtils.createSocketAddr(addr))) {
+            new WebImageViewer(NetUtils.createSocketAddr(addr), conf)) {
           viewer.start(inputFile);
         }
         break;
       case "DELIMITED":
         try (PBImageDelimitedTextWriter writer =
-            new PBImageDelimitedTextWriter(out, delimiter, tempPath)) {
-          writer.visit(new RandomAccessFile(inputFile, "r"));
+            new PBImageDelimitedTextWriter(out, delimiter, tempPath);
+            RandomAccessFile r = new RandomAccessFile(inputFile, "r")) {
+          writer.visit(r);
+        }
+        break;
+      case "DETECTCORRUPTION":
+        try (PBImageCorruptionDetector detector =
+            new PBImageCorruptionDetector(out, delimiter, tempPath)) {
+          detector.visit(new RandomAccessFile(inputFile, "r"));
         }
         break;
       default:
@@ -221,6 +245,10 @@ public class OfflineImageViewerPB {
     } catch (IOException e) {
       System.err.println("Encountered exception.  Exiting: " + e.getMessage());
       e.printStackTrace(System.err);
+    } finally {
+      if (out != null && out != System.out) {
+        out.close();
+      }
     }
     return -1;
   }

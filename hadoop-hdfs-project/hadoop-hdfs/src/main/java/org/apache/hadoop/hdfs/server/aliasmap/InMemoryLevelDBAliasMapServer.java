@@ -25,7 +25,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ProvidedStorageLocation;
 import org.apache.hadoop.hdfs.protocolPB.AliasMapProtocolPB;
@@ -34,9 +33,15 @@ import org.apache.hadoop.ipc.RPC;
 import javax.annotation.Nonnull;
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.Optional;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_BIND_HOST;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_SERVER_LOG;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_SERVER_LOG_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSUtil.getBindAddress;
 import static org.apache.hadoop.hdfs.protocol.proto.AliasMapProtocolProtos.*;
 import static org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap.CheckedFunction2;
 
@@ -79,20 +84,22 @@ public class InMemoryLevelDBAliasMapServer implements InMemoryAliasMapProtocol,
         AliasMapProtocolService
             .newReflectiveBlockingService(aliasMapProtocolXlator);
 
-    String rpcAddress =
-        conf.get(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS,
-            DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS_DEFAULT);
-    String[] split = rpcAddress.split(":");
-    String bindHost = split[0];
-    Integer port = Integer.valueOf(split[1]);
+    InetSocketAddress rpcAddress = getBindAddress(conf,
+        DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS,
+        DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS_DEFAULT,
+        DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_BIND_HOST);
+
+    boolean setVerbose = conf.getBoolean(
+        DFS_PROVIDED_ALIASMAP_INMEMORY_SERVER_LOG,
+        DFS_PROVIDED_ALIASMAP_INMEMORY_SERVER_LOG_DEFAULT);
 
     aliasMapServer = new RPC.Builder(conf)
         .setProtocol(AliasMapProtocolPB.class)
         .setInstance(aliasMapProtocolService)
-        .setBindAddress(bindHost)
-        .setPort(port)
+        .setBindAddress(rpcAddress.getHostName())
+        .setPort(rpcAddress.getPort())
         .setNumHandlers(1)
-        .setVerbose(true)
+        .setVerbose(setVerbose)
         .build();
 
     LOG.info("Starting InMemoryLevelDBAliasMapServer on {}", rpcAddress);
@@ -139,15 +146,27 @@ public class InMemoryLevelDBAliasMapServer implements InMemoryAliasMapProtocol,
     return conf;
   }
 
+  /**
+   * Get the {@link InMemoryAliasMap} used by this server.
+   * @return the inmemoryaliasmap used.
+   */
+  public InMemoryAliasMap getAliasMap() {
+    return aliasMap;
+  }
+
   @Override
   public void close() {
     LOG.info("Stopping InMemoryLevelDBAliasMapServer");
     try {
-      aliasMap.close();
+      if (aliasMap != null) {
+        aliasMap.close();
+      }
     } catch (IOException e) {
       LOG.error(e.getMessage());
     }
-    aliasMapServer.stop();
+    if (aliasMapServer != null) {
+      aliasMapServer.stop();
+    }
   }
 
 }

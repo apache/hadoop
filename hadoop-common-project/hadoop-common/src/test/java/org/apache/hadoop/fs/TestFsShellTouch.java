@@ -21,7 +21,11 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertThat;
 
+import java.text.ParseException;
+import java.util.Date;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.shell.TouchCommands.Touch;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
@@ -84,5 +88,104 @@ public class TestFsShellTouch {
 
     assertThat("Expected failed touchz in a non-existent directory",
         shellRun("-touchz", noDirName + "/foo"), is(not(0)));
+  }
+
+  @Test
+  public void testTouch() throws Exception {
+    // Ensure newFile2 does not exist
+    final String newFileName = "newFile2";
+    final Path newFile = new Path(newFileName);
+    lfs.delete(newFile, true);
+    assertThat(lfs.exists(newFile), is(false));
+
+    {
+      assertThat(
+          "Expected successful touch on a non-existent file with -c option",
+          shellRun("-touch", "-c", newFileName), is(not(0)));
+      assertThat(lfs.exists(newFile), is(false));
+    }
+
+    {
+      String strTime = formatTimestamp(System.currentTimeMillis());
+      Date dateObj = parseTimestamp(strTime);
+
+      assertThat(
+          "Expected successful touch on a new file with a specified timestamp",
+          shellRun("-touch", "-t", strTime, newFileName), is(0));
+      FileStatus new_status = lfs.getFileStatus(newFile);
+      assertThat(new_status.getAccessTime(), is(dateObj.getTime()));
+      assertThat(new_status.getModificationTime(), is(dateObj.getTime()));
+    }
+
+    FileStatus fstatus = lfs.getFileStatus(newFile);
+
+    {
+      String strTime = formatTimestamp(System.currentTimeMillis());
+      Date dateObj = parseTimestamp(strTime);
+
+      assertThat("Expected successful touch with a specified access time",
+          shellRun("-touch", "-a", "-t", strTime, newFileName), is(0));
+      FileStatus new_status = lfs.getFileStatus(newFile);
+      // Verify if access time is recorded correctly (and modification time
+      // remains unchanged).
+      assertThat(new_status.getAccessTime(), is(dateObj.getTime()));
+      assertThat(new_status.getModificationTime(),
+          is(fstatus.getModificationTime()));
+    }
+
+    fstatus = lfs.getFileStatus(newFile);
+
+    {
+      String strTime = formatTimestamp(System.currentTimeMillis());
+      Date dateObj = parseTimestamp(strTime);
+
+      assertThat(
+          "Expected successful touch with a specified modificatiom time",
+          shellRun("-touch", "-m", "-t", strTime, newFileName), is(0));
+      // Verify if modification time is recorded correctly (and access time
+      // remains unchanged).
+      FileStatus new_status = lfs.getFileStatus(newFile);
+      assertThat(new_status.getAccessTime(), is(fstatus.getAccessTime()));
+      assertThat(new_status.getModificationTime(), is(dateObj.getTime()));
+    }
+
+    {
+      String strTime = formatTimestamp(System.currentTimeMillis());
+      Date dateObj = parseTimestamp(strTime);
+
+      assertThat("Expected successful touch with a specified timestamp",
+          shellRun("-touch", "-t", strTime, newFileName), is(0));
+
+      // Verify if both modification and access times are recorded correctly
+      FileStatus new_status = lfs.getFileStatus(newFile);
+      assertThat(new_status.getAccessTime(), is(dateObj.getTime()));
+      assertThat(new_status.getModificationTime(), is(dateObj.getTime()));
+    }
+
+    {
+      String strTime = formatTimestamp(System.currentTimeMillis());
+      Date dateObj = parseTimestamp(strTime);
+
+      assertThat("Expected successful touch with a specified timestamp",
+          shellRun("-touch", "-a", "-m", "-t", strTime, newFileName), is(0));
+
+      // Verify if both modification and access times are recorded correctly
+      FileStatus new_status = lfs.getFileStatus(newFile);
+      assertThat(new_status.getAccessTime(), is(dateObj.getTime()));
+      assertThat(new_status.getModificationTime(), is(dateObj.getTime()));
+    }
+
+    {
+      assertThat("Expected failed touch with a missing timestamp",
+          shellRun("-touch", "-t", newFileName), is(not(0)));
+    }
+  }
+
+  private String formatTimestamp(long timeInMillis) {
+    return (new Touch()).getDateFormat().format(new Date(timeInMillis));
+  }
+
+  private Date parseTimestamp(String tstamp) throws ParseException {
+    return (new Touch()).getDateFormat().parse(tstamp);
   }
 }

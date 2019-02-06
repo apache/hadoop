@@ -19,16 +19,19 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import org.apache.hadoop.hdfs.AppendTestUtil;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyListOf;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyObject;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -42,6 +45,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -55,8 +59,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.collect.Iterators;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -71,7 +75,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
-import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -95,13 +98,11 @@ import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
-import org.apache.hadoop.hdfs.server.protocol.StorageReport;
-import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.SleepAnswer;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -118,7 +119,8 @@ import com.google.common.base.Supplier;
  * This tests if sync all replicas in block recovery works correctly.
  */
 public class TestBlockRecovery {
-  private static final Log LOG = LogFactory.getLog(TestBlockRecovery.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestBlockRecovery.class);
   private static final String DATA_DIR =
     MiniDFSCluster.getBaseDirectory() + "data";
   private DataNode dn;
@@ -167,8 +169,8 @@ public class TestBlockRecovery {
         11 * cellSize}, {36 * cellSize}}, };
 
   static {
-    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(LOG, Level.TRACE);
   }
 
   private final long
@@ -216,17 +218,17 @@ public class TestBlockRecovery {
         (1, CLUSTER_ID, POOL_ID, 1L));
 
     when(namenode.sendHeartbeat(
-            Mockito.any(DatanodeRegistration.class),
-            Mockito.any(StorageReport[].class),
+            Mockito.any(),
+            Mockito.any(),
             Mockito.anyLong(),
             Mockito.anyLong(),
             Mockito.anyInt(),
             Mockito.anyInt(),
             Mockito.anyInt(),
-            Mockito.any(VolumeFailureSummary.class),
+            Mockito.any(),
             Mockito.anyBoolean(),
-            Mockito.any(SlowPeerReports.class),
-            Mockito.any(SlowDiskReports.class)))
+            Mockito.any(),
+            Mockito.any()))
         .thenReturn(new HeartbeatResponse(
             new DatanodeCommand[0],
             new NNHAStatusHeartbeat(HAServiceState.ACTIVE, 1),
@@ -310,9 +312,9 @@ public class TestBlockRecovery {
     syncList.add(record1);
     syncList.add(record2);
     
-    when(dn1.updateReplicaUnderRecovery((ExtendedBlock)anyObject(), anyLong(),
+    when(dn1.updateReplicaUnderRecovery(any(ExtendedBlock.class), anyLong(),
         anyLong(), anyLong())).thenReturn("storage1");
-    when(dn2.updateReplicaUnderRecovery((ExtendedBlock)anyObject(), anyLong(),
+    when(dn2.updateReplicaUnderRecovery(any(ExtendedBlock.class), anyLong(),
         anyLong(), anyLong())).thenReturn("storage2");
 
     BlockRecoveryWorker.RecoveryTaskContiguous RecoveryTaskContiguous =
@@ -548,7 +550,7 @@ public class TestBlockRecovery {
       BlockRecoveryWorker.RecoveryTaskContiguous spyTask
           = spy(RecoveryTaskContiguous);
       spyTask.recover();
-      verify(spyTask, never()).syncBlock(anyListOf(BlockRecord.class));
+      verify(spyTask, never()).syncBlock(anyList());
     }
   }
 
@@ -576,7 +578,7 @@ public class TestBlockRecovery {
       } catch(IOException e){
         GenericTestUtils.assertExceptionContains("All datanodes failed", e);
       }
-      verify(spyTask, never()).syncBlock(anyListOf(BlockRecord.class));
+      verify(spyTask, never()).syncBlock(anyList());
     }
   }
 
@@ -1135,6 +1137,83 @@ public class TestBlockRecovery {
           return ns.getCompleteBlocksTotal() > 0;
         }
       }, 300, 300000);
+
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Test that block will be recovered even if there are less than the
+   * specified minReplication datanodes involved in its recovery.
+   *
+   * Check that, after recovering, the block will be successfully replicated.
+   */
+  @Test(timeout = 300000L)
+  public void testRecoveryWillIgnoreMinReplication() throws Exception {
+    tearDown(); // Stop the Mocked DN started in startup()
+
+    final int blockSize = 4096;
+    final int numReplicas = 3;
+    final String filename = "/testIgnoreMinReplication";
+    final Path filePath = new Path(filename);
+    Configuration configuration = new HdfsConfiguration();
+    configuration.setInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 2000);
+    configuration.setInt(DFS_NAMENODE_REPLICATION_MIN_KEY, 2);
+    configuration.setLong(DFS_BLOCK_SIZE_KEY, blockSize);
+    MiniDFSCluster cluster = null;
+
+    try {
+      cluster = new MiniDFSCluster.Builder(configuration).numDataNodes(5)
+          .build();
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final FSNamesystem fsn = cluster.getNamesystem();
+
+      // Create a file and never close the output stream to trigger recovery
+      FSDataOutputStream out = dfs.create(filePath, (short) numReplicas);
+      out.write(AppendTestUtil.randomBytes(0, blockSize));
+      out.hsync();
+
+      DFSClient dfsClient = new DFSClient(new InetSocketAddress("localhost",
+          cluster.getNameNodePort()), configuration);
+      LocatedBlock blk = dfsClient.getNamenode().
+          getBlockLocations(filename, 0, blockSize).
+          getLastLocatedBlock();
+
+      // Kill 2 out of 3 datanodes so that only 1 alive, thus < minReplication
+      List<DatanodeInfo> dataNodes = Arrays.asList(blk.getLocations());
+      assertEquals(dataNodes.size(), numReplicas);
+      for (DatanodeInfo dataNode : dataNodes.subList(0, numReplicas - 1)) {
+        cluster.stopDataNode(dataNode.getName());
+      }
+
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return fsn.getNumDeadDataNodes() == 2;
+        }
+      }, 300, 300000);
+
+      // Make sure hard lease expires to trigger replica recovery
+      cluster.setLeasePeriod(100L, 100L);
+
+      // Wait for recovery to succeed
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          try {
+            return dfs.isFileClosed(filePath);
+          } catch (IOException e) {}
+          return false;
+        }
+      }, 300, 300000);
+
+      // Wait for the block to be replicated
+      DFSTestUtil.waitForReplication(cluster, DFSTestUtil.getFirstBlock(
+          dfs, filePath), 1, numReplicas, 0);
 
     } finally {
       if (cluster != null) {

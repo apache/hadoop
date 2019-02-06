@@ -18,6 +18,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
+
+
+import java.io.IOException;
 import java.util.List;
 
 public interface AutoCreatedQueueManagementPolicy {
@@ -26,14 +29,15 @@ public interface AutoCreatedQueueManagementPolicy {
    * Initialize policy
    * @param schedulerContext Capacity Scheduler context
    */
-  void init(CapacitySchedulerContext schedulerContext, ParentQueue parentQueue);
+  void init(CapacitySchedulerContext schedulerContext, ParentQueue
+      parentQueue) throws IOException;
 
   /**
    * Reinitialize policy state ( if required )
    * @param schedulerContext Capacity Scheduler context
    */
   void reinitialize(CapacitySchedulerContext schedulerContext,
-      ParentQueue parentQueue);
+      ParentQueue parentQueue) throws IOException;
 
   /**
    * Get initial template for the specified leaf queue
@@ -48,6 +52,10 @@ public interface AutoCreatedQueueManagementPolicy {
   /**
    * Compute/Adjust child queue capacities
    * for auto created leaf queues
+   * This computes queue entitlements but does not update LeafQueueState or
+   * queue capacities. Scheduler calls commitQueueManagemetChanges after
+   * validation after applying queue changes and commits to LeafQueueState
+   * are done in commitQueueManagementChanges.
    *
    * @return returns a list of suggested QueueEntitlementChange(s) which may
    * or may not be be enforced by the scheduler

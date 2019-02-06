@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.mapred.gridmix;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -83,8 +83,8 @@ import java.util.Map;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 class DistributedCacheEmulator {
-  private static final Log LOG =
-      LogFactory.getLog(DistributedCacheEmulator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DistributedCacheEmulator.class);
 
   static final long AVG_BYTES_PER_MAP = 128 * 1024 * 1024L;// 128MB
 

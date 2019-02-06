@@ -47,7 +47,6 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.IFile.Writer;
-import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapred.Counters;
@@ -84,10 +83,10 @@ public class TestPipeApplication {
   public void testRunner() throws Exception {
 
     // clean old password files
-    JobConf conf = new JobConf();
-    File[] psw = cleanTokenPasswordFile(conf);
+    File[] psw = cleanTokenPasswordFile();
     try {
       RecordReader<FloatWritable, NullWritable> rReader = new ReaderPipesMapRunner();
+      JobConf conf = new JobConf();
       conf.set(Submitter.IS_JAVA_RR, "true");
       // for stdour and stderror
 
@@ -163,7 +162,7 @@ public class TestPipeApplication {
 
     TestTaskReporter reporter = new TestTaskReporter();
 
-    File[] psw = cleanTokenPasswordFile(conf);
+    File[] psw = cleanTokenPasswordFile();
     try {
 
       conf.set(MRJobConfig.TASK_ATTEMPT_ID, taskName);
@@ -248,7 +247,7 @@ public class TestPipeApplication {
 
     JobConf conf = new JobConf();
 
-    File[] psw = cleanTokenPasswordFile(conf);
+    File[] psw = cleanTokenPasswordFile();
 
     System.setProperty("test.build.data",
             "target/tmp/build/TEST_SUBMITTER_MAPPER/data");
@@ -389,8 +388,8 @@ public class TestPipeApplication {
   @Test
   public void testPipesReduser() throws Exception {
 
+    File[] psw = cleanTokenPasswordFile();
     JobConf conf = new JobConf();
-    File[] psw = cleanTokenPasswordFile(conf);
     try {
       Token<AMRMTokenIdentifier> token = new Token<AMRMTokenIdentifier>(
               "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
@@ -507,16 +506,14 @@ public class TestPipeApplication {
 
   }
 
-  private File[] cleanTokenPasswordFile(JobConf conf) throws Exception {
+  private File[] cleanTokenPasswordFile() throws Exception {
     File[] result = new File[2];
-    result[0] = new File(conf.get(MRConfig.LOCAL_DIR) + Path.SEPARATOR
-        + "jobTokenPassword");
+    result[0] = new File("./jobTokenPassword");
     if (result[0].exists()) {
       FileUtil.chmod(result[0].getAbsolutePath(), "700");
       assertTrue(result[0].delete());
     }
-    result[1] = new File(conf.get(MRConfig.LOCAL_DIR) + Path.SEPARATOR
-        + ".jobTokenPassword.crc");
+    result[1] = new File("./.jobTokenPassword.crc");
     if (result[1].exists()) {
       FileUtil.chmod(result[1].getAbsolutePath(), "700");
       result[1].delete();

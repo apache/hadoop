@@ -34,12 +34,17 @@ import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.util.StringUtils;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.apache.hadoop.fs.permission.FsCreateModes;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -118,6 +123,9 @@ public class FSOperations {
     }
     if (fileStatus.getPermission().getErasureCodedBit()) {
       json.put(HttpFSFileSystem.EC_BIT_JSON, true);
+    }
+    if (fileStatus.isSnapshotEnabled()) {
+      json.put(HttpFSFileSystem.SNAPSHOT_BIT_JSON, true);
     }
     return json;
   }
@@ -473,6 +481,7 @@ public class FSOperations {
     private InputStream is;
     private Path path;
     private short permission;
+    private short unmaskedPermission;
     private boolean override;
     private short replication;
     private long blockSize;
@@ -486,12 +495,14 @@ public class FSOperations {
      * @param override if the file should be overriden if it already exist.
      * @param repl the replication factor for the file.
      * @param blockSize the block size for the file.
+     * @param unmaskedPerm unmasked permissions for the file
      */
     public FSCreate(InputStream is, String path, short perm, boolean override,
-                    short repl, long blockSize) {
+                    short repl, long blockSize, short unmaskedPerm) {
       this.is = is;
       this.path = new Path(path);
       this.permission = perm;
+      this.unmaskedPermission = unmaskedPerm;
       this.override = override;
       this.replication = repl;
       this.blockSize = blockSize;
@@ -515,6 +526,10 @@ public class FSOperations {
         blockSize = fs.getDefaultBlockSize(path);
       }
       FsPermission fsPermission = new FsPermission(permission);
+      if (unmaskedPermission != -1) {
+        fsPermission = FsCreateModes.create(fsPermission,
+            new FsPermission(unmaskedPermission));
+      }
       int bufferSize = fs.getConf().getInt(HTTPFS_BUFFER_SIZE_KEY,
           HTTP_BUFFER_SIZE_DEFAULT);
       OutputStream os = fs.create(path, fsPermission, override, bufferSize, replication, blockSize, null);
@@ -748,16 +763,20 @@ public class FSOperations {
 
     private Path path;
     private short permission;
+    private short unmaskedPermission;
 
     /**
      * Creates a mkdirs executor.
      *
      * @param path directory path to create.
      * @param permission permission to use.
+     * @param unmaskedPermission unmasked permissions for the directory
      */
-    public FSMkdirs(String path, short permission) {
+    public FSMkdirs(String path, short permission,
+        short unmaskedPermission) {
       this.path = new Path(path);
       this.permission = permission;
+      this.unmaskedPermission = unmaskedPermission;
     }
 
     /**
@@ -773,6 +792,10 @@ public class FSOperations {
     @Override
     public JSONObject execute(FileSystem fs) throws IOException {
       FsPermission fsPermission = new FsPermission(permission);
+      if (unmaskedPermission != -1) {
+        fsPermission = FsCreateModes.create(fsPermission,
+            new FsPermission(unmaskedPermission));
+      }
       boolean mkdirs = fs.mkdirs(path, fsPermission);
       return toJSON(HttpFSFileSystem.MKDIRS_JSON, mkdirs);
     }
@@ -1457,6 +1480,78 @@ public class FSOperations {
   }
 
   /**
+   *  Executor that performs an allowSnapshot operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSAllowSnapshot implements
+      FileSystemAccess.FileSystemExecutor<Void> {
+
+    private Path path;
+
+    /**
+     * Creates a allowSnapshot executor.
+     * @param path directory path to allow snapshot.
+     */
+    public FSAllowSnapshot(String path) {
+      this.path = new Path(path);
+    }
+
+    /**
+     * Executes the filesystem operation.
+     * @param fs filesystem instance to use.
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        dfs.allowSnapshot(path);
+      } else {
+        throw new UnsupportedOperationException("allowSnapshot is not "
+            + "supported for HttpFs on " + fs.getClass()
+            + ". Please check your fs.defaultFS configuration");
+      }
+      return null;
+    }
+  }
+
+  /**
+   *  Executor that performs an disallowSnapshot operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSDisallowSnapshot implements
+      FileSystemAccess.FileSystemExecutor<Void> {
+
+    private Path path;
+
+    /**
+     * Creates a disallowSnapshot executor.
+     * @param path directory path to allow snapshot.
+     */
+    public FSDisallowSnapshot(String path) {
+      this.path = new Path(path);
+    }
+
+    /**
+     * Executes the filesystem operation.
+     * @param fs filesystem instance to use.
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        dfs.disallowSnapshot(path);
+      } else {
+        throw new UnsupportedOperationException("disallowSnapshot is not "
+            + "supported for HttpFs on " + fs.getClass()
+            + ". Please check your fs.defaultFS configuration");
+      }
+      return null;
+    }
+  }
+
+  /**
    *  Executor that performs a createSnapshot FileSystemAccess operation.
    */
   @InterfaceAudience.Private
@@ -1557,6 +1652,88 @@ public class FSOperations {
     public Void execute(FileSystem fs) throws IOException {
       fs.renameSnapshot(path, oldSnapshotName, snapshotName);
       return null;
+    }
+  }
+
+  /**
+   *  Executor that performs a getSnapshotDiff operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSGetSnapshotDiff implements
+      FileSystemAccess.FileSystemExecutor<String> {
+    private Path path;
+    private String oldSnapshotName;
+    private String snapshotName;
+
+    /**
+     * Creates a getSnapshotDiff executor.
+     * @param path directory path of the snapshots to be examined.
+     * @param oldSnapshotName Older snapshot name.
+     * @param snapshotName Newer snapshot name.
+     */
+    public FSGetSnapshotDiff(String path, String oldSnapshotName,
+        String snapshotName) {
+      this.path = new Path(path);
+      this.oldSnapshotName = oldSnapshotName;
+      this.snapshotName = snapshotName;
+    }
+
+    /**
+     * Executes the filesystem operation.
+     * @param fs filesystem instance to use.
+     * @return A serialized JSON string of snapshot diffs.
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public String execute(FileSystem fs) throws IOException {
+      SnapshotDiffReport sdr = null;
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        sdr = dfs.getSnapshotDiffReport(path, oldSnapshotName, snapshotName);
+      } else {
+        throw new UnsupportedOperationException("getSnapshotDiff is not "
+            + "supported for HttpFs on " + fs.getClass()
+            + ". Please check your fs.defaultFS configuration");
+      }
+      if (sdr != null) {
+        return JsonUtil.toJsonString(sdr);
+      } else {
+        return "";
+      }
+    }
+  }
+
+  /**
+   *  Executor that performs a getSnapshottableDirListing operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSGetSnapshottableDirListing implements
+      FileSystemAccess.FileSystemExecutor<String> {
+
+    /**
+     * Creates a getSnapshottableDirListing executor.
+     */
+    public FSGetSnapshottableDirListing() {
+    }
+
+    /**
+     * Executes the filesystem operation.
+     * @param fs filesystem instance to use.
+     * @return A JSON string of all snapshottable directories.
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public String execute(FileSystem fs) throws IOException {
+      SnapshottableDirectoryStatus[] sds = null;
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        sds = dfs.getSnapshottableDirListing();
+      } else {
+        throw new UnsupportedOperationException("getSnapshottableDirListing is "
+            + "not supported for HttpFs on " + fs.getClass()
+            + ". Please check your fs.defaultFS configuration");
+      }
+      return JsonUtil.toJsonString(sds);
     }
   }
 }

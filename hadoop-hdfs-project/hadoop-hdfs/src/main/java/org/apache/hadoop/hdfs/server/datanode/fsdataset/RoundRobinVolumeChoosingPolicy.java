@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 
@@ -31,7 +31,8 @@ import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
  */
 public class RoundRobinVolumeChoosingPolicy<V extends FsVolumeSpi>
     implements VolumeChoosingPolicy<V> {
-  public static final Log LOG = LogFactory.getLog(RoundRobinVolumeChoosingPolicy.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(RoundRobinVolumeChoosingPolicy.class);
 
   // curVolumes stores the RR counters of each storage type.
   // The ordinal of storage type in org.apache.hadoop.fs.StorageType

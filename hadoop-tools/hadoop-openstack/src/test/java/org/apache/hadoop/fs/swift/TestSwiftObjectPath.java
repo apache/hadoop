@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.fs.swift;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.swift.http.RestClientBindings;
 import org.apache.hadoop.fs.swift.http.SwiftRestClient;
@@ -36,7 +36,8 @@ import static org.junit.Assert.assertTrue;
  * Unit tests for SwiftObjectPath class.
  */
 public class TestSwiftObjectPath implements SwiftTestConstants {
-  private static final Log LOG = LogFactory.getLog(TestSwiftObjectPath.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSwiftObjectPath.class);
 
   /**
    * What an endpoint looks like. This is derived from a (valid)

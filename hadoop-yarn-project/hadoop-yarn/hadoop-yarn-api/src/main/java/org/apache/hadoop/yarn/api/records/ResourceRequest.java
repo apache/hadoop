@@ -102,6 +102,26 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
         .build();
   }
 
+  /**
+   * Clone a ResourceRequest object (shallow copy). Please keep it loaded with
+   * all (new) fields
+   *
+   * @param rr the object to copy from
+   * @return the copied object
+   */
+  @Public
+  @Evolving
+  public static ResourceRequest clone(ResourceRequest rr) {
+    // Please keep it loaded with all (new) fields
+    return ResourceRequest.newBuilder().priority(rr.getPriority())
+        .resourceName(rr.getResourceName()).capability(rr.getCapability())
+        .numContainers(rr.getNumContainers())
+        .relaxLocality(rr.getRelaxLocality())
+        .nodeLabelExpression(rr.getNodeLabelExpression())
+        .executionTypeRequest(rr.getExecutionTypeRequest())
+        .allocationRequestId(rr.getAllocationRequestId()).build();
+  }
+
   @Public
   @Unstable
   public static ResourceRequestBuilder newBuilder() {

@@ -84,7 +84,7 @@ public final class ConfTest {
     QName property = new QName("property");
 
     List<NodeInfo> nodes = new ArrayList<NodeInfo>();
-    Stack<NodeInfo> parsed = new Stack<NodeInfo>();
+    Stack<NodeInfo> parsed = new Stack<>();
 
     XMLInputFactory factory = XMLInputFactory.newInstance();
     XMLEventReader reader = factory.createXMLEventReader(in);
@@ -258,9 +258,7 @@ public final class ConfTest {
         if (confFile.isFile()) {
           files.add(confFile);
         } else if (confFile.isDirectory()) {
-          for (File file : listFiles(confFile)) {
-            files.add(file);
-          }
+          files.addAll(Arrays.asList(listFiles(confFile)));
         } else {
           terminate(1, confFile.getAbsolutePath()
               + " is neither a file nor directory");
@@ -313,9 +311,9 @@ class NodeInfo {
   private StartElement startElement;
   private List<Attribute> attributes = new ArrayList<Attribute>();
   private Map<StartElement, Characters> elements =
-      new HashMap<StartElement, Characters>();
+      new HashMap<>();
   private Map<QName, List<XMLEvent>> qNameXMLEventsMap =
-      new HashMap<QName, List<XMLEvent>>();
+      new HashMap<>();
 
   public NodeInfo(StartElement startElement) {
     this.startElement = startElement;

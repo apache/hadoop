@@ -55,6 +55,7 @@ function hadoop_usage
   hadoop_add_subcommand "timelinereader" client "run the timeline reader server"
   hadoop_add_subcommand "timelineserver" daemon "run the timeline server"
   hadoop_add_subcommand "top" client "view cluster information"
+  hadoop_add_subcommand "nodeattributes" client "node attributes cli client"
   hadoop_add_subcommand "version" client "print the version"
   hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" true
 }
@@ -141,6 +142,7 @@ ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
       HADOOP_CLASSNAME=org.apache.hadoop.yarn.client.cli.QueueCLI
     ;;
     registrydns)
+      echo "DEPRECATED: Use of this command is deprecated." 1>&2
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_SECURE_CLASSNAME='org.apache.hadoop.registry.server.dns.PrivilegedRegistryDNSStarter'
       HADOOP_CLASSNAME='org.apache.hadoop.registry.server.dns.RegistryDNSServer'
@@ -186,6 +188,10 @@ ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
       hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/lib/*"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer'
     ;;
+	nodeattributes)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="false"
+      HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.cli.NodeAttributesCLI'
+	;;
     timelineserver)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer'

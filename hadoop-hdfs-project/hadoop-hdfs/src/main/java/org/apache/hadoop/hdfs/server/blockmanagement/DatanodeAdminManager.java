@@ -21,8 +21,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.util.AbstractList;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -56,7 +57,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * Manages decommissioning and maintenance state for DataNodes. A background
  * monitor thread periodically checks the status of DataNodes that are
  * decommissioning or entering maintenance state.
- * <p/>
+ * <p>
  * A DataNode can be decommissioned in a few situations:
  * <ul>
  * <li>If a DN is dead, it is decommissioned immediately.</li>
@@ -71,11 +72,11 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * determine if they can be DECOMMISSIONED. The monitor also prunes this list
  * as blocks become replicated, so monitor scans will become more efficient
  * over time.
- * <p/>
+ * <p>
  * DECOMMISSION_INPROGRESS nodes that become dead do not progress to
  * DECOMMISSIONED until they become live again. This prevents potential
  * durability loss for singly-replicated blocks (see HDFS-6791).
- * <p/>
+ * <p>
  * DataNodes can also be put under maintenance state for any short duration
  * maintenance operations. Unlike decommissioning, blocks are not always
  * re-replicated for the DataNodes to enter maintenance state. When the
@@ -87,7 +88,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * of maintenance expiry time. When DataNodes don't transition or join the
  * cluster back by expiry time, blocks are re-replicated just as in
  * decommissioning case as to avoid read or write performance degradation.
- * <p/>
+ * <p>
  * This class depends on the FSNamesystem lock for synchronization.
  */
 @InterfaceAudience.Private
@@ -139,7 +140,7 @@ public class DatanodeAdminManager {
         new ThreadFactoryBuilder().setNameFormat("DatanodeAdminMonitor-%d")
             .setDaemon(true).build());
     outOfServiceNodeBlocks = new TreeMap<>();
-    pendingNodes = new LinkedList<>();
+    pendingNodes = new ArrayDeque<>();
   }
 
   /**
@@ -219,7 +220,7 @@ public class DatanodeAdminManager {
         pendingNodes.add(node);
       }
     } else {
-      LOG.trace("startDecommission: Node {} in {}, nothing to do." +
+      LOG.trace("startDecommission: Node {} in {}, nothing to do.",
           node, node.getAdminState());
     }
   }
@@ -242,7 +243,7 @@ public class DatanodeAdminManager {
       pendingNodes.remove(node);
       outOfServiceNodeBlocks.remove(node);
     } else {
-      LOG.trace("stopDecommission: Node {} in {}, nothing to do." +
+      LOG.trace("stopDecommission: Node {} in {}, nothing to do.",
           node, node.getAdminState());
     }
   }
@@ -272,7 +273,7 @@ public class DatanodeAdminManager {
       // IN_MAINTENANCE to support maintenance expiration.
       pendingNodes.add(node);
     } else {
-      LOG.trace("startMaintenance: Node {} in {}, nothing to do." +
+      LOG.trace("startMaintenance: Node {} in {}, nothing to do.",
           node, node.getAdminState());
     }
   }
@@ -321,7 +322,7 @@ public class DatanodeAdminManager {
       pendingNodes.remove(node);
       outOfServiceNodeBlocks.remove(node);
     } else {
-      LOG.trace("stopMaintenance: Node {} in {}, nothing to do." +
+      LOG.trace("stopMaintenance: Node {} in {}, nothing to do.",
           node, node.getAdminState());
     }
   }
@@ -394,8 +395,7 @@ public class DatanodeAdminManager {
     StringBuilder nodeList = new StringBuilder();
     for (DatanodeStorageInfo storage : storages) {
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
-      nodeList.append(node);
-      nodeList.append(" ");
+      nodeList.append(node).append(' ');
     }
     NameNode.blockStateChangeLog.info(
         "Block: " + block + ", Expected Replicas: "
@@ -517,7 +517,7 @@ public class DatanodeAdminManager {
       final Iterator<Map.Entry<DatanodeDescriptor, AbstractList<BlockInfo>>>
           it = new CyclicIteration<>(outOfServiceNodeBlocks,
               iterkey).iterator();
-      final LinkedList<DatanodeDescriptor> toRemove = new LinkedList<>();
+      final List<DatanodeDescriptor> toRemove = new ArrayList<>();
 
       while (it.hasNext() && !exceededNumBlocksPerCheck() && namesystem
           .isRunning()) {
@@ -583,12 +583,12 @@ public class DatanodeAdminManager {
                   "A node is in an invalid state!");
             }
             LOG.debug("Node {} is sufficiently replicated and healthy, "
-                + "marked as {}.", dn.getAdminState());
+                + "marked as {}.", dn, dn.getAdminState());
           } else {
             LOG.debug("Node {} {} healthy."
                 + " It needs to replicate {} more blocks."
                 + " {} is still in progress.", dn,
-                isHealthy? "is": "isn't", blocks.size(), dn.getAdminState());
+                isHealthy ? "is": "isn't", blocks.size(), dn.getAdminState());
           }
         } else {
           LOG.debug("Node {} still has {} blocks to replicate "
@@ -744,10 +744,10 @@ public class DatanodeAdminManager {
         lowRedundancyBlocks++;
         if (bc.isUnderConstruction()) {
           INode ucFile = namesystem.getFSDirectory().getInode(bc.getId());
-          if(!(ucFile instanceof  INodeFile) ||
+          if (!(ucFile instanceof  INodeFile) ||
               !ucFile.asFile().isUnderConstruction()) {
-            LOG.warn("File " + ucFile.getLocalName() + " is not under " +
-                "construction. Skipping add to low redundancy open files!");
+            LOG.warn("File {} is not under construction. Skipping add to " +
+                "low redundancy open files!", ucFile.getLocalName());
           } else {
             lowRedundancyBlocksInOpenFiles++;
             lowRedundancyOpenFiles.add(ucFile.getId());

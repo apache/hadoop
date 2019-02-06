@@ -25,10 +25,12 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -123,6 +125,95 @@ public class TestNMLeveldbStateStoreService {
     FileUtil.fullyDelete(TMP_DIR);
   }
 
+  private List<RecoveredContainerState> loadContainersState(
+      RecoveryIterator<RecoveredContainerState> it) throws IOException {
+    List<RecoveredContainerState> containers =
+        new ArrayList<RecoveredContainerState>();
+    while (it.hasNext()) {
+      RecoveredContainerState rcs = it.next();
+      containers.add(rcs);
+    }
+    return containers;
+  }
+
+  private List<ContainerManagerApplicationProto> loadApplicationProtos(
+      RecoveryIterator<ContainerManagerApplicationProto> it)
+      throws IOException {
+    List<ContainerManagerApplicationProto> applicationProtos =
+        new ArrayList<ContainerManagerApplicationProto>();
+    while (it.hasNext()) {
+      applicationProtos.add(it.next());
+    }
+    return applicationProtos;
+  }
+
+  private List<DeletionServiceDeleteTaskProto> loadDeletionTaskProtos(
+      RecoveryIterator<DeletionServiceDeleteTaskProto> it) throws IOException {
+    List<DeletionServiceDeleteTaskProto> deleteTaskProtos =
+        new ArrayList<DeletionServiceDeleteTaskProto>();
+    while (it.hasNext()) {
+      deleteTaskProtos.add(it.next());
+    }
+    return deleteTaskProtos;
+  }
+
+  private Map<String, RecoveredUserResources> loadUserResources(
+      RecoveryIterator<Map.Entry<String, RecoveredUserResources>> it)
+      throws IOException {
+    Map<String, RecoveredUserResources> userResources =
+        new HashMap<String, RecoveredUserResources>();
+    while (it.hasNext()) {
+      Map.Entry<String, RecoveredUserResources> entry = it.next();
+      userResources.put(entry.getKey(), entry.getValue());
+    }
+    return userResources;
+  }
+
+  private Map<ApplicationAttemptId, MasterKey> loadNMTokens(
+      RecoveryIterator<Map.Entry<ApplicationAttemptId, MasterKey>> it)
+      throws IOException {
+    Map<ApplicationAttemptId, MasterKey> nmTokens =
+        new HashMap<ApplicationAttemptId, MasterKey>();
+    while (it.hasNext()) {
+      Map.Entry<ApplicationAttemptId, MasterKey> entry = it.next();
+      nmTokens.put(entry.getKey(), entry.getValue());
+    }
+    return nmTokens;
+  }
+
+  private Map<ContainerId, Long> loadContainerTokens(
+      RecoveryIterator<Map.Entry<ContainerId, Long>> it) throws IOException {
+    Map<ContainerId, Long> containerTokens =
+        new HashMap<ContainerId, Long>();
+    while (it.hasNext()) {
+      Map.Entry<ContainerId, Long> entry = it.next();
+      containerTokens.put(entry.getKey(), entry.getValue());
+    }
+    return containerTokens;
+  }
+
+  private List<LocalizedResourceProto> loadCompletedResources(
+      RecoveryIterator<LocalizedResourceProto> it) throws IOException {
+    List<LocalizedResourceProto> completedResources =
+        new ArrayList<LocalizedResourceProto>();
+    while (it != null && it.hasNext()) {
+      completedResources.add(it.next());
+    }
+    return completedResources;
+  }
+
+  private Map<LocalResourceProto, Path> loadStartedResources(
+      RecoveryIterator <Map.Entry<LocalResourceProto, Path>> it)
+      throws IOException {
+    Map<LocalResourceProto, Path> startedResources =
+        new HashMap<LocalResourceProto, Path>();
+    while (it != null &&it.hasNext()) {
+      Map.Entry<LocalResourceProto, Path> entry = it.next();
+      startedResources.put(entry.getKey(), entry.getValue());
+    }
+    return startedResources;
+  }
+
   private void restartStateStore() throws IOException {
     // need to close so leveldb releases database lock
     if (stateStore != null) {
@@ -138,9 +229,11 @@ public class TestNMLeveldbStateStoreService {
     assertNotNull(state);
     LocalResourceTrackerState pubts = state.getPublicTrackerState();
     assertNotNull(pubts);
-    assertTrue(pubts.getLocalizedResources().isEmpty());
-    assertTrue(pubts.getInProgressResources().isEmpty());
-    assertTrue(state.getUserResources().isEmpty());
+    assertTrue(loadCompletedResources(pubts.getCompletedResourcesIterator())
+        .isEmpty());
+    assertTrue(loadStartedResources(pubts.getStartedResourcesIterator())
+        .isEmpty());
+    assertTrue(loadUserResources(state.getIterator()).isEmpty());
   }
 
   @Test
@@ -181,7 +274,7 @@ public class TestNMLeveldbStateStoreService {
       restartStateStore();
       Assert.fail("Incompatible version, should expect fail here.");
     } catch (ServiceStateException e) {
-      Assert.assertTrue("Exception message mismatch", 
+      Assert.assertTrue("Exception message mismatch",
         e.getMessage().contains("Incompatible version for NM state:"));
     }
   }
@@ -190,7 +283,9 @@ public class TestNMLeveldbStateStoreService {
   public void testApplicationStorage() throws IOException {
     // test empty when no state
     RecoveredApplicationsState state = stateStore.loadApplicationsState();
-    assertTrue(state.getApplications().isEmpty());
+    List<ContainerManagerApplicationProto> apps =
+        loadApplicationProtos(state.getIterator());
+    assertTrue(apps.isEmpty());
 
     // store an application and verify recovered
     final ApplicationId appId1 = ApplicationId.newInstance(1234, 1);
@@ -202,8 +297,9 @@ public class TestNMLeveldbStateStoreService {
     stateStore.storeApplication(appId1, appProto1);
     restartStateStore();
     state = stateStore.loadApplicationsState();
-    assertEquals(1, state.getApplications().size());
-    assertEquals(appProto1, state.getApplications().get(0));
+    apps = loadApplicationProtos(state.getIterator());
+    assertEquals(1, apps.size());
+    assertEquals(appProto1, apps.get(0));
 
     // add a new app
     final ApplicationId appId2 = ApplicationId.newInstance(1234, 2);
@@ -214,23 +310,25 @@ public class TestNMLeveldbStateStoreService {
     stateStore.storeApplication(appId2, appProto2);
     restartStateStore();
     state = stateStore.loadApplicationsState();
-    assertEquals(2, state.getApplications().size());
-    assertTrue(state.getApplications().contains(appProto1));
-    assertTrue(state.getApplications().contains(appProto2));
+    apps = loadApplicationProtos(state.getIterator());
+    assertEquals(2, apps.size());
+    assertTrue(apps.contains(appProto1));
+    assertTrue(apps.contains(appProto2));
 
     // test removing an application
     stateStore.removeApplication(appId2);
     restartStateStore();
     state = stateStore.loadApplicationsState();
-    assertEquals(1, state.getApplications().size());
-    assertEquals(appProto1, state.getApplications().get(0));
+    apps = loadApplicationProtos(state.getIterator());
+    assertEquals(1, apps.size());
+    assertEquals(appProto1, apps.get(0));
   }
 
   @Test
   public void testContainerStorage() throws IOException {
     // test empty when no state
     List<RecoveredContainerState> recoveredContainers =
-        stateStore.loadContainersState();
+        loadContainersState(stateStore.getContainerStateIterator());
     assertTrue(recoveredContainers.isEmpty());
 
     // create a container request
@@ -238,7 +336,9 @@ public class TestNMLeveldbStateStoreService {
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 4);
     ContainerId containerId = ContainerId.newContainerId(appAttemptId, 5);
-    StartContainerRequest containerReq = createContainerRequest(containerId);
+    Resource containerResource = Resource.newInstance(1024, 2);
+    StartContainerRequest containerReq =
+        createContainerRequest(containerId, containerResource);
 
     // store a container and verify recovered
     long containerStartTime = System.currentTimeMillis();
@@ -250,7 +350,8 @@ public class TestNMLeveldbStateStoreService {
         stateStore.getContainerVersionKey(containerId.toString()))));
 
     restartStateStore();
-    recoveredContainers = stateStore.loadContainersState();
+    recoveredContainers =
+        loadContainersState(stateStore.getContainerStateIterator());
     assertEquals(1, recoveredContainers.size());
     RecoveredContainerState rcs = recoveredContainers.get(0);
     assertEquals(0, rcs.getVersion());
@@ -260,18 +361,21 @@ public class TestNMLeveldbStateStoreService {
     assertEquals(false, rcs.getKilled());
     assertEquals(containerReq, rcs.getStartRequest());
     assertTrue(rcs.getDiagnostics().isEmpty());
+    assertEquals(containerResource, rcs.getCapability());
 
     // store a new container record without StartContainerRequest
     ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 6);
     stateStore.storeContainerLaunched(containerId1);
-    recoveredContainers = stateStore.loadContainersState();
+    recoveredContainers =
+        loadContainersState(stateStore.getContainerStateIterator());
     // check whether the new container record is discarded
     assertEquals(1, recoveredContainers.size());
 
     // queue the container, and verify recovered
     stateStore.storeContainerQueued(containerId);
     restartStateStore();
-    recoveredContainers = stateStore.loadContainersState();
+    recoveredContainers =
+        loadContainersState(stateStore.getContainerStateIterator());
     assertEquals(1, recoveredContainers.size());
     rcs = recoveredContainers.get(0);
     assertEquals(RecoveredContainerStatus.QUEUED, rcs.getStatus());
@@ -279,6 +383,7 @@ public class TestNMLeveldbStateStoreService {
     assertEquals(false, rcs.getKilled());
     assertEquals(containerReq, rcs.getStartRequest());
     assertTrue(rcs.getDiagnostics().isEmpty());
+    assertEquals(containerResource, rcs.getCapability());
 
     // launch the container, add some diagnostics, and verify recovered
     StringBuilder diags = new StringBuilder();
@@ -286,7 +391,8 @@ public class TestNMLeveldbStateStoreService {
     diags.append("some diags for container");
     stateStore.storeContainerDiagnostics(containerId, diags);
     restartStateStore();
-    recoveredContainers = stateStore.loadContainersState();
+    recoveredContainers =
+        loadContainersState(stateStore.getContainerStateIterator());
     assertEquals(1, recoveredContainers.size());
     rcs = recoveredContainers.get(0);
     assertEquals(RecoveredContainerStatus.LAUNCHED, rcs.getStatus());
@@ -294,11 +400,13 @@ public class TestNMLeveldbStateStoreService {
     assertEquals(false, rcs.getKilled());
     assertEquals(containerReq, rcs.getStartRequest());
     assertEquals(diags.toString(), rcs.getDiagnostics());
+    assertEquals(containerResource, rcs.getCapability());
 
     // pause the container, and verify recovered
     stateStore.storeContainerPaused(containerId);
     restartStateStore();
-    recoveredContainers = stateStore.loadContainersState();
+    recoveredContainers =
+        loadContainersState(stateStore.getContainerStateIterator());
     assertEquals(1, recoveredContainers.size());
     rcs = recoveredContainers.get(0);
     assertEquals(RecoveredContainerStatus.PAUSED, rcs.getStatus());
@@ -309,7 +417,8 @@ public class TestNMLeveldbStateStoreService {
     // Resume the container
     stateStore.removeContainerPaused(containerId);
     restartStateStore();
-    recoveredContainers = stateStore.loadContainersState();
+    recoveredContainers =
+        loadContainersState(stateStore.getContainerStateIterator());
     assertEquals(1, recoveredContainers.size());
 
     // increase the container size, and verify recovered
@@ -321,7 +430,8 @@ public class TestNMLeveldbStateStoreService {
     stateStore
         .storeContainerUpdateToken(containerId, updateTokenIdentifier);
     restartStateStore();
-    recoveredContainers = stateStore.loadContainersState();
+    recoveredContainers =
+        loadContainersState(stateStore.getContainerStateIterator());
     assertEquals(1, recoveredContainers.size());
     rcs = recoveredContainers.get(0);
     assertEquals(0, rcs.getVersion());
@@ -335,7 +445,8 @@ public class TestNMLeveldbStateStoreService {
     stateStore.storeContainerDiagnostics(containerId, diags);
     stateStore.storeContainerKilled(containerId);
     restartStateStore();
-    recoveredContainers = stateStore.loadContainersState();
+    recoveredContainers =
+        loadContainersState(stateStore.getContainerStateIterator());
     assertEquals(1, recoveredContainers.size());
     rcs = recoveredContainers.get(0);
     assertEquals(RecoveredContainerStatus.LAUNCHED, rcs.getStatus());
@@ -351,7 +462,8 @@ public class TestNMLeveldbStateStoreService {
     stateStore.storeContainerDiagnostics(containerId, diags);
     stateStore.storeContainerCompleted(containerId, 21);
     restartStateStore();
-    recoveredContainers = stateStore.loadContainersState();
+    recoveredContainers =
+        loadContainersState(stateStore.getContainerStateIterator());
     assertEquals(1, recoveredContainers.size());
     rcs = recoveredContainers.get(0);
     assertEquals(RecoveredContainerStatus.COMPLETED, rcs.getStatus());
@@ -364,22 +476,56 @@ public class TestNMLeveldbStateStoreService {
     stateStore.storeContainerWorkDir(containerId, "/test/workdir");
     stateStore.storeContainerLogDir(containerId, "/test/logdir");
     restartStateStore();
-    recoveredContainers = stateStore.loadContainersState();
+    recoveredContainers =
+        loadContainersState(stateStore.getContainerStateIterator());
     assertEquals(1, recoveredContainers.size());
     rcs = recoveredContainers.get(0);
     assertEquals(6, rcs.getRemainingRetryAttempts());
     assertEquals("/test/workdir", rcs.getWorkDir());
     assertEquals("/test/logdir", rcs.getLogDir());
 
+    validateRetryAttempts(containerId);
     // remove the container and verify not recovered
     stateStore.removeContainer(containerId);
     restartStateStore();
-    recoveredContainers = stateStore.loadContainersState();
+    recoveredContainers =
+        loadContainersState(stateStore.getContainerStateIterator());
     assertTrue(recoveredContainers.isEmpty());
+    // recover again to check remove clears all containers
+    restartStateStore();
+    NMStateStoreService nmStoreSpy = spy(stateStore);
+    loadContainersState(nmStoreSpy.getContainerStateIterator());
+    verify(nmStoreSpy,times(0)).removeContainer(any(ContainerId.class));
+  }
+
+  private void validateRetryAttempts(ContainerId containerId)
+      throws IOException {
+    // store finishTimeForRetryAttempts
+    List<Long> finishTimeForRetryAttempts = Arrays.asList(1462700529039L,
+        1462700529050L, 1462700529120L);
+    stateStore.storeContainerRestartTimes(containerId,
+        finishTimeForRetryAttempts);
+    restartStateStore();
+    RecoveredContainerState rcs =
+        loadContainersState(stateStore.getContainerStateIterator()).get(0);
+    List<Long> recoveredRestartTimes = rcs.getRestartTimes();
+    assertEquals(1462700529039L, (long)recoveredRestartTimes.get(0));
+    assertEquals(1462700529050L, (long)recoveredRestartTimes.get(1));
+    assertEquals(1462700529120L, (long)recoveredRestartTimes.get(2));
+  }
+
+  private StartContainerRequest createContainerRequest(
+          ContainerId containerId, Resource res) {
+    return createContainerRequestInternal(containerId, res);
   }
 
   private StartContainerRequest createContainerRequest(
       ContainerId containerId) {
+    return createContainerRequestInternal(containerId, null);
+  }
+
+  private StartContainerRequest createContainerRequestInternal(ContainerId
+          containerId, Resource res) {
     LocalResource lrsrc = LocalResource.newInstance(
         URL.newInstance("hdfs", "somehost", 12345, "/some/path/to/rsrc"),
         LocalResourceType.FILE, LocalResourceVisibility.APPLICATION, 123L,
@@ -405,6 +551,10 @@ public class TestNMLeveldbStateStoreService {
         localResources, env, containerCmds, serviceData, containerTokens,
         acls);
     Resource containerRsrc = Resource.newInstance(1357, 3);
+
+    if (res != null) {
+      containerRsrc = res;
+    }
     ContainerTokenIdentifier containerTokenId =
         new ContainerTokenIdentifier(containerId, "host", "user",
             containerRsrc, 9876543210L, 42, 2468, Priority.newInstance(7),
@@ -413,6 +563,111 @@ public class TestNMLeveldbStateStoreService {
         ContainerTokenIdentifier.KIND.toString(), "password".getBytes(),
         "tokenservice");
     return StartContainerRequest.newInstance(clc, containerToken);
+  }
+
+  @Test
+  public void testLocalTrackerStateIterator() throws IOException {
+    String user1 = "somebody";
+    ApplicationId appId1 = ApplicationId.newInstance(1, 1);
+    ApplicationId appId2 = ApplicationId.newInstance(2, 2);
+
+    String user2 = "someone";
+    ApplicationId appId3 = ApplicationId.newInstance(3, 3);
+
+    // start and finish local resource for applications
+    Path appRsrcPath1 = new Path("hdfs://some/app/resource1");
+    LocalResourcePBImpl rsrcPb1 = (LocalResourcePBImpl)
+        LocalResource.newInstance(
+            URL.fromPath(appRsrcPath1),
+            LocalResourceType.ARCHIVE, LocalResourceVisibility.APPLICATION,
+            123L, 456L);
+    LocalResourceProto appRsrcProto1 = rsrcPb1.getProto();
+    Path appRsrcLocalPath1 = new Path("/some/local/dir/for/apprsrc1");
+    Path appRsrcPath2 = new Path("hdfs://some/app/resource2");
+    LocalResourcePBImpl rsrcPb2 = (LocalResourcePBImpl)
+        LocalResource.newInstance(
+            URL.fromPath(appRsrcPath2),
+            LocalResourceType.ARCHIVE, LocalResourceVisibility.APPLICATION,
+            123L, 456L);
+    LocalResourceProto appRsrcProto2 = rsrcPb2.getProto();
+    Path appRsrcLocalPath2 = new Path("/some/local/dir/for/apprsrc2");
+    Path appRsrcPath3 = new Path("hdfs://some/app/resource3");
+    LocalResourcePBImpl rsrcPb3 = (LocalResourcePBImpl)
+        LocalResource.newInstance(
+            URL.fromPath(appRsrcPath3),
+            LocalResourceType.ARCHIVE, LocalResourceVisibility.APPLICATION,
+            123L, 456L);
+    LocalResourceProto appRsrcProto3 = rsrcPb3.getProto();
+    Path appRsrcLocalPath3 = new Path("/some/local/dir/for/apprsrc2");
+
+    stateStore.startResourceLocalization(user1, appId1, appRsrcProto1,
+        appRsrcLocalPath1);
+    stateStore.startResourceLocalization(user1, appId2, appRsrcProto2,
+        appRsrcLocalPath2);
+    stateStore.startResourceLocalization(user2, appId3, appRsrcProto3,
+        appRsrcLocalPath3);
+
+    LocalizedResourceProto appLocalizedProto1 =
+        LocalizedResourceProto.newBuilder()
+            .setResource(appRsrcProto1)
+            .setLocalPath(appRsrcLocalPath1.toString())
+            .setSize(1234567L)
+            .build();
+    LocalizedResourceProto appLocalizedProto2 =
+        LocalizedResourceProto.newBuilder()
+            .setResource(appRsrcProto2)
+            .setLocalPath(appRsrcLocalPath2.toString())
+            .setSize(1234567L)
+            .build();
+    LocalizedResourceProto appLocalizedProto3 =
+        LocalizedResourceProto.newBuilder()
+            .setResource(appRsrcProto3)
+            .setLocalPath(appRsrcLocalPath3.toString())
+            .setSize(1234567L)
+            .build();
+
+
+    stateStore.finishResourceLocalization(user1, appId1, appLocalizedProto1);
+    stateStore.finishResourceLocalization(user1, appId2, appLocalizedProto2);
+    stateStore.finishResourceLocalization(user2, appId3, appLocalizedProto3);
+
+
+    List<LocalizedResourceProto> completedResources =
+        new ArrayList<LocalizedResourceProto>();
+    Map<LocalResourceProto, Path> startedResources =
+        new HashMap<LocalResourceProto, Path>();
+
+    // restart and verify two users exist and two apps completed for user1.
+    restartStateStore();
+    RecoveredLocalizationState state = stateStore.loadLocalizationState();
+    Map<String, RecoveredUserResources> userResources =
+        loadUserResources(state.getIterator());
+    assertEquals(2, userResources.size());
+
+    RecoveredUserResources uResource = userResources.get(user1);
+    assertEquals(2, uResource.getAppTrackerStates().size());
+    LocalResourceTrackerState app1ts =
+        uResource.getAppTrackerStates().get(appId1);
+    assertNotNull(app1ts);
+    completedResources = loadCompletedResources(
+        app1ts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        app1ts.getStartedResourcesIterator());
+    assertTrue(startedResources.isEmpty());
+    assertEquals(1, completedResources.size());
+    assertEquals(appLocalizedProto1,
+        completedResources.iterator().next());
+    LocalResourceTrackerState app2ts =
+        uResource.getAppTrackerStates().get(appId2);
+    assertNotNull(app2ts);
+    completedResources = loadCompletedResources(
+        app2ts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        app2ts.getStartedResourcesIterator());
+    assertTrue(startedResources.isEmpty());
+    assertEquals(1, completedResources.size());
+    assertEquals(appLocalizedProto2,
+        completedResources.iterator().next());
   }
 
   @Test
@@ -432,27 +687,44 @@ public class TestNMLeveldbStateStoreService {
     stateStore.startResourceLocalization(user, appId, appRsrcProto,
         appRsrcLocalPath);
 
+    List<LocalizedResourceProto> completedResources =
+        new ArrayList<LocalizedResourceProto>();
+    Map<LocalResourceProto, Path> startedResources =
+        new HashMap<LocalResourceProto, Path>();
+
     // restart and verify only app resource is marked in-progress
     restartStateStore();
     RecoveredLocalizationState state = stateStore.loadLocalizationState();
     LocalResourceTrackerState pubts = state.getPublicTrackerState();
-    assertTrue(pubts.getLocalizedResources().isEmpty());
-    assertTrue(pubts.getInProgressResources().isEmpty());
+    completedResources = loadCompletedResources(
+        pubts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        pubts.getStartedResourcesIterator());
+    assertTrue(completedResources.isEmpty());
+    assertTrue(startedResources.isEmpty());
     Map<String, RecoveredUserResources> userResources =
-        state.getUserResources();
+        loadUserResources(state.getIterator());
     assertEquals(1, userResources.size());
     RecoveredUserResources rur = userResources.get(user);
     LocalResourceTrackerState privts = rur.getPrivateTrackerState();
     assertNotNull(privts);
-    assertTrue(privts.getLocalizedResources().isEmpty());
-    assertTrue(privts.getInProgressResources().isEmpty());
+    completedResources = loadCompletedResources(
+        privts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        privts.getStartedResourcesIterator());
+    assertTrue(completedResources.isEmpty());
+    assertTrue(startedResources.isEmpty());
     assertEquals(1, rur.getAppTrackerStates().size());
     LocalResourceTrackerState appts = rur.getAppTrackerStates().get(appId);
     assertNotNull(appts);
-    assertTrue(appts.getLocalizedResources().isEmpty());
-    assertEquals(1, appts.getInProgressResources().size());
+    completedResources = loadCompletedResources(
+        appts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        appts.getStartedResourcesIterator());
+    assertTrue(completedResources.isEmpty());
+    assertEquals(1, startedResources.size());
     assertEquals(appRsrcLocalPath,
-        appts.getInProgressResources().get(appRsrcProto));
+        startedResources.get(appRsrcProto));
 
     // start some public and private resources
     Path pubRsrcPath1 = new Path("hdfs://some/public/resource1");
@@ -487,28 +759,40 @@ public class TestNMLeveldbStateStoreService {
     restartStateStore();
     state = stateStore.loadLocalizationState();
     pubts = state.getPublicTrackerState();
-    assertTrue(pubts.getLocalizedResources().isEmpty());
-    assertEquals(2, pubts.getInProgressResources().size());
+    completedResources = loadCompletedResources(
+        pubts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        pubts.getStartedResourcesIterator());
+    assertTrue(completedResources.isEmpty());
+    assertEquals(2, startedResources.size());
     assertEquals(pubRsrcLocalPath1,
-        pubts.getInProgressResources().get(pubRsrcProto1));
+        startedResources.get(pubRsrcProto1));
     assertEquals(pubRsrcLocalPath2,
-        pubts.getInProgressResources().get(pubRsrcProto2));
-    userResources = state.getUserResources();
+        startedResources.get(pubRsrcProto2));
+    userResources = loadUserResources(state.getIterator());
     assertEquals(1, userResources.size());
     rur = userResources.get(user);
     privts = rur.getPrivateTrackerState();
     assertNotNull(privts);
-    assertTrue(privts.getLocalizedResources().isEmpty());
-    assertEquals(1, privts.getInProgressResources().size());
+    completedResources = loadCompletedResources(
+        privts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        privts.getStartedResourcesIterator());
+    assertTrue(completedResources.isEmpty());
+    assertEquals(1, startedResources.size());
     assertEquals(privRsrcLocalPath,
-        privts.getInProgressResources().get(privRsrcProto));
+        startedResources.get(privRsrcProto));
     assertEquals(1, rur.getAppTrackerStates().size());
     appts = rur.getAppTrackerStates().get(appId);
     assertNotNull(appts);
-    assertTrue(appts.getLocalizedResources().isEmpty());
-    assertEquals(1, appts.getInProgressResources().size());
+    completedResources = loadCompletedResources(
+        appts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        appts.getStartedResourcesIterator());
+    assertTrue(completedResources.isEmpty());
+    assertEquals(1, startedResources.size());
     assertEquals(appRsrcLocalPath,
-        appts.getInProgressResources().get(appRsrcProto));
+        startedResources.get(appRsrcProto));
   }
 
   @Test
@@ -535,27 +819,44 @@ public class TestNMLeveldbStateStoreService {
           .build();
     stateStore.finishResourceLocalization(user, appId, appLocalizedProto);
 
+    List<LocalizedResourceProto> completedResources =
+        new ArrayList<LocalizedResourceProto>();
+    Map<LocalResourceProto, Path> startedResources =
+        new HashMap<LocalResourceProto, Path>();
+
     // restart and verify only app resource is completed
     restartStateStore();
     RecoveredLocalizationState state = stateStore.loadLocalizationState();
     LocalResourceTrackerState pubts = state.getPublicTrackerState();
-    assertTrue(pubts.getLocalizedResources().isEmpty());
-    assertTrue(pubts.getInProgressResources().isEmpty());
+    completedResources = loadCompletedResources(
+        pubts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        pubts.getStartedResourcesIterator());
+    assertTrue(completedResources.isEmpty());
+    assertTrue(startedResources.isEmpty());
     Map<String, RecoveredUserResources> userResources =
-        state.getUserResources();
+        loadUserResources(state.getIterator());
     assertEquals(1, userResources.size());
     RecoveredUserResources rur = userResources.get(user);
     LocalResourceTrackerState privts = rur.getPrivateTrackerState();
     assertNotNull(privts);
-    assertTrue(privts.getLocalizedResources().isEmpty());
-    assertTrue(privts.getInProgressResources().isEmpty());
+    completedResources = loadCompletedResources(
+        privts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        privts.getStartedResourcesIterator());
+    assertTrue(completedResources.isEmpty());
+    assertTrue(startedResources.isEmpty());
     assertEquals(1, rur.getAppTrackerStates().size());
     LocalResourceTrackerState appts = rur.getAppTrackerStates().get(appId);
     assertNotNull(appts);
-    assertTrue(appts.getInProgressResources().isEmpty());
-    assertEquals(1, appts.getLocalizedResources().size());
+    completedResources = loadCompletedResources(
+        appts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        appts.getStartedResourcesIterator());
+    assertTrue(startedResources.isEmpty());
+    assertEquals(1, completedResources.size());
     assertEquals(appLocalizedProto,
-        appts.getLocalizedResources().iterator().next());
+        completedResources.iterator().next());
 
     // start some public and private resources
     Path pubRsrcPath1 = new Path("hdfs://some/public/resource1");
@@ -606,28 +907,40 @@ public class TestNMLeveldbStateStoreService {
     restartStateStore();
     state = stateStore.loadLocalizationState();
     pubts = state.getPublicTrackerState();
-    assertEquals(1, pubts.getLocalizedResources().size());
+    completedResources = loadCompletedResources(
+        pubts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        pubts.getStartedResourcesIterator());
+    assertEquals(1, completedResources.size());
     assertEquals(pubLocalizedProto1,
-        pubts.getLocalizedResources().iterator().next());
-    assertEquals(1, pubts.getInProgressResources().size());
+        completedResources.iterator().next());
+    assertEquals(1, startedResources.size());
     assertEquals(pubRsrcLocalPath2,
-        pubts.getInProgressResources().get(pubRsrcProto2));
-    userResources = state.getUserResources();
+        startedResources.get(pubRsrcProto2));
+    userResources = loadUserResources(state.getIterator());
     assertEquals(1, userResources.size());
     rur = userResources.get(user);
     privts = rur.getPrivateTrackerState();
     assertNotNull(privts);
-    assertEquals(1, privts.getLocalizedResources().size());
+    completedResources = loadCompletedResources(
+        privts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        privts.getStartedResourcesIterator());
+    assertEquals(1, completedResources.size());
     assertEquals(privLocalizedProto,
-        privts.getLocalizedResources().iterator().next());
-    assertTrue(privts.getInProgressResources().isEmpty());
+        completedResources.iterator().next());
+    assertTrue(startedResources.isEmpty());
     assertEquals(1, rur.getAppTrackerStates().size());
     appts = rur.getAppTrackerStates().get(appId);
     assertNotNull(appts);
-    assertTrue(appts.getInProgressResources().isEmpty());
-    assertEquals(1, appts.getLocalizedResources().size());
+    completedResources = loadCompletedResources(
+        appts.getCompletedResourcesIterator());
+    startedResources = loadStartedResources(
+        appts.getStartedResourcesIterator());
+    assertTrue(startedResources.isEmpty());
+    assertEquals(1, completedResources.size());
     assertEquals(appLocalizedProto,
-        appts.getLocalizedResources().iterator().next());
+        completedResources.iterator().next());
   }
 
   @Test
@@ -715,12 +1028,16 @@ public class TestNMLeveldbStateStoreService {
     restartStateStore();
     RecoveredLocalizationState state = stateStore.loadLocalizationState();
     LocalResourceTrackerState pubts = state.getPublicTrackerState();
-    assertTrue(pubts.getInProgressResources().isEmpty());
-    assertEquals(1, pubts.getLocalizedResources().size());
+    List<LocalizedResourceProto> completedResources =
+        loadCompletedResources(pubts.getCompletedResourcesIterator());
+    Map<LocalResourceProto, Path> startedResources =
+        loadStartedResources(pubts.getStartedResourcesIterator());
+    assertTrue(startedResources.isEmpty());
+    assertEquals(1, completedResources.size());
     assertEquals(pubLocalizedProto1,
-        pubts.getLocalizedResources().iterator().next());
+        completedResources.iterator().next());
     Map<String, RecoveredUserResources> userResources =
-        state.getUserResources();
+        loadUserResources(state.getIterator());
     assertTrue(userResources.isEmpty());
   }
 
@@ -729,7 +1046,9 @@ public class TestNMLeveldbStateStoreService {
     // test empty when no state
     RecoveredDeletionServiceState state =
         stateStore.loadDeletionServiceState();
-    assertTrue(state.getTasks().isEmpty());
+    List<DeletionServiceDeleteTaskProto> deleteTaskProtos =
+        loadDeletionTaskProtos(state.getIterator());
+    assertTrue(deleteTaskProtos.isEmpty());
 
     // store a deletion task and verify recovered
     DeletionServiceDeleteTaskProto proto =
@@ -746,8 +1065,9 @@ public class TestNMLeveldbStateStoreService {
     stateStore.storeDeletionTask(proto.getId(), proto);
     restartStateStore();
     state = stateStore.loadDeletionServiceState();
-    assertEquals(1, state.getTasks().size());
-    assertEquals(proto, state.getTasks().get(0));
+    deleteTaskProtos = loadDeletionTaskProtos(state.getIterator());
+    assertEquals(1, deleteTaskProtos.size());
+    assertEquals(proto, deleteTaskProtos.get(0));
 
     // store another deletion task
     DeletionServiceDeleteTaskProto proto2 =
@@ -760,31 +1080,36 @@ public class TestNMLeveldbStateStoreService {
     stateStore.storeDeletionTask(proto2.getId(), proto2);
     restartStateStore();
     state = stateStore.loadDeletionServiceState();
-    assertEquals(2, state.getTasks().size());
-    assertTrue(state.getTasks().contains(proto));
-    assertTrue(state.getTasks().contains(proto2));
+    deleteTaskProtos = loadDeletionTaskProtos(state.getIterator());
+    assertEquals(2, deleteTaskProtos.size());
+    assertTrue(deleteTaskProtos.contains(proto));
+    assertTrue(deleteTaskProtos.contains(proto2));
+
 
     // delete a task and verify gone after recovery
     stateStore.removeDeletionTask(proto2.getId());
     restartStateStore();
-    state = stateStore.loadDeletionServiceState();
-    assertEquals(1, state.getTasks().size());
-    assertEquals(proto, state.getTasks().get(0));
+    state =  stateStore.loadDeletionServiceState();
+    deleteTaskProtos = loadDeletionTaskProtos(state.getIterator());
+    assertEquals(1, deleteTaskProtos.size());
+    assertEquals(proto, deleteTaskProtos.get(0));
 
     // delete the last task and verify none left
     stateStore.removeDeletionTask(proto.getId());
     restartStateStore();
     state = stateStore.loadDeletionServiceState();
-    assertTrue(state.getTasks().isEmpty());
-  }
+    deleteTaskProtos = loadDeletionTaskProtos(state.getIterator());
+    assertTrue(deleteTaskProtos.isEmpty());  }
 
   @Test
   public void testNMTokenStorage() throws IOException {
     // test empty when no state
     RecoveredNMTokensState state = stateStore.loadNMTokensState();
+    Map<ApplicationAttemptId, MasterKey> loadedAppKeys =
+        loadNMTokens(state.getIterator());
     assertNull(state.getCurrentMasterKey());
     assertNull(state.getPreviousMasterKey());
-    assertTrue(state.getApplicationMasterKeys().isEmpty());
+    assertTrue(loadedAppKeys.isEmpty());
 
     // store a master key and verify recovered
     NMTokenSecretManagerForTest secretMgr = new NMTokenSecretManagerForTest();
@@ -792,18 +1117,20 @@ public class TestNMLeveldbStateStoreService {
     stateStore.storeNMTokenCurrentMasterKey(currentKey);
     restartStateStore();
     state = stateStore.loadNMTokensState();
+    loadedAppKeys = loadNMTokens(state.getIterator());
     assertEquals(currentKey, state.getCurrentMasterKey());
     assertNull(state.getPreviousMasterKey());
-    assertTrue(state.getApplicationMasterKeys().isEmpty());
+    assertTrue(loadedAppKeys.isEmpty());
 
     // store a previous key and verify recovered
     MasterKey prevKey = secretMgr.generateKey();
     stateStore.storeNMTokenPreviousMasterKey(prevKey);
     restartStateStore();
     state = stateStore.loadNMTokensState();
+    loadedAppKeys = loadNMTokens(state.getIterator());
     assertEquals(currentKey, state.getCurrentMasterKey());
     assertEquals(prevKey, state.getPreviousMasterKey());
-    assertTrue(state.getApplicationMasterKeys().isEmpty());
+    assertTrue(loadedAppKeys.isEmpty());
 
     // store a few application keys and verify recovered
     ApplicationAttemptId attempt1 = ApplicationAttemptId.newInstance(
@@ -816,10 +1143,9 @@ public class TestNMLeveldbStateStoreService {
     stateStore.storeNMTokenApplicationMasterKey(attempt2, attemptKey2);
     restartStateStore();
     state = stateStore.loadNMTokensState();
+    loadedAppKeys = loadNMTokens(state.getIterator());
     assertEquals(currentKey, state.getCurrentMasterKey());
     assertEquals(prevKey, state.getPreviousMasterKey());
-    Map<ApplicationAttemptId, MasterKey> loadedAppKeys =
-        state.getApplicationMasterKeys();
     assertEquals(2, loadedAppKeys.size());
     assertEquals(attemptKey1, loadedAppKeys.get(attempt1));
     assertEquals(attemptKey2, loadedAppKeys.get(attempt2));
@@ -838,9 +1164,9 @@ public class TestNMLeveldbStateStoreService {
     stateStore.storeNMTokenCurrentMasterKey(currentKey);
     restartStateStore();
     state = stateStore.loadNMTokensState();
+    loadedAppKeys = loadNMTokens(state.getIterator());
     assertEquals(currentKey, state.getCurrentMasterKey());
     assertEquals(prevKey, state.getPreviousMasterKey());
-    loadedAppKeys = state.getApplicationMasterKeys();
     assertEquals(2, loadedAppKeys.size());
     assertNull(loadedAppKeys.get(attempt1));
     assertEquals(attemptKey2, loadedAppKeys.get(attempt2));
@@ -852,9 +1178,10 @@ public class TestNMLeveldbStateStoreService {
     // test empty when no state
     RecoveredContainerTokensState state =
         stateStore.loadContainerTokensState();
+    Map<ContainerId, Long> loadedActiveTokens = loadContainerTokens(state.it);
     assertNull(state.getCurrentMasterKey());
     assertNull(state.getPreviousMasterKey());
-    assertTrue(state.getActiveTokens().isEmpty());
+    assertTrue(loadedActiveTokens.isEmpty());
 
     // store a master key and verify recovered
     ContainerTokenKeyGeneratorForTest keygen =
@@ -863,18 +1190,20 @@ public class TestNMLeveldbStateStoreService {
     stateStore.storeContainerTokenCurrentMasterKey(currentKey);
     restartStateStore();
     state = stateStore.loadContainerTokensState();
+    loadedActiveTokens = loadContainerTokens(state.it);
     assertEquals(currentKey, state.getCurrentMasterKey());
     assertNull(state.getPreviousMasterKey());
-    assertTrue(state.getActiveTokens().isEmpty());
+    assertTrue(loadedActiveTokens.isEmpty());
 
     // store a previous key and verify recovered
     MasterKey prevKey = keygen.generateKey();
     stateStore.storeContainerTokenPreviousMasterKey(prevKey);
     restartStateStore();
     state = stateStore.loadContainerTokensState();
+    loadedActiveTokens = loadContainerTokens(state.it);
     assertEquals(currentKey, state.getCurrentMasterKey());
     assertEquals(prevKey, state.getPreviousMasterKey());
-    assertTrue(state.getActiveTokens().isEmpty());
+    assertTrue(loadedActiveTokens.isEmpty());
 
     // store a few container tokens and verify recovered
     ContainerId cid1 = BuilderUtils.newContainerId(1, 1, 1, 1);
@@ -885,10 +1214,9 @@ public class TestNMLeveldbStateStoreService {
     stateStore.storeContainerToken(cid2, expTime2);
     restartStateStore();
     state = stateStore.loadContainerTokensState();
+    loadedActiveTokens = loadContainerTokens(state.it);
     assertEquals(currentKey, state.getCurrentMasterKey());
     assertEquals(prevKey, state.getPreviousMasterKey());
-    Map<ContainerId, Long> loadedActiveTokens =
-        state.getActiveTokens();
     assertEquals(2, loadedActiveTokens.size());
     assertEquals(expTime1, loadedActiveTokens.get(cid1));
     assertEquals(expTime2, loadedActiveTokens.get(cid2));
@@ -906,9 +1234,9 @@ public class TestNMLeveldbStateStoreService {
     stateStore.storeContainerTokenCurrentMasterKey(currentKey);
     restartStateStore();
     state = stateStore.loadContainerTokensState();
+    loadedActiveTokens = loadContainerTokens(state.it);
     assertEquals(currentKey, state.getCurrentMasterKey());
     assertEquals(prevKey, state.getPreviousMasterKey());
-    loadedActiveTokens = state.getActiveTokens();
     assertEquals(2, loadedActiveTokens.size());
     assertNull(loadedActiveTokens.get(cid1));
     assertEquals(expTime2, loadedActiveTokens.get(cid2));
@@ -987,8 +1315,8 @@ public class TestNMLeveldbStateStoreService {
   @Test
   public void testUnexpectedKeyDoesntThrowException() throws IOException {
     // test empty when no state
-    List<RecoveredContainerState> recoveredContainers = stateStore
-        .loadContainersState();
+    List<RecoveredContainerState> recoveredContainers =
+        loadContainersState(stateStore.getContainerStateIterator());
     assertTrue(recoveredContainers.isEmpty());
 
     ApplicationId appId = ApplicationId.newInstance(1234, 3);
@@ -1003,7 +1331,8 @@ public class TestNMLeveldbStateStoreService {
     + containerId.toString() + "/invalidKey1234").getBytes();
     stateStore.getDB().put(invalidKey, new byte[1]);
     restartStateStore();
-    recoveredContainers = stateStore.loadContainersState();
+    recoveredContainers =
+        loadContainersState(stateStore.getContainerStateIterator());
     assertEquals(1, recoveredContainers.size());
     RecoveredContainerState rcs = recoveredContainers.get(0);
     assertEquals(RecoveredContainerStatus.REQUESTED, rcs.getStatus());
@@ -1120,8 +1449,8 @@ public class TestNMLeveldbStateStoreService {
   @Test
   public void testStateStoreForResourceMapping() throws IOException {
     // test empty when no state
-    List<RecoveredContainerState> recoveredContainers = stateStore
-        .loadContainersState();
+    List<RecoveredContainerState> recoveredContainers =
+        loadContainersState(stateStore.getContainerStateIterator());
     assertTrue(recoveredContainers.isEmpty());
 
     ApplicationId appId = ApplicationId.newInstance(1234, 3);
@@ -1148,7 +1477,8 @@ public class TestNMLeveldbStateStoreService {
 
     // add a invalid key
     restartStateStore();
-    recoveredContainers = stateStore.loadContainersState();
+    recoveredContainers =
+        loadContainersState(stateStore.getContainerStateIterator());
     assertEquals(1, recoveredContainers.size());
     RecoveredContainerState rcs = recoveredContainers.get(0);
     List<Serializable> res = rcs.getResourceMappings()
@@ -1198,6 +1528,23 @@ public class TestNMLeveldbStateStoreService {
       stateStore.setDB(keepDB);
     }
     Assert.fail("Expected exception not thrown");
+  }
+
+  @Test
+  public void testEmptyRestartTimes() throws IOException {
+    List<Long> restartTimes = new ArrayList<>();
+    ApplicationId appId = ApplicationId.newInstance(1234, 3);
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(appId,
+        4);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 5);
+    storeMockContainer(containerId);
+    stateStore.storeContainerRestartTimes(containerId,
+        restartTimes);
+    restartStateStore();
+    RecoveredContainerState rcs =
+        loadContainersState(stateStore.getContainerStateIterator()).get(0);
+    List<Long> recoveredRestartTimes = rcs.getRestartTimes();
+    assertTrue(recoveredRestartTimes.isEmpty());
   }
 
   private StartContainerRequest storeMockContainer(ContainerId containerId)

@@ -34,7 +34,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.Reso
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.FpgaDiscoverer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.IntelFpgaOpenclPlugin;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
-import org.apache.hadoop.yarn.util.resource.TestResourceUtils;
+import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -61,7 +61,8 @@ public class TestFpgaResourceHandler {
 
   @Before
   public void setup() {
-    TestResourceUtils.addNewTypesToResources(ResourceInformation.FPGA_URI);
+    CustomResourceTypesConfigurationProvider.
+        initResourceTypes(ResourceInformation.FPGA_URI);
     configuration = new YarnConfiguration();
 
     mockCGroupsHandler = mock(CGroupsHandler.class);
@@ -406,10 +407,11 @@ public class TestFpgaResourceHandler {
 
   private static IntelFpgaOpenclPlugin mockPlugin(String type, List<FpgaResourceAllocator.FpgaDevice> list) {
     IntelFpgaOpenclPlugin plugin = mock(IntelFpgaOpenclPlugin.class);
-    when(plugin.initPlugin(Mockito.anyObject())).thenReturn(true);
+    when(plugin.initPlugin(Mockito.any())).thenReturn(true);
     when(plugin.getFpgaType()).thenReturn(type);
     when(plugin.downloadIP(Mockito.anyString(), Mockito.anyString(), Mockito.anyMap())).thenReturn("/tmp");
-    when(plugin.configureIP(Mockito.anyString(), Mockito.anyObject())).thenReturn(true);
+    when(plugin.configureIP(Mockito.anyString(), Mockito.any()))
+        .thenReturn(true);
     when(plugin.discover(Mockito.anyInt())).thenReturn(list);
     return plugin;
   }

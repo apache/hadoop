@@ -62,12 +62,10 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
 
     leafQueueTemplate = initializeLeafQueueConfigs().build();
 
-    StringBuffer queueInfo = new StringBuffer();
-    queueInfo.append("Created Managed Parent Queue: ").append(queueName).append(
-        "]\nwith capacity: [").append(super.getCapacity()).append(
-        "]\nwith max capacity: [").append(super.getMaximumCapacity()).append(
-        "].");
-    LOG.info(queueInfo.toString());
+    LOG.info(
+        "Created Managed Parent Queue: [{}] with capacity: [{}]"
+            + " with max capacity: [{}]",
+        queueName, super.getCapacity(), super.getMaximumCapacity());
 
     initializeQueueManagementPolicy();
   }
@@ -117,12 +115,10 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
 
       validateAndApplyQueueManagementChanges(queueManagementChanges);
 
-      StringBuffer queueInfo = new StringBuffer();
-      queueInfo.append("Reinitialized Managed Parent Queue: ").append(queueName)
-          .append("]\nwith capacity: [").append(super.getCapacity()).append(
-          "]\nwith max capacity: [").append(super.getMaximumCapacity()).append(
-          "].");
-      LOG.info(queueInfo.toString());
+      LOG.info(
+          "Reinitialized Managed Parent Queue: [{}] with capacity [{}]"
+              + " with max capacity [{}]",
+          queueName, super.getCapacity(), super.getMaximumCapacity());
     } catch (YarnException ye) {
       LOG.error("Exception while computing policy changes for leaf queue : "
           + getQueueName(), ye);
@@ -132,7 +128,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
     }
   }
 
-  private void initializeQueueManagementPolicy() {
+  private void initializeQueueManagementPolicy() throws IOException {
     queueManagementPolicy =
         csContext.getConfiguration().getAutoCreatedQueueManagementPolicyClass(
             getQueuePath());
@@ -140,7 +136,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
     queueManagementPolicy.init(csContext, this);
   }
 
-  private void reinitializeQueueManagementPolicy() {
+  private void reinitializeQueueManagementPolicy() throws IOException {
     AutoCreatedQueueManagementPolicy managementPolicy =
         csContext.getConfiguration().getAutoCreatedQueueManagementPolicyClass(
             getQueuePath());
@@ -339,6 +335,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
         ((AutoCreatedLeafQueue) childQueue).validateConfigurations(template);
         break;
       }
+
     }
   }
 

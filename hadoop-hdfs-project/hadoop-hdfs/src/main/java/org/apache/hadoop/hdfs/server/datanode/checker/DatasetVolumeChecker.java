@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
@@ -28,6 +27,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -43,9 +43,11 @@ import javax.annotation.Nullable;
 import java.nio.channels.ClosedChannelException;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -103,6 +105,8 @@ public class DatasetVolumeChecker {
   private static final VolumeCheckContext IGNORED_CONTEXT =
       new VolumeCheckContext();
 
+  private final ExecutorService checkVolumeResultHandlerExecutorService;
+
   /**
    * @param conf Configuration object.
    * @param timer {@link Timer} object used for throttling checks.
@@ -150,10 +154,11 @@ public class DatasetVolumeChecker {
 
     lastAllVolumesCheck = timer.monotonicNow() - minDiskCheckGapMs;
 
-    if (maxVolumeFailuresTolerated < 0) {
+    if (maxVolumeFailuresTolerated < DataNode.MAX_VOLUME_FAILURE_TOLERATED_LIMIT) {
       throw new DiskErrorException("Invalid value configured for "
           + DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY + " - "
-          + maxVolumeFailuresTolerated + " (should be non-negative)");
+          + maxVolumeFailuresTolerated + " "
+          + DataNode.MAX_VOLUME_FAILURES_TOLERATED_MSG);
     }
 
     delegateChecker = new ThrottledAsyncChecker<>(
@@ -163,6 +168,12 @@ public class DatasetVolumeChecker {
                 .setNameFormat("DataNode DiskChecker thread %d")
                 .setDaemon(true)
                 .build()));
+
+    checkVolumeResultHandlerExecutorService = Executors.newCachedThreadPool(
+        new ThreadFactoryBuilder()
+            .setNameFormat("VolumeCheck ResultHandler thread %d")
+            .setDaemon(true)
+            .build());
   }
 
   /**
@@ -292,7 +303,9 @@ public class DatasetVolumeChecker {
       numVolumeChecks.incrementAndGet();
       Futures.addCallback(olf.get(),
           new ResultHandler(volumeReference, new HashSet<>(), new HashSet<>(),
-          new AtomicLong(1), callback));
+              new AtomicLong(1), callback),
+          checkVolumeResultHandlerExecutorService
+      );
       return true;
     } else {
       IOUtils.cleanup(null, volumeReference);

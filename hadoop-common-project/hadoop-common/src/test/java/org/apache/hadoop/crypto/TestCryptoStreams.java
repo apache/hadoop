@@ -44,8 +44,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertCapabilities;
 
 public class TestCryptoStreams extends CryptoStreamsTestBase {
   /**
@@ -419,21 +418,33 @@ public class TestCryptoStreams extends CryptoStreamsTestBase {
     // verify hasCapability returns what FakeOutputStream is set up for
     CryptoOutputStream cos =
         (CryptoOutputStream) getOutputStream(defaultBufferSize, key, iv);
-    assertTrue(cos instanceof StreamCapabilities);
-    assertTrue(cos.hasCapability(StreamCapabilities.HFLUSH));
-    assertTrue(cos.hasCapability(StreamCapabilities.HSYNC));
-    assertTrue(cos.hasCapability(StreamCapabilities.DROPBEHIND));
-    assertFalse(cos.hasCapability(StreamCapabilities.READAHEAD));
-    assertFalse(cos.hasCapability(StreamCapabilities.UNBUFFER));
+
+    assertCapabilities(cos,
+        new String[] {
+            StreamCapabilities.HFLUSH,
+            StreamCapabilities.HSYNC,
+            StreamCapabilities.DROPBEHIND
+        },
+        new String[] {
+            StreamCapabilities.READAHEAD,
+            StreamCapabilities.UNBUFFER
+        }
+    );
 
     // verify hasCapability for input stream
     CryptoInputStream cis =
         (CryptoInputStream) getInputStream(defaultBufferSize, key, iv);
-    assertTrue(cis instanceof StreamCapabilities);
-    assertTrue(cis.hasCapability(StreamCapabilities.DROPBEHIND));
-    assertTrue(cis.hasCapability(StreamCapabilities.READAHEAD));
-    assertTrue(cis.hasCapability(StreamCapabilities.UNBUFFER));
-    assertFalse(cis.hasCapability(StreamCapabilities.HFLUSH));
-    assertFalse(cis.hasCapability(StreamCapabilities.HSYNC));
+
+    assertCapabilities(cis,
+        new String[] {
+            StreamCapabilities.DROPBEHIND,
+            StreamCapabilities.READAHEAD,
+            StreamCapabilities.UNBUFFER
+        },
+        new String[] {
+            StreamCapabilities.HFLUSH,
+            StreamCapabilities.HSYNC
+        }
+    );
   }
 }

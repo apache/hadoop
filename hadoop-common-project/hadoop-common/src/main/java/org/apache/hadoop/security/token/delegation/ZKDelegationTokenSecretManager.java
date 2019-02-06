@@ -204,7 +204,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
                 .retryPolicy(
                     new RetryNTimes(numRetries, sessionT / numRetries));
       } catch (Exception ex) {
-        throw new RuntimeException("Could not Load ZK acls or auth");
+        throw new RuntimeException("Could not Load ZK acls or auth: " + ex, ex);
       }
       zkClient = builder.ensembleProvider(new FixedEnsembleProvider(connString))
           .build();

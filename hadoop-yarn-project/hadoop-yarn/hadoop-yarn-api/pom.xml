@@ -19,11 +19,11 @@
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.2.0-SNAPSHOT</version>
+    <version>3.3.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-api</artifactId>
-  <version>3.2.0-SNAPSHOT</version>
+  <version>3.3.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN API</name>
 
   <properties>
@@ -34,10 +34,6 @@
   </properties>
 
   <dependencies>
-    <dependency>
-      <groupId>commons-lang</groupId>
-      <artifactId>commons-lang</artifactId>
-    </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
@@ -128,6 +124,8 @@
                   <include>server/application_history_server.proto</include>
                   <include>client_SCM_protocol.proto</include>
                   <include>server/SCM_Admin_protocol.proto</include>
+                  <include>yarn_csi_adaptor.proto</include>
+                  <include>YarnCsiAdaptor.proto</include>
                 </includes>
               </source>
             </configuration>

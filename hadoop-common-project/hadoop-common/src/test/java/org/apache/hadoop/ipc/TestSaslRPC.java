@@ -19,7 +19,7 @@
 package org.apache.hadoop.ipc;
 
 import com.google.protobuf.ServiceException;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -926,7 +926,9 @@ public class TestSaslRPC extends TestRpcBase {
   private static void assertAuthEquals(Pattern expect, String actual) {
     // this allows us to see the regexp and the value it didn't match
     if (!expect.matcher(actual).matches()) {
-      fail(); // it failed
+      // it failed
+      fail(String.format("\"%s\" did not match pattern %s",
+          actual, expect));
     }
   }
 

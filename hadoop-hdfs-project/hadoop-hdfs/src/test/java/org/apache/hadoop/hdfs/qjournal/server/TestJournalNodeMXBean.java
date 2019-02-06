@@ -82,7 +82,7 @@ public class TestJournalNodeMXBean {
     // format the journal ns1
     final NamespaceInfo FAKE_NSINFO = new NamespaceInfo(12345, "mycluster",
         "my-bp", 0L);
-    jn.getOrCreateJournal(NAMESERVICE).format(FAKE_NSINFO);
+    jn.getOrCreateJournal(NAMESERVICE).format(FAKE_NSINFO, false);
 
     // check again after format
     // getJournalsStatus

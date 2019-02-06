@@ -28,7 +28,7 @@ import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueStatistics;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -69,9 +70,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimpleCandidateNodeSet;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.collect.Sets;
+
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.UNDEFINED;
 
 public abstract class AbstractCSQueue implements CSQueue {
 
@@ -92,11 +96,15 @@ public abstract class AbstractCSQueue implements CSQueue {
   Set<String> resourceTypes;
   final RMNodeLabelsManager labelManager;
   String defaultLabelExpression;
-  
+  private String multiNodeSortingPolicyName = null;
+
   Map<AccessType, AccessControlList> acls = 
       new HashMap<AccessType, AccessControlList>();
   volatile boolean reservationsContinueLooking;
   private volatile boolean preemptionDisabled;
+  // Indicates if the in-queue preemption setting is ever disabled within the
+  // hierarchy of this queue.
+  private boolean intraQueuePreemptionDisabledInHierarchy;
 
   // Track resource usage-by-label like used-resource/pending-resource, etc.
   volatile ResourceUsage queueUsage;
@@ -357,9 +365,9 @@ public abstract class AbstractCSQueue implements CSQueue {
       capacityConfigType = CapacityConfigType.NONE;
       updateConfigurableResourceRequirement(getQueuePath(), clusterResource);
 
-      this.maximumAllocation =
-          configuration.getMaximumAllocationPerQueue(
-              getQueuePath());
+      // Setup queue's maximumAllocation respecting the global setting
+      // and queue setting
+      setupMaximumAllocation(configuration);
 
       // initialized the queue state based on previous state, configured state
       // and its parent state.
@@ -405,13 +413,64 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       this.preemptionDisabled = isQueueHierarchyPreemptionDisabled(this,
           configuration);
+      this.intraQueuePreemptionDisabledInHierarchy =
+          isIntraQueueHierarchyPreemptionDisabled(this, configuration);
 
       this.priority = configuration.getQueuePriority(
           getQueuePath());
 
+      // Update multi-node sorting algorithm for scheduling as configured.
+      setMultiNodeSortingPolicyName(
+          configuration.getMultiNodesSortingAlgorithmPolicy(getQueuePath()));
+
       this.userWeights = getUserWeightsFromHierarchy(configuration);
     } finally {
       writeLock.unlock();
+    }
+  }
+
+  private void setupMaximumAllocation(CapacitySchedulerConfiguration csConf) {
+    String queue = getQueuePath();
+    Resource clusterMax = ResourceUtils
+            .fetchMaximumAllocationFromConfig(csConf);
+    Resource queueMax = csConf.getQueueMaximumAllocation(queue);
+
+    maximumAllocation = Resources.clone(
+            parent == null ? clusterMax : parent.getMaximumAllocation());
+
+    String errMsg =
+            "Queue maximum allocation cannot be larger than the cluster setting"
+            + " for queue " + queue
+            + " max allocation per queue: %s"
+            + " cluster setting: " + clusterMax;
+
+    if (queueMax == Resources.none()) {
+      // Handle backward compatibility
+      long queueMemory = csConf.getQueueMaximumAllocationMb(queue);
+      int queueVcores = csConf.getQueueMaximumAllocationVcores(queue);
+      if (queueMemory != UNDEFINED) {
+        maximumAllocation.setMemorySize(queueMemory);
+      }
+
+      if (queueVcores != UNDEFINED) {
+        maximumAllocation.setVirtualCores(queueVcores);
+      }
+
+      if ((queueMemory != UNDEFINED && queueMemory > clusterMax.getMemorySize()
+          || (queueVcores != UNDEFINED
+              && queueVcores > clusterMax.getVirtualCores()))) {
+        throw new IllegalArgumentException(
+                String.format(errMsg, maximumAllocation));
+      }
+    } else {
+      // Queue level maximum-allocation can't be larger than cluster setting
+      for (ResourceInformation ri : queueMax.getResources()) {
+        if (ri.compareTo(clusterMax.getResourceInformation(ri.getName())) > 0) {
+          throw new IllegalArgumentException(String.format(errMsg, queueMax));
+        }
+
+        maximumAllocation.setResourceInformation(ri.getName(), ri);
+      }
     }
   }
 
@@ -613,6 +672,8 @@ public abstract class AbstractCSQueue implements CSQueue {
     queueInfo.setCurrentCapacity(getUsedCapacity());
     queueInfo.setQueueStatistics(getQueueStatistics());
     queueInfo.setPreemptionDisabled(preemptionDisabled);
+    queueInfo.setIntraQueuePreemptionDisabled(
+        getIntraQueuePreemptionDisabled());
     queueInfo.setQueueConfigurations(getQueueConfigurations());
     return queueInfo;
   }
@@ -735,6 +796,16 @@ public abstract class AbstractCSQueue implements CSQueue {
   public boolean getPreemptionDisabled() {
     return preemptionDisabled;
   }
+
+  @Private
+  public boolean getIntraQueuePreemptionDisabled() {
+    return intraQueuePreemptionDisabledInHierarchy || preemptionDisabled;
+  }
+
+  @Private
+  public boolean getIntraQueuePreemptionDisabledInHierarchy() {
+    return intraQueuePreemptionDisabledInHierarchy;
+  }
   
   @Private
   public QueueCapacities getQueueCapacities() {
@@ -757,12 +828,14 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   /**
-   * The specified queue is preemptable if system-wide preemption is turned on
-   * unless any queue in the <em>qPath</em> hierarchy has explicitly turned
-   * preemption off.
-   * NOTE: Preemptability is inherited from a queue's parent.
-   * 
-   * @return true if queue has preemption disabled, false otherwise
+   * The specified queue is cross-queue preemptable if system-wide cross-queue
+   * preemption is turned on unless any queue in the <em>qPath</em> hierarchy
+   * has explicitly turned cross-queue preemption off.
+   * NOTE: Cross-queue preemptability is inherited from a queue's parent.
+   *
+   * @param q queue to check preemption state
+   * @param configuration capacity scheduler config
+   * @return true if queue has cross-queue preemption disabled, false otherwise
    */
   private boolean isQueueHierarchyPreemptionDisabled(CSQueue q,
       CapacitySchedulerConfiguration configuration) {
@@ -790,7 +863,44 @@ public abstract class AbstractCSQueue implements CSQueue {
     return configuration.getPreemptionDisabled(q.getQueuePath(),
                                         parentQ.getPreemptionDisabled());
   }
-  
+
+  /**
+   * The specified queue is intra-queue preemptable if
+   * 1) system-wide intra-queue preemption is turned on
+   * 2) no queue in the <em>qPath</em> hierarchy has explicitly turned off intra
+   *    queue preemption.
+   * NOTE: Intra-queue preemptability is inherited from a queue's parent.
+   *
+   * @param q queue to check intra-queue preemption state
+   * @param configuration capacity scheduler config
+   * @return true if queue has intra-queue preemption disabled, false otherwise
+   */
+  private boolean isIntraQueueHierarchyPreemptionDisabled(CSQueue q,
+      CapacitySchedulerConfiguration configuration) {
+    boolean systemWideIntraQueuePreemption =
+        csContext.getConfiguration().getBoolean(
+            CapacitySchedulerConfiguration.INTRAQUEUE_PREEMPTION_ENABLED,
+            CapacitySchedulerConfiguration
+            .DEFAULT_INTRAQUEUE_PREEMPTION_ENABLED);
+    // Intra-queue preemption is disabled for this queue if the system-wide
+    // intra-queue preemption flag is false
+    if (!systemWideIntraQueuePreemption) return true;
+
+    // Check if this is the root queue and the root queue's intra-queue
+    // preemption disable switch is set
+    CSQueue parentQ = q.getParent();
+    if (parentQ == null) {
+      return configuration
+          .getIntraQueuePreemptionDisabled(q.getQueuePath(), false);
+    }
+
+    // At this point, the master preemption switch is enabled down to this
+    // queue's level. Determine whether or not intra-queue preemption is enabled
+    // down to this queu's level and return that value.
+    return configuration.getIntraQueuePreemptionDisabled(q.getQueuePath(),
+        parentQ.getIntraQueuePreemptionDisabledInHierarchy());
+  }
+
   private Resource getCurrentLimitResource(String nodePartition,
       Resource clusterResource, ResourceLimits currentResourceLimits,
       SchedulingMode schedulingMode) {
@@ -1187,5 +1297,29 @@ public abstract class AbstractCSQueue implements CSQueue {
   @Override
   public Map<String, Float> getUserWeights() {
     return userWeights;
+  }
+
+  public void recoverDrainingState() {
+    try {
+      this.writeLock.lock();
+      if (getState() == QueueState.STOPPED) {
+        updateQueueState(QueueState.DRAINING);
+      }
+      LOG.info("Recover draining state for queue " + this.getQueuePath());
+      if (getParent() != null && getParent().getState() == QueueState.STOPPED) {
+        ((AbstractCSQueue) getParent()).recoverDrainingState();
+      }
+    } finally {
+      this.writeLock.unlock();
+    }
+  }
+
+  @Override
+  public String getMultiNodeSortingPolicyName() {
+    return this.multiNodeSortingPolicyName;
+  }
+
+  public void setMultiNodeSortingPolicyName(String policyName) {
+    this.multiNodeSortingPolicyName = policyName;
   }
 }

@@ -196,7 +196,7 @@ public class TestNvidiaDockerV1CommandPlugin {
     // Volume driver should not be included by final commandline
     Assert.assertFalse(newCommandLine.containsKey("volume-driver"));
     Assert.assertTrue(newCommandLine.containsKey("devices"));
-    Assert.assertTrue(newCommandLine.containsKey("ro-mounts"));
+    Assert.assertTrue(newCommandLine.containsKey("mounts"));
 
     /* Test get docker volume command */
     commandPlugin = new MyNvidiaDockerV1CommandPlugin(conf);

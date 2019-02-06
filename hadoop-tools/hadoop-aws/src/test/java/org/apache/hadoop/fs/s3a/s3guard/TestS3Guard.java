@@ -27,6 +27,8 @@ import org.junit.Test;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_METADATASTORE_AUTHORITATIVE_DIR_TTL;
+
 /**
  * Tests for the {@link S3Guard} utility class.
  */
@@ -54,8 +56,10 @@ public class TestS3Guard extends Assert {
         makeFileStatus("s3a://bucket/dir/s3-file4", false)
     );
 
+    S3Guard.ITtlTimeProvider timeProvider = new S3Guard.TtlTimeProvider(
+        DEFAULT_METADATASTORE_AUTHORITATIVE_DIR_TTL);
     FileStatus[] result = S3Guard.dirListingUnion(ms, dirPath, s3Listing,
-        dirMeta, false);
+        dirMeta, false, timeProvider);
 
     assertEquals("listing length", 4, result.length);
     assertContainsPath(result, "s3a://bucket/dir/ms-file1");

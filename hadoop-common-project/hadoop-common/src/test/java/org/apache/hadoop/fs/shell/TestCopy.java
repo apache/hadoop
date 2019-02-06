@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.shell.CopyCommands.Put;
-import org.apache.hadoop.util.Progressable;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -153,8 +152,7 @@ public class TestCopy {
 
   private OngoingStubbing<FSDataOutputStream> whenFsCreate() throws IOException {
     return when(mockFs.create(eq(tmpPath), any(FsPermission.class),
-        anyBoolean(), anyInt(), anyShort(), anyLong(),
-        any(Progressable.class)));
+        anyBoolean(), anyInt(), anyShort(), anyLong(), any()));
   }
   
   private void tryCopyStream(InputStream in, boolean shouldPass) {

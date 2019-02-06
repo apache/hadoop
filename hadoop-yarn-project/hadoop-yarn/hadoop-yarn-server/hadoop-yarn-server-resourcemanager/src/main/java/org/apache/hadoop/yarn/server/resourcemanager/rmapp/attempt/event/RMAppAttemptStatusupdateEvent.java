@@ -25,15 +25,26 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 public class RMAppAttemptStatusupdateEvent extends RMAppAttemptEvent {
 
   private final float progress;
+  private final String trackingUrl;
 
   public RMAppAttemptStatusupdateEvent(ApplicationAttemptId appAttemptId,
       float progress) {
+    this(appAttemptId, progress, null);
+  }
+
+  public RMAppAttemptStatusupdateEvent(ApplicationAttemptId appAttemptId,
+                                       float progress, String trackingUrl) {
     super(appAttemptId, RMAppAttemptEventType.STATUS_UPDATE);
     this.progress = progress;
+    this.trackingUrl = trackingUrl;
   }
 
   public float getProgress() {
     return this.progress;
+  }
+
+  public String getTrackingUrl() {
+    return this.trackingUrl;
   }
 
 }

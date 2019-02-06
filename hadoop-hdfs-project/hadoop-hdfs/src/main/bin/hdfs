@@ -62,7 +62,8 @@ function hadoop_usage
   hadoop_add_subcommand "portmap" daemon "run a portmap service"
   hadoop_add_subcommand "secondarynamenode" daemon "run the DFS secondary namenode"
   hadoop_add_subcommand "snapshotDiff" client "diff two snapshots of a directory or diff the current directory contents with a snapshot"
-  hadoop_add_subcommand "storagepolicies" admin "list/get/set block storage policies"
+  hadoop_add_subcommand "storagepolicies" admin "list/get/set/satisfyStoragePolicy block storage policies"
+  hadoop_add_subcommand "sps" daemon "run external storagepolicysatisfier"
   hadoop_add_subcommand "version" client "print the version"
   hadoop_add_subcommand "zkfc" daemon "run the ZK Failover Controller daemon"
   hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" false
@@ -200,6 +201,10 @@ function hdfscmd_case
     ;;
     storagepolicies)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.StoragePolicyAdmin
+    ;;
+    sps)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.server.sps.ExternalStoragePolicySatisfier
     ;;
     version)
       HADOOP_CLASSNAME=org.apache.hadoop.util.VersionInfo

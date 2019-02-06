@@ -33,8 +33,18 @@ public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
     GETHOMEDIRECTORY(false, HttpURLConnection.HTTP_OK),
     GETDELEGATIONTOKEN(false, HttpURLConnection.HTTP_OK, true),
 
-    /** GET_BLOCK_LOCATIONS is a private unstable op. */
+    /**
+     * GET_BLOCK_LOCATIONS is a private/stable API op. It returns a
+     * {@link org.apache.hadoop.hdfs.protocol.LocatedBlocks}
+     * json object.
+     */
     GET_BLOCK_LOCATIONS(false, HttpURLConnection.HTTP_OK),
+    /**
+     * GETFILEBLOCKLOCATIONS is the public op that complies with
+     * {@link org.apache.hadoop.fs.FileSystem#getFileBlockLocations}
+     * interface.
+     */
+    GETFILEBLOCKLOCATIONS(false, HttpURLConnection.HTTP_OK),
     GETACLSTATUS(false, HttpURLConnection.HTTP_OK),
     GETXATTRS(false, HttpURLConnection.HTTP_OK),
     GETTRASHROOT(false, HttpURLConnection.HTTP_OK),
@@ -43,11 +53,15 @@ public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
     GETALLSTORAGEPOLICY(false, HttpURLConnection.HTTP_OK),
     GETSTORAGEPOLICY(false, HttpURLConnection.HTTP_OK),
 
+    GETECPOLICY(false, HttpURLConnection.HTTP_OK),
+
     NULL(false, HttpURLConnection.HTTP_NOT_IMPLEMENTED),
 
     CHECKACCESS(false, HttpURLConnection.HTTP_OK),
     LISTSTATUS_BATCH(false, HttpURLConnection.HTTP_OK),
-    GETSERVERDEFAULTS(false, HttpURLConnection.HTTP_OK);
+    GETSERVERDEFAULTS(false, HttpURLConnection.HTTP_OK),
+    GETSNAPSHOTDIFF(false, HttpURLConnection.HTTP_OK),
+    GETSNAPSHOTTABLEDIRECTORYLIST(false, HttpURLConnection.HTTP_OK);
 
     final boolean redirect;
     final int expectedHttpResponseCode;

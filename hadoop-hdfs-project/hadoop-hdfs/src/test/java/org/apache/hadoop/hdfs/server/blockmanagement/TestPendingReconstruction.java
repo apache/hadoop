@@ -441,6 +441,8 @@ public class TestPendingReconstruction {
       // 1. create a file
       Path filePath = new Path("/tmp.txt");
       DFSTestUtil.createFile(fs, filePath, 1024, (short) 3, 0L);
+      DFSTestUtil.waitForReplication(cluster.getFileSystem(), filePath,
+          (short) 3, 10000);
 
       // 2. disable the heartbeats
       for (DataNode dn : cluster.getDataNodes()) {
@@ -456,14 +458,14 @@ public class TestPendingReconstruction {
             "STORAGE_ID", "TEST");
         bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[1],
             "STORAGE_ID", "TEST");
+        BlockManagerTestUtil.computeAllPendingWork(bm);
+        BlockManagerTestUtil.updateState(bm);
+        assertEquals(bm.getPendingReconstructionBlocksCount(), 1L);
+        BlockInfo storedBlock = bm.getStoredBlock(block.getBlock().getLocalBlock());
+        assertEquals(bm.pendingReconstruction.getNumReplicas(storedBlock), 2);
       } finally {
         cluster.getNamesystem().writeUnlock();
       }
-      BlockManagerTestUtil.computeAllPendingWork(bm);
-      BlockManagerTestUtil.updateState(bm);
-      assertEquals(bm.getPendingReconstructionBlocksCount(), 1L);
-      BlockInfo storedBlock = bm.getStoredBlock(block.getBlock().getLocalBlock());
-      assertEquals(bm.pendingReconstruction.getNumReplicas(storedBlock), 2);
 
       // 4. delete the file
       fs.delete(filePath, true);

@@ -311,6 +311,7 @@ message StringTableSection {
     optional string str = 2;
   }
   optional uint32 numEntry = 1;
+  optional uint32 maskBits = 2 [default = 0];
   // repeated Entry
 }
 

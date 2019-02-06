@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs;
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -48,8 +48,8 @@ public class TestDataStream {
 
   @Test(timeout = 60000)
   public void testDfsClient() throws IOException, InterruptedException {
-    LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(LogFactory
-        .getLog(DataStreamer.class));
+    LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(LoggerFactory
+        .getLogger(DataStreamer.class));
     byte[] toWrite = new byte[PACKET_SIZE];
     new Random(1).nextBytes(toWrite);
     final Path path = new Path("/file1");

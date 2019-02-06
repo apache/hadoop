@@ -25,6 +25,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.LinkedList;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 
@@ -32,6 +33,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.ContentSummary;
 
 /**
@@ -56,13 +58,15 @@ class Ls extends FsCommand {
   private static final String OPTION_ATIME = "u";
   private static final String OPTION_SIZE = "S";
   private static final String OPTION_ECPOLICY = "e";
+  private static final String OPTION_SPOLICY = "sp";
 
   public static final String NAME = "ls";
   public static final String USAGE = "[-" + OPTION_PATHONLY + "] [-" +
       OPTION_DIRECTORY + "] [-" + OPTION_HUMAN + "] [-" +
       OPTION_HIDENONPRINTABLE + "] [-" + OPTION_RECURSIVE + "] [-" +
       OPTION_MTIME + "] [-" + OPTION_SIZE + "] [-" + OPTION_REVERSE + "] [-" +
-      OPTION_ATIME + "] [-" + OPTION_ECPOLICY +"] [<path> ...]";
+      OPTION_ATIME + "] [-" + OPTION_ECPOLICY + "] [-" + OPTION_SPOLICY
+      + "] [<path> ...]";
 
   public static final String DESCRIPTION =
       "List the contents that match the specified file pattern. If " +
@@ -95,7 +99,9 @@ class Ls extends FsCommand {
           "  Use time of last access instead of modification for\n" +
           "      display and sorting.\n"+
           "  -" + OPTION_ECPOLICY +
-          "  Display the erasure coding policy of files and directories.\n";
+          "  Display the erasure coding policy of files and directories.\n" +
+          "  -" + OPTION_SPOLICY +
+          "  Display the storage policy of files and directories.\n";
 
   protected final SimpleDateFormat dateFormat =
     new SimpleDateFormat("yyyy-MM-dd HH:mm");
@@ -109,6 +115,7 @@ class Ls extends FsCommand {
   private boolean orderSize;
   private boolean useAtime;
   private boolean displayECPolicy;
+  private boolean displaySPolicy;
   private Comparator<PathData> orderComparator;
 
   protected boolean humanReadable = false;
@@ -134,7 +141,8 @@ class Ls extends FsCommand {
     CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE,
         OPTION_PATHONLY, OPTION_DIRECTORY, OPTION_HUMAN,
         OPTION_HIDENONPRINTABLE, OPTION_RECURSIVE, OPTION_REVERSE,
-        OPTION_MTIME, OPTION_SIZE, OPTION_ATIME, OPTION_ECPOLICY);
+        OPTION_MTIME, OPTION_SIZE, OPTION_ATIME, OPTION_ECPOLICY,
+        OPTION_SPOLICY);
     cf.parse(args);
     pathOnly = cf.getOpt(OPTION_PATHONLY);
     dirRecurse = !cf.getOpt(OPTION_DIRECTORY);
@@ -146,6 +154,7 @@ class Ls extends FsCommand {
     orderSize = !orderTime && cf.getOpt(OPTION_SIZE);
     useAtime = cf.getOpt(OPTION_ATIME);
     displayECPolicy = cf.getOpt(OPTION_ECPOLICY);
+    displaySPolicy = cf.getOpt(OPTION_SPOLICY);
     if (args.isEmpty()) args.add(Path.CUR_DIR);
 
     initialiseOrderComparator();
@@ -155,7 +164,7 @@ class Ls extends FsCommand {
    * Should display only paths of files and directories.
    * @return true display paths only, false display all fields
    */
-  @InterfaceAudience.Private
+  @VisibleForTesting
   boolean isPathOnly() {
     return this.pathOnly;
   }
@@ -164,7 +173,7 @@ class Ls extends FsCommand {
    * Should the contents of the directory be shown or just the directory?
    * @return true if directory contents, false if just directory
    */
-  @InterfaceAudience.Private
+  @VisibleForTesting
   boolean isDirRecurse() {
     return this.dirRecurse;
   }
@@ -173,12 +182,12 @@ class Ls extends FsCommand {
    * Should file sizes be returned in human readable format rather than bytes?
    * @return true is human readable, false if bytes
    */
-  @InterfaceAudience.Private
+  @VisibleForTesting
   boolean isHumanReadable() {
     return this.humanReadable;
   }
 
-  @InterfaceAudience.Private
+  @VisibleForTesting
   private boolean isHideNonPrintable() {
     return hideNonPrintable;
   }
@@ -187,7 +196,7 @@ class Ls extends FsCommand {
    * Should directory contents be displayed in reverse order
    * @return true reverse order, false default order
    */
-  @InterfaceAudience.Private
+  @VisibleForTesting
   boolean isOrderReverse() {
     return this.orderReverse;
   }
@@ -196,7 +205,7 @@ class Ls extends FsCommand {
    * Should directory contents be displayed in mtime order.
    * @return true mtime order, false default order
    */
-  @InterfaceAudience.Private
+  @VisibleForTesting
   boolean isOrderTime() {
     return this.orderTime;
   }
@@ -205,7 +214,7 @@ class Ls extends FsCommand {
    * Should directory contents be displayed in size order.
    * @return true size order, false default order
    */
-  @InterfaceAudience.Private
+  @VisibleForTesting
   boolean isOrderSize() {
     return this.orderSize;
   }
@@ -214,13 +223,38 @@ class Ls extends FsCommand {
    * Should access time be used rather than modification time.
    * @return true use access time, false use modification time
    */
-  @InterfaceAudience.Private
+  @VisibleForTesting
   boolean isUseAtime() {
     return this.useAtime;
   }
 
+  /**
+   * Should EC policies be displayed.
+   * @return true display EC policies, false doesn't display EC policies
+   */
+  @VisibleForTesting
+  boolean isDisplayECPolicy() {
+    return this.displayECPolicy;
+  }
+
+  /**
+   * Should storage policies be displayed.
+   * @return true display storage policies, false doesn't display storage
+   *         policies
+   */
+  @VisibleForTesting
+  boolean isDisplaySPolicy() {
+    return this.displaySPolicy;
+  }
+
   @Override
   protected void processPathArgument(PathData item) throws IOException {
+    if (isDisplayECPolicy() && item.fs.getContentSummary(item.path)
+        .getErasureCodingPolicy() == null) {
+      throw new UnsupportedOperationException("FileSystem "
+          + item.fs.getUri() + " does not support Erasure Coding");
+    }
+
     // implicitly recurse once for cmdline directories
     if (dirRecurse && item.stat.isDirectory()) {
       recursePath(item);
@@ -230,8 +264,30 @@ class Ls extends FsCommand {
   }
 
   @Override
-  protected void processPaths(PathData parent, PathData ... items)
-  throws IOException {
+  protected boolean isSorted() {
+    // use the non-iterative method for listing because explicit sorting is
+    // required based on time/size/reverse or Total number of entries
+    // required to print summary first when non-recursive.
+    return !isRecursive() || isOrderTime() || isOrderSize() || isOrderReverse();
+  }
+
+  @Override
+  protected int getListingGroupSize() {
+    if (pathOnly) {
+      // If there is a need of printing only paths, then no grouping required
+      return 0;
+    }
+    /*
+     * LS output should be formatted properly. Grouping 100 items and formatting
+     * the output to reduce the creation of huge sized arrays. This method will
+     * be called only when recursive is set.
+     */
+    return 100;
+  }
+
+  @Override
+  protected void processPaths(PathData parent, PathData... items)
+      throws IOException {
     if (parent != null && !isRecursive() && items.length != 0) {
       if (!pathOnly) {
         out.println("Found " + items.length + " items");
@@ -260,6 +316,7 @@ class Ls extends FsCommand {
           stat.getOwner(),
           stat.getGroup(),
           contentSummary.getErasureCodingPolicy(),
+          displaySPolicy ? item.fs.getStoragePolicy(item.path).getName() : "",
           formatSize(stat.getLen()),
           dateFormat.format(new Date(isUseAtime()
               ? stat.getAccessTime()
@@ -273,6 +330,7 @@ class Ls extends FsCommand {
           (stat.isFile() ? stat.getReplication() : "-"),
           stat.getOwner(),
           stat.getGroup(),
+          displaySPolicy ? item.fs.getStoragePolicy(item.path).getName() : "",
           formatSize(stat.getLen()),
           dateFormat.format(new Date(isUseAtime()
               ? stat.getAccessTime()
@@ -296,21 +354,30 @@ class Ls extends FsCommand {
     }
 
     StringBuilder fmt = new StringBuilder();
-    fmt.append("%s%s"); // permission string
-    fmt.append("%"  + maxRepl  + "s ");
+    fmt.append("%s%s") // permission string
+        .append("%"  + maxRepl  + "s ")
+        .append((maxOwner > 0) ? "%-" + maxOwner + "s " : "%s")
+        .append((maxGroup > 0) ? "%-" + maxGroup + "s " : "%s");
     // Do not use '%-0s' as a formatting conversion, since it will throw a
     // a MissingFormatWidthException if it is used in String.format().
     // http://docs.oracle.com/javase/1.5.0/docs/api/java/util/Formatter.html#intFlags
     if(displayECPolicy){
-      int maxEC=0;
+      int maxEC = 0;
       for (PathData item : items) {
           ContentSummary contentSummary = item.fs.getContentSummary(item.path);
-          maxEC=maxLength(maxEC,contentSummary.getErasureCodingPolicy().length());
+        maxEC = maxLength(maxEC, contentSummary.getErasureCodingPolicy());
       }
-      fmt.append(" %"+maxEC+"s ");
+      fmt.append((maxEC > 0) ? "%-" + maxEC + "s " : "%s");
     }
-    fmt.append((maxOwner > 0) ? "%-" + maxOwner + "s " : "%s");
-    fmt.append((maxGroup > 0) ? "%-" + maxGroup + "s " : "%s");
+    int maxSpolicy = 0;
+    if (displaySPolicy) {
+      if (items.length != 0) {
+        for (BlockStoragePolicySpi s : items[0].fs.getAllStoragePolicies()) {
+          maxSpolicy = maxLength(maxSpolicy, s.getName());
+        }
+      }
+    }
+    fmt.append((maxSpolicy > 0) ? "%-" + maxSpolicy + "s " : "%s");
     fmt.append("%"  + maxLen   + "s ");
     fmt.append("%s %s"); // mod time & path
     lineFormat = fmt.toString();

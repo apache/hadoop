@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.mapred.gridmix;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
@@ -38,7 +38,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class StressJobFactory extends JobFactory<Statistics.ClusterStats> {
-  public static final Log LOG = LogFactory.getLog(StressJobFactory.class);
+  public static final Logger LOG = LoggerFactory.getLogger(StressJobFactory.class);
 
   private final LoadStatus loadStatus = new LoadStatus();
   /**

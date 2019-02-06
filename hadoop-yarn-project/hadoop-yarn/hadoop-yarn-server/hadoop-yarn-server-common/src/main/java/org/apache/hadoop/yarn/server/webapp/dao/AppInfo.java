@@ -53,8 +53,9 @@ public class AppInfo {
   protected String originalTrackingUrl;
   protected String trackingUrl;
   protected FinalApplicationStatus finalAppStatus;
-  protected long submittedTime;
+  private long submittedTime;
   protected long startedTime;
+  private long launchTime;
   protected long finishedTime;
   protected long elapsedTime;
   protected String applicationTags;
@@ -86,8 +87,9 @@ public class AppInfo {
     diagnosticsInfo = app.getDiagnostics();
     trackingUrl = app.getTrackingUrl();
     originalTrackingUrl = app.getOriginalTrackingUrl();
-    submittedTime = app.getStartTime();
+    submittedTime = app.getSubmitTime();
     startedTime = app.getStartTime();
+    launchTime = app.getLaunchTime();
     finishedTime = app.getFinishTime();
     elapsedTime = Times.elapsed(startedTime, finishedTime);
     finalAppStatus = app.getFinalApplicationStatus();
@@ -196,6 +198,10 @@ public class AppInfo {
 
   public long getSubmittedTime() {
     return submittedTime;
+  }
+
+  public long getLaunchTime() {
+    return launchTime;
   }
 
   public long getStartedTime() {

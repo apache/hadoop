@@ -25,7 +25,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 
@@ -37,6 +37,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.SocketTimeoutException;
 import java.net.URI;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -46,13 +47,17 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
+import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -78,10 +83,13 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
 import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
+import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
@@ -96,16 +104,16 @@ import org.apache.hadoop.net.StaticMapping;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.InOrder;
-import org.mockito.internal.util.reflection.Whitebox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 public class TestDistributedFileSystem {
   private static final Random RAN = new Random();
@@ -113,7 +121,8 @@ public class TestDistributedFileSystem {
       TestDistributedFileSystem.class);
 
   static {
-    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(LeaseRenewer.LOG, Level.DEBUG);
   }
 
   private boolean dualPortTesting = false;
@@ -706,6 +715,7 @@ public class TestDistributedFileSystem {
       // Iterative ls test
       long mkdirOp = getOpStatistics(OpType.MKDIRS);
       long listStatusOp = getOpStatistics(OpType.LIST_STATUS);
+      long locatedListStatusOP = getOpStatistics(OpType.LIST_LOCATED_STATUS);
       for (int i = 0; i < 10; i++) {
         Path p = new Path(dir, Integer.toString(i));
         fs.mkdirs(p);
@@ -729,6 +739,12 @@ public class TestDistributedFileSystem {
         checkStatistics(fs, readOps, ++writeOps, largeReadOps);
         checkOpStatistics(OpType.MKDIRS, mkdirOp);
         checkOpStatistics(OpType.LIST_STATUS, listStatusOp);
+
+        fs.listLocatedStatus(dir);
+        locatedListStatusOP++;
+        readOps++;
+        checkStatistics(fs, readOps, writeOps, largeReadOps);
+        checkOpStatistics(OpType.LIST_LOCATED_STATUS, locatedListStatusOP);
       }
       
       opCount = getOpStatistics(OpType.GET_STATUS);
@@ -765,7 +781,181 @@ public class TestDistributedFileSystem {
     } finally {
       if (cluster != null) cluster.shutdown();
     }
-    
+  }
+
+  @Test
+  public void testStatistics2() throws IOException, NoSuchAlgorithmException {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.EXTERNAL.toString());
+    File tmpDir = GenericTestUtils.getTestDir(UUID.randomUUID().toString());
+    final Path jksPath = new Path(tmpDir.toString(), "test.jks");
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+        JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri());
+
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      Path dir = new Path("/testStat");
+      dfs.mkdirs(dir);
+      int readOps = 0;
+      int writeOps = 0;
+      FileSystem.clearStatistics();
+
+      // Quota Commands.
+      long opCount = getOpStatistics(OpType.SET_QUOTA_USAGE);
+      dfs.setQuota(dir, 100, 1000);
+      checkStatistics(dfs, readOps, ++writeOps, 0);
+      checkOpStatistics(OpType.SET_QUOTA_USAGE, opCount + 1);
+
+      opCount = getOpStatistics(OpType.SET_QUOTA_BYTSTORAGEYPE);
+      dfs.setQuotaByStorageType(dir, StorageType.DEFAULT, 2000);
+      checkStatistics(dfs, readOps, ++writeOps, 0);
+      checkOpStatistics(OpType.SET_QUOTA_BYTSTORAGEYPE, opCount + 1);
+
+      opCount = getOpStatistics(OpType.GET_QUOTA_USAGE);
+      dfs.getQuotaUsage(dir);
+      checkStatistics(dfs, ++readOps, writeOps, 0);
+      checkOpStatistics(OpType.GET_QUOTA_USAGE, opCount + 1);
+
+      // Satisfy Storage Policy.
+      opCount = getOpStatistics(OpType.SATISFY_STORAGE_POLICY);
+      dfs.satisfyStoragePolicy(dir);
+      checkStatistics(dfs, readOps, ++writeOps, 0);
+      checkOpStatistics(OpType.SATISFY_STORAGE_POLICY, opCount + 1);
+
+      // Cache Commands.
+      CachePoolInfo cacheInfo =
+          new CachePoolInfo("pool1").setMode(new FsPermission((short) 0));
+
+      opCount = getOpStatistics(OpType.ADD_CACHE_POOL);
+      dfs.addCachePool(cacheInfo);
+      checkStatistics(dfs, readOps, ++writeOps, 0);
+      checkOpStatistics(OpType.ADD_CACHE_POOL, opCount + 1);
+
+      CacheDirectiveInfo directive = new CacheDirectiveInfo.Builder()
+          .setPath(new Path(".")).setPool("pool1").build();
+
+      opCount = getOpStatistics(OpType.ADD_CACHE_DIRECTIVE);
+      long id = dfs.addCacheDirective(directive);
+      checkStatistics(dfs, readOps, ++writeOps, 0);
+      checkOpStatistics(OpType.ADD_CACHE_DIRECTIVE, opCount + 1);
+
+      opCount = getOpStatistics(OpType.LIST_CACHE_DIRECTIVE);
+      dfs.listCacheDirectives(null);
+      checkStatistics(dfs, ++readOps, writeOps, 0);
+      checkOpStatistics(OpType.LIST_CACHE_DIRECTIVE, opCount + 1);
+
+      opCount = getOpStatistics(OpType.MODIFY_CACHE_DIRECTIVE);
+      dfs.modifyCacheDirective(new CacheDirectiveInfo.Builder().setId(id)
+          .setReplication((short) 2).build());
+      checkStatistics(dfs, readOps, ++writeOps, 0);
+      checkOpStatistics(OpType.MODIFY_CACHE_DIRECTIVE, opCount + 1);
+
+      opCount = getOpStatistics(OpType.REMOVE_CACHE_DIRECTIVE);
+      dfs.removeCacheDirective(id);
+      checkStatistics(dfs, readOps, ++writeOps, 0);
+      checkOpStatistics(OpType.REMOVE_CACHE_DIRECTIVE, opCount + 1);
+
+      opCount = getOpStatistics(OpType.MODIFY_CACHE_POOL);
+      dfs.modifyCachePool(cacheInfo);
+      checkStatistics(dfs, readOps, ++writeOps, 0);
+      checkOpStatistics(OpType.MODIFY_CACHE_POOL, opCount + 1);
+
+      opCount = getOpStatistics(OpType.LIST_CACHE_POOL);
+      dfs.listCachePools();
+      checkStatistics(dfs, ++readOps, writeOps, 0);
+      checkOpStatistics(OpType.LIST_CACHE_POOL, opCount + 1);
+
+      opCount = getOpStatistics(OpType.REMOVE_CACHE_POOL);
+      dfs.removeCachePool(cacheInfo.getPoolName());
+      checkStatistics(dfs, readOps, ++writeOps, 0);
+      checkOpStatistics(OpType.REMOVE_CACHE_POOL, opCount + 1);
+
+      // Crypto Commands.
+      final KeyProvider provider =
+          cluster.getNameNode().getNamesystem().getProvider();
+      final KeyProvider.Options options = KeyProvider.options(conf);
+      provider.createKey("key", options);
+      provider.flush();
+
+      opCount = getOpStatistics(OpType.CREATE_ENCRYPTION_ZONE);
+      dfs.createEncryptionZone(dir, "key");
+      checkStatistics(dfs, readOps, ++writeOps, 0);
+      checkOpStatistics(OpType.CREATE_ENCRYPTION_ZONE, opCount + 1);
+
+      opCount = getOpStatistics(OpType.LIST_ENCRYPTION_ZONE);
+      dfs.listEncryptionZones();
+      checkStatistics(dfs, ++readOps, writeOps, 0);
+      checkOpStatistics(OpType.LIST_ENCRYPTION_ZONE, opCount + 1);
+
+      opCount = getOpStatistics(OpType.GET_ENCRYPTION_ZONE);
+      dfs.getEZForPath(dir);
+      checkStatistics(dfs, ++readOps, writeOps, 0);
+      checkOpStatistics(OpType.GET_ENCRYPTION_ZONE, opCount + 1);
+    }
+  }
+
+  @Test
+  public void testECStatistics() throws IOException {
+    try (MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(getTestConfiguration()).build()) {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      Path dir = new Path("/test");
+      dfs.mkdirs(dir);
+      int readOps = 0;
+      int writeOps = 0;
+      FileSystem.clearStatistics();
+
+      long opCount = getOpStatistics(OpType.ENABLE_EC_POLICY);
+      dfs.enableErasureCodingPolicy("RS-10-4-1024k");
+      checkStatistics(dfs, readOps, ++writeOps, 0);
+      checkOpStatistics(OpType.ENABLE_EC_POLICY, opCount + 1);
+
+      opCount = getOpStatistics(OpType.SET_EC_POLICY);
+      dfs.setErasureCodingPolicy(dir, "RS-10-4-1024k");
+      checkStatistics(dfs, readOps, ++writeOps, 0);
+      checkOpStatistics(OpType.SET_EC_POLICY, opCount + 1);
+
+      opCount = getOpStatistics(OpType.GET_EC_POLICY);
+      dfs.getErasureCodingPolicy(dir);
+      checkStatistics(dfs, ++readOps, writeOps, 0);
+      checkOpStatistics(OpType.GET_EC_POLICY, opCount + 1);
+
+      opCount = getOpStatistics(OpType.UNSET_EC_POLICY);
+      dfs.unsetErasureCodingPolicy(dir);
+      checkStatistics(dfs, readOps, ++writeOps, 0);
+      checkOpStatistics(OpType.UNSET_EC_POLICY, opCount + 1);
+
+      opCount = getOpStatistics(OpType.GET_EC_POLICIES);
+      dfs.getAllErasureCodingPolicies();
+      checkStatistics(dfs, ++readOps, writeOps, 0);
+      checkOpStatistics(OpType.GET_EC_POLICIES, opCount + 1);
+
+      opCount = getOpStatistics(OpType.GET_EC_CODECS);
+      dfs.getAllErasureCodingCodecs();
+      checkStatistics(dfs, ++readOps, writeOps, 0);
+      checkOpStatistics(OpType.GET_EC_CODECS, opCount + 1);
+
+      ErasureCodingPolicy newPolicy =
+          new ErasureCodingPolicy(new ECSchema("rs", 5, 3), 1024 * 1024);
+
+      opCount = getOpStatistics(OpType.ADD_EC_POLICY);
+      dfs.addErasureCodingPolicies(new ErasureCodingPolicy[] {newPolicy});
+      checkStatistics(dfs, readOps, ++writeOps, 0);
+      checkOpStatistics(OpType.ADD_EC_POLICY, opCount + 1);
+
+      opCount = getOpStatistics(OpType.REMOVE_EC_POLICY);
+      dfs.removeErasureCodingPolicy("RS-5-3-1024k");
+      checkStatistics(dfs, readOps, ++writeOps, 0);
+      checkOpStatistics(OpType.REMOVE_EC_POLICY, opCount + 1);
+
+      opCount = getOpStatistics(OpType.DISABLE_EC_POLICY);
+      dfs.disableErasureCodingPolicy("RS-10-4-1024k");
+      checkStatistics(dfs, readOps, ++writeOps, 0);
+      checkOpStatistics(OpType.DISABLE_EC_POLICY, opCount + 1);
+    }
   }
 
   @SuppressWarnings("ThrowableResultOfMethodCallIgnored")

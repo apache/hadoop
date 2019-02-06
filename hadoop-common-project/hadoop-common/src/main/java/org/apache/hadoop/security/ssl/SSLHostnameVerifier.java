@@ -58,15 +58,15 @@ import org.slf4j.LoggerFactory;
  * or X509Certificate, or ultimately (they all end up calling this one),
  * String.  (It's easier to supply JUnit with Strings instead of mock
  * SSLSession objects!)
- * </p><p>Our check() methods throw exceptions if the name is
+ * <p>Our check() methods throw exceptions if the name is
  * invalid, whereas javax.net.ssl.HostnameVerifier just returns true/false.
- * <p/>
+ * <p>
  * We provide the HostnameVerifier.DEFAULT, HostnameVerifier.STRICT, and
  * HostnameVerifier.ALLOW_ALL implementations.  We also provide the more
  * specialized HostnameVerifier.DEFAULT_AND_LOCALHOST, as well as
  * HostnameVerifier.STRICT_IE6.  But feel free to define your own
  * implementations!
- * <p/>
+ * <p>
  * Inspired by Sebastian Hauer's original StrictSSLProtocolSocketFactory in the
  * HttpClient "contrib" repository.
  */
@@ -109,10 +109,10 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
 
     /**
      * The DEFAULT HostnameVerifier works the same way as Curl and Firefox.
-     * <p/>
+     * <p>
      * The hostname must match either the first CN, or any of the subject-alts.
      * A wildcard can occur in the CN, and in any of the subject-alts.
-     * <p/>
+     * <p>
      * The only difference between DEFAULT and STRICT is that a wildcard (such
      * as "*.foo.com") with DEFAULT matches all subdomains, including
      * "a.b.foo.com".
@@ -158,13 +158,13 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
      * Java 1.4, Sun Java 5, Sun Java 6.  It's also pretty close to IE6.
      * This implementation appears to be compliant with RFC 2818 for dealing
      * with wildcards.
-     * <p/>
+     * <p>
      * The hostname must match either the first CN, or any of the subject-alts.
      * A wildcard can occur in the CN, and in any of the subject-alts.  The
      * one divergence from IE6 is how we only check the first CN.  IE6 allows
      * a match against any of the CNs present.  We decided to follow in
      * Sun Java 1.4's footsteps and only check the first CN.
-     * <p/>
+     * <p>
      * A wildcard such as "*.foo.com" matches only subdomains in the same
      * level, for example "a.foo.com".  It does not match deeper subdomains
      * such as "a.b.foo.com".
@@ -229,7 +229,7 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
          * This contains a list of 2nd-level domains that aren't allowed to
          * have wildcards when combined with country-codes.
          * For example: [*.co.uk].
-         * <p/>
+         * <p>
          * The [*.co.uk] problem is an interesting one.  Should we just hope
          * that CA's would never foolishly allow such a certificate to happen?
          * Looks like we're the only implementation guarding against this.
@@ -417,9 +417,9 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
                 // Don't trim the CN, though!
                 final String cn = StringUtils.toLowerCase(it.next());
                 // Store CN in StringBuffer in case we need to report an error.
-                buf.append(" <");
-                buf.append(cn);
-                buf.append('>');
+            buf.append(" <")
+            .append(cn)
+            .append('>');
                 if (it.hasNext()) {
                     buf.append(" OR");
                 }
@@ -564,11 +564,11 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
       /**
        * Extracts the array of SubjectAlt DNS names from an X509Certificate.
        * Returns null if there aren't any.
-       * <p/>
+       * <p>
        * Note:  Java doesn't appear able to extract international characters
        * from the SubjectAlts.  It can only extract international characters
        * from the CN field.
-       * <p/>
+       * <p>
        * (Or maybe the version of OpenSSL I'm using to test isn't storing the
        * international characters correctly in the SubjectAlts?).
        *

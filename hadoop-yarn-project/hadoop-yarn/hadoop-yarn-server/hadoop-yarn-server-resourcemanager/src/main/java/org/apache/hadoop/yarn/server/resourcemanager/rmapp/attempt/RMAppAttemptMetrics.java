@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -27,7 +28,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import org.apache.commons.lang.time.DateUtils;
+import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -53,8 +54,8 @@ public class RMAppAttemptMetrics {
   
   private ReadLock readLock;
   private WriteLock writeLock;
-  private Map<String, AtomicLong> resourceUsageMap = new HashMap<>();
-  private Map<String, AtomicLong> preemptedResourceMap = new HashMap<>();
+  private Map<String, AtomicLong> resourceUsageMap = new ConcurrentHashMap<>();
+  private Map<String, AtomicLong> preemptedResourceMap = new ConcurrentHashMap<>();
   private RMContext rmContext;
 
   private int[][] localityStatistics =
@@ -97,7 +98,7 @@ public class RMAppAttemptMetrics {
   public Resource getResourcePreempted() {
     try {
       readLock.lock();
-      return resourcePreempted;
+      return Resource.newInstance(resourcePreempted);
     } finally {
       readLock.unlock();
     }
@@ -230,7 +231,7 @@ public class RMAppAttemptMetrics {
   }
 
   public Resource getApplicationAttemptHeadroom() {
-    return applicationHeadroom;
+    return Resource.newInstance(applicationHeadroom);
   }
 
   public void setApplicationAttemptHeadRoom(Resource headRoom) {

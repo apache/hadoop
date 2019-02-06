@@ -242,7 +242,7 @@ import org.slf4j.LoggerFactory;
  * DataNodes.
  *
  * The DataNode maintains just one critical table:
- *   block-> stream of bytes (of BLOCK_SIZE or less)
+ *   block{@literal ->} stream of bytes (of BLOCK_SIZE or less)
  *
  * This info is stored on a local disk.  The DataNode
  * reports the table's contents to the NameNode upon startup
@@ -293,6 +293,9 @@ public class DataNode extends ReconfigurableBase
       "  and rolling upgrades.";
 
   static final int CURRENT_BLOCK_FORMAT_VERSION = 1;
+  public static final int MAX_VOLUME_FAILURE_TOLERATED_LIMIT = -1;
+  public static final String MAX_VOLUME_FAILURES_TOLERATED_MSG =
+      "should be greater than or equal to -1";
 
   /** A list of property that are reconfigurable at runtime. */
   private static final List<String> RECONFIGURABLE_PROPERTIES =
@@ -329,6 +332,7 @@ public class DataNode extends ReconfigurableBase
   ThreadGroup threadGroup = null;
   private DNConf dnConf;
   private volatile boolean heartbeatsDisabledForTests = false;
+  private volatile boolean ibrDisabledForTests = false;
   private volatile boolean cacheReportsDisabledForTests = false;
   private DataStorage storage = null;
 
@@ -524,7 +528,7 @@ public class DataNode extends ReconfigurableBase
   }
 
   /**
-   * {@inheritdoc}.
+   * {@inheritDoc }.
    */
   @Override
   public String reconfigurePropertyImpl(String property, String newVal)
@@ -1083,7 +1087,7 @@ public class DataNode extends ReconfigurableBase
       reason = "verifcation is not supported by SimulatedFSDataset";
     } 
     if (reason == null) {
-      directoryScanner = new DirectoryScanner(this, data, conf);
+      directoryScanner = new DirectoryScanner(data, conf);
       directoryScanner.start();
     } else {
       LOG.info("Periodic Directory Tree Verification scan " +
@@ -1278,7 +1282,7 @@ public class DataNode extends ReconfigurableBase
       DFSUtilClient.CorruptedBlocks corruptedBlocks) throws IOException {
     Map<ExtendedBlock, Set<DatanodeInfo>> corruptionMap =
         corruptedBlocks.getCorruptionMap();
-    if (!corruptionMap.isEmpty()) {
+    if (corruptionMap != null) {
       for (Map.Entry<ExtendedBlock, Set<DatanodeInfo>> entry :
           corruptionMap.entrySet()) {
         for (DatanodeInfo dnInfo : entry.getValue()) {
@@ -1332,6 +1336,15 @@ public class DataNode extends ReconfigurableBase
   }
 
   @VisibleForTesting
+  void setIBRDisabledForTest(boolean disabled) {
+    this.ibrDisabledForTests = disabled;
+  }
+
+  @VisibleForTesting
+  boolean areIBRDisabledForTests() {
+    return this.ibrDisabledForTests;
+  }
+
   void setCacheReportsDisabledForTest(boolean disabled) {
     this.cacheReportsDisabledForTests = disabled;
   }
@@ -1389,10 +1402,11 @@ public class DataNode extends ReconfigurableBase
 
     int volFailuresTolerated = dnConf.getVolFailuresTolerated();
     int volsConfigured = dnConf.getVolsConfigured();
-    if (volFailuresTolerated < 0 || volFailuresTolerated >= volsConfigured) {
+    if (volFailuresTolerated < MAX_VOLUME_FAILURE_TOLERATED_LIMIT
+        || volFailuresTolerated >= volsConfigured) {
       throw new DiskErrorException("Invalid value configured for "
           + "dfs.datanode.failed.volumes.tolerated - " + volFailuresTolerated
-          + ". Value configured is either less than 0 or >= "
+          + ". Value configured is either less than -1 or >= "
           + "to the number of configured volumes (" + volsConfigured + ").");
     }
 
@@ -1480,22 +1494,35 @@ public class DataNode extends ReconfigurableBase
       throw new RuntimeException(errMessage);
     }
 
-    SaslPropertiesResolver saslPropsResolver = dnConf.getSaslPropsResolver();
-    if (resources != null && saslPropsResolver == null) {
-      return;
-    }
     if (dnConf.getIgnoreSecurePortsForTesting()) {
       return;
     }
-    if (saslPropsResolver != null &&
-        DFSUtil.getHttpPolicy(conf) == HttpConfig.Policy.HTTPS_ONLY &&
-        resources == null) {
-      return;
+
+    if (resources != null) {
+      final boolean httpSecured = resources.isHttpPortPrivileged()
+          || DFSUtil.getHttpPolicy(conf) == HttpConfig.Policy.HTTPS_ONLY;
+      final boolean rpcSecured = resources.isRpcPortPrivileged()
+          || resources.isSaslEnabled();
+
+      // Allow secure DataNode to startup if:
+      // 1. Http is secure.
+      // 2. Rpc is secure
+      if (rpcSecured && httpSecured) {
+        return;
+      }
+    } else {
+      // Handle cases when SecureDataNodeStarter#getSecureResources is not
+      // invoked
+      SaslPropertiesResolver saslPropsResolver = dnConf.getSaslPropsResolver();
+      if (saslPropsResolver != null &&
+          DFSUtil.getHttpPolicy(conf) == HttpConfig.Policy.HTTPS_ONLY) {
+        return;
+      }
     }
-    throw new RuntimeException("Cannot start secure DataNode without " +
-      "configuring either privileged resources or SASL RPC data transfer " +
-      "protection and SSL for HTTP.  Using privileged resources in " +
-      "combination with SASL RPC data transfer protection is not supported.");
+
+    throw new RuntimeException("Cannot start secure DataNode due to incorrect "
+        + "config. See https://cwiki.apache.org/confluence/display/HADOOP/"
+        + "Secure+DataNode for details.");
   }
   
   public static String generateUuid() {
@@ -1669,7 +1696,7 @@ public class DataNode extends ReconfigurableBase
     return blockPoolManager.get(bpid);
   }
   
-  int getBpOsCount() {
+  public int getBpOsCount() {
     return blockPoolManager.getAllNamenodeThreads().size();
   }
   
@@ -1960,7 +1987,7 @@ public class DataNode extends ReconfigurableBase
         }
       }
     }
-    
+
     List<BPOfferService> bposArray = (this.blockPoolManager == null)
         ? new ArrayList<BPOfferService>()
         : this.blockPoolManager.getAllNamenodeThreads();
@@ -2296,8 +2323,7 @@ public class DataNode extends ReconfigurableBase
     if (numTargets > 0) {
       StringBuilder xfersBuilder = new StringBuilder();
       for (int i = 0; i < numTargets; i++) {
-        xfersBuilder.append(xferTargets[i]);
-        xfersBuilder.append(" ");
+        xfersBuilder.append(xferTargets[i]).append(" ");
       }
       LOG.info(bpReg + " Starting thread to transfer " + 
                block + " to " + xfersBuilder);                       
@@ -2687,7 +2713,8 @@ public class DataNode extends ReconfigurableBase
     return locations;
   }
 
-  /** Instantiate & Start a single datanode daemon and wait for it to finish.
+  /** Instantiate &amp; Start a single datanode daemon and wait for it to
+   * finish.
    *  If this thread is specifically interrupted, it will stop waiting.
    */
   @VisibleForTesting
@@ -2696,7 +2723,8 @@ public class DataNode extends ReconfigurableBase
     return createDataNode(args, conf, null);
   }
   
-  /** Instantiate & Start a single datanode daemon and wait for it to finish.
+  /** Instantiate &amp; Start a single datanode daemon and wait for it to
+   * finish.
    *  If this thread is specifically interrupted, it will stop waiting.
    */
   @VisibleForTesting
@@ -3119,11 +3147,16 @@ public class DataNode extends ReconfigurableBase
   @Override // DataNodeMXBean
   public String getDiskBalancerStatus() {
     try {
-      return this.diskBalancer.queryWorkStatus().toJsonString();
+      return getDiskBalancer().queryWorkStatus().toJsonString();
     } catch (IOException ex) {
       LOG.debug("Reading diskbalancer Status failed. ex:{}", ex);
       return "";
     }
+  }
+
+  @Override
+  public boolean isSecurityEnabled() {
+    return UserGroupInformation.isSecurityEnabled();
   }
 
   public void refreshNamenodes(Configuration conf) throws IOException {
@@ -3496,8 +3529,8 @@ public class DataNode extends ReconfigurableBase
               + " Disk balancing not permitted.",
           DiskBalancerException.Result.DATANODE_STATUS_NOT_REGULAR);
     }
-    // TODO : Support force option
-    this.diskBalancer.submitPlan(planID, planVersion, planFile, planData,
+
+    getDiskBalancer().submitPlan(planID, planVersion, planFile, planData,
             skipDateCheck);
   }
 
@@ -3509,7 +3542,7 @@ public class DataNode extends ReconfigurableBase
   public void cancelDiskBalancePlan(String planID) throws
       IOException {
     checkSuperuserPrivilege();
-    this.diskBalancer.cancelPlan(planID);
+    getDiskBalancer().cancelPlan(planID);
   }
 
   /**
@@ -3520,7 +3553,7 @@ public class DataNode extends ReconfigurableBase
   @Override
   public DiskBalancerWorkStatus queryDiskBalancerPlan() throws IOException {
     checkSuperuserPrivilege();
-    return this.diskBalancer.queryWorkStatus();
+    return getDiskBalancer().queryWorkStatus();
   }
 
   /**
@@ -3537,9 +3570,9 @@ public class DataNode extends ReconfigurableBase
     Preconditions.checkNotNull(key);
     switch (key) {
     case DiskBalancerConstants.DISKBALANCER_VOLUME_NAME:
-      return this.diskBalancer.getVolumeNames();
+      return getDiskBalancer().getVolumeNames();
     case DiskBalancerConstants.DISKBALANCER_BANDWIDTH :
-      return Long.toString(this.diskBalancer.getBandwidth());
+      return Long.toString(getDiskBalancer().getBandwidth());
     default:
       LOG.error("Disk Balancer - Unknown key in get balancer setting. Key: {}",
           key);
@@ -3592,5 +3625,12 @@ public class DataNode extends ReconfigurableBase
       volumeInfoList.add(dnStorageInfo);
     }
     return volumeInfoList;
+  }
+
+  private DiskBalancer getDiskBalancer() throws IOException {
+    if (this.diskBalancer == null) {
+      throw new IOException("DiskBalancer is not initialized");
+    }
+    return this.diskBalancer;
   }
 }

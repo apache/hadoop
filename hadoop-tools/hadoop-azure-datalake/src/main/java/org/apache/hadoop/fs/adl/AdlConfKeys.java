@@ -105,6 +105,7 @@ public final class AdlConfKeys {
   static final String ADL_ENABLEUPN_FOR_OWNERGROUP_KEY =
       "adl.feature.ownerandgroup.enableupn";
   static final boolean ADL_ENABLEUPN_FOR_OWNERGROUP_DEFAULT = false;
+  public static final String ADL_HTTP_TIMEOUT = "adl.http.timeout";
 
   public static void addDeprecatedKeys() {
     Configuration.addDeprecations(new DeprecationDelta[]{

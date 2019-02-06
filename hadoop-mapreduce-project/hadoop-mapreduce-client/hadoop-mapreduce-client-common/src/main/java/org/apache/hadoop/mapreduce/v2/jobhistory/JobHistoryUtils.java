@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -89,13 +90,7 @@ public class JobHistoryUtils {
    */
   public static final FsPermission HISTORY_INTERMEDIATE_DONE_DIR_PERMISSIONS = 
     FsPermission.createImmutable((short) 01777);
-  
-  /**
-   * Permissions for the user directory under the intermediate done directory.
-   */
-  public static final FsPermission HISTORY_INTERMEDIATE_USER_DIR_PERMISSIONS = 
-    FsPermission.createImmutable((short) 0770);
-  
+
   public static final FsPermission HISTORY_INTERMEDIATE_FILE_PERMISSIONS = 
     FsPermission.createImmutable((short) 0770); // rwx------
   
@@ -207,6 +202,35 @@ public class JobHistoryUtils {
           + "/history/done_intermediate";
     }
     return ensurePathInDefaultFileSystem(doneDirPrefix, conf);
+  }
+
+  /**
+   * Gets the configured directory permissions for the user directories in the
+   * directory of the intermediate done history files. The user and the group
+   * both need full permissions, this is enforced by this method.
+   * @param conf The configuration object
+   * @return FsPermission of the user directories
+   */
+  public static FsPermission
+        getConfiguredHistoryIntermediateUserDoneDirPermissions(
+            Configuration conf) {
+    String userDoneDirPermissions = conf.get(
+        JHAdminConfig.MR_HISTORY_INTERMEDIATE_USER_DONE_DIR_PERMISSIONS);
+    if (userDoneDirPermissions == null) {
+      return new FsPermission(
+          JHAdminConfig.DEFAULT_MR_HISTORY_INTERMEDIATE_USER_DONE_DIR_PERMISSIONS);
+    }
+    FsPermission permission = new FsPermission(userDoneDirPermissions);
+    if (permission.getUserAction() != FsAction.ALL ||
+        permission.getGroupAction() != FsAction.ALL) {
+      permission = new FsPermission(FsAction.ALL, FsAction.ALL,
+          permission.getOtherAction(), permission.getStickyBit());
+      LOG.warn("Unsupported permission configured in " +
+          JHAdminConfig.MR_HISTORY_INTERMEDIATE_USER_DONE_DIR_PERMISSIONS +
+          ", the user and the group permission must be 7 (rwx). " +
+          "The permission was set to " + permission.toString());
+    }
+    return permission;
   }
   
   /**

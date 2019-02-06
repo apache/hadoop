@@ -26,7 +26,7 @@ extern  "C" {
 #endif
 
 struct hdfsBuilder;
-struct NativeMiniDfsCluster; 
+struct NativeMiniDfsCluster;
 
 /**
  * Represents a configuration to use for creating a Native MiniDFSCluster
@@ -51,6 +51,11 @@ struct NativeMiniDfsConf {
      * Nonzero if we should configure short circuit.
      */
     jboolean configureShortCircuit;
+
+    /**
+     * The number of datanodes in MiniDfsCluster
+     */
+    jint numDataNodes;
 };
 
 /**
@@ -96,13 +101,13 @@ void nmdFree(struct NativeMiniDfsCluster* cl);
  *
  * @return          the port, or a negative error code
  */
-int nmdGetNameNodePort(const struct NativeMiniDfsCluster *cl); 
+int nmdGetNameNodePort(const struct NativeMiniDfsCluster *cl);
 
 /**
  * Get the http address that's in use by the given (non-HA) nativeMiniDfs
  *
  * @param cl        The initialized NativeMiniDfsCluster
- * @param port      Used to capture the http port of the NameNode 
+ * @param port      Used to capture the http port of the NameNode
  *                  of the NativeMiniDfsCluster
  * @param hostName  Used to capture the http hostname of the NameNode
  *                  of the NativeMiniDfsCluster

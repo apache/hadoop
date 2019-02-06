@@ -151,6 +151,7 @@
 
 ###
 # Registry DNS specific parameters
+# This is deprecated and should be done in hadoop-env.sh
 ###
 # For privileged registry DNS, user to run as after dropping privileges
 # This will replace the hadoop.id.str Java property in secure mode.
@@ -166,3 +167,4 @@
 ###
 # Directory containing service examples
 # export YARN_SERVICE_EXAMPLES_DIR = $HADOOP_YARN_HOME/share/hadoop/yarn/yarn-service-examples
+# export YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE=true

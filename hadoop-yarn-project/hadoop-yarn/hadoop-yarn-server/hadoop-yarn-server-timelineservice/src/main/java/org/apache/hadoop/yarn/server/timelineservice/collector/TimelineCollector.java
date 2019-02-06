@@ -31,6 +31,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetricOperation;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
@@ -147,6 +148,33 @@ public abstract class TimelineCollector extends CompositeService {
     // caused by the timeline enitites that are being put here.
     synchronized (writer) {
       response = writeTimelineEntities(entities, callerUgi);
+      flushBufferedTimelineEntities();
+    }
+
+    return response;
+  }
+
+  /**
+   * Add or update an domain. If the domain already exists, only the owner
+   * and the admin can update it.
+   *
+   * @param domain    domain to post
+   * @param callerUgi the caller UGI
+   * @return the response that contains the result of the post.
+   * @throws IOException if there is any exception encountered while putting
+   *                     domain.
+   */
+  public TimelineWriteResponse putDomain(TimelineDomain domain,
+      UserGroupInformation callerUgi) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(
+          "putDomain(domain=" + domain + ", callerUgi=" + callerUgi + ")");
+    }
+
+    TimelineWriteResponse response;
+    synchronized (writer) {
+      final TimelineCollectorContext context = getTimelineEntityContext();
+      response = writer.write(context, domain);
       flushBufferedTimelineEntities();
     }
 

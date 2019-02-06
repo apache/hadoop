@@ -35,7 +35,7 @@ import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
+import org.apache.hadoop.yarn.server.webapp.LogWebServiceUtils;
 import org.apache.hadoop.yarn.server.webapp.YarnWebServiceParams;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfo;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
@@ -406,6 +407,7 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertEquals("test app", app.get("name"));
     assertEquals(round == 0 ? "test diagnostics info" : "",
         app.get("diagnosticsInfo"));
+    assertEquals(Integer.MAX_VALUE + 1L, app.get("submittedTime"));
     assertEquals("test queue", app.get("queue"));
     assertEquals("user1", app.get("user"));
     assertEquals("test app type", app.get("type"));
@@ -774,7 +776,8 @@ public class TestAHSWebServices extends JerseyTestBase {
     // the warning message.
     assertTrue(responseText.contains("LogAggregationType: "
         + ContainerLogAggregationType.LOCAL));
-    assertTrue(responseText.contains(AHSWebServices.getNoRedirectWarning()));
+    assertTrue(
+        responseText.contains(LogWebServiceUtils.getNoRedirectWarning()));
 
     // If we can not container information from ATS, and we specify the NM id,
     // but we can not get nm web address, we would still try to
@@ -790,7 +793,8 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertTrue(responseText.contains(content));
     assertTrue(responseText.contains("LogAggregationType: "
         + ContainerLogAggregationType.LOCAL));
-    assertTrue(responseText.contains(AHSWebServices.getNoRedirectWarning()));
+    assertTrue(
+        responseText.contains(LogWebServiceUtils.getNoRedirectWarning()));
 
     // If this is the redirect request, we would not re-direct the request
     // back and get the aggregated logs.

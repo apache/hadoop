@@ -24,6 +24,14 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
@@ -440,6 +448,19 @@ public class TestFrameworkUploader {
       }
       Assert.assertTrue(uploader.checkSymlink(symlinkToTarget));
 
+      // Create a symlink to the target with /./ in the path
+      symlinkToTarget = new File(parent.getAbsolutePath() +
+            "/./symlinkToTarget2.txt");
+      try {
+        Files.createSymbolicLink(
+            Paths.get(symlinkToTarget.getAbsolutePath()),
+            Paths.get(targetFile.getAbsolutePath()));
+      } catch (UnsupportedOperationException e) {
+        // Symlinks are not supported, so ignore the test
+        Assume.assumeTrue(false);
+      }
+      Assert.assertTrue(uploader.checkSymlink(symlinkToTarget));
+
       // Create a symlink outside the current directory
       File symlinkOutside = new File(parent, "symlinkToParent.txt");
       try {
@@ -457,4 +478,54 @@ public class TestFrameworkUploader {
 
   }
 
+  @Test
+  public void testPermissionSettingsOnRestrictiveUmask()
+      throws Exception {
+    File parent = new File(testDir);
+    parent.deleteOnExit();
+    MiniDFSCluster cluster = null;
+
+    try {
+      Assert.assertTrue("Directory creation failed", parent.mkdirs());
+      Configuration hdfsConf = new HdfsConfiguration();
+      String namenodeDir = new File(MiniDFSCluster.getBaseDirectory(),
+          "name").getAbsolutePath();
+      hdfsConf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, namenodeDir);
+      hdfsConf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, namenodeDir);
+      hdfsConf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "027");
+      cluster = new MiniDFSCluster.Builder(hdfsConf)
+          .numDataNodes(1).build();
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      cluster.waitActive();
+
+      File file1 = new File(parent, "a.jar");
+      file1.createNewFile();
+      File file2 = new File(parent, "b.jar");
+      file2.createNewFile();
+      File file3 = new File(parent, "c.jar");
+      file3.createNewFile();
+
+      FrameworkUploader uploader = new FrameworkUploader();
+      uploader.whitelist = "";
+      uploader.blacklist = "";
+      uploader.input = parent.getAbsolutePath() + File.separatorChar + "*";
+      String hdfsUri = hdfsConf.get(FS_DEFAULT_NAME_KEY);
+      String targetPath = "/test.tar.gz";
+      uploader.target = hdfsUri + targetPath;
+      uploader.acceptableReplication = 1;
+      uploader.setConf(hdfsConf);
+
+      uploader.collectPackages();
+      uploader.buildPackage();
+
+      FileStatus fileStatus = dfs.getFileStatus(new Path(targetPath));
+      FsPermission perm = fileStatus.getPermission();
+      Assert.assertEquals("Permissions", new FsPermission(0644), perm);
+    } finally {
+      if (cluster != null) {
+        cluster.close();
+      }
+      FileUtils.deleteDirectory(parent);
+    }
+  }
 }

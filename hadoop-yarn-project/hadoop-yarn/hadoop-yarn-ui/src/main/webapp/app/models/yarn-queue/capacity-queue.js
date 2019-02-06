@@ -94,7 +94,7 @@ export default DS.Model.extend({
 
   hasUserUsages: function() {
     return this.get("userUsagesDonutChartData").length > 0;
-  }.property(),
+  }.property("userUsagesDonutChartData"),
 
   numOfApplicationsDonutChartData: function() {
     return [

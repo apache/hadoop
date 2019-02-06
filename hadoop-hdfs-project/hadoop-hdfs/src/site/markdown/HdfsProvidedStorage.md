@@ -38,7 +38,7 @@ is limited to creating a *read-only image* of a remote namespace that implements
 to serve the image. Specifically, reads from a snapshot of a remote namespace are
 supported. Adding a remote namespace to an existing/running namenode, refreshing the
 remote snapshot, unmounting, and writes are not available in this release. One
-can use [ViewFs](./ViewFs.html) and [RBF](HDFSRouterFederation.html) to
+can use [ViewFs](./ViewFs.html) and [RBF](../hadoop-hdfs-rbf/HDFSRouterFederation.html) to
 integrate namespaces with `PROVIDED` storage into an existing deployment.
 
 Creating HDFS Clusters with `PROVIDED` Storage
@@ -152,7 +152,7 @@ Currently, the following two types of alias maps are supported.
 
 This is a LevelDB-based alias map that runs as a separate server in Namenode.
 The alias map itself can be created using the `fs2img` tool using the option
-`-Ddfs.provided.aliasmap.leveldb.path=file:///path/to/leveldb/map/dingos.db -o org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.LevelDBFileRegionAliasMap`
+`-Ddfs.provided.aliasmap.leveldb.path=file:///path/to/leveldb/map/dingos.db -b org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.LevelDBFileRegionAliasMap`
 as in the example above.
 
 Datanodes contact this alias map using the `org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMapProtocol` protocol.

@@ -80,10 +80,9 @@ public class RMNodeStatusEvent extends RMNodeEvent {
     this.logAggregationReportsForApps = logAggregationReportsForApps;
   }
   
-  @SuppressWarnings("unchecked")
   public List<Container> getNMReportedIncreasedContainers() {
     return this.nodeStatus.getIncreasedContainers() == null ?
-        Collections.EMPTY_LIST : this.nodeStatus.getIncreasedContainers();
+        Collections.emptyList() : this.nodeStatus.getIncreasedContainers();
   }
 
 

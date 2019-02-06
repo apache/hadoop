@@ -124,6 +124,18 @@ public class TestFileInputFormat {
   }
 
   @Test
+  public void testNumInputFilesIgnoreDirs() throws Exception {
+    Configuration conf = getConfiguration();
+    conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);
+    conf.setBoolean(FileInputFormat.INPUT_DIR_NONRECURSIVE_IGNORE_SUBDIRS, true);
+    Job job = Job.getInstance(conf);
+    FileInputFormat<?, ?> fileInputFormat = new TextInputFormat();
+    List<InputSplit> splits = fileInputFormat.getSplits(job);
+    Assert.assertEquals("Input splits are not correct", 1, splits.size());
+    verifySplits(Lists.newArrayList("test:/a1/file1"), splits);
+  }
+
+  @Test
   public void testListLocatedStatus() throws Exception {
     Configuration conf = getConfiguration();
     conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);

@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -89,6 +89,8 @@ public class ParentQueue extends AbstractCSQueue {
     RecordFactoryProvider.getRecordFactory(null);
 
   private QueueOrderingPolicy queueOrderingPolicy;
+
+  private long lastSkipQueueDebugLoggingTimestamp = -1;
 
   public ParentQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
@@ -539,15 +541,20 @@ public class ParentQueue extends AbstractCSQueue {
     if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY
         && !accessibleToPartition(candidates.getPartition())) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Skip this queue=" + getQueuePath()
-            + ", because it is not able to access partition=" + candidates
-            .getPartition());
+        long now = System.currentTimeMillis();
+        // Do logging every 1 sec to avoid excessive logging.
+        if (now - this.lastSkipQueueDebugLoggingTimestamp > 1000) {
+          LOG.debug("Skip this queue=" + getQueuePath()
+              + ", because it is not able to access partition=" + candidates
+              .getPartition());
+          this.lastSkipQueueDebugLoggingTimestamp = now;
+        }
       }
 
       ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
           getParentName(), getQueueName(), ActivityState.REJECTED,
-          ActivityDiagnosticConstant.NOT_ABLE_TO_ACCESS_PARTITION + node
-              .getPartition());
+          ActivityDiagnosticConstant.NOT_ABLE_TO_ACCESS_PARTITION
+              + candidates.getPartition());
       if (rootQueue) {
         ActivitiesLogger.NODE.finishSkippedNodeAllocation(activitiesManager,
             node);
@@ -561,10 +568,15 @@ public class ParentQueue extends AbstractCSQueue {
     if (!super.hasPendingResourceRequest(candidates.getPartition(),
         clusterResource, schedulingMode)) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Skip this queue=" + getQueuePath()
-            + ", because it doesn't need more resource, schedulingMode="
-            + schedulingMode.name() + " node-partition=" + candidates
-            .getPartition());
+        long now = System.currentTimeMillis();
+        // Do logging every 1 sec to avoid excessive logging.
+        if (now - this.lastSkipQueueDebugLoggingTimestamp > 1000) {
+          LOG.debug("Skip this queue=" + getQueuePath()
+              + ", because it doesn't need more resource, schedulingMode="
+              + schedulingMode.name() + " node-partition=" + candidates
+              .getPartition());
+          this.lastSkipQueueDebugLoggingTimestamp = now;
+        }
       }
 
       ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
@@ -666,12 +678,12 @@ public class ParentQueue extends AbstractCSQueue {
         assignment.setIncreasedAllocation(
             assignedToChild.isIncreasedAllocation());
 
-        LOG.info("assignedContainer" + " queue=" + getQueueName()
-            + " usedCapacity=" + getUsedCapacity() + " absoluteUsedCapacity="
-            + getAbsoluteUsedCapacity() + " used=" + queueUsage.getUsed()
-            + " cluster=" + clusterResource);
-
         if (LOG.isDebugEnabled()) {
+          LOG.debug("assignedContainer reserved=" + isReserved + " queue="
+              + getQueueName() + " usedCapacity=" + getUsedCapacity()
+              + " absoluteUsedCapacity=" + getAbsoluteUsedCapacity() + " used="
+              + queueUsage.getUsed() + " cluster=" + clusterResource);
+
           LOG.debug(
               "ParentQ=" + getQueueName() + " assignedSoFarInThisIteration="
                   + assignment.getResource() + " usedCapacity="
@@ -764,7 +776,6 @@ public class ParentQueue extends AbstractCSQueue {
       SchedulingMode schedulingMode) {
     CSAssignment assignment = CSAssignment.NULL_ASSIGNMENT;
 
-    Resource parentLimits = limits.getLimit();
     printChildQueues();
 
     // Try to assign to most 'under-served' sub-queue
@@ -778,7 +789,7 @@ public class ParentQueue extends AbstractCSQueue {
 
       // Get ResourceLimits of child queue before assign containers
       ResourceLimits childLimits =
-          getResourceLimitsOfChild(childQueue, cluster, parentLimits,
+          getResourceLimitsOfChild(childQueue, cluster, limits.getNetLimit(),
               candidates.getPartition());
 
       CSAssignment childAssignment = childQueue.assignContainers(cluster,
@@ -800,16 +811,21 @@ public class ParentQueue extends AbstractCSQueue {
             CSAssignment.SkippedType.QUEUE_LIMIT) {
           assignment = childAssignment;
         }
+        Resource blockedHeadroom = null;
+        if (childQueue instanceof LeafQueue) {
+          blockedHeadroom = childLimits.getHeadroom();
+        } else {
+          blockedHeadroom = childLimits.getBlockedHeadroom();
+        }
         Resource resourceToSubtract = Resources.max(resourceCalculator,
-            cluster, childLimits.getHeadroom(), Resources.none());
+            cluster, blockedHeadroom, Resources.none());
+        limits.addBlockedHeadroom(resourceToSubtract);
         if(LOG.isDebugEnabled()) {
-          LOG.debug("Decrease parentLimits " + parentLimits +
+          LOG.debug("Decrease parentLimits " + limits.getLimit() +
               " for " + this.getQueueName() + " by " +
               resourceToSubtract + " as childQueue=" +
               childQueue.getQueueName() + " is blocked");
         }
-        parentLimits = Resources.subtract(parentLimits,
-            resourceToSubtract);
       }
     }
 
@@ -895,6 +911,10 @@ public class ParentQueue extends AbstractCSQueue {
 
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
           this, labelManager, null);
+      // Update configured capacity/max-capacity for default partition only
+      CSQueueUtils.updateConfiguredCapacityMetrics(resourceCalculator,
+          labelManager.getResourceByLabel(null, clusterResource),
+          RMNodeLabelsManager.NO_LABEL, this);
     } finally {
       writeLock.unlock();
     }
@@ -1011,7 +1031,7 @@ public class ParentQueue extends AbstractCSQueue {
   private Resource getMinResourceNormalized(String name, Map<String, Float> effectiveMinRatio,
       Resource minResource) {
     Resource ret = Resource.newInstance(minResource);
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       ResourceInformation nResourceInformation = minResource
           .getResourceInformation(i);
@@ -1035,7 +1055,7 @@ public class ParentQueue extends AbstractCSQueue {
       Resource configuredMinResources, Resource numeratorForMinRatio) {
     Map<String, Float> effectiveMinRatioPerResource = new HashMap<>();
     if (numeratorForMinRatio != null) {
-      int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+      int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
       for (int i = 0; i < maxLength; i++) {
         ResourceInformation nResourceInformation = numeratorForMinRatio
             .getResourceInformation(i);

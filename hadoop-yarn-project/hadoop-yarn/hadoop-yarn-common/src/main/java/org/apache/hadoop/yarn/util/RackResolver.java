@@ -18,11 +18,9 @@
 
 package org.apache.hadoop.yarn.util;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
@@ -34,24 +32,31 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
 @InterfaceAudience.LimitedPrivate({"YARN", "MAPREDUCE"})
-public class RackResolver {
+public final class RackResolver {
   private static DNSToSwitchMapping dnsToSwitchMapping;
   private static boolean initCalled = false;
-  private static final Log LOG = LogFactory.getLog(RackResolver.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RackResolver.class);
+
+  /**
+   * Hide the default constructor for utility class.
+   */
+  private RackResolver() {
+  }
 
   public synchronized static void init(Configuration conf) {
     if (initCalled) {
       return;
-    } else {
-      initCalled = true;
     }
+    initCalled = true;
     Class<? extends DNSToSwitchMapping> dnsToSwitchMappingClass =
-      conf.getClass(
-        CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY, 
+        conf.getClass(
+        CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
         ScriptBasedMapping.class,
         DNSToSwitchMapping.class);
     try {
@@ -67,10 +72,10 @@ public class RackResolver {
       throw new RuntimeException(e);
     }
   }
-  
+
   /**
    * Utility method for getting a hostname resolved to a node in the
-   * network topology. This method initializes the class with the 
+   * network topology. This method initializes the class with the
    * right resolver implementation.
    * @param conf
    * @param hostName
@@ -94,33 +99,27 @@ public class RackResolver {
     }
     return coreResolve(hostName);
   }
-  
+
   private static Node coreResolve(String hostName) {
-    List <String> tmpList = new ArrayList<String>(1);
-    tmpList.add(hostName);
+    List <String> tmpList = Collections.singletonList(hostName);
     List <String> rNameList = dnsToSwitchMapping.resolve(tmpList);
-    String rName = null;
+    String rName = NetworkTopology.DEFAULT_RACK;
     if (rNameList == null || rNameList.get(0) == null) {
-      rName = NetworkTopology.DEFAULT_RACK;
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Couldn't resolve " + hostName + ". Falling back to "
-            + NetworkTopology.DEFAULT_RACK);
-      }
+      LOG.debug("Could not resolve {}. Falling back to {}", hostName,
+            NetworkTopology.DEFAULT_RACK);
     } else {
       rName = rNameList.get(0);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Resolved " + hostName + " to " + rName);
-      }
+      LOG.debug("Resolved {} to {}", hostName, rName);
     }
     return new NodeBase(hostName, rName);
   }
 
   /**
-   * Only used by tests
+   * Only used by tests.
    */
   @Private
   @VisibleForTesting
-  static DNSToSwitchMapping getDnsToSwitchMapping(){
+  static DNSToSwitchMapping getDnsToSwitchMapping() {
     return dnsToSwitchMapping;
   }
 }

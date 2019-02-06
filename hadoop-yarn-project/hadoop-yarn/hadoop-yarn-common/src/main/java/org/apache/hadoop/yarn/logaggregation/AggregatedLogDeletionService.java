@@ -258,7 +258,7 @@ public class AggregatedLogDeletionService extends AbstractService {
       return;
     }
     setLogAggCheckIntervalMsecs(retentionSecs);
-    task = new LogDeletionTask(conf, retentionSecs, creatRMClient());
+    task = new LogDeletionTask(conf, retentionSecs, createRMClient());
     timer = new Timer();
     timer.scheduleAtFixedRate(task, 0, checkIntervalMsecs);
   }
@@ -281,7 +281,7 @@ public class AggregatedLogDeletionService extends AbstractService {
   // We have already marked ApplicationClientProtocol.getApplicationReport
   // as @Idempotent, it will automatically take care of RM restart/failover.
   @VisibleForTesting
-  protected ApplicationClientProtocol creatRMClient() throws IOException {
+  protected ApplicationClientProtocol createRMClient() throws IOException {
     return ClientRMProxy.createRMProxy(getConfig(),
       ApplicationClientProtocol.class);
   }

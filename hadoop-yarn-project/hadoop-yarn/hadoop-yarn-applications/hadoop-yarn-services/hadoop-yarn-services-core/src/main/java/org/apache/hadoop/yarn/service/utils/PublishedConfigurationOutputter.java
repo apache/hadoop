@@ -32,6 +32,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 /**
@@ -61,7 +62,7 @@ public abstract class PublishedConfigurationOutputter {
   }
 */
   public void save(File dest) throws IOException {
-    FileUtils.writeStringToFile(dest, asString(), Charsets.UTF_8);
+    FileUtils.writeStringToFile(dest, asString(), StandardCharsets.UTF_8);
   }
 
   /**
@@ -98,8 +99,6 @@ public abstract class PublishedConfigurationOutputter {
         return new PropertiesOutputter(owner);
       case JSON:
         return new JsonOutputter(owner);
-      case ENV:
-        return new EnvOutputter(owner);
       case TEMPLATE:
         return new TemplateOutputter(owner);
       case YAML:

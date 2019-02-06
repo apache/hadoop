@@ -204,8 +204,8 @@ public class LocalizedResource implements EventHandler<ResourceEvent> {
       if (newState != null && oldState != newState) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Resource " + resourcePath + (localPath != null ?
-              "(->" + localPath + ")": "") + " transitioned from " + oldState
-              + " to " + newState);
+              "(->" + localPath + ")": "") + " size : " + getSize()
+              + " transitioned from " + oldState + " to " + newState);
         }
       }
     } finally {

@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.applications.distributedshell;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -32,6 +34,7 @@ import java.util.Arrays;
 import java.util.Base64;
 
 import com.google.common.base.Joiner;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -39,7 +42,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -103,7 +106,7 @@ import org.slf4j.LoggerFactory;
  * the provided shell command on a set of containers. </p>
  * 
  * <p>This client is meant to act as an example on how to write yarn-based applications. </p>
- * 
+ *
  * <p> To submit an application, a client first needs to connect to the <code>ResourceManager</code> 
  * aka ApplicationsManager or ASM via the {@link ApplicationClientProtocol}. The {@link ApplicationClientProtocol} 
  * provides a way for the client to get access to cluster information and to request for a
@@ -189,9 +192,13 @@ public class Client {
   private ExecutionType containerType = ExecutionType.GUARANTEED;
   // Whether to auto promote opportunistic containers
   private boolean autoPromoteContainers = false;
+  // Whether to enforce execution type of containers
+  private boolean enforceExecType = false;
 
   // Placement specification
   private String placementSpec = "";
+  // Node Attribute specification
+  private String nodeAttributeSpec = "";
   // log4j.properties file 
   // if available, add to local resources and set into classpath 
   private String log4jPropFile = "";	
@@ -229,6 +236,11 @@ public class Client {
 
   // Docker client configuration
   private String dockerClientConfig = null;
+
+  // Application tags
+  private Set<String> applicationTags = new HashSet<>();
+
+  private List<String> filesToLocalize = new ArrayList<>();
 
   // Command line options
   private Options opts;
@@ -327,12 +339,16 @@ public class Client {
     opts.addOption("promote_opportunistic_after_start", false,
         "Flag to indicate whether to automatically promote opportunistic"
             + " containers to guaranteed.");
+    opts.addOption("enforce_execution_type", false,
+        "Flag to indicate whether to enforce execution type of containers");
     opts.addOption("log_properties", true, "log4j.properties file");
     opts.addOption("keep_containers_across_application_attempts", false,
-      "Flag to indicate whether to keep containers across application attempts." +
-      " If the flag is true, running containers will not be killed when" +
-      " application attempt fails and these containers will be retrieved by" +
-      " the new application attempt ");
+        "Flag to indicate whether to keep containers across application "
+            + "attempts."
+            + " If the flag is true, running containers will not be killed when"
+            + " application attempt fails and these containers will be "
+            + "retrieved by"
+            + " the new application attempt ");
     opts.addOption("attempt_failures_validity_interval", true,
       "when attempt_failures_validity_interval in milliseconds is set to > 0," +
       "the failure number will not take failures which happen out of " +
@@ -373,6 +389,9 @@ public class Client {
         "If container could retry, it specifies max retires");
     opts.addOption("container_retry_interval", true,
         "Interval between each retry, unit is milliseconds");
+    opts.addOption("container_failures_validity_interval", true,
+        "Failures which are out of the time window will not be added to"
+            + " the number of container retry attempts");
     opts.addOption("docker_client_config", true,
         "The docker client configuration path. The scheme should be supplied"
             + " (i.e. file:// or hdfs://)."
@@ -381,6 +400,9 @@ public class Client {
         "Placement specification. Please note, if this option is specified,"
             + " The \"num_containers\" option will be ignored. All requested"
             + " containers will be of type GUARANTEED" );
+    opts.addOption("application_tags", true, "Application tags.");
+    opts.addOption("localize_files", true, "List of files, separated by comma"
+        + " to be localized for the command");
   }
 
   /**
@@ -439,6 +461,7 @@ public class Client {
       // Check if it is parsable
       PlacementSpec.parse(this.placementSpec);
     }
+
     appName = cliParser.getOptionValue("appname", "DistributedShell");
     amPriority = Integer.parseInt(cliParser.getOptionValue("priority", "0"));
     amQueue = cliParser.getOptionValue("queue", "default");
@@ -513,6 +536,9 @@ public class Client {
     if (cliParser.hasOption("promote_opportunistic_after_start")) {
       autoPromoteContainers = true;
     }
+    if (cliParser.hasOption("enforce_execution_type")) {
+      enforceExecType = true;
+    }
     containerMemory =
         Integer.parseInt(cliParser.getOptionValue("container_memory", "-1"));
     containerVirtualCores =
@@ -579,6 +605,10 @@ public class Client {
       containerRetryOptions.add("--container_retry_interval "
           + cliParser.getOptionValue("container_retry_interval"));
     }
+    if (cliParser.hasOption("container_failures_validity_interval")) {
+      containerRetryOptions.add("--container_failures_validity_interval "
+          + cliParser.getOptionValue("container_failures_validity_interval"));
+    }
 
     if (cliParser.hasOption("flow_name")) {
       flowName = cliParser.getOptionValue("flow_name");
@@ -597,6 +627,25 @@ public class Client {
     if (cliParser.hasOption("docker_client_config")) {
       dockerClientConfig = cliParser.getOptionValue("docker_client_config");
     }
+
+    if (cliParser.hasOption("application_tags")) {
+      String applicationTagsStr = cliParser.getOptionValue("application_tags");
+      String[] appTags = applicationTagsStr.split(",");
+      for (String appTag : appTags) {
+        this.applicationTags.add(appTag.trim());
+      }
+    }
+
+    if (cliParser.hasOption("localize_files")) {
+      String filesStr = cliParser.getOptionValue("localize_files");
+      if (filesStr.contains(",")) {
+        String[] files = filesStr.split(",");
+        filesToLocalize = Arrays.asList(files);
+      } else {
+        filesToLocalize.add(filesStr);
+      }
+    }
+
     return true;
   }
 
@@ -627,6 +676,12 @@ public class Client {
     }
 
     QueueInfo queueInfo = yarnClient.getQueueInfo(this.amQueue);
+    if (queueInfo == null) {
+      throw new IllegalArgumentException(String
+          .format("Queue %s not present in scheduler configuration.",
+              this.amQueue));
+    }
+
     LOG.info("Queue info"
         + ", queueName=" + queueInfo.getQueueName()
         + ", queueCurrentCapacity=" + queueInfo.getCurrentCapacity()
@@ -690,7 +745,7 @@ public class Client {
           + ", specified=" + amMemory
           + ", max=" + maxMem);
       amMemory = maxMem;
-    }				
+    }
 
     int maxVCores = appResponse.getMaximumResourceCapability().getVirtualCores();
     LOG.info("Max virtual cores capability of resources in this cluster " + maxVCores);
@@ -722,6 +777,9 @@ public class Client {
     }
 
     Set<String> tags = new HashSet<String>();
+    if (applicationTags != null) {
+      tags.addAll(applicationTags);
+    }
     if (flowName != null) {
       tags.add(TimelineUtils.generateFlowNameTag(flowName));
     }
@@ -749,7 +807,42 @@ public class Client {
     if (!log4jPropFile.isEmpty()) {
       addToLocalResources(fs, log4jPropFile, log4jPath, appId.toString(),
           localResources, null);
-    }			
+    }
+
+    // Process local files for localization
+    // Here we just upload the files, the AM
+    // will set up localization later.
+    StringBuilder localizableFiles = new StringBuilder();
+    filesToLocalize.stream().forEach(path -> {
+      File f = new File(path);
+
+      if (!f.exists()) {
+        throw new UncheckedIOException(
+            new IOException(path + " does not exist"));
+      }
+
+      if (!f.canRead()) {
+        throw new UncheckedIOException(
+            new IOException(path + " cannot be read"));
+      }
+
+      if (f.isDirectory()) {
+        throw new UncheckedIOException(
+          new IOException(path + " is a directory"));
+      }
+
+      try {
+        String fileName = f.getName();
+        uploadFile(fs, path, fileName, appId.toString());
+        if (localizableFiles.length() == 0) {
+          localizableFiles.append(fileName);
+        } else {
+          localizableFiles.append(",").append(fileName);
+        }
+      } catch (IOException e) {
+        throw new UncheckedIOException("Cannot upload file: " + path, e);
+      }
+    });
 
     // The shell script has to be made available on the final container(s)
     // where it will be executed. 
@@ -763,7 +856,9 @@ public class Client {
     if (!shellScriptPath.isEmpty()) {
       Path shellSrc = new Path(shellScriptPath);
       String shellPathSuffix =
-          appName + "/" + appId.toString() + "/" + SCRIPT_PATH;
+          ApplicationMaster.getRelativePath(appName,
+              appId.toString(),
+              SCRIPT_PATH);
       Path shellDst =
           new Path(fs.getHomeDirectory(), shellPathSuffix);
       fs.copyFromLocalFile(false, true, shellSrc, shellDst);
@@ -830,7 +925,9 @@ public class Client {
 
     // Set java executable command 
     LOG.info("Setting up app master command");
-    vargs.add(Environment.JAVA_HOME.$$() + "/bin/java");
+    // Need extra quote here because JAVA_HOME might contain space on Windows,
+    // e.g. C:/Program Files/Java...
+    vargs.add("\"" + Environment.JAVA_HOME.$$() + "/bin/java\"");
     // Set Xmx based on am memory size
     vargs.add("-Xmx" + amMemory + "m");
     // Set class name 
@@ -841,6 +938,9 @@ public class Client {
     }
     if (autoPromoteContainers) {
       vargs.add("--promote_opportunistic_after_start");
+    }
+    if (enforceExecType) {
+      vargs.add("--enforce_execution_type");
     }
     if (containerMemory > 0) {
       vargs.add("--container_memory " + String.valueOf(containerMemory));
@@ -869,12 +969,20 @@ public class Client {
     }
     vargs.add("--priority " + String.valueOf(shellCmdPriority));
 
+    if (keepContainers) {
+      vargs.add("--keep_containers_across_application_attempts");
+    }
+
     for (Map.Entry<String, String> entry : shellEnv.entrySet()) {
       vargs.add("--shell_env " + entry.getKey() + "=" + entry.getValue());
     }
     if (debugFlag) {
       vargs.add("--debug");
     }
+    if (localizableFiles.length() > 0) {
+      vargs.add("--localized_files " + localizableFiles.toString());
+    }
+    vargs.add("--appname " + appName);
 
     vargs.addAll(containerRetryOptions);
 
@@ -1055,7 +1163,7 @@ public class Client {
       String fileDstPath, String appId, Map<String, LocalResource> localResources,
       String resources) throws IOException {
     String suffix =
-        appName + "/" + appId + "/" + fileDstPath;
+        ApplicationMaster.getRelativePath(appName, appId, fileDstPath);
     Path dst =
         new Path(fs.getHomeDirectory(), suffix);
     if (fileSrcPath == null) {
@@ -1077,6 +1185,16 @@ public class Client {
             LocalResourceType.FILE, LocalResourceVisibility.APPLICATION,
             scFileStatus.getLen(), scFileStatus.getModificationTime());
     localResources.put(fileDstPath, scRsrc);
+  }
+
+  private void uploadFile(FileSystem fs, String fileSrcPath,
+      String fileDstPath, String appId) throws IOException {
+    String relativePath =
+        ApplicationMaster.getRelativePath(appName, appId, fileDstPath);
+    Path dst =
+        new Path(fs.getHomeDirectory(), relativePath);
+    LOG.info("Uploading file: " + fileSrcPath + " to " + dst);
+    fs.copyFromLocalFile(new Path(fileSrcPath), dst);
   }
 
   private void prepareTimelineDomain() {
