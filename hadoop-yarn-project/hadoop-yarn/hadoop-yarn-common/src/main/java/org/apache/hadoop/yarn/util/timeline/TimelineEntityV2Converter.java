@@ -258,6 +258,7 @@ public final class TimelineEntityV2Converter {
     String type = null;
     boolean unmanagedApplication = false;
     long createdTime = 0;
+    long launchTime = 0;
     long finishedTime = 0;
     float progress = 0.0f;
     int applicationPriority = 0;
@@ -417,6 +418,9 @@ public final class TimelineEntityV2Converter {
             ApplicationMetricsConstants.CREATED_EVENT_TYPE)) {
           createdTime = event.getTimestamp();
         } else if (event.getId().equals(
+            ApplicationMetricsConstants.LAUNCHED_EVENT_TYPE)) {
+          launchTime = event.getTimestamp();
+        } else if (event.getId().equals(
             ApplicationMetricsConstants.UPDATED_EVENT_TYPE)) {
           // This type of events are parsed in time-stamp descending order
           // which means the previous event could override the information
@@ -449,8 +453,9 @@ public final class TimelineEntityV2Converter {
     return ApplicationReport.newInstance(
         ApplicationId.fromString(entity.getId()),
         latestApplicationAttemptId, user, queue, name, null, -1, null, state,
-        diagnosticsInfo, null, createdTime, finishedTime, finalStatus,
-        appResources, null, progress, type, null, appTags, unmanagedApplication,
+        diagnosticsInfo, null, createdTime, launchTime,
+        finishedTime, finalStatus, appResources, null,
+        progress, type, null, appTags, unmanagedApplication,
         Priority.newInstance(applicationPriority), appNodeLabelExpression,
         amNodeLabelExpression);
   }

@@ -155,6 +155,20 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
 
   @SuppressWarnings("unchecked")
   @Override
+  public void appLaunched(RMApp app, long launchTime) {
+    ApplicationEntity entity =
+        createApplicationEntity(app.getApplicationId());
+    TimelineEvent tEvent = new TimelineEvent();
+    tEvent.setId(ApplicationMetricsConstants.LAUNCHED_EVENT_TYPE);
+    tEvent.setTimestamp(launchTime);
+    entity.addEvent(tEvent);
+
+    getDispatcher().getEventHandler().handle(new TimelineV2PublishEvent(
+        SystemMetricsEventType.PUBLISH_ENTITY, entity, app.getApplicationId()));
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
   public void appFinished(RMApp app, RMAppState state, long finishedTime) {
     ApplicationEntity entity = createApplicationEntity(app.getApplicationId());
 
