@@ -1754,6 +1754,6 @@ public interface ClientProtocol {
    * @throws IOException
    */
   @Idempotent
-  @ReadOnly(isCoordinated = true)
+  @ReadOnly(activeOnly = true)
   void msync() throws IOException;
 }
