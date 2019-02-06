@@ -178,7 +178,8 @@ public class TestDistributedShell {
           true);
     conf.setBoolean(
         YarnConfiguration.OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED, true);
-
+    conf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
+        YarnConfiguration.PROCESSOR_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     // ATS version specific settings
     if (timelineVersion == 1.0f) {
       conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 1.0f);
@@ -781,7 +782,7 @@ public class TestDistributedShell {
 
   }
 
-  private String getSleepCommand(int sec) {
+  protected String getSleepCommand(int sec) {
     // Windows doesn't have a sleep command, ping -n does the trick
     return Shell.WINDOWS ? "ping -n " + (sec + 1) + " 127.0.0.1 >nul"
         : "sleep " + sec;
