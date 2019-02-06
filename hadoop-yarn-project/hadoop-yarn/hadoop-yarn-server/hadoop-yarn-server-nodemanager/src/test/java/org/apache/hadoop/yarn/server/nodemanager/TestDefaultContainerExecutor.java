@@ -178,7 +178,7 @@ public class TestDefaultContainerExecutor {
     FileContext lfs = FileContext.getLocalFSFileContext(conf);
     DefaultContainerExecutor executor = new DefaultContainerExecutor(lfs);
     executor.setConf(conf);
-    executor.init();
+    executor.init(null);
 
     try {
       executor.createUserLocalDirs(localDirs, user);
@@ -317,7 +317,7 @@ public class TestDefaultContainerExecutor {
       Path workDir = localDir;
       Path pidFile = new Path(workDir, "pid.txt");
 
-      mockExec.init();
+      mockExec.init(null);
       mockExec.activateContainer(cId, pidFile);
       int ret = mockExec.launchContainer(new ContainerStartContext.Builder()
           .setContainer(container)

@@ -117,7 +117,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
   }
 
   @Override
-  public void init() throws IOException {
+  public void init(Context nmContext) throws IOException {
     String auth =
       getConf().get(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION);
     if (auth != null && !auth.equals("simple")) {

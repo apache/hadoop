@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
+
+import java.util.Map;
 
 /**
  * Class to encapsulate information about a Resource - the name of the resource,
@@ -35,13 +38,20 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
   private long minimumAllocation;
   private long maximumAllocation;
 
+  // Known resource types
   public static final String MEMORY_URI = "memory-mb";
   public static final String VCORES_URI = "vcores";
+  public static final String GPU_URI = "yarn.io/gpu";
 
   public static final ResourceInformation MEMORY_MB =
       ResourceInformation.newInstance(MEMORY_URI, "Mi");
   public static final ResourceInformation VCORES =
       ResourceInformation.newInstance(VCORES_URI);
+  public static final ResourceInformation GPUS =
+      ResourceInformation.newInstance(GPU_URI);
+
+  public static final Map<String, ResourceInformation> MANDATORY_RESOURCES =
+      ImmutableMap.of(MEMORY_URI, MEMORY_MB, VCORES_URI, VCORES, GPU_URI, GPUS);
 
   /**
    * Get the name for the resource.

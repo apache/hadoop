@@ -628,7 +628,7 @@ public class TestLinuxContainerExecutor {
     LinuxContainerExecutor lce = new LinuxContainerExecutor();
     lce.setConf(conf);
     try {
-      lce.init();
+      lce.init(null);
     } catch (IOException e) {
       // expected if LCE isn't setup right, but not necessary for this test
     }
