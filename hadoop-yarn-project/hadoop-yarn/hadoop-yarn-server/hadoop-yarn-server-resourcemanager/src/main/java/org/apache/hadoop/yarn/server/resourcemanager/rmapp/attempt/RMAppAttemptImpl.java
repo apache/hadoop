@@ -45,6 +45,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringInterner;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -1112,8 +1113,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
             appAttempt.getAMBlacklistManager().getBlacklistUpdates();
         if (LOG.isDebugEnabled()) {
           LOG.debug("Using blacklist for AM: additions(" +
-              amBlacklist.getBlacklistAdditions() + ") and removals(" +
-              amBlacklist.getBlacklistRemovals() + ")");
+              StringUtils.join(",", amBlacklist.getBlacklistAdditions()) + ") and removals(" +
+              StringUtils.join(",", amBlacklist.getBlacklistRemovals()) + ")");
         }
 
         QueueInfo queueInfo = null;
