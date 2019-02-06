@@ -625,6 +625,25 @@ public class TestOfflineImageViewer {
   }
 
   @Test
+  public void testWebImageViewerNullOp() throws Exception {
+    WebImageViewer viewer = new WebImageViewer(
+        NetUtils.createSocketAddr("localhost:0"));
+    try {
+      viewer.initServer(originalFsimage.getAbsolutePath());
+      int port = viewer.getPort();
+
+      // null op
+      URL url = new URL("http://localhost:" + port +
+          "/webhdfs/v1/");
+      // should get HTTP_BAD_REQUEST. NPE gets HTTP_INTERNAL_ERROR
+      verifyHttpResponseCode(HttpURLConnection.HTTP_BAD_REQUEST, url);
+    } finally {
+      // shutdown the viewer
+      viewer.close();
+    }
+  }
+
+  @Test
   public void testWebImageViewerSecureMode() throws Exception {
     Configuration conf = new Configuration();
     conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
