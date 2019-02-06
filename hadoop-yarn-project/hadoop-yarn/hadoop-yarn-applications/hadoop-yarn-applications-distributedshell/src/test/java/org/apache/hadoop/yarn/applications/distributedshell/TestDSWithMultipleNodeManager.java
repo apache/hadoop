@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.yarn.applications.distributedshell;
 import java.io.IOException;
+import java.util.concurrent.ConcurrentMap;
 import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
@@ -35,10 +39,10 @@ import com.google.common.collect.ImmutableMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TestDistributedShellWithNodeLabels {
+public class TestDSWithMultipleNodeManager {
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestDistributedShellWithNodeLabels.class);
-  
+      LoggerFactory.getLogger(TestDSWithMultipleNodeManager.class);
+
   static final int NUM_NMS = 2;
   TestDistributedShell distShellTest;
 
@@ -47,7 +51,7 @@ public class TestDistributedShellWithNodeLabels {
     distShellTest = new TestDistributedShell();
     distShellTest.setupInternal(NUM_NMS);
   }
-  
+
   private void initializeNodeLabels() throws IOException {
     RMContext rmContext = distShellTest.yarnCluster.getResourceManager(0).getRMContext();
 
@@ -77,11 +81,11 @@ public class TestDistributedShellWithNodeLabels {
     // Set label x to NM[1]
     labelsMgr.addLabelsToNode(ImmutableMap.of(nodeIds[1], labels));
   }
-  
+
   @Test(timeout=90000)
   public void testDSShellWithNodeLabelExpression() throws Exception {
     initializeNodeLabels();
-    
+
     // Start NMContainerMonitor
     NMContainerMonitor mon = new NMContainerMonitor();
     Thread t = new Thread(mon);
@@ -117,9 +121,9 @@ public class TestDistributedShellWithNodeLabels {
     LOG.info("Running DS Client");
     boolean result = client.run();
     LOG.info("Client run completed. Result=" + result);
-    
+
     t.interrupt();
-    
+
     // Check maximum number of containers on each NMs
     int[] maxRunningContainersOnNMs = mon.getMaxRunningContainersReport();
     // Check no container allocated on NM[0]
@@ -127,7 +131,54 @@ public class TestDistributedShellWithNodeLabels {
     // Check there're some containers allocated on NM[1]
     Assert.assertTrue(maxRunningContainersOnNMs[1] > 0);
   }
-  
+
+  @Test(timeout = 90000)
+  public void testDistributedShellWithPlacementConstraint()
+      throws Exception {
+    NMContainerMonitor mon = new NMContainerMonitor();
+    Thread t = new Thread(mon);
+    t.start();
+
+    String[] args = {
+        "--jar",
+        distShellTest.APPMASTER_JAR,
+        "1",
+        "--shell_command",
+        distShellTest.getSleepCommand(15),
+        "--placement_spec",
+        "zk=1,NOTIN,NODE,zk:spark=1,NOTIN,NODE,zk"
+    };
+    LOG.info("Initializing DS Client");
+    final Client client =
+        new Client(new Configuration(distShellTest.yarnCluster.getConfig()));
+    boolean initSuccess = client.init(args);
+    Assert.assertTrue(initSuccess);
+    LOG.info("Running DS Client");
+    boolean result = client.run();
+    LOG.info("Client run completed. Result=" + result);
+
+    t.interrupt();
+
+    ConcurrentMap<ApplicationId, RMApp> apps = distShellTest.yarnCluster.
+        getResourceManager().getRMContext().getRMApps();
+    RMApp app = apps.values().iterator().next();
+    RMAppAttempt appAttempt = app.getAppAttempts().values().iterator().next();
+    NodeId masterNodeId = appAttempt.getMasterContainer().getNodeId();
+    NodeManager nm1 = distShellTest.yarnCluster.getNodeManager(0);
+
+    int expectedNM1Count = 1;
+    int expectedNM2Count = 1;
+    if (nm1.getNMContext().getNodeId().equals(masterNodeId)) {
+      expectedNM1Count++;
+    } else {
+      expectedNM2Count++;
+    }
+
+    int[] maxRunningContainersOnNMs = mon.getMaxRunningContainersReport();
+    Assert.assertEquals(expectedNM1Count, maxRunningContainersOnNMs[0]);
+    Assert.assertEquals(expectedNM2Count, maxRunningContainersOnNMs[1]);
+  }
+
   /**
    * Monitor containers running on NMs
    */
