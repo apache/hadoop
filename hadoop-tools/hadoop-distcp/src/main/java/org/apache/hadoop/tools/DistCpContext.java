@@ -179,10 +179,6 @@ public class DistCpContext {
     return options.getCopyBufferSize();
   }
 
-  public boolean shouldDirectWrite() {
-    return options.shouldDirectWrite();
-  }
-
   public void setTargetPathExists(boolean targetPathExists) {
     this.targetPathExists = targetPathExists;
   }

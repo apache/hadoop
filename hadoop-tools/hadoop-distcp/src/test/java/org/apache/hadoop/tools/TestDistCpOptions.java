@@ -287,9 +287,8 @@ public class TestDistCpOptions {
         "skipCRC=false, blocking=true, numListstatusThreads=0, maxMaps=20, " +
         "mapBandwidth=0.0, copyStrategy='uniformsize', preserveStatus=[], " +
         "atomicWorkPath=null, logPath=null, sourceFileListing=abc, " +
-        "sourcePaths=null, targetPath=xyz, filtersFile='null', " +
-        "blocksPerChunk=0, copyBufferSize=8192, verboseLog=false, " +
-        "directWrite=false}";
+        "sourcePaths=null, targetPath=xyz, filtersFile='null'," +
+        " blocksPerChunk=0, copyBufferSize=8192, verboseLog=false}";
     String optionString = option.toString();
     Assert.assertEquals(val, optionString);
     Assert.assertNotSame(DistCpOptionSwitch.ATOMIC_COMMIT.toString(),
