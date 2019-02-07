@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LogDelet
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
 
 
@@ -515,14 +516,17 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   }
 
   @Override
-  public void storeAssignedResources(ContainerId containerId,
+  public void storeAssignedResources(Container container,
       String resourceType, List<Serializable> assignedResources)
       throws IOException {
     ResourceMappings.AssignedResources ar =
         new ResourceMappings.AssignedResources();
     ar.updateAssignedResources(assignedResources);
-    containerStates.get(containerId).getResourceMappings()
+    containerStates.get(container.getContainerId()).getResourceMappings()
         .addAssignedResources(resourceType, ar);
+
+    // update container resource mapping.
+    updateContainerResourceMapping(container, resourceType, assignedResources);
   }
 
   private static class TrackerState {

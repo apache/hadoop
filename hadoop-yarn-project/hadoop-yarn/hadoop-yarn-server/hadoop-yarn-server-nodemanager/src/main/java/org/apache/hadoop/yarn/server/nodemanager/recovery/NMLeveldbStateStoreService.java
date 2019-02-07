@@ -18,28 +18,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.recovery;
 
-import static org.fusesource.leveldbjni.JniDBFactory.asString;
-import static org.fusesource.leveldbjni.JniDBFactory.bytes;
-
-import org.slf4j.Logger;
-import org.apache.hadoop.yarn.api.records.Token;
-import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.Set;
-
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -51,9 +32,11 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainerRequestP
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
+import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.ContainerTokenIdentifierProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
@@ -61,9 +44,10 @@ import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.Deletion
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LogDeleterProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerRequestProto;
-import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.ContainerTokenIdentifierProto;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
@@ -76,10 +60,26 @@ import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBException;
 import org.iq80.leveldb.Options;
 import org.iq80.leveldb.WriteBatch;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
+import java.io.File;
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import static org.fusesource.leveldbjni.JniDBFactory.asString;
+import static org.fusesource.leveldbjni.JniDBFactory.bytes;
+
 
 public class NMLeveldbStateStoreService extends NMStateStoreService {
 
@@ -1180,15 +1180,18 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   }
 
   @Override
-  public void storeAssignedResources(ContainerId containerId,
+  public void storeAssignedResources(Container container,
       String resourceType, List<Serializable> assignedResources)
       throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("storeAssignedResources: containerId=" + containerId
-          + ", assignedResources=" + StringUtils.join(",", assignedResources));
+      LOG.debug(
+          "storeAssignedResources: containerId=" + container.getContainerId()
+              + ", assignedResources=" + StringUtils
+              .join(",", assignedResources));
+
     }
 
-    String keyResChng = CONTAINERS_KEY_PREFIX + containerId.toString()
+    String keyResChng = CONTAINERS_KEY_PREFIX + container.getContainerId().toString()
         + CONTAINER_ASSIGNED_RESOURCES_KEY_SUFFIX + resourceType;
     try {
       WriteBatch batch = db.createWriteBatch();
@@ -1206,6 +1209,9 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     } catch (DBException e) {
       throw new IOException(e);
     }
+
+    // update container resource mapping.
+    updateContainerResourceMapping(container, resourceType, assignedResources);
   }
 
   @SuppressWarnings("deprecation")

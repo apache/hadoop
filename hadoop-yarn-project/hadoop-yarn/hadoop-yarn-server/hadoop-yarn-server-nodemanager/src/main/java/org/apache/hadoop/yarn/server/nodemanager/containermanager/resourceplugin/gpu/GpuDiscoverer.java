@@ -136,12 +136,12 @@ public class GpuDiscoverer {
   }
 
   /**
-   * Get list of minor device numbers of Gpu devices usable by YARN.
+   * Get list of GPU devices usable by YARN.
    *
-   * @return List of minor device numbers of Gpu devices.
+   * @return List of GPU devices
    * @throws YarnException when any issue happens
    */
-  public synchronized List<Integer> getMinorNumbersOfGpusUsableByYarn()
+  public synchronized List<GpuDevice> getGpusUsableByYarn()
       throws YarnException {
     validateConfOrThrowException();
 
@@ -149,7 +149,7 @@ public class GpuDiscoverer {
         YarnConfiguration.NM_GPU_ALLOWED_DEVICES,
         YarnConfiguration.AUTOMATICALLY_DISCOVER_GPU_DEVICES);
 
-    List<Integer> minorNumbers = new ArrayList<>();
+    List<GpuDevice> gpuDevices = new ArrayList<>();
 
     if (allowedDevicesStr.equals(
         YarnConfiguration.AUTOMATICALLY_DISCOVER_GPU_DEVICES)) {
@@ -167,21 +167,31 @@ public class GpuDiscoverer {
       }
 
       if (lastDiscoveredGpuInformation.getGpus() != null) {
-        for (PerGpuDeviceInformation gpu : lastDiscoveredGpuInformation
-            .getGpus()) {
-          minorNumbers.add(gpu.getMinorNumber());
+        for (int i = 0; i < lastDiscoveredGpuInformation.getGpus().size();
+             i++) {
+          List<PerGpuDeviceInformation> gpuInfos =
+              lastDiscoveredGpuInformation.getGpus();
+          gpuDevices.add(new GpuDevice(i, gpuInfos.get(i).getMinorNumber()));
         }
       }
     } else{
       for (String s : allowedDevicesStr.split(",")) {
         if (s.trim().length() > 0) {
-          minorNumbers.add(Integer.valueOf(s.trim()));
+          String[] kv = s.trim().split(":");
+          if (kv.length != 2) {
+            throw new YarnException(
+                "Illegal format, it should be index:minor_number format, now it="
+                    + s);
+          }
+
+          gpuDevices.add(
+              new GpuDevice(Integer.parseInt(kv[0]), Integer.parseInt(kv[1])));
         }
       }
-      LOG.info("Allowed GPU devices with minor numbers:" + allowedDevicesStr);
+      LOG.info("Allowed GPU devices:" + gpuDevices);
     }
 
-    return minorNumbers;
+    return gpuDevices;
   }
 
   public synchronized void initialize(Configuration conf) throws YarnException {

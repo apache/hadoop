@@ -24,8 +24,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ResourceInformation;
-import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -35,6 +33,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileg
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDevice;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDiscoverer;
 
 import java.util.ArrayList;
@@ -64,17 +63,23 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
   @Override
   public List<PrivilegedOperation> bootstrap(Configuration configuration)
       throws ResourceHandlerException {
-    List<Integer> minorNumbersOfUsableGpus;
+    List<GpuDevice> usableGpus;
     try {
-      minorNumbersOfUsableGpus = GpuDiscoverer.getInstance()
-          .getMinorNumbersOfGpusUsableByYarn();
+      usableGpus = GpuDiscoverer.getInstance()
+          .getGpusUsableByYarn();
+      if (usableGpus == null || usableGpus.isEmpty()) {
+        String message = "GPU is enabled on the NodeManager, but couldn't find "
+            + "any usable GPU devices, please double check configuration.";
+        LOG.error(message);
+        throw new ResourceHandlerException(message);
+      }
     } catch (YarnException e) {
       LOG.error("Exception when trying to get usable GPU device", e);
       throw new ResourceHandlerException(e);
     }
 
-    for (int minorNumber : minorNumbersOfUsableGpus) {
-      gpuAllocator.addGpu(minorNumber);
+    for (GpuDevice gpu : usableGpus) {
+      gpuAllocator.addGpu(gpu);
     }
 
     // And initialize cgroups
@@ -102,10 +107,13 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
           PrivilegedOperation.OperationType.GPU, Arrays
           .asList(CONTAINER_ID_CLI_OPTION, containerIdStr));
       if (!allocation.getDeniedGPUs().isEmpty()) {
+        List<Integer> minorNumbers = new ArrayList<>();
+        for (GpuDevice deniedGpu : allocation.getDeniedGPUs()) {
+          minorNumbers.add(deniedGpu.getMinorNumber());
+        }
         privilegedOperation.appendArgs(Arrays.asList(EXCLUDED_GPUS_CLI_OPTION,
-            StringUtils.join(",", allocation.getDeniedGPUs())));
+            StringUtils.join(",", minorNumbers)));
       }
-
       privilegedOperationExecutor.executePrivilegedOperation(
           privilegedOperation, true);
     } catch (PrivilegedOperationException e) {
