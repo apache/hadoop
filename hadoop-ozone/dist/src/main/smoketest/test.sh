@@ -140,8 +140,6 @@ if [ "$RUN_ALL" = true ]; then
 #
 # We select the test suites and execute them on multiple type of clusters
 #
-   DEFAULT_TESTS=("security")
-   execute_tests ozonesecure "${DEFAULT_TESTS[@]}"
    DEFAULT_TESTS=("basic")
    execute_tests ozone "${DEFAULT_TESTS[@]}"
    TESTS=("ozonefs")
