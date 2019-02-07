@@ -371,6 +371,13 @@ public final class OzoneConfigKeys {
   public static final boolean OZONE_ACL_ENABLED_DEFAULT =
       false;
 
+  //For technical reasons this is unused and hardcoded to the
+  // OzoneFileSystem.initialize.
+  public static final String OZONE_FS_ISOLATED_CLASSLOADER =
+      "ozone.fs.isolated-classloader";
+
+
+
   /**
    * There is no need to instantiate this class.
    */

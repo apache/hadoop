@@ -56,9 +56,8 @@ This will make this bucket to be the default file system for HDFS dfs commands a
 You also need to add the ozone-filesystem.jar file to the classpath:
 
 {{< highlight bash >}}
-export HADOOP_CLASSPATH=/opt/ozone/share/hadoop/ozonefs/hadoop-ozone-filesystem.jar:$HADOOP_CLASSPATH
+export HADOOP_CLASSPATH=/opt/ozone/share/ozonefs/lib/hadoop-ozone-filesystem-lib-.*.jar:$HADOOP_CLASSPATH
 {{< /highlight >}}
-
 
 
 
@@ -78,3 +77,19 @@ hdfs dfs -mkdir /users
 
 Or put command etc. In other words, all programs like Hive, Spark, and Distcp will work against this file system.
 Please note that any keys created/deleted in the bucket using methods apart from OzoneFileSystem will show up as diectories and files in the Ozone File System.
+
+## Legacy mode
+
+There are two ozonefs files which includes all the dependencies:
+
+ * share/ozone/lib/hadoop-ozone-filesystem-lib-VERSION.jar
+ * share/ozone/lib/hadoop-ozone-filesystem-lib-legacy-VERSION.jar
+
+ The first one contains all the required dependency to use ozonefs with a
+ compatible hadoop version (hadoop 3.2 / 3.1).
+
+ The second one contains all the dependency in an internal, separated directory,
+ and a special class loader is used to load all the classes from the location.
+
+ With this method the hadoop-ozone-filesystem-lib-legacy.jar can be used from
+ any older hadoop version (eg. hadoop 2.7 or spark+hadoop 2.7)

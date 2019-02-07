@@ -11,11 +11,7 @@
   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   See the License for the specific language governing permissions and
   limitations under the License. See accompanying LICENSE file.
--->
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-http://maven.apache.org/xsd/maven-4.0.0.xsd">
+--><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
@@ -43,8 +39,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <module>common</module>
     <module>client</module>
     <module>ozone-manager</module>
-    <module>tools</module>
     <module>ozonefs</module>
+    <module>ozonefs-lib</module>
+    <module>ozonefs-lib-legacy</module>
+    <module>tools</module>
     <module>integration-test</module>
     <module>objectstore-service</module>
     <module>datanode</module>
@@ -100,6 +98,16 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-ozone-filesystem</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-filesystem-lib</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-filesystem-lib-legacy</artifactId>
         <version>${ozone.version}</version>
       </dependency>
       <dependency>
@@ -207,6 +215,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdds-tools</artifactId>
     </dependency>
+
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
@@ -304,7 +313,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
         <configuration>
-          <excludeFilterFile combine.self="override"></excludeFilterFile>
+          <excludeFilterFile combine.self="override"/>
         </configuration>
       </plugin>
       <plugin>
