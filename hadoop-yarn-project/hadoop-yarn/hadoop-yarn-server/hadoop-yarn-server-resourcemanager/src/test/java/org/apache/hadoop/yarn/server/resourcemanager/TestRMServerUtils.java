@@ -19,11 +19,13 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.junit.Assert;
 import org.junit.Test;
@@ -31,6 +33,9 @@ import org.mockito.Mockito;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -105,6 +110,37 @@ public class TestRMServerUtils {
     node2Req.setRelaxLocality(false);
     Assert.assertEquals(100,
         RMServerUtils.getApplicableNodeCountForAM(rmContext, conf, reqs));
+  }
+
+  @Test
+  public void testQueryRMNodes() throws Exception {
+    RMContext rmContext = Mockito.mock(RMContext.class);
+    NodeId node1 = NodeId.newInstance("node1", 1234);
+    RMNode rmNode1 = Mockito.mock(RMNode.class);
+    ConcurrentMap<NodeId, RMNode> inactiveList =
+        new ConcurrentHashMap<NodeId, RMNode>();
+    Mockito.when(rmNode1.getState()).thenReturn(NodeState.SHUTDOWN);
+    inactiveList.put(node1, rmNode1);
+    Mockito.when(rmContext.getInactiveRMNodes()).thenReturn(inactiveList);
+    List<RMNode> result = RMServerUtils.queryRMNodes(rmContext,
+        EnumSet.of(NodeState.SHUTDOWN));
+    Assert.assertTrue(result.size() != 0);
+    Assert.assertEquals(result.get(0), rmNode1);
+    Mockito.when(rmNode1.getState()).thenReturn(NodeState.DECOMMISSIONED);
+    result = RMServerUtils.queryRMNodes(rmContext,
+        EnumSet.of(NodeState.DECOMMISSIONED));
+    Assert.assertTrue(result.size() != 0);
+    Assert.assertEquals(result.get(0), rmNode1);
+    Mockito.when(rmNode1.getState()).thenReturn(NodeState.LOST);
+    result = RMServerUtils.queryRMNodes(rmContext,
+        EnumSet.of(NodeState.LOST));
+    Assert.assertTrue(result.size() != 0);
+    Assert.assertEquals(result.get(0), rmNode1);
+    Mockito.when(rmNode1.getState()).thenReturn(NodeState.REBOOTED);
+    result = RMServerUtils.queryRMNodes(rmContext,
+        EnumSet.of(NodeState.REBOOTED));
+    Assert.assertTrue(result.size() != 0);
+    Assert.assertEquals(result.get(0), rmNode1);
   }
 
   @Test
