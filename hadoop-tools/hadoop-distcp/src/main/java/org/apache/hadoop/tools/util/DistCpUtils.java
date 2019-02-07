@@ -211,6 +211,7 @@ public class DistCpUtils {
       List<AclEntry> srcAcl = srcFileStatus.getAclEntries();
       List<AclEntry> targetAcl = getAcl(targetFS, targetFileStatus);
       if (!srcAcl.equals(targetAcl)) {
+        targetFS.removeAcl(path);
         targetFS.setAcl(path, srcAcl);
       }
       // setAcl doesn't preserve sticky bit, so also call setPermission if needed.
