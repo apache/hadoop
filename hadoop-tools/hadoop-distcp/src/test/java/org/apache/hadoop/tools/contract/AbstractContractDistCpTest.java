@@ -552,7 +552,7 @@ public abstract class AbstractContractDistCpTest
 
   /**
    * Run the distcp job.
-   * @param optons distcp options
+   * @param options distcp options
    * @return the job. It will have already completed.
    * @throws Exception failure
    */
@@ -585,5 +585,69 @@ public abstract class AbstractContractDistCpTest
    */
   private static void mkdirs(FileSystem fs, Path dir) throws Exception {
     assertTrue("Failed to mkdir " + dir, fs.mkdirs(dir));
+  }
+
+  @Test
+  public void testDirectWrite() throws Exception {
+    describe("copy file from local to remote using direct write option");
+    directWrite(localFS, localDir, remoteFS, remoteDir, true);
+  }
+
+  @Test
+  public void testNonDirectWrite() throws Exception {
+    describe("copy file from local to remote without using direct write " +
+        "option");
+    directWrite(localFS, localDir, remoteFS, remoteDir, false);
+  }
+
+  /**
+   * Executes a test with support for using direct write option.
+   *
+   * @param srcFS source FileSystem
+   * @param srcDir source directory
+   * @param dstFS destination FileSystem
+   * @param dstDir destination directory
+   * @param directWrite whether to use -directwrite option
+   * @throws Exception if there is a failure
+   */
+  private void directWrite(FileSystem srcFS, Path srcDir, FileSystem dstFS,
+          Path dstDir, boolean directWrite) throws Exception {
+    initPathFields(srcDir, dstDir);
+
+    // Create 2 test files
+    mkdirs(srcFS, inputSubDir1);
+    byte[] data1 = dataset(64, 33, 43);
+    createFile(srcFS, inputFile1, true, data1);
+    byte[] data2 = dataset(200, 43, 53);
+    createFile(srcFS, inputFile2, true, data2);
+    Path target = new Path(dstDir, "outputDir");
+    if (directWrite) {
+      runDistCpDirectWrite(inputDir, target);
+    } else {
+      runDistCp(inputDir, target);
+    }
+    ContractTestUtils.assertIsDirectory(dstFS, target);
+    lsR("Destination tree after distcp", dstFS, target);
+
+    // Verify copied file contents
+    verifyFileContents(dstFS, new Path(target, "inputDir/file1"), data1);
+    verifyFileContents(dstFS, new Path(target, "inputDir/subDir1/file2"),
+        data2);
+  }
+
+  /**
+   * Run distcp -direct srcDir destDir.
+   * @param srcDir local source directory
+   * @param destDir remote destination directory
+   * @return the completed job
+   * @throws Exception any failure.
+   */
+  private Job runDistCpDirectWrite(final Path srcDir, final Path destDir)
+          throws Exception {
+    describe("\nDistcp -direct from " + srcDir + " to " + destDir);
+    return runDistCp(buildWithStandardOptions(
+            new DistCpOptions.Builder(
+                    Collections.singletonList(srcDir), destDir)
+                    .withDirectWrite(true)));
   }
 }
