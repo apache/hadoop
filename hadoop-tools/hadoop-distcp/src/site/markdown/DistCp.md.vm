@@ -241,6 +241,7 @@ Flag              | Description                          | Notes
 `-blocksperchunk <blocksperchunk>` | Number of blocks per chunk. When specified, split files into chunks to copy in parallel | If set to a positive value, files with more blocks than this value will be split into chunks of `<blocksperchunk>` blocks to be transferred in parallel, and reassembled on the destination. By default, `<blocksperchunk>` is 0 and the files will be transmitted in their entirety without splitting. This switch is only applicable when the source file system implements getBlockLocations method and the target file system implements concat method. |
 `-copybuffersize <copybuffersize>` | Size of the copy buffer to use. By default, `<copybuffersize>` is set to 8192B |
 `-xtrack <path>` | Save information about missing source files to the specified path. | This option is only valid with `-update` option. This is an experimental property and it cannot be used with `-atomic` option.
+`-direct` | Write directly to destination paths | Useful for avoiding potentially very expensive temporary file rename operations when the destination is an object store
 
 Architecture of DistCp
 ----------------------
@@ -455,7 +456,7 @@ configuration, or be otherwise available in all cluster hosts.
 DistCp can be used to upload data
 
 ```bash
-hadoop distcp hdfs://nn1:8020/datasets/set1 s3a://bucket/datasets/set1
+hadoop distcp -direct hdfs://nn1:8020/datasets/set1 s3a://bucket/datasets/set1
 ```
 
 To download data
@@ -535,6 +536,9 @@ rely on disk buffering.
     Copies each byte down to the Hadoop worker nodes and back to the
 bucket. As well as being slow, it means that charges may be incurred.
 
+* The `-direct` option can be used to write to object store target paths directly,
+avoiding the potentially very expensive temporary file rename operations that would
+otherwise occur.
 
 Frequently Asked Questions
 --------------------------
