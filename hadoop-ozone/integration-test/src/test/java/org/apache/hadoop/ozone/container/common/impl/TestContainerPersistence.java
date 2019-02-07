@@ -177,7 +177,7 @@ public class TestContainerPersistence {
   public void testCreateContainer() throws Exception {
     long testContainerID = getTestContainerID();
     addContainer(containerSet, testContainerID);
-    Assert.assertTrue(containerSet.getContainerMap()
+    Assert.assertTrue(containerSet.getContainerMapCopy()
         .containsKey(testContainerID));
     KeyValueContainerData kvData =
         (KeyValueContainerData) containerSet.getContainer(testContainerID)
@@ -226,14 +226,14 @@ public class TestContainerPersistence {
 
     Container container2 = addContainer(containerSet, testContainerID2);
 
-    Assert.assertTrue(containerSet.getContainerMap()
+    Assert.assertTrue(containerSet.getContainerMapCopy()
         .containsKey(testContainerID1));
-    Assert.assertTrue(containerSet.getContainerMap()
+    Assert.assertTrue(containerSet.getContainerMapCopy()
         .containsKey(testContainerID2));
 
     container1.delete();
     containerSet.removeContainer(testContainerID1);
-    Assert.assertFalse(containerSet.getContainerMap()
+    Assert.assertFalse(containerSet.getContainerMapCopy()
         .containsKey(testContainerID1));
 
     // Adding block to a deleted container should fail.
@@ -254,7 +254,7 @@ public class TestContainerPersistence {
     exception.expectMessage(
         "Container cannot be deleted because it is not empty.");
     container2.delete();
-    Assert.assertTrue(containerSet.getContainerMap()
+    Assert.assertTrue(containerSet.getContainerMapCopy()
         .containsKey(testContainerID1));
   }
 
@@ -762,8 +762,8 @@ public class TestContainerPersistence {
 
     container.update(newMetadata, false);
 
-    Assert.assertEquals(1, containerSet.getContainerMap().size());
-    Assert.assertTrue(containerSet.getContainerMap()
+    Assert.assertEquals(1, containerSet.getContainerMapCopy().size());
+    Assert.assertTrue(containerSet.getContainerMapCopy()
         .containsKey(testContainerID));
 
     // Verify in-memory map

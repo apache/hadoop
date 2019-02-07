@@ -78,7 +78,7 @@ public class TestContainerDeletionChoosingPolicy {
       KeyValueContainer container = new KeyValueContainer(data, conf);
       containerSet.addContainer(container);
       Assert.assertTrue(
-          containerSet.getContainerMap().containsKey(data.getContainerID()));
+          containerSet.getContainerMapCopy().containsKey(data.getContainerID()));
     }
 
     ContainerDeletionChoosingPolicy deletionPolicy =
@@ -138,7 +138,7 @@ public class TestContainerDeletionChoosingPolicy {
       KeyValueContainer container = new KeyValueContainer(data, conf);
       containerSet.addContainer(container);
       Assert.assertTrue(
-          containerSet.getContainerMap().containsKey(containerId));
+          containerSet.getContainerMapCopy().containsKey(containerId));
     }
 
     ContainerDeletionChoosingPolicy deletionPolicy =

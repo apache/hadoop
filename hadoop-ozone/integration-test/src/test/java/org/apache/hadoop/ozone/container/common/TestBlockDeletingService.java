@@ -204,7 +204,7 @@ public class TestBlockDeletingService {
 
     MetadataStore meta = BlockUtils.getDB(
         (KeyValueContainerData) containerData.get(0), conf);
-    Map<Long, Container> containerMap = containerSet.getContainerMap();
+    Map<Long, Container> containerMap = containerSet.getContainerMapCopy();
     // NOTE: this test assumes that all the container is KetValueContainer and
     // have DeleteTransactionId in KetValueContainerData. If other
     // types is going to be added, this test should be checked.
