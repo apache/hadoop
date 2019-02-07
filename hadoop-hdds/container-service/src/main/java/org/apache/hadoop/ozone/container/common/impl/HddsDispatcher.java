@@ -160,7 +160,15 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
           || cmdType == ContainerProtos.Type.PutSmallFile)) {
         // If container does not exist, create one for WriteChunk and
         // PutSmallFile request
-        createContainer(msg);
+        responseProto = createContainer(msg);
+        if (responseProto.getResult() != Result.SUCCESS) {
+          StorageContainerException sce = new StorageContainerException(
+              "ContainerID " + containerID + " creation failed",
+              responseProto.getResult());
+          audit(action, eventType, params, AuditEventStatus.FAILURE, sce);
+          return ContainerUtils.logAndReturnError(LOG, sce, msg);
+        }
+
         container = getContainer(containerID);
       }
 
@@ -250,8 +258,11 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
    * Create a container using the input container request.
    * @param containerRequest - the container request which requires container
    *                         to be created.
+   * @return ContainerCommandResponseProto container command response.
    */
-  private void createContainer(ContainerCommandRequestProto containerRequest) {
+  @VisibleForTesting
+  ContainerCommandResponseProto createContainer(
+      ContainerCommandRequestProto containerRequest) {
     ContainerProtos.CreateContainerRequestProto.Builder createRequest =
         ContainerProtos.CreateContainerRequestProto.newBuilder();
     ContainerType containerType =
@@ -270,7 +281,7 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
     // TODO: Assuming the container type to be KeyValueContainer for now.
     // We need to get container type from the containerRequest.
     Handler handler = getHandler(containerType);
-    handler.handle(requestBuilder.build(), null, null);
+    return handler.handle(requestBuilder.build(), null, null);
   }
 
   /**
