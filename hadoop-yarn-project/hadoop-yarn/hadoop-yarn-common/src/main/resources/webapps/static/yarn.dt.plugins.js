@@ -73,6 +73,28 @@ jQuery.fn.dataTableExt.oApi.fnSetFilteringDelay = function ( oSettings, iDelay )
   return this;
 }
 
+jQuery.fn.dataTableExt.oSort['num-ignore-str-asc'] = function(a, b) {
+  if (isNaN(a) && isNaN(b)) return ((a < b) ? 1 : ((a > b) ? -1 : 0));
+
+  if (isNaN(a)) return 1;
+  if (isNaN(b)) return -1;
+
+  var x = parseFloat(a);
+  var y = parseFloat(b);
+  return ((x < y) ? -1 : ((x > y) ? 1 : 0));
+};
+
+jQuery.fn.dataTableExt.oSort['num-ignore-str-desc'] = function(a, b) {
+  if (isNaN(a) && isNaN(b)) return ((a < b) ? 1 : ((a > b) ? -1 : 0));
+
+  if (isNaN(a)) return 1;
+  if (isNaN(b)) return -1;
+
+  var x = parseFloat(a);
+  var y = parseFloat(b);
+  return ((x < y) ? 1 : ((x > y) ? -1 : 0));
+};
+
 function renderHadoopDate(data, type, full) {
   if (type === 'display' || type === 'filter') {
     if(data === '0'|| data === '-1') {
