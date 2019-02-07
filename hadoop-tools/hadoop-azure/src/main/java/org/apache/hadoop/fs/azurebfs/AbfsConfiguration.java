@@ -219,6 +219,16 @@ public class AbfsConfiguration{
 
   /**
    * Returns the account-specific value if it exists, then looks for an
+   * account-agnostic value.
+   * @param key Account-agnostic configuration key
+   * @return value if one exists, else the default value
+   */
+  public String getString(String key, String defaultValue) {
+    return rawConfig.get(accountConf(key), rawConfig.get(key, defaultValue));
+  }
+
+  /**
+   * Returns the account-specific value if it exists, then looks for an
    * account-agnostic value, and finally tries the default value.
    * @param key Account-agnostic configuration key
    * @param defaultValue Value returned if none is configured
