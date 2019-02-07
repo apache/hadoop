@@ -15,10 +15,4 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-@InterfaceAudience.Private
-@InterfaceStability.Evolving
 package org.apache.hadoop.fs.azurebfs.oauth2;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;

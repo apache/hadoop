@@ -22,7 +22,6 @@ import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -166,21 +165,5 @@ public class TestStoragePolicyCommands {
         "The storage policy of " + bar.toString() + ":\n" + cold);
     DFSTestUtil.toolRun(admin, "-getStoragePolicy -path /fooz", 2,
         "File/Directory does not exist: /fooz");
-  }
-
-  @Test
-  public void testLsWithSpParameter() throws Exception {
-    Path file = new Path("/foo/bar");
-    DFSTestUtil.createFile(fs, file, SIZE, REPL, 0);
-    fs.setStoragePolicy(file, "COLD");
-    FsShell shell = new FsShell(conf);
-    DFSTestUtil.toolRun(shell, "-ls -sp /foo", 0, "COLD");
-  }
-
-  @Test
-  public void testLsWithSpParameterUnsupportedFs() throws Exception {
-    FsShell shell = new FsShell(conf);
-    DFSTestUtil.toolRun(shell, "-ls -sp file://", -1,
-        "UnsupportedOperationException");
   }
 }
