@@ -135,7 +135,8 @@ public class ContainerSet {
    * Return a copy of the containerMap.
    * @return containerMap
    */
-  public Map<Long, Container> getContainerMap() {
+  @VisibleForTesting
+  public Map<Long, Container> getContainerMapCopy() {
     return ImmutableMap.copyOf(containerMap);
   }
 
