@@ -1806,4 +1806,19 @@
       not be renewed.
     </description>
   </property>
+
+  <property>
+    <name>ozone.fs.isolated-classloader</name>
+    <value></value>
+    <tag>OZONE, OZONEFS</tag>
+    <description>
+      Enable it for older hadoops to separate the classloading of all the
+      Ozone classes. With 'true' value, ozonefs can be used with older
+      hadoop versions as the hadoop3/ozone related classes are loaded by
+      an isolated classloader.
+
+      Default depends from the used jar. true for ozone-filesystem-lib-legacy
+      jar and false for the ozone-filesystem-lib.jar
+    </description>
+  </property>
 </configuration>

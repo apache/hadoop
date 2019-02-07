@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.ozone;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import org.apache.hadoop.ozone.client.io.KeyOutputStream;
 
 
 /**
@@ -31,10 +30,10 @@ import org.apache.hadoop.ozone.client.io.KeyOutputStream;
  */
 public class OzoneFSOutputStream extends OutputStream {
 
-  private final KeyOutputStream outputStream;
+  private final OutputStream outputStream;
 
   public OzoneFSOutputStream(OutputStream outputStream) {
-    this.outputStream = (KeyOutputStream)outputStream;
+    this.outputStream = outputStream;
   }
 
   @Override

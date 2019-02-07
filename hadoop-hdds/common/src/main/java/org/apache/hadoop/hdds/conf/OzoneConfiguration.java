@@ -47,6 +47,8 @@ public class OzoneConfiguration extends Configuration {
 
   public OzoneConfiguration(Configuration conf) {
     super(conf);
+    //load the configuration from the classloader of the original conf.
+    setClassLoader(conf.getClassLoader());
   }
 
   public List<Property> readPropertyFromXml(URL url) throws JAXBException {

@@ -84,6 +84,13 @@
                 </artifactItem>
                 <artifactItem>
                   <groupId>org.apache.hadoop</groupId>
+                  <artifactId>hadoop-ozone-filesystem</artifactId>
+                  <version>${ozone.version}</version>
+                  <classifier>classpath</classifier>
+                  <destFileName>hadoop-ozone-filesystem.classpath</destFileName>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.apache.hadoop</groupId>
                   <artifactId>hadoop-ozone-common</artifactId>
                   <version>${ozone.version}</version>
                   <classifier>classpath</classifier>
@@ -182,6 +189,14 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-ozone-tools</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-ozone-filesystem-lib</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-ozone-filesystem-lib-legacy</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>

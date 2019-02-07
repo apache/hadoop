@@ -19,12 +19,12 @@ services:
    datanode:
       image: apache/hadoop-runner
       volumes:
-        - ../..:/opt/hadoop
+         - ../..:/opt/hadoop
       ports:
-        - 9864
+         - 9864
       command: ["/opt/hadoop/bin/ozone","datanode"]
       env_file:
-        - ./docker-config
+         - ./docker-config
    ozoneManager:
       image: apache/hadoop-runner
       hostname: ozoneManager
@@ -36,7 +36,7 @@ services:
          ENSURE_OM_INITIALIZED: /data/metadata/ozoneManager/current/VERSION
          WAITFOR: scm:9876
       env_file:
-          - ./docker-config
+         - ./docker-config
       command: ["/opt/hadoop/bin/ozone","om"]
    scm:
       image: apache/hadoop-runner
@@ -45,16 +45,25 @@ services:
       ports:
          - 9876
       env_file:
-          - ./docker-config
+         - ./docker-config
       environment:
-          ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
+         ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
       command: ["/opt/hadoop/bin/ozone","scm"]
-   hadooplast:
+   hadoop3:
       image: flokkr/hadoop:3.1.0
       volumes:
-        - ../..:/opt/ozone
+         - ../..:/opt/ozone
       env_file:
-        - ./docker-config
+         - ./docker-config
       environment:
-         HADOOP_CLASSPATH: /opt/ozone/share/hadoop/ozonefs/*.jar
+         HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-0*.jar
+      command: ["watch","-n","100000","ls"]
+   hadoop2:
+      image: flokkr/hadoop:2.9.0
+      volumes:
+         - ../..:/opt/ozone
+      env_file:
+         - ./docker-config
+      environment:
+         HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-legacy*.jar
       command: ["watch","-n","100000","ls"]
