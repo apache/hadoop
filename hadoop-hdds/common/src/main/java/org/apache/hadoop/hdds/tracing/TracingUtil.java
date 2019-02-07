@@ -40,12 +40,14 @@ public final class TracingUtil {
    * @param serviceName
    */
   public static void initTracing(String serviceName) {
-    Configuration config = Configuration.fromEnv(serviceName);
-    JaegerTracer tracer = config.getTracerBuilder()
-        .registerExtractor(StringCodec.FORMAT, new StringCodec())
-        .registerInjector(StringCodec.FORMAT, new StringCodec())
-        .build();
-    GlobalTracer.register(tracer);
+    if (!GlobalTracer.isRegistered()) {
+      Configuration config = Configuration.fromEnv(serviceName);
+      JaegerTracer tracer = config.getTracerBuilder()
+          .registerExtractor(StringCodec.FORMAT, new StringCodec())
+          .registerInjector(StringCodec.FORMAT, new StringCodec())
+          .build();
+      GlobalTracer.register(tracer);
+    }
   }
 
   /**

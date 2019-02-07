@@ -40,7 +40,8 @@ public class GrpcServerInterceptor implements ServerInterceptor {
       @Override
       public void onMessage(ReqT message) {
         try (Scope scope = TracingUtil
-            .importAndCreateScope(call.getMethodDescriptor().getFullMethodName(),
+            .importAndCreateScope(
+                call.getMethodDescriptor().getFullMethodName(),
                 headers.get(GrpcClientInterceptor.TRACING_HEADER))) {
           super.onMessage(message);
         }

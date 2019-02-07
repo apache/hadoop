@@ -138,7 +138,8 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       RpcController controller, GetContainerWithPipelineRequestProto request)
       throws ServiceException {
     try (Scope scope = TracingUtil
-        .importAndCreateScope("getContainerWithPipeline", request.getTraceID())) {
+        .importAndCreateScope("getContainerWithPipeline",
+            request.getTraceID())) {
       ContainerWithPipeline container = impl
           .getContainerWithPipeline(request.getContainerID());
       return GetContainerWithPipelineResponseProto.newBuilder()
@@ -213,7 +214,8 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       RpcController controller, ObjectStageChangeRequestProto request)
       throws ServiceException {
     try (Scope scope = TracingUtil
-        .importAndCreateScope("notifyObjectStageChange", request.getTraceID())) {
+        .importAndCreateScope("notifyObjectStageChange",
+            request.getTraceID())) {
       impl.notifyObjectStageChange(request.getType(), request.getId(),
           request.getOp(), request.getStage());
       return ObjectStageChangeResponseProto.newBuilder().build();

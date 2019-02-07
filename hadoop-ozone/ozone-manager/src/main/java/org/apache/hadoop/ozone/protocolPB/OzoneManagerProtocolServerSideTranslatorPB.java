@@ -64,7 +64,8 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
    public OMResponse submitRequest(RpcController controller,
       OMRequest request) throws ServiceException {
     Scope scope = TracingUtil
-        .importAndCreateScope(request.getCmdType().name(), request.getTraceID());
+        .importAndCreateScope(request.getCmdType().name(),
+            request.getTraceID());
     try {
       if (isRatisEnabled) {
         return submitRequestToRatis(request);
