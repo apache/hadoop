@@ -25,6 +25,8 @@
 
 #include "oom_listener.h"
 
+extern inline void cleanup(_oom_listener_descriptors *descriptors);
+
 void print_usage(void) {
   fprintf(stderr, "oom-listener");
   fprintf(stderr, "Listen to OOM events in a cgroup");
