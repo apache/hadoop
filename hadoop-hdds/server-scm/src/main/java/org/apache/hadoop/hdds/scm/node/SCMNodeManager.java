@@ -19,7 +19,8 @@ package org.apache.hadoop.hdds.scm.node;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
@@ -65,6 +66,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Maintains information about the Datanodes on SCM side.
@@ -80,18 +82,13 @@ import java.util.UUID;
  * get functions in this file as a snap-shot of information that is inconsistent
  * as soon as you read it.
  */
-public class SCMNodeManager
-    implements NodeManager, StorageContainerNodeProtocol {
+public class SCMNodeManager implements NodeManager {
 
   @VisibleForTesting
   static final Logger LOG =
       LoggerFactory.getLogger(SCMNodeManager.class);
 
   private final NodeStateManager nodeStateManager;
-  // Should we maintain aggregated stats? If this is not frequently used, we
-  // can always calculate it from nodeStats whenever required.
-  // Aggregated node stats
-  private SCMNodeStat scmStat;
   private final String clusterID;
   private final VersionInfo version;
   private final CommandQueue commandQueue;
@@ -108,7 +105,6 @@ public class SCMNodeManager
       StorageContainerManager scmManager, EventPublisher eventPublisher)
       throws IOException {
     this.nodeStateManager = new NodeStateManager(conf, eventPublisher);
-    this.scmStat = new SCMNodeStat();
     this.clusterID = clusterID;
     this.version = VersionInfo.getLatestVersion();
     this.commandQueue = new CommandQueue();
@@ -131,7 +127,7 @@ public class SCMNodeManager
 
 
   /**
-   * Gets all datanodes that are in a certain state. This function works by
+   * Returns all datanode that are in the given state. This function works by
    * taking a snapshot of the current collection and then returning the list
    * from that collection. This means that real map might have changed by the
    * time we return this list.
@@ -140,7 +136,8 @@ public class SCMNodeManager
    */
   @Override
   public List<DatanodeDetails> getNodes(NodeState nodestate) {
-    return nodeStateManager.getNodes(nodestate);
+    return nodeStateManager.getNodes(nodestate).stream()
+        .map(node -> (DatanodeDetails)node).collect(Collectors.toList());
   }
 
   /**
@@ -150,13 +147,14 @@ public class SCMNodeManager
    */
   @Override
   public List<DatanodeDetails> getAllNodes() {
-    return nodeStateManager.getAllNodes();
+    return nodeStateManager.getAllNodes().stream()
+        .map(node -> (DatanodeDetails)node).collect(Collectors.toList());
   }
 
   /**
    * Returns the Number of Datanodes by State they are in.
    *
-   * @return int -- count
+   * @return count
    */
   @Override
   public int getNodeCount(NodeState nodestate) {
@@ -166,7 +164,7 @@ public class SCMNodeManager
   /**
    * Returns the node state of a specific node.
    *
-   * @param datanodeDetails - Datanode Details
+   * @param datanodeDetails Datanode Details
    * @return Healthy/Stale/Dead/Unknown.
    */
   @Override
@@ -177,47 +175,6 @@ public class SCMNodeManager
       // TODO: should we throw NodeNotFoundException?
       return null;
     }
-  }
-
-
-  private void updateNodeStat(UUID dnId, NodeReportProto nodeReport) {
-    SCMNodeStat stat;
-    try {
-      stat = nodeStateManager.getNodeStat(dnId);
-
-      // Updating the storage report for the datanode.
-      // I dont think we will get NotFound exception, as we are taking
-      // nodeInfo from nodeStateMap, as I see it is not being removed from
-      // the map, just we change the states. And during first time
-      // registration we call this, after adding to nodeStateMap. And also
-      // from eventhandler it is called only if it has node Report.
-      DatanodeInfo datanodeInfo = nodeStateManager.getNode(dnId);
-      if (nodeReport != null) {
-        datanodeInfo.updateStorageReports(nodeReport.getStorageReportList());
-      }
-
-    } catch (NodeNotFoundException e) {
-      LOG.debug("SCM updateNodeStat based on heartbeat from previous " +
-          "dead datanode {}", dnId);
-      stat = new SCMNodeStat();
-    }
-
-    if (nodeReport != null && nodeReport.getStorageReportCount() > 0) {
-      long totalCapacity = 0;
-      long totalRemaining = 0;
-      long totalScmUsed = 0;
-      List<StorageReportProto> storageReports = nodeReport
-          .getStorageReportList();
-      for (StorageReportProto report : storageReports) {
-        totalCapacity += report.getCapacity();
-        totalRemaining +=  report.getRemaining();
-        totalScmUsed+= report.getScmUsed();
-      }
-      scmStat.subtract(stat);
-      stat.set(totalCapacity, totalScmUsed, totalRemaining);
-      scmStat.add(stat);
-    }
-    nodeStateManager.setNodeStat(dnId, stat);
   }
 
   /**
@@ -275,7 +232,7 @@ public class SCMNodeManager
     try {
       nodeStateManager.addNode(datanodeDetails);
       // Updating Node Report, as registration is successful
-      updateNodeStat(datanodeDetails.getUuid(), nodeReport);
+      processNodeReport(datanodeDetails, nodeReport);
       LOG.info("Registered Data node : {}", datanodeDetails);
     } catch (NodeAlreadyExistsException e) {
       LOG.trace("Datanode is already registered. Datanode: {}",
@@ -321,13 +278,21 @@ public class SCMNodeManager
   /**
    * Process node report.
    *
-   * @param dnUuid
+   * @param datanodeDetails
    * @param nodeReport
    */
   @Override
-  public void processNodeReport(DatanodeDetails dnUuid,
+  public void processNodeReport(DatanodeDetails datanodeDetails,
                                 NodeReportProto nodeReport) {
-    this.updateNodeStat(dnUuid.getUuid(), nodeReport);
+    try {
+      DatanodeInfo datanodeInfo = nodeStateManager.getNode(datanodeDetails);
+      if (nodeReport != null) {
+        datanodeInfo.updateStorageReports(nodeReport.getStorageReportList());
+      }
+    } catch (NodeNotFoundException e) {
+      LOG.warn("Got node report from unregistered datanode {}",
+          datanodeDetails);
+    }
   }
 
   /**
@@ -336,7 +301,16 @@ public class SCMNodeManager
    */
   @Override
   public SCMNodeStat getStats() {
-    return new SCMNodeStat(this.scmStat);
+    long capacity = 0L;
+    long used = 0L;
+    long remaining = 0L;
+
+    for (SCMNodeStat stat : getNodeStats().values()) {
+      capacity += stat.getCapacity().get();
+      used += stat.getScmUsed().get();
+      remaining += stat.getRemaining().get();
+    }
+    return new SCMNodeStat(capacity, used, remaining);
   }
 
   /**
@@ -344,8 +318,24 @@ public class SCMNodeManager
    * @return a map of individual node stats (live/stale but not dead).
    */
   @Override
-  public Map<UUID, SCMNodeStat> getNodeStats() {
-    return nodeStateManager.getNodeStatsMap();
+  public Map<DatanodeDetails, SCMNodeStat> getNodeStats() {
+
+    final Map<DatanodeDetails, SCMNodeStat> nodeStats = new HashMap<>();
+
+    final List<DatanodeInfo> healthyNodes =  nodeStateManager
+        .getNodes(NodeState.HEALTHY);
+    final List<DatanodeInfo> staleNodes = nodeStateManager
+        .getNodes(NodeState.STALE);
+    final List<DatanodeInfo> datanodes = new ArrayList<>(healthyNodes);
+    datanodes.addAll(staleNodes);
+
+    for (DatanodeInfo dnInfo : datanodes) {
+      SCMNodeStat nodeStat = getNodeStatInternal(dnInfo);
+      if (nodeStat != null) {
+        nodeStats.put(dnInfo, nodeStat);
+      }
+    }
+    return nodeStats;
   }
 
   /**
@@ -356,11 +346,28 @@ public class SCMNodeManager
    */
   @Override
   public SCMNodeMetric getNodeStat(DatanodeDetails datanodeDetails) {
+    final SCMNodeStat nodeStat = getNodeStatInternal(datanodeDetails);
+    return nodeStat != null ? new SCMNodeMetric(nodeStat) : null;
+  }
+
+  private SCMNodeStat getNodeStatInternal(DatanodeDetails datanodeDetails) {
     try {
-      return new SCMNodeMetric(
-          nodeStateManager.getNodeStat(datanodeDetails.getUuid()));
+      long capacity = 0L;
+      long used = 0L;
+      long remaining = 0L;
+
+      final DatanodeInfo datanodeInfo = nodeStateManager
+          .getNode(datanodeDetails);
+      final List<StorageReportProto> storageReportProtos = datanodeInfo
+          .getStorageReports();
+      for (StorageReportProto reportProto : storageReportProtos) {
+        capacity += reportProto.getCapacity();
+        used += reportProto.getScmUsed();
+        remaining += reportProto.getRemaining();
+      }
+      return new SCMNodeStat(capacity, used, remaining);
     } catch (NodeNotFoundException e) {
-      LOG.info("SCM getNodeStat from a decommissioned or removed datanode {}",
+      LOG.warn("Cannot generate NodeStat, datanode {} not found.",
           datanodeDetails.getUuid());
       return null;
     }
@@ -375,6 +382,8 @@ public class SCMNodeManager
     return nodeCountMap;
   }
 
+  // We should introduce DISK, SSD, etc., notion in
+  // SCMNodeStat and try to use it.
   @Override
   public Map<String, Long> getNodeInfo() {
     long diskCapacity = 0L;
@@ -385,14 +394,15 @@ public class SCMNodeManager
     long ssdUsed = 0L;
     long ssdRemaining = 0L;
 
-    List<DatanodeDetails> healthyNodes =  getNodes(NodeState.HEALTHY);
-    List<DatanodeDetails> staleNodes = getNodes(NodeState.STALE);
+    List<DatanodeInfo> healthyNodes =  nodeStateManager
+        .getNodes(NodeState.HEALTHY);
+    List<DatanodeInfo> staleNodes = nodeStateManager
+        .getNodes(NodeState.STALE);
 
-    List<DatanodeDetails> datanodes = new ArrayList<>(healthyNodes);
+    List<DatanodeInfo> datanodes = new ArrayList<>(healthyNodes);
     datanodes.addAll(staleNodes);
 
-    for (DatanodeDetails datanodeDetails : datanodes) {
-      DatanodeInfo dnInfo = (DatanodeInfo) datanodeDetails;
+    for (DatanodeInfo dnInfo : datanodes) {
       List<StorageReportProto> storageReportProtos = dnInfo.getStorageReports();
       for (StorageReportProto reportProto : storageReportProtos) {
         if (reportProto.getStorageType() ==
@@ -496,27 +506,6 @@ public class SCMNodeManager
       EventPublisher ignored) {
     addDatanodeCommand(commandForDatanode.getDatanodeId(),
         commandForDatanode.getCommand());
-  }
-
-  /**
-   * Update the node stats and cluster storage stats in this SCM Node Manager.
-   *
-   * @param dnUuid datanode uuid.
-   */
-  @Override
-  // TODO: This should be removed.
-  public void processDeadNode(UUID dnUuid) {
-    try {
-      SCMNodeStat stat = nodeStateManager.getNodeStat(dnUuid);
-      if (stat != null) {
-        LOG.trace("Update stat values as Datanode {} is dead.", dnUuid);
-        scmStat.subtract(stat);
-        stat.set(0, 0, 0);
-      }
-    } catch (NodeNotFoundException e) {
-      LOG.warn("Can't update stats based on message of dead Datanode {}, it"
-          + " doesn't exist or decommissioned already.", dnUuid);
-    }
   }
 
   @Override

@@ -63,8 +63,7 @@ public class TestNodeReportHandler implements EventPublisher {
     SCMNodeMetric nodeMetric = nodeManager.getNodeStat(dn);
     Assert.assertNull(nodeMetric);
 
-    nodeReportHandler.onMessage(
-        getNodeReport(dn, storageOne), this);
+    nodeManager.register(dn, getNodeReport(dn, storageOne).getReport(), null);
     nodeMetric = nodeManager.getNodeStat(dn);
 
     Assert.assertTrue(nodeMetric.get().getCapacity().get() == 100);

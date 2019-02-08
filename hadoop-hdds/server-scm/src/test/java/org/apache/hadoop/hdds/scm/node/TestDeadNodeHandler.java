@@ -36,6 +36,7 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdds.scm.HddsTestUtils;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
@@ -81,6 +82,10 @@ public class TestDeadNodeHandler {
     storageDir = GenericTestUtils.getTempPath(
         TestDeadNodeHandler.class.getSimpleName() + UUID.randomUUID());
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, storageDir);
+    conf.set(HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL, "100ms");
+    conf.set(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, "50ms");
+    conf.set(ScmConfigKeys.OZONE_SCM_STALENODE_INTERVAL, "1s");
+    conf.set(ScmConfigKeys.OZONE_SCM_DEADNODE_INTERVAL, "2s");
     eventQueue = new EventQueue();
     scm = HddsTestUtils.getScm(conf);
     nodeManager = (SCMNodeManager) scm.getScmNodeManager();
@@ -237,20 +242,21 @@ public class TestDeadNodeHandler {
     Assert.assertTrue(nodeStat.get().getRemaining().get() == 90);
     Assert.assertTrue(nodeStat.get().getScmUsed().get() == 10);
 
-    //WHEN datanode1 is dead.
-    eventQueue.fireEvent(SCMEvents.DEAD_NODE, datanode1);
-    Thread.sleep(100);
+    //TODO: Support logic to mark a node as dead in NodeManager.
 
+    nodeManager.processHeartbeat(datanode2);
+    Thread.sleep(1000);
+    nodeManager.processHeartbeat(datanode2);
+    Thread.sleep(1000);
+    nodeManager.processHeartbeat(datanode2);
+    Thread.sleep(1000);
+    nodeManager.processHeartbeat(datanode2);
     //THEN statistics in SCM should changed.
     stat = nodeManager.getStats();
-    Assert.assertTrue(stat.getCapacity().get() == 200);
-    Assert.assertTrue(stat.getRemaining().get() == 180);
-    Assert.assertTrue(stat.getScmUsed().get() == 20);
-
-    nodeStat = nodeManager.getNodeStat(datanode1);
-    Assert.assertTrue(nodeStat.get().getCapacity().get() == 0);
-    Assert.assertTrue(nodeStat.get().getRemaining().get() == 0);
-    Assert.assertTrue(nodeStat.get().getScmUsed().get() == 0);
+    Assert.assertEquals(200L, stat.getCapacity().get().longValue());
+    Assert.assertEquals(180L,
+        stat.getRemaining().get().longValue());
+    Assert.assertEquals(20L, stat.getScmUsed().get().longValue());
   }
 
   @Test

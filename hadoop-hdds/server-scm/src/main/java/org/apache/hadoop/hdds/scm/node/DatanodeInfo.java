@@ -23,6 +23,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.util.Time;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -38,7 +39,6 @@ public class DatanodeInfo extends DatanodeDetails {
   private volatile long lastHeartbeatTime;
   private long lastStatsUpdatedTime;
 
-  // If required we can dissect StorageReportProto and store the raw data
   private List<StorageReportProto> storageReports;
 
   /**
@@ -48,8 +48,9 @@ public class DatanodeInfo extends DatanodeDetails {
    */
   public DatanodeInfo(DatanodeDetails datanodeDetails) {
     super(datanodeDetails);
-    lock = new ReentrantReadWriteLock();
-    lastHeartbeatTime = Time.monotonicNow();
+    this.lock = new ReentrantReadWriteLock();
+    this.lastHeartbeatTime = Time.monotonicNow();
+    this.storageReports = Collections.emptyList();
   }
 
   /**
