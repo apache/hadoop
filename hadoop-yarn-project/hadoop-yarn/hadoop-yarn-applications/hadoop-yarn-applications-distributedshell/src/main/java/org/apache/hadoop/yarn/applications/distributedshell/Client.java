@@ -651,6 +651,12 @@ public class Client {
     }
 
     QueueInfo queueInfo = yarnClient.getQueueInfo(this.amQueue);
+    if (queueInfo == null) {
+      throw new IllegalArgumentException(String
+          .format("Queue %s not present in scheduler configuration.",
+              this.amQueue));
+    }
+
     LOG.info("Queue info"
         + ", queueName=" + queueInfo.getQueueName()
         + ", queueCurrentCapacity=" + queueInfo.getCurrentCapacity()
