@@ -326,7 +326,11 @@ public final class PBImageXmlWriter {
             summary.getCodec(), new BufferedInputStream(new LimitInputStream(
                 fin, s.getLength())));
 
-        switch (SectionName.fromString(s.getName())) {
+        SectionName sectionName = SectionName.fromString(s.getName());
+        if (sectionName == null) {
+          throw new IOException("Unrecognized section " + s.getName());
+        }
+        switch (sectionName) {
         case NS_INFO:
           dumpNameSection(is);
           break;
