@@ -79,7 +79,7 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  * mapping the application owner to a UID on the execution host, resource
  * management through Linux CGROUPS, and Docker support.</p>
  *
- * <p>If {@code hadoop.security.authetication} is set to {@code simple},
+ * <p>If {@code hadoop.security.authentication} is set to {@code simple},
  * then the
  * {@code yarn.nodemanager.linux-container-executor.nonsecure-mode.limit-users}
  * property will determine whether the {@code LinuxContainerExecutor} runs
