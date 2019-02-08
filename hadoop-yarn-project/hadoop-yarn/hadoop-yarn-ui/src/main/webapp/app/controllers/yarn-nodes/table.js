@@ -60,7 +60,7 @@ export default Ember.Controller.extend({
             getCellContent: function(row) {
               var node_id = row.get("id"),
                   node_addr = row.get("nodeHTTPAddress"),
-                  href = `#/yarn-node/${node_id}/${node_addr}`;
+                  href = `#/yarn-node/${node_id}/${node_addr}/info`;
                 switch(row.get("nodeState")) {
                 case "SHUTDOWN":
                 case "LOST":

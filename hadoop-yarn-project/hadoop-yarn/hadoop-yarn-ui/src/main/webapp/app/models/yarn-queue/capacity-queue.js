@@ -36,6 +36,7 @@ export default DS.Model.extend({
   numActiveApplications: DS.attr('number'),
   users: DS.hasMany('YarnUser'),
   type: DS.attr('string'),
+  resources: DS.attr('object'),
 
   isLeafQueue: function() {
     var len = this.get("children.length");
@@ -91,5 +92,5 @@ export default DS.Model.extend({
         value: this.get("numActiveApplications") || 0
       }
     ];
-  }.property("numPendingApplications", "numActiveApplications")
+  }.property("numPendingApplications", "numActiveApplications"),
 });
