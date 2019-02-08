@@ -21,6 +21,7 @@ package org.apache.hadoop.streaming;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -70,7 +71,7 @@ public class TestFileArgs extends TestStreaming
     // Set up side file
     FileSystem localFs = FileSystem.getLocal(conf);
     DataOutputStream dos = localFs.create(new Path("target/sidefile"));
-    dos.write("hello world\n".getBytes("UTF-8"));
+    dos.write("hello world\n".getBytes(StandardCharsets.UTF_8));
     dos.close();
 
     // Since ls doesn't read stdin, we don't want to write anything

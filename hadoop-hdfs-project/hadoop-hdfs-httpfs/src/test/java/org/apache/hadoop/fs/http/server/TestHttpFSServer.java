@@ -44,6 +44,7 @@ import java.io.Writer;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1562,7 +1563,7 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setDoOutput(true);
     conn.connect();
     OutputStream os = conn.getOutputStream();
-    os.write(testContent.getBytes());
+    os.write(testContent.getBytes(StandardCharsets.UTF_8));
     os.close();
     // Verify that it created the file and returned the location
     Assert.assertEquals(

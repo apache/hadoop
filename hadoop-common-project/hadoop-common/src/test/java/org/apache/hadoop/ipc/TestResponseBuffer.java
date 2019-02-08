@@ -22,6 +22,8 @@ import static org.junit.Assert.assertEquals;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+
 import org.apache.hadoop.ipc.ResponseBuffer;
 import org.junit.Test;
 
@@ -69,7 +71,7 @@ public class TestResponseBuffer {
   private void checkBuffer(ResponseBuffer buf, String expected)
       throws IOException {
     // buffer payload length matches expected length
-    int expectedLength = expected.getBytes().length;
+    int expectedLength = expected.getBytes(StandardCharsets.UTF_8).length;
     assertEquals(expectedLength, buf.size());
     // buffer has the framing bytes (int)
     byte[] framed = buf.toByteArray();

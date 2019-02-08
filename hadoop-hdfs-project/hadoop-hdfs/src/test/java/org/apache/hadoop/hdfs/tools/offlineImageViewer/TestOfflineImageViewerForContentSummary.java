@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -80,16 +82,16 @@ public class TestOfflineImageViewerForContentSummary {
 
       Path file1OnParentDir = new Path(parentDir, "file1");
       try (FSDataOutputStream o = hdfs.create(file1OnParentDir)) {
-        o.write("123".getBytes());
+        o.write("123".getBytes(StandardCharsets.UTF_8));
       }
       try (FSDataOutputStream o = hdfs.create(new Path(parentDir, "file2"))) {
-        o.write("1234".getBytes());
+        o.write("1234".getBytes(StandardCharsets.UTF_8));
       }
       try (FSDataOutputStream o = hdfs.create(new Path(childDir1, "file3"))) {
-        o.write("123".getBytes());
+        o.write("123".getBytes(StandardCharsets.UTF_8));
       }
       try (FSDataOutputStream o = hdfs.create(new Path(parentDir, "file4"))) {
-        o.write("123".getBytes());
+        o.write("123".getBytes(StandardCharsets.UTF_8));
       }
       Path link1 = new Path("/link1");
       Path link2 = new Path("/dirForLinks/linkfordir1");

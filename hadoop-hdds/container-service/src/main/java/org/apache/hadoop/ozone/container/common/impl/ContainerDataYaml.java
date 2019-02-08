@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -88,7 +89,7 @@ public final class ContainerDataYaml {
 
       // Write the ContainerData with checksum to Yaml file.
       writer = new OutputStreamWriter(new FileOutputStream(
-          containerFile), "UTF-8");
+          containerFile), StandardCharsets.UTF_8);
       yaml.dump(containerData, writer);
 
     } finally {

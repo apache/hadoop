@@ -47,6 +47,7 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -236,7 +237,7 @@ public class KDiag extends Configured implements Tool, Closeable {
     }
     if (outf != null) {
       println("Printing output to %s", outf);
-      out = new PrintWriter(new File(outf), "UTF-8");
+      out = new PrintWriter(new File(outf), StandardCharsets.UTF_8.name());
     }
     execute();
     return probeHasFailed ? KDIAG_FAILURE : 0;

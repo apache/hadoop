@@ -48,6 +48,7 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -1131,8 +1132,8 @@ public class TestIPC {
   
   @Test(timeout=60000)
   public void testHttpGetResponse() throws IOException {
-    doIpcVersionTest("GET / HTTP/1.0\r\n\r\n".getBytes(),
-        Server.RECEIVED_HTTP_REQ_RESPONSE.getBytes());
+    doIpcVersionTest("GET / HTTP/1.0\r\n\r\n".getBytes(StandardCharsets.UTF_8),
+        Server.RECEIVED_HTTP_REQ_RESPONSE.getBytes(StandardCharsets.UTF_8));
   }
   
   @Test(timeout=60000)
@@ -1753,7 +1754,7 @@ public class TestIPC {
       "50 43 24 56 65 72 73 69  6f 6e 4d 69 73 6d 61 74 PC$Versi onMismat\n" +
       "63 68                                            ch               \n"),
        Ints.toByteArray(HADOOP0_18_ERROR_MSG.length()),
-       HADOOP0_18_ERROR_MSG.getBytes());
+       HADOOP0_18_ERROR_MSG.getBytes(StandardCharsets.UTF_8));
     
     /**
      * Wireshark dump of an RPC request from Hadoop 0.20.3
@@ -1789,7 +1790,7 @@ public class TestIPC {
       "63 2e 52 50 43 24 56 65  72 73 69 6f 6e 4d 69 73 c.RPC$Ve rsionMis\n" +
       "6d 61 74 63 68                                   match            \n"),
       Ints.toByteArray(HADOOP0_20_ERROR_MSG.length()),
-      HADOOP0_20_ERROR_MSG.getBytes());
+      HADOOP0_20_ERROR_MSG.getBytes(StandardCharsets.UTF_8));
     
     
     final static String HADOOP0_21_ERROR_MSG =
@@ -1820,6 +1821,6 @@ public class TestIPC {
       "63 2e 52 50 43 24 56 65  72 73 69 6f 6e 4d 69 73 c.RPC$Ve rsionMis\n" +
       "6d 61 74 63 68                                   match            \n"),
       Ints.toByteArray(HADOOP0_21_ERROR_MSG.length()),
-      HADOOP0_21_ERROR_MSG.getBytes());
+      HADOOP0_21_ERROR_MSG.getBytes(StandardCharsets.UTF_8));
   }
 }

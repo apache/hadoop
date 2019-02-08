@@ -43,6 +43,7 @@ import javax.net.ssl.SSLSession;
 import java.io.File;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
@@ -200,9 +201,11 @@ public class TestSSLFactory {
     int appBufferMax = session.getApplicationBufferSize();
     int netBufferMax = session.getPacketBufferSize();
 
-    ByteBuffer clientOut = ByteBuffer.wrap("client".getBytes());
+    ByteBuffer clientOut =
+        ByteBuffer.wrap("client".getBytes(StandardCharsets.UTF_8));
     ByteBuffer clientIn = ByteBuffer.allocate(appBufferMax);
-    ByteBuffer serverOut = ByteBuffer.wrap("server".getBytes());
+    ByteBuffer serverOut =
+        ByteBuffer.wrap("server".getBytes(StandardCharsets.UTF_8));
     ByteBuffer serverIn = ByteBuffer.allocate(appBufferMax);
 
     // send data from client to server

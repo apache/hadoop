@@ -43,6 +43,7 @@ import javax.security.auth.login.AppConfigurationEntry;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -298,7 +299,7 @@ public class RegistrySecurity extends AbstractService {
           digestAuthUser = id;
           digestAuthPassword = pass;
           String authPair = id + ":" + pass;
-          digestAuthData = authPair.getBytes("UTF-8");
+          digestAuthData = authPair.getBytes(StandardCharsets.UTF_8);
           if (LOG.isDebugEnabled()) {
             LOG.debug("Auth is Digest ACL: {}", aclToString(acl));
           }

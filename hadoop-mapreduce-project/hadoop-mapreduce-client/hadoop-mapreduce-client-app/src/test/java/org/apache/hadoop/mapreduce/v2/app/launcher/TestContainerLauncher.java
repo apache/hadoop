@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -273,7 +274,7 @@ public class TestContainerLauncher {
     NMTokenSecretManagerInNM tokenSecretManager =
         new NMTokenSecretManagerInNM();
     MasterKey masterKey = Records.newRecord(MasterKey.class);
-    masterKey.setBytes(ByteBuffer.wrap("key".getBytes()));
+    masterKey.setBytes(ByteBuffer.wrap("key".getBytes(StandardCharsets.UTF_8)));
     tokenSecretManager.setMasterKey(masterKey);
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
       "token");

@@ -22,7 +22,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-
+import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -61,7 +61,8 @@ public final class CombinedHostsFileWriter {
     final ObjectMapper objectMapper = new ObjectMapper();
 
     try (Writer output =
-       new OutputStreamWriter(new FileOutputStream(hostsFile), "UTF-8")) {
+        new OutputStreamWriter(new FileOutputStream(hostsFile),
+            StandardCharsets.UTF_8)) {
       objectMapper.writeValue(output, allDNs);
     }
   }

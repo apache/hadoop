@@ -119,7 +119,7 @@ public class HtmlQuoting {
       ByteArrayOutputStream buffer = new ByteArrayOutputStream();
       try {
         quoteHtmlChars(buffer, bytes, 0, bytes.length);
-        return buffer.toString("UTF-8");
+        return buffer.toString(StandardCharsets.UTF_8.name());
       } catch (IOException ioe) {
         // Won't happen, since it is a bytearrayoutputstream
         return null;

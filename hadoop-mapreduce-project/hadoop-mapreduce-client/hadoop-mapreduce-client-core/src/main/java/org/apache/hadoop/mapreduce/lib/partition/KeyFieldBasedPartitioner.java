@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapreduce.lib.partition;
 
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -83,19 +83,14 @@ public class KeyFieldBasedPartitioner<K2, V2> extends Partitioner<K2, V2>
   }
   
   public int getPartition(K2 key, V2 value, int numReduceTasks) {
-    byte[] keyBytes;
 
     List <KeyDescription> allKeySpecs = keyFieldHelper.keySpecs();
     if (allKeySpecs.size() == 0) {
       return getPartition(key.toString().hashCode(), numReduceTasks);
     }
 
-    try {
-      keyBytes = key.toString().getBytes("UTF-8");
-    } catch (UnsupportedEncodingException e) {
-      throw new RuntimeException("The current system does not " +
-          "support UTF-8 encoding!", e);
-    }
+    byte[] keyBytes = key.toString().getBytes(StandardCharsets.UTF_8);
+
     // return 0 if the key is empty
     if (keyBytes.length == 0) {
       return 0;

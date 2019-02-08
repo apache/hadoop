@@ -28,6 +28,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
@@ -117,7 +118,7 @@ public class TestStickyBit {
     FSDataOutputStream h = null;
     try {
       h = hdfsAsUser2.append(file2);
-      h.write("Some more data".getBytes());
+      h.write("Some more data".getBytes(StandardCharsets.UTF_8));
       h.close();
       h = null;
     } finally {
@@ -496,7 +497,7 @@ public class TestStickyBit {
     FSDataOutputStream o = null;
     try {
       o = hdfs.create(p);
-      o.write("some file contents".getBytes());
+      o.write("some file contents".getBytes(StandardCharsets.UTF_8));
       o.close();
       o = null;
     } finally {

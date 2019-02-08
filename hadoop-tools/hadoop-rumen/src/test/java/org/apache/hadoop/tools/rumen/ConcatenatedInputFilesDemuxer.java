@@ -20,6 +20,7 @@ package org.apache.hadoop.tools.rumen;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -125,10 +126,10 @@ public class ConcatenatedInputFilesDemuxer implements InputDemuxer {
       this.input = new BufferedInputStream(input, 10000);
       this.input.mark(10000);
       this.fileMarker = fileMarker;
-      this.markerBytes = this.fileMarker.getBytes();
+      this.markerBytes = this.fileMarker.getBytes(StandardCharsets.UTF_8);
       this.fileMarkerBuffer = new byte[this.markerBytes.length];
       this.fileEndMarker = fileEndMarker;
-      this.endMarkerBytes = this.fileEndMarker.getBytes();
+      this.endMarkerBytes = this.fileEndMarker.getBytes(StandardCharsets.UTF_8);
       this.fileEndMarkerBuffer = new byte[this.endMarkerBytes.length];
     }
 

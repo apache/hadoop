@@ -53,8 +53,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -400,9 +400,8 @@ abstract class PBImageTextWriter implements Closeable {
       return ByteBuffer.allocate(8).putLong(value).array();
     }
 
-    private static byte[] toBytes(String value)
-        throws UnsupportedEncodingException {
-      return value.getBytes("UTF-8");
+    private static byte[] toBytes(String value) {
+      return value.getBytes(StandardCharsets.UTF_8);
     }
 
     private static long toLong(byte[] bytes) {
@@ -411,11 +410,7 @@ abstract class PBImageTextWriter implements Closeable {
     }
 
     private static String toString(byte[] bytes) throws IOException {
-      try {
-        return new String(bytes, "UTF-8");
-      } catch (UnsupportedEncodingException e) {
-        throw new IOException(e);
-      }
+      return new String(bytes, StandardCharsets.UTF_8);
     }
 
     @Override

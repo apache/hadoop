@@ -21,6 +21,7 @@ package org.apache.hadoop.util;
 import static org.junit.Assert.*;
 
 import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.junit.Test;
@@ -30,7 +31,8 @@ public class TestConfTest {
   @Test
   public void testEmptyConfiguration() {
     String conf = "<configuration/>";
-    ByteArrayInputStream bais = new ByteArrayInputStream(conf.getBytes());
+    ByteArrayInputStream bais =
+        new ByteArrayInputStream(conf.getBytes(StandardCharsets.UTF_8));
     List<String> errors = ConfTest.checkConf(bais);
     assertTrue(errors.isEmpty());
   }
@@ -43,7 +45,8 @@ public class TestConfTest {
         + "<value>bar</value>\n"
         + "</property>\n"
         + "</configuration>";
-    ByteArrayInputStream bais = new ByteArrayInputStream(conf.getBytes());
+    ByteArrayInputStream bais =
+        new ByteArrayInputStream(conf.getBytes(StandardCharsets.UTF_8));
     List<String> errors = ConfTest.checkConf(bais);
     assertTrue(errors.isEmpty());
   }
@@ -58,7 +61,8 @@ public class TestConfTest {
         + "<source>c</source>\n"
         + "</property>\n"
         + "</configuration>";
-    ByteArrayInputStream bais = new ByteArrayInputStream(conf.getBytes());
+    ByteArrayInputStream bais =
+        new ByteArrayInputStream(conf.getBytes(StandardCharsets.UTF_8));
     List<String> errors = ConfTest.checkConf(bais);
     assertTrue(errors.isEmpty());
   }
@@ -66,7 +70,8 @@ public class TestConfTest {
   @Test
   public void testEmptyInput() {
     String conf = "";
-    ByteArrayInputStream bais = new ByteArrayInputStream(conf.getBytes());
+    ByteArrayInputStream bais =
+        new ByteArrayInputStream(conf.getBytes(StandardCharsets.UTF_8));
     List<String> errors = ConfTest.checkConf(bais);
     assertEquals(1, errors.size());
     assertTrue(errors.get(0).startsWith("bad conf file: "));
@@ -75,7 +80,8 @@ public class TestConfTest {
   @Test
   public void testInvalidFormat() {
     String conf = "<configuration>";
-    ByteArrayInputStream bais = new ByteArrayInputStream(conf.getBytes());
+    ByteArrayInputStream bais =
+        new ByteArrayInputStream(conf.getBytes(StandardCharsets.UTF_8));
     List<String> errors = ConfTest.checkConf(bais);
     assertEquals(1, errors.size());
     assertTrue(errors.get(0).startsWith("bad conf file: "));
@@ -84,7 +90,8 @@ public class TestConfTest {
   @Test
   public void testRootElementNotConfiguration() {
     String conf = "<configurations/>";
-    ByteArrayInputStream bais = new ByteArrayInputStream(conf.getBytes());
+    ByteArrayInputStream bais =
+        new ByteArrayInputStream(conf.getBytes(StandardCharsets.UTF_8));
     List<String> errors = ConfTest.checkConf(bais);
     assertEquals(1, errors.size());
     assertEquals("bad conf file: top-level element not <configuration>", errors.get(0));
@@ -95,7 +102,8 @@ public class TestConfTest {
     String conf = "<configuration>\n"
         + "<foo/>\n"
         + "</configuration>";
-    ByteArrayInputStream bais = new ByteArrayInputStream(conf.getBytes());
+    ByteArrayInputStream bais =
+        new ByteArrayInputStream(conf.getBytes(StandardCharsets.UTF_8));
     List<String> errors = ConfTest.checkConf(bais);
     assertEquals(1, errors.size());
     assertEquals("Line 2: element not <property>", errors.get(0));
@@ -108,7 +116,8 @@ public class TestConfTest {
         + "<value>foo</value>\n"
         + "</property>\n"
         + "</configuration>";
-    ByteArrayInputStream bais = new ByteArrayInputStream(conf.getBytes());
+    ByteArrayInputStream bais =
+        new ByteArrayInputStream(conf.getBytes(StandardCharsets.UTF_8));
     List<String> errors = ConfTest.checkConf(bais);
     assertEquals(1, errors.size());
     assertEquals("Line 2: <property> has no <name>", errors.get(0));
@@ -135,7 +144,8 @@ public class TestConfTest {
         + "<name>foo</name>\n"
         + "</property>\n"
         + "</configuration>";
-    ByteArrayInputStream bais = new ByteArrayInputStream(conf.getBytes());
+    ByteArrayInputStream bais =
+        new ByteArrayInputStream(conf.getBytes(StandardCharsets.UTF_8));
     List<String> errors = ConfTest.checkConf(bais);
     assertEquals(1, errors.size());
     assertEquals("Line 2: <property> has no <value>", errors.get(0));
@@ -149,7 +159,8 @@ public class TestConfTest {
         + "<value></value>\n"
         + "</property>\n"
         + "</configuration>";
-    ByteArrayInputStream bais = new ByteArrayInputStream(conf.getBytes());
+    ByteArrayInputStream bais =
+        new ByteArrayInputStream(conf.getBytes(StandardCharsets.UTF_8));
     List<String> errors = ConfTest.checkConf(bais);
     assertTrue(errors.isEmpty());
   }
@@ -162,7 +173,8 @@ public class TestConfTest {
         + "<value>baz</value>\n"
         + "</property>\n"
         + "</configuration>";
-    ByteArrayInputStream bais = new ByteArrayInputStream(conf.getBytes());
+    ByteArrayInputStream bais =
+        new ByteArrayInputStream(conf.getBytes(StandardCharsets.UTF_8));
     List<String> errors = ConfTest.checkConf(bais);
     assertEquals(1, errors.size());
     assertEquals("Line 2: <property> has duplicated <name>s", errors.get(0));
@@ -177,7 +189,8 @@ public class TestConfTest {
         + "<value>baz</value>\n"
         + "</property>\n"
         + "</configuration>";
-    ByteArrayInputStream bais = new ByteArrayInputStream(conf.getBytes());
+    ByteArrayInputStream bais =
+        new ByteArrayInputStream(conf.getBytes(StandardCharsets.UTF_8));
     List<String> errors = ConfTest.checkConf(bais);
     assertEquals(1, errors.size());
     assertEquals("Line 2: <property> has duplicated <name>s", errors.get(0));
@@ -195,7 +208,8 @@ public class TestConfTest {
         + "<value>baz</value>\n"
         + "</property>\n"
         + "</configuration>";
-    ByteArrayInputStream bais = new ByteArrayInputStream(conf.getBytes());
+    ByteArrayInputStream bais =
+        new ByteArrayInputStream(conf.getBytes(StandardCharsets.UTF_8));
     List<String> errors = ConfTest.checkConf(bais);
     assertEquals(1, errors.size());
     assertEquals("Line 2, 6: duplicated <property>s for foo", errors.get(0));

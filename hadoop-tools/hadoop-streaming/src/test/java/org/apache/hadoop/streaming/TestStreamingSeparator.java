@@ -22,6 +22,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -64,7 +65,7 @@ public class TestStreamingSeparator
   {
     DataOutputStream out = new DataOutputStream(
                                                 new FileOutputStream(INPUT_FILE.getAbsoluteFile()));
-    out.write(input.getBytes("UTF-8"));
+    out.write(input.getBytes(StandardCharsets.UTF_8));
     out.close();
   }
 

@@ -251,7 +251,7 @@ public final class AzureADAuthenticator {
 
       if (httpMethod.equals("POST")) {
         conn.setDoOutput(true);
-        conn.getOutputStream().write(payload.getBytes("UTF-8"));
+        conn.getOutputStream().write(payload.getBytes(StandardCharsets.UTF_8));
       }
 
       int httpResponseCode = conn.getResponseCode();

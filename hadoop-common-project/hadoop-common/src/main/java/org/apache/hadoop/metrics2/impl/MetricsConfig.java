@@ -22,6 +22,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.charset.StandardCharsets;
+
 import static java.security.AccessController.*;
 import java.security.PrivilegedAction;
 import java.util.Iterator;
@@ -287,7 +289,7 @@ class MetricsConfig extends SubsetConfiguration {
       PropertiesConfiguration tmp = new PropertiesConfiguration();
       tmp.copy(c);
       tmp.write(pw);
-      return buffer.toString("UTF-8");
+      return buffer.toString(StandardCharsets.UTF_8.name());
     } catch (Exception e) {
       throw new MetricsConfigException(e);
     }

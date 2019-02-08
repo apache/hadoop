@@ -21,6 +21,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -188,7 +189,7 @@ public class OfflineImageViewerPB {
     PrintStream out = null;
     try {
       out = outputFile.equals("-") || "REVERSEXML".equalsIgnoreCase(processor) ?
-        System.out : new PrintStream(outputFile, "UTF-8");
+        System.out : new PrintStream(outputFile, StandardCharsets.UTF_8.name());
       switch (StringUtils.toUpperCase(processor)) {
       case "FILEDISTRIBUTION":
         long maxSize = Long.parseLong(cmd.getOptionValue("maxSize", "0"));

@@ -18,6 +18,9 @@
 package org.apache.hadoop.util.hash;
 
 import static org.junit.Assert.*;
+
+import java.nio.charset.StandardCharsets;
+
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Test;
 
@@ -55,14 +58,16 @@ public class TestHash {
     assertNull("testHash error invalid getInstance !!!",
         Hash.getInstance(Hash.INVALID_HASH));
 
-    int murmurHash = Hash.getInstance(Hash.MURMUR_HASH).hash(LINE.getBytes());
+    int murmurHash = Hash.getInstance(Hash.MURMUR_HASH)
+        .hash(LINE.getBytes(StandardCharsets.UTF_8));
     for (int i = 0; i < iterations; i++) {
       assertTrue("multiple evaluation murmur hash error !!!",
           murmurHash == Hash.getInstance(Hash.MURMUR_HASH)
-              .hash(LINE.getBytes()));
+              .hash(LINE.getBytes(StandardCharsets.UTF_8)));
     }
 
-    murmurHash = Hash.getInstance(Hash.MURMUR_HASH).hash(LINE.getBytes(), 67);
+    murmurHash = Hash.getInstance(Hash.MURMUR_HASH)
+        .hash(LINE.getBytes(StandardCharsets.UTF_8), 67);
     for (int i = 0; i < iterations; i++) {
       assertTrue(
           "multiple evaluation murmur hash error !!!",
@@ -70,20 +75,22 @@ public class TestHash {
               LINE.getBytes(), 67));
     }
 
-    int jenkinsHash = Hash.getInstance(Hash.JENKINS_HASH).hash(LINE.getBytes());
+    int jenkinsHash = Hash.getInstance(Hash.JENKINS_HASH)
+        .hash(LINE.getBytes(StandardCharsets.UTF_8));
     for (int i = 0; i < iterations; i++) {
       assertTrue(
           "multiple evaluation jenkins hash error !!!",
           jenkinsHash == Hash.getInstance(Hash.JENKINS_HASH).hash(
-              LINE.getBytes()));
+              LINE.getBytes(StandardCharsets.UTF_8)));
     }
 
-    jenkinsHash = Hash.getInstance(Hash.JENKINS_HASH).hash(LINE.getBytes(), 67);
+    jenkinsHash = Hash.getInstance(Hash.JENKINS_HASH)
+        .hash(LINE.getBytes(StandardCharsets.UTF_8), 67);
     for (int i = 0; i < iterations; i++) {
       assertTrue(
           "multiple evaluation jenkins hash error !!!",
           jenkinsHash == Hash.getInstance(Hash.JENKINS_HASH).hash(
-              LINE.getBytes(), 67));
+              LINE.getBytes(StandardCharsets.UTF_8), 67));
     }   
   } 
 }

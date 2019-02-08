@@ -26,6 +26,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.DocumentBuilder;
@@ -46,7 +47,6 @@ class ParsedConfigFile {
       Pattern.compile("_(job_[0-9]+_[0-9]+)_");
   private static final Pattern heapPattern =
       Pattern.compile("-Xmx([0-9]+)([mMgG])");
-  private static final Charset UTF_8 = Charset.forName("UTF-8");
 
   final int heapMegabytes;
 
@@ -103,7 +103,8 @@ class ParsedConfigFile {
     }
 
     try {
-      InputStream is = new ByteArrayInputStream(xmlString.getBytes(UTF_8));
+      InputStream is =
+          new ByteArrayInputStream(xmlString.getBytes(StandardCharsets.UTF_8));
 
       DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 

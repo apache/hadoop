@@ -55,6 +55,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -163,7 +164,7 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
         FileChannel channel = raf.getChannel();
         int offset = random.nextInt((int)channel.size() / 2);
         raf.seek(offset);
-        raf.write("BADBAD".getBytes());
+        raf.write("BADBAD".getBytes(StandardCharsets.UTF_8));
       }
     }
 

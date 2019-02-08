@@ -13,7 +13,7 @@
  */
 package org.apache.hadoop.security.authentication.util;
 
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 import java.util.Random;
 import javax.servlet.ServletContext;
@@ -140,11 +140,11 @@ public class TestZKSignerSecretProvider {
     long seed = System.currentTimeMillis();
     Random rand = new Random(seed);
     byte[] secret2 = Long.toString(rand.nextLong())
-        .getBytes(Charset.forName("UTF-8"));
+        .getBytes(StandardCharsets.UTF_8);
     byte[] secret1 = Long.toString(rand.nextLong())
-        .getBytes(Charset.forName("UTF-8"));
+        .getBytes(StandardCharsets.UTF_8);
     byte[] secret3 = Long.toString(rand.nextLong())
-        .getBytes(Charset.forName("UTF-8"));
+        .getBytes(StandardCharsets.UTF_8);
     rand = new Random(seed);
     // Secrets 4 and 5 get thrown away by ZK when the new secret provider tries
     // to init
@@ -238,7 +238,7 @@ public class TestZKSignerSecretProvider {
 
     @Override
     protected byte[] generateRandomSecret() {
-      return Long.toString(rand.nextLong()).getBytes(Charset.forName("UTF-8"));
+      return Long.toString(rand.nextLong()).getBytes(StandardCharsets.UTF_8);
     }
   }
 

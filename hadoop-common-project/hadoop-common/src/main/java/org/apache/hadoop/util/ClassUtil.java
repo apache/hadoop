@@ -21,6 +21,7 @@ package org.apache.hadoop.util;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Enumeration;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -47,7 +48,7 @@ public class ClassUtil {
           if (toReturn.startsWith("file:")) {
             toReturn = toReturn.substring("file:".length());
           }
-          toReturn = URLDecoder.decode(toReturn, "UTF-8");
+          toReturn = URLDecoder.decode(toReturn, StandardCharsets.UTF_8.name());
           return toReturn.replaceAll("!.*$", "");
         }
       }

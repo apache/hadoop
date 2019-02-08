@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -114,7 +115,7 @@ public class TestDFSStripedOutputStreamWithFailure extends
               ecPolicy.getName(),
           () -> {
             try (FSDataOutputStream out = dfs.create(dirFile, true)) {
-              out.write("something".getBytes());
+              out.write("something".getBytes(StandardCharsets.UTF_8));
               out.flush();
             }
             return 0;
@@ -130,7 +131,7 @@ public class TestDFSStripedOutputStreamWithFailure extends
         ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits());
     final Path dirFile = new Path(dir, "ecfile-" + numFailures);
     try (FSDataOutputStream out = dfs.create(dirFile, true)) {
-      out.write("idempotent close".getBytes());
+      out.write("idempotent close".getBytes(StandardCharsets.UTF_8));
 
       // Expect to raise IOE on the first close call, but any following
       // close() should be no-op.

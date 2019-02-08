@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -122,7 +123,6 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
    */
   public static final String NMSS_SECONDARY_SC_PREFIX =
       NMSS_CLASS_PREFIX + "secondarySC/";
-  public static final String STRING_TO_BYTE_FORMAT = "UTF-8";
 
   private static final RecordFactory RECORD_FACTORY =
       RecordFactoryProvider.getRecordFactory(null);
@@ -399,7 +399,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
                 entry.getKey().substring(NMSS_SECONDARY_SC_PREFIX.length());
             Token<AMRMTokenIdentifier> amrmToken = new Token<>();
             amrmToken.decodeFromUrlString(
-                new String(entry.getValue(), STRING_TO_BYTE_FORMAT));
+                new String(entry.getValue(), StandardCharsets.UTF_8));
             uamMap.put(scId, amrmToken);
             LOG.debug("Recovered UAM in " + scId + " from NMSS");
           }
@@ -1283,7 +1283,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
             } else if (getNMStateStore() != null) {
               getNMStateStore().storeAMRMProxyAppContextEntry(attemptId,
                   NMSS_SECONDARY_SC_PREFIX + subClusterId,
-                  token.encodeToUrlString().getBytes(STRING_TO_BYTE_FORMAT));
+                  token.encodeToUrlString().getBytes(StandardCharsets.UTF_8));
             }
           } catch (Throwable e) {
             LOG.error("Failed to persist UAM token from " + subClusterId
@@ -1739,7 +1739,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
           try {
             getNMStateStore().storeAMRMProxyAppContextEntry(attemptId,
                 NMSS_SECONDARY_SC_PREFIX + subClusterId.getId(),
-                newToken.encodeToUrlString().getBytes(STRING_TO_BYTE_FORMAT));
+                newToken.encodeToUrlString().getBytes(StandardCharsets.UTF_8));
           } catch (IOException e) {
             LOG.error("Error storing UAM token as AMRMProxy "
                 + "context entry in NMSS for " + attemptId, e);

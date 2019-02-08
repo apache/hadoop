@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.client.rpc;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -1589,11 +1590,11 @@ public abstract class TestOzoneRpcClientAbstract {
     Map<Integer, String> partsMap = new TreeMap<>();
     // Uploading part 1 with less than min size
     String partName = uploadPart(bucket, keyName, uploadID, 1, "data".getBytes(
-        "UTF-8"));
+        StandardCharsets.UTF_8));
     partsMap.put(1, partName);
 
     partName = uploadPart(bucket, keyName, uploadID, 2, "data".getBytes(
-        "UTF-8"));
+        StandardCharsets.UTF_8));
     partsMap.put(2, partName);
 
 
@@ -1654,7 +1655,8 @@ public abstract class TestOzoneRpcClientAbstract {
     String uploadID = initiateMultipartUpload(bucket, keyName, ReplicationType
         .STAND_ALONE, ReplicationFactor.ONE);
 
-    uploadPart(bucket, keyName, uploadID, 1, "data".getBytes("UTF-8"));
+    uploadPart(bucket, keyName, uploadID, 1,
+        "data".getBytes(StandardCharsets.UTF_8));
     // We have not uploaded any parts, but passing some list it should throw
     // error.
     TreeMap<Integer, String> partsMap = new TreeMap<>();
@@ -1683,7 +1685,8 @@ public abstract class TestOzoneRpcClientAbstract {
     String uploadID = initiateMultipartUpload(bucket, keyName, ReplicationType
         .STAND_ALONE, ReplicationFactor.ONE);
 
-    uploadPart(bucket, keyName, uploadID, 1, "data".getBytes("UTF-8"));
+    uploadPart(bucket, keyName, uploadID, 1,
+        "data".getBytes(StandardCharsets.UTF_8));
     // We have not uploaded any parts, but passing some list it should throw
     // error.
     TreeMap<Integer, String> partsMap = new TreeMap<>();
@@ -1752,7 +1755,8 @@ public abstract class TestOzoneRpcClientAbstract {
     try {
       String uploadID = initiateMultipartUpload(bucket, keyName, ReplicationType
           .STAND_ALONE, ReplicationFactor.ONE);
-      uploadPart(bucket, keyName, uploadID, 1, "data".getBytes("UTF-8"));
+      uploadPart(bucket, keyName, uploadID, 1,
+          "data".getBytes(StandardCharsets.UTF_8));
       bucket.abortMultipartUpload(keyName, uploadID);
     } catch (IOException ex) {
       fail("testAbortUploadSuccess failed");
@@ -1999,9 +2003,9 @@ public abstract class TestOzoneRpcClientAbstract {
 
     String part3 = UUID.randomUUID().toString();
     partName = uploadPart(bucket, keyName, uploadID, 3, part3.getBytes(
-        "UTF-8"));
+        StandardCharsets.UTF_8));
     partsMap.put(3, partName);
-    length += part3.getBytes("UTF-8").length;
+    length += part3.getBytes(StandardCharsets.UTF_8).length;
 
 
     // Complete multipart upload request
@@ -2010,7 +2014,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
     //Now Read the key which has been completed multipart upload.
     byte[] fileContent = new byte[data.length + data.length + part3.getBytes(
-        "UTF-8").length];
+        StandardCharsets.UTF_8).length];
     OzoneInputStream inputStream = bucket.readKey(keyName);
     inputStream.read(fileContent);
 

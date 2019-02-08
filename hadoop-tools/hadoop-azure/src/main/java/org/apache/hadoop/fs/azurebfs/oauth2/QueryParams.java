@@ -19,6 +19,7 @@ package org.apache.hadoop.fs.azurebfs.oauth2;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -48,9 +49,10 @@ public class QueryParams {
         String name = entry.getKey();
         try {
           sb.append(separator);
-          sb.append(URLEncoder.encode(name, "UTF-8"));
+          sb.append(URLEncoder.encode(name, StandardCharsets.UTF_8.name()));
           sb.append('=');
-          sb.append(URLEncoder.encode(entry.getValue(), "UTF-8"));
+          sb.append(URLEncoder.encode(entry.getValue(),
+              StandardCharsets.UTF_8.name()));
           separator = "&";
         } catch (UnsupportedEncodingException ex) {
         }

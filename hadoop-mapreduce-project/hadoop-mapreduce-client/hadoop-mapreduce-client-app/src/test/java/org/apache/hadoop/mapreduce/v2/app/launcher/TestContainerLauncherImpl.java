@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.BrokenBarrierException;
@@ -423,11 +424,11 @@ public class TestContainerLauncherImpl {
   private Token createNewContainerToken(ContainerId contId,
       String containerManagerAddr) {
     long currentTime = System.currentTimeMillis();
-    return MRApp.newContainerToken(NodeId.newInstance("127.0.0.1",
-        1234), "password".getBytes(), new ContainerTokenIdentifier(
-        contId, containerManagerAddr, "user",
-        Resource.newInstance(1024, 1),
-        currentTime + 10000L, 123, currentTime, Priority.newInstance(0), 0));
+    return MRApp.newContainerToken(NodeId.newInstance("127.0.0.1", 1234),
+        "password".getBytes(StandardCharsets.UTF_8),
+        new ContainerTokenIdentifier(contId, containerManagerAddr, "user",
+            Resource.newInstance(1024, 1), currentTime + 10000L, 123,
+            currentTime, Priority.newInstance(0), 0));
   }
 
   private static class ContainerManagerForTest implements ContainerManagementProtocolClient {

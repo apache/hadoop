@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.web.resources;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Comparator;
 
@@ -48,9 +49,11 @@ public abstract class Param<T, D extends Param.Domain<T>> {
       for(Param<?, ?> p : parameters) {
         if (p.getValue() != null) {
           b.append(separator)
-              .append(URLEncoder.encode(p.getName(), "UTF-8"))
+              .append(
+                  URLEncoder.encode(p.getName(), StandardCharsets.UTF_8.name()))
               .append("=")
-              .append(URLEncoder.encode(p.getValueString(), "UTF-8"));
+              .append(URLEncoder.encode(p.getValueString(),
+                  StandardCharsets.UTF_8.name()));
         }
       }
     } catch (UnsupportedEncodingException e) {

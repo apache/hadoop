@@ -20,6 +20,7 @@ package org.apache.hadoop.io.file.tfile;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
 import static org.junit.Assert.fail;
@@ -152,7 +153,7 @@ public class TestTFileStreams {
     if (skip)
       return;
     DataOutputStream dos = writer.prepareAppendKey(-1);
-    dos.write("key0".getBytes());
+    dos.write("key0".getBytes(StandardCharsets.UTF_8));
     try {
       closeOutput();
       fail("Cannot add only a key without a value. ");
@@ -169,7 +170,7 @@ public class TestTFileStreams {
     DataOutputStream outValue = null;
     try {
       outValue = writer.prepareAppendValue(6);
-      outValue.write("value0".getBytes());
+      outValue.write("value0".getBytes(StandardCharsets.UTF_8));
       fail("Cannot add a value without adding key first. ");
     }
     catch (Exception e) {
@@ -188,7 +189,7 @@ public class TestTFileStreams {
       return;
     DataOutputStream outKey = writer.prepareAppendKey(2);
     try {
-      outKey.write("key0".getBytes());
+      outKey.write("key0".getBytes(StandardCharsets.UTF_8));
       fail("Specified key length mismatched the actual key length.");
     }
     catch (IOException e) {
@@ -198,7 +199,7 @@ public class TestTFileStreams {
     DataOutputStream outValue = null;
     try {
       outValue = writer.prepareAppendValue(6);
-      outValue.write("value0".getBytes());
+      outValue.write("value0".getBytes(StandardCharsets.UTF_8));
     }
     catch (Exception e) {
       // noop, expecting an exception
@@ -211,7 +212,7 @@ public class TestTFileStreams {
       return;
     DataOutputStream outKey = writer.prepareAppendKey(2);
     try {
-      outKey.write("key0".getBytes());
+      outKey.write("key0".getBytes(StandardCharsets.UTF_8));
       outKey.close();
       fail("Key is longer than requested.");
     }
@@ -227,11 +228,11 @@ public class TestTFileStreams {
     if (skip)
       return;
     DataOutputStream outKey = writer.prepareAppendKey(4);
-    outKey.write("key0".getBytes());
+    outKey.write("key0".getBytes(StandardCharsets.UTF_8));
     outKey.close();
     DataOutputStream outValue = writer.prepareAppendValue(15);
     try {
-      outValue.write("value0".getBytes());
+      outValue.write("value0".getBytes(StandardCharsets.UTF_8));
       outValue.close();
       fail("Value is shorter than expected.");
     }
@@ -247,11 +248,11 @@ public class TestTFileStreams {
     if (skip)
       return;
     DataOutputStream outKey = writer.prepareAppendKey(4);
-    outKey.write("key0".getBytes());
+    outKey.write("key0".getBytes(StandardCharsets.UTF_8));
     outKey.close();
     DataOutputStream outValue = writer.prepareAppendValue(3);
     try {
-      outValue.write("value0".getBytes());
+      outValue.write("value0".getBytes(StandardCharsets.UTF_8));
       outValue.close();
       fail("Value is longer than expected.");
     }
@@ -274,7 +275,7 @@ public class TestTFileStreams {
       return;
     DataOutputStream outKey = writer.prepareAppendKey(8);
     try {
-      outKey.write("key0".getBytes());
+      outKey.write("key0".getBytes(StandardCharsets.UTF_8));
       outKey.close();
       fail("Key is shorter than expected.");
     }
@@ -408,18 +409,19 @@ public class TestTFileStreams {
       String key = TestTFileByteArrays.composeSortedKey("key", nx);
       DataOutputStream outKey =
           writer.prepareAppendKey(knownKeyLength ? key.length() : -1);
-      outKey.write(key.getBytes());
+      outKey.write(key.getBytes(StandardCharsets.UTF_8));
       outKey.close();
       String value = "value" + nx;
       DataOutputStream outValue =
           writer.prepareAppendValue(knownValueLength ? value.length() : -1);
-      outValue.write(value.getBytes());
+      outValue.write(value.getBytes(StandardCharsets.UTF_8));
       outValue.close();
       rawDataSize +=
-          WritableUtils.getVIntSize(key.getBytes().length)
-              + key.getBytes().length
-              + WritableUtils.getVIntSize(value.getBytes().length)
-              + value.getBytes().length;
+          WritableUtils.getVIntSize(key.getBytes(StandardCharsets.UTF_8).length)
+              + key.getBytes(StandardCharsets.UTF_8).length
+              + WritableUtils
+                  .getVIntSize(value.getBytes(StandardCharsets.UTF_8).length)
+              + value.getBytes(StandardCharsets.UTF_8).length;
     }
     if (close) {
       closeOutput();

@@ -27,6 +27,7 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -214,7 +215,7 @@ public class TestWebHDFSForHA {
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
     final Path p = new Path("/test");
-    final byte[] data = "Hello".getBytes();
+    final byte[] data = "Hello".getBytes(StandardCharsets.UTF_8);
 
     try {
       cluster = new MiniDFSCluster.Builder(conf).nnTopology(topo)

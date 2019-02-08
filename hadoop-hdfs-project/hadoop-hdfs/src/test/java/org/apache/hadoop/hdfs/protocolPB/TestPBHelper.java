@@ -30,6 +30,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -286,7 +287,8 @@ public class TestPBHelper {
   }
 
   private static BlockKey getBlockKey(int keyId) {
-    return new BlockKey(keyId, 10, "encodedKey".getBytes());
+    return new BlockKey(keyId, 10,
+        "encodedKey".getBytes(StandardCharsets.UTF_8));
   }
 
   private void compare(BlockKey k1, BlockKey k2) {
@@ -465,7 +467,7 @@ public class TestPBHelper {
   
   @Test
   public void testConvertText() {
-    Text t = new Text("abc".getBytes());
+    Text t = new Text("abc".getBytes(StandardCharsets.UTF_8));
     String s = t.toString();
     Text t1 = new Text(s);
     assertEquals(t, t1);
@@ -474,7 +476,8 @@ public class TestPBHelper {
   @Test
   public void testConvertBlockToken() {
     Token<BlockTokenIdentifier> token = new Token<BlockTokenIdentifier>(
-        "identifier".getBytes(), "password".getBytes(), new Text("kind"),
+        "identifier".getBytes(StandardCharsets.UTF_8),
+        "password".getBytes(StandardCharsets.UTF_8), new Text("kind"),
         new Text("service"));
     TokenProto tokenProto = PBHelperClient.convert(token);
     Token<BlockTokenIdentifier> token2 = PBHelperClient.convert(tokenProto);
@@ -541,7 +544,8 @@ public class TestPBHelper {
         new ExtendedBlock("bp12", 12345, 10, 53),
         dnInfos, storageIDs, media, 5, false, new DatanodeInfo[]{});
     lb.setBlockToken(new Token<BlockTokenIdentifier>(
-        "identifier".getBytes(), "password".getBytes(), new Text("kind"),
+        "identifier".getBytes(StandardCharsets.UTF_8),
+        "password".getBytes(StandardCharsets.UTF_8), new Text("kind"),
         new Text("service")));
     return lb;
   }
@@ -558,7 +562,8 @@ public class TestPBHelper {
     LocatedBlock lb = new LocatedBlock(
         new ExtendedBlock("bp12", 12345, 10, 53), dnInfos);
     lb.setBlockToken(new Token<BlockTokenIdentifier>(
-        "identifier".getBytes(), "password".getBytes(), new Text("kind"),
+        "identifier".getBytes(StandardCharsets.UTF_8),
+        "password".getBytes(StandardCharsets.UTF_8), new Text("kind"),
         new Text("service")));
     lb.setStartOffset(5);
     return lb;

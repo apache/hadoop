@@ -26,6 +26,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -641,7 +642,7 @@ public class TestFileAppend{
       for (int i = 0; i < 4; i++) {
         sb.append(hello);
       }
-      final byte[] content = sb.toString().getBytes();
+      final byte[] content = sb.toString().getBytes(StandardCharsets.UTF_8);
       AppendTestUtil.checkFullFile(fs, path, content.length, content,
           "Read /test");
 

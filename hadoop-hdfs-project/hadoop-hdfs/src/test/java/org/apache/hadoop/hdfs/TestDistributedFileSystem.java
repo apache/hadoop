@@ -37,6 +37,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.SocketTimeoutException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -1588,11 +1589,11 @@ public class TestDistributedFileSystem {
       FileSystem fs = cluster.getFileSystem();
       // create file under root
       FSDataOutputStream File1 = fs.create(new Path("/File1"));
-      File1.write("hi".getBytes());
+      File1.write("hi".getBytes(StandardCharsets.UTF_8));
       File1.close();
       // create file under sub-folder
       FSDataOutputStream File2 = fs.create(new Path("/Folder1/File2"));
-      File2.write("hi".getBytes());
+      File2.write("hi".getBytes(StandardCharsets.UTF_8));
       File2.close();
       // getUsed(Path) should return total len of all the files from a path
       assertEquals(2, fs.getUsed(new Path("/Folder1")));
@@ -1698,12 +1699,12 @@ public class TestDistributedFileSystem {
           .replication((short) 1)
           .blockSize(4096)
           .build()) {
-        byte[] contentOrigin = content.getBytes("UTF8");
+        byte[] contentOrigin = content.getBytes(StandardCharsets.UTF_8);
         out1.write(contentOrigin);
       }
 
       ContractTestUtils.verifyFileContents(fs, testFilePath,
-          content.getBytes());
+          content.getBytes(StandardCharsets.UTF_8));
 
       try (FSDataOutputStream out = fs.createFile(testFilePath).overwrite(false)
         .build()) {

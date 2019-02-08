@@ -21,6 +21,7 @@ package org.apache.hadoop.ha;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.UUID;
 
@@ -276,9 +277,10 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
     // znode's data so that data version will be increased to 1. Here znode's
     // aversion is 0.
     ZooKeeper otherClient = createClient();
-    otherClient.create(PARENT_DIR, "sample1".getBytes(), Ids.OPEN_ACL_UNSAFE,
-        CreateMode.PERSISTENT);
-    otherClient.setData(PARENT_DIR, "sample2".getBytes(), -1);
+    otherClient.create(PARENT_DIR, "sample1".getBytes(StandardCharsets.UTF_8),
+        Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+    otherClient.setData(PARENT_DIR, "sample2".getBytes(StandardCharsets.UTF_8),
+        -1);
     otherClient.close();
 
     elector.ensureParentZNode();

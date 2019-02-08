@@ -26,6 +26,7 @@ import static org.mockito.Mockito.times;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -427,7 +428,7 @@ public class TestEncryptedTransfer {
       DatanodeInfo[] targets = dfstream.getPipeline();
       cluster.stopDataNode(targets[0].getXferAddr());
       // write data to induce pipeline recovery
-      out.write(PLAIN_TEXT.getBytes());
+      out.write(PLAIN_TEXT.getBytes(StandardCharsets.UTF_8));
       out.hflush();
       assertFalse("The first datanode in the pipeline was not replaced.",
           Arrays.asList(dfstream.getPipeline()).contains(targets[0]));
@@ -531,7 +532,7 @@ public class TestEncryptedTransfer {
     } else {
       out = fs.append(TEST_PATH);
     }
-    out.write(PLAIN_TEXT.getBytes());
+    out.write(PLAIN_TEXT.getBytes(StandardCharsets.UTF_8));
     out.close();
   }
   

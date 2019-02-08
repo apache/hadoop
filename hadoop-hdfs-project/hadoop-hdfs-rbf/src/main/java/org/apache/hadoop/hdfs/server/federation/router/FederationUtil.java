@@ -24,6 +24,7 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -72,7 +73,7 @@ public final class FederationUtil {
       conn.setConnectTimeout(5 * 1000);
       conn.setReadTimeout(5 * 1000);
       InputStream in = conn.getInputStream();
-      InputStreamReader isr = new InputStreamReader(in, "UTF-8");
+      InputStreamReader isr = new InputStreamReader(in, StandardCharsets.UTF_8);
       reader = new BufferedReader(isr);
 
       StringBuilder sb = new StringBuilder();

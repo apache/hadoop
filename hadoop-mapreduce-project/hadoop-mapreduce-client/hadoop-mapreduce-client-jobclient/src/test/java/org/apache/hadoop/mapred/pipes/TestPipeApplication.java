@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -106,8 +107,9 @@ public class TestPipeApplication {
       conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
       // token for authorization
       Token<AMRMTokenIdentifier> token = new Token<AMRMTokenIdentifier>(
-              "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
-              "service"));
+          "user".getBytes(StandardCharsets.UTF_8),
+          "password".getBytes(StandardCharsets.UTF_8), new Text("kind"),
+          new Text("service"));
       TokenCache.setJobToken(token,  conf.getCredentials());
       conf.setBoolean(MRJobConfig.SKIP_RECORDS, true);
       TestTaskReporter reporter = new TestTaskReporter();
@@ -530,11 +532,12 @@ public class TestPipeApplication {
     }
     fCommand.createNewFile();
     OutputStream os = new FileOutputStream(fCommand);
-    os.write("#!/bin/sh \n".getBytes());
+    os.write("#!/bin/sh \n".getBytes(StandardCharsets.UTF_8));
     if (clazz == null) {
-      os.write(("ls ").getBytes());
+      os.write(("ls ").getBytes(StandardCharsets.UTF_8));
     } else {
-      os.write(("java -cp " + classpath + " " + clazz).getBytes());
+      os.write(("java -cp " + classpath + " " + clazz)
+          .getBytes(StandardCharsets.UTF_8));
     }
     os.flush();
     os.close();

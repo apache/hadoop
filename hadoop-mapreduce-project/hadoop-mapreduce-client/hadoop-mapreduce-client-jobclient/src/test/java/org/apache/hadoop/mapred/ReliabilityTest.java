@@ -21,6 +21,7 @@ package org.apache.hadoop.mapred;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -344,7 +345,7 @@ public class ReliabilityTest extends Configured implements Tool {
       for (String tracker : trackerNamesList) {
         String host = convertTrackerNameToHostName(tracker);
         LOG.info(new Date() + " Marking tracker on host: " + host);
-        fos.write((host + "\n").getBytes());
+        fos.write((host + "\n").getBytes(StandardCharsets.UTF_8));
         if (count++ >= trackerNamesList.size()/2) {
           break;
         }

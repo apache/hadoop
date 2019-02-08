@@ -59,6 +59,7 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.security.Security;
 import java.util.ArrayList;
@@ -867,8 +868,9 @@ public class TestSaslRPC extends TestRpcBase {
           break;
         case INVALID:
           token = new Token<>(
-              tokenId.getBytes(), "bad-password!".getBytes(),
-              tokenId.getKind(), null);
+            tokenId.getBytes(),
+            "bad-password!".getBytes(StandardCharsets.UTF_8), tokenId.getKind(),
+            null);
           SecurityUtil.setTokenService(token, addr);
           break;
         case OTHER:

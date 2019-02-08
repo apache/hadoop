@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +51,7 @@ public class CustomResourceTypesConfigurationProvider
       String name) throws YarnException, IOException {
     if (YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE.equals(name)) {
       return new ByteArrayInputStream(
-          customResourceTypes.getXml().getBytes());
+          customResourceTypes.getXml().getBytes(StandardCharsets.UTF_8));
     } else {
       return super.getConfigurationInputStream(bootstrapConf, name);
     }

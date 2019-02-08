@@ -24,6 +24,8 @@ import org.slf4j.LoggerFactory;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.nio.charset.StandardCharsets;
+
 public class TestKeyFieldHelper {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestKeyFieldHelper.class);
@@ -223,7 +225,8 @@ public class TestKeyFieldHelper {
     helper.setKeyFieldSeparator("\t");
     // test getWordLengths with unspecified key-specifications
     String input = "hi";
-    int[] result = helper.getWordLengths(input.getBytes(), 0, 2);
+    int[] result =
+        helper.getWordLengths(input.getBytes(StandardCharsets.UTF_8), 0, 2);
     assertTrue(equals(result, new int[] {1}));
     
     // set the key specs
@@ -231,45 +234,54 @@ public class TestKeyFieldHelper {
     
     // test getWordLengths with 3 words
     input = "hi\thello there";
-    result = helper.getWordLengths(input.getBytes(), 0, input.length());
+    result = helper.getWordLengths(input.getBytes(StandardCharsets.UTF_8), 0,
+        input.length());
     assertTrue(equals(result, new int[] {2, 2, 11}));
     
     // test getWordLengths with 4 words but with a different separator
     helper.setKeyFieldSeparator(" ");
     input = "hi hello\tthere you";
-    result = helper.getWordLengths(input.getBytes(), 0, input.length());
+    result = helper.getWordLengths(input.getBytes(StandardCharsets.UTF_8), 0,
+        input.length());
     assertTrue(equals(result, new int[] {3, 2, 11, 3}));
     
     // test with non zero start index
     input = "hi hello there you where me there";
     //                 .....................
-    result = helper.getWordLengths(input.getBytes(), 10, 33);
+    result =
+        helper.getWordLengths(input.getBytes(StandardCharsets.UTF_8), 10, 33);
     assertTrue(equals(result, new int[] {5, 4, 3, 5, 2, 3}));
     
     input = "hi hello there you where me ";
     //                 ..................
-    result = helper.getWordLengths(input.getBytes(), 10, input.length());
+    result = helper.getWordLengths(input.getBytes(StandardCharsets.UTF_8), 10,
+        input.length());
     assertTrue(equals(result, new int[] {5, 4, 3, 5, 2, 0}));
     
     input = "";
-    result = helper.getWordLengths(input.getBytes(), 0, 0);
+    result =
+        helper.getWordLengths(input.getBytes(StandardCharsets.UTF_8), 0, 0);
     assertTrue(equals(result, new int[] {1, 0}));
     
     input = "  abc";
-    result = helper.getWordLengths(input.getBytes(), 0, 5);
+    result =
+        helper.getWordLengths(input.getBytes(StandardCharsets.UTF_8), 0, 5);
     assertTrue(equals(result, new int[] {3, 0, 0, 3}));
     
     input = "  abc";
-    result = helper.getWordLengths(input.getBytes(), 0, 2);
+    result =
+        helper.getWordLengths(input.getBytes(StandardCharsets.UTF_8), 0, 2);
     assertTrue(equals(result, new int[] {3, 0, 0, 0}));
     
     input = " abc ";
-    result = helper.getWordLengths(input.getBytes(), 0, 2);
+    result =
+        helper.getWordLengths(input.getBytes(StandardCharsets.UTF_8), 0, 2);
     assertTrue(equals(result, new int[] {2, 0, 1}));
     
     helper.setKeyFieldSeparator("abcd");
     input = "abc";
-    result = helper.getWordLengths(input.getBytes(), 0, 3);
+    result =
+        helper.getWordLengths(input.getBytes(StandardCharsets.UTF_8), 0, 3);
     assertTrue(equals(result, new int[] {1, 3}));
   }
   
@@ -383,7 +395,8 @@ public class TestKeyFieldHelper {
     LOG.info("input : " + input);
     String keySpecs = helper.keySpecs().get(0).toString();
     LOG.info("keyspecs : " + keySpecs);
-    byte[] inputBytes = input.getBytes(); // get the input bytes
+    // get the input bytes
+    byte[] inputBytes = input.getBytes(StandardCharsets.UTF_8);
     if (e1 == -1) {
       e1 = inputBytes.length;
     }

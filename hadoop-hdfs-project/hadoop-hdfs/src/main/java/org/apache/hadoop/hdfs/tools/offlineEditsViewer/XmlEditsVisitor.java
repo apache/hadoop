@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.TransformerConfigurationException;
@@ -64,7 +65,8 @@ public class XmlEditsVisitor implements OfflineEditsVisitor {
     try {
       TransformerHandler handler = factory.newTransformerHandler();
       handler.getTransformer().setOutputProperty(OutputKeys.METHOD, "xml");
-      handler.getTransformer().setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+      handler.getTransformer().setOutputProperty(OutputKeys.ENCODING,
+          StandardCharsets.UTF_8.name());
       handler.getTransformer().setOutputProperty(OutputKeys.INDENT, "yes");
       handler.getTransformer().setOutputProperty(XML_INDENTATION_PROP,
               XML_INDENTATION_NUM);

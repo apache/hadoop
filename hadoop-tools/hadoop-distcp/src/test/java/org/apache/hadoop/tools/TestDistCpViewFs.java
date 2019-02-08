@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 
 public class TestDistCpViewFs {
   private static final Logger LOG = LoggerFactory.getLogger(TestDistCpViewFs.class);
@@ -376,8 +377,8 @@ public class TestDistCpViewFs {
     OutputStream out = fs.create(listFile);
     try {
       for (String entry : entries){
-        out.write((root + "/" + entry).getBytes());
-        out.write("\n".getBytes());
+        out.write((root + "/" + entry).getBytes(StandardCharsets.UTF_8));
+        out.write("\n".getBytes(StandardCharsets.UTF_8));
       }
     } finally {
       out.close();
@@ -397,8 +398,8 @@ public class TestDistCpViewFs {
       }
       OutputStream out = fs.create(new Path(e));
       try {
-        out.write((e).getBytes());
-        out.write("\n".getBytes());
+        out.write((e).getBytes(StandardCharsets.UTF_8));
+        out.write("\n".getBytes(StandardCharsets.UTF_8));
       } finally {
         out.close();
       }

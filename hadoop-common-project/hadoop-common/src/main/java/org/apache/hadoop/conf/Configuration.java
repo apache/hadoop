@@ -43,6 +43,7 @@ import java.net.InetSocketAddress;
 import java.net.JarURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -81,7 +82,6 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import com.google.common.base.Charsets;
 import org.apache.commons.collections.map.UnmodifiableMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -2809,7 +2809,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         LOG.info("found resource " + name + " at " + url);
       }
 
-      return new InputStreamReader(url.openStream(), Charsets.UTF_8);
+      return new InputStreamReader(url.openStream(), StandardCharsets.UTF_8);
     } catch (Exception e) {
       return null;
     }
@@ -3441,7 +3441,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param out the output stream to write to.
    */
   public void writeXml(OutputStream out) throws IOException {
-    writeXml(new OutputStreamWriter(out, "UTF-8"));
+    writeXml(new OutputStreamWriter(out, StandardCharsets.UTF_8));
   }
 
   public void writeXml(Writer out) throws IOException {

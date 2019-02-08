@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.io.PrintStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -55,7 +56,7 @@ public class CsvRecordOutput implements RecordOutput {
   /** Creates a new instance of CsvRecordOutput */
   public CsvRecordOutput(OutputStream out) {
     try {
-      stream = new PrintStream(out, true, "UTF-8");
+      stream = new PrintStream(out, true, StandardCharsets.UTF_8.name());
     } catch (UnsupportedEncodingException ex) {
       throw new RuntimeException(ex);
     }

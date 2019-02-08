@@ -32,6 +32,7 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.LoggerFactory;
@@ -200,7 +201,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
     fs = FileSystem.get(cluster.getURI(), conf);
     FileSystemTestHelper.createFile(fs, PATH, NUM_BLOCKS, BLOCK_SIZE);
     assertArrayEquals(FileSystemTestHelper.getFileData(NUM_BLOCKS, BLOCK_SIZE),
-      DFSTestUtil.readFile(fs, PATH).getBytes("UTF-8"));
+      DFSTestUtil.readFile(fs, PATH).getBytes(StandardCharsets.UTF_8));
     BlockLocation[] blockLocations = fs.getFileBlockLocations(PATH, 0,
       Long.MAX_VALUE);
     assertNotNull(blockLocations);

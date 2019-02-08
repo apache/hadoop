@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.auth.delegation;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionService;
@@ -134,7 +135,7 @@ public class ILoadTestSessionCredentials extends S3AScaleTestBase {
   @Test
   public void testCreate10Tokens() throws Throwable {
     File file = fetchTokens(10);
-    String csv = FileUtils.readFileToString(file, "UTF-8");
+    String csv = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
     LOG.info("CSV data\n{}", csv);
   }
 

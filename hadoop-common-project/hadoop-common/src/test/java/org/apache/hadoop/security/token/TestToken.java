@@ -19,6 +19,7 @@
 package org.apache.hadoop.security.token;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -92,8 +93,8 @@ public class TestToken {
     for(int i=0; i< values.length; ++i) {
       String val = values[i];
       Token.LOG.info("Input = {}", val);
-      orig = new Token<>(val.getBytes(),
-          val.getBytes(), new Text(val), new Text(val));
+      orig = new Token<>(val.getBytes(StandardCharsets.UTF_8),
+          val.getBytes(StandardCharsets.UTF_8), new Text(val), new Text(val));
       String encode = orig.encodeToUrlString();
       copy.decodeFromUrlString(encode);
       assertEquals(orig, copy);

@@ -19,6 +19,7 @@
 package org.apache.hadoop.streaming;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -120,7 +121,7 @@ public class TestStreaming
   {
     DataOutputStream out = getFileSystem().create(new Path(
       INPUT_FILE.getPath()));
-    out.write(getInputData().getBytes("UTF-8"));
+    out.write(getInputData().getBytes(StandardCharsets.UTF_8));
     out.close();
   }
 

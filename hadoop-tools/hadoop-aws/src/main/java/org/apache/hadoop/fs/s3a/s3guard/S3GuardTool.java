@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1321,7 +1322,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
       if (mode != Mode.ABORT || force) {
         return;
       }
-      Scanner scanner = new Scanner(System.in, "UTF-8");
+      Scanner scanner = new Scanner(System.in, StandardCharsets.UTF_8.name());
       out.println("Are you sure you want to delete any pending " +
           "uploads? (yes/no) >");
       String response = scanner.nextLine();

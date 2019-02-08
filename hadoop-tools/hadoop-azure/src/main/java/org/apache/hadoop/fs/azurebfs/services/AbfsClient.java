@@ -23,11 +23,13 @@ import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
 import com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.fs.azurebfs.utils.SSLSocketFactoryEx;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
@@ -105,7 +107,7 @@ public class AbfsClient {
     requestHeaders.add(new AbfsHttpHeader(ACCEPT, APPLICATION_JSON
             + COMMA + SINGLE_WHITE_SPACE + APPLICATION_OCTET_STREAM));
     requestHeaders.add(new AbfsHttpHeader(ACCEPT_CHARSET,
-            UTF_8));
+        StandardCharsets.UTF_8.name().toLowerCase()));
     requestHeaders.add(new AbfsHttpHeader(CONTENT_TYPE, EMPTY_STRING));
     requestHeaders.add(new AbfsHttpHeader(USER_AGENT, userAgent));
     return requestHeaders;
@@ -536,15 +538,13 @@ public class AbfsClient {
   }
 
   public static String urlEncode(final String value) throws AzureBlobFileSystemException {
-    String encodedString;
+    String encodedString = null;
     try {
-      encodedString =  URLEncoder.encode(value, UTF_8)
+      encodedString = URLEncoder.encode(value, StandardCharsets.UTF_8.name())
           .replace(PLUS, PLUS_ENCODE)
           .replace(FORWARD_SLASH_ENCODE, FORWARD_SLASH);
     } catch (UnsupportedEncodingException ex) {
-        throw new InvalidUriException(value);
     }
-
     return encodedString;
   }
 

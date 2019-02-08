@@ -28,6 +28,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -276,7 +277,8 @@ public class TestGenericOptionsParser {
     // create file
     Path tmpPath = localFs.makeQualified(new Path(tmpFile.toString()));
     Token<?> token = new Token<AbstractDelegationTokenIdentifier>(
-        "identifier".getBytes(), "password".getBytes(),
+        "identifier".getBytes(StandardCharsets.UTF_8),
+        "password".getBytes(StandardCharsets.UTF_8),
         new Text("token-kind"), new Text("token-service"));
     Credentials creds = new Credentials();
     creds.addToken(new Text("token-alias"), token);

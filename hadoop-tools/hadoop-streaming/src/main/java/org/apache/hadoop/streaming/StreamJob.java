@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -831,7 +832,7 @@ public class StreamJob implements Tool {
         jobConf_.setMapperClass(PipeMapper.class);
         jobConf_.setMapRunnerClass(PipeMapRunner.class);
         jobConf_.set("stream.map.streamprocessor",
-                     URLEncoder.encode(mapCmd_, "UTF-8"));
+            URLEncoder.encode(mapCmd_, StandardCharsets.UTF_8.name()));
       }
     }
 
@@ -842,7 +843,7 @@ public class StreamJob implements Tool {
       } else {
         jobConf_.setCombinerClass(PipeCombiner.class);
         jobConf_.set("stream.combine.streamprocessor", URLEncoder.encode(
-                comCmd_, "UTF-8"));
+                comCmd_, StandardCharsets.UTF_8.name()));
       }
     }
 
@@ -869,7 +870,7 @@ public class StreamJob implements Tool {
             isReducerACommand = true;
             jobConf_.setReducerClass(PipeReducer.class);
             jobConf_.set("stream.reduce.streamprocessor", URLEncoder.encode(
-                redCmd_, "UTF-8"));
+                redCmd_, StandardCharsets.UTF_8.name()));
           }
         }
       }

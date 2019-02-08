@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -173,7 +174,7 @@ public class TestNamenodeCapacityReport {
       for (int i=0; i < fileCount; i++) {
         streams[i] = (DFSOutputStream)fs.create(new Path("/f"+i))
             .getWrappedStream();
-        streams[i].write("1".getBytes());
+        streams[i].write("1".getBytes(StandardCharsets.UTF_8));
         streams[i].hsync();
       }
       triggerHeartbeats(cluster.getDataNodes());
@@ -264,7 +265,7 @@ public class TestNamenodeCapacityReport {
       for (int i=0; i < fileCount; i++) {
         streams[i] = (DFSOutputStream)fs.create(new Path("/f"+i), fileRepl)
             .getWrappedStream();
-        streams[i].write("1".getBytes());
+        streams[i].write("1".getBytes(StandardCharsets.UTF_8));
         streams[i].hsync();
         // the load for writers is 2 because both the write xceiver & packet
         // responder threads are counted in the load

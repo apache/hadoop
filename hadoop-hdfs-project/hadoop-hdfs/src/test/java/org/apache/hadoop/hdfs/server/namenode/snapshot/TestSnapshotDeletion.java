@@ -24,6 +24,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedAction;
 
 import org.apache.commons.lang3.RandomUtils;
@@ -1235,7 +1236,8 @@ public class TestSnapshotDeletion {
     Assert.assertNotNull(p);
     INodeDirectory pd = p.asDirectory();
     Assert.assertNotNull(pd);
-    Assert.assertNull(pd.getChild("bar".getBytes(), Snapshot.CURRENT_STATE_ID));
+    Assert.assertNull(pd.getChild("bar".getBytes(StandardCharsets.UTF_8),
+        Snapshot.CURRENT_STATE_ID));
 
     // make sure bar has been cleaned from inodeMap
     Assert.assertNull(fsdir.getInode(fileId));

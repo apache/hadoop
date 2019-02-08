@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -77,7 +78,7 @@ public class TestGetFileChecksum {
   public void testGetFileChecksumForBlocksUnderConstruction() {
     try {
       FSDataOutputStream file = dfs.create(new Path("/testFile"));
-      file.write("Performance Testing".getBytes());
+      file.write("Performance Testing".getBytes(StandardCharsets.UTF_8));
       dfs.getFileChecksum(new Path("/testFile"));
       fail("getFileChecksum should fail for files "
           + "with blocks under construction");

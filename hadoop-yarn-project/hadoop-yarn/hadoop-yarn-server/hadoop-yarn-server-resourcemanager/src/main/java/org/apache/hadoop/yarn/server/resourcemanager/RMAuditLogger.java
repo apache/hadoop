@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -163,12 +163,8 @@ public class RMAuditLogger {
     }
     
     if (signature != null) {
-      try {
-        String sigStr = new String(signature, "UTF-8");
-        add(Keys.CALLERSIGNATURE, sigStr, sb);
-      } catch (UnsupportedEncodingException e) {
-        // ignore this signature
-      }
+      String sigStr = new String(signature, StandardCharsets.UTF_8);
+      add(Keys.CALLERSIGNATURE, sigStr, sb);
     }
   }
 

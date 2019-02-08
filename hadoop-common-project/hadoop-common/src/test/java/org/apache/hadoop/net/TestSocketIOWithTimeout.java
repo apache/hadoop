@@ -23,6 +23,7 @@ import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.net.SocketTimeoutException;
 import java.nio.channels.Pipe;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import org.apache.hadoop.test.GenericTestUtils;
@@ -96,7 +97,7 @@ public class TestSocketIOWithTimeout {
       final InputStream in = new SocketInputStream(source, TIMEOUT);
       OutputStream out = new SocketOutputStream(sink, TIMEOUT);
       
-      byte[] writeBytes = TEST_STRING.getBytes();
+      byte[] writeBytes = TEST_STRING.getBytes(StandardCharsets.UTF_8);
       byte[] readBytes = new byte[writeBytes.length];
       byte byteWithHighBit = (byte)0x80;
       

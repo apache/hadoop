@@ -27,6 +27,7 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -1471,7 +1472,7 @@ public final class HttpServer2 implements FilterContainer {
       }
       response.setContentType("text/plain; charset=UTF-8");
       try (PrintStream out = new PrintStream(
-          response.getOutputStream(), false, "UTF-8")) {
+          response.getOutputStream(), false, StandardCharsets.UTF_8.name())) {
         ReflectionUtils.printThreadInfo(out, "");
       }
       ReflectionUtils.logThreadInfo(LOG, "jsp requested", 1);

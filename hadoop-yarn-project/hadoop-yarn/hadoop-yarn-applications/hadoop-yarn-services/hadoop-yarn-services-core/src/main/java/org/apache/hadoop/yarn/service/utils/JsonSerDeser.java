@@ -41,6 +41,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Support for marshalling objects to and from JSON.
@@ -51,7 +52,6 @@ import java.io.OutputStream;
 public class JsonSerDeser<T> {
 
   private static final Logger log = LoggerFactory.getLogger(JsonSerDeser.class);
-  private static final String UTF_8 = "UTF-8";
 
   private final Class<T> classType;
   private final ObjectMapper mapper;
@@ -164,7 +164,7 @@ public class JsonSerDeser<T> {
    * @throws IOException parse problems
    */
   public T fromBytes(byte[] b) throws IOException {
-    String json = new String(b, 0, b.length, UTF_8);
+    String json = new String(b, 0, b.length, StandardCharsets.UTF_8);
     return fromJson(json);
   }
   
@@ -226,7 +226,7 @@ public class JsonSerDeser<T> {
       OutputStream dataOutputStream) throws IOException {
     try {
       String json = toJson(instance);
-      byte[] b = json.getBytes(UTF_8);
+      byte[] b = json.getBytes(StandardCharsets.UTF_8);
       dataOutputStream.write(b);
       dataOutputStream.flush();
       dataOutputStream.close();

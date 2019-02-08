@@ -42,6 +42,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -112,8 +113,6 @@ class DistributedCacheEmulator {
   boolean generateDistCacheData = false;
 
   Configuration conf; // gridmix configuration
-
-  private static final Charset charsetUTF8 = Charset.forName("UTF-8");
 
   // Pseudo local file system where local FS based distributed cache files are
   // created by gridmix.
@@ -442,7 +441,7 @@ class DistributedCacheEmulator {
           new LongWritable(Long.parseLong(entry.getValue().toString()));
       BytesWritable filePath =
           new BytesWritable(
-          entry.getKey().toString().getBytes(charsetUTF8));
+          entry.getKey().toString().getBytes(StandardCharsets.UTF_8));
 
       byteCount += fileSize.get();
       bytesSync += fileSize.get();

@@ -47,6 +47,7 @@ import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -136,7 +137,7 @@ public final class ServiceUtils {
         // either unencoded or encoded as "%20"). Replace +s first, so
         // that they are kept sacred during the decoding process.
         toReturn = toReturn.replaceAll("\\+", "%2B");
-        toReturn = URLDecoder.decode(toReturn, "UTF-8");
+        toReturn = URLDecoder.decode(toReturn, StandardCharsets.UTF_8.name());
         String jarFilePath = toReturn.replaceAll("!.*$", "");
         return new File(jarFilePath);
       } else {

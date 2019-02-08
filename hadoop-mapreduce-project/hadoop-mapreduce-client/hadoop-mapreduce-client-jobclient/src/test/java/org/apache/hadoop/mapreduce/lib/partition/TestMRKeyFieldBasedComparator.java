@@ -36,6 +36,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -122,8 +123,8 @@ public class TestMRKeyFieldBasedComparator extends HadoopTestCase {
     testWithoutMRJob("-k9n", 1);
   }
   
-  byte[] line1_bytes = line1.getBytes();
-  byte[] line2_bytes = line2.getBytes();
+  byte[] line1_bytes = line1.getBytes(StandardCharsets.UTF_8);
+  byte[] line2_bytes = line2.getBytes(StandardCharsets.UTF_8);
 
   private void testWithoutMRJob(String keySpec, int expect) throws Exception {
     KeyFieldBasedComparator<Void, Void> keyFieldCmp = 

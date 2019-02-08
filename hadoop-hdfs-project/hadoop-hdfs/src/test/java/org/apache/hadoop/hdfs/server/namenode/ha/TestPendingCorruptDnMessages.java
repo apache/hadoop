@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -64,7 +65,7 @@ public class TestPendingCorruptDnMessages {
       
       FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
       OutputStream out = fs.create(filePath);
-      out.write("foo bar baz".getBytes());
+      out.write("foo bar baz".getBytes(StandardCharsets.UTF_8));
       out.close();
       
       HATestUtil.waitForStandbyToCatchUp(cluster.getNameNode(0),

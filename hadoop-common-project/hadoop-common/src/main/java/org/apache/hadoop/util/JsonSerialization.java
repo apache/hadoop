@@ -25,6 +25,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonParseException;
@@ -64,7 +65,6 @@ public class JsonSerialization<T> {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(JsonSerialization.class);
-  private static final String UTF_8 = "UTF-8";
 
   private final Class<T> classType;
   private final ObjectMapper mapper;
@@ -300,7 +300,7 @@ public class JsonSerialization<T> {
    * @throws EOFException not enough data
    */
   public T fromBytes(byte[] bytes) throws IOException {
-    return fromJson(new String(bytes, 0, bytes.length, UTF_8));
+    return fromJson(new String(bytes, 0, bytes.length, StandardCharsets.UTF_8));
   }
 
   /**

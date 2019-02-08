@@ -70,7 +70,7 @@ public class UserProvider extends CredentialProvider {
           " already exists in " + this);
     }
     credentials.addSecretKey(new Text(name), 
-        new String(credential).getBytes("UTF-8"));
+        new String(credential).getBytes(StandardCharsets.UTF_8));
     return new CredentialEntry(name, credential);
   }
 

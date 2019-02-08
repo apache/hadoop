@@ -18,7 +18,7 @@
 package org.apache.hadoop.mapred.gridmix;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
@@ -96,8 +96,6 @@ class GenerateDistCacheData extends GridmixJob {
    */
   static final short GRIDMIX_DISTCACHE_FILE_PERM = 0644;
 
-  private static final Charset charsetUTF8 = Charset.forName("UTF-8");
-
   public GenerateDistCacheData(Configuration conf) throws IOException {
     super(conf, 0L, JOB_NAME);
   }
@@ -156,7 +154,7 @@ class GenerateDistCacheData extends GridmixJob {
         throws IOException, InterruptedException {
 
       String fileName = new String(value.getBytes(), 0,
-          value.getLength(), charsetUTF8);
+          value.getLength(), StandardCharsets.UTF_8);
       Path path = new Path(fileName);
 
       FSDataOutputStream dos =

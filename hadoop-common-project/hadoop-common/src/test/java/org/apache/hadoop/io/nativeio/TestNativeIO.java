@@ -28,6 +28,7 @@ import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -461,7 +462,7 @@ public class TestNativeIO {
     assertNotNull(true);
     assertTrue(fd.valid());
     FileOutputStream fos = new FileOutputStream(fd);
-    fos.write("foo".getBytes());
+    fos.write("foo".getBytes(StandardCharsets.UTF_8));
     fos.close();
 
     assertFalse(fd.valid());
@@ -493,7 +494,7 @@ public class TestNativeIO {
       assertNotNull(true);
       assertTrue(fd.valid());
       FileOutputStream fos = new FileOutputStream(fd);
-      fos.write("foo".getBytes());
+      fos.write("foo".getBytes(StandardCharsets.UTF_8));
       fos.close();
     }
   }
@@ -563,7 +564,7 @@ public class TestNativeIO {
     FileOutputStream fos = new FileOutputStream(
       new File(TEST_DIR, "testSyncFileRange"));
     try {
-      fos.write("foo".getBytes());
+      fos.write("foo".getBytes(StandardCharsets.UTF_8));
       NativeIO.POSIX.sync_file_range(fos.getFD(), 0, 1024,
         SYNC_FILE_RANGE_WRITE);
       // no way to verify that this actually has synced,

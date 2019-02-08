@@ -23,7 +23,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -46,7 +46,6 @@ public class TestClasspath {
       .class);
   private static final File TEST_DIR = GenericTestUtils.getTestDir(
       "TestClasspath");
-  private static final Charset UTF8 = Charset.forName("UTF-8");
 
   static {
     ExitUtil.disableSystemExit();
@@ -83,7 +82,7 @@ public class TestClasspath {
   @Test
   public void testGlob() {
     Classpath.main(new String[] { "--glob" });
-    String strOut = new String(stdout.toByteArray(), UTF8);
+    String strOut = new String(stdout.toByteArray(), StandardCharsets.UTF_8);
     assertEquals(System.getProperty("java.class.path"), strOut.trim());
     assertTrue(stderr.toByteArray().length == 0);
   }
@@ -112,7 +111,7 @@ public class TestClasspath {
       fail("expected exit");
     } catch (ExitUtil.ExitException e) {
       assertTrue(stdout.toByteArray().length == 0);
-      String strErr = new String(stderr.toByteArray(), UTF8);
+      String strErr = new String(stderr.toByteArray(), StandardCharsets.UTF_8);
       assertTrue(strErr.contains("requires path of jar"));
     }
   }
@@ -120,7 +119,7 @@ public class TestClasspath {
   @Test
   public void testHelp() {
     Classpath.main(new String[] { "--help" });
-    String strOut = new String(stdout.toByteArray(), UTF8);
+    String strOut = new String(stdout.toByteArray(), StandardCharsets.UTF_8);
     assertTrue(strOut.contains("Prints the classpath"));
     assertTrue(stderr.toByteArray().length == 0);
   }
@@ -128,7 +127,7 @@ public class TestClasspath {
   @Test
   public void testHelpShort() {
     Classpath.main(new String[] { "-h" });
-    String strOut = new String(stdout.toByteArray(), UTF8);
+    String strOut = new String(stdout.toByteArray(), StandardCharsets.UTF_8);
     assertTrue(strOut.contains("Prints the classpath"));
     assertTrue(stderr.toByteArray().length == 0);
   }
@@ -140,7 +139,7 @@ public class TestClasspath {
       fail("expected exit");
     } catch (ExitUtil.ExitException e) {
       assertTrue(stdout.toByteArray().length == 0);
-      String strErr = new String(stderr.toByteArray(), UTF8);
+      String strErr = new String(stderr.toByteArray(), StandardCharsets.UTF_8);
       assertTrue(strErr.contains("unrecognized option"));
     }
   }

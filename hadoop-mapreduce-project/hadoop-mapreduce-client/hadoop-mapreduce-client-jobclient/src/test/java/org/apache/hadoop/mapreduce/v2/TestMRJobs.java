@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -1250,7 +1251,7 @@ public class TestMRJobs {
     JarOutputStream jos = new JarOutputStream(fos);
     ZipEntry ze = new ZipEntry("distributed.jar.inside" + index);
     jos.putNextEntry(ze);
-    jos.write(("inside the jar!" + index).getBytes());
+    jos.write(("inside the jar!" + index).getBytes(StandardCharsets.UTF_8));
     jos.closeEntry();
     jos.close();
     localFs.setPermission(p, new FsPermission("700"));

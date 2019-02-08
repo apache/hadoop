@@ -25,6 +25,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -95,7 +96,7 @@ public class TestMRCredentials {
     jsonString.append("}");
 
     FileOutputStream fos= new FileOutputStream (fileName);
-    fos.write(jsonString.toString().getBytes());
+    fos.write(jsonString.toString().getBytes(StandardCharsets.UTF_8));
     fos.close();
   }
 

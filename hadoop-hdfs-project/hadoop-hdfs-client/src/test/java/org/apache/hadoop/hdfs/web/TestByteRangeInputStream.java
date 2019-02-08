@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 import com.google.common.net.HttpHeaders;
 import org.apache.hadoop.hdfs.web.ByteRangeInputStream.InputStreamAndFileLength;
@@ -67,7 +68,7 @@ public class TestByteRangeInputStream {
   private HttpURLConnection getMockConnection(String length)
       throws IOException {
     HttpURLConnection mockConnection = mock(HttpURLConnection.class);
-    doReturn(new ByteArrayInputStream("asdf".getBytes()))
+    doReturn(new ByteArrayInputStream("asdf".getBytes(StandardCharsets.UTF_8)))
         .when(mockConnection).getInputStream();
     doReturn(length).when(mockConnection)
         .getHeaderField(HttpHeaders.CONTENT_LENGTH);

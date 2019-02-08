@@ -57,6 +57,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
@@ -936,8 +937,8 @@ public class TestUserGroupInformation {
             "privateUser", new String[] { "PRIVATEUSERS" });
     TestTokenIdentifier tokenId = new TestTokenIdentifier();
     Token<TestTokenIdentifier> token = new Token<TestTokenIdentifier>(
-            tokenId.getBytes(), "password".getBytes(),
-            tokenId.getKind(), null);
+        tokenId.getBytes(), "password".getBytes(StandardCharsets.UTF_8),
+        tokenId.getKind(), null);
     ugi.addToken(new Text("regular-token"), token);
 
     // Now add cloned private token
@@ -1037,14 +1038,14 @@ public class TestUserGroupInformation {
     TestTokenIdentifier tokenId = new TestTokenIdentifier();
     Credentials cred1 = new Credentials();
     Token<TestTokenIdentifier> token1 = new Token<TestTokenIdentifier>(
-            tokenId.getBytes(), "password".getBytes(),
+            tokenId.getBytes(), "password".getBytes(StandardCharsets.UTF_8),
             tokenId.getKind(), new Text("token-service1"));
     cred1.addToken(token1.getService(), token1);
     cred1.writeTokenStorageFile(new Path(testDirPath, tokenFiles[0]), conf);
 
     Credentials cred2 = new Credentials();
     Token<TestTokenIdentifier> token2 = new Token<TestTokenIdentifier>(
-            tokenId.getBytes(), "password".getBytes(),
+            tokenId.getBytes(), "password".getBytes(StandardCharsets.UTF_8),
             tokenId.getKind(), new Text("token-service2"));
     cred2.addToken(token2.getService(), token2);
     cred2.writeTokenStorageFile(new Path(testDirPath, tokenFiles[1]), conf);

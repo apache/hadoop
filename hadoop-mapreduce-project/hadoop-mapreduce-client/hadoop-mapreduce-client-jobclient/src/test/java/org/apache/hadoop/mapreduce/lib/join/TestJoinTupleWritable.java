@@ -21,6 +21,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -69,10 +70,10 @@ public class TestJoinTupleWritable {
       new FloatWritable(r.nextFloat()),
       new IntWritable(r.nextInt()),
       new LongWritable(r.nextLong()),
-      new BytesWritable("dingo".getBytes()),
+      new BytesWritable("dingo".getBytes(StandardCharsets.UTF_8)),
       new LongWritable(r.nextLong()),
       new IntWritable(r.nextInt()),
-      new BytesWritable("yak".getBytes()),
+      new BytesWritable("yak".getBytes(StandardCharsets.UTF_8)),
       new IntWritable(r.nextInt())
     };
     return writs;
@@ -109,10 +110,10 @@ public class TestJoinTupleWritable {
       new FloatWritable(r.nextFloat()),
       new IntWritable(r.nextInt()),
       new LongWritable(r.nextLong()),
-      new BytesWritable("dingo".getBytes()),
+      new BytesWritable("dingo".getBytes(StandardCharsets.UTF_8)),
       new LongWritable(r.nextLong()),
       new IntWritable(r.nextInt()),
-      new BytesWritable("yak".getBytes()),
+      new BytesWritable("yak".getBytes(StandardCharsets.UTF_8)),
       new IntWritable(r.nextInt())
     };
     TupleWritable t = new TupleWritable(writs);
@@ -131,10 +132,10 @@ public class TestJoinTupleWritable {
       new FloatWritable(r.nextFloat()),
       new IntWritable(r.nextInt()),
       new LongWritable(r.nextLong()),
-      new BytesWritable("dingo".getBytes()),
+      new BytesWritable("dingo".getBytes(StandardCharsets.UTF_8)),
       new LongWritable(r.nextLong()),
       new IntWritable(r.nextInt()),
-      new BytesWritable("yak".getBytes()),
+      new BytesWritable("yak".getBytes(StandardCharsets.UTF_8)),
       new IntWritable(r.nextInt())
     };
     TupleWritable sTuple = makeTuple(writs);
@@ -150,10 +151,10 @@ public class TestJoinTupleWritable {
       new FloatWritable(r.nextFloat()),
       new IntWritable(r.nextInt()),
       new LongWritable(r.nextLong()),
-      new BytesWritable("dingo".getBytes()),
+      new BytesWritable("dingo".getBytes(StandardCharsets.UTF_8)),
       new LongWritable(r.nextLong()),
       new IntWritable(r.nextInt()),
-      new BytesWritable("yak".getBytes()),
+      new BytesWritable("yak".getBytes(StandardCharsets.UTF_8)),
       new IntWritable(r.nextInt())
     };
     TupleWritable sTuple = makeTuple(writs);

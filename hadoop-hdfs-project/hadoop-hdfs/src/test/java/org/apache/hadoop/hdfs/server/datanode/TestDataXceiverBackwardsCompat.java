@@ -47,6 +47,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import static org.junit.Assert.fail;
@@ -168,8 +169,8 @@ public class TestDataXceiverBackwardsCompat {
 
     Token<BlockTokenIdentifier> token = (Token<BlockTokenIdentifier>)mock(
         Token.class);
-    doReturn("".getBytes()).when(token).getIdentifier();
-    doReturn("".getBytes()).when(token).getPassword();
+    doReturn("".getBytes(StandardCharsets.UTF_8)).when(token).getIdentifier();
+    doReturn("".getBytes(StandardCharsets.UTF_8)).when(token).getPassword();
     doReturn(new Text("")).when(token).getKind();
     doReturn(new Text("")).when(token).getService();
 

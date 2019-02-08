@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.mapred.nativetask.util;
 
-import com.google.common.base.Charsets;
+import java.nio.charset.StandardCharsets;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -135,13 +136,13 @@ public class ReadWriteBuffer {
   }
 
   public void writeString(String str) {
-    final byte[] bytes = str.getBytes(Charsets.UTF_8);
+    final byte[] bytes = str.getBytes(StandardCharsets.UTF_8);
     writeBytes(bytes, 0, bytes.length);
   }
 
   public String readString() {
     final byte[] bytes = readBytes();
-    return new String(bytes, Charsets.UTF_8);
+    return new String(bytes, StandardCharsets.UTF_8);
   }
 
   private void checkWriteSpaceAndResizeIfNecessary(int toBeWritten) {

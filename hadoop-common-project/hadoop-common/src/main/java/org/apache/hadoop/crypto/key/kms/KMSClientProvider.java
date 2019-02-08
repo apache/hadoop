@@ -109,8 +109,6 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
 
   public static final String SCHEME_NAME = "kms";
 
-  private static final String UTF8 = "UTF-8";
-
   private static final String CONTENT_TYPE = "Content-Type";
   private static final String APPLICATION_JSON_MIME = "application/json";
 
@@ -459,7 +457,8 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       if (collection != null) {
         sb.append(collection);
         if (resource != null) {
-          sb.append("/").append(URLEncoder.encode(resource, UTF8));
+          sb.append("/").append(
+              URLEncoder.encode(resource, StandardCharsets.UTF_8.name()));
           if (subResource != null) {
             sb.append("/").append(subResource);
           }

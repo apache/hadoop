@@ -31,6 +31,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
@@ -143,7 +144,7 @@ public class TestApplicationClassLoader {
     JarOutputStream out = new JarOutputStream(new FileOutputStream(jarFile));
     ZipEntry entry = new ZipEntry("resource.txt");
     out.putNextEntry(entry);
-    out.write("hello".getBytes());
+    out.write("hello".getBytes(StandardCharsets.UTF_8));
     out.closeEntry();
     out.close();
     return jarFile;

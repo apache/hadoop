@@ -29,6 +29,7 @@ import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1332,7 +1333,8 @@ public class TestEncryptionZones {
             DelegationTokenExtension.class,
             CryptoExtension.class));
     Mockito.when(keyProvider.getConf()).thenReturn(conf);
-    byte[] testIdentifier = "Test identifier for delegation token".getBytes();
+    byte[] testIdentifier =
+        "Test identifier for delegation token".getBytes(StandardCharsets.UTF_8);
 
     @SuppressWarnings("rawtypes")
     Token testToken = new Token(testIdentifier, new byte[0],
@@ -2102,7 +2104,8 @@ public class TestEncryptionZones {
         .extraInterfaces(DelegationTokenExtension.class,
          CryptoExtension.class));
     Mockito.when(keyProvider.getConf()).thenReturn(conf);
-    byte[] testIdentifier = "Test identifier for delegation token".getBytes();
+    byte[] testIdentifier =
+        "Test identifier for delegation token".getBytes(StandardCharsets.UTF_8);
 
     Token testToken = new Token(testIdentifier, new byte[0],
         new Text("kms-dt"), new Text());
@@ -2171,7 +2174,8 @@ public class TestEncryptionZones {
       IOUtils.copyBytes(is, os, 1024, true);
       streamBytes = os.toByteArray();
     }
-    Assert.assertArrayEquals(content.getBytes(), streamBytes);
+    Assert.assertArrayEquals(content.getBytes(StandardCharsets.UTF_8),
+        streamBytes);
   }
 
   private void verifyRaw(String content, InputStream is, InputStream rawIs)
@@ -2181,7 +2185,8 @@ public class TestEncryptionZones {
       IOUtils.copyBytes(is, os, 1024, true);
       streamBytes = os.toByteArray();
     }
-    Assert.assertFalse(Arrays.equals(content.getBytes(), streamBytes));
+    Assert.assertFalse(
+        Arrays.equals(content.getBytes(StandardCharsets.UTF_8), streamBytes));
 
     // webhdfs raw bytes should match the raw bytes from dfs.
     try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {

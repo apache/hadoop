@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -614,7 +615,7 @@ public class CLI extends Configured implements Tool {
     PrintStream ps = System.out;
     if (historyOutFile != null) {
       ps = new PrintStream(new BufferedOutputStream(new FileOutputStream(
-          new File(historyOutFile))), true, "UTF-8");
+          new File(historyOutFile))), true, StandardCharsets.UTF_8.name());
     }
     historyViewer.print(ps);
   }

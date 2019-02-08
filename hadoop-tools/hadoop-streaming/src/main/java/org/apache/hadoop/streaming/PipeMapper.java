@@ -20,6 +20,7 @@ package org.apache.hadoop.streaming;
 
 import java.io.*;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Mapper;
@@ -50,11 +51,10 @@ public class PipeMapper extends PipeMapRed implements Mapper {
       return str;
     }
     try {
-      return URLDecoder.decode(str, "UTF-8");
+      return URLDecoder.decode(str, StandardCharsets.UTF_8.name());
     }
     catch (UnsupportedEncodingException e) {
-      System.err.println("stream.map.streamprocessor in jobconf not found");
-      return null;
+      throw new RuntimeException(e);
     }
   }
 
@@ -75,13 +75,11 @@ public class PipeMapper extends PipeMapRed implements Mapper {
         inputFormatClassName.equals(TextInputFormat.class.getCanonicalName()));
     }
     
-    try {
-      mapOutputFieldSeparator = job.get("stream.map.output.field.separator", "\t").getBytes("UTF-8");
-      mapInputFieldSeparator = job.get("stream.map.input.field.separator", "\t").getBytes("UTF-8");
-      numOfMapOutputKeyFields = job.getInt("stream.num.map.output.key.fields", 1);
-    } catch (UnsupportedEncodingException e) {
-      throw new RuntimeException("The current system does not support UTF-8 encoding!", e);
-    }
+    mapOutputFieldSeparator = job.get("stream.map.output.field.separator", "\t")
+        .getBytes(StandardCharsets.UTF_8);
+    mapInputFieldSeparator = job.get("stream.map.input.field.separator", "\t")
+        .getBytes(StandardCharsets.UTF_8);
+    numOfMapOutputKeyFields = job.getInt("stream.num.map.output.key.fields", 1);
   }
 
   // Do NOT declare default constructor

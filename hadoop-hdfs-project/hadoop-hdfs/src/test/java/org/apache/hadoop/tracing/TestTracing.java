@@ -19,6 +19,7 @@ package org.apache.hadoop.tracing;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -184,7 +185,8 @@ public class TestTracing {
     Path filePath = new Path(testFileName);
     FSDataOutputStream stream = dfs.create(filePath);
     for (int i = 0; i < 10; i++) {
-      byte[] data = RandomStringUtils.randomAlphabetic(102400).getBytes();
+      byte[] data = RandomStringUtils.randomAlphabetic(102400)
+          .getBytes(StandardCharsets.UTF_8);
       stream.write(data);
     }
     stream.hsync();

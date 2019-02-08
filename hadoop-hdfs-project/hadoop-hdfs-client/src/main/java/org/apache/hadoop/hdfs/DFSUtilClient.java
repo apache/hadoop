@@ -66,7 +66,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -103,20 +102,11 @@ public class DFSUtilClient {
   private static final Logger LOG = LoggerFactory.getLogger(
       DFSUtilClient.class);
 
-  // Using the charset canonical name for String/byte[] conversions is much
-  // more efficient due to use of cached encoders/decoders.
-  private static final String UTF8_CSN = StandardCharsets.UTF_8.name();
-
   /**
    * Converts a string to a byte array using UTF8 encoding.
    */
   public static byte[] string2Bytes(String str) {
-    try {
-      return str.getBytes(UTF8_CSN);
-    } catch (UnsupportedEncodingException e) {
-      // should never happen!
-      throw new IllegalArgumentException("UTF8 decoding is not supported", e);
-    }
+    return str.getBytes(StandardCharsets.UTF_8);
   }
 
   /**
@@ -364,12 +354,7 @@ public class DFSUtilClient {
    * @return The decoded string
    */
   static String bytes2String(byte[] bytes, int offset, int length) {
-    try {
-      return new String(bytes, offset, length, UTF8_CSN);
-    } catch (UnsupportedEncodingException e) {
-      // should never happen!
-      throw new IllegalArgumentException("UTF8 encoding is not supported", e);
-    }
+    return new String(bytes, offset, length, StandardCharsets.UTF_8);
   }
 
   /**

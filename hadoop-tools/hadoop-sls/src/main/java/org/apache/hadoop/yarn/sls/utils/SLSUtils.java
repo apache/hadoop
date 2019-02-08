@@ -22,7 +22,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
-
+import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -120,7 +120,8 @@ public class SLSUtils {
     JsonFactory jsonF = new JsonFactory();
     ObjectMapper mapper = new ObjectMapper();
     Reader input =
-        new InputStreamReader(new FileInputStream(jobTrace), "UTF-8");
+        new InputStreamReader(new FileInputStream(jobTrace),
+            StandardCharsets.UTF_8);
     try {
       Iterator<Map> i = mapper.readValues(jsonF.createParser(input), Map.class);
       while (i.hasNext()) {
@@ -166,8 +167,8 @@ public class SLSUtils {
     Set<NodeDetails> nodeSet = new HashSet<>();
     JsonFactory jsonF = new JsonFactory();
     ObjectMapper mapper = new ObjectMapper();
-    Reader input =
-        new InputStreamReader(new FileInputStream(nodeFile), "UTF-8");
+    Reader input = new InputStreamReader(new FileInputStream(nodeFile),
+        StandardCharsets.UTF_8);
     try {
       Iterator<Map> i = mapper.readValues(jsonF.createParser(input), Map.class);
       while (i.hasNext()) {

@@ -44,6 +44,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -399,7 +400,7 @@ public class DiskBalancer {
 
     if ((planID == null) ||
         (planID.length() != sha1Length) ||
-        !DigestUtils.shaHex(plan.getBytes(Charset.forName("UTF-8")))
+        !DigestUtils.shaHex(plan.getBytes(StandardCharsets.UTF_8))
             .equalsIgnoreCase(planID)) {
       LOG.error("Disk Balancer - Invalid plan hash.");
       throw new DiskBalancerException("Invalid or mis-matched hash.",

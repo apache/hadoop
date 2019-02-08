@@ -390,7 +390,7 @@ public class TestConfiguration {
       String name = "multi_byte_\u611b_name";
       String value = "multi_byte_\u0641_value";
       out = new BufferedWriter(new OutputStreamWriter(
-        new FileOutputStream(CONFIG_MULTI_BYTE), "UTF-8"));
+        new FileOutputStream(CONFIG_MULTI_BYTE), StandardCharsets.UTF_8));
       startConfig();
       declareProperty(name, value, value);
       endConfig();
@@ -1804,7 +1804,8 @@ public class TestConfiguration {
 
   private Configuration getActualConf(String xmlStr) {
     Configuration ac = new Configuration(false);
-    InputStream in = new ByteArrayInputStream(xmlStr.getBytes());
+    InputStream in =
+        new ByteArrayInputStream(xmlStr.getBytes(StandardCharsets.UTF_8));
     ac.addResource(in);
     return ac;
   }
@@ -2532,8 +2533,9 @@ public class TestConfiguration {
   @Test
   public void testResourceRace() {
     InputStream is =
-        new BufferedInputStream(new ByteArrayInputStream(
-            "<configuration></configuration>".getBytes()));
+        new BufferedInputStream(
+            new ByteArrayInputStream("<configuration></configuration>"
+                .getBytes(StandardCharsets.UTF_8)));
     Configuration config = new Configuration();
     // Thread 1
     config.addResource(is);

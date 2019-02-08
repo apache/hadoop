@@ -42,6 +42,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 import javax.crypto.SecretKey;
@@ -129,7 +130,8 @@ public class TestFetcher {
     Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(job, id, ss, mm,
         r, metrics, except, key, connection);
 
-    String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
+    String replyHash = SecureShuffleUtils
+        .generateHash(encHash.getBytes(StandardCharsets.UTF_8), key);
     ShuffleHeader header = new ShuffleHeader(map1ID.toString(), 10, 10, 1);
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
     header.write(new DataOutputStream(bout));
@@ -199,7 +201,8 @@ public class TestFetcher {
     Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(job, id, ss, mm,
         r, metrics, except, key, connection);
 
-    String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
+    String replyHash = SecureShuffleUtils
+        .generateHash(encHash.getBytes(StandardCharsets.UTF_8), key);
     
     when(connection.getResponseCode()).thenReturn(200);
     when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_NAME))
@@ -208,8 +211,9 @@ public class TestFetcher {
         .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
     when(connection.getHeaderField(SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH))
         .thenReturn(replyHash);
-    ByteArrayInputStream in = new ByteArrayInputStream(
-        "\u00010 BOGUS DATA\nBOGUS DATA\nBOGUS DATA\n".getBytes());
+    ByteArrayInputStream in =
+        new ByteArrayInputStream("\u00010 BOGUS DATA\nBOGUS DATA\nBOGUS DATA\n"
+            .getBytes(StandardCharsets.UTF_8));
     when(connection.getInputStream()).thenReturn(in);
     
     underTest.copyFromHost(host);
@@ -227,7 +231,8 @@ public class TestFetcher {
 
   @Test
   public void testCopyFromHostIncompatibleShuffleVersion() throws Exception {
-    String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
+    String replyHash = SecureShuffleUtils
+        .generateHash(encHash.getBytes(StandardCharsets.UTF_8), key);
     
     when(connection.getResponseCode()).thenReturn(200);
     when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_NAME))
@@ -259,7 +264,8 @@ public class TestFetcher {
   @Test
   public void testCopyFromHostIncompatibleShuffleVersionWithRetry()
       throws Exception {
-    String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
+    String replyHash = SecureShuffleUtils
+        .generateHash(encHash.getBytes(StandardCharsets.UTF_8), key);
     
     when(connection.getResponseCode()).thenReturn(200);
     when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_NAME))
@@ -293,7 +299,8 @@ public class TestFetcher {
     Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(job, id, ss, mm,
         r, metrics, except, key, connection);
 
-    String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
+    String replyHash = SecureShuffleUtils
+        .generateHash(encHash.getBytes(StandardCharsets.UTF_8), key);
     
     when(connection.getResponseCode()).thenReturn(200);
     when(connection.getHeaderField(SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH))
@@ -332,7 +339,8 @@ public class TestFetcher {
     Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(job, id, ss, mm,
         r, metrics, except, key, connection);
 
-    String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
+    String replyHash = SecureShuffleUtils
+        .generateHash(encHash.getBytes(StandardCharsets.UTF_8), key);
     
     when(connection.getResponseCode()).thenReturn(200);
     when(connection.getHeaderField(SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH))
@@ -369,7 +377,8 @@ public class TestFetcher {
     Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(job, id, ss, mm,
         r, metrics, except, key, connection);
 
-    String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
+    String replyHash = SecureShuffleUtils
+        .generateHash(encHash.getBytes(StandardCharsets.UTF_8), key);
 
     when(connection.getResponseCode()).thenReturn(200);
     when(connection.getHeaderField(
@@ -406,7 +415,8 @@ public class TestFetcher {
     Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(jobWithRetry, 
         id, ss, mm, r, metrics, except, key, connection, true);
 
-    String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
+    String replyHash = SecureShuffleUtils
+        .generateHash(encHash.getBytes(StandardCharsets.UTF_8), key);
     
     when(connection.getResponseCode()).thenReturn(200);
     when(connection.getHeaderField(SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH))
@@ -447,7 +457,8 @@ public class TestFetcher {
     Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(jobWithRetry,
         id, ss, mm, r, metrics, except, key, connection);
 
-    String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
+    String replyHash = SecureShuffleUtils
+        .generateHash(encHash.getBytes(StandardCharsets.UTF_8), key);
 
     when(connection.getResponseCode()).thenReturn(200)
       .thenThrow(new SocketTimeoutException("forced timeout"));
@@ -481,7 +492,8 @@ public class TestFetcher {
     Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(job, id, ss, mm,
         r, metrics, except, key, connection);
 
-    String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
+    String replyHash = SecureShuffleUtils
+        .generateHash(encHash.getBytes(StandardCharsets.UTF_8), key);
 
     when(connection.getResponseCode()).thenReturn(200);
     when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_NAME))
@@ -496,13 +508,13 @@ public class TestFetcher {
     DataOutputStream dos = new DataOutputStream(bout);
     IFileOutputStream ios = new IFileOutputStream(dos);
     header.write(dos);
-    ios.write("MAPDATA123".getBytes());
+    ios.write("MAPDATA123".getBytes(StandardCharsets.UTF_8));
     ios.finish();
 
     ShuffleHeader header2 = new ShuffleHeader(map2ID.toString(), 14, 10, 1);
     IFileOutputStream ios2 = new IFileOutputStream(dos);
     header2.write(dos);
-    ios2.write("MAPDATA456".getBytes());
+    ios2.write("MAPDATA456".getBytes(StandardCharsets.UTF_8));
     ios2.finish();
 
     ByteArrayInputStream in = new ByteArrayInputStream(bout.toByteArray());
@@ -547,7 +559,7 @@ public class TestFetcher {
 
     int headerSize = dos.size();
     try {
-      ios.write(mapData.getBytes());
+      ios.write(mapData.getBytes(StandardCharsets.UTF_8));
     } finally {
       ios.close();
     }
@@ -600,7 +612,8 @@ public class TestFetcher {
     doNothing().when(mm).waitForResource();
     when(ss.getHost()).thenReturn(host);
 
-    String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
+    String replyHash = SecureShuffleUtils
+        .generateHash(encHash.getBytes(StandardCharsets.UTF_8), key);
     when(connection.getResponseCode()).thenReturn(200);
     when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_NAME))
         .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
@@ -647,7 +660,8 @@ public class TestFetcher {
     doNothing().when(mm).waitForResource();
     when(ss.getHost()).thenReturn(host);
 
-    String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
+    String replyHash = SecureShuffleUtils
+        .generateHash(encHash.getBytes(StandardCharsets.UTF_8), key);
     when(connection.getResponseCode()).thenReturn(200);
     when(connection.getHeaderField(
         SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH)).thenReturn(replyHash);
@@ -689,7 +703,8 @@ public class TestFetcher {
     Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(jobWithRetry,
         id, ss, mm, r, metrics, except, key, connection);
 
-    String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
+    String replyHash = SecureShuffleUtils
+        .generateHash(encHash.getBytes(StandardCharsets.UTF_8), key);
 
     when(connection.getResponseCode()).thenReturn(200);
     when(connection.getHeaderField(SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH))

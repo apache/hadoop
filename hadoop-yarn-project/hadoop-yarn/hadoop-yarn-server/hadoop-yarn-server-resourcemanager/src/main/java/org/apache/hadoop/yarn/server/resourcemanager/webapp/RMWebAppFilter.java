@@ -25,6 +25,7 @@ import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
 import java.util.Set;
 
@@ -106,7 +107,7 @@ public class RMWebAppFilter extends GuiceContainer {
   public void doFilter(HttpServletRequest request,
       HttpServletResponse response, FilterChain chain) throws IOException,
       ServletException {
-    response.setCharacterEncoding("UTF-8");
+    response.setCharacterEncoding(StandardCharsets.UTF_8.name());
     String htmlEscapedUri = HtmlQuoting.quoteHtmlChars(request.getRequestURI());
 
     if (htmlEscapedUri == null) {

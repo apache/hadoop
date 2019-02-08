@@ -40,6 +40,7 @@ import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -1989,7 +1990,7 @@ public class TestCheckpoint {
 
       File mockImageFile = File.createTempFile("image", "");
       FileOutputStream imageFile = new FileOutputStream(mockImageFile);
-      imageFile.write("data".getBytes());
+      imageFile.write("data".getBytes(StandardCharsets.UTF_8));
       imageFile.close();
       Mockito.doReturn(mockImageFile).when(dstImage)
           .findImageFile(Mockito.any(NameNodeFile.class), Mockito.anyLong());

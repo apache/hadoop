@@ -41,7 +41,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.util.List;
 import java.util.Map;
@@ -84,7 +84,7 @@ public class TestLpSolver extends TestSolver {
     RLESparseResourceAllocation result = solver.solve(jobHistory);
     String file = "src/test/resources/lp/answer.txt";
     Reader fileReader = new InputStreamReader(new FileInputStream(file),
-        Charset.forName("UTF-8"));
+        StandardCharsets.UTF_8);
     BufferedReader bufferedReader = new BufferedReader(fileReader);
     String line = bufferedReader.readLine();
     Configuration config = new Configuration();

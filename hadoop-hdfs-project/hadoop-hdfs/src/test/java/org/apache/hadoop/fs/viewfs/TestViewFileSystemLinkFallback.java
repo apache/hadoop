@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 
 import javax.security.auth.login.LoginException;
 
@@ -153,7 +154,8 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
 
     fsTarget.createNewFile(testLevel2File);
     dataOutputStream = fsTarget.append(testLevel2File);
-    dataOutputStream.write("test link fallback".toString().getBytes());
+    dataOutputStream.write(
+        "test link fallback".toString().getBytes(StandardCharsets.UTF_8));
     dataOutputStream.close();
 
     String clusterName = "ClusterFallback";
@@ -192,7 +194,8 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
     fsTarget.createNewFile(testBaseFile);
     fsTarget.createNewFile(testLevel2File);
     FSDataOutputStream dataOutputStream = fsTarget.append(testLevel2File);
-    dataOutputStream.write("test link fallback".toString().getBytes());
+    dataOutputStream.write(
+        "test link fallback".toString().getBytes(StandardCharsets.UTF_8));
     dataOutputStream.close();
 
     String clusterName = "ClusterFallback";
@@ -227,7 +230,8 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
     LOG.info("Level2FileStat: " + level2FileStat);
 
     dataOutputStream = vfs.append(testLevel2File);
-    dataOutputStream.write("Writing via viewfs fallback path".getBytes());
+    dataOutputStream.write(
+        "Writing via viewfs fallback path".getBytes(StandardCharsets.UTF_8));
     dataOutputStream.close();
 
     FileStatus level2FileStatAfterWrite = vfs.getFileStatus(

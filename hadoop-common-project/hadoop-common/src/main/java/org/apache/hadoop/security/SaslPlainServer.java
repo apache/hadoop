@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.security;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Provider;
 import java.util.Map;
 
@@ -80,12 +81,7 @@ public class SaslPlainServer implements SaslServer {
       throw new IllegalArgumentException("Received null response");
     }
     try {
-      String payload;
-      try {
-        payload = new String(response, "UTF-8");
-      } catch (Exception e) {
-        throw new IllegalArgumentException("Received corrupt response", e);
-      }
+      String payload = new String(response, StandardCharsets.UTF_8);
       // [ authz, authn, password ]
       String[] parts = payload.split("\u0000", 3);
       if (parts.length != 3) {

@@ -21,6 +21,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
 
 import org.apache.hadoop.conf.Configuration;
@@ -305,7 +306,7 @@ public class TestLeaseRecovery {
     boolean recoverLease = newdfs.recoverLease(file);
     assertTrue(recoverLease);
     FSDataOutputStream append = newdfs.append(file);
-    append.write("test".getBytes());
+    append.write("test".getBytes(StandardCharsets.UTF_8));
     append.close();
     }finally{
       if (cluster != null) {

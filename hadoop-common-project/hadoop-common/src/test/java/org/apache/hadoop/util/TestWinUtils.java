@@ -27,6 +27,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.FileUtil;
@@ -71,7 +72,7 @@ public class TestWinUtils {
 
   // Helper routine that writes the given content to the file.
   private void writeFile(File file, String content) throws IOException {
-    byte[] data = content.getBytes();
+    byte[] data = content.getBytes(StandardCharsets.UTF_8);
     try (FileOutputStream os = new FileOutputStream(file)) {
       os.write(data);
       os.close();

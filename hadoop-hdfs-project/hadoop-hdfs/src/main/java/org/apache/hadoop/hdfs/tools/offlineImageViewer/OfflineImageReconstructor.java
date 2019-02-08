@@ -36,7 +36,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.DigestOutputStream;
@@ -897,7 +897,7 @@ class OfflineImageReconstructor {
         }
         val = new HexBinaryAdapter().unmarshal(valHex);
       } else {
-        val = valStr.getBytes("UTF8");
+        val = valStr.getBytes(StandardCharsets.UTF_8);
       }
       b.setValue(ByteString.copyFrom(val));
 
@@ -1831,7 +1831,7 @@ class OfflineImageReconstructor {
       Files.deleteIfExists(Paths.get(outputPath));
       fout = new FileOutputStream(outputPath);
       fis = new FileInputStream(inputPath);
-      reader = new InputStreamReader(fis, Charset.forName("UTF-8"));
+      reader = new InputStreamReader(fis, StandardCharsets.UTF_8);
       out = new CountingOutputStream(
           new DigestOutputStream(
               new BufferedOutputStream(fout), digester));

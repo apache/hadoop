@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import org.apache.hadoop.fs.*;
@@ -134,9 +135,9 @@ public class TestKeyValueTextInputFormat {
     }
   }
   private LineReader makeStream(String str) throws IOException {
-    return new LineReader(new ByteArrayInputStream
-                                           (str.getBytes("UTF-8")), 
-                                           defaultConf);
+    return new LineReader(
+        new ByteArrayInputStream(str.getBytes(StandardCharsets.UTF_8)),
+        defaultConf);
   }
   @Test
   public void testUTF8() throws Exception {
@@ -192,7 +193,7 @@ public class TestKeyValueTextInputFormat {
     } else {
       stm = codec.createOutputStream(fs.create(name));
     }
-    stm.write(contents.getBytes());
+    stm.write(contents.getBytes(StandardCharsets.UTF_8));
     stm.close();
   }
   

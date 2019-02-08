@@ -29,7 +29,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Writer;
 import java.net.URL;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -253,7 +253,7 @@ public class TestLogAggregationIndexFileController {
       fInput = FileSystem.create(fs, checksumFile, LOG_FILE_UMASK);
       fInput.writeInt(nodeName.length());
       fInput.write(nodeName.getBytes(
-          Charset.forName("UTF-8")));
+          StandardCharsets.UTF_8));
       fInput.writeLong(0);
     } finally {
       IOUtils.closeQuietly(fInput);

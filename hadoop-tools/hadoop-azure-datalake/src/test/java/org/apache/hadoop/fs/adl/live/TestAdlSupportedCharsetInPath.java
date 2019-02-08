@@ -33,7 +33,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
 import java.util.*;
 
@@ -54,8 +53,7 @@ public class TestAdlSupportedCharsetInPath {
   }
 
   @Parameterized.Parameters(name = "{0}")
-  public static Collection<Object[]> adlCharTestData()
-      throws UnsupportedEncodingException {
+  public static Collection<Object[]> adlCharTestData() {
 
     ArrayList<String> filePathList = new ArrayList<>();
     for (int i = 32; i < 127; ++i) {

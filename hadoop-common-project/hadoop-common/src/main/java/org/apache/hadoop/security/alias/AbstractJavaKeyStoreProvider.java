@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -264,7 +265,8 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
     writeLock.lock();
     try {
       keyStore.setKeyEntry(alias,
-          new SecretKeySpec(new String(material).getBytes("UTF-8"), "AES"),
+          new SecretKeySpec(
+              new String(material).getBytes(StandardCharsets.UTF_8), "AES"),
           password, null);
     } catch (KeyStoreException e) {
       throw new IOException("Can't store credential " + alias + " in " + this,

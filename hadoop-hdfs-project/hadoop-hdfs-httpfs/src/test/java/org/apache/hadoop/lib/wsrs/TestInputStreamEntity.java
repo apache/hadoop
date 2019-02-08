@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 import org.junit.Test;
 
@@ -30,14 +31,15 @@ public class TestInputStreamEntity {
 
   @Test
   public void test() throws Exception {
-    InputStream is = new ByteArrayInputStream("abc".getBytes());
+    InputStream is =
+        new ByteArrayInputStream("abc".getBytes(StandardCharsets.UTF_8));
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     InputStreamEntity i = new InputStreamEntity(is);
     i.write(baos);
     baos.close();
     assertEquals(new String(baos.toByteArray()), "abc");
 
-    is = new ByteArrayInputStream("abc".getBytes());
+    is = new ByteArrayInputStream("abc".getBytes(StandardCharsets.UTF_8));
     baos = new ByteArrayOutputStream();
     i = new InputStreamEntity(is, 1, 1);
     i.write(baos);

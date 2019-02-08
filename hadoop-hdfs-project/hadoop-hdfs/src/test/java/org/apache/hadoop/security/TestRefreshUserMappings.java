@@ -33,6 +33,7 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -250,7 +251,8 @@ public class TestRefreshUserMappings {
     Configuration conf = new Configuration();
     URL url = conf.getResource("hdfs-site.xml");
 
-    String urlPath = URLDecoder.decode(url.getPath().toString(), "UTF-8");
+    String urlPath = URLDecoder.decode(url.getPath().toString(),
+        StandardCharsets.UTF_8.name());
     Path p = new Path(urlPath);
     Path dir = p.getParent();
     String tmp = dir.toString() + "/" + rsrcName;

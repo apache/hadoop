@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 
@@ -189,7 +190,7 @@ public class TestLocalJobSubmission {
     JarOutputStream jos = new JarOutputStream(fos);
     ZipEntry ze = new ZipEntry("test.jar.inside");
     jos.putNextEntry(ze);
-    jos.write(("inside the jar!").getBytes());
+    jos.write(("inside the jar!").getBytes(StandardCharsets.UTF_8));
     jos.closeEntry();
     jos.close();
     return p;

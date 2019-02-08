@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
@@ -630,7 +631,7 @@ import java.util.regex.Pattern;
 
         try (
             Writer writer = new OutputStreamWriter(new FileOutputStream(tcCmds),
-                "UTF-8");
+                StandardCharsets.UTF_8);
             PrintWriter printWriter = new PrintWriter(writer)) {
           for (String command : commands) {
             printWriter.println(command);

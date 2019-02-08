@@ -33,7 +33,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.UUID;
@@ -67,8 +66,7 @@ public class TestAdlInternalCreateNonRecursive {
   }
 
   @Parameterized.Parameters(name = "{0}")
-  public static Collection adlCreateNonRecursiveTestData()
-      throws UnsupportedEncodingException {
+  public static Collection adlCreateNonRecursiveTestData() {
     /*
       Test Data
       File name, Permission, Override flag, File already exist, Parent

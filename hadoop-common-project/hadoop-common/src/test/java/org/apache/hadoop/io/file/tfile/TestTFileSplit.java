@@ -17,6 +17,7 @@
 package org.apache.hadoop.io.file.tfile;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
 import org.junit.Test;
@@ -59,8 +60,9 @@ public class TestTFileSplit {
 
     int nx;
     for (nx = 0; nx < count; nx++) {
-      byte[] key = composeSortedKey(KEY, count, nx).getBytes();
-      byte[] value = (VALUE + nx).getBytes();
+      byte[] key =
+          composeSortedKey(KEY, count, nx).getBytes(StandardCharsets.UTF_8);
+      byte[] value = (VALUE + nx).getBytes(StandardCharsets.UTF_8);
       writer.append(key, value);
     }
     writer.close();

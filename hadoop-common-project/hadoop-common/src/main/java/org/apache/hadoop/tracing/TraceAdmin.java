@@ -21,6 +21,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -96,7 +97,8 @@ public class TraceAdmin extends Configured implements Tool {
       return 1;
     }
     ByteArrayOutputStream configStream = new ByteArrayOutputStream();
-    PrintStream configsOut = new PrintStream(configStream, false, "UTF-8");
+    PrintStream configsOut =
+        new PrintStream(configStream, false, StandardCharsets.UTF_8.name());
     SpanReceiverInfoBuilder factory = new SpanReceiverInfoBuilder(className);
     String prefix = "";
     for (int i = 0; i < args.size(); ++i) {
@@ -119,7 +121,8 @@ public class TraceAdmin extends Configured implements Tool {
       prefix = ", ";
     }
 
-    String configStreamStr = configStream.toString("UTF-8");
+    String configStreamStr =
+        configStream.toString(StandardCharsets.UTF_8.name());
     try {
       long id = remote.addSpanReceiver(factory.build());
       System.out.println("Added trace span receiver " + id +

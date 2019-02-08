@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.ozone.common;
 
+import java.nio.charset.StandardCharsets;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.junit.Assert;
@@ -45,7 +47,8 @@ public class TestChecksum {
   public void testVerifyChecksum() throws Exception {
     Checksum checksum = getChecksum(null);
     int dataLen = 55;
-    byte[] data = RandomStringUtils.randomAlphabetic(dataLen).getBytes();
+    byte[] data = RandomStringUtils.randomAlphabetic(dataLen)
+        .getBytes(StandardCharsets.UTF_8);
 
     ChecksumData checksumData = checksum.computeChecksum(data);
 
@@ -65,7 +68,8 @@ public class TestChecksum {
   @Test
   public void testIncorrectChecksum() throws Exception {
     Checksum checksum = getChecksum(null);
-    byte[] data = RandomStringUtils.randomAlphabetic(55).getBytes();
+    byte[] data =
+        RandomStringUtils.randomAlphabetic(55).getBytes(StandardCharsets.UTF_8);
     ChecksumData originalChecksumData = checksum.computeChecksum(data);
 
     // Change the data and check if new checksum matches the original checksum.
@@ -83,7 +87,8 @@ public class TestChecksum {
    */
   @Test
   public void testChecksumMismatchForDifferentChecksumTypes() throws Exception {
-    byte[] data = RandomStringUtils.randomAlphabetic(55).getBytes();
+    byte[] data =
+        RandomStringUtils.randomAlphabetic(55).getBytes(StandardCharsets.UTF_8);
 
     // Checksum1 of type SHA-256
     Checksum checksum1 = getChecksum(null);

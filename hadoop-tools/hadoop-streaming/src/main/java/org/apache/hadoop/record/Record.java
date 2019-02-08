@@ -22,6 +22,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -94,7 +95,7 @@ public abstract class Record implements WritableComparable, Cloneable {
       ByteArrayOutputStream s = new ByteArrayOutputStream();
       CsvRecordOutput a = new CsvRecordOutput(s);
       this.serialize(a);
-      return new String(s.toByteArray(), "UTF-8");
+      return new String(s.toByteArray(), StandardCharsets.UTF_8);
     } catch (Throwable ex) {
       throw new RuntimeException(ex);
     }

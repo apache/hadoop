@@ -21,6 +21,7 @@ package org.apache.hadoop.streaming;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -53,7 +54,7 @@ public class TestStreamAggregate
   {
     DataOutputStream out = new DataOutputStream(
                                                 new FileOutputStream(INPUT_FILE.getAbsoluteFile()));
-    out.write(input.getBytes("UTF-8"));
+    out.write(input.getBytes(StandardCharsets.UTF_8));
     out.close();
   }
 

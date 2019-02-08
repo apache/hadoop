@@ -23,6 +23,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -834,7 +835,7 @@ public class TestFileOutputCommitter {
     String contents = null;
     try {
       in.read(buf, 0, len);
-      contents = new String(buf, "UTF-8");
+      contents = new String(buf, StandardCharsets.UTF_8);
     } finally {
       in.close();
     }

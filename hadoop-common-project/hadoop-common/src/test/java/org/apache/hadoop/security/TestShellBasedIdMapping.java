@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -43,7 +44,7 @@ public class TestShellBasedIdMapping {
   private void createStaticMapFile(final File smapFile, final String smapStr)
       throws IOException {
     OutputStream out = new FileOutputStream(smapFile);
-    out.write(smapStr.getBytes());
+    out.write(smapStr.getBytes(StandardCharsets.UTF_8));
     out.close();
   }
 

@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.BitSet;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -330,14 +331,13 @@ public class TestTextInputFormat {
   }
 
   private static LineReader makeStream(String str) throws IOException {
-    return new LineReader(new ByteArrayInputStream
-                                             (str.getBytes("UTF-8")), 
-                                           defaultConf);
+    return new LineReader(
+        new ByteArrayInputStream(str.getBytes(StandardCharsets.UTF_8)),
+        defaultConf);
   }
   private static LineReader makeStream(String str, int bufsz) throws IOException {
-    return new LineReader(new ByteArrayInputStream
-                                             (str.getBytes("UTF-8")), 
-                                           bufsz);
+    return new LineReader(
+        new ByteArrayInputStream(str.getBytes(StandardCharsets.UTF_8)), bufsz);
   }
 
   @Test (timeout=5000)
@@ -362,7 +362,7 @@ public class TestTextInputFormat {
   @Test (timeout=5000)
   public void testNewLines() throws Exception {
     final String STR = "a\nbb\n\nccc\rdddd\r\r\r\n\r\neeeee";
-    final int STRLENBYTES = STR.getBytes().length;
+    final int STRLENBYTES = STR.getBytes(StandardCharsets.UTF_8).length;
     Text out = new Text();
     for (int bufsz = 1; bufsz < STRLENBYTES+1; ++bufsz) {
       LineReader in = makeStream(STR, bufsz);
@@ -402,7 +402,7 @@ public class TestTextInputFormat {
   @Test (timeout=5000)
   public void testMaxLineLength() throws Exception {
     final String STR = "a\nbb\n\nccc\rdddd\r\neeeee";
-    final int STRLENBYTES = STR.getBytes().length;
+    final int STRLENBYTES = STR.getBytes(StandardCharsets.UTF_8).length;
     Text out = new Text();
     for (int bufsz = 1; bufsz < STRLENBYTES+1; ++bufsz) {
       LineReader in = makeStream(STR, bufsz);
@@ -474,7 +474,7 @@ public class TestTextInputFormat {
     } else {
       stm = codec.createOutputStream(fs.create(name));
     }
-    stm.write(contents.getBytes());
+    stm.write(contents.getBytes(StandardCharsets.UTF_8));
     stm.close();
   }
   

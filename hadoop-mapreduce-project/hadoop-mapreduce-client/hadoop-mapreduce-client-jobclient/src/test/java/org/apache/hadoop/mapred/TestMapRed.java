@@ -24,6 +24,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.io.File;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -691,7 +692,7 @@ public class TestMapRed extends Configured implements Tool {
   private static boolean isSequenceFile(FileSystem fs,
                                         Path f) throws IOException {
     DataInputStream in = fs.open(f);
-    byte[] seq = "SEQ".getBytes();
+    byte[] seq = "SEQ".getBytes(StandardCharsets.UTF_8);
     for(int i=0; i < seq.length; ++i) {
       if (seq[i] != in.read()) {
         return false;

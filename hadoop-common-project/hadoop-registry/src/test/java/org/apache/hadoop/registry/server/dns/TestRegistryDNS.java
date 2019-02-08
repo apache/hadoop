@@ -48,6 +48,7 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.spec.RSAPrivateKeySpec;
@@ -189,7 +190,7 @@ public class TestRegistryDNS extends Assert {
   @Test
   public void testAppRegistration() throws Exception {
     ServiceRecord record = getMarshal().fromBytes("somepath",
-        APPLICATION_RECORD.getBytes());
+        APPLICATION_RECORD.getBytes(StandardCharsets.UTF_8));
     getRegistryDNS().register(
         "/registry/users/root/services/org-apache-slider/test1/", record);
 
@@ -232,7 +233,7 @@ public class TestRegistryDNS extends Assert {
   @Test
   public void testContainerRegistration() throws Exception {
     ServiceRecord record = getMarshal().fromBytes("somepath",
-        CONTAINER_RECORD.getBytes());
+        CONTAINER_RECORD.getBytes(StandardCharsets.UTF_8));
     getRegistryDNS().register(
         "/registry/users/root/services/org-apache-slider/test1/components/"
             + "ctr-e50-1451931954322-0016-01-000002",
@@ -250,8 +251,9 @@ public class TestRegistryDNS extends Assert {
 
   @Test
   public void testContainerRegistrationPersistanceAbsent() throws Exception {
-    ServiceRecord record = marshal.fromBytes("somepath",
-        CONTAINER_RECORD_YARN_PERSISTANCE_ABSENT.getBytes());
+    ServiceRecord record =
+        marshal.fromBytes("somepath", CONTAINER_RECORD_YARN_PERSISTANCE_ABSENT
+            .getBytes(StandardCharsets.UTF_8));
     registryDNS.register(
         "/registry/users/root/services/org-apache-slider/test1/components/"
             + "ctr-e50-1451931954322-0016-01-000003",
@@ -270,7 +272,7 @@ public class TestRegistryDNS extends Assert {
   @Test
   public void testRecordTTL() throws Exception {
     ServiceRecord record = getMarshal().fromBytes("somepath",
-        CONTAINER_RECORD.getBytes());
+        CONTAINER_RECORD.getBytes(StandardCharsets.UTF_8));
     getRegistryDNS().register(
         "/registry/users/root/services/org-apache-slider/test1/components/"
             + "ctr-e50-1451931954322-0016-01-000002",
@@ -292,7 +294,7 @@ public class TestRegistryDNS extends Assert {
   @Test
   public void testReverseLookup() throws Exception {
     ServiceRecord record = getMarshal().fromBytes("somepath",
-        CONTAINER_RECORD.getBytes());
+        CONTAINER_RECORD.getBytes(StandardCharsets.UTF_8));
     getRegistryDNS().register(
         "/registry/users/root/services/org-apache-slider/test1/components/"
             + "ctr-e50-1451931954322-0016-01-000002",
@@ -318,7 +320,7 @@ public class TestRegistryDNS extends Assert {
     getRegistryDNS().initializeZones(conf);
 
     ServiceRecord record = getMarshal().fromBytes("somepath",
-        CONTAINER_RECORD.getBytes());
+        CONTAINER_RECORD.getBytes(StandardCharsets.UTF_8));
     getRegistryDNS().register(
         "/registry/users/root/services/org-apache-slider/test1/components/"
             + "ctr-e50-1451931954322-0016-01-000002",
@@ -334,7 +336,7 @@ public class TestRegistryDNS extends Assert {
   @Test
   public void testMissingReverseLookup() throws Exception {
     ServiceRecord record = getMarshal().fromBytes("somepath",
-        CONTAINER_RECORD.getBytes());
+        CONTAINER_RECORD.getBytes(StandardCharsets.UTF_8));
     getRegistryDNS().register(
         "/registry/users/root/services/org-apache-slider/test1/components/"
             + "ctr-e50-1451931954322-0016-01-000002",
@@ -355,7 +357,7 @@ public class TestRegistryDNS extends Assert {
   @Test
   public void testNoContainerIP() throws Exception {
     ServiceRecord record = getMarshal().fromBytes("somepath",
-        CONTAINER_RECORD_NO_IP.getBytes());
+        CONTAINER_RECORD_NO_IP.getBytes(StandardCharsets.UTF_8));
     getRegistryDNS().register(
         "/registry/users/root/services/org-apache-slider/test1/components/"
             + "ctr-e50-1451931954322-0016-01-000002",
@@ -445,7 +447,7 @@ public class TestRegistryDNS extends Assert {
             DNSKEYRecord.Flags.ZONE_KEY,
             DNSKEYRecord.Protocol.DNSSEC,
             DNSSEC.Algorithm.RSASHA256,
-            Base64.decodeBase64(publicK.getBytes()));
+            Base64.decodeBase64(publicK.getBytes(StandardCharsets.UTF_8)));
     assertNotNull(dnskeyRecord);
     RSAPrivateKeySpec privateSpec = new RSAPrivateKeySpec(new BigInteger(1,
         Base64.decodeBase64(
@@ -488,7 +490,7 @@ public class TestRegistryDNS extends Assert {
   @Test
   public void testAAAALookup() throws Exception {
     ServiceRecord record = getMarshal().fromBytes("somepath",
-        CONTAINER_RECORD.getBytes());
+        CONTAINER_RECORD.getBytes(StandardCharsets.UTF_8));
     getRegistryDNS().register(
         "/registry/users/root/services/org-apache-slider/test1/components/"
             + "ctr-e50-1451931954322-0016-01-000002",
@@ -507,7 +509,7 @@ public class TestRegistryDNS extends Assert {
   @Test
   public void testNegativeLookup() throws Exception {
     ServiceRecord record = getMarshal().fromBytes("somepath",
-        CONTAINER_RECORD.getBytes());
+        CONTAINER_RECORD.getBytes(StandardCharsets.UTF_8));
     getRegistryDNS().register(
         "/registry/users/root/services/org-apache-slider/test1/components/"
             + "ctr-e50-1451931954322-0016-01-000002",
@@ -563,7 +565,7 @@ public class TestRegistryDNS extends Assert {
     getRegistryDNS().initializeZones(conf);
 
     ServiceRecord record = getMarshal().fromBytes("somepath",
-        CONTAINER_RECORD.getBytes());
+        CONTAINER_RECORD.getBytes(StandardCharsets.UTF_8));
     getRegistryDNS().register(
         "/registry/users/root/services/org-apache-slider/test1/components/"
             + "ctr-e50-1451931954322-0016-01-000002",
@@ -679,9 +681,9 @@ public class TestRegistryDNS extends Assert {
   @Test
   public void testMultiARecord() throws Exception {
     ServiceRecord record = getMarshal().fromBytes("somepath",
-        CONTAINER_RECORD.getBytes());
+        CONTAINER_RECORD.getBytes(StandardCharsets.UTF_8));
     ServiceRecord record2 = getMarshal().fromBytes("somepath",
-        CONTAINER_RECORD2.getBytes());
+        CONTAINER_RECORD2.getBytes(StandardCharsets.UTF_8));
     getRegistryDNS().register(
         "/registry/users/root/services/org-apache-slider/test1/components/"
             + "ctr-e50-1451931954322-0016-01-000002",

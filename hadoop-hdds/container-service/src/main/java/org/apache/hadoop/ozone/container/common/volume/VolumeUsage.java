@@ -112,7 +112,7 @@ public class VolumeUsage {
     Scanner sc;
 
     try {
-      sc = new Scanner(scmUsedFile, "UTF-8");
+      sc = new Scanner(scmUsedFile, StandardCharsets.UTF_8.name());
     } catch (FileNotFoundException fnfe) {
       return -1;
     }

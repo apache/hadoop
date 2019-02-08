@@ -21,14 +21,13 @@ import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.nio.charset.IllegalCharsetNameException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -413,12 +412,8 @@ public class KerberosUtil {
     }
 
     String getAsString() {
-      try {
-        return new String(bb.array(), bb.arrayOffset() + bb.position(),
-            bb.remaining(), "UTF-8");
-      } catch (UnsupportedEncodingException e) {
-        throw new IllegalCharsetNameException("UTF-8"); // won't happen.
-      }
+      return new String(bb.array(), bb.arrayOffset() + bb.position(),
+          bb.remaining(), StandardCharsets.UTF_8);
     }
 
     @Override

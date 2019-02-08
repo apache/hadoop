@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -72,7 +73,8 @@ public class TestHarFileSystemWithHA {
       throws IOException {
     fs.mkdirs(p);
     OutputStream out = fs.create(new Path(p, "_masterindex"));
-    out.write(Integer.toString(HarFileSystem.VERSION).getBytes());
+    out.write(Integer.toString(HarFileSystem.VERSION)
+        .getBytes(StandardCharsets.UTF_8));
     out.close();
     fs.create(new Path(p, "_index")).close();
   }

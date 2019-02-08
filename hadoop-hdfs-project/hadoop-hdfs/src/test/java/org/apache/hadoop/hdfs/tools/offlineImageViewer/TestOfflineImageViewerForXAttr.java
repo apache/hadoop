@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -77,18 +78,20 @@ public class TestOfflineImageViewerForXAttr {
       // Create a name space with XAttributes
       Path dir = new Path("/dir1");
       hdfs.mkdirs(dir);
-      hdfs.setXAttr(dir, "user.attr1", "value1".getBytes());
-      hdfs.setXAttr(dir, "user.attr2", "value2".getBytes());
+      hdfs.setXAttr(dir, "user.attr1", "value1".getBytes(StandardCharsets.UTF_8));
+      hdfs.setXAttr(dir, "user.attr2", "value2".getBytes(StandardCharsets.UTF_8));
       // Write results to the fsimage file
       hdfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER, false);
       hdfs.saveNamespace();
 
       List<XAttr> attributes = new ArrayList<XAttr>();
-      attributes.add(XAttrHelper.buildXAttr("user.attr1", "value1".getBytes()));
+      attributes.add(XAttrHelper.buildXAttr("user.attr1",
+          "value1".getBytes(StandardCharsets.UTF_8)));
 
       attr1JSon = JsonUtil.toJsonString(attributes, null);
 
-      attributes.add(XAttrHelper.buildXAttr("user.attr2", "value2".getBytes()));
+      attributes.add(XAttrHelper.buildXAttr("user.attr2",
+          "value2".getBytes(StandardCharsets.UTF_8)));
 
       // Determine the location of the fsimage file
       originalFsimage = FSImageTestUtil.findLatestImageFile(FSImageTestUtil

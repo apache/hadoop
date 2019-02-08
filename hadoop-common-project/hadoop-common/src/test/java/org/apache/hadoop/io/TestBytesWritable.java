@@ -21,6 +21,8 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.nio.charset.StandardCharsets;
+
 
 /**
  * This is the unit test for BytesWritable.
@@ -29,7 +31,7 @@ public class TestBytesWritable {
 
   @Test
   public void testSizeChange() throws Exception {
-    byte[] hadoop = "hadoop".getBytes();
+    byte[] hadoop = "hadoop".getBytes(StandardCharsets.UTF_8);
     BytesWritable buf = new BytesWritable(hadoop);
     int size = buf.getLength();
     int orig_capacity = buf.getCapacity();
@@ -56,7 +58,7 @@ public class TestBytesWritable {
   
   @Test
   public void testHash() throws Exception {
-    byte[] owen = "owen".getBytes();
+    byte[] owen = "owen".getBytes(StandardCharsets.UTF_8);
     BytesWritable buf = new BytesWritable(owen);
     assertEquals(4347922, buf.hashCode());
     buf.setCapacity(10000);
@@ -108,7 +110,7 @@ public class TestBytesWritable {
    */
   @Test
   public void testZeroCopy() {
-    byte[] bytes = "brock".getBytes();
+    byte[] bytes = "brock".getBytes(StandardCharsets.UTF_8);
     BytesWritable zeroBuf = new BytesWritable(bytes, bytes.length); // new
     BytesWritable copyBuf = new BytesWritable(bytes); // old
     // using zero copy constructor shouldn't result in a copy

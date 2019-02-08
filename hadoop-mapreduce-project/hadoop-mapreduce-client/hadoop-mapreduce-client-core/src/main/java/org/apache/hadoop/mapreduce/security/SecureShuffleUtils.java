@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+
 import javax.crypto.SecretKey;
 import javax.servlet.http.HttpServletRequest;
 
@@ -33,8 +35,6 @@ import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Charsets;
 
 /**
  * 
@@ -56,7 +56,7 @@ public class SecureShuffleUtils {
    */
   public static String generateHash(byte[] msg, SecretKey key) {
     return new String(Base64.encodeBase64(generateByteHash(msg, key)), 
-        Charsets.UTF_8);
+        StandardCharsets.UTF_8);
   }
   
   /**
@@ -87,7 +87,7 @@ public class SecureShuffleUtils {
    */
   public static String hashFromString(String enc_str, SecretKey key) 
   throws IOException {
-    return generateHash(enc_str.getBytes(Charsets.UTF_8), key); 
+    return generateHash(enc_str.getBytes(StandardCharsets.UTF_8), key); 
   }
   
   /**
@@ -98,9 +98,10 @@ public class SecureShuffleUtils {
    */
   public static void verifyReply(String base64Hash, String msg, SecretKey key)
   throws IOException {
-    byte[] hash = Base64.decodeBase64(base64Hash.getBytes(Charsets.UTF_8));
-    
-    boolean res = verifyHash(hash, msg.getBytes(Charsets.UTF_8), key);
+    byte[] hash =
+        Base64.decodeBase64(base64Hash.getBytes(StandardCharsets.UTF_8));
+
+    boolean res = verifyHash(hash, msg.getBytes(StandardCharsets.UTF_8), key);
     
     if(res != true) {
       throw new IOException("Verification of the hashReply failed");
@@ -144,11 +145,12 @@ public class SecureShuffleUtils {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     String strHex = "";
     try {
-      PrintStream ps = new PrintStream(baos, false, "UTF-8");
+      PrintStream ps =
+          new PrintStream(baos, false, StandardCharsets.UTF_8.name());
       for (byte b : ba) {
         ps.printf("%x", b);
       }
-      strHex = baos.toString("UTF-8");
+      strHex = baos.toString(StandardCharsets.UTF_8.name());
     } catch (UnsupportedEncodingException e) {
     }
     return strHex;

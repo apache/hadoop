@@ -25,12 +25,13 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 public class TestGpuDeviceInformationParser {
   @Test
   public void testParse() throws IOException, YarnException {
     File f = new File("src/test/resources/nvidia-smi-sample-xml-output");
-    String s = FileUtils.readFileToString(f, "UTF-8");
+    String s = FileUtils.readFileToString(f, StandardCharsets.UTF_8);
 
     GpuDeviceInformationParser parser = new GpuDeviceInformationParser();
 

@@ -38,6 +38,7 @@ import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.Inflater;
@@ -91,7 +92,7 @@ public class TestConcatenatedCompressedInput {
 
   private static LineReader makeStream(String str) throws IOException {
     return new LineReader(new ByteArrayInputStream(
-            str.getBytes("UTF-8")), defaultConf);
+            str.getBytes(StandardCharsets.UTF_8)), defaultConf);
   }
 
   private static void writeFile(FileSystem fs, Path name,
@@ -103,7 +104,7 @@ public class TestConcatenatedCompressedInput {
     } else {
       stm = codec.createOutputStream(fs.create(name));
     }
-    stm.write(contents.getBytes());
+    stm.write(contents.getBytes(StandardCharsets.UTF_8));
     stm.close();
   }
 
@@ -294,8 +295,8 @@ public class TestConcatenatedCompressedInput {
     inflater.setInput(compressedBuf, 0, numBytesRead);
     try {
       int numBytesUncompressed = inflater.inflate(uncompressedBuf);
-      String outString =
-        new String(uncompressedBuf, 0, numBytesUncompressed, "UTF-8");
+      String outString = new String(uncompressedBuf, 0, numBytesUncompressed,
+          StandardCharsets.UTF_8);
       System.out.println("uncompressed data of first gzip member = [" +
                          outString + "]");
     } catch (java.util.zip.DataFormatException ex) {

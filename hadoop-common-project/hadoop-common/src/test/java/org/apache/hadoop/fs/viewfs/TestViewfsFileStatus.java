@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -54,7 +55,7 @@ public class TestViewfsFileStatus {
     String testfilename = "testFileStatusSerialziation";
     TEST_DIR.mkdirs();
     File infile = new File(TEST_DIR, testfilename);
-    final byte[] content = "dingos".getBytes();
+    final byte[] content = "dingos".getBytes(StandardCharsets.UTF_8);
 
     FileOutputStream fos = null;
     try {

@@ -19,7 +19,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -108,11 +108,8 @@ public class Exec {
     public OutputBufferThread(InputStream is) {
       this.setDaemon(true);
       output = new ArrayList<String>();
-      try {
-        reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
-      } catch (UnsupportedEncodingException e) {
-        throw new RuntimeException("Unsupported encoding " + e.toString());
-      }
+      reader =
+          new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
     }
 
     @Override

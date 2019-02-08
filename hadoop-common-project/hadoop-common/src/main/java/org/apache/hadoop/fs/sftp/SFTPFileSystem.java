@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Vector;
 
@@ -114,7 +115,7 @@ public class SFTPFileSystem extends FileSystem {
     if (userAndPwdFromUri != null) {
       String[] userPasswdInfo = userAndPwdFromUri.split(":");
       String user = userPasswdInfo[0];
-      user = URLDecoder.decode(user, "UTF-8");
+      user = URLDecoder.decode(user, StandardCharsets.UTF_8.name());
       conf.set(FS_SFTP_USER_PREFIX + host, user);
       if (userPasswdInfo.length > 1) {
         conf.set(FS_SFTP_PASSWORD_PREFIX + host + "." +

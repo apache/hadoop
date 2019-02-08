@@ -27,6 +27,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.Base64;
@@ -112,7 +113,6 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.sun.jersey.spi.container.ResourceFilters;
 
@@ -1056,7 +1056,8 @@ public class NamenodeWebHdfsMethods {
       @Override
       public Response run() throws IOException, URISyntaxException {
         String absolutePath = path.getAbsolutePath() == null ? null :
-            URLDecoder.decode(path.getAbsolutePath(), "UTF-8");
+            URLDecoder.decode(path.getAbsolutePath(),
+                StandardCharsets.UTF_8.name());
         return get(ugi, delegation, username, doAsUser, absolutePath,
             op, offset, length, renewer, bufferSize, xattrNames, xattrEncoding,
             excludeDatanodes, fsAction, snapshotName, oldSnapshotName,
@@ -1241,7 +1242,7 @@ public class NamenodeWebHdfsMethods {
     {
       byte[] start = HdfsFileStatus.EMPTY_NAME;
       if (startAfter != null && startAfter.getValue() != null) {
-        start = startAfter.getValue().getBytes(Charsets.UTF_8);
+        start = startAfter.getValue().getBytes(StandardCharsets.UTF_8);
       }
       final DirectoryListing listing = getDirectoryListing(cp, fullpath, start);
       final String js = JsonUtil.toJsonString(listing);
@@ -1324,7 +1325,7 @@ public class NamenodeWebHdfsMethods {
       @Override
       public void write(final OutputStream outstream) throws IOException {
         final PrintWriter out = new PrintWriter(new OutputStreamWriter(
-            outstream, Charsets.UTF_8));
+            outstream, StandardCharsets.UTF_8));
         out.println("{\"" + FileStatus.class.getSimpleName() + "es\":{\""
             + FileStatus.class.getSimpleName() + "\":[");
 
