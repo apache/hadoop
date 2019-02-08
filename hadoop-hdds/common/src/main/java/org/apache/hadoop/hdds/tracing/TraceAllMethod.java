@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdds.tracing;
 
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -62,7 +63,15 @@ public class TraceAllMethod<T> implements InvocationHandler {
     try (Scope scope = GlobalTracer.get().buildSpan(
         name + "." + method.getName())
         .startActive(true)) {
-      return delegateMethod.invoke(delegate, args);
+      try {
+        return delegateMethod.invoke(delegate, args);
+      } catch (Exception ex) {
+        if (ex.getCause() != null) {
+          throw ex.getCause();
+        } else {
+          throw ex;
+        }
+      }
     }
   }
 
