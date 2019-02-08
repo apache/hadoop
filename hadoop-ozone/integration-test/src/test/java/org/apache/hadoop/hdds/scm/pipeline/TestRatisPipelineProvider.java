@@ -84,7 +84,7 @@ public class TestRatisPipelineProvider {
   }
 
   @Test
-  public void testCreatePipelineWithNodes() throws IOException {
+  public void testCreatePipelineWithNodes() {
     HddsProtos.ReplicationFactor factor = HddsProtos.ReplicationFactor.THREE;
     Pipeline pipeline =
         provider.create(factor, createListOfNodes(factor.getNumber()));

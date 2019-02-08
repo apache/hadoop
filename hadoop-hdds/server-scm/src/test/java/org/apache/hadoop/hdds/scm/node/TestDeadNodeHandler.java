@@ -35,24 +35,24 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.StorageReportProto;
+import org.apache.hadoop.hdds.scm.HddsTestUtils;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
 import org.apache.hadoop.hdds.scm.container.ContainerReplica;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
-import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .NodeReportFromDatanode;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
 import org.apache.hadoop.hdds.server.events.EventQueue;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -66,6 +66,7 @@ import org.slf4j.event.Level;
  */
 public class TestDeadNodeHandler {
 
+  private StorageContainerManager scm;
   private SCMNodeManager nodeManager;
   private ContainerManager containerManager;
   private NodeReportHandler nodeReportHandler;
@@ -75,17 +76,15 @@ public class TestDeadNodeHandler {
   private String storageDir;
 
   @Before
-  public void setup() throws IOException {
+  public void setup() throws IOException, AuthenticationException {
     OzoneConfiguration conf = new OzoneConfiguration();
     storageDir = GenericTestUtils.getTempPath(
         TestDeadNodeHandler.class.getSimpleName() + UUID.randomUUID());
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, storageDir);
     eventQueue = new EventQueue();
-    nodeManager = new SCMNodeManager(conf, "cluster1", null, eventQueue);
-    PipelineManager pipelineManager =
-        new SCMPipelineManager(conf, nodeManager, eventQueue);
-    containerManager = new SCMContainerManager(conf, nodeManager,
-        pipelineManager, eventQueue);
+    scm = HddsTestUtils.getScm(conf);
+    nodeManager = (SCMNodeManager) scm.getScmNodeManager();
+    containerManager = scm.getContainerManager();
     deadNodeHandler = new DeadNodeHandler(nodeManager, containerManager);
     eventQueue.addHandler(SCMEvents.DEAD_NODE, deadNodeHandler);
     publisher = Mockito.mock(EventPublisher.class);
@@ -94,6 +93,8 @@ public class TestDeadNodeHandler {
 
   @After
   public void teardown() {
+    scm.stop();
+    scm.join();
     FileUtil.fullyDelete(new File(storageDir));
   }
 

@@ -26,7 +26,7 @@ import org.apache.hadoop.hdds.scm.pipeline.Pipeline.PipelineState;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Set;
+import java.util.NavigableSet;
 
 /**
  * Manages the state of pipelines in SCM. All write operations like pipeline
@@ -77,7 +77,8 @@ class PipelineStateManager {
     return pipelineStateMap.getPipelines(type, states);
   }
 
-  Set<ContainerID> getContainers(PipelineID pipelineID) throws IOException {
+  NavigableSet<ContainerID> getContainers(PipelineID pipelineID)
+      throws IOException {
     return pipelineStateMap.getContainers(pipelineID);
   }
 

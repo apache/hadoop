@@ -204,7 +204,7 @@ public class TestStorageContainerManager {
         1, TimeUnit.SECONDS);
     // Reset container provision size, otherwise only one container
     // is created by default.
-    conf.setInt(ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE,
+    conf.setInt(ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT,
         numKeys);
 
     MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(conf)
@@ -286,7 +286,7 @@ public class TestStorageContainerManager {
     conf.setInt(ScmConfigKeys.OZONE_SCM_BLOCK_DELETION_MAX_RETRY, 5);
     conf.setTimeDuration(OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
         100, TimeUnit.MILLISECONDS);
-    conf.setInt(ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE,
+    conf.setInt(ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT,
         numKeys);
 
     MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(conf)

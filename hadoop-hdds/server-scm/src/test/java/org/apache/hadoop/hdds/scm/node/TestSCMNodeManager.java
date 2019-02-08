@@ -19,6 +19,7 @@ package org.apache.hadoop.hdds.scm.node;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
+import org.apache.hadoop.hdds.scm.HddsTestUtils;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
@@ -28,11 +29,12 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.StorageReportProto;
-import org.apache.hadoop.hdds.scm.events.SCMEvents;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.junit.After;
@@ -43,7 +45,6 @@ import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
@@ -77,6 +78,7 @@ import static org.junit.Assert.assertTrue;
 public class TestSCMNodeManager {
 
   private File testDir;
+  private StorageContainerManager scm;
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
@@ -93,6 +95,10 @@ public class TestSCMNodeManager {
 
   @After
   public void cleanup() {
+    if (scm != null) {
+      scm.stop();
+      scm.join();
+    }
     FileUtil.fullyDelete(testDir);
   }
 
@@ -119,17 +125,9 @@ public class TestSCMNodeManager {
    */
 
   SCMNodeManager createNodeManager(OzoneConfiguration config)
-      throws IOException {
-    EventQueue eventQueue = new EventQueue();
-    eventQueue.addHandler(SCMEvents.NEW_NODE,
-        Mockito.mock(NewNodeHandler.class));
-    eventQueue.addHandler(SCMEvents.STALE_NODE,
-        Mockito.mock(StaleNodeHandler.class));
-    eventQueue.addHandler(SCMEvents.DEAD_NODE,
-        Mockito.mock(DeadNodeHandler.class));
-    SCMNodeManager nodeManager = new SCMNodeManager(config,
-        UUID.randomUUID().toString(), null, eventQueue);
-    return nodeManager;
+      throws IOException, AuthenticationException {
+    scm = HddsTestUtils.getScm(config);
+    return (SCMNodeManager) scm.getScmNodeManager();
   }
 
   /**
@@ -141,8 +139,8 @@ public class TestSCMNodeManager {
    * @throws TimeoutException
    */
   @Test
-  public void testScmHeartbeat() throws IOException,
-      InterruptedException, TimeoutException {
+  public void testScmHeartbeat()
+      throws IOException, InterruptedException, AuthenticationException {
 
     try (SCMNodeManager nodeManager = createNodeManager(getConf())) {
       int registeredNodes = 5;
@@ -169,8 +167,8 @@ public class TestSCMNodeManager {
    * @throws TimeoutException
    */
   @Test
-  public void testScmNoHeartbeats() throws IOException,
-      InterruptedException, TimeoutException {
+  public void testScmNoHeartbeats()
+      throws IOException, InterruptedException, AuthenticationException {
 
     try (SCMNodeManager nodeManager = createNodeManager(getConf())) {
       //TODO: wait for heartbeat to be processed
@@ -190,8 +188,8 @@ public class TestSCMNodeManager {
    * @throws TimeoutException
    */
   @Test
-  public void testScmShutdown() throws IOException, InterruptedException,
-      TimeoutException {
+  public void testScmShutdown()
+      throws IOException, InterruptedException, AuthenticationException {
     OzoneConfiguration conf = getConf();
     conf.getTimeDuration(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
         100, TimeUnit.MILLISECONDS);
@@ -218,8 +216,8 @@ public class TestSCMNodeManager {
    * @throws TimeoutException
    */
   @Test
-  public void testScmHealthyNodeCount() throws IOException,
-      InterruptedException, TimeoutException {
+  public void testScmHealthyNodeCount()
+      throws IOException, InterruptedException, AuthenticationException {
     OzoneConfiguration conf = getConf();
     final int count = 10;
 
@@ -247,8 +245,8 @@ public class TestSCMNodeManager {
    */
 
   @Test
-  public void testScmSanityOfUserConfig1() throws IOException,
-      InterruptedException, TimeoutException {
+  public void testScmSanityOfUserConfig1()
+      throws IOException, AuthenticationException {
     OzoneConfiguration conf = getConf();
     final int interval = 100;
     conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, interval,
@@ -276,8 +274,8 @@ public class TestSCMNodeManager {
    * @throws TimeoutException
    */
   @Test
-  public void testScmSanityOfUserConfig2() throws IOException,
-      InterruptedException, TimeoutException {
+  public void testScmSanityOfUserConfig2()
+      throws IOException, AuthenticationException {
     OzoneConfiguration conf = getConf();
     final int interval = 100;
     conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, interval,
@@ -299,8 +297,8 @@ public class TestSCMNodeManager {
    * @throws TimeoutException
    */
   @Test
-  public void testScmDetectStaleAndDeadNode() throws IOException,
-      InterruptedException, TimeoutException {
+  public void testScmDetectStaleAndDeadNode()
+      throws IOException, InterruptedException, AuthenticationException {
     final int interval = 100;
     final int nodeCount = 10;
 
@@ -379,7 +377,8 @@ public class TestSCMNodeManager {
    * @throws IOException
    */
   @Test
-  public void testScmCheckForErrorOnNullDatanodeDetails() throws IOException {
+  public void testScmCheckForErrorOnNullDatanodeDetails()
+      throws IOException, AuthenticationException {
     try (SCMNodeManager nodeManager = createNodeManager(getConf())) {
       nodeManager.processHeartbeat(null);
     } catch (NullPointerException npe) {
@@ -438,8 +437,8 @@ public class TestSCMNodeManager {
    */
 
   @Test
-  public void testScmClusterIsInExpectedState1() throws IOException,
-      InterruptedException, TimeoutException {
+  public void testScmClusterIsInExpectedState1()
+      throws IOException, InterruptedException, AuthenticationException {
     OzoneConfiguration conf = getConf();
     conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, 100,
         MILLISECONDS);
@@ -613,8 +612,9 @@ public class TestSCMNodeManager {
    * @throws InterruptedException
    */
   @Test
-  public void testScmClusterIsInExpectedState2() throws IOException,
-      InterruptedException, TimeoutException {
+  public void testScmClusterIsInExpectedState2()
+      throws IOException, InterruptedException, TimeoutException,
+      AuthenticationException {
     final int healthyCount = 5000;
     final int staleCount = 100;
     final int deadCount = 10;
@@ -706,8 +706,9 @@ public class TestSCMNodeManager {
    * @throws TimeoutException
    */
   @Test
-  public void testScmCanHandleScale() throws IOException,
-      InterruptedException, TimeoutException {
+  public void testScmCanHandleScale()
+      throws IOException, InterruptedException, TimeoutException,
+      AuthenticationException {
     final int healthyCount = 3000;
     final int staleCount = 3000;
     OzoneConfiguration conf = getConf();
@@ -770,8 +771,8 @@ public class TestSCMNodeManager {
   @Test
   @Ignore
   // TODO: Enable this after we implement NodeReportEvent handler.
-  public void testScmStatsFromNodeReport() throws IOException,
-      InterruptedException, TimeoutException {
+  public void testScmStatsFromNodeReport()
+      throws IOException, InterruptedException, AuthenticationException {
     OzoneConfiguration conf = getConf();
     conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, 1000,
         MILLISECONDS);
@@ -813,8 +814,9 @@ public class TestSCMNodeManager {
   @Test
   @Ignore
   // TODO: Enable this after we implement NodeReportEvent handler.
-  public void testScmNodeReportUpdate() throws IOException,
-      InterruptedException, TimeoutException {
+  public void testScmNodeReportUpdate()
+      throws IOException, InterruptedException, TimeoutException,
+      AuthenticationException {
     OzoneConfiguration conf = getConf();
     final int heartbeatCount = 5;
     final int nodeCount = 1;
@@ -939,7 +941,8 @@ public class TestSCMNodeManager {
   }
 
   @Test
-  public void testHandlingSCMCommandEvent() throws IOException {
+  public void testHandlingSCMCommandEvent()
+      throws IOException, AuthenticationException {
     OzoneConfiguration conf = getConf();
     conf.getTimeDuration(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
         100, TimeUnit.MILLISECONDS);

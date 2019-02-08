@@ -104,7 +104,7 @@ public class TestContainerSQLCli {
     blockContainerMap = new HashMap<>();
 
     conf = new OzoneConfiguration();
-    conf.setInt(ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE, 2);
+    conf.setInt(ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT, 2);
     conf.setClass(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
         SCMContainerPlacementCapacity.class, ContainerPlacementPolicy.class);
     if(conf.getBoolean(ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY,
@@ -136,7 +136,7 @@ public class TestContainerSQLCli {
     }, 10, 1000 * 15);
     // blockManager.allocateBlock() will create containers if there is none
     // stored in levelDB. The number of containers to create is the value of
-    // OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE which we set to 2.
+    // OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT which we set to 2.
     // so the first allocateBlock() will create two containers. A random one
     // is assigned for the block.
 

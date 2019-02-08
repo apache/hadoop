@@ -19,10 +19,12 @@ package org.apache.hadoop.hdds.scm.pipeline;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.io.MultipleIOException;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.ratis.RatisHelper;
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.grpc.GrpcTlsConfig;
@@ -42,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Utility class for Ratis pipelines. Contains methods to create and destroy
@@ -51,6 +54,8 @@ public final class RatisPipelineUtils {
 
   private static TimeoutScheduler timeoutScheduler =
       TimeoutScheduler.newInstance(1);
+  private static AtomicBoolean isPipelineCreatorRunning =
+      new AtomicBoolean(false);
 
   private static final Logger LOG =
       LoggerFactory.getLogger(RatisPipelineUtils.class);
@@ -60,7 +65,8 @@ public final class RatisPipelineUtils {
 
   /**
    * Sends ratis command to create pipeline on all the datanodes.
-   * @param pipeline - Pipeline to be created
+   *
+   * @param pipeline  - Pipeline to be created
    * @param ozoneConf - Ozone Confinuration
    * @throws IOException if creation fails
    */
@@ -75,31 +81,39 @@ public final class RatisPipelineUtils {
   /**
    * Removes pipeline from SCM. Sends ratis command to destroy pipeline on all
    * the datanodes.
+   *
    * @param pipelineManager - SCM pipeline manager
-   * @param pipeline - Pipeline to be destroyed
-   * @param ozoneConf - Ozone configuration
+   * @param pipeline        - Pipeline to be destroyed
+   * @param ozoneConf       - Ozone configuration
    * @throws IOException
    */
   public static void destroyPipeline(PipelineManager pipelineManager,
       Pipeline pipeline, Configuration ozoneConf) throws IOException {
     final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
     LOG.debug("destroying pipeline:{} with {}", pipeline.getId(), group);
+    for (DatanodeDetails dn : pipeline.getNodes()) {
+      try {
+        destroyPipeline(dn, pipeline.getId(), ozoneConf);
+      } catch (IOException e) {
+        LOG.warn("Pipeline destroy failed for pipeline={} dn={}",
+            pipeline.getId(), dn);
+      }
+    }
     // remove the pipeline from the pipeline manager
     pipelineManager.removePipeline(pipeline.getId());
-    for (DatanodeDetails dn : pipeline.getNodes()) {
-      destroyPipeline(dn, pipeline.getId(), ozoneConf);
-    }
+    triggerPipelineCreation(pipelineManager, ozoneConf, 0);
   }
 
   /**
    * Finalizes pipeline in the SCM. Removes pipeline and sends ratis command to
    * destroy pipeline on the datanodes immediately or after timeout based on the
    * value of onTimeout parameter.
+   *
    * @param pipelineManager - SCM pipeline manager
-   * @param pipeline - Pipeline to be destroyed
-   * @param ozoneConf - Ozone Configuration
-   * @param onTimeout - if true pipeline is removed and destroyed on datanodes
-   *                  after timeout
+   * @param pipeline        - Pipeline to be destroyed
+   * @param ozoneConf       - Ozone Configuration
+   * @param onTimeout       - if true pipeline is removed and destroyed on
+   *                        datanodes after timeout
    * @throws IOException
    */
   public static void finalizeAndDestroyPipeline(PipelineManager pipelineManager,
@@ -126,9 +140,10 @@ public final class RatisPipelineUtils {
 
   /**
    * Sends ratis command to destroy pipeline on the given datanode.
-   * @param dn - Datanode on which pipeline needs to be destroyed
+   *
+   * @param dn         - Datanode on which pipeline needs to be destroyed
    * @param pipelineID - ID of pipeline to be destroyed
-   * @param ozoneConf - Ozone configuration
+   * @param ozoneConf  - Ozone configuration
    * @throws IOException
    */
   static void destroyPipeline(DatanodeDetails dn, PipelineID pipelineID,
@@ -183,5 +198,80 @@ public final class RatisPipelineUtils {
     if (!exceptions.isEmpty()) {
       throw MultipleIOException.createIOException(exceptions);
     }
+  }
+
+  /**
+   * Schedules a fixed interval job to create pipelines.
+   *
+   * @param pipelineManager - Pipeline manager
+   * @param conf            - Configuration
+   */
+  public static void scheduleFixedIntervalPipelineCreator(
+      PipelineManager pipelineManager, Configuration conf) {
+    long intervalInMillis = conf
+        .getTimeDuration(ScmConfigKeys.OZONE_SCM_PIPELINE_CREATION_INTERVAL,
+            ScmConfigKeys.OZONE_SCM_PIPELINE_CREATION_INTERVAL_DEFAULT,
+            TimeUnit.MILLISECONDS);
+    // TODO: #CLUTIL We can start the job asap
+    TimeDuration timeDuration =
+        TimeDuration.valueOf(intervalInMillis, TimeUnit.MILLISECONDS);
+    timeoutScheduler.onTimeout(timeDuration,
+        () -> fixedIntervalPipelineCreator(pipelineManager, conf,
+            timeDuration), LOG,
+        () -> "FixedIntervalPipelineCreatorJob failed.");
+  }
+
+  private static void fixedIntervalPipelineCreator(
+      PipelineManager pipelineManager, Configuration conf,
+      TimeDuration timeDuration) {
+    timeoutScheduler.onTimeout(timeDuration,
+        () -> fixedIntervalPipelineCreator(pipelineManager, conf,
+            timeDuration), LOG,
+        () -> "FixedIntervalPipelineCreatorJob failed.");
+    triggerPipelineCreation(pipelineManager, conf, 0);
+  }
+
+  /**
+   * Triggers pipeline creation after the specified time.
+   *
+   * @param pipelineManager - Pipeline manager
+   * @param conf            - Configuration
+   * @param afterMillis     - Time after which pipeline creation needs to be
+   *                        triggered
+   */
+  public static void triggerPipelineCreation(PipelineManager pipelineManager,
+      Configuration conf, long afterMillis) {
+    // TODO: #CLUTIL introduce a better mechanism to not have more than one
+    // job of a particular type running, probably via ratis.
+    if (!isPipelineCreatorRunning.compareAndSet(false, true)) {
+      return;
+    }
+    timeoutScheduler
+        .onTimeout(TimeDuration.valueOf(afterMillis, TimeUnit.MILLISECONDS),
+            () -> createPipelines(pipelineManager, conf), LOG,
+            () -> "PipelineCreation failed.");
+  }
+
+  private static void createPipelines(PipelineManager pipelineManager,
+      Configuration conf) {
+    // TODO: #CLUTIL Different replication factor may need to be supported
+    HddsProtos.ReplicationType type = HddsProtos.ReplicationType.valueOf(
+        conf.get(OzoneConfigKeys.OZONE_REPLICATION_TYPE,
+            OzoneConfigKeys.OZONE_REPLICATION_TYPE_DEFAULT));
+
+    for (HddsProtos.ReplicationFactor factor : HddsProtos.ReplicationFactor
+        .values()) {
+      while (true) {
+        try {
+          pipelineManager.createPipeline(type, factor);
+        } catch (IOException ioe) {
+          break;
+        } catch (Throwable t) {
+          LOG.error("Error while creating pipelines {}", t);
+          break;
+        }
+      }
+    }
+    isPipelineCreatorRunning.set(false);
   }
 }

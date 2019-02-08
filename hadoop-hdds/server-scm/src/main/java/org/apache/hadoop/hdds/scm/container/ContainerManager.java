@@ -16,10 +16,8 @@
  */
 package org.apache.hadoop.hdds.scm.container;
 
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -146,10 +144,12 @@ public interface ContainerManager extends Closeable {
       throws IOException;
 
   /**
-   * Returns the ContainerInfo.
-   * @return NodeManager
+   * Returns ContainerInfo which matches the requirements.
+   * @param size - the amount of space required in the container
+   * @param owner - the user which requires space in its owned container
+   * @param pipeline - pipeline to which the container should belong
+   * @return ContainerInfo for the matching container.
    */
-  ContainerInfo getMatchingContainer(long size,
-      String owner, ReplicationType type, ReplicationFactor factor,
-      LifeCycleState state) throws IOException;
+  ContainerInfo getMatchingContainer(long size, String owner,
+      Pipeline pipeline);
 }

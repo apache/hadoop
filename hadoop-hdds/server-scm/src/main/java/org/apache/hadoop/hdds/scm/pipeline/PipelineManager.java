@@ -26,7 +26,7 @@ import org.apache.hadoop.hdds.scm.container.ContainerID;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
-import java.util.Set;
+import java.util.NavigableSet;
 
 /**
  * Interface which exposes the api for pipeline management.
@@ -57,7 +57,7 @@ public interface PipelineManager extends Closeable {
   void removeContainerFromPipeline(PipelineID pipelineID,
       ContainerID containerID) throws IOException;
 
-  Set<ContainerID> getContainersInPipeline(PipelineID pipelineID)
+  NavigableSet<ContainerID> getContainersInPipeline(PipelineID pipelineID)
       throws IOException;
 
   int getNumberOfContainers(PipelineID pipelineID) throws IOException;

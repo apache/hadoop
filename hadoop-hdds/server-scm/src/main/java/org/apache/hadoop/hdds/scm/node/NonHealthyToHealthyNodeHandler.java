@@ -15,10 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hdds.scm.node;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipeline.RatisPipelineUtils;
@@ -26,22 +26,23 @@ import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
 /**
- * Handles New Node event.
+ * Handles Stale node event.
  */
-public class NewNodeHandler implements EventHandler<DatanodeDetails> {
+public class NonHealthyToHealthyNodeHandler
+    implements EventHandler<DatanodeDetails> {
 
   private final PipelineManager pipelineManager;
   private final Configuration conf;
 
-  public NewNodeHandler(PipelineManager pipelineManager, Configuration conf) {
+  public NonHealthyToHealthyNodeHandler(
+      PipelineManager pipelineManager, OzoneConfiguration conf) {
     this.pipelineManager = pipelineManager;
     this.conf = conf;
   }
 
   @Override
   public void onMessage(DatanodeDetails datanodeDetails,
-                        EventPublisher publisher) {
-    RatisPipelineUtils
-        .triggerPipelineCreation(pipelineManager, conf, 0);
+      EventPublisher publisher) {
+    RatisPipelineUtils.triggerPipelineCreation(pipelineManager, conf, 0);
   }
 }

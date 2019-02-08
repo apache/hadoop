@@ -41,7 +41,7 @@ class PipelineStateMap {
       PipelineStateMap.class);
 
   private final Map<PipelineID, Pipeline> pipelineMap;
-  private final Map<PipelineID, Set<ContainerID>> pipeline2container;
+  private final Map<PipelineID, NavigableSet<ContainerID>> pipeline2container;
 
   PipelineStateMap() {
 
@@ -202,17 +202,17 @@ class PipelineStateMap {
    * @return Set of containerIDs belonging to the pipeline
    * @throws IOException if pipeline is not found
    */
-  Set<ContainerID> getContainers(PipelineID pipelineID)
+  NavigableSet<ContainerID> getContainers(PipelineID pipelineID)
       throws PipelineNotFoundException {
     Preconditions.checkNotNull(pipelineID,
         "Pipeline Id cannot be null");
 
-    Set<ContainerID> containerIDs = pipeline2container.get(pipelineID);
+    NavigableSet<ContainerID> containerIDs = pipeline2container.get(pipelineID);
     if (containerIDs == null) {
       throw new PipelineNotFoundException(
           String.format("%s not found", pipelineID));
     }
-    return new HashSet<>(containerIDs);
+    return new TreeSet<>(containerIDs);
   }
 
   /**

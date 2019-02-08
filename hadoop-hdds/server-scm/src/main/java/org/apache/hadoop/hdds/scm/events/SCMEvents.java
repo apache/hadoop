@@ -169,6 +169,13 @@ public final class SCMEvents {
       new TypedEvent<>(DatanodeDetails.class, "Dead_Node");
 
   /**
+   * This event will be triggered whenever a datanode is moved from non-healthy
+   * state to healthy state.
+   */
+  public static final TypedEvent<DatanodeDetails> NON_HEALTHY_TO_HEALTHY_NODE =
+      new TypedEvent<>(DatanodeDetails.class, "NON_HEALTHY_TO_HEALTHY_NODE");
+
+  /**
    * This event will be triggered by CommandStatusReportHandler whenever a
    * status for Replication SCMCommand is received.
    */

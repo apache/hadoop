@@ -23,12 +23,16 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.container.CloseContainerEventHandler;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.RatisPipelineUtils;
 import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.scm.server.SCMStorage;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
@@ -49,6 +53,7 @@ import org.junit.rules.ExpectedException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConsts.GB;
@@ -59,27 +64,33 @@ import static org.apache.hadoop.ozone.OzoneConsts.MB;
  * Tests for SCM Block Manager.
  */
 public class TestBlockManager implements EventHandler<Boolean> {
-  private static SCMContainerManager mapping;
-  private static MockNodeManager nodeManager;
-  private static PipelineManager pipelineManager;
-  private static BlockManagerImpl blockManager;
-  private static File testDir;
+  private SCMContainerManager mapping;
+  private MockNodeManager nodeManager;
+  private PipelineManager pipelineManager;
+  private BlockManagerImpl blockManager;
+  private File testDir;
   private final static long DEFAULT_BLOCK_SIZE = 128 * MB;
   private static HddsProtos.ReplicationFactor factor;
   private static HddsProtos.ReplicationType type;
   private static String containerOwner = "OZONE";
   private static EventQueue eventQueue;
+  private int numContainerPerOwnerInPipeline;
+  private Configuration conf;
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
   @Before
   public void setUp() throws Exception {
-    Configuration conf = SCMTestUtils.getConf();
+    conf = SCMTestUtils.getConf();
+    numContainerPerOwnerInPipeline = conf.getInt(
+        ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT,
+        ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT_DEFAULT);
 
     String path = GenericTestUtils
         .getTempPath(TestBlockManager.class.getSimpleName());
     testDir = Paths.get(path).toFile();
+    testDir.delete();
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, path);
     eventQueue = new EventQueue();
     boolean folderExisted = testDir.exists() || testDir.mkdirs();
@@ -95,6 +106,9 @@ public class TestBlockManager implements EventHandler<Boolean> {
         nodeManager, pipelineManager, mapping, eventQueue);
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, blockManager);
     eventQueue.addHandler(SCMEvents.START_REPLICATION, this);
+    CloseContainerEventHandler closeContainerHandler =
+        new CloseContainerEventHandler(pipelineManager, mapping);
+    eventQueue.addHandler(SCMEvents.CLOSE_CONTAINER, closeContainerHandler);
     if(conf.getBoolean(ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY,
         ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT)){
       factor = HddsProtos.ReplicationFactor.THREE;
@@ -174,6 +188,113 @@ public class TestBlockManager implements EventHandler<Boolean> {
     }, 10, 1000 * 5);
     Assert.assertNotNull(blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
         type, factor, containerOwner));
+  }
+
+  @Test(timeout = 10000)
+  public void testMultipleBlockAllocation()
+      throws IOException, TimeoutException, InterruptedException {
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
+    GenericTestUtils
+        .waitFor(() -> !blockManager.isScmInChillMode(), 10, 1000 * 5);
+
+    pipelineManager.createPipeline(type, factor);
+    pipelineManager.createPipeline(type, factor);
+
+    AllocatedBlock allocatedBlock = blockManager
+        .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner);
+    // block should be allocated in different pipelines
+    GenericTestUtils.waitFor(() -> {
+      try {
+        AllocatedBlock block = blockManager
+            .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner);
+        return !block.getPipeline().getId()
+            .equals(allocatedBlock.getPipeline().getId());
+      } catch (IOException e) {
+      }
+      return false;
+    }, 100, 1000);
+  }
+
+  private boolean verifyNumberOfContainersInPipelines(
+      int numContainersPerPipeline) {
+    try {
+      for (Pipeline pipeline : pipelineManager.getPipelines(type, factor)) {
+        if (pipelineManager.getNumberOfContainers(pipeline.getId())
+            != numContainersPerPipeline) {
+          return false;
+        }
+      }
+    } catch (IOException e) {
+      return false;
+    }
+    return true;
+  }
+
+  @Test(timeout = 10000)
+  public void testMultipleBlockAllocationWithClosedContainer()
+      throws IOException, TimeoutException, InterruptedException {
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
+    GenericTestUtils
+        .waitFor(() -> !blockManager.isScmInChillMode(), 10, 1000 * 5);
+
+    // create pipelines
+    for (int i = 0;
+         i < nodeManager.getNodes(HddsProtos.NodeState.HEALTHY).size(); i++) {
+      pipelineManager.createPipeline(type, factor);
+    }
+
+    // wait till each pipeline has the configured number of containers.
+    // After this each pipeline has numContainerPerOwnerInPipeline containers
+    // for each owner
+    GenericTestUtils.waitFor(() -> {
+      try {
+        blockManager
+            .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner);
+      } catch (IOException e) {
+      }
+      return verifyNumberOfContainersInPipelines(
+          numContainerPerOwnerInPipeline);
+    }, 10, 1000);
+
+    // close all the containers in all the pipelines
+    for (Pipeline pipeline : pipelineManager.getPipelines(type, factor)) {
+      for (ContainerID cid : pipelineManager
+          .getContainersInPipeline(pipeline.getId())) {
+        eventQueue.fireEvent(SCMEvents.CLOSE_CONTAINER, cid);
+      }
+    }
+    // wait till no containers are left in the pipelines
+    GenericTestUtils
+        .waitFor(() -> verifyNumberOfContainersInPipelines(0), 10, 5000);
+
+    // allocate block so that each pipeline has the configured number of
+    // containers.
+    GenericTestUtils.waitFor(() -> {
+      try {
+        blockManager
+            .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner);
+      } catch (IOException e) {
+      }
+      return verifyNumberOfContainersInPipelines(
+          numContainerPerOwnerInPipeline);
+    }, 10, 1000);
+  }
+
+  @Test(timeout = 10000)
+  public void testBlockAllocationWithNoAvailablePipelines()
+      throws IOException, TimeoutException, InterruptedException {
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
+    GenericTestUtils
+        .waitFor(() -> !blockManager.isScmInChillMode(), 10, 1000 * 5);
+
+    for (Pipeline pipeline : pipelineManager.getPipelines()) {
+      RatisPipelineUtils
+          .finalizeAndDestroyPipeline(pipelineManager, pipeline, conf, false);
+    }
+    Assert.assertEquals(0, pipelineManager.getPipelines(type, factor).size());
+    Assert.assertNotNull(blockManager
+        .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner));
+    Assert.assertEquals(1, pipelineManager.getPipelines(type, factor).size());
   }
 
   @Override
