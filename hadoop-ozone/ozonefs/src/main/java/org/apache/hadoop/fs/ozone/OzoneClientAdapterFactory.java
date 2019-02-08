@@ -40,7 +40,7 @@ public final class OzoneClientAdapterFactory {
 
   public static OzoneClientAdapter createAdapter(
       String volumeStr,
-      String bucketStr)
+      String bucketStr, OzoneFSStorageStatistics storageStatistics)
       throws IOException {
 
     ClassLoader currentClassLoader = OzoneFileSystem.class.getClassLoader();
@@ -70,10 +70,11 @@ public final class OzoneClientAdapterFactory {
 
       OzoneClientAdapter ozoneClientAdapter = (OzoneClientAdapter) classLoader
           .loadClass("org.apache.hadoop.fs.ozone.OzoneClientAdapterImpl")
-          .getConstructor(String.class, String.class)
+          .getConstructor(String.class, String.class,
+              OzoneFSStorageStatistics.class)
           .newInstance(
               volumeStr,
-              bucketStr);
+              bucketStr, storageStatistics);
 
       Thread.currentThread().setContextClassLoader(contextClassLoader);
 

@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
+import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -84,6 +85,9 @@ public class OzoneFileSystem extends FileSystem {
 
   private OzoneClientAdapter adapter;
 
+
+  private OzoneFSStorageStatistics storageStatistics;
+
   private static final Pattern URL_SCHEMA_PATTERN =
       Pattern.compile("(.+)\\.([^\\.]+)");
 
@@ -121,9 +125,14 @@ public class OzoneFileSystem extends FileSystem {
       boolean isolatedClassloader =
           conf.getBoolean("ozone.fs.isolated-classloader", defaultValue);
 
+      storageStatistics = (OzoneFSStorageStatistics)
+          GlobalStorageStatistics.INSTANCE
+              .put(OzoneFSStorageStatistics.NAME,
+                  OzoneFSStorageStatistics::new);
       if (isolatedClassloader) {
         this.adapter =
-            OzoneClientAdapterFactory.createAdapter(volumeStr, bucketStr);
+            OzoneClientAdapterFactory.createAdapter(volumeStr, bucketStr,
+                storageStatistics);
       } else {
         OzoneConfiguration ozoneConfiguration;
         if (conf instanceof OzoneConfiguration) {
@@ -132,7 +141,7 @@ public class OzoneFileSystem extends FileSystem {
           ozoneConfiguration = new OzoneConfiguration(conf);
         }
         this.adapter = new OzoneClientAdapterImpl(ozoneConfiguration,
-            volumeStr, bucketStr);
+            volumeStr, bucketStr, storageStatistics);
       }
 
       try {
@@ -169,8 +178,18 @@ public class OzoneFileSystem extends FileSystem {
     return OZONE_URI_SCHEME;
   }
 
+  Statistics getFsStatistics() {
+    return statistics;
+  }
+
+  OzoneFSStorageStatistics getOzoneFSOpsCountStatistics() {
+    return storageStatistics;
+  }
+
   @Override
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
+    storageStatistics.incrementCounter(Statistic.INVOCATION_OPEN, 1);
+    statistics.incrementWriteOps(1);
     LOG.trace("open() path:{}", f);
     final FileStatus fileStatus = getFileStatus(f);
     final String key = pathToKey(f);
@@ -188,6 +207,8 @@ public class OzoneFileSystem extends FileSystem {
                                    short replication, long blockSize,
                                    Progressable progress) throws IOException {
     LOG.trace("create() path:{}", f);
+     storageStatistics.incrementCounter(Statistic.INVOCATION_CREATE, 1);
+    statistics.incrementWriteOps(1);
     final String key = pathToKey(f);
     final FileStatus status;
     try {
@@ -208,8 +229,7 @@ public class OzoneFileSystem extends FileSystem {
 
     // We pass null to FSDataOutputStream so it won't count writes that
     // are being buffered to a file
-    return new FSDataOutputStream(
-        adapter.createKey(key), null);
+    return new FSDataOutputStream(adapter.createKey(key), statistics);
   }
 
   @Override
@@ -220,6 +240,9 @@ public class OzoneFileSystem extends FileSystem {
       short replication,
       long blockSize,
       Progressable progress) throws IOException {
+    storageStatistics.incrementCounter(
+        Statistic.INVOCATION_CREATE_NON_RECURSIVE, 1);
+    statistics.incrementWriteOps(1);
     final Path parent = path.getParent();
     if (parent != null) {
       // expect this to raise an exception if there is no parent
@@ -273,6 +296,8 @@ public class OzoneFileSystem extends FileSystem {
    */
   @Override
   public boolean rename(Path src, Path dst) throws IOException {
+    storageStatistics.incrementCounter(Statistic.INVOCATION_RENAME, 1);
+    statistics.incrementWriteOps(1);
     if (src.equals(dst)) {
       return true;
     }
@@ -406,6 +431,8 @@ public class OzoneFileSystem extends FileSystem {
 
   @Override
   public boolean delete(Path f, boolean recursive) throws IOException {
+    storageStatistics.incrementCounter(Statistic.INVOCATION_DELETE, 1);
+    statistics.incrementWriteOps(1);
     LOG.debug("Delete path {} - recursive {}", f, recursive);
     FileStatus status;
     try {
@@ -596,6 +623,8 @@ public class OzoneFileSystem extends FileSystem {
 
   @Override
   public FileStatus[] listStatus(Path f) throws IOException {
+    storageStatistics.incrementCounter(Statistic.INVOCATION_LIST_STATUS, 1);
+    statistics.incrementReadOps(1);
     LOG.trace("listStatus() path:{}", f);
     ListStatusIterator iterator = new ListStatusIterator(f);
     iterator.iterate();
@@ -681,6 +710,8 @@ public class OzoneFileSystem extends FileSystem {
 
   @Override
   public FileStatus getFileStatus(Path f) throws IOException {
+    storageStatistics.incrementCounter(Statistic.INVOCATION_GET_FILE_STATUS, 1);
+    statistics.incrementReadOps(1);
     LOG.trace("getFileStatus() path:{}", f);
     Path qualifiedPath = f.makeQualified(uri, workingDir);
     String key = pathToKey(qualifiedPath);
