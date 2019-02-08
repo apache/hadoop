@@ -93,8 +93,7 @@ public interface NodeManager extends StorageContainerNodeProtocol,
    * Return a map of node stats.
    * @return a map of individual node stats (live/stale but not dead).
    */
-  // TODO: try to change the return type to Map<DatanodeDetails, SCMNodeStat>
-  Map<UUID, SCMNodeStat> getNodeStats();
+  Map<DatanodeDetails, SCMNodeStat> getNodeStats();
 
   /**
    * Return the node stat of the specified datanode.
@@ -159,17 +158,11 @@ public interface NodeManager extends StorageContainerNodeProtocol,
   /**
    * Process node report.
    *
-   * @param dnUuid
+   * @param datanodeDetails
    * @param nodeReport
    */
-  void processNodeReport(DatanodeDetails dnUuid, NodeReportProto nodeReport);
-
-  /**
-   * Process a dead node event in this Node Manager.
-   *
-   * @param dnUuid datanode uuid.
-   */
-  void processDeadNode(UUID dnUuid);
+  void processNodeReport(DatanodeDetails datanodeDetails,
+                         NodeReportProto nodeReport);
 
   /**
    * Get list of SCMCommands in the Command Queue for a particular Datanode.

@@ -76,7 +76,7 @@ public class MockNodeManager implements NodeManager {
   private final List<DatanodeDetails> healthyNodes;
   private final List<DatanodeDetails> staleNodes;
   private final List<DatanodeDetails> deadNodes;
-  private final Map<UUID, SCMNodeStat> nodeMetricMap;
+  private final Map<DatanodeDetails, SCMNodeStat> nodeMetricMap;
   private final SCMNodeStat aggregateStat;
   private boolean chillmode;
   private final Map<UUID, List<SCMCommand>> commandMap;
@@ -114,7 +114,7 @@ public class MockNodeManager implements NodeManager {
     newStat.set(
         (NODES[x % NODES.length].capacity),
         (NODES[x % NODES.length].used), remaining);
-    this.nodeMetricMap.put(datanodeDetails.getUuid(), newStat);
+    this.nodeMetricMap.put(datanodeDetails, newStat);
     aggregateStat.add(newStat);
 
     if (NODES[x % NODES.length].getCurrentState() == NodeData.HEALTHY) {
@@ -201,7 +201,7 @@ public class MockNodeManager implements NodeManager {
    * @return a list of individual node stats (live/stale but not dead).
    */
   @Override
-  public Map<UUID, SCMNodeStat> getNodeStats() {
+  public Map<DatanodeDetails, SCMNodeStat> getNodeStats() {
     return nodeMetricMap;
   }
 
@@ -213,7 +213,7 @@ public class MockNodeManager implements NodeManager {
    */
   @Override
   public SCMNodeMetric getNodeStat(DatanodeDetails datanodeDetails) {
-    SCMNodeStat stat = nodeMetricMap.get(datanodeDetails.getUuid());
+    SCMNodeStat stat = nodeMetricMap.get(datanodeDetails);
     if (stat == null) {
       return null;
     }
@@ -413,12 +413,12 @@ public class MockNodeManager implements NodeManager {
    * @param size number of bytes.
    */
   public void addContainer(DatanodeDetails datanodeDetails, long size) {
-    SCMNodeStat stat = this.nodeMetricMap.get(datanodeDetails.getUuid());
+    SCMNodeStat stat = this.nodeMetricMap.get(datanodeDetails);
     if (stat != null) {
       aggregateStat.subtract(stat);
       stat.getCapacity().add(size);
       aggregateStat.add(stat);
-      nodeMetricMap.put(datanodeDetails.getUuid(), stat);
+      nodeMetricMap.put(datanodeDetails, stat);
     }
   }
 
@@ -429,12 +429,12 @@ public class MockNodeManager implements NodeManager {
    * @param size number of bytes.
    */
   public void delContainer(DatanodeDetails datanodeDetails, long size) {
-    SCMNodeStat stat = this.nodeMetricMap.get(datanodeDetails.getUuid());
+    SCMNodeStat stat = this.nodeMetricMap.get(datanodeDetails);
     if (stat != null) {
       aggregateStat.subtract(stat);
       stat.getCapacity().subtract(size);
       aggregateStat.add(stat);
-      nodeMetricMap.put(datanodeDetails.getUuid(), stat);
+      nodeMetricMap.put(datanodeDetails, stat);
     }
   }
 
@@ -443,21 +443,6 @@ public class MockNodeManager implements NodeManager {
                         EventPublisher publisher) {
     addDatanodeCommand(commandForDatanode.getDatanodeId(),
         commandForDatanode.getCommand());
-  }
-
-  /**
-   * Remove the node stats and update the storage stats
-   * in this Node Manager.
-   *
-   * @param dnUuid UUID of the datanode.
-   */
-  @Override
-  public void processDeadNode(UUID dnUuid) {
-    SCMNodeStat stat = this.nodeMetricMap.get(dnUuid);
-    if (stat != null) {
-      aggregateStat.subtract(stat);
-      stat.set(0, 0, 0);
-    }
   }
 
   @Override

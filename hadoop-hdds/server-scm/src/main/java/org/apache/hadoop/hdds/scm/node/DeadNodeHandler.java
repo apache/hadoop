@@ -58,7 +58,6 @@ public class DeadNodeHandler implements EventHandler<DatanodeDetails> {
   @Override
   public void onMessage(DatanodeDetails datanodeDetails,
       EventPublisher publisher) {
-    nodeManager.processDeadNode(datanodeDetails.getUuid());
 
     // TODO: check if there are any pipeline on this node and fire close
     // pipeline event
