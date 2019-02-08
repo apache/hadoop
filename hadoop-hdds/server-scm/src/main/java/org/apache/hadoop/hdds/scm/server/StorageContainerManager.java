@@ -60,6 +60,7 @@ import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes;
 import org.apache.hadoop.hdds.scm.node.DeadNodeHandler;
 import org.apache.hadoop.hdds.scm.node.NewNodeHandler;
+import org.apache.hadoop.hdds.scm.node.NonHealthyToHealthyNodeHandler;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.node.NodeReportHandler;
 import org.apache.hadoop.hdds.scm.node.SCMNodeManager;
@@ -256,11 +257,13 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     CommandStatusReportHandler cmdStatusReportHandler =
         new CommandStatusReportHandler();
 
-    NewNodeHandler newNodeHandler = new NewNodeHandler();
+    NewNodeHandler newNodeHandler = new NewNodeHandler(pipelineManager, conf);
     StaleNodeHandler staleNodeHandler =
         new StaleNodeHandler(scmNodeManager, pipelineManager, conf);
     DeadNodeHandler deadNodeHandler = new DeadNodeHandler(scmNodeManager,
         containerManager);
+    NonHealthyToHealthyNodeHandler nonHealthyToHealthyNodeHandler =
+        new NonHealthyToHealthyNodeHandler(pipelineManager, conf);
     ContainerActionsHandler actionsHandler = new ContainerActionsHandler();
     PendingDeleteHandler pendingDeleteHandler =
         new PendingDeleteHandler(scmBlockManager.getSCMBlockDeletingService());
@@ -320,6 +323,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     eventQueue.addHandler(SCMEvents.CLOSE_CONTAINER, closeContainerHandler);
     eventQueue.addHandler(SCMEvents.NEW_NODE, newNodeHandler);
     eventQueue.addHandler(SCMEvents.STALE_NODE, staleNodeHandler);
+    eventQueue.addHandler(SCMEvents.NON_HEALTHY_TO_HEALTHY_NODE,
+        nonHealthyToHealthyNodeHandler);
     eventQueue.addHandler(SCMEvents.DEAD_NODE, deadNodeHandler);
     eventQueue.addHandler(SCMEvents.CMD_STATUS_REPORT, cmdStatusReportHandler);
     eventQueue.addHandler(SCMEvents.START_REPLICATION,

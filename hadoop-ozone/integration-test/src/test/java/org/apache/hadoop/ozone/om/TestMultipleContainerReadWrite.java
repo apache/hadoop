@@ -72,7 +72,7 @@ public class TestMultipleContainerReadWrite {
     conf = new OzoneConfiguration();
     conf.setStorageSize(OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE, 1,
         StorageUnit.MB);
-    conf.setInt(ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE, 5);
+    conf.setInt(ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT, 5);
     cluster = MiniOzoneCluster.newBuilder(conf).build();
     cluster.waitForClusterToBeReady();
     storageHandler = new ObjectStoreHandler(conf).getStorageHandler();

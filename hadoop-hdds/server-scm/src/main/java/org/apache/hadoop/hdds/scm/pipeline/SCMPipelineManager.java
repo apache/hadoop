@@ -40,6 +40,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -213,8 +214,8 @@ public class SCMPipelineManager implements PipelineManager {
   }
 
   @Override
-  public Set<ContainerID> getContainersInPipeline(PipelineID pipelineID)
-      throws IOException {
+  public NavigableSet<ContainerID> getContainersInPipeline(
+      PipelineID pipelineID) throws IOException {
     lock.readLock().lock();
     try {
       return stateManager.getContainers(pipelineID);

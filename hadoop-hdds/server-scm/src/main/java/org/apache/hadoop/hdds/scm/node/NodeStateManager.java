@@ -156,6 +156,8 @@ public class NodeStateManager implements Runnable, Closeable {
   private void initialiseState2EventMap() {
     state2EventMap.put(NodeState.STALE, SCMEvents.STALE_NODE);
     state2EventMap.put(NodeState.DEAD, SCMEvents.DEAD_NODE);
+    state2EventMap
+        .put(NodeState.HEALTHY, SCMEvents.NON_HEALTHY_TO_HEALTHY_NODE);
   }
 
   /*

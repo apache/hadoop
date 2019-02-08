@@ -760,11 +760,10 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.container.provision_batch_size</name>
-    <value>20</value>
-    <tag>OZONE, PERFORMANCE</tag>
-    <description>Pre-provision specified number of containers for block
-      allocation.
+    <name>ozone.scm.pipeline.owner.container.count</name>
+    <value>3</value>
+    <tag>OZONE, SCM, PIPELINE</tag>
+    <description>Number of containers per owner in a pipeline.
     </description>
   </property>
   <property>
@@ -1219,6 +1218,15 @@
     <description>
       Once a pipeline is closed, SCM should wait for the above configured time
       before destroying a pipeline.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.pipeline.creation.interval</name>
+    <value>120s</value>
+    <tag>OZONE, SCM, PIPELINE</tag>
+    <description>
+      SCM schedules a fixed interval job using the configured interval to
+      create pipelines.
     </description>
   </property>
 

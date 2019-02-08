@@ -312,9 +312,9 @@ public final class ScmConfigKeys {
   public static final String OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY =
       "ozone.scm.container.placement.impl";
 
-  public static final String OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE =
-      "ozone.scm.container.provision_batch_size";
-  public static final int OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE_DEFAULT = 20;
+  public static final String OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT =
+      "ozone.scm.pipeline.owner.container.count";
+  public static final int OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT_DEFAULT = 3;
 
   public static final String
       OZONE_SCM_KEY_VALUE_CONTAINER_DELETION_CHOOSING_POLICY =
@@ -331,6 +331,11 @@ public final class ScmConfigKeys {
 
   public static final String OZONE_SCM_PIPELINE_DESTROY_TIMEOUT_DEFAULT =
       "300s";
+
+  public static final String OZONE_SCM_PIPELINE_CREATION_INTERVAL =
+      "ozone.scm.pipeline.creation.interval";
+  public static final String OZONE_SCM_PIPELINE_CREATION_INTERVAL_DEFAULT =
+      "120s";
 
   public static final String OZONE_SCM_BLOCK_DELETION_MAX_RETRY =
       "ozone.scm.block.deletion.max.retry";

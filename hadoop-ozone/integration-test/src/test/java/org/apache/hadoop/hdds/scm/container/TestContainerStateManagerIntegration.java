@@ -16,6 +16,9 @@
  */
 package org.apache.hadoop.hdds.scm.container;
 
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.commons.lang3.RandomUtils;
@@ -23,6 +26,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -34,16 +38,21 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.NavigableSet;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 
 /**
  * Tests for ContainerStateManager.
  */
 public class TestContainerStateManagerIntegration {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestContainerStateManagerIntegration.class);
 
   private OzoneConfiguration conf;
   private MiniOzoneCluster cluster;
@@ -52,11 +61,15 @@ public class TestContainerStateManagerIntegration {
   private ContainerManager containerManager;
   private ContainerStateManager containerStateManager;
   private String containerOwner = "OZONE";
+  private int numContainerPerOwnerInPipeline;
 
 
   @Before
   public void setup() throws Exception {
     conf = new OzoneConfiguration();
+    numContainerPerOwnerInPipeline =
+        conf.getInt(ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT,
+            ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT_DEFAULT);
     cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(1).build();
     cluster.waitForClusterToBeReady();
     cluster.waitTobeOutOfChillMode();
@@ -80,11 +93,10 @@ public class TestContainerStateManagerIntegration {
     ContainerWithPipeline container1 = scm.getClientProtocolServer()
         .allocateContainer(xceiverClientManager.getType(),
             xceiverClientManager.getFactor(), containerOwner);
-    ContainerInfo info = containerStateManager
+    ContainerInfo info = containerManager
         .getMatchingContainer(OzoneConsts.GB * 3, containerOwner,
-            xceiverClientManager.getType(), xceiverClientManager.getFactor(),
-            HddsProtos.LifeCycleState.OPEN);
-    Assert.assertEquals(container1.getContainerInfo().getContainerID(),
+            container1.getPipeline());
+    Assert.assertNotEquals(container1.getContainerInfo().getContainerID(),
         info.getContainerID());
     Assert.assertEquals(containerOwner, info.getOwner());
     Assert.assertEquals(xceiverClientManager.getType(),
@@ -104,7 +116,7 @@ public class TestContainerStateManagerIntegration {
             HddsProtos.LifeCycleState.OPEN).size();
     Assert.assertNotEquals(container1.getContainerInfo().getContainerID(),
         container2.getContainerInfo().getContainerID());
-    Assert.assertEquals(2, numContainers);
+    Assert.assertEquals(3, numContainers);
   }
 
   @Test
@@ -156,36 +168,71 @@ public class TestContainerStateManagerIntegration {
 
   @Test
   public void testGetMatchingContainer() throws IOException {
+    long cid;
     ContainerWithPipeline container1 = scm.getClientProtocolServer().
         allocateContainer(xceiverClientManager.getType(),
             xceiverClientManager.getFactor(), containerOwner);
+    cid = container1.getContainerInfo().getContainerID();
 
-    ContainerInfo info = containerStateManager
+    // each getMatchingContainer call allocates a container in the
+    // pipeline till the pipeline has numContainerPerOwnerInPipeline number of
+    // containers.
+    for (int i = 1; i < numContainerPerOwnerInPipeline; i++) {
+      ContainerInfo info = containerManager
+          .getMatchingContainer(OzoneConsts.GB * 3, containerOwner,
+              container1.getPipeline());
+      Assert.assertTrue(info.getContainerID() > cid);
+      cid = info.getContainerID();
+    }
+
+    // At this point there are already three containers in the pipeline.
+    // next container should be the same as first container
+    ContainerInfo info = containerManager
         .getMatchingContainer(OzoneConsts.GB * 3, containerOwner,
-            xceiverClientManager.getType(), xceiverClientManager.getFactor(),
-            HddsProtos.LifeCycleState.OPEN);
+            container1.getPipeline());
     Assert.assertEquals(container1.getContainerInfo().getContainerID(),
         info.getContainerID());
+  }
 
-    ContainerWithPipeline container2 = scm.getClientProtocolServer().
+  @Test
+  public void testGetMatchingContainerMultipleThreads()
+      throws IOException, InterruptedException {
+    ContainerWithPipeline container1 = scm.getClientProtocolServer().
         allocateContainer(xceiverClientManager.getType(),
             xceiverClientManager.getFactor(), containerOwner);
-    info = containerStateManager
-        .getMatchingContainer(OzoneConsts.GB * 3, containerOwner,
-            xceiverClientManager.getType(), xceiverClientManager.getFactor(),
-            HddsProtos.LifeCycleState.OPEN);
-    // space has already been allocated in container1, now container 2 should
-    // be chosen.
-    Assert.assertEquals(container2.getContainerInfo().getContainerID(),
-        info.getContainerID());
+    Map<Long, Long> container2MatchedCount = new ConcurrentHashMap<>();
 
-    // now we have to get container1
-    info = containerStateManager
-        .getMatchingContainer(OzoneConsts.GB * 3, containerOwner,
-            xceiverClientManager.getType(), xceiverClientManager.getFactor(),
-            HddsProtos.LifeCycleState.OPEN);
-    Assert.assertEquals(container1.getContainerInfo().getContainerID(),
-        info.getContainerID());
+    // allocate blocks using multiple threads
+    int numBlockAllocates = 100000;
+    for (int i = 0; i < numBlockAllocates; i++) {
+      CompletableFuture.supplyAsync(() -> {
+        ContainerInfo info = containerManager
+            .getMatchingContainer(OzoneConsts.GB * 3, containerOwner,
+                container1.getPipeline());
+        container2MatchedCount
+            .compute(info.getContainerID(), (k, v) -> v == null ? 1L : v + 1);
+        return null;
+      });
+    }
+
+    // make sure pipeline has has numContainerPerOwnerInPipeline number of
+    // containers.
+    Assert.assertEquals(scm.getPipelineManager()
+            .getNumberOfContainers(container1.getPipeline().getId()),
+        numContainerPerOwnerInPipeline);
+    Thread.sleep(5000);
+    long threshold = 2000;
+    // check the way the block allocations are distributed in the different
+    // containers.
+    for (Long matchedCount : container2MatchedCount.values()) {
+      // TODO: #CLUTIL Look at the division of block allocations in different
+      // containers.
+      LOG.error("Total allocated block = " + matchedCount);
+      Assert.assertTrue(matchedCount <=
+          numBlockAllocates / container2MatchedCount.size() + threshold
+          && matchedCount >=
+          numBlockAllocates / container2MatchedCount.size() - threshold);
+    }
   }
 
   @Test

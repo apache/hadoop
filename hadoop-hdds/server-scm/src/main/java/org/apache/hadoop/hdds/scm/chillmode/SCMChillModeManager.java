@@ -27,6 +27,7 @@ import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.RatisPipelineUtils;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeProtocolServer
     .NodeRegistrationContainerReport;
 import org.apache.hadoop.hdds.server.events.EventHandler;
@@ -62,11 +63,13 @@ public class SCMChillModeManager implements
   private static final String PIPELINE_EXIT_RULE = "PipelineChillModeRule";
 
   private final EventQueue eventPublisher;
+  private final PipelineManager pipelineManager;
 
   public SCMChillModeManager(Configuration conf,
       List<ContainerInfo> allContainers, PipelineManager pipelineManager,
       EventQueue eventQueue) {
     this.config = conf;
+    this.pipelineManager = pipelineManager;
     this.eventPublisher = eventQueue;
     this.isChillModeEnabled = conf.getBoolean(
         HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED,
@@ -128,6 +131,10 @@ public class SCMChillModeManager implements
       e.cleanup();
     }
     emitChillModeStatus();
+    // TODO: #CLUTIL if we reenter chill mode the fixed interval pipeline
+    // creation job needs to stop
+    RatisPipelineUtils
+        .scheduleFixedIntervalPipelineCreator(pipelineManager, config);
   }
 
   @Override
