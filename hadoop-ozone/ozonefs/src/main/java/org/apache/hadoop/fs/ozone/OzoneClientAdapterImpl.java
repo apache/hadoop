@@ -52,10 +52,11 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
   private OzoneBucket bucket;
   private ReplicationType replicationType;
   private ReplicationFactor replicationFactor;
+  private OzoneFSStorageStatistics storageStatistics;
 
-  public OzoneClientAdapterImpl(String volumeStr, String bucketStr)
-      throws IOException {
-    this(createConf(), volumeStr, bucketStr);
+  public OzoneClientAdapterImpl(String volumeStr, String bucketStr,
+      OzoneFSStorageStatistics storageStatistics) throws IOException {
+    this(createConf(), volumeStr, bucketStr, storageStatistics);
   }
 
   private static OzoneConfiguration createConf() {
@@ -68,7 +69,8 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
   }
 
   public OzoneClientAdapterImpl(OzoneConfiguration conf, String volumeStr,
-      String bucketStr) throws IOException {
+      String bucketStr, OzoneFSStorageStatistics storageStatistics)
+      throws IOException {
     ClassLoader contextClassLoader =
         Thread.currentThread().getContextClassLoader();
     Thread.currentThread().setContextClassLoader(null);
@@ -86,6 +88,7 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
       this.bucket = volume.getBucket(bucketStr);
       this.replicationType = ReplicationType.valueOf(replicationTypeConf);
       this.replicationFactor = ReplicationFactor.valueOf(replicationCountConf);
+      this.storageStatistics = storageStatistics;
     } finally {
       Thread.currentThread().setContextClassLoader(contextClassLoader);
     }
@@ -99,11 +102,13 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
 
   @Override
   public InputStream createInputStream(String key) throws IOException {
+    storageStatistics.incrementCounter(Statistic.OBJECTS_READ, 1);
     return bucket.readKey(key).getInputStream();
   }
 
   @Override
   public OzoneFSOutputStream createKey(String key) throws IOException {
+    storageStatistics.incrementCounter(Statistic.OBJECTS_CREATED, 1);
     OzoneOutputStream ozoneOutputStream =
         bucket.createKey(key, 0, replicationType, replicationFactor,
             new HashMap<>());
@@ -112,6 +117,7 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
 
   @Override
   public void renameKey(String key, String newKeyName) throws IOException {
+    storageStatistics.incrementCounter(Statistic.OBJECTS_RENAMED, 1);
     bucket.renameKey(key, newKeyName);
   }
 
@@ -124,6 +130,7 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
   @Override
   public BasicKeyInfo getKeyInfo(String keyName) {
     try {
+      storageStatistics.incrementCounter(Statistic.OBJECTS_QUERY, 1);
       OzoneKey key = bucket.getKey(keyName);
       return new BasicKeyInfo(
           keyName,
@@ -160,6 +167,7 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
   public boolean createDirectory(String keyName) {
     try {
       LOG.trace("creating dir for key:{}", keyName);
+      storageStatistics.incrementCounter(Statistic.OBJECTS_CREATED, 1);
       bucket.createKey(keyName, 0, replicationType, replicationFactor,
           new HashMap<>()).close();
       return true;
@@ -179,6 +187,7 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
   public boolean deleteObject(String keyName) {
     LOG.trace("issuing delete for key" + keyName);
     try {
+      storageStatistics.incrementCounter(Statistic.OBJECTS_DELETED, 1);
       bucket.deleteKey(keyName);
       return true;
     } catch (IOException ioe) {
@@ -194,11 +203,13 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
 
   @Override
   public boolean hasNextKey(String key) {
+    storageStatistics.incrementCounter(Statistic.OBJECTS_LIST, 1);
     return bucket.listKeys(key).hasNext();
   }
 
   @Override
   public Iterator<BasicKeyInfo> listKeys(String pathKey) {
+    storageStatistics.incrementCounter(Statistic.OBJECTS_LIST, 1);
     return new IteratorAdapter(bucket.listKeys(pathKey));
   }
 
