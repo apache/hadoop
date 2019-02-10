@@ -204,7 +204,6 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     return minIndex.isPresent() ? minIndex.getAsLong() : 0;
   }
 
-
   @Override
   public long watchForCommit(long index, long timeout)
       throws InterruptedException, ExecutionException, TimeoutException,
@@ -254,7 +253,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
       commitInfoMap.remove(address);
       LOG.info(
           "Could not commit " + index + " to all the nodes. Server " + address
-              + " has failed" + "Committed by majority.");
+              + " has failed." + " Committed by majority.");
     }
     return index;
   }
@@ -266,9 +265,9 @@ public final class XceiverClientRatis extends XceiverClientSpi {
    * @return Response to the command
    */
   @Override
-  public XceiverClientAsyncReply sendCommandAsync(
+  public XceiverClientReply sendCommandAsync(
       ContainerCommandRequestProto request) {
-    XceiverClientAsyncReply asyncReply = new XceiverClientAsyncReply(null);
+    XceiverClientReply asyncReply = new XceiverClientReply(null);
     CompletableFuture<RaftClientReply> raftClientReply =
         sendRequestAsync(request);
     CompletableFuture<ContainerCommandResponseProto> containerCommandResponse =
@@ -291,6 +290,8 @@ public final class XceiverClientRatis extends XceiverClientSpi {
                 if (response.getResult() == ContainerProtos.Result.SUCCESS) {
                   updateCommitInfosMap(reply.getCommitInfos());
                   asyncReply.setLogIndex(reply.getLogIndex());
+                  asyncReply.setDatanode(
+                      RatisHelper.toDatanodeId(reply.getReplierId()));
                 }
                 return response;
               } catch (InvalidProtocolBufferException e) {

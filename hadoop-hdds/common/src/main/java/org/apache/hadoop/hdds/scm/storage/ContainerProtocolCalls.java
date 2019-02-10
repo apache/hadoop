@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdds.scm.storage;
 
-import org.apache.hadoop.hdds.scm.XceiverClientAsyncReply;
+import org.apache.hadoop.hdds.scm.XceiverClientReply;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .BlockNotCommittedException;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
@@ -58,8 +58,6 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ReadChunkRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ReadChunkResponseProto;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ReadContainerRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ReadContainerResponseProto;
@@ -72,6 +70,8 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
 import org.apache.hadoop.hdds.client.BlockID;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -199,7 +199,7 @@ public final class ContainerProtocolCalls  {
    * @throws InterruptedException
    * @throws ExecutionException
    */
-  public static XceiverClientAsyncReply putBlockAsync(
+  public static XceiverClientReply putBlockAsync(
       XceiverClientSpi xceiverClient, BlockData containerBlockData,
       String traceID)
       throws IOException, InterruptedException, ExecutionException {
@@ -217,7 +217,6 @@ public final class ContainerProtocolCalls  {
       builder.setEncodedToken(encodedToken);
     }
     ContainerCommandRequestProto request = builder.build();
-    xceiverClient.sendCommand(request);
     return xceiverClient.sendCommandAsync(request);
   }
 
@@ -228,11 +227,13 @@ public final class ContainerProtocolCalls  {
    * @param chunk information about chunk to read
    * @param blockID ID of the block
    * @param traceID container protocol call args
+   * @param excludeDns datamode to exclude while executing the command
    * @return container protocol read chunk response
    * @throws IOException if there is an I/O error while performing the call
    */
-  public static ReadChunkResponseProto readChunk(XceiverClientSpi xceiverClient,
-      ChunkInfo chunk, BlockID blockID, String traceID) throws IOException {
+  public static XceiverClientReply readChunk(XceiverClientSpi xceiverClient,
+      ChunkInfo chunk, BlockID blockID, String traceID, List<UUID> excludeDns)
+      throws IOException {
     ReadChunkRequestProto.Builder readChunkRequest = ReadChunkRequestProto
         .newBuilder()
         .setBlockID(blockID.getDatanodeBlockIDProtobuf())
@@ -251,9 +252,9 @@ public final class ContainerProtocolCalls  {
       builder.setEncodedToken(encodedToken);
     }
     ContainerCommandRequestProto request = builder.build();
-    ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
-    validateContainerResponse(response);
-    return response.getReadChunk();
+    XceiverClientReply reply =
+        xceiverClient.sendCommand(request, excludeDns);
+    return reply;
   }
 
   /**
@@ -302,7 +303,7 @@ public final class ContainerProtocolCalls  {
    * @param traceID container protocol call args
    * @throws IOException if there is an I/O error while performing the call
    */
-  public static XceiverClientAsyncReply writeChunkAsync(
+  public static XceiverClientReply writeChunkAsync(
       XceiverClientSpi xceiverClient, ChunkInfo chunk, BlockID blockID,
       ByteString data, String traceID)
       throws IOException, ExecutionException, InterruptedException {

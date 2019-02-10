@@ -19,7 +19,7 @@
 package org.apache.hadoop.hdds.scm.storage;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.hdds.scm.XceiverClientAsyncReply;
+import org.apache.hadoop.hdds.scm.XceiverClientReply;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.common.Checksum;
@@ -379,7 +379,7 @@ public class BlockOutputStream extends OutputStream {
     CompletableFuture<ContainerProtos.
         ContainerCommandResponseProto> flushFuture;
     try {
-      XceiverClientAsyncReply asyncReply =
+      XceiverClientReply asyncReply =
           putBlockAsync(xceiverClient, containerBlockData.build(), requestId);
       CompletableFuture<ContainerProtos.ContainerCommandResponseProto> future =
           asyncReply.getResponse();
@@ -598,7 +598,7 @@ public class BlockOutputStream extends OutputStream {
         traceID + ContainerProtos.Type.WriteChunk + chunkIndex + chunkInfo
             .getChunkName();
     try {
-      XceiverClientAsyncReply asyncReply =
+      XceiverClientReply asyncReply =
           writeChunkAsync(xceiverClient, chunkInfo, blockID, data, requestId);
       CompletableFuture<ContainerProtos.ContainerCommandResponseProto> future =
           asyncReply.getResponse();

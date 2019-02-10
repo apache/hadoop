@@ -21,20 +21,29 @@ package org.apache.hadoop.hdds.scm;
 
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
+
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
  * This class represents the Async reply from XceiverClient.
  */
-public class XceiverClientAsyncReply {
+public class XceiverClientReply {
 
   private CompletableFuture<ContainerCommandResponseProto> response;
   private Long logIndex;
+  private UUID dnId;
 
-  public XceiverClientAsyncReply(
+  public XceiverClientReply(
       CompletableFuture<ContainerCommandResponseProto> response) {
-    this.logIndex = (long)0;
+    this(response, null);
+  }
+
+  public XceiverClientReply(
+      CompletableFuture<ContainerCommandResponseProto> response, UUID dnId) {
+    this.logIndex = (long) 0;
     this.response = response;
+    this.dnId = dnId;
   }
 
   public CompletableFuture<ContainerCommandResponseProto> getResponse() {
@@ -47,6 +56,14 @@ public class XceiverClientAsyncReply {
 
   public void setLogIndex(Long logIndex) {
     this.logIndex = logIndex;
+  }
+
+  public UUID getDatanode() {
+    return dnId;
+  }
+
+  public void setDatanode(UUID datanodeId) {
+    this.dnId = datanodeId;
   }
 
   public void setResponse(

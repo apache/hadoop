@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hdds.scm.storage;
 
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.scm.XceiverClientReply;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.ozone.common.Checksum;
@@ -35,8 +38,11 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
 /**
  * An {@link InputStream} used by the REST service in combination with the
@@ -204,27 +210,57 @@ public class BlockInputStream extends InputStream implements Seekable {
     // On every chunk read chunkIndex should be increased so as to read the
     // next chunk
     chunkIndex += 1;
-    final ReadChunkResponseProto readChunkResponse;
+    XceiverClientReply reply;
+    ReadChunkResponseProto readChunkResponse = null;
     final ChunkInfo chunkInfo = chunks.get(chunkIndex);
-    try {
-      readChunkResponse = ContainerProtocolCalls
-          .readChunk(xceiverClient, chunkInfo, blockID, traceID);
-    } catch (IOException e) {
-      if (e instanceof StorageContainerException) {
-        throw e;
+    List<UUID> excludeDns = null;
+    ByteString byteString;
+    List<DatanodeDetails> dnList = xceiverClient.getPipeline().getNodes();
+    while (true) {
+      try {
+        reply = ContainerProtocolCalls
+            .readChunk(xceiverClient, chunkInfo, blockID, traceID, excludeDns);
+        ContainerProtos.ContainerCommandResponseProto response;
+        response = reply.getResponse().get();
+        ContainerProtocolCalls.validateContainerResponse(response);
+        readChunkResponse = response.getReadChunk();
+      } catch (IOException e) {
+        if (e instanceof StorageContainerException) {
+          throw e;
+        }
+        throw new IOException("Unexpected OzoneException: " + e.toString(), e);
+      } catch (ExecutionException | InterruptedException e) {
+        throw new IOException(
+            "Failed to execute ReadChunk command for chunk  " + chunkInfo
+                .getChunkName(), e);
       }
-      throw new IOException("Unexpected OzoneException: " + e.toString(), e);
+      byteString = readChunkResponse.getData();
+      try {
+        if (byteString.size() != chunkInfo.getLen()) {
+          // Bytes read from chunk should be equal to chunk size.
+          throw new IOException(String
+              .format("Inconsistent read for chunk=%s len=%d bytesRead=%d",
+                  chunkInfo.getChunkName(), chunkInfo.getLen(),
+                  byteString.size()));
+        }
+        ChecksumData checksumData =
+            ChecksumData.getFromProtoBuf(chunkInfo.getChecksumData());
+        Checksum.verifyChecksum(byteString, checksumData);
+        break;
+      } catch (IOException ioe) {
+        // we will end up in this situation only if the checksum mismatch
+        // happens or the length of the chunk mismatches.
+        // In this case, read should be retried on a different replica.
+        // TODO: Inform SCM of a possible corrupt container replica here
+        if (excludeDns == null) {
+          excludeDns = new ArrayList<>();
+        }
+        excludeDns.add(reply.getDatanode());
+        if (excludeDns.size() == dnList.size()) {
+          throw ioe;
+        }
+      }
     }
-    ByteString byteString = readChunkResponse.getData();
-    if (byteString.size() != chunkInfo.getLen()) {
-      // Bytes read from chunk should be equal to chunk size.
-      throw new IOException(String
-          .format("Inconsistent read for chunk=%s len=%d bytesRead=%d",
-              chunkInfo.getChunkName(), chunkInfo.getLen(), byteString.size()));
-    }
-    ChecksumData checksumData = ChecksumData.getFromProtoBuf(
-        chunkInfo.getChecksumData());
-    Checksum.verifyChecksum(byteString, checksumData);
 
     buffers = byteString.asReadOnlyByteBufferList();
     bufferIndex = 0;
