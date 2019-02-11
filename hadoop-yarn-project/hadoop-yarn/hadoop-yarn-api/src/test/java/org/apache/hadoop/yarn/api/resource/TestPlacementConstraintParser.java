@@ -42,7 +42,6 @@ import org.apache.hadoop.yarn.util.constraint.PlacementConstraintParser.Constrai
 
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets.allocationTag;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.and;
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.cardinality;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.or;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetIn;
@@ -110,11 +109,13 @@ public class TestPlacementConstraintParser {
     Assert.assertEquals("node", single.getScope());
     Assert.assertEquals(0, single.getMinCardinality());
     Assert.assertEquals(0, single.getMaxCardinality());
-    Assert.assertEquals(1, single.getTargetExpressions().size());
-    TargetExpression exp =
-        single.getTargetExpressions().iterator().next();
-    Assert.assertEquals("ALLOCATION_TAG", exp.getTargetType().toString());
-    Assert.assertEquals(3, exp.getTargetValues().size());
+    Assert.assertEquals(3, single.getTargetExpressions().size());
+    Set<TargetExpression> expectedTargetExpressions = Sets.newHashSet(
+        PlacementTargets.allocationTag("foo"),
+        PlacementTargets.allocationTag("bar"),
+        PlacementTargets.allocationTag("exp"));
+    Assert.assertTrue(Sets.difference(expectedTargetExpressions,
+        single.getTargetExpressions()).isEmpty());
     verifyConstraintToString(expressionStr, constraint);
 
     // Invalid OP
@@ -161,13 +162,13 @@ public class TestPlacementConstraintParser {
     Assert.assertEquals("rack", single.getScope());
     Assert.assertEquals(0, single.getMinCardinality());
     Assert.assertEquals(1, single.getMaxCardinality());
-    Assert.assertEquals(1, single.getTargetExpressions().size());
-    exp = single.getTargetExpressions().iterator().next();
-    Assert.assertEquals("ALLOCATION_TAG", exp.getTargetType().toString());
-    Assert.assertEquals(3, exp.getTargetValues().size());
-    Set<String> expectedTags = Sets.newHashSet("foo", "bar", "moo");
-    Assert.assertTrue(Sets.difference(expectedTags, exp.getTargetValues())
-        .isEmpty());
+    Assert.assertEquals(3, single.getTargetExpressions().size());
+    Set<TargetExpression> expectedTargetExpressions = Sets.newHashSet(
+        PlacementTargets.allocationTag("foo"),
+        PlacementTargets.allocationTag("bar"),
+        PlacementTargets.allocationTag("moo"));
+    Assert.assertTrue(Sets.difference(expectedTargetExpressions,
+        single.getTargetExpressions()).isEmpty());
     verifyConstraintToString(expressionExpr, constraint);
 
     // Invalid scope string
@@ -376,7 +377,11 @@ public class TestPlacementConstraintParser {
     tag1 = result.keySet().iterator().next();
     Assert.assertEquals("foo", tag1.getTag());
     Assert.assertEquals(10, tag1.getNumOfAllocations());
-    expectedPc1 = cardinality("node", 0, 100, "foo", "bar").build();
+    TargetExpression[] targetExpressions = new TargetExpression[] {
+        PlacementTargets.allocationTag("foo"),
+        PlacementTargets.allocationTag("bar")};
+    expectedPc1 = PlacementConstraints.targetCardinality("node", 0,
+        100, targetExpressions).build();
     Assert.assertEquals(expectedPc1, result.values().iterator().next());
 
     // Two constraint expressions
@@ -524,4 +529,50 @@ public class TestPlacementConstraintParser {
       Assert.assertTrue(e instanceof PlacementConstraintParseException);
     }
   }
+
+  @Test
+  public void testParseAllocationTagNameSpace()
+      throws PlacementConstraintParseException {
+    Map<SourceTags, PlacementConstraint> result;
+
+    // Constraint with Two Different NameSpaces
+    result = PlacementConstraintParser
+        .parsePlacementSpec("foo=2,notin,node,not-self/bar,all/moo");
+    Assert.assertEquals(1, result.size());
+    Set<TargetExpression> expectedTargetExpressions = Sets.newHashSet(
+        PlacementTargets.allocationTagWithNamespace("not-self", "bar"),
+        PlacementTargets.allocationTagWithNamespace("all", "moo"));
+    AbstractConstraint constraint = result.values().iterator().next().
+        getConstraintExpr();
+    Assert.assertTrue(constraint instanceof SingleConstraint);
+    SingleConstraint single = (SingleConstraint) constraint;
+    Assert.assertEquals(2, single.getTargetExpressions().size());
+    Assert.assertTrue(Sets.difference(expectedTargetExpressions,
+        single.getTargetExpressions()).isEmpty());
+
+    // Constraint With Default NameSpace SELF
+    result = PlacementConstraintParser
+        .parsePlacementSpec("foo=2,notin,node,moo");
+    Assert.assertEquals(1, result.size());
+    TargetExpression expectedTargetExpression = PlacementTargets.
+        allocationTagWithNamespace("self", "moo");
+    constraint = result.values().iterator().next().getConstraintExpr();
+    Assert.assertTrue(constraint instanceof SingleConstraint);
+    single = (SingleConstraint) constraint;
+    Assert.assertEquals(1, single.getTargetExpressions().size());
+    Assert.assertEquals(expectedTargetExpression,
+        single.getTargetExpressions().iterator().next());
+
+    // Constraint With Invalid NameSpace
+    boolean caughtException = false;
+    try {
+      result = PlacementConstraintParser
+          .parsePlacementSpec("foo=2,notin,node,bar/moo");
+    } catch(PlacementConstraintParseException e) {
+      caughtException = true;
+    }
+    Assert.assertTrue("PlacementConstraintParseException is expected",
+        caughtException);
+  }
+
 }
