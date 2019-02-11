@@ -15,8 +15,10 @@
 
 import logging
 import os
+import time
+import subprocess
 
-
+EPOCH_TIME = int(time.time())
 def pytest_addoption(parser):
     parser.addoption("--output-dir",
                      action="store",
@@ -40,13 +42,14 @@ def pytest_addoption(parser):
 
 
 def pytest_configure(config):
+    global OUTPUT_DIR
     os.environ["CONTAINER_STATUS_SLEEP"] = config.option.containerStatusSleep
-    outputdir = config.option.output_dir
+    OUTPUT_DIR = "%s/%s" % (config.option.output_dir, EPOCH_TIME)
     try:
-        os.makedirs(outputdir)
+        os.makedirs(OUTPUT_DIR)
     except OSError, e:
         raise Exception(e.strerror + ": " + e.filename)
-    log_file = os.path.join(outputdir, "output.log")
+    log_file = os.path.join(OUTPUT_DIR, "output.log")
 
     if config.option.log_level == "trace":
         loglevel = eval("logging.DEBUG")
@@ -74,8 +77,20 @@ def pytest_report_teststatus(report):
     elif report.when == 'call':
         logger.info("TEST \"%s\" %s in %3.2f seconds" %
                     (name, report.outcome.upper(), report.duration))
+        log_file_path = "%s/%s_all_docker.log" % \
+                        (OUTPUT_DIR, name)
+        gather_docker_logs(log_file_path)
 
 
 def pytest_sessionfinish(session):
     logger = logging.getLogger('main')
     logger.info("ALL TESTS FINISHED")
+    logger.info("ALL logs present in following directory: %s", OUTPUT_DIR)
+
+
+def gather_docker_logs(log_file_path):
+    docker_compose_file = os.environ["DOCKER_COMPOSE_FILE"]
+    output = subprocess.check_output(["docker-compose", "-f",
+                                      docker_compose_file, "logs"])
+    with open(log_file_path, "w") as text_file:
+        text_file.write(output)
