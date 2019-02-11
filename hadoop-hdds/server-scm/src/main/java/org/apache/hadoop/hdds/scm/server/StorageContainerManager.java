@@ -75,6 +75,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority.DefaultCAServe
 import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.server.events.EventQueue;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RPC;
@@ -453,6 +454,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       System.exit(0);
     }
     try {
+      TracingUtil.initTracing("StorageContainerManager");
       OzoneConfiguration conf = new OzoneConfiguration();
       GenericOptionsParser hParser = new GenericOptionsParser(conf, argv);
       if (!hParser.isParseSuccessful()) {

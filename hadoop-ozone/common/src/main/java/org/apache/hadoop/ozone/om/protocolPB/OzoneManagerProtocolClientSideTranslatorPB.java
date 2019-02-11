@@ -17,15 +17,18 @@
  */
 package org.apache.hadoop.ozone.om.protocolPB;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.KeyValueUtil;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
@@ -42,163 +45,95 @@ import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
-import org.apache.hadoop.ozone.om.exceptions.OMException;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.AllocateBlockRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.AllocateBlockResponse;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.CreateKeyRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.CreateKeyResponse;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.CommitKeyRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.CommitKeyResponse;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.DeleteKeyRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.DeleteKeyResponse;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.BucketArgs;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.BucketInfo;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.CreateBucketRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.CreateBucketResponse;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.InfoBucketRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.InfoBucketResponse;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.SetBucketPropertyRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.SetBucketPropertyResponse;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.DeleteBucketRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.DeleteBucketResponse;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.CreateVolumeRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.CreateVolumeResponse;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.LookupKeyRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.LookupKeyResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .MultipartCommitUploadPartRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .MultipartCommitUploadPartResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .MultipartInfoInitiateRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .MultipartInfoInitiateResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.
-    MultipartUploadAbortRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .MultipartUploadAbortResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .MultipartUploadCompleteRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .MultipartUploadCompleteResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .MultipartUploadListPartsRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .MultipartUploadListPartsResponse;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.RenameKeyRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.RenameKeyResponse;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.KeyArgs;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.SetVolumePropertyRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.SetVolumePropertyResponse;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.DeleteVolumeRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.DeleteVolumeResponse;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.InfoVolumeRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.InfoVolumeResponse;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.CheckVolumeAccessRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.CheckVolumeAccessResponse;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.ListBucketsRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.ListBucketsResponse;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.ListKeysRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.ListKeysResponse;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.VolumeInfo;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.Status;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.OzoneAclInfo;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.ListVolumeRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.ListVolumeResponse;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.ServiceListRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.ServiceListResponse;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.S3CreateBucketRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.S3CreateBucketResponse;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.S3DeleteBucketRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.S3DeleteBucketResponse;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.S3BucketInfoRequest;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.S3BucketInfoResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .S3ListBucketsRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .S3ListBucketsResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .GetS3SecretRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .GetS3SecretResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .OMRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .OMResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.BucketArgs;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.BucketInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CancelDelegationTokenResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CheckVolumeAccessRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CheckVolumeAccessResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CommitKeyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CommitKeyResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateBucketRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateBucketResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateKeyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateKeyResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateVolumeRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateVolumeResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteBucketRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteBucketResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteKeyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteKeyResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteVolumeRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteVolumeResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetDelegationTokenResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetS3SecretRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetS3SecretResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.InfoBucketRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.InfoBucketResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.InfoVolumeRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.InfoVolumeResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyArgs;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListBucketsRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListBucketsResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListKeysRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListKeysResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListVolumeRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListVolumeResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.LookupKeyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.LookupKeyResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartCommitUploadPartRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartCommitUploadPartResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartInfoInitiateRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartInfoInitiateResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartUploadAbortRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartUploadAbortResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartUploadCompleteRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartUploadCompleteResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartUploadListPartsRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartUploadListPartsResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.RenameKeyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.RenameKeyResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.RenewDelegationTokenResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3BucketInfoRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3BucketInfoResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3CreateBucketRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3CreateBucketResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3DeleteBucketRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3DeleteBucketResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3ListBucketsRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3ListBucketsResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServiceListRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServiceListResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetBucketPropertyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetBucketPropertyResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetVolumePropertyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetVolumePropertyResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.List;
-import java.util.stream.Collectors;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeInfo;
 import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
-import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.GetDelegationTokenResponseProto;
-import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.RenewDelegationTokenResponseProto;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.CancelDelegationTokenResponseProto;
+import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
+import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.security.token.Token;
 
-import static org.apache.hadoop.ozone.om.exceptions.OMException.*;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
+import io.opentracing.Scope;
+import io.opentracing.util.GlobalTracer;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_ERROR_OTHER;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.UNKNOWN;
-import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status.OK;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status.ACCESS_DENIED;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status.OK;
+
 
 /**
  *  The client side implementation of OzoneManagerProtocol.
@@ -259,6 +194,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
    * @param cmdType type of the request
    */
   private OMRequest.Builder createOMRequest(Type cmdType) {
+
     return OMRequest.newBuilder()
         .setCmdType(cmdType)
         .setClientId(clientID);
@@ -272,10 +208,18 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
    */
   private OMResponse submitRequest(OMRequest omRequest)
       throws IOException {
+    Scope scope =
+        GlobalTracer.get().buildSpan(omRequest.getCmdType().name())
+            .startActive(true);
     try {
-      return rpcProxy.submitRequest(NULL_RPC_CONTROLLER, omRequest);
+      OMRequest payload = OMRequest.newBuilder(omRequest)
+          .setTraceID(TracingUtil.exportCurrentSpan())
+          .build();
+      return rpcProxy.submitRequest(NULL_RPC_CONTROLLER, payload);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
+    } finally {
+      scope.close();
     }
   }
 

@@ -165,6 +165,7 @@ message ContainerWithPipeline {
 }
 
 message GetScmInfoRequestProto {
+    optional string traceID = 1;
 }
 
 message GetScmInfoRespsonseProto {

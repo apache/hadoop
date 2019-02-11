@@ -27,6 +27,7 @@ import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
@@ -139,6 +140,7 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
    */
   @Override
   public void start(Object service) {
+
     DefaultMetricsSystem.initialize("HddsDatanode");
     OzoneConfiguration.activate();
     if (service instanceof Configurable) {
@@ -151,6 +153,9 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
         datanodeDetails = initializeDatanodeDetails();
         datanodeDetails.setHostName(hostname);
         datanodeDetails.setIpAddress(ip);
+        TracingUtil.initTracing(
+            "HddsDatanodeService." + datanodeDetails.getUuidString()
+                .substring(0, 8));
         LOG.info("HddsDatanodeService host:{} ip:{}", hostname, ip);
         // Authenticate Hdds Datanode service if security is enabled
         if (conf.getBoolean(OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY,

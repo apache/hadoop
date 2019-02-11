@@ -127,6 +127,16 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
     </dependency>
+    <dependency>
+      <groupId>io.jaegertracing</groupId>
+      <artifactId>jaeger-client</artifactId>
+      <version>0.33.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.opentracing</groupId>
+      <artifactId>opentracing-util</artifactId>
+      <version>0.31.0</version>
+    </dependency>
   </dependencies>
 
   <build>

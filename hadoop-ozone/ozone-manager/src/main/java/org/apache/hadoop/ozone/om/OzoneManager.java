@@ -42,6 +42,7 @@ import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -586,6 +587,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       System.exit(0);
     }
     try {
+      TracingUtil.initTracing("OzoneManager");
       OzoneConfiguration conf = new OzoneConfiguration();
       GenericOptionsParser hParser = new GenericOptionsParser(conf, argv);
       if (!hParser.isParseSuccessful()) {
