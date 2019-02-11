@@ -47,3 +47,12 @@ services:
       environment:
           ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
       command: ["/opt/hadoop/bin/ozone","scm"]
+   ozone_client:
+       image: apache/hadoop-runner
+       volumes:
+         - ../..:/opt/hadoop
+       ports:
+         - 9869
+       command: ["tail", "-f","/etc/passwd"]
+       env_file:
+         - ./docker-config

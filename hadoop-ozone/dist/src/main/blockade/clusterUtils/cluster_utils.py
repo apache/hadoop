@@ -22,6 +22,7 @@ import logging
 import time
 import re
 import yaml
+import os
 
 
 logger = logging.getLogger(__name__)
@@ -64,17 +65,18 @@ class ClusterUtils(object):
 
     @classmethod
     def run_freon(cls, docker_compose_file, num_volumes, num_buckets,
-                  num_keys, key_size, replication_type, replication_factor):
+                  num_keys, key_size, replication_type, replication_factor,
+                  freon_client='ozoneManager'):
         # run freon
         cmd = "docker-compose -f %s " \
-              "exec ozoneManager /opt/hadoop/bin/ozone " \
+              "exec %s /opt/hadoop/bin/ozone " \
               "freon rk " \
               "--numOfVolumes %s " \
               "--numOfBuckets %s " \
               "--numOfKeys %s " \
               "--keySize %s " \
               "--replicationType %s " \
-              "--factor %s" % (docker_compose_file, num_volumes,
+              "--factor %s" % (docker_compose_file, freon_client, num_volumes,
                                num_buckets, num_keys, key_size,
                                replication_type, replication_factor)
         exit_code, output = cls.run_cmd(cmd)
@@ -189,3 +191,110 @@ class ClusterUtils(object):
                     ' '.join(all_datanode_container_status))
 
         return all_datanode_container_status
+
+    @classmethod
+    def create_volume(cls, docker_compose_file, volume_name):
+        command = "docker-compose -f %s " \
+              "exec ozone_client /opt/hadoop/bin/ozone " \
+                  "sh volume create /%s --user root" % \
+                  (docker_compose_file, volume_name)
+        logger.info("Creating Volume %s", volume_name)
+        exit_code, output = cls.run_cmd(command)
+        assert exit_code == 0, "Ozone volume create failed with output=[%s]" \
+                               % output
+
+    @classmethod
+    def delete_volume(cls, docker_compose_file, volume_name):
+        command = "docker-compose -f %s " \
+              "exec ozone_client /opt/hadoop/bin/ozone " \
+                  "sh volume delete /%s" % (docker_compose_file, volume_name)
+        logger.info("Deleting Volume %s", volume_name)
+        exit_code, output = cls.run_cmd(command)
+        return exit_code, output
+
+    @classmethod
+    def create_bucket(cls, docker_compose_file, bucket_name, volume_name):
+        command = "docker-compose -f %s " \
+              "exec ozone_client /opt/hadoop/bin/ozone " \
+              "sh bucket create /%s/%s" % (docker_compose_file,
+                                           volume_name, bucket_name)
+        logger.info("Creating Bucket %s in volume %s",
+                    bucket_name, volume_name)
+        exit_code, output = cls.run_cmd(command)
+        assert exit_code == 0, "Ozone bucket create failed with output=[%s]" \
+                               % output
+
+    @classmethod
+    def delete_bucket(cls, docker_compose_file, bucket_name, volume_name):
+        command = "docker-compose -f %s " \
+              "exec ozone_client /opt/hadoop/bin/ozone " \
+                  "sh bucket delete /%s/%s" % (docker_compose_file,
+                                               volume_name, bucket_name)
+        logger.info("Running delete bucket of %s/%s", volume_name, bucket_name)
+        exit_code, output = cls.run_cmd(command)
+        return exit_code, output
+
+    @classmethod
+    def put_key(cls, docker_compose_file, bucket_name, volume_name,
+               filepath, key_name=None, replication_factor=None):
+        command = "docker-compose -f %s " \
+              "exec ozone_client ls  %s" % (docker_compose_file, filepath)
+        exit_code, output = cls.run_cmd(command)
+        assert exit_code == 0, "%s does not exist" % filepath
+        if key_name is None:
+            key_name = os.path.basename(filepath)
+        command = "docker-compose -f %s " \
+              "exec ozone_client /opt/hadoop/bin/ozone " \
+                  "sh key put /%s/%s/%s %s" % (docker_compose_file,
+                                               volume_name, bucket_name,
+                                               key_name, filepath)
+        if replication_factor:
+            command = "%s --replication=%s" % (command, replication_factor)
+        logger.info("Creating key %s in %s/%s", key_name,
+                    volume_name, bucket_name)
+        exit_code, output = cls.run_cmd(command)
+        assert exit_code == 0, "Ozone put Key failed with output=[%s]" % output
+
+    @classmethod
+    def delete_key(cls, docker_compose_file, bucket_name, volume_name,
+                   key_name):
+        command = "docker-compose -f %s " \
+              "exec ozone_client /opt/hadoop/bin/ozone " \
+                  "sh key delete /%s/%s/%s" \
+                  % (docker_compose_file, volume_name, bucket_name, key_name)
+        logger.info("Running delete key %s in %s/%s",
+                    key_name, volume_name, bucket_name)
+        exit_code, output = cls.run_cmd(command)
+        return exit_code, output
+
+    @classmethod
+    def get_key(cls, docker_compose_file, bucket_name, volume_name,
+               key_name, filepath=None):
+        if filepath is None:
+            filepath = '.'
+        command = "docker-compose -f %s " \
+              "exec ozone_client /opt/hadoop/bin/ozone " \
+                  "sh key get /%s/%s/%s %s" % (docker_compose_file,
+                                               volume_name, bucket_name,
+                                               key_name, filepath)
+        logger.info("Running get key %s in %s/%s", key_name,
+                    volume_name, bucket_name)
+        exit_code, output = cls.run_cmd(command)
+        assert exit_code == 0, "Ozone get Key failed with output=[%s]" % output
+
+    @classmethod
+    def find_checksum(cls, docker_compose_file, filepath):
+        command = "docker-compose -f %s " \
+              "exec ozone_client md5sum  %s" % (docker_compose_file, filepath)
+        exit_code, output = cls.run_cmd(command)
+        assert exit_code == 0, "Cant find checksum"
+        myoutput = output.split("\n")
+        finaloutput = ""
+        for line in myoutput:
+            if line.find("Warning") >= 0 or line.find("is not a tty") >= 0:
+                logger.info("skip this line: %s", line)
+            else:
+                finaloutput = finaloutput + line
+        checksum = finaloutput.split(" ")
+        logger.info("Checksum of %s is : %s", filepath, checksum[0])
+        return checksum[0]

@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 parent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 FILE = os.path.join(parent_dir, "compose", "ozoneblockade",
                     "docker-compose.yaml")
+os.environ["DOCKER_COMPOSE_FILE"] = FILE
 SCALE = 3
 CONTAINER_LIST = []
 OM = []
