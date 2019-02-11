@@ -217,6 +217,8 @@ public final class TestSecureOzoneCluster {
         spnegoKeytab.getAbsolutePath());
     conf.set(OMConfigKeys.OZONE_OM_KERBEROS_KEYTAB_FILE_KEY,
         omKeyTab.getAbsolutePath());
+    conf.set(OMConfigKeys.OZONE_OM_HTTP_KERBEROS_KEYTAB_FILE,
+        spnegoKeytab.getAbsolutePath());
   }
 
   @Test
