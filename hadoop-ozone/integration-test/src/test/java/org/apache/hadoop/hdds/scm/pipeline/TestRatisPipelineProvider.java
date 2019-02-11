@@ -64,10 +64,11 @@ public class TestRatisPipelineProvider {
     factor = HddsProtos.ReplicationFactor.ONE;
     Pipeline pipeline1 = provider.create(factor);
     stateManager.addPipeline(pipeline1);
-    // New pipeline should not overlap with the previous created pipeline
-    Assert.assertTrue(
-        CollectionUtils.intersection(pipeline.getNodes(), pipeline1.getNodes())
-            .isEmpty());
+    // New pipeline should overlap with the previous created pipeline,
+    // and one datanode should overlap between the two types.
+    Assert.assertEquals(
+        CollectionUtils.intersection(pipeline.getNodes(),
+            pipeline1.getNodes()).size(), 1);
     Assert.assertEquals(pipeline1.getType(), HddsProtos.ReplicationType.RATIS);
     Assert.assertEquals(pipeline1.getFactor(), factor);
     Assert.assertEquals(pipeline1.getPipelineState(),
