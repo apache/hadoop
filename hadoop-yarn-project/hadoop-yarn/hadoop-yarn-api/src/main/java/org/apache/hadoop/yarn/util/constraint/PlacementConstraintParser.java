@@ -20,10 +20,13 @@ package org.apache.hadoop.yarn.util.constraint;
 import com.google.common.base.Strings;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType;
 import org.apache.hadoop.yarn.api.records.NodeAttributeOpCode;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TargetExpression;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -35,6 +38,7 @@ import java.util.List;
 import java.util.Stack;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -51,6 +55,7 @@ public final class PlacementConstraintParser {
   private static final char KV_SPLIT_DELIM = '=';
   private static final char BRACKET_START = '(';
   private static final char BRACKET_END = ')';
+  private static final char NAMESPACE_DELIM = '/';
   private static final String KV_NE_DELIM = "!=";
   private static final String IN = "in";
   private static final String NOT_IN = "notin";
@@ -101,6 +106,25 @@ public final class PlacementConstraintParser {
       } catch (NumberFormatException e) {
         throw new PlacementConstraintParseException(
             "Expecting an Integer, but get " + name);
+      }
+    }
+
+    TargetExpression parseNameSpace(String targetTag)
+        throws PlacementConstraintParseException {
+      int i = targetTag.lastIndexOf(NAMESPACE_DELIM);
+      if (i != -1) {
+        String namespace = targetTag.substring(0, i);
+        for (AllocationTagNamespaceType type :
+            AllocationTagNamespaceType.values()) {
+          if (type.getTypeKeyword().equals(namespace)) {
+            return PlacementTargets.allocationTagWithNamespace(
+                namespace, targetTag.substring(i+1));
+          }
+        }
+        throw new PlacementConstraintParseException(
+            "Invalid namespace prefix: " + namespace);
+      } else {
+        return PlacementTargets.allocationTag(targetTag);
       }
     }
 
@@ -392,12 +416,11 @@ public final class PlacementConstraintParser {
                 + constraintEntities);
       }
 
-      PlacementConstraint.TargetExpression target = null;
+      TargetExpression target = null;
       if (!constraintEntities.isEmpty()) {
-        target = PlacementConstraints.PlacementTargets
-            .nodeAttribute(attributeName,
-                constraintEntities
-                    .toArray(new String[constraintEntities.size()]));
+        target = PlacementTargets.nodeAttribute(attributeName,
+            constraintEntities
+            .toArray(new String[constraintEntities.size()]));
       }
 
       placementConstraints = PlacementConstraints
@@ -457,23 +480,20 @@ public final class PlacementConstraintParser {
         String scope = nextToken();
         scope = parseScope(scope);
 
-        Set<String> constraintEntities = new TreeSet<>();
+        Set<TargetExpression> targetExpressions = new HashSet<>();
         while(hasMoreTokens()) {
           String tag = nextToken();
-          constraintEntities.add(tag);
+          TargetExpression t = parseNameSpace(tag);
+          targetExpressions.add(t);
         }
-        PlacementConstraint.TargetExpression target = null;
-        if(!constraintEntities.isEmpty()) {
-          target = PlacementConstraints.PlacementTargets.allocationTag(
-              constraintEntities
-                  .toArray(new String[constraintEntities.size()]));
-        }
+        TargetExpression[] targetArr = targetExpressions.toArray(
+            new TargetExpression[targetExpressions.size()]);
         if (op.equalsIgnoreCase(IN)) {
           placementConstraints = PlacementConstraints
-              .targetIn(scope, target);
+              .targetIn(scope, targetArr);
         } else {
           placementConstraints = PlacementConstraints
-              .targetNotIn(scope, target);
+              .targetNotIn(scope, targetArr);
         }
       } else {
         throw new PlacementConstraintParseException(
@@ -527,13 +547,16 @@ public final class PlacementConstraintParser {
       String minCardinalityStr = resetElements.pop();
       int min = toInt(minCardinalityStr);
 
-      ArrayList<String> targetTags = new ArrayList<>();
+      Set<TargetExpression> targetExpressions = new HashSet<>();
       while (!resetElements.empty()) {
-        targetTags.add(resetElements.pop());
+        String tag = resetElements.pop();
+        TargetExpression t = parseNameSpace(tag);
+        targetExpressions.add(t);
       }
+      TargetExpression[] targetArr = targetExpressions.toArray(
+          new TargetExpression[targetExpressions.size()]);
 
-      return PlacementConstraints.cardinality(scope, min, max,
-          targetTags.toArray(new String[targetTags.size()]));
+      return PlacementConstraints.targetCardinality(scope, min, max, targetArr);
     }
   }
 
