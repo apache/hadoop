@@ -140,6 +140,7 @@ public abstract class AbstractS3ATokenIdentifier
    * Build from a token.
    * This has been written for refresh operations;
    * if someone implements refresh it will be relevant.
+   * @param kind token kind.
    * @param token to to build from
    * @throws IOException failure to build the identifier.
    */
@@ -153,6 +154,7 @@ public abstract class AbstractS3ATokenIdentifier
 
   /**
    * For subclasses to use in their own empty-constructors.
+   * @param kind token kind.
    */
   protected AbstractS3ATokenIdentifier(final Text kind) {
     super(kind);

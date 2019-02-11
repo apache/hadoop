@@ -58,6 +58,7 @@ public class TemporaryAWSCredentialsProvider extends
   /**
    * Construct from just a configuration.
    * @param conf configuration.
+   * @throws IOException on any failure to load the credentials.
    */
   public TemporaryAWSCredentialsProvider(final Configuration conf)
       throws IOException {
@@ -69,6 +70,7 @@ public class TemporaryAWSCredentialsProvider extends
    * to a filesystem.
    * @param uri binding to a filesystem URI.
    * @param conf configuration.
+   * @throws IOException on any failure to load the credentials.
    */
   public TemporaryAWSCredentialsProvider(
       @Nullable final URI uri,

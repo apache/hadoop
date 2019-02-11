@@ -66,6 +66,7 @@ public abstract class AbstractSessionCredentialsProvider
   /**
    * Initialize the credentials by calling
    * {@link #createCredentials(Configuration)} with the current config.
+   * @throws IOException on any failure.
    */
   @Retries.OnceTranslated
   protected void init() throws IOException {

@@ -1226,6 +1226,7 @@ public final class S3AUtils {
    * @param conf The Hadoop configuration
    * @param bucket Optional bucket to use to look up per-bucket proxy secrets
    * @return new AWS client configuration
+   * @throws IOException problem creating AWS client configuration
    */
   public static ClientConfiguration createAwsConf(Configuration conf,
       String bucket)

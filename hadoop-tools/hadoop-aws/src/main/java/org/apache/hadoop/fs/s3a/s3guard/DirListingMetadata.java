@@ -67,6 +67,7 @@ public class DirListingMetadata extends ExpirableMetadata {
    * @param isAuthoritative true iff listing is the full contents of the
    *     directory, and the calling client reports that this may be cached as
    *     the full and authoritative listing of all files in the directory.
+   * @param lastUpdated last updated time on which expiration is based.
    */
   public DirListingMetadata(Path path, Collection<PathMetadata> listing,
       boolean isAuthoritative, long lastUpdated) {

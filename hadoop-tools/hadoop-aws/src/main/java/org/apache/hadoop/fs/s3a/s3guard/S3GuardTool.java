@@ -145,6 +145,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
 
   /**
    * Return sub-command name.
+   * @return sub-dommand name.
    */
   public abstract String getName();
 
@@ -250,6 +251,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
 
   /**
    * Check if bucket or DDB table name is set.
+   * @param paths position arguments in which S3 path is provided.
    */
   protected void checkBucketNameOrDDBTableNameProvided(List<String> paths) {
     String s3Path = null;
@@ -270,6 +272,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
    *
    * @param forceCreate override the auto-creation setting to true.
    * @return a initialized metadata store.
+   * @throws IOException on unsupported metadata store.
    */
   protected MetadataStore initMetadataStore(boolean forceCreate)
       throws IOException {
