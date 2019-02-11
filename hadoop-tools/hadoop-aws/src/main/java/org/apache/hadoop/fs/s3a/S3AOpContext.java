@@ -75,7 +75,7 @@ public class S3AOpContext {
    * @param invoker invoker, which contains retry policy
    * @param stats optional stats object
    * @param instrumentation instrumentation to use
-   * @param dstFileStatus
+   * @param dstFileStatus file status from existence check
    */
   public S3AOpContext(boolean isS3GuardEnabled, Invoker invoker,
       @Nullable FileSystem.Statistics stats, S3AInstrumentation instrumentation,

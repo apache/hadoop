@@ -94,6 +94,8 @@ public class SessionTokenIdentifier extends
    * Constructor.
    * @param kind token kind.
    * @param owner token owner
+   * @param renewer token renewer
+   * @param realUser real user running over proxy user
    * @param uri filesystem URI.
    */
   public SessionTokenIdentifier(final Text kind,

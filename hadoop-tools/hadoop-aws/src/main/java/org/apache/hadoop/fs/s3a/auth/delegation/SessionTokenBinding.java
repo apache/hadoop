@@ -332,6 +332,7 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
   /**
    * Get the client to AWS STS.
    * @return the STS client, when successfully inited.
+   * @throws IOException any failure to bind to STS.
    */
   protected Optional<STSClientFactory.STSClient> prepareSTSClient()
       throws IOException {
@@ -397,6 +398,7 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
    * Expiration date time as passed in from source.
    * If unset, either we are unbound, or the token which came in does not
    * know its expiry.
+   * @return expiration data time.
    */
   protected Optional<OffsetDateTime> getExpirationDateTime() {
     return expirationDateTime;
@@ -409,6 +411,7 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
 
   /**
    * Token identifier bound to.
+   * @return token identifier.
    */
   protected Optional<SessionTokenIdentifier> getTokenIdentifier() {
     return tokenIdentifier;

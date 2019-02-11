@@ -146,6 +146,7 @@ public class S3ADelegationTokens extends AbstractDTService {
 
   /**
    * Instantiate.
+   * @throws IOException if login fails.
    */
   public S3ADelegationTokens() throws IOException {
     super("S3ADelegationTokens");

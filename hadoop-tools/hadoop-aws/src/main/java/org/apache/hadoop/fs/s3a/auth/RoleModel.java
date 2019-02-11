@@ -197,6 +197,7 @@ public class RoleModel {
    * @param allow allow or deny
    * @param path path
    * @param isDirectory is this a directory?
+   * @param wildcards add a * to the tail of the key?
    * @param actions action
    * @return the formatted json statement
    */
@@ -220,6 +221,7 @@ public class RoleModel {
    * @param allow allow or deny
    * @param path path
    * @param isDirectory is this a directory?
+   * @param wildcards add a * to the tail of the key?
    * @param actions action
    * @return the formatted json statement
    */

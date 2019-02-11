@@ -66,6 +66,7 @@ public final class MarshalledCredentialBinding {
    * Create a set of marshalled credentials from a set of credentials
    * issued by an STS call.
    * @param credentials AWS-provided session credentials
+   * @return a set of marshalled credentials.
    */
   public static MarshalledCredentials fromSTSCredentials(
       final Credentials credentials) {
@@ -117,6 +118,7 @@ public final class MarshalledCredentialBinding {
    * Loads the credentials from the owning S3A FS, including
    * from Hadoop credential providers.
    * There is no validation.
+   * @param uri binding URI
    * @param conf configuration to load from
    * @return the component
    * @throws IOException on any load failure
@@ -176,6 +178,7 @@ public final class MarshalledCredentialBinding {
   /**
    * Request a set of credentials from an STS endpoint.
    * @param parentCredentials the parent credentials needed to talk to STS
+   * @param awsConf AWS client configuration
    * @param stsEndpoint an endpoint, use "" for none
    * @param stsRegion region; use if the endpoint isn't the AWS default.
    * @param duration duration of the credentials in seconds. Minimum value: 900.

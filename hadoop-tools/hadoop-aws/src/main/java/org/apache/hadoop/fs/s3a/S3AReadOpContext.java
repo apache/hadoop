@@ -112,7 +112,7 @@ public class S3AReadOpContext extends S3AOpContext {
 
   /**
    * Get the readahead for this operation.
-   * @return a value >= 0
+   * @return a value {@literal >=} 0
    */
   public long getReadahead() {
     return readahead;
