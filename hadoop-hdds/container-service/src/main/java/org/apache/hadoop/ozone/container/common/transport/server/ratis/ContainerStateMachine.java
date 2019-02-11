@@ -23,6 +23,8 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+
+import io.opentracing.Scope;
 import org.apache.ratis.proto.RaftProtos.RaftPeerRole;
 import org.apache.ratis.protocol.RaftGroup;
 import org.apache.ratis.protocol.RaftGroupId;
@@ -44,6 +46,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ReadChunkRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ReadChunkResponseProto;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.hdds.security.token.TokenVerifier;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -225,58 +228,61 @@ public class ContainerStateMachine extends BaseStateMachine {
     final ContainerCommandRequestProto proto =
         getRequestProto(request.getMessage().getContent());
     Preconditions.checkArgument(request.getRaftGroupId().equals(gid));
-    try {
-      dispatcher.validateContainerCommand(proto);
-    } catch (IOException ioe) {
-      TransactionContext ctxt = TransactionContext.newBuilder()
-          .setClientRequest(request)
-          .setStateMachine(this)
-          .setServerRole(RaftPeerRole.LEADER)
-          .build();
-      ctxt.setException(ioe);
-      return ctxt;
-    }
-    if (proto.getCmdType() == Type.WriteChunk) {
-      final WriteChunkRequestProto write = proto.getWriteChunk();
-      // create the state machine data proto
-      final WriteChunkRequestProto dataWriteChunkProto =
-          WriteChunkRequestProto
-              .newBuilder(write)
-              .build();
-      ContainerCommandRequestProto dataContainerCommandProto =
-          ContainerCommandRequestProto
-              .newBuilder(proto)
-              .setWriteChunk(dataWriteChunkProto)
-              .build();
+    try (Scope scope = TracingUtil
+        .importAndCreateScope(proto.getCmdType().name(), proto.getTraceID())) {
+      try {
+        dispatcher.validateContainerCommand(proto);
+      } catch (IOException ioe) {
+        TransactionContext ctxt = TransactionContext.newBuilder()
+            .setClientRequest(request)
+            .setStateMachine(this)
+            .setServerRole(RaftPeerRole.LEADER)
+            .build();
+        ctxt.setException(ioe);
+        return ctxt;
+      }
+      if (proto.getCmdType() == Type.WriteChunk) {
+        final WriteChunkRequestProto write = proto.getWriteChunk();
+        // create the state machine data proto
+        final WriteChunkRequestProto dataWriteChunkProto =
+            WriteChunkRequestProto
+                .newBuilder(write)
+                .build();
+        ContainerCommandRequestProto dataContainerCommandProto =
+            ContainerCommandRequestProto
+                .newBuilder(proto)
+                .setWriteChunk(dataWriteChunkProto)
+                .build();
 
-      // create the log entry proto
-      final WriteChunkRequestProto commitWriteChunkProto =
-          WriteChunkRequestProto.newBuilder()
-              .setBlockID(write.getBlockID())
-              .setChunkData(write.getChunkData())
-              // skipping the data field as it is
-              // already set in statemachine data proto
-              .build();
-      ContainerCommandRequestProto commitContainerCommandProto =
-          ContainerCommandRequestProto
-              .newBuilder(proto)
-              .setWriteChunk(commitWriteChunkProto)
-              .build();
+        // create the log entry proto
+        final WriteChunkRequestProto commitWriteChunkProto =
+            WriteChunkRequestProto.newBuilder()
+                .setBlockID(write.getBlockID())
+                .setChunkData(write.getChunkData())
+                // skipping the data field as it is
+                // already set in statemachine data proto
+                .build();
+        ContainerCommandRequestProto commitContainerCommandProto =
+            ContainerCommandRequestProto
+                .newBuilder(proto)
+                .setWriteChunk(commitWriteChunkProto)
+                .build();
 
-      return TransactionContext.newBuilder()
-          .setClientRequest(request)
-          .setStateMachine(this)
-          .setServerRole(RaftPeerRole.LEADER)
-          .setStateMachineData(dataContainerCommandProto.toByteString())
-          .setLogData(commitContainerCommandProto.toByteString())
-          .build();
-    } else {
-      return TransactionContext.newBuilder()
-          .setClientRequest(request)
-          .setStateMachine(this)
-          .setServerRole(RaftPeerRole.LEADER)
-          .setLogData(request.getMessage().getContent())
-          .build();
+        return TransactionContext.newBuilder()
+            .setClientRequest(request)
+            .setStateMachine(this)
+            .setServerRole(RaftPeerRole.LEADER)
+            .setStateMachineData(dataContainerCommandProto.toByteString())
+            .setLogData(commitContainerCommandProto.toByteString())
+            .build();
+      } else {
+        return TransactionContext.newBuilder()
+            .setClientRequest(request)
+            .setStateMachine(this)
+            .setServerRole(RaftPeerRole.LEADER)
+            .setLogData(request.getMessage().getContent())
+            .build();
+      }
     }
   }
 

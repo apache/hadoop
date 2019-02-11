@@ -34,11 +34,14 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
+
+import io.opentracing.Scope;
 import org.apache.ratis.RaftConfigKeys;
 import org.apache.ratis.RatisHelper;
 import org.apache.ratis.client.RaftClientConfigKeys;
@@ -142,6 +145,7 @@ public final class XceiverServerRatis extends XceiverServer {
     for (int i = 0; i < numContainerOpExecutors; i++) {
       executors.add(Executors.newSingleThreadExecutor());
     }
+
     RaftServer.Builder builder = RaftServer.newBuilder()
         .setServerId(RatisHelper.toRaftPeerId(dd))
         .setProperties(serverProperties)
@@ -481,15 +485,20 @@ public final class XceiverServerRatis extends XceiverServer {
       HddsProtos.PipelineID pipelineID) throws IOException {
     super.submitRequest(request, pipelineID);
     RaftClientReply reply;
-    RaftClientRequest raftClientRequest =
-        createRaftClientRequest(request, pipelineID,
-            RaftClientRequest.writeRequestType());
-    try {
-      reply = server.submitClientRequestAsync(raftClientRequest).get();
-    } catch (Exception e) {
-      throw new IOException(e.getMessage(), e);
+    try (Scope scope = TracingUtil
+        .importAndCreateScope(request.getCmdType().name(),
+            request.getTraceID())) {
+
+      RaftClientRequest raftClientRequest =
+          createRaftClientRequest(request, pipelineID,
+              RaftClientRequest.writeRequestType());
+      try {
+        reply = server.submitClientRequestAsync(raftClientRequest).get();
+      } catch (Exception e) {
+        throw new IOException(e.getMessage(), e);
+      }
+      processReply(reply);
     }
-    processReply(reply);
   }
 
   private RaftClientRequest createRaftClientRequest(

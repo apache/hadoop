@@ -59,6 +59,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.SCMListContainerRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.SCMListContainerResponseProto;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
@@ -109,6 +110,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
       String owner) throws IOException {
 
     ContainerRequestProto request = ContainerRequestProto.newBuilder()
+        .setTraceID(TracingUtil.exportCurrentSpan())
         .setReplicationFactor(factor)
         .setReplicationType(type)
         .setOwner(owner)
@@ -134,6 +136,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
     GetContainerRequestProto request = GetContainerRequestProto
         .newBuilder()
         .setContainerID(containerID)
+        .setTraceID(TracingUtil.exportCurrentSpan())
         .build();
     try {
       GetContainerResponseProto response =
@@ -153,6 +156,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
         "Container ID cannot be negative");
     GetContainerWithPipelineRequestProto request =
         GetContainerWithPipelineRequestProto.newBuilder()
+            .setTraceID(TracingUtil.exportCurrentSpan())
             .setContainerID(containerID).build();
     try {
       GetContainerWithPipelineResponseProto response =
@@ -178,6 +182,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
         .newBuilder();
     builder.setStartContainerID(startContainerID);
     builder.setCount(count);
+    builder.setTraceID(TracingUtil.exportCurrentSpan());
     SCMListContainerRequestProto request = builder.build();
 
     try {
@@ -208,6 +213,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
         "Container ID cannot be negative");
     SCMDeleteContainerRequestProto request = SCMDeleteContainerRequestProto
         .newBuilder()
+        .setTraceID(TracingUtil.exportCurrentSpan())
         .setContainerID(containerID)
         .build();
     try {
@@ -232,6 +238,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
     Preconditions.checkNotNull(nodeStatuses);
     NodeQueryRequestProto request = NodeQueryRequestProto.newBuilder()
         .setState(nodeStatuses)
+        .setTraceID(TracingUtil.exportCurrentSpan())
         .setScope(queryScope).setPoolName(poolName).build();
     try {
       NodeQueryResponseProto response =
@@ -259,6 +266,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
         "Object id cannot be negative.");
     ObjectStageChangeRequestProto request =
         ObjectStageChangeRequestProto.newBuilder()
+            .setTraceID(TracingUtil.exportCurrentSpan())
             .setType(type)
             .setId(id)
             .setOp(op)
@@ -284,6 +292,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
       replicationType, HddsProtos.ReplicationFactor factor, HddsProtos
       .NodePool nodePool) throws IOException {
     PipelineRequestProto request = PipelineRequestProto.newBuilder()
+        .setTraceID(TracingUtil.exportCurrentSpan())
         .setNodePool(nodePool)
         .setReplicationFactor(factor)
         .setReplicationType(replicationType)
@@ -311,7 +320,8 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
   public List<Pipeline> listPipelines() throws IOException {
     try {
       ListPipelineRequestProto request = ListPipelineRequestProto
-          .newBuilder().build();
+          .newBuilder().setTraceID(TracingUtil.exportCurrentSpan())
+          .build();
       ListPipelineResponseProto response = rpcProxy.listPipelines(
           NULL_RPC_CONTROLLER, request);
       List<Pipeline> list = new ArrayList<>();
@@ -331,7 +341,8 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
     try {
       ClosePipelineRequestProto request =
           ClosePipelineRequestProto.newBuilder()
-          .setPipelineID(pipelineID)
+              .setTraceID(TracingUtil.exportCurrentSpan())
+              .setPipelineID(pipelineID)
           .build();
       rpcProxy.closePipeline(NULL_RPC_CONTROLLER, request);
     } catch (ServiceException e) {
@@ -342,7 +353,9 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
   @Override
   public ScmInfo getScmInfo() throws IOException {
     HddsProtos.GetScmInfoRequestProto request =
-        HddsProtos.GetScmInfoRequestProto.getDefaultInstance();
+        HddsProtos.GetScmInfoRequestProto.newBuilder()
+            .setTraceID(TracingUtil.exportCurrentSpan())
+            .build();
     try {
       HddsProtos.GetScmInfoRespsonseProto resp = rpcProxy.getScmInfo(
           NULL_RPC_CONTROLLER, request);

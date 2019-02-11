@@ -16,17 +16,16 @@
  */
 package org.apache.hadoop.ozone.protocolPB;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
-
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisClient;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .OMRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .OMResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
+import io.opentracing.Scope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,10 +63,17 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
   @Override
    public OMResponse submitRequest(RpcController controller,
       OMRequest request) throws ServiceException {
-    if (isRatisEnabled) {
-      return submitRequestToRatis(request);
-    } else {
-      return submitRequestDirectlyToOM(request);
+    Scope scope = TracingUtil
+        .importAndCreateScope(request.getCmdType().name(),
+            request.getTraceID());
+    try {
+      if (isRatisEnabled) {
+        return submitRequestToRatis(request);
+      } else {
+        return submitRequestDirectlyToOM(request);
+      }
+    } finally {
+      scope.close();
     }
   }
 

@@ -27,6 +27,7 @@ import java.util.Objects;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
@@ -60,7 +61,7 @@ public class ObjectStore {
    * @param proxy ClientProtocol proxy.
    */
   public ObjectStore(Configuration conf, ClientProtocol proxy) {
-    this.proxy = proxy;
+    this.proxy = TracingUtil.createProxy(proxy, ClientProtocol.class);
     this.listCacheSize = HddsClientUtils.getListCacheSize(conf);
   }
 
