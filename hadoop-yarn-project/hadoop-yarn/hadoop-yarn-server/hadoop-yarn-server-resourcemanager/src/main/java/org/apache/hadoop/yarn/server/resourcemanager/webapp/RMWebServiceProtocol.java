@@ -58,6 +58,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 
 /**
@@ -147,6 +149,19 @@ public interface RMWebServiceProtocol {
    * @return the information about the node in input
    */
   NodeInfo getNode(String nodeId);
+
+  /**
+   * This method changes the resources of a specific node, and it is reachable
+   * by using {@link RMWSConsts#NODE_RESOURCE}.
+   *
+   * @param hsr The servlet request.
+   * @param nodeId The node we want to retrieve the information for.
+   *               It is a PathParam.
+   * @param resourceOption The resource change.
+   * @throws AuthorizationException If the user is not authorized.
+   */
+  ResourceInfo updateNodeResource(HttpServletRequest hsr, String nodeId,
+      ResourceOptionInfo resourceOption) throws AuthorizationException;
 
   /**
    * This method retrieves all the app reports in the cluster, and it is

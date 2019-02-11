@@ -57,6 +57,9 @@ public final class RMWSConsts {
   /** Path for {@code RMWebServiceProtocol#getNode}. */
   public static final String NODES_NODEID = "/nodes/{nodeId}";
 
+  /** Path for {@code RMWebServiceProtocol#updateNodeResource}. */
+  public static final String NODE_RESOURCE = "/nodes/{nodeId}/resource";
+
   /**
    * Path for {@code RMWebServiceProtocol#getApps} and
    * {@code RMWebServiceProtocol#getApp}.
