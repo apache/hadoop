@@ -21,7 +21,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result;
+<<<<<<< HEAD
 import org.apache.hadoop.hdds.client.BlockID;
+=======
+>>>>>>> HDDS-1074. Remove dead variable from KeyOutputStream#addKeyLocationInfo. Contributed by Siddharth Wagle.
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
@@ -208,8 +211,6 @@ public class KeyOutputStream extends OutputStream {
         .getContainerWithPipeline(subKeyInfo.getContainerID());
 <<<<<<< HEAD
     UserGroupInformation.getCurrentUser().addToken(subKeyInfo.getToken());
-    XceiverClientSpi xceiverClient =
-        xceiverClientManager.acquireClient(containerWithPipeline.getPipeline());
     BlockOutputStreamEntry.Builder builder =
         new BlockOutputStreamEntry.Builder()
             .setBlockID(subKeyInfo.getBlockID())
