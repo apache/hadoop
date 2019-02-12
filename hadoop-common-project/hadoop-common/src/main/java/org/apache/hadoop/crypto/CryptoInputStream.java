@@ -33,6 +33,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.ByteBufferPositionedReadable;
 import org.apache.hadoop.fs.ByteBufferReadable;
 import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.CanSetReadahead;
@@ -62,9 +63,10 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class CryptoInputStream extends FilterInputStream implements 
-    Seekable, PositionedReadable, ByteBufferReadable, HasFileDescriptor, 
-    CanSetDropBehind, CanSetReadahead, HasEnhancedByteBufferAccess, 
-    ReadableByteChannel, CanUnbuffer, StreamCapabilities {
+    Seekable, PositionedReadable, ByteBufferReadable,
+    ByteBufferPositionedReadable, HasFileDescriptor, CanSetDropBehind,
+    CanSetReadahead, HasEnhancedByteBufferAccess, ReadableByteChannel,
+    CanUnbuffer, StreamCapabilities {
   private final byte[] oneByteBuf = new byte[1];
   private final CryptoCodec codec;
   private final Decryptor decryptor;
@@ -101,7 +103,7 @@ public class CryptoInputStream extends FilterInputStream implements
   private byte[] iv;
   private final boolean isByteBufferReadable;
   private final boolean isReadableByteChannel;
-  
+
   /** DirectBuffer pool */
   private final Queue<ByteBuffer> bufferPool = 
       new ConcurrentLinkedQueue<ByteBuffer>();
@@ -341,6 +343,26 @@ public class CryptoInputStream extends FilterInputStream implements
           "positioned read.");
     }
   }
+
+   /** Positioned read using ByteBuffers. It is thread-safe */
+  @Override
+  public int read(long position, final ByteBuffer buf)
+      throws IOException {
+    checkStream();
+    try {
+      int pos = buf.position();
+      final int n = ((ByteBufferPositionedReadable) in).read(position, buf);
+      if (n > 0) {
+        // This operation does not change the current offset of the file
+        decrypt(position, buf, n, pos);
+      }
+
+      return n;
+    } catch (ClassCastException e) {
+      throw new UnsupportedOperationException("This stream does not support " +
+          "positioned read.");
+    }
+  }
   
   /**
    * Decrypt length bytes in buffer starting at offset. Output is also put 
@@ -375,7 +397,70 @@ public class CryptoInputStream extends FilterInputStream implements
       returnDecryptor(decryptor);
     }
   }
-  
+
+  /**
+   * Decrypt n bytes in buf starting at start. Output is also put into buf
+   * starting at current position. buf.position() and buf.limit() should be
+   * unchanged after decryption. It is thread-safe.
+   *
+   * <p>
+   *   This method decrypts the input buf chunk-by-chunk and writes the
+   *   decrypted output back into the input buf. It uses two local buffers
+   *   taken from the {@link #bufferPool} to assist in this process: one is
+   *   designated as the input buffer and it stores a single chunk of the
+   *   given buf, the other is designated as the output buffer, which stores
+   *   the output of decrypting the input buffer. Both buffers are of size
+   *   {@link #bufferSize}.
+   * </p>
+   *
+   * <p>
+   *   Decryption is done by using a {@link Decryptor} and the
+   *   {@link #decrypt(Decryptor, ByteBuffer, ByteBuffer, byte)} method. Once
+   *   the decrypted data is written into the output buffer, is is copied back
+   *   into buf. Both buffers are returned back into the pool once the entire
+   *   buf is decrypted.
+   * </p>
+   */
+  private void decrypt(long position, ByteBuffer buf, int n, int start)
+          throws IOException {
+    ByteBuffer localInBuffer = getBuffer();
+    ByteBuffer localOutBuffer = getBuffer();
+    final int pos = buf.position();
+    final int limit = buf.limit();
+    int len = 0;
+    Decryptor localDecryptor = null;
+    try {
+      localDecryptor = getDecryptor();
+      byte[] localIV = initIV.clone();
+      updateDecryptor(localDecryptor, position, localIV);
+      byte localPadding = getPadding(position);
+      // Set proper position for inputdata.
+      localInBuffer.position(localPadding);
+
+      while (len < n) {
+        buf.position(start + len);
+        buf.limit(start + len + Math.min(n - len, localInBuffer.remaining()));
+        localInBuffer.put(buf);
+        // Do decryption
+        try {
+          decrypt(localDecryptor, localInBuffer, localOutBuffer, localPadding);
+          buf.position(start + len);
+          buf.limit(limit);
+          len += localOutBuffer.remaining();
+          buf.put(localOutBuffer);
+        } finally {
+          localPadding = afterDecryption(localDecryptor, localInBuffer,
+                                         position + n, localIV);
+        }
+      }
+      buf.position(pos);
+    } finally {
+      returnBuffer(localInBuffer);
+      returnBuffer(localOutBuffer);
+      returnDecryptor(localDecryptor);
+    }
+  }
+
   /** Positioned read fully. It is thread-safe */
   @Override
   public void readFully(long position, byte[] buffer, int offset, int length)
@@ -741,6 +826,7 @@ public class CryptoInputStream extends FilterInputStream implements
     case StreamCapabilities.DROPBEHIND:
     case StreamCapabilities.UNBUFFER:
     case StreamCapabilities.READBYTEBUFFER:
+    case StreamCapabilities.PREADBYTEBUFFER:
       return true;
     default:
       return false;
