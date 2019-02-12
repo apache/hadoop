@@ -17,11 +17,19 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.tools.DFSck;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -31,12 +39,15 @@ import org.junit.runners.Parameterized;
 
 import java.io.DataOutput;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.PrintStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 /**
@@ -209,6 +220,40 @@ public class TestBlockInfoStriped {
     for (int i = totalBlocks; i < totalBlocks * 2 - 2; i++) {
       Assert.assertEquals(-1, indices[i]);
       Assert.assertNull(info.getDatanode(i));
+    }
+  }
+
+  @Test
+  public void testGetBlockInfo() throws IllegalArgumentException, Exception {
+    int dataBlocks = testECPolicy.getNumDataUnits();
+    int parityBlocks = testECPolicy.getNumParityUnits();
+    int totalSize = dataBlocks + parityBlocks;
+    File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
+    Configuration conf = new Configuration();
+    try (MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf, builderBaseDir).numDataNodes(totalSize)
+            .build()) {
+      DistributedFileSystem fs = cluster.getFileSystem();
+      fs.enableErasureCodingPolicy(
+          StripedFileTestUtil.getDefaultECPolicy().getName());
+      fs.enableErasureCodingPolicy(testECPolicy.getName());
+      fs.mkdirs(new Path("/ecDir"));
+      fs.setErasureCodingPolicy(new Path("/ecDir"), testECPolicy.getName());
+      DFSTestUtil.createFile(fs, new Path("/ecDir/ecFile"),
+          fs.getDefaultBlockSize() * dataBlocks, (short) 1, 1024);
+      ExtendedBlock blk = DFSTestUtil
+          .getAllBlocks(fs, new Path("/ecDir/ecFile")).get(0).getBlock();
+      String id = "blk_" + Long.toString(blk.getBlockId());
+      BlockInfo bInfo = cluster.getNameNode().getNamesystem().getBlockManager()
+          .getStoredBlock(blk.getLocalBlock());
+      DatanodeStorageInfo[] dnStorageInfo = cluster.getNameNode()
+          .getNamesystem().getBlockManager().getStorages(bInfo);
+      bInfo.removeStorage(dnStorageInfo[1]);
+      ByteArrayOutputStream bStream = new ByteArrayOutputStream();
+      PrintStream out = new PrintStream(bStream, true);
+      assertEquals(0, ToolRunner.run(new DFSck(conf, out), new String[] {
+          new Path("/ecDir/ecFile").toString(), "-blockId", id }));
+      assertFalse(out.toString().contains("null"));
     }
   }
 
