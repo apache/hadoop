@@ -144,11 +144,20 @@ public class InMemoryLevelDBAliasMapClient extends BlockAliasMap<FileRegion>
     }
 
     @Override
+    public void remove(Block block) throws IOException {
+      aliasMap.remove(block);
+    }
+
+    @Override
     public void close() throws IOException {
     }
   }
 
-  InMemoryLevelDBAliasMapClient() {
+  public InMemoryLevelDBAliasMapClient() {
+    if (UserGroupInformation.isSecurityEnabled()) {
+      throw new UnsupportedOperationException("Unable to start "
+          + "InMemoryLevelDBAliasMapClient as security is enabled");
+    }
     aliasMaps = new ArrayList<>();
   }
 

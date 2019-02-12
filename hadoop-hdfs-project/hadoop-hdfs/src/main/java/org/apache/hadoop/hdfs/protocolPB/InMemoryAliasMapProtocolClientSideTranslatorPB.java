@@ -214,6 +214,21 @@ public class InMemoryAliasMapProtocolClientSideTranslatorPB
   }
 
   @Override
+  public void remove(@Nonnull Block block) throws IOException {
+    RemoveRequestProto request =
+        RemoveRequestProto
+            .newBuilder()
+            .setKey(PBHelperClient.convert(block))
+            .build();
+
+    try {
+      rpcProxy.remove(null, request);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
   public String getBlockPoolId() throws IOException {
     try {
       BlockPoolResponseProto response = rpcProxy.getBlockPoolId(null,

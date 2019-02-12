@@ -64,7 +64,7 @@ public class ITestInMemoryAliasMap {
   }
 
   @Test
-  public void readNotFoundReturnsNothing() throws IOException {
+  public void testReadNotFoundReturnsNothing() throws IOException {
     Block block = new Block(42, 43, 44);
 
     Optional<ProvidedStorageLocation> actualProvidedStorageLocationOpt
@@ -74,7 +74,7 @@ public class ITestInMemoryAliasMap {
   }
 
   @Test
-  public void readWrite() throws Exception {
+  public void testReadWriteRemove() throws Exception {
     Block block = new Block(42, 43, 44);
 
     Path path = new Path("eagle", "mouse");
@@ -92,14 +92,18 @@ public class ITestInMemoryAliasMap {
     Optional<ProvidedStorageLocation> actualProvidedStorageLocationOpt
         = aliasMap.read(block);
 
+
     assertTrue(actualProvidedStorageLocationOpt.isPresent());
     assertEquals(expectedProvidedStorageLocation,
         actualProvidedStorageLocationOpt.get());
 
+    aliasMap.remove(block);
+    actualProvidedStorageLocationOpt = aliasMap.read(block);
+    assertFalse(actualProvidedStorageLocationOpt.isPresent());
   }
 
   @Test
-  public void list() throws IOException {
+  public void testIteration() throws IOException {
     Block block1 = new Block(42, 43, 44);
     Block block2 = new Block(43, 44, 45);
     Block block3 = new Block(44, 45, 46);
