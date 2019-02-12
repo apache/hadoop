@@ -88,8 +88,20 @@ public abstract class BlockAliasMap<T extends BlockAlias> {
      */
     public interface Options { }
 
-    public abstract void store(U token) throws IOException;
+    /**
+     * Store the BlockAlias; this may be a destructive store, replacing old
+     * data.
+     * @param blockAlias
+     * @throws IOException
+     */
+    public abstract void store(U blockAlias) throws IOException;
 
+    /**
+     * Remove the block from the AliasMap.
+     * @param block
+     * @throws IOException
+     */
+    public abstract void remove(Block block) throws IOException;
   }
 
   /**

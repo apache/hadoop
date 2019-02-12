@@ -127,6 +127,11 @@ public class InMemoryLevelDBAliasMapServer implements InMemoryAliasMapProtocol,
   }
 
   @Override
+  public void remove(@Nonnull Block block) throws IOException {
+    aliasMap.remove(block);
+  }
+
+  @Override
   public String getBlockPoolId() {
     return blockPoolId;
   }

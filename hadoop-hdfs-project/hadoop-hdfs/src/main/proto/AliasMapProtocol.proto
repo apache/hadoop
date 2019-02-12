@@ -36,6 +36,13 @@ message WriteRequestProto {
 message WriteResponseProto {
 }
 
+message RemoveRequestProto {
+  required BlockProto key = 1;
+}
+
+message RemoveResponseProto {
+}
+
 message ReadRequestProto {
   required BlockProto key = 1;
 }
@@ -62,6 +69,7 @@ message BlockPoolResponseProto {
 
 service AliasMapProtocolService {
   rpc write(WriteRequestProto) returns(WriteResponseProto);
+  rpc remove(RemoveRequestProto) returns(RemoveResponseProto);
   rpc read(ReadRequestProto) returns(ReadResponseProto);
   rpc list(ListRequestProto) returns(ListResponseProto);
   rpc getBlockPoolId(BlockPoolRequestProto) returns(BlockPoolResponseProto);

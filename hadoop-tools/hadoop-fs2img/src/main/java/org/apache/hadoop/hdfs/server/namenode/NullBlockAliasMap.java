@@ -74,7 +74,12 @@ public class NullBlockAliasMap extends BlockAliasMap<FileRegion> {
       throws IOException {
     return new Writer<FileRegion>() {
       @Override
-      public void store(FileRegion token) throws IOException {
+      public void store(FileRegion blockAlias) throws IOException {
+        // do nothing
+      }
+
+      @Override
+      public void remove(Block block) throws IOException {
         // do nothing
       }
 
