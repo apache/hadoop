@@ -29,7 +29,7 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeProtocolServer
     .NodeRegistrationContainerReport;
-import org.apache.hadoop.hdds.scm.server.SCMStorage;
+import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.common.Storage;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
@@ -78,7 +78,7 @@ public final class HddsTestUtils {
   public static StorageContainerManager getScm(OzoneConfiguration conf)
       throws IOException, AuthenticationException {
     conf.setBoolean(OZONE_ENABLED, true);
-    SCMStorage scmStore = new SCMStorage(conf);
+    SCMStorageConfig scmStore = new SCMStorageConfig(conf);
     if(scmStore.getState() != Storage.StorageState.INITIALIZED) {
       String clusterId = UUID.randomUUID().toString();
       String scmId = UUID.randomUUID().toString();

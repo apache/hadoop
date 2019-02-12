@@ -30,16 +30,16 @@ import static org.apache.hadoop.ozone.OzoneConsts.SCM_ID;
 import static org.apache.hadoop.ozone.OzoneConsts.STORAGE_DIR;
 
 /**
- * SCMStorage is responsible for management of the StorageDirectories used by
- * the SCM.
+ * SCMStorageConfig is responsible for management of the
+ * StorageDirectories used by the SCM.
  */
-public class SCMStorage extends Storage {
+public class SCMStorageConfig extends Storage {
 
   /**
-   * Construct SCMStorage.
+   * Construct SCMStorageConfig.
    * @throws IOException if any directories are inaccessible.
    */
-  public SCMStorage(OzoneConfiguration conf) throws IOException {
+  public SCMStorageConfig(OzoneConfiguration conf) throws IOException {
     super(NodeType.SCM, ServerUtils.getScmDbDir(conf), STORAGE_DIR);
   }
 

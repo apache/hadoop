@@ -140,12 +140,16 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
 
     private TableIterator<byte[], ? extends KeyValue<byte[], byte[]>>
         rawIterator;
+    private final Class<KEY> keyClass;
+    private final Class<VALUE> valueClass;
 
     public TypedTableIterator(
         TableIterator<byte[], ? extends KeyValue<byte[], byte[]>> rawIterator,
         Class<KEY> keyType,
         Class<VALUE> valueType) {
       this.rawIterator = rawIterator;
+      keyClass = keyType;
+      valueClass = valueType;
     }
 
     @Override
@@ -166,6 +170,24 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
         return null;
       }
       return new TypedKeyValue(result);
+    }
+
+    @Override
+    public KEY key() {
+      byte[] result = rawIterator.key();
+      if (result == null) {
+        return null;
+      }
+      return codecRegistry.asObject(result, keyClass);
+    }
+
+    @Override
+    public TypedKeyValue value() {
+      KeyValue keyValue = rawIterator.value();
+      if(keyValue != null) {
+        return new TypedKeyValue(keyValue, keyClass, valueClass);
+      }
+      return null;
     }
 
     @Override

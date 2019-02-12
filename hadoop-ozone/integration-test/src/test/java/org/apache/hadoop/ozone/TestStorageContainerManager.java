@@ -51,7 +51,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
-import org.apache.hadoop.hdds.scm.server.SCMStorage;
+import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager.StartupOption;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
@@ -398,7 +398,7 @@ public class TestStorageContainerManager {
     // This will initialize SCM
     StorageContainerManager.scmInit(conf);
 
-    SCMStorage scmStore = new SCMStorage(conf);
+    SCMStorageConfig scmStore = new SCMStorageConfig(conf);
     Assert.assertEquals(NodeType.SCM, scmStore.getNodeType());
     Assert.assertEquals("testClusterId", scmStore.getClusterID());
     StartupOption.INIT.setClusterId("testClusterIdNew");
@@ -422,7 +422,7 @@ public class TestStorageContainerManager {
     StartupOption.INIT.setClusterId("testClusterId");
     // This will initialize SCM
     StorageContainerManager.scmInit(conf);
-    SCMStorage scmStore = new SCMStorage(conf);
+    SCMStorageConfig scmStore = new SCMStorageConfig(conf);
     Assert.assertEquals(NodeType.SCM, scmStore.getNodeType());
     Assert.assertNotEquals("testClusterId", scmStore.getClusterID());
     cluster.shutdown();
@@ -438,7 +438,8 @@ public class TestStorageContainerManager {
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, scmPath.toString());
     conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
     exception.expect(SCMException.class);
-    exception.expectMessage("SCM not initialized.");
+    exception.expectMessage(
+        "SCM not initialized due to storage config failure");
     StorageContainerManager.createSCM(null, conf);
   }
 
@@ -463,7 +464,7 @@ public class TestStorageContainerManager {
     Path scmPath = Paths.get(path, "scm-meta");
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, scmPath.toString());
     conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
-    SCMStorage scmStore = new SCMStorage(conf);
+    SCMStorageConfig scmStore = new SCMStorageConfig(conf);
     String clusterId = UUID.randomUUID().toString();
     String scmId = UUID.randomUUID().toString();
     scmStore.setClusterId(clusterId);

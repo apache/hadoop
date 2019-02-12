@@ -23,13 +23,11 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Collection;
 import java.util.Optional;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.HddsConfigKeys;
-import org.apache.hadoop.hdds.server.ServerUtils;
+import org.apache.hadoop.hdds.scm.ScmUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -117,33 +115,11 @@ public final class OmUtils {
    * Get the location where OM should store its metadata directories.
    * Fall back to OZONE_METADATA_DIRS if not defined.
    *
-   * @param conf
-   * @return
+   * @param conf - Config
+   * @return File path, after creating all the required Directories.
    */
   public static File getOmDbDir(Configuration conf) {
-    final Collection<String> dbDirs = conf.getTrimmedStringCollection(
-        OMConfigKeys.OZONE_OM_DB_DIRS);
-
-    if (dbDirs.size() > 1) {
-      throw new IllegalArgumentException(
-          "Bad configuration setting " + OMConfigKeys.OZONE_OM_DB_DIRS +
-              ". OM does not support multiple metadata dirs currently.");
-    }
-
-    if (dbDirs.size() == 1) {
-      final File dbDirPath = new File(dbDirs.iterator().next());
-      if (!dbDirPath.exists() && !dbDirPath.mkdirs()) {
-        throw new IllegalArgumentException("Unable to create directory " +
-            dbDirPath + " specified in configuration setting " +
-            OMConfigKeys.OZONE_OM_DB_DIRS);
-      }
-      return dbDirPath;
-    }
-
-    LOG.warn("{} is not configured. We recommend adding this setting. " +
-        "Falling back to {} instead.",
-        OMConfigKeys.OZONE_OM_DB_DIRS, HddsConfigKeys.OZONE_METADATA_DIRS);
-    return ServerUtils.getOzoneMetaDirPath(conf);
+    return ScmUtils.getDBPath(conf, OMConfigKeys.OZONE_OM_DB_DIRS);
   }
 
   /**

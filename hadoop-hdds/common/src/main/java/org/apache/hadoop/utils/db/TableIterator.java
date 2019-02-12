@@ -47,4 +47,16 @@ public interface TableIterator<KEY, T> extends Iterator<T>, Closeable {
    */
   T seek(KEY key);
 
+  /**
+   * Returns the key value at the current position.
+   * @return KEY
+   */
+  KEY key();
+
+  /**
+   * Returns the VALUE at the current position.
+   * @return VALUE
+   */
+  T value();
+
 }

@@ -21,6 +21,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
+import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.net.NetUtils;
@@ -31,7 +32,6 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
-import org.apache.hadoop.hdds.scm.server.SCMStorage;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.protocol.proto
@@ -1311,11 +1311,11 @@ public class TestOzoneManager {
   public void testOmInitialization() throws IOException {
     // Read the version file info from OM version file
     OMStorage omStorage = cluster.getOzoneManager().getOmStorage();
-    SCMStorage scmStorage = new SCMStorage(conf);
+    SCMStorageConfig scmStorageConfig = new SCMStorageConfig(conf);
     // asserts whether cluster Id and SCM ID are properly set in SCM Version
     // file.
-    Assert.assertEquals(clusterId, scmStorage.getClusterID());
-    Assert.assertEquals(scmId, scmStorage.getScmId());
+    Assert.assertEquals(clusterId, scmStorageConfig.getClusterID());
+    Assert.assertEquals(scmId, scmStorageConfig.getScmId());
     // asserts whether OM Id is properly set in OM Version file.
     Assert.assertEquals(omId, omStorage.getOmId());
     // asserts whether the SCM info is correct in OM Version file.

@@ -36,7 +36,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.Callable;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -45,7 +44,7 @@ import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.ScmInfo;
-import org.apache.hadoop.hdds.scm.server.SCMStorage;
+import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
@@ -78,6 +77,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -114,6 +114,8 @@ public final class TestSecureOzoneCluster {
   private OzoneManagerProtocolClientSideTranslatorPB omClient;
   private KeyPair keyPair;
   private Path metaDirPath;
+  @Rule
+  public TemporaryFolder folder= new TemporaryFolder();
 
   @Before
   public void init() {
@@ -121,8 +123,7 @@ public final class TestSecureOzoneCluster {
       conf = new OzoneConfiguration();
       conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "localhost");
       DefaultMetricsSystem.setMiniClusterMode(true);
-      final String path = GenericTestUtils
-          .getTempPath(UUID.randomUUID().toString());
+      final String path = folder.newFolder().toString();
       metaDirPath = Paths.get(path, "om-meta");
       conf.set(OZONE_METADATA_DIRS, metaDirPath.toString());
       startMiniKdc();
@@ -149,23 +150,22 @@ public final class TestSecureOzoneCluster {
       if (omClient != null) {
         omClient.close();
       }
-      FileUtils.deleteQuietly(metaDirPath.toFile());
     } catch (Exception e) {
       logger.error("Failed to stop TestSecureOzoneCluster", e);
     }
   }
 
-  private void createCredentialsInKDC(Configuration conf, MiniKdc miniKdc)
-      throws Exception {
+  private void createCredentialsInKDC(Configuration configuration,
+                                      MiniKdc kdc) throws Exception {
     createPrincipal(scmKeytab,
-        conf.get(ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY));
+        configuration.get(ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY));
     createPrincipal(spnegoKeytab,
-        conf.get(ScmConfigKeys
+        configuration.get(ScmConfigKeys
             .HDDS_SCM_HTTP_KERBEROS_PRINCIPAL_KEY));
-    conf.get(OMConfigKeys
+    configuration.get(OMConfigKeys
         .OZONE_OM_HTTP_KERBEROS_PRINCIPAL_KEY);
     createPrincipal(omKeyTab,
-        conf.get(OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY));
+        configuration.get(OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY));
   }
 
   private void createPrincipal(File keytab, String... principal)
@@ -185,37 +185,39 @@ public final class TestSecureOzoneCluster {
     miniKdc.stop();
   }
 
-  private void setSecureConfig(Configuration conf) throws IOException {
-    conf.setBoolean(OZONE_SECURITY_ENABLED_KEY, true);
-    conf.setBoolean(OZONE_ENABLED, true);
-    String host = InetAddress.getLocalHost().getCanonicalHostName();
+  private void setSecureConfig(Configuration configuration) throws IOException {
+    configuration.setBoolean(OZONE_SECURITY_ENABLED_KEY, true);
+    configuration.setBoolean(OZONE_ENABLED, true);
+    String host = InetAddress.getLocalHost().getCanonicalHostName()
+        .toLowerCase();
     String realm = miniKdc.getRealm();
     curUser = UserGroupInformation.getCurrentUser()
         .getUserName();
-    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+    configuration.set(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
-    conf.set(OZONE_ADMINISTRATORS, curUser);
+    configuration.set(OZONE_ADMINISTRATORS, curUser);
 
-    conf.set(ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY,
+    configuration.set(ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY,
         "scm/" + host + "@" + realm);
-    conf.set(ScmConfigKeys.HDDS_SCM_HTTP_KERBEROS_PRINCIPAL_KEY,
+    configuration.set(ScmConfigKeys.HDDS_SCM_HTTP_KERBEROS_PRINCIPAL_KEY,
         "HTTP_SCM/" + host + "@" + realm);
 
-    conf.set(OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY,
+    configuration.set(OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY,
         "om/" + host + "@" + realm);
-    conf.set(OMConfigKeys.OZONE_OM_HTTP_KERBEROS_PRINCIPAL_KEY,
+    configuration.set(OMConfigKeys.OZONE_OM_HTTP_KERBEROS_PRINCIPAL_KEY,
         "HTTP_OM/" + host + "@" + realm);
 
     scmKeytab = new File(workDir, "scm.keytab");
     spnegoKeytab = new File(workDir, "http.keytab");
     omKeyTab = new File(workDir, "om.keytab");
 
-    conf.set(ScmConfigKeys.HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY,
+    configuration.set(ScmConfigKeys.HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY,
         scmKeytab.getAbsolutePath());
-    conf.set(
+    configuration.set(
         ScmConfigKeys.HDDS_SCM_HTTP_KERBEROS_KEYTAB_FILE_KEY,
         spnegoKeytab.getAbsolutePath());
-    conf.set(OMConfigKeys.OZONE_OM_KERBEROS_KEYTAB_FILE_KEY,
+    configuration.set(OMConfigKeys.OZONE_OM_KERBEROS_KEYTAB_FILE_KEY,
         omKeyTab.getAbsolutePath());
     conf.set(OMConfigKeys.OZONE_OM_HTTP_KERBEROS_KEYTAB_FILE,
         spnegoKeytab.getAbsolutePath());
@@ -239,12 +241,15 @@ public final class TestSecureOzoneCluster {
     scmId = UUID.randomUUID().toString();
     omId = UUID.randomUUID().toString();
 
-    final String path = GenericTestUtils
-        .getTempPath(UUID.randomUUID().toString());
+    final String path = folder.newFolder().toString();
     Path scmPath = Paths.get(path, "scm-meta");
+    File temp = scmPath.toFile();
+    if(!temp.exists()) {
+      temp.mkdirs();
+    }
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, scmPath.toString());
     conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
-    SCMStorage scmStore = new SCMStorage(conf);
+    SCMStorageConfig scmStore = new SCMStorageConfig(conf);
     scmStore.setClusterId(clusterId);
     scmStore.setScmId(scmId);
     // writes the version file properties
@@ -586,5 +591,4 @@ public final class TestSecureOzoneCluster {
     CertificateClient certClient = new CertificateClientTestImpl(config);
     om.setCertClient(certClient);
   }
-
 }

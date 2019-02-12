@@ -220,9 +220,9 @@ public class TestBlockDeletion {
   private void verifyTransactionsCommitted() throws IOException {
     DeletedBlockLogImpl deletedBlockLog =
         (DeletedBlockLogImpl) scm.getScmBlockManager().getDeletedBlockLog();
-    for (int txnID = 1; txnID <= maxTransactionId; txnID++) {
+    for (long txnID = 1; txnID <= maxTransactionId; txnID++) {
       Assert.assertNull(
-          deletedBlockLog.getDeletedStore().get(Longs.toByteArray(txnID)));
+          scm.getScmMetadataStore().getDeletedBlocksTXTable().get(txnID));
     }
   }
 
