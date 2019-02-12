@@ -1762,6 +1762,13 @@
   </property>
 
   <property>
+    <description>Default option to decide whether to pull the latest image
+      or not.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.image-update</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>This configuration setting determines if privileged docker
       containers are allowed on this cluster. Privileged containers are granted
       the complete set of capabilities and are not subject to the limitations

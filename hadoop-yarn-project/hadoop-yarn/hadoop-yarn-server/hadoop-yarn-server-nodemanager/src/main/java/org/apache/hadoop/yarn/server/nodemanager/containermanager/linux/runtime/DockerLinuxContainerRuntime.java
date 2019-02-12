@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommandExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerExecCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerKillCommand;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerPullCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerRmCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerStartCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerVolumeCommand;
@@ -272,6 +273,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private Map<String, CsiAdaptorProtocol> csiClients = new HashMap<>();
   private PrivilegedOperationExecutor privilegedOperationExecutor;
   private String defaultImageName;
+  private Boolean defaultImageUpdate;
   private Set<String> allowedNetworks = new HashSet<>();
   private String defaultNetwork;
   private CGroupsHandler cGroupsHandler;
@@ -352,6 +354,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     defaultTmpfsMounts.clear();
     defaultImageName = conf.getTrimmed(
         YarnConfiguration.NM_DOCKER_IMAGE_NAME, "");
+    defaultImageUpdate = conf.getBoolean(
+        YarnConfiguration.NM_DOCKER_IMAGE_UPDATE, false);
     allowedNetworks.addAll(Arrays.asList(
         conf.getTrimmedStrings(
             YarnConfiguration.NM_DOCKER_ALLOWED_CONTAINER_NETWORKS,
@@ -802,6 +806,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       throws ContainerExecutionException {
     Container container = ctx.getContainer();
     ContainerId containerId = container.getContainerId();
+    String containerIdStr = containerId.toString();
     Map<String, String> environment = container.getLaunchContext()
         .getEnvironment();
     String imageName = environment.get(ENV_DOCKER_CONTAINER_IMAGE);
@@ -822,7 +827,10 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
     validateImageName(imageName);
 
-    String containerIdStr = containerId.toString();
+    if (defaultImageUpdate) {
+      pullImageFromRemote(containerIdStr, imageName);
+    }
+
     String runAsUser = ctx.getExecutionAttribute(RUN_AS_USER);
     String dockerRunAsUser = runAsUser;
     Path containerWorkDir = ctx.getExecutionAttribute(CONTAINER_WORK_DIR);
@@ -1377,6 +1385,25 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       throw new ContainerExecutionException("Image name '" + imageName
           + "' doesn't match docker image name pattern");
     }
+  }
+
+  public void pullImageFromRemote(String containerIdStr, String imageName)
+      throws ContainerExecutionException {
+    long start = System.currentTimeMillis();
+    DockerPullCommand dockerPullCommand = new DockerPullCommand(imageName);
+    LOG.debug("now pulling docker image." + " image name: " + imageName + ","
+        + " container: " + containerIdStr);
+
+    DockerCommandExecutor.executeDockerCommand(dockerPullCommand,
+        containerIdStr, null,
+        privilegedOperationExecutor, false, nmContext);
+
+    long end = System.currentTimeMillis();
+    long pullImageTimeMs = end - start;
+    LOG.debug("pull docker image done with "
+        + String.valueOf(pullImageTimeMs) + "ms spent."
+        + " image name: " + imageName + ","
+        + " container: " + containerIdStr);
   }
 
   private void executeLivelinessCheck(ContainerRuntimeContext ctx)
