@@ -16,50 +16,45 @@
  */
 package org.apache.hadoop.hdds.scm.block;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.StorageUnit;
-import org.apache.hadoop.hdds.HddsUtils;
-import org.apache.hadoop.hdds.client.ContainerBlockID;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdds.scm.ScmUtils;
-import org.apache.hadoop.hdds.scm.chillmode.ChillModePrecheck;
-import org.apache.hadoop.hdds.scm.container.ContainerManager;
-import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
-import org.apache.hadoop.hdds.scm.container.ContainerInfo;
-import org.apache.hadoop.hdds.scm.exceptions.SCMException;
-import org.apache.hadoop.hdds.scm.node.NodeManager;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
-import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
-import org.apache.hadoop.hdds.server.events.EventHandler;
-import org.apache.hadoop.hdds.server.events.EventPublisher;
-import org.apache.hadoop.metrics2.util.MBeans;
-import org.apache.hadoop.hdds.client.BlockID;
-import org.apache.hadoop.util.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.management.ObjectName;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import javax.management.ObjectName;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.StorageUnit;
+import org.apache.hadoop.hdds.HddsUtils;
+import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.client.ContainerBlockID;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.ScmUtils;
+import org.apache.hadoop.hdds.scm.chillmode.ChillModePrecheck;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
+import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.hdds.server.events.EventHandler;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.apache.hadoop.metrics2.util.MBeans;
+import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
-    .INVALID_BLOCK_SIZE;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
+import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes.INVALID_BLOCK_SIZE;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
 
 /** Block Manager manages the block access for SCM. */
 public class BlockManagerImpl implements EventHandler<Boolean>,
@@ -85,18 +80,14 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
    * Constructor.
    *
    * @param conf - configuration.
-   * @param nodeManager - node manager.
-   * @param pipelineManager - pipeline manager.
-   * @param containerManager - container manager.
-   * @param eventPublisher - event publisher.
+   * @param scm
    * @throws IOException
    */
-  public BlockManagerImpl(final Configuration conf,
-      final NodeManager nodeManager, final PipelineManager pipelineManager,
-      final ContainerManager containerManager, EventPublisher eventPublisher)
+  public BlockManagerImpl(final Configuration conf, StorageContainerManager scm)
       throws IOException {
-    this.pipelineManager = pipelineManager;
-    this.containerManager = containerManager;
+    Objects.requireNonNull(scm, "SCM cannot be null");
+    this.pipelineManager = scm.getPipelineManager();
+    this.containerManager = scm.getContainerManager();
 
     this.containerSize = (long)conf.getStorageSize(
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE,
@@ -106,7 +97,8 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
     mxBean = MBeans.register("BlockManager", "BlockManagerImpl", this);
 
     // SCM block deleting transaction log and deleting service.
-    deletedBlockLog = new DeletedBlockLogImpl(conf, containerManager);
+    deletedBlockLog = new DeletedBlockLogImpl(conf, scm.getContainerManager(),
+        scm.getScmMetadataStore());
     long svcInterval =
         conf.getTimeDuration(OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
             OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT,
@@ -118,7 +110,8 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
             TimeUnit.MILLISECONDS);
     blockDeletingService =
         new SCMBlockDeletingService(deletedBlockLog, containerManager,
-            nodeManager, eventPublisher, svcInterval, serviceTimeout, conf);
+            scm.getScmNodeManager(), scm.getEventQueue(), svcInterval,
+            serviceTimeout, conf);
     chillModePrecheck = new ChillModePrecheck(conf);
   }
 

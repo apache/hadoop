@@ -23,6 +23,7 @@ import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
+import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerReplica;
 import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -42,7 +44,8 @@ import org.apache.hadoop.hdds.protocol.proto
     .DeleteBlockTransactionResult;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.utils.MetadataKeyFilters;
-import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.utils.db.Table;
+import org.apache.hadoop.utils.db.TableIterator;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -62,10 +65,12 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_BLOCK_DELETION_MAX_RETRY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
 import static org.mockito.Matchers.anyObject;
 import static org.mockito.Mockito.when;
 
@@ -78,6 +83,7 @@ public class TestDeletedBlockLog {
   private OzoneConfiguration conf;
   private File testDir;
   private ContainerManager containerManager;
+  private StorageContainerManager scm;
   private List<DatanodeDetails> dnList;
 
   @Before
@@ -85,10 +91,13 @@ public class TestDeletedBlockLog {
     testDir = GenericTestUtils.getTestDir(
         TestDeletedBlockLog.class.getSimpleName());
     conf = new OzoneConfiguration();
+    conf.set(OZONE_ENABLED, "true");
     conf.setInt(OZONE_SCM_BLOCK_DELETION_MAX_RETRY, 20);
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, testDir.getAbsolutePath());
+    scm = TestUtils.getScm(conf);
     containerManager = Mockito.mock(SCMContainerManager.class);
-    deletedBlockLog = new DeletedBlockLogImpl(conf, containerManager);
+    deletedBlockLog = new DeletedBlockLogImpl(conf, containerManager,
+        scm.getScmMetadataStore());
     dnList = new ArrayList<>(3);
     setupContainerManager();
   }
@@ -126,6 +135,8 @@ public class TestDeletedBlockLog {
   @After
   public void tearDown() throws Exception {
     deletedBlockLog.close();
+    scm.stop();
+    scm.join();
     FileUtils.deleteDirectory(testDir);
   }
 
@@ -263,7 +274,6 @@ public class TestDeletedBlockLog {
     MetadataKeyFilters.MetadataKeyFilter avoidLatestTxid =
         (preKey, currentKey, nextKey) ->
             !Arrays.equals(latestTxid, currentKey);
-    MetadataStore store = deletedBlockLog.getDeletedStore();
     // Randomly add/get/commit/increase transactions.
     for (int i = 0; i < 100; i++) {
       int state = random.nextInt(4);
@@ -286,9 +296,13 @@ public class TestDeletedBlockLog {
         blocks = new ArrayList<>();
       } else {
         // verify the number of added and committed.
-        List<Map.Entry<byte[], byte[]>> result =
-            store.getRangeKVs(null, added, avoidLatestTxid);
-        Assert.assertEquals(added, result.size() + committed);
+        try (TableIterator<Long,
+            ? extends Table.KeyValue<Long, DeletedBlocksTransaction>> iter =
+            scm.getScmMetadataStore().getDeletedBlocksTXTable().iterator()) {
+          AtomicInteger count = new AtomicInteger();
+          iter.forEachRemaining((keyValue) -> count.incrementAndGet());
+          Assert.assertEquals(added, count.get() + committed);
+        }
       }
     }
     blocks = getTransactions(1000);
@@ -303,7 +317,8 @@ public class TestDeletedBlockLog {
     // close db and reopen it again to make sure
     // transactions are stored persistently.
     deletedBlockLog.close();
-    deletedBlockLog = new DeletedBlockLogImpl(conf, containerManager);
+    deletedBlockLog = new DeletedBlockLogImpl(conf, containerManager,
+        scm.getScmMetadataStore());
     List<DeletedBlocksTransaction> blocks =
         getTransactions(10);
     commitTransactions(blocks);

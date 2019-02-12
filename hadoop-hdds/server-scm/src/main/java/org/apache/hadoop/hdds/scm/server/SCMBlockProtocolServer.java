@@ -248,8 +248,8 @@ public class SCMBlockProtocolServer implements
     try{
       ScmInfo.Builder builder =
           new ScmInfo.Builder()
-              .setClusterId(scm.getScmStorage().getClusterID())
-              .setScmId(scm.getScmStorage().getScmId());
+              .setClusterId(scm.getScmStorageConfig().getClusterID())
+              .setScmId(scm.getScmStorageConfig().getScmId());
       return builder.build();
     } catch (Exception ex) {
       auditSuccess = false;

@@ -17,6 +17,7 @@
 package org.apache.hadoop.hdds.scm;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineAction;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ClosePipelineInfo;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineActionsProto;
@@ -48,8 +49,12 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.StorageTypeProto;
 import org.apache.hadoop.hdds.scm.node.SCMNodeManager;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.common.Storage;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 
 import java.io.File;
 import java.io.IOException;
@@ -58,6 +63,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
 
 /**
  * Stateless helper functions to handler scm/datanode connection.
@@ -461,4 +468,20 @@ public final class TestUtils {
         id, HddsProtos.LifeCycleEvent.QUASI_CLOSE);
 
   }
+
+  public static StorageContainerManager getScm(OzoneConfiguration conf)
+      throws IOException, AuthenticationException {
+    conf.setBoolean(OZONE_ENABLED, true);
+    SCMStorageConfig scmStore = new SCMStorageConfig(conf);
+    if(scmStore.getState() != Storage.StorageState.INITIALIZED) {
+      String clusterId = UUID.randomUUID().toString();
+      String scmId = UUID.randomUUID().toString();
+      scmStore.setClusterId(clusterId);
+      scmStore.setScmId(scmId);
+      // writes the version file properties
+      scmStore.initialize();
+    }
+    return StorageContainerManager.createSCM(null, conf);
+  }
+
 }
