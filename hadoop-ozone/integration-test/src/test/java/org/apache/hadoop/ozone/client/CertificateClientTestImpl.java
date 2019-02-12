@@ -69,17 +69,17 @@ public class CertificateClientTestImpl implements CertificateClient {
   }
 
   @Override
-  public PrivateKey getPrivateKey(String component) {
+  public PrivateKey getPrivateKey() {
     return keyPair.getPrivate();
   }
 
   @Override
-  public PublicKey getPublicKey(String component) {
+  public PublicKey getPublicKey() {
     return keyPair.getPublic();
   }
 
   @Override
-  public X509Certificate getCertificate(String component) {
+  public X509Certificate getCertificate() {
     return cert;
   }
 
@@ -89,20 +89,25 @@ public class CertificateClientTestImpl implements CertificateClient {
   }
 
   @Override
-  public byte[] signDataStream(InputStream stream, String component)
+  public byte[] signDataStream(InputStream stream)
       throws CertificateException {
     return new byte[0];
   }
 
   @Override
+  public byte[] signData(byte[] data) throws CertificateException {
+    return new byte[0];
+  }
+
+  @Override
   public boolean verifySignature(InputStream stream, byte[] signature,
-      X509Certificate x509Certificate) {
+      X509Certificate x509Certificate) throws CertificateException {
     return true;
   }
 
   @Override
   public boolean verifySignature(byte[] data, byte[] signature,
-      X509Certificate x509Certificate) {
+      X509Certificate x509Certificate) throws CertificateException {
     return true;
   }
 
@@ -117,32 +122,30 @@ public class CertificateClientTestImpl implements CertificateClient {
   }
 
   @Override
-  public void storePrivateKey(PrivateKey key, String component)
+  public void storeCertificate(X509Certificate certificate)
+      throws CertificateException {
+
+  }
+
+  /**
+   * Stores the trusted chain of certificates for a specific component.
+   *
+   * @param keyStore - Cert Store.
+   * @throws CertificateException - on Error.
+   */
+  @Override
+  public void storeTrustChain(CertStore keyStore) throws CertificateException {
+
+  }
+
+  @Override
+  public void storeTrustChain(List<X509Certificate> certificates)
       throws CertificateException {
 
   }
 
   @Override
-  public void storePublicKey(PublicKey key, String component)
-      throws CertificateException {
-
-  }
-
-  @Override
-  public void storeCertificate(X509Certificate certificate, String component)
-      throws CertificateException {
-
-  }
-
-  @Override
-  public void storeTrustChain(CertStore certStore, String component)
-      throws CertificateException {
-
-  }
-
-  @Override
-  public void storeTrustChain(List<X509Certificate> certificates,
-      String component) throws CertificateException {
-
+  public InitResponse init() throws CertificateException {
+    return null;
   }
 }

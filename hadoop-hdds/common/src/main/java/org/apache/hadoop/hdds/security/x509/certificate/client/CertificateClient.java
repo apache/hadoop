@@ -39,28 +39,26 @@ public interface CertificateClient {
    * Returns the private key of the specified component if it exists on the
    * local system.
    *
-   * @param component - String name like DN, OM, SCM etc.
    * @return private key or Null if there is no data.
    */
-  PrivateKey getPrivateKey(String component);
+  PrivateKey getPrivateKey();
 
   /**
    * Returns the public key of the specified component if it exists on the local
    * system.
    *
-   * @param component - String name like DN, OM, SCM etc.
    * @return public key or Null if there is no data.
    */
-  PublicKey getPublicKey(String component);
+  PublicKey getPublicKey();
 
   /**
    * Returns the certificate  of the specified component if it exists on the
    * local system.
    *
-   * @param component - String name like DN, OM, SCM etc.
+
    * @return certificate or Null if there is no data.
    */
-  X509Certificate getCertificate(String component);
+  X509Certificate getCertificate();
 
   /**
    * Verifies if this certificate is part of a trusted chain.
@@ -74,12 +72,13 @@ public interface CertificateClient {
    * key.
    *
    * @param stream - Data stream to sign.
-   * @param component - name of the component.
    * @return byte array - containing the signature.
    * @throws CertificateException - on Error.
    */
-  byte[] signDataStream(InputStream stream, String component)
+  byte[] signDataStream(InputStream stream)
       throws CertificateException;
+
+  byte[] signData(byte[] data) throws CertificateException;
 
   /**
    * Verifies a digital Signature, given the signature and the certificate of
@@ -91,7 +90,7 @@ public interface CertificateClient {
    * @return true if verified, false if not.
    */
   boolean verifySignature(InputStream stream, byte[] signature,
-      X509Certificate cert);
+      X509Certificate cert) throws CertificateException;
 
   /**
    * Verifies a digital Signature, given the signature and the certificate of
@@ -102,7 +101,7 @@ public interface CertificateClient {
    * @return true if verified, false if not.
    */
   boolean verifySignature(byte[] data, byte[] signature,
-      X509Certificate cert);
+      X509Certificate cert) throws CertificateException;
 
   /**
    * Returns a CSR builder that can be used to creates a Certificate sigining
@@ -122,53 +121,53 @@ public interface CertificateClient {
   X509Certificate queryCertificate(String query);
 
   /**
-   * Stores the private key of a specified component.
-   *
-   * @param key - private key
-   * @param component - name of the component.
-   * @throws CertificateException - on Error.
-   */
-  void storePrivateKey(PrivateKey key, String component)
-      throws CertificateException;
-
-  /**
-   * Stores the public key of a specified component.
-   *
-   * @param key - public key
-   * @param component - name of the component.
-   * @throws CertificateException - on Error.
-   */
-  void storePublicKey(PublicKey key, String component)
-      throws CertificateException;
-
-  /**
-   * Stores the Certificate of a specific component.
+   * Stores the Certificate.
    *
    * @param certificate - X509 Certificate
-   * @param component - Name of the component.
+
    * @throws CertificateException - on Error.
    */
-  void storeCertificate(X509Certificate certificate, String component)
+  void storeCertificate(X509Certificate certificate)
       throws CertificateException;
 
   /**
-   * Stores the trusted chain of certificates for a specific component.
+   * Stores the trusted chain of certificates.
    *
    * @param certStore - Cert Store.
-   * @param component - Trust Chain.
    * @throws CertificateException - on Error.
    */
-  void storeTrustChain(CertStore certStore,
-      String component) throws CertificateException;
+  void storeTrustChain(CertStore certStore) throws CertificateException;
 
   /**
-   * Stores the trusted chain of certificates for a specific component.
+   * Stores the trusted chain of certificates.
    *
    * @param certificates - List of Certificates.
-   * @param component - String component.
+
    * @throws CertificateException - on Error.
    */
-  void storeTrustChain(List<X509Certificate> certificates,
-      String component) throws CertificateException;
+  void storeTrustChain(List<X509Certificate> certificates)
+      throws CertificateException;
+
+  /**
+   * Initialize certificate client.
+   *
+   * */
+  InitResponse init() throws CertificateException;
+
+  /**
+   * Represents initialization response of client.
+   * 1. SUCCESS: Means client is initialized successfully and all required
+   *              files are in expected state.
+   * 2. FAILURE: Initialization failed due to some unrecoverable error.
+   * 3. GETCERT: Bootstrap of keypair is successful but certificate is not
+   *             found. Client should request SCM signed certificate.
+   *
+   */
+  enum InitResponse {
+    SUCCESS,
+    FAILURE,
+    GETCERT,
+    RECOVER
+  }
 
 }

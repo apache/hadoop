@@ -57,6 +57,7 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.ozone.client.CertificateClientTestImpl;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMStorage;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -78,7 +79,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -583,11 +583,7 @@ public final class TestSecureOzoneCluster {
     omStore.initialize();
     OzoneManager.setTestSecureOmFlag(true);
     om = OzoneManager.createOm(null, config);
-    CertificateClient certClient = Mockito.mock(CertificateClient.class);
-    Mockito.when(certClient.getPrivateKey("om"))
-        .thenReturn(keyPair.getPrivate());
-    Mockito.when(certClient.getPublicKey("om"))
-        .thenReturn(keyPair.getPublic());
+    CertificateClient certClient = new CertificateClientTestImpl(config);
     om.setCertClient(certClient);
   }
 

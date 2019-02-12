@@ -25,6 +25,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 /**
  * Ozone security Util class.
  */
@@ -38,6 +42,19 @@ public final class OzoneSecurityUtil {
   public static boolean isSecurityEnabled(Configuration conf) {
     return conf.getBoolean(OZONE_SECURITY_ENABLED_KEY,
         OZONE_SECURITY_ENABLED_DEFAULT);
+  }
+
+  /**
+   * Returns Keys status.
+   *
+   * @return True if the key files exist.
+   */
+  public static boolean checkIfFileExist(Path path, String fileName) {
+    if (Files.exists(path) && Files.exists(Paths.get(path.toString(),
+        fileName))) {
+      return true;
+    }
+    return false;
   }
 
 }

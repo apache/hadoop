@@ -26,6 +26,7 @@ import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
  */
 public class CertificateException extends SCMSecurityException {
 
+  private ErrorCode errorCode;
   /**
    * Ctor.
    * @param message - Error Message.
@@ -45,9 +46,42 @@ public class CertificateException extends SCMSecurityException {
 
   /**
    * Ctor.
+   * @param message - Message.
+   * @param cause  - Actual cause.
+   * @param errorCode
+   */
+  public CertificateException(String message, Throwable cause,
+      ErrorCode errorCode) {
+    super(message, cause);
+    this.errorCode = errorCode;
+  }
+
+  /**
+   * Ctor.
+   * @param message - Message.
+   * @param errorCode
+   */
+  public CertificateException(String message, ErrorCode errorCode) {
+    super(message);
+    this.errorCode = errorCode;
+  }
+
+  /**
+   * Ctor.
    * @param cause - Base Exception.
    */
   public CertificateException(Throwable cause) {
     super(cause);
+  }
+
+  /**
+   * Error codes to make it easy to decode these exceptions.
+   */
+  public enum ErrorCode {
+    KEYSTORE_ERROR,
+    CRYPTO_SIGN_ERROR,
+    CERTIFICATE_ERROR,
+    BOOTSTRAP_ERROR,
+    CRYPTO_SIGNATURE_VERIFICATION_ERROR
   }
 }

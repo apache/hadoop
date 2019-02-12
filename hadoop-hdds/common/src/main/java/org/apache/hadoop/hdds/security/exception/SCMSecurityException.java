@@ -73,6 +73,7 @@ public class SCMSecurityException extends IOException {
    */
   public enum ErrorCode {
     DEFAULT,
-    MISSING_BLOCK_TOKEN
+    MISSING_BLOCK_TOKEN,
+    BLOCK_TOKEN_VERIFICATION_FAILED
   }
 }

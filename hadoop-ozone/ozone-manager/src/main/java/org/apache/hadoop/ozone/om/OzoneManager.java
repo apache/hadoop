@@ -397,7 +397,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
     Objects.requireNonNull(certClient);
     return new OzoneBlockTokenSecretManager(secConfig, expiryTime,
-        certClient.getCertificate(OM_DAEMON).getSerialNumber().toString());
+        certClient.getCertificate().getSerialNumber().toString());
   }
 
   private void stopSecretManager() {
@@ -464,8 +464,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   private void readKeyPair() throws OzoneSecurityException {
     try {
-      keyPair = new KeyPair(certClient.getPublicKey(OM_DAEMON),
-          certClient.getPrivateKey(OM_DAEMON));
+      keyPair = new KeyPair(certClient.getPublicKey(),
+          certClient.getPrivateKey());
     } catch (Exception e) {
       throw new OzoneSecurityException("Error reading private file for "
           + "OzoneManager", e, OzoneSecurityException
