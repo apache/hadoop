@@ -180,6 +180,11 @@ public class InMemoryAliasMap implements InMemoryAliasMapProtocol,
     levelDb.put(extendedBlockDbFormat, providedStorageLocationDbFormat);
   }
 
+  public void remove(@Nonnull Block block) throws IOException {
+    byte[] extendedBlockDbFormat = toProtoBufBytes(block);
+    levelDb.delete(extendedBlockDbFormat);
+  }
+
   @Override
   public String getBlockPoolId() {
     return blockPoolID;
@@ -218,8 +223,7 @@ public class InMemoryAliasMap implements InMemoryAliasMapProtocol,
 
   public static byte[] toProtoBufBytes(@Nonnull Block block)
       throws IOException {
-    BlockProto blockProto =
-        PBHelperClient.convert(block);
+    BlockProto blockProto = PBHelperClient.convert(block);
     ByteArrayOutputStream blockOutputStream = new ByteArrayOutputStream();
     blockProto.writeTo(blockOutputStream);
     return blockOutputStream.toByteArray();

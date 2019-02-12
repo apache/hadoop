@@ -458,6 +458,12 @@ public class TextFileRegionAliasMap
     }
 
     @Override
+    public void remove(Block block) throws IOException {
+      throw new RuntimeException("TextFileWriter does not support " +
+          "block removal");
+    }
+
+    @Override
     public void close() throws IOException {
       out.close();
     }
