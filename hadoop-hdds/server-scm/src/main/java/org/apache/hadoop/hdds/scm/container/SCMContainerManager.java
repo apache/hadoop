@@ -112,7 +112,7 @@ public class SCMContainerManager implements ContainerManager {
           ContainerInfoProto.PARSER.parseFrom(entry.getValue()));
       Preconditions.checkNotNull(container);
       containerStateManager.loadContainer(container);
-      if (container.isOpen()) {
+      if (container.getState() == LifeCycleState.OPEN) {
         pipelineManager.addContainerToPipeline(container.getPipelineID(),
             ContainerID.valueof(container.getContainerID()));
       }
