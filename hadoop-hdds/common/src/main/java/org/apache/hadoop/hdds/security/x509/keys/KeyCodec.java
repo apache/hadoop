@@ -151,6 +151,51 @@ public class KeyCodec {
   }
 
   /**
+   * Writes a given private key using the default config options.
+   *
+   * @param key - Key to write to file.
+   * @throws IOException - On I/O failure.
+   */
+  public void writePrivateKey(PrivateKey key) throws IOException {
+    File privateKeyFile =
+        Paths.get(location.toString(),
+            securityConfig.getPrivateKeyFileName()).toFile();
+
+    if (Files.exists(privateKeyFile.toPath())) {
+      throw new IOException("Private key already exist.");
+    }
+
+    try (PemWriter privateKeyWriter = new PemWriter(new
+        FileWriterWithEncoding(privateKeyFile, DEFAULT_CHARSET))) {
+      privateKeyWriter.writeObject(
+          new PemObject(PRIVATE_KEY, key.getEncoded()));
+    }
+    Files.setPosixFilePermissions(privateKeyFile.toPath(), permissionSet);
+  }
+
+  /**
+   * Writes a given public key using the default config options.
+   *
+   * @param key - Key to write to file.
+   * @throws IOException - On I/O failure.
+   */
+  public void writePublicKey(PublicKey key) throws IOException {
+    File publicKeyFile = Paths.get(location.toString(),
+        securityConfig.getPublicKeyFileName()).toFile();
+
+    if (Files.exists(publicKeyFile.toPath())) {
+      throw new IOException("Private key already exist.");
+    }
+
+    try (PemWriter keyWriter = new PemWriter(new
+        FileWriterWithEncoding(publicKeyFile, DEFAULT_CHARSET))) {
+      keyWriter.writeObject(
+          new PemObject(PUBLIC_KEY, key.getEncoded()));
+    }
+    Files.setPosixFilePermissions(publicKeyFile.toPath(), permissionSet);
+  }
+
+  /**
    * Writes a given key using default config options.
    *
    * @param keyPair - Key pair to write
@@ -275,7 +320,7 @@ public class KeyCodec {
    * @throws IOException - On I/O failure.
    */
   private synchronized void writeKey(Path basePath, KeyPair keyPair,
-                                     String privateKeyFileName, String publicKeyFileName, boolean force)
+      String privateKeyFileName, String publicKeyFileName, boolean force)
       throws IOException {
     checkPreconditions(basePath);
 
