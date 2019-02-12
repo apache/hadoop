@@ -21,7 +21,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result;
-import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.ozone.common.Checksum;
@@ -202,8 +201,6 @@ public class KeyOutputStream extends OutputStream {
     ContainerWithPipeline containerWithPipeline = scmClient
         .getContainerWithPipeline(subKeyInfo.getContainerID());
     UserGroupInformation.getCurrentUser().addToken(subKeyInfo.getToken());
-    XceiverClientSpi xceiverClient =
-        xceiverClientManager.acquireClient(containerWithPipeline.getPipeline());
     BlockOutputStreamEntry.Builder builder =
         new BlockOutputStreamEntry.Builder()
             .setBlockID(subKeyInfo.getBlockID())
