@@ -61,6 +61,7 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction.RetryDecision;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
@@ -302,8 +303,8 @@ public class RouterRpcClient {
    * @param retryCount Number of retries.
    * @param nsId Nameservice ID.
    * @return Retry decision.
-   * @throws IOException Original exception if the retry policy generates one
-   *                     or IOException for no available namenodes.
+   * @throws NoNamenodesAvailableException Exception that the retry policy
+   *         generates for no available namenodes.
    */
   private RetryDecision shouldRetry(final IOException ioe, final int retryCount,
       final String nsId) throws IOException {
@@ -313,8 +314,7 @@ public class RouterRpcClient {
       if (retryCount == 0) {
         return RetryDecision.RETRY;
       } else {
-        throw new IOException("No namenode available under nameservice " + nsId,
-            ioe);
+        throw new NoNamenodesAvailableException(nsId, ioe);
       }
     }
 
@@ -405,6 +405,14 @@ public class RouterRpcClient {
           StandbyException se = new StandbyException(ioe.getMessage());
           se.initCause(ioe);
           throw se;
+        } else if (ioe instanceof NoNamenodesAvailableException) {
+          if (this.rpcMonitor != null) {
+            this.rpcMonitor.proxyOpNoNamenodes();
+          }
+          LOG.error("Can not get available namenode for {} {} error: {}",
+              nsId, rpcAddress, ioe.getMessage());
+          // Throw RetriableException so that client can retry
+          throw new RetriableException(ioe);
         } else {
           // Other communication error, this is a failure
           // Communication retries are handled by the retry policy
