@@ -125,10 +125,18 @@ public class OzoneFileSystem extends FileSystem {
       boolean isolatedClassloader =
           conf.getBoolean("ozone.fs.isolated-classloader", defaultValue);
 
-      storageStatistics = (OzoneFSStorageStatistics)
-          GlobalStorageStatistics.INSTANCE
-              .put(OzoneFSStorageStatistics.NAME,
-                  OzoneFSStorageStatistics::new);
+      try {
+        //register only to the GlobalStorageStatistics if the class exists.
+        //This is required to support hadoop versions <2.7
+        Class.forName("org.apache.hadoop.fs.GlobalStorageStatistics");
+        storageStatistics = (OzoneFSStorageStatistics)
+            GlobalStorageStatistics.INSTANCE
+                .put(OzoneFSStorageStatistics.NAME,
+                    OzoneFSStorageStatistics::new);
+      } catch (ClassNotFoundException e) {
+        storageStatistics = new OzoneFSStorageStatistics();
+      }
+
       if (isolatedClassloader) {
         this.adapter =
             OzoneClientAdapterFactory.createAdapter(volumeStr, bucketStr,
