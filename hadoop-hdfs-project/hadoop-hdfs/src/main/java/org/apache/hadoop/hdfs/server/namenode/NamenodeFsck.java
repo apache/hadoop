@@ -303,29 +303,22 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       if (blockManager.getCorruptReplicas(block) != null) {
         corruptionRecord = blockManager.getCorruptReplicas(block);
       }
-
-      //report block replicas status on datanodes
-      for(int idx = (blockInfo.numNodes()-1); idx >= 0; idx--) {
-        DatanodeDescriptor dn = blockInfo.getDatanode(idx);
-        out.print("Block replica on datanode/rack: " + dn.getHostName() +
-            dn.getNetworkLocation() + " ");
-        if (corruptionRecord != null && corruptionRecord.contains(dn)) {
-          out.print(CORRUPT_STATUS + "\t ReasonCode: " +
-              blockManager.getCorruptReason(block, dn));
-        } else if (dn.isDecommissioned() ){
-          out.print(DECOMMISSIONED_STATUS);
-        } else if (dn.isDecommissionInProgress()) {
-          out.print(DECOMMISSIONING_STATUS);
-        } else if (this.showMaintenanceState && dn.isEnteringMaintenance()) {
-          out.print(ENTERING_MAINTENANCE_STATUS);
-        } else if (this.showMaintenanceState && dn.isInMaintenance()) {
-          out.print(IN_MAINTENANCE_STATUS);
-        } else {
-          out.print(HEALTHY_STATUS);
+      // report block replicas status on datanodes
+      if (blockInfo.isStriped()) {
+        for (int idx = (blockInfo.getCapacity() - 1); idx >= 0; idx--) {
+          DatanodeDescriptor dn = blockInfo.getDatanode(idx);
+          if (dn == null) {
+            continue;
+          }
+          printDatanodeReplicaStatus(block, corruptionRecord, dn);
         }
-        out.print("\n");
+      } else {
+        for (int idx = (blockInfo.numNodes() - 1); idx >= 0; idx--) {
+          DatanodeDescriptor dn = blockInfo.getDatanode(idx);
+          printDatanodeReplicaStatus(block, corruptionRecord, dn);
+        }
       }
-    } catch (Exception e){
+    } catch (Exception e) {
       String errMsg = "Fsck on blockId '" + blockId;
       LOG.warn(errMsg, e);
       out.println(e.getMessage());
@@ -334,6 +327,27 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     } finally {
       namenode.getNamesystem().readUnlock("fsck");
     }
+  }
+
+  private void printDatanodeReplicaStatus(Block block,
+      Collection<DatanodeDescriptor> corruptionRecord, DatanodeDescriptor dn) {
+    out.print("Block replica on datanode/rack: " + dn.getHostName() +
+        dn.getNetworkLocation() + " ");
+    if (corruptionRecord != null && corruptionRecord.contains(dn)) {
+      out.print(CORRUPT_STATUS + "\t ReasonCode: " +
+          blockManager.getCorruptReason(block, dn));
+    } else if (dn.isDecommissioned()){
+      out.print(DECOMMISSIONED_STATUS);
+    } else if (dn.isDecommissionInProgress()) {
+      out.print(DECOMMISSIONING_STATUS);
+    } else if (this.showMaintenanceState && dn.isEnteringMaintenance()) {
+      out.print(ENTERING_MAINTENANCE_STATUS);
+    } else if (this.showMaintenanceState && dn.isInMaintenance()) {
+      out.print(IN_MAINTENANCE_STATUS);
+    } else {
+      out.print(HEALTHY_STATUS);
+    }
+    out.print("\n");
   }
 
   /**
