@@ -132,6 +132,15 @@ The following properties should be set in yarn-site.xml:
   </property>
 
   <property>
+    <name>yarn.nodemanager.runtime.linux.docker.image-update</name>
+    <value>false</value>
+    <description>
+      Optional. Default option to decide whether to pull the latest image
+      or not.
+    </description>
+  </property>
+
+  <property>
     <name>yarn.nodemanager.runtime.linux.docker.allowed-container-networks</name>
     <value>host,none,bridge</value>
     <description>

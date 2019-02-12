@@ -1936,6 +1936,10 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_DOCKER_IMAGE_NAME =
       DOCKER_CONTAINER_RUNTIME_PREFIX + "image-name";
 
+  /** Default option to decide whether to pull the latest image or not. **/
+  public static final String NM_DOCKER_IMAGE_UPDATE =
+      DOCKER_CONTAINER_RUNTIME_PREFIX + "image-update";
+
   /** Capabilities allowed (and added by default) for docker containers. **/
   public static final String NM_DOCKER_CONTAINER_CAPABILITIES =
       DOCKER_CONTAINER_RUNTIME_PREFIX + "capabilities";
