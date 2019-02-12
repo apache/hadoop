@@ -133,7 +133,7 @@ public class TestRouterRPCClientRetries {
     } catch (RemoteException e) {
       String ns0 = cluster.getNameservices().get(0);
       assertExceptionContains(
-          "No namenode available under nameservice " + ns0, e);
+          "No namenodes available under nameservice " + ns0, e);
     }
 
     // Verify the retry times, it should only retry one time.
