@@ -1381,7 +1381,7 @@ public class TestOzoneManager {
    * set to true.
    */
   @Test
-  public void testRatsiServerOnOmInitialization() throws IOException {
+  public void testRatisServerOnOMInitialization() throws IOException {
     // OM Ratis server should not be started when OZONE_OM_RATIS_ENABLE_KEY
     // is not set to true
     Assert.assertNull("OM Ratis server started though OM Ratis is disabled.",

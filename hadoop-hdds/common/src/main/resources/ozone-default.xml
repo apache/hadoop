@@ -455,6 +455,48 @@
     </description>
   </property>
   <property>
+    <name>ozone.om.service.ids</name>
+    <value></value>
+    <tag>OM, HA</tag>
+    <description>
+      Comma-separated list of OM service Ids.
+
+      If not set, the default value of "om-service-value" is assigned as the
+      OM service ID.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.nodes.EXAMPLEOMSERVICEID</name>
+    <value></value>
+    <tag>OM, HA</tag>
+    <description>
+      Comma-separated list of OM node Ids for a given OM service ID (eg.
+      EXAMPLEOMSERVICEID). The OM service ID should be the value (one of the
+      values if there are multiple) set for the parameter ozone.om.service.ids.
+
+      Unique identifiers for each OM Node, delimited by commas. This will be
+      used by OzoneManagers in HA setup to determine all the OzoneManagers
+      belonging to the same OMservice in the cluster. For example, if you
+      used “omService1” as the OM service ID previously, and you wanted to
+      use “om1”, “om2” and "om3" as the individual IDs of the OzoneManagers,
+      you would configure a property ozone.om.nodes.omService1, and its value
+      "om1,om2,om3".
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.node.id</name>
+    <value></value>
+    <tag>OM, HA</tag>
+    <description>
+      The ID of this OM node. If the OM node ID is not configured it
+      is determined automatically by matching the local node's address
+      with the configured address.
+
+      If node ID is not deterministic from the configuration, then it is set
+      to the OmId from the OM version file.
+    </description>
+  </property>
+  <property>
     <name>ozone.om.address</name>
     <value/>
     <tag>OM, REQUIRED</tag>
@@ -1453,15 +1495,6 @@
   </property>
 
   <property>
-    <name>ozone.om.ratis.random.port</name>
-    <value>false</value>
-    <tag>OZONE, OM, RATIS, DEBUG</tag>
-    <description>Allocates a random free port for OM's Ratis server. This is
-      used only while running unit tests.
-    </description>
-  </property>
-
-  <property>
     <name>ozone.om.ratis.rpc.type</name>
     <value>GRPC</value>
     <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
@@ -1543,28 +1576,39 @@
     <description>The timeout duration for OM Ratis client request.
     </description>
   </property>
-	<property>
-		<name>ozone.om.ratis.client.request.max.retries</name>
-		<value>180</value>
-		<tag>OZONE, OM, RATIS, MANAGEMENT</tag>
-		<description>Number of retries for OM client request.</description>
-	</property>
-	<property>
-		<name>ozone.om.ratis.client.request.retry.interval</name>
-		<value>100ms</value>
-		<tag>OZONE, OM, RATIS, MANAGEMENT</tag>
-		<description>Interval between successive retries for a OM client request.
-		</description>
-	</property>
+  <property>
+    <name>ozone.om.ratis.client.request.max.retries</name>
+    <value>180</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>Number of retries for OM client request.</description>
+  </property>
+  <property>
+    <name>ozone.om.ratis.client.request.retry.interval</name>
+    <value>100ms</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>Interval between successive retries for a OM client request.
+    </description>
+  </property>
 
-	<property>
-		<name>ozone.om.leader.election.minimum.timeout.duration</name>
-		<value>1s</value>
-		<tag>OZONE, OM, RATIS, MANAGEMENT</tag>
-		<description>The minimum timeout duration for OM ratis leader election.
-			Default is 1s.
-		</description>
-	</property>
+  <property>
+    <name>ozone.om.leader.election.minimum.timeout.duration</name>
+    <value>1s</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>The minimum timeout duration for OM ratis leader election.
+      Default is 1s.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.server.failure.timeout.duration</name>
+    <value>120s</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>The timeout duration for ratis server failure detection,
+      once the threshold has reached, the ratis state machine will be informed
+      about the failure in the ratis ring.
+    </description>
+  </property>
+
 
   <property>
     <name>ozone.acl.authorizer.class</name>

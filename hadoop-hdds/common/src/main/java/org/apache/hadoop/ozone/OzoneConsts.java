@@ -268,4 +268,7 @@ public final class OzoneConsts {
       Metadata.Key.of(OZONE_BLOCK_TOKEN, ASCII_STRING_MARSHALLER);
   public static final Metadata.Key<String> USER_METADATA_KEY =
       Metadata.Key.of(OZONE_USER, ASCII_STRING_MARSHALLER);
+
+  // Default OMServiceID for OM Ratis servers to use as RaftGroupId
+  public static final String OM_SERVICE_ID_DEFAULT = "om-service-value";
 }
