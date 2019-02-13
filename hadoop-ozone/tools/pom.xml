@@ -78,6 +78,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <version>2.15.0</version>
       <scope>test</scope>
     </dependency>
+      <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-ozone-ozone-manager</artifactId>
+          <version>0.4.0-SNAPSHOT</version>
+      </dependency>
   </dependencies>
   <build>
     <plugins>
