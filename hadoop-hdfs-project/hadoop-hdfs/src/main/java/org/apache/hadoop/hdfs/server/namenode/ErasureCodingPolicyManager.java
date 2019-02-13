@@ -238,6 +238,22 @@ public final class ErasureCodingPolicyManager {
   }
 
   /**
+   * Get a {@link ErasureCodingPolicy} by policy name, including system
+   * policy, user defined policy and Replication policy.
+   * @return ecPolicy, or null if not found
+   */
+  public ErasureCodingPolicy getErasureCodingPolicyByName(String name) {
+    final ErasureCodingPolicyInfo ecpi = getPolicyInfoByName(name);
+    if (ecpi == null) {
+      if (name.equalsIgnoreCase(ErasureCodeConstants.REPLICATION_POLICY_NAME)) {
+        return SystemErasureCodingPolicies.getReplicationPolicy();
+      }
+      return null;
+    }
+    return ecpi.getPolicy();
+  }
+
+  /**
    * Get a {@link ErasureCodingPolicyInfo} by policy name, including system
    * policy and user defined policy.
    * @return ecPolicy, or null if not found
