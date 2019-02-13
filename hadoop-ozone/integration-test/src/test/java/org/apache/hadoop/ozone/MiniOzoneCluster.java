@@ -52,6 +52,17 @@ public interface MiniOzoneCluster {
   }
 
   /**
+   * Returns the Builder to construct MiniOzoneHACluster.
+   *
+   * @param conf OzoneConfiguration
+   *
+   * @return MiniOzoneCluster builder
+   */
+  static Builder newHABuilder(OzoneConfiguration conf) {
+    return new MiniOzoneHAClusterImpl.Builder(conf);
+  }
+
+  /**
    * Returns the configuration object associated with the MiniOzoneCluster.
    *
    * @return Configuration
@@ -223,6 +234,8 @@ public interface MiniOzoneCluster {
     protected final String path;
 
     protected String clusterId;
+    protected String omServiceId;
+    protected int numOfOMs;
 
     protected Optional<Boolean> enableTrace = Optional.of(false);
     protected Optional<Integer> hbInterval = Optional.empty();
@@ -413,6 +426,16 @@ public interface MiniOzoneCluster {
      */
     public Builder setBlockSize(long size) {
       blockSize = Optional.of(size);
+      return this;
+    }
+
+    public Builder setNumOfOzoneManagers(int numOMs) {
+      this.numOfOMs = numOMs;
+      return this;
+    }
+
+    public Builder setOMServiceId(String serviceId) {
+      this.omServiceId = serviceId;
       return this;
     }
 

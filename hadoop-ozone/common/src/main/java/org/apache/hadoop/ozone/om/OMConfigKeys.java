@@ -40,6 +40,13 @@ public final class OMConfigKeys {
       "ozone.om.handler.count.key";
   public static final int OZONE_OM_HANDLER_COUNT_DEFAULT = 20;
 
+  public static final String OZONE_OM_SERVICE_IDS_KEY =
+      "ozone.om.service.ids";
+  public static final String OZONE_OM_NODES_KEY =
+      "ozone.om.nodes";
+  public static final String OZONE_OM_NODE_ID_KEY =
+      "ozone.om.node.id";
+
   public static final String OZONE_OM_ADDRESS_KEY =
       "ozone.om.address";
   public static final String OZONE_OM_BIND_HOST_DEFAULT =
@@ -101,11 +108,6 @@ public final class OMConfigKeys {
       = "ozone.om.ratis.port";
   public static final int OZONE_OM_RATIS_PORT_DEFAULT
       = 9872;
-  // When set to true, allocate a random free port for ozone ratis server
-  public static final String OZONE_OM_RATIS_RANDOM_PORT_KEY =
-      "ozone.om.ratis.random.port";
-  public static final boolean OZONE_OM_RATIS_RANDOM_PORT_KEY_DEFAULT
-      = false;
   public static final String OZONE_OM_RATIS_RPC_TYPE_KEY
       = "ozone.om.ratis.rpc.type";
   public static final String OZONE_OM_RATIS_RPC_TYPE_DEFAULT
@@ -175,6 +177,11 @@ public final class OMConfigKeys {
   public static final TimeDuration
       OZONE_OM_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_DEFAULT =
       TimeDuration.valueOf(1, TimeUnit.SECONDS);
+  public static final String OZONE_OM_RATIS_SERVER_FAILURE_TIMEOUT_DURATION_KEY
+      = "ozone.om.ratis.server.failure.timeout.duration";
+  public static final TimeDuration
+      OZONE_OM_RATIS_SERVER_FAILURE_TIMEOUT_DURATION_DEFAULT
+      = TimeDuration.valueOf(120, TimeUnit.SECONDS);
 
   public static final String OZONE_OM_KERBEROS_KEYTAB_FILE_KEY = "ozone.om."
       + "kerberos.keytab.file";

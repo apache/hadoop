@@ -38,6 +38,7 @@ public class TestOzoneConfigurationFields extends TestConfigurationFieldsBase {
     errorIfMissingConfigProps = true;
     errorIfMissingXmlProps = true;
     xmlPropsToSkipCompare.add("hadoop.tags.custom");
+    xmlPropsToSkipCompare.add("ozone.om.nodes.EXAMPLEOMSERVICEID");
     addPropertiesNotInXml();
   }
 
@@ -45,5 +46,6 @@ public class TestOzoneConfigurationFields extends TestConfigurationFieldsBase {
     configurationPropsToSkipCompare.add(HddsConfigKeys.HDDS_KEY_ALGORITHM);
     configurationPropsToSkipCompare.add(HddsConfigKeys.HDDS_SECURITY_PROVIDER);
     configurationPropsToSkipCompare.add(HddsConfigKeys.HDDS_GRPC_TLS_TEST_CERT);
+    configurationPropsToSkipCompare.add(OMConfigKeys.OZONE_OM_NODES_KEY);
   }
 }

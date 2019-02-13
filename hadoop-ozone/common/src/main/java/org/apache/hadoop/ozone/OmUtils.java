@@ -17,12 +17,15 @@
 
 package org.apache.hadoop.ozone;
 
+import com.google.common.base.Joiner;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Optional;
 
 import org.apache.commons.lang3.RandomStringUtils;
@@ -38,7 +41,9 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_BIND_HOST_DEFAULT;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTP_BIND_PORT_DEFAULT;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_NODES_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_PORT_DEFAULT;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -189,6 +194,66 @@ public final class OmUtils {
     } catch (NoSuchAlgorithmException ex) {
       throw new IOException("Error creating an instance of SHA-256 digest.\n" +
           "This could possibly indicate a faulty JRE");
+    }
+  }
+
+  /**
+   * Add non empty and non null suffix to a key.
+   */
+  private static String addSuffix(String key, String suffix) {
+    if (suffix == null || suffix.isEmpty()) {
+      return key;
+    }
+    assert !suffix.startsWith(".") :
+        "suffix '" + suffix + "' should not already have '.' prepended.";
+    return key + "." + suffix;
+  }
+
+  /**
+   * Concatenate list of suffix strings '.' separated.
+   */
+  private static String concatSuffixes(String... suffixes) {
+    if (suffixes == null) {
+      return null;
+    }
+    return Joiner.on(".").skipNulls().join(suffixes);
+  }
+
+  /**
+   * Return configuration key of format key.suffix1.suffix2...suffixN.
+   */
+  public static String addKeySuffixes(String key, String... suffixes) {
+    String keySuffix = concatSuffixes(suffixes);
+    return addSuffix(key, keySuffix);
+  }
+
+  /**
+   * Match input address to local address.
+   * Return true if it matches, false otherwsie.
+   */
+  public static boolean isAddressLocal(InetSocketAddress addr) {
+    return NetUtils.isLocalAddress(addr.getAddress());
+  }
+
+  /**
+   * Get a collection of all omNodeIds for the given omServiceId.
+   */
+  public static Collection<String> getOMNodeIds(Configuration conf,
+      String omServiceId) {
+    String key = addSuffix(OZONE_OM_NODES_KEY, omServiceId);
+    return conf.getTrimmedStringCollection(key);
+  }
+
+  /**
+   * @return <code>coll</code> if it is non-null and non-empty. Otherwise,
+   * returns a list with a single null value.
+   */
+  public static Collection<String> emptyAsSingletonNull(Collection<String>
+      coll) {
+    if (coll == null || coll.isEmpty()) {
+      return Collections.singletonList(null);
+    } else {
+      return coll;
     }
   }
 }
