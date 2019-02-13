@@ -62,6 +62,7 @@
 
     <menu name="Common" inherit="top">
       <item name="CLI Mini Cluster" href="hadoop-project-dist/hadoop-common/CLIMiniCluster.html"/>
+      <item name="Fair Call Queue" href="hadoop-project-dist/hadoop-common/FairCallQueue.html"/>
       <item name="Native Libraries" href="hadoop-project-dist/hadoop-common/NativeLibraries.html"/>
       <item name="Proxy User" href="hadoop-project-dist/hadoop-common/Superusers.html"/>
       <item name="Rack Awareness" href="hadoop-project-dist/hadoop-common/RackAwareness.html"/>
