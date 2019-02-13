@@ -1711,6 +1711,7 @@ public abstract class Server {
     IpcConnectionContextProto connectionContext;
     String protocolName;
     SaslServer saslServer;
+    private String establishedQOP;
     private AuthMethod authMethod;
     private AuthProtocol authProtocol;
     private boolean saslContextEstablished;
@@ -1788,14 +1789,7 @@ public abstract class Server {
     }
 
     public String getEstablishedQOP() {
-      // In practice, saslServer should not be null when this is
-      // called. If it is null, it must be either some
-      // configuration mistake or it is called from unit test.
-      if (saslServer == null) {
-        LOG.warn("SASL server should not be null!");
-        return null;
-      }
-      return (String)saslServer.getNegotiatedProperty(Sasl.QOP);
+      return establishedQOP;
     }
     
     public void setLastContact(long lastContact) {
@@ -1956,6 +1950,7 @@ public abstract class Server {
       // do NOT enable wrapping until the last auth response is sent
       if (saslContextEstablished) {
         String qop = (String) saslServer.getNegotiatedProperty(Sasl.QOP);
+        establishedQOP = qop;
         // SASL wrapping is only used if the connection has a QOP, and
         // the value is not auth.  ex. auth-int & auth-priv
         useWrap = (qop != null && !"auth".equalsIgnoreCase(qop));
