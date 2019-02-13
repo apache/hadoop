@@ -523,6 +523,22 @@ public class BlockTokenSecretManager extends
     return createPassword(nonce, key.getKey());
   }
 
+  /**
+   * Encrypt the given message with the current block key, using the current
+   * block key.
+   *
+   * @param message the message to be encrypted.
+   * @return the secret created by encrypting the given message.
+   */
+  public byte[] secretGen(byte[] message) {
+    return createPassword(message, currentKey.getKey());
+  }
+
+  @VisibleForTesting
+  public BlockKey getCurrentKey() {
+    return currentKey;
+  }
+
   @VisibleForTesting
   public synchronized void setKeyUpdateIntervalForTesting(long millis) {
     this.keyUpdateInterval = millis;
