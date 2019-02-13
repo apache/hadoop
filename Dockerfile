@@ -14,22 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM openjdk:8-jdk
-RUN apt-get update && apt-get install -y jq curl python python-pip sudo netcat && apt-get clean
+FROM centos
+RUN rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+RUN yum install -y sudo python2-pip wget nmap-ncat jq java-1.8.0-openjdk
 RUN pip install robotframework
 RUN wget -O /usr/local/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.0/dumb-init_1.2.0_amd64
 RUN chmod +x /usr/local/bin/dumb-init
 RUN mkdir -p /etc/security/keytabs && chmod -R a+wr /etc/security/keytabs 
 ADD https://repo.maven.apache.org/maven2/org/jboss/byteman/byteman/4.0.4/byteman-4.0.4.jar /opt/byteman.jar
 RUN chmod o+r /opt/byteman.jar
-ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
+ENV JAVA_HOME=/usr/lib/jvm/jre/
 ENV PATH $PATH:/opt/hadoop/bin
 
-RUN apt-get install -y jsvc
-ENV JSVC_HOME=/usr/bin
-
-RUN addgroup --gid 1000 hadoop
-RUN adduser --disabled-password --gecos "" --uid 1000 hadoop --gid 100 --home /opt/hadoop
+RUN groupadd --gid 1000 hadoop
+RUN useradd --uid 1000 hadoop --gid 100 --home /opt/hadoop
 RUN echo "hadoop ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 RUN chown hadoop /opt
 ADD scripts /opt/
