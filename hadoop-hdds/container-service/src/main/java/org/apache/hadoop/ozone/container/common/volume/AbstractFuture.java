@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.common.util.concurrent.Uninterruptibles;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import static java.util.concurrent.atomic.AtomicReferenceFieldUpdater
     .newUpdater;
 
@@ -162,6 +163,7 @@ public abstract class AbstractFuture<V> implements ListenableFuture<V> {
     // Prevent rare disastrous classloading in first call to LockSupport.park.
     // See: https://bugs.openjdk.java.net/browse/JDK-8074773
     @SuppressWarnings("unused")
+    @SuppressFBWarnings
     Class<?> ensureLoaded = LockSupport.class;
   }
 

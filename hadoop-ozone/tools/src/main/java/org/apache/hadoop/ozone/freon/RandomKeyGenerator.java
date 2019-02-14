@@ -634,7 +634,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
                   " of volume: {}.", key, bucket, volume, e);
             }
           }
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
           exception = true;
           LOG.error("Exception while creating bucket: {}" +
               " in volume: {}.", bucketName, volume, e);
