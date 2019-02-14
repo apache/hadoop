@@ -18,7 +18,9 @@
 package org.apache.hadoop.yarn.sls.appmaster;
 
 import com.codahale.metrics.MetricRegistry;
+import java.util.HashMap;
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -139,8 +141,9 @@ public class TestAMSimulator {
     String appId = "app1";
     String queue = "default";
     List<ContainerSimulator> containers = new ArrayList<>();
+    HashMap<ApplicationId, AMSimulator> map = new HashMap<>();
     app.init(1000, containers, rm, null, 0, 1000000L, "user1", queue, true,
-        appId, 0, SLSConfiguration.getAMContainerResource(conf), null);
+        appId, 0, SLSConfiguration.getAMContainerResource(conf), null, map);
     app.firstStep();
 
     verifySchedulerMetrics(appId);
