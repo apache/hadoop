@@ -35,7 +35,7 @@ wait_for_datanodes(){
 
      #This line checks the number of HEALTHY datanodes registered in scm over the
      # jmx HTTP servlet
-     datanodes=$(docker-compose -f "$1" exec scm curl -s 'http://localhost:9876/jmx?qry=Hadoop:service=SCMNodeManager,name=SCMNodeManagerInfo' | jq -r '.beans[0].NodeCount[] | select(.key=="HEALTHY") | .value')
+     datanodes=$(docker-compose -f "$1" exec -T scm curl -s 'http://localhost:9876/jmx?qry=Hadoop:service=SCMNodeManager,name=SCMNodeManagerInfo' | jq -r '.beans[0].NodeCount[] | select(.key=="HEALTHY") | .value')
       if [[ "$datanodes" == "3" ]]; then
 
         #It's up and running. Let's return from the function.
