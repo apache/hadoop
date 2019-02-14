@@ -478,7 +478,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
           (short) req.getReplication(), req.getBlockSize(),
           PBHelperClient.convertCryptoProtocolVersions(
               req.getCryptoProtocolVersionList()),
-          req.getEcPolicyName());
+          req.getEcPolicyName(), req.getStoragePolicy());
 
       if (result != null) {
         return CreateResponseProto.newBuilder().setFs(PBHelperClient.convert(result))

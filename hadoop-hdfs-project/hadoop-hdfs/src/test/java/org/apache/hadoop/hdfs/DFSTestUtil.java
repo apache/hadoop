@@ -2137,7 +2137,7 @@ public class DFSTestUtil {
         .create(file.toString(), new FsPermission((short)0755),
         dfs.getClient().getClientName(),
         new EnumSetWritable<>(EnumSet.of(CreateFlag.CREATE)),
-        false, (short)1, 128*1024*1024L, null, null);
+            false, (short) 1, 128 * 1024 * 1024L, null, null, null);
 
     FSNamesystem ns = cluster.getNamesystem();
     FSDirectory fsdir = ns.getFSDirectory();

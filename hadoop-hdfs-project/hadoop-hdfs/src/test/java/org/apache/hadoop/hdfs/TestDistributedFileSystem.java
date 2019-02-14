@@ -1449,7 +1449,46 @@ public class TestDistributedFileSystem {
       cluster.shutdown();
     }
   }
-  
+
+  @Test
+  public void testCreateWithStoragePolicy() throws Throwable {
+    Configuration conf = new HdfsConfiguration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .storageTypes(
+            new StorageType[] {StorageType.DISK, StorageType.ARCHIVE,
+                StorageType.SSD}).storagesPerDatanode(3).build()) {
+      DistributedFileSystem fs = cluster.getFileSystem();
+      Path file1 = new Path("/tmp/file1");
+      Path file2 = new Path("/tmp/file2");
+      fs.mkdirs(new Path("/tmp"));
+      fs.setStoragePolicy(new Path("/tmp"), "ALL_SSD");
+      FSDataOutputStream outputStream = fs.createFile(file1)
+          .storagePolicyName("COLD").build();
+      outputStream.write(1);
+      outputStream.close();
+      assertEquals(StorageType.ARCHIVE, DFSTestUtil.getAllBlocks(fs, file1)
+          .get(0).getStorageTypes()[0]);
+      assertEquals(fs.getStoragePolicy(file1).getName(), "COLD");
+
+      // Check with storage policy not specified.
+      outputStream = fs.createFile(file2).build();
+      outputStream.write(1);
+      outputStream.close();
+      assertEquals(StorageType.SSD, DFSTestUtil.getAllBlocks(fs, file2).get(0)
+          .getStorageTypes()[0]);
+      assertEquals(fs.getStoragePolicy(file2).getName(), "ALL_SSD");
+
+      // Check with default storage policy.
+      outputStream = fs.createFile(new Path("/default")).build();
+      outputStream.write(1);
+      outputStream.close();
+      assertEquals(StorageType.DISK,
+          DFSTestUtil.getAllBlocks(fs, new Path("/default")).get(0)
+              .getStorageTypes()[0]);
+      assertEquals(fs.getStoragePolicy(new Path("/default")).getName(), "HOT");
+    }
+  }
+
   @Test(timeout=60000)
   public void testListFiles() throws IOException {
     Configuration conf = new HdfsConfiguration();

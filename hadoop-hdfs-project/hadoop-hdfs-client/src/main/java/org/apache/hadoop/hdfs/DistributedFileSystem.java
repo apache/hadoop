@@ -563,13 +563,17 @@ public class DistributedFileSystem extends FileSystem
    * replication policy from its ancestor (the default).
    * ecPolicyName and SHOULD_REPLICATE CreateFlag are mutually exclusive. It's
    * invalid to set both SHOULD_REPLICATE and a non-null ecPolicyName.
+   * The third addition is storagePolicyName. A non-null storage Policy
+   * specifies an explicit storage policy for this file, overriding the
+   * inherited policy.
    *
    */
   private HdfsDataOutputStream create(final Path f,
       final FsPermission permission, final EnumSet<CreateFlag> flag,
       final int bufferSize, final short replication, final long blockSize,
       final Progressable progress, final ChecksumOpt checksumOpt,
-      final InetSocketAddress[] favoredNodes, final String ecPolicyName)
+      final InetSocketAddress[] favoredNodes, final String ecPolicyName,
+      final String storagePolicy)
       throws IOException {
     statistics.incrementWriteOps(1);
     storageStatistics.incrementOpCounter(OpType.CREATE);
@@ -579,7 +583,7 @@ public class DistributedFileSystem extends FileSystem
       public HdfsDataOutputStream doCall(final Path p) throws IOException {
         final DFSOutputStream out = dfs.create(getPathName(f), permission,
             flag, true, replication, blockSize, progress, bufferSize,
-            checksumOpt, favoredNodes, ecPolicyName);
+            checksumOpt, favoredNodes, ecPolicyName, storagePolicy);
         return dfs.createWrappedOutputStream(out, statistics);
       }
       @Override
@@ -588,7 +592,8 @@ public class DistributedFileSystem extends FileSystem
         if (fs instanceof DistributedFileSystem) {
           DistributedFileSystem myDfs = (DistributedFileSystem)fs;
           return myDfs.create(p, permission, flag, bufferSize, replication,
-              blockSize, progress, checksumOpt, favoredNodes, ecPolicyName);
+              blockSize, progress, checksumOpt, favoredNodes, ecPolicyName,
+              storagePolicy);
         }
         throw new UnsupportedOperationException("Cannot create with" +
             " favoredNodes through a symlink to a non-DistributedFileSystem: "
@@ -619,14 +624,15 @@ public class DistributedFileSystem extends FileSystem
    *
    * @see #create(Path, FsPermission, EnumSet, int, short, long, Progressable,
    * ChecksumOpt, InetSocketAddress[], String) for the descriptions of
-   * additional parameters, i.e., favoredNodes and ecPolicyName.
+   * additional parameters, i.e., favoredNodes, ecPolicyName and
+   * storagePolicyName.
    */
   private HdfsDataOutputStream createNonRecursive(final Path f,
       final FsPermission permission, final EnumSet<CreateFlag> flag,
       final int bufferSize, final short replication, final long blockSize,
       final Progressable progress, final ChecksumOpt checksumOpt,
-      final InetSocketAddress[] favoredNodes, final String ecPolicyName)
-      throws IOException {
+      final InetSocketAddress[] favoredNodes, final String ecPolicyName,
+      final String storagePolicyName) throws IOException {
     statistics.incrementWriteOps(1);
     storageStatistics.incrementOpCounter(OpType.CREATE);
     Path absF = fixRelativePart(f);
@@ -635,7 +641,7 @@ public class DistributedFileSystem extends FileSystem
       public HdfsDataOutputStream doCall(final Path p) throws IOException {
         final DFSOutputStream out = dfs.create(getPathName(f), permission,
             flag, false, replication, blockSize, progress, bufferSize,
-            checksumOpt, favoredNodes, ecPolicyName);
+            checksumOpt, favoredNodes, ecPolicyName, storagePolicyName);
         return dfs.createWrappedOutputStream(out, statistics);
       }
       @Override
@@ -645,7 +651,7 @@ public class DistributedFileSystem extends FileSystem
           DistributedFileSystem myDfs = (DistributedFileSystem)fs;
           return myDfs.createNonRecursive(p, permission, flag, bufferSize,
               replication, blockSize, progress, checksumOpt, favoredNodes,
-              ecPolicyName);
+              ecPolicyName, storagePolicyName);
         }
         throw new UnsupportedOperationException("Cannot create with" +
             " favoredNodes through a symlink to a non-DistributedFileSystem: "
@@ -3183,6 +3189,7 @@ public class DistributedFileSystem extends FileSystem
     private final DistributedFileSystem dfs;
     private InetSocketAddress[] favoredNodes = null;
     private String ecPolicyName = null;
+    private String storagePolicyName = null;
 
     /**
      * Construct a HdfsDataOutputStream builder for a file.
@@ -3255,6 +3262,22 @@ public class DistributedFileSystem extends FileSystem
     }
 
     @VisibleForTesting
+    String getStoragePolicyName() {
+      return storagePolicyName;
+    }
+
+    /**
+     * Enforce a file to follow the specified storage policy irrespective of the
+     * storage policy of its parent directory.
+     */
+    public HdfsDataOutputStreamBuilder storagePolicyName(
+        @Nonnull final String policyName) {
+      Preconditions.checkNotNull(policyName);
+      storagePolicyName = policyName;
+      return this;
+    }
+
+    @VisibleForTesting
     String getEcPolicyName() {
       return ecPolicyName;
     }
@@ -3320,11 +3343,12 @@ public class DistributedFileSystem extends FileSystem
           return dfs.create(getPath(), getPermission(), getFlags(),
               getBufferSize(), getReplication(), getBlockSize(),
               getProgress(), getChecksumOpt(), getFavoredNodes(),
-              getEcPolicyName());
+              getEcPolicyName(), getStoragePolicyName());
         } else {
           return dfs.createNonRecursive(getPath(), getPermission(), getFlags(),
               getBufferSize(), getReplication(), getBlockSize(), getProgress(),
-              getChecksumOpt(), getFavoredNodes(), getEcPolicyName());
+              getChecksumOpt(), getFavoredNodes(), getEcPolicyName(),
+              getStoragePolicyName());
         }
       } else if (getFlags().contains(CreateFlag.APPEND)) {
         return dfs.append(getPath(), getFlags(), getBufferSize(), getProgress(),
