@@ -37,8 +37,14 @@ export default AbstractRoute.extend(AppAttemptMixin, {
 
   activate() {
     const controller = this.controllerFor("yarn-app.logs");
+    const { attempt, containerid } = this.paramsFor('yarn-app.logs');
     controller.resetAfterRefresh();
     controller.initializeSelect();
+    if (attempt) {
+      controller.send("showContainersForAttemptId", attempt, containerid);
+    } else {
+      controller.set("selectedAttemptId", "");
+    }
   },
 
   unloadAll() {

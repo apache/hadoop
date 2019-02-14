@@ -146,4 +146,10 @@ export default DS.Model.extend({
     return `#/yarn-node/${this.get("nodeId")}/${addr}/info/`;
   }.property("nodeId", "nodeHttpAddress"),
 
+  appAttemptContainerLogsURL: function() {
+    const attemptId = this.get("id");
+    const containerId = this.get("appMasterContainerId");
+    const appId = Converter.attemptIdToAppId(attemptId);
+    return `#/yarn-app/${appId}/logs?attempt=${attemptId}&containerid=${containerId}`;
+  }.property("id", "appMasterContainerId")
 });
