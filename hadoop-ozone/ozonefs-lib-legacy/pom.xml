@@ -91,6 +91,12 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <artifactId>maven-findbugs-plugin</artifactId>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 
