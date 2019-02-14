@@ -94,7 +94,7 @@ export default DS.Model.extend({
       value: this.get("decommissioningNodes") || 0
     });
     arr.push({
-      label: "Decomissioned",
+      label: "Decommissioned",
       value: this.get("decommissionedNodes")
     });
     arr.push({
