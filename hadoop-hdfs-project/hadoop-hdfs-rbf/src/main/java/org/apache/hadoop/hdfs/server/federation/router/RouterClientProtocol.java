@@ -77,6 +77,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
+import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityManager;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
@@ -124,6 +125,8 @@ public class RouterClientProtocol implements ClientProtocol {
   private final ErasureCoding erasureCoding;
   /** StoragePolicy calls. **/
   private final RouterStoragePolicy storagePolicy;
+  /** Router security manager to handle token operations. */
+  private RouterSecurityManager securityManager = null;
 
   RouterClientProtocol(Configuration conf, RouterRpcServer rpcServer) {
     this.rpcServer = rpcServer;
@@ -148,13 +151,14 @@ public class RouterClientProtocol implements ClientProtocol {
         DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
     this.erasureCoding = new ErasureCoding(rpcServer);
     this.storagePolicy = new RouterStoragePolicy(rpcServer);
+    this.securityManager = rpcServer.getRouterSecurityManager();
   }
 
   @Override
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
-    return null;
+    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, true);
+    return this.securityManager.getDelegationToken(renewer);
   }
 
   /**
@@ -173,14 +177,16 @@ public class RouterClientProtocol implements ClientProtocol {
   @Override
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
-    return 0;
+    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, true);
+    return this.securityManager.renewDelegationToken(token);
   }
 
   @Override
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
+    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, true);
+    this.securityManager.cancelDelegationToken(token);
+    return;
   }
 
   @Override

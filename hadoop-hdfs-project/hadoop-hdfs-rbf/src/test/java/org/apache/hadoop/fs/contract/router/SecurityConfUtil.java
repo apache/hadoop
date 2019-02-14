@@ -31,6 +31,7 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_BIND_HOST_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
 import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileImpl;
+import org.apache.hadoop.hdfs.server.federation.security.MockDelegationTokenSecretManager;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.SecurityUtil;
@@ -144,6 +146,8 @@ public final class SecurityConfUtil {
 
     // We need to specify the host to prevent 0.0.0.0 as the host address
     conf.set(DFS_ROUTER_RPC_BIND_HOST_KEY, "localhost");
+    conf.set(DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS,
+        MockDelegationTokenSecretManager.class.getName());
 
     return conf;
   }

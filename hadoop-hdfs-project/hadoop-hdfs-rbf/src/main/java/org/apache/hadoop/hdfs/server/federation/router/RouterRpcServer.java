@@ -114,6 +114,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.PathLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
+import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityManager;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
@@ -197,6 +198,8 @@ public class RouterRpcServer extends AbstractService
   private final RouterNamenodeProtocol nnProto;
   /** ClientProtocol calls. */
   private final RouterClientProtocol clientProto;
+  /** Router security manager to handle token operations. */
+  private RouterSecurityManager securityManager = null;
 
   /**
    * Construct a router RPC server.
@@ -256,6 +259,9 @@ public class RouterRpcServer extends AbstractService
     LOG.info("RPC server binding to {} with {} handlers for Router {}",
         confRpcAddress, handlerCount, this.router.getRouterId());
 
+    // Create security manager
+    this.securityManager = new RouterSecurityManager(this.conf);
+
     this.rpcServer = new RPC.Builder(this.conf)
         .setProtocol(ClientNamenodeProtocolPB.class)
         .setInstance(clientNNPbService)
@@ -265,6 +271,7 @@ public class RouterRpcServer extends AbstractService
         .setnumReaders(readerCount)
         .setQueueSizePerHandler(handlerQueueSize)
         .setVerbose(false)
+        .setSecretManager(this.securityManager.getSecretManager())
         .build();
 
     // Add all the RPC protocols that the Router implements
@@ -344,7 +351,19 @@ public class RouterRpcServer extends AbstractService
     if (rpcMonitor != null) {
       this.rpcMonitor.close();
     }
+    if (securityManager != null) {
+      this.securityManager.stop();
+    }
     super.serviceStop();
+  }
+
+  /**
+   * Get the RPC security manager.
+   *
+   * @return RPC security manager.
+   */
+  public RouterSecurityManager getRouterSecurityManager() {
+    return this.securityManager;
   }
 
   /**
@@ -1457,7 +1476,7 @@ public class RouterRpcServer extends AbstractService
    * @return Remote user group information.
    * @throws IOException If we cannot get the user information.
    */
-  static UserGroupInformation getRemoteUser() throws IOException {
+  public static UserGroupInformation getRemoteUser() throws IOException {
     UserGroupInformation ugi = Server.getRemoteUser();
     return (ugi != null) ? ugi : UserGroupInformation.getCurrentUser();
   }

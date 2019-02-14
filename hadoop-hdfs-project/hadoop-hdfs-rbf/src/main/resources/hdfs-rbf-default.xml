@@ -584,4 +584,13 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.federation.router.secret.manager.class</name>
+    <value>org.apache.hadoop.hdfs.server.federation.router.security.token.ZKDelegationTokenSecretManagerImpl</value>
+    <description>
+      Class to implement state store to delegation tokens.
+      Default implementation uses zookeeper as the backend to store delegation tokens.
+    </description>
+  </property>
+
 </configuration>

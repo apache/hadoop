@@ -28,6 +28,8 @@ import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
 import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreSerializerPBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
+import org.apache.hadoop.hdfs.server.federation.router.security.token.ZKDelegationTokenSecretManagerImpl;
 
 import java.util.concurrent.TimeUnit;
 
@@ -294,4 +296,11 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
 
   public static final String DFS_ROUTER_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY =
       FEDERATION_ROUTER_PREFIX + "kerberos.internal.spnego.principal";
+
+  // HDFS Router secret manager for delegation token
+  public static final String DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS =
+      FEDERATION_ROUTER_PREFIX + "secret.manager.class";
+  public static final Class<? extends AbstractDelegationTokenSecretManager>
+      DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS_DEFAULT =
+      ZKDelegationTokenSecretManagerImpl.class;
 }
