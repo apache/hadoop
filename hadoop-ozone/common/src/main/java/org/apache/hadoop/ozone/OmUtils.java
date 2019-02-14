@@ -80,6 +80,24 @@ public final class OmUtils {
   }
 
   /**
+   * Retrieve the socket address that is used by OM as specified by the confKey.
+   * Return null if the specified conf key is not set.
+   * @param conf configuration
+   * @param confKey configuration key to lookup address from
+   * @return Target InetSocketAddress for the OM RPC server.
+   */
+  public static String getOmRpcAddress(Configuration conf, String confKey) {
+    final Optional<String> host = getHostNameFromConfigKeys(conf, confKey);
+
+    if (host.isPresent()) {
+      return host.get() + ":" + getOmRpcPort(conf, confKey);
+    } else {
+      // The specified confKey is not set
+      return null;
+    }
+  }
+
+  /**
    * Retrieve the socket address that should be used by clients to connect
    * to OM.
    * @param conf
@@ -105,6 +123,19 @@ public final class OmUtils {
     // If no port number is specified then we'll just try the defaultBindPort.
     final Optional<Integer> port = getPortNumberFromConfigKeys(conf,
         OZONE_OM_ADDRESS_KEY);
+    return port.orElse(OZONE_OM_PORT_DEFAULT);
+  }
+
+  /**
+   * Retrieve the port that is used by OM as specified by the confKey.
+   * Return default port if port is not specified in the confKey.
+   * @param conf configuration
+   * @param confKey configuration key to lookup address from
+   * @return Port on which OM RPC server will listen on
+   */
+  public static int getOmRpcPort(Configuration conf, String confKey) {
+    // If no port number is specified then we'll just try the defaultBindPort.
+    final Optional<Integer> port = getPortNumberFromConfigKeys(conf, confKey);
     return port.orElse(OZONE_OM_PORT_DEFAULT);
   }
 

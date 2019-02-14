@@ -360,7 +360,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         }
         String rpcAddrKey = OmUtils.addKeySuffixes(OZONE_OM_ADDRESS_KEY,
             serviceId, nodeId);
-        String rpcAddrStr = conf.get(rpcAddrKey);
+        String rpcAddrStr = OmUtils.getOmRpcAddress(conf, rpcAddrKey);
         if (rpcAddrStr == null) {
           continue;
         }
@@ -2406,5 +2406,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
   public String getOMServiceId() {
     return omNodeDetails.getOMServiceId();
+  }
+
+  @VisibleForTesting
+  public List<OMNodeDetails> getPeerNodes() {
+    return peerNodes;
   }
 }
