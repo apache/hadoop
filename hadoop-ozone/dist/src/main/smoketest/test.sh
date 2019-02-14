@@ -77,7 +77,7 @@ execute_tests(){
      TITLE="Ozone $TEST tests with $COMPOSE_DIR cluster"
      set +e
      OUTPUT_NAME="$COMPOSE_DIR-${TEST//\//_}"
-	  docker-compose -f "$COMPOSE_FILE" exec ozoneManager python -m robot --log NONE --report NONE "${OZONE_ROBOT_OPTS[@]}" --output "smoketest/$RESULT_DIR/robot-$OUTPUT_NAME.xml" --logtitle "$TITLE" --reporttitle "$TITLE" "smoketest/$TEST"
+	  docker-compose -f "$COMPOSE_FILE" exec -T ozoneManager python -m robot --log NONE --report NONE "${OZONE_ROBOT_OPTS[@]}" --output "smoketest/$RESULT_DIR/robot-$OUTPUT_NAME.xml" --logtitle "$TITLE" --reporttitle "$TITLE" "smoketest/$TEST"
      set -e
      docker-compose -f "$COMPOSE_FILE" logs > "$DIR/$RESULT_DIR/docker-$OUTPUT_NAME.log"
   done
