@@ -51,7 +51,6 @@ wait_for_datanodes(){
 
       sleep 2
    done
-
    echo "WARNING! Datanodes are not started successfully. Please check the docker-compose files"
 }
 
@@ -73,6 +72,8 @@ execute_tests(){
   docker-compose -f "$COMPOSE_FILE" down
   docker-compose -f "$COMPOSE_FILE" up -d --scale datanode=3
   wait_for_datanodes "$COMPOSE_FILE"
+  #TODO: we need to wait for the OM here
+  sleep 10
   for TEST in "${TESTS[@]}"; do
      TITLE="Ozone $TEST tests with $COMPOSE_DIR cluster"
      set +e
