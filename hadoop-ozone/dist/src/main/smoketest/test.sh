@@ -153,4 +153,4 @@ else
 fi
 
 #Generate the combined output and return with the right exit code (note: robot = execute test, rebot = generate output)
-docker run --rm -it -v "$DIR/..:/opt/hadoop" apache/hadoop-runner rebot -d "smoketest/$RESULT_DIR" "smoketest/$RESULT_DIR/robot-*.xml"
+docker run --rm -v "$DIR/..:/opt/hadoop" apache/hadoop-runner rebot -d "smoketest/$RESULT_DIR" "smoketest/$RESULT_DIR/robot-*.xml"
