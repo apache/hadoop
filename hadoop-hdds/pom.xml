@@ -290,6 +290,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
+        <version>3.0.4</version>
         <configuration>
           <excludeFilterFile combine.self="override"></excludeFilterFile>
         </configuration>
