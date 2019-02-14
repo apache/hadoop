@@ -107,7 +107,7 @@ public class TestVolumeRatis {
   }
 
   @Test
-  public void testCreateDuplicateVolume() throws OzoneException, IOException {
+  public void testCreateDuplicateVolume() throws Exception {
     TestVolume.runTestCreateDuplicateVolume(client);
   }
 

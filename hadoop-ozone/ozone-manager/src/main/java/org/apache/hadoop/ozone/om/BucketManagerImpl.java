@@ -91,13 +91,13 @@ public class BucketManagerImpl implements BucketManager {
       if (metadataManager.getVolumeTable().get(volumeKey) == null) {
         LOG.debug("volume: {} not found ", volumeName);
         throw new OMException("Volume doesn't exist",
-            OMException.ResultCodes.FAILED_VOLUME_NOT_FOUND);
+            OMException.ResultCodes.VOLUME_NOT_FOUND);
       }
       //Check if bucket already exists
       if (metadataManager.getBucketTable().get(bucketKey) != null) {
         LOG.debug("bucket: {} already exists ", bucketName);
         throw new OMException("Bucket already exist",
-            OMException.ResultCodes.FAILED_BUCKET_ALREADY_EXISTS);
+            OMException.ResultCodes.BUCKET_ALREADY_EXISTS);
       }
 
       OmBucketInfo omBucketInfo = OmBucketInfo.newBuilder()
@@ -144,7 +144,7 @@ public class BucketManagerImpl implements BucketManager {
         LOG.debug("bucket: {} not found in volume: {}.", bucketName,
             volumeName);
         throw new OMException("Bucket not found",
-            OMException.ResultCodes.FAILED_BUCKET_NOT_FOUND);
+            OMException.ResultCodes.BUCKET_NOT_FOUND);
       }
       return value;
     } catch (IOException | DBException ex) {
@@ -178,7 +178,7 @@ public class BucketManagerImpl implements BucketManager {
       if (oldBucketInfo == null) {
         LOG.debug("bucket: {} not found ", bucketName);
         throw new OMException("Bucket doesn't exist",
-            OMException.ResultCodes.FAILED_BUCKET_NOT_FOUND);
+            OMException.ResultCodes.BUCKET_NOT_FOUND);
       }
       OmBucketInfo.Builder bucketInfoBuilder = OmBucketInfo.newBuilder();
       bucketInfoBuilder.setVolumeName(oldBucketInfo.getVolumeName())
@@ -270,13 +270,13 @@ public class BucketManagerImpl implements BucketManager {
       if (metadataManager.getBucketTable().get(bucketKey) == null) {
         LOG.debug("bucket: {} not found ", bucketName);
         throw new OMException("Bucket doesn't exist",
-            OMException.ResultCodes.FAILED_BUCKET_NOT_FOUND);
+            OMException.ResultCodes.BUCKET_NOT_FOUND);
       }
       //Check if bucket is empty
       if (!metadataManager.isBucketEmpty(volumeName, bucketName)) {
         LOG.debug("bucket: {} is not empty ", bucketName);
         throw new OMException("Bucket is not empty",
-            OMException.ResultCodes.FAILED_BUCKET_NOT_EMPTY);
+            OMException.ResultCodes.BUCKET_NOT_EMPTY);
       }
       metadataManager.getBucketTable().delete(bucketKey);
     } catch (IOException ex) {

@@ -40,6 +40,8 @@ import java.util.Iterator;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKey;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.s3.commontypes.KeyMetadata;
 import org.apache.hadoop.ozone.s3.endpoint.MultiDeleteRequest.DeleteObject;
 import org.apache.hadoop.ozone.s3.endpoint.MultiDeleteResponse.DeletedObject;
@@ -239,15 +241,13 @@ public class BucketEndpoint extends EndpointBase {
 
     try {
       deleteS3Bucket(bucketName);
-    } catch (IOException ex) {
-      if (ex.getMessage().contains("BUCKET_NOT_EMPTY")) {
-        OS3Exception os3Exception = S3ErrorTable.newError(S3ErrorTable
+    } catch (OMException ex) {
+      if (ex.getResult() == ResultCodes.BUCKET_NOT_EMPTY) {
+        throw S3ErrorTable.newError(S3ErrorTable
             .BUCKET_NOT_EMPTY, bucketName);
-        throw os3Exception;
-      } else if (ex.getMessage().contains("BUCKET_NOT_FOUND")) {
-        OS3Exception os3Exception = S3ErrorTable.newError(S3ErrorTable
+      } else if (ex.getResult() == ResultCodes.BUCKET_NOT_FOUND) {
+        throw S3ErrorTable.newError(S3ErrorTable
             .NO_SUCH_BUCKET, bucketName);
-        throw os3Exception;
       } else {
         throw ex;
       }
@@ -280,8 +280,8 @@ public class BucketEndpoint extends EndpointBase {
           if (!request.isQuiet()) {
             result.addDeleted(new DeletedObject(keyToDelete.getKey()));
           }
-        } catch (IOException ex) {
-          if (!ex.getMessage().contains("KEY_NOT_FOUND")) {
+        } catch (OMException ex) {
+          if (ex.getResult() != ResultCodes.KEY_NOT_FOUND) {
             result.addError(
                 new Error(keyToDelete.getKey(), "InternalError",
                     ex.getMessage()));

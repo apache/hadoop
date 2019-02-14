@@ -16,37 +16,32 @@
  */
 package org.apache.hadoop.hdds.scm.protocolPB;
 
-import com.google.common.base.Preconditions;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdds.client.ContainerBlockID;
-import org.apache.hadoop.hdds.scm.ScmInfo;
-import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
-import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
-    .AllocateScmBlockRequestProto;
-import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
-    .AllocateScmBlockResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
-    .DeleteScmKeyBlocksRequestProto;
-import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
-    .DeleteScmKeyBlocksResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
-    .KeyBlocks;
-import org.apache.hadoop.ipc.ProtobufHelper;
-import org.apache.hadoop.ipc.ProtocolTranslator;
-import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ozone.common.BlockGroup;
-import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdds.client.ContainerBlockID;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.AllocateScmBlockRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.AllocateScmBlockResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.DeleteScmKeyBlocksRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.DeleteScmKeyBlocksResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.KeyBlocks;
+import org.apache.hadoop.hdds.scm.ScmInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
+import org.apache.hadoop.ipc.ProtocolTranslator;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ozone.common.BlockGroup;
+import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
+
+import com.google.common.base.Preconditions;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 
 /**
  * This class is the client-side translator to translate the requests made on
@@ -94,7 +89,7 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
     try {
       response = rpcProxy.allocateScmBlock(NULL_RPC_CONTROLLER, request);
     } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
+      throw transformServiceException(e);
     }
     if (response.getErrorCode() !=
         AllocateScmBlockResponseProto.Error.success) {
@@ -128,7 +123,7 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
     try {
       resp = rpcProxy.deleteScmKeyBlocks(NULL_RPC_CONTROLLER, request);
     } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
+      throw transformServiceException(e);
     }
     List<DeleteBlockGroupResult> results =
         new ArrayList<>(resp.getResultsCount());
@@ -138,6 +133,30 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
                 .convertBlockResultProto(result.getBlockResultsList())))
         .collect(Collectors.toList()));
     return results;
+  }
+
+  private IOException transformServiceException(
+      ServiceException se) throws IOException {
+    //TODO SCM has no perfect way to return with business exceptions. All
+    //the exceptions will be mapped to ServiceException.
+    //ServiceException is handled in a special way in hadoop rpc: the message
+    //contains the whole stack trace which is not required for the business
+    //exception. As of now I remove the stack trace (use first line only).
+    //Long term we need a proper way of the exception propagation.
+    Throwable cause = se.getCause();
+    if (cause == null) {
+      return new IOException(
+          new ServiceException(useFirstLine(se.getMessage()), se.getCause()));
+    }
+    return new IOException(useFirstLine(cause.getMessage()), cause.getCause());
+  }
+
+  private String useFirstLine(String message) {
+    if (message == null) {
+      return null;
+    } else {
+      return message.split("\n")[0];
+    }
   }
 
   /**
@@ -153,7 +172,7 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
     try {
       resp = rpcProxy.getScmInfo(NULL_RPC_CONTROLLER, request);
     } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
+      throw transformServiceException(e);
     }
     ScmInfo.Builder builder = new ScmInfo.Builder()
         .setClusterId(resp.getClusterId())
