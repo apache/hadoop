@@ -140,12 +140,14 @@ if [ "$RUN_ALL" = true ]; then
 #
 # We select the test suites and execute them on multiple type of clusters
 #
-   DEFAULT_TESTS=("basic")
-   execute_tests ozone "${DEFAULT_TESTS[@]}"
+   TESTS=("basic")
+   execute_tests ozone "${TESTS[@]}"
+   TESTS=("audiparser")
+   execute_tests ozone "${TESTS[@]}"
    TESTS=("ozonefs")
    execute_tests ozonefs "${TESTS[@]}"
-   TESTS=("ozone-hdfs")
-   execute_tests ozone-hdfs "${DEFAULT_TESTS[@]}"
+   TESTS=("basic")
+   execute_tests ozone-hdfs "${TESTS[@]}"
    TESTS=("s3")
    execute_tests ozones3 "${TESTS[@]}"
 else
