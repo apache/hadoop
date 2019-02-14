@@ -34,6 +34,7 @@ import org.slf4j.Logger;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.InvalidKeyException;
@@ -584,7 +585,8 @@ public abstract class DefaultCertificateClient implements CertificateClient {
    * */
   protected boolean validateKeyPair(PublicKey pubKey)
       throws CertificateException {
-    byte[] challenge = RandomStringUtils.random(1000).getBytes();
+    byte[] challenge = RandomStringUtils.random(1000).getBytes(
+        StandardCharsets.UTF_8);
     byte[]  sign = signDataStream(new ByteArrayInputStream(challenge));
     return verifySignature(challenge, sign, pubKey);
   }

@@ -628,7 +628,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
                   LOG.trace("Key {}, is queued for validation.", key);
                 }
               }
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
               exception = true;
               LOG.error("Exception while adding key: {} in bucket: {}" +
                   " of volume: {}.", key, bucket, volume, e);

@@ -137,56 +137,48 @@ public final class BlockOutputStreamEntry extends OutputStream {
       this.outputStream.close();
       // after closing the chunkOutPutStream, blockId would have been
       // reconstructed with updated bcsId
-      if (this.outputStream instanceof BlockOutputStream) {
-        this.blockID = ((BlockOutputStream) outputStream).getBlockID();
-      }
+      this.blockID = ((BlockOutputStream) outputStream).getBlockID();
     }
   }
 
   long getTotalSuccessfulFlushedData() throws IOException {
-    if (this.outputStream instanceof BlockOutputStream) {
+    if (outputStream != null) {
       BlockOutputStream out = (BlockOutputStream) this.outputStream;
       blockID = out.getBlockID();
       return out.getTotalSuccessfulFlushedData();
-    } else if (outputStream == null) {
+    } else {
       // For a pre allocated block for which no write has been initiated,
       // the OutputStream will be null here.
       // In such cases, the default blockCommitSequenceId will be 0
       return 0;
     }
-    throw new IOException("Invalid Output Stream for Key: " + key);
   }
 
   long getWrittenDataLength() throws IOException {
-    if (this.outputStream instanceof BlockOutputStream) {
+    if (outputStream != null) {
       BlockOutputStream out = (BlockOutputStream) this.outputStream;
       return out.getWrittenDataLength();
-    } else if (outputStream == null) {
+    } else {
       // For a pre allocated block for which no write has been initiated,
       // the OutputStream will be null here.
       // In such cases, the default blockCommitSequenceId will be 0
       return 0;
     }
-    throw new IOException("Invalid Output Stream for Key: " + key);
   }
 
   void cleanup(boolean invalidateClient) throws IOException {
     checkStream();
-    if (this.outputStream instanceof BlockOutputStream) {
-      BlockOutputStream out = (BlockOutputStream) this.outputStream;
-      out.cleanup(invalidateClient);
-    }
+    BlockOutputStream out = (BlockOutputStream) this.outputStream;
+    out.cleanup(invalidateClient);
+
   }
 
   void writeOnRetry(long len) throws IOException {
     checkStream();
-    if (this.outputStream instanceof BlockOutputStream) {
-      BlockOutputStream out = (BlockOutputStream) this.outputStream;
-      out.writeOnRetry(len);
-      this.currentPosition += len;
-    } else {
-      throw new IOException("Invalid Output Stream for Key: " + key);
-    }
+    BlockOutputStream out = (BlockOutputStream) this.outputStream;
+    out.writeOnRetry(len);
+    this.currentPosition += len;
+
   }
 
   /**

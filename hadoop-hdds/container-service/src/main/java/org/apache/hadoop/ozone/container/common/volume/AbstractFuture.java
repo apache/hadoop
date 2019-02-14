@@ -774,6 +774,7 @@ public abstract class AbstractFuture<V> implements ListenableFuture<V> {
    * @since 19.0
    */
   @Beta
+  @SuppressWarnings("deadstore")
   protected boolean setFuture(ListenableFuture<? extends V> future) {
     checkNotNull(future);
     Object localValue = value;
