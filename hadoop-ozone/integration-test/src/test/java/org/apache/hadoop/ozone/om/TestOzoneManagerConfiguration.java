@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.om;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -34,6 +35,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
@@ -92,6 +94,57 @@ public class TestOzoneManagerConfiguration {
       .setOmId(omId)
       .build();
     cluster.waitForClusterToBeReady();
+  }
+
+  /**
+   * Test that if no OM address is specified, then the OM rpc server
+   * is started on localhost.
+   */
+  @Test
+  public void testNoConfiguredOMAddress() throws Exception {
+    startCluster();
+    om = cluster.getOzoneManager();
+
+    Assert.assertTrue(NetUtils.isLocalAddress(
+        om.getOmRpcServerAddr().getAddress()));
+  }
+
+  /**
+   * Test that if only the hostname is specified for om address, then the
+   * default port is used.
+   */
+  @Test
+  public void testDefaultPortIfNotSpecified() throws Exception {
+
+    String omNode1Id = "omNode1";
+    String omNode2Id = "omNode2";
+    String omNodesKeyValue = omNode1Id + "," + omNode2Id;
+    conf.set(OMConfigKeys.OZONE_OM_NODES_KEY, omNodesKeyValue);
+
+    String omNode1RpcAddrKey = getOMAddrKeyWithSuffix(null, omNode1Id);
+    String omNode2RpcAddrKey = getOMAddrKeyWithSuffix(null, omNode2Id);
+
+    conf.set(omNode1RpcAddrKey, "0.0.0.0");
+    conf.set(omNode2RpcAddrKey, "122.0.0.122");
+
+    // Set omNode1 as the current node. omNode1 address does not have a port
+    // number specified. So the default port should be taken.
+    conf.set(OMConfigKeys.OZONE_OM_NODE_ID_KEY, omNode1Id);
+
+    startCluster();
+    om = cluster.getOzoneManager();
+    Assert.assertEquals("0.0.0.0",
+        om.getOmRpcServerAddr().getHostName());
+    Assert.assertEquals(OMConfigKeys.OZONE_OM_PORT_DEFAULT,
+        om.getOmRpcServerAddr().getPort());
+
+    // Verify that the 2nd OMs address stored in the current OM also has the
+    // default port as the port is not specified
+    InetSocketAddress omNode2Addr = om.getPeerNodes().get(0).getRpcAddress();
+    Assert.assertEquals("122.0.0.122", omNode2Addr.getHostString());
+    Assert.assertEquals(OMConfigKeys.OZONE_OM_PORT_DEFAULT,
+        omNode2Addr.getPort());
+
   }
 
   /**
