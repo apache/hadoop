@@ -66,6 +66,10 @@
             <td>{{check-availability model.container.exitStatusCode}}</td>
           </tr>
           <tr>
+            <td>Logs</td>
+            <td><a href="{{model.container.containerLogURL}}&service={{service}}">Link</a></td>
+          </tr>
+          <tr>
             <td>Terminal</td>
             <td><a href="{{model.container.termLink}}&user.name={{model.userInfo.requestedUser}}" target="_blank">Link</a></td>
           </tr>

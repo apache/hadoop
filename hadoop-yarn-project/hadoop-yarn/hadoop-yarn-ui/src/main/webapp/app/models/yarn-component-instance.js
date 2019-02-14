@@ -58,5 +58,12 @@ export default DS.Model.extend({
     var url = protocol + "//" + node + ":" + port +
        "/terminal/terminal.template?container=" + containerId;
     return url;
+  }),
+
+  containerLogURL: Ember.computed('containerId', function() {
+    const containerId = this.get('containerId');
+    const attemptId = Converter.containerIdToAttemptId(containerId);
+    const appId = Converter.attemptIdToAppId(attemptId);
+    return `#/yarn-app/${appId}/logs?attempt=${attemptId}&containerid=${containerId}`;
   })
 });
