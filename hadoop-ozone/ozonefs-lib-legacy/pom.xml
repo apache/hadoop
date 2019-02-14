@@ -92,7 +92,8 @@
         </executions>
       </plugin>
       <plugin>
-        <artifactId>maven-findbugs-plugin</artifactId>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>findbugs-maven-plugin</artifactId>
         <configuration>
           <skip>true</skip>
         </configuration>
