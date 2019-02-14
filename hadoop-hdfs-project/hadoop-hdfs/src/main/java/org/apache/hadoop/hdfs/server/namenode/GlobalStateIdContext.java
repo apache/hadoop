@@ -145,8 +145,10 @@ class GlobalStateIdContext implements AlignmentContext {
 
     if (clientStateId > serverStateId &&
         HAServiceState.ACTIVE.equals(namesystem.getState())) {
-      FSNamesystem.LOG.warn("A client sent stateId: " + clientStateId +
-          ", but server state is: " + serverStateId);
+      FSNamesystem.LOG.warn("The client stateId: {} is greater than "
+          + "the server stateId: {} This is unexpected. "
+          + "Resetting client stateId to server stateId",
+          clientStateId, serverStateId);
       return serverStateId;
     }
     if (HAServiceState.OBSERVER.equals(namesystem.getState()) &&
