@@ -125,6 +125,7 @@ class SnapshotCommands extends FsCommand {
       assert (items.size() == 1);
       PathData sroot = items.getFirst();
       sroot.fs.deleteSnapshot(sroot.path, snapshotName);
+      out.println("Deleted snapshot " + snapshotName + " under " + sroot.path);
     }
   }
   
@@ -166,6 +167,8 @@ class SnapshotCommands extends FsCommand {
       Preconditions.checkArgument(items.size() == 1);
       PathData sroot = items.getFirst();
       sroot.fs.renameSnapshot(sroot.path, oldName, newName);
+      out.println("Renamed snapshot " + oldName + " to " + newName +
+          " under " + sroot.path);
     }
     
   }
