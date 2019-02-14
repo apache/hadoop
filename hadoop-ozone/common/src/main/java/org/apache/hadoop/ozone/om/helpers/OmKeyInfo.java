@@ -221,7 +221,6 @@ public final class OmKeyInfo extends WithMetadata {
     private long modificationTime;
     private HddsProtos.ReplicationType type;
     private HddsProtos.ReplicationFactor factor;
-    private boolean isMultipartKey;
     private Map<String, String> metadata;
 
     public Builder() {
@@ -272,11 +271,6 @@ public final class OmKeyInfo extends WithMetadata {
 
     public Builder setReplicationType(HddsProtos.ReplicationType replType) {
       this.type = replType;
-      return this;
-    }
-
-    public Builder setIsMultipartKey(boolean isMultipart) {
-      this.isMultipartKey = isMultipart;
       return this;
     }
 
