@@ -192,7 +192,8 @@ public class RouterClientProtocol implements ClientProtocol {
   public HdfsFileStatus create(String src, FsPermission masked,
       String clientName, EnumSetWritable<CreateFlag> flag,
       boolean createParent, short replication, long blockSize,
-      CryptoProtocolVersion[] supportedVersions, String ecPolicyName)
+      CryptoProtocolVersion[] supportedVersions, String ecPolicyName,
+      String storagePolicy)
       throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 
@@ -213,9 +214,9 @@ public class RouterClientProtocol implements ClientProtocol {
         new Class<?>[] {String.class, FsPermission.class, String.class,
             EnumSetWritable.class, boolean.class, short.class,
             long.class, CryptoProtocolVersion[].class,
-            String.class},
+            String.class, String.class},
         createLocation.getDest(), masked, clientName, flag, createParent,
-        replication, blockSize, supportedVersions, ecPolicyName);
+        replication, blockSize, supportedVersions, ecPolicyName, storagePolicy);
     return (HdfsFileStatus) rpcClient.invokeSingle(createLocation, method);
   }
 

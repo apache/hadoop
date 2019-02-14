@@ -176,6 +176,7 @@ public interface ClientProtocol {
    *                     policy. ecPolicyName and SHOULD_REPLICATE CreateFlag
    *                     are mutually exclusive. It's invalid to set both
    *                     SHOULD_REPLICATE flag and a non-null ecPolicyName.
+   *@param storagePolicy the name of the storage policy.
    *
    * @return the status of the created file, it could be null if the server
    *           doesn't support returning the file status
@@ -209,7 +210,8 @@ public interface ClientProtocol {
   HdfsFileStatus create(String src, FsPermission masked,
       String clientName, EnumSetWritable<CreateFlag> flag,
       boolean createParent, short replication, long blockSize,
-      CryptoProtocolVersion[] supportedVersions, String ecPolicyName)
+      CryptoProtocolVersion[] supportedVersions, String ecPolicyName,
+      String storagePolicy)
       throws IOException;
 
   /**

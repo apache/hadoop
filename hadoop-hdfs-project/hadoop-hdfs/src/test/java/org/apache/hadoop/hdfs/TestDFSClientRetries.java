@@ -276,7 +276,7 @@ public class TestDFSClientRetries {
           .build())
         .when(mockNN)
         .create(anyString(), any(), anyString(), any(), anyBoolean(),
-            anyShort(), anyLong(), any(), any());
+            anyShort(), anyLong(), any(), any(), any());
 
     final DFSClient client = new DFSClient(null, mockNN, conf, null);
     OutputStream os = client.create("testfile", true);
