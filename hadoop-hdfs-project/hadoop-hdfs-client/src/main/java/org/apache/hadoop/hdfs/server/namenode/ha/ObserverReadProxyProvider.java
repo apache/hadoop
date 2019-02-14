@@ -233,10 +233,7 @@ public class ObserverReadProxyProvider<T extends ClientProtocol>
    * {@link #changeProxy(NNProxyInfo)} to initialize one.
    */
   private NNProxyInfo<T> getCurrentProxy() {
-    if (currentProxy == null) {
-      changeProxy(null);
-    }
-    return currentProxy;
+    return changeProxy(null);
   }
 
   /**
@@ -247,21 +244,20 @@ public class ObserverReadProxyProvider<T extends ClientProtocol>
    * returning.
    *
    * @param initial The expected current proxy
+   * @return The new proxy that should be used.
    */
-  private synchronized void changeProxy(NNProxyInfo<T> initial) {
+  private synchronized NNProxyInfo<T> changeProxy(NNProxyInfo<T> initial) {
     if (currentProxy != initial) {
       // Must have been a concurrent modification; ignore the move request
-      return;
+      return currentProxy;
     }
-    // Attempt to force concurrent callers of getCurrentProxy to wait for the
-    // new proxy; best-effort by setting currentProxy to null
-    currentProxy = null;
     currentIndex = (currentIndex + 1) % nameNodeProxies.size();
     currentProxy = createProxyIfNeeded(nameNodeProxies.get(currentIndex));
     currentProxy.setCachedState(getHAServiceState(currentProxy));
     LOG.debug("Changed current proxy from {} to {}",
         initial == null ? "none" : initial.proxyInfo,
         currentProxy.proxyInfo);
+    return currentProxy;
   }
 
   /**
