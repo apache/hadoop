@@ -207,7 +207,7 @@ public class OzoneFileSystem extends FileSystem {
                                    short replication, long blockSize,
                                    Progressable progress) throws IOException {
     LOG.trace("create() path:{}", f);
-     storageStatistics.incrementCounter(Statistic.INVOCATION_CREATE, 1);
+    storageStatistics.incrementCounter(Statistic.INVOCATION_CREATE, 1);
     statistics.incrementWriteOps(1);
     final String key = pathToKey(f);
     final FileStatus status;

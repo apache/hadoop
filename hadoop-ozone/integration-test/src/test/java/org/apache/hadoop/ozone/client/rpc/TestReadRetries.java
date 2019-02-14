@@ -76,7 +76,7 @@ public class TestReadRetries {
   private static StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
 
-  private static String SCM_ID = UUID.randomUUID().toString();
+  private static final String SCM_ID = UUID.randomUUID().toString();
 
 
   /**

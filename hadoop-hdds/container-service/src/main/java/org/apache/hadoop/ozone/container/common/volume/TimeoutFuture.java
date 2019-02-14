@@ -94,7 +94,7 @@ final class TimeoutFuture<V> extends AbstractFuture.TrustedFuture<V> {
    */
   private static final class Fire<V> implements Runnable {
     @Nullable
-    TimeoutFuture<V> timeoutFutureRef;
+    private TimeoutFuture<V> timeoutFutureRef;
 
     Fire(
         TimeoutFuture<V> timeoutFuture) {

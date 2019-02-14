@@ -116,7 +116,7 @@ public abstract class AbstractFuture<V> implements ListenableFuture<V> {
   }
 
   // Logger to log exceptions caught when running listeners.
-  private static final Logger log = Logger
+  private static final Logger LOG = Logger
       .getLogger(AbstractFuture.class.getName());
 
   // A heuristic for timed gets. If the remaining timeout is less than this,
@@ -150,8 +150,8 @@ public abstract class AbstractFuture<V> implements ListenableFuture<V> {
         // the field is definitely there.
         // For these users fallback to a suboptimal implementation, based on
         // synchronized. This will be a definite performance hit to those users.
-        log.log(Level.SEVERE, "UnsafeAtomicHelper is broken!", unsafeFailure);
-        log.log(
+        LOG.log(Level.SEVERE, "UnsafeAtomicHelper is broken!", unsafeFailure);
+        LOG.log(
             Level.SEVERE, "SafeAtomicHelper is broken!",
             atomicReferenceFieldUpdaterFailure);
         helper = new SynchronizedHelper();
@@ -168,6 +168,7 @@ public abstract class AbstractFuture<V> implements ListenableFuture<V> {
   /**
    * Waiter links form a Treiber stack, in the {@link #waiters} field.
    */
+  @SuppressWarnings("visibilitymodifier")
   private static final class Waiter {
     static final Waiter TOMBSTONE = new Waiter(false /* ignored param */);
 
@@ -252,6 +253,7 @@ public abstract class AbstractFuture<V> implements ListenableFuture<V> {
   /**
    * Listeners also form a stack through the {@link #listeners} field.
    */
+  @SuppressWarnings("visibilitymodifier")
   private static final class Listener {
     static final Listener TOMBSTONE = new Listener(null, null);
     final Runnable task;
@@ -276,16 +278,17 @@ public abstract class AbstractFuture<V> implements ListenableFuture<V> {
    * A special value to represent failure, when {@link #setException} is
    * called successfully.
    */
+  @SuppressWarnings("visibilitymodifier")
   private static final class Failure {
     static final Failure FALLBACK_INSTANCE =
         new Failure(
-            new Throwable("Failure occurred while trying to finish a future" +
-                ".") {
-              @Override
-              public synchronized Throwable fillInStackTrace() {
-                return this; // no stack trace
-              }
-            });
+          new Throwable("Failure occurred while trying to finish a future" +
+              ".") {
+            @Override
+            public synchronized Throwable fillInStackTrace() {
+              return this; // no stack trace
+            }
+          });
     final Throwable exception;
 
     Failure(Throwable exception) {
@@ -296,6 +299,7 @@ public abstract class AbstractFuture<V> implements ListenableFuture<V> {
   /**
    * A special value to represent cancellation and the 'wasInterrupted' bit.
    */
+  @SuppressWarnings("visibilitymodifier")
   private static final class Cancellation {
     final boolean wasInterrupted;
     @Nullable final Throwable cause;
@@ -309,6 +313,7 @@ public abstract class AbstractFuture<V> implements ListenableFuture<V> {
   /**
    * A special value that encodes the 'setFuture' state.
    */
+  @SuppressWarnings("visibilitymodifier")
   private static final class SetFuture<V> implements Runnable {
     final AbstractFuture<V> owner;
     final ListenableFuture<? extends V> future;
@@ -711,8 +716,8 @@ public abstract class AbstractFuture<V> implements ListenableFuture<V> {
    * @param value the value to be used as the result
    * @return true if the attempt was accepted, completing the {@code Future}
    */
-  protected boolean set(@Nullable V value) {
-    Object valueToSet = value == null ? NULL : value;
+  protected boolean set(@Nullable V val) {
+    Object valueToSet = value == null ? NULL : val;
     if (ATOMIC_HELPER.casValue(this, null, valueToSet)) {
       complete(this);
       return true;
@@ -774,8 +779,8 @@ public abstract class AbstractFuture<V> implements ListenableFuture<V> {
     Object localValue = value;
     if (localValue == null) {
       if (future.isDone()) {
-        Object value = getFutureValue(future);
-        if (ATOMIC_HELPER.casValue(this, null, value)) {
+        Object val = getFutureValue(future);
+        if (ATOMIC_HELPER.casValue(this, null, val)) {
           complete(this);
           return true;
         }
@@ -950,10 +955,8 @@ public abstract class AbstractFuture<V> implements ListenableFuture<V> {
     do {
       head = waiters;
     } while (!ATOMIC_HELPER.casWaiters(this, head, Waiter.TOMBSTONE));
-    for (
-        Waiter currentWaiter = head;
-        currentWaiter != null;
-        currentWaiter = currentWaiter.next) {
+    for (Waiter currentWaiter = head;
+         currentWaiter != null; currentWaiter = currentWaiter.next) {
       currentWaiter.unpark();
     }
   }
@@ -995,7 +998,7 @@ public abstract class AbstractFuture<V> implements ListenableFuture<V> {
       // Log it and keep going -- bad runnable and/or executor. Don't punish
       // the other runnables if we're given a bad one. We only catch
       // RuntimeException because we want Errors to propagate up.
-      log.log(
+      LOG.log(
           Level.SEVERE,
           "RuntimeException while executing runnable " + runnable + " with " +
               "executor " + executor,
@@ -1147,6 +1150,7 @@ public abstract class AbstractFuture<V> implements ListenableFuture<V> {
   /**
    * {@link AtomicHelper} based on {@link AtomicReferenceFieldUpdater}.
    */
+  @SuppressWarnings("visibilitymodifier")
   private static final class SafeAtomicHelper extends AtomicHelper {
     final AtomicReferenceFieldUpdater<Waiter, Thread> waiterThreadUpdater;
     final AtomicReferenceFieldUpdater<Waiter, Waiter> waiterNextUpdater;

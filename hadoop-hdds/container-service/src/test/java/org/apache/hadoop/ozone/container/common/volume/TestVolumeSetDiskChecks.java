@@ -18,38 +18,34 @@
 
 package org.apache.hadoop.ozone.container.common.volume;
 
-import com.google.common.collect.Iterables;
-import org.apache.commons.io.FileUtils;
-import org.apache.curator.shaded.com.google.common.collect.ImmutableSet;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdfs.server.datanode.checker.AsyncChecker;
-import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Timer;
+
+import com.google.common.collect.Iterables;
+import org.apache.commons.io.FileUtils;
+import org.apache.curator.shaded.com.google.common.collect.ImmutableSet;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.hamcrest.CoreMatchers.is;
 import org.junit.After;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.BindException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
 
 
 /**
@@ -66,7 +62,7 @@ public class TestVolumeSetDiskChecks {
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
-  Configuration conf = null;
+  private Configuration conf = null;
 
   /**
    * Cleanup volume directories.
@@ -117,14 +113,15 @@ public class TestVolumeSetDiskChecks {
     final VolumeSet volumeSet = new VolumeSet(
         UUID.randomUUID().toString(), conf) {
       @Override
-      HddsVolumeChecker getVolumeChecker(Configuration conf)
+      HddsVolumeChecker getVolumeChecker(Configuration configuration)
           throws DiskErrorException {
-        return new DummyChecker(conf, new Timer(), numBadVolumes);
+        return new DummyChecker(configuration, new Timer(), numBadVolumes);
       }
     };
 
     assertThat(volumeSet.getFailedVolumesList().size(), is(numBadVolumes));
-    assertThat(volumeSet.getVolumesList().size(), is(numVolumes - numBadVolumes));
+    assertThat(volumeSet.getVolumesList().size(),
+        is(numVolumes - numBadVolumes));
   }
 
   /**
@@ -139,9 +136,9 @@ public class TestVolumeSetDiskChecks {
     final VolumeSet volumeSet = new VolumeSet(
         UUID.randomUUID().toString(), conf) {
       @Override
-      HddsVolumeChecker getVolumeChecker(Configuration conf)
+      HddsVolumeChecker getVolumeChecker(Configuration configuration)
           throws DiskErrorException {
-        return new DummyChecker(conf, new Timer(), numVolumes);
+        return new DummyChecker(configuration, new Timer(), numVolumes);
       }
     };
   }
@@ -153,13 +150,13 @@ public class TestVolumeSetDiskChecks {
    * @param numDirs
    */
   private Configuration getConfWithDataNodeDirs(int numDirs) {
-    final Configuration conf = new OzoneConfiguration();
+    final Configuration ozoneConf = new OzoneConfiguration();
     final List<String> dirs = new ArrayList<>();
     for (int i = 0; i < numDirs; ++i) {
       dirs.add(GenericTestUtils.getRandomizedTestDir().getPath());
     }
-    conf.set(DFS_DATANODE_DATA_DIR_KEY, String.join(",", dirs));
-    return conf;
+    ozoneConf.set(DFS_DATANODE_DATA_DIR_KEY, String.join(",", dirs));
+    return ozoneConf;
   }
 
   /**
@@ -169,7 +166,7 @@ public class TestVolumeSetDiskChecks {
   static class DummyChecker extends HddsVolumeChecker {
     private final int numBadVolumes;
 
-    public DummyChecker(Configuration conf, Timer timer, int numBadVolumes)
+    DummyChecker(Configuration conf, Timer timer, int numBadVolumes)
         throws DiskErrorException {
       super(conf, timer);
       this.numBadVolumes = numBadVolumes;

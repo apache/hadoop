@@ -154,7 +154,8 @@ public class TestSecureContainerServer {
     XceiverClientSpi client = null;
     String containerName = OzoneUtils.getRequestID();
     try {
-      final Pipeline pipeline = ContainerTestHelper.createPipeline(numDatanodes);
+      final Pipeline pipeline =
+          ContainerTestHelper.createPipeline(numDatanodes);
 
       initConf.accept(pipeline, CONF);
 

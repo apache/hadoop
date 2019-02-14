@@ -25,6 +25,7 @@ import java.util.Map;
  */
 public class WithMetadata {
 
+  @SuppressWarnings("visibilitymodifier")
   protected Map<String, String> metadata = new HashMap<>();
 
   /**
