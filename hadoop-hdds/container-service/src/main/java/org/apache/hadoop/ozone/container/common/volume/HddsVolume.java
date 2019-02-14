@@ -66,7 +66,8 @@ import java.util.UUID;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public final class HddsVolume
+@SuppressWarnings("finalclass")
+public class HddsVolume
     implements Checkable<Boolean, VolumeCheckResult> {
 
   private static final Logger LOG = LoggerFactory.getLogger(HddsVolume.class);
