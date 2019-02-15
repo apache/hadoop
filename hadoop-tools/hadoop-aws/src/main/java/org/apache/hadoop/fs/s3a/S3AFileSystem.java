@@ -41,6 +41,7 @@ import java.util.Set;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -55,6 +56,7 @@ import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
 import com.amazonaws.services.s3.model.ListMultipartUploadsRequest;
@@ -65,6 +67,8 @@ import com.amazonaws.services.s3.model.MultipartUpload;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
@@ -79,6 +83,14 @@ import com.amazonaws.event.ProgressListener;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
+import org.apache.hadoop.fs.s3a.multipart.AbortableInputStream;
+import org.apache.hadoop.fs.s3a.multipart.AbortableS3ObjectInputStream;
+import org.apache.hadoop.fs.s3a.multipart.MultipartDownloader;
+import org.apache.hadoop.fs.s3a.multipart.S3Downloader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -204,6 +216,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LoggerFactory.getLogger("org.apache.hadoop.fs.s3a.S3AFileSystem.Progress");
   private LocalDirAllocator directoryAllocator;
   private CannedAccessControlList cannedACL;
+  private S3Downloader s3Downloader;
 
   /**
    * This must never be null; until initialized it just declares that there
@@ -402,6 +415,66 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       long authDirTtl = conf.getLong(METADATASTORE_AUTHORITATIVE_DIR_TTL,
           DEFAULT_METADATASTORE_AUTHORITATIVE_DIR_TTL);
       ttlTimeProvider = new S3Guard.TtlTimeProvider(authDirTtl);
+
+      S3Downloader rawS3Downloader = new S3Downloader() {
+        @Override
+        public AbortableInputStream download(
+            String requestBucket, String key, long rangeStart, long rangeEnd,
+            ChangeTracker changeTracker, String operation) throws IOException {
+          String serverSideEncryptionKey = getServerSideEncryptionKey(
+              requestBucket, getConf());
+          GetObjectRequest request = new GetObjectRequest(requestBucket, key);
+          if (S3AEncryptionMethods.SSE_C
+              .equals(getServerSideEncryptionAlgorithm()) &&
+              StringUtils.isNotBlank(serverSideEncryptionKey)) {
+            request.setSSECustomerKey(
+                new SSECustomerKey(serverSideEncryptionKey));
+          }
+
+          changeTracker.maybeApplyConstraint(request);
+
+          String text = String.format("%s %s at %d",
+              operation, uri, rangeStart);
+
+          S3Object object = Invoker.once(text, "s3a://" + key + "/" + bucket,
+              () -> s3 .getObject(request.withRange(rangeStart, rangeEnd - 1)));
+          S3ObjectInputStream s3ObjectInputStream = object
+              .getObjectContent();
+
+          changeTracker.processResponse(object, operation, rangeStart);
+
+          return new AbortableS3ObjectInputStream(s3ObjectInputStream);
+        }
+      };
+
+      boolean multipartDownloadEnabled = conf.getBoolean(
+          MULTIPART_DOWNLOAD_ENABLED,
+          DEFAULT_MULTIPART_DOWNLOAD_ENABLED);
+      if (multipartDownloadEnabled) {
+        ExecutorService downloadExecutorService = Executors.newFixedThreadPool(
+            intOption(
+                conf,
+                MULTIPART_DOWNLOAD_NUM_THREADS,
+                DEFAULT_MULTIPART_DOWNLOAD_NUM_THREADS,
+                0),
+            new ThreadFactoryBuilder()
+                .setNameFormat("multipart-download-%d")
+                .build());
+        this.s3Downloader = new MultipartDownloader(
+            conf.getLongBytes(
+                MULTIPART_DOWNLOAD_PART_SIZE,
+                DEFAULT_MULTIPART_DOWNLOAD_PART_SIZE),
+            MoreExecutors.listeningDecorator(downloadExecutorService),
+            rawS3Downloader,
+            conf.getLongBytes(
+                MULTIPART_DOWNLOAD_CHUNK_SIZE,
+                DEFAULT_MULTIPART_DOWNLOAD_CHUNK_SIZE),
+            conf.getLongBytes(
+                MULTIPART_DOWNLOAD_BUFFER_SIZE,
+                DEFAULT_MULTIPART_DOWNLOAD_BUFFER_SIZE));
+      } else {
+        this.s3Downloader = rawS3Downloader;
+      }
     } catch (AmazonClientException e) {
       throw translateException("initializing ", new Path(name), e);
     }
@@ -908,7 +981,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             readContext,
             createObjectAttributes(path),
             fileStatus.getLen(),
-            s3));
+            s3Downloader));
   }
 
   /**

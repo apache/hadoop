@@ -721,4 +721,19 @@ public final class Constants {
    * Default change detection require version: true.
    */
   public static final boolean CHANGE_DETECT_REQUIRE_VERSION_DEFAULT = true;
+
+  public static final String MULTIPART_DOWNLOAD_ENABLED = "fs.s3a.multipartdownload.enabled";
+  public static final boolean DEFAULT_MULTIPART_DOWNLOAD_ENABLED = false;
+
+  public static final String MULTIPART_DOWNLOAD_PART_SIZE = "fs.s3a.multipartdownload.part-size";
+  public static final long DEFAULT_MULTIPART_DOWNLOAD_PART_SIZE = 8_000_000;
+
+  public static final String MULTIPART_DOWNLOAD_CHUNK_SIZE = "fs.s3a.multipartdownload.chunk-size";
+  public static final long DEFAULT_MULTIPART_DOWNLOAD_CHUNK_SIZE = 262_144;
+
+  public static final String MULTIPART_DOWNLOAD_BUFFER_SIZE = "fs.s3a.multipartdownload.buffer-size";
+  public static final long DEFAULT_MULTIPART_DOWNLOAD_BUFFER_SIZE = 20_000_000;
+
+  public static final String MULTIPART_DOWNLOAD_NUM_THREADS = "fs.s3a.multipartdownload.num-threads";
+  public static final int DEFAULT_MULTIPART_DOWNLOAD_NUM_THREADS = 8;
 }

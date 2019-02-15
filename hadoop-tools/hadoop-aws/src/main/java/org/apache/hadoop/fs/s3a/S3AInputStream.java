@@ -18,15 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import javax.annotation.Nullable;
-
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
-import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.google.common.base.Preconditions;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CanSetReadahead;
@@ -35,9 +27,12 @@ import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 
+import org.apache.hadoop.fs.s3a.multipart.AbortableInputStream;
+import org.apache.hadoop.fs.s3a.multipart.S3Downloader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
@@ -82,9 +77,8 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    * set
    */
   private volatile boolean closed;
-  private S3ObjectInputStream wrappedStream;
+  private AbortableInputStream wrappedStream;
   private final S3AReadOpContext context;
-  private final AmazonS3 client;
   private final String bucket;
   private final String key;
   private final String pathStr;
@@ -93,10 +87,10 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
   private static final Logger LOG =
       LoggerFactory.getLogger(S3AInputStream.class);
   private final S3AInstrumentation.InputStreamStatistics streamStatistics;
-  private S3AEncryptionMethods serverSideEncryptionAlgorithm;
-  private String serverSideEncryptionKey;
   private S3AInputPolicy inputPolicy;
   private long readahead = Constants.DEFAULT_READAHEAD_RANGE;
+  private final S3Downloader s3Downloader;
+
 
   /**
    * This is the actual position within the object, used by
@@ -125,12 +119,12 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    * @param ctx operation context
    * @param s3Attributes object attributes from a HEAD request
    * @param contentLength length of content
-   * @param client S3 client to use
+   * @param s3Downloader {@link S3Downloader} to use
    */
   public S3AInputStream(S3AReadOpContext ctx,
       S3ObjectAttributes s3Attributes,
       long contentLength,
-      AmazonS3 client) {
+      S3Downloader s3Downloader) {
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getBucket()),
         "No Bucket");
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getKey()), "No Key");
@@ -140,12 +134,9 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
     this.key = s3Attributes.getKey();
     this.pathStr = ctx.dstFileStatus.getPath().toString();
     this.contentLength = contentLength;
-    this.client = client;
     this.uri = "s3a://" + this.bucket + "/" + this.key;
     this.streamStatistics = ctx.instrumentation.newInputStreamStatistics();
-    this.serverSideEncryptionAlgorithm =
-        s3Attributes.getServerSideEncryptionAlgorithm();
-    this.serverSideEncryptionKey = s3Attributes.getServerSideEncryptionKey();
+    this.s3Downloader = s3Downloader;
     this.changeTracker = new ChangeTracker(uri,
         ctx.getChangeDetectionPolicy(),
         streamStatistics.getVersionMismatchCounter());
@@ -187,22 +178,9 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
         inputPolicy);
 
     long opencount = streamStatistics.streamOpened();
-    GetObjectRequest request = new GetObjectRequest(bucket, key)
-        .withRange(targetPos, contentRangeFinish - 1);
-    if (S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm) &&
-        StringUtils.isNotBlank(serverSideEncryptionKey)){
-      request.setSSECustomerKey(new SSECustomerKey(serverSideEncryptionKey));
-    }
     String operation = opencount == 0 ? OPERATION_OPEN : OPERATION_REOPEN;
-    String text = String.format("%s %s at %d",
-        operation, uri, targetPos);
-    changeTracker.maybeApplyConstraint(request);
-    S3Object object = Invoker.once(text, uri,
-        () -> client.getObject(request));
-
-    changeTracker.processResponse(object, operation,
-        targetPos);
-    wrappedStream = object.getObjectContent();
+    wrappedStream = s3Downloader.download(
+        bucket, key, targetPos, contentRangeFinish, changeTracker, operation);
     contentRangeStart = targetPos;
     if (wrappedStream == null) {
       throw new PathIOException(uri,
