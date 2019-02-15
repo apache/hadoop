@@ -94,6 +94,9 @@ public final class HddsConfigKeys {
   public static final String HDDS_PROMETHEUS_ENABLED =
       "hdds.prometheus.endpoint.enabled";
 
+  public static final String HDDS_PROFILER_ENABLED =
+      "hdds.profiler.endpoint.enabled";
+
   public static final String HDDS_KEY_LEN = "hdds.key.len";
   public static final int HDDS_DEFAULT_KEY_LEN = 2048;
   public static final String HDDS_KEY_ALGORITHM = "hdds.key.algo";

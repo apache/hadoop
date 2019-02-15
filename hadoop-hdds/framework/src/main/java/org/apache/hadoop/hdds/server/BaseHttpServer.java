@@ -60,6 +60,8 @@ public abstract class BaseHttpServer {
 
   private boolean prometheusSupport;
 
+  private boolean profilerSupport;
+
   public BaseHttpServer(Configuration conf, String name) throws IOException {
     this.name = name;
     this.conf = conf;
@@ -91,11 +93,21 @@ public abstract class BaseHttpServer {
       prometheusSupport =
           conf.getBoolean(HddsConfigKeys.HDDS_PROMETHEUS_ENABLED, false);
 
+      profilerSupport =
+          conf.getBoolean(HddsConfigKeys.HDDS_PROFILER_ENABLED, false);
+
       if (prometheusSupport) {
         prometheusMetricsSink = new PrometheusMetricsSink();
         httpServer.getWebAppContext().getServletContext()
             .setAttribute(PROMETHEUS_SINK, prometheusMetricsSink);
         httpServer.addServlet("prometheus", "/prom", PrometheusServlet.class);
+      }
+
+      if (profilerSupport) {
+        LOG.warn(
+            "/prof java profiling servlet is activated. Not safe for "
+                + "production!");
+        httpServer.addServlet("profile", "/prof", ProfileServlet.class);
       }
     }
 

@@ -18,7 +18,7 @@
 # The name of the script being executed.
 HADOOP_SHELL_EXECNAME="ozone"
 MYNAME="${BASH_SOURCE-$0}"
-
+JVM_PID="$$"
 ## @description  build up the hdfs command's usage text.
 ## @audience     public
 ## @stability    stable
