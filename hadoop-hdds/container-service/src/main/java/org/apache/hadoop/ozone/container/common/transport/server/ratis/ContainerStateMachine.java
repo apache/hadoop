@@ -138,6 +138,7 @@ public class ContainerStateMachine extends BaseStateMachine {
    */
   private final CSMMetrics metrics;
 
+  @SuppressWarnings("parameternumber")
   public ContainerStateMachine(RaftGroupId gid, ContainerDispatcher dispatcher,
       ThreadPoolExecutor chunkExecutor, XceiverServerRatis ratisServer,
       List<ExecutorService> executors, long expiryInterval,

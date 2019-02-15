@@ -35,7 +35,7 @@ wait_for_datanodes(){
 
      #This line checks the number of HEALTHY datanodes registered in scm over the
      # jmx HTTP servlet
-     datanodes=$(docker-compose -f "$1" exec scm curl -s 'http://localhost:9876/jmx?qry=Hadoop:service=SCMNodeManager,name=SCMNodeManagerInfo' | jq -r '.beans[0].NodeCount[] | select(.key=="HEALTHY") | .value')
+     datanodes=$(docker-compose -f "$1" exec -T scm curl -s 'http://localhost:9876/jmx?qry=Hadoop:service=SCMNodeManager,name=SCMNodeManagerInfo' | jq -r '.beans[0].NodeCount[] | select(.key=="HEALTHY") | .value')
       if [[ "$datanodes" == "3" ]]; then
 
         #It's up and running. Let's return from the function.
@@ -51,7 +51,6 @@ wait_for_datanodes(){
 
       sleep 2
    done
-
    echo "WARNING! Datanodes are not started successfully. Please check the docker-compose files"
 }
 
@@ -73,11 +72,13 @@ execute_tests(){
   docker-compose -f "$COMPOSE_FILE" down
   docker-compose -f "$COMPOSE_FILE" up -d --scale datanode=3
   wait_for_datanodes "$COMPOSE_FILE"
+  #TODO: we need to wait for the OM here
+  sleep 10
   for TEST in "${TESTS[@]}"; do
      TITLE="Ozone $TEST tests with $COMPOSE_DIR cluster"
      set +e
      OUTPUT_NAME="$COMPOSE_DIR-${TEST//\//_}"
-	  docker-compose -f "$COMPOSE_FILE" exec ozoneManager python -m robot --log NONE --report NONE "${OZONE_ROBOT_OPTS[@]}" --output "smoketest/$RESULT_DIR/robot-$OUTPUT_NAME.xml" --logtitle "$TITLE" --reporttitle "$TITLE" "smoketest/$TEST"
+	  docker-compose -f "$COMPOSE_FILE" exec -T ozoneManager python -m robot --log NONE --report NONE "${OZONE_ROBOT_OPTS[@]}" --output "smoketest/$RESULT_DIR/robot-$OUTPUT_NAME.xml" --logtitle "$TITLE" --reporttitle "$TITLE" "smoketest/$TEST"
      set -e
      docker-compose -f "$COMPOSE_FILE" logs > "$DIR/$RESULT_DIR/docker-$OUTPUT_NAME.log"
   done
@@ -140,12 +141,14 @@ if [ "$RUN_ALL" = true ]; then
 #
 # We select the test suites and execute them on multiple type of clusters
 #
-   DEFAULT_TESTS=("basic")
-   execute_tests ozone "${DEFAULT_TESTS[@]}"
+   TESTS=("basic")
+   execute_tests ozone "${TESTS[@]}"
+   TESTS=("audiparser")
+   execute_tests ozone "${TESTS[@]}"
    TESTS=("ozonefs")
    execute_tests ozonefs "${TESTS[@]}"
-   TESTS=("ozone-hdfs")
-   execute_tests ozone-hdfs "${DEFAULT_TESTS[@]}"
+   TESTS=("basic")
+   execute_tests ozone-hdfs "${TESTS[@]}"
    TESTS=("s3")
    execute_tests ozones3 "${TESTS[@]}"
 else
@@ -153,4 +156,4 @@ else
 fi
 
 #Generate the combined output and return with the right exit code (note: robot = execute test, rebot = generate output)
-docker run --rm -it -v "$DIR/..:/opt/hadoop" apache/hadoop-runner rebot -d "smoketest/$RESULT_DIR" "smoketest/$RESULT_DIR/robot-*.xml"
+docker run --rm -v "$DIR/..:/opt/hadoop" apache/hadoop-runner rebot -d "smoketest/$RESULT_DIR" "smoketest/$RESULT_DIR/robot-*.xml"

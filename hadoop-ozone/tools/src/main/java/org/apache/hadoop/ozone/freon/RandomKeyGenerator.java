@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.opentracing.Scope;
 import io.opentracing.util.GlobalTracer;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -552,6 +553,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
     }
 
     @Override
+    @SuppressFBWarnings("REC_CATCH_EXCEPTION")
     public void run() {
       LOG.trace("Creating volume: {}", volumeName);
       long start = System.nanoTime();

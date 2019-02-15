@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.container.keyvalue;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
@@ -167,10 +168,10 @@ public class TestKeyValueHandlerWithUnhealthyContainer {
    * @param cmdType type of the container command.
    * @return
    */
-  private ContainerProtos.ContainerCommandRequestProto getDummyCommandRequestProto(
+  private ContainerCommandRequestProto getDummyCommandRequestProto(
       ContainerProtos.Type cmdType) {
-    final ContainerProtos.ContainerCommandRequestProto.Builder builder =
-        ContainerProtos.ContainerCommandRequestProto.newBuilder()
+    final ContainerCommandRequestProto.Builder builder =
+        ContainerCommandRequestProto.newBuilder()
             .setCmdType(cmdType)
             .setContainerID(DUMMY_CONTAINER_ID)
             .setDatanodeUuid(DATANODE_UUID);
@@ -190,36 +191,39 @@ public class TestKeyValueHandlerWithUnhealthyContainer {
                 .build())
             .build();
 
-    switch(cmdType) {
-      case ReadContainer:
-        builder.setReadContainer(ContainerProtos.ReadContainerRequestProto.newBuilder().build());
-        break;
-      case GetBlock:
-        builder.setGetBlock(ContainerProtos.GetBlockRequestProto.newBuilder()
-            .setBlockID(fakeBlockId).build());
-        break;
-      case GetCommittedBlockLength:
-        builder.setGetCommittedBlockLength(
-            ContainerProtos.GetCommittedBlockLengthRequestProto.newBuilder()
-                .setBlockID(fakeBlockId).build());
-      case ReadChunk:
-        builder.setReadChunk(ContainerProtos.ReadChunkRequestProto.newBuilder()
-            .setBlockID(fakeBlockId).setChunkData(fakeChunkInfo).build());
-        break;
-      case DeleteChunk:
-        builder.setDeleteChunk(ContainerProtos.DeleteChunkRequestProto.newBuilder()
-            .setBlockID(fakeBlockId).setChunkData(fakeChunkInfo).build());
-        break;
-      case GetSmallFile:
-        builder.setGetSmallFile(ContainerProtos.GetSmallFileRequestProto.newBuilder()
-            .setBlock(ContainerProtos.GetBlockRequestProto.newBuilder()
-                .setBlockID(fakeBlockId)
-                .build())
-            .build());
-        break;
+    switch (cmdType) {
+    case ReadContainer:
+      builder.setReadContainer(
+          ContainerProtos.ReadContainerRequestProto.newBuilder().build());
+      break;
+    case GetBlock:
+      builder.setGetBlock(ContainerProtos.GetBlockRequestProto.newBuilder()
+          .setBlockID(fakeBlockId).build());
+      break;
+    case GetCommittedBlockLength:
+      builder.setGetCommittedBlockLength(
+          ContainerProtos.GetCommittedBlockLengthRequestProto.newBuilder()
+              .setBlockID(fakeBlockId).build());
+    case ReadChunk:
+      builder.setReadChunk(ContainerProtos.ReadChunkRequestProto.newBuilder()
+          .setBlockID(fakeBlockId).setChunkData(fakeChunkInfo).build());
+      break;
+    case DeleteChunk:
+      builder
+          .setDeleteChunk(ContainerProtos.DeleteChunkRequestProto.newBuilder()
+              .setBlockID(fakeBlockId).setChunkData(fakeChunkInfo).build());
+      break;
+    case GetSmallFile:
+      builder
+          .setGetSmallFile(ContainerProtos.GetSmallFileRequestProto.newBuilder()
+              .setBlock(ContainerProtos.GetBlockRequestProto.newBuilder()
+                  .setBlockID(fakeBlockId)
+                  .build())
+              .build());
+      break;
 
-      default:
-        Assert.fail("Unhandled request type " + cmdType + " in unit test");
+    default:
+      Assert.fail("Unhandled request type " + cmdType + " in unit test");
     }
 
     return builder.build();

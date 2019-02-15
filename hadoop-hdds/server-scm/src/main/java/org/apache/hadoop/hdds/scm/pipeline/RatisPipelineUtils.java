@@ -261,15 +261,13 @@ public final class RatisPipelineUtils {
 
     for (HddsProtos.ReplicationFactor factor : HddsProtos.ReplicationFactor
         .values()) {
-      while (true) {
-        try {
-          pipelineManager.createPipeline(type, factor);
-        } catch (IOException ioe) {
-          break;
-        } catch (Throwable t) {
-          LOG.error("Error while creating pipelines {}", t);
-          break;
-        }
+      try {
+        pipelineManager.createPipeline(type, factor);
+      } catch (IOException ioe) {
+        break;
+      } catch (Throwable t) {
+        LOG.error("Error while creating pipelines {}", t);
+        break;
       }
     }
     isPipelineCreatorRunning.set(false);

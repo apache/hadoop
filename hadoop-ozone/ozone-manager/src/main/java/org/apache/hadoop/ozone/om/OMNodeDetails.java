@@ -101,6 +101,10 @@ public final class OMNodeDetails {
     return ratisPort;
   }
 
+  public int getRpcPort() {
+    return rpcPort;
+  }
+
   public String getRpcAddressString() {
     return NetUtils.getHostPortString(rpcAddress);
   }

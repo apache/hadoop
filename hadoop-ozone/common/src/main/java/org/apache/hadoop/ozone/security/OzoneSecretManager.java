@@ -60,6 +60,7 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
   private OzoneSecretKey currentKey;
   private AtomicInteger currentKeyId;
   private AtomicInteger tokenSequenceNumber;
+  @SuppressWarnings("visibilitymodifier")
   protected final Map<Integer, OzoneSecretKey> allKeys;
 
   /**

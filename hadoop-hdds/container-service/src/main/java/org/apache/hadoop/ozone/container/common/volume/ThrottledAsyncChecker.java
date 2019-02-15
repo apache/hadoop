@@ -87,7 +87,8 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
    * the results of the operation.
    * Protected by the object lock.
    */
-  private final Map<Checkable, ThrottledAsyncChecker.LastCheckResult<V>> completedChecks;
+  private final Map<Checkable, ThrottledAsyncChecker.LastCheckResult<V>>
+      completedChecks;
 
   public ThrottledAsyncChecker(final Timer timer,
                                final long minMsBetweenChecks,
@@ -125,7 +126,8 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
     }
 
     if (completedChecks.containsKey(target)) {
-      final ThrottledAsyncChecker.LastCheckResult<V> result = completedChecks.get(target);
+      final ThrottledAsyncChecker.LastCheckResult<V> result =
+          completedChecks.get(target);
       final long msSinceLastCheck = timer.monotonicNow() - result.completedAt;
       if (msSinceLastCheck < minMsBetweenChecks) {
         LOG.debug("Skipped checking {}. Time since last check {}ms " +

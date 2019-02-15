@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.ozone.container.common.transport.server;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -28,8 +29,8 @@ import org.apache.hadoop.hdds.security.token.TokenVerifier;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 
-import java.io.IOException;
-import java.util.Objects;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 
 /**
  * A server endpoint that acts as the communication layer for Ozone containers.
@@ -40,7 +41,7 @@ public abstract class XceiverServer implements XceiverServerSpi {
   private final TokenVerifier tokenVerifier;
 
   public XceiverServer(Configuration conf) {
-    Objects.nonNull(conf);
+    Preconditions.checkNotNull(conf);
     this.secConfig = new SecurityConfig(conf);
     tokenVerifier = new BlockTokenVerifier(secConfig, getCaClient());
   }
