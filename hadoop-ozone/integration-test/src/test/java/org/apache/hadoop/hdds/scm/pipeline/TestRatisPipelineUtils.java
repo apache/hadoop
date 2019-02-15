@@ -23,6 +23,7 @@ import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.After;
 import org.junit.Test;
 
 import java.util.List;
@@ -49,6 +50,11 @@ public class TestRatisPipelineUtils {
     cluster.waitForClusterToBeReady();
     StorageContainerManager scm = cluster.getStorageContainerManager();
     pipelineManager = scm.getPipelineManager();
+  }
+
+  @After
+  public void cleanup() {
+    cluster.shutdown();
   }
 
   @Test(timeout = 30000)
@@ -90,6 +96,6 @@ public class TestRatisPipelineUtils {
     GenericTestUtils.waitFor(() -> pipelineManager
         .getPipelines(HddsProtos.ReplicationType.RATIS,
             HddsProtos.ReplicationFactor.THREE, Pipeline.PipelineState.OPEN)
-        .size() == numPipelines, 100, 10000);
+        .size() == numPipelines, 100, 20000);
   }
 }

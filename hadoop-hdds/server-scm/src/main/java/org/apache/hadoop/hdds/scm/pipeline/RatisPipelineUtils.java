@@ -34,8 +34,6 @@ import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.retry.RetryPolicy;
 import org.apache.ratis.rpc.SupportedRpcType;
 import org.apache.ratis.util.function.CheckedBiConsumer;
-import org.apache.ratis.util.TimeDuration;
-import org.apache.ratis.util.TimeoutScheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,8 +50,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public final class RatisPipelineUtils {
 
-  private static TimeoutScheduler timeoutScheduler =
-      TimeoutScheduler.newInstance(1);
   private static AtomicBoolean isPipelineCreatorRunning =
       new AtomicBoolean(false);
 
@@ -127,12 +123,11 @@ public final class RatisPipelineUtils {
           .getTimeDuration(ScmConfigKeys.OZONE_SCM_PIPELINE_DESTROY_TIMEOUT,
               ScmConfigKeys.OZONE_SCM_PIPELINE_DESTROY_TIMEOUT_DEFAULT,
               TimeUnit.MILLISECONDS);
-      TimeDuration timeoutDuration = TimeDuration
-          .valueOf(pipelineDestroyTimeoutInMillis, TimeUnit.MILLISECONDS);
-      timeoutScheduler.onTimeout(timeoutDuration,
-          () -> destroyPipeline(pipelineManager, pipeline, ozoneConf), LOG,
-          () -> String.format("Destroy pipeline failed for pipeline:%s with %s",
-              pipeline.getId(), group));
+      RatisPipelineProvider.getScheduler()
+          .schedule(() -> destroyPipeline(pipelineManager, pipeline, ozoneConf),
+              pipelineDestroyTimeoutInMillis, TimeUnit.MILLISECONDS, LOG, String
+                  .format("Destroy pipeline failed for pipeline:%s with %s",
+                      pipeline.getId(), group));
     } else {
       destroyPipeline(pipelineManager, pipeline, ozoneConf);
     }
@@ -213,22 +208,12 @@ public final class RatisPipelineUtils {
             ScmConfigKeys.OZONE_SCM_PIPELINE_CREATION_INTERVAL_DEFAULT,
             TimeUnit.MILLISECONDS);
     // TODO: #CLUTIL We can start the job asap
-    TimeDuration timeDuration =
-        TimeDuration.valueOf(intervalInMillis, TimeUnit.MILLISECONDS);
-    timeoutScheduler.onTimeout(timeDuration,
-        () -> fixedIntervalPipelineCreator(pipelineManager, conf,
-            timeDuration), LOG,
-        () -> "FixedIntervalPipelineCreatorJob failed.");
-  }
-
-  private static void fixedIntervalPipelineCreator(
-      PipelineManager pipelineManager, Configuration conf,
-      TimeDuration timeDuration) {
-    timeoutScheduler.onTimeout(timeDuration,
-        () -> fixedIntervalPipelineCreator(pipelineManager, conf,
-            timeDuration), LOG,
-        () -> "FixedIntervalPipelineCreatorJob failed.");
-    triggerPipelineCreation(pipelineManager, conf, 0);
+    RatisPipelineProvider.getScheduler().scheduleWithFixedDelay(() -> {
+      if (!isPipelineCreatorRunning.compareAndSet(false, true)) {
+        return;
+      }
+      createPipelines(pipelineManager, conf);
+    }, intervalInMillis, intervalInMillis, TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -246,10 +231,9 @@ public final class RatisPipelineUtils {
     if (!isPipelineCreatorRunning.compareAndSet(false, true)) {
       return;
     }
-    timeoutScheduler
-        .onTimeout(TimeDuration.valueOf(afterMillis, TimeUnit.MILLISECONDS),
-            () -> createPipelines(pipelineManager, conf), LOG,
-            () -> "PipelineCreation failed.");
+    RatisPipelineProvider.getScheduler()
+        .schedule(() -> createPipelines(pipelineManager, conf), afterMillis,
+            TimeUnit.MILLISECONDS);
   }
 
   private static void createPipelines(PipelineManager pipelineManager,
@@ -261,13 +245,18 @@ public final class RatisPipelineUtils {
 
     for (HddsProtos.ReplicationFactor factor : HddsProtos.ReplicationFactor
         .values()) {
-      try {
-        pipelineManager.createPipeline(type, factor);
-      } catch (IOException ioe) {
-        break;
-      } catch (Throwable t) {
-        LOG.error("Error while creating pipelines {}", t);
-        break;
+      while (true) {
+        try {
+          if (RatisPipelineProvider.getScheduler().isClosed()) {
+            break;
+          }
+          pipelineManager.createPipeline(type, factor);
+        } catch (IOException ioe) {
+          break;
+        } catch (Throwable t) {
+          LOG.error("Error while creating pipelines {}", t);
+          break;
+        }
       }
     }
     isPipelineCreatorRunning.set(false);
