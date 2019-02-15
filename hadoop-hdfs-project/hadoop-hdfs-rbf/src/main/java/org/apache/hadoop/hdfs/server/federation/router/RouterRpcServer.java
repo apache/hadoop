@@ -1541,4 +1541,48 @@ public class RouterRpcServer extends AbstractService
   public FederationRPCMetrics getRPCMetrics() {
     return this.rpcMonitor.getRPCMetrics();
   }
+
+  /**
+   * Check if a path should be in all subclusters.
+   *
+   * @param path Path to check.
+   * @return If a path should be in all subclusters.
+   */
+  boolean isPathAll(final String path) {
+    if (subclusterResolver instanceof MountTableResolver) {
+      try {
+        MountTableResolver mountTable = (MountTableResolver) subclusterResolver;
+        MountTable entry = mountTable.getMountPoint(path);
+        if (entry != null) {
+          return entry.isAll();
+        }
+      } catch (IOException e) {
+        LOG.error("Cannot get mount point", e);
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Check if call needs to be invoked to all the locations. The call is
+   * supposed to be invoked in all the locations in case the order of the mount
+   * entry is amongst HASH_ALL, RANDOM or SPACE or if the source is itself a
+   * mount entry.
+   * @param path The path on which the operation need to be invoked.
+   * @return true if the call is supposed to invoked on all locations.
+   * @throws IOException
+   */
+  boolean isInvokeConcurrent(final String path) throws IOException {
+    if (subclusterResolver instanceof MountTableResolver) {
+      MountTableResolver mountTableResolver =
+          (MountTableResolver) subclusterResolver;
+      List<String> mountPoints = mountTableResolver.getMountPoints(path);
+      // If this is a mount point, we need to invoke everywhere.
+      if (mountPoints != null) {
+        return true;
+      }
+      return isPathAll(path);
+    }
+    return false;
+  }
 }
