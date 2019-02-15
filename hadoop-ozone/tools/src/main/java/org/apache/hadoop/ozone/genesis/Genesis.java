@@ -40,6 +40,7 @@ public final class Genesis {
   public static void main(String[] args) throws RunnerException {
     Options opt = new OptionsBuilder()
         .include(BenchMarkContainerStateMap.class.getSimpleName())
+        .include(BenchMarkOMKeyAllocation.class.getSimpleName())
 //        .include(BenchMarkMetadataStoreReads.class.getSimpleName())
 //        .include(BenchMarkMetadataStoreWrites.class.getSimpleName())
 //        .include(BenchMarkDatanodeDispatcher.class.getSimpleName())
