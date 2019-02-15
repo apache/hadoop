@@ -23,6 +23,9 @@ RUN chmod +x /usr/local/bin/dumb-init
 RUN mkdir -p /etc/security/keytabs && chmod -R a+wr /etc/security/keytabs 
 ADD https://repo.maven.apache.org/maven2/org/jboss/byteman/byteman/4.0.4/byteman-4.0.4.jar /opt/byteman.jar
 RUN chmod o+r /opt/byteman.jar
+RUN mkdir -p /opt/profiler && \
+    cd /opt/profiler && \
+    curl -L https://github.com/jvm-profiling-tools/async-profiler/releases/download/v1.5/async-profiler-1.5-linux-x64.tar.gz | tar xvz
 ENV JAVA_HOME=/usr/lib/jvm/jre/
 ENV PATH $PATH:/opt/hadoop/bin
 
