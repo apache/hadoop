@@ -1921,4 +1921,45 @@ namespace ContainerExecutor {
     run_docker_command_test(file_cmd_vec, bad_file_cmd_vec, get_docker_exec_command);
     free_configuration(&container_executor_cfg);
   }
+
+  TEST_F(TestDockerUtil, test_trusted_top_level_image) {
+    struct configuration container_cfg, cmd_cfg;
+    std::string container_executor_contents = "[docker]\n"
+        "  docker.trusted.registries=library\n";
+    write_file(container_executor_cfg_file, container_executor_contents);
+    int ret = read_config(container_executor_cfg_file.c_str(), &container_cfg);
+    if (ret != 0) {
+      FAIL();
+    }
+    ret = create_ce_file();
+    if (ret != 0) {
+      std::cerr << "Could not create ce file, skipping test" << std::endl;
+      return;
+    }
+    std::vector<std::pair<std::string, std::string> > file_cmd_vec;
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n"
+            "  image=centos",
+        "centos"));
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n"
+            "  image=ubuntu:latest",
+        "centos"));
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n"
+            "  image=library/centos",
+        "centos"));
+    std::vector<std::pair<std::string, std::string> >::const_iterator itr;
+
+    for (itr = file_cmd_vec.begin(); itr != file_cmd_vec.end(); ++itr) {
+      write_command_file(itr->first);
+      ret = read_config(docker_command_file.c_str(), &cmd_cfg);
+      if (ret != 0) {
+        FAIL();
+      }
+      ret = check_trusted_image(&cmd_cfg, &container_cfg);
+      ASSERT_EQ(0, ret);
+    }
+    free_configuration(&container_cfg);
+  }
 }

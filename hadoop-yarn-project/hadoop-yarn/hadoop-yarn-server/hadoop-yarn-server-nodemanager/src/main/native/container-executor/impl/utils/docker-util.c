@@ -113,6 +113,7 @@ int check_trusted_image(const struct configuration *command_config, const struct
   int found = 0;
   int i = 0;
   int ret = 0;
+  int no_registry_prefix_in_image_name = 0;
   char *image_name = get_configuration_value("image", DOCKER_COMMAND_FILE_SECTION, command_config);
   char **privileged_registry = get_configuration_values_delimiter("docker.trusted.registries", CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
   char *registry_ptr = NULL;
@@ -120,8 +121,20 @@ int check_trusted_image(const struct configuration *command_config, const struct
     ret = INVALID_DOCKER_IMAGE_NAME;
     goto free_and_exit;
   }
+  if (strchr(image_name, '/') == NULL) {
+    no_registry_prefix_in_image_name = 1;
+  }
   if (privileged_registry != NULL) {
     for (i = 0; privileged_registry[i] != NULL; i++) {
+      // "library" means we trust public top
+      if (strncmp(privileged_registry[i], "library", strlen("library")) == 0) {
+        if (no_registry_prefix_in_image_name) {
+          // if image doesn't exists, docker pull will automatically happen
+          found = 1;
+          fprintf(LOGFILE, "image: %s is a trusted top-level image.\n", image_name);
+          break;
+        }
+      }
       int len = strlen(privileged_registry[i]);
       if (privileged_registry[i][len - 1] != '/') {
         registry_ptr = (char *) alloc_and_clear_memory(len + 2, sizeof(char));
