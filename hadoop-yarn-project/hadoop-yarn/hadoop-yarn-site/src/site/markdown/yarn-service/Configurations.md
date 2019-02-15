@@ -122,7 +122,7 @@ The above config allows the service AM to be retried a maximum of 10 times.
 | Service-Level Config Name | Description |
 | ------------ | ------------- |
 |yarn.service.am-restart.max-attempts | Max number of times to start the service AM, after which the service will be killed (default 20).|
-|yarn.service.am-resource.memory | Memory size in GB for the service AM (default 1024).|
+|yarn.service.am-resource.memory | Memory size in MB for the service AM (default 1024).|
 |yarn.service.am.java.opts | Additional JVM options for the service AM (default " -Xmx768m" will be appended to any JVM opts that do not specify -Xmx).|
 |yarn.service.container-recovery.timeout.ms | Timeout in milliseconds after which a newly started service AM releases all the containers of previous AM attempts which are not yet recovered from the RM (default 120000, i.e. 2 minutes).|
 |yarn.service.failure-count-reset.window | Interval in seconds after which the container failure counts that will be evaluated for the per-component `yarn.service.container-failure-per-component.threshold` and `yarn.service.node-blacklist.threshold` are reset (default 21600, i.e. 6 hours).|
