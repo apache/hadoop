@@ -73,8 +73,8 @@ data node not only sends the CSR but signs the request with a shared secret
 with SCM. SCM then can issue a certificate without the intervention of a
 human administrator.
 
-The last, TESTING method which never should be used other than in development and
-testing clusters, is merely a mechanism to bypass all identity checks. If
+The last, TESTING method which never should be used other than in development
+ and testing clusters, is merely a mechanism to bypass all identity checks. If
 this flag is setup, then CA will issue a CSR if the base approves all fields.
 
  * Please do not use this mechanism(TESTING) for any purpose other than

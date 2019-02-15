@@ -56,6 +56,7 @@ import static org.junit.Assert.assertTrue;
  * Test class for {@link DefaultCertificateClient}.
  */
 @RunWith(Parameterized.class)
+@SuppressWarnings("visibilitymodifier")
 public class TestCertificateClientInit {
 
   private CertificateClient dnCertificateClient;

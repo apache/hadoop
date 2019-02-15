@@ -131,7 +131,7 @@ public class OzoneManagerRequestHandler {
     this.impl = om;
   }
 
-  //TODO: use map to make shorted methods
+  //TODO simplify it to make it shorter
   @SuppressWarnings("methodlength")
   public OMResponse handle(OMRequest request) {
     LOG.debug("Received OMRequest: {}, ", request);

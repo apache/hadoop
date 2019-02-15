@@ -34,6 +34,7 @@ import org.slf4j.Logger;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.InvalidKeyException;
@@ -524,10 +525,9 @@ public abstract class DefaultCertificateClient implements CertificateClient {
         return FAILURE;
       }
     default:
-      getLogger().error("Unexpected case: {}, Private key:{} , " +
-          "public key:{}, certificate:{}", init,
-          ((init.ordinal() & 1 << 2) == 1), ((init.ordinal() & 1 << 1) == 1),
-          ((init.ordinal() & 1 << 0) == 1));
+      getLogger().error("Unexpected case: {} (private/public/cert)",
+          Integer.toBinaryString(init.ordinal()));
+
       return FAILURE;
     }
   }
@@ -584,7 +584,8 @@ public abstract class DefaultCertificateClient implements CertificateClient {
    * */
   protected boolean validateKeyPair(PublicKey pubKey)
       throws CertificateException {
-    byte[] challenge = RandomStringUtils.random(1000).getBytes();
+    byte[] challenge = RandomStringUtils.random(1000).getBytes(
+        StandardCharsets.UTF_8);
     byte[]  sign = signDataStream(new ByteArrayInputStream(challenge));
     return verifySignature(challenge, sign, pubKey);
   }

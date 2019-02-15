@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +39,7 @@ public final class OzoneClientAdapterFactory {
   private OzoneClientAdapterFactory() {
   }
 
+  @SuppressFBWarnings("DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED")
   public static OzoneClientAdapter createAdapter(
       String volumeStr,
       String bucketStr, OzoneFSStorageStatistics storageStatistics)

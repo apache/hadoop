@@ -32,6 +32,8 @@ import org.apache.hadoop.hdfs.server.datanode.checker.AsyncChecker;
 import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Timer;
+
+import static org.apache.hadoop.hdfs.server.datanode.DataNode.MAX_VOLUME_FAILURE_TOLERATED_LIMIT;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -141,7 +143,7 @@ public class HddsVolumeChecker {
 
     lastAllVolumesCheck = timer.monotonicNow() - minDiskCheckGapMs;
 
-    if (maxVolumeFailuresTolerated < DataNode.MAX_VOLUME_FAILURE_TOLERATED_LIMIT) {
+    if (maxVolumeFailuresTolerated < MAX_VOLUME_FAILURE_TOLERATED_LIMIT) {
       throw new DiskErrorException("Invalid value configured for "
           + DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY + " - "
           + maxVolumeFailuresTolerated + " "
@@ -310,21 +312,21 @@ public class HddsVolumeChecker {
 
     @Override
     public void onSuccess(@Nonnull VolumeCheckResult result) {
-      switch(result) {
-        case HEALTHY:
-        case DEGRADED:
-          LOG.debug("Volume {} is {}.", volume, result);
-          markHealthy();
-          break;
-        case FAILED:
-          LOG.warn("Volume {} detected as being unhealthy", volume);
-          markFailed();
-          break;
-        default:
-          LOG.error("Unexpected health check result {} for volume {}",
-              result, volume);
-          markHealthy();
-          break;
+      switch (result) {
+      case HEALTHY:
+      case DEGRADED:
+        LOG.debug("Volume {} is {}.", volume, result);
+        markHealthy();
+        break;
+      case FAILED:
+        LOG.warn("Volume {} detected as being unhealthy", volume);
+        markFailed();
+        break;
+      default:
+        LOG.error("Unexpected health check result {} for volume {}",
+            result, volume);
+        markHealthy();
+        break;
       }
       cleanup();
     }
@@ -378,7 +380,8 @@ public class HddsVolumeChecker {
     try {
       delegateChecker.shutdownAndWait(gracePeriod, timeUnit);
     } catch (InterruptedException e) {
-      LOG.warn("{} interrupted during shutdown.", this.getClass().getSimpleName());
+      LOG.warn("{} interrupted during shutdown.",
+          this.getClass().getSimpleName());
       Thread.currentThread().interrupt();
     }
   }

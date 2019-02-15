@@ -17,30 +17,26 @@
  */
 node("ubuntu") {
     docker.image('elek/ozone-build').pull()
-    docker.image('elek/ozone-build').inside {
+    docker.image('elek/ozone-build').inside("--privileged") {
 
         stage('Checkout') {
             checkout scm
+            //use this for external Jenkinsfile builds
+            //checkout poll: false, scm: [$class: 'GitSCM', branches: [[name: env.branch]], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'github-token', url: "https://github.com/${organization}/${repository}.git"]]]
+
         }
 
         stage('Clean') {
-            status = sh returnStatus: true, script: 'mvn clean'
+            status = sh returnStatus: true, script: 'mvn clean -P hdds -am -pl :hadoop-ozone-dist '
         }
 
         stageRunner('Author', "author", {})
-
-        stageRunner('Isolation', "isolation", {})
-
-
-        stageRunner('Build', "build", {})
 
         stageRunner('Licence', "rat", {
             archiveArtifacts 'target/rat-aggregated.txt'
         }, 'artifact/target/rat-aggregated.txt/*view*/')
 
-        stageRunner('Unit test', "unit", {
-            junit '**/target/surefire-reports/*.xml'
-        }, 'testReport/')
+        stageRunner('Build', "build", {})
 
         stageRunner('Findbugs', "findbugs", {
             archiveArtifacts 'target/findbugs-all.txt'
@@ -48,8 +44,16 @@ node("ubuntu") {
         }, 'artifact/target/findbugs-all.txt/*view*/')
 
         stageRunner('Checkstyle', "checkstyle", {
-            checkstyle canComputeNew: false, canRunOnFailed: true, defaultEncoding: '', healthy: '', pattern: '**/checkstyle-result.xml', unHealthy: ''
+            checkstyle canComputeNew: false, canRunOnFailed: true, defaultEncoding: '', healthy: '', pattern: '**/checkstyle-errors.xml', unHealthy: ''
         }, 'checkstyleResult')
+
+        stageRunner('Acceptance', "acceptance", {
+             archiveArtifacts 'hadoop-ozone/dist/target/ozone-0.4.0-SNAPSHOT/smoketest/result/**'
+        })
+
+        stageRunner('Unit test', "unit", {
+            junit '**/target/surefire-reports/*.xml'
+        }, 'testReport/')
 
     }
 
@@ -70,35 +74,42 @@ def stageRunner(name, type, processResult, url = '') {
     }
 }
 
+def githubStatus(name, status, description, url='') {
+  commitId = sh(returnStdout: true, script: 'git rev-parse HEAD')
+  context = 'ci/ozone/' + name
+  if (url) {
+    githubNotify account: 'apache', context: context, credentialsId: 'github-pr-ozone', description: description, repo: 'hadoop', sha: commitId, status: status, targetUrl: url
+  } else {
+    githubNotify account: 'apache', context: context, credentialsId: 'github-pr-ozone', description: description, repo: 'hadoop', sha: commitId, status: status
+  }
+}
 def prStatusStart(name) {
-    if (env.CHANGE_ID) {
-        pullRequest.createStatus(status: "pending",
-                context: 'continuous-integration/jenkins/pr-merge/' + name,
-                description: name + " is started")
-    }
+       githubStatus(name,
+                     "PENDING",
+                     name + " is started")
+
+
 }
 
 def prStatusResult(responseCode, name, url = '') {
-    status = "error"
+    status = "ERROR"
     desc = "failed"
     if (responseCode == 0) {
-        status = "success"
+        status = "SUCCESS"
         desc = "passed"
     }
-    message = name + " is " + desc
-    //System.out.println(responseCode)
-    if (env.CHANGE_ID) {
+    message = name + " check is " + desc
         if (url) {
-            pullRequest.createStatus(status: status,
-                    context: 'continuous-integration/jenkins/pr-merge/' + name,
-                    description: message,
-                    targetUrl: env.BUILD_URL + url)
+            githubStatus(name,
+                          status,
+                          message,
+                          env.BUILD_URL + url)
         } else {
-            pullRequest.createStatus(status: status,
-                    context: 'continuous-integration/jenkins/pr-merge/' + name,
-                    description: message)
+            githubStatus(name,
+                          status,
+                          message)
         }
-    }
+
     if (responseCode != 0) {
         throw new RuntimeException(message)
     }

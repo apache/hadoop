@@ -17,8 +17,6 @@
 
 package org.apache.hadoop.ozone.client.io;
 
-import org.apache.hadoop.hdds.scm.storage.BlockInputStream;
-
 import java.io.IOException;
 import java.io.InputStream;
 

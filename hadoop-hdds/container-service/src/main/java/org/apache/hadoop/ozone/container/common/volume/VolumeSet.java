@@ -18,33 +18,6 @@
 
 package org.apache.hadoop.ozone.container.common.volume;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.apache.curator.shaded.com.google.common.collect.ImmutableSet;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.StorageType;
-
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_DATANODE_DIR_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
-import static org.apache.hadoop.util.RunJar.SHUTDOWN_HOOK_PRIORITY;
-
-import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
-import org.apache.hadoop.ozone.common.InconsistentStorageStateException;
-import org.apache.hadoop.ozone.container.common.impl.StorageLocationReport;
-import org.apache.hadoop.ozone.container.common.utils.HddsVolumeUtil;
-import org.apache.hadoop.ozone.container.common.volume.HddsVolume.VolumeState;
-import org.apache.hadoop.util.DiskChecker;
-import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
-import org.apache.hadoop.util.ShutdownHookManager;
-import org.apache.hadoop.util.Timer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -53,13 +26,34 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.NodeReportProto;
+import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.ozone.common.InconsistentStorageStateException;
+import org.apache.hadoop.ozone.container.common.impl.StorageLocationReport;
+import org.apache.hadoop.ozone.container.common.utils.HddsVolumeUtil;
+import org.apache.hadoop.ozone.container.common.volume.HddsVolume.VolumeState;
+import org.apache.hadoop.util.DiskChecker;
+import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
+import org.apache.hadoop.util.ShutdownHookManager;
+import org.apache.hadoop.util.Timer;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_DATANODE_DIR_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.apache.hadoop.util.RunJar.SHUTDOWN_HOOK_PRIORITY;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * VolumeSet to manage HDDS volumes in a DataNode.
@@ -91,8 +85,8 @@ public class VolumeSet {
   /**
    * An executor for periodic disk checks.
    */
-  final ScheduledExecutorService diskCheckerservice;
-  final ScheduledFuture<?> periodicDiskChecker;
+  private final ScheduledExecutorService diskCheckerservice;
+  private final ScheduledFuture<?> periodicDiskChecker;
 
   private static final long DISK_CHECK_INTERVAL_MINUTES = 15;
 
@@ -125,21 +119,21 @@ public class VolumeSet {
     this.diskCheckerservice = Executors.newScheduledThreadPool(
         1, r -> new Thread(r, "Periodic HDDS volume checker"));
     this.periodicDiskChecker =
-        diskCheckerservice.scheduleWithFixedDelay(() -> {
-            try {
-              checkAllVolumes();
-            } catch (IOException e) {
-              LOG.warn("Exception while checking disks", e);
-            }
-          }, DISK_CHECK_INTERVAL_MINUTES, DISK_CHECK_INTERVAL_MINUTES,
-              TimeUnit.MINUTES);
+      diskCheckerservice.scheduleWithFixedDelay(() -> {
+        try {
+          checkAllVolumes();
+        } catch (IOException e) {
+          LOG.warn("Exception while checking disks", e);
+        }
+      }, DISK_CHECK_INTERVAL_MINUTES, DISK_CHECK_INTERVAL_MINUTES,
+        TimeUnit.MINUTES);
     initializeVolumeSet();
   }
 
   @VisibleForTesting
-  HddsVolumeChecker getVolumeChecker(Configuration conf)
+  HddsVolumeChecker getVolumeChecker(Configuration configuration)
       throws DiskChecker.DiskErrorException {
-    return new HddsVolumeChecker(conf, new Timer());
+    return new HddsVolumeChecker(configuration, new Timer());
   }
 
   /**

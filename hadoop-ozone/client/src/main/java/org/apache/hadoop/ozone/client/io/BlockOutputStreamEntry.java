@@ -17,24 +17,28 @@
  */
 package org.apache.hadoop.ozone.client.io;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.util.List;
+
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
+<<<<<<< HEAD
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
+=======
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+>>>>>>> HDDS-1103.Fix rat/findbug/checkstyle errors in ozone/hdds projects.
 import org.apache.hadoop.hdds.scm.storage.BlockOutputStream;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
 import org.apache.hadoop.ozone.common.Checksum;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.util.List;
-
 /**
  * Helper class used inside {@link BlockOutputStream}.
  * */
-public class BlockOutputStreamEntry extends OutputStream {
+public final class BlockOutputStreamEntry extends OutputStream {
 
   private OutputStream outputStream;
   private BlockID blockID;
@@ -55,6 +59,7 @@ public class BlockOutputStreamEntry extends OutputStream {
   private final long watchTimeout;
   private List<ByteBuffer> bufferList;
 
+  @SuppressWarnings("parameternumber")
   private BlockOutputStreamEntry(BlockID blockID, String key,
       XceiverClientManager xceiverClientManager,
       XceiverClientSpi xceiverClient, String requestId, int chunkSize,
@@ -154,56 +159,55 @@ public class BlockOutputStreamEntry extends OutputStream {
       this.outputStream.close();
       // after closing the chunkOutPutStream, blockId would have been
       // reconstructed with updated bcsId
-      if (this.outputStream instanceof BlockOutputStream) {
-        this.blockID = ((BlockOutputStream) outputStream).getBlockID();
-      }
+      this.blockID = ((BlockOutputStream) outputStream).getBlockID();
     }
   }
 
   long getTotalSuccessfulFlushedData() throws IOException {
-    if (this.outputStream instanceof BlockOutputStream) {
+    if (outputStream != null) {
       BlockOutputStream out = (BlockOutputStream) this.outputStream;
       blockID = out.getBlockID();
       return out.getTotalSuccessfulFlushedData();
-    } else if (outputStream == null) {
-        // For a pre allocated block for which no write has been initiated,
-        // the OutputStream will be null here.
-        // In such cases, the default blockCommitSequenceId will be 0
-        return 0;
-    }
-    throw new IOException("Invalid Output Stream for Key: " + key);
-  }
-
-  long getWrittenDataLength() throws IOException {
-    if (this.outputStream instanceof BlockOutputStream) {
-      BlockOutputStream out = (BlockOutputStream) this.outputStream;
-      return out.getWrittenDataLength();
-    } else if (outputStream == null) {
+    } else {
       // For a pre allocated block for which no write has been initiated,
       // the OutputStream will be null here.
       // In such cases, the default blockCommitSequenceId will be 0
       return 0;
     }
-    throw new IOException("Invalid Output Stream for Key: " + key);
+  }
+
+  long getWrittenDataLength() throws IOException {
+    if (outputStream != null) {
+      BlockOutputStream out = (BlockOutputStream) this.outputStream;
+      return out.getWrittenDataLength();
+    } else {
+      // For a pre allocated block for which no write has been initiated,
+      // the OutputStream will be null here.
+      // In such cases, the default blockCommitSequenceId will be 0
+      return 0;
+    }
   }
 
   void cleanup() throws IOException{
     checkStream();
+<<<<<<< HEAD
     if (this.outputStream instanceof BlockOutputStream) {
       BlockOutputStream out = (BlockOutputStream) this.outputStream;
       out.cleanup();
     }
+=======
+    BlockOutputStream out = (BlockOutputStream) this.outputStream;
+    out.cleanup(invalidateClient);
+
+>>>>>>> HDDS-1103.Fix rat/findbug/checkstyle errors in ozone/hdds projects.
   }
 
   void writeOnRetry(long len) throws IOException {
     checkStream();
-    if (this.outputStream instanceof BlockOutputStream) {
-      BlockOutputStream out = (BlockOutputStream) this.outputStream;
-      out.writeOnRetry(len);
-      this.currentPosition += len;
-    } else {
-      throw new IOException("Invalid Output Stream for Key: " + key);
-    }
+    BlockOutputStream out = (BlockOutputStream) this.outputStream;
+    out.writeOnRetry(len);
+    this.currentPosition += len;
+
   }
 
   /**
@@ -246,8 +250,13 @@ public class BlockOutputStreamEntry extends OutputStream {
       return this;
     }
 
+<<<<<<< HEAD
     public Builder setXceiverClient(XceiverClientSpi client) {
       this.xceiverClient = client;
+=======
+    public Builder setPipeline(Pipeline ppln) {
+      this.pipeline = ppln;
+>>>>>>> HDDS-1103.Fix rat/findbug/checkstyle errors in ozone/hdds projects.
       return this;
     }
 
@@ -281,8 +290,8 @@ public class BlockOutputStreamEntry extends OutputStream {
       return this;
     }
 
-    public Builder setBufferList(List<ByteBuffer> bufferList) {
-      this.bufferList = bufferList;
+    public Builder setBufferList(List<ByteBuffer> bffrLst) {
+      this.bufferList = bffrLst;
       return this;
     }
 

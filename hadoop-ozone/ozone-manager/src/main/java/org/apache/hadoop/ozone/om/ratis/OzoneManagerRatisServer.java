@@ -176,6 +176,8 @@ public final class OzoneManagerRatisServer {
     }
   }
 
+  //TODO simplify it to make it shorter
+  @SuppressWarnings("methodlength")
   private RaftProperties newRaftProperties(Configuration conf) {
     final RaftProperties properties = new RaftProperties();
 

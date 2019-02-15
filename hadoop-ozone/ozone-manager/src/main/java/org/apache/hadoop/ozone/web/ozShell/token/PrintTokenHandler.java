@@ -25,6 +25,7 @@ import org.apache.hadoop.security.token.Token;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -58,7 +59,8 @@ public class PrintTokenHandler extends Handler {
       return null;
     }
 
-    String encodedToken = new String(Files.readAllBytes(Paths.get(tokenFile)));
+    String encodedToken = new String(Files.readAllBytes(Paths.get(tokenFile)),
+        StandardCharsets.UTF_8);
     Token token = new Token();
     token.decodeFromUrlString(encodedToken);
 

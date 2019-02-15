@@ -22,9 +22,8 @@ touch "$FINDBUGS_ALL_FILE"
 
 mvn -fn findbugs:check -Dfindbugs.failOnError=false  -am -pl :hadoop-ozone-dist -Phdds
 
-find hadoop-ozone -name findbugsXml.xml | xargs -n1 convertXmlToText >> "${FINDBUGS_ALL_FILE}"
-find hadoop-hdds -name findbugsXml.xml | xargs -n1 convertXmlToText >> "${FINDBUGS_ALL_FILE}"
-
+find hadoop-ozone -name findbugsXml.xml | xargs -n1 convertXmlToText | tee -a "${FINDBUGS_ALL_FILE}"
+find hadoop-hdds -name findbugsXml.xml | xargs -n1 convertXmlToText | tee -a "${FINDBUGS_ALL_FILE}"
 
 bugs=$(cat "$FINDBUGS_ALL_FILE" | wc -l)
 

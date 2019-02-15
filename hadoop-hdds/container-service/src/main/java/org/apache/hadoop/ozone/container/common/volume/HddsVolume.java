@@ -66,6 +66,7 @@ import java.util.UUID;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+@SuppressWarnings("finalclass")
 public class HddsVolume
     implements Checkable<Boolean, VolumeCheckResult> {
 

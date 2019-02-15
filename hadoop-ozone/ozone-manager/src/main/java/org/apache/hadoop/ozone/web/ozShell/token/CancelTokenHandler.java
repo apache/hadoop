@@ -26,6 +26,7 @@ import org.apache.hadoop.security.token.Token;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -63,7 +64,8 @@ public class CancelTokenHandler extends Handler {
     }
     Token token = new Token();
     token.decodeFromUrlString(
-        new String(Files.readAllBytes(Paths.get(tokenFile))));
+        new String(Files.readAllBytes(Paths.get(tokenFile)),
+            StandardCharsets.UTF_8));
     client.getObjectStore().cancelDelegationToken(token);
     return null;
   }

@@ -65,8 +65,9 @@ public interface CertificateServer {
    * approved.
    * @throws SCMSecurityException - on Error.
    */
-  Future<X509CertificateHolder>
-      requestCertificate(PKCS10CertificationRequest csr, CertificateApprover.ApprovalType type)
+  Future<X509CertificateHolder> requestCertificate(
+      PKCS10CertificationRequest csr,
+      CertificateApprover.ApprovalType type)
       throws SCMSecurityException;
 
 

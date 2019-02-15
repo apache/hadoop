@@ -90,10 +90,8 @@ public class OMCertificateClient extends DefaultCertificateClient {
         return FAILURE;
       }
     default:
-      LOG.error("Unexpected case: {}, Private key:{} , " +
-              "public key:{}, certificate:{}", init,
-          ((init.ordinal() & 1 << 2) == 1), ((init.ordinal() & 1 << 1) == 1),
-          ((init.ordinal() & 1 << 0) == 1));
+      LOG.error("Unexpected case: {} (private/public/cert)",
+          Integer.toBinaryString(init.ordinal()));
       return FAILURE;
     }
   }
