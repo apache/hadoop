@@ -255,11 +255,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     // Load HA related configurations
     loadOMHAConfigs(configuration);
 
-    // Authenticate KSM if security is enabled
-    if (securityEnabled) {
-      loginOMUser(configuration);
-    }
-
     if (!testSecureOmFlag || !isOzoneSecurityEnabled()) {
       scmContainerClient = getScmContainerClient(configuration);
       // verifies that the SCM info in the OM Version file is correct.
@@ -652,7 +647,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    * @param  conf
    * @throws IOException, AuthenticationException
    */
-  private void loginOMUser(OzoneConfiguration conf)
+  private static void loginOMUser(OzoneConfiguration conf)
       throws IOException, AuthenticationException {
 
     if (SecurityUtil.getAuthenticationMethod(conf).equals(
@@ -833,6 +828,9 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
 
     securityEnabled = OzoneSecurityUtil.isSecurityEnabled(conf);
+    if (securityEnabled) {
+      loginOMUser(conf);
+    }
 
     switch (startOpt) {
     case INIT:
