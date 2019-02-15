@@ -109,4 +109,4 @@ Run ozoneFS tests
                         Execute               ls -l GET.txt
     ${rc}  ${result} =  Run And Return Rc And Output        ozone fs -ls o3fs://abcde.pqrs/
                         Should Be Equal As Integers     ${rc}                1
-                        Should contain    ${result}         VOLUME_NOT_FOUND
+                        Should contain    ${result}         not found

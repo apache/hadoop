@@ -51,17 +51,14 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.BucketA
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.BucketInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CancelDelegationTokenResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CheckVolumeAccessRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CheckVolumeAccessResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CommitKeyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateBucketRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateBucketResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateKeyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateKeyResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateVolumeRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteBucketRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteKeyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteVolumeRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteVolumeResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetDelegationTokenResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetS3SecretRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetS3SecretResponse;
@@ -101,7 +98,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3ListB
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServiceListRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServiceListResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetBucketPropertyRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetBucketPropertyResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetVolumePropertyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeInfo;
@@ -296,9 +292,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setCheckVolumeAccessRequest(req)
         .build();
 
-    OMResponse omResponse = submitRequest(omRequest);
-    CheckVolumeAccessResponse resp = omResponse
-        .getCheckVolumeAccessResponse();
+    OMResponse omResponse = handleError(submitRequest(omRequest));
 
     if (omResponse.getStatus() == ACCESS_DENIED) {
       return false;
@@ -348,8 +342,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setDeleteVolumeRequest(req)
         .build();
 
-    DeleteVolumeResponse resp = handleError(submitRequest(omRequest))
-        .getDeleteVolumeResponse();
+    handleError(submitRequest(omRequest));
 
   }
 
@@ -440,8 +433,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setCreateBucketRequest(req)
         .build();
 
-    CreateBucketResponse resp = handleError(submitRequest(omRequest))
-        .getCreateBucketResponse();
+    handleError(submitRequest(omRequest));
 
   }
 
@@ -488,8 +480,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setSetBucketPropertyRequest(req)
         .build();
 
-    SetBucketPropertyResponse resp = handleError(submitRequest(omRequest))
-        .getSetBucketPropertyResponse();
+    handleError(submitRequest(omRequest));
 
   }
 
@@ -1108,9 +1099,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
 
     final CancelDelegationTokenResponseProto resp;
     try {
-      resp = handleError(submitRequest(omRequest))
-          .getCancelDelegationTokenResponse();
-      return;
+      handleError(submitRequest(omRequest));
     } catch (IOException e) {
       if(e instanceof OMException) {
         throw (OMException)e;
