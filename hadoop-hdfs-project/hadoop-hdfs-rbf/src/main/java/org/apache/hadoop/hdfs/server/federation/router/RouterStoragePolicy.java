@@ -50,7 +50,11 @@ public class RouterStoragePolicy {
         new Class<?>[] {String.class, String.class},
         new RemoteParam(),
         policyName);
-    rpcClient.invokeSequential(locations, method, null, null);
+    if (rpcServer.isInvokeConcurrent(src)) {
+      rpcClient.invokeConcurrent(locations, method);
+    } else {
+      rpcClient.invokeSequential(locations, method);
+    }
   }
 
   public BlockStoragePolicy[] getStoragePolicies() throws IOException {
@@ -67,7 +71,11 @@ public class RouterStoragePolicy {
     RemoteMethod method = new RemoteMethod("unsetStoragePolicy",
         new Class<?>[] {String.class},
         new RemoteParam());
-    rpcClient.invokeSequential(locations, method);
+    if (rpcServer.isInvokeConcurrent(src)) {
+      rpcClient.invokeConcurrent(locations, method);
+    } else {
+      rpcClient.invokeSequential(locations, method);
+    }
   }
 
   public BlockStoragePolicy getStoragePolicy(String path)

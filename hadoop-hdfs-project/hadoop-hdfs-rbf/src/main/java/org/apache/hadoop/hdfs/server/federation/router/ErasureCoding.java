@@ -157,7 +157,11 @@ public class ErasureCoding {
     RemoteMethod remoteMethod = new RemoteMethod("setErasureCodingPolicy",
         new Class<?>[] {String.class, String.class},
         new RemoteParam(), ecPolicyName);
-    rpcClient.invokeSequential(locations, remoteMethod, null, null);
+    if (rpcServer.isInvokeConcurrent(src)) {
+      rpcClient.invokeConcurrent(locations, remoteMethod);
+    } else {
+      rpcClient.invokeSequential(locations, remoteMethod);
+    }
   }
 
   public void unsetErasureCodingPolicy(String src) throws IOException {
@@ -167,7 +171,11 @@ public class ErasureCoding {
         rpcServer.getLocationsForPath(src, true);
     RemoteMethod remoteMethod = new RemoteMethod("unsetErasureCodingPolicy",
         new Class<?>[] {String.class}, new RemoteParam());
-    rpcClient.invokeSequential(locations, remoteMethod, null, null);
+    if (rpcServer.isInvokeConcurrent(src)) {
+      rpcClient.invokeConcurrent(locations, remoteMethod);
+    } else {
+      rpcClient.invokeSequential(locations, remoteMethod);
+    }
   }
 
   public ECBlockGroupStats getECBlockGroupStats() throws IOException {
