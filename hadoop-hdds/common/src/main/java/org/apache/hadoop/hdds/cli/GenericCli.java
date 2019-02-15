@@ -61,10 +61,11 @@ public class GenericCli implements Callable<Void>, GenericParentCommand {
     cmd.parseWithHandler(new RunLast(), argv);
   }
 
-  private void printError(Throwable error) {
+  protected void printError(Throwable error) {
     //message could be null in case of NPE. This is unexpected so we can
     //print out the stack trace.
-    if (verbose || error.getMessage() == null) {
+    if (verbose || error.getMessage() == null
+        || error.getMessage().length() == 0) {
       error.printStackTrace(System.err);
     } else {
       System.err.println(error.getMessage().split("\n")[0]);

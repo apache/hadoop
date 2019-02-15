@@ -53,17 +53,13 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CancelD
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CheckVolumeAccessRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CheckVolumeAccessResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CommitKeyRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CommitKeyResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateBucketRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateBucketResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateKeyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateKeyResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateVolumeRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateVolumeResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteBucketRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteBucketResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteKeyRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteKeyResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteVolumeRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteVolumeResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetDelegationTokenResponseProto;
@@ -87,7 +83,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Multipa
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartInfoInitiateRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartInfoInitiateResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartUploadAbortRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartUploadAbortResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartUploadCompleteRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartUploadCompleteResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartUploadListPartsRequest;
@@ -96,14 +91,11 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMReque
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.RenameKeyRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.RenameKeyResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.RenewDelegationTokenResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3BucketInfoRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3BucketInfoResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3CreateBucketRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3CreateBucketResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3DeleteBucketRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3DeleteBucketResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3ListBucketsRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3ListBucketsResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServiceListRequest;
@@ -111,8 +103,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Service
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetBucketPropertyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetBucketPropertyResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetVolumePropertyRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetVolumePropertyResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeInfo;
 import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
@@ -130,9 +120,9 @@ import io.opentracing.Scope;
 import io.opentracing.util.GlobalTracer;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_ERROR_OTHER;
-import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.UNKNOWN;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status.ACCESS_DENIED;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status.OK;
+
 
 
 /**
@@ -240,13 +230,8 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setCreateVolumeRequest(req)
         .build();
 
-    CreateVolumeResponse resp = submitRequest(omRequest)
-        .getCreateVolumeResponse();
-
-    if (resp.getStatus() != OK) {
-      throw new
-          IOException("Volume creation failed, error:" + resp.getStatus());
-    }
+    OMResponse omResponse = submitRequest(omRequest);
+    handleError(omResponse);
   }
 
   /**
@@ -266,13 +251,8 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setSetVolumePropertyRequest(req)
         .build();
 
-    SetVolumePropertyResponse resp = submitRequest(omRequest)
-        .getSetVolumePropertyResponse();
-
-    if (resp.getStatus() != OK) {
-      throw new
-          IOException("Volume owner change failed, error:" + resp.getStatus());
-    }
+    OMResponse omResponse = submitRequest(omRequest);
+    handleError(omResponse);
   }
 
   /**
@@ -292,13 +272,8 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setSetVolumePropertyRequest(req)
         .build();
 
-    SetVolumePropertyResponse resp = submitRequest(omRequest)
-        .getSetVolumePropertyResponse();
-
-    if (resp.getStatus() != OK) {
-      throw new
-          IOException("Volume quota change failed, error:" + resp.getStatus());
-    }
+    OMResponse omResponse = submitRequest(omRequest);
+    handleError(omResponse);
   }
 
   /**
@@ -321,16 +296,17 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setCheckVolumeAccessRequest(req)
         .build();
 
-    CheckVolumeAccessResponse resp = submitRequest(omRequest)
+    OMResponse omResponse = submitRequest(omRequest);
+    CheckVolumeAccessResponse resp = omResponse
         .getCheckVolumeAccessResponse();
 
-    if (resp.getStatus() == ACCESS_DENIED) {
+    if (omResponse.getStatus() == ACCESS_DENIED) {
       return false;
-    } else if (resp.getStatus() == OK) {
+    } else if (omResponse.getStatus() == OK) {
       return true;
     } else {
-      throw new
-          IOException("Check Volume Access failed, error:" + resp.getStatus());
+      handleError(omResponse);
+      return false;
     }
   }
 
@@ -350,12 +326,10 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setInfoVolumeRequest(req)
         .build();
 
-    InfoVolumeResponse resp = submitRequest(omRequest).getInfoVolumeResponse();
+    InfoVolumeResponse resp =
+        handleError(submitRequest(omRequest)).getInfoVolumeResponse();
 
-    if (resp.getStatus() != OK) {
-      throw new
-          IOException("Info Volume failed, error:" + resp.getStatus());
-    }
+
     return OmVolumeArgs.getFromProtobuf(resp.getVolumeInfo());
   }
 
@@ -374,13 +348,9 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setDeleteVolumeRequest(req)
         .build();
 
-    DeleteVolumeResponse resp = submitRequest(omRequest)
+    DeleteVolumeResponse resp = handleError(submitRequest(omRequest))
         .getDeleteVolumeResponse();
 
-    if (resp.getStatus() != OK) {
-      throw new
-          IOException("Delete Volume failed, error:" + resp.getStatus());
-    }
   }
 
   /**
@@ -443,12 +413,10 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setListVolumeRequest(request)
         .build();
 
-    ListVolumeResponse resp = submitRequest(omRequest).getListVolumeResponse();
+    ListVolumeResponse resp =
+        handleError(submitRequest(omRequest)).getListVolumeResponse();
 
-    if (resp.getStatus() != OK) {
-      throw new IOException("List volume failed, error: "
-          + resp.getStatus());
-    }
+
 
     return resp.getVolumeInfoList().stream()
         .map(item -> OmVolumeArgs.getFromProtobuf(item))
@@ -472,13 +440,9 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setCreateBucketRequest(req)
         .build();
 
-    CreateBucketResponse resp = submitRequest(omRequest)
+    CreateBucketResponse resp = handleError(submitRequest(omRequest))
         .getCreateBucketResponse();
 
-    if (resp.getStatus() != OK) {
-      throw new IOException("Bucket creation failed, error: "
-          + resp.getStatus());
-    }
   }
 
   /**
@@ -501,14 +465,10 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setInfoBucketRequest(req)
         .build();
 
-    InfoBucketResponse resp = submitRequest(omRequest).getInfoBucketResponse();
+    InfoBucketResponse resp =
+        handleError(submitRequest(omRequest)).getInfoBucketResponse();
 
-    if (resp.getStatus() == OK) {
-      return OmBucketInfo.getFromProtobuf(resp.getBucketInfo());
-    } else {
-      throw new IOException("Info Bucket failed, error: "
-          + resp.getStatus());
-    }
+    return OmBucketInfo.getFromProtobuf(resp.getBucketInfo());
   }
 
   /**
@@ -528,13 +488,9 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setSetBucketPropertyRequest(req)
         .build();
 
-    SetBucketPropertyResponse resp = submitRequest(omRequest)
+    SetBucketPropertyResponse resp = handleError(submitRequest(omRequest))
         .getSetBucketPropertyResponse();
 
-    if (resp.getStatus() != OK) {
-      throw new IOException("Setting bucket property failed, error: "
-          + resp.getStatus());
-    }
   }
 
   /**
@@ -566,19 +522,15 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setListBucketsRequest(request)
         .build();
 
-    ListBucketsResponse resp = submitRequest(omRequest)
+    ListBucketsResponse resp = handleError(submitRequest(omRequest))
         .getListBucketsResponse();
 
-    if (resp.getStatus() == OK) {
-      buckets.addAll(
+    buckets.addAll(
           resp.getBucketInfoList().stream()
               .map(OmBucketInfo::getFromProtobuf)
               .collect(Collectors.toList()));
-      return buckets;
-    } else {
-      throw new IOException("List Buckets failed, error: "
-          + resp.getStatus());
-    }
+    return buckets;
+
   }
 
   /**
@@ -630,13 +582,19 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setCreateKeyRequest(req)
         .build();
 
-    CreateKeyResponse resp = submitRequest(omRequest).getCreateKeyResponse();
+    CreateKeyResponse keyResponse =
+        handleError(submitRequest(omRequest)).getCreateKeyResponse();
+    return new OpenKeySession(keyResponse.getID(),
+        OmKeyInfo.getFromProtobuf(keyResponse.getKeyInfo()),
+        keyResponse.getOpenVersion());
+  }
 
+  private OMResponse handleError(OMResponse resp) throws OMException {
     if (resp.getStatus() != OK) {
-      throw new IOException("Create key failed, error:" + resp.getStatus());
+      throw new OMException(resp.getMessage(),
+          ResultCodes.values()[resp.getStatus().ordinal()]);
     }
-    return new OpenKeySession(resp.getID(),
-        OmKeyInfo.getFromProtobuf(resp.getKeyInfo()), resp.getOpenVersion());
+    return resp;
   }
 
   @Override
@@ -655,13 +613,8 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setAllocateBlockRequest(req)
         .build();
 
-    AllocateBlockResponse resp = submitRequest(omRequest)
+    AllocateBlockResponse resp = handleError(submitRequest(omRequest))
         .getAllocateBlockResponse();
-
-    if (resp.getStatus() != OK) {
-      throw new IOException("Allocate block failed, error:" +
-          resp.getStatus());
-    }
     return OmKeyLocationInfo.getFromProtobuf(resp.getKeyLocation());
   }
 
@@ -686,12 +639,9 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setCommitKeyRequest(req)
         .build();
 
-    CommitKeyResponse resp = submitRequest(omRequest).getCommitKeyResponse();
+    handleError(submitRequest(omRequest));
 
-    if (resp.getStatus() != OK) {
-      throw new IOException("Commit key failed, error:" +
-          resp.getStatus());
-    }
+
   }
 
 
@@ -709,12 +659,9 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setLookupKeyRequest(req)
         .build();
 
-    LookupKeyResponse resp = submitRequest(omRequest).getLookupKeyResponse();
+    LookupKeyResponse resp =
+        handleError(submitRequest(omRequest)).getLookupKeyResponse();
 
-    if (resp.getStatus() != OK) {
-      throw new IOException("Lookup key failed, error:" +
-          resp.getStatus());
-    }
     return OmKeyInfo.getFromProtobuf(resp.getKeyInfo());
   }
 
@@ -733,12 +680,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setRenameKeyRequest(req)
         .build();
 
-    RenameKeyResponse resp = submitRequest(omRequest).getRenameKeyResponse();
-
-    if (resp.getStatus() != OK) {
-      throw new IOException("Rename key failed, error:" +
-          resp.getStatus());
-    }
+    handleError(submitRequest(omRequest));
   }
 
   /**
@@ -760,12 +702,8 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setDeleteKeyRequest(req)
         .build();
 
-    DeleteKeyResponse resp = submitRequest(omRequest).getDeleteKeyResponse();
+    handleError(submitRequest(omRequest));
 
-    if (resp.getStatus() != OK) {
-      throw new IOException("Delete key failed, error:" +
-          resp.getStatus());
-    }
   }
 
   /**
@@ -783,13 +721,8 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setDeleteBucketRequest(req)
         .build();
 
-    DeleteBucketResponse resp = submitRequest(omRequest)
-        .getDeleteBucketResponse();
+    handleError(submitRequest(omRequest));
 
-    if (resp.getStatus() != OK) {
-      throw new
-          IOException("Delete Bucket failed, error:" + resp.getStatus());
-    }
   }
 
   /**
@@ -818,18 +751,14 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setListKeysRequest(req)
         .build();
 
-    ListKeysResponse resp = submitRequest(omRequest).getListKeysResponse();
+    ListKeysResponse resp =
+        handleError(submitRequest(omRequest)).getListKeysResponse();
+    keys.addAll(
+        resp.getKeyInfoList().stream()
+            .map(OmKeyInfo::getFromProtobuf)
+            .collect(Collectors.toList()));
+    return keys;
 
-    if (resp.getStatus() == OK) {
-      keys.addAll(
-          resp.getKeyInfoList().stream()
-              .map(OmKeyInfo::getFromProtobuf)
-              .collect(Collectors.toList()));
-      return keys;
-    } else {
-      throw new IOException("List Keys failed, error: "
-          + resp.getStatus());
-    }
   }
 
   @Override
@@ -844,13 +773,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setCreateS3BucketRequest(req)
         .build();
 
-    S3CreateBucketResponse resp = submitRequest(omRequest)
-        .getCreateS3BucketResponse();
-
-    if(resp.getStatus() != OK) {
-      throw new IOException("Creating S3 bucket failed, error: "
-          + resp.getStatus());
-    }
+    handleError(submitRequest(omRequest));
 
   }
 
@@ -864,13 +787,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setDeleteS3BucketRequest(request)
         .build();
 
-    S3DeleteBucketResponse resp = submitRequest(omRequest)
-        .getDeleteS3BucketResponse();
-
-    if(resp.getStatus() != OK) {
-      throw new IOException("Creating S3 bucket failed, error: "
-          + resp.getStatus());
-    }
+    handleError(submitRequest(omRequest));
 
   }
 
@@ -885,13 +802,8 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setInfoS3BucketRequest(request)
         .build();
 
-    S3BucketInfoResponse resp = submitRequest(omRequest)
+    S3BucketInfoResponse resp = handleError(submitRequest(omRequest))
         .getInfoS3BucketResponse();
-
-    if(resp.getStatus() != OK) {
-      throw new IOException("GetOzoneBucketMapping failed, error:" + resp
-          .getStatus());
-    }
     return resp.getOzoneMapping();
   }
 
@@ -915,19 +827,15 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setListS3BucketsRequest(request)
         .build();
 
-    S3ListBucketsResponse resp = submitRequest(omRequest)
+    S3ListBucketsResponse resp = handleError(submitRequest(omRequest))
         .getListS3BucketsResponse();
 
-    if (resp.getStatus() == OK) {
-      buckets.addAll(
-          resp.getBucketInfoList().stream()
-              .map(OmBucketInfo::getFromProtobuf)
-              .collect(Collectors.toList()));
-      return buckets;
-    } else {
-      throw new IOException("List S3 Buckets failed, error: "
-          + resp.getStatus());
-    }
+    buckets.addAll(
+        resp.getBucketInfoList().stream()
+            .map(OmBucketInfo::getFromProtobuf)
+            .collect(Collectors.toList()));
+    return buckets;
+
   }
 
   @Override
@@ -938,15 +846,11 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
     OMRequest omRequest = createOMRequest(Type.GetS3Secret)
         .setGetS3SecretRequest(request)
         .build();
-    final GetS3SecretResponse resp = submitRequest(omRequest)
+    final GetS3SecretResponse resp = handleError(submitRequest(omRequest))
         .getGetS3SecretResponse();
 
-    if(resp.getStatus() != OK) {
-      throw new IOException("Fetch S3 Secret failed, error: " +
-          resp.getStatus());
-    } else {
-      return S3SecretValue.fromProtobuf(resp.getS3Secret());
-    }
+    return S3SecretValue.fromProtobuf(resp.getS3Secret());
+
   }
 
   /**
@@ -974,13 +878,9 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setInitiateMultiPartUploadRequest(multipartInfoInitiateRequest.build())
         .build();
 
-    MultipartInfoInitiateResponse resp = submitRequest(omRequest)
+    MultipartInfoInitiateResponse resp = handleError(submitRequest(omRequest))
         .getInitiateMultiPartUploadResponse();
 
-    if (resp.getStatus() != OK) {
-      throw new IOException("Initiate Multipart upload failed, error:" + resp
-          .getStatus());
-    }
     return new OmMultipartInfo(resp.getVolumeName(), resp.getBucketName(), resp
         .getKeyName(), resp.getMultipartUploadID());
   }
@@ -1016,13 +916,9 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
             .build())
         .build();
 
-    MultipartCommitUploadPartResponse response = submitRequest(omRequest)
+    MultipartCommitUploadPartResponse response =
+        handleError(submitRequest(omRequest))
         .getCommitMultiPartUploadResponse();
-
-    if (response.getStatus() != OK) {
-      throw new IOException("Commit multipart upload part key failed, error:"
-          + response.getStatus());
-    }
 
     OmMultipartCommitUploadPartInfo info = new
         OmMultipartCommitUploadPartInfo(response.getPartName());
@@ -1051,13 +947,9 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setCompleteMultiPartUploadRequest(
             multipartUploadCompleteRequest.build()).build();
 
-    MultipartUploadCompleteResponse response = submitRequest(omRequest)
+    MultipartUploadCompleteResponse response =
+        handleError(submitRequest(omRequest))
         .getCompleteMultiPartUploadResponse();
-
-    if (response.getStatus() != OK) {
-      throw new IOException("Complete multipart upload failed, error:" +
-          response.getStatus());
-    }
 
     OmMultipartUploadCompleteInfo info = new
         OmMultipartUploadCompleteInfo(response.getVolume(), response
@@ -1082,13 +974,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setAbortMultiPartUploadRequest(multipartUploadAbortRequest.build())
         .build();
 
-    MultipartUploadAbortResponse response =
-        submitRequest(omRequest).getAbortMultiPartUploadResponse();
-
-    if (response.getStatus() != OK) {
-      throw new IOException("Abort multipart upload failed, error:" +
-          response.getStatus());
-    }
+    handleError(submitRequest(omRequest));
 
   }
 
@@ -1107,12 +993,9 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
             multipartUploadListPartsRequest.build()).build();
 
     MultipartUploadListPartsResponse response =
-        submitRequest(omRequest).getListMultipartUploadPartsResponse();
+        handleError(submitRequest(omRequest))
+            .getListMultipartUploadPartsResponse();
 
-    if (response.getStatus() != Status.OK) {
-      throw new IOException("List Multipart upload parts failed, error: " +
-          response.getStatus());
-    }
 
     OmMultipartUploadListParts omMultipartUploadListParts =
         new OmMultipartUploadListParts(response.getType(),
@@ -1130,17 +1013,13 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setServiceListRequest(req)
         .build();
 
-    final ServiceListResponse resp = submitRequest(omRequest)
+    final ServiceListResponse resp = handleError(submitRequest(omRequest))
         .getServiceListResponse();
 
-    if (resp.getStatus() == OK) {
-      return resp.getServiceInfoList().stream()
+    return resp.getServiceInfoList().stream()
           .map(ServiceInfo::getFromProtobuf)
           .collect(Collectors.toList());
-    } else {
-      throw new IOException("Getting service list failed, error: "
-          + resp.getStatus());
-    }
+
   }
 
   /**
@@ -1164,15 +1043,11 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
 
     final GetDelegationTokenResponseProto resp;
     try {
-      resp = submitRequest(omRequest).getGetDelegationTokenResponse();
-
-      if (resp.getStatus() == OK) {
-        return resp.getResponse().hasToken() ?
-            OMPBHelper.convertToDelegationToken(resp.getResponse().getToken())
-            : null;
-      }
-      throw new OMException("Get delegation token failed with response:"
-          + resp.getStatus(), toResultStatus(resp.getStatus()));
+      resp =
+          handleError(submitRequest(omRequest)).getGetDelegationTokenResponse();
+      return resp.getResponse().hasToken() ?
+          OMPBHelper.convertToDelegationToken(resp.getResponse().getToken())
+          : null;
     } catch (IOException e) {
       if(e instanceof OMException) {
         throw (OMException)e;
@@ -1202,13 +1077,9 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
 
     final RenewDelegationTokenResponseProto resp;
     try {
-      resp = submitRequest(omRequest)
+      resp = handleError(submitRequest(omRequest))
           .getRenewDelegationTokenResponse();
-      if (resp.getStatus() == OK) {
-        return resp.getResponse().getNewExpiryTime();
-      }
-      throw new OMException("Renew delegation token failed with response:"
-          + resp.getStatus(), toResultStatus(resp.getStatus()));
+      return resp.getResponse().getNewExpiryTime();
     } catch (IOException e) {
       if(e instanceof OMException) {
         throw (OMException)e;
@@ -1237,12 +1108,9 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
 
     final CancelDelegationTokenResponseProto resp;
     try {
-      resp = submitRequest(omRequest).getCancelDelegationTokenResponse();
-      if (resp.getStatus() == OK) {
-        return;
-      }
-      throw new OMException("Cancel delegation token failed with response:"
-          + resp.getStatus(), toResultStatus(resp.getStatus()));
+      resp = handleError(submitRequest(omRequest))
+          .getCancelDelegationTokenResponse();
+      return;
     } catch (IOException e) {
       if(e instanceof OMException) {
         throw (OMException)e;
@@ -1252,23 +1120,4 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
     }
   }
 
-  /**
-   * Converts proto status to OMException result code.
-   *
-   * @param status Proto status received from rpc call.
-   */
-  public ResultCodes toResultStatus(Status status) {
-    switch (status) {
-    case INVALID_AUTH_METHOD:
-      return ResultCodes.INVALID_AUTH_METHOD;
-    case INVALID_TOKEN:
-      return ResultCodes.INVALID_TOKEN;
-    case TOKEN_EXPIRED:
-      return ResultCodes.TOKEN_EXPIRED;
-    case TOKEN_ERROR_OTHER:
-      return TOKEN_ERROR_OTHER;
-    default:
-      return UNKNOWN;
-    }
-  }
 }

@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.web.ozShell;
 import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.web.ozShell.bucket.BucketCommands;
 import org.apache.hadoop.ozone.web.ozShell.keys.KeyCommands;
 import org.apache.hadoop.ozone.web.ozShell.s3.S3Commands;
@@ -92,6 +93,22 @@ public class Shell extends GenericCli {
    */
   public static void main(String[] argv) throws Exception {
     new Shell().run(argv);
+  }
+
+  @Override
+  protected void printError(Throwable errorArg) {
+    if (errorArg instanceof OMException) {
+      if (isVerbose()) {
+        errorArg.printStackTrace(System.err);
+      } else {
+        OMException omException = (OMException) errorArg;
+        System.err.println(String
+            .format("%s %s", omException.getResult().name(),
+                omException.getMessage()));
+      }
+    } else {
+      super.printError(errorArg);
+    }
   }
 }
 
