@@ -30,12 +30,6 @@
     <downloadSources>true</downloadSources>
   </properties>
 
-  <build>
-    <plugins>
-
-    </plugins>
-  </build>
-
   <dependencies>
     <dependency>
       <groupId>javax.xml.bind</groupId>
@@ -185,4 +179,42 @@
       <scope>provided</scope>
     </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-common-html</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>org.apache.hadoop</groupId>
+                  <artifactId>hadoop-hdds-server-framework</artifactId>
+                  <outputDirectory>${project.build.outputDirectory}
+                  </outputDirectory>
+                  <includes>webapps/static/**/*.*</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.apache.hadoop</groupId>
+                  <artifactId>hadoop-hdds-docs</artifactId>
+                  <outputDirectory>
+                    ${project.build.outputDirectory}/webapps/static
+                  </outputDirectory>
+                  <includes>docs/**/*.*</includes>
+                </artifactItem>
+              </artifactItems>
+              <overWriteSnapshots>true</overWriteSnapshots>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>
