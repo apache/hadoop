@@ -319,6 +319,14 @@
     </description>
   </property>
 
+  <property>
+    <name>hdds.profiler.endpoint.enabled</name>
+    <value>false</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>Enable /prof java profiler servlet page on HTTP server.
+    </description>
+  </property>
+
   <!--Ozone Settings-->
   <property>
     <name>ozone.administrators</name>

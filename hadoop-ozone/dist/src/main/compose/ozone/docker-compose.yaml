@@ -18,6 +18,7 @@ version: "3"
 services:
    datanode:
       image: apache/hadoop-runner
+      privileged: true #required by the profiler
       volumes:
         - ../..:/opt/hadoop
       ports:
@@ -27,6 +28,7 @@ services:
         - ./docker-config
    ozoneManager:
       image: apache/hadoop-runner
+      privileged: true #required by the profiler
       volumes:
          - ../..:/opt/hadoop
       ports:
@@ -39,6 +41,7 @@ services:
       command: ["/opt/hadoop/bin/ozone","om"]
    scm:
       image: apache/hadoop-runner
+      privileged: true #required by the profiler
       volumes:
          - ../..:/opt/hadoop
       ports:
