@@ -162,6 +162,18 @@
           </execution>
         </executions>
       </plugin>
+      <!-- there is no problem to have multiple versions of the jar files from
+      here. As the dependencies will be handled in a separated way with
+      separated classpath definitions-->
+      <plugin>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>depcheck</id>
+            <phase></phase>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 
