@@ -267,6 +267,10 @@ public class SCMPipelineManager implements PipelineManager {
 
   @Override
   public void close() throws IOException {
+    if (pipelineFactory != null) {
+      pipelineFactory.close();
+    }
+
     if (pipelineStore != null) {
       pipelineStore.close();
     }
