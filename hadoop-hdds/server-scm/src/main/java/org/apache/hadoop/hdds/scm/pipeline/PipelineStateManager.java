@@ -23,6 +23,8 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline.PipelineState;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
@@ -37,6 +39,9 @@ import java.util.NavigableSet;
  */
 class PipelineStateManager {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(PipelineStateManager.class);
+
   private final PipelineStateMap pipelineStateMap;
 
   PipelineStateManager(Configuration conf) {
@@ -45,6 +50,9 @@ class PipelineStateManager {
 
   void addPipeline(Pipeline pipeline) throws IOException {
     pipelineStateMap.addPipeline(pipeline);
+    if (pipeline.getPipelineState() == PipelineState.OPEN) {
+      LOG.info("Created pipeline " + pipeline);
+    }
   }
 
   void addContainerToPipeline(PipelineID pipelineId, ContainerID containerID)
@@ -87,7 +95,9 @@ class PipelineStateManager {
   }
 
   Pipeline removePipeline(PipelineID pipelineID) throws IOException {
-    return pipelineStateMap.removePipeline(pipelineID);
+    Pipeline pipeline = pipelineStateMap.removePipeline(pipelineID);
+    LOG.info("Pipeline {} removed from db", pipeline);
+    return pipeline;
   }
 
   void removeContainerFromPipeline(PipelineID pipelineID,
@@ -101,6 +111,7 @@ class PipelineStateManager {
     if (!pipeline.isClosed()) {
       pipeline = pipelineStateMap
           .updatePipelineState(pipelineId, PipelineState.CLOSED);
+      LOG.info("Pipeline {} moved to CLOSED state", pipeline);
     }
     return pipeline;
   }
@@ -113,6 +124,7 @@ class PipelineStateManager {
     if (pipeline.getPipelineState() == PipelineState.ALLOCATED) {
       pipeline = pipelineStateMap
           .updatePipelineState(pipelineId, PipelineState.OPEN);
+      LOG.info("Pipeline {} moved to OPEN state", pipeline.toString());
     }
     return pipeline;
   }

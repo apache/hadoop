@@ -84,6 +84,7 @@ public class PipelineReportHandler implements
     }
 
     if (pipeline.getPipelineState() == Pipeline.PipelineState.ALLOCATED) {
+      LOGGER.info("Pipeline {} reported by {}", pipeline.getId(), dn);
       pipeline.reportDatanode(dn);
       if (pipeline.isHealthy()) {
         // if all the dns have reported, pipeline can be moved to OPEN state
@@ -94,6 +95,8 @@ public class PipelineReportHandler implements
       if (numContainers == 0) {
         // since all the containers have been closed the pipeline can be
         // destroyed
+        LOGGER.info("Destroying pipeline {} as all containers are closed",
+            pipeline);
         RatisPipelineUtils.destroyPipeline(pipelineManager, pipeline, conf);
       }
     } else {
