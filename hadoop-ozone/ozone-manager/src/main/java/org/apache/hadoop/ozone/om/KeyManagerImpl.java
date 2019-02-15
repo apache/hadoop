@@ -171,6 +171,24 @@ public class KeyManagerImpl implements KeyManager {
     }
   }
 
+  /**
+   * Check S3 bucket exists or not.
+   * @param volumeName
+   * @param bucketName
+   * @throws IOException
+   */
+  private void validateS3Bucket(String volumeName, String bucketName)
+      throws IOException {
+
+    String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
+    //Check if bucket already exists
+    if (metadataManager.getBucketTable().get(bucketKey) == null) {
+      LOG.error("bucket not found: {}/{} ", volumeName, bucketName);
+      throw new OMException("Bucket not found",
+          OMException.ResultCodes.FAILED_BUCKET_NOT_FOUND);
+    }
+  }
+
   @Override
   public OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID)
       throws IOException {
@@ -663,6 +681,7 @@ public class KeyManagerImpl implements KeyManager {
     String keyName = omKeyArgs.getKeyName();
 
     metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    validateS3Bucket(volumeName, bucketName);
     try {
       long time = Time.monotonicNowNanos();
       String uploadID = UUID.randomUUID().toString() + "-" + Long.toString(
@@ -735,6 +754,7 @@ public class KeyManagerImpl implements KeyManager {
     int partNumber = omKeyArgs.getMultipartUploadPartNumber();
 
     metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    validateS3Bucket(volumeName, bucketName);
     String partName;
     try {
       String multipartKey = metadataManager.getMultipartKey(volumeName,
@@ -822,6 +842,7 @@ public class KeyManagerImpl implements KeyManager {
     String keyName = omKeyArgs.getKeyName();
     String uploadID = omKeyArgs.getMultipartUploadID();
     metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    validateS3Bucket(volumeName, bucketName);
     try {
       String multipartKey = metadataManager.getMultipartKey(volumeName,
           bucketName, keyName, uploadID);
@@ -973,6 +994,7 @@ public class KeyManagerImpl implements KeyManager {
     String keyName = omKeyArgs.getKeyName();
     String uploadID = omKeyArgs.getMultipartUploadID();
     Preconditions.checkNotNull(uploadID, "uploadID cannot be null");
+    validateS3Bucket(volumeName, bucketName);
     metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
 
     try {
