@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.apache.hadoop</groupId>
+  <artifactId>hadoop-main-ozone</artifactId>
+  <version>0.4.0-SNAPSHOT</version>
+  <description>Apache Hadoop Ozone Main</description>
+  <name>Apache Hadoop Ozone Main</name>
+  <packaging>pom</packaging>
+
+  <distributionManagement>
+    <repository>
+      <id>${distMgmtStagingId}</id>
+      <name>${distMgmtStagingName}</name>
+      <url>${distMgmtStagingUrl}</url>
+    </repository>
+    <snapshotRepository>
+      <id>${distMgmtSnapshotsId}</id>
+      <name>${distMgmtSnapshotsName}</name>
+      <url>${distMgmtSnapshotsUrl}</url>
+    </snapshotRepository>
+  </distributionManagement>
+
+  <repositories>
+    <repository>
+      <id>${distMgmtSnapshotsId}</id>
+      <name>${distMgmtSnapshotsName}</name>
+      <url>${distMgmtSnapshotsUrl}</url>
+    </repository>
+    <repository>
+      <id>repository.jboss.org</id>
+      <url>http://repository.jboss.org/nexus/content/groups/public/</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+    </license>
+  </licenses>
+
+  <organization>
+    <name>Apache Software Foundation</name>
+    <url>http://www.apache.org</url>
+  </organization>
+
+  <properties>
+    <!-- required as child projects with different version can't use ${project.version} -->
+    <hadoop.version>3.3.0-SNAPSHOT</hadoop.version>
+
+    <distMgmtSnapshotsId>apache.snapshots.https</distMgmtSnapshotsId>
+    <distMgmtSnapshotsName>Apache Development Snapshot Repository</distMgmtSnapshotsName>
+    <distMgmtSnapshotsUrl>https://repository.apache.org/content/repositories/snapshots</distMgmtSnapshotsUrl>
+    <distMgmtStagingId>apache.staging.https</distMgmtStagingId>
+    <distMgmtStagingName>Apache Release Distribution Repository</distMgmtStagingName>
+    <distMgmtStagingUrl>https://repository.apache.org/service/local/staging/deploy/maven2</distMgmtStagingUrl>
+
+    <!-- platform encoding override -->
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <shell-executable>bash</shell-executable>
+
+  </properties>
+
+  <modules>
+    <module>hadoop-ozone</module>
+    <module>hadoop-hdds</module>
+  </modules>
+
+  <profiles>
+    <profile>
+      <id>src</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <inherited>false</inherited>
+            <executions>
+              <execution>
+                <id>src-dist</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+                <configuration>
+                  <appendAssemblyId>false</appendAssemblyId>
+                  <attach>false</attach>
+                  <finalName>hadoop-${project.version}-src</finalName>
+                  <outputDirectory>hadoop-dist/target</outputDirectory>
+                  <!-- Not using descriptorRef and hadoop-assembly dependency -->
+                  <!-- to avoid making hadoop-main to depend on a module      -->
+                  <descriptors>
+                    <descriptor>hadoop-assemblies/src/main/resources/assemblies/hadoop-src.xml</descriptor>
+                  </descriptors>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <inherited>false</inherited>
+            <executions>
+              <execution>
+                <id>src-dist-msg</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <echo/>
+                    <echo>Hadoop source tar available at: ${basedir}/hadoop-dist/target/hadoop-${project.version}-src.tar.gz</echo>
+                    <echo/>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>hdds-src</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <inherited>false</inherited>
+            <executions>
+              <execution>
+                <id>src-dist</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+                <configuration>
+                  <appendAssemblyId>false</appendAssemblyId>
+                  <attach>false</attach>
+                  <finalName>hadoop-${project.version}-src-with-hdds</finalName>
+                  <outputDirectory>hadoop-dist/target</outputDirectory>
+                  <!-- Not using descriptorRef and hadoop-assembly dependency -->
+                  <!-- to avoid making hadoop-main to depend on a module      -->
+                  <descriptors>
+                    <descriptor>hadoop-assemblies/src/main/resources/assemblies/hadoop-src-with-hdds.xml</descriptor>
+                  </descriptors>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <inherited>false</inherited>
+            <executions>
+              <execution>
+                <id>src-dist-msg</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <echo/>
+                    <echo>Hadoop source tar (including HDDS) available at: ${basedir}/hadoop-dist/target/hadoop-${project.version}-src-with-hdds.tar.gz</echo>
+                    <echo/>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>sign</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>${maven-gpg-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>clover</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+        <property>
+          <name>clover</name>
+        </property>
+      </activation>
+      <properties>
+        <cloverLicenseLocation>${user.home}/.clover.license</cloverLicenseLocation>
+        <cloverDatabase>${project.build.directory}/clover/hadoop-coverage.db</cloverDatabase>
+        <!-- NB: This additional parametrization is made in order
+             to be able to re-define these properties with "-Dk=v" maven options.
+             By some reason the expressions declared in clover
+             docs like "${maven.clover.generateHtml}" do not work in that way.
+             However, the below properties are confirmed to work: e.g.
+             -DcloverGenHtml=false switches off the Html generation.
+             The default values provided here exactly correspond to Clover defaults, so
+             the behavior is 100% backwards compatible. -->
+        <cloverAlwaysReport>true</cloverAlwaysReport>
+        <cloverGenHtml>true</cloverGenHtml>
+        <cloverGenXml>true</cloverGenXml>
+        <cloverGenHistorical>false</cloverGenHistorical>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>com.atlassian.maven.plugins</groupId>
+            <artifactId>maven-clover2-plugin</artifactId>
+            <configuration>
+              <includesAllSourceRoots>false</includesAllSourceRoots>
+              <includesTestSourceRoots>true</includesTestSourceRoots>
+              <licenseLocation>${cloverLicenseLocation}</licenseLocation>
+              <cloverDatabase>${cloverDatabase}</cloverDatabase>
+              <targetPercentage>50%</targetPercentage>
+              <outputDirectory>${project.build.directory}/clover</outputDirectory>
+              <alwaysReport>${cloverAlwaysReport}</alwaysReport>
+              <generateHtml>${cloverGenHtml}</generateHtml>
+              <generateXml>${cloverGenXml}</generateXml>
+              <generateHistorical>${cloverGenHistorical}</generateHistorical>
+              <excludes>
+                <exclude>**/examples/**/*.java</exclude>
+                <exclude>**/hamlet/*.java</exclude>
+                <exclude>**/ha/proto/*.java</exclude>
+                <exclude>**/protocol/proto/*.java</exclude>
+                <exclude>**/compiler/generated/*.java</exclude>
+                <exclude>**/protobuf/*.java</exclude>
+                <exclude>**/v2/proto/*.java</exclude>
+                <exclude>**/yarn/proto/*.java</exclude>
+                <exclude>**/security/proto/*.java</exclude>
+                <exclude>**/tools/proto/*.java</exclude>
+                <exclude>**/hs/proto/*.java</exclude>
+              </excludes>
+            </configuration>
+            <executions>
+              <execution>
+                <id>clover-setup</id>
+                <phase>process-sources</phase>
+                <goals>
+                  <goal>setup</goal>
+                </goals>
+              </execution>
+              <execution>
+                <id>clover</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>clover</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>hdds</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <modules>
+        <module>hadoop-ozone</module>
+        <module>hadoop-hdds</module>
+      </modules>
+    </profile>
+  </profiles>
+</project>
