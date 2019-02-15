@@ -25,6 +25,8 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLUME_ALREADY_EXISTS;
 import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +36,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OM_S3_VOLUME_PREFIX;
-import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.FAILED_VOLUME_ALREADY_EXISTS;
 
 /**
  * S3 Bucket Manager, this class maintains a mapping between S3 Bucket and Ozone
@@ -168,7 +169,7 @@ public class S3BucketManagerImpl implements S3BucketManager {
       volumeManager.createVolume(args);
     } catch (OMException exp) {
       newVolumeCreate = false;
-      if (exp.getResult().compareTo(FAILED_VOLUME_ALREADY_EXISTS) == 0) {
+      if (exp.getResult().compareTo(VOLUME_ALREADY_EXISTS) == 0) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Volume already exists. {}", exp.getMessage());
         }

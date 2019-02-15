@@ -17,17 +17,20 @@
  */
 package org.apache.hadoop.ozone;
 
+import java.io.IOException;
+import java.util.List;
+
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
+import org.apache.hadoop.test.LambdaTestUtils.VoidCallable;
+
 import org.apache.ratis.util.function.CheckedConsumer;
 import org.junit.Assert;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * Helper class for Tests.
@@ -95,4 +98,15 @@ public final class OzoneTestUtils {
     }
   }
 
+  public static <E extends Throwable> void expectOmException(
+      OMException.ResultCodes code,
+      VoidCallable eval)
+      throws Exception {
+    try {
+      eval.call();
+      Assert.fail("OMException is expected");
+    } catch (OMException ex) {
+      Assert.assertEquals(code, ex.getResult());
+    }
+  }
 }

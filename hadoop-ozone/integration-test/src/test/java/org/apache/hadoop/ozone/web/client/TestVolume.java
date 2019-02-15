@@ -18,31 +18,6 @@
 
 package org.apache.hadoop.ozone.web.client;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.hadoop.hdds.client.OzoneQuota;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.client.VolumeArgs;
-import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
-import org.apache.hadoop.ozone.client.rest.RestClient;
-import org.apache.hadoop.ozone.client.rpc.RpcClient;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
-import org.apache.hadoop.ozone.client.OzoneVolume;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.Time;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.Ignore;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
 import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
@@ -50,10 +25,35 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.hadoop.hdds.client.OzoneQuota;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.OzoneTestUtils;
+import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.VolumeArgs;
+import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
+import org.apache.hadoop.ozone.client.rest.OzoneException;
+import org.apache.hadoop.ozone.client.rest.RestClient;
+import org.apache.hadoop.ozone.client.rpc.RpcClient;
+import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
+import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.AfterClass;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Test Ozone Volumes Lifecycle.
@@ -67,8 +67,7 @@ public class TestVolume {
   @Parameterized.Parameters
   public static Collection<Object[]> clientProtocol() {
     Object[][] params = new Object[][] {
-        {RpcClient.class},
-        {RestClient.class}};
+        {RpcClient.class}};
     return Arrays.asList(params);
   }
 
@@ -160,20 +159,16 @@ public class TestVolume {
   }
 
   @Test
-  public void testCreateDuplicateVolume() throws OzoneException, IOException {
+  public void testCreateDuplicateVolume() throws Exception {
     runTestCreateDuplicateVolume(client);
   }
 
   static void runTestCreateDuplicateVolume(ClientProtocol clientProtocol)
-      throws OzoneException, IOException {
-    try {
-      clientProtocol.createVolume("testvol");
-      clientProtocol.createVolume("testvol");
-      assertFalse(true);
-    } catch (IOException ioe) {
-      Assert.assertTrue(ioe.getMessage()
-          .contains("Volume creation failed, error:VOLUME_ALREADY_EXISTS"));
-    }
+      throws Exception {
+
+    clientProtocol.createVolume("testvol");
+    OzoneTestUtils.expectOmException(ResultCodes.VOLUME_ALREADY_EXISTS,
+        () -> clientProtocol.createVolume("testvol"));
   }
 
   @Test

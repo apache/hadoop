@@ -53,6 +53,8 @@ import org.apache.hadoop.ozone.client.OzoneKeyDetails;
 import org.apache.hadoop.ozone.client.OzoneMultipartUploadPartListParts;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
@@ -293,11 +295,10 @@ public class ObjectEndpoint extends EndpointBase {
       }
       addLastModifiedDate(responseBuilder, keyDetails);
       return responseBuilder.build();
-    } catch (IOException ex) {
-      if (ex.getMessage().contains("NOT_FOUND")) {
-        OS3Exception os3Exception = S3ErrorTable.newError(S3ErrorTable
+    } catch (OMException ex) {
+      if (ex.getResult() == ResultCodes.KEY_NOT_FOUND) {
+        throw S3ErrorTable.newError(S3ErrorTable
             .NO_SUCH_KEY, keyPath);
-        throw os3Exception;
       } else {
         throw ex;
       }
@@ -331,9 +332,8 @@ public class ObjectEndpoint extends EndpointBase {
     try {
       key = getBucket(bucketName).getKey(keyPath);
       // TODO: return the specified range bytes of this object.
-    } catch (IOException ex) {
-      LOG.error("Exception occurred in HeadObject", ex);
-      if (ex.getMessage().contains("KEY_NOT_FOUND")) {
+    } catch (OMException ex) {
+      if (ex.getResult() == ResultCodes.KEY_NOT_FOUND) {
         // Just return 404 with no content
         return Response.status(Status.NOT_FOUND).build();
       } else {
@@ -364,8 +364,8 @@ public class ObjectEndpoint extends EndpointBase {
     try {
       OzoneBucket ozoneBucket = getBucket(bucket);
       ozoneBucket.abortMultipartUpload(key, uploadId);
-    } catch (IOException ex) {
-      if (ex.getMessage().contains("NO_SUCH_MULTIPART_UPLOAD")) {
+    } catch (OMException ex) {
+      if (ex.getResult() == ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR) {
         throw S3ErrorTable.newError(S3ErrorTable.NO_SUCH_UPLOAD, uploadId);
       }
       throw ex;
@@ -385,6 +385,7 @@ public class ObjectEndpoint extends EndpointBase {
    * for more details.
    */
   @DELETE
+  @SuppressWarnings("emptyblock")
   public Response delete(
       @PathParam("bucket") String bucketName,
       @PathParam("path") String keyPath,
@@ -398,15 +399,17 @@ public class ObjectEndpoint extends EndpointBase {
       OzoneBucket bucket = getBucket(bucketName);
       bucket.getKey(keyPath);
       bucket.deleteKey(keyPath);
-    } catch (IOException ex) {
-      if (ex.getMessage().contains("BUCKET_NOT_FOUND")) {
+    } catch (OMException ex) {
+      if (ex.getResult() == ResultCodes.BUCKET_NOT_FOUND) {
         throw S3ErrorTable.newError(S3ErrorTable
             .NO_SUCH_BUCKET, bucketName);
-      } else if (!ex.getMessage().contains("NOT_FOUND")) {
+      } else if (ex.getResult() == ResultCodes.KEY_NOT_FOUND) {
+        //NOT_FOUND is not a problem, AWS doesn't throw exception for missing
+        // keys. Just return 204
+      } else {
         throw ex;
       }
-      //NOT_FOUND is not a problem, AWS doesn't throw exception for missing
-      // keys. Just return 204.
+
     }
     return Response
         .status(Status.NO_CONTENT)
@@ -518,22 +521,22 @@ public class ObjectEndpoint extends EndpointBase {
       completeMultipartUploadResponse.setLocation(bucket);
       return Response.status(Status.OK).entity(completeMultipartUploadResponse)
           .build();
-    } catch (IOException ex) {
+    } catch (OMException ex) {
       LOG.error("Error in Complete Multipart Upload Request for bucket: " +
           bucket + ", key: " + key, ex);
-      if (ex.getMessage().contains("MISMATCH_MULTIPART_LIST")) {
+      if (ex.getResult() == ResultCodes.MISMATCH_MULTIPART_LIST) {
         OS3Exception oex =
             S3ErrorTable.newError(S3ErrorTable.INVALID_PART, key);
         throw oex;
-      } else if (ex.getMessage().contains("MISSING_UPLOAD_PARTS")) {
+      } else if (ex.getResult() == ResultCodes.MISSING_UPLOAD_PARTS) {
         OS3Exception oex =
             S3ErrorTable.newError(S3ErrorTable.INVALID_PART_ORDER, key);
         throw oex;
-      } else if (ex.getMessage().contains("NO_SUCH_MULTIPART_UPLOAD_ERROR")) {
+      } else if (ex.getResult() == ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR) {
         OS3Exception os3Exception = S3ErrorTable.newError(NO_SUCH_UPLOAD,
             uploadID);
         throw os3Exception;
-      } else if (ex.getMessage().contains("ENTITY_TOO_SMALL")) {
+      } else if (ex.getResult() == ResultCodes.ENTITY_TOO_SMALL) {
         OS3Exception os3Exception = S3ErrorTable.newError(ENTITY_TOO_SMALL,
             key);
         throw os3Exception;
@@ -557,11 +560,10 @@ public class ObjectEndpoint extends EndpointBase {
       return Response.status(Status.OK).header("ETag",
           omMultipartCommitUploadPartInfo.getPartName()).build();
 
-    } catch (IOException ex) {
-      if (ex.getMessage().contains("NO_SUCH_MULTIPART_UPLOAD_ERROR")) {
-        OS3Exception os3Exception = S3ErrorTable.newError(NO_SUCH_UPLOAD,
+    } catch (OMException ex) {
+      if (ex.getResult() == ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR) {
+        throw S3ErrorTable.newError(NO_SUCH_UPLOAD,
             uploadID);
-        throw os3Exception;
       }
       throw ex;
     }
@@ -619,11 +621,10 @@ public class ObjectEndpoint extends EndpointBase {
         listPartsResponse.addPart(part);
       });
 
-    } catch (IOException ex) {
-      if (ex.getMessage().contains("NO_SUCH_MULTIPART_UPLOAD_ERROR")) {
-        OS3Exception os3Exception = S3ErrorTable.newError(NO_SUCH_UPLOAD,
+    } catch (OMException ex) {
+      if (ex.getResult() == ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR) {
+        throw S3ErrorTable.newError(NO_SUCH_UPLOAD,
             uploadID);
-        throw os3Exception;
       }
       throw ex;
     }
@@ -717,11 +718,12 @@ public class ObjectEndpoint extends EndpointBase {
       copyObjectResponse.setLastModified(Instant.ofEpochMilli(destKeyDetails
           .getModificationTime()));
       return copyObjectResponse;
-    } catch (IOException ex) {
-      if (ex.getMessage().contains("KEY_NOT_FOUND")) {
+    } catch (OMException ex) {
+      if (ex.getResult() == ResultCodes.KEY_NOT_FOUND) {
         throw S3ErrorTable.newError(S3ErrorTable.NO_SUCH_KEY, sourceKey);
+      } else if (ex.getResult() == ResultCodes.BUCKET_NOT_FOUND) {
+        throw S3ErrorTable.newError(S3ErrorTable.NO_SUCH_BUCKET, sourceBucket);
       }
-      LOG.error("Exception occurred in PutObject", ex);
       throw ex;
     } finally {
       if (!closed) {

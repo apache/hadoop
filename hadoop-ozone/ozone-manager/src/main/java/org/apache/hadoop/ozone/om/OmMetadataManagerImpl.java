@@ -59,8 +59,6 @@ import org.eclipse.jetty.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.HEAD;
-
 /**
  * Ozone metadata manager interface.
  */
@@ -434,13 +432,13 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     List<OmBucketInfo> result = new ArrayList<>();
     if (Strings.isNullOrEmpty(volumeName)) {
       throw new OMException("Volume name is required.",
-          ResultCodes.FAILED_VOLUME_NOT_FOUND);
+          ResultCodes.VOLUME_NOT_FOUND);
     }
 
     String volumeNameBytes = getVolumeKey(volumeName);
     if (volumeTable.get(volumeNameBytes) == null) {
       throw new OMException("Volume " + volumeName + " not found.",
-          ResultCodes.FAILED_VOLUME_NOT_FOUND);
+          ResultCodes.VOLUME_NOT_FOUND);
     }
 
     String startKey;
@@ -496,18 +494,18 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     List<OmKeyInfo> result = new ArrayList<>();
     if (Strings.isNullOrEmpty(volumeName)) {
       throw new OMException("Volume name is required.",
-          ResultCodes.FAILED_VOLUME_NOT_FOUND);
+          ResultCodes.VOLUME_NOT_FOUND);
     }
 
     if (Strings.isNullOrEmpty(bucketName)) {
       throw new OMException("Bucket name is required.",
-          ResultCodes.FAILED_BUCKET_NOT_FOUND);
+          ResultCodes.BUCKET_NOT_FOUND);
     }
 
     String bucketNameBytes = getBucketKey(volumeName, bucketName);
     if (getBucketTable().get(bucketNameBytes) == null) {
       throw new OMException("Bucket " + bucketName + " not found.",
-          ResultCodes.FAILED_BUCKET_NOT_FOUND);
+          ResultCodes.BUCKET_NOT_FOUND);
     }
 
     String seekKey;
@@ -558,7 +556,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     VolumeList volumes;
     if (StringUtil.isBlank(userName)) {
       throw new OMException("User name is required to list Volumes.",
-          ResultCodes.FAILED_USER_NOT_FOUND);
+          ResultCodes.USER_NOT_FOUND);
     }
     volumes = getVolumesByUser(userName);
 
@@ -587,7 +585,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
           // this probably means om db is corrupted or some entries are
           // accidentally removed.
           throw new OMException("Volume info not found for " + volumeName,
-              ResultCodes.FAILED_VOLUME_NOT_FOUND);
+              ResultCodes.VOLUME_NOT_FOUND);
         }
         result.add(volumeArgs);
       }
@@ -609,7 +607,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     } catch (IOException e) {
       throw new OMException("Unable to get volumes info by the given user, "
           + "metadata might be corrupted", e,
-          ResultCodes.FAILED_METADATA_ERROR);
+          ResultCodes.METADATA_ERROR);
     }
   }
 

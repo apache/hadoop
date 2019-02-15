@@ -24,6 +24,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVALID_AUTH_METHOD;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_ERROR_OTHER;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_EXPIRED;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLUME_NOT_FOUND;
 import static org.slf4j.event.Level.INFO;
 
 import java.io.File;
@@ -415,8 +416,8 @@ public final class TestSecureOzoneCluster {
       // Case 3: Test Client can authenticate using token.
       Assert.assertFalse(logs.getOutput().contains(
           "Auth successful for " + username + " (auth:TOKEN)"));
-      LambdaTestUtils.intercept(IOException.class, "Delete Volume failed,"
-          + " error:VOLUME_NOT_FOUND", () -> omClient.deleteVolume("vol1"));
+      OzoneTestUtils.expectOmException(VOLUME_NOT_FOUND,
+          () -> omClient.deleteVolume("vol1"));
       Assert.assertTrue(logs.getOutput().contains("Auth successful for "
           + username + " (auth:TOKEN)"));
 

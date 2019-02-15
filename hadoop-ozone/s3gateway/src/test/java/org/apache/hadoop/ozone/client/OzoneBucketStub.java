@@ -39,6 +39,8 @@ import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.OzoneMultipartUploadPartListParts.PartInfo;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 import org.apache.hadoop.util.Time;
@@ -124,7 +126,7 @@ public class OzoneBucketStub extends OzoneBucket {
     if (keyDetails.containsKey(key)) {
       return keyDetails.get(key);
     } else {
-      throw new IOException("Lookup key failed, error:KEY_NOT_FOUND");
+      throw new OMException(ResultCodes.KEY_NOT_FOUND);
     }
   }
 
@@ -177,7 +179,7 @@ public class OzoneBucketStub extends OzoneBucket {
       throws IOException {
     String multipartUploadID = multipartUploadIdMap.get(key);
     if (multipartUploadID == null || !multipartUploadID.equals(uploadID)) {
-      throw new IOException("NO_SUCH_MULTIPART_UPLOAD_ERROR");
+      throw new OMException(ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
     } else {
       ByteArrayOutputStream byteArrayOutputStream =
           new ByteArrayOutputStream((int) size) {
@@ -203,21 +205,21 @@ public class OzoneBucketStub extends OzoneBucket {
       String uploadID, Map<Integer, String> partsMap) throws IOException {
 
     if (multipartUploadIdMap.get(key) == null) {
-      throw new IOException("NO_SUCH_MULTIPART_UPLOAD_ERROR");
+      throw new OMException(ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
     } else {
       final Map<Integer, Part> partsList = partList.get(key);
 
       if (partsMap.size() != partsList.size()) {
-        throw new IOException("MISMATCH_MULTIPART_LIST");
+        throw new OMException(ResultCodes.MISMATCH_MULTIPART_LIST);
       }
 
       int count = 1;
       for (Map.Entry<Integer, String> part: partsMap.entrySet()) {
         if (part.getKey() != count) {
-          throw new IOException("MISSING_UPLOAD_PARTS");
+          throw new OMException(ResultCodes.MISSING_UPLOAD_PARTS);
         } else if (!part.getValue().equals(
             partsList.get(part.getKey()).getPartName())) {
-          throw new IOException("MISMATCH_MULTIPART_LIST");
+          throw new OMException(ResultCodes.MISMATCH_MULTIPART_LIST);
         } else {
           count++;
         }
@@ -232,7 +234,7 @@ public class OzoneBucketStub extends OzoneBucket {
   public void abortMultipartUpload(String keyName, String uploadID) throws
       IOException {
     if (multipartUploadIdMap.get(keyName) == null) {
-      throw new IOException("NO_SUCH_MULTIPART_UPLOAD");
+      throw new OMException(ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
     } else {
       multipartUploadIdMap.remove(keyName);
     }
@@ -242,7 +244,7 @@ public class OzoneBucketStub extends OzoneBucket {
   public OzoneMultipartUploadPartListParts listParts(String key,
       String uploadID, int partNumberMarker, int maxParts) throws IOException {
     if (multipartUploadIdMap.get(key) == null) {
-      throw new IOException("NO_SUCH_MULTIPART_UPLOAD");
+      throw new OMException(ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
     }
     List<PartInfo> partInfoList = new ArrayList<>();
 

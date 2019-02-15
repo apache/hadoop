@@ -30,6 +30,8 @@ import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -372,12 +374,14 @@ public class ObjectStore {
       try {
         return proxy.listS3Buckets(userName, bucketPrefix, prevBucket,
             listCacheSize);
-      } catch (IOException e) {
-        if (e.getMessage().contains("VOLUME_NOT_FOUND")) {
-          return new ArrayList<OzoneBucket>();
+      } catch (OMException e) {
+        if (e.getResult() == ResultCodes.VOLUME_NOT_FOUND) {
+          return new ArrayList<>();
         } else {
           throw new RuntimeException(e);
         }
+      } catch (IOException e) {
+        throw new RuntimeException(e);
       }
     }
   }

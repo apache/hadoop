@@ -161,13 +161,13 @@ public class KeyManagerImpl implements KeyManager {
     if (metadataManager.getVolumeTable().get(volumeKey) == null) {
       LOG.error("volume not found: {}", volumeName);
       throw new OMException("Volume not found",
-          OMException.ResultCodes.FAILED_VOLUME_NOT_FOUND);
+          OMException.ResultCodes.VOLUME_NOT_FOUND);
     }
     //Check if bucket already exists
     if (metadataManager.getBucketTable().get(bucketKey) == null) {
       LOG.error("bucket not found: {}/{} ", volumeName, bucketName);
       throw new OMException("Bucket not found",
-          OMException.ResultCodes.FAILED_BUCKET_NOT_FOUND);
+          OMException.ResultCodes.BUCKET_NOT_FOUND);
     }
   }
 
@@ -185,7 +185,7 @@ public class KeyManagerImpl implements KeyManager {
     if (metadataManager.getBucketTable().get(bucketKey) == null) {
       LOG.error("bucket not found: {}/{} ", volumeName, bucketName);
       throw new OMException("Bucket not found",
-          OMException.ResultCodes.FAILED_BUCKET_NOT_FOUND);
+          ResultCodes.BUCKET_NOT_FOUND);
     }
   }
 
@@ -205,7 +205,7 @@ public class KeyManagerImpl implements KeyManager {
       LOG.error("Allocate block for a key not in open status in meta store" +
           " /{}/{}/{} with ID {}", volumeName, bucketName, keyName, clientID);
       throw new OMException("Open Key not found",
-          OMException.ResultCodes.FAILED_KEY_NOT_FOUND);
+          OMException.ResultCodes.KEY_NOT_FOUND);
     }
 
     AllocatedBlock allocatedBlock;
@@ -288,7 +288,8 @@ public class KeyManagerImpl implements KeyManager {
             multipartKey);
         if (partKeyInfo == null) {
           throw new OMException("No such Multipart upload is with specified " +
-              "uploadId " + uploadID, ResultCodes.NO_SUCH_MULTIPART_UPLOAD);
+              "uploadId " + uploadID,
+              ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
         } else {
           factor = partKeyInfo.getFactor();
           type = partKeyInfo.getType();
@@ -386,7 +387,7 @@ public class KeyManagerImpl implements KeyManager {
         LOG.warn("Cannot allocate key. The generated open key id is already" +
             "used for the same key which is currently being written.");
         throw new OMException("Cannot allocate key. Not able to get a valid" +
-            "open key id.", OMException.ResultCodes.FAILED_KEY_ALLOCATION);
+            "open key id.", ResultCodes.KEY_ALLOCATION_ERROR);
       }
       metadataManager.getOpenKeyTable().put(openKey, keyInfo);
       LOG.debug("Key {} allocated in volume {} bucket {}",
@@ -398,7 +399,7 @@ public class KeyManagerImpl implements KeyManager {
       LOG.error("Key open failed for volume:{} bucket:{} key:{}",
           volumeName, bucketName, keyName, ex);
       throw new OMException(ex.getMessage(),
-          OMException.ResultCodes.FAILED_KEY_ALLOCATION);
+          ResultCodes.KEY_ALLOCATION_ERROR);
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
@@ -447,7 +448,7 @@ public class KeyManagerImpl implements KeyManager {
       OmKeyInfo keyInfo = metadataManager.getOpenKeyTable().get(openKey);
       if (keyInfo == null) {
         throw new OMException("Commit a key without corresponding entry " +
-            objectKey, ResultCodes.FAILED_KEY_NOT_FOUND);
+            objectKey, ResultCodes.KEY_NOT_FOUND);
       }
       keyInfo.setDataSize(args.getDataSize());
       keyInfo.setModificationTime(Time.now());
@@ -468,7 +469,7 @@ public class KeyManagerImpl implements KeyManager {
       LOG.error("Key commit failed for volume:{} bucket:{} key:{}",
           volumeName, bucketName, keyName, ex);
       throw new OMException(ex.getMessage(),
-          OMException.ResultCodes.FAILED_KEY_ALLOCATION);
+          ResultCodes.KEY_ALLOCATION_ERROR);
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
@@ -489,7 +490,7 @@ public class KeyManagerImpl implements KeyManager {
         LOG.debug("volume:{} bucket:{} Key:{} not found",
             volumeName, bucketName, keyName);
         throw new OMException("Key not found",
-            OMException.ResultCodes.FAILED_KEY_NOT_FOUND);
+            OMException.ResultCodes.KEY_NOT_FOUND);
       }
       if (grpcBlockTokenEnabled) {
         String remoteUser = getRemoteUser().getShortUserName();
@@ -507,7 +508,7 @@ public class KeyManagerImpl implements KeyManager {
       LOG.debug("Get key failed for volume:{} bucket:{} key:{}",
           volumeName, bucketName, keyName, ex);
       throw new OMException(ex.getMessage(),
-          OMException.ResultCodes.FAILED_KEY_NOT_FOUND);
+          OMException.ResultCodes.KEY_NOT_FOUND);
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
@@ -524,7 +525,7 @@ public class KeyManagerImpl implements KeyManager {
       LOG.error("Rename key failed for volume:{} bucket:{} fromKey:{} toKey:{}",
           volumeName, bucketName, fromKeyName, toKeyName);
       throw new OMException("Key name is empty",
-          ResultCodes.FAILED_INVALID_KEY_NAME);
+          ResultCodes.INVALID_KEY_NAME);
     }
 
     metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
@@ -540,7 +541,7 @@ public class KeyManagerImpl implements KeyManager {
                 + "Key: {} not found.", volumeName, bucketName, fromKeyName,
             toKeyName, fromKeyName);
         throw new OMException("Key not found",
-            OMException.ResultCodes.FAILED_KEY_NOT_FOUND);
+            OMException.ResultCodes.KEY_NOT_FOUND);
       }
 
       // A rename is a no-op if the target and source name is same.
@@ -559,7 +560,7 @@ public class KeyManagerImpl implements KeyManager {
                 + "Key: {} already exists.", volumeName, bucketName,
             fromKeyName, toKeyName, toKeyName);
         throw new OMException("Key not found",
-            OMException.ResultCodes.FAILED_KEY_ALREADY_EXISTS);
+            OMException.ResultCodes.KEY_ALREADY_EXISTS);
       }
 
       fromKeyValue.setKeyName(toKeyName);
@@ -572,10 +573,13 @@ public class KeyManagerImpl implements KeyManager {
         store.commitBatchOperation(batch);
       }
     } catch (IOException ex) {
+      if (ex instanceof OMException) {
+        throw ex;
+      }
       LOG.error("Rename key failed for volume:{} bucket:{} fromKey:{} toKey:{}",
           volumeName, bucketName, fromKeyName, toKeyName, ex);
       throw new OMException(ex.getMessage(),
-          ResultCodes.FAILED_KEY_RENAME);
+          ResultCodes.KEY_RENAME_ERROR);
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
@@ -594,7 +598,7 @@ public class KeyManagerImpl implements KeyManager {
       OmKeyInfo keyInfo = metadataManager.getKeyTable().get(objectKey);
       if (keyInfo == null) {
         throw new OMException("Key not found",
-            OMException.ResultCodes.FAILED_KEY_NOT_FOUND);
+            OMException.ResultCodes.KEY_NOT_FOUND);
       } else {
         // directly delete key with no blocks from db. This key need not be
         // moved to deleted table.
@@ -613,7 +617,7 @@ public class KeyManagerImpl implements KeyManager {
       LOG.error(String.format("Delete key failed for volume:%s "
           + "bucket:%s key:%s", volumeName, bucketName, keyName), ex);
       throw new OMException(ex.getMessage(), ex,
-          ResultCodes.FAILED_KEY_DELETION);
+          ResultCodes.KEY_DELETION_ERROR);
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
@@ -737,7 +741,7 @@ public class KeyManagerImpl implements KeyManager {
       LOG.error("Initiate Multipart upload Failed for volume:{} bucket:{} " +
               "key:{}", volumeName, bucketName, keyName, ex);
       throw new OMException(ex.getMessage(),
-          OMException.ResultCodes.INITIATE_MULTIPART_UPLOAD_FAILED);
+          ResultCodes.INITIATE_MULTIPART_UPLOAD_ERROR);
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
@@ -782,7 +786,7 @@ public class KeyManagerImpl implements KeyManager {
         // Move this part to delete table.
         metadataManager.getDeletedTable().put(partName, keyInfo);
         throw new OMException("No such Multipart upload is with specified " +
-            "uploadId " + uploadID, ResultCodes.NO_SUCH_MULTIPART_UPLOAD);
+            "uploadId " + uploadID, ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
       } else {
         PartKeyInfo oldPartKeyInfo =
             multipartKeyInfo.getPartKeyInfo(partNumber);
@@ -822,7 +826,8 @@ public class KeyManagerImpl implements KeyManager {
       LOG.error("Upload part Failed: volume:{} bucket:{} " +
           "key:{} PartNumber: {}", volumeName, bucketName, keyName,
           partNumber, ex);
-      throw new OMException(ex.getMessage(), ResultCodes.UPLOAD_PART_FAILED);
+      throw new OMException(ex.getMessage(),
+          ResultCodes.MULTIPART_UPLOAD_PARTFILE_ERROR);
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
@@ -855,7 +860,7 @@ public class KeyManagerImpl implements KeyManager {
       if (multipartKeyInfo == null) {
         throw new OMException("Complete Multipart Upload Failed: volume: " +
             volumeName + "bucket: " + bucketName + "key: " + keyName,
-            ResultCodes.NO_SUCH_MULTIPART_UPLOAD);
+            ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
       }
       TreeMap<Integer, PartKeyInfo> partKeyInfoMap = multipartKeyInfo
           .getPartKeyInfoMap();
@@ -979,7 +984,7 @@ public class KeyManagerImpl implements KeyManager {
       LOG.error("Complete Multipart Upload Failed: volume: " + volumeName +
           "bucket: " + bucketName + "key: " + keyName, ex);
       throw new OMException(ex.getMessage(), ResultCodes
-          .COMPLETE_MULTIPART_UPLOAD_FAILED);
+          .COMPLETE_MULTIPART_UPLOAD_ERROR);
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
@@ -1013,7 +1018,7 @@ public class KeyManagerImpl implements KeyManager {
             "such uploadID:" + uploadID);
         throw new OMException("Abort Multipart Upload Failed: volume: " +
             volumeName + "bucket: " + bucketName + "key: " + keyName,
-            ResultCodes.NO_SUCH_MULTIPART_UPLOAD);
+            ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
       } else {
         // Move all the parts to delete table
         TreeMap<Integer, PartKeyInfo> partKeyInfoMap = multipartKeyInfo
@@ -1072,7 +1077,7 @@ public class KeyManagerImpl implements KeyManager {
 
       if (multipartKeyInfo == null) {
         throw new OMException("No Such Multipart upload exists for this key.",
-                ResultCodes.NO_SUCH_MULTIPART_UPLOAD);
+            ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
       } else {
         TreeMap<Integer, PartKeyInfo> partKeyInfoMap =
             multipartKeyInfo.getPartKeyInfoMap();

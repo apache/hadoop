@@ -20,8 +20,20 @@
 package org.apache.hadoop.ozone.client;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.BUCKET_ALREADY_EXISTS;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.BUCKET_NOT_EMPTY;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.BUCKET_NOT_FOUND;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.S3_BUCKET_NOT_FOUND;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLUME_NOT_FOUND;
 
 /**
  * ObjectStore implementation with in-memory state.
@@ -65,7 +77,7 @@ public class ObjectStoreStub extends ObjectStore {
     if (volumes.containsKey(volumeName)) {
       return volumes.get(volumeName);
     } else {
-      throw new IOException("VOLUME_NOT_FOUND");
+      throw new OMException("", VOLUME_NOT_FOUND);
     }
   }
 
@@ -118,7 +130,7 @@ public class ObjectStoreStub extends ObjectStore {
       createVolume(volumeName);
       volumes.get(volumeName).createBucket(s3BucketName);
     } else {
-      throw new IOException("BUCKET_ALREADY_EXISTS");
+      throw new OMException("", BUCKET_ALREADY_EXISTS);
     }
 
     if (userBuckets.get(userName) == null) {
@@ -193,17 +205,17 @@ public class ObjectStoreStub extends ObjectStore {
       if (bucketEmptyStatus.get(s3BucketName)) {
         bucketVolumeMap.remove(s3BucketName);
       } else {
-        throw new IOException("BUCKET_NOT_EMPTY");
+        throw new OMException("", BUCKET_NOT_EMPTY);
       }
     } else {
-      throw new IOException("BUCKET_NOT_FOUND");
+      throw new OMException("", BUCKET_NOT_FOUND);
     }
   }
 
   @Override
   public String getOzoneBucketMapping(String s3BucketName) throws IOException {
     if (bucketVolumeMap.get(s3BucketName) == null) {
-      throw new IOException("S3_BUCKET_NOT_FOUND");
+      throw new OMException("", S3_BUCKET_NOT_FOUND);
     }
     return bucketVolumeMap.get(s3BucketName);
   }
@@ -212,7 +224,7 @@ public class ObjectStoreStub extends ObjectStore {
   @SuppressWarnings("StringSplitter")
   public String getOzoneVolumeName(String s3BucketName) throws IOException {
     if (bucketVolumeMap.get(s3BucketName) == null) {
-      throw new IOException("S3_BUCKET_NOT_FOUND");
+      throw new OMException("", S3_BUCKET_NOT_FOUND);
     }
     return bucketVolumeMap.get(s3BucketName).split("/")[0];
   }
@@ -221,7 +233,7 @@ public class ObjectStoreStub extends ObjectStore {
   @SuppressWarnings("StringSplitter")
   public String getOzoneBucketName(String s3BucketName) throws IOException {
     if (bucketVolumeMap.get(s3BucketName) == null) {
-      throw new IOException("S3_BUCKET_NOT_FOUND");
+      throw new OMException("", BUCKET_NOT_FOUND);
     }
     return bucketVolumeMap.get(s3BucketName).split("/")[1];
   }

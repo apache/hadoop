@@ -93,7 +93,7 @@ public class TestBucketManagerImpl {
           .build();
       bucketManager.createBucket(bucketInfo);
     } catch (OMException omEx) {
-      Assert.assertEquals(ResultCodes.FAILED_VOLUME_NOT_FOUND,
+      Assert.assertEquals(ResultCodes.VOLUME_NOT_FOUND,
           omEx.getResult());
       throw omEx;
     } finally {
@@ -130,7 +130,7 @@ public class TestBucketManagerImpl {
       bucketManager.createBucket(bucketInfo);
       bucketManager.createBucket(bucketInfo);
     } catch (OMException omEx) {
-      Assert.assertEquals(ResultCodes.FAILED_BUCKET_ALREADY_EXISTS,
+      Assert.assertEquals(ResultCodes.BUCKET_ALREADY_EXISTS,
           omEx.getResult());
       throw omEx;
     } finally {
@@ -148,7 +148,7 @@ public class TestBucketManagerImpl {
       BucketManager bucketManager = new BucketManagerImpl(metaMgr);
       bucketManager.getBucketInfo("sampleVol", "bucketOne");
     } catch (OMException omEx) {
-      Assert.assertEquals(ResultCodes.FAILED_BUCKET_NOT_FOUND,
+      Assert.assertEquals(ResultCodes.BUCKET_NOT_FOUND,
           omEx.getResult());
       throw omEx;
     } finally {
@@ -336,7 +336,7 @@ public class TestBucketManagerImpl {
     try {
       bucketManager.getBucketInfo("sampleVol", "bucket_1");
     } catch (OMException omEx) {
-      Assert.assertEquals(ResultCodes.FAILED_BUCKET_NOT_FOUND,
+      Assert.assertEquals(ResultCodes.BUCKET_NOT_FOUND,
           omEx.getResult());
       throw omEx;
     }
@@ -373,7 +373,7 @@ public class TestBucketManagerImpl {
     try {
       bucketManager.deleteBucket("sampleVol", "bucketOne");
     } catch (OMException omEx) {
-      Assert.assertEquals(ResultCodes.FAILED_BUCKET_NOT_EMPTY,
+      Assert.assertEquals(ResultCodes.BUCKET_NOT_EMPTY,
           omEx.getResult());
       throw omEx;
     }

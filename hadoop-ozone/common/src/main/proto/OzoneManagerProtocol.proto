@@ -135,7 +135,10 @@ message OMResponse {
   optional string traceID = 2;
 
   optional bool success = 3 [default=true];
+
   optional string message = 4;
+
+  required Status status = 5;
 
   optional CreateVolumeResponse              createVolumeResponse          = 11;
   optional SetVolumePropertyResponse         setVolumePropertyResponse     = 12;
@@ -217,6 +220,8 @@ enum Status {
     TOKEN_EXPIRED = 35;
     TOKEN_ERROR_OTHER = 36;
     LIST_MULTIPART_UPLOAD_PARTS_FAILED = 37;
+    SCM_IN_CHILL_MODE = 38;
+    INVALID_REQUEST = 39;
 
 }
 
@@ -239,7 +244,7 @@ message CreateVolumeRequest {
 }
 
 message CreateVolumeResponse {
-    required Status status = 1;
+
 }
 
 message VolumeList {
@@ -256,7 +261,7 @@ message SetVolumePropertyRequest {
 }
 
 message SetVolumePropertyResponse {
-    required Status status = 1;
+
 }
 
 /**
@@ -269,7 +274,6 @@ message CheckVolumeAccessRequest {
 
 message CheckVolumeAccessResponse {
 
-    required Status status = 1;
 }
 
 
@@ -282,7 +286,6 @@ message InfoVolumeRequest {
 }
 
 message InfoVolumeResponse {
-    required Status status = 1;
     optional VolumeInfo volumeInfo = 2;
 }
 
@@ -294,7 +297,7 @@ message DeleteVolumeRequest {
 }
 
 message DeleteVolumeResponse {
-    required Status status = 1;
+
 }
 
 
@@ -316,7 +319,6 @@ message ListVolumeRequest {
 }
 
 message ListVolumeResponse {
-    required Status status = 1;
     repeated VolumeInfo volumeInfo = 2;
 }
 
@@ -369,7 +371,7 @@ message CreateBucketRequest {
 }
 
 message CreateBucketResponse {
-    required Status status = 1;
+
 }
 
 message InfoBucketRequest {
@@ -378,7 +380,7 @@ message InfoBucketRequest {
 }
 
 message InfoBucketResponse {
-    required Status status = 1;
+
     optional BucketInfo bucketInfo = 2;
 }
 
@@ -387,7 +389,7 @@ message SetBucketPropertyRequest {
 }
 
 message SetBucketPropertyResponse {
-    required Status status = 1;
+
 }
 
 message DeleteBucketRequest {
@@ -396,7 +398,7 @@ message DeleteBucketRequest {
 }
 
 message DeleteBucketResponse {
-    required Status status = 1;
+
 }
 
 message ListBucketsRequest {
@@ -407,7 +409,7 @@ message ListBucketsRequest {
 }
 
 message ListBucketsResponse {
-    required Status status = 1;
+
     repeated BucketInfo bucketInfo = 2;
 }
 
@@ -459,7 +461,7 @@ message CreateKeyRequest {
 }
 
 message CreateKeyResponse {
-    required Status status = 1;
+
     optional KeyInfo keyInfo = 2;
     // clients' followup request may carry this ID for stateful operations
     // (similar to a cookie).
@@ -472,7 +474,7 @@ message LookupKeyRequest {
 }
 
 message LookupKeyResponse {
-    required Status status = 1;
+
     optional KeyInfo keyInfo = 2;
     // clients' followup request may carry this ID for stateful operations (similar
     // to a cookie).
@@ -487,7 +489,7 @@ message RenameKeyRequest{
 }
 
 message RenameKeyResponse{
-    required Status status = 1;
+
 }
 
 message DeleteKeyRequest {
@@ -495,7 +497,7 @@ message DeleteKeyRequest {
 }
 
 message DeleteKeyResponse {
-    required Status status = 1;
+
     optional KeyInfo keyInfo = 2;
     // clients' followup request may carry this ID for stateful operations
     // (similar to a cookie).
@@ -531,7 +533,7 @@ message ListKeysRequest {
 }
 
 message ListKeysResponse {
-    required Status status = 1;
+
     repeated KeyInfo keyInfo = 2;
 }
 
@@ -541,7 +543,7 @@ message CommitKeyRequest {
 }
 
 message CommitKeyResponse {
-    required Status status = 1;
+
 }
 
 message AllocateBlockRequest {
@@ -550,7 +552,7 @@ message AllocateBlockRequest {
 }
 
 message AllocateBlockResponse {
-    required Status status = 1;
+
     optional KeyLocation keyLocation = 2;
 }
 
@@ -558,7 +560,7 @@ message ServiceListRequest {
 }
 
 message ServiceListResponse {
-    required Status status = 1;
+
     repeated ServiceInfo serviceInfo = 2;
 }
 
@@ -585,7 +587,7 @@ message S3CreateBucketRequest {
 }
 
 message S3CreateBucketResponse {
-    required Status status = 1;
+
 }
 
 message S3DeleteBucketRequest {
@@ -593,14 +595,14 @@ message S3DeleteBucketRequest {
 }
 
 message S3DeleteBucketResponse {
-    required Status status = 1;
+
 }
 
 message S3BucketInfoRequest {
     required string s3bucketName = 1;
 }
 message S3BucketInfoResponse {
-    required Status status = 1;
+
     optional string ozoneMapping = 2;
 }
 
@@ -612,7 +614,7 @@ message S3ListBucketsRequest {
 }
 
 message S3ListBucketsResponse {
-    required Status status = 1;
+
     repeated BucketInfo bucketInfo = 2;
 }
 
@@ -625,7 +627,6 @@ message MultipartInfoInitiateResponse {
     required string bucketName = 2;
     required string keyName = 3;
     required string multipartUploadID = 4;
-    required Status status = 5;
 }
 
 message MultipartKeyInfo {
@@ -647,7 +648,6 @@ message MultipartCommitUploadPartRequest {
 message MultipartCommitUploadPartResponse {
     // This one is returned as Etag for S3.
     optional string partName = 1;
-    required Status status = 2;
 }
 
 message MultipartUploadCompleteRequest {
@@ -660,7 +660,6 @@ message MultipartUploadCompleteResponse {
     optional string bucket = 2;
     optional string key = 3;
     optional string hash = 4; // This will be used as etag for s3
-    required Status status = 5;
 }
 
 message Part {
@@ -673,7 +672,7 @@ message MultipartUploadAbortRequest {
 }
 
 message MultipartUploadAbortResponse {
-    required Status status = 1;
+
 }
 message MultipartUploadListPartsRequest {
     required string volume = 1;
@@ -685,7 +684,7 @@ message MultipartUploadListPartsRequest {
 }
 
 message MultipartUploadListPartsResponse {
-    required Status status = 1;
+
     optional hadoop.hdds.ReplicationType type = 2;
     optional uint32 nextPartNumberMarker = 3;
     optional bool isTruncated = 4;
@@ -701,17 +700,17 @@ message PartInfo {
 }
 
 message GetDelegationTokenResponseProto{
-    required Status status = 1;
+
     optional hadoop.common.GetDelegationTokenResponseProto response = 2;
 }
 
 message RenewDelegationTokenResponseProto{
-    required Status status = 1;
+
     optional hadoop.common.RenewDelegationTokenResponseProto response = 2;
 }
 
 message CancelDelegationTokenResponseProto {
-    required Status status = 1;
+
     optional hadoop.common.CancelDelegationTokenResponseProto response = 2;
 }
 
@@ -725,7 +724,6 @@ message GetS3SecretRequest {
 }
 
 message GetS3SecretResponse {
-    required Status status = 1;
     required S3Secret s3Secret = 2;
 }
 

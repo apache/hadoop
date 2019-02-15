@@ -16,12 +16,15 @@
  */
 package org.apache.hadoop.ozone.om;
 
+import java.util.LinkedList;
+import java.util.UUID;
 
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.OzoneTestUtils;
+import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.IOzoneObj;
 import org.apache.hadoop.ozone.security.acl.OzoneAclException;
@@ -34,21 +37,17 @@ import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.LambdaTestUtils;
+
+import org.apache.commons.lang3.RandomStringUtils;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_AUTHORIZER_CLASS;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
 import org.junit.AfterClass;
+import static org.junit.Assert.assertTrue;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-
-import java.io.IOException;
-import java.util.LinkedList;
-import java.util.UUID;
-
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_AUTHORIZER_CLASS;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test for Ozone Manager ACLs.
@@ -123,7 +122,7 @@ public class TestOmAcls {
     createVolumeArgs.setAdminName(adminUser);
     createVolumeArgs.setQuota(new OzoneQuota(i, OzoneQuota.Units.GB));
     logCapturer.clearOutput();
-    LambdaTestUtils.intercept(IOException.class, "Volume creation failed",
+    OzoneTestUtils.expectOmException(ResultCodes.INTERNAL_ERROR,
         () -> storageHandler.createVolume(createVolumeArgs));
     assertTrue(logCapturer.getOutput().contains("doesn't have CREATE " +
         "permission to access volume"));
@@ -132,7 +131,7 @@ public class TestOmAcls {
     bucketArgs.setAddAcls(new LinkedList<>());
     bucketArgs.setRemoveAcls(new LinkedList<>());
     bucketArgs.setStorageType(StorageType.DISK);
-    LambdaTestUtils.intercept(IOException.class, "Bucket creation failed",
+    OzoneTestUtils.expectOmException(ResultCodes.INTERNAL_ERROR,
         () -> storageHandler.createBucket(bucketArgs));
     assertTrue(logCapturer.getOutput().contains("doesn't have CREATE " +
         "permission to access bucket"));
@@ -156,7 +155,7 @@ public class TestOmAcls {
     // write a key without specifying size at all
     String keyName = "testKey";
     KeyArgs keyArgs = new KeyArgs(keyName, bucketArgs);
-    LambdaTestUtils.intercept(IOException.class, "Create key failed",
+    OzoneTestUtils.expectOmException(ResultCodes.INTERNAL_ERROR,
         () -> storageHandler.newKeyWriter(keyArgs));
     assertTrue(logCapturer.getOutput().contains("doesn't have READ permission" +
         " to access key"));

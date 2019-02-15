@@ -25,6 +25,8 @@ import java.util.Iterator;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
 import org.apache.hadoop.ozone.s3.header.AuthenticationHeaderParser;
@@ -57,12 +59,9 @@ public class EndpointBase {
     OzoneBucket bucket;
     try {
       bucket = volume.getBucket(bucketName);
-    } catch (IOException ex) {
-      LOG.error("Error occurred is {}", ex);
-      if (ex.getMessage().contains("NOT_FOUND")) {
-        OS3Exception oex =
-            S3ErrorTable.newError(S3ErrorTable.NO_SUCH_BUCKET, bucketName);
-        throw oex;
+    } catch (OMException ex) {
+      if (ex.getResult() == ResultCodes.KEY_NOT_FOUND) {
+        throw S3ErrorTable.newError(S3ErrorTable.NO_SUCH_BUCKET, bucketName);
       } else {
         throw ex;
       }
@@ -76,12 +75,10 @@ public class EndpointBase {
     try {
       OzoneVolume volume = getVolume(getOzoneVolumeName(bucketName));
       bucket = volume.getBucket(bucketName);
-    } catch (IOException ex) {
-      LOG.error("Error occurred is {}", ex);
-      if (ex.getMessage().contains("NOT_FOUND")) {
-        OS3Exception oex =
-            S3ErrorTable.newError(S3ErrorTable.NO_SUCH_BUCKET, bucketName);
-        throw oex;
+    } catch (OMException ex) {
+      if (ex.getResult() == ResultCodes.BUCKET_NOT_FOUND
+          || ex.getResult() == ResultCodes.S3_BUCKET_NOT_FOUND) {
+        throw S3ErrorTable.newError(S3ErrorTable.NO_SUCH_BUCKET, bucketName);
       } else {
         throw ex;
       }
@@ -93,8 +90,8 @@ public class EndpointBase {
     OzoneVolume volume = null;
     try {
       volume = client.getObjectStore().getVolume(volumeName);
-    } catch (Exception ex) {
-      if (ex.getMessage().contains("NOT_FOUND")) {
+    } catch (OMException ex) {
+      if (ex.getResult() == ResultCodes.VOLUME_NOT_FOUND) {
         throw new NotFoundException("Volume " + volumeName + " is not found");
       } else {
         throw ex;
@@ -115,9 +112,8 @@ public class EndpointBase {
       IOException {
     try {
       client.getObjectStore().createS3Bucket(userName, bucketName);
-    } catch (IOException ex) {
-      LOG.error("createS3Bucket error:", ex);
-      if (!ex.getMessage().contains("ALREADY_EXISTS")) {
+    } catch (OMException ex) {
+      if (ex.getResult() != ResultCodes.VOLUME_ALREADY_EXISTS) {
         // S3 does not return error for bucket already exists, it just
         // returns the location.
         throw ex;
