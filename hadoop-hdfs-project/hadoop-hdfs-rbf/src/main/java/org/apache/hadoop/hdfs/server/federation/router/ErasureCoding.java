@@ -187,33 +187,6 @@ public class ErasureCoding {
         rpcClient.invokeConcurrent(
             nss, method, true, false, ECBlockGroupStats.class);
 
-    // Merge the stats from all the namespaces
-    long lowRedundancyBlockGroups = 0;
-    long corruptBlockGroups = 0;
-    long missingBlockGroups = 0;
-    long bytesInFutureBlockGroups = 0;
-    long pendingDeletionBlocks = 0;
-    long highestPriorityLowRedundancyBlocks = 0;
-    boolean hasHighestPriorityLowRedundancyBlocks = false;
-
-    for (ECBlockGroupStats stats : allStats.values()) {
-      lowRedundancyBlockGroups += stats.getLowRedundancyBlockGroups();
-      corruptBlockGroups += stats.getCorruptBlockGroups();
-      missingBlockGroups += stats.getMissingBlockGroups();
-      bytesInFutureBlockGroups += stats.getBytesInFutureBlockGroups();
-      pendingDeletionBlocks += stats.getPendingDeletionBlocks();
-      if (stats.hasHighestPriorityLowRedundancyBlocks()) {
-        hasHighestPriorityLowRedundancyBlocks = true;
-        highestPriorityLowRedundancyBlocks +=
-            stats.getHighestPriorityLowRedundancyBlocks();
-      }
-    }
-    if (hasHighestPriorityLowRedundancyBlocks) {
-      return new ECBlockGroupStats(lowRedundancyBlockGroups, corruptBlockGroups,
-          missingBlockGroups, bytesInFutureBlockGroups, pendingDeletionBlocks,
-          highestPriorityLowRedundancyBlocks);
-    }
-    return new ECBlockGroupStats(lowRedundancyBlockGroups, corruptBlockGroups,
-        missingBlockGroups, bytesInFutureBlockGroups, pendingDeletionBlocks);
+    return ECBlockGroupStats.merge(allStats.values());
   }
 }
