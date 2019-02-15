@@ -24,16 +24,15 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -1061,8 +1060,8 @@ public class RouterRpcClient {
       }
     }
 
-    List<T> orderedLocations = new LinkedList<>();
-    Set<Callable<Object>> callables = new HashSet<>();
+    List<T> orderedLocations = new ArrayList<>();
+    List<Callable<Object>> callables = new ArrayList<>();
     for (final T location : locations) {
       String nsId = location.getNameserviceId();
       final List<? extends FederationNamenodeContext> namenodes =
@@ -1080,20 +1079,12 @@ public class RouterRpcClient {
             nnLocation = (T)new RemoteLocation(nsId, nnId, location.getDest());
           }
           orderedLocations.add(nnLocation);
-          callables.add(new Callable<Object>() {
-            public Object call() throws Exception {
-              return invokeMethod(ugi, nnList, proto, m, paramList);
-            }
-          });
+          callables.add(() -> invokeMethod(ugi, nnList, proto, m, paramList));
         }
       } else {
         // Call the objectGetter in order of nameservices in the NS list
         orderedLocations.add(location);
-        callables.add(new Callable<Object>() {
-          public Object call() throws Exception {
-            return invokeMethod(ugi, namenodes, proto, m, paramList);
-          }
-        });
+        callables.add(() ->  invokeMethod(ugi, namenodes, proto, m, paramList));
       }
     }
 
