@@ -143,7 +143,7 @@ if [ "$RUN_ALL" = true ]; then
 #
    TESTS=("basic")
    execute_tests ozone "${TESTS[@]}"
-   TESTS=("audiparser")
+   TESTS=("auditparser")
    execute_tests ozone "${TESTS[@]}"
    TESTS=("ozonefs")
    execute_tests ozonefs "${TESTS[@]}"

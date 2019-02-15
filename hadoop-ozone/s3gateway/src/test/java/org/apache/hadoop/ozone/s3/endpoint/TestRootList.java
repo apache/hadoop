@@ -58,7 +58,8 @@ public class TestRootList {
   public void testListBucket() throws Exception {
 
     // List operation should succeed even there is no bucket.
-    ListBucketResponse response = (ListBucketResponse) rootEndpoint.get().getEntity();
+    ListBucketResponse response =
+        (ListBucketResponse) rootEndpoint.get().getEntity();
     assertEquals(0, response.getBucketsNum());
 
     String bucketBaseName = "bucket-" + getClass().getName();

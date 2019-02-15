@@ -173,7 +173,8 @@ public class VolumeManagerImpl implements VolumeManager {
       if (volumeArgs == null) {
         LOG.debug("Changing volume ownership failed for user:{} volume:{}",
             owner, volume);
-        throw  new OMException(ResultCodes.VOLUME_NOT_FOUND);
+        throw new OMException("Volume " + volume + " is not found",
+            ResultCodes.VOLUME_NOT_FOUND);
       }
 
       Preconditions.checkState(volume.equals(volumeArgs.getVolume()));
@@ -270,7 +271,8 @@ public class VolumeManagerImpl implements VolumeManager {
           metadataManager.getVolumeTable().get(dbVolumeKey);
       if (volumeArgs == null) {
         LOG.debug("volume:{} does not exist", volume);
-        throw new OMException(ResultCodes.VOLUME_NOT_FOUND);
+        throw new OMException("Volume " + volume + " is not found",
+            ResultCodes.VOLUME_NOT_FOUND);
       }
 
       return volumeArgs;
@@ -309,7 +311,8 @@ public class VolumeManagerImpl implements VolumeManager {
           metadataManager.getVolumeTable().get(dbVolumeKey);
       if (volumeArgs == null) {
         LOG.debug("volume:{} does not exist", volume);
-        throw new OMException(ResultCodes.VOLUME_NOT_FOUND);
+        throw new OMException("Volume " + volume + " is not found",
+            ResultCodes.VOLUME_NOT_FOUND);
       }
 
       if (!metadataManager.isVolumeEmpty(volume)) {
@@ -361,7 +364,8 @@ public class VolumeManagerImpl implements VolumeManager {
           metadataManager.getVolumeTable().get(dbVolumeKey);
       if (volumeArgs == null) {
         LOG.debug("volume:{} does not exist", volume);
-        throw  new OMException(ResultCodes.VOLUME_NOT_FOUND);
+        throw new OMException("Volume " + volume + " is not found",
+            ResultCodes.VOLUME_NOT_FOUND);
       }
 
       Preconditions.checkState(volume.equals(volumeArgs.getVolume()));
