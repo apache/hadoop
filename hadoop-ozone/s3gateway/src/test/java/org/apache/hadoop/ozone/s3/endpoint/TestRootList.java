@@ -58,14 +58,14 @@ public class TestRootList {
   public void testListBucket() throws Exception {
 
     // List operation should succeed even there is no bucket.
-    ListBucketResponse response = rootEndpoint.get();
+    ListBucketResponse response = (ListBucketResponse) rootEndpoint.get().getEntity();
     assertEquals(0, response.getBucketsNum());
 
     String bucketBaseName = "bucket-" + getClass().getName();
     for(int i = 0; i < 10; i++) {
       objectStoreStub.createS3Bucket(userName, bucketBaseName + i);
     }
-    response = rootEndpoint.get();
+    response = (ListBucketResponse) rootEndpoint.get().getEntity();
     assertEquals(10, response.getBucketsNum());
   }
 

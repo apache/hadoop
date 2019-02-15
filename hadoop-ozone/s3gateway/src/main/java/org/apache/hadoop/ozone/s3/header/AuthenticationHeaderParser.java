@@ -50,6 +50,10 @@ public class AuthenticationHeaderParser {
     }
   }
 
+  public boolean doesAuthenticationInfoExists() {
+    return authHeader != null;
+  }
+
   public String getAccessKeyID() throws OS3Exception {
     parse();
     return accessKeyID;
