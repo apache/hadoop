@@ -56,6 +56,8 @@ public class StaleNodeHandler implements EventHandler<DatanodeDetails> {
       EventPublisher publisher) {
     Set<PipelineID> pipelineIds =
         nodeManager.getPipelines(datanodeDetails);
+    LOG.info("Datanode {} moved to stale state. Finalizing its pipelines {}",
+        datanodeDetails, pipelineIds);
     for (PipelineID pipelineID : pipelineIds) {
       try {
         Pipeline pipeline = pipelineManager.getPipeline(pipelineID);
