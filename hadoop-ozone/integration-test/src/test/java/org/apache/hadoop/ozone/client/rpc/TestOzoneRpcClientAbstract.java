@@ -93,10 +93,6 @@ import static org.junit.Assert.fail;
 import org.junit.Ignore;
 import org.junit.Test;
 
-<<<<<<<HEAD
-=======
-    >>>>>>>fix all the checkstyle issues
-
 /**
  * This is an abstract class to test all the public facing APIs of Ozone
  * Client, w/o OM Ratis server.
