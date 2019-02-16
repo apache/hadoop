@@ -176,55 +176,96 @@ public class TestDataNodeReconfiguration {
   @Test
   public void testAcquireWithMaxConcurrentMoversGreaterThanDefault()
       throws IOException, ReconfigurationException {
-    testAcquireWithMaxConcurrentMoversShared(10);
+    final DataNode[] dns = createDNsForTest(1);
+    try {
+      testAcquireOnMaxConcurrentMoversReconfiguration(dns[0], 10);
+    } finally {
+      dns[0].shutdown();
+    }
   }
 
   @Test
   public void testAcquireWithMaxConcurrentMoversLessThanDefault()
       throws IOException, ReconfigurationException {
-    testAcquireWithMaxConcurrentMoversShared(3);
-  }
-
-  private void testAcquireWithMaxConcurrentMoversShared(
-      int maxConcurrentMovers)
-      throws IOException, ReconfigurationException {
-    DataNode[] dns = null;
+    final DataNode[] dns = createDNsForTest(1);
     try {
-      dns = createDNsForTest(1);
-      testAcquireOnMaxConcurrentMoversReconfiguration(dns[0],
-          maxConcurrentMovers);
-    } catch (IOException ioe) {
-      throw ioe;
-    } catch (ReconfigurationException re) {
-      throw re;
+      testAcquireOnMaxConcurrentMoversReconfiguration(dns[0], 3);
     } finally {
-      shutDownDNs(dns);
+      dns[0].shutdown();
     }
   }
 
-  private void shutDownDNs(DataNode[] dns) {
-    if (dns == null) {
-      return;
-    }
+  /**
+   * Simulates a scenario where the DataNode has been reconfigured with fewer
+   * mover threads, but all of the current treads are busy and therefore the
+   * DataNode is unable to honor this request within a reasonable amount of
+   * time. The DataNode eventually gives up and returns a flag indicating that
+   * the request was not honored.
+   */
+  @Test
+  public void testFailedDecreaseConcurrentMovers()
+      throws IOException, ReconfigurationException {
+    final DataNode[] dns = createDNsForTest(1);
+    final DataNode dataNode = dns[0];
+    try {
+      // Set the current max to 2
+      dataNode.xserver.updateBalancerMaxConcurrentMovers(2);
 
-    for (int i = 0; i < dns.length; i++) {
-      try {
-        if (dns[i] == null) {
-          continue;
-        }
-        dns[i].shutdown();
-      } catch (Exception e) {
-        LOG.error("Cannot close: ", e);
-      }
+      // Simulate grabbing 2 threads
+      dataNode.xserver.balanceThrottler.acquire();
+      dataNode.xserver.balanceThrottler.acquire();
+
+      dataNode.xserver.setMaxReconfigureWaitTime(1);
+
+      // Attempt to set new maximum to 1
+      final boolean success =
+          dataNode.xserver.updateBalancerMaxConcurrentMovers(1);
+      Assert.assertFalse(success);
+    } finally {
+      dataNode.shutdown();
+    }
+  }
+
+  /**
+   * Test with invalid configuration.
+   */
+  @Test(expected = ReconfigurationException.class)
+  public void testFailedDecreaseConcurrentMoversReconfiguration()
+      throws IOException, ReconfigurationException {
+    final DataNode[] dns = createDNsForTest(1);
+    final DataNode dataNode = dns[0];
+    try {
+      // Set the current max to 2
+      dataNode.xserver.updateBalancerMaxConcurrentMovers(2);
+
+      // Simulate grabbing 2 threads
+      dataNode.xserver.balanceThrottler.acquire();
+      dataNode.xserver.balanceThrottler.acquire();
+
+      dataNode.xserver.setMaxReconfigureWaitTime(1);
+
+      // Now try reconfigure maximum downwards with threads released
+      dataNode.reconfigurePropertyImpl(
+          DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY, "1");
+    } catch (ReconfigurationException e) {
+      Assert.assertEquals(DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
+          e.getProperty());
+      Assert.assertEquals("1", e.getNewValue());
+      throw e;
+    } finally {
+      dataNode.shutdown();
     }
   }
 
   private void testAcquireOnMaxConcurrentMoversReconfiguration(
       DataNode dataNode, int maxConcurrentMovers) throws IOException,
       ReconfigurationException {
-    int defaultMaxThreads = dataNode.getConf().getInt(
+    final int defaultMaxThreads = dataNode.getConf().getInt(
         DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
         DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT);
+
+    /** Test that the default setup is working */
+
     for (int i = 0; i < defaultMaxThreads; i++) {
       assertEquals("should be able to get thread quota", true,
           dataNode.xserver.balanceThrottler.acquire());
@@ -233,25 +274,24 @@ public class TestDataNodeReconfiguration {
     assertEquals("should not be able to get thread quota", false,
         dataNode.xserver.balanceThrottler.acquire());
 
+    // Give back the threads
+    for (int i = 0; i < defaultMaxThreads; i++) {
+      dataNode.xserver.balanceThrottler.release();
+    }
+
+    /** Test that the change is applied correctly */
+
     // change properties
     dataNode.reconfigureProperty(
         DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
         String.valueOf(maxConcurrentMovers));
 
     assertEquals("thread quota is wrong", maxConcurrentMovers,
-        dataNode.xserver.balanceThrottler.getMaxConcurrentMovers()); // thread quota
+        dataNode.xserver.balanceThrottler.getMaxConcurrentMovers());
 
-    int val = Math.abs(maxConcurrentMovers - defaultMaxThreads);
-    if (defaultMaxThreads < maxConcurrentMovers) {
-      for (int i = 0; i < val; i++) {
-        assertEquals("should be able to get thread quota", true,
-            dataNode.xserver.balanceThrottler.acquire());
-      }
-    } else if (defaultMaxThreads > maxConcurrentMovers) {
-      for (int i = 0; i < val; i++) {
-        assertEquals("should not be able to get thread quota", false,
-            dataNode.xserver.balanceThrottler.acquire());
-      }
+    for (int i = 0; i < maxConcurrentMovers; i++) {
+      assertEquals("should be able to get thread quota", true,
+          dataNode.xserver.balanceThrottler.acquire());
     }
 
     assertEquals("should not be able to get thread quota", false,
