@@ -18,8 +18,22 @@
 package org.apache.hadoop.ozone.protocolPB;
 
 import com.google.protobuf.ByteString;
+import org.apache.hadoop.crypto.CipherSuite;
+import org.apache.hadoop.crypto.CryptoProtocolVersion;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.om.helpers.BucketEncryptionKeyInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .BucketEncryptionInfoProto;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .CipherSuiteProto;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .CryptoProtocolVersionProto;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .FileEncryptionInfoProto;
+
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto
@@ -148,4 +162,119 @@ public final class OMPBHelper {
         .toByteArray(), tokenProto.getPassword().toByteArray(), new Text(
         tokenProto.getKind()), new Text(tokenProto.getService()));
   }
+
+  public static BucketEncryptionKeyInfo convert(
+      BucketEncryptionInfoProto beInfo) {
+    if (beInfo == null) {
+      throw new IllegalArgumentException("Invalid argument: bucket encryption" +
+          " info is null");
+    }
+
+    return new BucketEncryptionKeyInfo(
+        beInfo.hasCryptoProtocolVersion()?
+            convert(beInfo.getCryptoProtocolVersion()) : null,
+        beInfo.hasSuite()? convert(beInfo.getSuite()) : null,
+        beInfo.getKeyName());
+  }
+
+
+  public static BucketEncryptionInfoProto convert(
+      BucketEncryptionKeyInfo beInfo) {
+    if (beInfo == null || beInfo.getKeyName() == null) {
+      throw new IllegalArgumentException("Invalid argument: bucket encryption" +
+          " info is null");
+    }
+
+    BucketEncryptionInfoProto.Builder bb = BucketEncryptionInfoProto
+        .newBuilder().setKeyName(beInfo.getKeyName());
+
+    if (beInfo.getSuite() != null) {
+      bb.setSuite(convert(beInfo.getSuite()));
+    }
+    if (beInfo.getVersion()!= null) {
+      bb.setCryptoProtocolVersion(convert(beInfo.getVersion()));
+    }
+    return bb.build();
+  }
+
+  public static FileEncryptionInfoProto convert(
+      FileEncryptionInfo info) {
+    if (info == null) {
+      return null;
+    }
+    return OzoneManagerProtocolProtos.FileEncryptionInfoProto.newBuilder()
+        .setSuite(convert(info.getCipherSuite()))
+        .setCryptoProtocolVersion(convert(info.getCryptoProtocolVersion()))
+        .setKey(getByteString(info.getEncryptedDataEncryptionKey()))
+        .setIv(getByteString(info.getIV()))
+        .setEzKeyVersionName(info.getEzKeyVersionName())
+        .setKeyName(info.getKeyName())
+        .build();
+  }
+
+  public static FileEncryptionInfo convert(FileEncryptionInfoProto proto) {
+    if (proto == null) {
+      return null;
+    }
+    CipherSuite suite = convert(proto.getSuite());
+    CryptoProtocolVersion version = convert(proto.getCryptoProtocolVersion());
+    byte[] key = proto.getKey().toByteArray();
+    byte[] iv = proto.getIv().toByteArray();
+    String ezKeyVersionName = proto.getEzKeyVersionName();
+    String keyName = proto.getKeyName();
+    return new FileEncryptionInfo(suite, version, key, iv, keyName,
+        ezKeyVersionName);
+  }
+
+  public static CipherSuite convert(CipherSuiteProto proto) {
+    switch(proto) {
+    case AES_CTR_NOPADDING:
+      return CipherSuite.AES_CTR_NOPADDING;
+    default:
+      // Set to UNKNOWN and stash the unknown enum value
+      CipherSuite suite = CipherSuite.UNKNOWN;
+      suite.setUnknownValue(proto.getNumber());
+      return suite;
+    }
+  }
+
+  public static CipherSuiteProto convert(CipherSuite suite) {
+    switch (suite) {
+    case UNKNOWN:
+      return CipherSuiteProto.UNKNOWN;
+    case AES_CTR_NOPADDING:
+      return CipherSuiteProto.AES_CTR_NOPADDING;
+    default:
+      return null;
+    }
+  }
+
+  public static CryptoProtocolVersionProto convert(
+      CryptoProtocolVersion version) {
+    switch(version) {
+    case UNKNOWN:
+      return OzoneManagerProtocolProtos.CryptoProtocolVersionProto
+          .UNKNOWN_PROTOCOL_VERSION;
+    case ENCRYPTION_ZONES:
+      return OzoneManagerProtocolProtos.CryptoProtocolVersionProto
+          .ENCRYPTION_ZONES;
+    default:
+      return null;
+    }
+  }
+
+  public static CryptoProtocolVersion convert(
+      CryptoProtocolVersionProto proto) {
+    switch(proto) {
+    case ENCRYPTION_ZONES:
+      return CryptoProtocolVersion.ENCRYPTION_ZONES;
+    default:
+      // Set to UNKNOWN and stash the unknown enum value
+      CryptoProtocolVersion version = CryptoProtocolVersion.UNKNOWN;
+      version.setUnknownValue(proto.getNumber());
+      return version;
+    }
+  }
+
+
 }

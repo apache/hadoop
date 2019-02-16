@@ -25,8 +25,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyInfo;
+import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.base.Preconditions;
@@ -47,6 +49,7 @@ public final class OmKeyInfo extends WithMetadata {
   private long modificationTime;
   private HddsProtos.ReplicationType type;
   private HddsProtos.ReplicationFactor factor;
+  private FileEncryptionInfo encInfo;
 
   @SuppressWarnings("parameternumber")
   OmKeyInfo(String volumeName, String bucketName, String keyName,
@@ -54,7 +57,8 @@ public final class OmKeyInfo extends WithMetadata {
       long creationTime, long modificationTime,
       HddsProtos.ReplicationType type,
       HddsProtos.ReplicationFactor factor,
-      Map<String, String> metadata) {
+      Map<String, String> metadata,
+      FileEncryptionInfo encInfo) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.keyName = keyName;
@@ -76,6 +80,7 @@ public final class OmKeyInfo extends WithMetadata {
     this.factor = factor;
     this.type = type;
     this.metadata = metadata;
+    this.encInfo = encInfo;
   }
 
   public String getVolumeName() {
@@ -207,6 +212,10 @@ public final class OmKeyInfo extends WithMetadata {
     this.modificationTime = modificationTime;
   }
 
+  public FileEncryptionInfo getFileEncryptionInfo() {
+    return encInfo;
+  }
+
   /**
    * Builder of OmKeyInfo.
    */
@@ -222,6 +231,7 @@ public final class OmKeyInfo extends WithMetadata {
     private HddsProtos.ReplicationType type;
     private HddsProtos.ReplicationFactor factor;
     private Map<String, String> metadata;
+    private FileEncryptionInfo encInfo;
 
     public Builder() {
       this.metadata = new HashMap<>();
@@ -284,17 +294,23 @@ public final class OmKeyInfo extends WithMetadata {
       return this;
     }
 
+    public Builder setFileEncryptionInfo(FileEncryptionInfo feInfo) {
+      this.encInfo = feInfo;
+      return this;
+    }
+
     public OmKeyInfo build() {
       return new OmKeyInfo(
           volumeName, bucketName, keyName, omKeyLocationInfoGroups,
-          dataSize, creationTime, modificationTime, type, factor, metadata);
+          dataSize, creationTime, modificationTime, type, factor, metadata,
+          encInfo);
     }
   }
 
   public KeyInfo getProtobuf() {
     long latestVersion = keyLocationVersions.size() == 0 ? -1 :
         keyLocationVersions.get(keyLocationVersions.size() - 1).getVersion();
-    return KeyInfo.newBuilder()
+    KeyInfo.Builder kb = KeyInfo.newBuilder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(keyName)
@@ -307,8 +323,11 @@ public final class OmKeyInfo extends WithMetadata {
         .setLatestVersion(latestVersion)
         .setCreationTime(creationTime)
         .setModificationTime(modificationTime)
-        .addAllMetadata(KeyValueUtil.toProtobuf(metadata))
-        .build();
+        .addAllMetadata(KeyValueUtil.toProtobuf(metadata));
+    if (encInfo != null) {
+      kb.setFileEncryptionInfo(OMPBHelper.convert(encInfo));
+    }
+    return kb.build();
   }
 
   public static OmKeyInfo getFromProtobuf(KeyInfo keyInfo) {
@@ -324,7 +343,9 @@ public final class OmKeyInfo extends WithMetadata {
         keyInfo.getModificationTime(),
         keyInfo.getType(),
         keyInfo.getFactor(),
-        KeyValueUtil.getFromProtobuf(keyInfo.getMetadataList()));
+        KeyValueUtil.getFromProtobuf(keyInfo.getMetadataList()),
+        keyInfo.hasFileEncryptionInfo() ? OMPBHelper.convert(keyInfo
+            .getFileEncryptionInfo()): null);
   }
 
   @Override

@@ -19,9 +19,15 @@ package org.apache.hadoop.ozone.om;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.crypto.CipherSuite;
+import org.apache.hadoop.crypto.CryptoProtocolVersion;
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.helpers.BucketEncryptionKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.util.Time;
@@ -42,6 +48,7 @@ public class BucketManagerImpl implements BucketManager {
    * OMMetadataManager is used for accessing OM MetadataDB and ReadWriteLock.
    */
   private final OMMetadataManager metadataManager;
+  private final KeyProviderCryptoExtension kmsProvider;
 
   /**
    * Constructs BucketManager.
@@ -49,7 +56,17 @@ public class BucketManagerImpl implements BucketManager {
    * @param metadataManager
    */
   public BucketManagerImpl(OMMetadataManager metadataManager) {
+    this(metadataManager, null);
+  }
+
+  public BucketManagerImpl(OMMetadataManager metadataManager,
+                           KeyProviderCryptoExtension kmsProvider) {
     this.metadataManager = metadataManager;
+    this.kmsProvider = kmsProvider;
+  }
+
+  KeyProviderCryptoExtension getKMSProvider() {
+    return kmsProvider;
   }
 
   /**
@@ -99,19 +116,47 @@ public class BucketManagerImpl implements BucketManager {
         throw new OMException("Bucket already exist",
             OMException.ResultCodes.BUCKET_ALREADY_EXISTS);
       }
-
-      OmBucketInfo omBucketInfo = OmBucketInfo.newBuilder()
+      BucketEncryptionKeyInfo bek = bucketInfo.getEncryptionKeyInfo();
+      BucketEncryptionKeyInfo.Builder bekb = null;
+      if (bek != null) {
+        if (kmsProvider == null) {
+          throw new OMException("Invalid KMS provider, check configuration " +
+              CommonConfigurationKeys.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+              OMException.ResultCodes.INVALID_KMS_PROVIDER);
+        }
+        if (bek.getKeyName() == null) {
+          throw new OMException("Bucket encryption key needed.", OMException
+              .ResultCodes.BUCKET_ENCRYPTION_KEY_NOT_FOUND);
+        }
+        // Talk to KMS to retrieve the bucket encryption key info.
+        KeyProvider.Metadata metadata = getKMSProvider().getMetadata(
+            bek.getKeyName());
+        if (metadata == null) {
+          throw new OMException("Bucket encryption key " + bek.getKeyName()
+              + " doesn't exist.",
+              OMException.ResultCodes.BUCKET_ENCRYPTION_KEY_NOT_FOUND);
+        }
+        // If the provider supports pool for EDEKs, this will fill in the pool
+        kmsProvider.warmUpEncryptedKeys(bek.getKeyName());
+        bekb = new BucketEncryptionKeyInfo.Builder()
+            .setKeyName(bek.getKeyName())
+            .setVersion(CryptoProtocolVersion.ENCRYPTION_ZONES)
+            .setSuite(CipherSuite.convert(metadata.getCipher()));
+      }
+      OmBucketInfo.Builder omBucketInfoBuilder = OmBucketInfo.newBuilder()
           .setVolumeName(bucketInfo.getVolumeName())
           .setBucketName(bucketInfo.getBucketName())
           .setAcls(bucketInfo.getAcls())
           .setStorageType(bucketInfo.getStorageType())
           .setIsVersionEnabled(bucketInfo.getIsVersionEnabled())
           .setCreationTime(Time.now())
-          .addAllMetadata(bucketInfo.getMetadata())
-          .build();
-      metadataManager.getBucketTable().put(bucketKey,
-          omBucketInfo);
+          .addAllMetadata(bucketInfo.getMetadata());
 
+      if (bekb != null) {
+        omBucketInfoBuilder.setBucketEncryptionKey(bekb.build());
+      }
+      metadataManager.getBucketTable().put(bucketKey,
+          omBucketInfoBuilder.build());
       LOG.debug("created bucket: {} in volume: {}", bucketName, volumeName);
     } catch (IOException | DBException ex) {
       if (!(ex instanceof OMException)) {

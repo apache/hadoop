@@ -51,17 +51,26 @@ public final class BucketArgs {
   private Map<String, String> metadata;
 
   /**
+   * Bucket encryption key name.
+   */
+  private String bucketEncryptionKey;
+
+  /**
    * Private constructor, constructed via builder.
    * @param versioning Bucket version flag.
    * @param storageType Storage type to be used.
    * @param acls list of ACLs.
+   * @param metadata map of bucket metadata
+   * @param bucketEncryptionKey bucket encryption key name
    */
   private BucketArgs(Boolean versioning, StorageType storageType,
-                     List<OzoneAcl> acls, Map<String, String> metadata) {
+                     List<OzoneAcl> acls, Map<String, String> metadata,
+                     String bucketEncryptionKey) {
     this.acls = acls;
     this.versioning = versioning;
     this.storageType = storageType;
     this.metadata = metadata;
+    this.bucketEncryptionKey = bucketEncryptionKey;
   }
 
   /**
@@ -98,6 +107,14 @@ public final class BucketArgs {
   }
 
   /**
+   * Returns the bucket encryption key name.
+   * @return bucket encryption key
+   */
+  public String getEncryptionKey() {
+    return bucketEncryptionKey;
+  }
+
+  /**
    * Returns new builder class that builds a OmBucketInfo.
    *
    * @return Builder
@@ -114,6 +131,7 @@ public final class BucketArgs {
     private StorageType storageType;
     private List<OzoneAcl> acls;
     private Map<String, String> metadata;
+    private String bucketEncryptionKey;
 
     public Builder() {
       metadata = new HashMap<>();
@@ -138,12 +156,18 @@ public final class BucketArgs {
       this.metadata.put(key, value);
       return this;
     }
+
+    public BucketArgs.Builder setBucketEncryptionKey(String bek) {
+      this.bucketEncryptionKey = bek;
+      return this;
+    }
     /**
      * Constructs the BucketArgs.
      * @return instance of BucketArgs.
      */
     public BucketArgs build() {
-      return new BucketArgs(versioning, storageType, acls, metadata);
+      return new BucketArgs(versioning, storageType, acls, metadata,
+          bucketEncryptionKey);
     }
   }
 }

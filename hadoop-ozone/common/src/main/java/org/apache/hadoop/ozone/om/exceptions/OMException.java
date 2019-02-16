@@ -177,6 +177,13 @@ public class OMException extends IOException {
 
     SCM_IN_CHILL_MODE,
 
-    INVALID_REQUEST
+    INVALID_REQUEST,
+
+    BUCKET_ENCRYPTION_KEY_NOT_FOUND,
+
+    UNKNOWN_CIPHER_SUITE,
+
+    INVALID_KMS_PROVIDER,
+
   }
 }

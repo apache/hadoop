@@ -25,6 +25,15 @@ services:
     hostname: kdc
     volumes:
       - ../..:/opt/hadoop
+  
+  kms:
+      image: apache/hadoop:${HADOOP_VERSION}
+      ports:
+      - 9600:9600
+      env_file:
+      - ./docker-config
+      command: ["hadoop", "kms"]
+
   datanode:
     build:
       context: docker-image/runner

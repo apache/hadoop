@@ -28,6 +28,9 @@ import java.security.KeyPair;
 import java.util.Collection;
 import java.util.Objects;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.HddsUtils;
@@ -114,6 +117,7 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.JvmPauseMonitor;
+import org.apache.hadoop.util.KMSUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
@@ -240,6 +244,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private final S3SecretManager s3SecretManager;
   private volatile boolean isOmRpcServerRunning = false;
 
+  private KeyProviderCryptoExtension kmsProvider = null;
+  private static String keyProviderUriKeyName =
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH;
+
   private OzoneManager(OzoneConfiguration conf) throws IOException,
       AuthenticationException {
     super(OzoneVersionInfo.OZONE_VERSION_INFO);
@@ -293,13 +301,22 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         OZONE_OM_ADDRESS_KEY, omNodeRpcAddr, omRpcServer);
     metadataManager = new OmMetadataManagerImpl(configuration);
     volumeManager = new VolumeManagerImpl(metadataManager, configuration);
-    bucketManager = new BucketManagerImpl(metadataManager);
+
+    // Create the KMS Key Provider
+    try {
+      kmsProvider = createKeyProviderExt(configuration);
+    } catch (IOException ioe) {
+      kmsProvider = null;
+      LOG.error("Fail to create Key Provider");
+    }
+
+    bucketManager = new BucketManagerImpl(metadataManager, getKmsProvider());
     metrics = OMMetrics.create();
 
     s3BucketManager = new S3BucketManagerImpl(configuration, metadataManager,
         volumeManager, bucketManager);
     keyManager = new KeyManagerImpl(scmBlockClient, metadataManager,
-        configuration, omStorage.getOmId(), blockTokenMgr);
+        configuration, omStorage.getOmId(), blockTokenMgr, getKmsProvider());
     s3SecretManager = new S3SecretManagerImpl(configuration, metadataManager);
 
     shutdownHook = () -> {
@@ -466,6 +483,18 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     // Set this nodes OZONE_OM_ADDRESS_KEY to the discovered address.
     configuration.set(OZONE_OM_ADDRESS_KEY,
         NetUtils.getHostPortString(rpcAddress));
+  }
+
+  private KeyProviderCryptoExtension createKeyProviderExt(
+      OzoneConfiguration conf) throws IOException {
+    KeyProvider keyProvider = KMSUtil.createKeyProvider(conf,
+        keyProviderUriKeyName);
+    if (keyProvider == null) {
+      return null;
+    }
+    KeyProviderCryptoExtension cryptoProvider = KeyProviderCryptoExtension
+        .createKeyProviderCryptoExtension(keyProvider);
+    return cryptoProvider;
   }
 
   /**
@@ -979,6 +1008,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
   }
 
+  @VisibleForTesting
+  public KeyProviderCryptoExtension getKmsProvider() {
+    return kmsProvider;
+  }
   /**
    * Get metadata manager.
    *
@@ -1003,7 +1036,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     DefaultMetricsSystem.initialize("OzoneManager");
 
     metadataManager.start(configuration);
-    startSecretManagerIfNecessary();
+    // TODO: uncomment this with HDDS-134 to avoid NPE
+    //startSecretManagerIfNecessary();
 
     // Set metrics and start metrics back ground thread
     metrics.setNumVolumes(metadataManager.countRowsInTable(metadataManager

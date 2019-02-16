@@ -223,6 +223,10 @@ enum Status {
     SCM_IN_CHILL_MODE = 38;
     INVALID_REQUEST = 39;
 
+    BUCKET_ENCRYPTION_KEY_NOT_FOUND = 40;
+    UNKNOWN_CIPHER_SUITE = 41;
+    INVALID_KMS_PROVIDER = 42;
+
 }
 
 
@@ -330,7 +334,7 @@ message BucketInfo {
     required StorageTypeProto storageType = 5 [default = DISK];
     required uint64 creationTime = 6;
     repeated hadoop.hdds.KeyValue metadata = 7;
-
+    optional BucketEncryptionInfoProto beinfo = 8;
 }
 
 enum StorageTypeProto {
@@ -338,6 +342,60 @@ enum StorageTypeProto {
     SSD = 2;
     ARCHIVE = 3;
     RAM_DISK = 4;
+}
+
+/**
+ * Cipher suite.
+ */
+enum CipherSuiteProto {
+    UNKNOWN = 1;
+    AES_CTR_NOPADDING = 2;
+}
+
+/**
+ * Crypto protocol version used to access encrypted files.
+ */
+enum CryptoProtocolVersionProto {
+    UNKNOWN_PROTOCOL_VERSION = 1;
+    ENCRYPTION_ZONES = 2;
+}
+/**
+ * Encryption information for bucket (bucket key)
+ */
+message BucketEncryptionInfoProto {
+    required string keyName = 1;
+    optional CipherSuiteProto suite = 2;
+    optional CryptoProtocolVersionProto cryptoProtocolVersion = 3;
+}
+
+/**
+ * Encryption information for a file.
+ */
+message FileEncryptionInfoProto {
+    required CipherSuiteProto suite = 1;
+    required CryptoProtocolVersionProto cryptoProtocolVersion = 2;
+    required bytes key = 3;
+    required bytes iv = 4;
+    required string keyName = 5;
+    required string ezKeyVersionName = 6;
+}
+
+/**
+ * Encryption information for an individual
+ * file within an encryption zone
+ */
+message PerFileEncryptionInfoProto {
+    required bytes key = 1;
+    required bytes iv = 2;
+    required string ezKeyVersionName = 3;
+}
+
+message DataEncryptionKeyProto {
+    required uint32 keyId = 1;
+    required bytes nonce = 3;
+    required bytes encryptionKey = 4;
+    required uint64 expiryDate = 5;
+    optional string encryptionAlgorithm = 6;
 }
 
 message BucketArgs {
@@ -439,6 +497,7 @@ message KeyLocation {
 message KeyLocationList {
     optional uint64 version = 1;
     repeated KeyLocation keyLocations = 2;
+    optional FileEncryptionInfoProto fileEncryptionInfo = 3;
 }
 
 message KeyInfo {
@@ -453,7 +512,7 @@ message KeyInfo {
     required uint64 modificationTime = 9;
     optional uint64 latestVersion = 10;
     repeated hadoop.hdds.KeyValue metadata = 11;
-
+    optional FileEncryptionInfoProto fileEncryptionInfo = 12;
 }
 
 message CreateKeyRequest {
