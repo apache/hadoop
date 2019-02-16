@@ -39,6 +39,7 @@ import org.apache.ratis.thirdparty.com.google.common.annotations.VisibleForTesti
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.DBOptions;
+import org.rocksdb.FlushOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.WriteOptions;
@@ -58,6 +59,7 @@ public class RDBStore implements DBStore {
   private final CodecRegistry codecRegistry;
   private final Hashtable<String, ColumnFamilyHandle> handleTable;
   private ObjectName statMBeanName;
+  private RDBCheckpointManager checkPointManager;
 
   @VisibleForTesting
   public RDBStore(File dbFile, DBOptions options,
@@ -107,6 +109,8 @@ public class RDBStore implements DBStore {
               dbFile.getAbsolutePath());
         }
       }
+
+      checkPointManager = new RDBCheckpointManager(db, "OM");
 
     } catch (RocksDBException e) {
       throw toIOException(
@@ -246,4 +250,20 @@ public class RDBStore implements DBStore {
     }
     return returnList;
   }
+
+  @Override
+  public DBCheckpointSnapshot getCheckpointSnapshot(boolean flush)
+      throws IOException {
+    if (flush) {
+      final FlushOptions flushOptions =
+          new FlushOptions().setWaitForFlush(true);
+      try {
+        db.flush(flushOptions);
+      } catch (RocksDBException e) {
+        LOG.error("Unable to Flush RocksDB data before creating snapshot", e);
+      }
+    }
+    return checkPointManager.createCheckpointSnapshot();
+  }
+
 }
