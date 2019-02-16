@@ -47,6 +47,9 @@ public final class OzoneClientUtils {
     bucketInfo.setVersioning(
         OzoneConsts.Versioning.getVersioning(bucket.getVersioning()));
     bucketInfo.setAcls(bucket.getAcls());
+    bucketInfo.setEncryptionKeyName(
+        bucket.getEncryptionKeyName()==null? "N/A" :
+            bucket.getEncryptionKeyName());
     return bucketInfo;
   }
 
@@ -104,6 +107,7 @@ public final class OzoneClientUtils {
     key.getOzoneKeyLocations().forEach((a) -> keyLocations.add(new KeyLocation(
         a.getContainerID(), a.getLocalID(), a.getLength(), a.getOffset())));
     keyInfo.setKeyLocation(keyLocations);
+    keyInfo.setFileEncryptionInfo(key.getFileEncryptionInfo());
     return keyInfo;
   }
 }

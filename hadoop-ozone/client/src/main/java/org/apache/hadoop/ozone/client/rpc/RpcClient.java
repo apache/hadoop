@@ -21,6 +21,10 @@ package org.apache.hadoop.ozone.client.rpc;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
+import org.apache.hadoop.crypto.CryptoInputStream;
+import org.apache.hadoop.crypto.CryptoOutputStream;
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -45,6 +49,7 @@ import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.common.Checksum;
+import org.apache.hadoop.ozone.om.helpers.BucketEncryptionKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
@@ -366,6 +371,12 @@ public class RpcClient implements ClientProtocol {
         Boolean.FALSE : bucketArgs.getVersioning();
     StorageType storageType = bucketArgs.getStorageType() == null ?
         StorageType.DEFAULT : bucketArgs.getStorageType();
+    BucketEncryptionKeyInfo bek = null;
+    if (bucketArgs.getEncryptionKey() != null) {
+      bek = new BucketEncryptionKeyInfo.Builder()
+          .setKeyName(bucketArgs.getEncryptionKey()).build();
+    }
+
     List<OzoneAcl> listOfAcls = new ArrayList<>();
     //User ACL
     listOfAcls.add(new OzoneAcl(OzoneAcl.OzoneACLType.USER,
@@ -388,9 +399,13 @@ public class RpcClient implements ClientProtocol {
         .setStorageType(storageType)
         .setAcls(listOfAcls.stream().distinct().collect(Collectors.toList()));
 
+    if (bek != null) {
+      builder.setBucketEncryptionKey(bek);
+    }
+
     LOG.info("Creating Bucket: {}/{}, with Versioning {} and " +
-            "Storage Type set to {}", volumeName, bucketName, isVersionEnabled,
-            storageType);
+            "Storage Type set to {} and Encryption set to {} ",
+        volumeName, bucketName, isVersionEnabled, storageType, bek != null);
     ozoneManagerClient.createBucket(builder.build());
   }
 
@@ -526,7 +541,9 @@ public class RpcClient implements ClientProtocol {
         bucketInfo.getStorageType(),
         bucketInfo.getIsVersionEnabled(),
         bucketInfo.getCreationTime(),
-        bucketInfo.getMetadata());
+        bucketInfo.getMetadata(),
+        bucketInfo.getEncryptionKeyInfo() != null ? bucketInfo
+            .getEncryptionKeyInfo().getKeyName() : null);
   }
 
   @Override
@@ -545,7 +562,9 @@ public class RpcClient implements ClientProtocol {
         bucket.getStorageType(),
         bucket.getIsVersionEnabled(),
         bucket.getCreationTime(),
-        bucket.getMetadata()))
+        bucket.getMetadata(),
+        bucket.getEncryptionKeyInfo() != null ? bucket
+            .getEncryptionKeyInfo().getKeyName() : null))
         .collect(Collectors.toList());
   }
 
@@ -588,7 +607,29 @@ public class RpcClient implements ClientProtocol {
     groupOutputStream.addPreallocateBlocks(
         openKey.getKeyInfo().getLatestVersionLocations(),
         openKey.getOpenVersion());
-    return new OzoneOutputStream(groupOutputStream);
+    final FileEncryptionInfo feInfo = groupOutputStream
+        .getFileEncryptionInfo();
+    if (feInfo != null) {
+      KeyProvider.KeyVersion decrypted = getDEK(feInfo);
+      final CryptoOutputStream cryptoOut = new CryptoOutputStream(
+          groupOutputStream, OzoneKMSUtil.getCryptoCodec(conf, feInfo),
+          decrypted.getMaterial(), feInfo.getIV());
+      return new OzoneOutputStream(cryptoOut);
+    } else {
+      return new OzoneOutputStream(groupOutputStream);
+    }
+  }
+
+  private KeyProvider.KeyVersion getDEK(FileEncryptionInfo feInfo)
+      throws IOException {
+    // check crypto protocol version
+    OzoneKMSUtil.checkCryptoProtocolVersion(feInfo);
+    KeyProvider.KeyVersion decrypted;
+    // TODO: support get kms uri from om rpc server.
+    decrypted = OzoneKMSUtil.decryptEncryptedDataEncryptionKey(feInfo,
+        OzoneKMSUtil.getKeyProvider(conf, OzoneKMSUtil.getKeyProviderUri(
+            ugi, null, null, conf)));
+    return decrypted;
   }
 
   @Override
@@ -608,6 +649,15 @@ public class RpcClient implements ClientProtocol {
         KeyInputStream.getFromOmKeyInfo(
             keyInfo, xceiverClientManager, storageContainerLocationClient,
             requestId);
+    FileEncryptionInfo feInfo = keyInfo.getFileEncryptionInfo();
+    if (feInfo != null) {
+      final KeyProvider.KeyVersion decrypted  = getDEK(feInfo);
+      final CryptoInputStream cryptoIn =
+          new CryptoInputStream(lengthInputStream.getWrappedStream(),
+              OzoneKMSUtil.getCryptoCodec(conf, feInfo),
+              decrypted.getMaterial(), feInfo.getIV());
+      return new OzoneInputStream(cryptoIn);
+    }
     return new OzoneInputStream(lengthInputStream.getWrappedStream());
   }
 
@@ -678,7 +728,8 @@ public class RpcClient implements ClientProtocol {
     return new OzoneKeyDetails(keyInfo.getVolumeName(), keyInfo.getBucketName(),
         keyInfo.getKeyName(), keyInfo.getDataSize(), keyInfo.getCreationTime(),
         keyInfo.getModificationTime(), ozoneKeyLocations, ReplicationType
-        .valueOf(keyInfo.getType().toString()), keyInfo.getMetadata());
+        .valueOf(keyInfo.getType().toString()), keyInfo.getMetadata(),
+        keyInfo.getFileEncryptionInfo());
   }
 
   @Override
@@ -738,7 +789,9 @@ public class RpcClient implements ClientProtocol {
         bucket.getStorageType(),
         bucket.getIsVersionEnabled(),
         bucket.getCreationTime(),
-        bucket.getMetadata()))
+        bucket.getMetadata(),
+        bucket.getEncryptionKeyInfo() != null ?
+            bucket.getEncryptionKeyInfo().getKeyName(): null))
         .collect(Collectors.toList());
   }
 

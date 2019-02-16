@@ -20,16 +20,22 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.security.GeneralSecurityException;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.conf.StorageUnit;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -41,11 +47,8 @@ import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.BlockTokenSecretProto.AccessModeProto;
-import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.ozone.common.BlockGroup;
-import org.apache.hadoop.ozone.om.exceptions.OMException;
-import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
+import org.apache.hadoop.ozone.om.helpers.BucketEncryptionKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
@@ -58,6 +61,12 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.ozone.common.BlockGroup;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .PartKeyInfo;
 import org.apache.hadoop.util.Time;
@@ -80,6 +89,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_KEY_PREALLOCATION_MA
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_MULTIPART_MIN_SIZE;
+import static org.apache.hadoop.util.Time.monotonicNow;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,9 +116,18 @@ public class KeyManagerImpl implements KeyManager {
 
   private BackgroundService keyDeletingService;
 
+  private final KeyProviderCryptoExtension kmsProvider;
+
   public KeyManagerImpl(ScmBlockLocationProtocol scmBlockClient,
       OMMetadataManager metadataManager, OzoneConfiguration conf, String omId,
       OzoneBlockTokenSecretManager secretManager) {
+    this(scmBlockClient, metadataManager, conf, omId, secretManager, null);
+  }
+
+  public KeyManagerImpl(ScmBlockLocationProtocol scmBlockClient,
+      OMMetadataManager metadataManager, OzoneConfiguration conf, String omId,
+      OzoneBlockTokenSecretManager secretManager,
+      KeyProviderCryptoExtension kmsProvider) {
     this.scmBlockClient = scmBlockClient;
     this.metadataManager = metadataManager;
     this.scmBlockSize = (long) conf
@@ -125,6 +144,7 @@ public class KeyManagerImpl implements KeyManager {
     this.grpcBlockTokenEnabled = conf.getBoolean(
         HDDS_BLOCK_TOKEN_ENABLED,
         HDDS_BLOCK_TOKEN_ENABLED_DEFAULT);
+    this.kmsProvider = kmsProvider;
   }
 
   @Override
@@ -144,12 +164,22 @@ public class KeyManagerImpl implements KeyManager {
     }
   }
 
+  KeyProviderCryptoExtension getKMSProvider() {
+    return kmsProvider;
+  }
+
   @Override
   public void stop() throws IOException {
     if (keyDeletingService != null) {
       keyDeletingService.shutdown();
       keyDeletingService = null;
     }
+  }
+
+  private OmBucketInfo getBucketInfo(String volumeName, String bucketName)
+      throws IOException {
+    String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
+    return metadataManager.getBucketTable().get(bucketKey);
   }
 
   private void validateBucket(String volumeName, String bucketName)
@@ -259,6 +289,30 @@ public class KeyManagerImpl implements KeyManager {
     return EnumSet.allOf(AccessModeProto.class);
   }
 
+  private EncryptedKeyVersion generateEDEK(
+      final String ezKeyName) throws IOException {
+    if (ezKeyName == null) {
+      return null;
+    }
+    long generateEDEKStartTime = monotonicNow();
+    EncryptedKeyVersion edek = SecurityUtil.doAsLoginUser(
+        new PrivilegedExceptionAction<EncryptedKeyVersion>() {
+          @Override
+          public EncryptedKeyVersion run() throws IOException {
+            try {
+              return getKMSProvider().generateEncryptedKey(ezKeyName);
+            } catch (GeneralSecurityException e) {
+              throw new IOException(e);
+            }
+          }
+        });
+    long generateEDEKTime = monotonicNow() - generateEDEKStartTime;
+    LOG.debug("generateEDEK takes {} ms", generateEDEKTime);
+    Preconditions.checkNotNull(edek);
+    return edek;
+  }
+
+  @SuppressWarnings("checkstyle:methodlength")
   @Override
   public OpenKeySession openKey(OmKeyArgs args) throws IOException {
     Preconditions.checkNotNull(args);
@@ -271,6 +325,24 @@ public class KeyManagerImpl implements KeyManager {
     ReplicationFactor factor = args.getFactor();
     ReplicationType type = args.getType();
     long currentTime = Time.monotonicNowNanos();
+
+    FileEncryptionInfo encInfo = null;
+    OmBucketInfo bucketInfo = getBucketInfo(volumeName, bucketName);
+    BucketEncryptionKeyInfo ezInfo = bucketInfo.getEncryptionKeyInfo();
+    if (ezInfo != null) {
+      if (getKMSProvider() == null) {
+        throw new OMException("Invalid KMS provider, check configuration " +
+            CommonConfigurationKeys.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+            OMException.ResultCodes.INVALID_KMS_PROVIDER);
+      }
+
+      final String ezKeyName = ezInfo.getKeyName();
+      EncryptedKeyVersion edek = generateEDEK(ezKeyName);
+      encInfo = new FileEncryptionInfo(ezInfo.getSuite(), ezInfo.getVersion(),
+            edek.getEncryptedKeyVersion().getMaterial(),
+            edek.getEncryptedKeyIv(),
+            ezKeyName, edek.getEncryptionKeyVersionName());
+    }
 
     try {
       if (args.getIsMultipartKey()) {
@@ -356,7 +428,7 @@ public class KeyManagerImpl implements KeyManager {
       if (args.getIsMultipartKey()) {
         // For this upload part we don't need to check in KeyTable. As this
         // is not an actual key, it is a part of the key.
-        keyInfo = createKeyInfo(args, locations, factor, type, size);
+        keyInfo = createKeyInfo(args, locations, factor, type, size, encInfo);
         //TODO args.getMetadata
         openVersion = 0;
       } else {
@@ -370,7 +442,7 @@ public class KeyManagerImpl implements KeyManager {
         } else {
           // the key does not exist, create a new object, the new blocks are the
           // version 0
-          keyInfo = createKeyInfo(args, locations, factor, type, size);
+          keyInfo = createKeyInfo(args, locations, factor, type, size, encInfo);
           openVersion = 0;
         }
       }
@@ -412,12 +484,14 @@ public class KeyManagerImpl implements KeyManager {
    * @param factor
    * @param type
    * @param size
+   * @param encInfo
    * @return
    */
   private OmKeyInfo createKeyInfo(OmKeyArgs keyArgs,
                                   List<OmKeyLocationInfo> locations,
                                   ReplicationFactor factor,
-                                  ReplicationType type, long size) {
+                                  ReplicationType type, long size,
+                                  FileEncryptionInfo encInfo) {
     return new OmKeyInfo.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
@@ -429,6 +503,7 @@ public class KeyManagerImpl implements KeyManager {
         .setDataSize(size)
         .setReplicationType(type)
         .setReplicationFactor(factor)
+        .setFileEncryptionInfo(encInfo)
         .build();
   }
 

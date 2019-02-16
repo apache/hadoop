@@ -66,6 +66,11 @@ public final class OmBucketInfo extends WithMetadata implements Auditable {
   private final long creationTime;
 
   /**
+   * Bucket encryption key info if encryption is enabled.
+   */
+  private BucketEncryptionKeyInfo bekInfo;
+
+  /**
    * Private constructor, constructed via builder.
    * @param volumeName - Volume name.
    * @param bucketName - Bucket name.
@@ -73,14 +78,18 @@ public final class OmBucketInfo extends WithMetadata implements Auditable {
    * @param isVersionEnabled - Bucket version flag.
    * @param storageType - Storage type to be used.
    * @param creationTime - Bucket creation time.
+   * @param metadata - metadata.
+   * @param bekInfo - bucket encryption key info.
    */
+  @SuppressWarnings("checkstyle:ParameterNumber")
   private OmBucketInfo(String volumeName,
                        String bucketName,
                        List<OzoneAcl> acls,
                        boolean isVersionEnabled,
                        StorageType storageType,
                        long creationTime,
-                       Map<String, String> metadata) {
+                       Map<String, String> metadata,
+                       BucketEncryptionKeyInfo bekInfo) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.acls = acls;
@@ -88,6 +97,7 @@ public final class OmBucketInfo extends WithMetadata implements Auditable {
     this.storageType = storageType;
     this.creationTime = creationTime;
     this.metadata = metadata;
+    this.bekInfo = bekInfo;
   }
 
   /**
@@ -140,6 +150,15 @@ public final class OmBucketInfo extends WithMetadata implements Auditable {
   }
 
   /**
+   * Returns bucket encryption key info.
+   * @return bucket encryption key info
+   */
+  public BucketEncryptionKeyInfo getEncryptionKeyInfo() {
+    return bekInfo;
+  }
+
+
+  /**
    * Returns new builder class that builds a OmBucketInfo.
    *
    * @return Builder
@@ -174,6 +193,7 @@ public final class OmBucketInfo extends WithMetadata implements Auditable {
     private StorageType storageType;
     private long creationTime;
     private Map<String, String> metadata;
+    private BucketEncryptionKeyInfo bekInfo;
 
     public Builder() {
       //Default values
@@ -225,6 +245,12 @@ public final class OmBucketInfo extends WithMetadata implements Auditable {
       return this;
     }
 
+    public Builder setBucketEncryptionKey(
+        BucketEncryptionKeyInfo info) {
+      this.bekInfo = info;
+      return this;
+    }
+
     /**
      * Constructs the OmBucketInfo.
      * @return instance of OmBucketInfo.
@@ -237,8 +263,7 @@ public final class OmBucketInfo extends WithMetadata implements Auditable {
       Preconditions.checkNotNull(storageType);
 
       return new OmBucketInfo(volumeName, bucketName, acls,
-          isVersionEnabled, storageType, creationTime, metadata
-      );
+          isVersionEnabled, storageType, creationTime, metadata, bekInfo);
     }
   }
 
@@ -246,7 +271,7 @@ public final class OmBucketInfo extends WithMetadata implements Auditable {
    * Creates BucketInfo protobuf from OmBucketInfo.
    */
   public BucketInfo getProtobuf() {
-    return BucketInfo.newBuilder()
+    BucketInfo.Builder bib =  BucketInfo.newBuilder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .addAllAcls(acls.stream().map(
@@ -254,8 +279,11 @@ public final class OmBucketInfo extends WithMetadata implements Auditable {
         .setIsVersionEnabled(isVersionEnabled)
         .setStorageType(storageType.toProto())
         .setCreationTime(creationTime)
-        .addAllMetadata(KeyValueUtil.toProtobuf(metadata))
-        .build();
+        .addAllMetadata(KeyValueUtil.toProtobuf(metadata));
+    if (bekInfo != null && bekInfo.getKeyName() != null) {
+      bib.setBeinfo(OMPBHelper.convert(bekInfo));
+    }
+    return bib.build();
   }
 
   /**
@@ -264,15 +292,22 @@ public final class OmBucketInfo extends WithMetadata implements Auditable {
    * @return instance of OmBucketInfo
    */
   public static OmBucketInfo getFromProtobuf(BucketInfo bucketInfo) {
-    return new OmBucketInfo(
-        bucketInfo.getVolumeName(),
-        bucketInfo.getBucketName(),
-        bucketInfo.getAclsList().stream().map(
-            OMPBHelper::convertOzoneAcl).collect(Collectors.toList()),
-        bucketInfo.getIsVersionEnabled(),
-        StorageType.valueOf(bucketInfo.getStorageType()),
-        bucketInfo.getCreationTime(),
-        KeyValueUtil.getFromProtobuf(bucketInfo.getMetadataList()));
+    OmBucketInfo.Builder obib = OmBucketInfo.newBuilder()
+        .setVolumeName(bucketInfo.getVolumeName())
+        .setBucketName(bucketInfo.getBucketName())
+        .setAcls(bucketInfo.getAclsList().stream().map(
+            OMPBHelper::convertOzoneAcl).collect(Collectors.toList()))
+        .setIsVersionEnabled(bucketInfo.getIsVersionEnabled())
+        .setStorageType(StorageType.valueOf(bucketInfo.getStorageType()))
+        .setCreationTime(bucketInfo.getCreationTime());
+    if (bucketInfo.getMetadataList() != null) {
+      obib.addAllMetadata(KeyValueUtil
+          .getFromProtobuf(bucketInfo.getMetadataList()));
+    }
+    if (bucketInfo.hasBeinfo()) {
+      obib.setBucketEncryptionKey(OMPBHelper.convert(bucketInfo.getBeinfo()));
+    }
+    return obib.build();
   }
 
   @Override
@@ -290,7 +325,8 @@ public final class OmBucketInfo extends WithMetadata implements Auditable {
         Objects.equals(acls, that.acls) &&
         Objects.equals(isVersionEnabled, that.isVersionEnabled) &&
         storageType == that.storageType &&
-        Objects.equals(metadata, that.metadata);
+        Objects.equals(metadata, that.metadata) &&
+        Objects.equals(bekInfo, that.bekInfo);
   }
 
   @Override

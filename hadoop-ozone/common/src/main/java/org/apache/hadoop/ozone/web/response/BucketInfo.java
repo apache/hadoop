@@ -68,6 +68,7 @@ public class BucketInfo implements Comparable<BucketInfo> {
   private StorageType storageType;
   private long bytesUsed;
   private long keyCount;
+  private String encryptionKeyName;
 
   /**
    * Constructor for BucketInfo.
@@ -190,6 +191,15 @@ public class BucketInfo implements Comparable<BucketInfo> {
    */
   public String getCreatedOn() {
     return createdOn;
+  }
+
+
+  public void setEncryptionKeyName(String encryptionKeyName) {
+    this.encryptionKeyName = encryptionKeyName;
+  }
+
+  public String getEncryptionKeyName() {
+    return encryptionKeyName;
   }
 
   /**
