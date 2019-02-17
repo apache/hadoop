@@ -745,5 +745,15 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
         <module>hadoop-hdds</module>
       </modules>
     </profile>
+    <profile>
+      <id>submarine</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <modules>
+        <module>hadoop-submarine</module>
+      </modules>
+    </profile>
+
   </profiles>
 </project>
