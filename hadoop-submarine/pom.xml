@@ -16,27 +16,27 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
                       http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <parent>
-    <artifactId>hadoop-yarn</artifactId>
-    <groupId>org.apache.hadoop</groupId>
-    <version>3.3.0-SNAPSHOT</version>
-  </parent>
   <modelVersion>4.0.0</modelVersion>
-  <artifactId>hadoop-yarn-applications</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
-  <name>Apache Hadoop YARN Applications</name>
+  <parent>
+    <groupId>org.apache.hadoop</groupId>
+    <artifactId>hadoop-project</artifactId>
+    <version>3.3.0-SNAPSHOT</version>
+    <relativePath/>
+  </parent>
+  <artifactId>hadoop-submarine</artifactId>
+  <version>0.2.0-SNAPSHOT</version>
+  <name>Hadoop Submarine</name>
   <packaging>pom</packaging>
 
   <properties>
-    <hadoop.common.build.dir>${basedir}/../../../../hadoop-common-project/hadoop-common/target</hadoop.common.build.dir>
+    <hadoop.common.build.dir>${basedir}/../hadoop-common-project/hadoop-common/target</hadoop.common.build.dir>
   </properties>
 
   <!-- Do not add dependencies here, add them to the POM of the leaf module -->
 
   <modules>
-    <module>hadoop-yarn-applications-distributedshell</module>
-    <module>hadoop-yarn-applications-unmanaged-am-launcher</module>
-    <module>hadoop-yarn-services</module>
+    <module>hadoop-submarine-core</module>
+    <module>hadoop-submarine-yarnservice-runtime</module>
   </modules>
 
  <profiles>
