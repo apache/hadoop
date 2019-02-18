@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdds.scm.pipeline;
 
 import com.google.common.base.Preconditions;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
@@ -328,13 +329,13 @@ class PipelineStateMap {
     return updatedPipeline;
   }
 
-  private class PipelineQuery {
+  private static class PipelineQuery {
     private ReplicationType type;
     private ReplicationFactor factor;
 
     PipelineQuery(ReplicationType type, ReplicationFactor factor) {
-      this.type = type;
-      this.factor = factor;
+      this.type = Preconditions.checkNotNull(type);
+      this.factor = Preconditions.checkNotNull(factor);
     }
 
     PipelineQuery(Pipeline pipeline) {
@@ -343,6 +344,7 @@ class PipelineStateMap {
     }
 
     @Override
+    @SuppressFBWarnings("NP_EQUALS_SHOULD_HANDLE_NULL_ARGUMENT")
     public boolean equals(Object other) {
       if (this == other) {
         return true;
