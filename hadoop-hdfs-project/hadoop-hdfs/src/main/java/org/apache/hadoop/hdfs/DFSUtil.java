@@ -56,7 +56,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -114,22 +113,6 @@ public class DFSUtil {
   /** @return a pseudo secure random number generator. */
   public static SecureRandom getSecureRandom() {
     return SECURE_RANDOM.get();
-  }
-
-  /** Shuffle the elements in the given array. */
-  public static <T> T[] shuffle(final T[] array) {
-    if (array != null && array.length > 0) {
-      for (int n = array.length; n > 1; ) {
-        final int randomIndex = ThreadLocalRandom.current().nextInt(n);
-        n--;
-        if (n != randomIndex) {
-          final T tmp = array[randomIndex];
-          array[randomIndex] = array[n];
-          array[n] = tmp;
-        }
-      }
-    }
-    return array;
   }
 
   /**
