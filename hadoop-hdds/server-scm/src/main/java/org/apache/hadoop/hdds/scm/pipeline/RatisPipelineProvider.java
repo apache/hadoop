@@ -38,6 +38,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Implements Api for creating ratis pipelines.
  */
@@ -48,6 +50,8 @@ public class RatisPipelineProvider implements PipelineProvider {
   private final Configuration conf;
   private static Scheduler scheduler;
 
+  //TODO static Scheduler should be removed!!!! HDDS-1128
+  @SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
   RatisPipelineProvider(NodeManager nodeManager,
       PipelineStateManager stateManager, Configuration conf) {
     this.nodeManager = nodeManager;

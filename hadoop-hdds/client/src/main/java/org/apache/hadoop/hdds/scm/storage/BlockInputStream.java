@@ -109,7 +109,8 @@ public class BlockInputStream extends InputStream implements Seekable {
     int dataout = EOF;
 
     if (available == EOF) {
-      Preconditions.checkState (buffers == null); //should have released by now, see below
+      Preconditions
+          .checkState(buffers == null); //should have released by now, see below
     } else {
       dataout = Byte.toUnsignedInt(buffers.get(bufferIndex).get());
     }
@@ -149,7 +150,8 @@ public class BlockInputStream extends InputStream implements Seekable {
     while (len > 0) {
       int available = prepareRead(len);
       if (available == EOF) {
-        Preconditions.checkState(buffers == null); //should have been released by now
+        Preconditions
+            .checkState(buffers == null); //should have been released by now
         return total != 0 ? total : EOF;
       }
       buffers.get(bufferIndex).get(b, off + total, available);
@@ -167,7 +169,7 @@ public class BlockInputStream extends InputStream implements Seekable {
   }
 
   /**
-   * Determines if all data in the stream has been consumed
+   * Determines if all data in the stream has been consumed.
    *
    * @return true if EOF, false if more data is available
    */
@@ -176,8 +178,9 @@ public class BlockInputStream extends InputStream implements Seekable {
       return false;
     } else {
       // if there are any chunks, we better be at the last chunk for EOF
-      Preconditions.checkState (((chunks == null) || chunks.isEmpty() ||
-              chunkIndex == (chunks.size() - 1)), "EOF detected, but not at the last chunk");
+      Preconditions.checkState(((chunks == null) || chunks.isEmpty() ||
+              chunkIndex == (chunks.size() - 1)),
+          "EOF detected, but not at the last chunk");
       return true;
     }
   }
@@ -247,7 +250,7 @@ public class BlockInputStream extends InputStream implements Seekable {
         if (buffersRemaining()) {
           // move to next available buffer
           ++bufferIndex;
-          Preconditions.checkState (bufferIndex < buffers.size());
+          Preconditions.checkState(bufferIndex < buffers.size());
         } else {
           // no more buffers remaining
           break;
