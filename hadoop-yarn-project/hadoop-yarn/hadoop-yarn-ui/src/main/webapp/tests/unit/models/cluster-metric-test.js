@@ -73,7 +73,7 @@ test('Testing fields', function(assert) {
 	assert.deepEqual(model.get('getRunningAppsDataForDonutChart'),
 		[{label: "Pending", value: 0}, {label: "Running", value: 0}]);
 	assert.deepEqual(model.get('getNodesDataForDonutChart'),
-		[{label: "Active", value: 4}, {label: "Unhealthy", value: 0}, {label: "Decomissioned", value: 0}]);
+		[{label: "Active", value: 4}, {label: "Unhealthy", value: 0}, {label: "Decommissioned", value: 0}]);
 	assert.deepEqual(model.get('getMemoryDataForDonutChart'),
 		[{label: "Allocated", value: 0}, {label: "Reserved", value: 0}, {label: "Available", value: 32768}]);
 	assert.deepEqual(model.get('getVCoreDataForDonutChart'),
