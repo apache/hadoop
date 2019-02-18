@@ -21,7 +21,14 @@ import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.nio.channels.AsynchronousCloseException;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -33,7 +40,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.net.PeerServer;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
-import org.apache.hadoop.util.Daemon;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -56,7 +62,7 @@ class DataXceiverServer implements Runnable {
 
   private final PeerServer peerServer;
   private final DataNode datanode;
-  private final HashMap<Peer, Thread> peers = new HashMap<>();
+  private final HashMap<Peer, Future<?>> peers = new HashMap<>();
   private final HashMap<Peer, DataXceiver> peersXceiver = new HashMap<>();
   private final Lock lock = new ReentrantLock();
   private final Condition noPeers = lock.newCondition();
@@ -176,6 +182,8 @@ class DataXceiverServer implements Runnable {
    */
   final long estimateBlockSize;
 
+  private final ExecutorService xceiverExecutor;
+
   DataXceiverServer(PeerServer peerServer, Configuration conf,
       DataNode datanode) {
     this.peerServer = peerServer;
@@ -194,6 +202,21 @@ class DataXceiverServer implements Runnable {
             DFSConfigKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_DEFAULT),
         conf.getInt(DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
             DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT));
+
+    final long xceiverTTL =
+        conf.getLong(DFSConfigKeys.DFS_DATANODE_RECEIVER_THREADS_TTL,
+            DFSConfigKeys.DFS_DATANODE_RECEIVER_THREADS_TTL_DEFAULT);
+
+    this.xceiverExecutor =
+        new ThreadPoolExecutor(0, maxXceiverCount, xceiverTTL, TimeUnit.SECONDS,
+            new SynchronousQueue<>(true), new ThreadFactory() {
+              @Override
+              public Thread newThread(Runnable r) {
+                final Thread t = new Thread(datanode.threadGroup, r);
+                t.setDaemon(true);
+                return t;
+              }
+            });
   }
 
   @Override
@@ -203,17 +226,13 @@ class DataXceiverServer implements Runnable {
       try {
         peer = peerServer.accept();
 
-        // Make sure the xceiver count is not exceeded
-        int curXceiverCount = datanode.getXceiverCount();
-        if (curXceiverCount > maxXceiverCount) {
-          throw new IOException("Xceiver count " + curXceiverCount
-              + " exceeds the limit of concurrent xcievers: "
-              + maxXceiverCount);
-        }
+        final DataXceiver xceiver = DataXceiver.create(peer, datanode, this);
+        Future<Void> f = this.xceiverExecutor.submit(xceiver);
+        addPeer(peer, f, xceiver);
 
-        new Daemon(datanode.threadGroup,
-            DataXceiver.create(peer, datanode, this))
-            .start();
+        LOG.debug("Number of active connections is: {}. Thread pool: {}",
+            datanode.getXceiverCount(), this.xceiverExecutor);
+
       } catch (SocketTimeoutException ignored) {
         // wake up to see if should continue to run
       } catch (AsynchronousCloseException ace) {
@@ -222,7 +241,7 @@ class DataXceiverServer implements Runnable {
         if (datanode.shouldRun && !datanode.shutdownForUpgrade) {
           LOG.warn("{}:DataXceiverServer", datanode.getDisplayName(), ace);
         }
-      } catch (IOException ie) {
+      } catch (RejectedExecutionException | IOException ie) {
         IOUtils.closeQuietly(peer);
         LOG.warn("{}:DataXceiverServer", datanode.getDisplayName(), ie);
       } catch (OutOfMemoryError ie) {
@@ -257,6 +276,10 @@ class DataXceiverServer implements Runnable {
       lock.unlock();
     }
 
+    // Initiate an orderly shutdown of the thread pool in which previously
+    // submitted tasks are executed, but no new tasks will be accepted.
+    this.xceiverExecutor.shutdown();
+
     // if in restart prep stage, notify peers before closing them.
     if (datanode.shutdownForUpgrade) {
       restartNotifyPeers();
@@ -288,14 +311,14 @@ class DataXceiverServer implements Runnable {
     }
   }
 
-  void addPeer(Peer peer, Thread t, DataXceiver xceiver)
+  void addPeer(Peer peer, Future<Void> f, DataXceiver xceiver)
       throws IOException {
     lock.lock();
     try {
       if (closed) {
         throw new IOException("Server closed.");
       }
-      peers.put(peer, t);
+      peers.put(peer, f);
       peersXceiver.put(peer, xceiver);
       datanode.metrics.incrDataNodeActiveXceiversCount();
     } finally {
@@ -342,7 +365,14 @@ class DataXceiverServer implements Runnable {
   public void stopWriters() {
     lock.lock();
     try {
-      peers.keySet().forEach(p -> peersXceiver.get(p).stopWriter());
+      for (final Map.Entry<Peer, Future<?>> entry : peers.entrySet()) {
+        final Peer peer = entry.getKey();
+        final DataXceiver xceiver = peersXceiver.get(peer);
+        if (xceiver.hasBlockReceiver()) {
+          LOG.info("Cancelling the writer for peer: {}", peer);
+          entry.getValue().cancel(true);
+        }
+      }
     } finally {
       lock.unlock();
     }
@@ -358,7 +388,7 @@ class DataXceiverServer implements Runnable {
     lock.lock();
     try {
       // interrupt each and every DataXceiver thread.
-      peers.values().forEach(t -> t.interrupt());
+      peers.values().forEach(f -> f.cancel(true));
     } finally {
       lock.unlock();
     }
@@ -369,6 +399,13 @@ class DataXceiverServer implements Runnable {
    */
   void closeAllPeers() {
     LOG.info("Closing all peers.");
+    Preconditions.checkState(this.closed && xceiverExecutor.isShutdown());
+    try {
+      LOG.info("Waiting up to 60 seconds for current threads to complete");
+      xceiverExecutor.awaitTermination(60, TimeUnit.SECONDS);
+    } catch (InterruptedException e) {
+      // Ignore and just complete shutdown anyway
+    }
     lock.lock();
     try {
       peers.keySet().forEach(p -> IOUtils.closeQuietly(p));

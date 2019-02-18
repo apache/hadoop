@@ -21,11 +21,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.channels.ReadableByteChannel;
 
 import org.apache.hadoop.net.SocketInputStream;
 import org.apache.hadoop.net.SocketOutputStream;
 import org.apache.hadoop.net.unix.DomainSocket;
+import org.apache.http.client.utils.URIBuilder;
 
 /**
  * Represents a peer that we communicate with by using non-blocking I/O
@@ -46,11 +49,18 @@ public class NioInetPeer implements Peer {
 
   private final boolean isLocal;
 
+  private final URI localURI;
+  private final URI remoteURI;
+
   public NioInetPeer(Socket socket) throws IOException {
     this.socket = socket;
     this.in = new SocketInputStream(socket.getChannel(), 0);
     this.out = new SocketOutputStream(socket.getChannel(), 0);
     this.isLocal = socket.getInetAddress().equals(socket.getLocalAddress());
+    this.localURI = getURI(socket.getLocalAddress().getHostAddress(),
+        socket.getLocalPort());
+    this.remoteURI =
+        getURI(socket.getInetAddress().getHostAddress(), socket.getPort());
   }
 
   @Override
@@ -105,6 +115,16 @@ public class NioInetPeer implements Peer {
   }
 
   @Override
+  public URI getRemoteURI() {
+    return this.remoteURI;
+  }
+
+  @Override
+  public URI getLocalURI() {
+    return this.localURI;
+  }
+
+  @Override
   public InputStream getInputStream() throws IOException {
     return in;
   }
@@ -120,11 +140,6 @@ public class NioInetPeer implements Peer {
   }
 
   @Override
-  public String toString() {
-    return "NioInetPeer(" + socket.toString() + ")";
-  }
-
-  @Override
   public DomainSocket getDomainSocket() {
     return null;
   }
@@ -132,5 +147,30 @@ public class NioInetPeer implements Peer {
   @Override
   public boolean hasSecureChannel() {
     return false;
+  }
+
+  @Override
+  public String toString() {
+    return "NioInetPeer [isLocal=" + isLocal + ", localURI=" + localURI
+        + ", remoteURI=" + remoteURI + "]";
+  }
+
+  /**
+   * Given a host name and port, create a DN URI. Turn checked exception into
+   * runtime. Exception should never happen because the inputs are captures from
+   * an exiting socket and not parsed from an external source.
+   *
+   * @param host Host for URI
+   * @param port Port for URI
+   * @return A URI
+   */
+  private URI getURI(final String host, final int port) {
+    try {
+      return new URIBuilder().setScheme("hdfs+dn")
+      .setHost(host)
+      .setPort(port).build();
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException(e);
+    }
   }
 }

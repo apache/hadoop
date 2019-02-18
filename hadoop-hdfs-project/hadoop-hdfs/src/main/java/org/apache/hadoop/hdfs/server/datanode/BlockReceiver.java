@@ -342,8 +342,7 @@ class BlockReceiver implements Closeable {
       }
     } catch(IOException e) {
       ioe = e;
-    }
-    finally {
+    } finally {
       IOUtils.closeStream(checksumOut);
     }
     // close block file
@@ -363,18 +362,22 @@ class BlockReceiver implements Closeable {
       }
     } catch (IOException e) {
       ioe = e;
-    }
-    finally{
+    } finally {
       streams.close();
     }
-    if (replicaHandler != null) {
-      IOUtils.cleanup(null, replicaHandler);
-      replicaHandler = null;
+    IOUtils.closeStream(this.replicaHandler);
+    this.replicaHandler = null;
+
+    if (this.replicaInfo != null) {
+      // Since this BlockReceiver is closing, it is no longer associated
+      // with this replica
+      this.replicaInfo.attemptToSetWriter(Thread.currentThread(), null);
     }
+
     if (measuredFlushTime) {
       datanode.metrics.addFlushNanos(flushTotalNanos);
     }
-    if(ioe != null) {
+    if (ioe != null) {
       // Volume error check moved to FileIoProvider
       throw ioe;
     }

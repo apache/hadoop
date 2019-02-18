@@ -746,6 +746,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_DATANODE_MAX_RECEIVER_THREADS_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY;
   public static final int     DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT = 4096;
+  public static final String  DFS_DATANODE_RECEIVER_THREADS_TTL =
+      "dfs.datanode.transfer.threads.ttl";
+  public static final long    DFS_DATANODE_RECEIVER_THREADS_TTL_DEFAULT = 60L; // seconds
   public static final String  DFS_DATANODE_SCAN_PERIOD_HOURS_KEY = "dfs.datanode.scan.period.hours";
   public static final int     DFS_DATANODE_SCAN_PERIOD_HOURS_DEFAULT = 21 * 24;  // 3 weeks.
   public static final String  DFS_BLOCK_SCANNER_VOLUME_BYTES_PER_SECOND = "dfs.block.scanner.volume.bytes.per.second";

@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -50,11 +49,12 @@ public class LocalReplicaInPipeline extends LocalReplica
 
   private final Lock lock = new ReentrantLock();
   private final Condition bytesOnDiskChange = lock.newCondition();
+  private final Condition writerChanged = lock.newCondition();
 
   private long bytesAcked;
   private long bytesOnDisk;
   private byte[] lastChecksum;
-  private AtomicReference<Thread> writer = new AtomicReference<Thread>();
+  private volatile Thread writer;
 
   /**
    * Bytes reserved for this replica on the containing volume.
@@ -108,7 +108,7 @@ public class LocalReplicaInPipeline extends LocalReplica
     super(blockId, len, genStamp, vol, dir);
     this.bytesAcked = len;
     this.bytesOnDisk = len;
-    this.writer.set(writer);
+    this.writer = writer;
     this.bytesReserved = bytesToReserve;
     this.originalBytesReserved = bytesToReserve;
   }
@@ -121,7 +121,7 @@ public class LocalReplicaInPipeline extends LocalReplica
     super(from);
     this.bytesAcked = from.getBytesAcked();
     this.bytesOnDisk = from.getBytesOnDisk();
-    this.writer.set(from.writer.get());
+    this.writer = from.writer;
     this.bytesReserved = from.bytesReserved;
     this.originalBytesReserved = from.originalBytesReserved;
   }
@@ -218,17 +218,28 @@ public class LocalReplicaInPipeline extends LocalReplica
     }
   }
 
-  @Override // ReplicaInPipeline
-  public void setWriter(Thread writer) {
-    this.writer.set(writer);
+  @Override
+  public void setWriter(Thread newWriter) {
+    lock.lock();
+    try {
+      if (this.writer != newWriter) {
+        this.writer = newWriter;
+        this.writerChanged.signalAll();
+      }
+    } finally {
+      lock.unlock();
+    }
   }
 
   @Override
   public void interruptThread() {
-    Thread thread = writer.get();
-    if (thread != null && thread != Thread.currentThread()
-        && thread.isAlive()) {
-      thread.interrupt();
+    lock.lock();
+    try {
+      if (this.writer != null && this.writer != Thread.currentThread()) {
+        this.writer.interrupt();
+      }
+    } finally {
+      lock.unlock();
     }
   }
 
@@ -240,40 +251,61 @@ public class LocalReplicaInPipeline extends LocalReplica
   /**
    * Attempt to set the writer to a new value.
    */
-  @Override // ReplicaInPipeline
+  @Override
   public boolean attemptToSetWriter(Thread prevWriter, Thread newWriter) {
-    return writer.compareAndSet(prevWriter, newWriter);
+    final boolean change;
+    lock.lock();
+    try {
+      change = (this.writer == prevWriter);
+      if (change) {
+        this.writer = newWriter;
+        this.writerChanged.signalAll();
+      }
+    } finally {
+      lock.unlock();
+    }
+    return change;
   }
 
   /**
    * Interrupt the writing thread and wait until it dies.
    * @throws IOException the waiting is interrupted
    */
-  @Override // ReplicaInPipeline
+  @Override
   public void stopWriter(long xceiverStopTimeout) throws IOException {
-    while (true) {
-      Thread thread = writer.get();
-      if ((thread == null) || (thread == Thread.currentThread()) ||
-          (!thread.isAlive())) {
-        if (writer.compareAndSet(thread, null)) {
-          return; // Done
-        }
-        // The writer changed.  Go back to the start of the loop and attempt to
-        // stop the new writer.
-        continue;
+    lock.lock();
+    try {
+      final Thread thread = this.writer;
+      if (thread == null) {
+        // No writer
+        return;
       }
+      if (!thread.isAlive() || thread == Thread.currentThread()) {
+        this.writer = null;
+        this.writerChanged.signalAll();
+        return;
+      }
+
+      // Another thread owns this replica, stop it and wait for it to give up
+      // this replica
       thread.interrupt();
-      try {
-        thread.join(xceiverStopTimeout);
-        if (thread.isAlive()) {
-          // Our thread join timed out.
-          final String msg = "Join on writer thread " + thread + " timed out";
+
+      long nanos = TimeUnit.MILLISECONDS.toNanos(xceiverStopTimeout);
+
+      while (thread == this.writer) {
+        if (nanos <= 0L) {
+          final String msg = "Join on writer thread " + thread + " timed out. "
+              + "Writer thread may not have called attemptToSetWriter to "
+              + "clear ownership.";
           DataNode.LOG.warn(msg + "\n" + StringUtils.getStackTrace(thread));
           throw new IOException(msg);
         }
-      } catch (InterruptedException e) {
-        throw new IOException("Waiting for writer thread is interrupted.");
+        nanos = writerChanged.awaitNanos(nanos);
       }
+    } catch (InterruptedException e) {
+      throw new IOException("Waiting for writer thread is interrupted.");
+    } finally {
+      lock.unlock();
     }
   }
 
