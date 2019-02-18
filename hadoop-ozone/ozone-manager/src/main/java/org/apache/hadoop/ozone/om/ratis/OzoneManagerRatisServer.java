@@ -23,6 +23,7 @@ import com.google.common.base.Strings;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -357,6 +358,6 @@ public final class OzoneManagerRatisServer {
   }
 
   private UUID getRaftGroupIdFromOmServiceId(String omServiceId) {
-    return UUID.nameUUIDFromBytes(omServiceId.getBytes());
+    return UUID.nameUUIDFromBytes(omServiceId.getBytes(StandardCharsets.UTF_8));
   }
 }
