@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.deviceframework;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -49,10 +50,20 @@ public class DevicePluginAdapter implements ResourcePlugin {
   private final static Log LOG = LogFactory.getLog(DevicePluginAdapter.class);
 
   private final String resourceName;
+
   private final DevicePlugin devicePlugin;
   private DeviceMappingManager deviceMappingManager;
+
   private DeviceResourceHandlerImpl deviceResourceHandler;
   private DeviceResourceUpdaterImpl deviceResourceUpdater;
+  private DeviceResourceDockerRuntimePluginImpl deviceDockerCommandPlugin;
+
+
+  @VisibleForTesting
+  public void setDeviceResourceHandler(
+      DeviceResourceHandlerImpl deviceResourceHandler) {
+    this.deviceResourceHandler = deviceResourceHandler;
+  }
 
   public DevicePluginAdapter(String name, DevicePlugin dp,
       DeviceMappingManager dmm) {
@@ -65,8 +76,16 @@ public class DevicePluginAdapter implements ResourcePlugin {
     return deviceMappingManager;
   }
 
+
+  public DevicePlugin getDevicePlugin() {
+    return devicePlugin;
+  }
+
   @Override
   public void initialize(Context context) throws YarnException {
+    deviceDockerCommandPlugin = new DeviceResourceDockerRuntimePluginImpl(
+        resourceName,
+        devicePlugin, this);
     deviceResourceUpdater = new DeviceResourceUpdaterImpl(
         resourceName, devicePlugin);
     LOG.info(resourceName + " plugin adapter initialized");
@@ -78,8 +97,8 @@ public class DevicePluginAdapter implements ResourcePlugin {
       CGroupsHandler cGroupsHandler,
       PrivilegedOperationExecutor privilegedOperationExecutor) {
     this.deviceResourceHandler = new DeviceResourceHandlerImpl(resourceName,
-        devicePlugin, this, deviceMappingManager,
-        cGroupsHandler, privilegedOperationExecutor);
+        this, deviceMappingManager,
+        cGroupsHandler, privilegedOperationExecutor, nmContext);
     return deviceResourceHandler;
   }
 
@@ -95,7 +114,7 @@ public class DevicePluginAdapter implements ResourcePlugin {
 
   @Override
   public DockerCommandPlugin getDockerCommandPluginInstance() {
-    return null;
+    return deviceDockerCommandPlugin;
   }
 
   @Override

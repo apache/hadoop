@@ -54,6 +54,7 @@ public class PrivilegedOperation {
     RUN_DOCKER_CMD("--run-docker"),
     GPU("--module-gpu"),
     FPGA("--module-fpga"),
+    DEVICE("--module-devices"),
     LIST_AS_USER(""), // no CLI switch supported yet.
     ADD_NUMA_PARAMS(""), // no CLI switch supported yet.
     REMOVE_DOCKER_CONTAINER("--remove-docker-container"),

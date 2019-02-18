@@ -18,20 +18,29 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.deviceframework;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DevicePlugin;
+import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DeviceRuntimeSpec;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.YarnRuntimeType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -52,19 +61,45 @@ public class DeviceResourceHandlerImpl implements ResourceHandler {
   private final CGroupsHandler cGroupsHandler;
   private final PrivilegedOperationExecutor privilegedOperationExecutor;
   private final DevicePluginAdapter devicePluginAdapter;
+  private final Context nmContext;
+  private ShellWrapper shellWrapper;
 
-  public DeviceResourceHandlerImpl(String reseName,
-      DevicePlugin devPlugin,
+  // This will be used by container-executor to add necessary clis
+  public static final String EXCLUDED_DEVICES_CLI_OPTION = "--excluded_devices";
+  public static final String ALLOWED_DEVICES_CLI_OPTION = "--allowed_devices";
+  public static final String CONTAINER_ID_CLI_OPTION = "--container_id";
+
+  public DeviceResourceHandlerImpl(String resName,
       DevicePluginAdapter devPluginAdapter,
       DeviceMappingManager devMappingManager,
       CGroupsHandler cgHandler,
-      PrivilegedOperationExecutor operation) {
+      PrivilegedOperationExecutor operation,
+      Context ctx) {
     this.devicePluginAdapter = devPluginAdapter;
-    this.resourceName = reseName;
-    this.devicePlugin = devPlugin;
+    this.resourceName = resName;
+    this.devicePlugin = devPluginAdapter.getDevicePlugin();
     this.cGroupsHandler = cgHandler;
     this.privilegedOperationExecutor = operation;
     this.deviceMappingManager = devMappingManager;
+    this.nmContext = ctx;
+    this.shellWrapper = new ShellWrapper();
+  }
+
+  @VisibleForTesting
+  public DeviceResourceHandlerImpl(String resName,
+      DevicePluginAdapter devPluginAdapter,
+      DeviceMappingManager devMappingManager,
+      CGroupsHandler cgHandler,
+      PrivilegedOperationExecutor operation,
+      Context ctx, ShellWrapper shell) {
+    this.devicePluginAdapter = devPluginAdapter;
+    this.resourceName = resName;
+    this.devicePlugin = devPluginAdapter.getDevicePlugin();
+    this.cGroupsHandler = cgHandler;
+    this.privilegedOperationExecutor = operation;
+    this.deviceMappingManager = devMappingManager;
+    this.nmContext = ctx;
+    this.shellWrapper = shell;
   }
 
   @Override
@@ -98,11 +133,13 @@ public class DeviceResourceHandlerImpl implements ResourceHandler {
     String containerIdStr = container.getContainerId().toString();
     DeviceMappingManager.DeviceAllocation allocation =
         deviceMappingManager.assignDevices(resourceName, container);
-    LOG.debug("Allocated to "
-        + containerIdStr + ": " + allocation);
-
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Allocated to "
+          + containerIdStr + ": " + allocation);
+    }
+    DeviceRuntimeSpec spec;
     try {
-      devicePlugin.onDevicesAllocated(
+      spec = devicePlugin.onDevicesAllocated(
           allocation.getAllowed(), YarnRuntimeType.RUNTIME_DEFAULT);
     } catch (Exception e) {
       throw new ResourceHandlerException("Exception thrown from"
@@ -110,11 +147,93 @@ public class DeviceResourceHandlerImpl implements ResourceHandler {
     }
 
     // cgroups operation based on allocation
-    /**
-     * TODO: implement a general container-executor device module
-     * */
+    if (spec != null) {
+      LOG.warn("Runtime spec in non-Docker container is not supported yet!");
+    }
+    // Create device cgroups for the container
+    cGroupsHandler.createCGroup(CGroupsHandler.CGroupController.DEVICES,
+        containerIdStr);
+    // non-Docker, use cgroups to do isolation
+    if (!DockerLinuxContainerRuntime.isDockerContainerRequested(
+        nmContext.getConf(),
+        container.getLaunchContext().getEnvironment())) {
+      tryIsolateDevices(allocation, containerIdStr);
+      List<PrivilegedOperation> ret = new ArrayList<>();
+      ret.add(new PrivilegedOperation(
+          PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
+          PrivilegedOperation.CGROUP_ARG_PREFIX + cGroupsHandler
+              .getPathForCGroupTasks(CGroupsHandler.CGroupController.DEVICES,
+                  containerIdStr)));
 
+      return ret;
+    }
     return null;
+  }
+
+  /**
+   * Try set cgroup devices params for the container using container-executor.
+   * If it has real device major number, minor number or dev path,
+   * we'll do the enforcement. Otherwise, won't do it.
+   *
+   * */
+  private void tryIsolateDevices(
+      DeviceMappingManager.DeviceAllocation allocation,
+      String containerIdStr) throws ResourceHandlerException {
+    try {
+      // Execute c-e to setup device isolation before launch the container
+      PrivilegedOperation privilegedOperation = new PrivilegedOperation(
+          PrivilegedOperation.OperationType.DEVICE,
+          Arrays.asList(CONTAINER_ID_CLI_OPTION, containerIdStr));
+      boolean needNativeDeviceOperation = false;
+      int majorNumber;
+      int minorNumber;
+      List<String> devNumbers = new ArrayList<>();
+      if (!allocation.getDenied().isEmpty()) {
+        DeviceType devType;
+        for (Device deniedDevice : allocation.getDenied()) {
+          majorNumber = deniedDevice.getMajorNumber();
+          minorNumber = deniedDevice.getMinorNumber();
+          // Add device type
+          devType = getDeviceType(deniedDevice);
+          if (devType != null) {
+            devNumbers.add(devType.getName() + "-" + majorNumber + ":"
+                + minorNumber + "-rwm");
+          }
+        }
+        if (devNumbers.size() != 0) {
+          privilegedOperation.appendArgs(
+              Arrays.asList(EXCLUDED_DEVICES_CLI_OPTION,
+                  StringUtils.join(",", devNumbers)));
+          needNativeDeviceOperation = true;
+        }
+      }
+
+      if (!allocation.getAllowed().isEmpty()) {
+        devNumbers.clear();
+        for (Device allowedDevice : allocation.getAllowed()) {
+          majorNumber = allowedDevice.getMajorNumber();
+          minorNumber = allowedDevice.getMinorNumber();
+          if (majorNumber != -1 && minorNumber != -1) {
+            devNumbers.add(majorNumber + ":" + minorNumber);
+          }
+        }
+        if (devNumbers.size() > 0) {
+          privilegedOperation.appendArgs(
+              Arrays.asList(ALLOWED_DEVICES_CLI_OPTION,
+                  StringUtils.join(",", devNumbers)));
+          needNativeDeviceOperation = true;
+        }
+      }
+      if (needNativeDeviceOperation) {
+        privilegedOperationExecutor.executePrivilegedOperation(
+            privilegedOperation, true);
+      }
+    } catch (PrivilegedOperationException e) {
+      cGroupsHandler.deleteCGroup(CGroupsHandler.CGroupController.DEVICES,
+          containerIdStr);
+      LOG.warn("Could not update cgroup for container", e);
+      throw new ResourceHandlerException(e);
+    }
   }
 
   @Override
@@ -134,6 +253,8 @@ public class DeviceResourceHandlerImpl implements ResourceHandler {
   public synchronized List<PrivilegedOperation> postComplete(
       ContainerId containerId) throws ResourceHandlerException {
     deviceMappingManager.cleanupAssignedDevices(resourceName, containerId);
+    cGroupsHandler.deleteCGroup(CGroupsHandler.CGroupController.DEVICES,
+        containerId.toString());
     return null;
   }
 
@@ -151,4 +272,73 @@ public class DeviceResourceHandlerImpl implements ResourceHandler {
         ", devicePluginAdapter=" + devicePluginAdapter +
         '}';
   }
+
+  public DeviceType getDeviceType(Device device) {
+    String devName = device.getDevPath();
+    if (devName.isEmpty()) {
+      LOG.warn("Empty device path provided, try to get device type from " +
+          "major:minor device number");
+      int major = device.getMajorNumber();
+      int minor = device.getMinorNumber();
+      if (major == -1 && minor == -1) {
+        LOG.warn("Non device number provided, cannot decide the device type");
+        return null;
+      }
+      // Get type from the device numbers
+      return getDeviceTypeFromDeviceNumber(device.getMajorNumber(),
+          device.getMinorNumber());
+    }
+    DeviceType deviceType;
+    try {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Try to get device type from device path: " + devName);
+      }
+      String output = shellWrapper.getDeviceFileType(devName);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("stat output:" + output);
+      }
+      deviceType = output.startsWith("c") ? DeviceType.CHAR : DeviceType.BLOCK;
+    } catch (IOException e) {
+      String msg =
+          "Failed to get device type from stat " + devName;
+      LOG.warn(msg);
+      return null;
+    }
+    return deviceType;
+  }
+
+  /**
+   * Get the device type used for cgroups value set.
+   * If sys file "/sys/dev/block/major:minor" exists, it's block device.
+   * Otherwise, it's char device. An exception is that Nvidia GPU doesn't
+   * create this sys file. so assume character device by default.
+   */
+  public DeviceType getDeviceTypeFromDeviceNumber(int major, int minor) {
+    if (shellWrapper.existFile("/sys/dev/block/"
+        + major + ":" + minor)) {
+      return DeviceType.BLOCK;
+    }
+    return DeviceType.CHAR;
+  }
+
+  /**
+   * Enum for Linux device type. Used when updating device cgroups params.
+   * "b" represents block device
+   * "c" represents character device
+   * */
+  private enum DeviceType {
+    BLOCK("b"),
+    CHAR("c");
+
+    private final String name;
+
+    DeviceType(String n) {
+      this.name = n;
+    }
+
+    public String getName() {
+      return name;
+    }
+  }
+
 }

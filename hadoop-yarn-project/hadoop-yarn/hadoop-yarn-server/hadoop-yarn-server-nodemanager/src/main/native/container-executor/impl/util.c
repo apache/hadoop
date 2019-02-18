@@ -44,6 +44,9 @@ char** split_delimiter(char *value, const char *delim) {
     memset(return_values, 0, sizeof(char *) * return_values_size);
 
     temp_tok = strtok_r(value, delim, &tempstr);
+    if (NULL == temp_tok) {
+      return_values[size++] = strdup(value);
+    }
     while (temp_tok != NULL) {
       temp_tok = strdup(temp_tok);
       if (NULL == temp_tok) {

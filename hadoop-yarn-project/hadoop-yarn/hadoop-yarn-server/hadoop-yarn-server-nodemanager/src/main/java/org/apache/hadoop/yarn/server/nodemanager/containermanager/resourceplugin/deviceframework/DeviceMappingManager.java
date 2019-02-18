@@ -95,6 +95,20 @@ public class DeviceMappingManager {
     return devicePluginSchedulers;
   }
 
+  @VisibleForTesting
+  public Set<Device> getAllocatedDevices(String resourceName,
+      ContainerId cId) {
+    Set<Device> assigned = new TreeSet<>();
+    Map<Device, ContainerId> assignedMap =
+        this.getAllUsedDevices().get(resourceName);
+    for (Map.Entry<Device, ContainerId> entry : assignedMap.entrySet()) {
+      if (entry.getValue().equals(cId)) {
+        assigned.add(entry.getKey());
+      }
+    }
+    return assigned;
+  }
+
   public synchronized void addDeviceSet(String resourceName,
       Set<Device> deviceSet) {
     LOG.info("Adding new resource: " + "type:"
@@ -148,8 +162,10 @@ public class DeviceMappingManager {
     ContainerId containerId = container.getContainerId();
     int requestedDeviceCount = getRequestedDeviceCount(resourceName,
         requestedResource);
-    LOG.debug("Try allocating " + requestedDeviceCount
-        + " " + resourceName);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Try allocating " + requestedDeviceCount
+          + " " + resourceName);
+    }
     // Assign devices to container if requested some.
     if (requestedDeviceCount > 0) {
       if (requestedDeviceCount > getAvailableDevices(resourceName)) {
@@ -245,18 +261,24 @@ public class DeviceMappingManager {
       ContainerId containerId) {
     Iterator<Map.Entry<Device, ContainerId>> iter =
         allUsedDevices.get(resourceName).entrySet().iterator();
+    Map.Entry<Device, ContainerId> entry;
     while (iter.hasNext()) {
-      if (iter.next().getValue().equals(containerId)) {
+      entry = iter.next();
+      if (entry.getValue().equals(containerId)) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Recycle devices: " + entry.getKey()
+              + ", type: " + resourceName + " from " + containerId);
+        }
         iter.remove();
       }
     }
   }
 
-  public static int getRequestedDeviceCount(String resourceName,
+  public static int getRequestedDeviceCount(String resName,
       Resource requestedResource) {
     try {
       return Long.valueOf(requestedResource.getResourceValue(
-          resourceName)).intValue();
+          resName)).intValue();
     } catch (ResourceNotFoundException e) {
       return 0;
     }
@@ -270,10 +292,7 @@ public class DeviceMappingManager {
   private long getReleasingDevices(String resourceName) {
     long releasingDevices = 0;
     Map<Device, ContainerId> used = allUsedDevices.get(resourceName);
-    Iterator<Map.Entry<Device, ContainerId>> iter = used.entrySet()
-        .iterator();
-    while (iter.hasNext()) {
-      ContainerId containerId = iter.next().getValue();
+    for (ContainerId containerId : ImmutableSet.copyOf(used.values())) {
       Container container = nmContext.getContainers().get(containerId);
       if (container != null) {
         if (container.isContainerInFinalStates()) {
@@ -295,16 +314,20 @@ public class DeviceMappingManager {
       DevicePluginScheduler dps) throws ResourceHandlerException {
 
     if (null == dps) {
-      LOG.debug("Customized device plugin scheduler is preferred "
-          + "but not implemented, use default logic");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Customized device plugin scheduler is preferred "
+            + "but not implemented, use default logic");
+      }
       defaultScheduleAction(allowed, used,
           assigned, containerId, count);
     } else {
-      LOG.debug("Customized device plugin implemented,"
-          + "use customized logic");
-      // Use customized device scheduler
-      LOG.debug("Try to schedule " + count
-          + "(" + resourceName + ") using " + dps.getClass());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Customized device plugin implemented,"
+            + "use customized logic");
+        // Use customized device scheduler
+        LOG.debug("Try to schedule " + count
+            + "(" + resourceName + ") using " + dps.getClass());
+      }
       // Pass in unmodifiable set
       Set<Device> dpsAllocated = dps.allocateDevices(
           Sets.difference(allowed, used.keySet()),
@@ -345,6 +368,7 @@ public class DeviceMappingManager {
     private String resourceName;
 
     private Set<Device> allowed = Collections.emptySet();
+
     private Set<Device> denied = Collections.emptySet();
 
     DeviceAllocation(String resName, Set<Device> a,
@@ -360,6 +384,10 @@ public class DeviceMappingManager {
 
     public Set<Device> getAllowed() {
       return allowed;
+    }
+
+    public Set<Device> getDenied() {
+      return denied;
     }
 
     @Override
