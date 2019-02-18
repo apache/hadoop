@@ -132,7 +132,7 @@ int update_cgroups_parameters(
     goto cleanup;
   }
 
-  fprintf(ERRORFILE, "CGroups: Updating cgroups, path=%s, value=%s",
+  fprintf(ERRORFILE, "CGroups: Updating cgroups, path=%s, value=%s\n",
     full_path, value);
 
   // Write values to file
