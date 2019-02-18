@@ -419,6 +419,48 @@ public class TestPipelineStateManager {
     removePipeline(pipeline);
   }
 
+  @Test
+  public void testQueryPipeline() throws IOException {
+    Pipeline pipeline = createDummyPipeline(HddsProtos.ReplicationType.RATIS,
+        HddsProtos.ReplicationFactor.THREE, 3);
+    // pipeline in allocated state should not be reported
+    stateManager.addPipeline(pipeline);
+    Assert.assertEquals(0, stateManager
+        .getPipelines(HddsProtos.ReplicationType.RATIS,
+            HddsProtos.ReplicationFactor.THREE, Pipeline.PipelineState.OPEN)
+        .size());
+
+    // pipeline in open state should be reported
+    stateManager.openPipeline(pipeline.getId());
+    Assert.assertEquals(1, stateManager
+        .getPipelines(HddsProtos.ReplicationType.RATIS,
+            HddsProtos.ReplicationFactor.THREE, Pipeline.PipelineState.OPEN)
+        .size());
+
+    Pipeline pipeline2 = createDummyPipeline(HddsProtos.ReplicationType.RATIS,
+        HddsProtos.ReplicationFactor.THREE, 3);
+    pipeline2 = Pipeline.newBuilder(pipeline2)
+        .setState(Pipeline.PipelineState.OPEN)
+        .build();
+    // pipeline in open state should be reported
+    stateManager.addPipeline(pipeline2);
+    Assert.assertEquals(2, stateManager
+        .getPipelines(HddsProtos.ReplicationType.RATIS,
+            HddsProtos.ReplicationFactor.THREE, Pipeline.PipelineState.OPEN)
+        .size());
+
+    // pipeline in closed state should not be reported
+    stateManager.finalizePipeline(pipeline2.getId());
+    Assert.assertEquals(1, stateManager
+        .getPipelines(HddsProtos.ReplicationType.RATIS,
+            HddsProtos.ReplicationFactor.THREE, Pipeline.PipelineState.OPEN)
+        .size());
+
+    // clean up
+    removePipeline(pipeline);
+    removePipeline(pipeline2);
+  }
+
   private void removePipeline(Pipeline pipeline) throws IOException {
     stateManager.finalizePipeline(pipeline.getId());
     stateManager.removePipeline(pipeline.getId());
