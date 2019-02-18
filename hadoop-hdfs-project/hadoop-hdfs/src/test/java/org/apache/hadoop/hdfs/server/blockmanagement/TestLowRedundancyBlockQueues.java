@@ -218,12 +218,12 @@ public class TestLowRedundancyBlockQueues {
   private void assertAdded(LowRedundancyBlocks queues,
                            BlockInfo block,
                            int curReplicas,
-                           int decomissionedReplicas,
+                           int decommissionedReplicas,
                            int expectedReplicas) {
     assertTrue("Failed to add " + block,
                queues.add(block,
                           curReplicas, 0,
-                          decomissionedReplicas,
+                          decommissionedReplicas,
                           expectedReplicas));
   }
 

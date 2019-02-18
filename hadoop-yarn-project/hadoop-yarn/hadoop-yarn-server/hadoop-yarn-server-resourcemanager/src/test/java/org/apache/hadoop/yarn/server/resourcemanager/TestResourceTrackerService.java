@@ -523,12 +523,13 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     checkDecommissionedNMCount(rm, ++initialMetricCount);
     nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertEquals(
-        "Node should not have been decomissioned.",
+        "Node should not have been decommissioned.",
         NodeAction.NORMAL,
         nodeHeartbeat.getNodeAction());
     nodeHeartbeat = nm2.nodeHeartbeat(true);
-    Assert.assertEquals("Node should have been decomissioned but is in state" +
-        nodeHeartbeat.getNodeAction(),
+    Assert.assertEquals(
+        "Node should have been decommissioned but is in state"
+            + nodeHeartbeat.getNodeAction(),
         NodeAction.SHUTDOWN, nodeHeartbeat.getNodeAction());
   }
 

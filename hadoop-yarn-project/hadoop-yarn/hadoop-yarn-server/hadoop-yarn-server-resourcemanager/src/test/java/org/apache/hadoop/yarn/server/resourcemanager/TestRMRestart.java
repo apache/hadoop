@@ -2019,7 +2019,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   }
 
   @Test (timeout = 60000)
-  public void testDecomissionedNMsMetricsOnRMRestart() throws Exception {
+  public void testDecommissionedNMsMetricsOnRMRestart() throws Exception {
     conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
       hostFile.getAbsolutePath());
     writeToHostsFile("");
