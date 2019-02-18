@@ -22,7 +22,6 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -174,7 +173,7 @@ public class TestBlockPlacementPolicyRackFaultTolerant {
     for (int i = 0; i < length; i++) {
       pairs[i] = new Object[]{locs[i], storageIDs[i]};
     }
-    DFSUtil.shuffle(pairs);
+    Collections.shuffle(Arrays.asList(pairs));
     for (int i = 0; i < length; i++) {
       locs[i] = (DatanodeInfo) pairs[i][0];
       storageIDs[i] = (String) pairs[i][1];

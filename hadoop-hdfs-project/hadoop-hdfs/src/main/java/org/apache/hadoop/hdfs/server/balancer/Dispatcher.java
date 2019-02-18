@@ -29,7 +29,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -50,7 +52,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -1120,7 +1121,8 @@ public class Dispatcher {
     final List<DatanodeStorageReport> trimmed = new ArrayList<DatanodeStorageReport>(); 
     // create network topology and classify utilization collections:
     // over-utilized, above-average, below-average and under-utilized.
-    for (DatanodeStorageReport r : DFSUtil.shuffle(reports)) {
+    Collections.shuffle(Arrays.asList(reports));
+    for (DatanodeStorageReport r : reports) {
       final DatanodeInfo datanode = r.getDatanodeInfo();
       if (shouldIgnore(datanode)) {
         continue;
