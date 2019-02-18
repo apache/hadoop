@@ -52,15 +52,12 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
-import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_REGION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CREATE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_NAME_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_NULL;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.S3AUtils.clearBucketOption;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
-import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_NO_METASTORE_OR_FILESYSTEM;
-import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_USAGE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -349,68 +346,28 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   @Test
   public void testSetCapacityFailFastIfNotGuarded() throws Exception{
     Configuration conf = getConfiguration();
-    bindToNonexistentTable(conf);
-    String bucket = rawFs.getBucket();
-    clearBucketOption(conf, bucket, S3_METADATA_STORE_IMPL);
-    clearBucketOption(conf, bucket, S3GUARD_DDB_TABLE_NAME_KEY);
-    clearBucketOption(conf, bucket, S3GUARD_DDB_TABLE_CREATE_KEY);
+    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, UUID.randomUUID().toString());
+    conf.set(S3GUARD_DDB_TABLE_CREATE_KEY, Boolean.FALSE.toString());
     conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
 
     S3GuardTool.SetCapacity cmdR = new S3GuardTool.SetCapacity(conf);
-    String[] argsR = new String[]{
-        cmdR.getName(),
-        "s3a://" + getFileSystem().getBucket()
-    };
+    String[] argsR = new String[]{cmdR.getName(),
+        "s3a://" + getFileSystem().getBucket()};
 
     intercept(IllegalStateException.class, "unguarded",
-        () -> cmdR.run(argsR));
-  }
-
-  /**
-   * Binds the configuration to a nonexistent table.
-   * @param conf
-   */
-  protected void bindToNonexistentTable(final Configuration conf) {
-    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, UUID.randomUUID().toString());
-    conf.setBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, false);
+        () -> run(argsR));
   }
 
   @Test
   public void testDestroyNoBucket() throws Throwable {
-    describe("Destroy a bucket which doesn't exist");
-
-    Configuration conf = getConfiguration();
-    // set a table as a safety check in case the test goes wrong
-    // and deletes it.
-    bindToNonexistentTable(conf);
-
-    S3GuardTool.Destroy cmdR = new S3GuardTool.Destroy(conf);
-    String[] argsR = new String[]{
-        S3GuardTool.Destroy.NAME,
-        S3A_THIS_BUCKET_DOES_NOT_EXIST
-    };
     intercept(FileNotFoundException.class,
-        () -> cmdR.run(argsR));
-  }
-
-  @Test
-  public void testDestroyNoArgs() throws Throwable {
-    describe("Destroy a bucket which doesn't exist");
-
-    Configuration conf = getConfiguration();
-    // set a table as a safety check in case the test goes wrong
-    // and deletes it.
-    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, UUID.randomUUID().toString());
-    conf.set(S3GUARD_DDB_REGION_KEY, "us-gov-west-1");
-    conf.setBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, false);
-
-    S3GuardTool.Destroy cmdR = new S3GuardTool.Destroy(conf);
-
-    assertExitCode(E_USAGE,
-        intercept(ExitUtil.ExitException.class,
-            E_NO_METASTORE_OR_FILESYSTEM,
-            () -> cmdR.run(new String[]{})));
-
+        new Callable<Integer>() {
+          @Override
+          public Integer call() throws Exception {
+            return run(S3GuardTool.Destroy.NAME,
+                S3A_THIS_BUCKET_DOES_NOT_EXIST);
+          }
+        });
   }
 
   @Test
@@ -425,24 +382,11 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
       exec(cmd, S3GuardTool.BucketInfo.MAGIC_FLAG, name);
     } else {
       // if the FS isn't magic, expect the probe to fail
-      assertExitCode(E_BAD_STATE,
-          intercept(ExitUtil.ExitException.class,
-              () -> exec(cmd, S3GuardTool.BucketInfo.MAGIC_FLAG, name)));
-    }
-  }
-
-  /**
-   * Assert that an exit exception had a specific error code.
-   * @param expectedErrorCode expected code.
-   * @param e exit exception
-   * @throws AssertionError with the exit exception nested inside
-   */
-  protected void assertExitCode(final int expectedErrorCode,
-      final ExitUtil.ExitException e) {
-    if (e.getExitCode() != expectedErrorCode) {
-      throw new AssertionError("Expected error code " + expectedErrorCode
-          + " in " + e,
-          e);
+      ExitUtil.ExitException e = intercept(ExitUtil.ExitException.class,
+          () -> exec(cmd, S3GuardTool.BucketInfo.MAGIC_FLAG, name));
+      if (e.getExitCode() != E_BAD_STATE) {
+        throw e;
+      }
     }
   }
 
