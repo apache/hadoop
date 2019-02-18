@@ -244,12 +244,17 @@ class DataXceiverServer implements Runnable {
     }
 
     // Close the server to stop reception of more requests.
+    lock.lock();
     try {
-      peerServer.close();
-      closed = true;
+      if (!closed) {
+        peerServer.close();
+        closed = true;
+      }
     } catch (IOException ie) {
       LOG.warn("{}:DataXceiverServer: close exception",
           datanode.getDisplayName(), ie);
+    } finally {
+      lock.unlock();
     }
 
     // if in restart prep stage, notify peers before closing them.
@@ -270,11 +275,16 @@ class DataXceiverServer implements Runnable {
     assert (datanode.shouldRun == false || datanode.shutdownForUpgrade) :
       "shoudRun should be set to false or restarting should be true"
       + " before killing";
+    lock.lock();
     try {
-      this.peerServer.close();
-      this.closed = true;
+      if (!closed) {
+        peerServer.close();
+        closed = true;
+      }
     } catch (IOException ie) {
       LOG.warn("{}:DataXceiverServer.kill()", datanode.getDisplayName(), ie);
+    } finally {
+      lock.unlock();
     }
   }
 
