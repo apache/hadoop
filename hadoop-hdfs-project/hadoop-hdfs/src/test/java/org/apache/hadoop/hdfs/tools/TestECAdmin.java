@@ -68,8 +68,7 @@ public class TestECAdmin {
     try {
       System.out.flush();
       System.err.flush();
-      out.reset();
-      err.reset();
+      resetOutputs();
     } finally {
       System.setOut(OLD_OUT);
       System.setErr(OLD_ERR);
@@ -241,5 +240,60 @@ public class TestECAdmin {
     assertTrue("Error message should be printed",
         err.toString().contains("RemoteException: The policy name " +
             "NonExistentPolicy does not exist"));
+  }
+
+  @Test
+  public void testVerifyClusterSetupWithGivenPolicies() throws Exception {
+    cluster = DFSTestUtil.setupCluster(conf, 5, 2, 0);
+
+    String[] args = new String[]{"-verifyClusterSetup", "-policy",
+        "RS-3-2-1024k"};
+    int ret = admin.run(args);
+    LOG.info("Command stdout: {}", out.toString());
+    LOG.info("Command stderr: {}", err.toString());
+    assertEquals("Return value of the command is not successful", 2, ret);
+    assertTrue("Result of cluster topology verify " +
+        "should be logged correctly", out.toString()
+        .contains("less than the minimum required number of racks (3) " +
+            "for the erasure coding policies: RS-3-2-1024k"));
+    assertTrue("Error output should be empty", err.toString().isEmpty());
+
+    resetOutputs();
+    args = new String[]{"-verifyClusterSetup", "-policy",
+        "RS-10-4-1024k", "RS-3-2-1024k"};
+    ret = admin.run(args);
+    LOG.info("Command stdout: {}", out.toString());
+    LOG.info("Command stderr: {}", err.toString());
+    assertEquals("Return value of the command is not successful", 2, ret);
+    assertTrue("Result of cluster topology verify " +
+        "should be logged correctly", out.toString()
+        .contains(
+            "for the erasure coding policies: RS-10-4-1024k, RS-3-2-1024k"));
+    assertTrue("Error output should be empty", err.toString().isEmpty());
+
+    resetOutputs();
+    args = new String[]{"-verifyClusterSetup", "-policy", "invalidPolicy"};
+    ret = admin.run(args);
+    LOG.info("Command stdout: {}", out.toString());
+    LOG.info("Command stderr: {}", err.toString());
+    assertEquals("Return value of the command is not successful", -1, ret);
+    assertTrue("Error message should be logged", err.toString()
+        .contains("The given erasure coding policy invalidPolicy " +
+            "does not exist."));
+
+    resetOutputs();
+    args = new String[]{"-verifyClusterSetup", "-policy"};
+    ret = admin.run(args);
+    LOG.info("Command stdout: {}", out.toString());
+    LOG.info("Command stderr: {}", err.toString());
+    assertEquals("Return value of the command is not successful", -1, ret);
+    assertTrue("Error message should be logged", err.toString()
+        .contains("NotEnoughArgumentsException: Not enough arguments: " +
+            "expected 1 but got 0"));
+  }
+
+  private void resetOutputs() {
+    out.reset();
+    err.reset();
   }
 }
