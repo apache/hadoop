@@ -21,9 +21,9 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -125,7 +125,7 @@ public class VolumeScanner extends Thread {
    * Each block pool has its own BlockIterator.
    */
   private final List<BlockIterator> blockIters =
-      new LinkedList<BlockIterator>();
+      new ArrayList<BlockIterator>();
 
   /**
    * Blocks which are suspect.
