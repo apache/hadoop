@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.utils.db;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -43,7 +44,7 @@ public class CodecRegistry {
    * @param <T>     Type of the return value.
    * @return the object with the parsed field data
    */
-  public <T> T asObject(byte[] rawData, Class<T> format) {
+  public <T> T asObject(byte[] rawData, Class<T> format) throws IOException {
     if (rawData == null) {
       return null;
     }
@@ -62,7 +63,7 @@ public class CodecRegistry {
    * @param <T>    Type of the typed object.
    * @return byte array to store it ini the kv store.
    */
-  public <T> byte[] asRawData(T object) {
+  public <T> byte[] asRawData(T object) throws IOException {
     Preconditions.checkNotNull(object,
         "Null value shouldn't be persisted in the database");
     Class<T> format = (Class<T>) object.getClass();

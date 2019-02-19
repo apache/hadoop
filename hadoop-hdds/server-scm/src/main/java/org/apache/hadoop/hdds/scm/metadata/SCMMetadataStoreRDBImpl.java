@@ -18,10 +18,13 @@
 package org.apache.hadoop.hdds.scm.metadata;
 
 import java.io.File;
+import java.math.BigInteger;
 import java.nio.file.Paths;
+import java.security.cert.X509Certificate;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import java.io.IOException;
+import org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateStore;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.utils.db.DBStore;
 import org.apache.hadoop.utils.db.DBStoreBuilder;
@@ -37,16 +40,27 @@ import static org.apache.hadoop.ozone.OzoneConsts.SCM_DB_NAME;
  * A RocksDB based implementation of SCM Metadata Store.
  * <p>
  * <p>
- * +---------------+------------+-------------------------+
- * | Column Family |    Key     |          Value          |
- * +---------------+------------+-------------------------+
- * | DeletedBlocks | TXID(Long) | DeletedBlockTransaction |
- * +---------------+------------+-------------------------+
+ * +---------------+------------------+-------------------------+
+ * | Column Family |    Key           |          Value          |
+ * +---------------+------------------+-------------------------+
+ * | DeletedBlocks | TXID(Long)       | DeletedBlockTransaction |
+ * +---------------+------------------+-------------------------+
+ * | ValidCerts    | Serial (BigInt)  | X509Certificate         |
+ * +---------------+------------------+-------------------------+
+ * |RevokedCerts   | Serial (BigInt)  | X509Certificate         |
+ * +---------------+------------------+-------------------------+
  */
 public class SCMMetadataStoreRDBImpl implements SCMMetadataStore {
 
   private static final String DELETED_BLOCKS_TABLE = "deletedBlocks";
   private Table deletedBlocksTable;
+
+  private static final String VALID_CERTS_TABLE = "validCerts";
+  private Table validCertsTable;
+
+  private static final String REVOKED_CERTS_TABLE = "revokedCerts";
+  private Table revokedCertsTable;
+
 
 
   private static final Logger LOG =
@@ -77,13 +91,26 @@ public class SCMMetadataStoreRDBImpl implements SCMMetadataStore {
           .setName(SCM_DB_NAME)
           .setPath(Paths.get(metaDir.getPath()))
           .addTable(DELETED_BLOCKS_TABLE)
+          .addTable(VALID_CERTS_TABLE)
+          .addTable(REVOKED_CERTS_TABLE)
           .addCodec(DeletedBlocksTransaction.class,
               new DeletedBlocksTransactionCodec())
           .addCodec(Long.class, new LongCodec())
+          .addCodec(BigInteger.class, new BigIntegerCodec())
+          .addCodec(X509Certificate.class, new X509CertificateCodec())
           .build();
+
       deletedBlocksTable = this.store.getTable(DELETED_BLOCKS_TABLE,
           Long.class, DeletedBlocksTransaction.class);
       checkTableStatus(deletedBlocksTable, DELETED_BLOCKS_TABLE);
+
+      validCertsTable = this.store.getTable(VALID_CERTS_TABLE,
+          BigInteger.class, X509Certificate.class);
+      checkTableStatus(validCertsTable, VALID_CERTS_TABLE);
+
+      revokedCertsTable = this.store.getTable(REVOKED_CERTS_TABLE,
+          BigInteger.class, X509Certificate.class);
+      checkTableStatus(revokedCertsTable, REVOKED_CERTS_TABLE);
     }
   }
 
@@ -108,6 +135,29 @@ public class SCMMetadataStoreRDBImpl implements SCMMetadataStore {
   @Override
   public Long getNextDeleteBlockTXID() {
     return this.txID.incrementAndGet();
+  }
+
+  @Override
+  public Table<BigInteger, X509Certificate> getValidCertsTable() {
+    return validCertsTable;
+  }
+
+  @Override
+  public Table<BigInteger, X509Certificate> getRevokedCertsTable() {
+    return revokedCertsTable;
+  }
+
+  @Override
+  public TableIterator getAllCerts(CertificateStore.CertType certType) {
+    if(certType == CertificateStore.CertType.VALID_CERTS) {
+      return validCertsTable.iterator();
+    }
+
+    if(certType == CertificateStore.CertType.REVOKED_CERTS) {
+      return revokedCertsTable.iterator();
+    }
+
+    return null;
   }
 
   @Override

@@ -36,18 +36,30 @@ public class TestOmMultipartKeyInfoCodec {
     OmMultipartKeyInfoCodec codec = new OmMultipartKeyInfoCodec();
     OmMultipartKeyInfo omMultipartKeyInfo = new OmMultipartKeyInfo(UUID
         .randomUUID().toString(), new HashMap<>());
-    byte[] data = codec.toPersistedFormat(omMultipartKeyInfo);
+    byte[] data = new byte[0];
+    try {
+      data = codec.toPersistedFormat(omMultipartKeyInfo);
+    } catch (java.io.IOException e) {
+      e.printStackTrace();
+    }
     Assert.assertNotNull(data);
 
-    OmMultipartKeyInfo multipartKeyInfo = codec.fromPersistedFormat(data);
+    OmMultipartKeyInfo multipartKeyInfo = null;
+    try {
+      multipartKeyInfo = codec.fromPersistedFormat(data);
+    } catch (java.io.IOException e) {
+      e.printStackTrace();
+    }
     Assert.assertEquals(omMultipartKeyInfo, multipartKeyInfo);
 
     // When random byte data passed returns null.
     try {
-      codec.fromPersistedFormat("radom".getBytes());
+      codec.fromPersistedFormat("random".getBytes());
     } catch (IllegalArgumentException ex) {
       GenericTestUtils.assertExceptionContains("Can't encode the the raw " +
           "data from the byte array", ex);
+    } catch (java.io.IOException e) {
+      e.printStackTrace();
     }
 
   }

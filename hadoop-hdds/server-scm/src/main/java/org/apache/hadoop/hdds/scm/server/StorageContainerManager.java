@@ -254,8 +254,16 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
      * passed before any artifacts like SCM DB is created. So please don't
      * add any other initialization above the Security checks please.
      */
+    if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
+      loginAsSCMUser(conf);
+    }
 
-    // Authenticate SCM if security is enabled
+    // Creates the SCM DBs or opens them if it exists.
+    // A valid pointer to the store is required by all the other services below.
+    initalizeMetadataStore(conf, configurator);
+
+    // Authenticate SCM if security is enabled, this initialization can only
+    // be done after the metadata store is initialized.
     if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
       initializeCAnSecurityProtocol(conf, configurator);
     } else {
@@ -266,8 +274,6 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       securityProtocolServer = null;
     }
 
-    // Creates the SCM DBs or opens them if it exists.
-    initalizeMetadataStore(conf, configurator);
 
     eventQueue = new EventQueue();
     long watcherTimeout =
@@ -438,11 +444,11 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
    */
   private void initializeCAnSecurityProtocol(OzoneConfiguration conf,
                                              SCMConfigurator configurator)
-      throws IOException, AuthenticationException {
-    loginAsSCMUser(conf);
+      throws IOException {
     if(configurator.getCertificateServer() != null) {
       this.certificateServer = configurator.getCertificateServer();
     } else {
+      // This assumes that SCM init has run, and DB metadata stores are created.
       certificateServer = initializeCertificateServer(
           getScmStorageConfig().getClusterID(),
           getScmStorageConfig().getScmId());
@@ -515,7 +521,14 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     // TODO: Support Certificate Server loading via Class Name loader.
     // So it is easy to use different Certificate Servers if needed.
     String subject = "scm@" + InetAddress.getLocalHost().getHostName();
-    return new DefaultCAServer(subject, clusterID, scmID);
+    if(this.scmMetadataStore == null) {
+      LOG.error("Cannot initialize Certificate Server without a valid meta " +
+          "data layer.");
+      throw new SCMException("Cannot initialize CA without a valid metadata " +
+          "store", ResultCodes.SCM_NOT_INITIALIZED);
+    }
+    SCMCertStore certStore = new SCMCertStore(this.scmMetadataStore);
+    return new DefaultCAServer(subject, clusterID, scmID, certStore);
   }
 
   /**

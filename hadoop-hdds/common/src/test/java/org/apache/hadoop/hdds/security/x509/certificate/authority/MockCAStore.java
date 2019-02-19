@@ -17,24 +17,38 @@
  *
  */
 
-package org.apache.hadoop.hdds.scm.metadata;
+package org.apache.hadoop.hdds.security.x509.certificate.authority;
 
-import com.google.common.primitives.Longs;
 import java.io.IOException;
-import org.apache.hadoop.utils.db.Codec;
+import java.math.BigInteger;
+import java.security.cert.X509Certificate;
 
 /**
- * Codec for Persisting the DeletedBlocks.
+ *
  */
-public class LongCodec implements Codec<Long> {
-
+public class MockCAStore implements CertificateStore {
   @Override
-  public byte[] toPersistedFormat(Long object) throws IOException {
-    return Longs.toByteArray(object);
+  public void storeValidCertificate(BigInteger serialID,
+                                    X509Certificate certificate)
+      throws IOException {
+
   }
 
   @Override
-  public Long fromPersistedFormat(byte[] rawData) throws IOException {
-    return Longs.fromByteArray(rawData);
+  public void revokeCertificate(BigInteger serialID) throws IOException {
+
+  }
+
+  @Override
+  public void removeExpiredCertificate(BigInteger serialID)
+      throws IOException {
+
+  }
+
+  @Override
+  public X509Certificate getCertificateByID(BigInteger serialID,
+                                            CertType certType)
+      throws IOException {
+    return null;
   }
 }

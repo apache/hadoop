@@ -19,10 +19,10 @@
 
 package org.apache.hadoop.hdds.security.x509.certificate.authority;
 
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.PKIProfiles.PKIProfile;
+import org.apache.hadoop.util.Time;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.cert.X509CertificateHolder;
@@ -100,9 +100,8 @@ public class DefaultApprover extends BaseApprover {
     X509v3CertificateBuilder certificateGenerator =
         new X509v3CertificateBuilder(
             caCertificate.getSubject(),
-            // When we do persistence we will check if the certificate number
-            // is a duplicate.
-            new BigInteger(RandomUtils.nextBytes(8)),
+            // Serial is not sequential but it is monotonically increasing.
+            BigInteger.valueOf(Time.monotonicNowNanos()),
             validFrom,
             validTill,
             certificationRequest.getSubject(), keyInfo);

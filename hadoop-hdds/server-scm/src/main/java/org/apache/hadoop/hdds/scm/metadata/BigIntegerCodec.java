@@ -19,22 +19,21 @@
 
 package org.apache.hadoop.hdds.scm.metadata;
 
-import com.google.common.primitives.Longs;
 import java.io.IOException;
+import java.math.BigInteger;
 import org.apache.hadoop.utils.db.Codec;
 
 /**
- * Codec for Persisting the DeletedBlocks.
+ * Encode and decode BigInteger.
  */
-public class LongCodec implements Codec<Long> {
-
+public class BigIntegerCodec implements Codec<BigInteger> {
   @Override
-  public byte[] toPersistedFormat(Long object) throws IOException {
-    return Longs.toByteArray(object);
+  public byte[] toPersistedFormat(BigInteger object) throws IOException {
+    return object.toByteArray();
   }
 
   @Override
-  public Long fromPersistedFormat(byte[] rawData) throws IOException {
-    return Longs.fromByteArray(rawData);
+  public BigInteger fromPersistedFormat(byte[] rawData) throws IOException {
+    return new BigInteger(rawData);
   }
 }

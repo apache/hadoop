@@ -21,6 +21,7 @@ package org.apache.hadoop.hdds.scm.metadata;
 
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import java.io.IOException;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
 import org.apache.hadoop.utils.db.Codec;
 
@@ -30,12 +31,14 @@ import org.apache.hadoop.utils.db.Codec;
 public class DeletedBlocksTransactionCodec
     implements Codec<DeletedBlocksTransaction> {
   @Override
-  public byte[] toPersistedFormat(DeletedBlocksTransaction object) {
+  public byte[] toPersistedFormat(DeletedBlocksTransaction object)
+      throws IOException {
     return object.toByteArray();
   }
 
   @Override
-  public DeletedBlocksTransaction fromPersistedFormat(byte[] rawData) {
+  public DeletedBlocksTransaction fromPersistedFormat(byte[] rawData)
+      throws IOException {
     try {
       return DeletedBlocksTransaction.parseFrom(rawData);
     } catch (InvalidProtocolBufferException e) {
