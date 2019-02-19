@@ -25,6 +25,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type;
 import org.apache.ratis.RaftConfigKeys;
 import org.apache.ratis.client.RaftClient;
@@ -110,6 +111,7 @@ public final class OMRatisHelper {
         .setCmdType(cmdType)
         .setSuccess(false)
         .setMessage(e.getMessage())
+        .setStatus(Status.INTERNAL_ERROR)
         .build();
   }
 }
