@@ -1006,6 +1006,20 @@ There's are limit on how often you can change the capacity of an DynamoDB table;
 if you call set-capacity too often, it fails. Wait until the after the time indicated
 and try again.
 
+### Error `Invalid region specified`
+
+```
+java.io.IOException: Invalid region specified "iceland-2":
+  Region can be configured with fs.s3a.s3guard.ddb.region:
+  us-gov-west-1, us-east-1, us-east-2, us-west-1, us-west-2,
+  eu-west-1, eu-west-2, eu-west-3, eu-central-1, ap-south-1,
+  ap-southeast-1, ap-southeast-2, ap-northeast-1, ap-northeast-2,
+  sa-east-1, cn-north-1, cn-northwest-1, ca-central-1
+  at org.apache.hadoop.fs.s3a.s3guard.DynamoDBClientFactory$DefaultDynamoDBClientFactory.getRegion
+  at org.apache.hadoop.fs.s3a.s3guard.DynamoDBClientFactory$DefaultDynamoDBClientFactory.createDynamoDBClient
+```
+
+The region specified in `fs.s3a.s3guard.ddb.region` is invalid.
 
 ## Other Topics
 

@@ -552,6 +552,10 @@ public abstract class S3GuardTool extends Configured implements Tool {
     @Override
     public int run(String[] args, PrintStream out) throws Exception {
       List<String> paths = parseArgs(args);
+      if (paths.isEmpty()) {
+        errorln(getUsage());
+        throw invalidArgs("no arguments");
+      }
       Map<String, String> options = new HashMap<>();
       checkIfS3BucketIsGuarded(paths);
 
@@ -1639,6 +1643,11 @@ public abstract class S3GuardTool extends Configured implements Tool {
     } catch (ExitUtil.ExitException e) {
       // explicitly raised exit code
       exit(e.getExitCode(), e.toString());
+    } catch (FileNotFoundException e) {
+      // Bucket doesn't exist or similar - return code of 44, "404".
+      errorln(e.toString());
+      LOG.debug("Not found:", e);
+      exit(EXIT_NOT_FOUND, e.toString());
     } catch (Throwable e) {
       e.printStackTrace(System.err);
       exit(ERROR, e.toString());

@@ -25,8 +25,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -52,6 +54,7 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_REGION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CREATE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_NAME_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_NULL;
@@ -346,28 +349,95 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   @Test
   public void testSetCapacityFailFastIfNotGuarded() throws Exception{
     Configuration conf = getConfiguration();
-    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, UUID.randomUUID().toString());
-    conf.set(S3GUARD_DDB_TABLE_CREATE_KEY, Boolean.FALSE.toString());
+    bindToNonexistentTable(conf);
+    String bucket = rawFs.getBucket();
+    clearBucketOption(conf, bucket, S3_METADATA_STORE_IMPL);
+    clearBucketOption(conf, bucket, S3GUARD_DDB_TABLE_NAME_KEY);
+    clearBucketOption(conf, bucket, S3GUARD_DDB_TABLE_CREATE_KEY);
     conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
 
     S3GuardTool.SetCapacity cmdR = new S3GuardTool.SetCapacity(conf);
-    String[] argsR = new String[]{cmdR.getName(),
-        "s3a://" + getFileSystem().getBucket()};
+    String[] argsR = new String[]{
+        cmdR.getName(),
+        "s3a://" + getFileSystem().getBucket()
+    };
 
     intercept(IllegalStateException.class, "unguarded",
-        () -> run(argsR));
+        () -> cmdR.run(argsR));
+  }
+
+  /**
+   * Binds the configuration to a nonexistent table.
+   * @param conf
+   */
+  private void bindToNonexistentTable(final Configuration conf) {
+    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, UUID.randomUUID().toString());
+    conf.unset(S3GUARD_DDB_REGION_KEY);
+    conf.setBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, false);
+  }
+
+  /**
+   * Make an S3GuardTool of the specific subtype with binded configuration
+   * to a nonexistent table.
+   * @param tool
+   */
+  private S3GuardTool makeBindedTool(Class<? extends S3GuardTool> tool)
+      throws Exception {
+    Configuration conf = getConfiguration();
+    // set a table as a safety check in case the test goes wrong
+    // and deletes it.
+    bindToNonexistentTable(conf);
+    return tool.getDeclaredConstructor(Configuration.class).newInstance(conf);
   }
 
   @Test
-  public void testDestroyNoBucket() throws Throwable {
-    intercept(FileNotFoundException.class,
-        new Callable<Integer>() {
-          @Override
-          public Integer call() throws Exception {
-            return run(S3GuardTool.Destroy.NAME,
-                S3A_THIS_BUCKET_DOES_NOT_EXIST);
-          }
-        });
+  public void testToolsNoBucket() throws Throwable {
+    List<Class<? extends S3GuardTool>> tools =
+        Arrays.asList(S3GuardTool.Destroy.class, S3GuardTool.BucketInfo.class,
+            S3GuardTool.Diff.class, S3GuardTool.Import.class,
+            S3GuardTool.Prune.class, S3GuardTool.SetCapacity.class,
+            S3GuardTool.Uploads.class);
+
+    for (Class<? extends S3GuardTool> tool : tools) {
+      S3GuardTool cmdR = makeBindedTool(tool);
+      describe("Calling " + cmdR.getName() + " on a bucket that does not exist.");
+      String[] argsR = new String[]{
+          cmdR.getName(),
+          S3A_THIS_BUCKET_DOES_NOT_EXIST
+      };
+      intercept(FileNotFoundException.class,
+          () -> cmdR.run(argsR));
+    }
+  }
+
+  @Test
+  public void testToolsNoArgsForBucketAndDDBTable() throws Throwable {
+    List<Class<? extends S3GuardTool>> tools =
+        Arrays.asList(S3GuardTool.Destroy.class, S3GuardTool.Init.class);
+
+    for (Class<? extends S3GuardTool> tool : tools) {
+      S3GuardTool cmdR = makeBindedTool(tool);
+      describe("Calling " + cmdR.getName() + " without any arguments.");
+      intercept(ExitUtil.ExitException.class,
+          "S3 bucket url or DDB table name have to be provided explicitly",
+          () -> cmdR.run(new String[]{tool.getName()}));
+    }
+  }
+
+  @Test
+  public void testToolsNoArgsForBucket() throws Throwable {
+    List<Class<? extends S3GuardTool>> tools =
+        Arrays.asList(S3GuardTool.BucketInfo.class, S3GuardTool.Diff.class,
+            S3GuardTool.Import.class, S3GuardTool.Prune.class,
+            S3GuardTool.SetCapacity.class, S3GuardTool.Uploads.class);
+
+    for (Class<? extends S3GuardTool> tool : tools) {
+      S3GuardTool cmdR = makeBindedTool(tool);
+      describe("Calling " + cmdR.getName() + " without any arguments.");
+      assertExitCode(S3GuardTool.INVALID_ARGUMENT,
+          intercept(ExitUtil.ExitException.class,
+              () -> cmdR.run(new String[]{tool.getName()})));
+    }
   }
 
   @Test
@@ -382,11 +452,23 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
       exec(cmd, S3GuardTool.BucketInfo.MAGIC_FLAG, name);
     } else {
       // if the FS isn't magic, expect the probe to fail
-      ExitUtil.ExitException e = intercept(ExitUtil.ExitException.class,
-          () -> exec(cmd, S3GuardTool.BucketInfo.MAGIC_FLAG, name));
-      if (e.getExitCode() != E_BAD_STATE) {
-        throw e;
-      }
+      assertExitCode(E_BAD_STATE,
+          intercept(ExitUtil.ExitException.class,
+              () -> exec(cmd, S3GuardTool.BucketInfo.MAGIC_FLAG, name)));
+    }
+  }
+
+  /**
+   * Assert that an exit exception had a specific error code.
+   * @param expectedErrorCode expected code.
+   * @param e exit exception
+   * @throws AssertionError with the exit exception nested inside
+   */
+  protected void assertExitCode(final int expectedErrorCode,
+      final ExitUtil.ExitException e) {
+    if (e.getExitCode() != expectedErrorCode) {
+      throw new AssertionError("Expected error code " +
+          expectedErrorCode + " in " + e, e);
     }
   }
 
