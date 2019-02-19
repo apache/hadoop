@@ -119,7 +119,10 @@ public class RDBStore implements DBStore {
           OM_DB_CHECKPOINTS_DIR_NAME).toString();
       File checkpointsDir = new File(checkpointsParentDir);
       if (!checkpointsDir.exists()) {
-        checkpointsDir.mkdir();
+        boolean success = checkpointsDir.mkdir();
+        if (!success) {
+          LOG.warn("Unable to create RocksDB checkpoint directory");
+        }
       }
 
       //Initialize checkpoint manager
