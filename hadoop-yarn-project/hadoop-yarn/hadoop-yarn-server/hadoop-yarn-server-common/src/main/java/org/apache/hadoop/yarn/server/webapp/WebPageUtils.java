@@ -60,7 +60,7 @@ public class WebPageUtils {
     } else if (isResourceManager) {
       sb.append("[17]");
     } else {
-      sb.append("[9]");
+      sb.append("[10]");
     }
     sb.append(", 'mRender': parseHadoopProgress }]");
     return sb.toString();
