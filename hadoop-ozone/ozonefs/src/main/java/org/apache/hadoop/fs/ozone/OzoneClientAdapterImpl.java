@@ -72,7 +72,6 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
    *
    * @param volumeStr         Name of the volume to use.
    * @param bucketStr         Name of the bucket to use
-   * @param storageStatistics Storage statistic (optional, can be null)
    * @throws IOException In case of a problem.
    */
   public OzoneClientAdapterImpl(String volumeStr, String bucketStr)
