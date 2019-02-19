@@ -19,9 +19,12 @@
 
 package org.apache.hadoop.utils.db;
 
+import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_CHECKPOINTS_DIR_NAME;
+
 import javax.management.ObjectName;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -39,6 +42,7 @@ import org.apache.ratis.thirdparty.com.google.common.annotations.VisibleForTesti
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.DBOptions;
+import org.rocksdb.FlushOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.WriteOptions;
@@ -58,6 +62,8 @@ public class RDBStore implements DBStore {
   private final CodecRegistry codecRegistry;
   private final Hashtable<String, ColumnFamilyHandle> handleTable;
   private ObjectName statMBeanName;
+  private RDBCheckpointManager checkPointManager;
+  private final String checkpointsParentDir;
 
   @VisibleForTesting
   public RDBStore(File dbFile, DBOptions options,
@@ -107,6 +113,17 @@ public class RDBStore implements DBStore {
               dbFile.getAbsolutePath());
         }
       }
+
+      //create checkpoints directory if not exists.
+      checkpointsParentDir = Paths.get(dbLocation.getParent(),
+          OM_DB_CHECKPOINTS_DIR_NAME).toString();
+      File checkpointsDir = new File(checkpointsParentDir);
+      if (!checkpointsDir.exists()) {
+        checkpointsDir.mkdir();
+      }
+
+      //Initialize checkpoint manager
+      checkPointManager = new RDBCheckpointManager(db, "om");
 
     } catch (RocksDBException e) {
       throw toIOException(
@@ -246,4 +263,20 @@ public class RDBStore implements DBStore {
     }
     return returnList;
   }
+
+  @Override
+  public DBCheckpointSnapshot getCheckpointSnapshot(boolean flush)
+      throws IOException {
+    if (flush) {
+      final FlushOptions flushOptions =
+          new FlushOptions().setWaitForFlush(true);
+      try {
+        db.flush(flushOptions);
+      } catch (RocksDBException e) {
+        LOG.error("Unable to Flush RocksDB data before creating snapshot", e);
+      }
+    }
+    return checkPointManager.createCheckpointSnapshot(checkpointsParentDir);
+  }
+
 }

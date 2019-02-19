@@ -30,6 +30,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <dependencies>
 
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-compress</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
