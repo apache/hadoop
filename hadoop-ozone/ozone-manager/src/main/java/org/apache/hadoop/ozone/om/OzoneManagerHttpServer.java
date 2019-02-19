@@ -32,6 +32,7 @@ public class OzoneManagerHttpServer extends BaseHttpServer {
       throws IOException {
     super(conf, "ozoneManager");
     addServlet("serviceList", "/serviceList", ServiceListJSONServlet.class);
+    addServlet("dbSnapshot", "/dbSnapshot", OMDbSnapshotServlet.class);
     getWebAppContext().setAttribute(OzoneConsts.OM_CONTEXT_ATTRIBUTE, om);
   }
 

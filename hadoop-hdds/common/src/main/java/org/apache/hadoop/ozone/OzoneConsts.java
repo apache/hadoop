@@ -114,10 +114,13 @@ public final class OzoneConsts {
   public static final String DN_CONTAINER_DB = "-dn-"+ CONTAINER_DB_SUFFIX;
   public static final String DELETED_BLOCK_DB = "deletedBlock.db";
   public static final String OM_DB_NAME = "om.db";
+  public static final String OM_DB_CHECKPOINTS_DIR_NAME = "om.db.checkpoints";
   public static final String OZONE_MANAGER_TOKEN_DB_NAME = "om-token.db";
   public static final String SCM_DB_NAME = "scm.db";
 
   public static final String STORAGE_DIR_CHUNKS = "chunks";
+  public static final String OZONE_DB_CHECKPOINT_REQUEST_FLUSH =
+      "flushBeforeCheckpoint";
 
   /**
    * Supports Bucket Versioning.

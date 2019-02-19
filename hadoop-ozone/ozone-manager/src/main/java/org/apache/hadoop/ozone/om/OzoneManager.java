@@ -2428,6 +2428,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     return LOG;
   }
 
+  public OzoneConfiguration getConfiguration() {
+    return configuration;
+  }
+
   public static void setTestSecureOmFlag(boolean testSecureOmFlag) {
     OzoneManager.testSecureOmFlag = testSecureOmFlag;
   }
