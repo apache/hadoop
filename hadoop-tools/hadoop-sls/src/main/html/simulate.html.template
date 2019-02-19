@@ -4,18 +4,18 @@
       <link rel="stylesheet" href="css/bootstrap.min.css" media="screen">
       <link rel="stylesheet" href="css/bootstrap-responsive.min.css">
       <style type="text/css">
-        body '{' font: 20px sans-serif; '}'
+        body '{' font: 15px sans-serif; '}'
         .axis path,
         .axis line '{' fill: none; stroke: #000; shape-rendering: crispEdges; '}'
-        .axis text '{' font-family: sans-serif; font-size: 20px; '}'
-        .line '{' fill: none; stroke: steelblue; stroke-width: 3px; '}'
+        .axis text '{' font-family: sans-serif; font-size: 12px; '}'
+        .line '{' fill: none; stroke: steelblue; stroke-width: 2px; '}'
         .legend '{'
-          padding: 5px;
-          font: 18px sans-serif;
+          padding: 3px;
+          font: 10px sans-serif;
           background: yellow;
           box-shadow: 2px 2px 1px #888;
         '}'
-        .title '{' font: 24px sans-serif; '}'
+        .title '{' font: 20px sans-serif; '}'
         .divborder '{'
           border-width: 1px;
           border-style: solid;
@@ -118,8 +118,8 @@
 
       // draw each chart
       function drawEachChart(index) '{'
-        var margin = '{'top: 50, right: 250, bottom: 50, left: 70'}';
-        width = 750 - margin.left - margin.right;
+        var margin = '{'top: 50, right: 225, bottom: 50, left: 85'}';
+        width = 770 - margin.left - margin.right;
         height = 420 - margin.top - margin.bottom;
 
       xs[index] = d3.scale.linear().range([0, width]);
