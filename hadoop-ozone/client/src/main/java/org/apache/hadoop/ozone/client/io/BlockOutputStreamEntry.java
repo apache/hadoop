@@ -23,11 +23,12 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ChecksumType;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.storage.BlockOutputStream;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
-import org.apache.hadoop.ozone.common.Checksum;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
@@ -41,7 +42,8 @@ public final class BlockOutputStreamEntry extends OutputStream {
   private final String key;
   private final XceiverClientManager xceiverClientManager;
   private final Pipeline pipeline;
-  private final Checksum checksum;
+  private final ChecksumType checksumType;
+  private final int bytesPerChecksum;
   private final String requestId;
   private final int chunkSize;
   // total number of bytes that should be written to this stream
@@ -60,7 +62,8 @@ public final class BlockOutputStreamEntry extends OutputStream {
       XceiverClientManager xceiverClientManager,
       Pipeline pipeline, String requestId, int chunkSize,
       long length, long streamBufferFlushSize, long streamBufferMaxSize,
-      long watchTimeout, List<ByteBuffer> bufferList, Checksum checksum,
+      long watchTimeout, List<ByteBuffer> bufferList,
+      ChecksumType checksumType, int bytesPerChecksum,
       Token<OzoneBlockTokenIdentifier> token) {
     this.outputStream = null;
     this.blockID = blockID;
@@ -76,7 +79,8 @@ public final class BlockOutputStreamEntry extends OutputStream {
     this.streamBufferMaxSize = streamBufferMaxSize;
     this.watchTimeout = watchTimeout;
     this.bufferList = bufferList;
-    this.checksum = checksum;
+    this.checksumType = checksumType;
+    this.bytesPerChecksum = bytesPerChecksum;
   }
 
   long getLength() {
@@ -105,7 +109,8 @@ public final class BlockOutputStreamEntry extends OutputStream {
       this.outputStream =
           new BlockOutputStream(blockID, key, xceiverClientManager,
               pipeline, requestId, chunkSize, streamBufferFlushSize,
-              streamBufferMaxSize, watchTimeout, bufferList, checksum);
+              streamBufferMaxSize, watchTimeout, bufferList, checksumType,
+              bytesPerChecksum);
     }
   }
 
@@ -198,10 +203,16 @@ public final class BlockOutputStreamEntry extends OutputStream {
     private long watchTimeout;
     private List<ByteBuffer> bufferList;
     private Token<OzoneBlockTokenIdentifier> token;
-    private Checksum checksum;
+    private ChecksumType checksumType;
+    private int bytesPerChecksum;
 
-    public Builder setChecksum(Checksum cs) {
-      this.checksum = cs;
+    public Builder setChecksumType(ChecksumType type) {
+      this.checksumType = type;
+      return this;
+    }
+
+    public Builder setBytesPerChecksum(int bytes) {
+      this.bytesPerChecksum = bytes;
       return this;
     }
 
@@ -270,7 +281,7 @@ public final class BlockOutputStreamEntry extends OutputStream {
       return new BlockOutputStreamEntry(blockID, key,
           xceiverClientManager, pipeline, requestId, chunkSize,
           length, streamBufferFlushSize, streamBufferMaxSize, watchTimeout,
-          bufferList, checksum, token);
+          bufferList, checksumType, bytesPerChecksum, token);
     }
   }
 
@@ -292,10 +303,6 @@ public final class BlockOutputStreamEntry extends OutputStream {
 
   public Pipeline getPipeline() {
     return pipeline;
-  }
-
-  public Checksum getChecksum() {
-    return checksum;
   }
 
   public String getRequestId() {

@@ -27,6 +27,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
@@ -679,6 +682,66 @@ public abstract class TestOzoneRpcClientAbstract {
       Assert.assertTrue(key.getCreationTime() >= currentTime);
       Assert.assertTrue(key.getModificationTime() >= currentTime);
     }
+  }
+
+
+  @Test
+  public void testPutKeyRatisThreeNodesParallel() throws IOException,
+      InterruptedException {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    long currentTime = Time.now();
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+
+    CountDownLatch latch = new CountDownLatch(2);
+    AtomicInteger failCount = new AtomicInteger(0);
+
+    Runnable r = () -> {
+      try {
+        for (int i = 0; i < 5; i++) {
+          String keyName = UUID.randomUUID().toString();
+          String data = generateData(5 * 1024 * 1024,
+              (byte) RandomUtils.nextLong()).toString();
+          OzoneOutputStream out = bucket.createKey(keyName,
+              data.getBytes().length, ReplicationType.RATIS,
+              ReplicationFactor.THREE, new HashMap<>());
+          out.write(data.getBytes());
+          out.close();
+          OzoneKey key = bucket.getKey(keyName);
+          Assert.assertEquals(keyName, key.getName());
+          OzoneInputStream is = bucket.readKey(keyName);
+          byte[] fileContent = new byte[data.getBytes().length];
+          is.read(fileContent);
+          is.close();
+          Assert.assertTrue(verifyRatisReplication(volumeName, bucketName,
+              keyName, ReplicationType.RATIS,
+              ReplicationFactor.THREE));
+          Assert.assertEquals(data, new String(fileContent));
+          Assert.assertTrue(key.getCreationTime() >= currentTime);
+          Assert.assertTrue(key.getModificationTime() >= currentTime);
+        }
+        latch.countDown();
+      } catch (IOException ex) {
+        latch.countDown();
+        failCount.incrementAndGet();
+      }
+    };
+
+    Thread thread1 = new Thread(r);
+    Thread thread2 = new Thread(r);
+
+    thread1.start();
+    thread2.start();
+
+    latch.await(600, TimeUnit.SECONDS);
+
+    if (failCount.get() > 0) {
+      fail("testPutKeyRatisThreeNodesParallel failed");
+    }
+
   }
 
   private void readKey(OzoneBucket bucket, String keyName, String data)

@@ -21,10 +21,12 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FileEncryptionInfo;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ChecksumType;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.ozone.common.Checksum;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.om.helpers.*;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
@@ -79,7 +81,8 @@ public class KeyOutputStream extends OutputStream {
   private final long streamBufferMaxSize;
   private final long watchTimeout;
   private final long blockSize;
-  private final Checksum checksum;
+  private final int bytesPerChecksum;
+  private final ChecksumType checksumType;
   private List<ByteBuffer> bufferList;
   private OmMultipartCommitUploadPartInfo commitUploadPartInfo;
   private FileEncryptionInfo feInfo;
@@ -106,7 +109,10 @@ public class KeyOutputStream extends OutputStream {
     bufferList.add(buffer);
     watchTimeout = 0;
     blockSize = 0;
-    this.checksum = new Checksum();
+    this.checksumType = ChecksumType.valueOf(
+        OzoneConfigKeys.OZONE_CLIENT_CHECKSUM_TYPE_DEFAULT);
+    this.bytesPerChecksum = OzoneConfigKeys
+        .OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT_BYTES; // Default is 1MB
   }
 
   @VisibleForTesting
@@ -142,7 +148,8 @@ public class KeyOutputStream extends OutputStream {
       OzoneManagerProtocolClientSideTranslatorPB omClient, int chunkSize,
       String requestId, ReplicationFactor factor, ReplicationType type,
       long bufferFlushSize, long bufferMaxSize, long size, long watchTimeout,
-      Checksum checksum, String uploadID, int partNumber, boolean isMultipart) {
+      ChecksumType checksumType, int bytesPerChecksum,
+      String uploadID, int partNumber, boolean isMultipart) {
     this.streamEntries = new ArrayList<>();
     this.currentStreamIndex = 0;
     this.omClient = omClient;
@@ -165,7 +172,8 @@ public class KeyOutputStream extends OutputStream {
     this.streamBufferMaxSize = bufferMaxSize;
     this.blockSize = size;
     this.watchTimeout = watchTimeout;
-    this.checksum = checksum;
+    this.bytesPerChecksum = bytesPerChecksum;
+    this.checksumType = checksumType;
 
     Preconditions.checkState(chunkSize > 0);
     Preconditions.checkState(streamBufferFlushSize > 0);
@@ -220,7 +228,8 @@ public class KeyOutputStream extends OutputStream {
             .setStreamBufferMaxSize(streamBufferMaxSize)
             .setWatchTimeout(watchTimeout)
             .setBufferList(bufferList)
-            .setChecksum(checksum)
+            .setChecksumType(checksumType)
+            .setBytesPerChecksum(bytesPerChecksum)
             .setToken(subKeyInfo.getToken());
     streamEntries.add(builder.build());
   }
@@ -573,7 +582,8 @@ public class KeyOutputStream extends OutputStream {
     private long streamBufferMaxSize;
     private long blockSize;
     private long watchTimeout;
-    private Checksum checksum;
+    private ChecksumType checksumType;
+    private int bytesPerChecksum;
     private String multipartUploadID;
     private int multipartNumber;
     private boolean isMultipartKey;
@@ -651,8 +661,13 @@ public class KeyOutputStream extends OutputStream {
       return this;
     }
 
-    public Builder setChecksum(Checksum checksumObj){
-      this.checksum = checksumObj;
+    public Builder setChecksumType(ChecksumType cType){
+      this.checksumType = cType;
+      return this;
+    }
+
+    public Builder setBytesPerChecksum(int bytes){
+      this.bytesPerChecksum = bytes;
       return this;
     }
 
@@ -664,8 +679,8 @@ public class KeyOutputStream extends OutputStream {
     public KeyOutputStream build() throws IOException {
       return new KeyOutputStream(openHandler, xceiverManager, scmClient,
           omClient, chunkSize, requestID, factor, type, streamBufferFlushSize,
-          streamBufferMaxSize, blockSize, watchTimeout, checksum,
-          multipartUploadID, multipartNumber, isMultipartKey);
+          streamBufferMaxSize, blockSize, watchTimeout, checksumType,
+          bytesPerChecksum, multipartUploadID, multipartNumber, isMultipartKey);
     }
   }
 
