@@ -82,7 +82,7 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  * mapping the application owner to a UID on the execution host, resource
  * management through Linux CGROUPS, and Docker support.</p>
  *
- * <p>If {@code hadoop.security.authetication} is set to {@code simple},
+ * <p>If {@code hadoop.security.authentication} is set to {@code simple},
  * then the
  * {@code yarn.nodemanager.linux-container-executor.nonsecure-mode.limit-users}
  * property will determine whether the {@code LinuxContainerExecutor} runs
@@ -272,7 +272,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
    * Add a niceness level to the process that will be executed.  Adds
    * {@code -n <nice>} to the given command. The niceness level will be
    * taken from the
-   * {@code yarn.nodemanager.container-executer.os.sched.prioity} property.
+   * {@link YarnConfiguration#NM_CONTAINER_EXECUTOR_SCHED_PRIORITY} property.
    *
    * @param command the command to which to add the niceness setting.
    */

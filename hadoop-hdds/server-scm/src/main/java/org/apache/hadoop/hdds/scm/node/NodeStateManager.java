@@ -27,7 +27,6 @@ import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
-import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.node.states.*;
 import org.apache.hadoop.hdds.scm.node.states.Node2PipelineMap;
@@ -156,6 +155,8 @@ public class NodeStateManager implements Runnable, Closeable {
   private void initialiseState2EventMap() {
     state2EventMap.put(NodeState.STALE, SCMEvents.STALE_NODE);
     state2EventMap.put(NodeState.DEAD, SCMEvents.DEAD_NODE);
+    state2EventMap
+        .put(NodeState.HEALTHY, SCMEvents.NON_HEALTHY_TO_HEALTHY_NODE);
   }
 
   /*
@@ -274,20 +275,6 @@ public class NodeStateManager implements Runnable, Closeable {
   }
 
   /**
-   * Get information about the node.
-   *
-   * @param datanodeUUID datanode UUID
-   *
-   * @return DatanodeInfo
-   *
-   * @throws NodeNotFoundException if the node is not present
-   */
-  public DatanodeInfo getNode(UUID datanodeUUID)
-      throws NodeNotFoundException {
-    return nodeStateMap.getNodeInfo(datanodeUUID);
-  }
-
-  /**
    * Updates the last heartbeat time of the node.
    *
    * @throws NodeNotFoundException if the node is not present
@@ -317,7 +304,7 @@ public class NodeStateManager implements Runnable, Closeable {
    *
    * @return list of healthy nodes
    */
-  public List<DatanodeDetails> getHealthyNodes() {
+  public List<DatanodeInfo> getHealthyNodes() {
     return getNodes(NodeState.HEALTHY);
   }
 
@@ -326,7 +313,7 @@ public class NodeStateManager implements Runnable, Closeable {
    *
    * @return list of stale nodes
    */
-  public List<DatanodeDetails> getStaleNodes() {
+  public List<DatanodeInfo> getStaleNodes() {
     return getNodes(NodeState.STALE);
   }
 
@@ -335,7 +322,7 @@ public class NodeStateManager implements Runnable, Closeable {
    *
    * @return list of dead nodes
    */
-  public List<DatanodeDetails> getDeadNodes() {
+  public List<DatanodeInfo> getDeadNodes() {
     return getNodes(NodeState.DEAD);
   }
 
@@ -346,12 +333,12 @@ public class NodeStateManager implements Runnable, Closeable {
    *
    * @return list of nodes
    */
-  public List<DatanodeDetails> getNodes(NodeState state) {
-    List<DatanodeDetails> nodes = new ArrayList<>();
+  public List<DatanodeInfo> getNodes(NodeState state) {
+    List<DatanodeInfo> nodes = new ArrayList<>();
     nodeStateMap.getNodes(state).forEach(
         uuid -> {
           try {
-            nodes.add(nodeStateMap.getNodeDetails(uuid));
+            nodes.add(nodeStateMap.getNodeInfo(uuid));
           } catch (NodeNotFoundException e) {
             // This should not happen unless someone else other than
             // NodeStateManager is directly modifying NodeStateMap and removed
@@ -367,12 +354,12 @@ public class NodeStateManager implements Runnable, Closeable {
    *
    * @return all the managed nodes
    */
-  public List<DatanodeDetails> getAllNodes() {
-    List<DatanodeDetails> nodes = new ArrayList<>();
+  public List<DatanodeInfo> getAllNodes() {
+    List<DatanodeInfo> nodes = new ArrayList<>();
     nodeStateMap.getAllNodes().forEach(
         uuid -> {
           try {
-            nodes.add(nodeStateMap.getNodeDetails(uuid));
+            nodes.add(nodeStateMap.getNodeInfo(uuid));
           } catch (NodeNotFoundException e) {
             // This should not happen unless someone else other than
             // NodeStateManager is directly modifying NodeStateMap and removed
@@ -437,38 +424,6 @@ public class NodeStateManager implements Runnable, Closeable {
    */
   public int getTotalNodeCount() {
     return nodeStateMap.getTotalNodeCount();
-  }
-
-  /**
-   * Returns the current stats of the node.
-   *
-   * @param uuid node id
-   *
-   * @return SCMNodeStat
-   *
-   * @throws NodeNotFoundException if the node is not present
-   */
-  public SCMNodeStat getNodeStat(UUID uuid) throws NodeNotFoundException {
-    return nodeStateMap.getNodeStat(uuid);
-  }
-
-  /**
-   * Returns a unmodifiable copy of nodeStats.
-   * @return map with node stats.
-   */
-  public Map<UUID, SCMNodeStat> getNodeStatsMap() {
-    return nodeStateMap.getNodeStats();
-  }
-
-  /**
-   * Set the stat for the node.
-   *
-   * @param uuid node id.
-   *
-   * @param newstat new stat that will set to the specify node.
-   */
-  public void setNodeStat(UUID uuid, SCMNodeStat newstat) {
-    nodeStateMap.setNodeStat(uuid, newstat);
   }
 
   /**

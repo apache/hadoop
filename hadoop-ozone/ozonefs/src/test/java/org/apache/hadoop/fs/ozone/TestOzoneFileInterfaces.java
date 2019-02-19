@@ -42,6 +42,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageStatistics;
+import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
@@ -55,6 +57,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.fs.ozone.Constants.OZONE_DEFAULT_USER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 /**
  * Test OzoneFileSystem Interfaces.
@@ -88,12 +91,17 @@ public class TestOzoneFileInterfaces {
 
   private static FileSystem fs;
 
+  private static OzoneFileSystem o3fs;
+
   private static StorageHandler storageHandler;
+
+  private OzoneFSStorageStatistics statistics;
 
   public TestOzoneFileInterfaces(boolean setDefaultFs,
       boolean useAbsolutePath) {
     this.setDefaultFs = setDefaultFs;
     this.useAbsolutePath = useAbsolutePath;
+    GlobalStorageStatistics.INSTANCE.reset();
   }
 
   @Before
@@ -130,6 +138,8 @@ public class TestOzoneFileInterfaces {
     } else {
       fs = FileSystem.get(new URI(rootPath + "/test.txt"), conf);
     }
+    o3fs = (OzoneFileSystem) fs;
+    statistics = o3fs.getOzoneFSOpsCountStatistics();
   }
 
   @After
@@ -149,6 +159,7 @@ public class TestOzoneFileInterfaces {
               fs.getClass(),
           fs instanceof OzoneFileSystem);
       assertEquals(OzoneConsts.OZONE_URI_SCHEME, fs.getUri().getScheme());
+      assertEquals(OzoneConsts.OZONE_URI_SCHEME, statistics.getScheme());
     }
   }
 
@@ -163,13 +174,21 @@ public class TestOzoneFileInterfaces {
       stream.writeBytes(data);
     }
 
+    assertEquals(statistics.getLong(
+        StorageStatistics.CommonStatisticNames.OP_CREATE).longValue(), 1);
+    assertEquals(statistics.getLong("objects_created").longValue(), 1);
+
     FileStatus status = fs.getFileStatus(path);
+    assertEquals(statistics.getLong(
+        StorageStatistics.CommonStatisticNames.OP_GET_FILE_STATUS).longValue(),
+        2);
+    assertEquals(statistics.getLong("objects_query").longValue(), 1);
     // The timestamp of the newly created file should always be greater than
     // the time when the test was started
     assertTrue("Modification time has not been recorded: " + status,
         status.getModificationTime() > currentTime);
 
-    assertEquals(false, status.isDirectory());
+    assertFalse(status.isDirectory());
     assertEquals(FsPermission.getFileDefault(), status.getPermission());
     verifyOwnerGroup(status);
 
@@ -188,6 +207,9 @@ public class TestOzoneFileInterfaces {
       assertEquals(readBytes, buffer.length);
       assertEquals(buffer.length, inputStream.getPos());
     }
+    assertEquals(statistics.getLong(
+        StorageStatistics.CommonStatisticNames.OP_OPEN).longValue(), 1);
+    assertEquals(statistics.getLong("objects_read").longValue(), 1);
   }
 
   private void verifyOwnerGroup(FileStatus fileStatus) {
@@ -207,7 +229,7 @@ public class TestOzoneFileInterfaces {
     FileStatus status = fs.getFileStatus(path);
     assertTrue("The created path is not directory.", status.isDirectory());
 
-    assertEquals(true, status.isDirectory());
+    assertTrue(status.isDirectory());
     assertEquals(FsPermission.getDirDefault(), status.getPermission());
     verifyOwnerGroup(status);
 
@@ -224,15 +246,14 @@ public class TestOzoneFileInterfaces {
 
   @Test
   public void testPathToKey() throws Exception {
-    OzoneFileSystem ozoneFs = (OzoneFileSystem) TestOzoneFileInterfaces.fs;
 
-    assertEquals("a/b/1", ozoneFs.pathToKey(new Path("/a/b/1")));
+    assertEquals("a/b/1", o3fs.pathToKey(new Path("/a/b/1")));
 
     assertEquals("user/" + getCurrentUser() + "/key1/key2",
-        ozoneFs.pathToKey(new Path("key1/key2")));
+        o3fs.pathToKey(new Path("key1/key2")));
 
     assertEquals("key1/key2",
-        ozoneFs.pathToKey(new Path("o3fs://test1/key1/key2")));
+        o3fs.pathToKey(new Path("o3fs://test1/key1/key2")));
   }
 
   private String getCurrentUser() {

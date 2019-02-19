@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.s3a.auth;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -35,8 +35,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.util.JsonSerialization;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Jackson Role Model for Role Properties, for API clients and tests.
@@ -175,6 +175,21 @@ public class RoleModel {
 
   /**
    * Create a statement.
+   * @param allow allow or deny
+   * @param scope scope
+   * @param actions actions
+   * @return the formatted json statement
+   */
+  public static Statement statement(boolean allow,
+      String scope,
+      Collection<String> actions) {
+    return new Statement(RoleModel.effect(allow))
+        .addActions(actions)
+        .addResources(scope);
+  }
+
+  /**
+   * Create a statement.
    * If {@code isDirectory} is true, a "/" is added to the path.
    * This is critical when adding wildcard permissions under
    * a directory, and also needed when locking down dir-as-file
@@ -182,6 +197,7 @@ public class RoleModel {
    * @param allow allow or deny
    * @param path path
    * @param isDirectory is this a directory?
+   * @param wildcards add a * to the tail of the key?
    * @param actions action
    * @return the formatted json statement
    */
@@ -191,6 +207,30 @@ public class RoleModel {
       final boolean isDirectory,
       final boolean wildcards,
       final String... actions) {
+    return new Statement(RoleModel.effect(allow))
+        .addActions(actions)
+        .addResources(resource(path, isDirectory, wildcards));
+  }
+
+  /**
+   * Create a statement.
+   * If {@code isDirectory} is true, a "/" is added to the path.
+   * This is critical when adding wildcard permissions under
+   * a directory, and also needed when locking down dir-as-file
+   * and dir-as-directory-marker access.
+   * @param allow allow or deny
+   * @param path path
+   * @param isDirectory is this a directory?
+   * @param wildcards add a * to the tail of the key?
+   * @param actions action
+   * @return the formatted json statement
+   */
+  public static Statement statement(
+      final boolean allow,
+      final Path path,
+      final boolean isDirectory,
+      final boolean wildcards,
+      final Collection<String> actions) {
     return new Statement(RoleModel.effect(allow))
         .addActions(actions)
         .addResources(resource(path, isDirectory, wildcards));
@@ -264,8 +304,8 @@ public class RoleModel {
 
     @Override
     public void validate() {
-      checkNotNull(sid, "Sid");
-      checkNotNull(effect, "Effect");
+      requireNonNull(sid, "Sid");
+      requireNonNull(effect, "Effect");
       checkState(!(action.isEmpty()), "Empty Action");
       checkState(!(resource.isEmpty()), "Empty Resource");
     }
@@ -280,11 +320,25 @@ public class RoleModel {
       return this;
     }
 
+    public Statement addActions(Collection<String> actions) {
+      action.addAll(actions);
+      return this;
+    }
+
     public Statement addResources(String... resources) {
       Collections.addAll(resource, resources);
       return this;
     }
 
+    /**
+     * Add a list of resources.
+     * @param resources resource list
+     * @return this statement.
+     */
+    public Statement addResources(Collection<String> resources) {
+      resource.addAll(resources);
+      return this;
+    }
   }
 
   /**
@@ -298,12 +352,20 @@ public class RoleModel {
     @JsonProperty("Statement")
     public List<Statement> statement;
 
+    /**
+     * Empty constructor: initializes the statements to an empty list.
+     */
+    public Policy() {
+      statement = new ArrayList<>();
+    }
+
     public Policy(final List<RoleModel.Statement> statement) {
       this.statement = statement;
     }
 
     public Policy(RoleModel.Statement... statements) {
-      statement = Arrays.asList(statements);
+      statement = new ArrayList<>(statements.length);
+      Collections.addAll(statement, statements);
     }
 
     /**
@@ -311,11 +373,34 @@ public class RoleModel {
      */
     @Override
     public void validate() {
-      checkNotNull(statement, "Statement");
+      requireNonNull(statement, "Statement");
       checkState(VERSION.equals(version), "Invalid Version: %s", version);
       statement.stream().forEach((a) -> a.validate());
     }
 
+    /**
+     * Add the statements of another policy to this one.
+     * @param other other policy.
+     */
+    public void add(Policy other) {
+      add(other.statement);
+    }
+
+    /**
+     * Add a collection of statements.
+     * @param statements statements to add.
+     */
+    public void add(Collection<Statement> statements) {
+      statement.addAll(statements);
+    }
+
+    /**
+     * Add a single statement.
+     * @param stat new statement.
+     */
+    public void add(Statement stat) {
+      statement.add(stat);
+    }
   }
 
 

@@ -189,9 +189,9 @@ public class DFSZKFailoverController extends ZKFailoverController {
     
     GenericOptionsParser parser = new GenericOptionsParser(
         new HdfsConfiguration(), args);
-    DFSZKFailoverController zkfc = DFSZKFailoverController.create(
-        parser.getConfiguration());
     try {
+      DFSZKFailoverController zkfc = DFSZKFailoverController.create(
+          parser.getConfiguration());
       System.exit(zkfc.run(parser.getRemainingArgs()));
     } catch (Throwable t) {
       LOG.error("DFSZKFailOverController exiting due to earlier exception "
@@ -241,8 +241,8 @@ public class DFSZKFailoverController extends ZKFailoverController {
       IOUtils.copyBytes(conn.getInputStream(), out, 4096, true);
       StringBuilder localNNThreadDumpContent =
           new StringBuilder("-- Local NN thread dump -- \n");
-      localNNThreadDumpContent.append(out);
-      localNNThreadDumpContent.append("\n -- Local NN thread dump -- ");
+      localNNThreadDumpContent.append(out)
+          .append("\n -- Local NN thread dump -- ");
       LOG.info("{}", localNNThreadDumpContent.toString());
       isThreadDumpCaptured = true;
     } catch (IOException e) {

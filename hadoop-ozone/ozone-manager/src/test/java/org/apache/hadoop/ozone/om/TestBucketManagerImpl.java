@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
@@ -29,10 +31,7 @@ import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
-import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
-import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
-import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
-import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.helpers.*;
 
 import org.junit.Assert;
 import org.junit.Rule;
@@ -40,6 +39,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 
 /**
@@ -93,7 +93,7 @@ public class TestBucketManagerImpl {
           .build();
       bucketManager.createBucket(bucketInfo);
     } catch (OMException omEx) {
-      Assert.assertEquals(ResultCodes.FAILED_VOLUME_NOT_FOUND,
+      Assert.assertEquals(ResultCodes.VOLUME_NOT_FOUND,
           omEx.getResult());
       throw omEx;
     } finally {
@@ -103,6 +103,40 @@ public class TestBucketManagerImpl {
 
   @Test
   public void testCreateBucket() throws Exception {
+    OmMetadataManagerImpl metaMgr = createSampleVol();
+
+    KeyProviderCryptoExtension kmsProvider = Mockito.mock(
+        KeyProviderCryptoExtension.class);
+    String testBekName = "key1";
+    String testCipherName = "AES/CTR/NoPadding";
+
+    KeyProvider.Metadata mockMetadata = Mockito.mock(KeyProvider.Metadata
+        .class);
+    Mockito.when(kmsProvider.getMetadata(testBekName)).thenReturn(mockMetadata);
+    Mockito.when(mockMetadata.getCipher()).thenReturn(testCipherName);
+
+    BucketManager bucketManager = new BucketManagerImpl(metaMgr,
+        kmsProvider);
+    OmBucketInfo bucketInfo = OmBucketInfo.newBuilder()
+        .setVolumeName("sampleVol")
+        .setBucketName("bucketOne")
+        .setBucketEncryptionKey(new
+            BucketEncryptionKeyInfo.Builder().setKeyName("key1").build())
+        .build();
+    bucketManager.createBucket(bucketInfo);
+    Assert.assertNotNull(bucketManager.getBucketInfo("sampleVol", "bucketOne"));
+
+    OmBucketInfo bucketInfoRead =
+        bucketManager.getBucketInfo("sampleVol",  "bucketOne");
+
+    Assert.assertTrue(bucketInfoRead.getEncryptionKeyInfo().getKeyName()
+        .equals(bucketInfo.getEncryptionKeyInfo().getKeyName()));
+    metaMgr.getStore().close();
+  }
+
+
+  @Test
+  public void testCreateEncryptedBucket() throws Exception {
     OmMetadataManagerImpl metaMgr = createSampleVol();
 
     BucketManager bucketManager = new BucketManagerImpl(metaMgr);
@@ -130,7 +164,7 @@ public class TestBucketManagerImpl {
       bucketManager.createBucket(bucketInfo);
       bucketManager.createBucket(bucketInfo);
     } catch (OMException omEx) {
-      Assert.assertEquals(ResultCodes.FAILED_BUCKET_ALREADY_EXISTS,
+      Assert.assertEquals(ResultCodes.BUCKET_ALREADY_EXISTS,
           omEx.getResult());
       throw omEx;
     } finally {
@@ -148,7 +182,7 @@ public class TestBucketManagerImpl {
       BucketManager bucketManager = new BucketManagerImpl(metaMgr);
       bucketManager.getBucketInfo("sampleVol", "bucketOne");
     } catch (OMException omEx) {
-      Assert.assertEquals(ResultCodes.FAILED_BUCKET_NOT_FOUND,
+      Assert.assertEquals(ResultCodes.BUCKET_NOT_FOUND,
           omEx.getResult());
       throw omEx;
     } finally {
@@ -336,7 +370,7 @@ public class TestBucketManagerImpl {
     try {
       bucketManager.getBucketInfo("sampleVol", "bucket_1");
     } catch (OMException omEx) {
-      Assert.assertEquals(ResultCodes.FAILED_BUCKET_NOT_FOUND,
+      Assert.assertEquals(ResultCodes.BUCKET_NOT_FOUND,
           omEx.getResult());
       throw omEx;
     }
@@ -373,7 +407,7 @@ public class TestBucketManagerImpl {
     try {
       bucketManager.deleteBucket("sampleVol", "bucketOne");
     } catch (OMException omEx) {
-      Assert.assertEquals(ResultCodes.FAILED_BUCKET_NOT_EMPTY,
+      Assert.assertEquals(ResultCodes.BUCKET_NOT_EMPTY,
           omEx.getResult());
       throw omEx;
     }

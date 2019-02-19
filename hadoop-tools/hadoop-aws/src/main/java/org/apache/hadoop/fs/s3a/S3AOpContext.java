@@ -75,7 +75,7 @@ public class S3AOpContext {
    * @param invoker invoker, which contains retry policy
    * @param stats optional stats object
    * @param instrumentation instrumentation to use
-   * @param dstFileStatus
+   * @param dstFileStatus file status from existence check
    */
   public S3AOpContext(boolean isS3GuardEnabled, Invoker invoker,
       @Nullable FileSystem.Statistics stats, S3AInstrumentation instrumentation,
@@ -84,4 +84,29 @@ public class S3AOpContext {
         dstFileStatus);
   }
 
+  public boolean isS3GuardEnabled() {
+    return isS3GuardEnabled;
+  }
+
+  public Invoker getInvoker() {
+    return invoker;
+  }
+
+  @Nullable
+  public FileSystem.Statistics getStats() {
+    return stats;
+  }
+
+  public S3AInstrumentation getInstrumentation() {
+    return instrumentation;
+  }
+
+  @Nullable
+  public Invoker getS3guardInvoker() {
+    return s3guardInvoker;
+  }
+
+  public FileStatus getDstFileStatus() {
+    return dstFileStatus;
+  }
 }

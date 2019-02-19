@@ -41,7 +41,7 @@ public class RDBStoreIterator
   @Override
   public void forEachRemaining(
       Consumer<? super ByteArrayKeyValue> action) {
-    while(hasNext()) {
+    while (hasNext()) {
       action.accept(next());
     }
   }
@@ -56,7 +56,7 @@ public class RDBStoreIterator
     if (rocksDBIterator.isValid()) {
       ByteArrayKeyValue value =
           ByteArrayKeyValue.create(rocksDBIterator.key(), rocksDBIterator
-          .value());
+              .value());
       rocksDBIterator.next();
       return value;
     }
@@ -76,6 +76,23 @@ public class RDBStoreIterator
   @Override
   public ByteArrayKeyValue seek(byte[] key) {
     rocksDBIterator.seek(key);
+    if (rocksDBIterator.isValid()) {
+      return ByteArrayKeyValue.create(rocksDBIterator.key(),
+          rocksDBIterator.value());
+    }
+    return null;
+  }
+
+  @Override
+  public byte[] key() {
+    if (rocksDBIterator.isValid()) {
+      return rocksDBIterator.key();
+    }
+    return null;
+  }
+
+  @Override
+  public ByteArrayKeyValue value() {
     if (rocksDBIterator.isValid()) {
       return ByteArrayKeyValue.create(rocksDBIterator.key(),
           rocksDBIterator.value());

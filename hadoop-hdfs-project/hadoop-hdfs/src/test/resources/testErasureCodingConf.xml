@@ -1034,5 +1034,45 @@
       </comparators>
     </test>
 
+    <test>
+      <description>ls: file with disabled EC Policy</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir -policy XOR-2-1-1024k</ec-admin-command>
+        <command>-fs NAMENODE -touchz /ecdir/file1</command>
+        <ec-admin-command>-fs NAMENODE -disablePolicy -policy XOR-2-1-1024k</ec-admin-command>
+        <command>-fs NAMENODE -ls -e /ecdir</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -enablePolicy -policy XOR-2-1-1024k</ec-admin-command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*[A-Za-z0-9-]{1,}( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/ecdir/file1</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>ls: file with replication Policy</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir -replicate</ec-admin-command>
+        <command>-fs NAMENODE -touchz /ecdir/file1</command>
+        <command>-fs NAMENODE -ls -e /</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^drwxr-xr-x( )*-( )*USERNAME( )*supergroup( )*[A-Za-z0-9-]{1,}( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/ecdir</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
   </tests>
 </configuration>

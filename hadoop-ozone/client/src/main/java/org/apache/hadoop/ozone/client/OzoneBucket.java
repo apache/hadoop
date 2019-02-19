@@ -32,8 +32,10 @@ import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.WithMetadata;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +44,7 @@ import java.util.NoSuchElementException;
 /**
  * A class that encapsulates OzoneBucket.
  */
-public class OzoneBucket {
+public class OzoneBucket extends WithMetadata {
 
   /**
    * The proxy used for connecting to the cluster and perform
@@ -93,21 +95,17 @@ public class OzoneBucket {
   private long creationTime;
 
   /**
-   * Constructs OzoneBucket instance.
-   * @param conf Configuration object.
-   * @param proxy ClientProtocol proxy.
-   * @param volumeName Name of the volume the bucket belongs to.
-   * @param bucketName Name of the bucket.
-   * @param acls ACLs associated with the bucket.
-   * @param storageType StorageType of the bucket.
-   * @param versioning versioning status of the bucket.
-   * @param creationTime creation time of the bucket.
+   * Bucket Encryption key name if bucket encryption is enabled.
    */
+  private String encryptionKeyName;
+
   @SuppressWarnings("parameternumber")
   public OzoneBucket(Configuration conf, ClientProtocol proxy,
                      String volumeName, String bucketName,
                      List<OzoneAcl> acls, StorageType storageType,
-                     Boolean versioning, long creationTime) {
+                     Boolean versioning, long creationTime,
+                     Map<String, String> metadata,
+                     String encryptionKeyName) {
     Preconditions.checkNotNull(proxy, "Client proxy is not set.");
     this.proxy = proxy;
     this.volumeName = volumeName;
@@ -123,6 +121,43 @@ public class OzoneBucket {
     this.defaultReplicationType = ReplicationType.valueOf(conf.get(
         OzoneConfigKeys.OZONE_REPLICATION_TYPE,
         OzoneConfigKeys.OZONE_REPLICATION_TYPE_DEFAULT));
+    this.metadata = metadata;
+    this.encryptionKeyName = encryptionKeyName;
+  }
+
+  /**
+   * Constructs OzoneBucket instance.
+   * @param conf Configuration object.
+   * @param proxy ClientProtocol proxy.
+   * @param volumeName Name of the volume the bucket belongs to.
+   * @param bucketName Name of the bucket.
+   * @param acls ACLs associated with the bucket.
+   * @param storageType StorageType of the bucket.
+   * @param versioning versioning status of the bucket.
+   * @param creationTime creation time of the bucket.
+   */
+  @SuppressWarnings("parameternumber")
+  public OzoneBucket(Configuration conf, ClientProtocol proxy,
+                     String volumeName, String bucketName,
+                     List<OzoneAcl> acls, StorageType storageType,
+                     Boolean versioning, long creationTime,
+                     Map<String, String> metadata) {
+    Preconditions.checkNotNull(proxy, "Client proxy is not set.");
+    this.proxy = proxy;
+    this.volumeName = volumeName;
+    this.name = bucketName;
+    this.acls = acls;
+    this.storageType = storageType;
+    this.versioning = versioning;
+    this.listCacheSize = HddsClientUtils.getListCacheSize(conf);
+    this.creationTime = creationTime;
+    this.defaultReplication = ReplicationFactor.valueOf(conf.getInt(
+        OzoneConfigKeys.OZONE_REPLICATION,
+        OzoneConfigKeys.OZONE_REPLICATION_DEFAULT));
+    this.defaultReplicationType = ReplicationType.valueOf(conf.get(
+        OzoneConfigKeys.OZONE_REPLICATION_TYPE,
+        OzoneConfigKeys.OZONE_REPLICATION_TYPE_DEFAULT));
+    this.metadata = metadata;
   }
 
   @VisibleForTesting
@@ -198,6 +233,14 @@ public class OzoneBucket {
   }
 
   /**
+   * Return the bucket encryption key name.
+   * @return the bucket encryption key name
+   */
+  public String getEncryptionKeyName() {
+    return encryptionKeyName;
+  }
+
+  /**
    * Adds ACLs to the Bucket.
    * @param addAcls ACLs to be added
    * @throws IOException
@@ -248,7 +291,8 @@ public class OzoneBucket {
    */
   public OzoneOutputStream createKey(String key, long size)
       throws IOException {
-    return createKey(key, size, defaultReplicationType, defaultReplication);
+    return createKey(key, size, defaultReplicationType, defaultReplication,
+        new HashMap<>());
   }
 
   /**
@@ -262,9 +306,11 @@ public class OzoneBucket {
    */
   public OzoneOutputStream createKey(String key, long size,
                                      ReplicationType type,
-                                     ReplicationFactor factor)
+                                     ReplicationFactor factor,
+                                     Map<String, String> keyMetadata)
       throws IOException {
-    return proxy.createKey(volumeName, name, key, size, type, factor);
+    return proxy
+        .createKey(volumeName, name, key, size, type, factor, keyMetadata);
   }
 
   /**
@@ -398,6 +444,28 @@ public class OzoneBucket {
       IOException {
     proxy.abortMultipartUpload(volumeName, name, keyName, uploadID);
   }
+
+  /**
+   * Returns list of parts of a multipart upload key.
+   * @param keyName
+   * @param uploadID
+   * @param partNumberMarker
+   * @param maxParts
+   * @return OzoneMultipartUploadPartListParts
+   */
+  public OzoneMultipartUploadPartListParts listParts(String keyName,
+      String uploadID, int partNumberMarker, int maxParts)  throws IOException {
+    // As at most we  can have 10000 parts for a key, not using iterator. If
+    // needed, it can be done later. So, if we send 10000 as max parts at
+    // most in a single rpc call, we return 0.6 mb, by assuming each part
+    // size as 60 bytes (ignored the replication type size during calculation)
+
+    return proxy.listParts(volumeName, name, keyName, uploadID,
+              partNumberMarker, maxParts);
+  }
+
+
+
 
   /**
    * An Iterator to iterate over {@link OzoneKey} list.

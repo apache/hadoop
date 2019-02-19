@@ -26,6 +26,7 @@ import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.container.states.ContainerState;
 import org.apache.hadoop.hdds.scm.container.states.ContainerStateMap;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent;
@@ -120,6 +121,7 @@ public class ContainerStateManager {
   private final ConcurrentHashMap<ContainerState, ContainerID> lastUsedMap;
   private final ContainerStateMap containers;
   private final AtomicLong containerCount;
+  private final int numContainerPerOwnerInPipeline;
 
   /**
    * Constructs a Container State Manager that tracks all containers owned by
@@ -150,6 +152,9 @@ public class ContainerStateManager {
     this.lastUsedMap = new ConcurrentHashMap<>();
     this.containerCount = new AtomicLong(0);
     this.containers = new ContainerStateMap();
+    this.numContainerPerOwnerInPipeline = configuration
+        .getInt(ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT,
+            ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT_DEFAULT);
   }
 
   /*
@@ -246,6 +251,8 @@ public class ContainerStateManager {
 
     Pipeline pipeline;
     try {
+      // TODO: #CLUTIL remove creation logic when all replication types and
+      // factors are handled by pipeline creator job.
       pipeline = pipelineManager.createPipeline(type, replicationFactor);
     } catch (IOException e) {
       final List<Pipeline> pipelines = pipelineManager
@@ -257,10 +264,25 @@ public class ContainerStateManager {
       }
       pipeline = pipelines.get((int) containerCount.get() % pipelines.size());
     }
+    return allocateContainer(pipelineManager, owner, pipeline);
+  }
 
-    Preconditions.checkNotNull(pipeline, "Pipeline type=%s/"
-        + "replication=%s couldn't be found for the new container. "
-        + "Do you have enough nodes?", type, replicationFactor);
+  /**
+   * Allocates a new container based on the type, replication etc.
+   *
+   * @param pipelineManager   - Pipeline Manager class.
+   * @param owner             - Owner of the container.
+   * @param pipeline          - Pipeline to which the container needs to be
+   *                          allocated.
+   * @return ContainerWithPipeline
+   * @throws IOException on Failure.
+   */
+  ContainerInfo allocateContainer(
+      final PipelineManager pipelineManager, final String owner,
+      Pipeline pipeline) throws IOException {
+    Preconditions.checkNotNull(pipeline,
+        "Pipeline couldn't be found for the new container. "
+            + "Do you have enough nodes?");
 
     final long containerID = containerCount.incrementAndGet();
     final ContainerInfo containerInfo = new ContainerInfo.Builder()
@@ -272,7 +294,7 @@ public class ContainerStateManager {
         .setOwner(owner)
         .setContainerID(containerID)
         .setDeleteTransactionId(0)
-        .setReplicationFactor(replicationFactor)
+        .setReplicationFactor(pipeline.getFactor())
         .setReplicationType(pipeline.getType())
         .build();
     pipelineManager.addContainerToPipeline(pipeline.getId(),
@@ -343,39 +365,83 @@ public class ContainerStateManager {
   /**
    * Return a container matching the attributes specified.
    *
-   * @param size - Space needed in the Container.
-   * @param owner - Owner of the container - A specific nameservice.
-   * @param type - Replication Type {StandAlone, Ratis}
-   * @param factor - Replication Factor {ONE, THREE}
-   * @param state - State of the Container-- {Open, Allocated etc.}
+   * @param size            - Space needed in the Container.
+   * @param owner           - Owner of the container - A specific nameservice.
+   * @param pipelineManager - Pipeline Manager
+   * @param pipeline        - Pipeline from which container needs to be matched
    * @return ContainerInfo, null if there is no match found.
    */
-  ContainerInfo getMatchingContainer(final long size,
-      String owner, ReplicationType type, ReplicationFactor factor,
-      LifeCycleState state) {
+  ContainerInfo getMatchingContainer(final long size, String owner,
+      PipelineManager pipelineManager, Pipeline pipeline) throws IOException {
 
-    // Find containers that match the query spec, if no match return null.
-    final NavigableSet<ContainerID> matchingSet =
-        containers.getMatchingContainerIDs(state, owner, factor, type);
-    if (matchingSet == null || matchingSet.size() == 0) {
+    NavigableSet<ContainerID> containerIDs =
+        pipelineManager.getContainersInPipeline(pipeline.getId());
+    if (containerIDs == null) {
+      LOG.error("Container list is null for pipeline=", pipeline.getId());
+      return null;
+    }
+
+    getContainers(containerIDs, owner);
+    if (containerIDs.size() < numContainerPerOwnerInPipeline) {
+      synchronized (pipeline) {
+        // TODO: #CLUTIL Maybe we can add selection logic inside synchronized
+        // as well
+        containerIDs = getContainers(
+            pipelineManager.getContainersInPipeline(pipeline.getId()), owner);
+        if (containerIDs.size() < numContainerPerOwnerInPipeline) {
+          ContainerInfo containerInfo =
+              allocateContainer(pipelineManager, owner, pipeline);
+          lastUsedMap.put(new ContainerState(owner, pipeline.getId()),
+              containerInfo.containerID());
+          return containerInfo;
+        }
+      }
+    }
+
+    ContainerInfo containerInfo =
+        getMatchingContainer(size, owner, pipeline.getId(), containerIDs);
+    if (containerInfo == null) {
+      synchronized (pipeline) {
+        containerInfo =
+            allocateContainer(pipelineManager, owner, pipeline);
+        lastUsedMap.put(new ContainerState(owner, pipeline.getId()),
+            containerInfo.containerID());
+      }
+    }
+    // TODO: #CLUTIL cleanup entries in lastUsedMap
+    return containerInfo;
+  }
+
+  /**
+   * Return a container matching the attributes specified.
+   *
+   * @param size         - Space needed in the Container.
+   * @param owner        - Owner of the container - A specific nameservice.
+   * @param pipelineID   - ID of the pipeline
+   * @param containerIDs - Set of containerIDs to choose from
+   * @return ContainerInfo, null if there is no match found.
+   */
+  ContainerInfo getMatchingContainer(final long size, String owner,
+      PipelineID pipelineID, NavigableSet<ContainerID> containerIDs) {
+    if (containerIDs.isEmpty()) {
       return null;
     }
 
     // Get the last used container and find container above the last used
     // container ID.
-    final ContainerState key = new ContainerState(owner, type, factor);
-    final ContainerID lastID = lastUsedMap
-        .getOrDefault(key, matchingSet.first());
+    final ContainerState key = new ContainerState(owner, pipelineID);
+    final ContainerID lastID =
+        lastUsedMap.getOrDefault(key, containerIDs.first());
 
     // There is a small issue here. The first time, we will skip the first
     // container. But in most cases it will not matter.
-    NavigableSet<ContainerID> resultSet = matchingSet.tailSet(lastID, false);
+    NavigableSet<ContainerID> resultSet = containerIDs.tailSet(lastID, false);
     if (resultSet.size() == 0) {
-      resultSet = matchingSet;
+      resultSet = containerIDs;
     }
 
     ContainerInfo selectedContainer =
-        findContainerWithSpace(size, resultSet, owner);
+        findContainerWithSpace(size, resultSet, owner, pipelineID);
     if (selectedContainer == null) {
 
       // If we did not find any space in the tailSet, we need to look for
@@ -386,15 +452,17 @@ public class ContainerStateManager {
       // not true. Hence we need to include the last used container as the
       // last element in the sorted set.
 
-      resultSet = matchingSet.headSet(lastID, true);
-      selectedContainer = findContainerWithSpace(size, resultSet, owner);
+      resultSet = containerIDs.headSet(lastID, true);
+      selectedContainer =
+          findContainerWithSpace(size, resultSet, owner, pipelineID);
     }
-    return selectedContainer;
 
+    return selectedContainer;
   }
 
   private ContainerInfo findContainerWithSpace(final long size,
-      final NavigableSet<ContainerID> searchSet, final String owner) {
+      final NavigableSet<ContainerID> searchSet, final String owner,
+      final PipelineID pipelineID) {
     try {
       // Get the container with space to meet our request.
       for (ContainerID id : searchSet) {
@@ -402,9 +470,7 @@ public class ContainerStateManager {
         if (containerInfo.getUsedBytes() + size <= this.containerSize) {
           containerInfo.updateLastUsedTime();
 
-          final ContainerState key = new ContainerState(owner,
-              containerInfo.getReplicationType(),
-              containerInfo.getReplicationFactor());
+          final ContainerState key = new ContainerState(owner, pipelineID);
           lastUsedMap.put(key, containerInfo.containerID());
           return containerInfo;
         }
@@ -455,6 +521,22 @@ public class ContainerStateManager {
   ContainerInfo getContainer(final ContainerID containerID)
       throws ContainerNotFoundException {
     return containers.getContainerInfo(containerID);
+  }
+
+  private NavigableSet<ContainerID> getContainers(
+      NavigableSet<ContainerID> containerIDs, String owner) {
+    for (ContainerID cid : containerIDs) {
+      try {
+        if (!getContainer(cid).getOwner().equals(owner)) {
+          containerIDs.remove(cid);
+        }
+      } catch (ContainerNotFoundException e) {
+        LOG.error("Could not find container info for container id={} {}", cid,
+            e);
+        containerIDs.remove(cid);
+      }
+    }
+    return containerIDs;
   }
 
   void close() throws IOException {

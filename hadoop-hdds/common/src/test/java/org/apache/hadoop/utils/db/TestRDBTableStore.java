@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.utils.db;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -55,6 +56,16 @@ public class TestRDBTableStore {
   public TemporaryFolder folder = new TemporaryFolder();
   private RDBStore rdbStore = null;
   private DBOptions options = null;
+
+  private static boolean consume(Table.KeyValue keyValue)  {
+    count++;
+    try {
+      Assert.assertNotNull(keyValue.getKey());
+    } catch(IOException ex) {
+      Assert.fail("Unexpected Exception " + ex.toString());
+    }
+    return true;
+  }
 
   @Before
   public void setUp() throws Exception {
@@ -189,12 +200,6 @@ public class TestRDBTableStore {
       //then
       Assert.assertNull(testTable.get(key));
     }
-  }
-
-  private static boolean consume(Table.KeyValue keyValue) {
-    count++;
-    Assert.assertNotNull(keyValue.getKey());
-    return true;
   }
 
   @Test

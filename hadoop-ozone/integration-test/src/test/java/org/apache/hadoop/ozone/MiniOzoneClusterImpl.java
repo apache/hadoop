@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ipc.Client;
@@ -40,7 +41,6 @@ import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OzoneManager;
-import org.apache.hadoop.hdds.scm.server.SCMStorage;
 import org.apache.hadoop.ozone.om.OMStorage;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.protocolPB
@@ -48,6 +48,7 @@ import org.apache.hadoop.hdds.scm.protocolPB
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import org.slf4j.Logger;
@@ -82,14 +83,14 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
  * StorageContainerManager and multiple DataNodes.
  */
 @InterfaceAudience.Private
-public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
+public class MiniOzoneClusterImpl implements MiniOzoneCluster {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(MiniOzoneClusterImpl.class);
 
   private final OzoneConfiguration conf;
   private StorageContainerManager scm;
-  private final OzoneManager ozoneManager;
+  private OzoneManager ozoneManager;
   private final List<HddsDatanodeService> hddsDatanodes;
 
   // Timeout for the cluster to be ready
@@ -100,12 +101,26 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
    *
    * @throws IOException if there is an I/O error
    */
-  private MiniOzoneClusterImpl(OzoneConfiguration conf,
+  MiniOzoneClusterImpl(OzoneConfiguration conf,
                                OzoneManager ozoneManager,
                                StorageContainerManager scm,
                                List<HddsDatanodeService> hddsDatanodes) {
     this.conf = conf;
     this.ozoneManager = ozoneManager;
+    this.scm = scm;
+    this.hddsDatanodes = hddsDatanodes;
+  }
+
+  /**
+   * Creates a new MiniOzoneCluster without the OzoneManager. This is used by
+   * {@link MiniOzoneHAClusterImpl} for starting multiple OzoneManagers.
+   * @param conf
+   * @param scm
+   * @param hddsDatanodes
+   */
+  MiniOzoneClusterImpl(OzoneConfiguration conf, StorageContainerManager scm,
+      List<HddsDatanodeService> hddsDatanodes) {
+    this.conf = conf;
     this.scm = scm;
     this.hddsDatanodes = hddsDatanodes;
   }
@@ -233,7 +248,8 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
 
   @Override
   public void restartStorageContainerManager()
-      throws TimeoutException, InterruptedException, IOException {
+      throws TimeoutException, InterruptedException, IOException,
+      AuthenticationException {
     scm.stop();
     scm.join();
     scm = StorageContainerManager.createSCM(null, conf);
@@ -244,7 +260,7 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
   @Override
   public void restartOzoneManager() throws IOException {
     ozoneManager.stop();
-    ozoneManager.start();
+    ozoneManager.restart();
   }
 
   @Override
@@ -370,9 +386,17 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
     public MiniOzoneCluster build() throws IOException {
       DefaultMetricsSystem.setMiniClusterMode(true);
       initializeConfiguration();
-      StorageContainerManager scm = createSCM();
-      scm.start();
-      OzoneManager om = createOM();
+      StorageContainerManager scm;
+      OzoneManager om;
+      try {
+        scm = createSCM();
+        scm.start();
+        om = createOM();
+        om.setCertClient(certClient);
+      } catch (AuthenticationException ex) {
+        throw new IOException("Unable to build MiniOzoneCluster. ", ex);
+      }
+
       om.start();
       final List<HddsDatanodeService> hddsDatanodes = createHddsDatanodes(scm);
       MiniOzoneClusterImpl cluster = new MiniOzoneClusterImpl(conf, om, scm,
@@ -384,11 +408,11 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
     }
 
     /**
-     * Initializes the configureation required for starting MiniOzoneCluster.
+     * Initializes the configuration required for starting MiniOzoneCluster.
      *
      * @throws IOException
      */
-    private void initializeConfiguration() throws IOException {
+    void initializeConfiguration() throws IOException {
       conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, ozoneEnabled);
       Path metaDir = Paths.get(path, "ozone-meta");
       Files.createDirectories(metaDir);
@@ -424,14 +448,16 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
      *
      * @throws IOException
      */
-    private StorageContainerManager createSCM() throws IOException {
+    StorageContainerManager createSCM()
+        throws IOException, AuthenticationException {
       configureSCM();
-      SCMStorage scmStore = new SCMStorage(conf);
+      SCMStorageConfig scmStore = new SCMStorageConfig(conf);
       initializeScmStorage(scmStore);
       return StorageContainerManager.createSCM(null, conf);
     }
 
-    private void initializeScmStorage(SCMStorage scmStore) throws IOException {
+    private void initializeScmStorage(SCMStorageConfig scmStore)
+        throws IOException {
       if (scmStore.getState() == StorageState.INITIALIZED) {
         return;
       }
@@ -443,7 +469,7 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
       scmStore.initialize();
     }
 
-    private void initializeOmStorage(OMStorage omStorage) throws IOException{
+    void initializeOmStorage(OMStorage omStorage) throws IOException{
       if (omStorage.getState() == StorageState.INITIALIZED) {
         return;
       }
@@ -460,7 +486,8 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
      *
      * @throws IOException
      */
-    private OzoneManager createOM() throws IOException {
+    private OzoneManager createOM()
+        throws IOException, AuthenticationException {
       configureOM();
       OMStorage omStore = new OMStorage(conf);
       initializeOmStorage(omStore);
@@ -474,7 +501,7 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
      *
      * @throws IOException
      */
-    private List<HddsDatanodeService> createHddsDatanodes(
+    List<HddsDatanodeService> createHddsDatanodes(
         StorageContainerManager scm) throws IOException {
       configureHddsDatanodes();
       String scmAddress =  scm.getDatanodeRpcAddress().getHostString() +

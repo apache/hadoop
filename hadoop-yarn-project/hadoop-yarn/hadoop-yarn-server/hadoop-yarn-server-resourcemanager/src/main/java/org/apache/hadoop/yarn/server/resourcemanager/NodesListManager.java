@@ -113,7 +113,7 @@ public class NodesListManager extends CompositeService implements
           YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH);
       this.hostsReader =
           createHostsFileReader(this.includesFile, this.excludesFile);
-      setDecomissionedNMs();
+      setDecommissionedNMs();
       printConfiguredHosts();
     } catch (YarnException ex) {
       disableHostsFileReader(ex);
@@ -245,7 +245,7 @@ public class NodesListManager extends CompositeService implements
     handleExcludeNodeList(graceful, timeout);
   }
 
-  private void setDecomissionedNMs() {
+  private void setDecommissionedNMs() {
     Set<String> excludeList = hostsReader.getExcludedHosts();
     for (final String host : excludeList) {
       NodeId nodeId = createUnknownNodeId(host);
@@ -526,7 +526,7 @@ public class NodesListManager extends CompositeService implements
           conf.get(YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH);
       this.hostsReader =
           createHostsFileReader(this.includesFile, this.excludesFile);
-      setDecomissionedNMs();
+      setDecommissionedNMs();
     } catch (IOException ioe2) {
       // Should *never* happen
       this.hostsReader = null;

@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.hdds.scm.node;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.RatisPipelineUtils;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
@@ -27,9 +30,18 @@ import org.apache.hadoop.hdds.server.events.EventPublisher;
  */
 public class NewNodeHandler implements EventHandler<DatanodeDetails> {
 
+  private final PipelineManager pipelineManager;
+  private final Configuration conf;
+
+  public NewNodeHandler(PipelineManager pipelineManager, Configuration conf) {
+    this.pipelineManager = pipelineManager;
+    this.conf = conf;
+  }
+
   @Override
   public void onMessage(DatanodeDetails datanodeDetails,
                         EventPublisher publisher) {
-    // We currently have nothing to do when we receive new node event.
+    RatisPipelineUtils
+        .triggerPipelineCreation(pipelineManager, conf, 0);
   }
 }

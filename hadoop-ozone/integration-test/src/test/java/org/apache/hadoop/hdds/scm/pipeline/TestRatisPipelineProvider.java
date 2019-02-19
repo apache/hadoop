@@ -50,6 +50,28 @@ public class TestRatisPipelineProvider {
         stateManager, new OzoneConfiguration());
   }
 
+  private void createPipelineAndAssertions(
+          HddsProtos.ReplicationFactor factor) throws IOException {
+    Pipeline pipeline = provider.create(factor);
+    stateManager.addPipeline(pipeline);
+    Assert.assertEquals(pipeline.getType(), HddsProtos.ReplicationType.RATIS);
+    Assert.assertEquals(pipeline.getFactor(), factor);
+    Assert.assertEquals(pipeline.getPipelineState(),
+            Pipeline.PipelineState.OPEN);
+    Assert.assertEquals(pipeline.getNodes().size(), factor.getNumber());
+    Pipeline pipeline1 = provider.create(factor);
+    stateManager.addPipeline(pipeline1);
+    // New pipeline should not overlap with the previous created pipeline
+    Assert.assertTrue(
+        CollectionUtils.intersection(pipeline.getNodes(), pipeline1.getNodes())
+            .isEmpty());
+    Assert.assertEquals(pipeline1.getType(), HddsProtos.ReplicationType.RATIS);
+    Assert.assertEquals(pipeline1.getFactor(), factor);
+    Assert.assertEquals(pipeline1.getPipelineState(),
+            Pipeline.PipelineState.OPEN);
+    Assert.assertEquals(pipeline1.getNodes().size(), factor.getNumber());
+  }
+
   @Test
   public void testCreatePipelineWithFactor() throws IOException {
     HddsProtos.ReplicationFactor factor = HddsProtos.ReplicationFactor.THREE;
@@ -64,15 +86,26 @@ public class TestRatisPipelineProvider {
     factor = HddsProtos.ReplicationFactor.ONE;
     Pipeline pipeline1 = provider.create(factor);
     stateManager.addPipeline(pipeline1);
-    // New pipeline should not overlap with the previous created pipeline
-    Assert.assertTrue(
-        CollectionUtils.intersection(pipeline.getNodes(), pipeline1.getNodes())
-            .isEmpty());
+    // New pipeline should overlap with the previous created pipeline,
+    // and one datanode should overlap between the two types.
+    Assert.assertEquals(
+        CollectionUtils.intersection(pipeline.getNodes(),
+            pipeline1.getNodes()).size(), 1);
     Assert.assertEquals(pipeline1.getType(), HddsProtos.ReplicationType.RATIS);
     Assert.assertEquals(pipeline1.getFactor(), factor);
     Assert.assertEquals(pipeline1.getPipelineState(),
         Pipeline.PipelineState.OPEN);
     Assert.assertEquals(pipeline1.getNodes().size(), factor.getNumber());
+  }
+
+  @Test
+  public void testCreatePipelineWithFactorThree() throws IOException {
+    createPipelineAndAssertions(HddsProtos.ReplicationFactor.THREE);
+  }
+
+  @Test
+  public void testCreatePipelineWithFactorOne() throws IOException {
+    createPipelineAndAssertions(HddsProtos.ReplicationFactor.ONE);
   }
 
   private List<DatanodeDetails> createListOfNodes(int nodeCount) {
@@ -84,7 +117,7 @@ public class TestRatisPipelineProvider {
   }
 
   @Test
-  public void testCreatePipelineWithNodes() throws IOException {
+  public void testCreatePipelineWithNodes() {
     HddsProtos.ReplicationFactor factor = HddsProtos.ReplicationFactor.THREE;
     Pipeline pipeline =
         provider.create(factor, createListOfNodes(factor.getNumber()));

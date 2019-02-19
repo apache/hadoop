@@ -156,7 +156,13 @@ class FSImageLoader {
           LOG.debug("Loading section " + s.getName() + " length: " + s.getLength
               ());
         }
-        switch (FSImageFormatProtobuf.SectionName.fromString(s.getName())) {
+
+        FSImageFormatProtobuf.SectionName sectionName
+            = FSImageFormatProtobuf.SectionName.fromString(s.getName());
+        if (sectionName == null) {
+          throw new IOException("Unrecognized section " + s.getName());
+        }
+        switch (sectionName) {
           case STRING_TABLE:
             stringTable = loadStringTable(is);
             break;

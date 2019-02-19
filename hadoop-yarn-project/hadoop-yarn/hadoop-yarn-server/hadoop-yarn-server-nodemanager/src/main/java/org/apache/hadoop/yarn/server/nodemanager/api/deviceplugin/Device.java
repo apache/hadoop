@@ -181,8 +181,8 @@ public final class Device implements Serializable, Comparable {
     // default -1 representing the value is not set
     private int id = -1;
     private String devPath = "";
-    private int majorNumber;
-    private int minorNumber;
+    private int majorNumber = -1;
+    private int minorNumber = -1;
     private String busID = "";
     private boolean isHealthy;
     private String status = "";

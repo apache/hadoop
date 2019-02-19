@@ -42,7 +42,6 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
@@ -317,12 +316,12 @@ public class TestDeleteRace {
         DelayAnswer delayer = new DelayAnswer(LOG);
         Mockito.doAnswer(delayer).when(nnSpy).commitBlockSynchronization(
             Mockito.eq(blk),
-            Mockito.anyInt(),  // new genstamp
+            Mockito.anyLong(), // new genstamp
             Mockito.anyLong(), // new length
             Mockito.eq(true),  // close file
             Mockito.eq(false), // delete block
-            (DatanodeID[]) Mockito.anyObject(), // new targets
-            (String[]) Mockito.anyObject());    // new target storages
+            Mockito.any(),     // new targets
+            Mockito.any());    // new target storages
 
         fs.recoverLease(fPath);
 

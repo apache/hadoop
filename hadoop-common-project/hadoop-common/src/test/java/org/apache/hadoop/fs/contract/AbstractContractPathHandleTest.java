@@ -17,16 +17,19 @@
  */
 package org.apache.hadoop.fs.contract;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.InvalidPathHandleException;
 import org.apache.hadoop.fs.Options.HandleOpt;
 import org.apache.hadoop.fs.Path;
@@ -38,6 +41,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyRead;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyFileContents;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
+import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 
 import org.apache.hadoop.fs.RawPathHandle;
 import org.junit.Test;
@@ -249,4 +253,61 @@ public abstract class AbstractContractPathHandleTest
     // unreachable
     return null;
   }
+
+
+  @Test
+  public void testOpenFileApplyRead() throws Throwable {
+    describe("use the apply sequence to read a whole file");
+    CompletableFuture<Long> readAllBytes = getFileSystem()
+        .openFile(
+            getHandleOrSkip(
+                testFile(B1)))
+        .build()
+        .thenApply(ContractTestUtils::readStream);
+    assertEquals("Wrong number of bytes read value",
+        TEST_FILE_LEN,
+        (long) readAllBytes.get());
+  }
+
+  @Test
+  public void testOpenFileDelete() throws Throwable {
+    describe("use the apply sequence to read a whole file");
+    FileStatus testFile = testFile(B1);
+    PathHandle handle = getHandleOrSkip(testFile);
+    // delete that file
+    FileSystem fs = getFileSystem();
+    fs.delete(testFile.getPath(), false);
+    // now construct the builder.
+    // even if the open happens in the build operation,
+    // the failure must not surface until later.
+    CompletableFuture<FSDataInputStream> builder =
+        fs.openFile(handle)
+            .opt("fs.test.something", true)
+            .build();
+    IOException ioe = interceptFuture(IOException.class, "", builder);
+    if (!(ioe instanceof FileNotFoundException)
+        && !(ioe instanceof InvalidPathHandleException)) {
+      // support both FileNotFoundException
+      // and InvalidPathHandleException as different implementations
+      // support either -and with non-atomic open sequences, possibly
+      // both
+      throw ioe;
+    }
+  }
+
+  @Test
+  public void testOpenFileLazyFail() throws Throwable {
+    describe("openFile fails on a misssng file in the get() and not before");
+    FileStatus stat = testFile(B1);
+    CompletableFuture<Long> readAllBytes = getFileSystem()
+        .openFile(
+            getHandleOrSkip(
+                stat))
+        .build()
+        .thenApply(ContractTestUtils::readStream);
+    assertEquals("Wrong number of bytes read value",
+        TEST_FILE_LEN,
+        (long) readAllBytes.get());
+  }
+
 }

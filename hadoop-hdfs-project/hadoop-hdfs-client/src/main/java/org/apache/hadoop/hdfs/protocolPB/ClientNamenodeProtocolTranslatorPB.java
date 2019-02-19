@@ -345,7 +345,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
   public HdfsFileStatus create(String src, FsPermission masked,
       String clientName, EnumSetWritable<CreateFlag> flag,
       boolean createParent, short replication, long blockSize,
-      CryptoProtocolVersion[] supportedVersions, String ecPolicyName)
+      CryptoProtocolVersion[] supportedVersions, String ecPolicyName,
+      String storagePolicy)
       throws IOException {
     CreateRequestProto.Builder builder = CreateRequestProto.newBuilder()
         .setSrc(src)
@@ -357,6 +358,9 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .setBlockSize(blockSize);
     if (ecPolicyName != null) {
       builder.setEcPolicyName(ecPolicyName);
+    }
+    if (storagePolicy != null) {
+      builder.setStoragePolicy(storagePolicy);
     }
     FsPermission unmasked = masked.getUnmasked();
     if (unmasked != null) {

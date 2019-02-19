@@ -69,11 +69,11 @@
 
     <!-- jackson versions -->
     <jackson.version>1.9.13</jackson.version>
-    <jackson2.version>2.9.5</jackson2.version>
+    <jackson2.version>2.9.8</jackson2.version>
 
     <!-- httpcomponents versions -->
-    <httpclient.version>4.5.2</httpclient.version>
-    <httpcore.version>4.4.4</httpcore.version>
+    <httpclient.version>4.5.6</httpclient.version>
+    <httpcore.version>4.4.10</httpcore.version>
 
     <!-- SLF4J version -->
     <slf4j.version>1.7.25</slf4j.version>
@@ -1064,8 +1064,8 @@
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
-        <artifactId>mockito-all</artifactId>
-        <version>1.8.5</version>
+        <artifactId>mockito-core</artifactId>
+        <version>2.23.4</version>
       </dependency>
       <dependency>
         <groupId>org.objenesis</groupId>
@@ -1279,7 +1279,7 @@
       <dependency>
         <groupId>com.aliyun.oss</groupId>
         <artifactId>aliyun-sdk-oss</artifactId>
-        <version>2.8.3</version>
+        <version>3.4.1</version>
         <exclusions>
           <exclusion>
             <groupId>org.apache.httpcomponents</groupId>
@@ -1468,6 +1468,11 @@
           <groupId>org.yaml</groupId>
           <artifactId>snakeyaml</artifactId>
           <version>${snakeyaml.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.hamcrest</groupId>
+          <artifactId>hamcrest-library</artifactId>
+          <version>1.3</version>
         </dependency>
         <dependency>
           <groupId>org.assertj</groupId>
@@ -1680,35 +1685,6 @@
             </goals>
           </execution>
         </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>animal-sniffer-maven-plugin</artifactId>
-        <version>1.16</version>
-        <executions>
-          <execution>
-            <id>signature-check</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <signature>
-            <groupId>org.codehaus.mojo.signature</groupId>
-            <artifactId>java18</artifactId>
-            <version>1.0</version>
-          </signature>
-          <ignores>
-            <ignore>sun.misc.*</ignore>
-            <ignore>sun.net.*</ignore>
-            <ignore>sun.nio.ch.*</ignore>
-            <ignore>com.sun.javadoc.*</ignore>
-            <ignore>com.sun.tools.*</ignore>
-            <ignore>java.lang.invoke.*</ignore>
-          </ignores>
-        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -2030,6 +2006,16 @@
                 <additionalOption>--add-exports</additionalOption>
                 <additionalOption>java.naming/com.sun.jndi.ldap=ALL-UNNAMED</additionalOption>
               </additionalOptions>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <compilerArgs combine.children="append">
+                <arg>--add-exports</arg>
+                <arg>java.naming/com.sun.jndi.ldap=ALL-UNNAMED</arg>
+              </compilerArgs>
             </configuration>
           </plugin>
         </plugins>

@@ -21,25 +21,19 @@ import com.google.common.base.Strings;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.IOException;
 import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.cli.MissingSubcommandException;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.rest.RestClient;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
-import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -78,11 +72,9 @@ public class TestOzoneDatanodeShell {
   @Rule
   public Timeout testTimeout = new Timeout(300000);
 
-  private static String url;
   private static File baseDir;
   private static OzoneConfiguration conf = null;
   private static MiniOzoneCluster cluster = null;
-  private static ClientProtocol client = null;
   private static HddsDatanodeService datanode = null;
 
   private final ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -123,7 +115,6 @@ public class TestOzoneDatanodeShell {
         .build();
     conf.setInt(OZONE_REPLICATION, ReplicationFactor.THREE.getValue());
     conf.setQuietMode(false);
-    client = new RpcClient(conf);
     cluster.waitForClusterToBeReady();
   }
 
@@ -145,26 +136,6 @@ public class TestOzoneDatanodeShell {
   public void setup() {
     System.setOut(new PrintStream(out));
     System.setErr(new PrintStream(err));
-    if(clientProtocol.equals(RestClient.class)) {
-      String hostName = cluster.getOzoneManager().getHttpServer()
-          .getHttpAddress().getHostName();
-      int port = cluster
-          .getOzoneManager().getHttpServer().getHttpAddress().getPort();
-      url = String.format("http://" + hostName + ":" + port);
-    } else {
-      List<ServiceInfo> services = null;
-      try {
-        services = cluster.getOzoneManager().getServiceList();
-      } catch (IOException e) {
-        LOG.error("Could not get service list from OM");
-      }
-      String hostName = services.stream().filter(
-          a -> a.getNodeType().equals(HddsProtos.NodeType.OM))
-          .collect(Collectors.toList()).get(0).getHostname();
-
-      String port = cluster.getOzoneManager().getRpcPort();
-      url = String.format("o3://" + hostName + ":" + port);
-    }
   }
 
   @After
@@ -180,9 +151,8 @@ public class TestOzoneDatanodeShell {
 
 
   private void executeDatanode(HddsDatanodeService hdds, String[] args) {
-    List<String> arguments = new ArrayList(Arrays.asList(args));
-    LOG.info("Executing ozone datanode command with args {}", arguments);
-    CommandLine cmd = datanode.getCmd();
+    LOG.info("Executing datanode command with args {}", Arrays.asList(args));
+    CommandLine cmd = hdds.getCmd();
 
     IExceptionHandler2<List<Object>> exceptionHandler =
         new IExceptionHandler2<List<Object>>() {

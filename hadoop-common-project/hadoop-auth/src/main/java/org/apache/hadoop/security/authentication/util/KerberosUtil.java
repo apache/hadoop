@@ -167,7 +167,7 @@ public class KerberosUtil {
   }
 
   /* Return fqdn of the current host */
-  static String getLocalHostName() throws UnknownHostException {
+  public static String getLocalHostName() throws UnknownHostException {
     return InetAddress.getLocalHost().getCanonicalHostName();
   }
   

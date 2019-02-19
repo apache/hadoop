@@ -216,7 +216,7 @@ public class ReplicationManager implements Runnable {
               final int toDelete = Math.min(listOfReplica.size() - 1,
                   numberOfReplicasToDelete);
               final DeleteContainerCommand deleteContainer =
-                  new DeleteContainerCommand(containerID.getId());
+                  new DeleteContainerCommand(containerID.getId(), true);
               for (int i = 0; i < toDelete; i++) {
                 LOG.info("Container {} is over replicated." +
                     " Expected replica count is {}, but found {}." +

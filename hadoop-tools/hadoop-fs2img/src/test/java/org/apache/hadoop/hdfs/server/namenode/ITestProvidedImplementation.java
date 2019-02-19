@@ -1146,7 +1146,7 @@ public class ITestProvidedImplementation {
     DataNode dn1 = cluster.getDataNodes().get(0);
     DataNode dn2 = cluster.getDataNodes().get(1);
 
-    // stop the 1st DN while being decomissioned.
+    // stop the 1st DN while being decommissioned.
     MiniDFSCluster.DataNodeProperties dn1Properties = cluster.stopDataNode(0);
     BlockManagerTestUtil.noticeDeadDatanode(cluster.getNameNode(),
         dn1.getDatanodeId().getXferAddr());

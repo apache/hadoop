@@ -27,8 +27,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -252,6 +252,7 @@ public class TestAuxServices {
 
   private void writeManifestFile(AuxServiceRecords services, Configuration
       conf) throws IOException {
+    conf.setBoolean(YarnConfiguration.NM_AUX_SERVICES_MANIFEST_ENABLED, true);
     conf.set(YarnConfiguration.NM_AUX_SERVICES_MANIFEST, manifest
         .getAbsolutePath());
     mapper.writeValue(manifest, services);
@@ -897,5 +898,53 @@ public class TestAuxServices {
     manifest.delete();
     aux.loadManifest(conf, false);
     assertEquals(0, aux.getServices().size());
+  }
+
+  @Test
+  public void testManualReload() throws IOException {
+    Assume.assumeTrue(useManifest);
+    Configuration conf = getABConf();
+    final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+        MOCK_CONTEXT, MOCK_DEL_SERVICE);
+    aux.init(conf);
+    try {
+      aux.reload(null);
+      Assert.fail("Should receive the exception.");
+    } catch (IOException e) {
+      assertTrue("Wrong message: " + e.getMessage(),
+          e.getMessage().equals("Auxiliary services have not been started " +
+              "yet, please retry later"));
+    }
+    aux.start();
+    assertEquals(2, aux.getServices().size());
+    aux.reload(null);
+    assertEquals(2, aux.getServices().size());
+    aux.reload(new AuxServiceRecords());
+    assertEquals(0, aux.getServices().size());
+    aux.stop();
+  }
+
+  @Test
+  public void testReloadWhenDisabled() throws IOException {
+    Configuration conf = new Configuration();
+    final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER,
+        MOCK_CONTEXT, MOCK_DEL_SERVICE);
+    aux.init(conf);
+    try {
+      aux.reload(null);
+      Assert.fail("Should receive the exception.");
+    } catch (IOException e) {
+      assertTrue("Wrong message: " + e.getMessage(),
+          e.getMessage().equals("Dynamic reloading is not enabled via " +
+              YarnConfiguration.NM_AUX_SERVICES_MANIFEST_ENABLED));
+    }
+    try {
+      aux.reloadManifest();
+      Assert.fail("Should receive the exception.");
+    } catch (IOException e) {
+      assertTrue("Wrong message: " + e.getMessage(),
+          e.getMessage().equals("Dynamic reloading is not enabled via " +
+              YarnConfiguration.NM_AUX_SERVICES_MANIFEST_ENABLED));
+    }
   }
 }

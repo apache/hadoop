@@ -25,8 +25,8 @@ menu:
 Introduction
 -------------
 
-Ozone ships with it own client library, that supports both RPC(Remote
-Procedure call) and REST(Representational State Transfer). This library is
+Ozone ships with its own client library that supports both RPC (Remote
+Procedure Call) and REST (Representational State Transfer). This library is
 the primary user interface to ozone.
 
 It is trivial to switch from RPC to REST or vice versa, by setting the
@@ -77,10 +77,10 @@ An object store represents an active cluster against which the client is working
 {{< highlight java >}}
 // Let us create a volume to store our game assets.
 // This uses default arguments for creating that volume.
-objectStore.createVolume(“assets”);
+objectStore.createVolume("assets");
 
 // Let us verify that the volume got created.
-OzoneVolume assets = objectStore.getVolume(“assets”);
+OzoneVolume assets = objectStore.getVolume("assets");
 {{< /highlight >}}
 
 
@@ -92,8 +92,8 @@ Once you have a volume, you can create buckets inside the volume.
 
 {{< highlight bash >}}
 // Let us create a bucket called videos.
-assets.createBucket(“videos”);
-Ozonebucket video = assets.getBucket(“videos”);
+assets.createBucket("videos");
+OzoneBucket video = assets.getBucket("videos");
 {{< /highlight >}}
 
 At this point we have a usable volume and a bucket. Our volume is called assets and bucket is called videos.
@@ -106,20 +106,20 @@ With a bucket object the users can now read and write keys. The following code r
 
 {{< highlight bash >}}
 // read data from the file, this is a user provided function.
-byte [] vidoeData = readFile(“into.mp4”);
+byte [] videoData = readFile("intro.mp4");
 
 // Create an output stream and write data.
-OzoneOutputStream videoStream = video.createKey(“intro.mp4”, 1048576);
+OzoneOutputStream videoStream = video.createKey("intro.mp4", 1048576);
 videoStream.write(videoData);
 
 // Close the stream when it is done.
- videoStream.close();
+videoStream.close();
 
 
 // We can use the same bucket to read the file that we just wrote, by creating an input Stream.
 // Let us allocate a byte array to hold the video first.
 byte[] data = new byte[(int)1048576];
-OzoneInputStream introStream = video.readKey(“intro.mp4”);
+OzoneInputStream introStream = video.readKey("intro.mp4");
 // read intro.mp4 into the data buffer
 introStream.read(data);
 introStream.close();
@@ -137,31 +137,31 @@ ObjectStore objectStore = ozClient.getObjectStore();
 
 // Let us create a volume to store our game assets.
 // This default arguments for creating that volume.
-objectStore.createVolume(“assets”);
+objectStore.createVolume("assets");
 
 // Let us verify that the volume got created.
-OzoneVolume assets = objectStore.getVolume(“assets”);
+OzoneVolume assets = objectStore.getVolume("assets");
 
 // Let us create a bucket called videos.
-assets.createBucket(“videos”);
-Ozonebucket video = assets.getBucket(“videos”);
+assets.createBucket("videos");
+OzoneBucket video = assets.getBucket("videos");
 
 // read data from the file, this is assumed to be a user provided function.
-byte [] vidoeData = readFile(“into.mp4”);
+byte [] videoData = readFile("intro.mp4");
 
 // Create an output stream and write data.
-OzoneOutputStream videoStream = video.createKey(“intro.mp4”, 1048576);
+OzoneOutputStream videoStream = video.createKey("intro.mp4", 1048576);
 videoStream.write(videoData);
 
 // Close the stream when it is done.
- videoStream.close();
+videoStream.close();
 
 
 // We can use the same bucket to read the file that we just wrote, by creating an input Stream.
 // Let us allocate a byte array to hold the video first.
 
 byte[] data = new byte[(int)1048576];
-OzoneInputStream introStream = video.readKey(“into.mp4”);
+OzoneInputStream introStream = video.readKey("intro.mp4");
 introStream.read(data);
 
 // Close the stream when it is done.

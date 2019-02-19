@@ -66,20 +66,16 @@ public class RpcDetailedMetrics {
 
   /**
    * Add an RPC processing time sample
-   * @param metName of the RPC call
+   * @param name of the RPC call
    * @param processingTime  the processing time
    */
   //@Override // some instrumentation interface
-  public void addProcessingTime(String metName, long processingTime) {
-    rates.add(metName, processingTime);
+  public void addProcessingTime(String name, int processingTime) {
+    rates.add(name, processingTime);
   }
 
-  public void addDeferredProcessingTime(String metName, long processingTime) {
-    deferredRpcRates.add(metName, processingTime);
-  }
-
-  public MutableRatesWithAggregation getMutableRates() {
-    return rates;
+  public void addDeferredProcessingTime(String name, long processingTime) {
+    deferredRpcRates.add(name, processingTime);
   }
 
   /**

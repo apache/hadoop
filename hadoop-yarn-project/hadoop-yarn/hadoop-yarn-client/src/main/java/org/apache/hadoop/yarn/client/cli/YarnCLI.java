@@ -72,6 +72,10 @@ public abstract class YarnCLI extends Configured implements Tool {
   }
 
   public void stop() {
-    this.client.stop();
+    // this.client may be null when it is called before
+    // invoking `createAndStartYarnClient`
+    if (this.client != null) {
+      this.client.stop();
+    }
   }
 }

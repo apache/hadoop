@@ -17,14 +17,24 @@
  */
 package org.apache.hadoop.hdds.scm;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
+
 import org.apache.commons.lang3.RandomUtils;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeProtocolServer
     .NodeRegistrationContainerReport;
+import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.ozone.common.Storage;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
+
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
 
 /**
  * Stateless helper functions for Hdds tests.
@@ -63,6 +73,21 @@ public final class HddsTestUtils {
     return new NodeRegistrationContainerReport(
         TestUtils.randomDatanodeDetails(),
         TestUtils.getContainerReports(containers));
+  }
+
+  public static StorageContainerManager getScm(OzoneConfiguration conf)
+      throws IOException, AuthenticationException {
+    conf.setBoolean(OZONE_ENABLED, true);
+    SCMStorageConfig scmStore = new SCMStorageConfig(conf);
+    if(scmStore.getState() != Storage.StorageState.INITIALIZED) {
+      String clusterId = UUID.randomUUID().toString();
+      String scmId = UUID.randomUUID().toString();
+      scmStore.setClusterId(clusterId);
+      scmStore.setScmId(scmId);
+      // writes the version file properties
+      scmStore.initialize();
+    }
+    return StorageContainerManager.createSCM(null, conf);
   }
 
   /**

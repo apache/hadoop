@@ -19,26 +19,36 @@ package org.apache.hadoop.ozone.om;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.security.GeneralSecurityException;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.conf.StorageUnit;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.common.BlockGroup;
-import org.apache.hadoop.ozone.om.exceptions.OMException;
-import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
+import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.BlockTokenSecretProto.AccessModeProto;
+import org.apache.hadoop.ozone.om.helpers.BucketEncryptionKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
@@ -48,7 +58,15 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
+import org.apache.hadoop.ozone.om.helpers.OmPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.ozone.common.BlockGroup;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .PartKeyInfo;
 import org.apache.hadoop.util.Time;
@@ -57,6 +75,9 @@ import org.apache.hadoop.utils.db.BatchOperation;
 import org.apache.hadoop.utils.db.DBStore;
 
 import com.google.common.base.Preconditions;
+
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_BLOCK_TOKEN_ENABLED;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_BLOCK_TOKEN_ENABLED_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
@@ -68,6 +89,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_KEY_PREALLOCATION_MA
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_MULTIPART_MIN_SIZE;
+import static org.apache.hadoop.util.Time.monotonicNow;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -89,13 +111,23 @@ public class KeyManagerImpl implements KeyManager {
 
   private final long preallocateMax;
   private final String omId;
+  private final OzoneBlockTokenSecretManager secretManager;
+  private final boolean grpcBlockTokenEnabled;
 
   private BackgroundService keyDeletingService;
 
+  private final KeyProviderCryptoExtension kmsProvider;
+
   public KeyManagerImpl(ScmBlockLocationProtocol scmBlockClient,
-      OMMetadataManager metadataManager,
-      OzoneConfiguration conf,
-      String omId) {
+      OMMetadataManager metadataManager, OzoneConfiguration conf, String omId,
+      OzoneBlockTokenSecretManager secretManager) {
+    this(scmBlockClient, metadataManager, conf, omId, secretManager, null);
+  }
+
+  public KeyManagerImpl(ScmBlockLocationProtocol scmBlockClient,
+      OMMetadataManager metadataManager, OzoneConfiguration conf, String omId,
+      OzoneBlockTokenSecretManager secretManager,
+      KeyProviderCryptoExtension kmsProvider) {
     this.scmBlockClient = scmBlockClient;
     this.metadataManager = metadataManager;
     this.scmBlockSize = (long) conf
@@ -108,6 +140,11 @@ public class KeyManagerImpl implements KeyManager {
         OZONE_KEY_PREALLOCATION_MAXSIZE_DEFAULT);
     this.omId = omId;
     start(conf);
+    this.secretManager = secretManager;
+    this.grpcBlockTokenEnabled = conf.getBoolean(
+        HDDS_BLOCK_TOKEN_ENABLED,
+        HDDS_BLOCK_TOKEN_ENABLED_DEFAULT);
+    this.kmsProvider = kmsProvider;
   }
 
   @Override
@@ -127,12 +164,22 @@ public class KeyManagerImpl implements KeyManager {
     }
   }
 
+  KeyProviderCryptoExtension getKMSProvider() {
+    return kmsProvider;
+  }
+
   @Override
   public void stop() throws IOException {
     if (keyDeletingService != null) {
       keyDeletingService.shutdown();
       keyDeletingService = null;
     }
+  }
+
+  private OmBucketInfo getBucketInfo(String volumeName, String bucketName)
+      throws IOException {
+    String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
+    return metadataManager.getBucketTable().get(bucketKey);
   }
 
   private void validateBucket(String volumeName, String bucketName)
@@ -144,13 +191,31 @@ public class KeyManagerImpl implements KeyManager {
     if (metadataManager.getVolumeTable().get(volumeKey) == null) {
       LOG.error("volume not found: {}", volumeName);
       throw new OMException("Volume not found",
-          OMException.ResultCodes.FAILED_VOLUME_NOT_FOUND);
+          OMException.ResultCodes.VOLUME_NOT_FOUND);
     }
     //Check if bucket already exists
     if (metadataManager.getBucketTable().get(bucketKey) == null) {
       LOG.error("bucket not found: {}/{} ", volumeName, bucketName);
       throw new OMException("Bucket not found",
-          OMException.ResultCodes.FAILED_BUCKET_NOT_FOUND);
+          OMException.ResultCodes.BUCKET_NOT_FOUND);
+    }
+  }
+
+  /**
+   * Check S3 bucket exists or not.
+   * @param volumeName
+   * @param bucketName
+   * @throws IOException
+   */
+  private void validateS3Bucket(String volumeName, String bucketName)
+      throws IOException {
+
+    String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
+    //Check if bucket already exists
+    if (metadataManager.getBucketTable().get(bucketKey) == null) {
+      LOG.error("bucket not found: {}/{} ", volumeName, bucketName);
+      throw new OMException("Bucket not found",
+          ResultCodes.BUCKET_NOT_FOUND);
     }
   }
 
@@ -170,7 +235,7 @@ public class KeyManagerImpl implements KeyManager {
       LOG.error("Allocate block for a key not in open status in meta store" +
           " /{}/{}/{} with ID {}", volumeName, bucketName, keyName, clientID);
       throw new OMException("Open Key not found",
-          OMException.ResultCodes.FAILED_KEY_NOT_FOUND);
+          OMException.ResultCodes.KEY_NOT_FOUND);
     }
 
     AllocatedBlock allocatedBlock;
@@ -185,11 +250,18 @@ public class KeyManagerImpl implements KeyManager {
       }
       throw ex;
     }
-    OmKeyLocationInfo info = new OmKeyLocationInfo.Builder()
+    OmKeyLocationInfo.Builder builder = new OmKeyLocationInfo.Builder()
         .setBlockID(new BlockID(allocatedBlock.getBlockID()))
         .setLength(scmBlockSize)
-        .setOffset(0)
-        .build();
+        .setOffset(0);
+    if (grpcBlockTokenEnabled) {
+      String remoteUser = getRemoteUser().getShortUserName();
+      builder.setToken(secretManager.generateToken(remoteUser,
+          allocatedBlock.getBlockID().toString(),
+          getAclForUser(remoteUser),
+          scmBlockSize));
+    }
+    OmKeyLocationInfo info = builder.build();
     // current version not committed, so new blocks coming now are added to
     // the same version
     keyInfo.appendNewBlocks(Collections.singletonList(info));
@@ -199,6 +271,48 @@ public class KeyManagerImpl implements KeyManager {
     return info;
   }
 
+  /* Optimize ugi lookup for RPC operations to avoid a trip through
+   * UGI.getCurrentUser which is synch'ed.
+   */
+  public static UserGroupInformation getRemoteUser() throws IOException {
+    UserGroupInformation ugi = Server.getRemoteUser();
+    return (ugi != null) ? ugi : UserGroupInformation.getCurrentUser();
+  }
+
+  /**
+   * Return acl for user.
+   * @param user
+   *
+   * */
+  private EnumSet<AccessModeProto> getAclForUser(String user) {
+    // TODO: Return correct acl for user.
+    return EnumSet.allOf(AccessModeProto.class);
+  }
+
+  private EncryptedKeyVersion generateEDEK(
+      final String ezKeyName) throws IOException {
+    if (ezKeyName == null) {
+      return null;
+    }
+    long generateEDEKStartTime = monotonicNow();
+    EncryptedKeyVersion edek = SecurityUtil.doAsLoginUser(
+        new PrivilegedExceptionAction<EncryptedKeyVersion>() {
+          @Override
+          public EncryptedKeyVersion run() throws IOException {
+            try {
+              return getKMSProvider().generateEncryptedKey(ezKeyName);
+            } catch (GeneralSecurityException e) {
+              throw new IOException(e);
+            }
+          }
+        });
+    long generateEDEKTime = monotonicNow() - generateEDEKStartTime;
+    LOG.debug("generateEDEK takes {} ms", generateEDEKTime);
+    Preconditions.checkNotNull(edek);
+    return edek;
+  }
+
+  @SuppressWarnings("checkstyle:methodlength")
   @Override
   public OpenKeySession openKey(OmKeyArgs args) throws IOException {
     Preconditions.checkNotNull(args);
@@ -211,6 +325,24 @@ public class KeyManagerImpl implements KeyManager {
     ReplicationFactor factor = args.getFactor();
     ReplicationType type = args.getType();
     long currentTime = Time.monotonicNowNanos();
+
+    FileEncryptionInfo encInfo = null;
+    OmBucketInfo bucketInfo = getBucketInfo(volumeName, bucketName);
+    BucketEncryptionKeyInfo ezInfo = bucketInfo.getEncryptionKeyInfo();
+    if (ezInfo != null) {
+      if (getKMSProvider() == null) {
+        throw new OMException("Invalid KMS provider, check configuration " +
+            CommonConfigurationKeys.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+            OMException.ResultCodes.INVALID_KMS_PROVIDER);
+      }
+
+      final String ezKeyName = ezInfo.getKeyName();
+      EncryptedKeyVersion edek = generateEDEK(ezKeyName);
+      encInfo = new FileEncryptionInfo(ezInfo.getSuite(), ezInfo.getVersion(),
+            edek.getEncryptedKeyVersion().getMaterial(),
+            edek.getEncryptedKeyIv(),
+            ezKeyName, edek.getEncryptionKeyVersionName());
+    }
 
     try {
       if (args.getIsMultipartKey()) {
@@ -228,7 +360,8 @@ public class KeyManagerImpl implements KeyManager {
             multipartKey);
         if (partKeyInfo == null) {
           throw new OMException("No such Multipart upload is with specified " +
-              "uploadId " + uploadID, ResultCodes.NO_SUCH_MULTIPART_UPLOAD);
+              "uploadId " + uploadID,
+              ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
         } else {
           factor = partKeyInfo.getFactor();
           type = partKeyInfo.getType();
@@ -268,11 +401,19 @@ public class KeyManagerImpl implements KeyManager {
           }
           throw ex;
         }
-        OmKeyLocationInfo subKeyInfo = new OmKeyLocationInfo.Builder()
+        OmKeyLocationInfo.Builder builder = new OmKeyLocationInfo.Builder()
             .setBlockID(new BlockID(allocatedBlock.getBlockID()))
             .setLength(allocateSize)
-            .setOffset(0)
-            .build();
+            .setOffset(0);
+        if (grpcBlockTokenEnabled) {
+          String remoteUser = getRemoteUser().getShortUserName();
+          builder.setToken(secretManager.generateToken(remoteUser,
+              allocatedBlock.getBlockID().toString(),
+              getAclForUser(remoteUser),
+              scmBlockSize));
+        }
+
+        OmKeyLocationInfo subKeyInfo = builder.build();
         locations.add(subKeyInfo);
         requestedSize -= allocateSize;
       }
@@ -287,7 +428,8 @@ public class KeyManagerImpl implements KeyManager {
       if (args.getIsMultipartKey()) {
         // For this upload part we don't need to check in KeyTable. As this
         // is not an actual key, it is a part of the key.
-        keyInfo = createKeyInfo(args, locations, factor, type, size);
+        keyInfo = createKeyInfo(args, locations, factor, type, size, encInfo);
+        //TODO args.getMetadata
         openVersion = 0;
       } else {
         keyInfo = metadataManager.getKeyTable().get(objectKey);
@@ -300,7 +442,7 @@ public class KeyManagerImpl implements KeyManager {
         } else {
           // the key does not exist, create a new object, the new blocks are the
           // version 0
-          keyInfo = createKeyInfo(args, locations, factor, type, size);
+          keyInfo = createKeyInfo(args, locations, factor, type, size, encInfo);
           openVersion = 0;
         }
       }
@@ -317,7 +459,7 @@ public class KeyManagerImpl implements KeyManager {
         LOG.warn("Cannot allocate key. The generated open key id is already" +
             "used for the same key which is currently being written.");
         throw new OMException("Cannot allocate key. Not able to get a valid" +
-            "open key id.", OMException.ResultCodes.FAILED_KEY_ALLOCATION);
+            "open key id.", ResultCodes.KEY_ALLOCATION_ERROR);
       }
       metadataManager.getOpenKeyTable().put(openKey, keyInfo);
       LOG.debug("Key {} allocated in volume {} bucket {}",
@@ -329,7 +471,7 @@ public class KeyManagerImpl implements KeyManager {
       LOG.error("Key open failed for volume:{} bucket:{} key:{}",
           volumeName, bucketName, keyName, ex);
       throw new OMException(ex.getMessage(),
-          OMException.ResultCodes.FAILED_KEY_ALLOCATION);
+          ResultCodes.KEY_ALLOCATION_ERROR);
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
@@ -342,12 +484,14 @@ public class KeyManagerImpl implements KeyManager {
    * @param factor
    * @param type
    * @param size
+   * @param encInfo
    * @return
    */
   private OmKeyInfo createKeyInfo(OmKeyArgs keyArgs,
                                   List<OmKeyLocationInfo> locations,
                                   ReplicationFactor factor,
-                                  ReplicationType type, long size) {
+                                  ReplicationType type, long size,
+                                  FileEncryptionInfo encInfo) {
     return new OmKeyInfo.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
@@ -359,6 +503,7 @@ public class KeyManagerImpl implements KeyManager {
         .setDataSize(size)
         .setReplicationType(type)
         .setReplicationFactor(factor)
+        .setFileEncryptionInfo(encInfo)
         .build();
   }
 
@@ -378,7 +523,7 @@ public class KeyManagerImpl implements KeyManager {
       OmKeyInfo keyInfo = metadataManager.getOpenKeyTable().get(openKey);
       if (keyInfo == null) {
         throw new OMException("Commit a key without corresponding entry " +
-            objectKey, ResultCodes.FAILED_KEY_NOT_FOUND);
+            objectKey, ResultCodes.KEY_NOT_FOUND);
       }
       keyInfo.setDataSize(args.getDataSize());
       keyInfo.setModificationTime(Time.now());
@@ -399,7 +544,7 @@ public class KeyManagerImpl implements KeyManager {
       LOG.error("Key commit failed for volume:{} bucket:{} key:{}",
           volumeName, bucketName, keyName, ex);
       throw new OMException(ex.getMessage(),
-          OMException.ResultCodes.FAILED_KEY_ALLOCATION);
+          ResultCodes.KEY_ALLOCATION_ERROR);
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
@@ -420,14 +565,25 @@ public class KeyManagerImpl implements KeyManager {
         LOG.debug("volume:{} bucket:{} Key:{} not found",
             volumeName, bucketName, keyName);
         throw new OMException("Key not found",
-            OMException.ResultCodes.FAILED_KEY_NOT_FOUND);
+            OMException.ResultCodes.KEY_NOT_FOUND);
+      }
+      if (grpcBlockTokenEnabled) {
+        String remoteUser = getRemoteUser().getShortUserName();
+        for (OmKeyLocationInfoGroup key : value.getKeyLocationVersions()) {
+          key.getLocationList().forEach(k -> {
+            k.setToken(secretManager.generateToken(remoteUser,
+                k.getBlockID().getContainerBlockID().toString(),
+                getAclForUser(remoteUser),
+                k.getLength()));
+          });
+        }
       }
       return value;
     } catch (IOException ex) {
       LOG.debug("Get key failed for volume:{} bucket:{} key:{}",
           volumeName, bucketName, keyName, ex);
       throw new OMException(ex.getMessage(),
-          OMException.ResultCodes.FAILED_KEY_NOT_FOUND);
+          OMException.ResultCodes.KEY_NOT_FOUND);
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
@@ -444,7 +600,7 @@ public class KeyManagerImpl implements KeyManager {
       LOG.error("Rename key failed for volume:{} bucket:{} fromKey:{} toKey:{}",
           volumeName, bucketName, fromKeyName, toKeyName);
       throw new OMException("Key name is empty",
-          ResultCodes.FAILED_INVALID_KEY_NAME);
+          ResultCodes.INVALID_KEY_NAME);
     }
 
     metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
@@ -460,7 +616,7 @@ public class KeyManagerImpl implements KeyManager {
                 + "Key: {} not found.", volumeName, bucketName, fromKeyName,
             toKeyName, fromKeyName);
         throw new OMException("Key not found",
-            OMException.ResultCodes.FAILED_KEY_NOT_FOUND);
+            OMException.ResultCodes.KEY_NOT_FOUND);
       }
 
       // A rename is a no-op if the target and source name is same.
@@ -479,7 +635,7 @@ public class KeyManagerImpl implements KeyManager {
                 + "Key: {} already exists.", volumeName, bucketName,
             fromKeyName, toKeyName, toKeyName);
         throw new OMException("Key not found",
-            OMException.ResultCodes.FAILED_KEY_ALREADY_EXISTS);
+            OMException.ResultCodes.KEY_ALREADY_EXISTS);
       }
 
       fromKeyValue.setKeyName(toKeyName);
@@ -492,10 +648,13 @@ public class KeyManagerImpl implements KeyManager {
         store.commitBatchOperation(batch);
       }
     } catch (IOException ex) {
+      if (ex instanceof OMException) {
+        throw ex;
+      }
       LOG.error("Rename key failed for volume:{} bucket:{} fromKey:{} toKey:{}",
           volumeName, bucketName, fromKeyName, toKeyName, ex);
       throw new OMException(ex.getMessage(),
-          ResultCodes.FAILED_KEY_RENAME);
+          ResultCodes.KEY_RENAME_ERROR);
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
@@ -514,7 +673,7 @@ public class KeyManagerImpl implements KeyManager {
       OmKeyInfo keyInfo = metadataManager.getKeyTable().get(objectKey);
       if (keyInfo == null) {
         throw new OMException("Key not found",
-            OMException.ResultCodes.FAILED_KEY_NOT_FOUND);
+            OMException.ResultCodes.KEY_NOT_FOUND);
       } else {
         // directly delete key with no blocks from db. This key need not be
         // moved to deleted table.
@@ -533,7 +692,7 @@ public class KeyManagerImpl implements KeyManager {
       LOG.error(String.format("Delete key failed for volume:%s "
           + "bucket:%s key:%s", volumeName, bucketName, keyName), ex);
       throw new OMException(ex.getMessage(), ex,
-          ResultCodes.FAILED_KEY_DELETION);
+          ResultCodes.KEY_DELETION_ERROR);
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
@@ -601,6 +760,7 @@ public class KeyManagerImpl implements KeyManager {
     String keyName = omKeyArgs.getKeyName();
 
     metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    validateS3Bucket(volumeName, bucketName);
     try {
       long time = Time.monotonicNowNanos();
       String uploadID = UUID.randomUUID().toString() + "-" + Long.toString(
@@ -656,7 +816,7 @@ public class KeyManagerImpl implements KeyManager {
       LOG.error("Initiate Multipart upload Failed for volume:{} bucket:{} " +
               "key:{}", volumeName, bucketName, keyName, ex);
       throw new OMException(ex.getMessage(),
-          OMException.ResultCodes.INITIATE_MULTIPART_UPLOAD_FAILED);
+          ResultCodes.INITIATE_MULTIPART_UPLOAD_ERROR);
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
@@ -673,6 +833,7 @@ public class KeyManagerImpl implements KeyManager {
     int partNumber = omKeyArgs.getMultipartUploadPartNumber();
 
     metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    validateS3Bucket(volumeName, bucketName);
     String partName;
     try {
       String multipartKey = metadataManager.getMultipartKey(volumeName,
@@ -700,7 +861,7 @@ public class KeyManagerImpl implements KeyManager {
         // Move this part to delete table.
         metadataManager.getDeletedTable().put(partName, keyInfo);
         throw new OMException("No such Multipart upload is with specified " +
-            "uploadId " + uploadID, ResultCodes.NO_SUCH_MULTIPART_UPLOAD);
+            "uploadId " + uploadID, ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
       } else {
         PartKeyInfo oldPartKeyInfo =
             multipartKeyInfo.getPartKeyInfo(partNumber);
@@ -740,7 +901,8 @@ public class KeyManagerImpl implements KeyManager {
       LOG.error("Upload part Failed: volume:{} bucket:{} " +
           "key:{} PartNumber: {}", volumeName, bucketName, keyName,
           partNumber, ex);
-      throw new OMException(ex.getMessage(), ResultCodes.UPLOAD_PART_FAILED);
+      throw new OMException(ex.getMessage(),
+          ResultCodes.MULTIPART_UPLOAD_PARTFILE_ERROR);
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
@@ -760,6 +922,7 @@ public class KeyManagerImpl implements KeyManager {
     String keyName = omKeyArgs.getKeyName();
     String uploadID = omKeyArgs.getMultipartUploadID();
     metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    validateS3Bucket(volumeName, bucketName);
     try {
       String multipartKey = metadataManager.getMultipartKey(volumeName,
           bucketName, keyName, uploadID);
@@ -772,10 +935,10 @@ public class KeyManagerImpl implements KeyManager {
       if (multipartKeyInfo == null) {
         throw new OMException("Complete Multipart Upload Failed: volume: " +
             volumeName + "bucket: " + bucketName + "key: " + keyName,
-            ResultCodes.NO_SUCH_MULTIPART_UPLOAD);
+            ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
       }
       TreeMap<Integer, PartKeyInfo> partKeyInfoMap = multipartKeyInfo
-          .getPartKeyInfoList();
+          .getPartKeyInfoMap();
 
       TreeMap<Integer, String> multipartMap = multipartUploadList
           .getMultipartMap();
@@ -896,7 +1059,7 @@ public class KeyManagerImpl implements KeyManager {
       LOG.error("Complete Multipart Upload Failed: volume: " + volumeName +
           "bucket: " + bucketName + "key: " + keyName, ex);
       throw new OMException(ex.getMessage(), ResultCodes
-          .COMPLETE_MULTIPART_UPLOAD_FAILED);
+          .COMPLETE_MULTIPART_UPLOAD_ERROR);
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
@@ -911,6 +1074,7 @@ public class KeyManagerImpl implements KeyManager {
     String keyName = omKeyArgs.getKeyName();
     String uploadID = omKeyArgs.getMultipartUploadID();
     Preconditions.checkNotNull(uploadID, "uploadID cannot be null");
+    validateS3Bucket(volumeName, bucketName);
     metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
 
     try {
@@ -929,11 +1093,11 @@ public class KeyManagerImpl implements KeyManager {
             "such uploadID:" + uploadID);
         throw new OMException("Abort Multipart Upload Failed: volume: " +
             volumeName + "bucket: " + bucketName + "key: " + keyName,
-            ResultCodes.NO_SUCH_MULTIPART_UPLOAD);
+            ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
       } else {
         // Move all the parts to delete table
         TreeMap<Integer, PartKeyInfo> partKeyInfoMap = multipartKeyInfo
-            .getPartKeyInfoList();
+            .getPartKeyInfoMap();
         DBStore store = metadataManager.getStore();
         try (BatchOperation batch = store.initBatchOperation()) {
           for (Map.Entry<Integer, PartKeyInfo> partKeyInfoEntry : partKeyInfoMap
@@ -959,11 +1123,88 @@ public class KeyManagerImpl implements KeyManager {
       LOG.error("Abort Multipart Upload Failed: volume: " + volumeName +
           "bucket: " + bucketName + "key: " + keyName, ex);
       throw new OMException(ex.getMessage(), ResultCodes
-          .COMPLETE_MULTIPART_UPLOAD_FAILED);
+          .ABORT_MULTIPART_UPLOAD_FAILED);
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
 
+  }
+
+
+  @Override
+  public OmMultipartUploadListParts listParts(String volumeName,
+      String bucketName, String keyName, String uploadID,
+      int partNumberMarker, int maxParts)  throws IOException {
+    Preconditions.checkNotNull(volumeName);
+    Preconditions.checkNotNull(bucketName);
+    Preconditions.checkNotNull(keyName);
+    Preconditions.checkNotNull(uploadID);
+    boolean isTruncated = false;
+    int nextPartNumberMarker = 0;
+
+    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    try {
+      String multipartKey = metadataManager.getMultipartKey(volumeName,
+          bucketName, keyName, uploadID);
+
+      OmMultipartKeyInfo multipartKeyInfo =
+          metadataManager.getMultipartInfoTable().get(multipartKey);
+
+      if (multipartKeyInfo == null) {
+        throw new OMException("No Such Multipart upload exists for this key.",
+            ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
+      } else {
+        TreeMap<Integer, PartKeyInfo> partKeyInfoMap =
+            multipartKeyInfo.getPartKeyInfoMap();
+        Iterator<Map.Entry<Integer, PartKeyInfo>> partKeyInfoMapIterator =
+            partKeyInfoMap.entrySet().iterator();
+        HddsProtos.ReplicationType replicationType =
+            partKeyInfoMap.firstEntry().getValue().getPartKeyInfo().getType();
+        int count = 0;
+        List<OmPartInfo> omPartInfoList = new ArrayList<>();
+
+        while (count < maxParts && partKeyInfoMapIterator.hasNext()) {
+          Map.Entry<Integer, PartKeyInfo> partKeyInfoEntry =
+              partKeyInfoMapIterator.next();
+          nextPartNumberMarker = partKeyInfoEntry.getKey();
+          // As we should return only parts with part number greater
+          // than part number marker
+          if (partKeyInfoEntry.getKey() > partNumberMarker) {
+            PartKeyInfo partKeyInfo = partKeyInfoEntry.getValue();
+            OmPartInfo omPartInfo = new OmPartInfo(partKeyInfo.getPartNumber(),
+                partKeyInfo.getPartName(),
+                partKeyInfo.getPartKeyInfo().getModificationTime(),
+                partKeyInfo.getPartKeyInfo().getDataSize());
+            omPartInfoList.add(omPartInfo);
+            replicationType = partKeyInfo.getPartKeyInfo().getType();
+            count++;
+          }
+        }
+
+        if (partKeyInfoMapIterator.hasNext()) {
+          Map.Entry<Integer, PartKeyInfo> partKeyInfoEntry =
+              partKeyInfoMapIterator.next();
+          isTruncated = true;
+        } else {
+          isTruncated = false;
+          nextPartNumberMarker = 0;
+        }
+        OmMultipartUploadListParts omMultipartUploadListParts =
+            new OmMultipartUploadListParts(replicationType,
+                nextPartNumberMarker, isTruncated);
+        omMultipartUploadListParts.addPartList(omPartInfoList);
+        return omMultipartUploadListParts;
+      }
+    } catch (OMException ex) {
+      throw ex;
+    } catch (IOException ex){
+      LOG.error("List Multipart Upload Parts Failed: volume: " + volumeName +
+              "bucket: " + bucketName + "key: " + keyName, ex);
+      throw new OMException(ex.getMessage(), ResultCodes
+              .LIST_MULTIPART_UPLOAD_PARTS_FAILED);
+    } finally {
+      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+    }
   }
 
 }

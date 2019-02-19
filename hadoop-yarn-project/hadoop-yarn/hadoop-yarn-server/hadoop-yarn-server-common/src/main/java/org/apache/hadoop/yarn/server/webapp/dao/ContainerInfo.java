@@ -164,4 +164,8 @@ public class ContainerInfo {
   public String getExposedPorts() {
     return exposedPorts;
   }
+
+  public boolean hasCustomResources() {
+    return allocatedResources.size() > 2;
+  }
 }

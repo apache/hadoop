@@ -2817,6 +2817,7 @@ Use the following URI to obtain a Node Object, from a node identified by the nod
 | usedVirtualCores | long | The total number of vCores currently used on the node |
 | availableVirtualCores | long | The total number of vCores available on the node |
 | resourceUtilization | object | Resource utilization on the node |
+| totalResource | object | Resources on the node |
 
 The *resourceUtilization* object contains the following elements:
 
@@ -2871,6 +2872,11 @@ Response Body:
       "aggregatedContainersPhysicalMemoryMB": 0,
       "aggregatedContainersVirtualMemoryMB": 0,
       "containersCPUUsage": 0
+    },
+    "totalResource":
+    {
+      "memory": 2048,
+      "vCores": 5
     }
   }
 }
@@ -2916,7 +2922,115 @@ Response Body:
     <aggregatedContainersVirtualMemoryMB>0</aggregatedContainersVirtualMemoryMB>
     <containersCPUUsage>0.0</containersCPUUsage>
   </resourceUtilization>
+  <totalResource>
+    <memory>2048</memory>
+    <vCores>5</vCores>
+  </totalResource>
 </node>
+```
+
+Cluster Node Update Resource API
+--------------------------------
+
+Update the total resources in a node.
+
+### URI
+
+Use the following URI to update the resources of a Node Object identified by the nodeid value.
+
+      http://rm-http-address:port/ws/v1/cluster/nodes/{nodeid}/resource
+
+### HTTP Operations Supported
+
+      POST
+
+### Query Parameters Supported
+
+      None
+
+### Elements of the *resourceOption* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| memory | long | The total amount of memory to set on the node (in MB) |
+| vcores | long | The total number of vCores to set on the node |
+| overCommitTimeout | long | The timeout to preempt containers |
+
+### Response Examples
+
+**JSON response**
+
+HTTP Request:
+
+      POST http://rm-http-address:port/ws/v1/cluster/nodes/h2:1235/resource
+
+Request body:
+
+```json
+{
+  "resource":
+  {
+    "memory": 1024,
+    "vCores": 3
+  },
+  "overCommitTimeout": -1
+}
+```
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+      Transfer-Encoding: chunked
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```json
+{
+  "resourceInfo":
+  {
+    "memory": 8192,
+    "vCores": 5
+  }
+}
+```
+
+**XML response**
+
+HTTP Request:
+
+      GET http://rm-http-address:port/ws/v1/cluster/node/h2:1235/resource
+      Accept: application/xml
+
+Request body:
+
+```xml
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<resourceOption>
+  <resource>
+    <memory>8192</memory>
+    <vCores>5</vCores>
+  </resource>
+  <overCommitTimeout>1000</overCommitTimeout>
+</resourceOption>
+```
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Content-Length: 552
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```xml
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<resourceInfo>
+  <memory>8192</memory>
+  <vCores>5</vCores>
+</resourceInfo>
 ```
 
 Cluster Writeable APIs

@@ -20,10 +20,16 @@ package org.apache.hadoop.ozone.web.ozShell;
 
 import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.web.ozShell.bucket.BucketCommands;
 import org.apache.hadoop.ozone.web.ozShell.keys.KeyCommands;
+import org.apache.hadoop.ozone.web.ozShell.s3.S3Commands;
+import org.apache.hadoop.ozone.web.ozShell.token.TokenCommands;
 import org.apache.hadoop.ozone.web.ozShell.volume.VolumeCommands;
 
+import io.opentracing.Scope;
+import io.opentracing.util.GlobalTracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
@@ -39,12 +45,13 @@ import picocli.CommandLine.Command;
     subcommands = {
         VolumeCommands.class,
         BucketCommands.class,
-        KeyCommands.class
+        KeyCommands.class,
+        TokenCommands.class,
+        S3Commands.class
     },
     versionProvider = HddsVersionProvider.class,
     mixinStandardHelpOptions = true)
 public class Shell extends GenericCli {
-
 
   private static final Logger LOG = LoggerFactory.getLogger(Shell.class);
 
@@ -70,6 +77,14 @@ public class Shell extends GenericCli {
   // General options
   public static final int DEFAULT_OZONE_PORT = 50070;
 
+  @Override
+  public void execute(String[] argv) {
+    TracingUtil.initTracing("shell");
+    try (Scope scope = GlobalTracer.get().buildSpan("main").startActive(true)) {
+      super.execute(argv);
+    }
+  }
+
   /**
    * Main for the ozShell Command handling.
    *
@@ -78,6 +93,22 @@ public class Shell extends GenericCli {
    */
   public static void main(String[] argv) throws Exception {
     new Shell().run(argv);
+  }
+
+  @Override
+  protected void printError(Throwable errorArg) {
+    if (errorArg instanceof OMException) {
+      if (isVerbose()) {
+        errorArg.printStackTrace(System.err);
+      } else {
+        OMException omException = (OMException) errorArg;
+        System.err.println(String
+            .format("%s %s", omException.getResult().name(),
+                omException.getMessage()));
+      }
+    } else {
+      super.printError(errorArg);
+    }
   }
 }
 

@@ -71,8 +71,7 @@ public class TestContainerSchedulerRecovery {
 
   @Mock private ContainerId containerId;
 
-  @InjectMocks private ContainerScheduler spy =
-      new ContainerScheduler(context, dispatcher, metrics, 0);
+  private ContainerScheduler spy;
 
 
   private RecoveredContainerState createRecoveredContainerState(
@@ -97,6 +96,7 @@ public class TestContainerSchedulerRecovery {
     ContainerManager cm = mock(ContainerManager.class);
     when(cm.getContainersMonitor()).thenReturn(containersMonitor);
     when(context.getContainerManager()).thenReturn(cm);
+    spy = new ContainerScheduler(context, dispatcher, metrics, 0);
   }
 
   @Before public void setUp() throws Exception {

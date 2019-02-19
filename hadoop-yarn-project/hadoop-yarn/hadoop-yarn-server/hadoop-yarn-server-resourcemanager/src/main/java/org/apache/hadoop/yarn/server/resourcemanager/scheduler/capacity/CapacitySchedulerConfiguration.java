@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -141,12 +142,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final boolean DEFAULT_RESERVE_CONT_LOOK_ALL_NODES = true;
 
   @Private
+  public static final String MAXIMUM_ALLOCATION = "maximum-allocation";
+
+  @Private
   public static final String MAXIMUM_ALLOCATION_MB = "maximum-allocation-mb";
 
   @Private
   public static final String MAXIMUM_ALLOCATION_VCORES =
-      "maximum-allocation-vcores";
-
+          "maximum-allocation-vcores";
   /**
    * Ordering policy of queues
    */
@@ -474,6 +477,17 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         ", capacity=" + capacity);
   }
 
+  @VisibleForTesting
+  public void setCapacity(String queue, String absoluteResourceCapacity) {
+    if (queue.equals("root")) {
+      throw new IllegalArgumentException(
+          "Cannot set capacity, root queue has a fixed capacity");
+    }
+    set(getQueuePrefix(queue) + CAPACITY, absoluteResourceCapacity);
+    LOG.debug("CSConf - setCapacity: queuePrefix=" + getQueuePrefix(queue)
+        + ", capacity=" + absoluteResourceCapacity);
+  }
+
   public float getNonLabeledQueueMaximumCapacity(String queue) {
     String configuredCapacity = get(getQueuePrefix(queue) + MAXIMUM_CAPACITY);
     boolean matcher = (configuredCapacity != null)
@@ -508,7 +522,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public void setCapacityByLabel(String queue, String label, float capacity) {
     setFloat(getNodeLabelPrefix(queue, label) + CAPACITY, capacity);
   }
-  
+
+  @VisibleForTesting
+  public void setCapacityByLabel(String queue, String label,
+                                 String absoluteResourceCapacity) {
+    set(getNodeLabelPrefix(queue, label) + CAPACITY, absoluteResourceCapacity);
+  }
+
   public void setMaximumCapacityByLabel(String queue, String label,
       float capacity) {
     setFloat(getNodeLabelPrefix(queue, label) + MAXIMUM_CAPACITY, capacity);
@@ -645,8 +665,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   private float internalGetLabeledQueueCapacity(String queue, String label, String suffix,
       float defaultValue) {
     String capacityPropertyName = getNodeLabelPrefix(queue, label) + suffix;
-    boolean matcher = (capacityPropertyName != null)
-        && RESOURCE_PATTERN.matcher(capacityPropertyName).find();
+    String configuredCapacity = get(capacityPropertyName);
+    boolean matcher = (configuredCapacity != null)
+        && RESOURCE_PATTERN.matcher(configuredCapacity).find();
     if (matcher) {
       // Return capacity in percentage as 0 for non-root queues and 100 for
       // root.From AbstractCSQueue, absolute resource will be parsed and
@@ -871,50 +892,32 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   /**
-   * Get the per queue setting for the maximum limit to allocate to
-   * each container request.
+   * Get maximum_allocation setting for the specified queue from the
+   * configuration.
    *
    * @param queue
    *          name of the queue
-   * @return setting specified per queue else falls back to the cluster setting
+   * @return Resource object or Resource.none if not set
    */
-  public Resource getMaximumAllocationPerQueue(String queue) {
-    // Only support to specify memory and vcores maximum allocation per queue
-    // for now.
+  public Resource getQueueMaximumAllocation(String queue) {
     String queuePrefix = getQueuePrefix(queue);
-    long maxAllocationMbPerQueue = getInt(queuePrefix + MAXIMUM_ALLOCATION_MB,
-        (int)UNDEFINED);
-    int maxAllocationVcoresPerQueue = getInt(
-        queuePrefix + MAXIMUM_ALLOCATION_VCORES, (int)UNDEFINED);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("max alloc mb per queue for " + queue + " is "
-          + maxAllocationMbPerQueue);
-      LOG.debug("max alloc vcores per queue for " + queue + " is "
-          + maxAllocationVcoresPerQueue);
+    String rawQueueMaxAllocation = get(queuePrefix + MAXIMUM_ALLOCATION, null);
+    if (Strings.isNullOrEmpty(rawQueueMaxAllocation)) {
+      return Resources.none();
+    } else {
+      return ResourceUtils.createResourceFromString(rawQueueMaxAllocation,
+              ResourceUtils.getResourcesTypeInfo());
     }
-    Resource clusterMax = ResourceUtils.fetchMaximumAllocationFromConfig(this);
-    if (maxAllocationMbPerQueue == (int)UNDEFINED) {
-      LOG.info("max alloc mb per queue for " + queue + " is undefined");
-      maxAllocationMbPerQueue = clusterMax.getMemorySize();
-    }
-    if (maxAllocationVcoresPerQueue == (int)UNDEFINED) {
-       LOG.info("max alloc vcore per queue for " + queue + " is undefined");
-      maxAllocationVcoresPerQueue = clusterMax.getVirtualCores();
-    }
-    // Copy from clusterMax and overwrite per-queue's maximum memory/vcore
-    // allocation.
-    Resource result = Resources.clone(clusterMax);
-    result.setMemorySize(maxAllocationMbPerQueue);
-    result.setVirtualCores(maxAllocationVcoresPerQueue);
-    if (maxAllocationMbPerQueue > clusterMax.getMemorySize()
-        || maxAllocationVcoresPerQueue > clusterMax.getVirtualCores()) {
-      throw new IllegalArgumentException(
-          "Queue maximum allocation cannot be larger than the cluster setting"
-          + " for queue " + queue
-          + " max allocation per queue: " + result
-          + " cluster setting: " + clusterMax);
-    }
-    return result;
+  }
+
+  public long getQueueMaximumAllocationMb(String queue) {
+    String queuePrefix = getQueuePrefix(queue);
+    return getInt(queuePrefix + MAXIMUM_ALLOCATION_MB, (int)UNDEFINED);
+  }
+
+  public int getQueueMaximumAllocationVcores(String queue) {
+    String queuePrefix = getQueuePrefix(queue);
+    return getInt(queuePrefix + MAXIMUM_ALLOCATION_VCORES, (int)UNDEFINED);
   }
 
   public boolean getEnableUserMetrics() {

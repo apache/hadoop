@@ -21,6 +21,8 @@ package org.apache.hadoop.hdds.scm;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.ratis.grpc.GrpcTlsConfig;
 import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.protocol.RaftRetryFailureException;
 import org.apache.ratis.retry.RetryPolicy;
@@ -34,6 +36,8 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
+
 import org.apache.ratis.RatisHelper;
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.protocol.RaftClientReply;
@@ -69,9 +73,11 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     final int maxOutstandingRequests =
         HddsClientUtils.getMaxOutstandingRequests(ozoneConf);
     final RetryPolicy retryPolicy = RatisHelper.createRetryPolicy(ozoneConf);
+    final GrpcTlsConfig tlsConfig = RatisHelper.createTlsClientConfig(new
+        SecurityConfig(ozoneConf));
     return new XceiverClientRatis(pipeline,
         SupportedRpcType.valueOfIgnoreCase(rpcType), maxOutstandingRequests,
-        retryPolicy);
+        retryPolicy, tlsConfig);
   }
 
   private final Pipeline pipeline;
@@ -79,6 +85,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   private final AtomicReference<RaftClient> client = new AtomicReference<>();
   private final int maxOutstandingRequests;
   private final RetryPolicy retryPolicy;
+  private final GrpcTlsConfig tlsConfig;
 
   // Map to track commit index at every server
   private final ConcurrentHashMap<String, Long> commitInfoMap;
@@ -90,7 +97,8 @@ public final class XceiverClientRatis extends XceiverClientSpi {
    * Constructs a client.
    */
   private XceiverClientRatis(Pipeline pipeline, RpcType rpcType,
-      int maxOutStandingChunks, RetryPolicy retryPolicy) {
+      int maxOutStandingChunks, RetryPolicy retryPolicy,
+      GrpcTlsConfig tlsConfig) {
     super();
     this.pipeline = pipeline;
     this.rpcType = rpcType;
@@ -98,6 +106,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     this.retryPolicy = retryPolicy;
     commitInfoMap = new ConcurrentHashMap<>();
     watchClient = null;
+    this.tlsConfig = tlsConfig;
   }
 
   private void updateCommitInfosMap(
@@ -145,9 +154,16 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     // maxOutstandingRequests so as to set the upper bound on max no of async
     // requests to be handled by raft client
     if (!client.compareAndSet(null,
-        RatisHelper.newRaftClient(rpcType, getPipeline(), retryPolicy))) {
+        RatisHelper.newRaftClient(rpcType, getPipeline(), retryPolicy,
+            maxOutstandingRequests, tlsConfig))) {
       throw new IllegalStateException("Client is already connected.");
     }
+  }
+
+  @Override
+  public void connect(String encodedToken) throws Exception {
+    throw new UnsupportedOperationException("Block tokens are not " +
+        "implemented for Ratis clients.");
   }
 
   @Override
@@ -175,9 +191,13 @@ public final class XceiverClientRatis extends XceiverClientSpi {
 
   private CompletableFuture<RaftClientReply> sendRequestAsync(
       ContainerCommandRequestProto request) {
-    boolean isReadOnlyRequest = HddsUtils.isReadOnly(request);
-    ByteString byteString = request.toByteString();
-    LOG.debug("sendCommandAsync {} {}", isReadOnlyRequest, request);
+    ContainerCommandRequestProto finalPayload =
+        ContainerCommandRequestProto.newBuilder(request)
+            .setTraceID(TracingUtil.exportCurrentSpan())
+            .build();
+    boolean isReadOnlyRequest = HddsUtils.isReadOnly(finalPayload);
+    ByteString byteString = finalPayload.toByteString();
+    LOG.debug("sendCommandAsync {} {}", isReadOnlyRequest, finalPayload);
     return isReadOnlyRequest ? getClient().sendReadOnlyAsync(() -> byteString) :
         getClient().sendAsync(() -> byteString);
   }
@@ -189,7 +209,6 @@ public final class XceiverClientRatis extends XceiverClientSpi {
         commitInfoMap.values().parallelStream().mapToLong(v -> v).min();
     return minIndex.isPresent() ? minIndex.getAsLong() : 0;
   }
-
 
   @Override
   public long watchForCommit(long index, long timeout)
@@ -205,7 +224,8 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     // create a new RaftClient instance for watch request
     if (watchClient == null) {
       watchClient =
-          RatisHelper.newRaftClient(rpcType, getPipeline(), retryPolicy);
+          RatisHelper.newRaftClient(rpcType, getPipeline(), retryPolicy,
+              maxOutstandingRequests, tlsConfig);
     }
     CompletableFuture<RaftClientReply> replyFuture = watchClient
         .sendWatchAsync(index, RaftProtos.ReplicationLevel.ALL_COMMITTED);
@@ -223,7 +243,8 @@ public final class XceiverClientRatis extends XceiverClientSpi {
       // here once the watch request bypassing sliding window in Raft Client
       // gets fixed.
       watchClient =
-          RatisHelper.newRaftClient(rpcType, getPipeline(), retryPolicy);
+          RatisHelper.newRaftClient(rpcType, getPipeline(), retryPolicy,
+              maxOutstandingRequests, tlsConfig);
       reply = watchClient
           .sendWatchAsync(index, RaftProtos.ReplicationLevel.MAJORITY_COMMITTED)
           .get(timeout, TimeUnit.MILLISECONDS);
@@ -238,7 +259,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
       commitInfoMap.remove(address);
       LOG.info(
           "Could not commit " + index + " to all the nodes. Server " + address
-              + " has failed" + "Committed by majority.");
+              + " has failed." + " Committed by majority.");
     }
     return index;
   }
@@ -250,9 +271,9 @@ public final class XceiverClientRatis extends XceiverClientSpi {
    * @return Response to the command
    */
   @Override
-  public XceiverClientAsyncReply sendCommandAsync(
+  public XceiverClientReply sendCommandAsync(
       ContainerCommandRequestProto request) {
-    XceiverClientAsyncReply asyncReply = new XceiverClientAsyncReply(null);
+    XceiverClientReply asyncReply = new XceiverClientReply(null);
     CompletableFuture<RaftClientReply> raftClientReply =
         sendRequestAsync(request);
     CompletableFuture<ContainerCommandResponseProto> containerCommandResponse =
@@ -275,6 +296,8 @@ public final class XceiverClientRatis extends XceiverClientSpi {
                 if (response.getResult() == ContainerProtos.Result.SUCCESS) {
                   updateCommitInfosMap(reply.getCommitInfos());
                   asyncReply.setLogIndex(reply.getLogIndex());
+                  asyncReply.setDatanode(
+                      RatisHelper.toDatanodeId(reply.getReplierId()));
                 }
                 return response;
               } catch (InvalidProtocolBufferException e) {

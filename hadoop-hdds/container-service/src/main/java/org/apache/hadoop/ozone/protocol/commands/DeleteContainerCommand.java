@@ -31,9 +31,28 @@ public class DeleteContainerCommand extends
     SCMCommand<DeleteContainerCommandProto> {
 
   private final long containerId;
+  private final boolean force;
 
+  /**
+   * DeleteContainerCommand, to send a command for datanode to delete a
+   * container.
+   * @param containerId
+   */
   public DeleteContainerCommand(long containerId) {
+    this(containerId, false);
+  }
+
+  /**
+   * DeleteContainerCommand, to send a command for datanode to delete a
+   * container.
+   * @param containerId
+   * @param forceFlag if this is set to true, we delete container without
+   * checking state of the container.
+   */
+
+  public DeleteContainerCommand(long containerId, boolean forceFlag) {
     this.containerId = containerId;
+    this.force = forceFlag;
   }
 
   @Override
@@ -46,7 +65,7 @@ public class DeleteContainerCommand extends
     DeleteContainerCommandProto.Builder builder =
         DeleteContainerCommandProto.newBuilder();
     builder.setCmdId(getId())
-        .setContainerID(getContainerID());
+        .setContainerID(getContainerID()).setForce(force);
     return builder.build();
   }
 
@@ -54,9 +73,14 @@ public class DeleteContainerCommand extends
     return containerId;
   }
 
+  public boolean isForce() {
+    return force;
+  }
+
   public static DeleteContainerCommand getFromProtobuf(
       DeleteContainerCommandProto protoMessage) {
     Preconditions.checkNotNull(protoMessage);
-    return new DeleteContainerCommand(protoMessage.getContainerID());
+    return new DeleteContainerCommand(protoMessage.getContainerID(),
+        protoMessage.getForce());
   }
 }

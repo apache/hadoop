@@ -213,10 +213,10 @@ public final class ErasureCodingPolicyManager {
         .toArray(new ErasureCodingPolicyInfo[0]);
   }
 
-  public ErasureCodingPolicyInfo[] getCopyOfPolicies() {
-    ErasureCodingPolicyInfo[] copy;
+  public ErasureCodingPolicy[] getCopyOfEnabledPolicies() {
+    ErasureCodingPolicy[] copy;
     synchronized (this) {
-      copy = Arrays.copyOf(allPolicies, allPolicies.length);
+      copy = Arrays.copyOf(enabledPolicies, enabledPolicies.length);
     }
     return copy;
   }
@@ -250,6 +250,22 @@ public final class ErasureCodingPolicyManager {
   public ErasureCodingPolicy getByName(String name) {
     final ErasureCodingPolicyInfo ecpi = getPolicyInfoByName(name);
     if (ecpi == null) {
+      return null;
+    }
+    return ecpi.getPolicy();
+  }
+
+  /**
+   * Get a {@link ErasureCodingPolicy} by policy name, including system
+   * policy, user defined policy and Replication policy.
+   * @return ecPolicy, or null if not found
+   */
+  public ErasureCodingPolicy getErasureCodingPolicyByName(String name) {
+    final ErasureCodingPolicyInfo ecpi = getPolicyInfoByName(name);
+    if (ecpi == null) {
+      if (name.equalsIgnoreCase(ErasureCodeConstants.REPLICATION_POLICY_NAME)) {
+        return SystemErasureCodingPolicies.getReplicationPolicy();
+      }
       return null;
     }
     return ecpi.getPolicy();

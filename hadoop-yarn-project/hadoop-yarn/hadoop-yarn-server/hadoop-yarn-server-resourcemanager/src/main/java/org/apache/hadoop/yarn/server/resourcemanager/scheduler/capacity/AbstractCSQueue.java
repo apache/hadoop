@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueStatistics;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -69,9 +70,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimpleCandidateNodeSet;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.collect.Sets;
+
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.UNDEFINED;
 
 public abstract class AbstractCSQueue implements CSQueue {
 
@@ -361,9 +365,9 @@ public abstract class AbstractCSQueue implements CSQueue {
       capacityConfigType = CapacityConfigType.NONE;
       updateConfigurableResourceRequirement(getQueuePath(), clusterResource);
 
-      this.maximumAllocation =
-          configuration.getMaximumAllocationPerQueue(
-              getQueuePath());
+      // Setup queue's maximumAllocation respecting the global setting
+      // and queue setting
+      setupMaximumAllocation(configuration);
 
       // initialized the queue state based on previous state, configured state
       // and its parent state.
@@ -422,6 +426,51 @@ public abstract class AbstractCSQueue implements CSQueue {
       this.userWeights = getUserWeightsFromHierarchy(configuration);
     } finally {
       writeLock.unlock();
+    }
+  }
+
+  private void setupMaximumAllocation(CapacitySchedulerConfiguration csConf) {
+    String queue = getQueuePath();
+    Resource clusterMax = ResourceUtils
+            .fetchMaximumAllocationFromConfig(csConf);
+    Resource queueMax = csConf.getQueueMaximumAllocation(queue);
+
+    maximumAllocation = Resources.clone(
+            parent == null ? clusterMax : parent.getMaximumAllocation());
+
+    String errMsg =
+            "Queue maximum allocation cannot be larger than the cluster setting"
+            + " for queue " + queue
+            + " max allocation per queue: %s"
+            + " cluster setting: " + clusterMax;
+
+    if (queueMax == Resources.none()) {
+      // Handle backward compatibility
+      long queueMemory = csConf.getQueueMaximumAllocationMb(queue);
+      int queueVcores = csConf.getQueueMaximumAllocationVcores(queue);
+      if (queueMemory != UNDEFINED) {
+        maximumAllocation.setMemorySize(queueMemory);
+      }
+
+      if (queueVcores != UNDEFINED) {
+        maximumAllocation.setVirtualCores(queueVcores);
+      }
+
+      if ((queueMemory != UNDEFINED && queueMemory > clusterMax.getMemorySize()
+          || (queueVcores != UNDEFINED
+              && queueVcores > clusterMax.getVirtualCores()))) {
+        throw new IllegalArgumentException(
+                String.format(errMsg, maximumAllocation));
+      }
+    } else {
+      // Queue level maximum-allocation can't be larger than cluster setting
+      for (ResourceInformation ri : queueMax.getResources()) {
+        if (ri.compareTo(clusterMax.getResourceInformation(ri.getName())) > 0) {
+          throw new IllegalArgumentException(String.format(errMsg, queueMax));
+        }
+
+        maximumAllocation.setResourceInformation(ri.getName(), ri);
+      }
     }
   }
 

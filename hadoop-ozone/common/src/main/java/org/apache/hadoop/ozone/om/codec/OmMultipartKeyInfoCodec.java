@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.om.codec;
 
 import com.google.common.base.Preconditions;
 import com.google.protobuf.InvalidProtocolBufferException;
+import java.io.IOException;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.utils.db.Codec;
@@ -30,7 +31,8 @@ import org.apache.hadoop.utils.db.Codec;
 public class OmMultipartKeyInfoCodec implements Codec<OmMultipartKeyInfo> {
 
   @Override
-  public byte[] toPersistedFormat(OmMultipartKeyInfo object) {
+  public byte[] toPersistedFormat(OmMultipartKeyInfo object)
+      throws IOException {
     Preconditions.checkNotNull(object,
         "Null object can't be converted to byte array.");
     return object.getProto().toByteArray();
@@ -42,7 +44,8 @@ public class OmMultipartKeyInfoCodec implements Codec<OmMultipartKeyInfo> {
    * Construct {@link OmMultipartKeyInfo} from byte[]. If unable to convert
    * return null.
    */
-  public OmMultipartKeyInfo fromPersistedFormat(byte[] rawData) {
+  public OmMultipartKeyInfo fromPersistedFormat(byte[] rawData)
+      throws IOException {
     Preconditions.checkNotNull(rawData,
         "Null byte array can't converted to real object.");
     try {

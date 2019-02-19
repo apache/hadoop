@@ -84,11 +84,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.argThat;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isA;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -1069,7 +1069,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   static class IsPreemptionRequestFor
-      extends ArgumentMatcher<ContainerPreemptEvent> {
+      implements ArgumentMatcher<ContainerPreemptEvent> {
     private final ApplicationAttemptId appAttId;
     private final SchedulerEventType type;
     IsPreemptionRequestFor(ApplicationAttemptId appAttId) {
@@ -1081,9 +1081,8 @@ public class TestProportionalCapacityPreemptionPolicy {
       this.type = type;
     }
     @Override
-    public boolean matches(Object o) {
-      return appAttId.equals(((ContainerPreemptEvent)o).getAppId())
-          && type.equals(((ContainerPreemptEvent)o).getType());
+    public boolean matches(ContainerPreemptEvent evt) {
+      return appAttId.equals(evt.getAppId()) && type.equals(evt.getType());
     }
     @Override
     public String toString() {
@@ -1127,7 +1126,7 @@ public class TestProportionalCapacityPreemptionPolicy {
 
     FiCaSchedulerNode mNode = mock(FiCaSchedulerNode.class);
     when(mNode.getPartition()).thenReturn(RMNodeLabelsManager.NO_LABEL);
-    when(mCS.getSchedulerNode(any(NodeId.class))).thenReturn(mNode);
+    when(mCS.getSchedulerNode(any())).thenReturn(mNode);
   }
 
   ParentQueue buildMockRootQueue(Random r, int[]... queueData) {

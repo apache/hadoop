@@ -385,7 +385,7 @@
     <!-- Add back in Mockito since the hadoop-hdfs test jar needs it. -->
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
+      <artifactId>mockito-core</artifactId>
       <optional>true</optional>
     </dependency>
     <!-- Add back in the transitive dependencies excluded from hadoop-common in client TODO remove once we have a filter for "is in these artifacts" -->
@@ -729,7 +729,7 @@
 
                     <!-- Mockito tries to include its own unrelocated copy of hamcrest. :( -->
                     <filter>
-                      <artifact>org.mockito:mockito-all</artifact>
+                      <artifact>org.mockito:mockito-core</artifact>
                       <excludes>
                         <exclude>asm-license.txt</exclude>
                         <exclude>cglib-license.txt</exclude>

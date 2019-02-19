@@ -39,6 +39,7 @@ import picocli.CommandLine.ParentCommand;
         ListKeyHandler.class,
         GetKeyHandler.class,
         PutKeyHandler.class,
+        RenameKeyHandler.class,
         DeleteKeyHandler.class
     },
     mixinStandardHelpOptions = true,

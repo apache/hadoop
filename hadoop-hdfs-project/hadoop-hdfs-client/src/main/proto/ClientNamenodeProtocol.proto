@@ -83,6 +83,7 @@ message CreateRequestProto {
   repeated CryptoProtocolVersionProto cryptoProtocolVersion = 8;
   optional FsPermissionProto unmasked = 9;
   optional string ecPolicyName = 10;
+  optional string storagePolicy = 11;
 }
 
 message CreateResponseProto {

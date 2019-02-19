@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -75,7 +75,7 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Matchers;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -107,8 +107,9 @@ public class TestRMContainerImpl {
     ConcurrentMap<ApplicationId, RMApp> rmApps =
         spy(new ConcurrentHashMap<ApplicationId, RMApp>());
     RMApp rmApp = mock(RMApp.class);
-    when(rmApp.getRMAppAttempt((ApplicationAttemptId)Matchers.any())).thenReturn(null);
-    Mockito.doReturn(rmApp).when(rmApps).get((ApplicationId)Matchers.any());
+    when(rmApp.getRMAppAttempt(any())).thenReturn(null);
+    Mockito.doReturn(rmApp)
+        .when(rmApps).get(ArgumentMatchers.<ApplicationId>any());
 
     RMApplicationHistoryWriter writer = mock(RMApplicationHistoryWriter.class);
     SystemMetricsPublisher publisher = mock(SystemMetricsPublisher.class);
@@ -414,8 +415,9 @@ public class TestRMContainerImpl {
     ConcurrentMap<ApplicationId, RMApp> rmApps =
         spy(new ConcurrentHashMap<ApplicationId, RMApp>());
     RMApp rmApp = mock(RMApp.class);
-    when(rmApp.getRMAppAttempt(Matchers.any())).thenReturn(null);
-    Mockito.doReturn(rmApp).when(rmApps).get(Matchers.any());
+    when(rmApp.getRMAppAttempt(any())).thenReturn(null);
+    Mockito.doReturn(rmApp).when(rmApps).get(
+        ArgumentMatchers.<ApplicationId>any());
 
     RMApplicationHistoryWriter writer = mock(RMApplicationHistoryWriter.class);
     SystemMetricsPublisher publisher = mock(SystemMetricsPublisher.class);

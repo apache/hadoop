@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 
 /**
  * KeyInfoDetails class is used for parsing json response
@@ -40,6 +41,8 @@ public class KeyInfoDetails extends KeyInfo {
    * to specify replica locations.
    */
   private List<KeyLocation> keyLocations;
+
+  private FileEncryptionInfo feInfo;
 
   /**
    * Constructor needed for json serialization.
@@ -63,6 +66,14 @@ public class KeyInfoDetails extends KeyInfo {
    */
   public List<KeyLocation> getKeyLocations() {
     return keyLocations;
+  }
+
+  public void setFileEncryptionInfo(FileEncryptionInfo info) {
+    this.feInfo = info;
+  }
+
+  public FileEncryptionInfo getFileEncryptionInfo() {
+    return feInfo;
   }
 
   /**

@@ -19,14 +19,19 @@
 package org.apache.hadoop.ozone.om.ratis;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OmUtils;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
+import org.apache.hadoop.ozone.om.OMNodeDetails;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -64,8 +69,20 @@ public class TestOzoneManagerRatisServer {
     conf.setTimeDuration(
         OMConfigKeys.OZONE_OM_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_KEY,
         LEADER_ELECTION_TIMEOUT, TimeUnit.MILLISECONDS);
-    omRatisServer = OzoneManagerRatisServer.newOMRatisServer(omID,
-        InetAddress.getLocalHost(), conf);
+    int ratisPort = conf.getInt(
+        OMConfigKeys.OZONE_OM_RATIS_PORT_KEY,
+        OMConfigKeys.OZONE_OM_RATIS_PORT_DEFAULT);
+    InetSocketAddress rpcAddress = new InetSocketAddress(
+        InetAddress.getLocalHost(), 0);
+    OMNodeDetails omNodeDetails = new OMNodeDetails.Builder()
+        .setRpcAddress(rpcAddress)
+        .setRatisPort(ratisPort)
+        .setOMNodeId(omID)
+        .setOMServiceId(OzoneConsts.OM_SERVICE_ID_DEFAULT)
+        .build();
+    // Starts a single node Ratis server
+    omRatisServer = OzoneManagerRatisServer.newOMRatisServer(conf, null,
+      omNodeDetails, Collections.emptyList());
     omRatisServer.start();
     omRatisClient = OzoneManagerRatisClient.newOzoneManagerRatisClient(omID,
         omRatisServer.getRaftGroup(), conf);
@@ -94,14 +111,11 @@ public class TestOzoneManagerRatisServer {
   /**
    * Submit any request to OM Ratis server and check that the dummy response
    * message is received.
-   * TODO: Once state machine is implemented, submitting a request to Ratis
-   * server should result in a valid response.
    */
   @Test
   public void testSubmitRatisRequest() throws Exception {
     // Wait for leader election
     Thread.sleep(LEADER_ELECTION_TIMEOUT * 2);
-
     OMRequest request = OMRequest.newBuilder()
         .setCmdType(OzoneManagerProtocolProtos.Type.CreateVolume)
         .setClientId(clientId)
@@ -109,12 +123,9 @@ public class TestOzoneManagerRatisServer {
 
     OMResponse response = omRatisClient.sendCommand(request);
 
-    // Since the state machine is not implemented yet, we should get the
-    // configured dummy message from Ratis.
+    Assert.assertEquals(OzoneManagerProtocolProtos.Type.CreateVolume,
+        response.getCmdType());
     Assert.assertEquals(false, response.getSuccess());
-    Assert.assertTrue(response.getMessage().contains("Dummy response from " +
-        "Ratis server for command type: " +
-        OzoneManagerProtocolProtos.Type.CreateVolume));
     Assert.assertEquals(false, response.hasCreateVolumeResponse());
   }
 

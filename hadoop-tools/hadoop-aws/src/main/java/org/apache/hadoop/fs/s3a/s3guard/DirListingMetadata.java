@@ -67,6 +67,7 @@ public class DirListingMetadata extends ExpirableMetadata {
    * @param isAuthoritative true iff listing is the full contents of the
    *     directory, and the calling client reports that this may be cached as
    *     the full and authoritative listing of all files in the directory.
+   * @param lastUpdated last updated time on which expiration is based.
    */
   public DirListingMetadata(Path path, Collection<PathMetadata> listing,
       boolean isAuthoritative, long lastUpdated) {
@@ -273,8 +274,8 @@ public class DirListingMetadata extends ExpirableMetadata {
 
     // If this dir's path has host (and thus scheme), so must its children
     URI parentUri = path.toUri();
+    URI childUri = childPath.toUri();
     if (parentUri.getHost() != null) {
-      URI childUri = childPath.toUri();
       Preconditions.checkNotNull(childUri.getHost(), "Expected non-null URI " +
           "host: %s", childUri);
       Preconditions.checkArgument(
@@ -286,7 +287,8 @@ public class DirListingMetadata extends ExpirableMetadata {
     }
     Preconditions.checkArgument(!childPath.isRoot(),
         "childPath cannot be the root path: %s", childPath);
-    Preconditions.checkArgument(childPath.getParent().equals(path),
+    Preconditions.checkArgument(parentUri.getPath().equals(
+        childPath.getParent().toUri().getPath()),
         "childPath %s must be a child of %s", childPath, path);
   }
 

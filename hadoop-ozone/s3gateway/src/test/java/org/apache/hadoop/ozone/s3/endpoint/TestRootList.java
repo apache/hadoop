@@ -24,7 +24,6 @@ import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClientStub;
 import org.apache.hadoop.ozone.s3.header.AuthenticationHeaderParser;
 
-import org.apache.commons.lang3.RandomStringUtils;
 import static org.junit.Assert.assertEquals;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,16 +57,16 @@ public class TestRootList {
   @Test
   public void testListBucket() throws Exception {
 
-    // List operation should success even there is no bucket.
-    ListBucketResponse response = rootEndpoint.get();
+    // List operation should succeed even there is no bucket.
+    ListBucketResponse response =
+        (ListBucketResponse) rootEndpoint.get().getEntity();
     assertEquals(0, response.getBucketsNum());
 
-    String bucketBaseName = "bucket-";
+    String bucketBaseName = "bucket-" + getClass().getName();
     for(int i = 0; i < 10; i++) {
-      objectStoreStub.createS3Bucket(userName,
-          bucketBaseName + RandomStringUtils.randomNumeric(3));
+      objectStoreStub.createS3Bucket(userName, bucketBaseName + i);
     }
-    response = rootEndpoint.get();
+    response = (ListBucketResponse) rootEndpoint.get().getEntity();
     assertEquals(10, response.getBucketsNum());
   }
 

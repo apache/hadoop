@@ -34,7 +34,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -100,19 +99,18 @@ public class TestContainersLauncher {
   @Mock
   private ContainerLaunch containerLaunch;
 
-  @InjectMocks
-  private ContainersLauncher tempContainersLauncher = new ContainersLauncher(
-      context, dispatcher, exec, dirsHandler, containerManager);
-
   private ContainersLauncher spy;
 
   @Before
   public void setup() throws IllegalArgumentException, IllegalAccessException {
     MockitoAnnotations.initMocks(this);
+    ContainersLauncher tempContainersLauncher = new ContainersLauncher(
+        context, dispatcher, exec, dirsHandler, containerManager);
     ConcurrentMap<ApplicationId, Application> applications =
         new ConcurrentHashMap<>();
     applications.put(appId, app1);
     spy = spy(tempContainersLauncher);
+    spy.containerLauncher = containerLauncher;
     conf = doReturn(conf).when(spy).getConfig();
     when(event.getContainer()).thenReturn(container);
     when(container.getContainerId()).thenReturn(containerId);

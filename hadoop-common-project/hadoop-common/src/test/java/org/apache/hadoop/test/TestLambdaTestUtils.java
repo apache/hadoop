@@ -24,6 +24,10 @@ import org.junit.Test;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -516,17 +520,105 @@ public class TestLambdaTestUtils extends Assert {
    */
   @Test
   public void testEvalDoesWrapIOEs() throws Throwable {
-    AssertionError ex = intercept(AssertionError.class, "ioe",
-        () -> eval(() -> {
-          throw new IOException("ioe");
-        }));
-    Throwable cause = ex.getCause();
-    if (cause == null) {
-      throw ex;
-    }
-    if (!(cause instanceof IOException)) {
-      throw cause;
-    }
+    verifyCause(IOException.class,
+        intercept(AssertionError.class, "ioe",
+          () -> eval(() -> {
+            throw new IOException("ioe");
+          })));
+  }
+
+  @Test
+  public void testInterceptFutureUnwrapped() throws Throwable {
+    CompletableFuture<String> future = new CompletableFuture<>();
+    future.completeExceptionally(new IOException("oops"));
+    interceptFuture(IOException.class, "oops", future);
+  }
+
+  @Test
+  public void testInterceptFutureWrongException() throws Throwable {
+    CompletableFuture<String> future = new CompletableFuture<>();
+    future.completeExceptionally(new RuntimeException("oops"));
+    intercept(RuntimeException.class,
+        "oops",
+        () -> interceptFuture(IOException.class, "", future));
+  }
+
+  @Test
+  public void testInterceptFutureNotAnException() throws Throwable {
+    CompletableFuture<String> future = new CompletableFuture<>();
+    future.completeExceptionally(new Error("oops"));
+    verifyCause(Error.class,
+        intercept(ExecutionException.class,
+            "oops",
+            () -> interceptFuture(IOException.class, "", future)));
+  }
+
+  /**
+   * Variant for exception catching.
+   */
+  @Test
+  public void testInterceptFutureNotAnException2() throws Throwable {
+    CompletableFuture<String> future = new CompletableFuture<>();
+    future.completeExceptionally(new Error("oops"));
+    verifyCause(Error.class,
+        interceptFuture(ExecutionException.class, "", future));
+  }
+
+  @Test
+  public void testInterceptFutureNoFailures() throws Throwable {
+    CompletableFuture<String> future = new CompletableFuture<>();
+    future.complete("happy");
+    intercept(AssertionError.class,
+        "happy",
+        () -> interceptFuture(IOException.class, "oops", future));
+  }
+
+  /**
+   * This will timeout immediately and raise a TimeoutException.
+   */
+  @Test
+  public void testInterceptFutureTimeout() throws Throwable {
+    CompletableFuture<String> future = new CompletableFuture<>();
+    intercept(TimeoutException.class,
+        "",
+        () -> interceptFuture(IOException.class, "oops",
+            1, TimeUnit.NANOSECONDS,
+            future));
+  }
+
+  /**
+   * This will timeout immediately and raise a TimeoutException.
+   */
+  @Test
+  public void testInterceptFutureTimeout2() throws Throwable {
+    CompletableFuture<String> future = new CompletableFuture<>();
+    interceptFuture(TimeoutException.class, "",
+            1, TimeUnit.NANOSECONDS,
+            future);
+  }
+
+  /**
+   * This will timeout immediately and raise a TimeoutException.
+   */
+  @Test
+  public void testInterceptFutureTimeoutSuccess() throws Throwable {
+    CompletableFuture<String> future = new CompletableFuture<>();
+    future.completeExceptionally(new IOException("oops"));
+    interceptFuture(IOException.class, "oops",
+        1, TimeUnit.NANOSECONDS,
+        future);
+  }
+
+  /**
+   * This will timeout immediately and raise a TimeoutException.
+   */
+  @Test
+  public void testInterceptFutureCancelled() throws Throwable {
+    CompletableFuture<String> future = new CompletableFuture<>();
+    future.cancel(false);
+    interceptFuture(CancellationException.class, "",
+        1, TimeUnit.NANOSECONDS,
+        future);
   }
 
 }

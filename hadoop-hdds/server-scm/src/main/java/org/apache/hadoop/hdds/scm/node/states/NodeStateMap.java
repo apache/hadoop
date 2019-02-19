@@ -21,7 +21,6 @@ package org.apache.hadoop.hdds.scm.node.states;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
-import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.node.DatanodeInfo;
 
 import java.util.*;
@@ -46,10 +45,6 @@ public class NodeStateMap {
    */
   private final ConcurrentHashMap<NodeState, Set<UUID>> stateMap;
   /**
-   * Represents the current stats of node.
-   */
-  private final ConcurrentHashMap<UUID, SCMNodeStat> nodeStats;
-  /**
    * Node to set of containers on the node.
    */
   private final ConcurrentHashMap<UUID, Set<ContainerID>> nodeToContainer;
@@ -63,7 +58,6 @@ public class NodeStateMap {
     lock = new ReentrantReadWriteLock();
     nodeMap = new ConcurrentHashMap<>();
     stateMap = new ConcurrentHashMap<>();
-    nodeStats = new ConcurrentHashMap<>();
     nodeToContainer = new ConcurrentHashMap<>();
     initStateMap();
   }
@@ -94,7 +88,6 @@ public class NodeStateMap {
         throw new NodeAlreadyExistsException("Node UUID: " + id);
       }
       nodeMap.put(id, new DatanodeInfo(datanodeDetails));
-      nodeStats.put(id, new SCMNodeStat());
       nodeToContainer.put(id, Collections.emptySet());
       stateMap.get(nodeState).add(id);
     } finally {
@@ -124,20 +117,6 @@ public class NodeStateMap {
     } finally {
       lock.writeLock().unlock();
     }
-  }
-
-  /**
-   * Returns DatanodeDetails for the given node id.
-   *
-   * @param uuid Node Id
-   *
-   * @return DatanodeDetails of the node
-   *
-   * @throws NodeNotFoundException if the node is not present
-   */
-  public DatanodeDetails getNodeDetails(UUID uuid)
-      throws NodeNotFoundException {
-    return getNodeInfo(uuid);
   }
 
   /**
@@ -243,43 +222,6 @@ public class NodeStateMap {
     } finally {
       lock.readLock().unlock();
     }
-  }
-
-  /**
-   * Returns the current stats of the node.
-   *
-   * @param uuid node id
-   *
-   * @return SCMNodeStat of the specify node.
-   *
-   * @throws NodeNotFoundException if the node is not found
-   */
-  public SCMNodeStat getNodeStat(UUID uuid) throws NodeNotFoundException {
-    SCMNodeStat stat = nodeStats.get(uuid);
-    if (stat == null) {
-      throw new NodeNotFoundException("Node UUID: " + uuid);
-    }
-    return stat;
-  }
-
-  /**
-   * Returns a unmodifiable copy of nodeStats.
-   *
-   * @return map with node stats.
-   */
-  public Map<UUID, SCMNodeStat> getNodeStats() {
-    return Collections.unmodifiableMap(nodeStats);
-  }
-
-  /**
-   * Set the current stats of the node.
-   *
-   * @param uuid node id
-   *
-   * @param newstat stat that will set to the specify node.
-   */
-  public void setNodeStat(UUID uuid, SCMNodeStat newstat) {
-    nodeStats.put(uuid, newstat);
   }
 
   public void setContainers(UUID uuid, Set<ContainerID> containers)

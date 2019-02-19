@@ -126,7 +126,7 @@ public class ReplicationNodeManagerMock implements NodeManager {
    * @return a map of individual node stats (live/stale but not dead).
    */
   @Override
-  public Map<UUID, SCMNodeStat> getNodeStats() {
+  public Map<DatanodeDetails, SCMNodeStat> getNodeStats() {
     return null;
   }
 
@@ -302,15 +302,6 @@ public class ReplicationNodeManagerMock implements NodeManager {
   @Override
   public void onMessage(CommandForDatanode commandForDatanode,
                         EventPublisher publisher) {
-    // do nothing.
-  }
-
-  /**
-   * Empty implementation for processDeadNode.
-   * @param dnUuid
-   */
-  @Override
-  public void processDeadNode(UUID dnUuid) {
     // do nothing.
   }
 

@@ -19,8 +19,9 @@
 package org.apache.hadoop.hdds.scm.storage;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.hdds.scm.XceiverClientAsyncReply;
+import org.apache.hadoop.hdds.scm.XceiverClientReply;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.common.Checksum;
 import org.apache.hadoop.ozone.common.ChecksumData;
 import org.apache.hadoop.ozone.common.OzoneChecksumException;
@@ -28,6 +29,7 @@ import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ChecksumType;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ChunkInfo;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.BlockData;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.KeyValue;
@@ -75,7 +77,8 @@ public class BlockOutputStream extends OutputStream {
   private final BlockData.Builder containerBlockData;
   private XceiverClientManager xceiverClientManager;
   private XceiverClientSpi xceiverClient;
-  private final Checksum checksum;
+  private final ContainerProtos.ChecksumType checksumType;
+  private final int bytesPerChecksum;
   private final String streamId;
   private int chunkIndex;
   private int chunkSize;
@@ -113,21 +116,23 @@ public class BlockOutputStream extends OutputStream {
    * @param blockID              block ID
    * @param key                  chunk key
    * @param xceiverClientManager client manager that controls client
-   * @param xceiverClient        client to perform container calls
+   * @param pipeline             pipeline where block will be written
    * @param traceID              container protocol call args
    * @param chunkSize            chunk size
    * @param bufferList           list of byte buffers
    * @param streamBufferFlushSize flush size
    * @param streamBufferMaxSize   max size of the currentBuffer
    * @param watchTimeout          watch timeout
-   * @param checksum              checksum
+   * @param checksumType          checksum type
+   * @param bytesPerChecksum      Bytes per checksum
    */
   @SuppressWarnings("parameternumber")
   public BlockOutputStream(BlockID blockID, String key,
-      XceiverClientManager xceiverClientManager, XceiverClientSpi xceiverClient,
+      XceiverClientManager xceiverClientManager, Pipeline pipeline,
       String traceID, int chunkSize, long streamBufferFlushSize,
-      long streamBufferMaxSize, long watchTimeout,
-      List<ByteBuffer> bufferList, Checksum checksum) {
+      long streamBufferMaxSize, long watchTimeout, List<ByteBuffer> bufferList,
+      ChecksumType checksumType, int bytesPerChecksum)
+      throws IOException {
     this.blockID = blockID;
     this.key = key;
     this.traceID = traceID;
@@ -138,14 +143,15 @@ public class BlockOutputStream extends OutputStream {
         BlockData.newBuilder().setBlockID(blockID.getDatanodeBlockIDProtobuf())
             .addMetadata(keyValue);
     this.xceiverClientManager = xceiverClientManager;
-    this.xceiverClient = xceiverClient;
+    this.xceiverClient = xceiverClientManager.acquireClient(pipeline);
     this.streamId = UUID.randomUUID().toString();
     this.chunkIndex = 0;
     this.streamBufferFlushSize = streamBufferFlushSize;
     this.streamBufferMaxSize = streamBufferMaxSize;
     this.watchTimeout = watchTimeout;
     this.bufferList = bufferList;
-    this.checksum = checksum;
+    this.checksumType = checksumType;
+    this.bytesPerChecksum = bytesPerChecksum;
 
     // A single thread executor handle the responses of async requests
     responseExecutor = Executors.newSingleThreadExecutor();
@@ -378,7 +384,7 @@ public class BlockOutputStream extends OutputStream {
     CompletableFuture<ContainerProtos.
         ContainerCommandResponseProto> flushFuture;
     try {
-      XceiverClientAsyncReply asyncReply =
+      XceiverClientReply asyncReply =
           putBlockAsync(xceiverClient, containerBlockData.build(), requestId);
       CompletableFuture<ContainerProtos.ContainerCommandResponseProto> future =
           asyncReply.getResponse();
@@ -500,7 +506,7 @@ public class BlockOutputStream extends OutputStream {
           throw new IOException(
               "Unexpected Storage Container Exception: " + e.toString(), e);
         } finally {
-          cleanup();
+          cleanup(false);
         }
       }
       // clear the currentBuffer
@@ -541,9 +547,9 @@ public class BlockOutputStream extends OutputStream {
     }
   }
 
-  public void cleanup() {
+  public void cleanup(boolean invalidateClient) {
     if (xceiverClientManager != null) {
-      xceiverClientManager.releaseClient(xceiverClient);
+      xceiverClientManager.releaseClient(xceiverClient, invalidateClient);
     }
     xceiverClientManager = null;
     xceiverClient = null;
@@ -584,6 +590,7 @@ public class BlockOutputStream extends OutputStream {
   private void writeChunkToContainer(ByteBuffer chunk) throws IOException {
     int effectiveChunkSize = chunk.remaining();
     ByteString data = ByteString.copyFrom(chunk);
+    Checksum checksum = new Checksum(checksumType, bytesPerChecksum);
     ChecksumData checksumData = checksum.computeChecksum(data);
     ChunkInfo chunkInfo = ChunkInfo.newBuilder()
         .setChunkName(DigestUtils.md5Hex(key) + "_stream_" + streamId +
@@ -597,7 +604,7 @@ public class BlockOutputStream extends OutputStream {
         traceID + ContainerProtos.Type.WriteChunk + chunkIndex + chunkInfo
             .getChunkName();
     try {
-      XceiverClientAsyncReply asyncReply =
+      XceiverClientReply asyncReply =
           writeChunkAsync(xceiverClient, chunkInfo, blockID, data, requestId);
       CompletableFuture<ContainerProtos.ContainerCommandResponseProto> future =
           asyncReply.getResponse();

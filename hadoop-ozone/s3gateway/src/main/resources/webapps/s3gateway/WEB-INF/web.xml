@@ -21,10 +21,6 @@
       <param-name>javax.ws.rs.Application</param-name>
       <param-value>org.apache.hadoop.ozone.s3.GatewayApplication</param-value>
     </init-param>
-    <init-param>
-      <param-name>jersey.config.servlet.filter.staticContentRegex</param-name>
-      <param-value>/static/images/*.ico</param-value>
-    </init-param>
     <load-on-startup>1</load-on-startup>
   </servlet>
   <servlet-mapping>

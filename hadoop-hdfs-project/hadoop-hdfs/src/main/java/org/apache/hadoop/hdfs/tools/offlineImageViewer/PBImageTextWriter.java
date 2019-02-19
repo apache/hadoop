@@ -594,7 +594,11 @@ abstract class PBImageTextWriter implements Closeable {
         is = FSImageUtil.wrapInputStreamForCompression(conf,
             summary.getCodec(), new BufferedInputStream(new LimitInputStream(
                 fin, section.getLength())));
-        switch (SectionName.fromString(section.getName())) {
+        SectionName sectionName = SectionName.fromString(section.getName());
+        if (sectionName == null) {
+          throw new IOException("Unrecognized section " + section.getName());
+        }
+        switch (sectionName) {
         case STRING_TABLE:
           LOG.info("Loading string table");
           stringTable = FSImageLoader.loadStringTable(is);

@@ -89,7 +89,8 @@ public class TestContainerStateMachineIdempotency {
     XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     try {
       //create the container
-      ContainerProtocolCalls.createContainer(client, containerID, traceID);
+      ContainerProtocolCalls.createContainer(client, containerID, traceID,
+          null);
       // call create Container again
       BlockID blockID = ContainerTestHelper.getTestBlockID(containerID);
       byte[] data =
@@ -111,11 +112,13 @@ public class TestContainerStateMachineIdempotency {
       client.sendCommand(putKeyRequest);
 
       // close container call
-      ContainerProtocolCalls.closeContainer(client, containerID, traceID);
-      ContainerProtocolCalls.closeContainer(client, containerID, traceID);
+      ContainerProtocolCalls.closeContainer(client, containerID, traceID,
+          null);
+      ContainerProtocolCalls.closeContainer(client, containerID, traceID,
+          null);
     } catch (IOException ioe) {
       Assert.fail("Container operation failed" + ioe);
     }
-    xceiverClientManager.releaseClient(client);
+    xceiverClientManager.releaseClient(client, false);
   }
 }

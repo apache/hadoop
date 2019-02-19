@@ -63,5 +63,10 @@
     <Method name="reopen"/>
     <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
   </Match>
+  <Match>
+    <Class name="org.apache.hadoop.fs.s3a.S3AFileSystem"/>
+    <Method name="openFileWithOptions"/>
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE"/>
+  </Match>
 
 </FindBugsFilter>

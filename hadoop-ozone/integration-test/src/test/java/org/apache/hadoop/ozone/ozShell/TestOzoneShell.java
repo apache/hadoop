@@ -18,19 +18,23 @@
 package org.apache.hadoop.ozone.ozShell;
 
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.cli.MissingSubcommandException;
@@ -52,7 +56,10 @@ import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.client.rest.RestClient;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
@@ -65,7 +72,12 @@ import org.apache.hadoop.test.GenericTestUtils;
 import com.google.common.base.Strings;
 import org.apache.commons.lang3.RandomStringUtils;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.BUCKET_NOT_FOUND;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_NOT_FOUND;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.S3_BUCKET_NOT_FOUND;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLUME_NOT_FOUND;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -119,8 +131,7 @@ public class TestOzoneShell {
   @Parameterized.Parameters
   public static Collection<Object[]> clientProtocol() {
     Object[][] params = new Object[][] {
-        {RpcClient.class},
-        {RestClient.class}};
+        {RpcClient.class}};
     return Arrays.asList(params);
   }
 
@@ -171,25 +182,15 @@ public class TestOzoneShell {
   public void setup() {
     System.setOut(new PrintStream(out));
     System.setErr(new PrintStream(err));
+
     if(clientProtocol.equals(RestClient.class)) {
       String hostName = cluster.getOzoneManager().getHttpServer()
           .getHttpAddress().getHostName();
       int port = cluster
           .getOzoneManager().getHttpServer().getHttpAddress().getPort();
-      url = String.format("http://" + hostName + ":" + port);
+      url = String.format("http://%s:%d", hostName, port);
     } else {
-      List<ServiceInfo> services = null;
-      try {
-        services = cluster.getOzoneManager().getServiceList();
-      } catch (IOException e) {
-        LOG.error("Could not get service list from OM");
-      }
-      String hostName = services.stream().filter(
-          a -> a.getNodeType().equals(HddsProtos.NodeType.OM))
-          .collect(Collectors.toList()).get(0).getHostname();
-
-      String port = cluster.getOzoneManager().getRpcPort();
-      url = String.format("o3://" + hostName + ":" + port);
+      url = "o3://" + getOmAddress();
     }
   }
 
@@ -239,8 +240,7 @@ public class TestOzoneShell {
   }
 
   private void execute(Shell ozoneShell, String[] args) {
-    List<String> arguments = new ArrayList(Arrays.asList(args));
-    LOG.info("Executing shell command with args {}", arguments);
+    LOG.info("Executing shell command with args {}", Arrays.asList(args));
     CommandLine cmd = ozoneShell.getCmd();
 
     IExceptionHandler2<List<Object>> exceptionHandler =
@@ -302,9 +302,8 @@ public class TestOzoneShell {
     try {
       client.getVolumeDetails(volumeName);
       fail("Get volume call should have thrown.");
-    } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains(
-          "Info Volume failed, error:VOLUME_NOT_FOUND", e);
+    } catch (OMException e) {
+      Assert.assertEquals(VOLUME_NOT_FOUND, e.getResult());
     }
 
 
@@ -329,9 +328,8 @@ public class TestOzoneShell {
     try {
       client.getVolumeDetails(volumeName);
       fail("Get volume call should have thrown.");
-    } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains(
-          "Info Volume failed, error:VOLUME_NOT_FOUND", e);
+    } catch (OMException e) {
+      Assert.assertEquals(VOLUME_NOT_FOUND, e.getResult());
     }
   }
 
@@ -373,7 +371,7 @@ public class TestOzoneShell {
 
     // get info for non-exist volume
     args = new String[] {"volume", "info", url + "/invalid-volume"};
-    executeWithError(shell, args, "VOLUME_NOT_FOUND");
+    executeWithError(shell, args, VOLUME_NOT_FOUND);
   }
 
   @Test
@@ -439,16 +437,34 @@ public class TestOzoneShell {
     // test error conditions
     args = new String[] {"volume", "update", url + "/invalid-volume",
         "--user", newUser};
-    executeWithError(shell, args, "Info Volume failed, error:VOLUME_NOT_FOUND");
+    executeWithError(shell, args, ResultCodes.VOLUME_NOT_FOUND);
 
     err.reset();
     args = new String[] {"volume", "update", url + "/invalid-volume",
         "--quota", "500MB"};
-    executeWithError(shell, args, "Info Volume failed, error:VOLUME_NOT_FOUND");
+    executeWithError(shell, args, ResultCodes.VOLUME_NOT_FOUND);
   }
 
   /**
-   * Execute command, assert exeception message and returns true if error
+   * Execute command, assert exception message and returns true if error
+   * was thrown.
+   */
+  private void executeWithError(Shell ozoneShell, String[] args,
+      OMException.ResultCodes code) {
+
+    try {
+      execute(ozoneShell, args);
+      fail("Exception is expected from command execution " + Arrays
+          .asList(args));
+    } catch (Exception ex) {
+      Assert.assertEquals(OMException.class, ex.getCause().getClass());
+      Assert.assertEquals(code, ((OMException) ex.getCause()).getResult());
+    }
+
+  }
+
+  /**
+   * Execute command, assert exception message and returns true if error
    * was thrown.
    */
   private void executeWithError(Shell ozoneShell, String[] args,
@@ -473,6 +489,27 @@ public class TestOzoneShell {
                   expectedError, exceptionToCheck.getMessage()),
               exceptionToCheck.getMessage().contains(expectedError));
         }
+      }
+    }
+  }
+
+  /**
+   * Execute command, assert exception message and returns true if error
+   * was thrown.
+   */
+  private void executeWithError(Shell ozoneShell, String[] args,
+      Class exception) {
+    if (Objects.isNull(exception)) {
+      execute(ozoneShell, args);
+    } else {
+      try {
+        execute(ozoneShell, args);
+        fail("Exception is expected from command execution " + Arrays
+            .asList(args));
+      } catch (Exception ex) {
+        LOG.error("Exception: ", ex);
+        assertTrue(ex.getCause().getClass().getCanonicalName()
+            .equals(exception.getCanonicalName()));
       }
     }
   }
@@ -638,7 +675,7 @@ public class TestOzoneShell {
     // test create a bucket in a non-exist volume
     args = new String[] {"bucket", "create",
         url + "/invalid-volume/" + bucketName};
-    executeWithError(shell, args, "Info Volume failed, error:VOLUME_NOT_FOUND");
+    executeWithError(shell, args, VOLUME_NOT_FOUND);
 
     // test createBucket with invalid bucket name
     args = new String[] {"bucket", "create",
@@ -664,22 +701,20 @@ public class TestOzoneShell {
     try {
       vol.getBucket(bucketName);
       fail("Get bucket should have thrown.");
-    } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains(
-          "Info Bucket failed, error: BUCKET_NOT_FOUND", e);
+    } catch (OMException e) {
+      Assert.assertEquals(BUCKET_NOT_FOUND, e.getResult());
     }
 
     // test delete bucket in a non-exist volume
     args = new String[] {"bucket", "delete",
         url + "/invalid-volume" + "/" + bucketName};
-    executeWithError(shell, args, "Info Volume failed, error:VOLUME_NOT_FOUND");
+    executeWithError(shell, args, VOLUME_NOT_FOUND);
 
     err.reset();
     // test delete non-exist bucket
     args = new String[] {"bucket", "delete",
         url + "/" + vol.getName() + "/invalid-bucket"};
-    executeWithError(shell, args,
-        "Delete Bucket failed, error:BUCKET_NOT_FOUND");
+    executeWithError(shell, args, BUCKET_NOT_FOUND);
   }
 
   @Test
@@ -708,7 +743,7 @@ public class TestOzoneShell {
     args = new String[] {"bucket", "info",
         url + "/" + vol.getName() + "/invalid-bucket" + bucketName};
     executeWithError(shell, args,
-        "Info Bucket failed, error: BUCKET_NOT_FOUND");
+        ResultCodes.BUCKET_NOT_FOUND);
   }
 
   @Test
@@ -752,8 +787,7 @@ public class TestOzoneShell {
     args = new String[] {"bucket", "update",
         url + "/" + vol.getName() + "/invalid-bucket", "--addAcl",
         "user:frodo:rw"};
-    executeWithError(shell, args,
-        "Info Bucket failed, error: BUCKET_NOT_FOUND");
+    executeWithError(shell, args, BUCKET_NOT_FOUND);
   }
 
   @Test
@@ -869,8 +903,7 @@ public class TestOzoneShell {
     args = new String[] {"key", "put",
         url + "/" + volumeName + "/invalid-bucket/" + keyName,
         createTmpFile()};
-    executeWithError(shell, args,
-        "Info Bucket failed, error: BUCKET_NOT_FOUND");
+    executeWithError(shell, args, BUCKET_NOT_FOUND);
   }
 
   @Test
@@ -934,25 +967,41 @@ public class TestOzoneShell {
     execute(shell, args);
 
     // verify if key has been deleted in the bucket
-    try {
-      bucket.getKey(keyName);
-      fail("Get key should have thrown.");
-    } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains(
-          "Lookup key failed, error:KEY_NOT_FOUND", e);
-    }
+    assertKeyNotExists(bucket, keyName);
 
     // test delete key in a non-exist bucket
     args = new String[] {"key", "delete",
         url + "/" + volumeName + "/invalid-bucket/" + keyName};
-    executeWithError(shell, args,
-        "Info Bucket failed, error: BUCKET_NOT_FOUND");
+    executeWithError(shell, args, BUCKET_NOT_FOUND);
 
     err.reset();
     // test delete a non-exist key in bucket
     args = new String[] {"key", "delete",
         url + "/" + volumeName + "/" + bucketName + "/invalid-key"};
-    executeWithError(shell, args, "Delete key failed, error:KEY_NOT_FOUND");
+    executeWithError(shell, args, KEY_NOT_FOUND);
+  }
+
+  @Test
+  public void testRenameKey() throws Exception {
+    LOG.info("Running testRenameKey");
+    OzoneBucket bucket = creatBucket();
+    OzoneKey oldKey = createTestKey(bucket);
+
+    String oldName = oldKey.getName();
+    String newName = oldName + ".new";
+    String[] args = new String[]{
+        "key", "rename",
+        String.format("%s/%s/%s",
+            url, oldKey.getVolumeName(), oldKey.getBucketName()),
+        oldName,
+        newName
+    };
+    execute(shell, args);
+
+    OzoneKey newKey = bucket.getKey(newName);
+    assertEquals(oldKey.getCreationTime(), newKey.getCreationTime());
+    assertEquals(oldKey.getDataSize(), newKey.getDataSize());
+    assertKeyNotExists(bucket, oldName);
   }
 
   @Test
@@ -992,7 +1041,7 @@ public class TestOzoneShell {
 
     // verify the response output
     // get the non-exist key info should be failed
-    executeWithError(shell, args, "Lookup key failed, error:KEY_NOT_FOUND");
+    executeWithError(shell, args, KEY_NOT_FOUND);
   }
 
   @Test
@@ -1019,7 +1068,7 @@ public class TestOzoneShell {
                 output.contains(OzoneConsts.OZONE_TIME_ZONE));
     args = new String[] {"key", "info",
         url + "/" + volumeName + "/" + bucketName + "/" + keyNameOnly};
-    executeWithError(shell, args, "Lookup key failed, error:KEY_NOT_FOUND");
+    executeWithError(shell, args, KEY_NOT_FOUND);
     out.reset();
     err.reset();
   }
@@ -1127,17 +1176,8 @@ public class TestOzoneShell {
 
   @Test
   public void testS3BucketMapping() throws  IOException {
-
-    List<ServiceInfo> services =
-        cluster.getOzoneManager().getServiceList();
-
-    String omHostName = services.stream().filter(
-        a -> a.getNodeType().equals(HddsProtos.NodeType.OM))
-        .collect(Collectors.toList()).get(0).getHostname();
-
-    String omPort = cluster.getOzoneManager().getRpcPort();
     String setOmAddress =
-        "--set=" + OZONE_OM_ADDRESS_KEY + "=" + omHostName + ":" + omPort;
+        "--set=" + OZONE_OM_ADDRESS_KEY + "=" + getOmAddress();
 
     String s3Bucket = "bucket1";
     String commandOutput;
@@ -1161,7 +1201,7 @@ public class TestOzoneShell {
     //Trying to get map for an unknown bucket
     args = new String[] {setOmAddress, "bucket", "path",
         "unknownbucket"};
-    executeWithError(shell, args, "S3_BUCKET_NOT_FOUND");
+    executeWithError(shell, args, S3_BUCKET_NOT_FOUND);
 
     // No bucket name
     args = new String[] {setOmAddress, "bucket", "path"};
@@ -1169,7 +1209,39 @@ public class TestOzoneShell {
 
     // Invalid bucket name
     args = new String[] {setOmAddress, "bucket", "path", "/asd/multipleslash"};
-    executeWithError(shell, args, "S3_BUCKET_NOT_FOUND");
+    executeWithError(shell, args, S3_BUCKET_NOT_FOUND);
+  }
+
+  @Test
+  public void testS3Secret() throws Exception {
+    String setOmAddress =
+        "--set=" + OZONE_OM_ADDRESS_KEY + "=" + getOmAddress();
+
+    err.reset();
+    String outputFirstAttempt;
+    String outputSecondAttempt;
+
+    //First attempt: If secrets are not found in database, they will be created
+    String[] args = new String[] {setOmAddress, "s3", "getsecret"};
+    execute(shell, args);
+    outputFirstAttempt = out.toString();
+    //Extracting awsAccessKey & awsSecret value from output
+    String[] output = outputFirstAttempt.split("\n");
+    String awsAccessKey = output[0].split("=")[1];
+    String awsSecret = output[1].split("=")[1];
+    assertTrue((awsAccessKey != null && awsAccessKey.length() > 0) &&
+            (awsSecret != null && awsSecret.length() > 0));
+
+    out.reset();
+
+    //Second attempt: Since secrets were created in previous attempt, it
+    // should return the same value
+    args = new String[] {setOmAddress, "s3", "getsecret"};
+    execute(shell, args);
+    outputSecondAttempt = out.toString();
+
+    //verifying if secrets from both attempts are same
+    assertTrue(outputFirstAttempt.equals(outputSecondAttempt));
   }
 
   private void createS3Bucket(String userName, String s3Bucket) {
@@ -1206,6 +1278,79 @@ public class TestOzoneShell {
     return bucketInfo;
   }
 
+  private OzoneKey createTestKey(OzoneBucket bucket) throws IOException {
+    String key = "key" + RandomStringUtils.randomNumeric(5);
+    String value = "value";
+
+    OzoneOutputStream keyOutputStream =
+        bucket.createKey(key, value.length());
+    keyOutputStream.write(value.getBytes());
+    keyOutputStream.close();
+
+    return bucket.getKey(key);
+  }
+
+  @Test
+  public void testTokenCommands() throws Exception {
+    String omAdd = "--set=" + OZONE_OM_ADDRESS_KEY + "=" + getOmAddress();
+    List<String[]> shellCommands = new ArrayList<>(4);
+    // Case 1: Execution will fail when security is disabled.
+    shellCommands.add(new String[]{omAdd, "token", "get"});
+    shellCommands.add(new String[]{omAdd, "token", "renew"});
+    shellCommands.add(new String[]{omAdd, "token", "cancel"});
+    shellCommands.add(new String[]{omAdd, "token", "print"});
+    shellCommands.forEach(cmd -> execute(cmd, "Error:Token operations " +
+        "work only"));
+
+    String security = "-D=" + OZONE_SECURITY_ENABLED_KEY + "=true";
+
+    // Case 2: Execution of get token will fail when security is enabled but
+    // OzoneManager is not setup correctly.
+    execute(new String[]{omAdd, security,
+        "token", "get"}, "Error: Get delegation token operation failed.");
+
+    // Clear all commands.
+    shellCommands.clear();
+
+    // Case 3: Execution of renew/cancel/print token will fail as token file
+    // doesn't exist.
+    shellCommands.add(new String[]{omAdd, security, "token", "renew"});
+    shellCommands.add(new String[]{omAdd, security, "token", "cancel"});
+    shellCommands.add(new String[]{omAdd, security, "token", "print"});
+    shellCommands.forEach(cmd -> execute(cmd, "token " +
+        "operation failed as token file:"));
+
+    // Create corrupt token file.
+    File testPath = GenericTestUtils.getTestDir();
+    Files.createDirectories(testPath.toPath());
+    Path tokenFile = Paths.get(testPath.toString(), "token.txt");
+    String question = RandomStringUtils.random(100);
+    Files.write(tokenFile, question.getBytes());
+
+    // Clear all commands.
+    shellCommands.clear();
+    String file = "-t=" + tokenFile.toString();
+
+    // Case 4: Execution of renew/cancel/print token will fail if token file
+    // is corrupt.
+    shellCommands.add(new String[]{omAdd, security, "token", "renew", file});
+    shellCommands.add(new String[]{omAdd, security, "token",
+        "cancel", file});
+    shellCommands.add(new String[]{omAdd, security, "token", "print", file});
+    shellCommands.forEach(cmd -> executeWithError(shell, cmd,
+        EOFException.class));
+  }
+
+  private void execute(String[] cmd, String msg) {
+    // verify the response output
+    execute(shell, cmd);
+    String output = err.toString();
+    assertTrue(output.contains(msg));
+    // reset stream
+    out.reset();
+    err.reset();
+  }
+
   /**
    * Create a temporary file used for putting key.
    * @return the created file's path string
@@ -1225,4 +1370,31 @@ public class TestOzoneShell {
 
     return tmpFile.getAbsolutePath();
   }
+
+  private String getOmAddress() {
+    List<ServiceInfo> services;
+    try {
+      services = cluster.getOzoneManager().getServiceList();
+    } catch (IOException e) {
+      fail("Could not get service list from OM");
+      return null;
+    }
+
+    return services.stream()
+        .filter(a -> HddsProtos.NodeType.OM.equals(a.getNodeType()))
+        .findFirst()
+        .map(s -> s.getServiceAddress(ServicePort.Type.RPC))
+        .orElseThrow(IllegalStateException::new);
+  }
+
+  private static void assertKeyNotExists(OzoneBucket bucket, String keyName)
+      throws IOException {
+    try {
+      bucket.getKey(keyName);
+      fail(String.format("Key %s should not exist, but it does", keyName));
+    } catch (OMException e) {
+      Assert.assertEquals(KEY_NOT_FOUND, e.getResult());
+    }
+  }
+
 }

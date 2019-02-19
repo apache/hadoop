@@ -69,7 +69,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Matchers;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -97,10 +96,10 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyListOf;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -213,7 +212,7 @@ public class TestFsDatasetImpl {
       DataStorage.VolumeBuilder builder =
           new DataStorage.VolumeBuilder(storage, sd);
       when(storage.prepareVolume(eq(datanode), eq(loc),
-          anyListOf(NamespaceInfo.class)))
+          anyList()))
           .thenReturn(builder);
 
       dataset.addVolume(loc, nsInfos);
@@ -332,7 +331,7 @@ public class TestFsDatasetImpl {
     DataStorage.VolumeBuilder builder =
         new DataStorage.VolumeBuilder(storage, sd);
     when(storage.prepareVolume(eq(datanode), eq(loc),
-        anyListOf(NamespaceInfo.class)))
+        anyList()))
         .thenReturn(builder);
 
     dataset.addVolume(loc, nsInfos);
@@ -366,7 +365,7 @@ public class TestFsDatasetImpl {
     DataStorage.VolumeBuilder builder = new DataStorage.VolumeBuilder(storage, sd);
     when(storage.prepareVolume(eq(datanode),
         eq(StorageLocation.parse(badDir.toURI().toString())),
-        Matchers.<List<NamespaceInfo>>any()))
+        anyList()))
         .thenReturn(builder);
 
     StorageLocation location = StorageLocation.parse(badDir.toString());
@@ -510,7 +509,7 @@ public class TestFsDatasetImpl {
         new DataStorage.VolumeBuilder(storage, sd);
     when(
         storage.prepareVolume(eq(datanode), eq(loc),
-            anyListOf(NamespaceInfo.class))).thenReturn(builder);
+            anyList())).thenReturn(builder);
 
     String cacheFilePath =
         String.format("%s/%s/%s/%s/%s", path, CURRENT_DIR, BLOCK_POOL_IDS[0],

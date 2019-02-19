@@ -49,6 +49,8 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
 
+import static org.apache.hadoop.yarn.util.StringHelper.PATH_JOINER;
+
 /**
  * Utility class to generate reports from timeline entities.
  */
@@ -57,7 +59,7 @@ public final class TimelineEntityV2Converter {
   }
 
   public static ContainerReport convertToContainerReport(
-      TimelineEntity entity) {
+      TimelineEntity entity, String serverAddress, String user) {
     int allocatedMem = 0;
     int allocatedVcore = 0;
     String allocatedHost = null;
@@ -142,8 +144,13 @@ public final class TimelineEntityV2Converter {
     }
     String logUrl = null;
     NodeId allocatedNode = null;
+    String containerId = entity.getId();
     if (allocatedHost != null) {
       allocatedNode = NodeId.newInstance(allocatedHost, allocatedPort);
+      if (serverAddress != null && user != null) {
+        logUrl = PATH_JOINER.join(serverAddress,
+            "logs", allocatedNode, containerId, containerId, user);
+      }
     }
     ContainerReport container = ContainerReport.newInstance(
         ContainerId.fromString(entity.getId()),
@@ -251,6 +258,7 @@ public final class TimelineEntityV2Converter {
     String type = null;
     boolean unmanagedApplication = false;
     long createdTime = 0;
+    long launchTime = 0;
     long finishedTime = 0;
     float progress = 0.0f;
     int applicationPriority = 0;
@@ -410,6 +418,9 @@ public final class TimelineEntityV2Converter {
             ApplicationMetricsConstants.CREATED_EVENT_TYPE)) {
           createdTime = event.getTimestamp();
         } else if (event.getId().equals(
+            ApplicationMetricsConstants.LAUNCHED_EVENT_TYPE)) {
+          launchTime = event.getTimestamp();
+        } else if (event.getId().equals(
             ApplicationMetricsConstants.UPDATED_EVENT_TYPE)) {
           // This type of events are parsed in time-stamp descending order
           // which means the previous event could override the information
@@ -442,8 +453,9 @@ public final class TimelineEntityV2Converter {
     return ApplicationReport.newInstance(
         ApplicationId.fromString(entity.getId()),
         latestApplicationAttemptId, user, queue, name, null, -1, null, state,
-        diagnosticsInfo, null, createdTime, finishedTime, finalStatus,
-        appResources, null, progress, type, null, appTags, unmanagedApplication,
+        diagnosticsInfo, null, createdTime, launchTime,
+        finishedTime, finalStatus, appResources, null,
+        progress, type, null, appTags, unmanagedApplication,
         Priority.newInstance(applicationPriority), appNodeLabelExpression,
         amNodeLabelExpression);
   }

@@ -408,7 +408,7 @@ public class TestDatanodeManager {
       storageIDs[i] = "storageID-" + i;
     }
 
-    // set first 2 locations as decomissioned
+    // set first 2 locations as decommissioned
     locs[0].setDecommissioned();
     locs[1].setDecommissioned();
 

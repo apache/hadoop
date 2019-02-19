@@ -16,52 +16,45 @@
  */
 package org.apache.hadoop.hdds.scm.block;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.StorageUnit;
-import org.apache.hadoop.hdds.HddsUtils;
-import org.apache.hadoop.hdds.client.ContainerBlockID;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdds.scm.ScmUtils;
-import org.apache.hadoop.hdds.scm.chillmode.ChillModePrecheck;
-import org.apache.hadoop.hdds.scm.container.ContainerManager;
-import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
-import org.apache.hadoop.hdds.scm.container.ContainerInfo;
-import org.apache.hadoop.hdds.scm.exceptions.SCMException;
-import org.apache.hadoop.hdds.scm.node.NodeManager;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
-import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
-import org.apache.hadoop.hdds.server.events.EventHandler;
-import org.apache.hadoop.hdds.server.events.EventPublisher;
-import org.apache.hadoop.metrics2.util.MBeans;
-import org.apache.hadoop.hdds.client.BlockID;
-import org.apache.hadoop.util.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.management.ObjectName;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import javax.management.ObjectName;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.StorageUnit;
+import org.apache.hadoop.hdds.HddsUtils;
+import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.client.ContainerBlockID;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.ScmUtils;
+import org.apache.hadoop.hdds.scm.chillmode.ChillModePrecheck;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
+import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.hdds.server.events.EventHandler;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.apache.hadoop.metrics2.util.MBeans;
+import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
-    .INVALID_BLOCK_SIZE;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
+import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes.INVALID_BLOCK_SIZE;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
 
 /** Block Manager manages the block access for SCM. */
 public class BlockManagerImpl implements EventHandler<Boolean>,
@@ -80,8 +73,6 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
   private final DeletedBlockLog deletedBlockLog;
   private final SCMBlockDeletingService blockDeletingService;
 
-  private final int containerProvisionBatchSize;
-  private final Random rand;
   private ObjectName mxBean;
   private ChillModePrecheck chillModePrecheck;
 
@@ -89,34 +80,25 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
    * Constructor.
    *
    * @param conf - configuration.
-   * @param nodeManager - node manager.
-   * @param pipelineManager - pipeline manager.
-   * @param containerManager - container manager.
-   * @param eventPublisher - event publisher.
+   * @param scm
    * @throws IOException
    */
-  public BlockManagerImpl(final Configuration conf,
-      final NodeManager nodeManager, final PipelineManager pipelineManager,
-      final ContainerManager containerManager, EventPublisher eventPublisher)
+  public BlockManagerImpl(final Configuration conf, StorageContainerManager scm)
       throws IOException {
-    this.pipelineManager = pipelineManager;
-    this.containerManager = containerManager;
+    Objects.requireNonNull(scm, "SCM cannot be null");
+    this.pipelineManager = scm.getPipelineManager();
+    this.containerManager = scm.getContainerManager();
 
     this.containerSize = (long)conf.getStorageSize(
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE,
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT,
         StorageUnit.BYTES);
 
-    this.containerProvisionBatchSize =
-        conf.getInt(
-            ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE,
-            ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE_DEFAULT);
-    rand = new Random();
-
     mxBean = MBeans.register("BlockManager", "BlockManagerImpl", this);
 
     // SCM block deleting transaction log and deleting service.
-    deletedBlockLog = new DeletedBlockLogImpl(conf, containerManager);
+    deletedBlockLog = new DeletedBlockLogImpl(conf, scm.getContainerManager(),
+        scm.getScmMetadataStore());
     long svcInterval =
         conf.getTimeDuration(OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
             OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT,
@@ -128,7 +110,8 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
             TimeUnit.MILLISECONDS);
     blockDeletingService =
         new SCMBlockDeletingService(deletedBlockLog, containerManager,
-            nodeManager, eventPublisher, svcInterval, serviceTimeout, conf);
+            scm.getScmNodeManager(), scm.getEventQueue(), svcInterval,
+            serviceTimeout, conf);
     chillModePrecheck = new ChillModePrecheck(conf);
   }
 
@@ -149,32 +132,6 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
   public void stop() throws IOException {
     this.blockDeletingService.shutdown();
     this.close();
-  }
-
-  /**
-   * Pre allocate specified count of containers for block creation.
-   *
-   * @param count - Number of containers to allocate.
-   * @param type - Type of containers
-   * @param factor - how many copies needed for this container.
-   * @throws IOException
-   */
-  private synchronized void preAllocateContainers(int count,
-      ReplicationType type, ReplicationFactor factor, String owner) {
-    for (int i = 0; i < count; i++) {
-      ContainerInfo containerInfo;
-      try {
-        // TODO: Fix this later when Ratis is made the Default.
-        containerInfo = containerManager.allocateContainer(
-            type, factor, owner);
-
-        if (containerInfo == null) {
-          LOG.warn("Unable to allocate container.");
-        }
-      } catch (IOException ex) {
-        LOG.warn("Unable to allocate container.", ex);
-      }
-    }
   }
 
   /**
@@ -201,51 +158,43 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
     /*
       Here is the high level logic.
 
-      1. We try to find containers in open state.
+      1. We try to find pipelines in open state.
 
-      2. If there are no containers in open state, then we will pre-allocate a
-      bunch of containers in SCM and try again.
+      2. If there are no pipelines in OPEN state, then we try to create one.
 
-      TODO : Support random picking of two containers from the list. So we can
-             use different kind of policies.
+      3. We allocate a block from the available containers in the selected
+      pipeline.
+
+      TODO : #CLUTIL Support random picking of two containers from the list.
+      So we can use different kind of policies.
     */
 
     ContainerInfo containerInfo;
 
-    // look for OPEN containers that match the criteria.
-    containerInfo = containerManager
-        .getMatchingContainer(size, owner, type, factor,
-            HddsProtos.LifeCycleState.OPEN);
-
-    // We did not find OPEN Containers. This generally means
-    // that most of our containers are full or we have not allocated
-    // containers of the type and replication factor. So let us go and
-    // allocate some.
-
-    // Even though we have already checked the containers in OPEN
-    // state, we have to check again as we only hold a read lock.
-    // Some other thread might have pre-allocated container in meantime.
-    if (containerInfo == null) {
-      synchronized (this) {
-        if (!containerManager.getContainers(HddsProtos.LifeCycleState.OPEN)
-            .isEmpty()) {
-          containerInfo = containerManager
-              .getMatchingContainer(size, owner, type, factor,
-                  HddsProtos.LifeCycleState.OPEN);
+    while (true) {
+      List<Pipeline> availablePipelines = pipelineManager
+          .getPipelines(type, factor, Pipeline.PipelineState.OPEN);
+      Pipeline pipeline;
+      if (availablePipelines.size() == 0) {
+        try {
+          // TODO: #CLUTIL Remove creation logic when all replication types and
+          // factors are handled by pipeline creator
+          pipeline = pipelineManager.createPipeline(type, factor);
+        } catch (IOException e) {
+          break;
         }
-
-        if (containerInfo == null) {
-          preAllocateContainers(containerProvisionBatchSize, type, factor,
-              owner);
-          containerInfo = containerManager
-              .getMatchingContainer(size, owner, type, factor,
-                  HddsProtos.LifeCycleState.OPEN);
-        }
+      } else {
+        // TODO: #CLUTIL Make the selection policy driven.
+        pipeline = availablePipelines
+            .get((int) (Math.random() * availablePipelines.size()));
       }
-    }
 
-    if (containerInfo != null) {
-      return newBlock(containerInfo);
+      // look for OPEN containers that match the criteria.
+      containerInfo = containerManager
+          .getMatchingContainer(size, owner, pipeline);
+      if (containerInfo != null) {
+        return newBlock(containerInfo);
+      }
     }
 
     // we have tried all strategies we know and but somehow we are not able

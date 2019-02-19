@@ -23,7 +23,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.anyInt;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -642,6 +643,16 @@ public class TestIPC {
   }
 
   /**
+   * Mock socket class to help inject an exception for HADOOP-7428.
+   */
+  static class MockSocket extends Socket {
+    @Override
+    public synchronized void setSoTimeout(int timeout) {
+      throw new RuntimeException("Injected fault");
+    }
+  }
+
+  /**
    * Test that, if a RuntimeException is thrown after creating a socket
    * but before successfully connecting to the IPC server, that the
    * failure is handled properly. This is a regression test for
@@ -654,11 +665,8 @@ public class TestIPC {
     SocketFactory spyFactory = spy(NetUtils.getDefaultSocketFactory(conf));
     Mockito.doAnswer(new Answer<Socket>() {
       @Override
-      public Socket answer(InvocationOnMock invocation) throws Throwable {
-        Socket s = spy((Socket)invocation.callRealMethod());
-        doThrow(new RuntimeException("Injected fault")).when(s)
-          .setSoTimeout(anyInt());
-        return s;
+      public Socket answer(InvocationOnMock invocation) {
+        return new MockSocket();
       }
     }).when(spyFactory).createSocket();
       
@@ -861,7 +869,7 @@ public class TestIPC {
       }
       // wait until reader put a call to callQueue, to make sure all readers
       // are blocking on the queue after initialClients threads are started.
-      verify(spy, timeout(5000).times(i + 1)).put(Mockito.<Call>anyObject());
+      verify(spy, timeout(5000).times(i + 1)).put(any());
     }
 
     try {
@@ -1598,11 +1606,11 @@ public class TestIPC {
     Socket s;
     // don't attempt bind with no service host.
     s = checkConnect(null, asProxy);
-    Mockito.verify(s, Mockito.never()).bind(Mockito.any(SocketAddress.class));
+    Mockito.verify(s, Mockito.never()).bind(any(SocketAddress.class));
 
     // don't attempt bind with service host not belonging to this host.
     s = checkConnect("1.2.3.4", asProxy);
-    Mockito.verify(s, Mockito.never()).bind(Mockito.any(SocketAddress.class));
+    Mockito.verify(s, Mockito.never()).bind(any(SocketAddress.class));
 
     // do attempt bind when service host is this host.
     InetAddress addr = InetAddress.getLocalHost();
@@ -1637,7 +1645,7 @@ public class TestIPC {
     SocketFactory mockFactory = Mockito.mock(SocketFactory.class);
     Mockito.doReturn(s).when(mockFactory).createSocket();
     doThrow(expectedConnectEx).when(s).connect(
-        Mockito.any(SocketAddress.class), Mockito.anyInt());
+        any(SocketAddress.class), Mockito.anyInt());
 
     // do a dummy call and expect it to throw an exception on connect.
     // tests should verify if/how a bind occurred.

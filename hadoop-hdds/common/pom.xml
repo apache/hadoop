@@ -59,6 +59,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
           <groupId>io.dropwizard.metrics</groupId>
           <artifactId>metrics-core</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.bouncycastle</groupId>
+          <artifactId>bcprov-jdk15on</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
@@ -81,7 +85,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>rocksdbjni</artifactId>
       <version>5.14.2</version>
     </dependency>
-
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
@@ -109,7 +112,31 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>commons-pool2</artifactId>
       <version>2.6.0</version>
     </dependency>
-
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk15on</artifactId>
+      <version>${bouncycastle.version}</version>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/commons-validator/commons-validator -->
+    <dependency>
+      <groupId>commons-validator</groupId>
+      <artifactId>commons-validator</artifactId>
+      <version>1.6</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.jaegertracing</groupId>
+      <artifactId>jaeger-client</artifactId>
+      <version>0.33.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.opentracing</groupId>
+      <artifactId>opentracing-util</artifactId>
+      <version>0.31.0</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -232,6 +259,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <include>StorageContainerLocationProtocol.proto</include>
                   <include>hdds.proto</include>
                   <include>ScmBlockLocationProtocol.proto</include>
+                  <include>SCMSecurityProtocol.proto</include>
                 </includes>
               </source>
             </configuration>

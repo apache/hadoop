@@ -17,21 +17,19 @@
 
 package org.apache.hadoop.ozone.client.io;
 
-import org.apache.hadoop.hdds.scm.storage.ChunkInputStream;
-
 import java.io.IOException;
 import java.io.InputStream;
 
 /**
  * OzoneInputStream is used to read data from Ozone.
- * It uses SCM's {@link ChunkInputStream} for reading the data.
+ * It uses {@link KeyInputStream} for reading the data.
  */
 public class OzoneInputStream extends InputStream {
 
   private final InputStream inputStream;
 
   /**
-   * Constructs OzoneInputStream with ChunkInputStream.
+   * Constructs OzoneInputStream with KeyInputStream.
    *
    * @param inputStream
    */

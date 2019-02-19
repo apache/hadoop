@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.service.monitor.ComponentHealthThresholdMonitor;
 import org.apache.hadoop.yarn.service.monitor.probe.MonitorUtils;
 import org.apache.hadoop.yarn.service.monitor.probe.Probe;
 import org.apache.hadoop.yarn.service.containerlaunch.ContainerLaunchService;
+import org.apache.hadoop.yarn.service.provider.ProviderService;
 import org.apache.hadoop.yarn.service.provider.ProviderUtils;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.ServiceUtils;
@@ -79,6 +80,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -695,19 +697,22 @@ public class Component implements EventHandler<ComponentEvent> {
         "[COMPONENT {}]: Assigned {} to component instance {} and launch on host {} ",
         getName(), container.getId(), instance.getCompInstanceName(),
         container.getNodeId());
+    Future<ProviderService.ResolvedLaunchParams> resolvedParamFuture;
     if (!(upgradeStatus.isCompleted() && cancelUpgradeStatus.isCompleted())) {
       UpgradeStatus status = !cancelUpgradeStatus.isCompleted() ?
           cancelUpgradeStatus : upgradeStatus;
 
-      scheduler.getContainerLaunchService()
+      resolvedParamFuture = scheduler.getContainerLaunchService()
           .launchCompInstance(scheduler.getApp(), instance, container,
               createLaunchContext(status.getTargetSpec(),
                   status.getTargetVersion()));
     } else {
-      scheduler.getContainerLaunchService().launchCompInstance(
+      resolvedParamFuture = scheduler.getContainerLaunchService()
+          .launchCompInstance(
           scheduler.getApp(), instance, container,
           createLaunchContext(componentSpec, scheduler.getApp().getVersion()));
     }
+    instance.updateResolvedLaunchParams(resolvedParamFuture);
   }
 
   public ContainerLaunchService.ComponentLaunchContext createLaunchContext(

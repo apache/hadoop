@@ -162,9 +162,9 @@ public class PathLocation {
       sb.append(nsId + "->" + path);
     }
     if (this.destinations.size() > 1) {
-      sb.append(" [");
-      sb.append(this.destOrder.toString());
-      sb.append("]");
+      sb.append(" [")
+          .append(this.destOrder.toString())
+          .append("]");
     }
     return sb.toString();
   }

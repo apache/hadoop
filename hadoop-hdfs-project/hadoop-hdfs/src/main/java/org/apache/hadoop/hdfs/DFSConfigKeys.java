@@ -1285,6 +1285,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY =
       HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY;
 
+  public static final String DFS_NAMENODE_SEND_QOP_ENABLED =
+      "dfs.namenode.send.qop.enabled";
+  public static final boolean DFS_NAMENODE_SEND_QOP_ENABLED_DEFAULT = false;
+
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry 
   @Deprecated
   public static final String  DFS_CLIENT_RETRY_POLICY_ENABLED_KEY

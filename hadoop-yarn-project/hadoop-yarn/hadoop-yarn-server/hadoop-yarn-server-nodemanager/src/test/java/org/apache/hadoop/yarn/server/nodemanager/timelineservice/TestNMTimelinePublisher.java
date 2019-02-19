@@ -67,6 +67,8 @@ public class TestNMTimelinePublisher {
     conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
     conf.setLong(YarnConfiguration.ATS_APP_COLLECTOR_LINGER_PERIOD_IN_MS,
         3000L);
+    conf.setBoolean(YarnConfiguration.NM_PUBLISH_CONTAINER_EVENTS_ENABLED,
+        true);
     timelineClient = new DummyTimelineClient(null);
     Context context = createMockContext();
     dispatcher = new DrainDispatcher();

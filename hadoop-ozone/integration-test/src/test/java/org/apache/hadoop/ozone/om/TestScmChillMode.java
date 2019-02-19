@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.ozone.om;
 
-import com.google.common.util.concurrent.AtomicDouble;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -128,9 +127,7 @@ public class TestScmChillMode {
     Map<String, OmKeyInfo> keyLocations = helper.createKeys(100, 4096);
     final List<ContainerInfo> containers = cluster
         .getStorageContainerManager().getContainerManager().getContainers();
-    GenericTestUtils.waitFor(() -> {
-      return containers.size() > 10;
-    }, 100, 1000);
+    GenericTestUtils.waitFor(() -> containers.size() >= 3, 100, 1000);
 
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
     String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
@@ -251,15 +248,11 @@ public class TestScmChillMode {
     Map<String, OmKeyInfo> keyLocations = helper.createKeys(100 * 2, 4096);
     final List<ContainerInfo> containers = miniCluster
         .getStorageContainerManager().getContainerManager().getContainers();
-    GenericTestUtils.waitFor(() -> {
-      return containers.size() > 10;
-    }, 100, 1000 * 2);
+    GenericTestUtils.waitFor(() -> containers.size() >= 3, 100, 1000 * 2);
 
     // Removing some container to keep them open.
     containers.remove(0);
-    containers.remove(1);
-    containers.remove(2);
-    containers.remove(3);
+    containers.remove(0);
 
     // Close remaining containers
     SCMContainerManager mapping = (SCMContainerManager) miniCluster
@@ -300,16 +293,11 @@ public class TestScmChillMode {
     assertTrue(scm.isInChillMode());
     assertFalse(logCapturer.getOutput().contains("SCM exiting chill mode."));
     assertTrue(scm.getCurrentContainerThreshold() == 0);
-    AtomicDouble curThreshold = new AtomicDouble();
-    AtomicDouble lastReportedThreshold = new AtomicDouble();
     for (HddsDatanodeService dn : miniCluster.getHddsDatanodes()) {
       dn.start(null);
-      GenericTestUtils.waitFor(() -> {
-        curThreshold.set(scm.getCurrentContainerThreshold());
-        return curThreshold.get() > lastReportedThreshold.get();
-      }, 100, 1000 * 5);
-      lastReportedThreshold.set(curThreshold.get());
     }
+    GenericTestUtils
+        .waitFor(() -> scm.getCurrentContainerThreshold() == 1.0, 100, 20000);
     cluster = miniCluster;
     double chillModeCutoff = conf
         .getDouble(HddsConfigKeys.HDDS_SCM_CHILLMODE_THRESHOLD_PCT,

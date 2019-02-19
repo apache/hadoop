@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase;
 import org.apache.hadoop.util.Progressable;
 
@@ -71,6 +72,8 @@ public class MockS3AFileSystem extends S3AFileSystem {
   /** Log the entire stack of where operations are called: {@value}.  */
   public static final int LOG_STACK = 2;
 
+  private final Path root;
+
   /**
    * This can be edited to set the log level of events through the
    * mock FS.
@@ -85,8 +88,10 @@ public class MockS3AFileSystem extends S3AFileSystem {
       Pair<StagingTestBase.ClientResults, StagingTestBase.ClientErrors> outcome) {
     this.mock = mock;
     this.outcome = outcome;
-    setUri(FS_URI);
+    setUri(FS_URI, false);
     setBucket(BUCKET);
+    setEncryptionSecrets(new EncryptionSecrets());
+    root = new Path(FS_URI.toString());
   }
 
   public Pair<StagingTestBase.ClientResults, StagingTestBase.ClientErrors>
@@ -119,8 +124,18 @@ public class MockS3AFileSystem extends S3AFileSystem {
   }
 
   @Override
+  public URI getUri() {
+    return FS_URI;
+  }
+
+  @Override
   public Path getWorkingDirectory() {
-    return new Path("s3a://" + BUCKET + "/work");
+    return new Path(root, "work");
+  }
+
+  @Override
+  public Path qualify(final Path path) {
+    return path.makeQualified(FS_URI, getWorkingDirectory());
   }
 
   @Override

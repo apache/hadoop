@@ -45,6 +45,11 @@ public final class Pipeline {
   private PipelineState state;
   private Map<DatanodeDetails, Long> nodeStatus;
 
+  /**
+   * The immutable properties of pipeline object is used in
+   * ContainerStateManager#getMatchingContainerByPipeline to take a lock on
+   * the container allocations for a particular pipeline.
+   */
   private Pipeline(PipelineID id, ReplicationType type,
       ReplicationFactor factor, PipelineState state,
       Map<DatanodeDetails, Long> nodeStatus) {

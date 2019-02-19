@@ -110,8 +110,9 @@ public class AuxServices extends AbstractService
   private Path stateStoreRoot = null;
   private FileSystem stateStoreFs = null;
 
-  private Path manifest;
-  private FileSystem manifestFS;
+  private volatile boolean manifestEnabled = false;
+  private volatile Path manifest;
+  private volatile FileSystem manifestFS;
   private Timer manifestReloadTimer;
   private TimerTask manifestReloadTask;
   private long manifestReloadInterval;
@@ -137,6 +138,13 @@ public class AuxServices extends AbstractService
     this.mapper = new ObjectMapper();
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     // Obtain services from configuration in init()
+  }
+
+  /**
+   * Returns whether aux services manifest / dynamic loading is enabled.
+   */
+  public boolean isManifestEnabled() {
+    return manifestEnabled;
   }
 
   /**
@@ -480,8 +488,31 @@ public class AuxServices extends AbstractService
    *
    * @throws IOException if manifest can't be loaded
    */
-  private void reloadManifest() throws IOException {
+  @VisibleForTesting
+  protected void reloadManifest() throws IOException {
     loadManifest(getConfig(), true);
+  }
+
+  /**
+   * Reloads auxiliary services. Must be called after service init.
+   *
+   * @param services a list of auxiliary services
+   * @throws IOException if aux services have not been started yet or dynamic
+   * reloading is not enabled
+   */
+  public synchronized void reload(AuxServiceRecords services) throws
+      IOException {
+    if (!manifestEnabled) {
+      throw new IOException("Dynamic reloading is not enabled via " +
+          YarnConfiguration.NM_AUX_SERVICES_MANIFEST_ENABLED);
+    }
+    if (getServiceState() != Service.STATE.STARTED) {
+      throw new IOException("Auxiliary services have not been started yet, " +
+          "please retry later");
+    }
+    LOG.info("Received list of auxiliary services: " + mapper
+        .writeValueAsString(services));
+    loadServices(services, getConfig(), true);
   }
 
   private boolean checkManifestPermissions(FileStatus status) throws
@@ -562,6 +593,10 @@ public class AuxServices extends AbstractService
   @VisibleForTesting
   protected synchronized void loadManifest(Configuration conf, boolean
       startServices) throws IOException {
+    if (!manifestEnabled) {
+      throw new IOException("Dynamic reloading is not enabled via " +
+          YarnConfiguration.NM_AUX_SERVICES_MANIFEST_ENABLED);
+    }
     if (manifest == null) {
       return;
     }
@@ -578,6 +613,19 @@ public class AuxServices extends AbstractService
       return;
     }
     AuxServiceRecords services = maybeReadManifestFile();
+    loadServices(services, conf, startServices);
+  }
+
+  /**
+   * Updates current aux services based on changes found in the service list.
+   *
+   * @param services list of auxiliary services
+   * @param conf configuration
+   * @param startServices if true starts services, otherwise only inits services
+   * @throws IOException
+   */
+  private synchronized void loadServices(AuxServiceRecords services,
+      Configuration conf, boolean startServices) throws IOException {
     if (services == null) {
       // read did not occur or no changes detected
       return;
@@ -613,7 +661,7 @@ public class AuxServices extends AbstractService
       }
     }
 
-    // remove aux services that do not appear in the manifest
+    // remove aux services that do not appear in the new list
     Set<String> servicesToRemove = new HashSet<>(serviceMap.keySet());
     servicesToRemove.removeAll(loadedAuxServices);
     for (String sName : servicesToRemove) {
@@ -622,7 +670,7 @@ public class AuxServices extends AbstractService
     }
 
     if (!foundChanges) {
-      LOG.info("No auxiliary services changes detected in manifest");
+      LOG.info("No auxiliary services changes detected");
     }
   }
 
@@ -701,8 +749,10 @@ public class AuxServices extends AbstractService
           STATE_STORE_ROOT_NAME);
       stateStoreFs = FileSystem.getLocal(conf);
     }
-    String manifestStr = conf.get(YarnConfiguration.NM_AUX_SERVICES_MANIFEST);
-    if (manifestStr == null) {
+    manifestEnabled = conf.getBoolean(
+        YarnConfiguration.NM_AUX_SERVICES_MANIFEST_ENABLED,
+        YarnConfiguration.DEFAULT_NM_AUX_SERVICES_MANIFEST_ENABLED);
+    if (!manifestEnabled) {
       Collection<String> auxNames = conf.getStringCollection(
           YarnConfiguration.NM_AUX_SERVICES);
       for (final String sName : auxNames) {
@@ -713,14 +763,20 @@ public class AuxServices extends AbstractService
         addService(sName, s, service);
       }
     } else {
-      manifest = new Path(manifestStr);
-      manifestFS = FileSystem.get(new URI(manifestStr), conf);
-      loadManifest(conf, false);
+      String manifestStr = conf.get(YarnConfiguration.NM_AUX_SERVICES_MANIFEST);
+      if (manifestStr != null) {
+        manifest = new Path(manifestStr);
+        manifestFS = FileSystem.get(new URI(manifestStr), conf);
+        loadManifest(conf, false);
+        manifestReloadInterval = conf.getLong(
+            YarnConfiguration.NM_AUX_SERVICES_MANIFEST_RELOAD_MS,
+            YarnConfiguration.DEFAULT_NM_AUX_SERVICES_MANIFEST_RELOAD_MS);
+        manifestReloadTask = new ManifestReloadTask();
+      } else {
+        LOG.info("Auxiliary services manifest is enabled, but no manifest " +
+            "file is specified in the configuration.");
+      }
     }
-    manifestReloadInterval = conf.getLong(
-        YarnConfiguration.NM_AUX_SERVICES_MANIFEST_RELOAD_MS,
-        YarnConfiguration.DEFAULT_NM_AUX_SERVICES_MANIFEST_RELOAD_MS);
-    manifestReloadTask = new ManifestReloadTask();
 
     super.serviceInit(conf);
   }
@@ -752,8 +808,10 @@ public class AuxServices extends AbstractService
       String name = entry.getKey();
       startAuxService(name, service, serviceRecordMap.get(name));
     }
-    if (manifest != null && manifestReloadInterval > 0) {
-      manifestReloadTimer = new Timer("AuxServicesManifestRelaod-Timer",
+    if (manifestEnabled && manifest != null && manifestReloadInterval > 0) {
+      LOG.info("Scheduling reloading auxiliary services manifest file at " +
+          "interval " + manifestReloadInterval + " ms");
+      manifestReloadTimer = new Timer("AuxServicesManifestReload-Timer",
           true);
       manifestReloadTimer.schedule(manifestReloadTask,
           manifestReloadInterval, manifestReloadInterval);

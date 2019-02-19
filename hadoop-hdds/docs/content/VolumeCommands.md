@@ -52,7 +52,7 @@ volume has a quota of 1TB, and the owner is _bilbo_.
 
 ### Delete
 
-The volume delete commands allows an administrator to delete a volume. If the
+The volume delete command allows an administrator to delete a volume. If the
 volume is not empty then this command will fail.
 
 ***Params:***

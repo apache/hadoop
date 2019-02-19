@@ -72,7 +72,9 @@ public class OzoneHddsDatanodeService implements ServicePlugin {
   @Override
   public void stop() {
     try {
-      handler.close();
+      if (handler != null) {
+        handler.close();
+      }
     } catch (Exception e) {
       throw new RuntimeException("Can't stop the Object Store Rest server", e);
     }

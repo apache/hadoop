@@ -329,9 +329,6 @@ public final class OzoneConfigKeys {
       DFS_RATIS_SERVER_FAILURE_DURATION_DEFAULT =
       ScmConfigKeys.DFS_RATIS_SERVER_FAILURE_DURATION_DEFAULT;
 
-  public static final String OZONE_SCM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL =
-      "ozone.web.authentication.kerberos.principal";
-
   public static final String HDDS_DATANODE_PLUGINS_KEY =
       "hdds.datanode.plugins";
 
@@ -345,6 +342,10 @@ public final class OzoneConfigKeys {
       "hdds.datanode.storage.utilization.critical.threshold";
   public static final double
       HDDS_DATANODE_STORAGE_UTILIZATION_CRITICAL_THRESHOLD_DEFAULT = 0.75;
+
+  public static final String OZONE_SECURITY_ENABLED_KEY =
+      "ozone.security.enabled";
+  public static final boolean OZONE_SECURITY_ENABLED_DEFAULT = false;
 
   public static final String OZONE_CONTAINER_COPY_WORKDIR =
       "hdds.datanode.replication.work.dir";
@@ -369,6 +370,13 @@ public final class OzoneConfigKeys {
       "ozone.acl.enabled";
   public static final boolean OZONE_ACL_ENABLED_DEFAULT =
       false;
+
+  //For technical reasons this is unused and hardcoded to the
+  // OzoneFileSystem.initialize.
+  public static final String OZONE_FS_ISOLATED_CLASSLOADER =
+      "ozone.fs.isolated-classloader";
+
+
 
   /**
    * There is no need to instantiate this class.

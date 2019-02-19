@@ -20,6 +20,7 @@ package org.apache.hadoop.crypto.key;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -54,7 +55,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public abstract class KeyProvider {
+public abstract class KeyProvider implements Closeable {
   public static final String DEFAULT_CIPHER_NAME =
       CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_DEFAULT_CIPHER_KEY;
   public static final String DEFAULT_CIPHER =

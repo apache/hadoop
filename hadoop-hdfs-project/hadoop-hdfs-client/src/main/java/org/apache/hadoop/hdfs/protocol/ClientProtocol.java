@@ -176,6 +176,7 @@ public interface ClientProtocol {
    *                     policy. ecPolicyName and SHOULD_REPLICATE CreateFlag
    *                     are mutually exclusive. It's invalid to set both
    *                     SHOULD_REPLICATE flag and a non-null ecPolicyName.
+   *@param storagePolicy the name of the storage policy.
    *
    * @return the status of the created file, it could be null if the server
    *           doesn't support returning the file status
@@ -209,7 +210,8 @@ public interface ClientProtocol {
   HdfsFileStatus create(String src, FsPermission masked,
       String clientName, EnumSetWritable<CreateFlag> flag,
       boolean createParent, short replication, long blockSize,
-      CryptoProtocolVersion[] supportedVersions, String ecPolicyName)
+      CryptoProtocolVersion[] supportedVersions, String ecPolicyName,
+      String storagePolicy)
       throws IOException;
 
   /**
@@ -696,10 +698,11 @@ public interface ClientProtocol {
       boolean needLocation) throws IOException;
 
   /**
-   * Get listing of all the snapshottable directories.
-   *
-   * @return Information about all the current snapshottable directory
-   * @throws IOException If an I/O error occurred
+   * Get the list of snapshottable directories that are owned
+   * by the current user. Return all the snapshottable directories if the
+   * current user is a super user.
+   * @return The list of all the current snapshottable directories.
+   * @throws IOException If an I/O error occurred.
    */
   @Idempotent
   @ReadOnly(isCoordinated = true)
@@ -1807,7 +1810,7 @@ public interface ClientProtocol {
    * @throws IOException
    */
   @Idempotent
-  @ReadOnly(isCoordinated = true)
+  @ReadOnly(activeOnly = true)
   void msync() throws IOException;
 
   /**

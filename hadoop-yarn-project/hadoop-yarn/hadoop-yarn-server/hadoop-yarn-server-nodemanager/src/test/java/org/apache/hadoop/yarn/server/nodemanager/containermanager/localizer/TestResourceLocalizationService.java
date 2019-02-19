@@ -23,14 +23,14 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyShort;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.argThat;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isA;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyShort;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -65,7 +65,6 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionMatcher;
 import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
@@ -304,19 +303,19 @@ public class TestResourceLocalizationService {
         p = new Path((new URI(p.toString())).getPath());
         Path usercache = new Path(p, ContainerLocalizer.USERCACHE);
         verify(spylfs)
-            .rename(eq(usercache), any(Path.class), any(Options.Rename.class));
+            .rename(eq(usercache), any(Path.class), any());
         verify(spylfs)
             .mkdir(eq(usercache),
                 eq(defaultPerm), eq(true));
         Path publicCache = new Path(p, ContainerLocalizer.FILECACHE);
         verify(spylfs)
-            .rename(eq(usercache), any(Path.class), any(Options.Rename.class));
+            .rename(eq(usercache), any(Path.class), any());
         verify(spylfs)
             .mkdir(eq(publicCache),
                 eq(defaultPerm), eq(true));
         Path nmPriv = new Path(p, ResourceLocalizationService.NM_PRIVATE_DIR);
         verify(spylfs)
-            .rename(eq(usercache), any(Path.class), any(Options.Rename.class));
+            .rename(eq(usercache), any(Path.class), any());
         verify(spylfs).mkdir(eq(nmPriv),
             eq(ResourceLocalizationService.NM_PRIVATE_PERM), eq(true));
       }
@@ -899,14 +898,8 @@ public class TestResourceLocalizationService {
       spyService.handle(new ApplicationLocalizationEvent(
           LocalizationEventType.INIT_APPLICATION_RESOURCES, app));
       ArgumentMatcher<ApplicationEvent> matchesAppInit =
-        new ArgumentMatcher<ApplicationEvent>() {
-          @Override
-          public boolean matches(Object o) {
-            ApplicationEvent evt = (ApplicationEvent) o;
-            return evt.getType() == ApplicationEventType.APPLICATION_INITED
+          evt -> evt.getType() == ApplicationEventType.APPLICATION_INITED
               && appId == evt.getApplicationID();
-          }
-        };
       dispatcher.await();
       verify(applicationBus).handle(argThat(matchesAppInit));
 
@@ -1055,14 +1048,8 @@ public class TestResourceLocalizationService {
       dispatcher.await();
       // verify container notification
       ArgumentMatcher<ContainerEvent> matchesContainerLoc =
-        new ArgumentMatcher<ContainerEvent>() {
-          @Override
-          public boolean matches(Object o) {
-            ContainerEvent evt = (ContainerEvent) o;
-            return evt.getType() == ContainerEventType.RESOURCE_LOCALIZED
+          evt -> evt.getType() == ContainerEventType.RESOURCE_LOCALIZED
               && c.getContainerId() == evt.getContainerID();
-          }
-        };
       // total 3 resource localzation calls. one for each resource.
       verify(containerBus, times(3)).handle(argThat(matchesContainerLoc));
         
@@ -1076,8 +1063,8 @@ public class TestResourceLocalizationService {
     }
   }
 
-  private static class DownloadingPathsMatcher extends ArgumentMatcher<Path[]>
-      implements VarargMatcher {
+  private static class DownloadingPathsMatcher implements
+      ArgumentMatcher<Path[]>, VarargMatcher {
     static final long serialVersionUID = 0;
 
     private transient Set<Path> matchPaths;
@@ -1087,8 +1074,7 @@ public class TestResourceLocalizationService {
     }
 
     @Override
-    public boolean matches(Object varargs) {
-      Path[] downloadingPaths = (Path[]) varargs;
+    public boolean matches(Path[] downloadingPaths) {
       if (matchPaths.size() != downloadingPaths.length) {
         return false;
       }
@@ -1226,14 +1212,8 @@ public class TestResourceLocalizationService {
     spyService.handle(new ApplicationLocalizationEvent(
         LocalizationEventType.INIT_APPLICATION_RESOURCES, app));
     ArgumentMatcher<ApplicationEvent> matchesAppInit =
-        new ArgumentMatcher<ApplicationEvent>() {
-          @Override
-          public boolean matches(Object o) {
-            ApplicationEvent evt = (ApplicationEvent) o;
-            return evt.getType() == ApplicationEventType.APPLICATION_INITED
+        evt -> evt.getType() == ApplicationEventType.APPLICATION_INITED
                 && appId == evt.getApplicationID();
-          }
-        };
     dispatcher.await();
     verify(applicationBus).handle(argThat(matchesAppInit));
   }
@@ -1323,14 +1303,8 @@ public class TestResourceLocalizationService {
     dispatcher.await();
     // verify container notification
     ArgumentMatcher<ContainerEvent> successContainerLoc =
-        new ArgumentMatcher<ContainerEvent>() {
-          @Override
-          public boolean matches(Object o) {
-            ContainerEvent evt = (ContainerEvent) o;
-            return evt.getType() == ContainerEventType.RESOURCE_LOCALIZED
-                && c1.getContainerId() == evt.getContainerID();
-          }
-        };
+        evt -> evt.getType() == ContainerEventType.RESOURCE_LOCALIZED
+            && c1.getContainerId() == evt.getContainerID();
     // Only one resource gets localized for container c1.
     verify(containerBus).handle(argThat(successContainerLoc));
 
@@ -2909,14 +2883,9 @@ public class TestResourceLocalizationService {
       }
 
       ArgumentMatcher<ApplicationEvent> matchesAppDestroy =
-          new ArgumentMatcher<ApplicationEvent>() {
-            @Override
-            public boolean matches(Object o) {
-              ApplicationEvent evt = (ApplicationEvent) o;
-              return (evt.getType() == ApplicationEventType.APPLICATION_RESOURCES_CLEANEDUP)
-                  && appId == evt.getApplicationID();
-            }
-          };
+          evt -> evt.getType() ==
+              ApplicationEventType.APPLICATION_RESOURCES_CLEANEDUP
+              && appId == evt.getApplicationID();
 
       dispatcher.await();
 

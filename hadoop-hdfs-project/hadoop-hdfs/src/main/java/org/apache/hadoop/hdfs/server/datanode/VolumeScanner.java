@@ -21,9 +21,9 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -125,7 +125,7 @@ public class VolumeScanner extends Thread {
    * Each block pool has its own BlockIterator.
    */
   private final List<BlockIterator> blockIters =
-      new LinkedList<BlockIterator>();
+      new ArrayList<BlockIterator>();
 
   /**
    * Blocks which are suspect.
@@ -228,15 +228,15 @@ public class VolumeScanner extends Thread {
         " path %s%n", volume.getStorageID(), volume));
     synchronized (stats) {
       p.append(String.format("Bytes verified in last hour       : %57d%n",
-          stats.bytesScannedInPastHour));
-      p.append(String.format("Blocks scanned in current period  : %57d%n",
-          stats.blocksScannedInCurrentPeriod));
-      p.append(String.format("Blocks scanned since restart      : %57d%n",
-          stats.blocksScannedSinceRestart));
-      p.append(String.format("Block pool scans since restart    : %57d%n",
-          stats.scansSinceRestart));
-      p.append(String.format("Block scan errors since restart   : %57d%n",
-          stats.scanErrorsSinceRestart));
+          stats.bytesScannedInPastHour))
+          .append(String.format("Blocks scanned in current period  : %57d%n",
+              stats.blocksScannedInCurrentPeriod))
+          .append(String.format("Blocks scanned since restart      : %57d%n",
+              stats.blocksScannedSinceRestart))
+          .append(String.format("Block pool scans since restart    : %57d%n",
+              stats.scansSinceRestart))
+          .append(String.format("Block scan errors since restart   : %57d%n",
+              stats.scanErrorsSinceRestart));
       if (stats.nextBlockPoolScanStartMs > 0) {
         p.append(String.format("Hours until next block pool scan  : %57.3f%n",
             positiveMsToHours(stats.nextBlockPoolScanStartMs -

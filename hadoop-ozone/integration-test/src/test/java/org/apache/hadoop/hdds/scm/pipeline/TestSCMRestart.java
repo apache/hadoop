@@ -58,7 +58,7 @@ public class TestSCMRestart {
   public static void init() throws Exception {
     conf = new OzoneConfiguration();
     cluster = MiniOzoneCluster.newBuilder(conf)
-        .setNumDatanodes(6)
+        .setNumDatanodes(4)
         .setHbInterval(1000)
         .setHbProcessorInterval(1000)
         .build();

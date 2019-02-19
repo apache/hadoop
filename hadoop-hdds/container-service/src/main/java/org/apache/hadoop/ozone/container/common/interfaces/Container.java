@@ -50,10 +50,9 @@ public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
   /**
    * Deletes the container.
    *
-   * @param forceDelete   - whether this container should be deleted forcibly.
    * @throws StorageContainerException
    */
-  void delete(boolean forceDelete) throws StorageContainerException;
+  void delete() throws StorageContainerException;
 
   /**
    * Update the container.
@@ -83,6 +82,11 @@ public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
    * Marks the container for closing. Moves the container to CLOSING state.
    */
   void markContainerForClose() throws StorageContainerException;
+
+  /**
+   * Marks the container replica as unhealthy.
+   */
+  void markContainerUnhealthy() throws StorageContainerException;
 
   /**
    * Quasi Closes a open container, if it is already closed or does not exist a

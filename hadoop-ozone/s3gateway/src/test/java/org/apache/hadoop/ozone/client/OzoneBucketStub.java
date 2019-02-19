@@ -38,8 +38,12 @@ import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.client.OzoneMultipartUploadPartListParts.PartInfo;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.util.Time;
 
 /**
  * In-memory ozone bucket for testing.
@@ -83,12 +87,15 @@ public class OzoneBucketStub extends OzoneBucket {
   @Override
   public OzoneOutputStream createKey(String key, long size) throws IOException {
     return createKey(key, size, ReplicationType.STAND_ALONE,
-        ReplicationFactor.ONE);
+        ReplicationFactor.ONE, new HashMap<>());
   }
 
   @Override
   public OzoneOutputStream createKey(String key, long size,
-      ReplicationType type, ReplicationFactor factor) throws IOException {
+                                     ReplicationType type,
+                                     ReplicationFactor factor,
+                                     Map<String, String> metadata)
+      throws IOException {
     ByteArrayOutputStream byteArrayOutputStream =
         new ByteArrayOutputStream((int) size) {
           @Override
@@ -101,7 +108,7 @@ public class OzoneBucketStub extends OzoneBucket {
                 size,
                 System.currentTimeMillis(),
                 System.currentTimeMillis(),
-                new ArrayList<>(), type
+                new ArrayList<>(), type, metadata, null
             ));
             super.close();
           }
@@ -119,7 +126,7 @@ public class OzoneBucketStub extends OzoneBucket {
     if (keyDetails.containsKey(key)) {
       return keyDetails.get(key);
     } else {
-      throw new IOException("Lookup key failed, error:KEY_NOT_FOUND");
+      throw new OMException(ResultCodes.KEY_NOT_FOUND);
     }
   }
 
@@ -171,8 +178,8 @@ public class OzoneBucketStub extends OzoneBucket {
                                               int partNumber, String uploadID)
       throws IOException {
     String multipartUploadID = multipartUploadIdMap.get(key);
-    if (multipartUploadID == null || multipartUploadID != uploadID) {
-      throw new IOException("NO_SUCH_MULTIPART_UPLOAD_ERROR");
+    if (multipartUploadID == null || !multipartUploadID.equals(uploadID)) {
+      throw new OMException(ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
     } else {
       ByteArrayOutputStream byteArrayOutputStream =
           new ByteArrayOutputStream((int) size) {
@@ -198,21 +205,21 @@ public class OzoneBucketStub extends OzoneBucket {
       String uploadID, Map<Integer, String> partsMap) throws IOException {
 
     if (multipartUploadIdMap.get(key) == null) {
-      throw new IOException("NO_SUCH_MULTIPART_UPLOAD_ERROR");
+      throw new OMException(ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
     } else {
       final Map<Integer, Part> partsList = partList.get(key);
 
       if (partsMap.size() != partsList.size()) {
-        throw new IOException("MISMATCH_MULTIPART_LIST");
+        throw new OMException(ResultCodes.MISMATCH_MULTIPART_LIST);
       }
 
       int count = 1;
       for (Map.Entry<Integer, String> part: partsMap.entrySet()) {
         if (part.getKey() != count) {
-          throw new IOException("MISSING_UPLOAD_PARTS");
+          throw new OMException(ResultCodes.MISSING_UPLOAD_PARTS);
         } else if (!part.getValue().equals(
             partsList.get(part.getKey()).getPartName())) {
-          throw new IOException("MISMATCH_MULTIPART_LIST");
+          throw new OMException(ResultCodes.MISMATCH_MULTIPART_LIST);
         } else {
           count++;
         }
@@ -221,6 +228,65 @@ public class OzoneBucketStub extends OzoneBucket {
 
     return new OmMultipartUploadCompleteInfo(getVolumeName(), getName(), key,
         DigestUtils.sha256Hex(key));
+  }
+
+  @Override
+  public void abortMultipartUpload(String keyName, String uploadID) throws
+      IOException {
+    if (multipartUploadIdMap.get(keyName) == null) {
+      throw new OMException(ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
+    } else {
+      multipartUploadIdMap.remove(keyName);
+    }
+  }
+
+  @Override
+  public OzoneMultipartUploadPartListParts listParts(String key,
+      String uploadID, int partNumberMarker, int maxParts) throws IOException {
+    if (multipartUploadIdMap.get(key) == null) {
+      throw new OMException(ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
+    }
+    List<PartInfo> partInfoList = new ArrayList<>();
+
+    if (partList.get(key) == null) {
+      return new OzoneMultipartUploadPartListParts(ReplicationType.STAND_ALONE,
+          0, false);
+    } else {
+      Map<Integer, Part> partMap = partList.get(key);
+      Iterator<Map.Entry<Integer, Part>> partIterator =
+          partMap.entrySet().iterator();
+
+      int count = 0;
+      int nextPartNumberMarker = 0;
+      boolean truncated = false;
+      while (count < maxParts && partIterator.hasNext()) {
+        Map.Entry<Integer, Part> partEntry = partIterator.next();
+        nextPartNumberMarker = partEntry.getKey();
+        if (partEntry.getKey() > partNumberMarker) {
+          PartInfo partInfo = new PartInfo(partEntry.getKey(),
+              partEntry.getValue().getPartName(),
+              partEntry.getValue().getContent().length, Time.now());
+          partInfoList.add(partInfo);
+          count++;
+        }
+      }
+
+      if (partIterator.hasNext()) {
+        truncated = true;
+      } else {
+        truncated = false;
+        nextPartNumberMarker = 0;
+      }
+
+      OzoneMultipartUploadPartListParts ozoneMultipartUploadPartListParts =
+          new OzoneMultipartUploadPartListParts(ReplicationType.STAND_ALONE,
+              nextPartNumberMarker, truncated);
+      ozoneMultipartUploadPartListParts.addAllParts(partInfoList);
+
+      return ozoneMultipartUploadPartListParts;
+
+    }
+
   }
 
   /**

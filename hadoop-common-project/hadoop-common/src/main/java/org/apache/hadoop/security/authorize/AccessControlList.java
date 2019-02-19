@@ -295,9 +295,9 @@ public class AccessControlList implements Writable {
       sb.append('*');
     }
     else {
-      sb.append(getUsersString());
-      sb.append(" ");
-      sb.append(getGroupsString());
+      sb.append(getUsersString())
+          .append(" ")
+          .append(getGroupsString());
     }
     return sb.toString();
   }

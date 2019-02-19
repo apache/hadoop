@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.utils.db;
 
+import java.io.IOException;
 import org.apache.hadoop.hdfs.DFSUtil;
 
 /**
@@ -26,7 +27,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 public class StringCodec implements Codec<String> {
 
   @Override
-  public byte[] toPersistedFormat(String object) {
+  public byte[] toPersistedFormat(String object) throws IOException {
     if (object != null) {
       return DFSUtil.string2Bytes(object);
     } else {
@@ -35,7 +36,7 @@ public class StringCodec implements Codec<String> {
   }
 
   @Override
-  public String fromPersistedFormat(byte[] rawData) {
+  public String fromPersistedFormat(byte[] rawData) throws IOException {
     if (rawData != null) {
       return DFSUtil.bytes2String(rawData);
     } else {

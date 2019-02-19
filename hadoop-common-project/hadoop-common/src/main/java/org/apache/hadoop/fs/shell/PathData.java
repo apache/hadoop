@@ -484,9 +484,9 @@ public class PathData implements Comparable<PathData> {
       return decodedRemainder;
     } else {
       StringBuilder buffer = new StringBuilder();
-      buffer.append(scheme);
-      buffer.append(":");
-      buffer.append(decodedRemainder);
+      buffer.append(scheme)
+          .append(":")
+          .append(decodedRemainder);
       return buffer.toString();
     }
   }

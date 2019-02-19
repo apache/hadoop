@@ -58,6 +58,7 @@ import org.slf4j.event.Level;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Set;
 import java.util.List;
 import java.util.HashSet;
@@ -133,7 +134,7 @@ public class TestBlockDeletion {
     String keyName = UUID.randomUUID().toString();
 
     OzoneOutputStream out = bucket.createKey(keyName, value.getBytes().length,
-        ReplicationType.STAND_ALONE, ReplicationFactor.ONE);
+        ReplicationType.STAND_ALONE, ReplicationFactor.ONE, new HashMap<>());
     for (int i = 0; i < 100; i++) {
       out.write(value.getBytes());
     }
@@ -219,9 +220,9 @@ public class TestBlockDeletion {
   private void verifyTransactionsCommitted() throws IOException {
     DeletedBlockLogImpl deletedBlockLog =
         (DeletedBlockLogImpl) scm.getScmBlockManager().getDeletedBlockLog();
-    for (int txnID = 1; txnID <= maxTransactionId; txnID++) {
+    for (long txnID = 1; txnID <= maxTransactionId; txnID++) {
       Assert.assertNull(
-          deletedBlockLog.getDeletedStore().get(Longs.toByteArray(txnID)));
+          scm.getScmMetadataStore().getDeletedBlocksTXTable().get(txnID));
     }
   }
 

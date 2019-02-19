@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.constants;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.util.VersionInfo;
 
 /**
  * Responsible to keep all constant keys used in abfs rest client here.
@@ -43,7 +44,7 @@ public final class AbfsHttpConstants {
   public static final String OS_NAME = "os.name";
   public static final String OS_VERSION = "os.version";
 
-  public static final String CLIENT_VERSION = "Azure Blob FS/1.0";
+  public static final String CLIENT_VERSION = "Azure Blob FS/" + VersionInfo.getVersion();
 
   // Abfs Http Verb
   public static final String HTTP_METHOD_DELETE = "DELETE";

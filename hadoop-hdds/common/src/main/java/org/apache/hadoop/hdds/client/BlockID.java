@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.hdds.client;
 
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 
@@ -75,10 +74,9 @@ public class BlockID {
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this)
-        .append("containerID", containerBlockID.getContainerID())
-        .append("localID", containerBlockID.getLocalID())
-        .append("blockCommitSequenceId", blockCommitSequenceId)
+    return new StringBuffer().append(getContainerBlockID().toString())
+        .append(" bcId: ")
+        .append(blockCommitSequenceId)
         .toString();
   }
 

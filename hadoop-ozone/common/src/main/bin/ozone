@@ -18,7 +18,7 @@
 # The name of the script being executed.
 HADOOP_SHELL_EXECNAME="ozone"
 MYNAME="${BASH_SOURCE-$0}"
-
+JVM_PID="$$"
 ## @description  build up the hdfs command's usage text.
 ## @audience     public
 ## @stability    stable
@@ -69,7 +69,20 @@ function ozonecmd_case
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-tools"
     ;;
     classpath)
-      hadoop_do_classpath_subcommand HADOOP_CLASSNAME "$@"
+      if [[ "$#" -gt 0 ]]; then
+        OZONE_RUN_ARTIFACT_NAME="$1"
+        HADOOP_CLASSNAME="org.apache.hadoop.util.Classpath"
+        #remove the artifact name and replace it with glob
+        # (We need at least one argument to execute the Classpath helper class)
+        HADOOP_SUBCMD_ARGS[0]="--glob"
+      else
+        hadoop_finalize
+        echo "Usage: ozone classpath <ARTIFACTNAME>"
+        echo "Where the artifact name is one of:"
+        echo ""
+        ls -1 ${HADOOP_HDFS_HOME}/share/ozone/classpath/ | sed 's/.classpath//'
+        exit -1
+      fi
     ;;
     datanode)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"

@@ -35,6 +35,17 @@ message DatanodeDetailsProto {
     repeated Port ports = 4;
 }
 
+/**
+ Proto message encapsulating information required to uniquely identify a
+ OzoneManager.
+*/
+message OzoneManagerDetailsProto {
+    required string uuid = 1;          // UUID assigned to the OzoneManager.
+    required string ipAddress = 2;     // IP address of OM.
+    required string hostName = 3;      // Hostname of OM.
+    repeated Port ports = 4;
+}
+
 message Port {
     required string name = 1;
     required uint32 value = 2;
@@ -154,6 +165,7 @@ message ContainerWithPipeline {
 }
 
 message GetScmInfoRequestProto {
+    optional string traceID = 1;
 }
 
 message GetScmInfoRespsonseProto {
@@ -193,6 +205,30 @@ enum ScmOps {
 message ContainerBlockID {
     required int64 containerID = 1;
     required int64 localID = 2;
+}
+
+
+/**
+ * Information for the Hdds block token.
+ * When adding further fields, make sure they are optional as they would
+ * otherwise not be backwards compatible.
+ */
+message BlockTokenSecretProto {
+    /**
+ * File access permissions mode.
+ */
+    enum AccessModeProto {
+        READ = 1;
+        WRITE = 2;
+        COPY = 3;
+        DELETE = 4;
+    }
+    required string ownerId = 1;
+    required string blockId = 2;
+    required uint64 expiryDate = 3;
+    required string omCertSerialId = 4;
+    repeated AccessModeProto modes = 5;
+    required uint64 maxLength = 6;
 }
 
 message BlockID {

@@ -84,7 +84,7 @@ public class TestKeyManagerImpl {
     scmBlockLocationProtocol = Mockito.mock(ScmBlockLocationProtocol.class);
     metadataManager = Mockito.mock(OMMetadataManager.class);
     keyManager = new KeyManagerImpl(scmBlockLocationProtocol, metadataManager,
-        conf, "om1");
+        conf, "om1", null);
     setupMocks();
   }
 

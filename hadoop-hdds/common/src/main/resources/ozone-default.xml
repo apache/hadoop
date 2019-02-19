@@ -319,6 +319,14 @@
     </description>
   </property>
 
+  <property>
+    <name>hdds.profiler.endpoint.enabled</name>
+    <value>false</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>Enable /prof java profiler servlet page on HTTP server.
+    </description>
+  </property>
+
   <!--Ozone Settings-->
   <property>
     <name>ozone.administrators</name>
@@ -452,6 +460,48 @@
       per time interval in OM. Those keys are sent to delete metadata and
       generate transactions in SCM for next async deletion between SCM
       and DataNode.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.service.ids</name>
+    <value></value>
+    <tag>OM, HA</tag>
+    <description>
+      Comma-separated list of OM service Ids.
+
+      If not set, the default value of "om-service-value" is assigned as the
+      OM service ID.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.nodes.EXAMPLEOMSERVICEID</name>
+    <value></value>
+    <tag>OM, HA</tag>
+    <description>
+      Comma-separated list of OM node Ids for a given OM service ID (eg.
+      EXAMPLEOMSERVICEID). The OM service ID should be the value (one of the
+      values if there are multiple) set for the parameter ozone.om.service.ids.
+
+      Unique identifiers for each OM Node, delimited by commas. This will be
+      used by OzoneManagers in HA setup to determine all the OzoneManagers
+      belonging to the same OMservice in the cluster. For example, if you
+      used “omService1” as the OM service ID previously, and you wanted to
+      use “om1”, “om2” and "om3" as the individual IDs of the OzoneManagers,
+      you would configure a property ozone.om.nodes.omService1, and its value
+      "om1,om2,om3".
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.node.id</name>
+    <value></value>
+    <tag>OM, HA</tag>
+    <description>
+      The ID of this OM node. If the OM node ID is not configured it
+      is determined automatically by matching the local node's address
+      with the configured address.
+
+      If node ID is not deterministic from the configuration, then it is set
+      to the OmId from the OM version file.
     </description>
   </property>
   <property>
@@ -760,11 +810,10 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.container.provision_batch_size</name>
-    <value>20</value>
-    <tag>OZONE, PERFORMANCE</tag>
-    <description>Pre-provision specified number of containers for block
-      allocation.
+    <name>ozone.scm.pipeline.owner.container.count</name>
+    <value>3</value>
+    <tag>OZONE, SCM, PIPELINE</tag>
+    <description>Number of containers per owner in a pipeline.
     </description>
   </property>
   <property>
@@ -963,14 +1012,6 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.keytab.file</name>
-    <value/>
-    <tag>OZONE, SECURITY</tag>
-    <description>
-      The keytab file for Kerberos authentication in SCM.
-    </description>
-  </property>
-  <property>
     <name>ozone.scm.names</name>
     <value/>
     <tag>OZONE, REQUIRED</tag>
@@ -998,20 +1039,6 @@
     <description>
       Setting this flag to true dumps the HTTP request/ response in
       the logs. Very useful when debugging REST protocol.
-    </description>
-  </property>
-  <property>
-    <name>ozone.web.authentication.kerberos.principal</name>
-    <value/>
-    <tag>OZONE, SECURITY</tag>
-    <description>
-      The server principal used by the SCM and OM for web UI SPNEGO
-      authentication when Kerberos security is enabled. This is typically set to
-      HTTP/_HOST@REALM.TLD The SPNEGO server principal begins with the prefix
-      HTTP/ by convention.
-
-      If the value is '*', the web server will attempt to login with
-      every principal specified in the keytab file.
     </description>
   </property>
 
@@ -1161,7 +1188,7 @@
   <property>
     <name>ozone.tags.system</name>
     <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,
-      CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY,ACL</value>
+      CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY,TOKEN,TLS</value>
   </property>
 
 
@@ -1241,6 +1268,15 @@
     <description>
       Once a pipeline is closed, SCM should wait for the above configured time
       before destroying a pipeline.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.pipeline.creation.interval</name>
+    <value>120s</value>
+    <tag>OZONE, SCM, PIPELINE</tag>
+    <description>
+      SCM schedules a fixed interval job using the configured interval to
+      create pipelines.
     </description>
   </property>
 
@@ -1419,6 +1455,14 @@
       file. Unit could be defined with postfix (ns,ms,s,m,h,d)
     </description>
   </property>
+  <property>
+    <name>ozone.security.enabled</name>
+    <value>false</value>
+    <tag> OZONE, SECURITY</tag>
+    <description>True if security is enabled for ozone. When this property is
+     true, hadoop.security.authentication should be Kerberos.
+    </description>
+  </property>
 
   <property>
     <name>ozone.client.checksum.type</name>
@@ -1455,15 +1499,6 @@
     <tag>OZONE, OM, RATIS</tag>
     <description>
       The port number of the OzoneManager's Ratis server.
-    </description>
-  </property>
-
-  <property>
-    <name>ozone.om.ratis.random.port</name>
-    <value>false</value>
-    <tag>OZONE, OM, RATIS, DEBUG</tag>
-    <description>Allocates a random free port for OM's Ratis server. This is
-      used only while running unit tests.
     </description>
   </property>
 
@@ -1549,28 +1584,39 @@
     <description>The timeout duration for OM Ratis client request.
     </description>
   </property>
-	<property>
-		<name>ozone.om.ratis.client.request.max.retries</name>
-		<value>180</value>
-		<tag>OZONE, OM, RATIS, MANAGEMENT</tag>
-		<description>Number of retries for OM client request.</description>
-	</property>
-	<property>
-		<name>ozone.om.ratis.client.request.retry.interval</name>
-		<value>100ms</value>
-		<tag>OZONE, OM, RATIS, MANAGEMENT</tag>
-		<description>Interval between successive retries for a OM client request.
-		</description>
-	</property>
+  <property>
+    <name>ozone.om.ratis.client.request.max.retries</name>
+    <value>180</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>Number of retries for OM client request.</description>
+  </property>
+  <property>
+    <name>ozone.om.ratis.client.request.retry.interval</name>
+    <value>100ms</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>Interval between successive retries for a OM client request.
+    </description>
+  </property>
 
-	<property>
-		<name>ozone.om.leader.election.minimum.timeout.duration</name>
-		<value>1s</value>
-		<tag>OZONE, OM, RATIS, MANAGEMENT</tag>
-		<description>The minimum timeout duration for OM ratis leader election.
-			Default is 1s.
-		</description>
-	</property>
+  <property>
+    <name>ozone.om.leader.election.minimum.timeout.duration</name>
+    <value>1s</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>The minimum timeout duration for OM ratis leader election.
+      Default is 1s.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.server.failure.timeout.duration</name>
+    <value>120s</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>The timeout duration for ratis server failure detection,
+      once the threshold has reached, the ratis state machine will be informed
+      about the failure in the ratis ring.
+    </description>
+  </property>
+
 
   <property>
     <name>ozone.acl.authorizer.class</name>
@@ -1585,5 +1631,254 @@
     <tag>OZONE, SECURITY, ACL</tag>
     <description>Key to enable/disable ozone acls.</description>
   </property>
+  <property>
+    <name>hdds.scm.kerberos.keytab.file</name>
+    <value></value>
+    <tag> OZONE, SECURITY</tag>
+    <description> The keytab file used by each SCM daemon to login as its
+      service principal. The principal name is configured with
+      hdds.scm.kerberos.principal.
+    </description>
+  </property>
+  <property>
+    <name>hdds.scm.kerberos.principal</name>
+    <value></value>
+    <tag> OZONE, SECURITY</tag>
+    <description>The SCM service principal. Ex scm/_HOST@REALM.COM</description>
+  </property>
 
+  <property>
+    <name>ozone.om.kerberos.keytab.file</name>
+    <value></value>
+    <tag> OZONE, SECURITY</tag>
+    <description> The keytab file used by OzoneManager daemon to login as its
+      service principal. The principal name is configured with
+      ozone.om.kerberos.principal.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.kerberos.principal</name>
+    <value></value>
+    <tag> OZONE, SECURITY</tag>
+    <description>The OzoneManager service principal. Ex om/_HOST@REALM.COM</description>
+  </property>
+
+  <property>
+    <name>hdds.scm.http.kerberos.principal</name>
+    <value>HTTP/_HOST@EXAMPLE.COM</value>
+  </property>
+  <property>
+    <name>hdds.scm.http.kerberos.keytab</name>
+    <value>/etc/security/keytabs/HTTP.keytab</value>
+  </property>
+
+  <property>
+    <name>ozone.om.http.kerberos.principal</name>
+    <value>HTTP/_HOST@EXAMPLE.COM</value>
+    <description>
+      OzoneManager http server kerberos principal.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.http.kerberos.keytab.file</name>
+    <value>/etc/security/keytabs/HTTP.keytab</value>
+    <description>
+      OzoneManager http server kerberos keytab.
+    </description>
+  </property>
+  <property>
+    <name>hdds.key.len</name>
+    <value>2048</value>
+    <tag>SCM, HDDS, X509, SECURITY</tag>
+    <description>
+      SCM CA key length.  This is an algorithm-specific metric, such as modulus length, specified in number of bits.
+    </description>
+  </property>
+  <property>
+    <name>hdds.key.dir.name</name>
+    <value>keys</value>
+    <tag>SCM, HDDS, X509, SECURITY</tag>
+    <description>
+      Directory to store public/private key for SCM CA. This is relative to ozone/hdds meteadata dir.
+    </description>
+  </property>
+  <property>
+    <name>hdds.block.token.expiry.time</name>
+    <value>1d</value>
+    <tag>OZONE, HDDS, SECURITY, TOKEN</tag>
+    <description>
+      Default value for expiry time of block token. This
+      setting supports multiple time unit suffixes as described in
+      dfs.heartbeat.interval. If no suffix is specified, then milliseconds is
+      assumed.
+    </description>
+  </property>
+  
+  <property>
+    <name>hdds.block.token.enabled</name>
+    <value>false</value>
+    <tag>OZONE, HDDS, SECURITY, TOKEN</tag>
+    <description>True if block tokens are enabled, else false.</description>
+  </property>
+  <property>
+    <name>hdds.x509.file.name</name>
+    <value>certificate.crt</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>Certificate file name.</description>
+  </property>
+  <property>
+    <name>hdds.grpc.tls.provider</name>
+    <value>OPENSSL</value>
+    <tag>OZONE, HDDS, SECURITY, TLS</tag>
+    <description>HDDS GRPC server TLS provider.</description>
+  </property>
+  <property>
+    <name>hdds.client.cert.chain.file.name</name>
+    <value>client.crt</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>Client certificate file name. It is an optional
+      field only required when mutual TLS (hdds.grpc.mutual.tls.required)
+      is set to true .</description>
+  </property>
+  <property>
+    <name>hdds.grpc.mutual.tls.required</name>
+    <value>false</value>
+    <tag>OZONE, HDDS, SECURITY, TLS</tag>
+    <description>If mutual tls check is enabled for GRPC.
+    Considered only if hdds.grpc.tls.enabled is set to true.</description>
+  </property>
+  <property>
+    <name>hdds.grpc.tls.enabled</name>
+    <value>false</value>
+    <tag>OZONE, HDDS, SECURITY, TLS</tag>
+    <description>If HDDS GRPC server TLS is enabled.</description>
+  </property>
+  <property>
+    <name>hdds.server.cert.chain.file.name</name>
+    <value>server.crt</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>Hdds server certificate file name.</description>
+  </property>
+  <property>
+    <name>hdds.trust.cert.collection.file.name</name>
+    <value>ca.crt</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>HDDS Certificate Authority trust store file name.</description>
+  </property>
+  <property>
+    <name>hdds.x509.default.duration</name>
+    <value>P365D</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>Default duration for which x509 certificates issued by SCM are
+      valid. The formats accepted are based on the ISO-8601 duration format
+      PnDTnHnMn.nS</description>
+  </property>
+  <property>
+    <name>hdds.x509.dir.name</name>
+    <value>certs</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>X509 certificate directory name.</description>
+  </property>
+  <property>
+    <name>hdds.x509.max.duration</name>
+    <value>P1865D</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>Max time for which certificate issued by SCM CA are valid.
+      . The formats accepted are based on the ISO-8601 duration format
+      PnDTnHnMn.nS</description>
+  </property>
+  <property>
+    <name>hdds.x509.signature.algorithm</name>
+    <value>SHA256withRSA</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>X509 signature certificate.</description>
+  </property>
+  <property>
+    <name>ozone.scm.security.handler.count.key</name>
+    <value>2</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>Threads configured for SCMSecurityProtocolServer.</description>
+  </property>
+  <property>
+    <name>ozone.scm.security.service.address</name>
+    <value>0.0.0.0:9961</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>Address of SCMSecurityProtocolServer.</description>
+  </property>
+  <property>
+    <name>ozone.scm.security.service.bind.host</name>
+    <value>0.0.0.0</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>SCM security server host.</description>
+  </property>
+  <property>
+    <name>ozone.scm.security.service.port</name>
+    <value>9961</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>SCM security server port.</description>
+  </property>
+
+  <property>
+    <name>hdds.metadata.dir</name>
+    <value/>
+    <tag>X509, SECURITY</tag>
+    <description>
+      Absolute path to HDDS metadata dir.
+    </description>
+  </property>
+  <property>
+    <name>hdds.priv.key.file.name</name>
+    <value>private.pem</value>
+    <tag>X509, SECURITY</tag>
+    <description>
+      Name of file which stores private key generated for SCM CA.
+    </description>
+  </property>
+  <property>
+    <name>hdds.public.key.file.name</name>
+    <value>public.pem</value>
+    <tag>X509, SECURITY</tag>
+    <description>
+      Name of file which stores public key generated for SCM CA.
+    </description>
+  </property>
+  <property>
+    <name>ozone.manager.delegation.remover.scan.interval</name>
+    <value>3600000</value>
+    <description>
+      Time interval after which ozone secret manger scans for expired
+      delegation token.
+    </description>
+  </property>
+  <property>
+    <name>ozone.manager.delegation.token.renew-interval</name>
+    <value>1d</value>
+    <description>
+      Default time interval after which ozone delegation token will
+      require renewal before any further use.
+    </description>
+  </property>
+  <property>
+    <name>ozone.manager.delegation.token.max-lifetime</name>
+    <value>7d</value>
+    <description>
+      Default max time interval after which ozone delegation token will
+      not be renewed.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.fs.isolated-classloader</name>
+    <value></value>
+    <tag>OZONE, OZONEFS</tag>
+    <description>
+      Enable it for older hadoops to separate the classloading of all the
+      Ozone classes. With 'true' value, ozonefs can be used with older
+      hadoop versions as the hadoop3/ozone related classes are loaded by
+      an isolated classloader.
+
+      Default depends from the used jar. true for ozone-filesystem-lib-legacy
+      jar and false for the ozone-filesystem-lib.jar
+    </description>
+  </property>
 </configuration>

@@ -32,7 +32,7 @@ Ozone shell supports the following bucket commands.
 
 ### Create
 
-The bucket create command allows a user to create a bucket.
+The bucket create command allows users to create a bucket.
 
 ***Params:***
 
@@ -49,7 +49,7 @@ Since no scheme was specified this command defaults to O3 (RPC) protocol.
 
 ### Delete
 
-The bucket delete commands allows an user to delete a volume. If the
+The bucket delete command allows users to delete a bucket. If the
 bucket is not empty then this command will fail.
 
 ***Params:***
@@ -59,7 +59,7 @@ bucket is not empty then this command will fail.
 |  Uri                           | The name of the bucket
 
 {{< highlight bash >}}
-ozone sh volume delete /hive/jan
+ozone sh bucket delete /hive/jan
 {{< /highlight >}}
 
 The above command will delete _jan_ bucket if it is empty.
@@ -81,7 +81,7 @@ The above command will print out the information about _jan_ bucket.
 
 ### List
 
-The bucket list commands allows uset to list the buckets in a volume.
+The bucket list command allows users to list the buckets in a volume.
 
 ***Params:***
 
@@ -96,7 +96,7 @@ The bucket list commands allows uset to list the buckets in a volume.
 ozone sh bucket list /hive
 {{< /highlight >}}
 
-This command will  list all buckets on the volume _hive_.
+This command will list all buckets on the volume _hive_.
 
 
 

@@ -19,17 +19,23 @@
 package org.apache.hadoop.ozone;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.nio.file.Paths;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -87,5 +93,43 @@ public class TestOmUtils {
   public void testNoOmDbDirConfigured() {
     thrown.expect(IllegalArgumentException.class);
     OmUtils.getOmDbDir(new OzoneConfiguration());
+  }
+
+  @Test
+  public void testCreateTarFile() throws Exception {
+
+    File tempSnapshotDir = null;
+    FileInputStream fis = null;
+    FileOutputStream fos = null;
+    File tarFile = null;
+
+    try {
+      String testDirName = System.getProperty("java.io.tmpdir");
+      if (!testDirName.endsWith("/")) {
+        testDirName += "/";
+      }
+      testDirName += "TestCreateTarFile_Dir" + System.currentTimeMillis();
+      tempSnapshotDir = new File(testDirName);
+      tempSnapshotDir.mkdirs();
+
+      File file = new File(testDirName + "/temp1.txt");
+      FileWriter writer = new FileWriter(file);
+      writer.write("Test data 1");
+      writer.close();
+
+      file = new File(testDirName + "/temp2.txt");
+      writer = new FileWriter(file);
+      writer.write("Test data 2");
+      writer.close();
+
+      tarFile = OmUtils.createTarFile(Paths.get(testDirName));
+      Assert.assertNotNull(tarFile);
+
+    } finally {
+      IOUtils.closeStream(fis);
+      IOUtils.closeStream(fos);
+      FileUtils.deleteDirectory(tempSnapshotDir);
+      FileUtils.deleteQuietly(tarFile);
+    }
   }
 }

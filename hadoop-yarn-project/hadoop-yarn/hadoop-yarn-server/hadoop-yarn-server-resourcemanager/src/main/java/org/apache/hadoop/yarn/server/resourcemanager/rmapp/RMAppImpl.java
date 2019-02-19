@@ -293,7 +293,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.ACCEPTED, RMAppState.ACCEPTED, 
         RMAppEventType.APP_RUNNING_ON_NODE,
         new AppRunningOnNodeTransition())
-      // Handle AppAttemptLaunch to upate the launchTime and publish to ATS
+      // Handle AppAttemptLaunch to update the launchTime and publish to ATS
       .addTransition(RMAppState.ACCEPTED, RMAppState.ACCEPTED,
         RMAppEventType.ATTEMPT_LAUNCHED,
         new AttemptLaunchedTransition())
@@ -1067,6 +1067,8 @@ public class RMAppImpl implements RMApp, Recoverable {
                 app.getCurrentAppAttempt().getAppAttemptId()+
                 "launchTime: "+event.getTimestamp());
         app.launchTime = event.getTimestamp();
+        app.rmContext.getSystemMetricsPublisher().appLaunched(
+            app, app.launchTime);
       }
     }
   }

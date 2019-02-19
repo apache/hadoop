@@ -414,7 +414,7 @@ public class TestRetryCacheWithHA {
           new EnumSetWritable<CreateFlag>(createFlag), false, DataNodes,
           BlockSize,
           new CryptoProtocolVersion[] {CryptoProtocolVersion.ENCRYPTION_ZONES},
-          null);
+          null, null);
     }
 
     @Override

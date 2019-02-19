@@ -539,8 +539,8 @@
 
       This property allows users to set ACLs of their choice instead of using
       the default mechanism. For fencing to work, the ACLs should be
-      carefully set differently on each ResourceManger such that all the
-      ResourceManagers have shared admin access and the Active ResourceManger
+      carefully set differently on each ResourceManager such that all the
+      ResourceManagers have shared admin access and the Active ResourceManager
       takes over (exclusively) the create-delete access.
     </description>
     <name>yarn.resourcemanager.zk-state-store.root-node.acl</name>
@@ -1191,6 +1191,14 @@
   </property>
 
   <property>
+    <description>The setting that controls whether yarn container events are
+      published to the timeline service or not by NM. This configuration setting
+      is for ATS V2.</description>
+    <name>yarn.nodemanager.emit-container-events</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <description>Interval in between cache cleanups.</description>
     <name>yarn.nodemanager.localizer.cache.cleanup.interval-ms</name>
     <value>600000</value>
@@ -1754,6 +1762,13 @@
   </property>
 
   <property>
+    <description>Default option to decide whether to pull the latest image
+      or not.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.image-update</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>This configuration setting determines if privileged docker
       containers are allowed on this cluster. Privileged containers are granted
       the complete set of capabilities and are not subject to the limitations
@@ -1922,9 +1937,17 @@
   </property>
 
   <property>
-    <description>A file containing auxiliary service specifications. If
-      manifest file is specified, yarn.nodemanager.aux-services and other
-      aux services configuration properties will be ignored.</description>
+    <description>Boolean indicating whether loading aux services from a manifest
+      is enabled. If enabled, aux services may be dynamically modified through
+      reloading the manifest via filesystem changes or a REST API. When
+      enabled, aux services configuration properties unrelated to the manifest
+      will be ignored.</description>
+    <name>yarn.nodemanager.aux-services.manifest.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>A file containing auxiliary service specifications.</description>
     <name>yarn.nodemanager.aux-services.manifest</name>
     <value></value>
   </property>
@@ -1933,7 +1956,7 @@
     <description>Length of time in ms to wait between reloading aux services
       manifest. If 0 or less, manifest will not be reloaded.</description>
     <name>yarn.nodemanager.aux-services.manifest.reload-ms</name>
-    <value></value>
+    <value>0</value>
   </property>
 
   <property>
@@ -4088,12 +4111,20 @@
     <description>
       CSI driver names running on this node, multiple driver names need to
       be delimited by comma. The driver name should be same value returned
-      by the getPluginInfo call. For each of the CSI driver name, it must
+      by the getPluginInfo call.For each of the CSI driver name, it must
       to define following two corresponding properties:
         "yarn.nodemanager.csi-driver.${NAME}.endpoint"
         "yarn.nodemanager.csi-driver-adaptor.${NAME}.address"
       The 1st property defines where the driver's endpoint is;
       2nd property defines where the mapping csi-driver-adaptor's address is.
+      What's more, an optional csi-driver-adaptor class can be defined
+      for each csi-driver:
+        "yarn.nodemanager.csi-driver.${NAME}.class"
+      once given, the adaptor will be initiated with the given class instead
+      of the default implementation
+      org.apache.hadoop.yarn.csi.adaptor.DefaultCsiAdaptorImpl. User can plug
+      customized adaptor code for csi-driver with this configuration
+      if necessary.
     </description>
     <name>yarn.nodemanager.csi-driver.names</name>
     <value></value>

@@ -57,6 +57,8 @@ public class PipelineActionHandler
           pipelineID = PipelineID.
               getFromProtobuf(action.getClosePipeline().getPipelineID());
           Pipeline pipeline = pipelineManager.getPipeline(pipelineID);
+          LOG.info("Received pipeline action {} for {} from datanode [}",
+              action.getAction(), pipeline, report.getDatanodeDetails());
           RatisPipelineUtils
               .finalizeAndDestroyPipeline(pipelineManager, pipeline, ozoneConf,
                   true);

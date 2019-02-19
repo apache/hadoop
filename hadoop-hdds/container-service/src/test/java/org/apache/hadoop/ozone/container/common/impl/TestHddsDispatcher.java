@@ -38,6 +38,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerAction;
 import org.apache.hadoop.ozone.common.Checksum;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
@@ -59,6 +60,7 @@ import java.util.UUID;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_DATANODE_DIR_KEY;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -130,23 +132,7 @@ public class TestHddsDispatcher {
       OzoneConfiguration conf = new OzoneConfiguration();
       conf.set(HDDS_DATANODE_DIR_KEY, testDir);
       DatanodeDetails dd = randomDatanodeDetails();
-      ContainerSet containerSet = new ContainerSet();
-      VolumeSet volumeSet = new VolumeSet(dd.getUuidString(), conf);
-      DatanodeStateMachine stateMachine = Mockito.mock(
-          DatanodeStateMachine.class);
-      StateContext context = Mockito.mock(StateContext.class);
-      Mockito.when(stateMachine.getDatanodeDetails()).thenReturn(dd);
-      Mockito.when(context.getParent()).thenReturn(stateMachine);
-      ContainerMetrics metrics = ContainerMetrics.create(conf);
-      Map<ContainerType, Handler> handlers = Maps.newHashMap();
-      for (ContainerType containerType : ContainerType.values()) {
-        handlers.put(containerType,
-            Handler.getHandlerForContainerType(containerType, conf, context,
-                containerSet, volumeSet, metrics));
-      }
-      HddsDispatcher hddsDispatcher = new HddsDispatcher(
-          conf, containerSet, volumeSet, handlers, context, metrics);
-      hddsDispatcher.setScmId(scmId.toString());
+      HddsDispatcher hddsDispatcher = createDispatcher(dd, scmId, conf);
       ContainerCommandRequestProto writeChunkRequest =
           getWriteChunkRequest(dd.getUuidString(), 1L, 1L);
       // send read chunk request and make sure container does not exist
@@ -167,6 +153,72 @@ public class TestHddsDispatcher {
     } finally {
       FileUtils.deleteDirectory(new File(testDir));
     }
+  }
+
+  @Test
+  public void testWriteChunkWithCreateContainerFailure() throws IOException {
+    String testDir = GenericTestUtils.getTempPath(
+        TestHddsDispatcher.class.getSimpleName());
+    try {
+      UUID scmId = UUID.randomUUID();
+      OzoneConfiguration conf = new OzoneConfiguration();
+      conf.set(HDDS_DATANODE_DIR_KEY, testDir);
+      DatanodeDetails dd = randomDatanodeDetails();
+      HddsDispatcher hddsDispatcher = createDispatcher(dd, scmId, conf);
+      ContainerCommandRequestProto writeChunkRequest = getWriteChunkRequest(
+          dd.getUuidString(), 1L, 1L);
+
+      HddsDispatcher mockDispatcher = Mockito.spy(hddsDispatcher);
+      ContainerCommandResponseProto.Builder builder = ContainerUtils
+          .getContainerCommandResponse(writeChunkRequest,
+              ContainerProtos.Result.DISK_OUT_OF_SPACE, "");
+      // Return DISK_OUT_OF_SPACE response when writing chunk
+      // with container creation.
+      Mockito.doReturn(builder.build()).when(mockDispatcher)
+          .createContainer(writeChunkRequest);
+
+      GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
+          .captureLogs(HddsDispatcher.LOG);
+      // send write chunk request without sending create container
+      mockDispatcher.dispatch(writeChunkRequest, null);
+      // verify the error log
+      assertTrue(logCapturer.getOutput()
+          .contains("ContainerID " + writeChunkRequest.getContainerID()
+              + " creation failed : Result: DISK_OUT_OF_SPACE"));
+    } finally {
+      FileUtils.deleteDirectory(new File(testDir));
+    }
+  }
+
+  /**
+   * Creates HddsDispatcher instance with given infos.
+   * @param dd datanode detail info.
+   * @param scmId UUID of scm id.
+   * @param conf configuration be used.
+   * @return HddsDispatcher HddsDispatcher instance.
+   * @throws IOException
+   */
+  private HddsDispatcher createDispatcher(DatanodeDetails dd, UUID scmId,
+      OzoneConfiguration conf) throws IOException {
+    ContainerSet containerSet = new ContainerSet();
+    VolumeSet volumeSet = new VolumeSet(dd.getUuidString(), conf);
+    DatanodeStateMachine stateMachine = Mockito.mock(
+        DatanodeStateMachine.class);
+    StateContext context = Mockito.mock(StateContext.class);
+    Mockito.when(stateMachine.getDatanodeDetails()).thenReturn(dd);
+    Mockito.when(context.getParent()).thenReturn(stateMachine);
+    ContainerMetrics metrics = ContainerMetrics.create(conf);
+    Map<ContainerType, Handler> handlers = Maps.newHashMap();
+    for (ContainerType containerType : ContainerType.values()) {
+      handlers.put(containerType,
+          Handler.getHandlerForContainerType(containerType, conf, context,
+              containerSet, volumeSet, metrics));
+    }
+
+    HddsDispatcher hddsDispatcher = new HddsDispatcher(
+        conf, containerSet, volumeSet, handlers, context, metrics);
+    hddsDispatcher.setScmId(scmId.toString());
+    return hddsDispatcher;
   }
 
   // This method has to be removed once we move scm/TestUtils.java

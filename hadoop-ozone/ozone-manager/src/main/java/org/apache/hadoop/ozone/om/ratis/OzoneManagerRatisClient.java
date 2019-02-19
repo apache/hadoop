@@ -19,12 +19,10 @@ package org.apache.hadoop.ozone.om.ratis;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OmUtils;
@@ -57,7 +55,7 @@ public final class OzoneManagerRatisClient implements Closeable {
   private final RaftGroup raftGroup;
   private final String omID;
   private final RpcType rpcType;
-  private final AtomicReference<RaftClient> client = new AtomicReference<>();
+  private RaftClient raftClient;
   private final RetryPolicy retryPolicy;
   private final Configuration conf;
 
@@ -101,30 +99,19 @@ public final class OzoneManagerRatisClient implements Closeable {
     // maxOutstandingRequests so as to set the upper bound on max no of async
     // requests to be handled by raft client
 
-    if (!client.compareAndSet(null, OMRatisHelper.newRaftClient(
-        rpcType, omID, raftGroup, retryPolicy, conf))) {
-      throw new IllegalStateException("Client is already connected.");
-    }
+    raftClient = OMRatisHelper.newRaftClient(rpcType, omID, raftGroup,
+        retryPolicy, conf);
   }
 
   @Override
   public void close() {
-    final RaftClient c = client.getAndSet(null);
-    if (c != null) {
-      closeRaftClient(c);
+    if (raftClient != null) {
+      try {
+        raftClient.close();
+      } catch (IOException e) {
+        throw new IllegalStateException(e);
+      }
     }
-  }
-
-  private void closeRaftClient(RaftClient raftClient) {
-    try {
-      raftClient.close();
-    } catch (IOException e) {
-      throw new IllegalStateException(e);
-    }
-  }
-
-  private RaftClient getClient() {
-    return Objects.requireNonNull(client.get(), "client is null");
   }
 
   /**
@@ -188,7 +175,7 @@ public final class OzoneManagerRatisClient implements Closeable {
     boolean isReadOnlyRequest = OmUtils.isReadOnly(request);
     ByteString byteString = OMRatisHelper.convertRequestToByteString(request);
     LOG.debug("sendOMRequestAsync {} {}", isReadOnlyRequest, request);
-    return isReadOnlyRequest ? getClient().sendReadOnlyAsync(() -> byteString) :
-        getClient().sendAsync(() -> byteString);
+    return isReadOnlyRequest ? raftClient.sendReadOnlyAsync(() -> byteString) :
+        raftClient.sendAsync(() -> byteString);
   }
 }

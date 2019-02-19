@@ -89,7 +89,6 @@ import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -621,14 +620,7 @@ public class TestCheckpoint {
   }
 
   private File filePathContaining(final String substring) {
-    return Mockito.argThat(
-        new ArgumentMatcher<File>() {
-          @Override
-          public boolean matches(Object argument) {
-            String path = ((File) argument).getAbsolutePath();
-            return path.contains(substring);
-          }
-        });
+    return Mockito.argThat(arg -> arg.getAbsolutePath().contains(substring));
   }
 
   private void checkTempImages(NNStorage storage) throws IOException {
@@ -1993,7 +1985,7 @@ public class TestCheckpoint {
       NNStorage dstImage = Mockito.mock(NNStorage.class);
       Mockito.doReturn(Lists.newArrayList(new File("/wont-be-written")))
         .when(dstImage).getFiles(
-            Mockito.<NameNodeDirType>anyObject(), Mockito.anyString());
+            Mockito.<NameNodeDirType>any(), Mockito.anyString());
 
       File mockImageFile = File.createTempFile("image", "");
       FileOutputStream imageFile = new FileOutputStream(mockImageFile);

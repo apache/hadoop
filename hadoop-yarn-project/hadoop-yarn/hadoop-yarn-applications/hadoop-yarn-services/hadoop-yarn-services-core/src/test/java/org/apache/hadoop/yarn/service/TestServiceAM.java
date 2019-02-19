@@ -395,7 +395,7 @@ public class TestServiceAM extends ServiceTestUtils{
   // Test to verify that the containers are released and the
   // component instance is added to the pending queue when building the launch
   // context fails.
-  @Test(timeout = 9990000)
+  @Test(timeout = 30000)
   public void testContainersReleasedWhenPreLaunchFails()
       throws Exception {
     ApplicationId applicationId = ApplicationId.newInstance(
@@ -420,6 +420,11 @@ public class TestServiceAM extends ServiceTestUtils{
     // allocate a container
     am.feedContainerToComp(exampleApp, containerId, "compa");
     am.waitForContainerToRelease(containerId);
+    ComponentInstance compAinst0 = am.getCompInstance(compA.getName(),
+        "compa-0");
+    GenericTestUtils.waitFor(() ->
+        am.getComponent(compA.getName()).getPendingInstances()
+        .contains(compAinst0), 2000, 30000);
 
     Assert.assertEquals(1,
         am.getComponent("compa").getPendingInstances().size());

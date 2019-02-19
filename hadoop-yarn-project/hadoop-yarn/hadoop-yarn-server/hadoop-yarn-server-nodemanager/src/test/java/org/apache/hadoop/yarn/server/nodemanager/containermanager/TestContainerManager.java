@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
+import com.google.common.collect.Lists;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesResponse;
+import org.apache.hadoop.yarn.api.records.LocalizationState;
+import org.apache.hadoop.yarn.api.records.LocalizationStatus;
 import org.apache.hadoop.yarn.server.api.AuxiliaryLocalPathHandler;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import static org.junit.Assert.assertEquals;
@@ -2178,5 +2183,128 @@ public class TestContainerManager extends BaseContainerManagerTest {
     Assert.assertTrue(response.getFailedRequests().containsKey(cId));
     Assert.assertTrue(response.getFailedRequests().get(cId).getMessage()
         .contains("Null resource visibility for local resource"));
+  }
+
+  @Test
+  public void testGetLocalizationStatuses() throws Exception {
+    containerManager.start();
+    ContainerId containerId = createContainerId(0, 0);
+    Token containerToken =
+        createContainerToken(containerId, DUMMY_RM_IDENTIFIER,
+            context.getNodeId(),
+            user, context.getContainerTokenSecretManager());
+
+    // localization resource
+    File scriptFile = Shell.appendScriptExtension(tmpDir, "scriptFile_new");
+    PrintWriter fileWriter = new PrintWriter(scriptFile);
+    File file1 = new File(tmpDir, "file1.txt").getAbsoluteFile();
+
+    writeScriptFile(fileWriter, "Upgrade World!", file1, containerId, false);
+
+    ContainerLaunchContext containerLaunchContext =
+        prepareContainerLaunchContext(scriptFile, "dest_file1", false, 0);
+
+    StartContainerRequest request = StartContainerRequest.newInstance(
+        containerLaunchContext, containerToken);
+    List<StartContainerRequest> startRequest = new ArrayList<>();
+    startRequest.add(request);
+
+    // start container
+    StartContainersRequest requestList = StartContainersRequest.newInstance(
+        startRequest);
+    containerManager.startContainers(requestList);
+    Thread.sleep(5000);
+
+    // Get localization statuses
+    GetLocalizationStatusesRequest statusRequest =
+        GetLocalizationStatusesRequest.newInstance(
+            Lists.newArrayList(containerId));
+
+    GetLocalizationStatusesResponse statusResponse =
+        containerManager.getLocalizationStatuses(statusRequest);
+
+    Assert.assertEquals(1, statusResponse.getLocalizationStatuses()
+        .get(containerId).size());
+    LocalizationStatus status = statusResponse.getLocalizationStatuses()
+        .get(containerId).iterator().next();
+    Assert.assertEquals("resource key", "dest_file1",
+        status.getResourceKey());
+    Assert.assertEquals("resource status", LocalizationState.COMPLETED,
+        status.getLocalizationState());
+
+    Assert.assertEquals(0, statusResponse.getFailedRequests().size());
+
+    // stop containers
+    StopContainersRequest stopRequest =
+        StopContainersRequest.newInstance(Lists.newArrayList(containerId));
+    containerManager.stopContainers(stopRequest);
+  }
+
+  @Test
+  public void testGetLocalizationStatusesMultiContainers() throws Exception {
+    containerManager.start();
+    ContainerId container1 = createContainerId(0, 0);
+    ContainerId container2 = createContainerId(1, 0);
+
+    Token containerToken1 = createContainerToken(container1,
+        DUMMY_RM_IDENTIFIER, context.getNodeId(), user,
+        context.getContainerTokenSecretManager());
+    Token containerToken2 = createContainerToken(container2,
+        DUMMY_RM_IDENTIFIER, context.getNodeId(), user,
+        context.getContainerTokenSecretManager());
+
+    // localization resource
+    File scriptFile = Shell.appendScriptExtension(tmpDir, "scriptFile_new");
+    PrintWriter fileWriter = new PrintWriter(scriptFile);
+    File file1 = new File(tmpDir, "file1.txt").getAbsoluteFile();
+
+    writeScriptFile(fileWriter, "Upgrade World!", file1, container1, false);
+
+    ContainerLaunchContext containerLaunchContext =
+        prepareContainerLaunchContext(scriptFile, "dest_file1", false, 0);
+
+    StartContainerRequest request1 = StartContainerRequest.newInstance(
+        containerLaunchContext, containerToken1);
+    StartContainerRequest request2 = StartContainerRequest.newInstance(
+        containerLaunchContext, containerToken2);
+
+    List<StartContainerRequest> startRequest = new ArrayList<>();
+    startRequest.add(request1);
+    startRequest.add(request2);
+
+    // start container
+    StartContainersRequest requestList = StartContainersRequest.newInstance(
+        startRequest);
+    containerManager.startContainers(requestList);
+    Thread.sleep(5000);
+
+    // Get localization statuses
+    GetLocalizationStatusesRequest statusRequest =
+        GetLocalizationStatusesRequest.newInstance(
+            Lists.newArrayList(container1, container2));
+
+    GetLocalizationStatusesResponse statusResponse =
+        containerManager.getLocalizationStatuses(statusRequest);
+    Assert.assertEquals(2, statusResponse.getLocalizationStatuses().size());
+
+    ContainerId[] containerIds = {container1, container2};
+    Arrays.stream(containerIds).forEach(cntnId -> {
+      List<LocalizationStatus> statuses = statusResponse
+          .getLocalizationStatuses().get(container1);
+      Assert.assertEquals(1, statuses.size());
+      LocalizationStatus status = statuses.get(0);
+      Assert.assertEquals("resource key", "dest_file1",
+          status.getResourceKey());
+      Assert.assertEquals("resource status", LocalizationState.COMPLETED,
+          status.getLocalizationState());
+    });
+
+    Assert.assertEquals(0, statusResponse.getFailedRequests().size());
+
+    // stop containers
+    StopContainersRequest stopRequest =
+        StopContainersRequest.newInstance(Lists.newArrayList(container1,
+            container2));
+    containerManager.stopContainers(stopRequest);
   }
 }

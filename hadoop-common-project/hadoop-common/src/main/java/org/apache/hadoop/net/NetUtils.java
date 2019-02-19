@@ -850,8 +850,8 @@ public class NetUtils {
     StringBuilder hostDetails = new StringBuilder(27);
     hostDetails.append("local host is: ")
         .append(quoteHost(localHost))
-        .append("; ");
-    hostDetails.append("destination host is: ").append(quoteHost(destHost))
+        .append("; ")
+        .append("destination host is: ").append(quoteHost(destHost))
         .append(":")
         .append(destPort).append("; ");
     return hostDetails.toString();

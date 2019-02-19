@@ -204,15 +204,15 @@ public class TestDecommission extends AdminStatesBaseTest {
 
     writeFile(fileSys, file1, replicas);
 
-    int deadDecomissioned = ns.getNumDecomDeadDataNodes();
-    int liveDecomissioned = ns.getNumDecomLiveDataNodes();
+    int deadDecommissioned = ns.getNumDecomDeadDataNodes();
+    int liveDecommissioned = ns.getNumDecomLiveDataNodes();
 
     // Decommission one node. Verify that node is decommissioned.
     DatanodeInfo decomNode = takeNodeOutofService(0, null, 0,
         decommissionedNodes, AdminStates.DECOMMISSIONED);
     decommissionedNodes.add(decomNode);
-    assertEquals(deadDecomissioned, ns.getNumDecomDeadDataNodes());
-    assertEquals(liveDecomissioned + 1, ns.getNumDecomLiveDataNodes());
+    assertEquals(deadDecommissioned, ns.getNumDecomDeadDataNodes());
+    assertEquals(liveDecommissioned + 1, ns.getNumDecomLiveDataNodes());
 
     // Ensure decommissioned datanode is not automatically shutdown
     DFSClient client = getDfsClient(0);
@@ -378,15 +378,15 @@ public class TestDecommission extends AdminStatesBaseTest {
 
         writeFile(fileSys, file1, replicas);
 
-        int deadDecomissioned = ns.getNumDecomDeadDataNodes();
-        int liveDecomissioned = ns.getNumDecomLiveDataNodes();
+        int deadDecommissioned = ns.getNumDecomDeadDataNodes();
+        int liveDecommissioned = ns.getNumDecomLiveDataNodes();
 
         // Decommission one node. Verify that node is decommissioned.
         DatanodeInfo decomNode = takeNodeOutofService(i, null, 0,
             decommissionedNodes, AdminStates.DECOMMISSIONED);
         decommissionedNodes.add(decomNode);
-        assertEquals(deadDecomissioned, ns.getNumDecomDeadDataNodes());
-        assertEquals(liveDecomissioned + 1, ns.getNumDecomLiveDataNodes());
+        assertEquals(deadDecommissioned, ns.getNumDecomDeadDataNodes());
+        assertEquals(liveDecommissioned + 1, ns.getNumDecomLiveDataNodes());
 
         // Ensure decommissioned datanode is not automatically shutdown
         DFSClient client = getDfsClient(i);

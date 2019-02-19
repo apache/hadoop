@@ -89,6 +89,8 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
    * |-------------------------------------------------------------------|
    * | s3Table            | s3BucketName -> /volumeName/bucketName       |
    * |-------------------------------------------------------------------|
+   * | s3SecretTable      | s3g_access_key_id -> s3Secret                |
+   * |-------------------------------------------------------------------|
    */
 
   private static final String USER_TABLE = "userTable";
@@ -99,6 +101,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   private static final String OPEN_KEY_TABLE = "openKeyTable";
   private static final String S3_TABLE = "s3Table";
   private static final String MULTIPARTINFO_TABLE = "multipartInfoTable";
+  private static final String S3_SECRET_TABLE = "s3SecretTable";
 
   private DBStore store;
 
@@ -113,6 +116,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   private Table openKeyTable;
   private Table s3Table;
   private Table<String, OmMultipartKeyInfo> multipartInfoTable;
+  private Table s3SecretTable;
 
   public OmMetadataManagerImpl(OzoneConfiguration conf) throws IOException {
     this.lock = new OzoneManagerLock(conf);
@@ -195,6 +199,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
           .addTable(OPEN_KEY_TABLE)
           .addTable(S3_TABLE)
           .addTable(MULTIPARTINFO_TABLE)
+          .addTable(S3_SECRET_TABLE)
           .addCodec(OmKeyInfo.class, new OmKeyInfoCodec())
           .addCodec(OmBucketInfo.class, new OmBucketInfoCodec())
           .addCodec(OmVolumeArgs.class, new OmVolumeArgsCodec())
@@ -233,6 +238,8 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
           String.class, OmMultipartKeyInfo.class);
       checkTableStatus(multipartInfoTable, MULTIPARTINFO_TABLE);
 
+      s3SecretTable = this.store.getTable(S3_SECRET_TABLE);
+      checkTableStatus(s3SecretTable, S3_SECRET_TABLE);
     }
   }
 
@@ -425,13 +432,13 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     List<OmBucketInfo> result = new ArrayList<>();
     if (Strings.isNullOrEmpty(volumeName)) {
       throw new OMException("Volume name is required.",
-          ResultCodes.FAILED_VOLUME_NOT_FOUND);
+          ResultCodes.VOLUME_NOT_FOUND);
     }
 
     String volumeNameBytes = getVolumeKey(volumeName);
     if (volumeTable.get(volumeNameBytes) == null) {
       throw new OMException("Volume " + volumeName + " not found.",
-          ResultCodes.FAILED_VOLUME_NOT_FOUND);
+          ResultCodes.VOLUME_NOT_FOUND);
     }
 
     String startKey;
@@ -487,18 +494,18 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     List<OmKeyInfo> result = new ArrayList<>();
     if (Strings.isNullOrEmpty(volumeName)) {
       throw new OMException("Volume name is required.",
-          ResultCodes.FAILED_VOLUME_NOT_FOUND);
+          ResultCodes.VOLUME_NOT_FOUND);
     }
 
     if (Strings.isNullOrEmpty(bucketName)) {
       throw new OMException("Bucket name is required.",
-          ResultCodes.FAILED_BUCKET_NOT_FOUND);
+          ResultCodes.BUCKET_NOT_FOUND);
     }
 
     String bucketNameBytes = getBucketKey(volumeName, bucketName);
     if (getBucketTable().get(bucketNameBytes) == null) {
       throw new OMException("Bucket " + bucketName + " not found.",
-          ResultCodes.FAILED_BUCKET_NOT_FOUND);
+          ResultCodes.BUCKET_NOT_FOUND);
     }
 
     String seekKey;
@@ -549,7 +556,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     VolumeList volumes;
     if (StringUtil.isBlank(userName)) {
       throw new OMException("User name is required to list Volumes.",
-          ResultCodes.FAILED_USER_NOT_FOUND);
+          ResultCodes.USER_NOT_FOUND);
     }
     volumes = getVolumesByUser(userName);
 
@@ -578,7 +585,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
           // this probably means om db is corrupted or some entries are
           // accidentally removed.
           throw new OMException("Volume info not found for " + volumeName,
-              ResultCodes.FAILED_VOLUME_NOT_FOUND);
+              ResultCodes.VOLUME_NOT_FOUND);
         }
         result.add(volumeArgs);
       }
@@ -600,7 +607,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     } catch (IOException e) {
       throw new OMException("Unable to get volumes info by the given user, "
           + "metadata might be corrupted", e,
-          ResultCodes.FAILED_METADATA_ERROR);
+          ResultCodes.METADATA_ERROR);
     }
   }
 
@@ -654,5 +661,10 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
       }
     }
     return count;
+  }
+
+  @Override
+  public Table<byte[], byte[]> getS3SecretTable() {
+    return s3SecretTable;
   }
 }

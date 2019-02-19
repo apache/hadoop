@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DevicePlugin;
@@ -33,6 +34,8 @@ import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DeviceRuntimeS
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.YarnRuntimeType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
@@ -74,6 +77,10 @@ public class TestDeviceMappingManager {
   private ExecutorService containerLauncher;
   private Configuration conf;
 
+  private CGroupsHandler mockCGroupsHandler;
+  private PrivilegedOperationExecutor mockPrivilegedExecutor;
+  private Context mockCtx;
+
   @Before
   public void setup() throws Exception {
     // setup resource-types.xml
@@ -89,7 +96,7 @@ public class TestDeviceMappingManager {
         isA(String.class),
         isA(ArrayList.class));
     dmm = new DeviceMappingManager(context);
-    int deviceCount = 600;
+    int deviceCount = 100;
     TreeSet<Device> r = new TreeSet<>();
     for (int i = 0; i < deviceCount; i++) {
       r.add(Device.Builder.newInstance()
@@ -117,6 +124,10 @@ public class TestDeviceMappingManager {
 
     containerLauncher =
         Executors.newFixedThreadPool(10);
+    mockCGroupsHandler = mock(CGroupsHandler.class);
+    mockPrivilegedExecutor = mock(PrivilegedOperationExecutor.class);
+    mockCtx = mock(NodeManager.NMContext.class);
+    when(mockCtx.getConf()).thenReturn(conf);
   }
 
   @After
@@ -134,7 +145,7 @@ public class TestDeviceMappingManager {
   @Test
   public void testAllocation()
       throws InterruptedException, ResourceHandlerException {
-    int totalContainerCount = 100;
+    int totalContainerCount = 10;
     String resourceName1 = "cmpA.com/hdwA";
     String resourceName2 = "cmp.com/cmp";
     DeviceMappingManager dmmSpy = spy(dmm);
@@ -158,11 +169,12 @@ public class TestDeviceMappingManager {
           resourceName,
           num, false);
       containerSet.get(resourceName).put(c, num);
-
+      DevicePlugin myPlugin = new MyTestPlugin();
+      DevicePluginAdapter dpa = new DevicePluginAdapter(resourceName,
+          myPlugin, dmm);
       DeviceResourceHandlerImpl dri = new DeviceResourceHandlerImpl(
-          resourceName,
-          new MyTestPlugin(), null,
-          dmmSpy, null, null);
+          resourceName, dpa,
+          dmmSpy, mockCGroupsHandler, mockPrivilegedExecutor, mockCtx);
       Future<Integer> f = containerLauncher.submit(new MyContainerLaunch(
           dri, c, i, false));
     }
@@ -173,12 +185,11 @@ public class TestDeviceMappingManager {
     }
 
     Long endTime = System.currentTimeMillis();
-    LOG.info("Each container allocation spends roughly: {} ms",
+    LOG.info("Each container preStart spends roughly: {} ms",
         (endTime - startTime)/totalContainerCount);
     // Ensure invocation times
     verify(dmmSpy, times(totalContainerCount)).assignDevices(
         anyString(), any(Container.class));
-
     // Ensure used devices' count for each type is correct
     int totalAllocatedCount = 0;
     Map<Device, ContainerId> used1 =
@@ -198,23 +209,15 @@ public class TestDeviceMappingManager {
     for (Map.Entry<Container, Integer> entry :
         containerSet.get(resourceName1).entrySet()) {
       int containerWanted = entry.getValue();
-      int actualAllocated = 0;
-      for (ContainerId cid : used1.values()) {
-        if (cid.equals(entry.getKey().getContainerId())) {
-          actualAllocated++;
-        }
-      }
+      int actualAllocated = dmm.getAllocatedDevices(resourceName1,
+          entry.getKey().getContainerId()).size();
       Assert.assertEquals(containerWanted, actualAllocated);
     }
     for (Map.Entry<Container, Integer> entry :
         containerSet.get(resourceName2).entrySet()) {
       int containerWanted = entry.getValue();
-      int actualAllocated = 0;
-      for (ContainerId cid : used2.values()) {
-        if (cid.equals(entry.getKey().getContainerId())) {
-          actualAllocated++;
-        }
-      }
+      int actualAllocated = dmm.getAllocatedDevices(resourceName2,
+          entry.getKey().getContainerId()).size();
       Assert.assertEquals(containerWanted, actualAllocated);
     }
   }
@@ -248,11 +251,12 @@ public class TestDeviceMappingManager {
           resourceName,
           num, false);
       containerSet.get(resourceName).put(c, num);
-
+      DevicePlugin myPlugin = new MyTestPlugin();
+      DevicePluginAdapter dpa = new DevicePluginAdapter(resourceName,
+          myPlugin, dmm);
       DeviceResourceHandlerImpl dri = new DeviceResourceHandlerImpl(
-          resourceName,
-          new MyTestPlugin(), null,
-          dmmSpy, null, null);
+          resourceName, dpa,
+          dmmSpy, mockCGroupsHandler, mockPrivilegedExecutor, mockCtx);
       Future<Integer> f = containerLauncher.submit(new MyContainerLaunch(
           dri, c, i, true));
     }
@@ -261,7 +265,6 @@ public class TestDeviceMappingManager {
     while (!containerLauncher.awaitTermination(10, TimeUnit.SECONDS)) {
       LOG.info("Wait for the threads to finish");
     }
-
 
     // Ensure invocation times
     verify(dmmSpy, times(totalContainerCount)).assignDevices(

@@ -269,7 +269,7 @@ public class TestResources {
     unsetExtraResourceType();
     setupExtraResourceType();
 
-    Resource res = Resources.createResourceWithSameValue(11L);
+    Resource res = ResourceUtils.createResourceWithSameValue(11L);
     assertEquals(11L, res.getMemorySize());
     assertEquals(11, res.getVirtualCores());
     assertEquals(11L, res.getResourceInformation(EXTRA_RESOURCE_TYPE).getValue());
@@ -280,7 +280,7 @@ public class TestResources {
     unsetExtraResourceType();
     setupExtraResourceType();
 
-    Resource res = Resources.createResourceWithSameValue(11);
+    Resource res = ResourceUtils.createResourceWithSameValue(11);
     assertEquals(11, res.getMemorySize());
     assertEquals(11, res.getVirtualCores());
     assertEquals(11, res.getResourceInformation(EXTRA_RESOURCE_TYPE).getValue());
@@ -288,14 +288,14 @@ public class TestResources {
 
   @Test
   public void testCreateSimpleResourceWithSameLongValue() {
-    Resource res = Resources.createResourceWithSameValue(11L);
+    Resource res = ResourceUtils.createResourceWithSameValue(11L);
     assertEquals(11L, res.getMemorySize());
     assertEquals(11, res.getVirtualCores());
   }
 
   @Test
   public void testCreateSimpleResourceWithSameIntValue() {
-    Resource res = Resources.createResourceWithSameValue(11);
+    Resource res = ResourceUtils.createResourceWithSameValue(11);
     assertEquals(11, res.getMemorySize());
     assertEquals(11, res.getVirtualCores());
   }

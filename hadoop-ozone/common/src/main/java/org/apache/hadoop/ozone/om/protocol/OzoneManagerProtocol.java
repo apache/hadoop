@@ -18,6 +18,8 @@
 package org.apache.hadoop.ozone.om.protocol;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+
+import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
@@ -25,18 +27,23 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.OzoneAclInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
+
 import java.io.IOException;
 import java.util.List;
+import org.apache.hadoop.security.KerberosInfo;
 
 /**
  * Protocol to talk to OM.
  */
-public interface OzoneManagerProtocol {
+@KerberosInfo(
+    serverPrincipal = OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY)
+public interface OzoneManagerProtocol  extends OzoneManagerSecurityProtocol {
 
   /**
    * Creates a volume.
@@ -307,7 +314,6 @@ public interface OzoneManagerProtocol {
                                    String bucketPrefix, int maxNumOfBuckets)
       throws IOException;
 
-
   /**
    * Initiate multipart upload for the specified key.
    * @param keyArgs
@@ -345,5 +351,26 @@ public interface OzoneManagerProtocol {
    */
   void abortMultipartUpload(OmKeyArgs omKeyArgs) throws IOException;
 
+  /**
+   * Returns list of parts of a multipart upload key.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param uploadID
+   * @param partNumberMarker
+   * @param maxParts
+   * @return OmMultipartUploadListParts
+   */
+  OmMultipartUploadListParts listParts(String volumeName, String bucketName,
+      String keyName, String uploadID, int partNumberMarker,
+      int maxParts)  throws IOException;
+
+  /**
+   * Gets s3Secret for given kerberos user.
+   * @param kerberosID
+   * @return S3SecretValue
+   * @throws IOException
+   */
+  S3SecretValue getS3Secret(String kerberosID) throws IOException;
 }
 

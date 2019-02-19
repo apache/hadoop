@@ -581,7 +581,15 @@ public class DataNode extends ReconfigurableBase
                       "balancer max concurrent movers must be larger than 0"));
             }
           }
-          xserver.updateBalancerMaxConcurrentMovers(movers);
+          boolean success = xserver.updateBalancerMaxConcurrentMovers(movers);
+          if (!success) {
+            rootException = new ReconfigurationException(
+                property,
+                newVal,
+                getConf().get(property),
+                new IllegalArgumentException(
+                    "Could not modify concurrent moves thread count"));
+          }
           return Integer.toString(movers);
         } catch (NumberFormatException nfe) {
           rootException = new ReconfigurationException(
@@ -2323,8 +2331,7 @@ public class DataNode extends ReconfigurableBase
     if (numTargets > 0) {
       StringBuilder xfersBuilder = new StringBuilder();
       for (int i = 0; i < numTargets; i++) {
-        xfersBuilder.append(xferTargets[i]);
-        xfersBuilder.append(" ");
+        xfersBuilder.append(xferTargets[i]).append(" ");
       }
       LOG.info(bpReg + " Starting thread to transfer " + 
                block + " to " + xfersBuilder);                       

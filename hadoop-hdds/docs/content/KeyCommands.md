@@ -29,6 +29,7 @@ Ozone shell supports the following key commands.
   * [delete](#delete)
   * [info](#info)
   * [list](#list)
+  * [rename](#rename)
 
 
 ### Get
@@ -69,7 +70,7 @@ The above command will put the sales.orc as a new key into _/hive/jan/corrected-
 
 ### Delete
 
-The delete key command removes the key from the bucket.
+The key delete command removes the key from the bucket.
 
 ***Params:***
 
@@ -102,7 +103,7 @@ key.
 
 ### List
 
-The key list commands allows user to list all keys in a bucket.
+The key list command allows user to list all keys in a bucket.
 
 ***Params:***
 
@@ -117,8 +118,24 @@ The key list commands allows user to list all keys in a bucket.
 ozone sh key list /hive/jan
 {{< /highlight >}}
 
-This command will  list all key in the bucket _/hive/jan_.
+This command will list all keys in the bucket _/hive/jan_.
 
+### Rename
+
+The `key rename` command changes the name of an existing key in the specified bucket.
+
+***Params:***
+
+| Arguments                      |  Comment                                |
+|--------------------------------|-----------------------------------------|
+|  Uri                           | The name of the bucket in **/volume/bucket** format.
+|  FromKey                       | The existing key to be renamed
+|  ToKey                         | The new desired name of the key
+
+{{< highlight bash >}}
+ozone sh key rename /hive/jan sales.orc new_name.orc
+{{< /highlight >}}
+The above command will rename `sales.orc` to `new_name.orc` in the bucket `/hive/jan`.
 
 
 

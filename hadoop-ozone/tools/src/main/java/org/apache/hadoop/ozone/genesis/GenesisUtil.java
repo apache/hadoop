@@ -25,6 +25,7 @@ import org.apache.hadoop.utils.MetadataStore;
 import org.apache.hadoop.utils.MetadataStoreBuilder;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Random;
 
@@ -45,6 +46,10 @@ public final class GenesisUtil {
   private static final int DB_FILE_LEN = 7;
   private static final String TMP_DIR = "java.io.tmpdir";
 
+  public static Path getTempPath() {
+    return Paths.get(System.getProperty(TMP_DIR));
+  }
+
   public static MetadataStore getMetadataStore(String dbType)
       throws IOException {
     Configuration conf = new Configuration();
@@ -52,8 +57,7 @@ public final class GenesisUtil {
     builder.setConf(conf);
     builder.setCreateIfMissing(true);
     builder.setDbFile(
-        Paths.get(System.getProperty(TMP_DIR))
-            .resolve(RandomStringUtils.randomNumeric(DB_FILE_LEN))
+        getTempPath().resolve(RandomStringUtils.randomNumeric(DB_FILE_LEN))
             .toFile());
     switch (dbType) {
     case DEFAULT_TYPE:

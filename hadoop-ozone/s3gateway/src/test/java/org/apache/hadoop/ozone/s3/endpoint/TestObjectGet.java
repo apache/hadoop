@@ -70,7 +70,7 @@ public class TestObjectGet {
         new ByteArrayInputStream(CONTENT.getBytes(UTF_8));
 
     //WHEN
-    Response response = rest.get("b1", "key1", body);
+    Response response = rest.get("b1", "key1", null, 0, null, body);
 
     //THEN
     OzoneInputStream ozoneInputStream =

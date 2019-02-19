@@ -55,6 +55,7 @@ public class Container extends BaseResource {
   private Artifact artifact = null;
   private Boolean privilegedContainer = null;
   private Map<String, List<Map<String, String>>> exposedPorts = null;
+  private List<LocalizationStatus> localizationStatuses = null;
 
   /**
    * Unique container id of a running service, e.g.
@@ -256,6 +257,35 @@ public class Container extends BaseResource {
 
   public void setExposedPorts(Map<String, List<Map<String, String>>> ports) {
     this.exposedPorts = ports;
+  }
+
+  /**
+   * Localization statuses.
+   */
+  @ApiModelProperty(example = "null", value =
+      "Localization statuses of a container.")
+  @JsonProperty("localization_statuses")
+  public List<LocalizationStatus> getLocalizationStatuses() {
+    return localizationStatuses;
+  }
+
+  /**
+   * Sets the localization statuses.
+   * @param statuses localization statuses.
+   */
+  @XmlElement(name = "localization_statuses")
+  public void setLocalizationStatuses(List<LocalizationStatus> statuses) {
+    this.localizationStatuses = statuses;
+  }
+
+  /**
+   * Sets the localization statuses and returns the container.
+   * @param statuses
+   * @return
+   */
+  public Container localizationStatuses(List<LocalizationStatus> statuses) {
+    this.localizationStatuses = statuses;
+    return this;
   }
 
   @Override

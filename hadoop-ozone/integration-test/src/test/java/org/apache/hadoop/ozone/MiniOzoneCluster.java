@@ -21,10 +21,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import java.io.IOException;
@@ -47,6 +49,17 @@ public interface MiniOzoneCluster {
    */
   static Builder newBuilder(OzoneConfiguration conf) {
     return new MiniOzoneClusterImpl.Builder(conf);
+  }
+
+  /**
+   * Returns the Builder to construct MiniOzoneHACluster.
+   *
+   * @param conf OzoneConfiguration
+   *
+   * @return MiniOzoneCluster builder
+   */
+  static Builder newHABuilder(OzoneConfiguration conf) {
+    return new MiniOzoneHAClusterImpl.Builder(conf);
   }
 
   /**
@@ -150,7 +163,7 @@ public interface MiniOzoneCluster {
    * @throws InterruptedException
    */
   void restartStorageContainerManager() throws InterruptedException,
-      TimeoutException, IOException;
+      TimeoutException, IOException, AuthenticationException;
 
   /**
    * Restarts OzoneManager instance.
@@ -221,6 +234,8 @@ public interface MiniOzoneCluster {
     protected final String path;
 
     protected String clusterId;
+    protected String omServiceId;
+    protected int numOfOMs;
 
     protected Optional<Boolean> enableTrace = Optional.of(false);
     protected Optional<Integer> hbInterval = Optional.empty();
@@ -239,6 +254,7 @@ public interface MiniOzoneCluster {
     protected int numOfScmHandlers = 20;
     protected int numOfDatanodes = 1;
     protected boolean  startDataNodes = true;
+    protected CertificateClient certClient;
 
     protected Builder(OzoneConfiguration conf) {
       this.conf = conf;
@@ -261,6 +277,18 @@ public interface MiniOzoneCluster {
 
     public Builder setStartDataNodes(boolean nodes) {
       this.startDataNodes = nodes;
+      return this;
+    }
+
+    /**
+     * Sets the certificate client.
+     *
+     * @param client
+     *
+     * @return MiniOzoneCluster.Builder
+     */
+    public Builder setCertificateClient(CertificateClient client) {
+      this.certClient = client;
       return this;
     }
 
@@ -398,6 +426,16 @@ public interface MiniOzoneCluster {
      */
     public Builder setBlockSize(long size) {
       blockSize = Optional.of(size);
+      return this;
+    }
+
+    public Builder setNumOfOzoneManagers(int numOMs) {
+      this.numOfOMs = numOMs;
+      return this;
+    }
+
+    public Builder setOMServiceId(String serviceId) {
+      this.omServiceId = serviceId;
       return this;
     }
 

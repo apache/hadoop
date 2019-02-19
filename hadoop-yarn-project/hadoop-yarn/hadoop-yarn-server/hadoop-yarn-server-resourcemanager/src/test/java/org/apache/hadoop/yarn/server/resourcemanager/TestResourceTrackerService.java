@@ -32,7 +32,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.NodeEventDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.FileSystemNodeAttributeStore;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -523,12 +523,13 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     checkDecommissionedNMCount(rm, ++initialMetricCount);
     nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertEquals(
-        "Node should not have been decomissioned.",
+        "Node should not have been decommissioned.",
         NodeAction.NORMAL,
         nodeHeartbeat.getNodeAction());
     nodeHeartbeat = nm2.nodeHeartbeat(true);
-    Assert.assertEquals("Node should have been decomissioned but is in state" +
-        nodeHeartbeat.getNodeAction(),
+    Assert.assertEquals(
+        "Node should have been decommissioned but is in state"
+            + nodeHeartbeat.getNodeAction(),
         NodeAction.SHUTDOWN, nodeHeartbeat.getNodeAction());
   }
 
