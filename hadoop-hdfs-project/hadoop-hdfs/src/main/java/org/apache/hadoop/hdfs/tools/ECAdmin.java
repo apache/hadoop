@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -612,24 +613,32 @@ public class ECAdmin extends Configured implements Tool {
 
     @Override
     public String getShortUsage() {
-      return "[" + getName() + "]\n";
+      return "[" + getName() + " [-policy <policy>...<policy>]]\n";
     }
 
     @Override
     public String getLongUsage() {
+      TableListing listing = AdminHelper.getOptionDescriptionListing();
+      listing.addRow("<policy>", "The name of the erasure coding policy");
       return getShortUsage() + "\n"
-          + "Verify the cluster setup can support all enabled erasure coding"
-          + " policies.\n";
+          + "Verify if the cluster setup can support all enabled erasure " +
+          "coding policies. If optional parameter -policy is specified, " +
+          "verify if the cluster setup can support the given policy.\n";
     }
 
     @Override
     public int run(Configuration conf, List<String> args) throws IOException {
-      if (args.size() > 0) {
-        System.err.println(getName() + ": Too many arguments");
-        return 1;
-      }
+      boolean isPolicyOption = StringUtils.popOption("-policy", args);
       final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
-      ECTopologyVerifierResult result = getECTopologyVerifierResult(dfs);
+      ECTopologyVerifierResult result;
+      if (isPolicyOption) {
+        CommandFormat c = new CommandFormat(1, Integer.MAX_VALUE);
+        c.parse(args);
+        String[] parameters = args.toArray(new String[args.size()]);
+        result = getECTopologyResultForPolicies(dfs, parameters);
+      } else {
+        result = getECTopologyVerifierResult(dfs);
+      }
       System.out.println(result.getResultMessage());
       if (result.isSupported()) {
         return 0;
@@ -647,6 +656,21 @@ public class ECAdmin extends Configured implements Tool {
 
     return ECTopologyVerifier.getECTopologyVerifierResult(report,
         getEnabledPolicies(policies));
+  }
+
+  private static ECTopologyVerifierResult getECTopologyResultForPolicies(
+      final DistributedFileSystem dfs, final String... policyNames)
+      throws IOException {
+    ErasureCodingPolicy[] policies =
+        new ErasureCodingPolicy[policyNames.length];
+    for (int i = 0; i < policyNames.length; i++) {
+      policies[i] =
+        getPolicy(dfs.getClient().getNamenode().getErasureCodingPolicies(),
+            policyNames[i]);
+    }
+    final DatanodeInfo[] report = dfs.getClient().getNamenode()
+        .getDatanodeReport(HdfsConstants.DatanodeReportType.ALL);
+    return ECTopologyVerifier.getECTopologyVerifierResult(report, policies);
   }
 
   private static ECTopologyVerifierResult getECTopologyVerifierResultForPolicy(
