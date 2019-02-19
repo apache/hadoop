@@ -104,15 +104,6 @@ public class CertificateCodec {
   }
 
   /**
-   * Get Certificate location.
-   *
-   * @return Path
-   */
-  public Path getLocation() {
-    return location;
-  }
-
-  /**
    * Returns the Certificate as a PEM encoded String.
    *
    * @param x509CertHolder - X.509 Certificate Holder.
@@ -122,16 +113,32 @@ public class CertificateCodec {
   public static String getPEMEncodedString(X509CertificateHolder x509CertHolder)
       throws SCMSecurityException {
     try {
+      return getPEMEncodedString(getX509Certificate(x509CertHolder));
+    } catch (CertificateException exp) {
+      throw new SCMSecurityException(exp);
+    }
+  }
+
+  /**
+   * Returns the Certificate as a PEM encoded String.
+   *
+   * @param certificate - X.509 Certificate.
+   * @return PEM Encoded Certificate String.
+   * @throws SCMSecurityException - On failure to create a PEM String.
+   */
+  public static String getPEMEncodedString(X509Certificate certificate)
+      throws SCMSecurityException {
+    try {
       StringWriter stringWriter = new StringWriter();
       try (JcaPEMWriter pemWriter = new JcaPEMWriter(stringWriter)) {
-        pemWriter.writeObject(getX509Certificate(x509CertHolder));
+        pemWriter.writeObject(certificate);
       }
       return stringWriter.toString();
-    } catch (CertificateException | IOException e) {
-      LOG.error("Error in encoding certificate." + x509CertHolder
-          .getSubject().toString(), e);
+    } catch (IOException e) {
+      LOG.error("Error in encoding certificate." + certificate
+          .getSubjectDN().toString(), e);
       throw new SCMSecurityException("PEM Encoding failed for certificate." +
-          x509CertHolder.getSubject().toString(), e);
+          certificate.getSubjectDN().toString(), e);
     }
   }
 
@@ -143,12 +150,21 @@ public class CertificateCodec {
    * @throws CertificateException - Thrown on Failure.
    * @throws IOException          - Thrown on Failure.
    */
-  public X509Certificate getX509Certificate(String pemEncodedString)
+  public static X509Certificate getX509Certificate(String pemEncodedString)
       throws CertificateException, IOException {
     CertificateFactory fact = CertificateFactory.getInstance("X.509");
     try (InputStream input = IOUtils.toInputStream(pemEncodedString, UTF_8)) {
       return (X509Certificate) fact.generateCertificate(input);
     }
+  }
+
+  /**
+   * Get Certificate location.
+   *
+   * @return Path
+   */
+  public Path getLocation() {
+    return location;
   }
 
   /**

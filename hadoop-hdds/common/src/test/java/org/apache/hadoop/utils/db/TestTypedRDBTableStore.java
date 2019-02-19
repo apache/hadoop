@@ -199,7 +199,11 @@ public class TestTypedRDBTableStore {
 
   private static boolean consume(Table.KeyValue keyValue) {
     count++;
-    Assert.assertNotNull(keyValue.getKey());
+    try {
+      Assert.assertNotNull(keyValue.getKey());
+    } catch (IOException ex) {
+      Assert.fail(ex.toString());
+    }
     return true;
   }
 

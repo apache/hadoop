@@ -19,22 +19,36 @@
 
 package org.apache.hadoop.hdds.scm.metadata;
 
-import com.google.common.primitives.Longs;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.utils.db.Codec;
 
 /**
- * Codec for Persisting the DeletedBlocks.
+ * Encodes and Decodes X509Certificate Class.
  */
-public class LongCodec implements Codec<Long> {
-
+public class X509CertificateCodec implements Codec<X509Certificate> {
   @Override
-  public byte[] toPersistedFormat(Long object) throws IOException {
-    return Longs.toByteArray(object);
+  public byte[] toPersistedFormat(X509Certificate object) throws IOException {
+    try {
+      return CertificateCodec.getPEMEncodedString(object)
+          .getBytes(Charset.forName("UTF-8"));
+    } catch (SCMSecurityException exp) {
+      throw new IOException(exp);
+    }
   }
 
   @Override
-  public Long fromPersistedFormat(byte[] rawData) throws IOException {
-    return Longs.fromByteArray(rawData);
+  public X509Certificate fromPersistedFormat(byte[] rawData)
+      throws IOException {
+    try{
+      String s = new String(rawData, Charset.forName("UTF-8"));
+      return CertificateCodec.getX509Certificate(s);
+    } catch (CertificateException exp) {
+      throw new IOException(exp);
+    }
   }
 }

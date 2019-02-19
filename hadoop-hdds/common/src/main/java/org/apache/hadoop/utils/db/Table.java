@@ -102,8 +102,8 @@ public interface Table<KEY, VALUE> extends AutoCloseable {
    */
   interface KeyValue<KEY, VALUE> {
 
-    KEY getKey();
+    KEY getKey() throws IOException;
 
-    VALUE getValue();
+    VALUE getValue() throws IOException;
   }
 }

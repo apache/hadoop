@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.om.codec;
 
+import java.io.IOException;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.utils.db.Codec;
 
@@ -29,14 +30,14 @@ import com.google.protobuf.InvalidProtocolBufferException;
 public class VolumeListCodec implements Codec<VolumeList> {
 
   @Override
-  public byte[] toPersistedFormat(VolumeList object) {
+  public byte[] toPersistedFormat(VolumeList object) throws IOException {
     Preconditions
         .checkNotNull(object, "Null object can't be converted to byte array.");
     return object.toByteArray();
   }
 
   @Override
-  public VolumeList fromPersistedFormat(byte[] rawData) {
+  public VolumeList fromPersistedFormat(byte[] rawData) throws IOException {
     Preconditions
         .checkNotNull(rawData,
             "Null byte array can't converted to real object.");

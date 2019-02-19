@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.om.codec;
 
+import java.io.IOException;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.BucketInfo;
 import org.apache.hadoop.utils.db.Codec;
@@ -30,14 +31,14 @@ import com.google.protobuf.InvalidProtocolBufferException;
 public class OmBucketInfoCodec implements Codec<OmBucketInfo> {
 
   @Override
-  public byte[] toPersistedFormat(OmBucketInfo object) {
+  public byte[] toPersistedFormat(OmBucketInfo object) throws IOException {
     Preconditions
         .checkNotNull(object, "Null object can't be converted to byte array.");
     return object.getProtobuf().toByteArray();
   }
 
   @Override
-  public OmBucketInfo fromPersistedFormat(byte[] rawData) {
+  public OmBucketInfo fromPersistedFormat(byte[] rawData) throws IOException {
     Preconditions
         .checkNotNull(rawData,
             "Null byte array can't converted to real object.");

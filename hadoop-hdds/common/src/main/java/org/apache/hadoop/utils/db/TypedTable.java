@@ -123,12 +123,12 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
     }
 
     @Override
-    public KEY getKey() {
+    public KEY getKey() throws IOException {
       return codecRegistry.asObject(rawKeyValue.getKey(), keyType);
     }
 
     @Override
-    public VALUE getValue() {
+    public VALUE getValue() throws IOException {
       return codecRegistry.asObject(rawKeyValue.getValue(), valueType);
     }
   }
@@ -163,7 +163,7 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
     }
 
     @Override
-    public TypedKeyValue seek(KEY key) {
+    public TypedKeyValue seek(KEY key) throws IOException {
       byte[] keyBytes = codecRegistry.asRawData(key);
       KeyValue<byte[], byte[]> result = rawIterator.seek(keyBytes);
       if (result == null) {
@@ -173,7 +173,7 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
     }
 
     @Override
-    public KEY key() {
+    public KEY key() throws IOException {
       byte[] result = rawIterator.key();
       if (result == null) {
         return null;

@@ -20,6 +20,7 @@
 package org.apache.hadoop.utils.db;
 
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.Iterator;
 
 /**
@@ -45,13 +46,13 @@ public interface TableIterator<KEY, T> extends Iterator<T>, Closeable {
    * @param key - Bytes that represent the key.
    * @return VALUE.
    */
-  T seek(KEY key);
+  T seek(KEY key) throws IOException;
 
   /**
    * Returns the key value at the current position.
    * @return KEY
    */
-  KEY key();
+  KEY key() throws IOException;
 
   /**
    * Returns the VALUE at the current position.

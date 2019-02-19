@@ -17,13 +17,17 @@
  */
 package org.apache.hadoop.hdds.scm.metadata;
 
+import java.math.BigInteger;
+import java.security.cert.X509Certificate;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import java.io.IOException;
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateStore;
 import org.apache.hadoop.utils.db.DBStore;
 import org.apache.hadoop.utils.db.Table;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
+import org.apache.hadoop.utils.db.TableIterator;
 
 /**
  * Generic interface for data stores for SCM.
@@ -53,21 +57,47 @@ public interface SCMMetadataStore {
   DBStore getStore();
 
   /**
-   *  A Table that keeps the deleted blocks lists and transactions.
-    * @return Table
+   * A Table that keeps the deleted blocks lists and transactions.
+   *
+   * @return Table
    */
   Table<Long, DeletedBlocksTransaction> getDeletedBlocksTXTable();
 
   /**
    * Returns the current TXID for the deleted blocks.
+   *
    * @return Long
    */
   Long getCurrentTXID();
 
   /**
    * Returns the next TXID for the Deleted Blocks.
+   *
    * @return Long.
-  */
+   */
   Long getNextDeleteBlockTXID();
+
+  /**
+   * A table that maintains all the valid certificates issued by the SCM CA.
+   *
+   * @return Table
+   */
+  Table<BigInteger, X509Certificate> getValidCertsTable();
+
+  /**
+   * A Table that maintains all revoked certificates until they expire.
+   *
+   * @return Table.
+   */
+  Table<BigInteger, X509Certificate> getRevokedCertsTable();
+
+  /**
+   * Returns the list of Certificates of a specific type.
+   *
+   * @param certType - CertType.
+   * @return Iterator<X509Certificate>
+   */
+  TableIterator getAllCerts(CertificateStore.CertType certType);
+
 
 }

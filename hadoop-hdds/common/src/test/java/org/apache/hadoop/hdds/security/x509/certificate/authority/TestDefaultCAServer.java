@@ -51,10 +51,12 @@ public class TestDefaultCAServer {
   private static OzoneConfiguration conf = new OzoneConfiguration();
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  private MockCAStore caStore;
 
   @Before
   public void init() throws IOException {
     conf.set(OZONE_METADATA_DIRS, temporaryFolder.newFolder().toString());
+    caStore = new MockCAStore();
   }
 
   @Test
@@ -63,7 +65,7 @@ public class TestDefaultCAServer {
     SecurityConfig securityConfig = new SecurityConfig(conf);
     CertificateServer testCA = new DefaultCAServer("testCA",
         RandomStringUtils.randomAlphabetic(4),
-        RandomStringUtils.randomAlphabetic(4));
+        RandomStringUtils.randomAlphabetic(4), caStore);
     testCA.init(securityConfig, CertificateServer.CAType.SELF_SIGNED_CA);
     X509CertificateHolder first = testCA.getCACertificate();
     assertNotNull(first);
@@ -88,7 +90,7 @@ public class TestDefaultCAServer {
     SecurityConfig securityConfig = new SecurityConfig(conf);
     CertificateServer testCA = new DefaultCAServer("testCA",
         RandomStringUtils.randomAlphabetic(4),
-        RandomStringUtils.randomAlphabetic(4));
+        RandomStringUtils.randomAlphabetic(4), caStore);
     Consumer<SecurityConfig> caInitializer =
         ((DefaultCAServer) testCA).processVerificationStatus(
         DefaultCAServer.VerificationStatus.MISSING_CERTIFICATE);
@@ -108,7 +110,7 @@ public class TestDefaultCAServer {
     SecurityConfig securityConfig = new SecurityConfig(conf);
     CertificateServer testCA = new DefaultCAServer("testCA",
         RandomStringUtils.randomAlphabetic(4),
-        RandomStringUtils.randomAlphabetic(4));
+        RandomStringUtils.randomAlphabetic(4), caStore);
     Consumer<SecurityConfig> caInitializer =
         ((DefaultCAServer) testCA).processVerificationStatus(
             DefaultCAServer.VerificationStatus.MISSING_KEYS);
@@ -155,7 +157,7 @@ public class TestDefaultCAServer {
 
     CertificateServer testCA = new DefaultCAServer("testCA",
         RandomStringUtils.randomAlphabetic(4),
-        RandomStringUtils.randomAlphabetic(4));
+        RandomStringUtils.randomAlphabetic(4), caStore);
     testCA.init(new SecurityConfig(conf),
         CertificateServer.CAType.SELF_SIGNED_CA);
 
