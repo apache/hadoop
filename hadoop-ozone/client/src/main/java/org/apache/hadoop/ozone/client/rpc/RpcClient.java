@@ -48,7 +48,6 @@ import org.apache.hadoop.ozone.client.io.LengthInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
-import org.apache.hadoop.ozone.common.Checksum;
 import org.apache.hadoop.ozone.om.helpers.BucketEncryptionKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
@@ -110,7 +109,8 @@ public class RpcClient implements ClientProtocol {
       ozoneManagerClient;
   private final XceiverClientManager xceiverClientManager;
   private final int chunkSize;
-  private final Checksum checksum;
+  private final ChecksumType checksumType;
+  private final int bytesPerChecksum;
   private final UserGroupInformation ugi;
   private final OzoneAcl.OzoneACLRights userRights;
   private final OzoneAcl.OzoneACLRights groupRights;
@@ -189,22 +189,22 @@ public class RpcClient implements ClientProtocol {
         OzoneConfigKeys.OZONE_CLIENT_BYTES_PER_CHECKSUM,
         OzoneConfigKeys.OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT,
         StorageUnit.BYTES);
-    int checksumSize;
     if(configuredChecksumSize <
         OzoneConfigKeys.OZONE_CLIENT_BYTES_PER_CHECKSUM_MIN_SIZE) {
       LOG.warn("The checksum size ({}) is not allowed to be less than the " +
               "minimum size ({}), resetting to the minimum size.",
           configuredChecksumSize,
           OzoneConfigKeys.OZONE_CLIENT_BYTES_PER_CHECKSUM_MIN_SIZE);
-      checksumSize = OzoneConfigKeys.OZONE_CLIENT_BYTES_PER_CHECKSUM_MIN_SIZE;
+      bytesPerChecksum =
+          OzoneConfigKeys.OZONE_CLIENT_BYTES_PER_CHECKSUM_MIN_SIZE;
     } else {
-      checksumSize = configuredChecksumSize;
+      bytesPerChecksum = configuredChecksumSize;
     }
+
     String checksumTypeStr = conf.get(
         OzoneConfigKeys.OZONE_CLIENT_CHECKSUM_TYPE,
         OzoneConfigKeys.OZONE_CLIENT_CHECKSUM_TYPE_DEFAULT);
-    ChecksumType checksumType = ChecksumType.valueOf(checksumTypeStr);
-    this.checksum = new Checksum(checksumType, checksumSize);
+    checksumType = ChecksumType.valueOf(checksumTypeStr);
   }
 
   private InetSocketAddress getScmAddressForClient() throws IOException {
@@ -602,7 +602,8 @@ public class RpcClient implements ClientProtocol {
             .setStreamBufferMaxSize(streamBufferMaxSize)
             .setWatchTimeout(watchTimeout)
             .setBlockSize(blockSize)
-            .setChecksum(checksum)
+            .setChecksumType(checksumType)
+            .setBytesPerChecksum(bytesPerChecksum)
             .build();
     groupOutputStream.addPreallocateBlocks(
         openKey.getKeyInfo().getLatestVersionLocations(),
@@ -863,7 +864,8 @@ public class RpcClient implements ClientProtocol {
             .setStreamBufferMaxSize(streamBufferMaxSize)
             .setWatchTimeout(watchTimeout)
             .setBlockSize(blockSize)
-            .setChecksum(checksum)
+            .setBytesPerChecksum(bytesPerChecksum)
+            .setChecksumType(checksumType)
             .setMultipartNumber(partNumber)
             .setMultipartUploadID(uploadID)
             .setIsMultipartKey(true)

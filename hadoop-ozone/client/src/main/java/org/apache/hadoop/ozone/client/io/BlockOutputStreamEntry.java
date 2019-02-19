@@ -23,15 +23,12 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ChecksumType;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
-<<<<<<< HEAD
-import org.apache.hadoop.hdds.scm.XceiverClientSpi;
-=======
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
->>>>>>> HDDS-1103.Fix rat/findbug/checkstyle errors in ozone/hdds projects.
 import org.apache.hadoop.hdds.scm.storage.BlockOutputStream;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
-import org.apache.hadoop.ozone.common.Checksum;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
@@ -44,8 +41,9 @@ public final class BlockOutputStreamEntry extends OutputStream {
   private BlockID blockID;
   private final String key;
   private final XceiverClientManager xceiverClientManager;
-  private final XceiverClientSpi xceiverClient;
-  private final Checksum checksum;
+  private final Pipeline pipeline;
+  private final ChecksumType checksumType;
+  private final int bytesPerChecksum;
   private final String requestId;
   private final int chunkSize;
   // total number of bytes that should be written to this stream
@@ -64,7 +62,8 @@ public final class BlockOutputStreamEntry extends OutputStream {
       XceiverClientManager xceiverClientManager,
       XceiverClientSpi xceiverClient, String requestId, int chunkSize,
       long length, long streamBufferFlushSize, long streamBufferMaxSize,
-      long watchTimeout, List<ByteBuffer> bufferList, Checksum checksum,
+      long watchTimeout, List<ByteBuffer> bufferList,
+      ChecksumType checksumType, int bytesPerChecksum,
       Token<OzoneBlockTokenIdentifier> token) {
     this.outputStream = null;
     this.blockID = blockID;
@@ -80,7 +79,8 @@ public final class BlockOutputStreamEntry extends OutputStream {
     this.streamBufferMaxSize = streamBufferMaxSize;
     this.watchTimeout = watchTimeout;
     this.bufferList = bufferList;
-    this.checksum = checksum;
+    this.checksumType = checksumType;
+    this.bytesPerChecksum = bytesPerChecksum;
   }
 
   /**
@@ -127,8 +127,9 @@ public final class BlockOutputStreamEntry extends OutputStream {
       }
       this.outputStream =
           new BlockOutputStream(blockID, key, xceiverClientManager,
-              xceiverClient, requestId, chunkSize, streamBufferFlushSize,
-              streamBufferMaxSize, watchTimeout, bufferList, checksum);
+              pipeline, requestId, chunkSize, streamBufferFlushSize,
+              streamBufferMaxSize, watchTimeout, bufferList, checksumType,
+              bytesPerChecksum);
     }
   }
 
@@ -190,16 +191,9 @@ public final class BlockOutputStreamEntry extends OutputStream {
 
   void cleanup() throws IOException{
     checkStream();
-<<<<<<< HEAD
-    if (this.outputStream instanceof BlockOutputStream) {
-      BlockOutputStream out = (BlockOutputStream) this.outputStream;
-      out.cleanup();
-    }
-=======
     BlockOutputStream out = (BlockOutputStream) this.outputStream;
     out.cleanup(invalidateClient);
 
->>>>>>> HDDS-1103.Fix rat/findbug/checkstyle errors in ozone/hdds projects.
   }
 
   void writeOnRetry(long len) throws IOException {
@@ -227,10 +221,16 @@ public final class BlockOutputStreamEntry extends OutputStream {
     private long watchTimeout;
     private List<ByteBuffer> bufferList;
     private Token<OzoneBlockTokenIdentifier> token;
-    private Checksum checksum;
+    private ChecksumType checksumType;
+    private int bytesPerChecksum;
 
-    public Builder setChecksum(Checksum cs) {
-      this.checksum = cs;
+    public Builder setChecksumType(ChecksumType type) {
+      this.checksumType = type;
+      return this;
+    }
+
+    public Builder setBytesPerChecksum(int bytes) {
+      this.bytesPerChecksum = bytes;
       return this;
     }
 
@@ -250,13 +250,8 @@ public final class BlockOutputStreamEntry extends OutputStream {
       return this;
     }
 
-<<<<<<< HEAD
-    public Builder setXceiverClient(XceiverClientSpi client) {
-      this.xceiverClient = client;
-=======
     public Builder setPipeline(Pipeline ppln) {
       this.pipeline = ppln;
->>>>>>> HDDS-1103.Fix rat/findbug/checkstyle errors in ozone/hdds projects.
       return this;
     }
 
@@ -304,7 +299,7 @@ public final class BlockOutputStreamEntry extends OutputStream {
       return new BlockOutputStreamEntry(blockID, key,
           xceiverClientManager, xceiverClient, requestId, chunkSize,
           length, streamBufferFlushSize, streamBufferMaxSize, watchTimeout,
-          bufferList, checksum, token);
+          bufferList, checksumType, bytesPerChecksum, token);
     }
   }
 
@@ -326,10 +321,6 @@ public final class BlockOutputStreamEntry extends OutputStream {
 
   public XceiverClientSpi getXceiverClient() {
     return xceiverClient;
-  }
-
-  public Checksum getChecksum() {
-    return checksum;
   }
 
   public String getRequestId() {

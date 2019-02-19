@@ -21,16 +21,12 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FileEncryptionInfo;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ChecksumType;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result;
-<<<<<<< HEAD
-import org.apache.hadoop.hdds.client.BlockID;
-=======
->>>>>>> HDDS-1074. Remove dead variable from KeyOutputStream#addKeyLocationInfo. Contributed by Siddharth Wagle.
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.scm.storage.BlockOutputStream;
-import org.apache.hadoop.ozone.common.Checksum;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.om.helpers.*;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
@@ -40,11 +36,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
-<<<<<<< HEAD
-import org.apache.hadoop.security.UserGroupInformation;
-=======
 import org.apache.ratis.protocol.AlreadyClosedException;
->>>>>>> HDDS-959. KeyOutputStream should handle retry failures. Contributed by Lokesh Jain.
 import org.apache.ratis.protocol.RaftRetryFailureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,7 +80,8 @@ public class KeyOutputStream extends OutputStream {
   private final long streamBufferMaxSize;
   private final long watchTimeout;
   private final long blockSize;
-  private final Checksum checksum;
+  private final int bytesPerChecksum;
+  private final ChecksumType checksumType;
   private List<ByteBuffer> bufferList;
   private OmMultipartCommitUploadPartInfo commitUploadPartInfo;
   private FileEncryptionInfo feInfo;
@@ -115,7 +108,10 @@ public class KeyOutputStream extends OutputStream {
     bufferList.add(buffer);
     watchTimeout = 0;
     blockSize = 0;
-    this.checksum = new Checksum();
+    this.checksumType = ChecksumType.valueOf(
+        OzoneConfigKeys.OZONE_CLIENT_CHECKSUM_TYPE_DEFAULT);
+    this.bytesPerChecksum = OzoneConfigKeys
+        .OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT_BYTES; // Default is 1MB
   }
 
   @VisibleForTesting
@@ -151,7 +147,8 @@ public class KeyOutputStream extends OutputStream {
       OzoneManagerProtocolClientSideTranslatorPB omClient, int chunkSize,
       String requestId, ReplicationFactor factor, ReplicationType type,
       long bufferFlushSize, long bufferMaxSize, long size, long watchTimeout,
-      Checksum checksum, String uploadID, int partNumber, boolean isMultipart) {
+      ChecksumType checksumType, int bytesPerChecksum,
+      String uploadID, int partNumber, boolean isMultipart) {
     this.streamEntries = new ArrayList<>();
     this.currentStreamIndex = 0;
     this.omClient = omClient;
@@ -174,7 +171,8 @@ public class KeyOutputStream extends OutputStream {
     this.streamBufferMaxSize = bufferMaxSize;
     this.blockSize = size;
     this.watchTimeout = watchTimeout;
-    this.checksum = checksum;
+    this.bytesPerChecksum = bytesPerChecksum;
+    this.checksumType = checksumType;
 
     Preconditions.checkState(chunkSize > 0);
     Preconditions.checkState(streamBufferFlushSize > 0);
@@ -215,31 +213,11 @@ public class KeyOutputStream extends OutputStream {
       throws IOException {
     ContainerWithPipeline containerWithPipeline = scmClient
         .getContainerWithPipeline(subKeyInfo.getContainerID());
-<<<<<<< HEAD
-    UserGroupInformation.getCurrentUser().addToken(subKeyInfo.getToken());
-    BlockOutputStreamEntry.Builder builder =
-        new BlockOutputStreamEntry.Builder()
-            .setBlockID(subKeyInfo.getBlockID())
-            .setKey(keyArgs.getKeyName())
-            .setXceiverClientManager(xceiverClientManager)
-            .setXceiverClient(xceiverClient)
-            .setRequestId(requestID)
-            .setChunkSize(chunkSize)
-            .setLength(subKeyInfo.getLength())
-            .setStreamBufferFlushSize(streamBufferFlushSize)
-            .setStreamBufferMaxSize(streamBufferMaxSize)
-            .setWatchTimeout(watchTimeout)
-            .setBufferList(bufferList)
-            .setChecksum(checksum)
-            .setToken(subKeyInfo.getToken());
-    streamEntries.add(builder.build());
-=======
     streamEntries.add(new BlockOutputStreamEntry(subKeyInfo.getBlockID(),
         keyArgs.getKeyName(), xceiverClientManager,
         containerWithPipeline.getPipeline(), requestID, chunkSize,
         subKeyInfo.getLength(), streamBufferFlushSize, streamBufferMaxSize,
         watchTimeout, bufferList, checksum));
->>>>>>> HDDS-959. KeyOutputStream should handle retry failures. Contributed by Lokesh Jain.
   }
 
   @Override
@@ -590,7 +568,8 @@ public class KeyOutputStream extends OutputStream {
     private long streamBufferMaxSize;
     private long blockSize;
     private long watchTimeout;
-    private Checksum checksum;
+    private ChecksumType checksumType;
+    private int bytesPerChecksum;
     private String multipartUploadID;
     private int multipartNumber;
     private boolean isMultipartKey;
@@ -668,8 +647,13 @@ public class KeyOutputStream extends OutputStream {
       return this;
     }
 
-    public Builder setChecksum(Checksum checksumObj){
-      this.checksum = checksumObj;
+    public Builder setChecksumType(ChecksumType cType){
+      this.checksumType = cType;
+      return this;
+    }
+
+    public Builder setBytesPerChecksum(int bytes){
+      this.bytesPerChecksum = bytes;
       return this;
     }
 
@@ -681,13 +665,11 @@ public class KeyOutputStream extends OutputStream {
     public KeyOutputStream build() throws IOException {
       return new KeyOutputStream(openHandler, xceiverManager, scmClient,
           omClient, chunkSize, requestID, factor, type, streamBufferFlushSize,
-          streamBufferMaxSize, blockSize, watchTimeout, checksum,
-          multipartUploadID, multipartNumber, isMultipartKey);
+          streamBufferMaxSize, blockSize, watchTimeout, checksumType,
+          bytesPerChecksum, multipartUploadID, multipartNumber, isMultipartKey);
     }
   }
 
-<<<<<<< HEAD
-=======
   private static class BlockOutputStreamEntry extends OutputStream {
     private OutputStream outputStream;
     private BlockID blockID;
@@ -833,7 +815,6 @@ public class KeyOutputStream extends OutputStream {
     }
   }
 
->>>>>>> HDDS-959. KeyOutputStream should handle retry failures. Contributed by Lokesh Jain.
   /**
    * Verify that the output stream is open. Non blocking; this gives
    * the last state of the volatile {@link #closed} field.

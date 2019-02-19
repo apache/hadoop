@@ -38,6 +38,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Class to compute and verify checksums for chunks.
+ *
+ * This class is not thread safe.
  */
 public class Checksum {
 

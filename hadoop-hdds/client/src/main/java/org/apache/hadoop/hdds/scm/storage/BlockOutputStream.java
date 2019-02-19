@@ -29,6 +29,7 @@ import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ChecksumType;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ChunkInfo;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.BlockData;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.KeyValue;
@@ -76,7 +77,8 @@ public class BlockOutputStream extends OutputStream {
   private final BlockData.Builder containerBlockData;
   private XceiverClientManager xceiverClientManager;
   private XceiverClientSpi xceiverClient;
-  private final Checksum checksum;
+  private final ContainerProtos.ChecksumType checksumType;
+  private final int bytesPerChecksum;
   private final String streamId;
   private int chunkIndex;
   private int chunkSize;
@@ -121,14 +123,16 @@ public class BlockOutputStream extends OutputStream {
    * @param streamBufferFlushSize flush size
    * @param streamBufferMaxSize   max size of the currentBuffer
    * @param watchTimeout          watch timeout
-   * @param checksum              checksum
+   * @param checksumType          checksum type
+   * @param bytesPerChecksum      Bytes per checksum
    */
   @SuppressWarnings("parameternumber")
   public BlockOutputStream(BlockID blockID, String key,
       XceiverClientManager xceiverClientManager, Pipeline pipeline,
       String traceID, int chunkSize, long streamBufferFlushSize,
       long streamBufferMaxSize, long watchTimeout, List<ByteBuffer> bufferList,
-      Checksum checksum) throws IOException {
+      ChecksumType checksumType, int bytesPerChecksum)
+      throws IOException {
     this.blockID = blockID;
     this.key = key;
     this.traceID = traceID;
@@ -146,7 +150,8 @@ public class BlockOutputStream extends OutputStream {
     this.streamBufferMaxSize = streamBufferMaxSize;
     this.watchTimeout = watchTimeout;
     this.bufferList = bufferList;
-    this.checksum = checksum;
+    this.checksumType = checksumType;
+    this.bytesPerChecksum = bytesPerChecksum;
 
     // A single thread executor handle the responses of async requests
     responseExecutor = Executors.newSingleThreadExecutor();
@@ -585,6 +590,7 @@ public class BlockOutputStream extends OutputStream {
   private void writeChunkToContainer(ByteBuffer chunk) throws IOException {
     int effectiveChunkSize = chunk.remaining();
     ByteString data = ByteString.copyFrom(chunk);
+    Checksum checksum = new Checksum(checksumType, bytesPerChecksum);
     ChecksumData checksumData = checksum.computeChecksum(data);
     ChunkInfo chunkInfo = ChunkInfo.newBuilder()
         .setChunkName(DigestUtils.md5Hex(key) + "_stream_" + streamId +
