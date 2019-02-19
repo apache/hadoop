@@ -348,7 +348,8 @@ public final class OmUtils {
       File[] filesInDir = file.listFiles();
       if (filesInDir != null) {
         for (File cFile : filesInDir) {
-          addFilesToArchive(cFile.getAbsolutePath(), cFile, tarFileOutputStream);
+          addFilesToArchive(cFile.getAbsolutePath(), cFile,
+              tarFileOutputStream);
         }
       }
     }
