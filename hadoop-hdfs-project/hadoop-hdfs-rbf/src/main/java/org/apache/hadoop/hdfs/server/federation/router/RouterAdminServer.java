@@ -23,7 +23,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
@@ -39,6 +42,7 @@ import org.apache.hadoop.hdfs.protocolPB.RouterAdminProtocolServerSideTranslator
 import org.apache.hadoop.hdfs.protocolPB.RouterPolicyProvider;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
+import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.store.DisabledNameserviceStore;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreCache;
@@ -52,6 +56,8 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.EnterSafeModeRequ
 import org.apache.hadoop.hdfs.server.federation.store.protocol.EnterSafeModeResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDisabledNameservicesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDisabledNameservicesResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetSafeModeRequest;
@@ -376,6 +382,36 @@ public class RouterAdminServer extends AbstractService
     } else {
       return getMountTableStore().refreshMountTableEntries(request);
     }
+  }
+
+  @Override
+  public GetDestinationResponse getDestination(
+      GetDestinationRequest request) throws IOException {
+    final String src = request.getSrcPath();
+    final List<String> nsIds = new ArrayList<>();
+    RouterRpcServer rpcServer = this.router.getRpcServer();
+    List<RemoteLocation> locations = rpcServer.getLocationsForPath(src, false);
+    RouterRpcClient rpcClient = rpcServer.getRPCClient();
+    RemoteMethod method = new RemoteMethod("getFileInfo",
+        new Class<?>[] {String.class}, new RemoteParam());
+    try {
+      Map<RemoteLocation, HdfsFileStatus> responses =
+          rpcClient.invokeConcurrent(
+              locations, method, false, false, HdfsFileStatus.class);
+      for (RemoteLocation location : locations) {
+        if (responses.get(location) != null) {
+          nsIds.add(location.getNameserviceId());
+        }
+      }
+    } catch (IOException ioe) {
+      LOG.error("Cannot get location for {}: {}",
+          src, ioe.getMessage());
+    }
+    if (nsIds.isEmpty() && !locations.isEmpty()) {
+      String nsId = locations.get(0).getNameserviceId();
+      nsIds.add(nsId);
+    }
+    return GetDestinationResponse.newInstance(nsIds);
   }
 
   /**
