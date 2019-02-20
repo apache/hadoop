@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone;
 
+import static junit.framework.TestCase.assertNotNull;
 import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ADMINISTRATORS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
@@ -25,6 +26,7 @@ import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVA
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_ERROR_OTHER;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_EXPIRED;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLUME_NOT_FOUND;
+import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod.KERBEROS;
 import static org.slf4j.event.Level.INFO;
 
 import java.io.File;
@@ -37,14 +39,17 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.ScmInfo;
+import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
@@ -53,6 +58,7 @@ import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.minikdc.MiniKdc;
@@ -105,7 +111,10 @@ public final class TestSecureOzoneCluster {
   private File scmKeytab;
   private File spnegoKeytab;
   private File omKeyTab;
+  private File testUserKeytab;
   private String curUser;
+  private String testUserPrincipal;
+  private UserGroupInformation testKerberosUgi;
   private StorageContainerManager scm;
   private OzoneManager om;
 
@@ -163,8 +172,7 @@ public final class TestSecureOzoneCluster {
     createPrincipal(spnegoKeytab,
         configuration.get(ScmConfigKeys
             .HDDS_SCM_HTTP_KERBEROS_PRINCIPAL_KEY));
-    configuration.get(OMConfigKeys
-        .OZONE_OM_HTTP_KERBEROS_PRINCIPAL_KEY);
+    createPrincipal(testUserKeytab, testUserPrincipal);
     createPrincipal(omKeyTab,
         configuration.get(OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY));
   }
@@ -212,6 +220,8 @@ public final class TestSecureOzoneCluster {
     scmKeytab = new File(workDir, "scm.keytab");
     spnegoKeytab = new File(workDir, "http.keytab");
     omKeyTab = new File(workDir, "om.keytab");
+    testUserKeytab = new File(workDir, "testuser.keytab");
+    testUserPrincipal = "test@" + realm;
 
     configuration.set(ScmConfigKeys.HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY,
         scmKeytab.getAbsolutePath());
@@ -233,6 +243,47 @@ public final class TestSecureOzoneCluster {
     ScmInfo scmInfo = scm.getClientProtocolServer().getScmInfo();
     Assert.assertEquals(clusterId, scmInfo.getClusterId());
     Assert.assertEquals(scmId, scmInfo.getScmId());
+  }
+
+  @Test
+  public void testSCMSecurityProtocol() throws Exception {
+
+    initSCM();
+    scm = StorageContainerManager.createSCM(null, conf);
+    //Reads the SCM Info from SCM instance
+    try {
+      scm.start();
+
+      // Case 1: User with Kerberos credentials should succeed.
+      UserGroupInformation ugi =
+          UserGroupInformation.loginUserFromKeytabAndReturnUGI(
+              testUserPrincipal, testUserKeytab.getCanonicalPath());
+      ugi.setAuthenticationMethod(KERBEROS);
+      SCMSecurityProtocol scmSecurityProtocolClient =
+          HddsClientUtils.getScmSecurityClient(conf, ugi);
+      assertNotNull(scmSecurityProtocolClient);
+      String caCert = scmSecurityProtocolClient.getCACertificate();
+      LambdaTestUtils.intercept(RemoteException.class, "Certificate not found",
+          () -> scmSecurityProtocolClient.getCertificate("1"));
+      assertNotNull(caCert);
+
+      // Case 2: User without Kerberos credentials should fail.
+      ugi = UserGroupInformation.createRemoteUser("test");
+      ugi.setAuthenticationMethod(AuthMethod.TOKEN);
+      SCMSecurityProtocol finalScmSecurityProtocolClient =
+          HddsClientUtils.getScmSecurityClient(conf, ugi);
+
+      LambdaTestUtils.intercept(IOException.class, "Client cannot" +
+              " authenticate via:[KERBEROS]",
+          () -> finalScmSecurityProtocolClient.getCACertificate());
+      LambdaTestUtils.intercept(IOException.class, "Client cannot" +
+              " authenticate via:[KERBEROS]",
+          () -> finalScmSecurityProtocolClient.getCertificate("1"));
+    } finally {
+      if (scm != null) {
+        scm.stop();
+      }
+    }
   }
 
   private void initSCM()

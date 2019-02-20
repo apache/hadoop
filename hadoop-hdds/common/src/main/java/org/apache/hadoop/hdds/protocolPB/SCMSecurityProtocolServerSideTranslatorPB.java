@@ -20,7 +20,9 @@ import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import java.io.IOException;
 
+import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertificateRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetDataNodeCertRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertResponseProto.ResponseCode;
 import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
@@ -81,6 +83,39 @@ public class SCMSecurityProtocolServerSideTranslatorPB implements
       String certificate = impl
           .getOMCertificate(request.getOmDetails(),
               request.getCSR());
+      SCMGetCertResponseProto.Builder builder =
+          SCMGetCertResponseProto
+              .newBuilder()
+              .setResponseCode(ResponseCode.success)
+              .setX509Certificate(certificate);
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public SCMGetCertResponseProto getCertificate(RpcController controller,
+      SCMGetCertificateRequestProto request) throws ServiceException {
+    try {
+      String certificate = impl.getCertificate(request.getCertSerialId());
+      SCMGetCertResponseProto.Builder builder =
+          SCMGetCertResponseProto
+              .newBuilder()
+              .setResponseCode(ResponseCode.success)
+              .setX509Certificate(certificate);
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public SCMGetCertResponseProto getCACertificate(RpcController controller,
+      SCMSecurityProtocolProtos.SCMGetCACertificateRequestProto request)
+      throws ServiceException {
+    try {
+      String certificate = impl.getCACertificate();
       SCMGetCertResponseProto.Builder builder =
           SCMGetCertResponseProto
               .newBuilder()

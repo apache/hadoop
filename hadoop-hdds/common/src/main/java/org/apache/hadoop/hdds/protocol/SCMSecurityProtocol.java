@@ -45,11 +45,30 @@ public interface SCMSecurityProtocol {
   /**
    * Get SCM signed certificate for OM.
    *
-   * @param omDetails - DataNode Details.
+   * @param omDetails       - DataNode Details.
    * @param certSignReq     - Certificate signing request.
-   * @return byte[]         - SCM signed certificate.
+   * @return String         - pem encoded SCM signed
+   *                          certificate.
    */
   String getOMCertificate(OzoneManagerDetailsProto omDetails,
       String certSignReq) throws IOException;
+
+  /**
+   * Get SCM signed certificate for given certificate serial id if it exists.
+   * Throws exception if it's not found.
+   *
+   * @param certSerialId    - Certificate serial id.
+   * @return String         - pem encoded SCM signed
+   *                          certificate with given cert id if it
+   *                          exists.
+   */
+  String getCertificate(String certSerialId) throws IOException;
+
+  /**
+   * Get CA certificate.
+   *
+   * @return String         - pem encoded CA certificate.
+   */
+  String getCACertificate() throws IOException;
 
 }
