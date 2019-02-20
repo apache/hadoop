@@ -94,6 +94,7 @@ import org.apache.hadoop.ipc.RefreshResponse;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolPB;
+import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.SecurityUtil;
@@ -1537,11 +1538,20 @@ public class DFSAdmin extends FsShell {
           nsId, ClientProtocol.class);
       List<IOException> exceptions = new ArrayList<>();
       for (ProxyAndInfo<ClientProtocol> proxy : proxies) {
-        try{
+        try {
           proxy.getProxy().metaSave(pathname);
           System.out.println("Created metasave file " + pathname
               + " in the log directory of namenode " + proxy.getAddress());
-        } catch (IOException ioe){
+        } catch (RemoteException re) {
+          Exception unwrapped =  re.unwrapRemoteException(
+              StandbyException.class);
+          if (unwrapped instanceof StandbyException) {
+            System.out.println("Skip Standby NameNode, since it cannot perform"
+                + " metasave operation");
+          } else {
+            throw re;
+          }
+        } catch (IOException ioe) {
           System.out.println("Created metasave file " + pathname
               + " in the log directory of namenode " + proxy.getAddress()
               + " failed");
