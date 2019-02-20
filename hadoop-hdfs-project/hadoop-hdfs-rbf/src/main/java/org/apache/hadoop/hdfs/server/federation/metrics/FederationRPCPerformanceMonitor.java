@@ -129,7 +129,7 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   public long proxyOp() {
     PROXY_TIME.set(monotonicNow());
     long processingTime = getProcessingTime();
-    if (processingTime >= 0) {
+    if (metrics != null && processingTime >= 0) {
       metrics.addProcessingTime(processingTime);
     }
     return Thread.currentThread().getId();
@@ -139,7 +139,7 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   public void proxyOpComplete(boolean success) {
     if (success) {
       long proxyTime = getProxyTime();
-      if (proxyTime >= 0) {
+      if (metrics != null && proxyTime >= 0) {
         metrics.addProxyTime(proxyTime);
       }
     }
@@ -147,7 +147,9 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
 
   @Override
   public void proxyOpFailureStandby() {
-    metrics.incrProxyOpFailureStandby();
+    if (metrics != null) {
+      metrics.incrProxyOpFailureStandby();
+    }
   }
 
   @Override

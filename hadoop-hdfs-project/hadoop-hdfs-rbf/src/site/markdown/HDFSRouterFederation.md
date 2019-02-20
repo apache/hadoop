@@ -261,6 +261,10 @@ RANDOM can be used for reading and writing data from/into different subclusters.
 The common use for this approach is to have the same data in multiple subclusters and balance the reads across subclusters.
 For example, if thousands of containers need to read the same data (e.g., a library), one can use RANDOM to read the data from any of the subclusters.
 
+To determine which subcluster contains a file:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -getDestination /user/user1/file.txt
+
 Note that consistency of the data across subclusters is not guaranteed by the Router.
 
 ### Disabling nameservices

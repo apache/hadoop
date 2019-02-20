@@ -175,6 +175,14 @@ message GetMountTableEntriesResponseProto {
   optional uint64 timestamp = 2;
 }
 
+message GetDestinationRequestProto {
+  optional string srcPath = 1;
+}
+
+message  GetDestinationResponseProto {
+  repeated string destinations = 1;
+}
+
 
 /////////////////////////////////////////////////
 // Routers
