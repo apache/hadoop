@@ -34,6 +34,7 @@ public class NativeAzureFileSystemContract extends AbstractBondedFSContract {
   public NativeAzureFileSystemContract(Configuration conf) {
     super(conf); //insert the base features
     addConfResource(CONTRACT_XML);
+    AzureTestUtils.assumeNamespaceDisabled(conf);
   }
 
   @Override
