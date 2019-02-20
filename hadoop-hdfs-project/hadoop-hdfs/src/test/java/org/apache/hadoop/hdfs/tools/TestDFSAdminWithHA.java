@@ -414,16 +414,21 @@ public class TestDFSAdminWithHA {
   @Test (timeout = 30000)
   public void testMetaSave() throws Exception {
     setUpHaCluster(false);
+    cluster.getDfsCluster().transitionToActive(0);
     int exitCode = admin.run(new String[] {"-metasave", "dfs.meta"});
     assertEquals(err.toString().trim(), 0, exitCode);
-    String message = "Created metasave file dfs.meta in the log directory"
-        + " of namenode.*";
-    assertOutputMatches(message + newLine + message + newLine);
+    String messageFromActiveNN = "Created metasave file dfs.meta "
+        + "in the log directory of namenode.*";
+    String messageFromStandbyNN = "Skip Standby NameNode, since it "
+        + "cannot perform metasave operation";
+    assertOutputMatches(messageFromActiveNN + newLine +
+        messageFromStandbyNN + newLine);
   }
 
   @Test (timeout = 30000)
   public void testMetaSaveNN1UpNN2Down() throws Exception {
     setUpHaCluster(false);
+    cluster.getDfsCluster().transitionToActive(0);
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-metasave", "dfs.meta"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
@@ -437,6 +442,7 @@ public class TestDFSAdminWithHA {
   @Test (timeout = 30000)
   public void testMetaSaveNN1DownNN2Up() throws Exception {
     setUpHaCluster(false);
+    cluster.getDfsCluster().transitionToActive(1);
     cluster.getDfsCluster().shutdownNameNode(0);
     int exitCode = admin.run(new String[] {"-metasave", "dfs.meta"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
