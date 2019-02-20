@@ -22,6 +22,9 @@ import java.io.Closeable;
 import java.io.IOException;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.OzoneManagerDetailsProto;
+import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCACertificateRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertificateRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertificateRequestProto.Builder;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetDataNodeCertRequestProto;
 import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
 import org.apache.hadoop.ipc.ProtobufHelper;
@@ -106,6 +109,43 @@ public class SCMSecurityProtocolClientSideTranslatorPB implements
         .setOmDetails(omDetails);
     try {
       return rpcProxy.getOMCertificate(NULL_RPC_CONTROLLER, builder.build())
+          .getX509Certificate();
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  /**
+   * Get SCM signed certificate with given serial id. Throws exception if
+   * certificate is not found.
+   *
+   * @param certSerialId    - Certificate serial id.
+   * @return string         - pem encoded certificate.
+   */
+  @Override
+  public String getCertificate(String certSerialId) throws IOException {
+    Builder builder = SCMGetCertificateRequestProto
+        .newBuilder()
+        .setCertSerialId(certSerialId);
+    try {
+      return rpcProxy.getCertificate(NULL_RPC_CONTROLLER, builder.build())
+          .getX509Certificate();
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  /**
+   * Get CA certificate.
+   *
+   * @return serial   - Root certificate.
+   */
+  @Override
+  public String getCACertificate() throws IOException {
+    SCMGetCACertificateRequestProto protoIns = SCMGetCACertificateRequestProto
+        .getDefaultInstance();
+    try {
+      return rpcProxy.getCACertificate(NULL_RPC_CONTROLLER, protoIns)
           .getX509Certificate();
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);

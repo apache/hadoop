@@ -36,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -169,6 +170,23 @@ public class DefaultCAServer implements CertificateServer {
     } catch (CertificateException e) {
       throw new IOException(e);
     }
+  }
+
+  /**
+   * Returns the Certificate corresponding to given certificate serial id if
+   * exist. Return null if it doesn't exist.
+   *
+   * @param certSerialId         - Certificate for this CA.
+   * @return X509CertificateHolder
+   * @throws CertificateException - usually thrown if this CA is not
+   * initialized.
+   * @throws IOException - on Error.
+   */
+  @Override
+  public X509Certificate getCertificate(String certSerialId) throws
+      IOException {
+    return store.getCertificateByID(new BigInteger(certSerialId),
+        CertificateStore.CertType.VALID_CERTS);
   }
 
   private KeyPair getCAKeys() throws IOException {

@@ -19,6 +19,8 @@ package org.apache.hadoop.hdds.scm.server;
 import com.google.protobuf.BlockingService;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -134,6 +136,47 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol {
     } catch (InterruptedException | ExecutionException e) {
       LOGGER.error("getOMCertificate operation failed. ", e);
       throw new IOException("getOMCertificate operation failed. ", e);
+    }
+  }
+
+  /**
+   * Get SCM signed certificate with given serial id.
+   *
+   * @param certSerialId    - Certificate serial id.
+   * @return string         - pem encoded SCM signed certificate.
+   */
+  @Override
+  public String getCertificate(String certSerialId) throws IOException {
+    LOGGER.debug("Getting certificate with certificate serial id",
+        certSerialId);
+    try {
+      X509Certificate certificate =
+          certificateServer.getCertificate(certSerialId);
+      if (certificate != null) {
+        return CertificateCodec.getPEMEncodedString(certificate);
+      }
+    } catch (CertificateException e) {
+      LOGGER.error("getCertificate operation failed. ", e);
+      throw new IOException("getCertificate operation failed. ", e);
+    }
+    LOGGER.debug("Certificate with serial id {} not found.", certSerialId);
+    throw new IOException("Certificate not found");
+  }
+
+  /**
+   * Get SCM signed certificate for OM.
+   *
+   * @return string         - Root certificate.
+   */
+  @Override
+  public String getCACertificate() throws IOException {
+    LOGGER.debug("Getting CA certificate.");
+    try {
+      return CertificateCodec.getPEMEncodedString(
+          certificateServer.getCACertificate());
+    } catch (CertificateException e) {
+      LOGGER.error("getRootCertificate operation failed. ", e);
+      throw new IOException("getRootCertificate operation failed. ", e);
     }
   }
 

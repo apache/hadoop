@@ -53,6 +53,19 @@ message SCMGetOMCertRequestProto {
 }
 
 /**
+* Proto request to get a certificate with given serial id.
+*/
+message SCMGetCertificateRequestProto {
+  required string certSerialId = 1;
+}
+
+/**
+* Proto request to get CA certificate.
+*/
+message SCMGetCACertificateRequestProto {
+}
+
+/**
  * Returns a certificate signed by SCM.
  */
 message SCMGetCertResponseProto {
@@ -79,4 +92,15 @@ service SCMSecurityProtocolService {
   rpc getOMCertificate (SCMGetOMCertRequestProto) returns
   (SCMGetCertResponseProto);
 
+  /**
+   * Get SCM signed certificate for DataNode.
+   */
+  rpc getCertificate (SCMGetCertificateRequestProto) returns
+  (SCMGetCertResponseProto);
+
+  /**
+   * Get SCM signed certificate for DataNode.
+   */
+  rpc getCACertificate (SCMGetCACertificateRequestProto) returns
+  (SCMGetCertResponseProto);
 }

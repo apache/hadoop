@@ -410,4 +410,54 @@ public final class HddsUtils {
   public static long getUtcTime() {
     return Calendar.getInstance(UTC_ZONE).getTimeInMillis();
   }
+
+  /**
+   * Retrieve the socket address that should be used by clients to connect
+   * to the SCM for
+   * {@link org.apache.hadoop.hdds.protocol.SCMSecurityProtocol}. If
+   * {@link ScmConfigKeys#OZONE_SCM_SECURITY_SERVICE_ADDRESS_KEY} is not defined
+   * then {@link ScmConfigKeys#OZONE_SCM_CLIENT_ADDRESS_KEY} is used. If neither
+   * is defined then {@link ScmConfigKeys#OZONE_SCM_NAMES} is used.
+   *
+   * @param conf
+   * @return Target InetSocketAddress for the SCM block client endpoint.
+   * @throws IllegalArgumentException if configuration is not defined.
+   */
+  public static InetSocketAddress getScmAddressForSecurityProtocol(
+      Configuration conf) {
+    Optional<String> host = getHostNameFromConfigKeys(conf,
+        ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_ADDRESS_KEY);
+
+    if (!host.isPresent()) {
+      host = getHostNameFromConfigKeys(conf,
+          ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY);
+    }
+
+    if (!host.isPresent()) {
+      // Fallback to Ozone SCM names.
+      Collection<InetSocketAddress> scmAddresses = getSCMAddresses(conf);
+      if (scmAddresses.size() > 1) {
+        throw new IllegalArgumentException(
+            ScmConfigKeys.OZONE_SCM_NAMES +
+                " must contain a single hostname. Multiple SCM hosts are " +
+                "currently unsupported");
+      }
+      host = Optional.of(scmAddresses.iterator().next().getHostName());
+    }
+
+    if (!host.isPresent()) {
+      throw new IllegalArgumentException(
+          ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_ADDRESS_KEY
+              + " must be defined. See"
+              + " https://wiki.apache.org/hadoop/Ozone#Configuration"
+              + " for details on configuring Ozone.");
+    }
+
+    final Optional<Integer> port = getPortNumberFromConfigKeys(conf,
+        ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_PORT_KEY);
+
+    return NetUtils.createSocketAddr(host.get() + ":" + port
+        .orElse(ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_PORT_DEFAULT));
+  }
+
 }
