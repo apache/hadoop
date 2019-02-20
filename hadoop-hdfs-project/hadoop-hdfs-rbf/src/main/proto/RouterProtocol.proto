@@ -79,4 +79,9 @@ service RouterAdminProtocolService {
    * Refresh mount entries
    */
   rpc refreshMountTableEntries(RefreshMountTableEntriesRequestProto) returns(RefreshMountTableEntriesResponseProto);
+
+  /**
+   * Get the destination of a file/directory in the federation.
+   */
+  rpc getDestination(GetDestinationRequestProto) returns (GetDestinationResponseProto);
 }

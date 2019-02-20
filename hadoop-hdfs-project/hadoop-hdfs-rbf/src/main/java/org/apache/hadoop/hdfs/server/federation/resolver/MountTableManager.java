@@ -21,6 +21,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RefreshMountTableEntriesRequest;
@@ -93,4 +95,14 @@ public interface MountTableManager {
    */
   RefreshMountTableEntriesResponse refreshMountTableEntries(
       RefreshMountTableEntriesRequest request) throws IOException;
+
+  /**
+   * Get the destination subcluster (namespace) of a file/directory.
+   *
+   * @param request Fully populated request object including the file to check.
+   * @return The response including the subcluster where the input file is.
+   * @throws IOException Throws exception if the data store is not initialized.
+   */
+  GetDestinationResponse getDestination(
+      GetDestinationRequest request) throws IOException;
 }

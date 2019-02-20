@@ -23,11 +23,19 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -41,8 +49,11 @@ import org.apache.hadoop.hdfs.server.federation.resolver.MultipleDestinationMoun
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -52,6 +63,8 @@ import org.junit.Test;
  * Tests router rpc with multiple destination mount table resolver.
  */
 public class TestRouterRPCMultipleDestinationMountTableResolver {
+  private static final List<String> NS_IDS = Arrays.asList("ns0", "ns1");
+
   private static StateStoreDFSCluster cluster;
   private static RouterContext routerContext;
   private static MountTableResolver resolver;
@@ -391,4 +404,135 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
 
     return addResponse.getStatus();
   }
+
+  @Test
+  public void testGetDestinationHashAll() throws Exception {
+    testGetDestination(DestinationOrder.HASH_ALL,
+        Arrays.asList("ns1"),
+        Arrays.asList("ns1"),
+        Arrays.asList("ns1", "ns0"));
+  }
+
+  @Test
+  public void testGetDestinationHash() throws Exception {
+    testGetDestination(DestinationOrder.HASH,
+        Arrays.asList("ns1"),
+        Arrays.asList("ns1"),
+        Arrays.asList("ns1"));
+  }
+
+  @Test
+  public void testGetDestinationRandom() throws Exception {
+    testGetDestination(DestinationOrder.RANDOM,
+        null, null, Arrays.asList("ns0", "ns1"));
+  }
+
+  /**
+   * Generic test for getting the destination subcluster.
+   * @param order DestinationOrder of the mount point.
+   * @param expectFileLocation Expected subclusters of a file. null for any.
+   * @param expectNoFileLocation Expected subclusters of a non-existing file.
+   * @param expectDirLocation Expected subclusters of a nested directory.
+   * @throws Exception If the test cannot run.
+   */
+  private void testGetDestination(DestinationOrder order,
+      List<String> expectFileLocation,
+      List<String> expectNoFileLocation,
+      List<String> expectDirLocation) throws Exception {
+    setupOrderMountPath(order);
+
+    RouterClient client = routerContext.getAdminClient();
+    MountTableManager mountTableManager = client.getMountTableManager();
+
+    // If the file exists, it should be in the expected subcluster
+    final String pathFile = "dir/file";
+    final Path pathRouterFile = new Path("/mount", pathFile);
+    final Path pathLocalFile = new Path("/tmp", pathFile);
+    FileStatus fileStatus = routerFs.getFileStatus(pathRouterFile);
+    assertTrue(fileStatus + " should be a file", fileStatus.isFile());
+    GetDestinationResponse respFile = mountTableManager.getDestination(
+        GetDestinationRequest.newInstance(pathRouterFile));
+    if (expectFileLocation != null) {
+      assertEquals(expectFileLocation, respFile.getDestinations());
+      assertPathStatus(expectFileLocation, pathLocalFile, false);
+    } else {
+      Collection<String> dests = respFile.getDestinations();
+      assertPathStatus(dests, pathLocalFile, false);
+    }
+
+    // If the file does not exist, it should give us the expected subclusters
+    final String pathNoFile = "dir/no-file";
+    final Path pathRouterNoFile = new Path("/mount", pathNoFile);
+    final Path pathLocalNoFile = new Path("/tmp", pathNoFile);
+    LambdaTestUtils.intercept(FileNotFoundException.class,
+        () -> routerFs.getFileStatus(pathRouterNoFile));
+    GetDestinationResponse respNoFile = mountTableManager.getDestination(
+        GetDestinationRequest.newInstance(pathRouterNoFile));
+    if (expectNoFileLocation != null) {
+      assertEquals(expectNoFileLocation, respNoFile.getDestinations());
+    }
+    assertPathStatus(Collections.emptyList(), pathLocalNoFile, false);
+
+    // If the folder exists, it should be in the expected subcluster
+    final String pathNestedDir = "dir/dir";
+    final Path pathRouterNestedDir = new Path("/mount", pathNestedDir);
+    final Path pathLocalNestedDir = new Path("/tmp", pathNestedDir);
+    FileStatus dirStatus = routerFs.getFileStatus(pathRouterNestedDir);
+    assertTrue(dirStatus + " should be a directory", dirStatus.isDirectory());
+    GetDestinationResponse respDir = mountTableManager.getDestination(
+        GetDestinationRequest.newInstance(pathRouterNestedDir));
+    assertEqualsCollection(expectDirLocation, respDir.getDestinations());
+    assertPathStatus(expectDirLocation, pathLocalNestedDir, true);
+  }
+
+  /**
+   * Assert that the status of a file in the subcluster is the expected one.
+   * @param expectedLocations Subclusters where the file is expected to exist.
+   * @param path Path of the file/directory to check.
+   * @param isDir If the path is expected to be a directory.
+   * @throws Exception If the file cannot be checked.
+   */
+  private void assertPathStatus(Collection<String> expectedLocations,
+      Path path, boolean isDir) throws Exception {
+    for (String nsId : NS_IDS) {
+      final FileSystem fs = getFileSystem(nsId);
+      if (expectedLocations.contains(nsId)) {
+        assertTrue(path + " should exist in " + nsId, fs.exists(path));
+        final FileStatus status = fs.getFileStatus(path);
+        if (isDir) {
+          assertTrue(path + " should be a directory", status.isDirectory());
+        } else {
+          assertTrue(path + " should be a file", status.isFile());
+        }
+      } else {
+        assertFalse(path + " should not exist in " + nsId, fs.exists(path));
+      }
+    }
+  }
+
+  /**
+   * Assert if two collections are equal without checking the order.
+   * @param col1 First collection to compare.
+   * @param col2 Second collection to compare.
+   */
+  private static void assertEqualsCollection(
+      Collection<String> col1, Collection<String> col2) {
+    assertEquals(new TreeSet<>(col1), new TreeSet<>(col2));
+  }
+
+  /**
+   * Get the filesystem for each subcluster.
+   * @param nsId Identifier of the name space (subcluster).
+   * @return The FileSystem for
+   */
+  private static FileSystem getFileSystem(final String nsId) {
+    if (nsId.equals("ns0")) {
+      return nnFs0;
+    }
+    if (nsId.equals("ns1")) {
+      return nnFs1;
+    }
+    return null;
+  }
+
 }
