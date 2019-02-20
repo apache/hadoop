@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.client.protocol;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.io.Text;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.client.rpc.ha.OMProxyProvider;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 
@@ -506,4 +508,7 @@ public interface ClientProtocol {
    * @throws IOException
    */
   S3SecretValue getS3Secret(String kerberosID) throws IOException;
+
+  @VisibleForTesting
+  OMProxyProvider getOMProxyProvider();
 }
