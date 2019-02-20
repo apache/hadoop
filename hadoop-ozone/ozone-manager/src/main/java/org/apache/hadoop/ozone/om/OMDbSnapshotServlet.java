@@ -50,9 +50,10 @@ public class OMDbSnapshotServlet extends HttpServlet {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(OMDbSnapshotServlet.class);
+  private static final long serialVersionUID = 1L;
 
   private transient DBStore omDbStore;
-  private DataTransferThrottler throttler = null;
+  private transient DataTransferThrottler throttler = null;
 
   @Override
   public void init() throws ServletException {
@@ -111,7 +112,6 @@ public class OMDbSnapshotServlet extends HttpServlet {
         response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         return;
       }
-      LOG.info("Tar location = " + checkPointTarFile.getAbsolutePath());
       checkPointTarFile = OmUtils.createTarFile(
           checkpoint.getCheckpointLocation());
       LOG.info("Tar location = " + checkPointTarFile.getAbsolutePath());

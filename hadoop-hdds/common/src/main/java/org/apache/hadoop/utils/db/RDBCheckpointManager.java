@@ -93,7 +93,7 @@ public class RDBCheckpointManager {
     return null;
   }
 
-  class RocksDBCheckpointSnapshot implements DBCheckpointSnapshot {
+  static class RocksDBCheckpointSnapshot implements DBCheckpointSnapshot {
 
     private Path checkpointLocation;
     private long checkpointTimestamp;
