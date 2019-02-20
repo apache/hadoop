@@ -146,6 +146,7 @@ endif()
 
 add_subdirectory(main/native/libhdfs)
 add_subdirectory(main/native/libhdfs-tests)
+add_subdirectory(main/native/libhdfs-examples)
 
 # Temporary fix to disable Libhdfs++ build on older systems that do not support thread_local
 include(CheckCXXSourceCompiles)
