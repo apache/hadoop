@@ -26,6 +26,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
@@ -36,6 +41,8 @@ import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.metrics.FederationMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
+import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
+import org.apache.hadoop.hdfs.server.federation.resolver.MultipleDestinationMountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
@@ -78,7 +85,8 @@ public class TestRouterAdminCLI {
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
-    cluster = new StateStoreDFSCluster(false, 1);
+    cluster = new StateStoreDFSCluster(false, 1,
+        MultipleDestinationMountTableResolver.class);
     // Build and start a router with State Store + admin + RPC
     Configuration conf = new RouterConfigBuilder()
         .stateStore()
@@ -550,6 +558,11 @@ public class TestRouterAdminCLI {
         .contains("\t[-nameservice enable | disable <nameservice>]"));
     out.reset();
 
+    argv = new String[] {"-getDestination"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(out.toString().contains("\t[-getDestination <path>]"));
+    out.reset();
+
     argv = new String[] {"-Random"};
     assertEquals(-1, ToolRunner.run(admin, argv));
     String expected = "Usage: hdfs dfsrouteradmin :\n"
@@ -560,6 +573,7 @@ public class TestRouterAdminCLI {
         + "<destination> " + "[-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] "
         + "-owner <owner> -group <group> -mode <mode>]\n" + "\t[-rm <source>]\n"
         + "\t[-ls <path>]\n"
+        + "\t[-getDestination <path>]\n"
         + "\t[-setQuota <path> -nsQuota <nsQuota> -ssQuota "
         + "<quota in bytes or quota size string>]\n" + "\t[-clrQuota <path>]\n"
         + "\t[-safemode enter | leave | get]\n"
@@ -1090,5 +1104,53 @@ public class TestRouterAdminCLI {
     assertEquals(nsId, mountTable.getDestinations().get(0).getNameserviceId());
     assertEquals(dest, mountTable.getDestinations().get(0).getDest());
     assertEquals(order, mountTable.getDestOrder());
+  }
+
+  @Test
+  public void testGetDestination() throws Exception {
+
+    // Test the basic destination feature
+    System.setOut(new PrintStream(out));
+    String[] argv = new String[] {"-getDestination", "/file.txt"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    assertEquals("Destination: ns0" + System.lineSeparator(), out.toString());
+
+    // Add a HASH_ALL entry to check the destination changing
+    argv = new String[] {"-add", "/testGetDest", "ns0,ns1",
+        "/testGetDestination",
+        "-order", DestinationOrder.HASH_ALL.toString()};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    MountTableResolver resolver =
+        (MountTableResolver) router.getSubclusterResolver();
+    resolver.loadCache(true);
+
+    // Files should be distributed across ns0 and ns1
+    Map<String, AtomicInteger> counter = new TreeMap<>();
+    final Pattern p = Pattern.compile("Destination: (.*)");
+    for (int i = 0; i < 10; i++) {
+      out.reset();
+      String filename = "file" + i+ ".txt";
+      argv = new String[] {"-getDestination", "/testGetDest/" + filename};
+      assertEquals(0, ToolRunner.run(admin, argv));
+      String outLine = out.toString();
+      Matcher m = p.matcher(outLine);
+      assertTrue(m.find());
+      String nsId = m.group(1);
+      if (counter.containsKey(nsId)) {
+        counter.get(nsId).getAndIncrement();
+      } else {
+        counter.put(nsId, new AtomicInteger(1));
+      }
+    }
+    assertEquals("Wrong counter size: " + counter, 2, counter.size());
+    assertTrue(counter + " should contain ns0", counter.containsKey("ns0"));
+    assertTrue(counter + " should contain ns1", counter.containsKey("ns1"));
+
+    // Bad cases
+    argv = new String[] {"-getDestination"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    argv = new String[] {"-getDestination /file1.txt /file2.txt"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
   }
 }
