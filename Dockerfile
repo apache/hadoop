@@ -21,7 +21,27 @@ RUN yum -y install --setopt=skip_missing_names_on_install=False \
 RUN ln -s /usr/bin/cmake3 /usr/bin/cmake
 
 RUN mkdir /build
-COPY . /build
+COPY .git /build/.git
+COPY hadoop-yarn-project /build/hadoop-yarn-project
+COPY hadoop-assemblies /build/hadoop-assemblies
+COPY hadoop-project /build/hadoop-project
+COPY hadoop-common-project /build/hadoop-common-project
+COPY hadoop-cloud-storage-project /build/hadoop-cloud-storage-project
+COPY hadoop-project-dist /build/hadoop-project-dist
+COPY hadoop-maven-plugins /build/hadoop-maven-plugins
+COPY hadoop-dist /build/hadoop-dist
+COPY hadoop-minicluster /build/hadoop-minicluster
+COPY hadoop-mapreduce-project /build/hadoop-mapreduce-project
+COPY hadoop-tools /build/hadoop-tools
+COPY hadoop-hdfs-project /build/hadoop-hdfs-project
+COPY hadoop-client-modules /build/hadoop-client-modules
+COPY hadoop-build-tools /build/hadoop-build-tools
+COPY dev-support /build/dev-support
+COPY pom.xml /build/pom.xml
+COPY LICENSE.txt /build/LICENSE.txt
+COPY BUILDING.txt /build/BUILDING.txt
+COPY NOTICE.txt /build/NOTICE.txt
+COPY README.txt /build/README.txt
 
 ENV CMAKE_C_COMPILER=gcc CMAKE_CXX_COMPILER=g++
 
