@@ -350,12 +350,18 @@ public class NamenodeWebHdfsMethods {
     cp.cancelDelegationToken(token);
   }
 
-  public Token<? extends TokenIdentifier> generateDelegationToken(
-      final UserGroupInformation ugi,
+  public Credentials createCredentials(final UserGroupInformation ugi,
       final String renewer) throws IOException {
     final NameNode namenode = (NameNode)context.getAttribute("name.node");
     final Credentials c = DelegationTokenSecretManager.createCredentials(
         namenode, ugi, renewer != null? renewer: ugi.getShortUserName());
+    return c;
+  }
+
+  public Token<? extends TokenIdentifier> generateDelegationToken(
+      final UserGroupInformation ugi,
+      final String renewer) throws IOException {
+    Credentials c = createCredentials(ugi, renewer);
     if (c == null) {
       return null;
     }
