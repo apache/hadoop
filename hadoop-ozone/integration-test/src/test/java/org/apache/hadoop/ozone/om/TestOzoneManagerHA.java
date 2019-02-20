@@ -19,19 +19,29 @@ package org.apache.hadoop.ozone.om;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
-import org.apache.hadoop.ozone.*;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.MiniOzoneHAClusterImpl;
+import org.apache.hadoop.ozone.client.OzoneClient;
+import org.apache.hadoop.ozone.client.rpc.ha.OMProxyInfo;
+import org.apache.hadoop.ozone.client.rpc.ha.OMProxyProvider;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
 
 import java.io.IOException;
-import java.util.*;
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.UUID;
 
 import static org.apache.hadoop.ozone.MiniOzoneHAClusterImpl
     .NODE_FAILURE_TIMEOUT;
@@ -151,6 +161,34 @@ public class TestOzoneManagerHA {
     } else {
       // Verify that the request failed
       Assert.assertTrue(retVolumeinfo.getVolumeName().isEmpty());
+    }
+  }
+
+  /**
+   * Test that OMProxyProvider creates an OM proxy for each OM in the cluster.
+   */
+  @Test
+  public void testOMClientProxyProvide() throws Exception {
+    OzoneClient rpcClient = cluster.getRpcClient();
+    OMProxyProvider omProxyProvider =
+        rpcClient.getObjectStore().getClientProxy().getOMProxyProvider();
+    List<OMProxyInfo> omProxies = omProxyProvider.getOMProxies();
+
+    Assert.assertEquals(numOfOMs, omProxies.size());
+
+    for (int i = 0; i < numOfOMs; i++) {
+      InetSocketAddress omRpcServerAddr =
+          cluster.getOzoneManager(i).getOmRpcServerAddr();
+      boolean omClientProxyExists = false;
+      for (OMProxyInfo omProxyInfo : omProxies) {
+        if (omProxyInfo.getAddress().equals(omRpcServerAddr)) {
+          omClientProxyExists = true;
+          break;
+        }
+      }
+      Assert.assertTrue("There is no OM Client Proxy corresponding to OM " +
+              "node" + cluster.getOzoneManager(i).getOMNodId(),
+          omClientProxyExists);
     }
   }
 }

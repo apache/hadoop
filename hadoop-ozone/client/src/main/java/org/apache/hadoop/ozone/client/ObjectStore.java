@@ -72,6 +72,11 @@ public class ObjectStore {
     proxy = null;
   }
 
+  @VisibleForTesting
+  public ClientProtocol getClientProxy() {
+    return proxy;
+  }
+
   /**
    * Creates the volume with default values.
    * @param volumeName Name of the volume to be created.

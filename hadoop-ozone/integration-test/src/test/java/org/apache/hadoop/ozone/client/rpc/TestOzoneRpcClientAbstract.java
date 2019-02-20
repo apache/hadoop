@@ -63,6 +63,8 @@ import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
+import org.apache.hadoop.ozone.client.rpc.ha.OMProxyInfo;
+import org.apache.hadoop.ozone.client.rpc.ha.OMProxyProvider;
 import org.apache.hadoop.ozone.common.OzoneChecksumException;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
@@ -178,6 +180,23 @@ public abstract class TestOzoneRpcClientAbstract {
 
   public static void setScmId(String scmId){
     TestOzoneRpcClientAbstract.scmId = scmId;
+  }
+
+  /**
+   * Test OM Proxy Provider.
+   */
+  @Test
+  public void testOMClientProxyProvider() {
+    OMProxyProvider omProxyProvider = store.getClientProxy()
+        .getOMProxyProvider();
+    List<OMProxyInfo> omProxies = omProxyProvider.getOMProxies();
+
+    // For a non-HA OM service, there should be only one OM proxy.
+    Assert.assertEquals(1, omProxies.size());
+    // The address in OMProxyInfo object, which client will connect to,
+    // should match the OM's RPC address.
+    Assert.assertTrue(omProxies.get(0).getAddress().equals(
+        ozoneManager.getOmRpcServerAddr()));
   }
 
   @Test
