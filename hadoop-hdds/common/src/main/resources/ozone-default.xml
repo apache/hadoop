@@ -1881,4 +1881,13 @@
       jar and false for the ozone-filesystem-lib.jar
     </description>
   </property>
+  <property>
+    <name>ozone.manager.db.snapshot.transfer.bandwidthPerSec</name>
+    <value>0</value>
+    <tag>OZONE</tag>
+    <description>
+      Maximum bandwidth used for Ozone Manager DB checkpoint download through
+      the servlet.
+    </description>
+  </property>
 </configuration>
