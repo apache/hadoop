@@ -1756,10 +1756,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void metaSave(String filename) throws IOException {
     String operationName = "metaSave";
     checkSuperuserPrivilege(operationName);
-    checkOperation(OperationCategory.UNCHECKED);
+    checkOperation(OperationCategory.READ);
     writeLock();
     try {
-      checkOperation(OperationCategory.UNCHECKED);
+      checkOperation(OperationCategory.READ);
       File file = new File(System.getProperty("hadoop.log.dir"), filename);
       PrintWriter out = new PrintWriter(new BufferedWriter(
           new OutputStreamWriter(new FileOutputStream(file), Charsets.UTF_8)));

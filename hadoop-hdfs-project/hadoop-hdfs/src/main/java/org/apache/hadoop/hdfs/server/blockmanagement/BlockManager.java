@@ -838,8 +838,13 @@ public class BlockManager implements BlockStatsMXBean {
       new ArrayList<DatanodeStorageInfo>();
     
     NumberReplicas numReplicas = new NumberReplicas();
+    BlockInfo blockInfo = getStoredBlock(block);
+    if (blockInfo == null) {
+      out.println("Block "+ block + " is Null");
+      return;
+    }
     // source node returned is not used
-    chooseSourceDatanodes(getStoredBlock(block), containingNodes,
+    chooseSourceDatanodes(blockInfo, containingNodes,
         containingLiveReplicasNodes, numReplicas,
         new LinkedList<Byte>(), LowRedundancyBlocks.LEVEL);
     
@@ -848,7 +853,7 @@ public class BlockManager implements BlockStatsMXBean {
     assert containingLiveReplicasNodes.size() >= numReplicas.liveReplicas();
     int usableReplicas = numReplicas.liveReplicas() +
                          numReplicas.decommissionedAndDecommissioning();
-    
+
     if (block instanceof BlockInfo) {
       BlockCollection bc = getBlockCollection((BlockInfo)block);
       String fileName = (bc == null) ? "[orphaned]" : bc.getName();
@@ -1764,8 +1769,8 @@ public class BlockManager implements BlockStatsMXBean {
     this.shouldPostponeBlocksFromFuture  = postpone;
   }
 
-
-  private void postponeBlock(Block blk) {
+  @VisibleForTesting
+  void postponeBlock(Block blk) {
     postponedMisreplicatedBlocks.add(blk);
   }
   
