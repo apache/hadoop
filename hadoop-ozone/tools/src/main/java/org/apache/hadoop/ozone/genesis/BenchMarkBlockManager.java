@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.genesis;
 
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
@@ -46,6 +47,7 @@ import java.io.IOException;
 import java.util.UUID;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_DB_CACHE_SIZE_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_DB_CACHE_SIZE_MB;
@@ -59,9 +61,16 @@ import static org.apache.hadoop.ozone.OzoneConsts.SCM_PIPELINE_DB;
 @State(Scope.Thread)
 public class BenchMarkBlockManager {
 
-  private StorageContainerManager scm;
-  private PipelineManager pipelineManager;
-  private BlockManager blockManager;
+  private static String testDir;
+  private static StorageContainerManager scm;
+  private static PipelineManager pipelineManager;
+  private static BlockManager blockManager;
+  private static ReentrantLock lock = new ReentrantLock();
+
+  @Param({"1", "10", "100", "1000", "10000", "100000"})
+  private static int numPipelines;
+  @Param({"3", "10", "100"})
+  private static int numContainersPerPipeline;
 
   private static StorageContainerManager getScm(OzoneConfiguration conf,
       SCMConfigurator configurator) throws IOException,
@@ -80,46 +89,53 @@ public class BenchMarkBlockManager {
   }
 
   @Setup(Level.Trial)
-  public void initialize()
+  public static void initialize()
       throws IOException, AuthenticationException, InterruptedException {
-    OzoneConfiguration conf = new OzoneConfiguration();
-    conf.set(HddsConfigKeys.OZONE_METADATA_DIRS,
-        GenesisUtil.getTempPath().resolve(RandomStringUtils.randomNumeric(7))
-            .toString());
-    conf.setInt(OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT, 100);
-    final File metaDir = ServerUtils.getScmDbDir(conf);
-    final File pipelineDBPath = new File(metaDir, SCM_PIPELINE_DB);
-    int cacheSize = conf.getInt(OZONE_SCM_DB_CACHE_SIZE_MB,
-        OZONE_SCM_DB_CACHE_SIZE_DEFAULT);
-    MetadataStore pipelineStore =
-        MetadataStoreBuilder.newBuilder()
-            .setCreateIfMissing(true)
-            .setConf(conf)
-            .setDbFile(pipelineDBPath)
-            .setCacheSize(cacheSize * OzoneConsts.MB)
-            .build();
-    addPipelines(100, ReplicationFactor.THREE, pipelineStore);
-    pipelineStore.close();
-    scm = getScm(conf, new SCMConfigurator());
-    pipelineManager = scm.getPipelineManager();
-    for (Pipeline pipeline : pipelineManager
-        .getPipelines(ReplicationType.RATIS, ReplicationFactor.THREE)) {
-      pipelineManager.openPipeline(pipeline.getId());
+    try {
+      lock.lock();
+      if (scm == null) {
+        OzoneConfiguration conf = new OzoneConfiguration();
+        testDir = GenesisUtil.getTempPath()
+            .resolve(RandomStringUtils.randomNumeric(7)).toString();
+        conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, testDir);
+        conf.setInt(OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT,
+            numContainersPerPipeline);
+        final File metaDir = ServerUtils.getScmDbDir(conf);
+        final File pipelineDBPath = new File(metaDir, SCM_PIPELINE_DB);
+        int cacheSize = conf.getInt(OZONE_SCM_DB_CACHE_SIZE_MB,
+            OZONE_SCM_DB_CACHE_SIZE_DEFAULT);
+        MetadataStore pipelineStore =
+            MetadataStoreBuilder.newBuilder().setCreateIfMissing(true)
+                .setConf(conf).setDbFile(pipelineDBPath)
+                .setCacheSize(cacheSize * OzoneConsts.MB).build();
+        addPipelines(ReplicationFactor.THREE,
+            pipelineStore);
+        pipelineStore.close();
+        scm = getScm(conf, new SCMConfigurator());
+        pipelineManager = scm.getPipelineManager();
+        for (Pipeline pipeline : pipelineManager
+            .getPipelines(ReplicationType.RATIS, ReplicationFactor.THREE)) {
+          pipelineManager.openPipeline(pipeline.getId());
+        }
+        blockManager = scm.getScmBlockManager();
+        scm.getEventQueue().fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
+        Thread.sleep(1000);
+      }
+    } finally {
+      lock.unlock();
     }
-    blockManager = scm.getScmBlockManager();
-    scm.getEventQueue().fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
-    Thread.sleep(1000);
   }
 
   @Setup(Level.Trial)
-  public void tearDown() {
+  public static void tearDown() {
     if (scm != null) {
       scm.stop();
       scm.join();
+      FileUtil.fullyDelete(new File(testDir));
     }
   }
 
-  private void addPipelines(int numPipelines, ReplicationFactor factor,
+  private static void addPipelines(ReplicationFactor factor,
       MetadataStore pipelineStore) throws IOException {
     List<DatanodeDetails> nodes = new ArrayList<>();
     for (int i = 0; i < factor.getNumber(); i++) {
@@ -140,6 +156,7 @@ public class BenchMarkBlockManager {
     }
   }
 
+  @Threads(4)
   @Benchmark
   public void allocateBlockBenchMark(BenchMarkBlockManager state,
       Blackhole bh) throws IOException {
