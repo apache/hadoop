@@ -26,6 +26,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
@@ -48,7 +49,6 @@ import org.apache.ratis.rpc.SupportedRpcType;
 import org.apache.ratis.server.RaftServer;
 import org.apache.ratis.server.RaftServerConfigKeys;
 import org.apache.ratis.statemachine.impl.BaseStateMachine;
-import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.ratis.util.LifeCycle;
 import org.apache.ratis.util.SizeInBytes;
 import org.apache.ratis.util.TimeDuration;
@@ -91,7 +91,7 @@ public final class OzoneManagerRatisServer {
 
     this.raftPeerId = localRaftPeerId;
     this.raftGroupId = RaftGroupId.valueOf(
-        ByteString.copyFromUtf8(raftGroupIdStr));
+        getRaftGroupIdFromOmServiceId(raftGroupIdStr));
     this.raftGroup = RaftGroup.valueOf(raftGroupId, raftPeers);
 
     StringBuilder raftPeersStr = new StringBuilder();
@@ -354,5 +354,9 @@ public final class OzoneManagerRatisServer {
       storageDir = HddsServerUtil.getDefaultRatisDirectory(conf);
     }
     return storageDir;
+  }
+
+  private UUID getRaftGroupIdFromOmServiceId(String omServiceId) {
+    return UUID.nameUUIDFromBytes(omServiceId.getBytes());
   }
 }
