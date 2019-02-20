@@ -70,7 +70,7 @@ $HADOOP_HOME/share/hadoop/common/
 $HADOOP_HOME/share/hadoop/hdfs
 $HADOOP_HOME/share/hadoop/hdfs/lib/"
 
-for d in $JAR_DIRS; do 
+for d in $JAR_DIRS; do
   for j in $d/*.jar; do
     CLASSPATH=${CLASSPATH}:$j
   done;
@@ -114,14 +114,14 @@ LIB_JVM_DIR=`findlibjvm`
 echo  "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 echo  LIB_JVM_DIR = $LIB_JVM_DIR
 echo  "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-# Put delays to ensure hdfs is up and running and also shuts down 
+# Put delays to ensure hdfs is up and running and also shuts down
 # after the tests are complete
 rm $HDFS_TEST_CONF_DIR/core-site.xml
 
 $HADOOP_HOME/bin/hadoop jar $HDFS_TEST_JAR \
     org.apache.hadoop.test.MiniDFSClusterManager \
     -format -nnport 20300 -writeConfig $HDFS_TEST_CONF_DIR/core-site.xml \
-    > /tmp/libhdfs-test-cluster.out 2>&1 & 
+    > /tmp/libhdfs-test-cluster.out 2>&1 &
 
 MINI_CLUSTER_PID=$!
 for i in {1..15}; do

@@ -16,13 +16,18 @@
  * limitations under the License.
  */
 
-#include "hdfs/hdfs.h" 
+#include "hdfs/hdfs.h"
 
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
 
+/**
+ * An example of using libhdfs to write files. The usage of this file is as follows:
+ *
+ *   Usage: hdfs_write <filename> <filesize> <buffersize>
+ */
 int main(int argc, char **argv) {
     hdfsFS fs;
     const char *writeFileName = argv[1];
@@ -40,12 +45,12 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Usage: hdfs_write <filename> <filesize> <buffersize>\n");
         exit(-1);
     }
-    
+
     fs = hdfsConnect("default", 0);
     if (!fs) {
         fprintf(stderr, "Oops! Failed to connect to hdfs!\n");
         exit(-1);
-    } 
+    }
 
     // sanity check
     if(fileTotalSize == ULONG_MAX && errno == ERANGE) {
@@ -79,7 +84,7 @@ int main(int argc, char **argv) {
 
     // write to the file
     for (nrRemaining = fileTotalSize; nrRemaining > 0; nrRemaining -= bufferSize ) {
-      curSize = ( bufferSize < nrRemaining ) ? bufferSize : (tSize)nrRemaining; 
+      curSize = ( bufferSize < nrRemaining ) ? bufferSize : (tSize)nrRemaining;
       if ((written = hdfsWrite(fs, writeFile, (void*)buffer, curSize)) != curSize) {
         fprintf(stderr, "ERROR: hdfsWrite returned an error on write: %d\n", written);
         exit(-3);
