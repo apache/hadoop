@@ -38,7 +38,7 @@
         <executions>
           <execution>
             <id>copy-classpath-files</id>
-            <phase>package</phase>
+            <phase>prepare-package</phase>
             <goals>
               <goal>copy</goal>
             </goals>
@@ -108,7 +108,7 @@
           </execution>
           <execution>
             <id>copy-jars</id>
-            <phase>package</phase>
+            <phase>prepare-package</phase>
             <goals>
               <goal>copy-dependencies</goal>
             </goals>
@@ -126,7 +126,7 @@
         <executions>
           <execution>
             <id>dist</id>
-            <phase>prepare-package</phase>
+            <phase>compile</phase>
             <goals>
               <goal>exec</goal>
             </goals>
