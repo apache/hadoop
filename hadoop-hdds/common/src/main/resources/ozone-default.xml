@@ -1882,7 +1882,7 @@
     </description>
   </property>
   <property>
-    <name>ozone.manager.db.snapshot.transfer.bandwidthPerSec</name>
+    <name>ozone.manager.db.checkpoint.transfer.bandwidthPerSec</name>
     <value>0</value>
     <tag>OZONE</tag>
     <description>
