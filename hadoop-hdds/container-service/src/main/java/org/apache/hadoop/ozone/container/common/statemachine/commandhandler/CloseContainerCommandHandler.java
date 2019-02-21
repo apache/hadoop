@@ -86,6 +86,11 @@ public class CloseContainerCommandHandler implements CommandHandler {
         return;
       }
 
+      if (container.getContainerState() == ContainerProtos.ContainerDataProto.State.CLOSED) {
+        // Closing a container is an idempotent operation.
+        return;
+      }
+
       // Move the container to CLOSING state
       controller.markContainerForClose(containerId);
 
