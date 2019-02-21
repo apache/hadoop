@@ -907,15 +907,16 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       String containerName, URI sessionUri)
           throws AzureException, StorageException, URISyntaxException {
 
+    LOG.debug("Connecting to Azure storage in Secure Mode");
     // Assertion: storageInteractionLayer instance has to be a SecureStorageInterfaceImpl
     if (!(this.storageInteractionLayer instanceof SecureStorageInterfaceImpl)) {
-      throw new AssertionError("connectToAzureStorageInSASKeyMode() should be called only"
+      throw new AssertionError("connectToAzureStorageInSecureMode() should be called only"
         + " for SecureStorageInterfaceImpl instances");
     }
 
     ((SecureStorageInterfaceImpl) this.storageInteractionLayer).
       setStorageAccountName(accountName);
-
+    connectingUsingSAS = true;
     container = storageInteractionLayer.getContainerReference(containerName);
     rootDirectory = container.getDirectoryReference("");
 
