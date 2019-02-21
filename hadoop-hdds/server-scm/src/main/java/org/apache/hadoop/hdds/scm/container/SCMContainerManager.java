@@ -222,9 +222,9 @@ public class SCMContainerManager implements ContainerManager {
       throws IOException {
     lock.lock();
     try {
-      final ContainerInfo containerInfo;
-      containerInfo = containerStateManager
-          .allocateContainer(pipelineManager, type, replicationFactor, owner);
+      final ContainerInfo containerInfo =
+          containerStateManager.allocateContainer(pipelineManager, type,
+              replicationFactor, owner);
       // Add container to DB.
       addContainerToDB(containerInfo);
       return containerInfo;
@@ -357,10 +357,6 @@ public class SCMContainerManager implements ContainerManager {
       //TODO: #CLUTIL See if lock is required here
       NavigableSet<ContainerID> containerIDs =
           pipelineManager.getContainersInPipeline(pipeline.getId());
-      if (containerIDs == null) {
-        LOG.error("Container list is null for pipeline=", pipeline.getId());
-        return null;
-      }
 
       containerIDs = getContainersForOwner(containerIDs, owner);
       if (containerIDs.size() < numContainerPerOwnerInPipeline) {
@@ -392,13 +388,10 @@ public class SCMContainerManager implements ContainerManager {
                   pipeline);
           // Add to DB
           addContainerToDB(containerInfo);
-          containerStateManager.updateLastUsedMap(pipeline.getId(),
-              containerInfo.containerID(), owner);
         }
-      } else {
-        containerStateManager.updateLastUsedMap(pipeline.getId(),
-            containerInfo.containerID(), owner);
       }
+      containerStateManager.updateLastUsedMap(pipeline.getId(),
+          containerInfo.containerID(), owner);
       // TODO: #CLUTIL cleanup entries in lastUsedMap
       return containerInfo;
     } catch (Exception e) {
