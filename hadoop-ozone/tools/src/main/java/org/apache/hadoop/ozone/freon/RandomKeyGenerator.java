@@ -616,8 +616,8 @@ public final class RandomKeyGenerator implements Callable<Void> {
                     .startActive(true)) {
                   os.write(keyValue);
                   os.write(randomValue);
+                  os.close();
                 }
-                os.close();
 
                 long keyWriteDuration = System.nanoTime() - keyWriteStart;
 
