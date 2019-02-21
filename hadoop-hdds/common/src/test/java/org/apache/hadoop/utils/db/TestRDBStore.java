@@ -254,19 +254,19 @@ public class TestRDBStore {
       Assert.assertNotNull("DB Store cannot be null", newStore);
 
       insertRandomData(newStore, 1);
-      DBCheckpoint checkpoint =
-          newStore.getCheckpoint(true);
-      Assert.assertNotNull(checkpoint);
+      DBCheckpointSnapshot checkpointSnapshot =
+          newStore.getCheckpointSnapshot(true);
+      Assert.assertNotNull(checkpointSnapshot);
 
       RDBStore restoredStoreFromCheckPoint =
-          new RDBStore(checkpoint.getCheckpointLocation().toFile(),
+          new RDBStore(checkpointSnapshot.getCheckpointLocation().toFile(),
               options, configSet);
 
       // Let us make sure that our estimate is not off by 10%
       Assert.assertTrue(
           restoredStoreFromCheckPoint.getEstimatedKeyCount() > 90
           || restoredStoreFromCheckPoint.getEstimatedKeyCount() < 110);
-      checkpoint.cleanupCheckpoint();
+      checkpointSnapshot.cleanupCheckpoint();
     }
 
   }
@@ -278,15 +278,15 @@ public class TestRDBStore {
       Assert.assertNotNull("DB Store cannot be null", newStore);
 
       insertRandomData(newStore, 1);
-      DBCheckpoint checkpoint =
-          newStore.getCheckpoint(true);
-      Assert.assertNotNull(checkpoint);
+      DBCheckpointSnapshot checkpointSnapshot =
+          newStore.getCheckpointSnapshot(true);
+      Assert.assertNotNull(checkpointSnapshot);
 
       Assert.assertTrue(Files.exists(
-          checkpoint.getCheckpointLocation()));
-      checkpoint.cleanupCheckpoint();
+          checkpointSnapshot.getCheckpointLocation()));
+      checkpointSnapshot.cleanupCheckpoint();
       Assert.assertFalse(Files.exists(
-          checkpoint.getCheckpointLocation()));
+          checkpointSnapshot.getCheckpointLocation()));
     }
   }
 }

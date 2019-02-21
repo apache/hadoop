@@ -143,6 +143,6 @@ public interface DBStore extends AutoCloseable {
    * @return An object that encapsulates the checkpoint information along with
    * location.
    */
-  DBCheckpoint getCheckpoint(boolean flush) throws IOException;
+  DBCheckpointSnapshot getCheckpointSnapshot(boolean flush) throws IOException;
 
 }
