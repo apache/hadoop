@@ -39,17 +39,17 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.utils.db.DBStore;
-import org.apache.hadoop.utils.db.DBCheckpointSnapshot;
+import org.apache.hadoop.utils.db.DBCheckpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Provides the current checkpoint Snapshot of the OM DB. (tar.gz)
  */
-public class OMDbSnapshotServlet extends HttpServlet {
+public class OMDBCheckpointServlet extends HttpServlet {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(OMDbSnapshotServlet.class);
+      LoggerFactory.getLogger(OMDBCheckpointServlet.class);
   private static final long serialVersionUID = 1L;
 
   private transient DBStore omDbStore;
@@ -62,15 +62,15 @@ public class OMDbSnapshotServlet extends HttpServlet {
         .getAttribute(OzoneConsts.OM_CONTEXT_ATTRIBUTE);
 
     if (om == null) {
-      LOG.error("Unable to initialize OMDbSnapshotServlet. OM is null");
+      LOG.error("Unable to initialize OMDBCheckpointServlet. OM is null");
       return;
     }
 
     omDbStore = om.getMetadataManager().getStore();
     OzoneConfiguration configuration = om.getConfiguration();
     long transferBandwidth = configuration.getLongBytes(
-        OMConfigKeys.OZONE_DB_SNAPSHOT_TRANSFER_RATE_KEY,
-        OMConfigKeys.OZONE_DB_SNAPSHOT_TRANSFER_RATE_DEFAULT);
+        OMConfigKeys.OZONE_DB_CHECKPOINT_TRANSFER_RATE_KEY,
+        OMConfigKeys.OZONE_DB_CHECKPOINT_TRANSFER_RATE_DEFAULT);
 
     if (transferBandwidth > 0) {
       throttler = new DataTransferThrottler(transferBandwidth);
@@ -105,7 +105,7 @@ public class OMDbSnapshotServlet extends HttpServlet {
         flush = Boolean.valueOf(flushParam);
       }
 
-      DBCheckpointSnapshot checkpoint = omDbStore.getCheckpointSnapshot(flush);
+      DBCheckpoint checkpoint = omDbStore.getCheckpoint(flush);
       if (checkpoint == null) {
         LOG.error("Unable to process metadata snapshot request. " +
             "Checkpoint request returned null.");

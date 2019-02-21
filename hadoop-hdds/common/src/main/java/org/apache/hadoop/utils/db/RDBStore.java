@@ -268,18 +268,14 @@ public class RDBStore implements DBStore {
   }
 
   @Override
-  public DBCheckpointSnapshot getCheckpointSnapshot(boolean flush)
-      throws IOException {
-    if (flush) {
-      final FlushOptions flushOptions =
-          new FlushOptions().setWaitForFlush(true);
-      try {
-        db.flush(flushOptions);
-      } catch (RocksDBException e) {
-        LOG.error("Unable to Flush RocksDB data before creating snapshot", e);
-      }
+  public DBCheckpoint getCheckpoint(boolean flush) {
+    final FlushOptions flushOptions = new FlushOptions().setWaitForFlush(flush);
+    try {
+      db.flush(flushOptions);
+    } catch (RocksDBException e) {
+      LOG.error("Unable to Flush RocksDB data before creating snapshot", e);
     }
-    return checkPointManager.createCheckpointSnapshot(checkpointsParentDir);
+    return checkPointManager.createCheckpoint(checkpointsParentDir);
   }
 
 }
