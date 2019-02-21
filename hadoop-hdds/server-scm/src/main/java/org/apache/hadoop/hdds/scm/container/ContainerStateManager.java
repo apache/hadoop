@@ -121,7 +121,6 @@ public class ContainerStateManager {
   private final ConcurrentHashMap<ContainerState, ContainerID> lastUsedMap;
   private final ContainerStateMap containers;
   private final AtomicLong containerCount;
-  private final int numContainerPerOwnerInPipeline;
 
   /**
    * Constructs a Container State Manager that tracks all containers owned by
@@ -152,9 +151,6 @@ public class ContainerStateManager {
     this.lastUsedMap = new ConcurrentHashMap<>();
     this.containerCount = new AtomicLong(0);
     this.containers = new ContainerStateMap();
-    this.numContainerPerOwnerInPipeline = configuration
-        .getInt(ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT,
-            ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT_DEFAULT);
   }
 
   /*
@@ -362,55 +358,6 @@ public class ContainerStateManager {
     });
   }
 
-  /**
-   * Return a container matching the attributes specified.
-   *
-   * @param size            - Space needed in the Container.
-   * @param owner           - Owner of the container - A specific nameservice.
-   * @param pipelineManager - Pipeline Manager
-   * @param pipeline        - Pipeline from which container needs to be matched
-   * @return ContainerInfo, null if there is no match found.
-   */
-  ContainerInfo getMatchingContainer(final long size, String owner,
-      PipelineManager pipelineManager, Pipeline pipeline) throws IOException {
-
-    NavigableSet<ContainerID> containerIDs =
-        pipelineManager.getContainersInPipeline(pipeline.getId());
-    if (containerIDs == null) {
-      LOG.error("Container list is null for pipeline=", pipeline.getId());
-      return null;
-    }
-
-    getContainers(containerIDs, owner);
-    if (containerIDs.size() < numContainerPerOwnerInPipeline) {
-      synchronized (pipeline) {
-        // TODO: #CLUTIL Maybe we can add selection logic inside synchronized
-        // as well
-        containerIDs = getContainers(
-            pipelineManager.getContainersInPipeline(pipeline.getId()), owner);
-        if (containerIDs.size() < numContainerPerOwnerInPipeline) {
-          ContainerInfo containerInfo =
-              allocateContainer(pipelineManager, owner, pipeline);
-          lastUsedMap.put(new ContainerState(owner, pipeline.getId()),
-              containerInfo.containerID());
-          return containerInfo;
-        }
-      }
-    }
-
-    ContainerInfo containerInfo =
-        getMatchingContainer(size, owner, pipeline.getId(), containerIDs);
-    if (containerInfo == null) {
-      synchronized (pipeline) {
-        containerInfo =
-            allocateContainer(pipelineManager, owner, pipeline);
-        lastUsedMap.put(new ContainerState(owner, pipeline.getId()),
-            containerInfo.containerID());
-      }
-    }
-    // TODO: #CLUTIL cleanup entries in lastUsedMap
-    return containerInfo;
-  }
 
   /**
    * Return a container matching the attributes specified.
@@ -469,9 +416,6 @@ public class ContainerStateManager {
         final ContainerInfo containerInfo = containers.getContainerInfo(id);
         if (containerInfo.getUsedBytes() + size <= this.containerSize) {
           containerInfo.updateLastUsedTime();
-
-          final ContainerState key = new ContainerState(owner, pipelineID);
-          lastUsedMap.put(key, containerInfo.containerID());
           return containerInfo;
         }
       }
@@ -523,21 +467,7 @@ public class ContainerStateManager {
     return containers.getContainerInfo(containerID);
   }
 
-  private NavigableSet<ContainerID> getContainers(
-      NavigableSet<ContainerID> containerIDs, String owner) {
-    for (ContainerID cid : containerIDs) {
-      try {
-        if (!getContainer(cid).getOwner().equals(owner)) {
-          containerIDs.remove(cid);
-        }
-      } catch (ContainerNotFoundException e) {
-        LOG.error("Could not find container info for container id={} {}", cid,
-            e);
-        containerIDs.remove(cid);
-      }
-    }
-    return containerIDs;
-  }
+
 
   void close() throws IOException {
   }
@@ -581,6 +511,18 @@ public class ContainerStateManager {
   void removeContainer(final ContainerID containerID)
       throws ContainerNotFoundException {
     containers.removeContainer(containerID);
+  }
+
+  /**
+   * Update the lastUsedmap to update with ContainerState and containerID.
+   * @param pipelineID
+   * @param containerID
+   * @param owner
+   */
+  public synchronized void updateLastUsedMap(PipelineID pipelineID,
+      ContainerID containerID, String owner) {
+    lastUsedMap.put(new ContainerState(owner, pipelineID),
+        containerID);
   }
 
 }
