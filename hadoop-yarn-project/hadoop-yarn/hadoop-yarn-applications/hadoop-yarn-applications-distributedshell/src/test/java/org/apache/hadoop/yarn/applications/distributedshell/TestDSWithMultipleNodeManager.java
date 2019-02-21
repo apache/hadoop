@@ -156,7 +156,7 @@ public class TestDSWithMultipleNodeManager {
         "--shell_command",
         distShellTest.getSleepCommand(15),
         "--placement_spec",
-        "zk=1,NOTIN,NODE,zk:spark=1,NOTIN,NODE,zk"
+        "zk(1),NOTIN,NODE,zk:spark(1),NOTIN,NODE,zk"
     };
     LOG.info("Initializing DS Client");
     final Client client =
@@ -202,7 +202,7 @@ public class TestDSWithMultipleNodeManager {
         "--shell_command",
         distShellTest.getSleepCommand(30),
         "--placement_spec",
-        "bar=1,notin,node,bar"
+        "bar(1),notin,node,bar"
     };
     final Client clientA =
         new Client(new Configuration(distShellTest.yarnCluster.getConfig()));
@@ -275,7 +275,7 @@ public class TestDSWithMultipleNodeManager {
         "--shell_command",
         Shell.WINDOWS ? "dir" : "ls",
         "--placement_spec",
-        "foo=3,notin,node,all/bar"
+        "foo(3),notin,node,all/bar"
     };
     final Client clientB = new Client(new Configuration(distShellTest.
         yarnCluster.getConfig()));

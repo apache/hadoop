@@ -22,6 +22,7 @@ import com.google.common.collect.Sets;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.hadoop.yarn.api.records.NodeAttributeOpCode;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
@@ -274,15 +275,15 @@ public class TestPlacementConstraintParser {
     TokenizerTester mp;
 
     ct = new MultipleConstraintsTokenizer(
-        "foo=1,A1,A2,A3:bar=2,B1,B2:moo=3,C1,C2");
+        "foo(1),A1,A2,A3:bar(2),B1,B2:moo(3),C1,C2");
     mp = new TokenizerTester(ct,
-        "foo=1,A1,A2,A3", "bar=2,B1,B2", "moo=3,C1,C2");
+        "foo(1),A1,A2,A3", "bar(2),B1,B2", "moo(3),C1,C2");
     mp.verify();
 
     ct = new MultipleConstraintsTokenizer(
-        "foo=1,AND(A2:A3):bar=2,OR(B1:AND(B2:B3)):moo=3,C1,C2");
+        "foo(1),AND(A2:A3):bar(2),OR(B1:AND(B2:B3)):moo(3),C1,C2");
     mp = new TokenizerTester(ct,
-        "foo=1,AND(A2:A3)", "bar=2,OR(B1:AND(B2:B3))", "moo=3,C1,C2");
+        "foo(1),AND(A2:A3)", "bar(2),OR(B1:AND(B2:B3))", "moo(3),C1,C2");
     mp.verify();
 
     ct = new MultipleConstraintsTokenizer("A:B:C");
@@ -301,12 +302,12 @@ public class TestPlacementConstraintParser {
     mp = new TokenizerTester(ct, "A", "AND(B:OR(C:D))", "E");
     mp.verify();
 
-    st = new SourceTagsTokenizer("A=4");
+    st = new SourceTagsTokenizer("A(4)");
     mp = new TokenizerTester(st, "A", "4");
     mp.verify();
 
     try {
-      st = new SourceTagsTokenizer("A=B");
+      st = new SourceTagsTokenizer("A(B)");
       mp = new TokenizerTester(st, "A", "B");
       mp.verify();
       Assert.fail("Expecting a parsing failure");
@@ -348,9 +349,20 @@ public class TestPlacementConstraintParser {
     PlacementConstraint actualPc1, actualPc2;
     SourceTags tag1, tag2;
 
+    // Only Source Tag without constraint
+    result = PlacementConstraintParser
+        .parsePlacementSpec("foo(3)");
+    Assert.assertEquals(1, result.size());
+    tag1 = result.keySet().iterator().next();
+    Assert.assertEquals("foo", tag1.getTag());
+    Assert.assertEquals(3, tag1.getNumOfAllocations());
+    expectedPc1 = null;
+    actualPc1 = result.values().iterator().next();
+    Assert.assertEquals(expectedPc1, actualPc1);
+
     // A single anti-affinity constraint
     result = PlacementConstraintParser
-        .parsePlacementSpec("foo=3,notin,node,foo");
+        .parsePlacementSpec("foo(3),notin,node,foo");
     Assert.assertEquals(1, result.size());
     tag1 = result.keySet().iterator().next();
     Assert.assertEquals("foo", tag1.getTag());
@@ -361,7 +373,7 @@ public class TestPlacementConstraintParser {
 
     // Upper case
     result = PlacementConstraintParser
-        .parsePlacementSpec("foo=3,NOTIN,NODE,foo");
+        .parsePlacementSpec("foo(3),NOTIN,NODE,foo");
     Assert.assertEquals(1, result.size());
     tag1 = result.keySet().iterator().next();
     Assert.assertEquals("foo", tag1.getTag());
@@ -372,7 +384,7 @@ public class TestPlacementConstraintParser {
 
     // A single cardinality constraint
     result = PlacementConstraintParser
-        .parsePlacementSpec("foo=10,cardinality,node,foo,bar,0,100");
+        .parsePlacementSpec("foo(10),cardinality,node,foo,bar,0,100");
     Assert.assertEquals(1, result.size());
     tag1 = result.keySet().iterator().next();
     Assert.assertEquals("foo", tag1.getTag());
@@ -386,7 +398,7 @@ public class TestPlacementConstraintParser {
 
     // Two constraint expressions
     result = PlacementConstraintParser
-        .parsePlacementSpec("foo=3,notin,node,foo:bar=2,in,node,foo");
+        .parsePlacementSpec("foo(3),notin,node,foo:bar(2),in,node,foo");
     Assert.assertEquals(2, result.size());
     Iterator<SourceTags> keyIt = result.keySet().iterator();
     tag1 = keyIt.next();
@@ -403,7 +415,7 @@ public class TestPlacementConstraintParser {
 
     // And constraint
     result = PlacementConstraintParser
-        .parsePlacementSpec("foo=1000,and(notin,node,bar:in,node,foo)");
+        .parsePlacementSpec("foo(1000),and(notin,node,bar:in,node,foo)");
     Assert.assertEquals(1, result.size());
     keyIt = result.keySet().iterator();
     tag1 = keyIt.next();
@@ -416,8 +428,8 @@ public class TestPlacementConstraintParser {
 
     // Multiple constraints with nested forms.
     result = PlacementConstraintParser.parsePlacementSpec(
-            "foo=1000,and(notin,node,bar:or(in,node,foo:in,node,moo))"
-                + ":bar=200,notin,node,foo");
+            "foo(1000),and(notin,node,bar:or(in,node,foo:in,node,moo))"
+                + ":bar(200),notin,node,foo");
     Assert.assertEquals(2, result.size());
     keyIt = result.keySet().iterator();
     tag1 = keyIt.next();
@@ -436,6 +448,17 @@ public class TestPlacementConstraintParser {
     Assert.assertEquals(actualPc1, expectedPc1);
     expectedPc2 = targetNotIn("node", allocationTag("foo")).build();
     Assert.assertEquals(expectedPc2, actualPc2);
+
+    // Failure Cases
+    String[] invalidSpecs = {"foo(3", "foo),bar", "foobar", "),java=1.7,1.8"};
+    for (String spec : invalidSpecs) {
+      try {
+        result = PlacementConstraintParser.parsePlacementSpec(spec);
+        Assert.fail("Expected a failure!");
+      } catch (Exception e) {
+        Assert.assertTrue(e instanceof PlacementConstraintParseException);
+      }
+    }
   }
 
   // We verify the toString result by parsing it again
@@ -466,7 +489,7 @@ public class TestPlacementConstraintParser {
 
     // A single node attribute constraint
     result = PlacementConstraintParser
-        .parsePlacementSpec("xyz=4,rm.yarn.io/foo=true");
+        .parsePlacementSpec("xyz(4),rm.yarn.io/foo=true");
     Assert.assertEquals(1, result.size());
     TargetExpression target = PlacementTargets
         .nodeAttribute("rm.yarn.io/foo", "true");
@@ -477,7 +500,7 @@ public class TestPlacementConstraintParser {
 
     // A single node attribute constraint
     result = PlacementConstraintParser
-        .parsePlacementSpec("xyz=3,rm.yarn.io/foo!=abc");
+        .parsePlacementSpec("xyz(3),rm.yarn.io/foo!=abc");
     Assert.assertEquals(1, result.size());
     target = PlacementTargets
         .nodeAttribute("rm.yarn.io/foo", "abc");
@@ -492,7 +515,7 @@ public class TestPlacementConstraintParser {
     // A single node attribute constraint
     result = PlacementConstraintParser
         .parsePlacementSpec(
-            "xyz=1,rm.yarn.io/foo!=abc:zxy=1,rm.yarn.io/bar=true");
+            "xyz(1),rm.yarn.io/foo!=abc:zxy(1),rm.yarn.io/bar=true");
     Assert.assertEquals(2, result.size());
     target = PlacementTargets
         .nodeAttribute("rm.yarn.io/foo", "abc");
@@ -519,11 +542,27 @@ public class TestPlacementConstraintParser {
     actualPc1 = result.values().iterator().next();
     Assert.assertEquals(expectedPc1, actualPc1.getConstraintExpr());
 
+    // Node Attribute Constraint With Multiple Values
+    result = PlacementConstraintParser
+        .parsePlacementSpec("java=1.7,1.8");
+    Assert.assertEquals(1, result.size());
+
+    Set<String> constraintEntities = new TreeSet<>();
+    constraintEntities.add("1.7");
+    constraintEntities.add("1.8");
+    target = PlacementConstraints.PlacementTargets.nodeAttribute("java",
+        constraintEntities.toArray(new String[constraintEntities.size()]));
+    expectedPc1 = targetNodeAttribute("node", NodeAttributeOpCode.EQ, target);
+    actualSourceTags = result.keySet().iterator().next();
+    Assert.assertTrue(actualSourceTags.isEmpty());
+    actualPc1 = result.values().iterator().next();
+    Assert.assertEquals(expectedPc1, actualPc1.getConstraintExpr());
+
     // If source tags is not specified for a node-attribute constraint,
     // then this expression must be single constraint expression.
     try {
       PlacementConstraintParser
-          .parsePlacementSpec("rm.yarn.io/foo=true:xyz=1,notin,node,xyz");
+          .parsePlacementSpec("rm.yarn.io/foo=true:xyz(1),notin,node,xyz");
       Assert.fail("Expected a failure!");
     } catch (Exception e) {
       Assert.assertTrue(e instanceof PlacementConstraintParseException);
@@ -537,7 +576,7 @@ public class TestPlacementConstraintParser {
 
     // Constraint with Two Different NameSpaces
     result = PlacementConstraintParser
-        .parsePlacementSpec("foo=2,notin,node,not-self/bar,all/moo");
+        .parsePlacementSpec("foo(2),notin,node,not-self/bar,all/moo");
     Assert.assertEquals(1, result.size());
     Set<TargetExpression> expectedTargetExpressions = Sets.newHashSet(
         PlacementTargets.allocationTagWithNamespace("not-self", "bar"),
@@ -552,7 +591,7 @@ public class TestPlacementConstraintParser {
 
     // Constraint With Default NameSpace SELF
     result = PlacementConstraintParser
-        .parsePlacementSpec("foo=2,notin,node,moo");
+        .parsePlacementSpec("foo(2),notin,node,moo");
     Assert.assertEquals(1, result.size());
     TargetExpression expectedTargetExpression = PlacementTargets.
         allocationTagWithNamespace("self", "moo");
@@ -567,7 +606,7 @@ public class TestPlacementConstraintParser {
     boolean caughtException = false;
     try {
       result = PlacementConstraintParser
-          .parsePlacementSpec("foo=2,notin,node,bar/moo");
+          .parsePlacementSpec("foo(2),notin,node,bar/moo");
     } catch(PlacementConstraintParseException e) {
       caughtException = true;
     }
