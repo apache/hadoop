@@ -34,6 +34,7 @@ import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.common.BlockGroup;
@@ -83,8 +84,13 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
     Preconditions.checkArgument(size > 0, "block size must be greater than 0");
 
     AllocateScmBlockRequestProto request =
-        AllocateScmBlockRequestProto.newBuilder().setSize(size).setType(type)
-            .setFactor(factor).setOwner(owner).build();
+        AllocateScmBlockRequestProto.newBuilder()
+            .setSize(size)
+            .setType(type)
+            .setFactor(factor)
+            .setOwner(owner)
+            .setTraceID(TracingUtil.exportCurrentSpan())
+            .build();
     final AllocateScmBlockResponseProto response;
     try {
       response = rpcProxy.allocateScmBlock(NULL_RPC_CONTROLLER, request);
@@ -117,7 +123,9 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
     List<KeyBlocks> keyBlocksProto = keyBlocksInfoList.stream()
         .map(BlockGroup::getProto).collect(Collectors.toList());
     DeleteScmKeyBlocksRequestProto request = DeleteScmKeyBlocksRequestProto
-        .newBuilder().addAllKeyBlocks(keyBlocksProto).build();
+        .newBuilder()
+        .addAllKeyBlocks(keyBlocksProto)
+        .build();
 
     final DeleteScmKeyBlocksResponseProto resp;
     try {

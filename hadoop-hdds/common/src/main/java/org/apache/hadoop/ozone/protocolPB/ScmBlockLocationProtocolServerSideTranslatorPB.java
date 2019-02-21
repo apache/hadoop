@@ -19,6 +19,8 @@ package org.apache.hadoop.ozone.protocolPB;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+import io.opentracing.Scope;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
@@ -37,6 +39,7 @@ import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
     .DeleteScmKeyBlocksRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
     .DeleteScmKeyBlocksResponseProto;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
 
@@ -69,7 +72,9 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
   public AllocateScmBlockResponseProto allocateScmBlock(
       RpcController controller, AllocateScmBlockRequestProto request)
       throws ServiceException {
-    try {
+    try (Scope scope = TracingUtil
+        .importAndCreateScope("ScmBlockLocationProtocol.allocateBlock",
+            request.getTraceID())) {
       AllocatedBlock allocatedBlock =
           impl.allocateBlock(request.getSize(), request.getType(),
               request.getFactor(), request.getOwner());

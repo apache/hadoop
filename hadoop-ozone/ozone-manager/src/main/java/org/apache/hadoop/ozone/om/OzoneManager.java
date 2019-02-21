@@ -724,7 +724,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
                 scmBlockAddress, UserGroupInformation.getCurrentUser(), conf,
                 NetUtils.getDefaultSocketFactory(conf),
                 Client.getRpcTimeout(conf)));
-    return scmBlockLocationClient;
+    return TracingUtil
+        .createProxy(scmBlockLocationClient, ScmBlockLocationProtocol.class);
   }
 
   /**
