@@ -82,7 +82,7 @@ cleanup:
 }
 
 static int internal_handle_devices_request(
-    update_cgroups_parameters_function update_cgroups_parameters_func_p,
+    update_cgroups_param_function update_cgroups_parameters_func_p,
     char** deny_devices_number_tokens,
     char** allow_devices_number_tokens,
     const char* container_id) {
@@ -196,7 +196,7 @@ void reload_devices_configuration() {
  * --allowed_devices 8:32,8:48,243:2 \
  * --container_id container_x_y
  */
-int handle_devices_request(update_cgroups_parameters_function func,
+int handle_devices_request(update_cgroups_param_function func,
     const char* module_name, int module_argc, char** module_argv) {
   if (!cfg_section) {
     reload_devices_configuration();

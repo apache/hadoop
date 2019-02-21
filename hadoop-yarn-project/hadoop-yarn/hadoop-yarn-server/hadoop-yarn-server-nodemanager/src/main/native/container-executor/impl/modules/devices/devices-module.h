@@ -28,13 +28,13 @@
 #define DEVICES_MODULE_SECTION_NAME "devices"
 
 // For unit test stubbing
-typedef int (*update_cgroups_parameters_function)(const char*, const char*,
+typedef int (*update_cgroups_param_function)(const char*, const char*,
    const char*, const char*);
 
 /**
  * Handle devices requests
  */
-int handle_devices_request(update_cgroups_parameters_function func,
+int handle_devices_request(update_cgroups_param_function func,
    const char* module_name, int module_argc, char** module_argv);
 
 /**
