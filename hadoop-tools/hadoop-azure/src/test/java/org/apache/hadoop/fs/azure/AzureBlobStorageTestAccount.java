@@ -597,7 +597,10 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
       }
       // Remove the account key from the configuration to make sure we don't
       // cheat and use that.
-      conf.set(ACCOUNT_KEY_PROPERTY_NAME + accountName, "");
+      // but only if not in secure mode, which requires that login
+      if (!conf.getBoolean(AzureNativeFileSystemStore.KEY_USE_SECURE_MODE, false)) {
+        conf.set(ACCOUNT_KEY_PROPERTY_NAME + accountName, "");
+      }
       // Set the SAS key.
       conf.set(SAS_PROPERTY_NAME + containerName + "." + accountName, sas);
     }
