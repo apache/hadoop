@@ -27,6 +27,7 @@ import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKE
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_EXPIRED;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLUME_NOT_FOUND;
 import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod.KERBEROS;
+import org.junit.Ignore;
 import static org.slf4j.event.Level.INFO;
 
 import java.io.File;
@@ -401,6 +402,7 @@ public final class TestSecureOzoneCluster {
    * @throws Exception
    */
   @Test
+  @Ignore("TODO:HDDS-1156")
   public void testDelegationToken() throws Exception {
 
     // Capture logs for assertions
@@ -546,6 +548,7 @@ public final class TestSecureOzoneCluster {
    * @throws Exception
    */
   @Test
+  @Ignore("TODO:HDDS-1156")
   public void testDelegationTokenRenewal() throws Exception {
     GenericTestUtils
         .setLogLevel(LoggerFactory.getLogger(Server.class.getName()), INFO);

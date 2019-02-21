@@ -343,6 +343,7 @@ public class TestOzoneManager {
 
   // Create a volume and test Volume access for a different user
   @Test
+  @Ignore("TODO:HDDS-1147")
   public void testAccessVolume() throws IOException, OzoneException {
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
@@ -673,6 +674,7 @@ public class TestOzoneManager {
    * @throws OzoneException
    */
   @Test
+  @Ignore("TODO:HDDS-1147")
   public void testRenameKey() throws IOException, OzoneException {
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
@@ -1307,6 +1309,7 @@ public class TestOzoneManager {
    * @throws IOException
    */
   @Test
+  @Ignore("TODO:HDDS-1147")
   public void testOmInitializationFailure() throws Exception {
     OzoneConfiguration config = new OzoneConfiguration();
     final String path =

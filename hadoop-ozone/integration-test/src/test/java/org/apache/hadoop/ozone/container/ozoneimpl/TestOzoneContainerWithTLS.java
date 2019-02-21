@@ -37,6 +37,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ThreadUtil;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -66,6 +67,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY
  * Tests ozone containers via secure grpc/netty.
  */
 @RunWith(Parameterized.class)
+@Ignore("TODO:HDDS-1157")
 public class TestOzoneContainerWithTLS {
   private final static Logger LOG = LoggerFactory.getLogger(
       TestOzoneContainerWithTLS.class);

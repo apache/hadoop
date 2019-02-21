@@ -33,6 +33,7 @@ import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -130,6 +131,7 @@ public class TestOzoneManagerHA {
    * Test client request fails when 2 OMs are down.
    */
   @Test
+  @Ignore("TODO:HDDS-1158")
   public void testTwoOMNodesDown() throws Exception {
     cluster.stopOzoneManager(1);
     cluster.stopOzoneManager(2);
