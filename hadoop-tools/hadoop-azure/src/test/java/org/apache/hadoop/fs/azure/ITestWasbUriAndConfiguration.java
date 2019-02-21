@@ -19,6 +19,8 @@
 package org.apache.hadoop.fs.azure;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeNotNull;
 
 import java.io.ByteArrayInputStream;
@@ -30,8 +32,10 @@ import java.net.URI;
 import java.util.Date;
 import java.util.EnumSet;
 import java.io.File;
+import java.util.NoSuchElementException;
 
 import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
@@ -42,6 +46,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.CreateOptions;
+import org.apache.hadoop.test.GenericTestUtils;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -50,8 +56,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
+import com.microsoft.azure.storage.core.SR;
 
 public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
 
@@ -171,6 +179,57 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
     obtainedInputStream.readFully(obtained);
     obtainedInputStream.close();
     assertEquals(3, obtained[2]);
+  }
+
+  /**
+   * Use secure mode, which will automatically switch to SAS,
+   */
+  @Test
+  public void testConnectUsingSecureSAS() throws Exception {
+    // Create the test account with SAS credentials.
+    Configuration conf = new Configuration();
+    conf.setBoolean(AzureNativeFileSystemStore.KEY_USE_SECURE_MODE, true);
+    testAccount = AzureBlobStorageTestAccount.create("",
+        EnumSet.of(CreateOptions.UseSas),
+        conf);
+    assumeNotNull(testAccount);
+    NativeAzureFileSystem fs = testAccount.getFileSystem();
+
+    AzureException ex = intercept(AzureException.class,
+        SR.ENUMERATION_ERROR,
+        () -> ContractTestUtils.writeTextFile(fs,
+            new Path("/testConnectUsingSecureSAS"),
+            "testConnectUsingSecureSAS",
+            true));
+
+    StorageException cause = getCause(StorageException.class,
+        getCause(NoSuchElementException.class, ex));
+    GenericTestUtils.assertExceptionContains(
+        "The specified container does not exist", cause);
+  }
+
+  /**
+   * Get an inner cause of an exception; require it to be of the given
+   * type.
+   * If there is a problem, an AssertionError is thrown, containing the
+   * outer or inner exception.
+   * @param clazz required class
+   * @param t exception
+   * @param <E> type of required exception
+   * @return the retrieved exception
+   * @throws AssertionError if there is no cause or it is of the wrong type.
+   */
+  private <E extends Throwable> E getCause(
+      Class<E> clazz, Throwable t) {
+    Throwable e = t.getCause();
+    if (e == null) {
+      throw new AssertionError("No cause", t);
+    }
+    if (!clazz.isAssignableFrom(e.getClass())) {
+      throw new AssertionError("Wrong inner class", e);
+    } else {
+      return (E) e;
+    }
   }
 
   @Test
@@ -324,7 +383,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
   @Test
   public void testCredsFromCredentialProvider() throws Exception {
 
-    Assume.assumeFalse(runningInSASMode);
+    assumeFalse(runningInSASMode);
     String account = "testacct";
     String key = "testkey";
     // set up conf to have a cred provider
