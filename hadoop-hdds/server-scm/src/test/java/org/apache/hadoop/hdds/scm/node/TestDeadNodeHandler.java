@@ -58,6 +58,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.slf4j.event.Level;
@@ -104,6 +105,7 @@ public class TestDeadNodeHandler {
   }
 
   @Test
+  @Ignore("TODO:HDDS-1155")
   public void testOnMessage() throws IOException, NodeNotFoundException {
     //GIVEN
     DatanodeDetails datanode1 = TestUtils.randomDatanodeDetails();
@@ -260,6 +262,7 @@ public class TestDeadNodeHandler {
   }
 
   @Test
+  @Ignore("TODO:HDDS-1155")
   public void testOnMessageReplicaFailure() throws Exception {
 
     DatanodeDetails datanode1 = TestUtils.randomDatanodeDetails();
