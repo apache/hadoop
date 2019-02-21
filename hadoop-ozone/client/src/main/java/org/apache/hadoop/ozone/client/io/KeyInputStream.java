@@ -265,7 +265,7 @@ public class KeyInputStream extends InputStream implements Seekable {
       XceiverClientManager xceiverClientManager,
       StorageContainerLocationProtocolClientSideTranslatorPB
           storageContainerLocationClient,
-      String requestId) throws IOException {
+      String requestId, boolean verifyChecksum) throws IOException {
     long length = 0;
     long containerKey;
     KeyInputStream groupInputStream = new KeyInputStream();
@@ -311,7 +311,7 @@ public class KeyInputStream extends InputStream implements Seekable {
         success = true;
         BlockInputStream inputStream = new BlockInputStream(
             omKeyLocationInfo.getBlockID(), xceiverClientManager, xceiverClient,
-            chunks, requestId);
+            chunks, requestId, verifyChecksum);
         groupInputStream.addStream(inputStream,
             omKeyLocationInfo.getLength());
       } finally {

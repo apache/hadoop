@@ -1485,6 +1485,15 @@
   </property>
 
   <property>
+    <name>ozone.client.verify.checksum</name>
+    <value>true</value>
+    <tag>OZONE, CLIENT, MANAGEMENT</tag>
+    <description>
+      Ozone client to verify checksum of the checksum blocksize data.
+    </description>
+  </property>
+
+  <property>
     <name>ozone.om.ratis.enable</name>
     <value>false</value>
     <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
