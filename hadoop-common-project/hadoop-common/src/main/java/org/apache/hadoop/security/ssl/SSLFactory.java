@@ -85,6 +85,10 @@ public class SSLFactory implements ConnectionConfigurator {
   private Mode mode;
   private boolean requireClientCert;
   private SSLContext context;
+  // the java keep-alive cache relies on instance equivalence of the SSL socket
+  // factory.  in many java versions, SSLContext#getSocketFactory always
+  // returns a new instance which completely breaks the cache...
+  private SSLSocketFactory socketFactory;
   private HostnameVerifier hostnameVerifier;
   private KeyStoresFactory keystoresFactory;
 
@@ -150,6 +154,9 @@ public class SSLFactory implements ConnectionConfigurator {
     context.init(keystoresFactory.getKeyManagers(),
                  keystoresFactory.getTrustManagers(), null);
     context.getDefaultSSLParameters().setProtocols(enabledProtocols);
+    if (mode == Mode.CLIENT) {
+      socketFactory = context.getSocketFactory();
+    }
     hostnameVerifier = getHostnameVerifier(conf);
   }
 
@@ -270,7 +277,7 @@ public class SSLFactory implements ConnectionConfigurator {
       throw new IllegalStateException(
           "Factory is not in CLIENT mode. Actual mode is " + mode.toString());
     }
-    return context.getSocketFactory();
+    return socketFactory;
   }
 
   /**
