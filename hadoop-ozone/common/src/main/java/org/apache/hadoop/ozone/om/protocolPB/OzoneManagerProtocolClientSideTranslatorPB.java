@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.ozone.om.protocolPB;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -112,8 +111,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-import io.opentracing.Scope;
-import io.opentracing.util.GlobalTracer;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_ERROR_OTHER;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status.ACCESS_DENIED;
@@ -127,7 +124,7 @@ import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.
 
 @InterfaceAudience.Private
 public final class OzoneManagerProtocolClientSideTranslatorPB
-    implements OzoneManagerProtocol, ProtocolTranslator, Closeable {
+    implements OzoneManagerProtocol, ProtocolTranslator {
 
   /**
    * RpcController is not used and hence is set to null.
@@ -194,9 +191,6 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
    */
   private OMResponse submitRequest(OMRequest omRequest)
       throws IOException {
-    Scope scope =
-        GlobalTracer.get().buildSpan(omRequest.getCmdType().name())
-            .startActive(true);
     try {
       OMRequest payload = OMRequest.newBuilder(omRequest)
           .setTraceID(TracingUtil.exportCurrentSpan())
@@ -204,8 +198,6 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
       return rpcProxy.submitRequest(NULL_RPC_CONTROLLER, payload);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
-    } finally {
-      scope.close();
     }
   }
 
