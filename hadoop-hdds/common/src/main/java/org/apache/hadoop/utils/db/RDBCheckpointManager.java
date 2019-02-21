@@ -68,8 +68,7 @@ public class RDBCheckpointManager {
    * @param parentDir The directory where the checkpoint needs to be created.
    * @return RocksDB specific Checkpoint information object.
    */
-  public RocksDBCheckpointSnapshot createCheckpointSnapshot(String parentDir)
-      throws IOException {
+  public RocksDBCheckpoint createCheckpoint(String parentDir) {
     try {
       long currentTime = System.currentTimeMillis();
 
@@ -82,7 +81,7 @@ public class RDBCheckpointManager {
       Path checkpointPath = Paths.get(parentDir, checkpointDir);
       checkpoint.createCheckpoint(checkpointPath.toString());
 
-      return new RocksDBCheckpointSnapshot(
+      return new RocksDBCheckpoint(
           checkpointPath,
           currentTime,
           db.getLatestSequenceNumber()); //Best guesstimate here. Not accurate.
@@ -93,13 +92,13 @@ public class RDBCheckpointManager {
     return null;
   }
 
-  static class RocksDBCheckpointSnapshot implements DBCheckpointSnapshot {
+  static class RocksDBCheckpoint implements DBCheckpoint {
 
     private Path checkpointLocation;
     private long checkpointTimestamp;
     private long latestSequenceNumber;
 
-    RocksDBCheckpointSnapshot(Path checkpointLocation,
+    RocksDBCheckpoint(Path checkpointLocation,
                               long snapshotTimestamp,
                               long latestSequenceNumber) {
       this.checkpointLocation = checkpointLocation;
