@@ -25,7 +25,7 @@ import java.nio.file.Path;
 /**
  * Generic DB Checkpoint interface.
  */
-public interface DBCheckpointSnapshot {
+public interface DBCheckpoint {
 
   /**
    * Get Snapshot location.
