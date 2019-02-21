@@ -112,8 +112,8 @@ public final class ObjectStoreHandler implements Closeable {
         TracingUtil.createProxy(
             new ScmBlockLocationProtocolClientSideTranslatorPB(
                 RPC.getProxy(ScmBlockLocationProtocolPB.class, scmVersion,
-                    scmBlockAddress, UserGroupInformation.getCurrentUser(), conf,
-                    NetUtils.getDefaultSocketFactory(conf),
+                    scmBlockAddress, UserGroupInformation.getCurrentUser(),
+                    conf, NetUtils.getDefaultSocketFactory(conf),
                     Client.getRpcTimeout(conf))),
             ScmBlockLocationProtocol.class);
 
