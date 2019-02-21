@@ -215,6 +215,47 @@ public class TestCloseContainerCommandHandler {
     }
   }
 
+  @Test
+  public void testQuasiCloseClosedContainer()
+      throws Exception {
+    final OzoneConfiguration conf = new OzoneConfiguration();
+    final DatanodeDetails datanodeDetails = randomDatanodeDetails();
+    final OzoneContainer ozoneContainer = getOzoneContainer(conf, datanodeDetails);
+    ozoneContainer.start();
+    try {
+      final Container container = createContainer(conf, datanodeDetails, ozoneContainer);
+      Mockito.verify(context.getParent(),
+          Mockito.times(1)).triggerHeartbeat();
+      final long containerId = container.getContainerData().getContainerID();
+      final PipelineID pipelineId = PipelineID.valueOf(UUID.fromString(
+          container.getContainerData().getOriginPipelineId()));
+
+      final CloseContainerCommandHandler closeHandler = new CloseContainerCommandHandler();
+      final CloseContainerCommand closeCommand = new CloseContainerCommand(
+          containerId, pipelineId);
+
+      closeHandler.handle(closeCommand, ozoneContainer, context, null);
+
+      Assert.assertEquals(ContainerProtos.ContainerDataProto.State.CLOSED,
+          ozoneContainer.getContainerSet().getContainer(containerId)
+              .getContainerState());
+
+      // The container is closed, now we send close command with pipeline id which doesn't exist.
+      // This should cause the datanode to trigger quasi close, since the container is already
+      // closed, this should do nothing. The command should not fail either.
+      final PipelineID randomPipeline = PipelineID.randomId();
+      final CloseContainerCommand quasiCloseCommand = new CloseContainerCommand(
+          containerId, randomPipeline);
+      closeHandler.handle(quasiCloseCommand, ozoneContainer, context, null);
+
+      Assert.assertEquals(ContainerProtos.ContainerDataProto.State.CLOSED,
+          ozoneContainer.getContainerSet().getContainer(containerId)
+              .getContainerState());
+    } finally {
+      ozoneContainer.stop();
+    }
+  }
+
   private OzoneContainer getOzoneContainer(final OzoneConfiguration conf,
       final DatanodeDetails datanodeDetails) throws IOException {
     testDir = GenericTestUtils.getTestDir(
