@@ -270,11 +270,21 @@ public class NamenodeWebHdfsMethods {
       for (String host : StringUtils
           .getTrimmedStringCollection(excludeDatanodes)) {
         int idx = host.indexOf(":");
-        if (idx != -1) {          
-          excludes.add(bm.getDatanodeManager().getDatanodeByXferAddr(
-              host.substring(0, idx), Integer.parseInt(host.substring(idx + 1))));
+        Node excludeNode = null;
+        if (idx != -1) {
+          excludeNode = bm.getDatanodeManager().getDatanodeByXferAddr(
+             host.substring(0, idx), Integer.parseInt(host.substring(idx + 1)));
         } else {
-          excludes.add(bm.getDatanodeManager().getDatanodeByHost(host));
+          excludeNode = bm.getDatanodeManager().getDatanodeByHost(host);
+        }
+
+        if (excludeNode != null) {
+          excludes.add(excludeNode);
+        } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("DataNode " + host + " was requested to be excluded, "
+                + "but it was not found.");
+          }
         }
       }
     }
