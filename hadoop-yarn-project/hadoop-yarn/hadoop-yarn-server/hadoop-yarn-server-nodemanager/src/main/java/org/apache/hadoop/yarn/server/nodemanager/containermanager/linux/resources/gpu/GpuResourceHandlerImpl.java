@@ -65,11 +65,10 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
       throws ResourceHandlerException {
     List<GpuDevice> usableGpus;
     try {
-      usableGpus = GpuDiscoverer.getInstance()
-          .getGpusUsableByYarn();
+      usableGpus = GpuDiscoverer.getInstance().getGpusUsableByYarn();
       if (usableGpus == null || usableGpus.isEmpty()) {
         String message = "GPU is enabled on the NodeManager, but couldn't find "
-            + "any usable GPU devices, please double check configuration.";
+            + "any usable GPU devices, please double check configuration!";
         LOG.error(message);
         throw new ResourceHandlerException(message);
       }
