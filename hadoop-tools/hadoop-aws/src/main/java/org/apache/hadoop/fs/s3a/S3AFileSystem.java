@@ -974,17 +974,39 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return new FSDataOutputStream(
         new S3ABlockOutputStream(this,
             destKey,
-            new SemaphoredDelegatingExecutor(boundedThreadPool,
-                blockOutputActiveBlocks, true),
-            progress,
+            createWriteOpContext(status, progress,
+                S3AWriteOpContext.DeleteParentPolicy.bulk),
             partSize,
             blockFactory,
-            instrumentation.newOutputStreamStatistics(statistics),
-            getWriteOperationHelper(),
             putTracker),
         null);
   }
 
+  /**
+   * Create the write operation context.
+   * @param status optional filesystem.
+   * @param progress optional progress callback.
+   * @param deleteParentPolicy
+   * @return the instance.
+   */
+  public S3AWriteOpContext createWriteOpContext(
+      final FileStatus status,
+      final Progressable progress,
+      S3AWriteOpContext.DeleteParentPolicy deleteParentPolicy) {
+    return new S3AWriteOpContext(
+        hasMetadataStore(),
+        invoker,
+        statistics,
+        instrumentation,
+        status,
+        deleteParentPolicy,
+        new SemaphoredDelegatingExecutor(boundedThreadPool,
+            blockOutputActiveBlocks, true),
+        progress,
+        instrumentation.newOutputStreamStatistics(statistics),
+        getWriteOperationHelper());
+  }
+  
   /**
    * Get a {@code WriteOperationHelper} instance.
    *
@@ -1752,7 +1774,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws AmazonClientException on problems
    */
   @Retries.OnceRaw("For PUT; post-PUT actions are RetriesExceptionsSwallowed")
-  PutObjectResult putObjectDirect(PutObjectRequest putObjectRequest)
+  PutObjectResult putObjectDirect(
+      final PutObjectRequest putObjectRequest,
+      final S3AWriteOpContext writeContext)
       throws AmazonClientException {
     long len = getPutRequestLength(putObjectRequest);
     LOG.debug("PUT {} bytes to {}", len, putObjectRequest.getKey());
@@ -1761,7 +1785,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       PutObjectResult result = s3.putObject(putObjectRequest);
       incrementPutCompletedStatistics(true, len);
       // update metadata
-      finishedWrite(putObjectRequest.getKey(), len);
+      finishedWrite(putObjectRequest.getKey(), len, writeContext);
       return result;
     } catch (AmazonClientException e) {
       incrementPutCompletedStatistics(false, len);
@@ -2625,8 +2649,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throw new FileNotFoundException("Not a file: " + src);
     }
 
+    FileStatus status;
     try {
-      FileStatus status = getFileStatus(dst);
+      status = getFileStatus(dst);
       if (!status.isFile()) {
         throw new FileAlreadyExistsException(dst + " exists and is not a file");
       }
@@ -2635,13 +2660,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
     } catch (FileNotFoundException e) {
       // no destination, all is well
+      status = null;
     }
+    
     final String key = pathToKey(dst);
     final ObjectMetadata om = newObjectMetadata(srcfile.length());
     Progressable progress = null;
     PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, srcfile);
+    final S3AWriteOpContext context = createWriteOpContext(status, null,
+        S3AWriteOpContext.DeleteParentPolicy.bulk);
     invoker.retry("copyFromLocalFile(" + src + ")", dst.toString(), true,
-        () -> executePut(putObjectRequest, progress));
+        () -> executePut(putObjectRequest, progress, context));
     if (delSrc) {
       local.delete(src, false);
     }
@@ -2658,8 +2687,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws InterruptedIOException if the blocking was interrupted.
    */
   @Retries.OnceRaw("For PUT; post-PUT actions are RetriesExceptionsSwallowed")
-  UploadResult executePut(PutObjectRequest putObjectRequest,
-      Progressable progress)
+  UploadResult executePut(
+      final PutObjectRequest putObjectRequest,
+      final Progressable progress,
+      final S3AWriteOpContext writeContext)
       throws InterruptedIOException {
     String key = putObjectRequest.getKey();
     UploadInfo info = putObject(putObjectRequest);
@@ -2670,7 +2701,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     UploadResult result = waitForUploadCompletion(key, info);
     listener.uploadCompleted();
     // post-write actions
-    finishedWrite(key, info.getLength());
+    finishedWrite(key, info.getLength(), writeContext);
     return result;
   }
 
@@ -2983,7 +3014,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @InterfaceAudience.Private
   @Retries.RetryExceptionsSwallowed
-  void finishedWrite(String key, long length) {
+  void finishedWrite(
+      final String key,
+      final long length,
+      final S3AWriteOpContext writeContext) {
     LOG.debug("Finished write to {}, len {}", key, length);
     Path p = keyToQualifiedPath(key);
     Preconditions.checkArgument(length >= 0, "content length is negative");
@@ -3069,9 +3103,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     PutObjectRequest putObjectRequest = newPutObjectRequest(objectName,
         newObjectMetadata(0L),
         im);
+    final S3AWriteOpContext writeContext = createWriteOpContext(null, null,
+        S3AWriteOpContext.DeleteParentPolicy.bulk);
     invoker.retry("PUT 0-byte object ", objectName,
          true,
-        () -> putObjectDirect(putObjectRequest));
+        () -> putObjectDirect(putObjectRequest, writeContext));
     incrementPutProgressStatistics(objectName, 0);
     instrumentation.directoryCreated();
   }
@@ -3747,4 +3783,5 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return result;
   }
 
+  
 }

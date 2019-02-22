@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
 import org.apache.hadoop.util.Progressable;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -48,9 +49,20 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
     S3AInstrumentation.OutputStreamStatistics statistics = null;
     WriteOperationHelper oHelper = mock(WriteOperationHelper.class);
     PutTracker putTracker = mock(PutTracker.class);
-    stream = spy(new S3ABlockOutputStream(fs, "", executorService,
-      progressable, blockSize, blockFactory, statistics, oHelper,
-      putTracker));
+    S3AWriteOpContext writeContext = new S3AWriteOpContext(
+        false,
+        null,
+        null,
+        null,
+        null,
+        S3AWriteOpContext.DeleteParentPolicy.bulk,
+        executorService,
+        progressable,
+        null,
+        oHelper
+    );
+    stream = spy(new S3ABlockOutputStream(fs, "",
+        writeContext, blockSize, blockFactory, putTracker));
   }
 
   @Test

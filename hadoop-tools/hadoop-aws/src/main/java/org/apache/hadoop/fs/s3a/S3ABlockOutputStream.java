@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -120,6 +119,8 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   private final PutTracker putTracker;
 
+  private final S3AWriteOpContext writeContext;
+  
   /**
    * An S3A output stream which uploads partitions in a separate pool of
    * threads; different {@link S3ADataBlocks.BlockFactory}
@@ -127,39 +128,34 @@ class S3ABlockOutputStream extends OutputStream implements
    *
    * @param fs S3AFilesystem
    * @param key S3 object to work on.
-   * @param executorService the executor service to use to schedule work
-   * @param progress report progress in order to prevent timeouts. If
-   * this object implements {@code ProgressListener} then it will be
-   * directly wired up to the AWS client, so receive detailed progress
-   * information.
+   * @param writeContext write context
    * @param blockSize size of a single block.
    * @param blockFactory factory for creating stream destinations
-   * @param statistics stats for this stream
-   * @param writeOperationHelper state of the write operation.
    * @param putTracker put tracking for commit support
    * @throws IOException on any problem
    */
-  S3ABlockOutputStream(S3AFileSystem fs,
-      String key,
-      ExecutorService executorService,
-      Progressable progress,
-      long blockSize,
-      S3ADataBlocks.BlockFactory blockFactory,
-      S3AInstrumentation.OutputStreamStatistics statistics,
-      WriteOperationHelper writeOperationHelper,
-      PutTracker putTracker)
+  S3ABlockOutputStream(
+      final S3AFileSystem fs,
+      final String key,
+      final S3AWriteOpContext writeContext,
+      final long blockSize,
+      final S3ADataBlocks.BlockFactory blockFactory,
+      final PutTracker putTracker)
       throws IOException {
     this.fs = fs;
     this.key = key;
     this.blockFactory = blockFactory;
     this.blockSize = (int) blockSize;
-    this.statistics = statistics;
-    this.writeOperationHelper = writeOperationHelper;
+    this.writeContext = writeContext;
+    this.statistics = writeContext.getStatistics();
+    this.writeOperationHelper = writeContext.getWriteOperationHelper();
     this.putTracker = putTracker;
     Preconditions.checkArgument(blockSize >= Constants.MULTIPART_MIN_SIZE,
         "Block size is too small: %d", blockSize);
-    this.executorService = MoreExecutors.listeningDecorator(executorService);
+    this.executorService = MoreExecutors.listeningDecorator(
+        writeContext.getExecutorService());
     this.multiPartUpload = null;
+    Progressable progress = writeContext.getProgress();
     this.progressListener = (progress instanceof ProgressListener) ?
         (ProgressListener) progress
         : new ProgressableListener(progress);
@@ -393,7 +389,7 @@ class S3ABlockOutputStream extends OutputStream implements
       }
       LOG.debug("Upload complete to {} by {}", key, writeOperationHelper);
     } catch (IOException ioe) {
-      writeOperationHelper.writeFailed(ioe);
+      writeOperationHelper.writeFailed(writeContext, ioe);
       throw ioe;
     } finally {
       closeAll(LOG, block, blockFactory);
@@ -402,7 +398,7 @@ class S3ABlockOutputStream extends OutputStream implements
       clearActiveBlock();
     }
     // Note end of write. This does not change the state of the remote FS.
-    writeOperationHelper.writeSuccessful(bytes);
+    writeOperationHelper.writeSuccessful(writeContext, bytes);
   }
 
   /**
@@ -661,7 +657,8 @@ class S3ABlockOutputStream extends OutputStream implements
             uploadId,
             partETags,
             bytesSubmitted,
-            errorCount);
+            errorCount,
+            writeContext);
       } finally {
         statistics.exceptionInMultipartComplete(errorCount.get());
       }

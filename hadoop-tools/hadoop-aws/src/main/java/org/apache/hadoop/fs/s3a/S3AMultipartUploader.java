@@ -133,7 +133,7 @@ public class S3AMultipartUploader extends MultipartUploader {
     }
     AtomicInteger errorCount = new AtomicInteger(0);
     CompleteMultipartUploadResult result = writeHelper.completeMPUwithRetries(
-        key, uploadIdStr, eTags, totalLength, errorCount);
+        key, uploadIdStr, eTags, totalLength, errorCount, writeContext);
 
     byte[] eTag = result.getETag().getBytes(Charsets.UTF_8);
     return (PathHandle) () -> ByteBuffer.wrap(eTag);
