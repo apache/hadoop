@@ -160,6 +160,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private NodeLabelsProvider nodeLabelsProvider;
   private NodeAttributesProvider nodeAttributesProvider;
   private long tokenSequenceNo;
+  private boolean timelineServiceV2Enabled;
 
   public NodeStatusUpdaterImpl(Context context, Dispatcher dispatcher,
       NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
@@ -254,6 +255,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     this.logAggregationEnabled =
         conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
           YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED);
+    this.timelineServiceV2Enabled = YarnConfiguration.
+        timelineServiceV2Enabled(conf);
+
   }
 
   @Override
@@ -1411,7 +1415,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                   newResource.toString());
             }
           }
-          if (YarnConfiguration.timelineServiceV2Enabled(context.getConf())) {
+          if (timelineServiceV2Enabled) {
             updateTimelineCollectorData(response);
           }
 

@@ -115,12 +115,15 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
 
   private RMContext rmContext;
   private ResourceProfilesManager resourceProfilesManager;
+  private boolean timelineServiceV2Enabled;
 
   @Override
   public void init(ApplicationMasterServiceContext amsContext,
       ApplicationMasterServiceProcessor nextProcessor) {
     this.rmContext = (RMContext)amsContext;
     this.resourceProfilesManager = rmContext.getResourceProfilesManager();
+    this.timelineServiceV2Enabled = YarnConfiguration.
+        timelineServiceV2Enabled(rmContext.getYarnConfiguration());
   }
 
   @Override
@@ -326,8 +329,7 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
     response.setNumClusterNodes(getScheduler().getNumClusterNodes());
 
     // add collector address for this application
-    if (YarnConfiguration.timelineServiceV2Enabled(
-        getRmContext().getYarnConfiguration())) {
+    if (timelineServiceV2Enabled) {
       CollectorInfo collectorInfo = app.getCollectorInfo();
       if (collectorInfo != null) {
         response.setCollectorInfo(collectorInfo);
