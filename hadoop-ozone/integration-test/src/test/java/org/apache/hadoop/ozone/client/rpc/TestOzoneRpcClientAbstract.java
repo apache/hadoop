@@ -770,39 +770,12 @@ public abstract class TestOzoneRpcClientAbstract {
   public void testReadKeyWithVerifyChecksumFlagEnable() throws Exception {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
-
-    String value = "sample value";
-    store.createVolume(volumeName);
-    OzoneVolume volume = store.getVolume(volumeName);
-    volume.createBucket(bucketName);
-    OzoneBucket bucket = volume.getBucket(bucketName);
     String keyName = UUID.randomUUID().toString();
 
-    // Write data into a key
-    OzoneOutputStream out = bucket.createKey(keyName,
-        value.getBytes().length, ReplicationType.RATIS,
-        ReplicationFactor.ONE, new HashMap<>());
-    out.write(value.getBytes());
-    out.close();
+    // Create and corrupt key
+    createAndCorruptKey(volumeName, bucketName, keyName);
 
-    // We need to find the location of the chunk file corresponding to the
-    // data we just wrote.
-    OzoneKey key = bucket.getKey(keyName);
-    long containerID = ((OzoneKeyDetails) key).getOzoneKeyLocations().get(0)
-        .getContainerID();
-
-    // Get the container by traversing the datanodes. Atleast one of the
-    // datanode must have this container.
-    Container container = null;
-    for (HddsDatanodeService hddsDatanode : cluster.getHddsDatanodes()) {
-      container = hddsDatanode.getDatanodeStateMachine().getContainer()
-          .getContainerSet().getContainer(containerID);
-      if (container != null) {
-        break;
-      }
-    }
-    Assert.assertNotNull("Container not found", container);
-    corruptData(container, key);
+    // read corrupt key with verify checksum enabled
     readCorruptedKey(volumeName, bucketName, keyName, true);
 
   }
@@ -812,13 +785,23 @@ public abstract class TestOzoneRpcClientAbstract {
   public void testReadKeyWithVerifyChecksumFlagDisable() throws Exception {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
 
+    // Create and corrupt key
+    createAndCorruptKey(volumeName, bucketName, keyName);
+
+    // read corrupt key with verify checksum enabled
+    readCorruptedKey(volumeName, bucketName, keyName, false);
+
+  }
+
+  private void createAndCorruptKey(String volumeName, String bucketName,
+      String keyName) throws IOException {
     String value = "sample value";
     store.createVolume(volumeName);
     OzoneVolume volume = store.getVolume(volumeName);
     volume.createBucket(bucketName);
     OzoneBucket bucket = volume.getBucket(bucketName);
-    String keyName = UUID.randomUUID().toString();
 
     // Write data into a key
     OzoneOutputStream out = bucket.createKey(keyName,
@@ -845,8 +828,6 @@ public abstract class TestOzoneRpcClientAbstract {
     }
     Assert.assertNotNull("Container not found", container);
     corruptData(container, key);
-    readCorruptedKey(volumeName, bucketName, keyName, false);
-
   }
 
 
