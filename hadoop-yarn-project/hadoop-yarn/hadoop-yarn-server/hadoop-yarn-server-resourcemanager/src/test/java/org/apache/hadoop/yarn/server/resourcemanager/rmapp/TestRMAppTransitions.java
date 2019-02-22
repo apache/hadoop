@@ -694,7 +694,7 @@ public class TestRMAppTransitions {
     sendAppUpdateSavedEvent(application);
     assertKilled(application);
     assertAppFinalStateNotSaved(application);
-    verifyApplicationFinished(RMAppState.KILLED);
+    verifyApplicationFinished(RMAppState.KILLED, FinalApplicationStatus.KILLED);
     verifyAppRemovedSchedulerEvent(RMAppState.KILLED);
     verifyRMAppFieldsForFinalTransitions(application);
   }
@@ -713,7 +713,7 @@ public class TestRMAppTransitions {
     sendAppUpdateSavedEvent(application);
     assertFailed(application, rejectedText);
     assertAppFinalStateSaved(application);
-    verifyApplicationFinished(RMAppState.FAILED);
+    verifyApplicationFinished(RMAppState.FAILED, FinalApplicationStatus.FAILED);
     verifyRMAppFieldsForFinalTransitions(application);
   }
 
@@ -731,7 +731,7 @@ public class TestRMAppTransitions {
     sendAppUpdateSavedEvent(application);
     assertFailed(application, rejectedText);
     assertAppFinalStateSaved(application);
-    verifyApplicationFinished(RMAppState.FAILED);
+    verifyApplicationFinished(RMAppState.FAILED, FinalApplicationStatus.FAILED);
     verifyRMAppFieldsForFinalTransitions(application);
     rmContext.getStateStore().removeApplication(application);
   }
@@ -753,7 +753,7 @@ public class TestRMAppTransitions {
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
     assertKilled(application);
-    verifyApplicationFinished(RMAppState.KILLED);
+    verifyApplicationFinished(RMAppState.KILLED, FinalApplicationStatus.KILLED);
     verifyAppRemovedSchedulerEvent(RMAppState.KILLED);
     verifyRMAppFieldsForFinalTransitions(application);
   }
@@ -772,7 +772,7 @@ public class TestRMAppTransitions {
     sendAppUpdateSavedEvent(application);
     assertFailed(application, rejectedText);
     assertAppFinalStateSaved(application);
-    verifyApplicationFinished(RMAppState.FAILED);
+    verifyApplicationFinished(RMAppState.FAILED, FinalApplicationStatus.FAILED);
     verifyRMAppFieldsForFinalTransitions(application);
   }
 
@@ -789,7 +789,7 @@ public class TestRMAppTransitions {
     assertFailed(application, rejectedText);
     verify(store, times(0)).updateApplicationState(
         any(ApplicationStateData.class));
-    verifyApplicationFinished(RMAppState.FAILED);
+    verifyApplicationFinished(RMAppState.FAILED, FinalApplicationStatus.FAILED);
     assertTimesAtFinish(application);
   }
 
@@ -807,7 +807,7 @@ public class TestRMAppTransitions {
     sendAppUpdateSavedEvent(application);
     assertFailed(application, rejectedText);
     assertAppFinalStateSaved(application);
-    verifyApplicationFinished(RMAppState.FAILED);
+    verifyApplicationFinished(RMAppState.FAILED, FinalApplicationStatus.FAILED);
     verifyRMAppFieldsForFinalTransitions(application);
   }
 
@@ -829,7 +829,7 @@ public class TestRMAppTransitions {
     sendAppUpdateSavedEvent(application);
     assertKilled(application);
     assertAppFinalStateSaved(application);
-    verifyApplicationFinished(RMAppState.KILLED);
+    verifyApplicationFinished(RMAppState.KILLED, FinalApplicationStatus.KILLED);
     verifyAppRemovedSchedulerEvent(RMAppState.KILLED);
     verifyRMAppFieldsForFinalTransitions(application);
   }
@@ -866,7 +866,7 @@ public class TestRMAppTransitions {
     sendAppUpdateSavedEvent(application);
     assertFailed(application, ".*" + message + ".*Failing the application.*");
     assertAppFinalStateSaved(application);
-    verifyApplicationFinished(RMAppState.FAILED);
+    verifyApplicationFinished(RMAppState.FAILED, FinalApplicationStatus.FAILED);
   }
 
   @Test
@@ -893,7 +893,7 @@ public class TestRMAppTransitions {
     sendAppUpdateSavedEvent(application);
     assertKilled(application);
     assertAppFinalStateSaved(application);
-    verifyApplicationFinished(RMAppState.KILLED);
+    verifyApplicationFinished(RMAppState.KILLED, FinalApplicationStatus.KILLED);
     verifyAppRemovedSchedulerEvent(RMAppState.KILLED);
     verifyRMAppFieldsForFinalTransitions(application);
   }
@@ -917,7 +917,7 @@ public class TestRMAppTransitions {
     sendAppUpdateSavedEvent(application);
     assertKilled(application);
     assertAppFinalStateSaved(application);
-    verifyApplicationFinished(RMAppState.KILLED);
+    verifyApplicationFinished(RMAppState.KILLED, FinalApplicationStatus.KILLED);
     verifyAppRemovedSchedulerEvent(RMAppState.KILLED);
   }
 
@@ -941,7 +941,7 @@ public class TestRMAppTransitions {
     sendAttemptUpdateSavedEvent(application);
     sendAppUpdateSavedEvent(application);
     assertKilled(application);
-    verifyApplicationFinished(RMAppState.KILLED);
+    verifyApplicationFinished(RMAppState.KILLED, FinalApplicationStatus.KILLED);
     verifyAppRemovedSchedulerEvent(RMAppState.KILLED);
     verifyRMAppFieldsForFinalTransitions(application);
   }
@@ -1000,7 +1000,7 @@ public class TestRMAppTransitions {
     rmDispatcher.await();
     assertFailed(application, ".*Failing the application.*");
     assertAppFinalStateSaved(application);
-    verifyApplicationFinished(RMAppState.FAILED);
+    verifyApplicationFinished(RMAppState.FAILED, FinalApplicationStatus.FAILED);
     verifyRMAppFieldsForFinalTransitions(application);
   }
 
@@ -1062,7 +1062,9 @@ public class TestRMAppTransitions {
     StringBuilder diag = application.getDiagnostics();
     Assert.assertEquals("application diagnostics is not correct",
         "", diag.toString());
-    verifyApplicationFinished(RMAppState.FINISHED);
+    // finished without a proper final state is the same as failed
+    verifyApplicationFinished(RMAppState.FINISHED,
+        FinalApplicationStatus.FAILED);
     verifyRMAppFieldsForFinalTransitions(application);
   }
 
@@ -1089,7 +1091,7 @@ public class TestRMAppTransitions {
     rmDispatcher.await();
     assertTimesAtFinish(application);
     assertAppState(RMAppState.FAILED, application);
-    verifyApplicationFinished(RMAppState.FAILED);
+    verifyApplicationFinished(RMAppState.FAILED, FinalApplicationStatus.FAILED);
 
     assertTimesAtFinish(application);
     assertAppState(RMAppState.FAILED, application);
@@ -1144,7 +1146,7 @@ public class TestRMAppTransitions {
     rmDispatcher.await();
     assertTimesAtFinish(application);
     assertAppState(RMAppState.KILLED, application);
-    verifyApplicationFinished(RMAppState.KILLED);
+    verifyApplicationFinished(RMAppState.KILLED, FinalApplicationStatus.KILLED);
 
     assertTimesAtFinish(application);
     assertAppState(RMAppState.KILLED, application);
@@ -1257,15 +1259,20 @@ public class TestRMAppTransitions {
             + "/"));
   }
 
-  private void verifyApplicationFinished(RMAppState state) {
+  private void verifyApplicationFinished(RMAppState state,
+      FinalApplicationStatus finalAppStatus) {
     ArgumentCaptor<RMAppState> finalState =
         ArgumentCaptor.forClass(RMAppState.class);
     verify(writer).applicationFinished(any(RMApp.class), finalState.capture());
     Assert.assertEquals(state, finalState.getValue());
     finalState = ArgumentCaptor.forClass(RMAppState.class);
-    verify(publisher).appFinished(any(RMApp.class), finalState.capture(),
+    ArgumentCaptor<RMApp> app =
+        ArgumentCaptor.forClass(RMApp.class);
+    verify(publisher).appFinished(app.capture(), finalState.capture(),
         anyLong());
     Assert.assertEquals(state, finalState.getValue());
+    Assert.assertEquals(finalAppStatus,
+        app.getValue().getFinalApplicationStatus());
   }
   
   private void verifyAppRemovedSchedulerEvent(RMAppState finalState) {
