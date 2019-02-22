@@ -23,17 +23,26 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.GpuDeviceInformation;
-import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 public class TestGpuDiscoverer {
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
+
   private String getTestParentFolder() {
     File f = new File("target/temp/" + TestGpuDiscoverer.class.getName());
     return f.getAbsolutePath();
@@ -51,6 +60,12 @@ public class TestGpuDiscoverer {
     f.mkdirs();
   }
 
+  private Configuration createConfigWithAllowedDevices(String s) {
+    Configuration conf = new Configuration(false);
+    conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, s);
+    return conf;
+  }
+
   @Test
   public void testLinuxGpuResourceDiscoverPluginConfig() throws Exception {
     // Only run this on demand.
@@ -61,10 +76,10 @@ public class TestGpuDiscoverer {
     Configuration conf = new Configuration(false);
     GpuDiscoverer plugin = new GpuDiscoverer();
     plugin.initialize(conf);
-    Assert.assertEquals(GpuDiscoverer.DEFAULT_BINARY_NAME,
+    assertEquals(GpuDiscoverer.DEFAULT_BINARY_NAME,
         plugin.getPathOfGpuBinary());
-    Assert.assertNotNull(plugin.getEnvironmentToRunCommand().get("PATH"));
-    Assert.assertTrue(
+    assertNotNull(plugin.getEnvironmentToRunCommand().get("PATH"));
+    assertTrue(
         plugin.getEnvironmentToRunCommand().get("PATH").contains("nvidia"));
 
     // test case 2, check mandatory set path.
@@ -74,18 +89,18 @@ public class TestGpuDiscoverer {
     conf.set(YarnConfiguration.NM_GPU_PATH_TO_EXEC, getTestParentFolder());
     plugin = new GpuDiscoverer();
     plugin.initialize(conf);
-    Assert.assertEquals(fakeBinary.getAbsolutePath(),
+    assertEquals(fakeBinary.getAbsolutePath(),
         plugin.getPathOfGpuBinary());
-    Assert.assertNull(plugin.getEnvironmentToRunCommand().get("PATH"));
+    assertNull(plugin.getEnvironmentToRunCommand().get("PATH"));
 
     // test case 3, check mandatory set path, but binary doesn't exist so default
     // path will be used.
     fakeBinary.delete();
     plugin = new GpuDiscoverer();
     plugin.initialize(conf);
-    Assert.assertEquals(GpuDiscoverer.DEFAULT_BINARY_NAME,
+    assertEquals(GpuDiscoverer.DEFAULT_BINARY_NAME,
         plugin.getPathOfGpuBinary());
-    Assert.assertTrue(
+    assertTrue(
         plugin.getEnvironmentToRunCommand().get("PATH").contains("nvidia"));
   }
 
@@ -100,42 +115,165 @@ public class TestGpuDiscoverer {
     plugin.initialize(conf);
     GpuDeviceInformation info = plugin.getGpuDeviceInformation();
 
-    Assert.assertTrue(info.getGpus().size() > 0);
-    Assert.assertEquals(plugin.getGpusUsableByYarn().size(),
+    assertTrue(info.getGpus().size() > 0);
+    assertEquals(plugin.getGpusUsableByYarn().size(),
         info.getGpus().size());
   }
 
   @Test
-  public void getNumberOfUsableGpusFromConfig() throws YarnException {
-    Configuration conf = new Configuration(false);
+  public void testGetNumberOfUsableGpusFromConfigSingleDevice()
+      throws YarnException {
+    Configuration conf = createConfigWithAllowedDevices("1:2");
 
-    // Illegal format
-    conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:2,3");
     GpuDiscoverer plugin = new GpuDiscoverer();
-    try {
-      plugin.initialize(conf);
-      plugin.getGpusUsableByYarn();
-      Assert.fail("Illegal format, should fail.");
-    } catch (YarnException e) {
-      // Expected
-    }
+    plugin.initialize(conf);
+    List<GpuDevice> usableGpuDevices = plugin.getGpusUsableByYarn();
+    assertEquals(1, usableGpuDevices.size());
 
-    // Valid format
-    conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:2,3:4");
-    plugin = new GpuDiscoverer();
+    assertEquals(1, usableGpuDevices.get(0).getIndex());
+    assertEquals(2, usableGpuDevices.get(0).getMinorNumber());
+  }
+
+  @Test
+  public void testGetNumberOfUsableGpusFromConfigIllegalFormat()
+      throws YarnException {
+    Configuration conf = createConfigWithAllowedDevices("0:0,1:1,2:2,3");
+
+    exception.expect(GpuDeviceSpecificationException.class);
+    GpuDiscoverer plugin = new GpuDiscoverer();
+    plugin.initialize(conf);
+    plugin.getGpusUsableByYarn();
+  }
+
+  @Test
+  public void testGetNumberOfUsableGpusFromConfig() throws YarnException {
+    Configuration conf = createConfigWithAllowedDevices("0:0,1:1,2:2,3:4");
+    GpuDiscoverer plugin = new GpuDiscoverer();
     plugin.initialize(conf);
 
     List<GpuDevice> usableGpuDevices = plugin.getGpusUsableByYarn();
-    Assert.assertEquals(4, usableGpuDevices.size());
+    assertEquals(4, usableGpuDevices.size());
 
-    Assert.assertTrue(0 == usableGpuDevices.get(0).getIndex());
-    Assert.assertTrue(1 == usableGpuDevices.get(1).getIndex());
-    Assert.assertTrue(2 == usableGpuDevices.get(2).getIndex());
-    Assert.assertTrue(3 == usableGpuDevices.get(3).getIndex());
+    assertEquals(0, usableGpuDevices.get(0).getIndex());
+    assertEquals(0, usableGpuDevices.get(0).getMinorNumber());
 
-    Assert.assertTrue(0 == usableGpuDevices.get(0).getMinorNumber());
-    Assert.assertTrue(1 == usableGpuDevices.get(1).getMinorNumber());
-    Assert.assertTrue(2 == usableGpuDevices.get(2).getMinorNumber());
-    Assert.assertTrue(4 == usableGpuDevices.get(3).getMinorNumber());
+    assertEquals(1, usableGpuDevices.get(1).getIndex());
+    assertEquals(1, usableGpuDevices.get(1).getMinorNumber());
+
+    assertEquals(2, usableGpuDevices.get(2).getIndex());
+    assertEquals(2, usableGpuDevices.get(2).getMinorNumber());
+
+    assertEquals(3, usableGpuDevices.get(3).getIndex());
+    assertEquals(4, usableGpuDevices.get(3).getMinorNumber());
+  }
+
+  @Test
+  public void testGetNumberOfUsableGpusFromConfigDuplicateValues()
+      throws YarnException {
+    Configuration conf = createConfigWithAllowedDevices("0:0,1:1,2:2,1:1");
+
+    exception.expect(GpuDeviceSpecificationException.class);
+    GpuDiscoverer plugin = new GpuDiscoverer();
+    plugin.initialize(conf);
+    plugin.getGpusUsableByYarn();
+  }
+
+  @Test
+  public void testGetNumberOfUsableGpusFromConfigDuplicateValues2()
+      throws YarnException {
+    Configuration conf = createConfigWithAllowedDevices("0:0,1:1,2:2,1:1,2:2");
+
+    exception.expect(GpuDeviceSpecificationException.class);
+    GpuDiscoverer plugin = new GpuDiscoverer();
+    plugin.initialize(conf);
+    plugin.getGpusUsableByYarn();
+  }
+
+  @Test
+  public void testGetNumberOfUsableGpusFromConfigIncludingSpaces()
+      throws YarnException {
+    Configuration conf = createConfigWithAllowedDevices("0 : 0,1 : 1");
+
+    exception.expect(GpuDeviceSpecificationException.class);
+    GpuDiscoverer plugin = new GpuDiscoverer();
+    plugin.initialize(conf);
+    plugin.getGpusUsableByYarn();
+  }
+
+  @Test
+  public void testGetNumberOfUsableGpusFromConfigIncludingGibberish()
+      throws YarnException {
+    Configuration conf = createConfigWithAllowedDevices("0:@$1,1:1");
+
+    exception.expect(GpuDeviceSpecificationException.class);
+    GpuDiscoverer plugin = new GpuDiscoverer();
+    plugin.initialize(conf);
+    plugin.getGpusUsableByYarn();
+  }
+
+  @Test
+  public void testGetNumberOfUsableGpusFromConfigIncludingLetters()
+      throws YarnException {
+    Configuration conf = createConfigWithAllowedDevices("x:0, 1:y");
+
+    exception.expect(GpuDeviceSpecificationException.class);
+    GpuDiscoverer plugin = new GpuDiscoverer();
+    plugin.initialize(conf);
+    plugin.getGpusUsableByYarn();
+  }
+
+  @Test
+  public void testGetNumberOfUsableGpusFromConfigWithoutIndexNumber()
+      throws YarnException {
+    Configuration conf = createConfigWithAllowedDevices(":0, :1");
+
+    exception.expect(GpuDeviceSpecificationException.class);
+    GpuDiscoverer plugin = new GpuDiscoverer();
+    plugin.initialize(conf);
+    plugin.getGpusUsableByYarn();
+  }
+
+  @Test
+  public void testGetNumberOfUsableGpusFromConfigEmptyString()
+      throws YarnException {
+    Configuration conf = createConfigWithAllowedDevices("");
+
+    exception.expect(GpuDeviceSpecificationException.class);
+    GpuDiscoverer plugin = new GpuDiscoverer();
+    plugin.initialize(conf);
+    plugin.getGpusUsableByYarn();
+  }
+
+  @Test
+  public void testGetNumberOfUsableGpusFromConfigValueWithoutComma()
+      throws YarnException {
+    Configuration conf = createConfigWithAllowedDevices("0:0 0:1");
+
+    exception.expect(GpuDeviceSpecificationException.class);
+    GpuDiscoverer plugin = new GpuDiscoverer();
+    plugin.initialize(conf);
+    plugin.getGpusUsableByYarn();
+  }
+
+  @Test
+  public void testGetNumberOfUsableGpusFromConfigValueWithoutComma2()
+      throws YarnException {
+    Configuration conf = createConfigWithAllowedDevices("0.1 0.2");
+
+    exception.expect(GpuDeviceSpecificationException.class);
+    GpuDiscoverer plugin = new GpuDiscoverer();
+    plugin.initialize(conf);
+    plugin.getGpusUsableByYarn();
+  }
+
+  @Test
+  public void testGetNumberOfUsableGpusFromConfigValueWithoutColonSeparator()
+      throws YarnException {
+    Configuration conf = createConfigWithAllowedDevices("0.1,0.2");
+
+    exception.expect(GpuDeviceSpecificationException.class);
+    GpuDiscoverer plugin = new GpuDiscoverer();
+    plugin.initialize(conf);
+    plugin.getGpusUsableByYarn();
   }
 }
