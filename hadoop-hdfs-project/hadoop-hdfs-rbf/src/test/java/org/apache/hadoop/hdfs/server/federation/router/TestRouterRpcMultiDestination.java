@@ -25,8 +25,8 @@ import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.internal.util.reflection.Whitebox.getInternalState;
-import static org.mockito.internal.util.reflection.Whitebox.setInternalState;
+import static org.apache.hadoop.test.Whitebox.getInternalState;
+import static org.apache.hadoop.test.Whitebox.setInternalState;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
