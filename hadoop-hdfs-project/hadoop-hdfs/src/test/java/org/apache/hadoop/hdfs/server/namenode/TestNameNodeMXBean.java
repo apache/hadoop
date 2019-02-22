@@ -1032,8 +1032,8 @@ public class TestNameNodeMXBean {
 
     assertFalse("Test cluster does not support all enabled " +
         "erasure coding policies.", isSupported);
-    assertTrue(resultMessage.contains("The number of racks"));
-    assertTrue(resultMessage.contains("is less than the minimum required " +
-        "number of racks"));
+    assertTrue(resultMessage.contains("3 racks are required for " +
+        "the erasure coding policies: RS-6-3-1024k. " +
+        "The number of racks is only 1."));
   }
 }

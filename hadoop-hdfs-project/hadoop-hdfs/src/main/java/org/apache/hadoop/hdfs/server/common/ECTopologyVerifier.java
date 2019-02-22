@@ -93,18 +93,19 @@ public final class ECTopologyVerifier {
       final int numOfRacks, final int numOfDataNodes, String readablePolicies) {
     String resultMessage;
     if (numOfDataNodes < minDN) {
-      resultMessage = String.format("The number of DataNodes (%d) is less " +
-          "than the minimum required number of DataNodes (%d) for the " +
-          "erasure coding policies: %s", numOfDataNodes, minDN,
-          readablePolicies);
+      resultMessage = String.format("%d DataNodes are required for " +
+              "the erasure coding policies: %s. " +
+              "The number of DataNodes is only %d.",
+          minDN, readablePolicies, numOfDataNodes);
       LOG.debug(resultMessage);
       return new ECTopologyVerifierResult(false, resultMessage);
     }
 
     if (numOfRacks < minRack) {
-      resultMessage = String.format("The number of racks (%d) is less than " +
-          "the minimum required number of racks (%d) for the erasure " +
-          "coding policies: %s", numOfRacks, minRack, readablePolicies);
+      resultMessage = String.format("%d racks are required for " +
+          "the erasure coding policies: %s. " +
+              "The number of racks is only %d.",
+          minRack, readablePolicies, numOfRacks);
       LOG.debug(resultMessage);
       return new ECTopologyVerifierResult(false, resultMessage);
     }
