@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -47,7 +47,7 @@ public class GpuDiscoverer {
   public static final Logger LOG = LoggerFactory.getLogger(
       GpuDiscoverer.class);
   @VisibleForTesting
-  protected static final String DEFAULT_BINARY_NAME = "nvidia-smi";
+  static final String DEFAULT_BINARY_NAME = "nvidia-smi";
 
   // When executable path not set, try to search default dirs
   // By default search /usr/bin, /bin, and /usr/local/nvidia/bin (when
@@ -70,7 +70,7 @@ public class GpuDiscoverer {
   private GpuDeviceInformationParser parser = new GpuDeviceInformationParser();
 
   private int numOfErrorExecutionSinceLastSucceed = 0;
-  GpuDeviceInformation lastDiscoveredGpuInformation = null;
+  private GpuDeviceInformation lastDiscoveredGpuInformation = null;
 
   private void validateConfOrThrowException() throws YarnException {
     if (conf == null) {
@@ -89,7 +89,7 @@ public class GpuDiscoverer {
    * @return GpuDeviceInformation
    * @throws YarnException when any error happens
    */
-  public synchronized GpuDeviceInformation getGpuDeviceInformation()
+  synchronized GpuDeviceInformation getGpuDeviceInformation()
       throws YarnException {
     validateConfOrThrowException();
 
@@ -112,10 +112,9 @@ public class GpuDiscoverer {
     try {
       output = Shell.execCommand(environment,
           new String[] { pathOfGpuBinary, "-x", "-q" }, MAX_EXEC_TIMEOUT_MS);
-      GpuDeviceInformation info = parser.parseXml(output);
+      lastDiscoveredGpuInformation = parser.parseXml(output);
       numOfErrorExecutionSinceLastSucceed = 0;
-      lastDiscoveredGpuInformation = info;
-      return info;
+      return lastDiscoveredGpuInformation;
     } catch (IOException e) {
       numOfErrorExecutionSinceLastSucceed++;
       String msg =
@@ -149,52 +148,91 @@ public class GpuDiscoverer {
         YarnConfiguration.NM_GPU_ALLOWED_DEVICES,
         YarnConfiguration.AUTOMATICALLY_DISCOVER_GPU_DEVICES);
 
-    List<GpuDevice> gpuDevices = new ArrayList<>();
-
     if (allowedDevicesStr.equals(
         YarnConfiguration.AUTOMATICALLY_DISCOVER_GPU_DEVICES)) {
-      // Get gpu device information from system.
-      if (null == lastDiscoveredGpuInformation) {
-        String msg = YarnConfiguration.NM_GPU_ALLOWED_DEVICES + " is set to "
-            + YarnConfiguration.AUTOMATICALLY_DISCOVER_GPU_DEVICES
-            + ", however automatically discovering "
-            + "GPU information failed, please check NodeManager log for more"
-            + " details, as an alternative, admin can specify "
-            + YarnConfiguration.NM_GPU_ALLOWED_DEVICES
-            + " manually to enable GPU isolation.";
-        LOG.error(msg);
-        throw new YarnException(msg);
-      }
-
-      if (lastDiscoveredGpuInformation.getGpus() != null) {
-        for (int i = 0; i < lastDiscoveredGpuInformation.getGpus().size();
-             i++) {
-          List<PerGpuDeviceInformation> gpuInfos =
-              lastDiscoveredGpuInformation.getGpus();
-          gpuDevices.add(new GpuDevice(i, gpuInfos.get(i).getMinorNumber()));
-        }
-      }
-    } else{
-      for (String s : allowedDevicesStr.split(",")) {
-        if (s.trim().length() > 0) {
-          String[] kv = s.trim().split(":");
-          if (kv.length != 2) {
-            throw new YarnException(
-                "Illegal format, it should be index:minor_number format, now it="
-                    + s);
-          }
-
-          gpuDevices.add(
-              new GpuDevice(Integer.parseInt(kv[0]), Integer.parseInt(kv[1])));
-        }
-      }
-      LOG.info("Allowed GPU devices:" + gpuDevices);
+      return parseGpuDevicesFromAutoDiscoveredGpuInfo();
+    } else {
+      return parseGpuDevicesFromUserDefinedValues(allowedDevicesStr);
     }
+  }
+
+  private List<GpuDevice> parseGpuDevicesFromAutoDiscoveredGpuInfo()
+          throws YarnException {
+    if (lastDiscoveredGpuInformation == null) {
+      String msg = YarnConfiguration.NM_GPU_ALLOWED_DEVICES + " is set to "
+          + YarnConfiguration.AUTOMATICALLY_DISCOVER_GPU_DEVICES
+          + ", however automatically discovering "
+          + "GPU information failed, please check NodeManager log for more"
+          + " details, as an alternative, admin can specify "
+          + YarnConfiguration.NM_GPU_ALLOWED_DEVICES
+          + " manually to enable GPU isolation.";
+      LOG.error(msg);
+      throw new YarnException(msg);
+    }
+
+    List<GpuDevice> gpuDevices = new ArrayList<>();
+    if (lastDiscoveredGpuInformation.getGpus() != null) {
+      int numberOfGpus = lastDiscoveredGpuInformation.getGpus().size();
+      LOG.debug("Found {} GPU devices", numberOfGpus);
+      for (int i = 0; i < numberOfGpus; i++) {
+        List<PerGpuDeviceInformation> gpuInfos =
+            lastDiscoveredGpuInformation.getGpus();
+        gpuDevices.add(new GpuDevice(i, gpuInfos.get(i).getMinorNumber()));
+      }
+    }
+    return gpuDevices;
+  }
+
+  /**
+   * @param devices allowed devices coming from the config.
+   *                          Individual devices should be separated by commas.
+   *                          <br>The format of individual devices should be:
+   *                           &lt;index:&gt;&lt;minorNumber&gt;
+   * @return List of GpuDevices
+   * @throws YarnException when a GPU device is defined as a duplicate.
+   * The first duplicate GPU device will be added to the exception message.
+   */
+  private List<GpuDevice> parseGpuDevicesFromUserDefinedValues(String devices)
+      throws YarnException {
+    if (devices.trim().isEmpty()) {
+      throw GpuDeviceSpecificationException.createWithEmptyValueSpecified();
+    }
+    List<GpuDevice> gpuDevices = Lists.newArrayList();
+    for (String device : devices.split(",")) {
+      if (device.trim().length() > 0) {
+        String[] splitByColon = device.trim().split(":");
+        if (splitByColon.length != 2) {
+          throw GpuDeviceSpecificationException.
+              createWithWrongValueSpecified(device, devices);
+        }
+
+        GpuDevice gpuDevice = parseGpuDevice(device, splitByColon, devices);
+        if (!gpuDevices.contains(gpuDevice)) {
+          gpuDevices.add(gpuDevice);
+        } else {
+          throw GpuDeviceSpecificationException
+              .createWithDuplicateValueSpecified(device, devices);
+        }
+      }
+    }
+    LOG.info("Allowed GPU devices:" + gpuDevices);
 
     return gpuDevices;
   }
 
-  public synchronized void initialize(Configuration conf) throws YarnException {
+  private GpuDevice parseGpuDevice(String device, String[] splitByColon,
+      String allowedDevicesStr) throws YarnException {
+    try {
+      int index = Integer.parseInt(splitByColon[0]);
+      int minorNumber = Integer.parseInt(splitByColon[1]);
+      return new GpuDevice(index, minorNumber);
+    } catch (NumberFormatException e) {
+      throw GpuDeviceSpecificationException.
+          createWithWrongValueSpecified(device, allowedDevicesStr, e);
+    }
+  }
+
+  public synchronized void initialize(Configuration conf) {
     this.conf = conf;
     numOfErrorExecutionSinceLastSucceed = 0;
     String pathToExecutable = conf.get(YarnConfiguration.NM_GPU_PATH_TO_EXEC,
@@ -203,9 +241,7 @@ public class GpuDiscoverer {
       pathToExecutable = DEFAULT_BINARY_NAME;
     }
 
-    // Validate file existence
     File binaryPath = new File(pathToExecutable);
-
     if (!binaryPath.exists()) {
       // When binary not exist, use default setting.
       boolean found = false;
@@ -249,12 +285,12 @@ public class GpuDiscoverer {
   }
 
   @VisibleForTesting
-  protected Map<String, String> getEnvironmentToRunCommand() {
+  Map<String, String> getEnvironmentToRunCommand() {
     return environment;
   }
 
   @VisibleForTesting
-  protected String getPathOfGpuBinary() {
+  String getPathOfGpuBinary() {
     return pathOfGpuBinary;
   }
 
