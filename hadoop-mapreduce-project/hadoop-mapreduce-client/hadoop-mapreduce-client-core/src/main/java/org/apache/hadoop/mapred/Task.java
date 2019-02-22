@@ -1449,6 +1449,9 @@ abstract public class Task implements Writable, Configurable {
 
   void taskCleanup(TaskUmbilicalProtocol umbilical) 
   throws IOException {
+    if (committer == null) {
+      return;
+    }
     // set phase for this task
     setPhase(TaskStatus.Phase.CLEANUP);
     getProgress().setStatus("cleanup");
