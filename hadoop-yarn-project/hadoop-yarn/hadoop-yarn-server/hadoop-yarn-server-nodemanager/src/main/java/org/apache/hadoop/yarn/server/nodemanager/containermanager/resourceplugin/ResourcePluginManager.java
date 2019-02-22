@@ -230,8 +230,7 @@ public class ResourcePluginManager {
       for (Method m : actualClass.getDeclaredMethods()) {
         if (m.getName().equals(method.getName())) {
           LOG.debug("Method {} found in class {}",
-              actualClass.getSimpleName(),
-              m.getName());
+              m.getName(), actualClass.getSimpleName());
           found = true;
           break;
         }
