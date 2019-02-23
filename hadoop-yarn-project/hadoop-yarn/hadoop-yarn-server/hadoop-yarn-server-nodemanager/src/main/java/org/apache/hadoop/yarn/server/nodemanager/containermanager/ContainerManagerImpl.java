@@ -227,6 +227,7 @@ public class ContainerManagerImpl extends CompositeService implements
 
   // NM metrics publisher is set only if the timeline service v.2 is enabled
   private NMTimelinePublisher nmMetricsPublisher;
+  private boolean timelineServiceV2Enabled;
 
   public ContainerManagerImpl(Context context, ContainerExecutor exec,
       DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
@@ -263,11 +264,13 @@ public class ContainerManagerImpl extends CompositeService implements
     // initialize the metrics publisher if the timeline service v.2 is enabled
     // and the system publisher is enabled
     Configuration conf = context.getConf();
-    if (YarnConfiguration.timelineServiceV2Enabled(conf) &&
-        YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
-      LOG.info("YARN system metrics publishing service is enabled");
-      nmMetricsPublisher = createNMTimelinePublisher(context);
-      context.setNMTimelinePublisher(nmMetricsPublisher);
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      if (YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
+        LOG.info("YARN system metrics publishing service is enabled");
+        nmMetricsPublisher = createNMTimelinePublisher(context);
+        context.setNMTimelinePublisher(nmMetricsPublisher);
+      }
+      this.timelineServiceV2Enabled = true;
     }
     this.containersMonitor = createContainersMonitor(exec);
     addService(this.containersMonitor);
@@ -1184,7 +1187,7 @@ public class ContainerManagerImpl extends CompositeService implements
   private FlowContext getFlowContext(ContainerLaunchContext launchContext,
       ApplicationId applicationID) {
     FlowContext flowContext = null;
-    if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
+    if (timelineServiceV2Enabled) {
       String flowName = launchContext.getEnvironment()
           .get(TimelineUtils.FLOW_NAME_TAG_PREFIX);
       String flowVersion = launchContext.getEnvironment()

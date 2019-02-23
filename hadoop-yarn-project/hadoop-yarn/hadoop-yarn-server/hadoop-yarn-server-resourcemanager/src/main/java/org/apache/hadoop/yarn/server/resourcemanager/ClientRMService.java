@@ -236,6 +236,7 @@ public class ClientRMService extends AbstractService implements
       RMAppState.ACCEPTED, RMAppState.RUNNING);
 
   private ResourceProfilesManager resourceProfilesManager;
+  private boolean timelineServiceV2Enabled;
 
   public ClientRMService(RMContext rmContext, YarnScheduler scheduler,
       RMAppManager rmAppManager, ApplicationACLsManager applicationACLsManager,
@@ -306,6 +307,8 @@ public class ClientRMService extends AbstractService implements
                                                YarnConfiguration.RM_ADDRESS,
                                                YarnConfiguration.DEFAULT_RM_ADDRESS,
                                                server.getListenerAddress());
+    this.timelineServiceV2Enabled = YarnConfiguration.
+        timelineServiceV2Enabled(conf);
     super.serviceStart();
   }
 
@@ -585,7 +588,7 @@ public class ClientRMService extends AbstractService implements
       throw RPCUtil.getRemoteException(ie);
     }
 
-    if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
+    if (timelineServiceV2Enabled) {
       // Sanity check for flow run
       String value = null;
       try {

@@ -95,6 +95,7 @@ public class ApplicationMasterService extends AbstractService implements
       new ConcurrentHashMap<ApplicationAttemptId, AllocateResponseLock>();
   protected final RMContext rmContext;
   private final AMSProcessingChain amsProcessingChain;
+  private boolean timelineServiceV2Enabled;
 
   public ApplicationMasterService(RMContext rmContext,
       YarnScheduler scheduler) {
@@ -212,6 +213,8 @@ public class ApplicationMasterService extends AbstractService implements
                                YarnConfiguration.RM_SCHEDULER_ADDRESS,
                                YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
                                server.getListenerAddress());
+    this.timelineServiceV2Enabled = YarnConfiguration.
+        timelineServiceV2Enabled(conf);
     super.serviceStart();
   }
 
@@ -302,7 +305,7 @@ public class ApplicationMasterService extends AbstractService implements
         rmContext.getRMApps().get(applicationAttemptId.getApplicationId());
 
     // Remove collector address when app get finished.
-    if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
+    if (timelineServiceV2Enabled) {
       ((RMAppImpl) rmApp).removeCollectorData();
     }
     // checking whether the app exits in RMStateStore at first not to throw
