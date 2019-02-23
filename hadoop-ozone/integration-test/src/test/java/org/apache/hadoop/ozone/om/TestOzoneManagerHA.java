@@ -25,11 +25,13 @@ import org.apache.hadoop.ozone.MiniOzoneHAClusterImpl;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.rpc.ha.OMProxyInfo;
 import org.apache.hadoop.ozone.client.rpc.ha.OMProxyProvider;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -152,17 +154,27 @@ public class TestOzoneManagerHA {
     createVolumeArgs.setUserName(userName);
     createVolumeArgs.setAdminName(adminName);
 
-    storageHandler.createVolume(createVolumeArgs);
+    try {
+      storageHandler.createVolume(createVolumeArgs);
 
-    VolumeArgs getVolumeArgs = new VolumeArgs(volumeName, userArgs);
-    VolumeInfo retVolumeinfo = storageHandler.getVolumeInfo(getVolumeArgs);
+      VolumeArgs getVolumeArgs = new VolumeArgs(volumeName, userArgs);
+      VolumeInfo retVolumeinfo = storageHandler.getVolumeInfo(getVolumeArgs);
 
-    if (checkSuccess) {
-      Assert.assertTrue(retVolumeinfo.getVolumeName().equals(volumeName));
-      Assert.assertTrue(retVolumeinfo.getOwner().getName().equals(userName));
-    } else {
-      // Verify that the request failed
-      Assert.assertTrue(retVolumeinfo.getVolumeName().isEmpty());
+      if (checkSuccess) {
+        Assert.assertTrue(retVolumeinfo.getVolumeName().equals(volumeName));
+        Assert.assertTrue(retVolumeinfo.getOwner().getName().equals(userName));
+      } else {
+        // Verify that the request failed
+        Assert.assertTrue(retVolumeinfo.getVolumeName().isEmpty());
+        Assert.fail("There is no quorum. Request should have failed");
+      }
+    } catch (OMException e) {
+      if (!checkSuccess) {
+        GenericTestUtils.assertExceptionContains(
+            "RaftRetryFailureException", e);
+      } else {
+        throw e;
+      }
     }
   }
 
