@@ -801,6 +801,73 @@ When docker-registry application reaches STABLE state in YARN, user can push or 
 ### Docker Registry on S3
 
 Docker Registry provides its own S3 driver and YAML configuration.  YARN service configuration can generate YAML template, and enable direct Docker Registry to S3 storage.  This option is the top choice for deploying Docker Trusted Registry on AWS.
+Configuring Docker registry storage driver to S3 requires mounting /etc/docker/registry/config.yml file (through YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS), which needs to configure an S3 bucket with its corresponding accesskey and secretKey.
+
+Sample config.yml
+```
+version: 0.1
+log:
+    fields:
+        service: registry
+http:
+    addr: :5000
+storage:
+    cache:
+        blobdescriptor: inmemory
+    s3:
+        accesskey: #AWS_KEY#
+        secretkey: #AWS_SECRET#
+        region: #AWS_REGION#
+        bucket: #AWS_BUCKET#
+        encrypt: #ENCRYPT#
+        secure:  #SECURE#
+        chunksize: 5242880
+        multipartcopychunksize: 33554432
+        multipartcopymaxconcurrency: 100
+        multipartcopythresholdsize: 33554432
+        rootdirectory: #STORAGE_PATH#
+```
+
+Docker Registry can be started using YARN service:
+registry.json
+
+```
+{
+  "name": "docker-registry",
+  "version": "1.0",
+  "kerberos_principal" : {
+    "principal_name" : "registry/_HOST@EXAMPLE.COM",
+    "keytab" : "file:///etc/security/keytabs/registry.service.keytab"
+  },
+  "components" :
+  [
+    {
+      "name": "registry",
+      "number_of_containers": 1,
+      "artifact": {
+        "id": "registry:latest",
+        "type": "DOCKER"
+      },
+      "resource": {
+        "cpus": 1,
+        "memory": "256"
+      },
+      "run_privileged_container": true,
+      "configuration": {
+        "env": {
+          "YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE":"true",
+          "YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS":"<path to config.yml>:/etc/docker/registry/config.yml",
+        },
+        "properties": {
+          "docker.network": "host"
+        }
+      }
+    }
+  ]
+}
+```
+
+For further details and parameters that could be configured in the S3 storage driver, please refer https://docs.docker.com/registry/storage-drivers/s3/.
 
 ### Docker Registry with CSI Driver
 
