@@ -31,6 +31,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <dependencies>
 
   </dependencies>
+
   <build>
     <plugins>
       <plugin>
@@ -43,17 +44,17 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <goal>exec</goal>
             </goals>
             <phase>compile</phase>
+            <configuration>
+              <executable>${shell-executable}</executable>
+              <workingDirectory>${project.build.directory}</workingDirectory>
+              <arguments>
+                <argument>${basedir}/dev-support/bin/generate-site.sh</argument>
+                <argument>${hdds.version}</argument>
+                <argument>${project.build.directory}</argument>
+              </arguments>
+            </configuration>
           </execution>
         </executions>
-        <configuration>
-          <executable>${shell-executable}</executable>
-          <workingDirectory>${project.build.directory}</workingDirectory>
-          <arguments>
-            <argument>${basedir}/dev-support/bin/generate-site.sh</argument>
-            <argument>${hdds.version}</argument>
-            <argument>${project.build.directory}</argument>
-          </arguments>
-        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.rat</groupId>
