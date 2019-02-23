@@ -3360,4 +3360,14 @@
       address. (i.e 0.0.0.0)
     </description>
   </property>
+
+  <property>
+    <name>hadoop.domainname.resolver.impl</name>
+    <value>org.apache.hadoop.net.DNSDomainNameResolver</value>
+    <description>The implementation of DomainNameResolver used for service (NameNodes,
+      RBF Routers etc) discovery. The default implementation
+      org.apache.hadoop.net.DNSDomainNameResolver returns all IP addresses associated
+      with the input domain name of the services by querying the underlying DNS.
+    </description>
+  </property>
 </configuration>
