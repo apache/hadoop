@@ -17,12 +17,10 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.KMSUtil;
@@ -30,7 +28,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.log4j.Level;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -59,7 +58,8 @@ public class KMSBenchmark implements Tool {
   private static final Logger LOG =
           LoggerFactory.getLogger(KMSBenchmark.class);
 
-  private static final String GENERAL_OPTIONS_USAGE = "[-logLevel L] |";
+  private static final String GENERAL_OPTIONS_USAGE = "[-threads int] |" +
+          " [-numops int] | [{-warmup (true|false)}]";
 
   private static Configuration config;
 
@@ -74,6 +74,11 @@ public class KMSBenchmark implements Tool {
           throws IOException {
     config = conf;
     kp = createKeyProviderCryptoExtension(config);
+    try {
+      eek = kp.generateEncryptedKey(encryptionKeyName);
+    } catch (GeneralSecurityException e) {
+      LOG.warn("failed to generate key", e);
+    }
     // create key and/or warm up
     for (int i = 2; i < args.length; i++) {
       if (args[i].equals("-warmup")) {
@@ -126,9 +131,6 @@ public class KMSBenchmark implements Tool {
     // time from start to finish
     private long elapsedTime = 0;
 
-    // logging level, ERROR by default
-    private Level logLevel;
-
     private List<StatsDaemon> daemons;
 
     /**
@@ -174,7 +176,6 @@ public class KMSBenchmark implements Tool {
     OperationStatsBase() {
       numOpsRequired = 10000;
       numThreads = 3;
-      logLevel = Level.ERROR;
     }
 
     void benchmark() throws IOException {
@@ -301,16 +302,6 @@ public class KMSBenchmark implements Tool {
       }
 
       // process common options
-      int llIndex = args.indexOf("-logLevel");
-      if (llIndex >= 0) {
-        if (args.size() <= llIndex + 1) {
-          printUsage();
-        }
-        logLevel = Level.toLevel(args.get(llIndex+1), Level.ERROR);
-        args.remove(llIndex+1);
-        args.remove(llIndex);
-      }
-
       String type = args.get(1);
       if (OP_ALL_NAME.equals(type)) {
         type = getOpName();
@@ -511,7 +502,6 @@ public class KMSBenchmark implements Tool {
         throws IOException {
       long start = Time.now();
       try {
-        eek = kp.generateEncryptedKey(encryptionKeyName);
         kp.decryptEncryptedKey(eek);
       } catch (GeneralSecurityException e) {
         LOG.warn("failed to generate and/or decrypt key", e);
