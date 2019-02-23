@@ -1396,7 +1396,6 @@ tSize hdfsRead(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
 {
     jobject jInputStream;
     jbyteArray jbRarray;
-    jint noReadBytes = length;
     jvalue jVal;
     jthrowable jthr;
     JNIEnv* env;
@@ -1452,7 +1451,12 @@ tSize hdfsRead(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
         errno = EINTR;
         return -1;
     }
-    (*env)->GetByteArrayRegion(env, jbRarray, 0, noReadBytes, buffer);
+    // We only copy the portion of the jbRarray that was actually filled by
+    // the call to FsDataInputStream#read; #read is not guaranteed to fill the
+    // entire buffer, instead it returns the number of bytes read into the
+    // buffer; we use the return value as the input in GetByteArrayRegion to
+    // ensure don't copy more bytes than necessary
+    (*env)->GetByteArrayRegion(env, jbRarray, 0, jVal.i, buffer);
     destroyLocalReference(env, jbRarray);
     if ((*env)->ExceptionCheck(env)) {
         errno = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
