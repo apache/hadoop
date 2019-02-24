@@ -20,15 +20,18 @@ import com.sun.jersey.api.container.ContainerFactory;
 import com.sun.jersey.api.core.ApplicationAdapter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
 import org.apache.hadoop.ozone.web.ObjectStoreApplication;
@@ -66,9 +69,8 @@ public final class ObjectStoreHandler implements Closeable {
       LoggerFactory.getLogger(ObjectStoreHandler.class);
 
   private final ObjectStoreJerseyContainer objectStoreJerseyContainer;
-  private final OzoneManagerProtocolClientSideTranslatorPB
-      ozoneManagerClient;
-  private final StorageContainerLocationProtocolClientSideTranslatorPB
+  private final OzoneManagerProtocol ozoneManagerClient;
+  private final StorageContainerLocationProtocol
       storageContainerLocationClient;
   private final ScmBlockLocationProtocolClientSideTranslatorPB
       scmBlockLocationClient;
@@ -94,11 +96,14 @@ public final class ObjectStoreHandler implements Closeable {
     InetSocketAddress scmAddress =
         getScmAddressForClients(conf);
     this.storageContainerLocationClient =
-        new StorageContainerLocationProtocolClientSideTranslatorPB(
-            RPC.getProxy(StorageContainerLocationProtocolPB.class, scmVersion,
-                scmAddress, UserGroupInformation.getCurrentUser(), conf,
-                NetUtils.getDefaultSocketFactory(conf),
-                Client.getRpcTimeout(conf)));
+        TracingUtil.createProxy(
+            new StorageContainerLocationProtocolClientSideTranslatorPB(
+                RPC.getProxy(StorageContainerLocationProtocolPB.class,
+                    scmVersion,
+                    scmAddress, UserGroupInformation.getCurrentUser(), conf,
+                    NetUtils.getDefaultSocketFactory(conf),
+                    Client.getRpcTimeout(conf))),
+            StorageContainerLocationProtocol.class);
 
     InetSocketAddress scmBlockAddress =
         getScmAddressForBlockClients(conf);
@@ -115,15 +120,18 @@ public final class ObjectStoreHandler implements Closeable {
         RPC.getProtocolVersion(OzoneManagerProtocolPB.class);
     InetSocketAddress omAddress = getOmAddress(conf);
     this.ozoneManagerClient =
-        new OzoneManagerProtocolClientSideTranslatorPB(
-            RPC.getProxy(OzoneManagerProtocolPB.class, omVersion,
-                omAddress, UserGroupInformation.getCurrentUser(), conf,
-                NetUtils.getDefaultSocketFactory(conf),
-                Client.getRpcTimeout(conf)), clientId.toString());
+        TracingUtil.createProxy(
+            new OzoneManagerProtocolClientSideTranslatorPB(
+                RPC.getProxy(OzoneManagerProtocolPB.class, omVersion,
+                    omAddress, UserGroupInformation.getCurrentUser(), conf,
+                    NetUtils.getDefaultSocketFactory(conf),
+                    Client.getRpcTimeout(conf)), clientId.toString()),
+            OzoneManagerProtocol.class);
 
     storageHandler = new DistributedStorageHandler(
         new OzoneConfiguration(conf),
-        this.storageContainerLocationClient,
+        TracingUtil.createProxy(storageContainerLocationClient,
+            StorageContainerLocationProtocol.class),
         this.ozoneManagerClient);
     ApplicationAdapter aa =
         new ApplicationAdapter(new ObjectStoreApplication());

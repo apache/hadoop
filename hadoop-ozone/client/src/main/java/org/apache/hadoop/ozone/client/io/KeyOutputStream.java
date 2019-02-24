@@ -26,16 +26,15 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
+import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.om.helpers.*;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
-import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolClientSideTranslatorPB;
+import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
-import org.apache.hadoop.hdds.scm.protocolPB
-    .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.ratis.protocol.AlreadyClosedException;
 import org.apache.ratis.protocol.RaftRetryFailureException;
@@ -68,9 +67,8 @@ public class KeyOutputStream extends OutputStream {
   // array list's get(index) is O(1)
   private final ArrayList<BlockOutputStreamEntry> streamEntries;
   private int currentStreamIndex;
-  private final OzoneManagerProtocolClientSideTranslatorPB omClient;
-  private final
-      StorageContainerLocationProtocolClientSideTranslatorPB scmClient;
+  private final OzoneManagerProtocol omClient;
+  private final StorageContainerLocationProtocol scmClient;
   private final OmKeyArgs keyArgs;
   private final long openID;
   private final XceiverClientManager xceiverClientManager;
@@ -144,8 +142,8 @@ public class KeyOutputStream extends OutputStream {
   @SuppressWarnings("parameternumber")
   public KeyOutputStream(OpenKeySession handler,
       XceiverClientManager xceiverClientManager,
-      StorageContainerLocationProtocolClientSideTranslatorPB scmClient,
-      OzoneManagerProtocolClientSideTranslatorPB omClient, int chunkSize,
+      StorageContainerLocationProtocol scmClient,
+      OzoneManagerProtocol omClient, int chunkSize,
       String requestId, ReplicationFactor factor, ReplicationType type,
       long bufferFlushSize, long bufferMaxSize, long size, long watchTimeout,
       ChecksumType checksumType, int bytesPerChecksum,
@@ -572,8 +570,8 @@ public class KeyOutputStream extends OutputStream {
   public static class Builder {
     private OpenKeySession openHandler;
     private XceiverClientManager xceiverManager;
-    private StorageContainerLocationProtocolClientSideTranslatorPB scmClient;
-    private OzoneManagerProtocolClientSideTranslatorPB omClient;
+    private StorageContainerLocationProtocol scmClient;
+    private OzoneManagerProtocol omClient;
     private int chunkSize;
     private String requestID;
     private ReplicationType type;
@@ -609,14 +607,13 @@ public class KeyOutputStream extends OutputStream {
       return this;
     }
 
-    public Builder setScmClient(
-        StorageContainerLocationProtocolClientSideTranslatorPB client) {
+    public Builder setScmClient(StorageContainerLocationProtocol client) {
       this.scmClient = client;
       return this;
     }
 
     public Builder setOmClient(
-        OzoneManagerProtocolClientSideTranslatorPB client) {
+        OzoneManagerProtocol client) {
       this.omClient = client;
       return this;
     }

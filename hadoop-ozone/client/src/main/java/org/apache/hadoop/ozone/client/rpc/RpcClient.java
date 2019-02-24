@@ -31,6 +31,8 @@ import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ChecksumType;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
+import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
@@ -63,7 +65,7 @@ import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
-import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolClientSideTranslatorPB;
+import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
@@ -103,11 +105,10 @@ public class RpcClient implements ClientProtocol {
       LoggerFactory.getLogger(RpcClient.class);
 
   private final OzoneConfiguration conf;
-  private final StorageContainerLocationProtocolClientSideTranslatorPB
+  private final StorageContainerLocationProtocol
       storageContainerLocationClient;
   private final OMProxyProvider omProxyProvider;
-  private final OzoneManagerProtocolClientSideTranslatorPB
-      ozoneManagerClient;
+  private final OzoneManagerProtocol ozoneManagerClient;
   private final XceiverClientManager xceiverClientManager;
   private final int chunkSize;
   private final ChecksumType checksumType;
@@ -137,19 +138,24 @@ public class RpcClient implements ClientProtocol {
     RPC.setProtocolEngine(conf, OzoneManagerProtocolPB.class,
         ProtobufRpcEngine.class);
     this.omProxyProvider = new OMProxyProvider(conf, ugi);
-    this.ozoneManagerClient = this.omProxyProvider.getProxy();
+    this.ozoneManagerClient =
+        TracingUtil.createProxy(
+            this.omProxyProvider.getProxy(),
+            OzoneManagerProtocol.class);
 
     long scmVersion =
         RPC.getProtocolVersion(StorageContainerLocationProtocolPB.class);
     InetSocketAddress scmAddress = getScmAddressForClient();
     RPC.setProtocolEngine(conf, StorageContainerLocationProtocolPB.class,
         ProtobufRpcEngine.class);
-    this.storageContainerLocationClient =
+
+    StorageContainerLocationProtocolClientSideTranslatorPB client =
         new StorageContainerLocationProtocolClientSideTranslatorPB(
             RPC.getProxy(StorageContainerLocationProtocolPB.class, scmVersion,
                 scmAddress, ugi, conf, NetUtils.getDefaultSocketFactory(conf),
                 Client.getRpcTimeout(conf)));
-
+    this.storageContainerLocationClient =
+        TracingUtil.createProxy(client, StorageContainerLocationProtocol.class);
     this.xceiverClientManager = new XceiverClientManager(conf);
 
     int configuredChunkSize = (int) conf
