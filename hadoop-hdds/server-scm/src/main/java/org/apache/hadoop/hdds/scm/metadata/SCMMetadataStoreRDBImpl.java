@@ -24,12 +24,14 @@ import java.security.cert.X509Certificate;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import java.io.IOException;
-import org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateStore;
+import org.apache.hadoop.hdds.security.x509.certificate.authority
+    .CertificateStore;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.utils.db.DBStore;
 import org.apache.hadoop.utils.db.DBStoreBuilder;
 import org.apache.hadoop.utils.db.Table;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
 import org.apache.hadoop.utils.db.TableIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,7 +77,8 @@ public class SCMMetadataStoreRDBImpl implements SCMMetadataStore {
    * @param config - Ozone Configuration.
    * @throws IOException - on Failure.
    */
-  public SCMMetadataStoreRDBImpl(OzoneConfiguration config) throws IOException {
+  public SCMMetadataStoreRDBImpl(OzoneConfiguration config)
+      throws IOException {
     this.configuration = config;
     start(this.configuration);
     this.txID = new AtomicLong(this.getLargestRecordedTXID());
@@ -187,8 +190,8 @@ public class SCMMetadataStoreRDBImpl implements SCMMetadataStore {
   private void checkTableStatus(Table table, String name) throws IOException {
     String logMessage = "Unable to get a reference to %s table. Cannot " +
         "continue.";
-    String errMsg = "Inconsistent DB state, Table - %s. Please check the logs" +
-        "for more info.";
+    String errMsg = "Inconsistent DB state, Table - %s. Please check the" +
+        " logs for more info.";
     if (table == null) {
       LOG.error(String.format(logMessage, name));
       throw new IOException(String.format(errMsg, name));

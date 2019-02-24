@@ -50,11 +50,16 @@ import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes.INVALID_BLOCK_SIZE;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
+import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
+    .INVALID_BLOCK_SIZE;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
 
 /** Block Manager manages the block access for SCM. */
 public class BlockManagerImpl implements EventHandler<Boolean>,
@@ -83,8 +88,8 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
    * @param scm
    * @throws IOException
    */
-  public BlockManagerImpl(final Configuration conf, StorageContainerManager scm)
-      throws IOException {
+  public BlockManagerImpl(final Configuration conf,
+                          final StorageContainerManager scm) {
     Objects.requireNonNull(scm, "SCM cannot be null");
     this.pipelineManager = scm.getPipelineManager();
     this.containerManager = scm.getContainerManager();
