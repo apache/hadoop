@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs.ozone;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -42,8 +43,35 @@ public final class OzoneClientAdapterFactory {
   @SuppressFBWarnings("DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED")
   public static OzoneClientAdapter createAdapter(
       String volumeStr,
-      String bucketStr, OzoneFSStorageStatistics storageStatistics)
+      String bucketStr) throws IOException {
+    return createAdapter(volumeStr, bucketStr,
+        (aClass) -> (OzoneClientAdapter) aClass
+            .getConstructor(String.class, String.class)
+            .newInstance(
+                volumeStr,
+                bucketStr));
+  }
+
+
+  public static OzoneClientAdapter createAdapter(
+      String volumeStr,
+      String bucketStr,
+      OzoneFSStorageStatistics storageStatistics)
       throws IOException {
+    return createAdapter(volumeStr, bucketStr,
+        (aClass) -> (OzoneClientAdapter) aClass
+            .getConstructor(String.class, String.class,
+                OzoneFSStorageStatistics.class)
+            .newInstance(
+                volumeStr,
+                bucketStr,
+                storageStatistics));
+  }
+
+  public static OzoneClientAdapter createAdapter(
+      String volumeStr,
+      String bucketStr,
+      OzoneClientAdapterCreator creator) throws IOException {
 
     ClassLoader currentClassLoader = OzoneFileSystem.class.getClassLoader();
     List<URL> urls = new ArrayList<>();
@@ -70,13 +98,10 @@ public final class OzoneClientAdapterFactory {
       reflectionUtils.getMethod("getClassByName", String.class)
           .invoke(null, "org.apache.ratis.grpc.GrpcFactory");
 
-      OzoneClientAdapter ozoneClientAdapter = (OzoneClientAdapter) classLoader
-          .loadClass("org.apache.hadoop.fs.ozone.OzoneClientAdapterImpl")
-          .getConstructor(String.class, String.class,
-              OzoneFSStorageStatistics.class)
-          .newInstance(
-              volumeStr,
-              bucketStr, storageStatistics);
+      Class<?> aClass = classLoader
+          .loadClass("org.apache.hadoop.fs.ozone.OzoneClientAdapterImpl");
+      OzoneClientAdapter ozoneClientAdapter =
+          creator.createOzoneClientAdapter(aClass);
 
       Thread.currentThread().setContextClassLoader(contextClassLoader);
 
@@ -117,6 +142,16 @@ public final class OzoneClientAdapterFactory {
 
     urls.add(new URL(rootPath + "libs/"));
 
+  }
+
+  /**
+   * Interface to create OzoneClientAdapter implementation with reflection.
+   */
+  @FunctionalInterface
+  interface OzoneClientAdapterCreator {
+    OzoneClientAdapter createOzoneClientAdapter(Class<?> clientAdapter)
+        throws NoSuchMethodException, IllegalAccessException,
+        InvocationTargetException, InstantiationException;
   }
 
 }

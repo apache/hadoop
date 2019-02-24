@@ -54,10 +54,32 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
   private ReplicationFactor replicationFactor;
   private OzoneFSStorageStatistics storageStatistics;
 
+  /**
+   * Create new OzoneClientAdapter implementation.
+   *
+   * @param volumeStr         Name of the volume to use.
+   * @param bucketStr         Name of the bucket to use
+   * @param storageStatistics Storage statistic (optional, can be null)
+   * @throws IOException In case of a problem.
+   */
   public OzoneClientAdapterImpl(String volumeStr, String bucketStr,
       OzoneFSStorageStatistics storageStatistics) throws IOException {
     this(createConf(), volumeStr, bucketStr, storageStatistics);
   }
+
+  /**
+   * Create new OzoneClientAdapter implementation.
+   *
+   * @param volumeStr         Name of the volume to use.
+   * @param bucketStr         Name of the bucket to use
+   * @throws IOException In case of a problem.
+   */
+  public OzoneClientAdapterImpl(String volumeStr, String bucketStr)
+      throws IOException {
+    this(createConf(), volumeStr, bucketStr, null);
+  }
+
+
 
   private static OzoneConfiguration createConf() {
     ClassLoader contextClassLoader =
@@ -102,13 +124,17 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
 
   @Override
   public InputStream createInputStream(String key) throws IOException {
-    storageStatistics.incrementCounter(Statistic.OBJECTS_READ, 1);
+    if (storageStatistics != null) {
+      storageStatistics.incrementCounter(Statistic.OBJECTS_READ, 1);
+    }
     return bucket.readKey(key).getInputStream();
   }
 
   @Override
   public OzoneFSOutputStream createKey(String key) throws IOException {
-    storageStatistics.incrementCounter(Statistic.OBJECTS_CREATED, 1);
+    if (storageStatistics != null) {
+      storageStatistics.incrementCounter(Statistic.OBJECTS_CREATED, 1);
+    }
     OzoneOutputStream ozoneOutputStream =
         bucket.createKey(key, 0, replicationType, replicationFactor,
             new HashMap<>());
@@ -117,7 +143,9 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
 
   @Override
   public void renameKey(String key, String newKeyName) throws IOException {
-    storageStatistics.incrementCounter(Statistic.OBJECTS_RENAMED, 1);
+    if (storageStatistics != null) {
+      storageStatistics.incrementCounter(Statistic.OBJECTS_RENAMED, 1);
+    }
     bucket.renameKey(key, newKeyName);
   }
 
@@ -130,7 +158,9 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
   @Override
   public BasicKeyInfo getKeyInfo(String keyName) {
     try {
-      storageStatistics.incrementCounter(Statistic.OBJECTS_QUERY, 1);
+      if (storageStatistics != null) {
+        storageStatistics.incrementCounter(Statistic.OBJECTS_QUERY, 1);
+      }
       OzoneKey key = bucket.getKey(keyName);
       return new BasicKeyInfo(
           keyName,
@@ -167,7 +197,9 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
   public boolean createDirectory(String keyName) {
     try {
       LOG.trace("creating dir for key:{}", keyName);
-      storageStatistics.incrementCounter(Statistic.OBJECTS_CREATED, 1);
+      if (storageStatistics != null) {
+        storageStatistics.incrementCounter(Statistic.OBJECTS_CREATED, 1);
+      }
       bucket.createKey(keyName, 0, replicationType, replicationFactor,
           new HashMap<>()).close();
       return true;
@@ -187,7 +219,9 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
   public boolean deleteObject(String keyName) {
     LOG.trace("issuing delete for key" + keyName);
     try {
-      storageStatistics.incrementCounter(Statistic.OBJECTS_DELETED, 1);
+      if (storageStatistics != null) {
+        storageStatistics.incrementCounter(Statistic.OBJECTS_DELETED, 1);
+      }
       bucket.deleteKey(keyName);
       return true;
     } catch (IOException ioe) {
@@ -203,13 +237,17 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
 
   @Override
   public boolean hasNextKey(String key) {
-    storageStatistics.incrementCounter(Statistic.OBJECTS_LIST, 1);
+    if (storageStatistics != null) {
+      storageStatistics.incrementCounter(Statistic.OBJECTS_LIST, 1);
+    }
     return bucket.listKeys(key).hasNext();
   }
 
   @Override
   public Iterator<BasicKeyInfo> listKeys(String pathKey) {
-    storageStatistics.incrementCounter(Statistic.OBJECTS_LIST, 1);
+    if (storageStatistics != null) {
+      storageStatistics.incrementCounter(Statistic.OBJECTS_LIST, 1);
+    }
     return new IteratorAdapter(bucket.listKeys(pathKey));
   }
 
