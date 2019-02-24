@@ -22,6 +22,9 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+
+import io.opentracing.Scope;
+import io.opentracing.util.GlobalTracer;
 import org.apache.ratis.grpc.GrpcTlsConfig;
 import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.protocol.RaftRetryFailureException;
@@ -191,15 +194,20 @@ public final class XceiverClientRatis extends XceiverClientSpi {
 
   private CompletableFuture<RaftClientReply> sendRequestAsync(
       ContainerCommandRequestProto request) {
-    ContainerCommandRequestProto finalPayload =
-        ContainerCommandRequestProto.newBuilder(request)
-            .setTraceID(TracingUtil.exportCurrentSpan())
-            .build();
-    boolean isReadOnlyRequest = HddsUtils.isReadOnly(finalPayload);
-    ByteString byteString = finalPayload.toByteString();
-    LOG.debug("sendCommandAsync {} {}", isReadOnlyRequest, finalPayload);
-    return isReadOnlyRequest ? getClient().sendReadOnlyAsync(() -> byteString) :
-        getClient().sendAsync(() -> byteString);
+    try (Scope scope = GlobalTracer.get()
+        .buildSpan("XceiverClientRatis." + request.getCmdType().name())
+        .startActive(true)) {
+      ContainerCommandRequestProto finalPayload =
+          ContainerCommandRequestProto.newBuilder(request)
+              .setTraceID(TracingUtil.exportCurrentSpan())
+              .build();
+      boolean isReadOnlyRequest = HddsUtils.isReadOnly(finalPayload);
+      ByteString byteString = finalPayload.toByteString();
+      LOG.debug("sendCommandAsync {} {}", isReadOnlyRequest, finalPayload);
+      return isReadOnlyRequest ?
+          getClient().sendReadOnlyAsync(() -> byteString) :
+          getClient().sendAsync(() -> byteString);
+    }
   }
 
   // gets the minimum log index replicated to all servers
