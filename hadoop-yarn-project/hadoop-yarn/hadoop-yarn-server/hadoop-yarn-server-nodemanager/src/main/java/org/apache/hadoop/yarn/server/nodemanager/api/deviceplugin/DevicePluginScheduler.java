@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -29,10 +30,15 @@ public interface DevicePluginScheduler {
    * Called when allocating devices. The framework will do all device book
    * keeping and fail recovery. So this hook could be stateless and only do
    * scheduling based on available devices passed in. It could be
-   * invoked multiple times by the framework.
+   * invoked multiple times by the framework. The hint in environment variables
+   * passed in could be potentially used in making better scheduling decision.
+   * For instance, GPU scheduling might support different kind of policy. The
+   * container can set it through environment variables.
    * @param availableDevices Devices allowed to be chosen from.
    * @param count Number of device to be allocated.
+   * @param env Environment variables of the container.
    * @return A set of {@link Device} allocated
    * */
-  Set<Device> allocateDevices(Set<Device> availableDevices, int count);
+  Set<Device> allocateDevices(Set<Device> availableDevices, int count,
+      Map<String, String> env);
 }

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugi
 
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.*;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -62,7 +63,7 @@ public class FakeTestDevicePlugin1
 
   @Override
   public Set<Device> allocateDevices(Set<Device> availableDevices,
-      int count) {
+      int count, Map<String, String> env) {
     Set<Device> allocated = new TreeSet<Device>();
     int number = 0;
     for (Device d : availableDevices) {
