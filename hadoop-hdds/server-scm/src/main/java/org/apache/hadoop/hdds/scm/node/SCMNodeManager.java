@@ -91,10 +91,9 @@ public class SCMNodeManager implements NodeManager {
   private final String clusterID;
   private final VersionInfo version;
   private final CommandQueue commandQueue;
+  private final SCMNodeMetrics metrics;
   // Node manager MXBean
   private ObjectName nmInfoBean;
-
-  // Node pool manager.
   private final StorageContainerManager scmManager;
 
   /**
@@ -103,6 +102,7 @@ public class SCMNodeManager implements NodeManager {
   public SCMNodeManager(OzoneConfiguration conf, String clusterID,
       StorageContainerManager scmManager, EventPublisher eventPublisher)
       throws IOException {
+    this.metrics = SCMNodeMetrics.create();
     this.nodeStateManager = new NodeStateManager(conf, eventPublisher);
     this.clusterID = clusterID;
     this.version = VersionInfo.getLatestVersion();
@@ -185,6 +185,7 @@ public class SCMNodeManager implements NodeManager {
   @Override
   public void close() throws IOException {
     unregisterMXBean();
+    metrics.unRegister();
   }
 
   /**
@@ -257,7 +258,9 @@ public class SCMNodeManager implements NodeManager {
         "DatanodeDetails.");
     try {
       nodeStateManager.updateLastHeartbeatTime(datanodeDetails);
+      metrics.incNumHBProcessed();
     } catch (NodeNotFoundException e) {
+      metrics.incNumHBProcessingFailed();
       LOG.error("SCM trying to process heartbeat from an " +
           "unregistered node {}. Ignoring the heartbeat.", datanodeDetails);
     }
@@ -287,8 +290,10 @@ public class SCMNodeManager implements NodeManager {
       DatanodeInfo datanodeInfo = nodeStateManager.getNode(datanodeDetails);
       if (nodeReport != null) {
         datanodeInfo.updateStorageReports(nodeReport.getStorageReportList());
+        metrics.incNumNodeReportProcessed();
       }
     } catch (NodeNotFoundException e) {
+      metrics.incNumNodeReportProcessingFailed();
       LOG.warn("Got node report from unregistered datanode {}",
           datanodeDetails);
     }

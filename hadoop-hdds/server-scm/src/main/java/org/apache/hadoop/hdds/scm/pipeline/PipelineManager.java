@@ -31,7 +31,7 @@ import java.util.NavigableSet;
 /**
  * Interface which exposes the api for pipeline management.
  */
-public interface PipelineManager extends Closeable {
+public interface PipelineManager extends Closeable, PipelineManagerMXBean {
 
   Pipeline createPipeline(ReplicationType type, ReplicationFactor factor)
       throws IOException;
