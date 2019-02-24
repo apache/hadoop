@@ -31,6 +31,7 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.hdds.scm.server.SCMConfigurator;
 import org.apache.hadoop.hdds.scm.server
     .SCMDatanodeHeartbeatDispatcher.PipelineActionsFromDatanode;
 import org.apache.hadoop.hdds.scm.server
@@ -474,9 +475,40 @@ public final class TestUtils {
 
   }
 
+  /**
+   * Construct and returns StorageContainerManager instance using the given
+   * configuration. The ports used by this StorageContainerManager are
+   * randomly selected from free ports available.
+   *
+   * @param conf OzoneConfiguration
+   * @return StorageContainerManager instance
+   * @throws IOException
+   * @throws AuthenticationException
+   */
   public static StorageContainerManager getScm(OzoneConfiguration conf)
       throws IOException, AuthenticationException {
+    return getScm(conf, new SCMConfigurator());
+  }
+
+  /**
+   * Construct and returns StorageContainerManager instance using the given
+   * configuration and the configurator. The ports used by this
+   * StorageContainerManager are randomly selected from free ports available.
+   *
+   * @param conf OzoneConfiguration
+   * @param configurator SCMConfigurator
+   * @return StorageContainerManager instance
+   * @throws IOException
+   * @throws AuthenticationException
+   */
+  public static StorageContainerManager getScm(OzoneConfiguration conf,
+                                               SCMConfigurator configurator)
+      throws IOException, AuthenticationException {
     conf.setBoolean(OZONE_ENABLED, true);
+    conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
+    conf.set(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
+    conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY, "127.0.0.1:0");
+    conf.set(ScmConfigKeys.OZONE_SCM_HTTP_ADDRESS_KEY, "127.0.0.1:0");
     SCMStorageConfig scmStore = new SCMStorageConfig(conf);
     if(scmStore.getState() != Storage.StorageState.INITIALIZED) {
       String clusterId = UUID.randomUUID().toString();
@@ -486,7 +518,7 @@ public final class TestUtils {
       // writes the version file properties
       scmStore.initialize();
     }
-    return StorageContainerManager.createSCM(null, conf);
+    return new StorageContainerManager(conf, configurator);
   }
 
 }

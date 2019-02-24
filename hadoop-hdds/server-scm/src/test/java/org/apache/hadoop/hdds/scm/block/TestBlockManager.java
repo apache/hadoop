@@ -19,12 +19,12 @@ package org.apache.hadoop.hdds.scm.block;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.CloseContainerEventHandler;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
@@ -35,14 +35,11 @@ import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipeline.RatisPipelineUtils;
 import org.apache.hadoop.hdds.scm.server.SCMConfigurator;
-import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.server.events.EventQueue;
-import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
-import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -52,7 +49,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConsts.GB;
 import static org.apache.hadoop.ozone.OzoneConsts.MB;
 
@@ -95,7 +91,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
     nodeManager = new MockNodeManager(true, 10);
     SCMConfigurator configurator = new SCMConfigurator();
     configurator.setScmNodeManager(nodeManager);
-    scm = getScm(conf, configurator);
+    scm = TestUtils.getScm(conf, configurator);
 
     // Initialize these fields so that the tests can pass.
     mapping = (SCMContainerManager) scm.getContainerManager();
@@ -122,22 +118,6 @@ public class TestBlockManager implements EventHandler<Boolean> {
   @After
   public void cleanup() throws IOException {
     scm.stop();
-  }
-
-  private static StorageContainerManager getScm(OzoneConfiguration conf,
-                                                SCMConfigurator configurator)
-      throws IOException, AuthenticationException {
-    conf.setBoolean(OZONE_ENABLED, true);
-    SCMStorageConfig scmStore = new SCMStorageConfig(conf);
-    if(scmStore.getState() != StorageState.INITIALIZED) {
-      String clusterId = UUID.randomUUID().toString();
-      String scmId = UUID.randomUUID().toString();
-      scmStore.setClusterId(clusterId);
-      scmStore.setScmId(scmId);
-      // writes the version file properties
-      scmStore.initialize();
-    }
-    return new StorageContainerManager(conf, configurator);
   }
 
   @Test
