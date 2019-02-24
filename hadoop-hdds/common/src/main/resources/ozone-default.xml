@@ -1466,7 +1466,7 @@
 
   <property>
     <name>ozone.client.checksum.type</name>
-    <value>SHA256</value>
+    <value>CRC32</value>
     <tag>OZONE, CLIENT, MANAGEMENT</tag>
     <description>The checksum type [NONE/ CRC32/ CRC32C/ SHA256/ MD5] determines
       which algorithm would be used to compute checksum for chunk data.
