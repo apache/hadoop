@@ -1899,4 +1899,69 @@
       the servlet.
     </description>
   </property>
+
+  <property>
+    <name>ozone.freon.http-address</name>
+    <value>0.0.0.0:9884</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The address and the base port where the FREON web ui will listen on.
+      If the port is 0 then the server will start on a free port.
+    </description>
+  </property>
+  <property>
+    <name>ozone.freon.http-bind-host</name>
+    <value>0.0.0.0</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The actual address the Freon web server will bind to. If this
+      optional address is set, it overrides only the hostname portion of
+      ozone.freon.http-address.
+    </description>
+  </property>
+  <property>
+    <name>ozone.freon.http.enabled</name>
+    <value>true</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      Property to enable or disable FREON web ui.
+    </description>
+  </property>
+  <property>
+    <name>ozone.freon.https-address</name>
+    <value>0.0.0.0:9885</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The address and the base port where the Freon web server will listen
+      on using HTTPS.
+      If the port is 0 then the server will start on a free port.
+    </description>
+  </property>
+  <property>
+    <name>ozone.freon.https-bind-host</name>
+    <value>0.0.0.0</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The actual address the Freon web server will bind to using HTTPS.
+      If this optional address is set, it overrides only the hostname portion of
+      ozone.freon.http-address.
+    </description>
+  </property>
+  <property>
+    <name>ozone.freon.http.kerberos.principal</name>
+    <value>HTTP/_HOST@EXAMPLE.COM</value>
+    <tag>SECURITY</tag>
+    <description>
+     Security principal used by freon.
+    </description>
+  </property>
+  <property>
+    <name>ozone.freon.http.kerberos.keytab</name>
+    <value>/etc/security/keytabs/HTTP.keytab</value>
+    <tag>SECURITY</tag>
+    <description>
+       Keytab used by Freon.
+    </description>
+  </property>
+
 </configuration>

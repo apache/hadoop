@@ -380,6 +380,26 @@ public final class OzoneConfigKeys {
       "ozone.fs.isolated-classloader";
 
 
+  public static final String OZONE_FREON_HTTP_ENABLED_KEY =
+      "ozone.freon.http.enabled";
+  public static final String OZONE_FREON_HTTP_BIND_HOST_KEY =
+      "ozone.freon.http-bind-host";
+  public static final String OZONE_FREON_HTTPS_BIND_HOST_KEY =
+      "ozone.freon.https-bind-host";
+  public static final String OZONE_FREON_HTTP_ADDRESS_KEY =
+      "ozone.freon.http-address";
+  public static final String OZONE_FREON_HTTPS_ADDRESS_KEY =
+      "ozone.freon.https-address";
+
+  public static final String OZONE_FREON_HTTP_BIND_HOST_DEFAULT = "0.0.0.0";
+  public static final int OZONE_FREON_HTTP_BIND_PORT_DEFAULT = 9884;
+  public static final int OZONE_FREON_HTTPS_BIND_PORT_DEFAULT = 9885;
+  public static final String
+      OZONE_FREON_HTTP_KERBEROS_PRINCIPAL_KEY =
+      "ozone.freon.http.kerberos.principal";
+  public static final String
+      OZONE_FREON_HTTP_KERBEROS_KEYTAB_FILE_KEY =
+      "ozone.freon.http.kerberos.keytab";
 
   /**
    * There is no need to instantiate this class.
