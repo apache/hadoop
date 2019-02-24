@@ -24,6 +24,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -1701,6 +1702,12 @@ public class LeafQueue extends AbstractCSQueue {
     // Notify PreemptionManager
     csContext.getPreemptionManager().removeKillableContainer(
         new KillableContainer(rmContainer, node.getPartition(), queueName));
+
+    // Update preemption metrics if exit status is PREEMPTED
+    if (containerStatus != null
+        && ContainerExitStatus.PREEMPTED == containerStatus.getExitStatus()) {
+      updateQueuePreemptionMetrics(rmContainer);
+    }
   }
 
   void allocateResource(Resource clusterResource,
@@ -2216,5 +2223,20 @@ public class LeafQueue extends AbstractCSQueue {
 
   public long getDefaultApplicationLifetime() {
     return defaultApplicationLifetime;
+  }
+
+  private void updateQueuePreemptionMetrics(RMContainer rmc) {
+    final long usedMillis = rmc.getFinishTime() - rmc.getCreationTime();
+    final long usedSeconds = usedMillis / DateUtils.MILLIS_PER_SECOND;
+    Resource containerResource = rmc.getAllocatedResource();
+    metrics.preemptContainer();
+    long mbSeconds = (containerResource.getMemorySize() * usedMillis)
+        / DateUtils.MILLIS_PER_SECOND;
+    long vcSeconds = (containerResource.getVirtualCores() * usedMillis)
+        / DateUtils.MILLIS_PER_SECOND;
+    metrics.updatePreemptedMemoryMBSeconds(mbSeconds);
+    metrics.updatePreemptedVcoreSeconds(vcSeconds);
+    metrics.updatePreemptedSecondsForCustomResources(containerResource,
+        usedSeconds);
   }
 }
