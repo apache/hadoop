@@ -112,6 +112,7 @@ public class RpcClient implements ClientProtocol {
   private final int chunkSize;
   private final ChecksumType checksumType;
   private final int bytesPerChecksum;
+  private boolean verifyChecksum;
   private final UserGroupInformation ugi;
   private final OzoneAcl.OzoneACLRights userRights;
   private final OzoneAcl.OzoneACLRights groupRights;
@@ -198,6 +199,9 @@ public class RpcClient implements ClientProtocol {
         OzoneConfigKeys.OZONE_CLIENT_CHECKSUM_TYPE,
         OzoneConfigKeys.OZONE_CLIENT_CHECKSUM_TYPE_DEFAULT);
     checksumType = ChecksumType.valueOf(checksumTypeStr);
+    this.verifyChecksum =
+        conf.getBoolean(OzoneConfigKeys.OZONE_CLIENT_VERIFY_CHECKSUM,
+            OzoneConfigKeys.OZONE_CLIENT_VERIFY_CHECKSUM_DEFAULT);
   }
 
   private InetSocketAddress getScmAddressForClient() throws IOException {
@@ -648,7 +652,7 @@ public class RpcClient implements ClientProtocol {
     LengthInputStream lengthInputStream =
         KeyInputStream.getFromOmKeyInfo(
             keyInfo, xceiverClientManager, storageContainerLocationClient,
-            requestId);
+            requestId, verifyChecksum);
     FileEncryptionInfo feInfo = keyInfo.getFileEncryptionInfo();
     if (feInfo != null) {
       final KeyProvider.KeyVersion decrypted  = getDEK(feInfo);

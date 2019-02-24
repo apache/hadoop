@@ -362,6 +362,9 @@ public final class OzoneConfigKeys {
   public static final int OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT_BYTES =
       1024 * 1024;
   public static final int OZONE_CLIENT_BYTES_PER_CHECKSUM_MIN_SIZE = 256 * 1024;
+  public static final String OZONE_CLIENT_VERIFY_CHECKSUM =
+      "ozone.client.verify.checksum";
+  public static final boolean OZONE_CLIENT_VERIFY_CHECKSUM_DEFAULT = true;
   public static final String OZONE_ACL_AUTHORIZER_CLASS =
       "ozone.acl.authorizer.class";
   public static final String OZONE_ACL_AUTHORIZER_CLASS_DEFAULT =

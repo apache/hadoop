@@ -88,6 +88,7 @@ public final class DistributedStorageHandler implements StorageHandler {
   private final long blockSize;
   private final ChecksumType checksumType;
   private final int bytesPerChecksum;
+  private final boolean verifyChecksum;
 
   /**
    * Creates a new DistributedStorageHandler.
@@ -153,7 +154,9 @@ public final class DistributedStorageHandler implements StorageHandler {
         OzoneConfigKeys.OZONE_CLIENT_CHECKSUM_TYPE,
         OzoneConfigKeys.OZONE_CLIENT_CHECKSUM_TYPE_DEFAULT);
     this.checksumType = ChecksumType.valueOf(checksumTypeStr);
-
+    this.verifyChecksum =
+        conf.getBoolean(OzoneConfigKeys.OZONE_CLIENT_VERIFY_CHECKSUM,
+            OzoneConfigKeys.OZONE_CLIENT_VERIFY_CHECKSUM_DEFAULT);
   }
 
   @Override
@@ -479,7 +482,7 @@ public final class DistributedStorageHandler implements StorageHandler {
     OmKeyInfo keyInfo = ozoneManagerClient.lookupKey(keyArgs);
     return KeyInputStream.getFromOmKeyInfo(
         keyInfo, xceiverClientManager, storageContainerLocationClient,
-        args.getRequestID());
+        args.getRequestID(), verifyChecksum);
   }
 
   @Override
