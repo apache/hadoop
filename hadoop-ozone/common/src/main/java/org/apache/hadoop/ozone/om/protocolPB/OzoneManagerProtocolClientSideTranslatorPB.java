@@ -292,7 +292,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setCheckVolumeAccessRequest(req)
         .build();
 
-    OMResponse omResponse = handleError(submitRequest(omRequest));
+    OMResponse omResponse = submitRequest(omRequest);
 
     if (omResponse.getStatus() == ACCESS_DENIED) {
       return false;
