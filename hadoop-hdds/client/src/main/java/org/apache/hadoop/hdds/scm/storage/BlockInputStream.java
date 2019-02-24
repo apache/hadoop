@@ -66,6 +66,7 @@ public class BlockInputStream extends InputStream implements Seekable {
   private long[] chunkOffset;
   private List<ByteBuffer> buffers;
   private int bufferIndex;
+  private final boolean verifyChecksum;
 
   /**
    * Creates a new BlockInputStream.
@@ -75,10 +76,12 @@ public class BlockInputStream extends InputStream implements Seekable {
    * @param xceiverClient client to perform container calls
    * @param chunks list of chunks to read
    * @param traceID container protocol call traceID
+   * @param verifyChecksum verify checksum
    */
   public BlockInputStream(
       BlockID blockID, XceiverClientManager xceiverClientManager,
-      XceiverClientSpi xceiverClient, List<ChunkInfo> chunks, String traceID) {
+      XceiverClientSpi xceiverClient, List<ChunkInfo> chunks, String traceID,
+      boolean verifyChecksum) {
     this.blockID = blockID;
     this.traceID = traceID;
     this.xceiverClientManager = xceiverClientManager;
@@ -91,6 +94,7 @@ public class BlockInputStream extends InputStream implements Seekable {
     initializeChunkOffset();
     this.buffers = null;
     this.bufferIndex = 0;
+    this.verifyChecksum = verifyChecksum;
   }
 
   private void initializeChunkOffset() {
@@ -318,7 +322,9 @@ public class BlockInputStream extends InputStream implements Seekable {
         }
         ChecksumData checksumData =
             ChecksumData.getFromProtoBuf(chunkInfo.getChecksumData());
-        Checksum.verifyChecksum(byteString, checksumData);
+        if (verifyChecksum) {
+          Checksum.verifyChecksum(byteString, checksumData);
+        }
         break;
       } catch (IOException ioe) {
         // we will end up in this situation only if the checksum mismatch

@@ -31,6 +31,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.OzoneTestUtils;
 import org.apache.hadoop.ozone.client.BucketArgs;
@@ -762,6 +764,95 @@ public abstract class TestOzoneRpcClientAbstract {
     }
 
   }
+
+
+  @Test
+  public void testReadKeyWithVerifyChecksumFlagEnable() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+
+    // Create and corrupt key
+    createAndCorruptKey(volumeName, bucketName, keyName);
+
+    // read corrupt key with verify checksum enabled
+    readCorruptedKey(volumeName, bucketName, keyName, true);
+
+  }
+
+
+  @Test
+  public void testReadKeyWithVerifyChecksumFlagDisable() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+
+    // Create and corrupt key
+    createAndCorruptKey(volumeName, bucketName, keyName);
+
+    // read corrupt key with verify checksum enabled
+    readCorruptedKey(volumeName, bucketName, keyName, false);
+
+  }
+
+  private void createAndCorruptKey(String volumeName, String bucketName,
+      String keyName) throws IOException {
+    String value = "sample value";
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+
+    // Write data into a key
+    OzoneOutputStream out = bucket.createKey(keyName,
+        value.getBytes().length, ReplicationType.RATIS,
+        ReplicationFactor.ONE, new HashMap<>());
+    out.write(value.getBytes());
+    out.close();
+
+    // We need to find the location of the chunk file corresponding to the
+    // data we just wrote.
+    OzoneKey key = bucket.getKey(keyName);
+    long containerID = ((OzoneKeyDetails) key).getOzoneKeyLocations().get(0)
+        .getContainerID();
+
+    // Get the container by traversing the datanodes. Atleast one of the
+    // datanode must have this container.
+    Container container = null;
+    for (HddsDatanodeService hddsDatanode : cluster.getHddsDatanodes()) {
+      container = hddsDatanode.getDatanodeStateMachine().getContainer()
+          .getContainerSet().getContainer(containerID);
+      if (container != null) {
+        break;
+      }
+    }
+    Assert.assertNotNull("Container not found", container);
+    corruptData(container, key);
+  }
+
+
+  private void readCorruptedKey(String volumeName, String bucketName,
+      String keyName, boolean verifyChecksum) throws IOException {
+    try {
+      Configuration configuration = cluster.getConf();
+      configuration.setBoolean(OzoneConfigKeys.OZONE_CLIENT_VERIFY_CHECKSUM,
+          verifyChecksum);
+      RpcClient client = new RpcClient(configuration);
+      OzoneInputStream is = client.getKey(volumeName, bucketName, keyName);
+      is.read(new byte[100]);
+      is.close();
+      if (verifyChecksum) {
+        fail("Reading corrupted data should fail, as verify checksum is " +
+            "enabled");
+      }
+    } catch (OzoneChecksumException e) {
+      if (!verifyChecksum) {
+        fail("Reading corrupted data should not fail, as verify checksum is " +
+            "disabled");
+      }
+    }
+  }
+
 
   private void readKey(OzoneBucket bucket, String keyName, String data)
       throws IOException {
