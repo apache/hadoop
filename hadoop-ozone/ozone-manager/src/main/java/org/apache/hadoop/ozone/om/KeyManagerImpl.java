@@ -634,7 +634,7 @@ public class KeyManagerImpl implements KeyManager {
             "Rename key failed for volume:{} bucket:{} fromKey:{} toKey:{}. "
                 + "Key: {} already exists.", volumeName, bucketName,
             fromKeyName, toKeyName, toKeyName);
-        throw new OMException("Key not found",
+        throw new OMException("Key already exists",
             OMException.ResultCodes.KEY_ALREADY_EXISTS);
       }
 
