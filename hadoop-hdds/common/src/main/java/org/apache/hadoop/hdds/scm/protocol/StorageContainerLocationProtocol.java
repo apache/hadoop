@@ -26,6 +26,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.ObjectStageChangeRequestProto;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.security.KerberosInfo;
@@ -35,7 +36,7 @@ import org.apache.hadoop.security.KerberosInfo;
  * that currently host a container.
  */
 @KerberosInfo(serverPrincipal = ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY)
-public interface StorageContainerLocationProtocol {
+public interface StorageContainerLocationProtocol extends Closeable {
   /**
    * Asks SCM where a container should be allocated. SCM responds with the
    * set of datanodes that should be used creating this container.

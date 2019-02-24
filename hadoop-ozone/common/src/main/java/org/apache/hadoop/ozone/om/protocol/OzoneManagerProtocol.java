@@ -34,6 +34,7 @@ import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.security.KerberosInfo;
@@ -43,7 +44,8 @@ import org.apache.hadoop.security.KerberosInfo;
  */
 @KerberosInfo(
     serverPrincipal = OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY)
-public interface OzoneManagerProtocol  extends OzoneManagerSecurityProtocol {
+public interface OzoneManagerProtocol
+    extends OzoneManagerSecurityProtocol, Closeable {
 
   /**
    * Creates a volume.

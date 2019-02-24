@@ -552,4 +552,9 @@ public class SCMClientProtocolServer implements
         .withException(throwable)
         .build();
   }
+
+  @Override
+  public void close() throws IOException {
+    stop();
+  }
 }

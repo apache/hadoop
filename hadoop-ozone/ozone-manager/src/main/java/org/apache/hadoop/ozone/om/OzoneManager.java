@@ -512,6 +512,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     return ReflectionUtils.newInstance(clazz, conf);
   }
 
+  @Override
+  public void close() throws IOException {
+    stop();
+  }
+
   /**
    * Class which schedule saving metrics to a file.
    */
@@ -736,12 +741,14 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         RPC.getProtocolVersion(StorageContainerLocationProtocolPB.class);
     InetSocketAddress scmAddr = getScmAddressForClients(
         conf);
-    StorageContainerLocationProtocolClientSideTranslatorPB scmContainerClient =
-        new StorageContainerLocationProtocolClientSideTranslatorPB(
+    StorageContainerLocationProtocol scmContainerClient =
+        TracingUtil.createProxy(
+            new StorageContainerLocationProtocolClientSideTranslatorPB(
             RPC.getProxy(StorageContainerLocationProtocolPB.class, scmVersion,
                 scmAddr, UserGroupInformation.getCurrentUser(), conf,
                 NetUtils.getDefaultSocketFactory(conf),
-                Client.getRpcTimeout(conf)));
+                Client.getRpcTimeout(conf))),
+            StorageContainerLocationProtocol.class);
     return scmContainerClient;
   }
 

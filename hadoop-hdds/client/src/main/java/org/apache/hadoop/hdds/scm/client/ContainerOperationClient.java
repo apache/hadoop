@@ -23,8 +23,7 @@ import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.scm.protocolPB
-    .StorageContainerLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerDataProto;
@@ -48,12 +47,12 @@ public class ContainerOperationClient implements ScmClient {
   private static final Logger LOG =
       LoggerFactory.getLogger(ContainerOperationClient.class);
   private static long containerSizeB = -1;
-  private final StorageContainerLocationProtocolClientSideTranslatorPB
+  private final StorageContainerLocationProtocol
       storageContainerLocationClient;
   private final XceiverClientManager xceiverClientManager;
 
   public ContainerOperationClient(
-      StorageContainerLocationProtocolClientSideTranslatorPB
+      StorageContainerLocationProtocol
           storageContainerLocationClient,
       XceiverClientManager xceiverClientManager) {
     this.storageContainerLocationClient = storageContainerLocationClient;
