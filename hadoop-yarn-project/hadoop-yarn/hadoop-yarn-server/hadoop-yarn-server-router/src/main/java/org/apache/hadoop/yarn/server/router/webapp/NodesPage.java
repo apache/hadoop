@@ -50,11 +50,11 @@ class NodesPage extends RouterView {
 
   private String nodesTableInit() {
     StringBuilder b = tableInit().append(", aoColumnDefs: [");
-    b.append("{'bSearchable': false, 'aTargets': [ 7 ]}");
-    b.append(", {'sType': 'title-numeric', 'bSearchable': false, "
-        + "'aTargets': [ 2, 3, 4, 5, 6 ] }");
-    b.append(", {'sType': 'title-numeric', 'aTargets': [ 5 ]}");
-    b.append("]}");
+    b.append("{'bSearchable': false, 'aTargets': [ 7 ]}")
+        .append(", {'sType': 'title-numeric', 'bSearchable': false, "
+            + "'aTargets': [ 2, 3, 4, 5, 6 ] }")
+        .append(", {'sType': 'title-numeric', 'aTargets': [ 5 ]}")
+        .append("]}");
     return b.toString();
   }
 }

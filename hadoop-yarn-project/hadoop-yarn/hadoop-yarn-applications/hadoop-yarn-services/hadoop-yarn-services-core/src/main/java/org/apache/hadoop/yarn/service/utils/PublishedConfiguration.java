@@ -178,9 +178,9 @@ public class PublishedConfiguration {
   public String toString() {
     final StringBuilder sb =
         new StringBuilder("PublishedConfiguration{");
-    sb.append("description='").append(description).append('\'');
-    sb.append(" entries = ").append(entries.size());
-    sb.append('}');
+    sb.append("description='").append(description).append('\'')
+        .append(" entries = ").append(entries.size())
+        .append('}');
     return sb.toString();
   }
 

@@ -1357,9 +1357,9 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       return;
     }
     StringBuilder diagnosticMessageBldr = new StringBuilder();
-    diagnosticMessageBldr.append("[");
-    diagnosticMessageBldr.append(fdf.format(System.currentTimeMillis()));
-    diagnosticMessageBldr.append("] ");
+    diagnosticMessageBldr.append("[")
+        .append(fdf.format(System.currentTimeMillis()))
+        .append("] ");
     switch (state) {
     case INACTIVATED:
       diagnosticMessageBldr.append(state.diagnosticMessage);

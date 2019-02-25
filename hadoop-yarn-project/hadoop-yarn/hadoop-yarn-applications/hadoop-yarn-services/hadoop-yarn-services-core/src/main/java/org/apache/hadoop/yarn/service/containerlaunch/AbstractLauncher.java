@@ -166,8 +166,8 @@ public class AbstractLauncher {
           if (sb.length() > 0) {
             sb.append(",");
           }
-          sb.append(mount.getKey()).append(":");
-          sb.append(mount.getValue()).append(":ro");
+          sb.append(mount.getKey()).append(":")
+              .append(mount.getValue()).append(":ro");
         }
         env.put(ENV_DOCKER_CONTAINER_MOUNTS, sb.toString());
       }

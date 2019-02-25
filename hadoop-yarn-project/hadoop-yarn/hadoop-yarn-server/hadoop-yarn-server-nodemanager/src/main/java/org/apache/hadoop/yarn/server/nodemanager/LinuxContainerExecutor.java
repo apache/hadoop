@@ -597,10 +597,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
           + containerId + " and exit code: " + exitCode, e);
 
       StringBuilder builder = new StringBuilder();
-      builder.append("Exception from container-launch.\n");
-      builder.append("Container id: " + containerId + "\n");
-      builder.append("Exit code: " + exitCode + "\n");
-      builder.append("Exception message: " + e.getMessage() + "\n");
+      builder.append("Exception from container-launch.\n")
+          .append("Container id: " + containerId + "\n")
+          .append("Exit code: " + exitCode + "\n")
+          .append("Exception message: " + e.getMessage() + "\n");
       if (!Optional.fromNullable(e.getErrorOutput()).or("").isEmpty()) {
         builder.append("Shell error output: " + e.getErrorOutput() + "\n");
       }

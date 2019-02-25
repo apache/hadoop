@@ -310,21 +310,25 @@ public class Container extends BaseResource {
     StringBuilder sb = new StringBuilder();
     sb.append("class Container {\n");
 
-    sb.append("    id: ").append(toIndentedString(id)).append("\n");
-    sb.append("    launchTime: ").append(toIndentedString(launchTime))
-        .append("\n");
-    sb.append("    ip: ").append(toIndentedString(ip)).append("\n");
-    sb.append("    hostname: ").append(toIndentedString(hostname)).append("\n");
-    sb.append("    bareHost: ").append(toIndentedString(bareHost)).append("\n");
-    sb.append("    state: ").append(toIndentedString(state)).append("\n");
-    sb.append("    componentInstanceName: ").append(toIndentedString(
-        componentInstanceName))
-        .append("\n");
-    sb.append("    resource: ").append(toIndentedString(resource)).append("\n");
-    sb.append("    artifact: ").append(toIndentedString(artifact)).append("\n");
-    sb.append("    privilegedContainer: ")
-        .append(toIndentedString(privilegedContainer)).append("\n");
-    sb.append("}");
+    sb.append("    id: ").append(toIndentedString(id)).append("\n")
+        .append("    launchTime: ").append(toIndentedString(launchTime))
+        .append("\n")
+        .append("    ip: ").append(toIndentedString(ip)).append("\n")
+        .append("    hostname: ").append(toIndentedString(hostname))
+        .append("\n")
+        .append("    bareHost: ").append(toIndentedString(bareHost))
+        .append("\n")
+        .append("    state: ").append(toIndentedString(state)).append("\n")
+        .append("    componentInstanceName: ").append(toIndentedString(
+            componentInstanceName))
+        .append("\n")
+        .append("    resource: ").append(toIndentedString(resource))
+        .append("\n")
+        .append("    artifact: ").append(toIndentedString(artifact))
+        .append("\n")
+        .append("    privilegedContainer: ")
+        .append(toIndentedString(privilegedContainer)).append("\n")
+        .append("}");
     return sb.toString();
   }
 

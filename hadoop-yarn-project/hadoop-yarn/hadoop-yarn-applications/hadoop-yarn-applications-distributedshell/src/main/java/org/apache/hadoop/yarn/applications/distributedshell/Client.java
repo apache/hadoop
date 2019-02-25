@@ -906,16 +906,16 @@ public class Client {
     for (String c : conf.getStrings(
         YarnConfiguration.YARN_APPLICATION_CLASSPATH,
         YarnConfiguration.DEFAULT_YARN_CROSS_PLATFORM_APPLICATION_CLASSPATH)) {
-      classPathEnv.append(ApplicationConstants.CLASS_PATH_SEPARATOR);
-      classPathEnv.append(c.trim());
+      classPathEnv.append(ApplicationConstants.CLASS_PATH_SEPARATOR)
+          .append(c.trim());
     }
     classPathEnv.append(ApplicationConstants.CLASS_PATH_SEPARATOR).append(
       "./log4j.properties");
 
     // add the runtime classpath needed for tests to work
     if (conf.getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
-      classPathEnv.append(':');
-      classPathEnv.append(System.getProperty("java.class.path"));
+      classPathEnv.append(':')
+          .append(System.getProperty("java.class.path"));
     }
 
     env.put("CLASSPATH", classPathEnv.toString());

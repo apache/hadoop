@@ -211,13 +211,15 @@ public class ConfigFile implements Serializable {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class ConfigFile {\n");
+    sb.append("class ConfigFile {\n")
 
-    sb.append("    type: ").append(toIndentedString(type)).append("\n");
-    sb.append("    destFile: ").append(toIndentedString(destFile)).append("\n");
-    sb.append("    srcFile: ").append(toIndentedString(srcFile)).append("\n");
-    sb.append("    properties: ").append(toIndentedString(properties)).append("\n");
-    sb.append("}");
+        .append("    type: ").append(toIndentedString(type)).append("\n")
+        .append("    destFile: ").append(toIndentedString(destFile))
+        .append("\n")
+        .append("    srcFile: ").append(toIndentedString(srcFile)).append("\n")
+        .append("    properties: ").append(toIndentedString(properties))
+        .append("\n")
+        .append("}");
     return sb.toString();
   }
 

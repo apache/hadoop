@@ -98,11 +98,11 @@ public abstract class NodeLabel implements Comparable<NodeLabel> {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("<");
-    sb.append(getName());
-    sb.append(":exclusivity=");
-    sb.append(isExclusive());
-    sb.append(">");
+    sb.append("<")
+        .append(getName())
+        .append(":exclusivity=")
+        .append(isExclusive())
+        .append(">");
     return sb.toString();
   }
 

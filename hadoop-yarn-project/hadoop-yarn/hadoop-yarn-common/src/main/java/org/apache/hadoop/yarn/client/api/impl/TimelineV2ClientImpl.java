@@ -276,9 +276,9 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
     } else {
       StringBuilder msg =
           new StringBuilder("TimelineClient has reached to max retry times : ");
-      msg.append(this.maxServiceRetries);
-      msg.append(" for service address: ");
-      msg.append(timelineServiceAddress);
+      msg.append(this.maxServiceRetries)
+          .append(" for service address: ")
+          .append(timelineServiceAddress);
       LOG.error(msg.toString());
       throw new IOException(msg.toString(), e);
     }

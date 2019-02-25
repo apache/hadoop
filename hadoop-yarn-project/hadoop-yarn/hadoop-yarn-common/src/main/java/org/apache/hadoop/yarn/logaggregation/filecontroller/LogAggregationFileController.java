@@ -531,9 +531,9 @@ public abstract class LogAggregationFileController {
   protected String aggregatedLogSuffix(String fileName) {
     StringBuilder sb = new StringBuilder();
     String endOfFile = "End of LogType:" + fileName;
-    sb.append("\n" + endOfFile + "\n");
-    sb.append(StringUtils.repeat("*", endOfFile.length() + 50)
-        + "\n\n");
+    sb.append("\n" + endOfFile + "\n")
+        .append(StringUtils.repeat("*", endOfFile.length() + 50)
+            + "\n\n");
     return sb.toString();
   }
 

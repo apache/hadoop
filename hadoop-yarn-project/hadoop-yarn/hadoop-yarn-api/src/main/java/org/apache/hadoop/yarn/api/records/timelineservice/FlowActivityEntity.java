@@ -77,13 +77,13 @@ public class FlowActivityEntity extends TimelineEntity {
     String id = super.getId();
     if (id == null) {
       StringBuilder sb = new StringBuilder();
-      sb.append(getCluster());
-      sb.append('/');
-      sb.append(getDate().getTime());
-      sb.append('/');
-      sb.append(getUser());
-      sb.append('@');
-      sb.append(getFlowName());
+      sb.append(getCluster())
+          .append('/')
+          .append(getDate().getTime())
+          .append('/')
+          .append(getUser())
+          .append('@')
+          .append(getFlowName());
       id = sb.toString();
       setId(id);
     }

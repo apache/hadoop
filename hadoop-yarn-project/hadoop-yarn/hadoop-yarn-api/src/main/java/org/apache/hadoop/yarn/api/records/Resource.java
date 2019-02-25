@@ -475,10 +475,10 @@ public abstract class Resource implements Comparable<Resource> {
       if (ri.getValue() == 0) {
         continue;
       }
-      sb.append(", ");
-      sb.append(ri.getName()).append(": ")
-          .append(ri.getValue());
-      sb.append(ri.getUnits());
+      sb.append(", ")
+          .append(ri.getName()).append(": ")
+          .append(ri.getValue())
+          .append(ri.getUnits());
     }
 
     sb.append(">");

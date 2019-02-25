@@ -233,12 +233,12 @@ class NodesPage extends RmView {
   private String nodesTableInit() {
     StringBuilder b = tableInit().append(", 'aaData': nodeTableData")
         .append(", bDeferRender: true").append(", bProcessing: true")
-        .append(", aoColumnDefs: [");
-    b.append("{'bSearchable': false, 'aTargets': [ 7 ]}");
-    b.append(", {'sType': 'title-numeric', 'bSearchable': false, "
-        + "'aTargets': [ 9, 10 ] }");
-    b.append(", {'sType': 'title-numeric', 'aTargets': [ 5 ]}");
-    b.append("]}");
+        .append(", aoColumnDefs: [")
+        .append("{'bSearchable': false, 'aTargets': [ 7 ]}")
+        .append(", {'sType': 'title-numeric', 'bSearchable': false, "
+            + "'aTargets': [ 9, 10 ] }")
+        .append(", {'sType': 'title-numeric', 'aTargets': [ 5 ]}")
+        .append("]}");
     return b.toString();
   }
 }

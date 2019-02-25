@@ -69,15 +69,15 @@ public class QueueCapacities {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder();
-      sb.append("{used=" + capacitiesArr[0] + "%, ");
-      sb.append("abs_used=" + capacitiesArr[1] + "%, ");
-      sb.append("max_cap=" + capacitiesArr[2] + "%, ");
-      sb.append("abs_max_cap=" + capacitiesArr[3] + "%, ");
-      sb.append("cap=" + capacitiesArr[4] + "%, ");
-      sb.append("abs_cap=" + capacitiesArr[5] + "%}");
-      sb.append("max_am_perc=" + capacitiesArr[6] + "%}");
-      sb.append("reserved_cap=" + capacitiesArr[7] + "%}");
-      sb.append("abs_reserved_cap=" + capacitiesArr[8] + "%}");
+      sb.append("{used=" + capacitiesArr[0] + "%, ")
+          .append("abs_used=" + capacitiesArr[1] + "%, ")
+          .append("max_cap=" + capacitiesArr[2] + "%, ")
+          .append("abs_max_cap=" + capacitiesArr[3] + "%, ")
+          .append("cap=" + capacitiesArr[4] + "%, ")
+          .append("abs_cap=" + capacitiesArr[5] + "%}")
+          .append("max_am_perc=" + capacitiesArr[6] + "%}")
+          .append("reserved_cap=" + capacitiesArr[7] + "%}")
+          .append("abs_reserved_cap=" + capacitiesArr[8] + "%}");
       return sb.toString();
     }
   }

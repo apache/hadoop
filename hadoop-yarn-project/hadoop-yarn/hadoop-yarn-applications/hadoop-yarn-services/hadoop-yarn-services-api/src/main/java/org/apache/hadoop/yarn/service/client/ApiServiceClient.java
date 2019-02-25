@@ -105,14 +105,14 @@ public class ApiServiceClient extends AppAdminClient {
         Client client = Client.create();
         client.setFollowRedirects(false);
         StringBuilder sb = new StringBuilder();
-        sb.append(scheme);
-        sb.append(host);
-        sb.append(path);
+        sb.append(scheme)
+            .append(host)
+            .append(path);
         if (!useKerberos) {
           try {
             String username = UserGroupInformation.getCurrentUser().getShortUserName();
-            sb.append("?user.name=");
-            sb.append(username);
+            sb.append("?user.name=")
+                .append(username);
           } catch (IOException e) {
             LOG.debug("Fail to resolve username: {}", e);
           }
@@ -154,11 +154,11 @@ public class ApiServiceClient extends AppAdminClient {
   private String getServicePath(String appName) throws IOException {
     String url = getRMWebAddress();
     StringBuilder api = new StringBuilder();
-    api.append(url);
-    api.append("/app/v1/services");
+    api.append(url)
+        .append("/app/v1/services");
     if (appName != null) {
-      api.append("/");
-      api.append(appName);
+      api.append("/")
+          .append(appName);
     }
     appendUserNameIfRequired(api);
     return api.toString();
@@ -168,8 +168,8 @@ public class ApiServiceClient extends AppAdminClient {
     Preconditions.checkNotNull(appName);
     String url = getRMWebAddress();
     StringBuilder api = new StringBuilder();
-    api.append(url);
-    api.append("/app/v1/services/").append(appName).append("/")
+    api.append(url)
+        .append("/app/v1/services/").append(appName).append("/")
         .append(RestApiConstants.COMP_INSTANCES);
     appendUserNameIfRequired(api);
     return api.toString();
@@ -196,8 +196,8 @@ public class ApiServiceClient extends AppAdminClient {
     Preconditions.checkNotNull(appName);
     String url = getRMWebAddress();
     StringBuilder api = new StringBuilder();
-    api.append(url);
-    api.append("/app/v1/services/").append(appName).append("/")
+    api.append(url)
+        .append("/app/v1/services/").append(appName).append("/")
         .append(RestApiConstants.COMPONENTS);
     appendUserNameIfRequired(api);
     return api.toString();
@@ -528,16 +528,16 @@ public class ApiServiceClient extends AppAdminClient {
           .get(ClientResponse.class);
       if (response.getStatus() == 404) {
         StringBuilder sb = new StringBuilder();
-        sb.append(" Service ");
-        sb.append(appName);
-        sb.append(" not found");
+        sb.append(" Service ")
+            .append(appName)
+            .append(" not found");
         return sb.toString();
       }
       if (response.getStatus() != 200) {
         StringBuilder sb = new StringBuilder();
-        sb.append(appName);
-        sb.append(" Failed : HTTP error code : ");
-        sb.append(response.getStatus());
+        sb.append(appName)
+            .append(" Failed : HTTP error code : ")
+            .append(response.getStatus());
         return sb.toString();
       }
       output = response.getEntity(String.class);
@@ -659,9 +659,9 @@ public class ApiServiceClient extends AppAdminClient {
       ClientResponse response = getApiClient(uri).get(ClientResponse.class);
       if (response.getStatus() != 200) {
         StringBuilder sb = new StringBuilder();
-        sb.append("Failed: HTTP error code: ");
-        sb.append(response.getStatus());
-        sb.append(" ErrorMsg: ").append(response.getEntity(String.class));
+        sb.append("Failed: HTTP error code: ")
+            .append(response.getStatus())
+            .append(" ErrorMsg: ").append(response.getEntity(String.class));
         return sb.toString();
       }
       return response.getEntity(String.class);

@@ -331,17 +331,17 @@ public class DefaultContainerExecutor extends ContainerExecutor {
             + containerId + " and exit code: " + exitCode , e);
 
         StringBuilder builder = new StringBuilder();
-        builder.append("Exception from container-launch.\n");
-        builder.append("Container id: ").append(containerId).append("\n");
-        builder.append("Exit code: ").append(exitCode).append("\n");
+        builder.append("Exception from container-launch.\n")
+            .append("Container id: ").append(containerId).append("\n")
+            .append("Exit code: ").append(exitCode).append("\n");
         if (!Optional.fromNullable(e.getMessage()).or("").isEmpty()) {
-          builder.append("Exception message: ");
-          builder.append(e.getMessage()).append("\n");
+          builder.append("Exception message: ")
+              .append(e.getMessage()).append("\n");
         }
 
         if (!shExec.getOutput().isEmpty()) {
-          builder.append("Shell output: ");
-          builder.append(shExec.getOutput()).append("\n");
+          builder.append("Shell output: ")
+              .append(shExec.getOutput()).append("\n");
         }
         String diagnostics = builder.toString();
         logOutput(diagnostics);

@@ -77,12 +77,12 @@ public class LocalizationStatusPBImpl extends LocalizationStatus {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("LocalizationStatus: [");
-    sb.append("ResourceKey: ").append(getResourceKey()).append(", ");
-    sb.append("LocalizationState: ").append(getLocalizationState())
-        .append(", ");
-    sb.append("Diagnostics: ").append(getDiagnostics()).append(", ");
-    sb.append("]");
+    sb.append("LocalizationStatus: [")
+        .append("ResourceKey: ").append(getResourceKey()).append(", ")
+        .append("LocalizationState: ").append(getLocalizationState())
+        .append(", ")
+        .append("Diagnostics: ").append(getDiagnostics()).append(", ")
+        .append("]");
     return sb.toString();
   }
 

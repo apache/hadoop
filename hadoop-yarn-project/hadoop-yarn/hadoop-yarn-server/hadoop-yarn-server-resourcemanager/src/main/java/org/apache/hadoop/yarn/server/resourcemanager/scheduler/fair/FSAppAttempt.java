@@ -1399,9 +1399,9 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     }
 
     StringBuilder diagnosticMessageBldr = new StringBuilder();
-    diagnosticMessageBldr.append(" (Resource request: ");
-    diagnosticMessageBldr.append(resource);
-    diagnosticMessageBldr.append(reason);
+    diagnosticMessageBldr.append(" (Resource request: ")
+        .append(resource)
+        .append(reason);
     updateAMContainerDiagnostics(AMState.INACTIVATED,
         diagnosticMessageBldr.toString());
   }
