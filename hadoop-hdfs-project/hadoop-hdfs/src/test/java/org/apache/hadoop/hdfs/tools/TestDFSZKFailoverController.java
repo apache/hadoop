@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.tools;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -211,6 +213,20 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
     assertEquals(0,
         tool.run(new String[]{"-failover", "nn2", "nn1"}));
     waitForHAState(0, HAServiceState.ACTIVE);
+    waitForHAState(1, HAServiceState.STANDBY);
+    // Answer "yes" to the prompt for --forcemanual
+    InputStream inOriginial = System.in;
+    System.setIn(new ByteArrayInputStream("yes\n".getBytes()));
+    int result = tool.run(
+        new String[]{"-transitionToObserver", "-forcemanual", "nn2"});
+    assertEquals("State transition returned: " + result, 0, result);
+    waitForHAState(1, HAServiceState.OBSERVER);
+    // Answer "yes" to the prompt for --forcemanual
+    System.setIn(new ByteArrayInputStream("yes\n".getBytes()));
+    result = tool.run(
+        new String[]{"-transitionToStandby", "-forcemanual", "nn2"});
+    System.setIn(inOriginial);
+    assertEquals("State transition returned: " + result, 0, result);
     waitForHAState(1, HAServiceState.STANDBY);
   }
 
