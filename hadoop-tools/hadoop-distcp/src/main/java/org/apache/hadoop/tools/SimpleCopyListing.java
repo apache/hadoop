@@ -718,8 +718,8 @@ public class SimpleCopyListing extends CopyListing {
       return;
     }
 
-    fileListWriter.append(new Text(DistCpUtils.getRelativePath(sourcePathRoot,
-        fileStatus.getPath())), fileStatus);
+    fileListWriter.append(getFileListingKey(sourcePathRoot, fileStatus),
+        getFileListingValue(fileStatus));
     fileListWriter.sync();
 
     if (!fileStatus.isDirectory()) {
