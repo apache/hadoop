@@ -71,6 +71,7 @@ public class TestGpuResourceHandler {
   private GpuResourceHandlerImpl gpuResourceHandler;
   private NMStateStoreService mockNMStateStore;
   private ConcurrentHashMap<ContainerId, Container> runningContainersMap;
+  private GpuDiscoverer gpuDiscoverer;
 
   @Before
   public void setup() {
@@ -89,8 +90,9 @@ public class TestGpuResourceHandler {
     runningContainersMap = new ConcurrentHashMap<>();
     when(nmctx.getContainers()).thenReturn(runningContainersMap);
 
+    gpuDiscoverer = new GpuDiscoverer();
     gpuResourceHandler = new GpuResourceHandlerImpl(nmctx, mockCGroupsHandler,
-        mockPrivilegedExecutor);
+        mockPrivilegedExecutor, gpuDiscoverer);
   }
 
   @Test
@@ -98,7 +100,7 @@ public class TestGpuResourceHandler {
     Configuration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0");
 
-    GpuDiscoverer.getInstance().initialize(conf);
+    gpuDiscoverer.initialize(conf);
 
     gpuResourceHandler.bootstrap(conf);
     verify(mockCGroupsHandler, times(1)).initializeCGroupController(
@@ -162,7 +164,7 @@ public class TestGpuResourceHandler {
       throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:3,3:4");
-    GpuDiscoverer.getInstance().initialize(conf);
+    gpuDiscoverer.initialize(conf);
 
     gpuResourceHandler.bootstrap(conf);
     Assert.assertEquals(4,
@@ -251,7 +253,7 @@ public class TestGpuResourceHandler {
       throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:3,3:4");
-    GpuDiscoverer.getInstance().initialize(conf);
+    gpuDiscoverer.initialize(conf);
 
     gpuResourceHandler.bootstrap(conf);
     Assert.assertEquals(4,
@@ -280,7 +282,7 @@ public class TestGpuResourceHandler {
   public void testAllocationWithoutAllowedGpus() throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, " ");
-    GpuDiscoverer.getInstance().initialize(conf);
+    gpuDiscoverer.initialize(conf);
 
     try {
       gpuResourceHandler.bootstrap(conf);
@@ -315,7 +317,7 @@ public class TestGpuResourceHandler {
   public void testAllocationStored() throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:3,3:4");
-    GpuDiscoverer.getInstance().initialize(conf);
+    gpuDiscoverer.initialize(conf);
 
     gpuResourceHandler.bootstrap(conf);
     Assert.assertEquals(4,
@@ -361,9 +363,9 @@ public class TestGpuResourceHandler {
 
     GpuResourceHandlerImpl gpuNULLStateResourceHandler =
         new GpuResourceHandlerImpl(nmnctx, mockCGroupsHandler,
-        mockPrivilegedExecutor);
+        mockPrivilegedExecutor, gpuDiscoverer);
 
-    GpuDiscoverer.getInstance().initialize(conf);
+    gpuDiscoverer.initialize(conf);
 
     gpuNULLStateResourceHandler.bootstrap(conf);
     Assert.assertEquals(4,
@@ -383,7 +385,7 @@ public class TestGpuResourceHandler {
   public void testRecoverResourceAllocation() throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:3,3:4");
-    GpuDiscoverer.getInstance().initialize(conf);
+    gpuDiscoverer.initialize(conf);
 
     gpuResourceHandler.bootstrap(conf);
     Assert.assertEquals(4,
