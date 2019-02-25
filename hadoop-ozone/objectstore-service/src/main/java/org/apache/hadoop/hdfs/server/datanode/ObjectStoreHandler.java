@@ -20,6 +20,7 @@ import com.sun.jersey.api.container.ContainerFactory;
 import com.sun.jersey.api.core.ApplicationAdapter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
@@ -72,7 +73,7 @@ public final class ObjectStoreHandler implements Closeable {
   private final OzoneManagerProtocol ozoneManagerClient;
   private final StorageContainerLocationProtocol
       storageContainerLocationClient;
-  private final ScmBlockLocationProtocolClientSideTranslatorPB
+  private final ScmBlockLocationProtocol
       scmBlockLocationClient;
   private final StorageHandler storageHandler;
   private ClientId clientId = ClientId.randomId();
@@ -108,11 +109,13 @@ public final class ObjectStoreHandler implements Closeable {
     InetSocketAddress scmBlockAddress =
         getScmAddressForBlockClients(conf);
     this.scmBlockLocationClient =
-        new ScmBlockLocationProtocolClientSideTranslatorPB(
-            RPC.getProxy(ScmBlockLocationProtocolPB.class, scmVersion,
-                scmBlockAddress, UserGroupInformation.getCurrentUser(), conf,
-                NetUtils.getDefaultSocketFactory(conf),
-                Client.getRpcTimeout(conf)));
+        TracingUtil.createProxy(
+            new ScmBlockLocationProtocolClientSideTranslatorPB(
+                RPC.getProxy(ScmBlockLocationProtocolPB.class, scmVersion,
+                    scmBlockAddress, UserGroupInformation.getCurrentUser(),
+                    conf, NetUtils.getDefaultSocketFactory(conf),
+                    Client.getRpcTimeout(conf))),
+            ScmBlockLocationProtocol.class);
 
     RPC.setProtocolEngine(conf, OzoneManagerProtocolPB.class,
         ProtobufRpcEngine.class);

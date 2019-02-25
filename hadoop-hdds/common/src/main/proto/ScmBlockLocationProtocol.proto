@@ -41,6 +41,7 @@ message AllocateScmBlockRequestProto {
   required ReplicationType type = 2;
   required hadoop.hdds.ReplicationFactor factor = 3;
   required string owner = 4;
+  optional string traceID = 5;
 
 }
 
@@ -71,6 +72,8 @@ message KeyBlocks {
  */
 message DeleteScmKeyBlocksResponseProto {
   repeated DeleteKeyBlocksResultProto results = 1;
+  optional string traceID = 2;
+
 }
 
 /**
