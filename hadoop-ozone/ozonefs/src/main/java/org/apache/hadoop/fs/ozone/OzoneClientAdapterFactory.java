@@ -52,7 +52,7 @@ public final class OzoneClientAdapterFactory {
                 bucketStr));
   }
 
-
+  @SuppressFBWarnings("DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED")
   public static OzoneClientAdapter createAdapter(
       String volumeStr,
       String bucketStr,
@@ -68,6 +68,7 @@ public final class OzoneClientAdapterFactory {
                 storageStatistics));
   }
 
+  @SuppressFBWarnings("DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED")
   public static OzoneClientAdapter createAdapter(
       String volumeStr,
       String bucketStr,
