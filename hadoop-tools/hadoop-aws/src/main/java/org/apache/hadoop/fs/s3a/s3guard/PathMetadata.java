@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.Tristate;
 
 /**
@@ -33,7 +34,7 @@ import org.apache.hadoop.fs.s3a.Tristate;
 @InterfaceStability.Evolving
 public class PathMetadata extends ExpirableMetadata {
 
-  private final FileStatus fileStatus;
+  private final S3AFileStatus fileStatus;
   private Tristate isEmptyDirectory;
   private boolean isDeleted;
 
@@ -45,22 +46,24 @@ public class PathMetadata extends ExpirableMetadata {
   public static PathMetadata tombstone(Path path) {
     long now = System.currentTimeMillis();
     FileStatus status = new FileStatus(0, false, 0, 0, now, path);
-    return new PathMetadata(status, Tristate.UNKNOWN, true);
+    S3AFileStatus s3aStatus = S3AFileStatus.fromFileStatus(
+        status, Tristate.UNKNOWN, null, null);
+    return new PathMetadata(s3aStatus, Tristate.UNKNOWN, true);
   }
 
   /**
    * Creates a new {@code PathMetadata} containing given {@code FileStatus}.
    * @param fileStatus file status containing an absolute path.
    */
-  public PathMetadata(FileStatus fileStatus) {
-    this(fileStatus, Tristate.UNKNOWN);
+  public PathMetadata(S3AFileStatus fileStatus) {
+    this(fileStatus, Tristate.UNKNOWN, false);
   }
 
-  public PathMetadata(FileStatus fileStatus, Tristate isEmptyDir) {
+  public PathMetadata(S3AFileStatus fileStatus, Tristate isEmptyDir) {
     this(fileStatus, isEmptyDir, false);
   }
 
-  public PathMetadata(FileStatus fileStatus, Tristate isEmptyDir, boolean
+  public PathMetadata(S3AFileStatus fileStatus, Tristate isEmptyDir, boolean
       isDeleted) {
     Preconditions.checkNotNull(fileStatus, "fileStatus must be non-null");
     Preconditions.checkNotNull(fileStatus.getPath(), "fileStatus path must be" +
@@ -75,7 +78,7 @@ public class PathMetadata extends ExpirableMetadata {
   /**
    * @return {@code FileStatus} contained in this {@code PathMetadata}.
    */
-  public final FileStatus getFileStatus() {
+  public final S3AFileStatus getFileStatus() {
     return fileStatus;
   }
 
@@ -128,10 +131,11 @@ public class PathMetadata extends ExpirableMetadata {
    * @param sb target StringBuilder
    */
   public void prettyPrint(StringBuilder sb) {
-    sb.append(String.format("%-5s %-20s %-7d %-8s %-6s",
+    sb.append(String.format("%-5s %-20s %-7d %-8s %-6s %-20s %-20s",
         fileStatus.isDirectory() ? "dir" : "file",
         fileStatus.getPath().toString(), fileStatus.getLen(),
-        isEmptyDirectory.name(), isDeleted));
+        isEmptyDirectory.name(), isDeleted,
+        fileStatus.getETag(), fileStatus.getVersionId()));
     sb.append(fileStatus);
   }
 

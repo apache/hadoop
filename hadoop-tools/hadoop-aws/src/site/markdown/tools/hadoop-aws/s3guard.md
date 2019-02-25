@@ -923,6 +923,21 @@ from previous days, and and choosing a combination of
 retry counts and an interval which allow for the clients to cope with
 some throttling, but not to time out other applications.
 
+## Read-After-Overwrite Consistency
+
+S3Guard provides read-after-overwrite consistency through ETags (default) or
+object versioning. This works such that a reader reading a file after an
+overwrite either sees the new version of the file or an error. Without S3Guard,
+new readers may see the original version. Once S3 reaches eventual consistency,
+new readers will see the new version.
+
+Readers using S3Guard will usually see the new file version, but may
+in rare cases see `RemoteFileChangedException` instead. This would occur if
+an S3 object read cannot provide the version tracked in S3Guard metadata.
+
+The configuration controlling this behavior is the same as for handling
+[read-during-overwrite](./index.html#Handling_Read-During-Overwrite).
+
 ## Troubleshooting
 
 ### Error: `S3Guard table lacks version marker.`

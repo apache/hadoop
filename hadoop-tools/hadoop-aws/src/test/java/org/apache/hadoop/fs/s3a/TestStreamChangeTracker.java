@@ -161,6 +161,28 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         CHANGE_DETECTED);
   }
 
+  @Test
+  public void testVersionCheckingUpfrontETag() throws Throwable {
+    ChangeTracker tracker = newTracker(
+        ChangeDetectionPolicy.Mode.Server,
+        ChangeDetectionPolicy.Source.ETag,
+        false,
+        objectAttributes("etag1", "versionid1"));
+
+    assertEquals("etag1", tracker.getRevisionId());
+  }
+
+  @Test
+  public void testVersionCheckingUpfrontVersionId() throws Throwable {
+    ChangeTracker tracker = newTracker(
+        ChangeDetectionPolicy.Mode.Server,
+        ChangeDetectionPolicy.Source.VersionId,
+        false,
+        objectAttributes("etag1", "versionid1"));
+
+    assertEquals("versionid1", tracker.getRevisionId());
+  }
+
   protected void assertConstraintApplied(final ChangeTracker tracker,
       final GetObjectRequest request) {
     assertTrue("Tracker should have applied contraints " + tracker,
@@ -218,14 +240,29 @@ public class TestStreamChangeTracker extends HadoopTestBase {
    */
   protected ChangeTracker newTracker(final ChangeDetectionPolicy.Mode mode,
       final ChangeDetectionPolicy.Source source, boolean requireVersion) {
+    return newTracker(mode, source, requireVersion,
+        objectAttributes(null, null));
+  }
+
+  /**
+   * Create tracker.
+   * Contains standard assertions(s).
+   * @return the tracker.
+   */
+  protected ChangeTracker newTracker(final ChangeDetectionPolicy.Mode mode,
+      final ChangeDetectionPolicy.Source source, boolean requireVersion,
+      S3ObjectAttributes objectAttributes) {
     ChangeDetectionPolicy policy = createPolicy(
         mode,
         source,
         requireVersion);
     ChangeTracker tracker = new ChangeTracker(URI, policy,
-        new AtomicLong(0));
+        new AtomicLong(0), objectAttributes);
+    if (objectAttributes.getVersionId() == null
+        && objectAttributes.getETag() == null) {
     assertFalse("Tracker should not have applied constraints " + tracker,
-        tracker.maybeApplyConstraint(newGetObjectRequest()));
+          tracker.maybeApplyConstraint(newGetObjectRequest()));
+    }
     return tracker;
   }
 
@@ -251,5 +288,15 @@ public class TestStreamChangeTracker extends HadoopTestBase {
     response.setBucketName(BUCKET);
     response.setKey(OBJECT);
     return response;
+  }
+
+  private S3ObjectAttributes objectAttributes(
+      String etag, String versionId) {
+    return new S3ObjectAttributes(BUCKET,
+        OBJECT,
+        null,
+        null,
+        etag,
+        versionId);
   }
 }

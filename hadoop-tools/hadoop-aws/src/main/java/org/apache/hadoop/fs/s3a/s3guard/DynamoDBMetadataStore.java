@@ -88,6 +88,7 @@ import org.apache.hadoop.fs.s3a.AWSServiceThrottledException;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AUtils;
@@ -129,6 +130,14 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
  *      This attribute is meaningful only to file items.</li>
  * <li> optional long attribute revealing block size of the file.
  *      This attribute is meaningful only to file items.</li>
+ * <li> optional string attribute tracking the s3 eTag of the file.
+ *      May be absent if the metadata was entered with a version of S3Guard
+ *      before this was tracked.
+ *      This attribute is meaningful only to file items.</li>
+  * <li> optional string attribute tracking the s3 versionId of the file.
+ *      May be absent if the metadata was entered with a version of S3Guard
+ *      before this was tracked.
+ *      This attribute is meaningful only to file items.</li>
  * </ul>
  *
  * The DynamoDB partition key is the parent, and the range key is the child.
@@ -155,20 +164,20 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
  * This is persisted to a single DynamoDB table as:
  *
  * <pre>
- * =========================================================================
- * | parent                 | child | is_dir | mod_time | len |     ...    |
- * =========================================================================
- * | /bucket                | dir1  | true   |          |     |            |
- * | /bucket/dir1           | dir2  | true   |          |     |            |
- * | /bucket/dir1           | dir3  | true   |          |     |            |
- * | /bucket/dir1/dir2      | file1 |        |   100    | 111 |            |
- * | /bucket/dir1/dir2      | file2 |        |   200    | 222 |            |
- * | /bucket/dir1/dir3      | dir4  | true   |          |     |            |
- * | /bucket/dir1/dir3      | dir5  | true   |          |     |            |
- * | /bucket/dir1/dir3/dir4 | file3 |        |   300    | 333 |            |
- * | /bucket/dir1/dir3/dir5 | file4 |        |   400    | 444 |            |
- * | /bucket/dir1/dir3      | dir6  | true   |          |     |            |
- * =========================================================================
+ * ====================================================================================
+ * | parent                 | child | is_dir | mod_time | len | etag | ver_id |  ...  |
+ * ====================================================================================
+ * | /bucket                | dir1  | true   |          |     |      |        |       |
+ * | /bucket/dir1           | dir2  | true   |          |     |      |        |       |
+ * | /bucket/dir1           | dir3  | true   |          |     |      |        |       |
+ * | /bucket/dir1/dir2      | file1 |        |   100    | 111 | abc  |  mno   |       |
+ * | /bucket/dir1/dir2      | file2 |        |   200    | 222 | def  |  pqr   |       |
+ * | /bucket/dir1/dir3      | dir4  | true   |          |     |      |        |       |
+ * | /bucket/dir1/dir3      | dir5  | true   |          |     |      |        |       |
+ * | /bucket/dir1/dir3/dir4 | file3 |        |   300    | 333 | ghi  |  stu   |       |
+ * | /bucket/dir1/dir3/dir5 | file4 |        |   400    | 444 | jkl  |  vwx   |       |
+ * | /bucket/dir1/dir3      | dir6  | true   |          |     |      |        |       |
+ * ====================================================================================
  * </pre>
  *
  * This choice of schema is efficient for read access patterns.
@@ -610,9 +619,12 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * @param path   path to dir
    * @return new FileStatus
    */
-  private FileStatus makeDirStatus(String owner, Path path) {
-    return new FileStatus(0, true, 1, 0, 0, 0, null,
-            owner, null, path);
+  private S3AFileStatus makeDirStatus(String owner, Path path) {
+    FileStatus fileStatus = new FileStatus(0, true, 1, 0, 0, 0, null,
+        owner, null, path);
+
+    return S3AFileStatus.fromFileStatus(fileStatus, Tristate.UNKNOWN,
+        null, null);
   }
 
   @Override
@@ -675,7 +687,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       while (!parent.isRoot() && !ancestry.containsKey(parent)) {
         LOG.debug("auto-create ancestor path {} for child path {}",
             parent, path);
-        final FileStatus status = makeDirStatus(parent, username);
+        final S3AFileStatus status = makeDirStatus(parent, username);
         ancestry.put(parent, new DDBPathMetadata(status, Tristate.FALSE,
             false));
         parent = parent.getParent();
@@ -880,7 +892,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     while (path != null && !path.isRoot()) {
       final Item item = getConsistentItem(path);
       if (!itemExists(item)) {
-        final FileStatus status = makeDirStatus(path, username);
+        final S3AFileStatus status = makeDirStatus(path, username);
         metasToPut.add(new DDBPathMetadata(status, Tristate.FALSE, false,
             meta.isAuthoritativeDir(), meta.getLastUpdated()));
         path = path.getParent();
@@ -903,9 +915,13 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   /** Create a directory FileStatus using current system time as mod time. */
-  static FileStatus makeDirStatus(Path f, String owner) {
-    return  new FileStatus(0, true, 1, 0, System.currentTimeMillis(), 0,
+  static S3AFileStatus makeDirStatus(Path f, String owner) {
+    FileStatus fileStatus =
+        new FileStatus(0, true, 1, 0, System.currentTimeMillis(), 0,
         null, owner, owner, f);
+    S3AFileStatus s3aStatus = S3AFileStatus.fromFileStatus(
+        fileStatus, Tristate.UNKNOWN, null, null);
+    return s3aStatus;
   }
 
   /**

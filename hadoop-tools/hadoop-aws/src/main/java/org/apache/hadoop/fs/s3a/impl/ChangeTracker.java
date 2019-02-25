@@ -20,11 +20,14 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.transfer.model.CopyResult;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.s3a.NoVersionAttributeException;
+import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,9 +40,10 @@ import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * Change tracking for input streams: the revision ID/etag
- * the previous request is recorded and when the next request comes in,
- * it is compared.
+ * Change tracking for input streams: the version ID or etag of the object is
+ * tracked and compared on open/re-open.  An initial version ID or etag may or
+ * may not be available, depending on usage (e.g. if S3Guard is utilized).
+ *
  * Self-contained for testing and use in different streams.
  */
 @InterfaceAudience.Private
@@ -76,13 +80,20 @@ public class ChangeTracker {
    * @param uri URI of object being tracked
    * @param policy policy to track.
    * @param versionMismatches reference to the version mismatch counter
+   * @param s3ObjectAttributes attributes of the object, potentially including
+   * an eTag or versionId to match depending on {@code policy}
    */
   public ChangeTracker(final String uri,
       final ChangeDetectionPolicy policy,
-      final AtomicLong versionMismatches) {
+      final AtomicLong versionMismatches,
+      final S3ObjectAttributes s3ObjectAttributes) {
     this.policy = checkNotNull(policy);
     this.uri = uri;
     this.versionMismatches = versionMismatches;
+    this.revisionId = policy.getRevisionId(s3ObjectAttributes);
+    if (revisionId != null) {
+      LOG.debug("Revision ID for object at {}: {}", uri, revisionId);
+    }
   }
 
   public String getRevisionId() {
@@ -106,6 +117,23 @@ public class ChangeTracker {
    */
   public boolean maybeApplyConstraint(
       final GetObjectRequest request) {
+
+    if (policy.getMode() == ChangeDetectionPolicy.Mode.Server
+        && revisionId != null) {
+      policy.applyRevisionConstraint(request, revisionId);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Apply any revision control set by the policy if it is to be
+   * enforced on the server.
+   * @param request request to modify
+   * @return true iff a constraint was added.
+   */
+  public boolean maybeApplyConstraint(
+      final CopyObjectRequest request) {
 
     if (policy.getMode() == ChangeDetectionPolicy.Mode.Server
         && revisionId != null) {
@@ -148,16 +176,48 @@ public class ChangeTracker {
       }
     }
 
-    final ObjectMetadata metadata = object.getObjectMetadata();
+    processMetadata(object.getObjectMetadata(), operation, pos);
+  }
+
+  /**
+   * Process the response from the server for validation against the
+   * change policy.
+   * @param copyResult result of a copy operation
+   * @throws PathIOException raised on failure
+   * @throws RemoteFileChangedException if the remote file has changed.
+   */
+  public void processResponse(final CopyResult copyResult)
+      throws PathIOException {
+    final String newRevisionId = policy.getRevisionId(copyResult);
+    processNewRevision(newRevisionId, "copy", 0);
+  }
+
+  /**
+   * Process metadata response from server for validation against the change
+   * policy.
+   * @param metadata metadata returned from server
+   * @param operation operation in progress
+   * @param pos offset of read
+   * @throws PathIOException raised on failure
+   * @throws RemoteFileChangedException if the remote file has changed.
+   */
+  public void processMetadata(final ObjectMetadata metadata,
+      final String operation,
+      final long pos) throws PathIOException {
     final String newRevisionId = policy.getRevisionId(metadata, uri);
+    processNewRevision(newRevisionId, operation, pos);
+  }
+
+  private void processNewRevision(final String newRevisionId,
+      final String operation, final long pos) throws PathIOException {
     if (newRevisionId == null && policy.isRequireVersion()) {
       throw new NoVersionAttributeException(uri, String.format(
           "Change detection policy requires %s",
           policy.getSource()));
     }
     if (revisionId == null) {
-      // revisionId is null on first (re)open. Pin it so change can be detected
-      // if object has been updated
+      // revisionId may be null on first (re)open. Pin it so change can be
+      // detected if object has been updated
       LOG.debug("Setting revision ID for object at {}: {}",
           uri, newRevisionId);
       revisionId = newRevisionId;

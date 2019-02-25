@@ -27,8 +27,8 @@ import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
+import org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
-import org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore;
 
 import org.junit.After;
 import org.junit.Before;
@@ -36,7 +36,7 @@ import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 
 /**
- * Abstract base class for S3A unit tests using a mock S3 client and a null
+ * Abstract base class for S3A unit tests using a mock S3 client and a local
  * metadata store.
  */
 public abstract class AbstractS3AMockTest {
@@ -59,12 +59,14 @@ public abstract class AbstractS3AMockTest {
     Configuration conf = new Configuration();
     conf.setClass(S3_CLIENT_FACTORY_IMPL, MockS3ClientFactory.class,
         S3ClientFactory.class);
-    // We explicitly disable MetadataStore even if it's configured. For unit
-    // test we don't issue request to AWS DynamoDB service.
-    conf.setClass(S3_METADATA_STORE_IMPL, NullMetadataStore.class,
+    // We explicitly use local MetadataStore even if something else is
+    // configured. For unit test we don't issue request to AWS DynamoDB service
+    conf.setClass(S3_METADATA_STORE_IMPL, LocalMetadataStore.class,
         MetadataStore.class);
     // FS is always magic
     conf.setBoolean(CommitConstants.MAGIC_COMMITTER_ENABLED, true);
+    // use minimum multipart size for faster triggering
+    conf.setLong(Constants.MULTIPART_SIZE, MULTIPART_MIN_SIZE);
     fs = new S3AFileSystem();
     URI uri = URI.create(FS_S3A + "://" + BUCKET);
     fs.initialize(uri, conf);

@@ -67,6 +67,8 @@ public class TestPathMetadataDynamoDBTranslation extends Assert {
   private static final long TEST_FILE_LENGTH = 100;
   private static final long TEST_MOD_TIME = 9999;
   private static final long TEST_BLOCK_SIZE = 128;
+  private static final String TEST_ETAG = "abc";
+  private static final String TEST_VERSION_ID = "def";
   private static final Path TEST_FILE_PATH = new Path(TEST_DIR_PATH, "myFile");
   private static final Item TEST_FILE_ITEM = new Item();
   private static DDBPathMetadata testFilePathMetadata;
@@ -84,7 +86,7 @@ public class TestPathMetadataDynamoDBTranslation extends Assert {
 
     testFilePathMetadata = new DDBPathMetadata(
         new S3AFileStatus(TEST_FILE_LENGTH, TEST_MOD_TIME, TEST_FILE_PATH,
-            TEST_BLOCK_SIZE, username));
+            TEST_BLOCK_SIZE, username, TEST_ETAG, TEST_VERSION_ID));
 
     TEST_FILE_ITEM
         .withPrimaryKey(PARENT, pathToParentKey(TEST_FILE_PATH.getParent()),
@@ -92,7 +94,9 @@ public class TestPathMetadataDynamoDBTranslation extends Assert {
         .withBoolean(IS_DIR, false)
         .withLong(FILE_LENGTH, TEST_FILE_LENGTH)
         .withLong(MOD_TIME, TEST_MOD_TIME)
-        .withLong(BLOCK_SIZE, TEST_BLOCK_SIZE);
+        .withLong(BLOCK_SIZE, TEST_BLOCK_SIZE)
+        .withString(ETAG, TEST_ETAG)
+        .withString(VERSION_ID, TEST_VERSION_ID);
   }
 
   /**
@@ -147,7 +151,7 @@ public class TestPathMetadataDynamoDBTranslation extends Assert {
    */
   private static void verify(Item item, PathMetadata meta) {
     assertNotNull(meta);
-    final FileStatus status = meta.getFileStatus();
+    final S3AFileStatus status = meta.getFileStatus();
     final Path path = status.getPath();
     assertEquals(item.get(PARENT), pathToParentKey(path.getParent()));
     assertEquals(item.get(CHILD), path.getName());
@@ -157,6 +161,10 @@ public class TestPathMetadataDynamoDBTranslation extends Assert {
     assertEquals(len, status.getLen());
     long bSize = item.hasAttribute(BLOCK_SIZE) ? item.getLong(BLOCK_SIZE) : 0;
     assertEquals(bSize, status.getBlockSize());
+    String eTag = item.getString(ETAG);
+    assertEquals(eTag, status.getETag());
+    String versionId = item.getString(VERSION_ID);
+    assertEquals(versionId, status.getVersionId());
 
     /*
      * S3AFileStatue#getModificationTime() reports the current time, so the
