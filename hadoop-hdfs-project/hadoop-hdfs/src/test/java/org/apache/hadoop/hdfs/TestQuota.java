@@ -413,13 +413,13 @@ public class TestQuota {
       }
     });
 
-    // 19: clrQuota on the root directory ("/") should fail
-    runCommand(admin, true, "-clrQuota", "/");
+    // 19: clrQuota on the root directory ("/") should pass.
+    runCommand(admin, false, "-clrQuota", "/");
 
     // 20: setQuota on the root directory ("/") should succeed
     runCommand(admin, false, "-setQuota", "1000000", "/");
 
-    runCommand(admin, true, "-clrQuota", "/");
+    runCommand(admin, false, "-clrQuota", "/");
     runCommand(admin, false, "-clrSpaceQuota", "/");
     runCommand(admin, new String[]{"-clrQuota", parent.toString()}, false);
     runCommand(admin, false, "-clrSpaceQuota", parent.toString());
@@ -456,7 +456,7 @@ public class TestQuota {
     final Path childFile4 = new Path(dir, "datafile2");
     final Path childFile5 = new Path(dir, "datafile3");
 
-    runCommand(admin, true, "-clrQuota", "/");
+    runCommand(admin, false, "-clrQuota", "/");
     runCommand(admin, false, "-clrSpaceQuota", "/");
     // set space quota to a real low value
     runCommand(admin, false, "-setSpaceQuota", Long.toString(spaceQuota2), "/");
@@ -1563,6 +1563,19 @@ public class TestQuota {
       }
     }, 100, 10000);
     assertEquals(0, cluster.getNamesystem().getNumFilesUnderConstruction());
+  }
+
+  @Test
+  public void testClrQuotaOnRoot() throws Exception {
+    long orignalQuota = dfs.getQuotaUsage(new Path("/")).getQuota();
+    DFSAdmin admin = new DFSAdmin(conf);
+    String[] args;
+    args = new String[] {"-setQuota", "3K", "/"};
+    runCommand(admin, args, false);
+    assertEquals(3 * 1024, dfs.getQuotaUsage(new Path("/")).getQuota());
+    args = new String[] {"-clrQuota", "/"};
+    runCommand(admin, args, false);
+    assertEquals(orignalQuota, dfs.getQuotaUsage(new Path("/")).getQuota());
   }
 
   @Test
