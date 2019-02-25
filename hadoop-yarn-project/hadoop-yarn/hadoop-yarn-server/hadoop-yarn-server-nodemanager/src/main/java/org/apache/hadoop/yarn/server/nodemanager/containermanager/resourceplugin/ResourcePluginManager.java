@@ -34,6 +34,8 @@ import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DeviceRegister
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.deviceframework.DeviceMappingManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.deviceframework.DevicePluginAdapter;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.FpgaResourcePlugin;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDiscoverer;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuNodeResourceUpdateHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuResourcePlugin;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.slf4j.Logger;
@@ -96,7 +98,10 @@ public class ResourcePluginManager {
 
         ResourcePlugin plugin = null;
         if (resourceName.equals(GPU_URI)) {
-          plugin = new GpuResourcePlugin();
+          final GpuDiscoverer gpuDiscoverer = new GpuDiscoverer();
+          final GpuNodeResourceUpdateHandler updateHandler =
+              new GpuNodeResourceUpdateHandler(gpuDiscoverer);
+          plugin = new GpuResourcePlugin(updateHandler, gpuDiscoverer);
         } else if (resourceName.equals(FPGA_URI)) {
           plugin = new FpgaResourcePlugin();
         }

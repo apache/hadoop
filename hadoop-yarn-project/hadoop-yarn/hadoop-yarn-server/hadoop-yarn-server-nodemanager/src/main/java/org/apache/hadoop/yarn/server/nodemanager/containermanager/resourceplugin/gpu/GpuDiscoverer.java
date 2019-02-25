@@ -58,11 +58,6 @@ public class GpuDiscoverer {
   // command should not run more than 10 sec.
   private static final int MAX_EXEC_TIMEOUT_MS = 10 * 1000;
   private static final int MAX_REPEATED_ERROR_ALLOWED = 10;
-  private static GpuDiscoverer instance;
-
-  static {
-    instance = new GpuDiscoverer();
-  }
 
   private Configuration conf = null;
   private String pathOfGpuBinary = null;
@@ -292,9 +287,5 @@ public class GpuDiscoverer {
   @VisibleForTesting
   String getPathOfGpuBinary() {
     return pathOfGpuBinary;
-  }
-
-  public static GpuDiscoverer getInstance() {
-    return instance;
   }
 }

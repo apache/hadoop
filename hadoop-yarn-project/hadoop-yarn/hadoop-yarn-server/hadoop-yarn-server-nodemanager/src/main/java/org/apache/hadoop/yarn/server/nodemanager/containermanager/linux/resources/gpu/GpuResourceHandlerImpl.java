@@ -52,14 +52,17 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
   private final GpuResourceAllocator gpuAllocator;
   private final CGroupsHandler cGroupsHandler;
   private final PrivilegedOperationExecutor privilegedOperationExecutor;
+  private final GpuDiscoverer gpuDiscoverer;
 
   public GpuResourceHandlerImpl(Context nmContext,
       CGroupsHandler cGroupsHandler,
-      PrivilegedOperationExecutor privilegedOperationExecutor) {
+      PrivilegedOperationExecutor privilegedOperationExecutor,
+      GpuDiscoverer gpuDiscoverer) {
     this.nmContext = nmContext;
     this.cGroupsHandler = cGroupsHandler;
     this.privilegedOperationExecutor = privilegedOperationExecutor;
-    gpuAllocator = new GpuResourceAllocator(nmContext);
+    this.gpuAllocator = new GpuResourceAllocator(nmContext);
+    this.gpuDiscoverer = gpuDiscoverer;
   }
 
   @Override
@@ -67,7 +70,7 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
       throws ResourceHandlerException {
     List<GpuDevice> usableGpus;
     try {
-      usableGpus = GpuDiscoverer.getInstance().getGpusUsableByYarn();
+      usableGpus = gpuDiscoverer.getGpusUsableByYarn();
       if (usableGpus == null || usableGpus.isEmpty()) {
         String message = "GPU is enabled on the NodeManager, but couldn't find "
             + "any usable GPU devices, please double check configuration!";
