@@ -25,6 +25,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.FpgaResourcePlugin;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDiscoverer;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuNodeResourceUpdateHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuResourcePlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,7 +86,10 @@ public class ResourcePluginManager {
 
         ResourcePlugin plugin = null;
         if (resourceName.equals(GPU_URI)) {
-          plugin = new GpuResourcePlugin();
+          final GpuDiscoverer gpuDiscoverer = new GpuDiscoverer();
+          final GpuNodeResourceUpdateHandler updateHandler =
+              new GpuNodeResourceUpdateHandler(gpuDiscoverer);
+          plugin = new GpuResourcePlugin(updateHandler, gpuDiscoverer);
         } else if (resourceName.equals(FPGA_URI)) {
           plugin = new FpgaResourcePlugin();
         }
