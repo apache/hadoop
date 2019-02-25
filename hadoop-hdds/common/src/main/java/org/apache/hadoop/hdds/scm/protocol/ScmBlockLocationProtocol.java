@@ -26,6 +26,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 
@@ -34,7 +35,7 @@ import java.util.List;
  * to read/write a block.
  */
 @KerberosInfo(serverPrincipal = ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY)
-public interface ScmBlockLocationProtocol {
+public interface ScmBlockLocationProtocol extends Closeable {
 
   /**
    * Asks SCM where a block should be allocated. SCM responds with the

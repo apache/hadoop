@@ -178,4 +178,9 @@ public class ScmBlockLocationTestIngClient implements ScmBlockLocationProtocol {
             .setScmId(scmId);
     return builder.build();
   }
+
+  @Override
+  public void close() throws IOException {
+
+  }
 }

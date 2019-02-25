@@ -295,4 +295,9 @@ public class SCMBlockProtocolServer implements
         .withException(throwable)
         .build();
   }
+
+  @Override
+  public void close() throws IOException {
+    stop();
+  }
 }
