@@ -162,14 +162,14 @@ public class Resource extends BaseResource implements Cloneable {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class Resource {\n");
+    sb.append("class Resource {\n")
 
-    sb.append("    profile: ").append(toIndentedString(profile)).append("\n");
-    sb.append("    cpus: ").append(toIndentedString(cpus)).append("\n");
-    sb.append("    memory: ").append(toIndentedString(memory)).append("\n");
-    sb.append("    additional: ").append(
-        toIndentedString(additional)).append("\n");
-    sb.append("}");
+        .append("    profile: ").append(toIndentedString(profile)).append("\n")
+        .append("    cpus: ").append(toIndentedString(cpus)).append("\n")
+        .append("    memory: ").append(toIndentedString(memory)).append("\n")
+        .append("    additional: ").append(
+            toIndentedString(additional)).append("\n")
+        .append("}");
     return sb.toString();
   }
 

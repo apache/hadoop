@@ -173,12 +173,14 @@ public class ReadinessCheck implements Serializable {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class ReadinessCheck {\n");
+    sb.append("class ReadinessCheck {\n")
 
-    sb.append("    type: ").append(toIndentedString(type)).append("\n");
-    sb.append("    properties: ").append(toIndentedString(properties)).append("\n");
-    sb.append("    artifact: ").append(toIndentedString(artifact)).append("\n");
-    sb.append("}");
+        .append("    type: ").append(toIndentedString(type)).append("\n")
+        .append("    properties: ").append(toIndentedString(properties))
+        .append("\n")
+        .append("    artifact: ").append(toIndentedString(artifact))
+        .append("\n")
+        .append("}");
     return sb.toString();
   }
 

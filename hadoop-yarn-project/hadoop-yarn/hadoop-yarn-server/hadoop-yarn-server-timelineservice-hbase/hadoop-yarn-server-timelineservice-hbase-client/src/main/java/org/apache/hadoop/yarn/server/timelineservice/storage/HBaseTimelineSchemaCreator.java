@@ -237,28 +237,29 @@ public final class HBaseTimelineSchemaCreator implements SchemaCreator {
 
   private static void printUsage() {
     StringBuilder usage = new StringBuilder("Command Usage: \n");
-    usage.append("TimelineSchemaCreator [-help] Display help info" +
-        " for all commands. Or\n");
-    usage.append("TimelineSchemaCreator -create [OPTIONAL_OPTIONS]" +
-        " Create hbase tables.\n\n");
-    usage.append("The Optional options for creating tables include: \n");
-    usage.append("[-entityTableName <Entity Table Name>] " +
-        "The name of the Entity table\n");
-    usage.append("[-entityMetricsTTL <Entity Table Metrics TTL>]" +
-        " TTL for metrics in the Entity table\n");
-    usage.append("[-appToflowTableName <AppToflow Table Name>]" +
-        " The name of the AppToFlow table\n");
-    usage.append("[-applicationTableName <Application Table Name>]" +
-        " The name of the Application table\n");
-    usage.append("[-applicationMetricsTTL <Application Table Metrics TTL>]" +
-        " TTL for metrics in the Application table\n");
-    usage.append("[-subApplicationTableName <SubApplication Table Name>]" +
-        " The name of the SubApplication table\n");
-    usage.append("[-subApplicationMetricsTTL " +
-        " <SubApplication Table Metrics TTL>]" +
-        " TTL for metrics in the SubApplication table\n");
-    usage.append("[-skipExistingTable] Whether to skip existing" +
-        " hbase tables\n");
+    usage
+        .append("TimelineSchemaCreator [-help] Display help info"
+            + " for all commands. Or\n")
+        .append("TimelineSchemaCreator -create [OPTIONAL_OPTIONS]" +
+            " Create hbase tables.\n\n")
+        .append("The Optional options for creating tables include: \n")
+        .append("[-entityTableName <Entity Table Name>] " +
+            "The name of the Entity table\n")
+        .append("[-entityMetricsTTL <Entity Table Metrics TTL>]" +
+            " TTL for metrics in the Entity table\n")
+        .append("[-appToflowTableName <AppToflow Table Name>]" +
+            " The name of the AppToFlow table\n")
+        .append("[-applicationTableName <Application Table Name>]" +
+            " The name of the Application table\n")
+        .append("[-applicationMetricsTTL <Application Table Metrics TTL>]" +
+            " TTL for metrics in the Application table\n")
+        .append("[-subApplicationTableName <SubApplication Table Name>]" +
+            " The name of the SubApplication table\n")
+        .append("[-subApplicationMetricsTTL "
+            + " <SubApplication Table Metrics TTL>]" +
+            " TTL for metrics in the SubApplication table\n")
+        .append("[-skipExistingTable] Whether to skip existing" +
+            " hbase tables\n");
     System.out.println(usage.toString());
   }
 

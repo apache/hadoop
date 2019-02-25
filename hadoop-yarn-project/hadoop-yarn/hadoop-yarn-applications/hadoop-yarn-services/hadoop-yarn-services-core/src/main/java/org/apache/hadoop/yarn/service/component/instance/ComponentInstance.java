@@ -351,18 +351,18 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       comp.reInsertPendingInstance(compInstance);
 
       StringBuilder builder = new StringBuilder();
-      builder.append(compInstance.getCompInstanceId()).append(": ");
-      builder.append(event.getContainerId()).append(
-          " completed. Reinsert back to pending list and requested ");
-      builder.append("a new container.").append(System.lineSeparator());
-      builder.append(" exitStatus=").append(
-          failureBeforeLaunch || event.getStatus() == null ? null :
-              event.getStatus().getExitStatus());
-      builder.append(", diagnostics=");
-      builder.append(failureBeforeLaunch ?
-          FAILED_BEFORE_LAUNCH_DIAG :
-          (event.getStatus() != null ? event.getStatus().getDiagnostics() :
-              UPGRADE_FAILED));
+      builder.append(compInstance.getCompInstanceId()).append(": ")
+          .append(event.getContainerId()).append(
+              " completed. Reinsert back to pending list and requested ")
+          .append("a new container.").append(System.lineSeparator())
+          .append(" exitStatus=").append(
+              failureBeforeLaunch || event.getStatus() == null ? null :
+                  event.getStatus().getExitStatus())
+          .append(", diagnostics=")
+          .append(failureBeforeLaunch ?
+              FAILED_BEFORE_LAUNCH_DIAG :
+              (event.getStatus() != null ? event.getStatus().getDiagnostics() :
+                  UPGRADE_FAILED));
 
       if (event.getStatus() != null && event.getStatus().getExitStatus() != 0) {
         LOG.error(builder.toString());

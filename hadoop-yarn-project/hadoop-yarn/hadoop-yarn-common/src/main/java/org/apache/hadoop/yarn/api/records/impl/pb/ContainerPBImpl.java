@@ -404,18 +404,18 @@ public class ContainerPBImpl extends Container {
 
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("Container: [");
-    sb.append("ContainerId: ").append(getId()).append(", ");
-    sb.append("AllocationRequestId: ").append(getAllocationRequestId())
-        .append(", ");
-    sb.append("Version: ").append(getVersion()).append(", ");
-    sb.append("NodeId: ").append(getNodeId()).append(", ");
-    sb.append("NodeHttpAddress: ").append(getNodeHttpAddress()).append(", ");
-    sb.append("Resource: ").append(getResource()).append(", ");
-    sb.append("Priority: ").append(getPriority()).append(", ");
-    sb.append("Token: ").append(getContainerToken()).append(", ");
-    sb.append("ExecutionType: ").append(getExecutionType()).append(", ");
-    sb.append("]");
+    sb.append("Container: [")
+        .append("ContainerId: ").append(getId()).append(", ")
+        .append("AllocationRequestId: ").append(getAllocationRequestId())
+        .append(", ")
+        .append("Version: ").append(getVersion()).append(", ")
+        .append("NodeId: ").append(getNodeId()).append(", ")
+        .append("NodeHttpAddress: ").append(getNodeHttpAddress()).append(", ")
+        .append("Resource: ").append(getResource()).append(", ")
+        .append("Priority: ").append(getPriority()).append(", ")
+        .append("Token: ").append(getContainerToken()).append(", ")
+        .append("ExecutionType: ").append(getExecutionType()).append(", ")
+        .append("]");
     return sb.toString();
   }
 

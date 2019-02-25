@@ -94,9 +94,9 @@ public class ActivityNode {
 
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append(this.activityNodeName + " ");
-    sb.append(this.appPriority + " ");
-    sb.append(this.state + " ");
+    sb.append(this.activityNodeName + " ")
+        .append(this.appPriority + " ")
+        .append(this.state + " ");
     if (!this.diagnostic.equals("")) {
       sb.append(this.diagnostic + "\n");
     }

@@ -979,9 +979,9 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
 
     public String toString() {
       StringBuilder sb = new StringBuilder();
-      sb.append("\t").append(this.getName()).append("\n");
-      sb.append("\t").append(MemInfo.SIZE.name + ":" + this.getSize())
-        .append(" kB\n");
+      sb.append("\t").append(this.getName()).append("\n")
+          .append("\t").append(MemInfo.SIZE.name + ":" + this.getSize())
+          .append(" kB\n");
       sb.append("\t").append(MemInfo.PSS.name + ":" + this.getPss())
         .append(" kB\n");
       sb.append("\t").append(MemInfo.RSS.name + ":" + this.getRss())

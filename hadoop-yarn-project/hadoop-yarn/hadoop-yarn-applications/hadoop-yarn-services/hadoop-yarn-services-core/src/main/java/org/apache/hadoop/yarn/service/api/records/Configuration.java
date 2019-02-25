@@ -173,13 +173,13 @@ public class Configuration implements Serializable {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class Configuration {\n");
+    sb.append("class Configuration {\n")
 
-    sb.append("    properties: ").append(toIndentedString(properties))
-        .append("\n");
-    sb.append("    env: ").append(toIndentedString(env)).append("\n");
-    sb.append("    files: ").append(toIndentedString(files)).append("\n");
-    sb.append("}");
+        .append("    properties: ").append(toIndentedString(properties))
+        .append("\n")
+        .append("    env: ").append(toIndentedString(env)).append("\n")
+        .append("    files: ").append(toIndentedString(files)).append("\n")
+        .append("}");
     return sb.toString();
   }
 

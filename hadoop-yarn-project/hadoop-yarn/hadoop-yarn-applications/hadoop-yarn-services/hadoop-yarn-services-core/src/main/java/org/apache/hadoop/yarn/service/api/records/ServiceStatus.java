@@ -124,13 +124,13 @@ public class ServiceStatus extends BaseResource {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class ServiceStatus {\n");
+    sb.append("class ServiceStatus {\n")
 
-    sb.append("    diagnostics: ").append(toIndentedString(diagnostics))
-        .append("\n");
-    sb.append("    state: ").append(toIndentedString(state)).append("\n");
-    sb.append("    code: ").append(toIndentedString(code)).append("\n");
-    sb.append("}");
+        .append("    diagnostics: ").append(toIndentedString(diagnostics))
+        .append("\n")
+        .append("    state: ").append(toIndentedString(state)).append("\n")
+        .append("    code: ").append(toIndentedString(code)).append("\n")
+        .append("}");
     return sb.toString();
   }
 

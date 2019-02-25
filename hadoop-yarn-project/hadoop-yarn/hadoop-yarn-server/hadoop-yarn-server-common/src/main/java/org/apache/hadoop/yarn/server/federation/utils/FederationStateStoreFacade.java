@@ -516,8 +516,8 @@ public final class FederationStateStoreFacade {
   protected String buildCacheKey(String typeName, String methodName,
       String argName) {
     StringBuilder buffer = new StringBuilder();
-    buffer.append(typeName).append(".");
-    buffer.append(methodName);
+    buffer.append(typeName).append(".")
+        .append(methodName);
     if (argName != null) {
       buffer.append("::");
       buffer.append(argName);

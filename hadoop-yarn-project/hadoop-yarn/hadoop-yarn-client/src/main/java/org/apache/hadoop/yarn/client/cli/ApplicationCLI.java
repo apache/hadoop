@@ -1245,8 +1245,8 @@ public class ApplicationCLI extends YarnCLI {
 
   private String getAllValidApplicationStates() {
     StringBuilder sb = new StringBuilder();
-    sb.append("The valid application state can be" + " one of the following: ");
-    sb.append(ALLSTATES_OPTION + ",");
+    sb.append("The valid application state can be" + " one of the following: ")
+        .append(ALLSTATES_OPTION + ",");
     for (YarnApplicationState appState : YarnApplicationState.values()) {
       sb.append(appState + ",");
     }

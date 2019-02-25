@@ -474,31 +474,33 @@ public class Component implements Serializable {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class Component {\n");
-
-    sb.append("    name: ").append(toIndentedString(name)).append("\n");
-    sb.append("    state: ").append(toIndentedString(state)).append("\n");
-    sb.append("    dependencies: ").append(toIndentedString(dependencies))
-        .append("\n");
-    sb.append("    readinessCheck: ").append(toIndentedString(readinessCheck))
-        .append("\n");
-    sb.append("    artifact: ").append(toIndentedString(artifact)).append("\n");
-    sb.append("    launchCommand: ").append(toIndentedString(launchCommand))
-        .append("\n");
-    sb.append("    resource: ").append(toIndentedString(resource)).append("\n");
-    sb.append("    numberOfContainers: ")
-        .append(toIndentedString(numberOfContainers)).append("\n");
-    sb.append("    containers: ").append(toIndentedString(containers))
-        .append("\n");
-    sb.append("    runPrivilegedContainer: ")
-        .append(toIndentedString(runPrivilegedContainer)).append("\n");
-    sb.append("    placementPolicy: ").append(toIndentedString(placementPolicy))
-        .append("\n");
-    sb.append("    configuration: ").append(toIndentedString(configuration))
-        .append("\n");
-    sb.append("    quicklinks: ").append(toIndentedString(quicklinks))
-        .append("\n");
-    sb.append("}");
+    sb.append("class Component {\n")
+        .append("    name: ").append(toIndentedString(name)).append("\n")
+        .append("    state: ").append(toIndentedString(state)).append("\n")
+        .append("    dependencies: ").append(toIndentedString(dependencies))
+        .append("\n")
+        .append("    readinessCheck: ").append(toIndentedString(readinessCheck))
+        .append("\n")
+        .append("    artifact: ").append(toIndentedString(artifact))
+        .append("\n")
+        .append("    launchCommand: ").append(toIndentedString(launchCommand))
+        .append("\n")
+        .append("    resource: ").append(toIndentedString(resource))
+        .append("\n")
+        .append("    numberOfContainers: ")
+        .append(toIndentedString(numberOfContainers)).append("\n")
+        .append("    containers: ").append(toIndentedString(containers))
+        .append("\n")
+        .append("    runPrivilegedContainer: ")
+        .append(toIndentedString(runPrivilegedContainer)).append("\n")
+        .append("    placementPolicy: ")
+        .append(toIndentedString(placementPolicy))
+        .append("\n")
+        .append("    configuration: ").append(toIndentedString(configuration))
+        .append("\n")
+        .append("    quicklinks: ").append(toIndentedString(quicklinks))
+        .append("\n")
+        .append("}");
     return sb.toString();
   }
 

@@ -1112,18 +1112,18 @@ public class ServiceScheduler extends CompositeService {
           } else {
             requestPath.append("http://");
           }
-          requestPath.append(bareHost);
-          requestPath.append(":");
-          requestPath.append(port);
-          requestPath.append("/ws/v1/node/yarn/sysfs/");
-          requestPath.append(UserGroupInformation.getCurrentUser()
-              .getShortUserName());
-          requestPath.append("/");
-          requestPath.append(yarnApp.getId());
+          requestPath.append(bareHost)
+              .append(":")
+              .append(port)
+              .append("/ws/v1/node/yarn/sysfs/")
+              .append(UserGroupInformation.getCurrentUser()
+                  .getShortUserName())
+              .append("/")
+              .append(yarnApp.getId());
           if (!useKerberos) {
-            requestPath.append("?user.name=");
-            requestPath.append(UserGroupInformation.getCurrentUser()
-                .getShortUserName());
+            requestPath.append("?user.name=")
+                .append(UserGroupInformation.getCurrentUser()
+                    .getShortUserName());
           }
           Builder builder = HttpUtil.connect(requestPath.toString());
           ClientResponse response = builder.put(ClientResponse.class, spec);

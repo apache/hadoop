@@ -127,13 +127,13 @@ public class ResourceInformation {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class ResourceInformation {\n");
-    sb.append("    value: ").append(toIndentedString(value)).append("\n");
-    sb.append("    unit: ").append(toIndentedString(unit)).append("\n");
-    sb.append("    attributes: ").append(toIndentedString(attributes))
-        .append("\n");
-    sb.append("    tags: ").append(toIndentedString(tags)).append("\n");
-    sb.append("}");
+    sb.append("class ResourceInformation {\n")
+        .append("    value: ").append(toIndentedString(value)).append("\n")
+        .append("    unit: ").append(toIndentedString(unit)).append("\n")
+        .append("    attributes: ").append(toIndentedString(attributes))
+        .append("\n")
+        .append("    tags: ").append(toIndentedString(tags)).append("\n")
+        .append("}");
     return sb.toString();
   }
 

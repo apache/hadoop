@@ -194,11 +194,11 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
         default:
           break;
         }
-        logMsg.append(" NM = ");
-        logMsg.append(entry.getKey());
-        logMsg.append(", attributes=[ ");
-        logMsg.append(StringUtils.join(entry.getValue().keySet(), ","));
-        logMsg.append("] ,");
+        logMsg.append(" NM = ")
+            .append(entry.getKey())
+            .append(", attributes=[ ")
+            .append(StringUtils.join(entry.getValue().keySet(), ","))
+            .append("] ,");
       }
 
       if (LOG.isDebugEnabled()) {

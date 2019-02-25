@@ -150,18 +150,19 @@ public class Graph {
   public String generateGraphViz(String indent) {
     StringBuilder sb = new StringBuilder();
     if (this.parent == null) {
-      sb.append("digraph " + name + " {\n");
-      sb.append(String.format("graph [ label=%s, fontsize=24, fontname=Helvetica];%n",
-          wrapSafeString(name)));
-      sb.append("node [fontsize=12, fontname=Helvetica];\n");
-      sb.append("edge [fontsize=9, fontcolor=blue, fontname=Arial];\n");
+      sb.append("digraph " + name + " {\n")
+          .append(String.format(
+              "graph [ label=%s, fontsize=24, fontname=Helvetica];%n",
+              wrapSafeString(name)))
+          .append("node [fontsize=12, fontname=Helvetica];\n")
+          .append("edge [fontsize=9, fontcolor=blue, fontname=Arial];\n");
     } else {
       sb.append("subgraph cluster_" + name + " {\nlabel=\"" + name + "\"\n");
     }
     for (Graph g : subgraphs) {
       String ginfo = g.generateGraphViz(indent+"  ");
-      sb.append(ginfo);
-      sb.append("\n");
+      sb.append(ginfo)
+          .append("\n");
     }
     for (Node n : nodes) {
       sb.append(String.format(

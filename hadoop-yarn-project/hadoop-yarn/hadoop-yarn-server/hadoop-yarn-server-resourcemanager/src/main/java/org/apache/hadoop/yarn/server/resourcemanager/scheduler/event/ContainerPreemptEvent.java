@@ -48,8 +48,8 @@ public class ContainerPreemptEvent extends SchedulerEvent {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder(super.toString());
-    sb.append(" ").append(getAppId());
-    sb.append(" ").append(getContainer().getContainerId());
+    sb.append(" ").append(getAppId())
+        .append(" ").append(getContainer().getContainerId());
     return sb.toString();
   }
 

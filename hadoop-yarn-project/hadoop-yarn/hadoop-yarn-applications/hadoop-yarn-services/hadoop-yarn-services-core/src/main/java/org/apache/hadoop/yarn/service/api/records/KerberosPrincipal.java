@@ -120,12 +120,12 @@ public class KerberosPrincipal implements Serializable {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class KerberosPrincipal {\n");
+    sb.append("class KerberosPrincipal {\n")
 
-    sb.append("    principalName: ").append(toIndentedString(principalName))
-        .append("\n");
-    sb.append("    keytab: ").append(toIndentedString(keytab)).append("\n");
-    sb.append("}");
+        .append("    principalName: ").append(toIndentedString(principalName))
+        .append("\n")
+        .append("    keytab: ").append(toIndentedString(keytab)).append("\n")
+        .append("}");
     return sb.toString();
   }
 

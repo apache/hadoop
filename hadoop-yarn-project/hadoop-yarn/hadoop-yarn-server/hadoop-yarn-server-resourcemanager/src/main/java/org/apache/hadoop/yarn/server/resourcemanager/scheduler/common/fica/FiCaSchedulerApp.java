@@ -999,25 +999,24 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
   protected void getPendingAppDiagnosticMessage(
       StringBuilder diagnosticMessage) {
     LeafQueue queue = getCSLeafQueue();
-    diagnosticMessage.append(" Details : AM Partition = ");
-    diagnosticMessage.append(appAMNodePartitionName.isEmpty()
-        ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION : appAMNodePartitionName);
-    diagnosticMessage.append("; ");
-    diagnosticMessage.append("AM Resource Request = ");
-    diagnosticMessage.append(getAMResource(appAMNodePartitionName));
-    diagnosticMessage.append("; ");
-    diagnosticMessage.append("Queue Resource Limit for AM = ");
-    diagnosticMessage
-        .append(queue.getAMResourceLimitPerPartition(appAMNodePartitionName));
-    diagnosticMessage.append("; ");
-    diagnosticMessage.append("User AM Resource Limit of the queue = ");
-    diagnosticMessage.append(queue.getUserAMResourceLimitPerPartition(
-        appAMNodePartitionName, getUser()));
-    diagnosticMessage.append("; ");
-    diagnosticMessage.append("Queue AM Resource Usage = ");
-    diagnosticMessage.append(
-        queue.getQueueResourceUsage().getAMUsed(appAMNodePartitionName));
-    diagnosticMessage.append("; ");
+    diagnosticMessage.append(" Details : AM Partition = ")
+        .append(appAMNodePartitionName.isEmpty()
+        ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION : appAMNodePartitionName)
+        .append("; ")
+        .append("AM Resource Request = ")
+        .append(getAMResource(appAMNodePartitionName))
+        .append("; ")
+        .append("Queue Resource Limit for AM = ")
+        .append(queue.getAMResourceLimitPerPartition(appAMNodePartitionName))
+        .append("; ")
+        .append("User AM Resource Limit of the queue = ")
+        .append(queue.getUserAMResourceLimitPerPartition(
+            appAMNodePartitionName, getUser()))
+        .append("; ")
+        .append("Queue AM Resource Usage = ")
+        .append(
+            queue.getQueueResourceUsage().getAMUsed(appAMNodePartitionName))
+        .append("; ");
   }
 
   protected void getActivedAppDiagnosticMessage(
@@ -1025,39 +1024,39 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     LeafQueue queue = getCSLeafQueue();
     QueueCapacities queueCapacities = queue.getQueueCapacities();
     QueueResourceQuotas queueResourceQuotas = queue.getQueueResourceQuotas();
-    diagnosticMessage.append(" Details : AM Partition = ");
-    diagnosticMessage.append(appAMNodePartitionName.isEmpty()
-        ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION : appAMNodePartitionName);
-    diagnosticMessage.append(" ; ");
-    diagnosticMessage.append("Partition Resource = ");
-    diagnosticMessage.append(rmContext.getNodeLabelManager()
-        .getResourceByLabel(appAMNodePartitionName, Resources.none()));
-    diagnosticMessage.append(" ; ");
-    diagnosticMessage.append("Queue's Absolute capacity = ");
-    diagnosticMessage.append(
-        queueCapacities.getAbsoluteCapacity(appAMNodePartitionName) * 100);
-    diagnosticMessage.append(" % ; ");
-    diagnosticMessage.append("Queue's Absolute used capacity = ");
-    diagnosticMessage.append(
-        queueCapacities.getAbsoluteUsedCapacity(appAMNodePartitionName) * 100);
-    diagnosticMessage.append(" % ; ");
-    diagnosticMessage.append("Queue's Absolute max capacity = ");
-    diagnosticMessage.append(
-        queueCapacities.getAbsoluteMaximumCapacity(appAMNodePartitionName)
-            * 100);
-    diagnosticMessage.append(" % ; ");
-    diagnosticMessage.append("Queue's capacity (absolute resource) = ");
-    diagnosticMessage.append(
-        queueResourceQuotas.getEffectiveMinResource(appAMNodePartitionName));
-    diagnosticMessage.append(" ; ");
-    diagnosticMessage.append("Queue's used capacity (absolute resource) = ");
-    diagnosticMessage
-        .append(queue.getQueueResourceUsage().getUsed(appAMNodePartitionName));
-    diagnosticMessage.append(" ; ");
-    diagnosticMessage.append("Queue's max capacity (absolute resource) = ");
-    diagnosticMessage.append(
-        queueResourceQuotas.getEffectiveMaxResource(appAMNodePartitionName));
-    diagnosticMessage.append(" ; ");
+    diagnosticMessage.append(" Details : AM Partition = ")
+        .append(appAMNodePartitionName.isEmpty()
+            ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION : appAMNodePartitionName)
+        .append(" ; ")
+        .append("Partition Resource = ")
+        .append(rmContext.getNodeLabelManager()
+            .getResourceByLabel(appAMNodePartitionName, Resources.none()))
+        .append(" ; ")
+        .append("Queue's Absolute capacity = ")
+        .append(
+            queueCapacities.getAbsoluteCapacity(appAMNodePartitionName) * 100)
+        .append(" % ; ")
+        .append("Queue's Absolute used capacity = ")
+        .append(
+            queueCapacities.getAbsoluteUsedCapacity(appAMNodePartitionName)
+                * 100)
+        .append(" % ; ")
+        .append("Queue's Absolute max capacity = ")
+        .append(
+            queueCapacities.getAbsoluteMaximumCapacity(appAMNodePartitionName)
+                * 100)
+        .append(" % ; ")
+        .append("Queue's capacity (absolute resource) = ")
+        .append(
+            queueResourceQuotas.getEffectiveMinResource(appAMNodePartitionName))
+        .append(" ; ")
+        .append("Queue's used capacity (absolute resource) = ")
+        .append(queue.getQueueResourceUsage().getUsed(appAMNodePartitionName))
+        .append(" ; ")
+        .append("Queue's max capacity (absolute resource) = ")
+        .append(
+            queueResourceQuotas.getEffectiveMaxResource(appAMNodePartitionName))
+        .append(" ; ");
   }
 
   /**
@@ -1082,15 +1081,15 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
         appSkipNodeDiagnostics = null;
       }
       diagnosticMessageBldr.append(
-          CSAMContainerLaunchDiagnosticsConstants.LAST_NODE_PROCESSED_MSG);
-      diagnosticMessageBldr.append(node.getNodeID());
-      diagnosticMessageBldr.append(" ( Partition : ");
-      diagnosticMessageBldr.append(node.getLabels());
-      diagnosticMessageBldr.append(", Total resource : ");
-      diagnosticMessageBldr.append(node.getTotalResource());
-      diagnosticMessageBldr.append(", Available resource : ");
-      diagnosticMessageBldr.append(node.getUnallocatedResource());
-      diagnosticMessageBldr.append(" ).");
+          CSAMContainerLaunchDiagnosticsConstants.LAST_NODE_PROCESSED_MSG)
+          .append(node.getNodeID())
+          .append(" ( Partition : ")
+          .append(node.getLabels())
+          .append(", Total resource : ")
+          .append(node.getTotalResource())
+          .append(", Available resource : ")
+          .append(node.getUnallocatedResource())
+          .append(" ).");
       updateAMContainerDiagnostics(AMState.ACTIVATED, diagnosticMessageBldr.toString());
     }
   }

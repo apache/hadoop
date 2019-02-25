@@ -779,8 +779,8 @@ public class ClientRMService extends AbstractService implements
     String diagnostics = org.apache.commons.lang3.StringUtils
         .trimToNull(request.getDiagnostics());
     if (diagnostics != null) {
-      message.append(" with diagnostic message: ");
-      message.append(diagnostics);
+      message.append(" with diagnostic message: ")
+          .append(diagnostics);
     }
 
     this.rmContext.getDispatcher().getEventHandler()

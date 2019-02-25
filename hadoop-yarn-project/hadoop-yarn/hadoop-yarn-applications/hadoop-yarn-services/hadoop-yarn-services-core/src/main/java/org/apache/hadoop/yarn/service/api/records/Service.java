@@ -424,35 +424,38 @@ public class Service extends BaseResource {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class Service {\n");
+    sb.append("class Service {\n")
 
-    sb.append("    name: ").append(toIndentedString(name)).append("\n");
-    sb.append("    id: ").append(toIndentedString(id)).append("\n");
-    sb.append("    version: ").append(toIndentedString(version)).append("\n");
-    sb.append("    description: ").append(toIndentedString(description))
-        .append("\n");
-    sb.append("    artifact: ").append(toIndentedString(artifact)).append("\n");
-    sb.append("    resource: ").append(toIndentedString(resource)).append("\n");
-    sb.append("    launchTime: ").append(toIndentedString(launchTime))
-        .append("\n");
-    sb.append("    numberOfRunningContainers: ")
-        .append(toIndentedString(numberOfRunningContainers)).append("\n");
-    sb.append("    lifetime: ").append(toIndentedString(lifetime)).append("\n");
-    sb.append("    components: ").append(toIndentedString(components))
-        .append("\n");
-    sb.append("    configuration: ").append(toIndentedString(configuration))
-        .append("\n");
-    sb.append("    state: ").append(toIndentedString(state)).append("\n");
-    sb.append("    quicklinks: ").append(toIndentedString(quicklinks))
-        .append("\n");
-    sb.append("    queue: ").append(toIndentedString(queue)).append("\n");
-    sb.append("    kerberosPrincipal: ")
-        .append(toIndentedString(kerberosPrincipal)).append("\n");
-    sb.append("    dockerClientConfig: ")
-        .append(toIndentedString(dockerClientConfig)).append("\n");
-    sb.append("    dependencies: ")
-        .append(toIndentedString(dependencies)).append("\n");
-    sb.append("}");
+        .append("    name: ").append(toIndentedString(name)).append("\n")
+        .append("    id: ").append(toIndentedString(id)).append("\n")
+        .append("    version: ").append(toIndentedString(version)).append("\n")
+        .append("    description: ").append(toIndentedString(description))
+        .append("\n")
+        .append("    artifact: ").append(toIndentedString(artifact))
+        .append("\n")
+        .append("    resource: ").append(toIndentedString(resource))
+        .append("\n")
+        .append("    launchTime: ").append(toIndentedString(launchTime))
+        .append("\n")
+        .append("    numberOfRunningContainers: ")
+        .append(toIndentedString(numberOfRunningContainers)).append("\n")
+        .append("    lifetime: ").append(toIndentedString(lifetime))
+        .append("\n")
+        .append("    components: ").append(toIndentedString(components))
+        .append("\n")
+        .append("    configuration: ").append(toIndentedString(configuration))
+        .append("\n")
+        .append("    state: ").append(toIndentedString(state)).append("\n")
+        .append("    quicklinks: ").append(toIndentedString(quicklinks))
+        .append("\n")
+        .append("    queue: ").append(toIndentedString(queue)).append("\n")
+        .append("    kerberosPrincipal: ")
+        .append(toIndentedString(kerberosPrincipal)).append("\n")
+        .append("    dockerClientConfig: ")
+        .append(toIndentedString(dockerClientConfig)).append("\n")
+        .append("    dependencies: ")
+        .append(toIndentedString(dependencies)).append("\n")
+        .append("}");
     return sb.toString();
   }
 

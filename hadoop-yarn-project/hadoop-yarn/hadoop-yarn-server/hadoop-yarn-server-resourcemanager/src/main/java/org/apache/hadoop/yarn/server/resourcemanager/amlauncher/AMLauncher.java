@@ -352,8 +352,8 @@ public class AMLauncher implements Runnable {
         LOG.info("Error cleaning master ", ie);
       } catch (YarnException e) {
         StringBuilder sb = new StringBuilder("Container ");
-        sb.append(masterContainer.getId().toString());
-        sb.append(" is not handled by this NodeManager");
+        sb.append(masterContainer.getId().toString())
+            .append(" is not handled by this NodeManager");
         if (!e.getMessage().contains(sb.toString())) {
           // Ignoring if container is already killed by Node Manager.
           LOG.info("Error cleaning master ", e);
