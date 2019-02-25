@@ -362,6 +362,30 @@
 </property>
 
 <property>
+  <name>hadoop.security.group.mapping.ldap.bind.users</name>
+  <value></value>
+  <description>
+    Aliases of users to be used to bind as when connecting to the LDAP
+    server(s). Each alias will have to have its distinguished name and
+    password specified through:
+    hadoop.security.group.mapping.ldap.bind.user
+    and a password configuration such as:
+    hadoop.security.group.mapping.ldap.bind.password.alias
+
+    For example, if:
+    hadoop.security.group.mapping.ldap.bind.users=alias1,alias2
+
+    then the following configuration is valid:
+    hadoop.security.group.mapping.ldap.bind.users.alias1.bind.user=bindUser1
+    hadoop.security.group.mapping.ldap.bind.users.alias1.bind.password.alias=
+    bindPasswordAlias1
+    hadoop.security.group.mapping.ldap.bind.users.alias2.bind.user=bindUser2
+    hadoop.security.group.mapping.ldap.bind.users.alias2.bind.password.alias=
+    bindPasswordAlias2
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.group.mapping.ldap.bind.user</name>
   <value></value>
   <description>

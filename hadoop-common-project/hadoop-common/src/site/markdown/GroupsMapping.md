@@ -78,11 +78,6 @@ This provider supports LDAP with simple password authentication using JNDI API.
 `hadoop.security.group.mapping.ldap.base` configures the search base for the LDAP connection. This is a distinguished name, and will typically be the root of the LDAP directory.
 Get groups for a given username first looks up the user and then looks up the groups for the user result. If the directory setup has different user and group search bases, use `hadoop.security.group.mapping.ldap.userbase` and `hadoop.security.group.mapping.ldap.groupbase` configs.
 
-If the LDAP server does not support anonymous binds,
-set the distinguished name of the user to bind in `hadoop.security.group.mapping.ldap.bind.user`.
-The path to the file containing the bind user's password is specified in `hadoop.security.group.mapping.ldap.bind.password.file`.
-This file should be readable only by the Unix user running the daemons.
-
 It is possible to set a maximum time limit when searching and awaiting a result.
 Set `hadoop.security.group.mapping.ldap.directory.search.timeout` to 0 if infinite wait period is desired. Default is 10,000 milliseconds (10 seconds).
 This is the limit for each ldap query.  If `hadoop.security.group.mapping.ldap.search.group.hierarchy.levels` is set to a positive value, then the total latency will be bounded by max(Recur Depth in LDAP, `hadoop.security.group.mapping.ldap.search.group.hierarchy.levels` ) * `hadoop.security.group.mapping.ldap.directory.search.timeout`.
@@ -90,6 +85,27 @@ This is the limit for each ldap query.  If `hadoop.security.group.mapping.ldap.s
 `hadoop.security.group.mapping.ldap.base` configures how far to walk up the groups hierarchy when resolving groups.
 By default, with a limit of 0, in order to be considered a member of a group, the user must be an explicit member in LDAP.  Otherwise, it will traverse the group hierarchy `hadoop.security.group.mapping.ldap.search.group.hierarchy.levels` levels up.
 
+### Bind user(s) ###
+If the LDAP server does not support anonymous binds,
+set the distinguished name of the user to bind in `hadoop.security.group.mapping.ldap.bind.user`.
+The path to the file containing the bind user's password is specified in `hadoop.security.group.mapping.ldap.bind.password.file`.
+This file should be readable only by the Unix user running the daemons.
+
+Multiple bind users
+--------
+If multiple bind users are required, they can be specified through `hadoop.security.group.mapping.ldap.bind.users`.
+These will represent the aliases of users to be used to bind as when connecting to the LDAP.
+Each alias will then have to have its distinguished name and password configured.
+This is useful if the bind user's password has to be reset.
+If AuthenticationException is encountered when connecting to LDAP, LDAPGroupsMapping will switch to the next bind user information and cycle back if necessary.
+
+For example, if:
+`hadoop.security.group.mapping.ldap.bind.users=alias1,alias2`
+, then the following configuration is valid:
+`hadoop.security.group.mapping.ldap.bind.users.alias1.bind.user=bindUser1`
+`hadoop.security.group.mapping.ldap.bind.users.alias1.bind.password.alias=bindPasswordAlias1`
+`hadoop.security.group.mapping.ldap.bind.users.alias2.bind.user=bindUser2`
+`hadoop.security.group.mapping.ldap.bind.users.alias2.bind.password.alias=bindPasswordAlias2`
 
 ### Active Directory ###
 The default configuration supports LDAP group name resolution with an Active Directory server.
