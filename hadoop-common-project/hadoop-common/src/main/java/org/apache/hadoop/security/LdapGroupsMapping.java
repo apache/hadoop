@@ -31,6 +31,7 @@ import java.util.HashSet;
 import java.util.Collection;
 import java.util.Set;
 
+import javax.naming.AuthenticationException;
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
@@ -135,22 +136,39 @@ public class LdapGroupsMapping
       LDAP_TRUSTSTORE_PASSWORD_KEY + ".file";
 
   /*
+   * User aliases to bind to the LDAP server with. Each alias will have
+   * to have its username and password configured, see core-default.xml
+   * and GroupsMapping.md for details.
+   */
+  public static final String BIND_USERS_KEY = LDAP_CONFIG_PREFIX +
+      ".bind.users";
+
+  /*
    * User to bind to the LDAP server with
    */
-  public static final String BIND_USER_KEY = LDAP_CONFIG_PREFIX + ".bind.user";
+  public static final String BIND_USER_SUFFIX = ".bind.user";
+  public static final String BIND_USER_KEY = LDAP_CONFIG_PREFIX +
+      BIND_USER_SUFFIX;
   public static final String BIND_USER_DEFAULT = "";
 
   /*
    * Password for the bind user
    */
-  public static final String BIND_PASSWORD_KEY = LDAP_CONFIG_PREFIX + ".bind.password";
+  public static final String BIND_PASSWORD_SUFFIX = ".bind.password";
+  public static final String BIND_PASSWORD_KEY = LDAP_CONFIG_PREFIX +
+      BIND_PASSWORD_SUFFIX;
   public static final String BIND_PASSWORD_DEFAULT = "";
-  
-  public static final String BIND_PASSWORD_FILE_KEY = BIND_PASSWORD_KEY + ".file";
+
+  public static final String BIND_PASSWORD_FILE_SUFFIX =
+      BIND_PASSWORD_SUFFIX + ".file";
+  public static final String BIND_PASSWORD_FILE_KEY = LDAP_CONFIG_PREFIX +
+      BIND_PASSWORD_FILE_SUFFIX;
   public static final String BIND_PASSWORD_FILE_DEFAULT = "";
 
+  public static final String BIND_PASSWORD_ALIAS_SUFFIX =
+      BIND_PASSWORD_SUFFIX + ".alias";
   public static final String BIND_PASSWORD_ALIAS_KEY =
-      BIND_PASSWORD_KEY + ".alias";
+      LDAP_CONFIG_PREFIX + BIND_PASSWORD_ALIAS_SUFFIX;
   public static final String BIND_PASSWORD_ALIAS_DEFAULT = "";
 
   /*
@@ -273,8 +291,14 @@ public class LdapGroupsMapping
   private String keystorePass;
   private String truststore;
   private String truststorePass;
-  private String bindUser;
-  private String bindPassword;
+
+  /*
+   * Users to bind to when connecting to LDAP. This will be a rotating
+   * iterator, cycling back to the first user if necessary.
+   */
+  private Iterator<BindUserInfo> bindUsers;
+  private BindUserInfo currentBindUser;
+
   private String userbaseDN;
   private String groupbaseDN;
   private String groupSearchFilter;
@@ -318,6 +342,8 @@ public class LdapGroupsMapping
         atemptsBeforeFailover++) {
       try {
         return doGetGroups(user, groupHierarchyLevels);
+      } catch (AuthenticationException e) {
+        switchBindUser(e);
       } catch (NamingException e) {
         LOG.warn("Failed to get groups for user {} (attempt={}/{}) using {}. " +
             "Exception: ", user, attempt, numAttempts, currentLdapUrl, e);
@@ -589,6 +615,19 @@ public class LdapGroupsMapping
     return false;
   }
 
+  /**
+   * Switch to the next available user to bind to.
+   * @param e AuthenticationException encountered when contacting LDAP
+   */
+  protected void switchBindUser(AuthenticationException e) {
+    BindUserInfo oldBindUser = this.currentBindUser;
+    currentBindUser = this.bindUsers.next();
+    if (!oldBindUser.equals(currentBindUser)) {
+      LOG.info("Switched from {} to {} after an AuthenticationException: {}",
+          oldBindUser, currentBindUser, e.getMessage());
+    }
+  }
+
   private DirContext getDirContext() throws NamingException {
     if (ctx == null) {
       // Set up the initial environment for LDAP connectivity
@@ -615,8 +654,8 @@ public class LdapGroupsMapping
         }
       }
 
-      env.put(Context.SECURITY_PRINCIPAL, bindUser);
-      env.put(Context.SECURITY_CREDENTIALS, bindPassword);
+      env.put(Context.SECURITY_PRINCIPAL, currentBindUser.username);
+      env.put(Context.SECURITY_CREDENTIALS, currentBindUser.password);
 
       env.put("com.sun.jndi.ldap.connect.timeout", conf.get(CONNECTION_TIMEOUT,
           String.valueOf(CONNECTION_TIMEOUT_DEFAULT)));
@@ -653,6 +692,7 @@ public class LdapGroupsMapping
 
   @Override
   public synchronized void setConf(Configuration conf) {
+    this.conf = conf;
     String[] urls = conf.getStrings(LDAP_URL_KEY, LDAP_URL_DEFAULT);
     if (urls == null || urls.length == 0) {
       throw new RuntimeException("LDAP URL(s) are not configured");
@@ -664,20 +704,8 @@ public class LdapGroupsMapping
     if (useSsl) {
       loadSslConf(conf);
     }
-    
-    bindUser = conf.get(BIND_USER_KEY, BIND_USER_DEFAULT);
 
-    String alias = conf.get(BIND_PASSWORD_ALIAS_KEY,
-        BIND_PASSWORD_ALIAS_DEFAULT);
-    bindPassword = getPasswordFromCredentialProviders(conf, alias, "");
-    if (bindPassword.isEmpty()) {
-      bindPassword = getPassword(conf, BIND_PASSWORD_KEY,
-          BIND_PASSWORD_DEFAULT);
-      if (bindPassword.isEmpty()) {
-        bindPassword = extractPassword(
-            conf.get(BIND_PASSWORD_FILE_KEY, BIND_PASSWORD_FILE_DEFAULT));
-      }
-    }
+    initializeBindUsers();
 
     String baseDN = conf.getTrimmed(BASE_DN_KEY, BASE_DN_DEFAULT);
 
@@ -734,8 +762,6 @@ public class LdapGroupsMapping
     this.numAttemptsBeforeFailover = conf.getInt(
         LDAP_NUM_ATTEMPTS_BEFORE_FAILOVER_KEY,
         LDAP_NUM_ATTEMPTS_BEFORE_FAILOVER_DEFAULT);
-
-    this.conf = conf;
   }
 
   /**
@@ -819,6 +845,77 @@ public class LdapGroupsMapping
       return password.toString().trim();
     } catch (IOException ioe) {
       throw new RuntimeException("Could not read password file: " + pwFile, ioe);
+    }
+  }
+
+  private void initializeBindUsers() {
+    List<BindUserInfo> bindUsersConfigured = new ArrayList<>();
+
+    String[] bindUserAliases = conf.getStrings(BIND_USERS_KEY);
+    if (bindUserAliases != null && bindUserAliases.length > 0) {
+
+      for (String bindUserAlias : bindUserAliases) {
+        String userConfPrefix = BIND_USERS_KEY + "." + bindUserAlias;
+        String bindUsername = conf.get(userConfPrefix + BIND_USER_SUFFIX);
+        String bindPassword = getPasswordForBindUser(userConfPrefix);
+
+        if (bindUsername == null || bindPassword == null) {
+          throw new RuntimeException("Bind username or password not " +
+              "configured for user: " + bindUserAlias);
+        }
+        bindUsersConfigured.add(new BindUserInfo(bindUsername, bindPassword));
+      }
+    } else {
+      String bindUsername = conf.get(BIND_USER_KEY, BIND_USER_DEFAULT);
+      String bindPassword = getPasswordForBindUser(LDAP_CONFIG_PREFIX);
+      bindUsersConfigured.add(new BindUserInfo(bindUsername, bindPassword));
+    }
+
+    this.bindUsers = Iterators.cycle(bindUsersConfigured);
+    this.currentBindUser = this.bindUsers.next();
+  }
+
+  private String getPasswordForBindUser(String keyPrefix) {
+    String password;
+    String alias = conf.get(keyPrefix + BIND_PASSWORD_ALIAS_SUFFIX,
+        BIND_PASSWORD_ALIAS_DEFAULT);
+    password = getPasswordFromCredentialProviders(conf, alias, "");
+    if (password.isEmpty()) {
+      password = getPassword(conf, keyPrefix + BIND_PASSWORD_SUFFIX,
+          BIND_PASSWORD_DEFAULT);
+      if (password.isEmpty()) {
+        password = extractPassword(conf.get(
+            keyPrefix + BIND_PASSWORD_FILE_SUFFIX, BIND_PASSWORD_FILE_DEFAULT));
+      }
+    }
+    return password;
+  }
+
+  private final static class BindUserInfo {
+    private final String username;
+    private final String password;
+
+    private BindUserInfo(String username, String password) {
+      this.username = username;
+      this.password = password;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (!(o instanceof BindUserInfo)) {
+        return false;
+      }
+      return this.username.equals(((BindUserInfo) o).username);
+    }
+
+    @Override
+    public int hashCode() {
+      return this.username.hashCode();
+    }
+
+    @Override
+    public String toString() {
+      return this.username;
     }
   }
 }
