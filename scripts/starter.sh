@@ -20,8 +20,6 @@ set -e
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-$DIR/envtoconf.py --destination /opt/hadoop/etc/hadoop
-
 if [ -n "$SLEEP_SECONDS" ]; then
    echo "Sleeping for $SLEEP_SECONDS seconds"
    sleep $SLEEP_SECONDS
@@ -34,7 +32,7 @@ fi
 #
 # export WAITFOR=localhost:9878
 #
-# With an optional parameter, you can also set the maximum 
+# With an optional parameter, you can also set the maximum
 # time of waiting with (in seconds) with WAITFOR_TIMEOUT.
 # (The default is 300 seconds / 5 minutes.)
 if [ ! -z "$WAITFOR" ]; then
@@ -58,83 +56,80 @@ if [ ! -z "$WAITFOR" ]; then
   fi
 fi
 
-
 if [ -n "$KERBEROS_ENABLED" ]; then
-	echo "Setting up kerberos!!"
-	KERBEROS_SERVER=${KERBEROS_SERVER:-krb5}
-	ISSUER_SERVER=${ISSUER_SERVER:-$KERBEROS_SERVER\:8081}
-	echo "KDC ISSUER_SERVER => $ISSUER_SERVER"
+  echo "Setting up kerberos!!"
+  KERBEROS_SERVER=${KERBEROS_SERVER:-krb5}
+  ISSUER_SERVER=${ISSUER_SERVER:-$KERBEROS_SERVER\:8081}
+  echo "KDC ISSUER_SERVER => $ISSUER_SERVER"
 
-	while true
-	do
-	  STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://$ISSUER_SERVER/keytab/test/test)
-	  if [ $STATUS -eq 200 ]; then
-		echo "Got 200, KDC service ready!!"
-		break
-	  else
-		echo "Got $STATUS :( KDC service not ready yet..."
-	  fi
-	  sleep 5
-	done
+  if [ -n "$SLEEP_SECONDS" ]; then
+    echo "Sleeping for $(SLEEP_SECONDS) seconds"
+    sleep "$SLEEP_SECONDS"
+  fi
 
-	export HOST_NAME=`hostname -f`
-	for NAME in ${KERBEROS_KEYTABS}; do
-	   echo "Download $NAME/$HOSTNAME@EXAMPLE.COM keytab file to $CONF_DIR/$NAME.keytab"
-	   wget http://$ISSUER_SERVER/keytab/$HOST_NAME/$NAME -O $CONF_DIR/$NAME.keytab
-	   KERBEROS_ENABLED=true
-	done
+  if [ -z "$KEYTAB_DIR"]; then
+    KEYTAB_DIR=/etc/security/keytabs
+  fi
+  while true
+    do
+      set +e
+      STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://"$ISSUER_SERVER"/keytab/test/test)
+      set -e
+      if [ "$STATUS" -eq 200 ]; then
+        echo "Got 200, KDC service ready!!"
+        break
+      else
+        echo "Got $STATUS :( KDC service not ready yet..."
+      fi
+      sleep 5
+    done
 
-	cat $DIR/krb5.conf |  sed "s/SERVER/$KERBEROS_SERVER/g" | sudo tee /etc/krb5.conf
+    HOST_NAME=$(hostname -f)
+    export HOST_NAME
+    for NAME in ${KERBEROS_KEYTABS}; do
+      echo "Download $NAME/$HOSTNAME@EXAMPLE.COM keytab file to $KEYTAB_DIR/$NAME.keytab"
+      wget "http://$ISSUER_SERVER/keytab/$HOST_NAME/$NAME" -O "$KEYTAB_DIR/$NAME.keytab"
+      klist -kt "$KEYTAB_DIR/$NAME.keytab"
+      KERBEROS_ENABLED=true
+    done
+
+    sed "s/SERVER/$KERBEROS_SERVER/g" "$DIR"/krb5.conf | sudo tee /etc/krb5.conf
 fi
 
 #To avoid docker volume permission problems
 sudo chmod o+rwx /data
 
+"$DIR"/envtoconf.py --destination /opt/hadoop/etc/hadoop
+
 if [ -n "$ENSURE_NAMENODE_DIR" ]; then
-   CLUSTERID_OPTS=""
-   if [ -n "$ENSURE_NAMENODE_CLUSTERID" ]; then
-      CLUSTERID_OPTS="-clusterid $ENSURE_NAMENODE_CLUSTERID"
-   fi
-   if [ ! -d "$ENSURE_NAMENODE_DIR" ]; then
-      /opt/hadoop/bin/hdfs namenode -format -force $CLUSTERID_OPTS
-        fi
+  CLUSTERID_OPTS=""
+  if [ -n "$ENSURE_NAMENODE_CLUSTERID" ]; then
+    CLUSTERID_OPTS="-clusterid $ENSURE_NAMENODE_CLUSTERID"
+  fi
+  if [ ! -d "$ENSURE_NAMENODE_DIR" ]; then
+    /opt/hadoop/bin/hdfs namenode -format -force "$CLUSTERID_OPTS"
+  fi
 fi
 
 if [ -n "$ENSURE_STANDBY_NAMENODE_DIR" ]; then
-   if [ ! -d "$ENSURE_STANDBY_NAMENODE_DIR" ]; then
-      /opt/hadoop/bin/hdfs namenode -bootstrapStandby
-    fi
+  if [ ! -d "$ENSURE_STANDBY_NAMENODE_DIR" ]; then
+    /opt/hadoop/bin/hdfs namenode -bootstrapStandby
+  fi
 fi
 
 if [ -n "$ENSURE_SCM_INITIALIZED" ]; then
-   if [ ! -f "$ENSURE_SCM_INITIALIZED" ]; then
-      # Improve om and scm start up options
-      /opt/hadoop/bin/ozone scm --init || /opt/hadoop/bin/ozone scm -init
-   fi
+  if [ ! -f "$ENSURE_SCM_INITIALIZED" ]; then
+    # Improve om and scm start up options
+    /opt/hadoop/bin/ozone scm --init || /opt/hadoop/bin/ozone scm -init
+  fi
 fi
-
 
 if [ -n "$ENSURE_OM_INITIALIZED" ]; then
-   if [ ! -f "$ENSURE_OM_INITIALIZED" ]; then
-      # Improve om and scm start up options
-      /opt/hadoop/bin/ozone om --init || /opt/hadoop/bin/ozone om -createObjectStore
-   fi
+  if [ ! -f "$ENSURE_OM_INITIALIZED" ]; then
+    # Improve om and scm start up options
+    /opt/hadoop/bin/ozone om --init ||  /opt/hadoop/bin/ozone om -createObjectStore
+  fi
 fi
-
-
-# The KSM initialization block will go away eventually once
-# we have completed renaming KSM to OzoneManager (OM).
-#
-if [ -n "$ENSURE_KSM_INITIALIZED" ]; then
-   if [ ! -f "$ENSURE_KSM_INITIALIZED" ]; then
-      # To make sure SCM is running in dockerized environment we will sleep
-      # Could be removed after HDFS-13203
-      echo "Waiting 15 seconds for SCM startup"
-      sleep 15
-      /opt/hadoop/bin/ozone ksm -createObjectStore
-   fi
-fi
-
 
 # Supports byteman script to instrument hadoop process with byteman script
 #
@@ -158,5 +153,4 @@ if [ -n "$BYTEMAN_SCRIPT" ] || [ -n "$BYTEMAN_SCRIPT_URL" ]; then
   echo "Process is instrumented with adding $AGENT_STRING to HADOOP_OPTS"
 fi
 
-
-$@
+"$@"

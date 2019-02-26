@@ -34,6 +34,8 @@ RUN useradd --uid 1000 hadoop --gid 100 --home /opt/hadoop
 RUN echo "hadoop ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 RUN chown hadoop /opt
 ADD scripts /opt/
+ADD scripts/krb5.conf /etc/
+RUN yum install -y krb5-workstation
 
 WORKDIR /opt/hadoop
 

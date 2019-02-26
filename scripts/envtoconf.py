@@ -16,89 +16,100 @@
 # limitations under the License.
 #
 
+"""convert environment variables to config"""
+
 import os
 import re
-from shutil import copyfile
 
 import argparse
 
 import sys
 import transformation
 
+class Simple(object):
+  """Simple conversion"""
+  def __init__(self, args):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--destination", help="Destination directory", required=True)
+    self.args = parser.parse_args(args=args)
+    # copy the default files to file.raw in destination directory
 
-class Simple:
-    def __init__(self, args):
-        parser = argparse.ArgumentParser()
-        parser.add_argument("--destination", help="Destination directory", required=True)
-        self.args = parser.parse_args(args=args)
-        # copy the default files to file.raw in desitnation directory
+    self.known_formats = ['xml', 'properties', 'yaml', 'yml', 'env', "sh", "cfg", 'conf']
+    self.output_dir = self.args.destination
 
-        self.known_formats = ['xml', 'properties', 'yaml', 'yml', 'env', "sh", "cfg", 'conf']
-        self.output_dir = self.args.destination
+    self.configurables = {}
 
-        self.configurables = {}
+  def destination_file_path(self, name, extension):
+    """destination file path"""
+    return os.path.join(self.output_dir, "{}.{}".format(name, extension))
 
-    def destination_file_path(self, name, extension):
-        return os.path.join(self.output_dir, "{}.{}".format(name, extension))
+  def write_env_var(self, name, extension, key, value):
+    """Write environment variables"""
+    with open(self.destination_file_path(name, extension) + ".raw", "a") as myfile:
+      myfile.write("{}: {}\n".format(key, value))
 
-    def write_env_var(self, name, extension, key, value):
-        with open(self.destination_file_path(name, extension) + ".raw", "a") as myfile:
-            myfile.write("{}: {}\n".format(key, value))
+  def process_envs(self):
+    """Process environment variables"""
+    for key in os.environ.keys():
+      pattern = re.compile("[_\\.]")
+      parts = pattern.split(key)
+      extension = None
+      name = parts[0].lower()
+      if len(parts) > 1:
+        extension = parts[1].lower()
+        config_key = key[len(name) + len(extension) + 2:].strip()
+      if extension and "!" in extension:
+        splitted = extension.split("!")
+        extension = splitted[0]
+        fmt = splitted[1]
+        config_key = key[len(name) + len(extension) + len(fmt) + 3:].strip()
+      else:
+        fmt = extension
 
-    def process_envs(self):
-        for key in os.environ.keys():
-            p = re.compile("[_\\.]")
-            parts = p.split(key)
-            extension = None
-            name = parts[0].lower()
-            if len(parts) > 1:
-                extension = parts[1].lower()
-                config_key = key[len(name) + len(extension) + 2:].strip()
-            if extension and "!" in extension:
-                splitted = extension.split("!")
-                extension = splitted[0]
-                format = splitted[1]
-                config_key = key[len(name) + len(extension) + len(format) + 3:].strip()
-            else:
-                format = extension
+      if extension and extension in self.known_formats:
+        if name not in self.configurables.keys():
+          with open(self.destination_file_path(name, extension) + ".raw", "w") as myfile:
+            myfile.write("")
+        self.configurables[name] = (extension, fmt)
+        self.write_env_var(name, extension, config_key, os.environ[key])
+      else:
+        for configurable_name in self.configurables:
+          if key.lower().startswith(configurable_name.lower()):
+            self.write_env_var(configurable_name,
+                               self.configurables[configurable_name],
+                               key[len(configurable_name) + 1:],
+                               os.environ[key])
 
-            if extension and extension in self.known_formats:
-                if name not in self.configurables.keys():
-                    with open(self.destination_file_path(name, extension) + ".raw", "w") as myfile:
-                        myfile.write("")
-                self.configurables[name] = (extension, format)
-                self.write_env_var(name, extension, config_key, os.environ[key])
-            else:
-                for configurable_name in self.configurables.keys():
-                    if key.lower().startswith(configurable_name.lower()):
-                        self.write_env_var(configurable_name, self.configurables[configurable_name], key[len(configurable_name) + 1:], os.environ[key])
+  def transform(self):
+    """transform"""
+    for configurable_name in self.configurables:
+      name = configurable_name
+      extension, fmt = self.configurables[name]
 
-    def transform(self):
-        for configurable_name in self.configurables.keys():
-            name = configurable_name
-            extension, format = self.configurables[name]
+      destination_path = self.destination_file_path(name, extension)
 
-            destination_path = self.destination_file_path(name, extension)
+      with open(destination_path + ".raw", "r") as myfile:
+        content = myfile.read()
+        transformer_func = getattr(transformation, "to_" + fmt)
+        content = transformer_func(content)
+        with open(destination_path, "w") as myfile:
+          myfile.write(content)
 
-            with open(destination_path + ".raw", "r") as myfile:
-                content = myfile.read()
-                transformer_func = getattr(transformation, "to_" + format)
-                content = transformer_func(content)
-                with open(destination_path, "w") as myfile:
-                    myfile.write(content)
+  def main(self):
+    """main"""
 
-    def main(self):
+    # add the
+    self.process_envs()
 
-        # add the
-        self.process_envs()
-
-        # copy file.ext.raw to file.ext in the destination directory, and transform to the right format (eg. key: value ===> XML)
-        self.transform()
+    # copy file.ext.raw to file.ext in the destination directory, and
+    # transform to the right format (eg. key: value ===> XML)
+    self.transform()
 
 
 def main():
-    Simple(sys.argv[1:]).main()
+  """main"""
+  Simple(sys.argv[1:]).main()
 
 
 if __name__ == '__main__':
-    Simple(sys.argv[1:]).main()
+  Simple(sys.argv[1:]).main()
