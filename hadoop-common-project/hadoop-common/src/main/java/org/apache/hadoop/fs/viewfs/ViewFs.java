@@ -162,9 +162,9 @@ public class ViewFs extends AbstractFileSystem {
 
   static AccessControlException readOnlyMountTable(final String operation,
       final String p) {
-    return new AccessControlException( 
-        "InternalDir of ViewFileSystem is readonly; operation=" + operation + 
-        "Path=" + p);
+    return new AccessControlException(
+        "InternalDir of ViewFileSystem is readonly, operation " + operation +
+            " not permitted on path " + p + ".");
   }
   static AccessControlException readOnlyMountTable(final String operation,
       final Path p) {
