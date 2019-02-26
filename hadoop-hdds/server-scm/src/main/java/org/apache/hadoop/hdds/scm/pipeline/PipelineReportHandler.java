@@ -20,11 +20,14 @@ package org.apache.hadoop.hdds.scm.pipeline;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineReport;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.scm.chillmode.SCMChillModeManager;
+import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.server
     .SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventHandler;
@@ -33,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Objects;
 
 /**
  * Handles Pipeline Reports from datanode.
@@ -44,12 +48,21 @@ public class PipelineReportHandler implements
       .getLogger(PipelineReportHandler.class);
   private final PipelineManager pipelineManager;
   private final Configuration conf;
+  private final SCMChillModeManager scmChillModeManager;
+  private final boolean pipelineAvailabilityCheck;
 
-  public PipelineReportHandler(PipelineManager pipelineManager,
+  public PipelineReportHandler(SCMChillModeManager scmChillModeManager,
+      PipelineManager pipelineManager,
       Configuration conf) {
     Preconditions.checkNotNull(pipelineManager);
+    Objects.requireNonNull(scmChillModeManager);
+    this.scmChillModeManager = scmChillModeManager;
     this.pipelineManager = pipelineManager;
     this.conf = conf;
+    this.pipelineAvailabilityCheck = conf.getBoolean(
+        HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK,
+        HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK_DEFAULT);
+
   }
 
   @Override
@@ -70,6 +83,11 @@ public class PipelineReportHandler implements
             report, dn, e);
       }
     }
+    if (pipelineAvailabilityCheck && scmChillModeManager.getInChillMode()) {
+      publisher.fireEvent(SCMEvents.PROCESSED_PIPELINE_REPORT,
+          pipelineReportFromDatanode);
+    }
+
   }
 
   private void processPipelineReport(PipelineReport report, DatanodeDetails dn)
