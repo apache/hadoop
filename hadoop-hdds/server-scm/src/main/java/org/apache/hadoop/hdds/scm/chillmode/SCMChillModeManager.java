@@ -60,7 +60,8 @@ public class SCMChillModeManager implements
   private Configuration config;
   private static final String CONT_EXIT_RULE = "ContainerChillModeRule";
   private static final String DN_EXIT_RULE = "DataNodeChillModeRule";
-  private static final String PIPELINE_EXIT_RULE = "PipelineChillModeRule";
+  private static final String HEALTHY_PIPELINE_EXIT_RULE =
+      "HealthyPipelineChillModeRule";
 
   private final EventQueue eventPublisher;
   private final PipelineManager pipelineManager;
@@ -83,9 +84,9 @@ public class SCMChillModeManager implements
           HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK,
           HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK_DEFAULT)
           && pipelineManager != null) {
-        PipelineChillModeRule rule = new PipelineChillModeRule(pipelineManager,
-            this);
-        exitRules.put(PIPELINE_EXIT_RULE, rule);
+        HealthyPipelineChillModeRule rule = new HealthyPipelineChillModeRule(
+            pipelineManager, this, config);
+        exitRules.put(HEALTHY_PIPELINE_EXIT_RULE, rule);
         eventPublisher.addHandler(SCMEvents.PIPELINE_REPORT, rule);
       }
       emitChillModeStatus();
@@ -170,6 +171,12 @@ public class SCMChillModeManager implements
   public double getCurrentContainerThreshold() {
     return ((ContainerChillModeRule) exitRules.get(CONT_EXIT_RULE))
         .getCurrentContainerThreshold();
+  }
+
+  @VisibleForTesting
+  public HealthyPipelineChillModeRule getHealthyPipelineChillModeRule() {
+    return (HealthyPipelineChillModeRule)
+        exitRules.get(HEALTHY_PIPELINE_EXIT_RULE);
   }
 
 }

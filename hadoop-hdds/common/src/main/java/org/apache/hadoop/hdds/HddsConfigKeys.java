@@ -80,6 +80,15 @@ public final class HddsConfigKeys {
   public static final String HDDS_SCM_CHILLMODE_THRESHOLD_PCT =
       "hdds.scm.chillmode.threshold.pct";
   public static final double HDDS_SCM_CHILLMODE_THRESHOLD_PCT_DEFAULT = 0.99;
+
+
+  // percentage of healthy pipelines, where all 3 datanodes are reported in the
+  // pipeline.
+  public static final String HDDS_SCM_CHILLMODE_HEALTHY_PIPELINE_THRESHOLD_PCT =
+      "hdds.scm.chillmode.healthy.pipelie.pct";
+  public static final double
+      HDDS_SCM_CHILLMODE_HEALTHY_PIPELINE_THRESHOLD_PCT_DEFAULT = 0.10;
+
   public static final String HDDS_LOCK_MAX_CONCURRENCY =
       "hdds.lock.max.concurrency";
   public static final int HDDS_LOCK_MAX_CONCURRENCY_DEFAULT = 100;
