@@ -103,6 +103,10 @@ public final class SCMEvents {
   public static final TypedEvent<PipelineReportFromDatanode> PIPELINE_REPORT =
           new TypedEvent<>(PipelineReportFromDatanode.class, "Pipeline_Report");
 
+  public static final TypedEvent<PipelineReportFromDatanode>
+      PROCESSED_PIPELINE_REPORT = new TypedEvent<>(
+          PipelineReportFromDatanode.class, "Processed_Pipeline_Report");
+
   /**
    * PipelineActions are sent by Datanode. This event is received by
    * SCMDatanodeHeartbeatDispatcher and PIPELINE_ACTIONS event is generated.

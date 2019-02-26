@@ -87,7 +87,7 @@ public class SCMChillModeManager implements
         HealthyPipelineChillModeRule rule = new HealthyPipelineChillModeRule(
             pipelineManager, this, config);
         exitRules.put(HEALTHY_PIPELINE_EXIT_RULE, rule);
-        eventPublisher.addHandler(SCMEvents.PIPELINE_REPORT, rule);
+        eventPublisher.addHandler(SCMEvents.PROCESSED_PIPELINE_REPORT, rule);
       }
       emitChillModeStatus();
     } else {

@@ -144,7 +144,7 @@ public class TestHealthyPipelineChillModeRule {
 
     // Here no need to fire event from 3 nodes, as already pipeline is in
     // open state, but doing it.
-    eventQueue.fireEvent(SCMEvents.PIPELINE_REPORT,
+    eventQueue.fireEvent(SCMEvents.PROCESSED_PIPELINE_REPORT,
         new SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode(
             pipeline.getNodes().get(0), reportBuilder.build()));
   }
