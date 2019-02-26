@@ -1316,6 +1316,16 @@
   </property>
 
   <property>
+    <name>hdds.scm.chillmode.healthy.pipelie.pct</name>
+    <value>0.10</value>
+    <tag>HDDS,SCM,OPERATION</tag>
+    <description>
+      Percentage of healthy pipelines, where all 3 datanodes are reported in the
+      pipeline.
+    </description>
+  </property>
+
+  <property>
     <name>hdds.container.action.max.limit</name>
     <value>20</value>
     <tag>DATANODE</tag>

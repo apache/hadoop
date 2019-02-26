@@ -103,6 +103,10 @@ public final class SCMEvents {
   public static final TypedEvent<PipelineReportFromDatanode> PIPELINE_REPORT =
           new TypedEvent<>(PipelineReportFromDatanode.class, "Pipeline_Report");
 
+  /**
+   * PipelineReport processed by pipeline report handler. This event is
+   * received by HealthyPipelineChillModeRule.
+   */
   public static final TypedEvent<PipelineReportFromDatanode>
       PROCESSED_PIPELINE_REPORT = new TypedEvent<>(
           PipelineReportFromDatanode.class, "Processed_Pipeline_Report");
