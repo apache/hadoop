@@ -122,8 +122,9 @@ public class DeviceResourceHandlerImpl implements ResourceHandler {
     }
     // Add device set. Here we trust the plugin's return value
     deviceMappingManager.addDeviceSet(resourceName, availableDevices);
-    // TODO: Init cgroups
-
+    // Init cgroups
+    this.cGroupsHandler.initializeCGroupController(
+        CGroupsHandler.CGroupController.DEVICES);
     return null;
   }
 
