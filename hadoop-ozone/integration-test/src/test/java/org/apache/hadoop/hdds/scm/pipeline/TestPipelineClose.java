@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReport;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
+import org.apache.hadoop.hdds.scm.chillmode.SCMChillModeManager;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
@@ -40,6 +41,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -192,11 +194,15 @@ public class TestPipelineClose {
     for (DatanodeDetails dn : pipeline.getNodes()) {
       PipelineReportFromDatanode pipelineReport =
           TestUtils.getPipelineReportFromDatanode(dn, pipeline.getId());
+      EventQueue eventQueue = new EventQueue();
+      SCMChillModeManager scmChillModeManager =
+          new SCMChillModeManager(new OzoneConfiguration(),
+              new ArrayList<>(), pipelineManager, eventQueue);
       PipelineReportHandler pipelineReportHandler =
-          new PipelineReportHandler(pipelineManager, conf);
+          new PipelineReportHandler(scmChillModeManager, pipelineManager, conf);
       // on receiving pipeline report for the pipeline, pipeline report handler
       // should destroy the pipeline for the dn
-      pipelineReportHandler.onMessage(pipelineReport, new EventQueue());
+      pipelineReportHandler.onMessage(pipelineReport, eventQueue);
     }
 
     OzoneContainer ozoneContainer =
