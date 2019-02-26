@@ -55,16 +55,20 @@ public class RouterWebHDFSContract extends HDFSContract {
   }
 
   public static void createCluster() throws IOException {
+    createCluster(new HdfsConfiguration());
+  }
+
+  public static void createCluster(Configuration conf) throws IOException {
     try {
-      HdfsConfiguration conf = new HdfsConfiguration();
       conf.addResource(CONTRACT_HDFS_XML);
       conf.addResource(CONTRACT_WEBHDFS_XML);
 
-      cluster = new MiniRouterDFSCluster(true, 2);
+      cluster = new MiniRouterDFSCluster(true, 2, conf);
 
       // Start NNs and DNs and wait until ready
-      cluster.startCluster();
+      cluster.startCluster(conf);
 
+      cluster.addRouterOverrides(conf);
       // Start routers with only an RPC service
       cluster.startRouters();
 
@@ -85,7 +89,7 @@ public class RouterWebHDFSContract extends HDFSContract {
       cluster.waitActiveNamespaces();
     } catch (Exception e) {
       cluster = null;
-      throw new IOException("Cannot start federated cluster", e);
+      throw new IOException(e.getCause());
     }
   }
 
