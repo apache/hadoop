@@ -2028,6 +2028,7 @@
       client ozone manager protocol.
     </description>
   </property>
+
   <property>
     <name>hdds.datanode.http.kerberos.principal</name>
     <value>HTTP/_HOST@EXAMPLE.COM</value>
