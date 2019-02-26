@@ -1963,5 +1963,50 @@
        Keytab used by Freon.
     </description>
   </property>
+  <property>
+    <name>hdds.security.client.datanode.container.protocol.acl</name>
+    <value>*</value>
+    <tag>SECURITY</tag>
+    <description>
+      Comma separated list of users and groups allowed to access
+      client datanode container protocol.
+    </description>
+  </property>
+  <property>
+    <name>hdds.security.client.scm.block.protocol.acl</name>
+    <value>*</value>
+    <tag>SECURITY</tag>
+    <description>
+      Comma separated list of users and groups allowed to access
+      client scm block protocol.
+    </description>
+  </property>
+  <property>
+    <name>hdds.security.client.scm.certificate.protocol.acl</name>
+    <value>*</value>
+    <tag>SECURITY</tag>
+    <description>
+      Comma separated list of users and groups allowed to access
+      client scm certificate protocol.
+    </description>
+  </property>
+  <property>
+    <name>hdds.security.client.scm.container.protocol.acl</name>
+    <value>*</value>
+    <tag>SECURITY</tag>
+    <description>
+      Comma separated list of users and groups allowed to access
+      client scm container protocol.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.security.client.protocol.acl</name>
+    <value>*</value>
+    <tag>SECURITY</tag>
+    <description>
+      Comma separated list of users and groups allowed to access
+      client ozone manager protocol.
+    </description>
+  </property>
 
 </configuration>

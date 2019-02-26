@@ -23,6 +23,7 @@ package org.apache.hadoop.hdds.scm.server;
 
 import com.google.common.collect.Maps;
 import com.google.protobuf.BlockingService;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos;
@@ -117,7 +118,10 @@ public class SCMBlockProtocolServer implements
         updateRPCListenAddress(
             conf, OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY, scmBlockAddress,
             blockRpcServer);
-
+    if (conf.getBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
+        false)) {
+      blockRpcServer.refreshServiceAcl(conf, SCMPolicyProvider.getInstance());
+    }
   }
 
   public RPC.Server getBlockRpcServer() {

@@ -56,6 +56,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <version>2.2.0</version>
       <scope>test</scope>
     </dependency>
+      <dependency>
+          <groupId>com.google.code.findbugs</groupId>
+          <artifactId>findbugs</artifactId>
+          <version>3.0.1</version>
+          <scope>compile</scope>
+      </dependency>
 
   </dependencies>
   <build>

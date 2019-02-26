@@ -31,6 +31,12 @@ import org.apache.hadoop.security.KerberosInfo;
 @InterfaceAudience.Private
 public interface SCMSecurityProtocol {
 
+  @SuppressWarnings("checkstyle:ConstantName")
+  /**
+   * Version 1: Initial version.
+   */
+  long versionID = 1L;
+
   /**
    * Get SCM signed certificate for DataNode.
    *

@@ -70,7 +70,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class TestCloseContainerHandlingByClient {
 
   private static MiniOzoneCluster cluster;
-  private static OzoneConfiguration conf;
+  private static OzoneConfiguration conf = new OzoneConfiguration();
   private static OzoneClient client;
   private static ObjectStore objectStore;
   private static int chunkSize;
@@ -88,7 +88,6 @@ public class TestCloseContainerHandlingByClient {
    */
   @BeforeClass
   public static void init() throws Exception {
-    conf = new OzoneConfiguration();
     chunkSize = (int) OzoneConsts.MB;
     blockSize = 4 * chunkSize;
     conf.set(OzoneConfigKeys.OZONE_CLIENT_WATCH_REQUEST_TIMEOUT, "5000ms");

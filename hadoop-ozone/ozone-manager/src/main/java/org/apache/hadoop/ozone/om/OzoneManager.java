@@ -30,6 +30,7 @@ import java.util.Objects;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
@@ -263,20 +264,19 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     // Load HA related configurations
     loadOMHAConfigs(configuration);
 
-    if (!testSecureOmFlag || !isOzoneSecurityEnabled()) {
-      scmContainerClient = getScmContainerClient(configuration);
-      // verifies that the SCM info in the OM Version file is correct.
-      scmBlockClient = getScmBlockClient(configuration);
+    scmContainerClient = getScmContainerClient(configuration);
+    // verifies that the SCM info in the OM Version file is correct.
+    scmBlockClient = getScmBlockClient(configuration);
+
+    // For testing purpose only, not hit scm from om as Hadoop UGI can't login
+    // two principals in the same JVM.
+    if (!testSecureOmFlag) {
       ScmInfo scmInfo = scmBlockClient.getScmInfo();
       if (!(scmInfo.getClusterId().equals(omStorage.getClusterID()) && scmInfo
           .getScmId().equals(omStorage.getScmId()))) {
         throw new OMException("SCM version info mismatch.",
             ResultCodes.SCM_VERSION_MISMATCH_ERROR);
       }
-    } else {
-      // For testing purpose only
-      scmContainerClient = null;
-      scmBlockClient = null;
     }
 
     RPC.setProtocolEngine(configuration, OzoneManagerProtocolPB.class,
@@ -778,6 +778,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         .build();
 
     DFSUtil.addPBProtocol(conf, protocol, instance, rpcServer);
+
+    if (conf.getBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
+        false)) {
+      rpcServer.refreshServiceAcl(conf, OMPolicyProvider.getInstance());
+    }
     return rpcServer;
   }
 

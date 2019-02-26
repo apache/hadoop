@@ -210,4 +210,10 @@ public final class OMConfigKeys {
   public static final long OZONE_DB_CHECKPOINT_TRANSFER_RATE_DEFAULT =
       0;  //no throttling
 
+  // Comma separated acls (users, groups) allowing clients accessing
+  // OM client protocol
+  // when hadoop.security.authorization is true, this needs to be set in
+  // hadoop-policy.xml, "*" allows all users/groups to access.
+  public static final String OZONE_OM_SECURITY_CLIENT_PROTOCOL_ACL =
+      "ozone.om.security.client.protocol.acl";
 }
