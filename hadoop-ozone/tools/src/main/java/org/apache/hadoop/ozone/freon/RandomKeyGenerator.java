@@ -215,7 +215,9 @@ public final class RandomKeyGenerator implements Callable<Void> {
     for (FreonOps ops : FreonOps.values()) {
       histograms.add(ops.ordinal(), new Histogram(new UniformReservoir()));
     }
-    freon.startHttpServer();
+    if (freon != null) {
+      freon.startHttpServer();
+    }
   }
 
   @Override
@@ -296,7 +298,9 @@ public final class RandomKeyGenerator implements Callable<Void> {
     Runtime.getRuntime().addShutdownHook(
         new Thread(() -> {
           printStats(System.out);
-          freon.stopHttpServer();
+          if (freon != null) {
+            freon.stopHttpServer();
+          }
         }));
   }
   /**
