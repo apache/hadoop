@@ -30,7 +30,7 @@ import org.apache.hadoop.security.KerberosInfo;
  * Protocol Buffers service interface to add Hadoop-specific annotations.
  */
 @ProtocolInfo(protocolName =
-    "org.apache.hadoop.ozone.protocol.StorageContainerLocationProtocol",
+    "org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol",
     protocolVersion = 1)
 @KerberosInfo(
     serverPrincipal = ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY)

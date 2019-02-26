@@ -25,6 +25,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.protobuf.BlockingService;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -179,6 +180,11 @@ public class SCMDatanodeProtocolServer implements
             conf, OZONE_SCM_DATANODE_ADDRESS_KEY, datanodeRpcAddr,
             datanodeRpcServer);
 
+    if (conf.getBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
+        false)) {
+      datanodeRpcServer.refreshServiceAcl(conf,
+          SCMPolicyProvider.getInstance());
+    }
   }
 
   public void start() {

@@ -47,6 +47,13 @@ import org.apache.hadoop.security.KerberosInfo;
     serverPrincipal = ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY)
 @InterfaceAudience.Private
 public interface StorageContainerDatanodeProtocol {
+
+  @SuppressWarnings("checkstyle:ConstantName")
+  /**
+   * Version 1: Initial version.
+   */
+  long versionID = 1L;
+
   /**
    * Returns SCM version.
    * @return Version info.

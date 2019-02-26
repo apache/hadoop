@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.OzoneManagerDetailsProto;
@@ -86,6 +87,10 @@ public class SCMSecurityProtocolServer implements SCMSecurityProtocol {
             SCMSecurityProtocolPB.class,
             secureProtoPbService,
             handlerCount);
+    if (conf.getBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
+        false)) {
+      rpcServer.refreshServiceAcl(conf, SCMPolicyProvider.getInstance());
+    }
   }
 
   /**

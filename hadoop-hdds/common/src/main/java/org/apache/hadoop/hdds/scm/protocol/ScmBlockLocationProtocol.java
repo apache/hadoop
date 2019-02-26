@@ -37,6 +37,12 @@ import java.util.List;
 @KerberosInfo(serverPrincipal = ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY)
 public interface ScmBlockLocationProtocol extends Closeable {
 
+  @SuppressWarnings("checkstyle:ConstantName")
+  /**
+   * Version 1: Initial version.
+   */
+  long versionID = 1L;
+
   /**
    * Asks SCM where a block should be allocated. SCM responds with the
    * set of datanodes that should be used creating this block.

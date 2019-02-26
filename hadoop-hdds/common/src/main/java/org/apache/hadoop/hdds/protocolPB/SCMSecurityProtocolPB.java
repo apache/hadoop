@@ -26,7 +26,7 @@ import org.apache.hadoop.security.KerberosInfo;
  */
 
 @ProtocolInfo(protocolName =
-    "org.apache.hadoop.ozone.protocol.SCMSecurityProtocol",
+    "org.apache.hadoop.hdds.protocol.SCMSecurityProtocol",
     protocolVersion = 1)
 @KerberosInfo(serverPrincipal = ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY)
 public interface SCMSecurityProtocolPB extends

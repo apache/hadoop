@@ -47,6 +47,12 @@ import org.apache.hadoop.security.KerberosInfo;
 public interface OzoneManagerProtocol
     extends OzoneManagerSecurityProtocol, Closeable {
 
+  @SuppressWarnings("checkstyle:ConstantName")
+  /**
+   * Version 1: Initial version.
+   */
+  long versionID = 1L;
+
   /**
    * Creates a volume.
    * @param args - Arguments to create Volume.

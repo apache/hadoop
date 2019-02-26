@@ -183,4 +183,34 @@ public final class HddsConfigKeys {
   public static final String HDDS_GRPC_TLS_TEST_CERT = "hdds.grpc.tls" +
       ".test_cert";
   public static final boolean HDDS_GRPC_TLS_TEST_CERT_DEFAULT = false;
+
+  // Comma separated acls (users, groups) allowing clients accessing
+  // datanode container protocol
+  // when hadoop.security.authorization is true, this needs to be set in
+  // hadoop-policy.xml, "*" allows all users/groups to access.
+  public static final String
+      HDDS_SECURITY_CLIENT_DATANODE_CONTAINER_PROTOCOL_ACL =
+      "hdds.security.client.datanode.container.protocol.acl";
+
+  // Comma separated acls (users, groups) allowing clients accessing
+  // scm container protocol
+  // when hadoop.security.authorization is true, this needs to be set in
+  // hadoop-policy.xml, "*" allows all users/groups to access.
+  public static final String HDDS_SECURITY_CLIENT_SCM_CONTAINER_PROTOCOL_ACL =
+      "hdds.security.client.scm.container.protocol.acl";
+
+  // Comma separated acls (users, groups) allowing clients accessing
+  // scm block protocol
+  // when hadoop.security.authorization is true, this needs to be set in
+  // hadoop-policy.xml, "*" allows all users/groups to access.
+  public static final String HDDS_SECURITY_CLIENT_SCM_BLOCK_PROTOCOL_ACL =
+      "hdds.security.client.scm.block.protocol.acl";
+
+  // Comma separated acls (users, groups) allowing clients accessing
+  // scm certificate protocol
+  // when hadoop.security.authorization is true, this needs to be set in
+  // hadoop-policy.xml, "*" allows all users/groups to access.
+  public static final String HDDS_SECURITY_CLIENT_SCM_CERTIFICATE_PROTOCOL_ACL =
+      "hdds.security.client.scm.certificate.protocol.acl";
+
 }

@@ -45,6 +45,13 @@ CORE-SITE.XML_hadoop.security.authentication=kerberos
 CORE-SITE.XML_hadoop.security.auth_to_local=RULE:[2:$1@$0](.*)s/.*/root/
 CORE-SITE.XML_hadoop.security.key.provider.path=kms://http@kms:9600/kms
 
+CORE-SITE.XML_hadoop.security.authorization=true
+HADOOP-POLICY.XML_ozone.om.security.client.protocol.acl=*
+HADOOP-POLICY.XML_hdds.security.client.datanode.container.protocol.acl=*
+HADOOP-POLICY.XML_hdds.security.client.scm.container.protocol.acl=*
+HADOOP-POLICY.XML_hdds.security.client.scm.block.protocol.acl=*
+HADOOP-POLICY.XML_hdds.security.client.scm.certificate.protocol.acl=*
+
 HDFS-SITE.XML_rpc.metrics.quantile.enable=true
 HDFS-SITE.XML_rpc.metrics.percentiles.intervals=60,300
 LOG4J.PROPERTIES_log4j.rootLogger=INFO, stdout

@@ -30,7 +30,7 @@ import org.apache.hadoop.ozone.security.OzoneDelegationTokenSelector;
  * Protocol used to communicate with OM.
  */
 @ProtocolInfo(protocolName =
-    "org.apache.hadoop.ozone.protocol.OzoneManagerProtocol",
+    "org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol",
     protocolVersion = 1)
 @KerberosInfo(
     serverPrincipal = OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY)
