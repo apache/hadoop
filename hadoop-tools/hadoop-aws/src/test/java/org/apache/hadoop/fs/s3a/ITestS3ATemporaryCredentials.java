@@ -40,9 +40,9 @@ import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.STSClientFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.auth.delegation.SessionTokenIdentifier;
-import org.apache.hadoop.fs.s3a.commit.DurationInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;

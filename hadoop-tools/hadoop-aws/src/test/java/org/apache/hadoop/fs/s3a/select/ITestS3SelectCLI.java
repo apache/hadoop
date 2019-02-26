@@ -34,9 +34,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
-import org.apache.hadoop.fs.s3a.commit.Duration;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.OperationDuration;
 import org.apache.hadoop.util.ToolRunner;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -165,7 +165,7 @@ public class ITestS3SelectCLI extends AbstractS3SelectTest {
     LOG.info("Result from select:\n{}", lines.get(0));
     assertEquals(lineCount, lines.size());
     selectCount.assertDiffEquals("select count", 1);
-    Duration duration = selectTool.getSelectDuration();
+    OperationDuration duration = selectTool.getSelectDuration();
     assertTrue("Select duration was not measured",
         duration.value() > 0);
   }

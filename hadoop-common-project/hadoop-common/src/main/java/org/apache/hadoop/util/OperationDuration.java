@@ -16,17 +16,22 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.commit;
+package org.apache.hadoop.util;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Little duration counter.
  */
-public class Duration {
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+public class OperationDuration {
 
   private final long started;
   private long finished;
 
-  public Duration() {
+  public OperationDuration() {
     started = time();
     finished = started;
   }

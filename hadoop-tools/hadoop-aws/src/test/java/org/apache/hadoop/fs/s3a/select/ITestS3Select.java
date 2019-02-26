@@ -50,7 +50,6 @@ import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
-import org.apache.hadoop.fs.s3a.commit.DurationInfo;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
@@ -62,6 +61,7 @@ import org.apache.hadoop.mapreduce.lib.input.LineRecordReader;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
+import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADV_NORMAL;
