@@ -21,8 +21,10 @@ package org.apache.hadoop.ozone.genesis;
 import org.openjdk.jmh.profile.StackProfiler;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
-import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
+import picocli.CommandLine;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Command;
 
 /**
  * Main class that executes a set of HDDS/Ozone benchmarks.
@@ -32,30 +34,57 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
  * Hence, these classes do not use the Tool/Runner pattern of standard Hadoop
  * CLI.
  */
+@Command(name = "ozone genesis",
+    description = "Tool for running ozone benchmarks",
+    mixinStandardHelpOptions = true)
 public final class Genesis {
+
+  // For adding benchmark to Genesis add the benchmark name in the default value
+  // and description for this option.
+  @Option(names = "-benchmark", required = true, split = ",",
+      defaultValue = "BenchMarkContainerStateMap,BenchMarkOMKeyAllocation,"
+          + "BenchMarkBlockManager,BenchMarkMetadataStoreReads,"
+          + "BenchMarkMetadataStoreWrites,BenchMarkDatanodeDispatcher"
+          + "BenchMarkRocksDbStore",
+      description =
+      "Option used for specifying benchmarks to run.\n"
+          + "Ex. ozone genesis -benchmark BenchMarkContainerStateMap,"
+          + "BenchMarkOMKeyAllocation.\n"
+          + "Possible benchmarks which can be used are "
+          + "{BenchMarkContainerStateMap, BenchMarkOMKeyAllocation, "
+          + "BenchMarkBlockManager, BenchMarkMetadataStoreReads, "
+          + "BenchMarkMetadataStoreWrites, BenchMarkDatanodeDispatcher, "
+          + "BenchMarkRocksDbStore}")
+  private static String[] benchmarks;
+
+  @Option(names = "-t", defaultValue = "4",
+      description = "Number of threads to use for the benchmark.\n"
+          + "This option can be overridden by threads mentioned in benchmark.")
+  private static int numThreads;
 
   private Genesis() {
   }
 
   public static void main(String[] args) throws RunnerException {
-    Options opt = new OptionsBuilder()
-        .include(BenchMarkContainerStateMap.class.getSimpleName())
-        .include(BenchMarkOMKeyAllocation.class.getSimpleName())
-        .include(BenchMarkBlockManager.class.getSimpleName())
-//        .include(BenchMarkMetadataStoreReads.class.getSimpleName())
-//        .include(BenchMarkMetadataStoreWrites.class.getSimpleName())
-//        .include(BenchMarkDatanodeDispatcher.class.getSimpleName())
-// Commenting this test out, till we support either a command line or a config
-        // file based ability to run tests.
-//        .include(BenchMarkRocksDbStore.class.getSimpleName())
-        .warmupIterations(5)
+    CommandLine commandLine = new CommandLine(new Genesis());
+    commandLine.parse(args);
+    if (commandLine.isUsageHelpRequested()) {
+      commandLine.usage(System.out);
+      return;
+    }
+
+    OptionsBuilder optionsBuilder = new OptionsBuilder();
+    for (String benchmark : benchmarks) {
+      optionsBuilder.include(benchmark);
+    }
+    optionsBuilder.warmupIterations(2)
         .measurementIterations(20)
         .addProfiler(StackProfiler.class)
         .shouldDoGC(true)
         .forks(1)
-        .build();
+        .threads(numThreads);
 
-    new Runner(opt).run();
+    new Runner(optionsBuilder.build()).run();
   }
 }
 
