@@ -80,53 +80,54 @@ public class IdentityTransformer {
   /**
    * Perform identity transformation for the Get request results in AzureBlobFileSystemStore:
    * getFileStatus(), listStatus(), getAclStatus().
-   * Input originalUserOrGroup can be one of the following:
+   * Input originalIdentity can be one of the following:
    * 1. $superuser:
    *     by default it will be transformed to local user/group, this can be disabled by setting
    *     "fs.azure.identity.transformer.skip.superuser.replacement" to true.
    *
    * 2. User principal id:
-   *     can be transformed to localUserOrGroup, if this principal id matches the principal id set in
-   *     "fs.azure.identity.transformer.service.principal.id" and localUserOrGroup is stated in
+   *     can be transformed to localIdentity, if this principal id matches the principal id set in
+   *     "fs.azure.identity.transformer.service.principal.id" and localIdentity is stated in
    *     "fs.azure.identity.transformer.service.principal.substitution.list"
    *
    * 3. User principal name (UPN):
-   *     can be transformed to a short name(localUserOrGroup) if "fs.azure.identity.transformer.enable.short.name"
-   *     is enabled.
+   *     can be transformed to a short name(localIdentity) if originalIdentity is owner name, and
+   *     "fs.azure.identity.transformer.enable.short.name" is enabled.
    *
-   * @param originalUserOrGroup the original user or group in the get request results: FileStatus, AclStatus.
-   * @param localUserOrGroup the local user or group, should be parsed from UserGroupInformation.
+   * @param originalIdentity the original user or group in the get request results: FileStatus, AclStatus.
+   * @param isUserName indicate whether the input originalIdentity is an owner name or owning group name.
+   * @param localIdentity the local user or group, should be parsed from UserGroupInformation.
    * @return owner or group after transformation.
    * */
-  public String transformIdentityForGetRequest(String originalUserOrGroup, String localUserOrGroup) {
-    if (originalUserOrGroup == null) {
-      originalUserOrGroup = localUserOrGroup;
-      // localUserOrGroup might be a full name, so continue the transformation.
+  public String transformIdentityForGetRequest(String originalIdentity, boolean isUserName, String localIdentity) {
+    if (originalIdentity == null) {
+      originalIdentity = localIdentity;
+      // localIdentity might be a full name, so continue the transformation.
     }
     // case 1: it is $superuser and replace $superuser config is enabled
-    if (!skipSuperUserReplacement && SUPER_USER.equals(originalUserOrGroup)) {
-      return localUserOrGroup;
+    if (!skipSuperUserReplacement && SUPER_USER.equals(originalIdentity)) {
+      return localIdentity;
     }
 
     if (skipUserIdentityReplacement) {
-      return originalUserOrGroup;
+      return originalIdentity;
     }
 
     // case 2: original owner is principalId set in config, and localUser
     //         is a daemon service specified in substitution list,
     //         To avoid ownership check failure in job task, replace it
     //         to local daemon user/group
-    if (originalUserOrGroup.equals(servicePrincipalId) && isInSubstitutionList(localUserOrGroup)) {
-      return localUserOrGroup;
+    if (originalIdentity.equals(servicePrincipalId) && isInSubstitutionList(localIdentity)) {
+      return localIdentity;
     }
 
     // case 3: If original owner is a fully qualified name, and
     //         short name is enabled, replace with shortName.
-    if (shouldUseShortUserName(originalUserOrGroup)) {
-      return getShortName(originalUserOrGroup);
+    if (isUserName && shouldUseShortUserName(originalIdentity)) {
+      return getShortName(originalIdentity);
     }
 
-    return originalUserOrGroup;
+    return originalIdentity;
   }
 
   /**
