@@ -164,6 +164,8 @@ public class TestDevicePluginAdapter {
         mockShellWrapper);
     adapter.setDeviceResourceHandler(drhl);
     adapter.getDeviceResourceHandler().bootstrap(conf);
+    verify(mockCGroupsHandler).initializeCGroupController(
+        CGroupsHandler.CGroupController.DEVICES);
     int size = dmm.getAvailableDevices(resourceName);
     Assert.assertEquals(3, size);
     // Case 1. A container c1 requests 1 device
