@@ -491,10 +491,12 @@ public class AzureBlobFileSystemStore {
 
     final String transformedOwner = identityTransformer.transformIdentityForGetRequest(
               result.getResponseHeader(HttpHeaderConfigurations.X_MS_OWNER),
+              true,
               userName);
 
     final String transformedGroup = identityTransformer.transformIdentityForGetRequest(
               result.getResponseHeader(HttpHeaderConfigurations.X_MS_GROUP),
+              false,
               primaryUserGroup);
 
     return new VersionedFileStatus(
@@ -536,8 +538,8 @@ public class AzureBlobFileSystemStore {
       long blockSize = abfsConfiguration.getAzureBlockSize();
 
       for (ListResultEntrySchema entry : retrievedSchema.paths()) {
-        final String owner = identityTransformer.transformIdentityForGetRequest(entry.owner(), userName);
-        final String group = identityTransformer.transformIdentityForGetRequest(entry.group(), primaryUserGroup);
+        final String owner = identityTransformer.transformIdentityForGetRequest(entry.owner(), true, userName);
+        final String group = identityTransformer.transformIdentityForGetRequest(entry.group(), false, primaryUserGroup);
         final FsPermission fsPermission = entry.permissions() == null
                 ? new AbfsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL)
                 : AbfsPermission.valueOf(entry.permissions());
@@ -758,9 +760,11 @@ public class AzureBlobFileSystemStore {
 
     final String transformedOwner = identityTransformer.transformIdentityForGetRequest(
             result.getResponseHeader(HttpHeaderConfigurations.X_MS_OWNER),
+            true,
             userName);
     final String transformedGroup = identityTransformer.transformIdentityForGetRequest(
             result.getResponseHeader(HttpHeaderConfigurations.X_MS_GROUP),
+            false,
             primaryUserGroup);
 
     final String permissions = result.getResponseHeader(HttpHeaderConfigurations.X_MS_PERMISSIONS);
