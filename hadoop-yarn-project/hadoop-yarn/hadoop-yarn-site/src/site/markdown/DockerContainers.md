@@ -642,7 +642,19 @@ Privileged docker container can interact with host system devices.  This can cau
 
 The default behavior is disallow any privileged docker containers.  When `docker.privileged-containers.enabled` is set to enabled, docker image can run with root privileges in the docker container, but access to host level devices are disabled.  This allows developer and tester to run docker images from internet without causing harm to host operating system.
 
-When docker images have been certified by developers and testers to be trustworthy.  The trusted image can be promoted to trusted docker registry.  System administrator can define `docker.trusted.registries`, and setup private docker registry server to promote trusted images.
+When docker images have been certified by developers and testers to be trustworthy.  The trusted image can be promoted to trusted docker registry.  System administrator can define `docker.trusted.registries`, and setup private docker registry server to promote trusted images.  System administrator may choose to allow official docker images from Docker Hub to be part of trusted registries.  "library" is the name to use for trusting official docker images.  Container-executor.cfg example:
+
+```
+[docker]
+  docker.privileged-containers.enabled=true
+  docker.trusted.registries=library
+```
+
+In development environment, local images can be tagged with a repository name prefix to enable trust.  The recommendation of choosing a repository name is using a local hostname and port number to prevent accidentially pulling docker images from Docker Hub or use reserved Docker Hub keyword: "local".  Docker run will look for docker images on Docker Hub, if the image does not exist locally.  Using a local hostname and port in image name can prevent accidental pulling of canonical images from docker hub.  Example of tagging image with localhost:5000 as trusted registry:
+
+```
+docker tag centos:latest localhost:5000/centos:latest
+```
 
 Trusted images are allowed to mount external devices such as HDFS via NFS gateway, or host level Hadoop configuration.  If system administrators allow writing to external volumes using `docker.allow.rw-mounts directive`, privileged docker container can have full control of host level files in the predefined volumes.
 
