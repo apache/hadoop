@@ -41,11 +41,11 @@ import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.impl.FutureIOSupport;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.commit.Duration;
-import org.apache.hadoop.fs.s3a.commit.DurationInfo;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 import org.apache.hadoop.fs.shell.CommandFormat;
+import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.OperationDuration;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
@@ -102,7 +102,7 @@ public class SelectTool extends S3GuardTool {
 
   static final String SELECT_IS_DISABLED = "S3 Select is disabled";
 
-  private Duration selectDuration;
+  private OperationDuration selectDuration;
 
   private long bytesRead;
 
@@ -130,7 +130,7 @@ public class SelectTool extends S3GuardTool {
     return USAGE;
   }
 
-  public Duration getSelectDuration() {
+  public OperationDuration getSelectDuration() {
     return selectDuration;
   }
 
@@ -241,7 +241,7 @@ public class SelectTool extends S3GuardTool {
     }
     linesRead = 0;
 
-    selectDuration = new Duration();
+    selectDuration = new OperationDuration();
 
     // open and scan the stream.
     final FutureDataInputStreamBuilder builder = fs.openFile(path)
