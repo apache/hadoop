@@ -48,9 +48,9 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
   public static final String EXCLUDED_GPUS_CLI_OPTION = "--excluded_gpus";
   public static final String CONTAINER_ID_CLI_OPTION = "--container_id";
 
-  private GpuResourceAllocator gpuAllocator;
-  private CGroupsHandler cGroupsHandler;
-  private PrivilegedOperationExecutor privilegedOperationExecutor;
+  private final GpuResourceAllocator gpuAllocator;
+  private final CGroupsHandler cGroupsHandler;
+  private final PrivilegedOperationExecutor privilegedOperationExecutor;
 
   public GpuResourceHandlerImpl(Context nmContext,
       CGroupsHandler cGroupsHandler,
@@ -174,5 +174,12 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
   @Override
   public List<PrivilegedOperation> teardown() throws ResourceHandlerException {
     return null;
+  }
+
+  @Override
+  public String toString() {
+    return GpuResourceHandlerImpl.class.getName() + "{" +
+        "gpuAllocator=" + gpuAllocator +
+        '}';
   }
 }

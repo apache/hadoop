@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -52,7 +53,13 @@ public class ResourcePluginManager {
   public synchronized void initialize(Context context)
       throws YarnException {
     Configuration conf = context.getConf();
+
     String[] plugins = conf.getStrings(YarnConfiguration.NM_RESOURCE_PLUGINS);
+    if (plugins == null || plugins.length == 0) {
+      LOG.info("No Resource plugins found from configuration!");
+    }
+    LOG.info("Found Resource plugins from configuration: "
+        + Arrays.toString(plugins));
 
     if (plugins != null) {
       Map<String, ResourcePlugin> pluginMap = new HashMap<>();
@@ -64,23 +71,21 @@ public class ResourcePluginManager {
           String msg =
               "Trying to initialize resource plugin with name=" + resourceName
                   + ", it is not supported, list of supported plugins:"
-                  + StringUtils.join(",",
-                  SUPPORTED_RESOURCE_PLUGINS);
+                  + StringUtils.join(",", SUPPORTED_RESOURCE_PLUGINS);
           LOG.error(msg);
           throw new YarnException(msg);
         }
 
         if (pluginMap.containsKey(resourceName)) {
-          // Duplicated items, ignore ...
+          LOG.warn("Ignoring duplicate Resource plugin definition: " +
+              resourceName);
           continue;
         }
 
         ResourcePlugin plugin = null;
         if (resourceName.equals(GPU_URI)) {
           plugin = new GpuResourcePlugin();
-        }
-
-        if (resourceName.equals(FPGA_URI)) {
+        } else if (resourceName.equals(FPGA_URI)) {
           plugin = new FpgaResourcePlugin();
         }
 
@@ -90,6 +95,7 @@ public class ResourcePluginManager {
                   + " should be loaded and initialized");
         }
         plugin.initialize(context);
+        LOG.info("Initialized plugin {}", plugin);
         pluginMap.put(resourceName, plugin);
       }
 
