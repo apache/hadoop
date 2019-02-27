@@ -282,11 +282,10 @@ public class ApiServiceClient extends AppAdminClient {
   private Builder getApiClient(String requestPath)
       throws IOException {
     Client client = Client.create(getClientConfig());
-    Configuration conf = getConfig();
     client.setChunkedEncodingSize(null);
     Builder builder = client
         .resource(requestPath).type(MediaType.APPLICATION_JSON);
-    if (conf.get("hadoop.http.authentication.type").equals("kerberos")) {
+    if (UserGroupInformation.isSecurityEnabled()) {
       try {
         URI url = new URI(requestPath);
         String challenge = generateToken(url.getHost());
