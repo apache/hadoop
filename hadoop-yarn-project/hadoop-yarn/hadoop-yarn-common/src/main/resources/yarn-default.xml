@@ -2660,6 +2660,17 @@
     <value></value>
   </property>
 
+  <property>
+    <description>
+      Removes the UUID if represent and limit the the flowname length with
+      the given value for ATSv2. In case the value is negative or 0,
+      it only removes the UUID and does not limit the flow name.
+    </description>
+    <name>yarn.timeline-service.flowname.max-size
+    </name>
+    <value>0</value>
+  </property>
+
   <!--  Shared Cache Configuration -->
 
   <property>

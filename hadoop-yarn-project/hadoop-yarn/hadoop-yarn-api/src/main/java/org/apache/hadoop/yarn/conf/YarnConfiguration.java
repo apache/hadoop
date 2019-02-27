@@ -2782,6 +2782,19 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_HDFS_LOCATION_FLOW_RUN_COPROCESSOR_JAR =
       "/hbase/coprocessor/hadoop-yarn-server-timelineservice.jar";
 
+  /**
+   * This setting controls the max size of the flow name getting generated
+   * in ATSv2 after removing UUID if present.
+   * */
+  public static final String FLOW_NAME_MAX_SIZE =
+      TIMELINE_SERVICE_PREFIX + "flowname.max-size";
+
+  /**
+   * Default setting for flow name size has no size restriction
+   * after removing UUID if present.
+   */
+  public static final int FLOW_NAME_DEFAULT_MAX_SIZE = 0;
+
     /**
    * The name for setting that points to an optional HBase configuration
    * (hbase-site.xml file) with settings that will override the ones found on
