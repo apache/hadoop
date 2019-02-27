@@ -35,11 +35,7 @@ services:
       command: ["hadoop", "kms"]
 
   datanode:
-    build:
-      context: docker-image/runner
-      dockerfile: Dockerfile
-      args:
-        buildno: 1
+    image: apache/hadoop-runner
     volumes:
       - ../..:/opt/hadoop
     hostname: datanode
@@ -49,12 +45,7 @@ services:
     env_file:
       - docker-config
   ozoneManager:
-    build:
-      context: docker-image/runner
-      dockerfile: Dockerfile
-      args:
-        buildno: 1
-    image: om
+    image: apache/hadoop-runner
     hostname: om
     volumes:
       - ../..:/opt/hadoop
@@ -67,11 +58,7 @@ services:
       - docker-config
     command: ["/opt/hadoop/bin/ozone","om"]
   scm:
-    build:
-      context: docker-image/runner
-      dockerfile: Dockerfile
-      args:
-        buildno: 1
+    image: apache/hadoop-runner
     hostname: scm
     volumes:
       - ../..:/opt/hadoop
