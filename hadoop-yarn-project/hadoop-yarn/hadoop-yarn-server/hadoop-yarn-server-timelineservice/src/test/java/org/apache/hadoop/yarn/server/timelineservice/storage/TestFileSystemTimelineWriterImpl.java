@@ -20,16 +20,19 @@ package org.apache.hadoop.yarn.server.timelineservice.storage;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.BufferedReader;
 import java.io.File;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
@@ -96,16 +99,20 @@ public class TestFileSystemTimelineWriterImpl {
               "flow_version", 12345678L, "app_id"),
           te, UserGroupInformation.createRemoteUser("user_id"));
 
-      String fileName = fsi.getOutputRoot() + File.separator + "entities" +
+      String fileName = outputRoot + File.separator + "entities" +
           File.separator + "cluster_id" + File.separator + "user_id" +
           File.separator + "flow_name" + File.separator + "flow_version" +
           File.separator + "12345678" + File.separator + "app_id" +
           File.separator + type + File.separator + id +
           FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
-      Path path = Paths.get(fileName);
-      File f = new File(fileName);
-      assertTrue(f.exists() && !f.isDirectory());
-      List<String> data = Files.readAllLines(path, StandardCharsets.UTF_8);
+      Path path = new Path(fileName);
+      FileSystem fs = FileSystem.get(conf);
+      assertTrue("Specified path(" + fileName + ") should exist: ",
+              fs.exists(path));
+      FileStatus fileStatus = fs.getFileStatus(path);
+      assertTrue("Specified path should be a file",
+              !fileStatus.isDirectory());
+      List<String> data = readFromFile(fs, path);
       // ensure there's only one entity + 1 new line
       assertTrue("data size is:" + data.size(), data.size() == 2);
       String d = data.get(0);
@@ -119,12 +126,15 @@ public class TestFileSystemTimelineWriterImpl {
           File.separator + "12345678" + File.separator + "app_id" +
           File.separator + type2 + File.separator + id2 +
           FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
-      Path path2 = Paths.get(fileName2);
-      File file = new File(fileName2);
-      assertTrue(file.exists() && !file.isDirectory());
-      List<String> data2 = Files.readAllLines(path2, StandardCharsets.UTF_8);
+      Path path2 = new Path(fileName2);
+      assertTrue("Specified path(" + fileName + ") should exist: ",
+              fs.exists(path2));
+      FileStatus fileStatus2 = fs.getFileStatus(path2);
+      assertTrue("Specified path should be a file",
+              !fileStatus2.isDirectory());
+      List<String> data2 = readFromFile(fs, path2);
       // ensure there's only one entity + 1 new line
-      assertTrue("data size is:" + data.size(), data2.size() == 2);
+      assertTrue("data size is:" + data2.size(), data2.size() == 2);
       String metricToString = data2.get(0);
       // confirm the contents same as what was written
       assertEquals(metricToString,
@@ -136,4 +146,17 @@ public class TestFileSystemTimelineWriterImpl {
     }
   }
 
+  private List<String> readFromFile(FileSystem fs, Path path)
+          throws IOException {
+    BufferedReader br = new BufferedReader(
+            new InputStreamReader(fs.open(path)));
+    List<String> data = new ArrayList<>();
+    String line = br.readLine();
+    data.add(line);
+    while(line != null) {
+      line = br.readLine();
+      data.add(line);
+    }
+    return data;
+  }
 }
