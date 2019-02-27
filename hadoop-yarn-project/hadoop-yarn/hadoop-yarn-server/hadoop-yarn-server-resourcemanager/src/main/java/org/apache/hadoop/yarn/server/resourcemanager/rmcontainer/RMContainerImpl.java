@@ -25,6 +25,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -154,7 +155,8 @@ public class RMContainerImpl implements RMContainer {
     // Transitions from KILLED state
     .addTransition(RMContainerState.KILLED, RMContainerState.KILLED,
         EnumSet.of(RMContainerEventType.EXPIRE, RMContainerEventType.RELEASED,
-            RMContainerEventType.KILL, RMContainerEventType.FINISHED))
+            RMContainerEventType.KILL, RMContainerEventType.ACQUIRED,
+            RMContainerEventType.FINISHED))
 
     // create the topology tables
     .installTopology();
@@ -473,8 +475,7 @@ public class RMContainerImpl implements RMContainer {
          stateMachine.doTransition(event.getType(), event);
       } catch (InvalidStateTransitionException e) {
         LOG.error("Can't handle this event at current state", e);
-        LOG.error("Invalid event " + event.getType() + 
-            " on container " + this.getContainerId());
+        onInvalidStateTransition(event.getType(), oldState);
       }
       if (oldState != getState()) {
         LOG.info(event.getContainerId() + " Container Transitioned from "
@@ -898,5 +899,18 @@ public class RMContainerImpl implements RMContainer {
     if (containerId != null) {
       rmContext.getRMApplicationHistoryWriter().containerStarted(this);
     }
+  }
+
+  /**
+   * catch the InvalidStateTransition.
+   * @param state
+   * @param rmContainerEventType
+   */
+  @VisibleForTesting
+  protected void onInvalidStateTransition(
+      RMContainerEventType rmContainerEventType,
+      RMContainerState state){
+    LOG.error("Invalid event " + rmContainerEventType +
+              " on container " + this.getContainerId());
   }
 }
