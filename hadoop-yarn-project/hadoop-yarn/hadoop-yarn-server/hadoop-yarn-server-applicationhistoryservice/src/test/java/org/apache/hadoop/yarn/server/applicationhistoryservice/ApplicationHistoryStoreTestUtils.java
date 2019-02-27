@@ -47,6 +47,12 @@ public class ApplicationHistoryStoreTestUtils {
       appId.toString(), "test type", "test queue", "test user", 0, 0));
   }
 
+  protected void writeApplicationStartData(ApplicationId appId, long startTime)
+      throws IOException {
+    store.applicationStarted(ApplicationStartData.newInstance(appId,
+        appId.toString(), "test type", "test queue", "test user", 0, startTime));
+  }
+
   protected void writeApplicationFinishData(ApplicationId appId)
       throws IOException {
     store.applicationFinished(ApplicationFinishData.newInstance(appId, 0,
