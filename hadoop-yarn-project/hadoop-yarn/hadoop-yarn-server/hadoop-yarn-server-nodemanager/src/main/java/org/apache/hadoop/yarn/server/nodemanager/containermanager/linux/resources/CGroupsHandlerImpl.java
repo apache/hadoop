@@ -64,7 +64,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
   private static final String MTAB_FILE = "/proc/mounts";
   private static final String CGROUPS_FSTYPE = "cgroup";
 
-  private String mtabFile;
+  private final String mtabFile;
   private final String cGroupPrefix;
   private final boolean enableCGroupMount;
   private final String cGroupMountPath;
@@ -620,5 +620,17 @@ class CGroupsHandlerImpl implements CGroupsHandler {
   @Override
   public String getCGroupMountPath() {
     return cGroupMountPath;
+  }
+
+  @Override
+  public String toString() {
+    return CGroupsHandlerImpl.class.getName() + "{" +
+        "mtabFile='" + mtabFile + '\'' +
+        ", cGroupPrefix='" + cGroupPrefix + '\'' +
+        ", enableCGroupMount=" + enableCGroupMount +
+        ", cGroupMountPath='" + cGroupMountPath + '\'' +
+        ", deleteCGroupTimeout=" + deleteCGroupTimeout +
+        ", deleteCGroupDelay=" + deleteCGroupDelay +
+        '}';
   }
 }
