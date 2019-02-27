@@ -104,10 +104,20 @@ public class ApplicationHistoryManagerImpl extends AbstractService implements
         historyStore.getAllApplications();
     HashMap<ApplicationId, ApplicationReport> applicationsReport =
         new HashMap<ApplicationId, ApplicationReport>();
+    int count = 0;
     for (Entry<ApplicationId, ApplicationHistoryData> entry : histData
       .entrySet()) {
+      if (count == appsNum) {
+        break;
+      }
+      long appStartTime = entry.getValue().getStartTime();
+      if (appStartTime < appStartedTimeBegin
+          || appStartTime > appStartedTimeEnd) {
+        continue;
+      }
       applicationsReport.put(entry.getKey(),
         convertToApplicationReport(entry.getValue()));
+      count++;
     }
     return applicationsReport;
   }
