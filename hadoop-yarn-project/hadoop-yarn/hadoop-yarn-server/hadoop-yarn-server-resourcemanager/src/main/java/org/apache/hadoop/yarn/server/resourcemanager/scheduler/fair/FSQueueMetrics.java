@@ -27,8 +27,10 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.FSQueueMetricsForCustomResources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 @Metrics(context="yarn")
 public class FSQueueMetrics extends QueueMetrics {
@@ -47,29 +49,45 @@ public class FSQueueMetrics extends QueueMetrics {
   @Metric("AM resource usage of memory in MB") MutableGaugeLong amResourceUsageMB;
   @Metric("AM resource usage of CPU in vcores") MutableGaugeInt amResourceUsageVCores;
 
+  private final FSQueueMetricsForCustomResources customResources;
   private String schedulingPolicy;
 
   FSQueueMetrics(MetricsSystem ms, String queueName, Queue parent,
       boolean enableUserMetrics, Configuration conf) {
     super(ms, queueName, parent, enableUserMetrics, conf);
+
+    if (ResourceUtils.getNumberOfKnownResourceTypes() > 2) {
+      this.customResources =
+          new FSQueueMetricsForCustomResources();
+    } else {
+      this.customResources = null;
+    }
   }
   
-  public void setFairShare(Resource resource) {
-    fairShareMB.set(resource.getMemorySize());
-    fairShareVCores.set(resource.getVirtualCores());
-  }
-  
-  public long getFairShareMB() {
+  long getFairShareMB() {
     return fairShareMB.value();
   }
   
-  public long getFairShareVirtualCores() {
+  long getFairShareVirtualCores() {
     return fairShareVCores.value();
   }
 
-  public void setSteadyFairShare(Resource resource) {
-    steadyFairShareMB.set(resource.getMemorySize());
-    steadyFairShareVCores.set(resource.getVirtualCores());
+  public Resource getFairShare() {
+    if (customResources != null) {
+      return Resource.newInstance(fairShareMB.value(),
+          (int) fairShareVCores.value(),
+          customResources.getFairShareValues());
+    }
+    return Resource.newInstance(fairShareMB.value(),
+        (int) fairShareVCores.value());
+  }
+
+  public void setFairShare(Resource resource) {
+    fairShareMB.set(resource.getMemorySize());
+    fairShareVCores.set(resource.getVirtualCores());
+    if (customResources != null) {
+      customResources.setFairShare(resource);
+    }
   }
 
   public long getSteadyFairShareMB() {
@@ -80,11 +98,24 @@ public class FSQueueMetrics extends QueueMetrics {
     return steadyFairShareVCores.value();
   }
 
-  public void setMinShare(Resource resource) {
-    minShareMB.set(resource.getMemorySize());
-    minShareVCores.set(resource.getVirtualCores());
+  public Resource getSteadyFairShare() {
+    if (customResources != null) {
+      return Resource.newInstance(steadyFairShareMB.value(),
+          (int) steadyFairShareVCores.value(),
+          customResources.getSteadyFairShareValues());
+    }
+    return Resource.newInstance(steadyFairShareMB.value(),
+        (int) steadyFairShareVCores.value());
   }
-  
+
+  public void setSteadyFairShare(Resource resource) {
+    steadyFairShareMB.set(resource.getMemorySize());
+    steadyFairShareVCores.set(resource.getVirtualCores());
+    if (customResources != null) {
+      customResources.setSteadyFairShare(resource);
+    }
+  }
+
   public long getMinShareMB() {
     return minShareMB.value();
   }
@@ -92,10 +123,23 @@ public class FSQueueMetrics extends QueueMetrics {
   public long getMinShareVirtualCores() {
     return minShareVCores.value();
   }
-  
-  public void setMaxShare(Resource resource) {
-    maxShareMB.set(resource.getMemorySize());
-    maxShareVCores.set(resource.getVirtualCores());
+
+  public Resource getMinShare() {
+    if (customResources != null) {
+      return Resource.newInstance(minShareMB.value(),
+          (int) minShareVCores.value(),
+          customResources.getMinShareValues());
+    }
+    return Resource.newInstance(minShareMB.value(),
+        (int) minShareVCores.value());
+  }
+
+  public void setMinShare(Resource resource) {
+    minShareMB.set(resource.getMemorySize());
+    minShareVCores.set(resource.getVirtualCores());
+    if (customResources != null) {
+      customResources.setMinShare(resource);
+    }
   }
   
   public long getMaxShareMB() {
@@ -104,6 +148,24 @@ public class FSQueueMetrics extends QueueMetrics {
   
   public long getMaxShareVirtualCores() {
     return maxShareVCores.value();
+  }
+
+  public Resource getMaxShare() {
+    if (customResources != null) {
+      return Resource.newInstance(maxShareMB.value(),
+          (int) maxShareVCores.value(),
+          customResources.getMaxShareValues());
+    }
+    return Resource.newInstance(maxShareMB.value(),
+        (int) maxShareVCores.value());
+  }
+
+  public void setMaxShare(Resource resource) {
+    maxShareMB.set(resource.getMemorySize());
+    maxShareVCores.set(resource.getVirtualCores());
+    if (customResources != null) {
+      customResources.setMaxShare(resource);
+    }
   }
 
   public int getMaxApps() {
@@ -132,6 +194,16 @@ public class FSQueueMetrics extends QueueMetrics {
     return maxAMShareVCores.value();
   }
 
+  public Resource getMaxAMShare() {
+    if (customResources != null) {
+      return Resource.newInstance(maxAMShareMB.value(),
+          maxAMShareVCores.value(),
+          customResources.getMaxAMShareValues());
+    }
+    return Resource.newInstance(maxAMShareMB.value(),
+        maxAMShareVCores.value());
+  }
+
   /**
    * Set the maximum resource AM can use.
    *
@@ -140,6 +212,9 @@ public class FSQueueMetrics extends QueueMetrics {
   public void setMaxAMShare(Resource resource) {
     maxAMShareMB.set(resource.getMemorySize());
     maxAMShareVCores.set(resource.getVirtualCores());
+    if (customResources != null) {
+      customResources.setMaxAMShare(resource);
+    }
   }
 
   /**
@@ -160,6 +235,16 @@ public class FSQueueMetrics extends QueueMetrics {
     return amResourceUsageVCores.value();
   }
 
+  public Resource getAMResourceUsage() {
+    if (customResources != null) {
+      return Resource.newInstance(amResourceUsageMB.value(),
+          amResourceUsageVCores.value(),
+          customResources.getAMResourceUsageValues());
+    }
+    return Resource.newInstance(amResourceUsageMB.value(),
+        amResourceUsageVCores.value());
+  }
+
   /**
    * Set the AM resource usage.
    *
@@ -168,6 +253,9 @@ public class FSQueueMetrics extends QueueMetrics {
   public void setAMResourceUsage(Resource resource) {
     amResourceUsageMB.set(resource.getMemorySize());
     amResourceUsageVCores.set(resource.getVirtualCores());
+    if (customResources != null) {
+      customResources.setAMResourceUsage(resource);
+    }
   }
 
   /**
