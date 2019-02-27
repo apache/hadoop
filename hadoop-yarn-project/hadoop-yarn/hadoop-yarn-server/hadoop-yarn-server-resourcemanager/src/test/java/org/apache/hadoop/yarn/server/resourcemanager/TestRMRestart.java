@@ -100,6 +100,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreAMRMTokenEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreProxyCAEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreRMDTEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreRMDTMasterKeyEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
@@ -1646,7 +1647,8 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
         // Skip if synchronous updation of DTToken
         if (!(event instanceof RMStateStoreAMRMTokenEvent)
             && !(event instanceof RMStateStoreRMDTEvent)
-            && !(event instanceof RMStateStoreRMDTMasterKeyEvent)) {
+            && !(event instanceof RMStateStoreRMDTMasterKeyEvent)
+            && !(event instanceof RMStateStoreProxyCAEvent)) {
           while (wait);
         }
         super.handleStoreEvent(event);
