@@ -118,6 +118,10 @@ public class DistCpConstants {
   public static final String CONF_LABEL_COPY_BUFFER_SIZE =
       "distcp.copy.buffer.size";
 
+  /** DistCp Blocks Per Chunk: {@value}. */
+  public static final String CONF_LABEL_BLOCKS_PER_CHUNK =
+      "distcp.blocks.per.chunk";
+
   /**
    * Conf label for SSL Trust-store location.
    */

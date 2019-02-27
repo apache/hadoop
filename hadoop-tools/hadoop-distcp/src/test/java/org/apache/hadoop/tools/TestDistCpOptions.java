@@ -21,6 +21,7 @@ package org.apache.hadoop.tools;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
 
+import org.apache.hadoop.conf.Configuration;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -529,5 +530,32 @@ public class TestDistCpOptions {
     options.setLogPath(logPath);
     options.setVerboseLog(true);
     Assert.assertTrue(options.shouldVerboseLog());
+  }
+
+  @Test
+  public void testAppendToConf() {
+    final int expectedBlocksPerChunk = 999;
+    final String expectedValForEmptyConfigKey = "VALUE_OF_EMPTY_CONFIG_KEY";
+
+    DistCpOptions options = new DistCpOptions(
+        Collections.singletonList(
+            new Path("hdfs://localhost:8020/source")),
+        new Path("hdfs://localhost:8020/target/"));
+    options.setBlocksPerChunk(expectedBlocksPerChunk);
+
+    Configuration config = new Configuration();
+    config.set("", expectedValForEmptyConfigKey);
+
+    options.appendToConf(config);
+    Assert.assertEquals(expectedBlocksPerChunk,
+        config.getInt(
+            DistCpOptionSwitch
+                .BLOCKS_PER_CHUNK
+                .getConfigLabel(), 0));
+    Assert.assertEquals(
+        "Some DistCpOptionSwitch's config label is empty! " +
+            "Pls ensure the config label is provided when apply to config, " +
+            "otherwise it may not be fetched properly",
+            expectedValForEmptyConfigKey, config.get(""));
   }
 }
