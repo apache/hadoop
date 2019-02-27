@@ -69,18 +69,6 @@ public class OzoneTokenIdentifier extends
   }
 
   /**
-   * Default TrivialRenewer.
-   */
-  @InterfaceAudience.Private
-  public static class Renewer extends Token.TrivialRenewer {
-
-    @Override
-    protected Text getKind() {
-      return KIND_NAME;
-    }
-  }
-
-  /**
    * Overrides default implementation to write using Protobuf.
    *
    * @param out output stream
