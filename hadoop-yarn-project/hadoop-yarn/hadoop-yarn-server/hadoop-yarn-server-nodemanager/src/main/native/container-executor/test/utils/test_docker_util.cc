@@ -1962,4 +1962,28 @@ namespace ContainerExecutor {
     }
     free_configuration(&container_cfg);
   }
+
+  TEST_F(TestDockerUtil, test_docker_images) {
+    std::vector<std::pair<std::string, std::string> > file_cmd_vec;
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n  docker-command=images",
+        "images --format={{json .}} --filter=dangling=false"));
+
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n  docker-command=images\n  image=image-id",
+        "images image-id --format={{json .}} --filter=dangling=false"));
+
+    std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=run\n  image=image-id",
+        static_cast<int>(INCORRECT_COMMAND)));
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "docker-command=images\n  image=image-id",
+        static_cast<int>(INCORRECT_COMMAND)));
+
+    run_docker_command_test(file_cmd_vec, bad_file_cmd_vec,
+      get_docker_images_command);
+    free_configuration(&container_executor_cfg);
+  }
+
 }
