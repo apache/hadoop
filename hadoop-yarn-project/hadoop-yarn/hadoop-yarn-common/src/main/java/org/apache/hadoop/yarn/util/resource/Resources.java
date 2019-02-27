@@ -35,6 +35,8 @@ import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 @Unstable
 public class Resources {
 
+  private enum RoundingDirection { UP, DOWN }
+
   private static final Log LOG =
       LogFactory.getLog(Resources.class);
 
@@ -305,17 +307,7 @@ public class Resources {
   }
 
   public static Resource multiplyTo(Resource lhs, double by) {
-    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
-    for (int i = 0; i < maxLength; i++) {
-      try {
-        ResourceInformation lhsValue = lhs.getResourceInformation(i);
-        lhs.setResourceValue(i, (long) (lhsValue.getValue() * by));
-      } catch (ResourceNotFoundException ye) {
-        LOG.warn("Resource is missing:" + ye.getMessage());
-        continue;
-      }
-    }
-    return lhs;
+    return multiplyAndRound(lhs, by, RoundingDirection.DOWN);
   }
 
   public static Resource multiply(Resource lhs, double by) {
@@ -338,7 +330,6 @@ public class Resources {
         lhs.setResourceValue(i, lhsValue.getValue() + convertedRhs);
       } catch (ResourceNotFoundException ye) {
         LOG.warn("Resource is missing:" + ye.getMessage());
-        continue;
       }
     }
     return lhs;
@@ -358,29 +349,58 @@ public class Resources {
       ResourceCalculator calculator,Resource lhs, double by, Resource factor) {
     return calculator.multiplyAndNormalizeDown(lhs, by, factor);
   }
-  
+
+  /**
+   * Multiply {@code lhs} by {@code by}, and set the result rounded down into a
+   * cloned version of {@code lhs} Resource object.
+   * @param lhs Resource object
+   * @param by Multiply values by this value
+   * @return A cloned version of {@code lhs} with updated values
+   */
   public static Resource multiplyAndRoundDown(Resource lhs, double by) {
-    Resource out = clone(lhs);
+    return multiplyAndRound(clone(lhs), by, RoundingDirection.DOWN);
+  }
+
+  /**
+   * Multiply {@code lhs} by {@code by}, and set the result rounded up into a
+   * cloned version of {@code lhs} Resource object.
+   * @param lhs Resource object
+   * @param by Multiply values by this value
+   * @return A cloned version of {@code lhs} with updated values
+   */
+  public static Resource multiplyAndRoundUp(Resource lhs, double by) {
+    return multiplyAndRound(clone(lhs), by, RoundingDirection.UP);
+  }
+
+  /**
+   * Multiply {@code lhs} by {@code by}, and set the result according to
+   * the rounding direction to {@code lhs}
+   * without creating any new {@link Resource} object.
+   * @param lhs Resource object
+   * @param by Multiply values by this value
+   * @return Returns {@code lhs} itself (without cloning) with updated values
+   */
+  private static Resource multiplyAndRound(Resource lhs, double by,
+      RoundingDirection roundingDirection) {
     int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       try {
         ResourceInformation lhsValue = lhs.getResourceInformation(i);
-        out.setResourceValue(i, (long) (lhsValue.getValue() * by));
+
+        final long value;
+        if (roundingDirection == RoundingDirection.DOWN) {
+          value = (long) (lhsValue.getValue() * by);
+        } else {
+          value = (long) Math.ceil(lhsValue.getValue() * by);
+        }
+        lhs.setResourceValue(i, value);
       } catch (ResourceNotFoundException ye) {
         LOG.warn("Resource is missing:" + ye.getMessage());
-        continue;
       }
     }
-    return out;
+    return lhs;
   }
 
-  public static Resource multiplyAndRoundUp(Resource lhs, double by) {
-    Resource out = clone(lhs);
-    out.setMemorySize((long)Math.ceil(lhs.getMemorySize() * by));
-    out.setVirtualCores((int)Math.ceil(lhs.getVirtualCores() * by));
-    return out;
-  }
-  
   public static Resource normalize(
       ResourceCalculator calculator, Resource lhs, Resource min,
       Resource max, Resource increment) {
