@@ -45,7 +45,6 @@ public class ResourceInfo {
   }
 
   public ResourceInfo(Resource res) {
-    // Make sure no NPE.
     if (res != null) {
       memory = res.getMemorySize();
       vCores = res.getVirtualCores();
