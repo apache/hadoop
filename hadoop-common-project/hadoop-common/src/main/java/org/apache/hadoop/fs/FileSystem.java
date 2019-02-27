@@ -4240,14 +4240,34 @@ public abstract class FileSystem extends Configured
     return GlobalStorageStatistics.INSTANCE;
   }
 
+  /**
+   * Create instance of the standard FSDataOutputStreamBuilder for the
+   * given filesystem and path.
+   * @param fileSystem owner
+   * @param path path to create
+   * @return a builder.
+   */
+  @InterfaceStability.Unstable
+  protected static FSDataOutputStreamBuilder createDataOutputStreamBuilder(
+      @Nonnull final FileSystem fileSystem,
+      @Nonnull final Path path) {
+    return new FileSystemDataOutputStreamBuilder(fileSystem, path);
+  }
+
+  /**
+   * Standard implementation of the FSDataOutputStreamBuilder; invokes
+   * create/createNonRecursive or Append depending upon the options.
+   */
   private static final class FileSystemDataOutputStreamBuilder extends
       FSDataOutputStreamBuilder<FSDataOutputStream,
         FileSystemDataOutputStreamBuilder> {
 
     /**
      * Constructor.
+     * @param fileSystem owner
+     * @param p path to create
      */
-    protected FileSystemDataOutputStreamBuilder(FileSystem fileSystem, Path p) {
+    private FileSystemDataOutputStreamBuilder(FileSystem fileSystem, Path p) {
       super(fileSystem, p);
     }
 
@@ -4290,7 +4310,7 @@ public abstract class FileSystem extends Configured
    * builder interface becomes stable.
    */
   public FSDataOutputStreamBuilder createFile(Path path) {
-    return new FileSystemDataOutputStreamBuilder(this, path)
+    return createDataOutputStreamBuilder(this, path)
         .create().overwrite(true);
   }
 
@@ -4300,7 +4320,7 @@ public abstract class FileSystem extends Configured
    * @return a {@link FSDataOutputStreamBuilder} to build file append request.
    */
   public FSDataOutputStreamBuilder appendFile(Path path) {
-    return new FileSystemDataOutputStreamBuilder(this, path).append();
+    return createDataOutputStreamBuilder(this, path).append();
   }
 
   /**
@@ -4321,7 +4341,7 @@ public abstract class FileSystem extends Configured
   @InterfaceStability.Unstable
   public FutureDataInputStreamBuilder openFile(Path path)
       throws IOException, UnsupportedOperationException {
-    return new FSDataInputStreamBuilder(this, path).getThisBuilder();
+    return createDataInputStreamBuilder(this, path).getThisBuilder();
   }
 
   /**
@@ -4340,7 +4360,7 @@ public abstract class FileSystem extends Configured
   @InterfaceStability.Unstable
   public FutureDataInputStreamBuilder openFile(PathHandle pathHandle)
       throws IOException, UnsupportedOperationException {
-    return new FSDataInputStreamBuilder(this, pathHandle)
+    return createDataInputStreamBuilder(this, pathHandle)
         .getThisBuilder();
   }
 
@@ -4414,6 +4434,36 @@ public abstract class FileSystem extends Configured
       result.completeExceptionally(tx);
     }
     return result;
+  }
+
+  /**
+   * Create instance of the standard {@link FSDataInputStreamBuilder} for the
+   * given filesystem and path.
+   * @param fileSystem owner
+   * @param path path to read
+   * @return a builder.
+   */
+  @InterfaceAudience.LimitedPrivate("Filesystems")
+  @InterfaceStability.Unstable
+  protected static FSDataInputStreamBuilder createDataInputStreamBuilder(
+      @Nonnull final FileSystem fileSystem,
+      @Nonnull final Path path) {
+    return new FSDataInputStreamBuilder(fileSystem, path);
+  }
+
+  /**
+   * Create instance of the standard {@link FSDataInputStreamBuilder} for the
+   * given filesystem and path handle.
+   * @param fileSystem owner
+   * @param pathHandle path handle of file to open.
+   * @return a builder.
+   */
+  @InterfaceAudience.LimitedPrivate("Filesystems")
+  @InterfaceStability.Unstable
+  protected static FSDataInputStreamBuilder createDataInputStreamBuilder(
+      @Nonnull final FileSystem fileSystem,
+      @Nonnull final PathHandle pathHandle) {
+    return new FSDataInputStreamBuilder(fileSystem, pathHandle);
   }
 
   /**
