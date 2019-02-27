@@ -458,6 +458,8 @@ int get_docker_command(const char *command_file, const struct configuration *con
     ret = get_docker_start_command(command_file, conf, args);
   } else if (strcmp(DOCKER_EXEC_COMMAND, command) == 0) {
     ret = get_docker_exec_command(command_file, conf, args);
+  } else if (strcmp(DOCKER_IMAGES_COMMAND, command) == 0) {
+      ret = get_docker_images_command(command_file, conf, args);
   } else {
     ret = UNKNOWN_DOCKER_COMMAND;
   }
@@ -1734,5 +1736,41 @@ free_and_exit:
   free(container_name);
   free_values(launch_command);
   free_configuration(&command_config);
+  return ret;
+}
+
+int get_docker_images_command(const char *command_file, const struct configuration *conf, args *args) {
+  int ret = 0;
+  char *image_name = NULL;
+
+  struct configuration command_config = {0, NULL};
+  ret = read_and_verify_command_file(command_file, DOCKER_IMAGES_COMMAND, &command_config);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  ret = add_to_args(args, DOCKER_IMAGES_COMMAND);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  image_name = get_configuration_value("image", DOCKER_COMMAND_FILE_SECTION, &command_config);
+  if (image_name) {
+    if (validate_docker_image_name(image_name) != 0) {
+      ret = INVALID_DOCKER_IMAGE_NAME;
+       goto free_and_exit;
+    }
+    ret = add_to_args(args, image_name);
+    if (ret != 0) {
+      goto free_and_exit;
+    }
+  }
+
+  ret = add_to_args(args, "--format={{json .}}");
+  ret = add_to_args(args, "--filter=dangling=false");
+
+  free_and_exit:
+    free(image_name);
+    free_configuration(&command_config);
   return ret;
 }
