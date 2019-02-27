@@ -372,6 +372,12 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
         + "by ChecksumFileSystem");
   }
 
+  @Override
+  public void concat(final Path f, final Path[] psrcs) throws IOException {
+    throw new UnsupportedOperationException("Concat is not supported "
+        + "by ChecksumFileSystem");
+  }
+
   /**
    * Calculated the length of the checksum file in bytes.
    * @param size the length of the data file in bytes
