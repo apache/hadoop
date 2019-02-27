@@ -44,16 +44,13 @@ public class CodecRegistry {
    * @param <T>     Type of the return value.
    * @return the object with the parsed field data
    */
-  public <T> T asObject(byte[] rawData, Class<T> format) throws IOException {
+  public <T> T asObject(byte[] rawData, Class<T> format)
+      throws IOException {
     if (rawData == null) {
       return null;
     }
-    if (valueCodecs.containsKey(format)) {
-      return (T) valueCodecs.get(format).fromPersistedFormat(rawData);
-    } else {
-      throw new IllegalStateException(
-          "Codec is not registered for type: " + format);
-    }
+    Codec codec = getCodec(format);
+    return (T) codec.fromPersistedFormat(rawData);
   }
 
   /**
@@ -66,14 +63,39 @@ public class CodecRegistry {
   public <T> byte[] asRawData(T object) throws IOException {
     Preconditions.checkNotNull(object,
         "Null value shouldn't be persisted in the database");
+    Codec<T> codec = getCodec(object);
+    return codec.toPersistedFormat(object);
+  }
+
+  /**
+   * Get codec for the typed object including class and subclass.
+   * @param object typed object.
+   * @return Codec for the typed object.
+   * @throws IOException
+   */
+  private <T> Codec getCodec(T object) throws IOException {
     Class<T> format = (Class<T>) object.getClass();
+    return getCodec(format);
+  }
+
+
+  /**
+   * Get codec for the typed object including class and subclass.
+   * @param <T>    Type of the typed object.
+   * @return Codec for the typed object.
+   * @throws IOException
+   */
+  private <T> Codec getCodec(Class<T> format) throws IOException {
+    Codec<T> codec;
     if (valueCodecs.containsKey(format)) {
-      Codec<T> codec = (Codec<T>) valueCodecs.get(format);
-      return codec.toPersistedFormat(object);
+      codec = (Codec<T>) valueCodecs.get(format);
+    } else if (valueCodecs.containsKey(format.getSuperclass())) {
+      codec = (Codec<T>) valueCodecs.get(format.getSuperclass());
     } else {
       throw new IllegalStateException(
           "Codec is not registered for type: " + format);
     }
+    return codec;
   }
 
   /**
