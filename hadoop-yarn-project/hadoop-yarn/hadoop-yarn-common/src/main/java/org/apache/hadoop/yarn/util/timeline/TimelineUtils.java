@@ -24,6 +24,8 @@ import java.net.InetSocketAddress;
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
@@ -180,6 +182,36 @@ public class TimelineUtils {
    */
   public static String generateFlowNameTag(String flowName) {
     return FLOW_NAME_TAG_PREFIX + ":" + flowName;
+  }
+
+  /**
+   * Shortens the flow name for the configured size by removing UUID if present.
+   *
+   * @param flowName which has to be shortened
+   * @param conf to resize the flow name
+   * @return shortened flowName
+   */
+  public static String shortenFlowName(String flowName, Configuration conf) {
+    if (flowName == null) {
+      return null;
+    }
+    // remove UUID inside flowname if present
+    flowName = removeUUID(flowName);
+    // resize flowname
+    int length = conf.getInt(YarnConfiguration.FLOW_NAME_MAX_SIZE,
+        YarnConfiguration.FLOW_NAME_DEFAULT_MAX_SIZE);
+    if (length <= 0) {
+      return flowName;
+    }
+    return StringUtils.substring(flowName, 0, length);
+  }
+
+  @VisibleForTesting
+  static String removeUUID(String flowName) {
+    flowName = StringUtils.replaceAll(flowName,
+        "-?([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-" +
+        "[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}){1}", "");
+    return flowName;
   }
 
   /**
