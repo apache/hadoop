@@ -1326,6 +1326,16 @@
   </property>
 
   <property>
+    <name>hdds.scm.chillmode.atleast.one.node.reported.pipeline.pct</name>
+    <value>0.90</value>
+    <tag>HDDS,SCM,OPERATION</tag>
+    <description>
+      Percentage of pipelines, where at least one datanode is reported in the
+      pipeline.
+    </description>
+  </property>
+
+  <property>
     <name>hdds.container.action.max.limit</name>
     <value>20</value>
     <tag>DATANODE</tag>
