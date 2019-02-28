@@ -18,7 +18,12 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
+import java.util.Arrays;
+import java.util.Collection;
+
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -27,15 +32,36 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractContractSeekTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.Constants;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
 
 /**
  * S3A contract tests covering file seek.
  */
+@RunWith(Parameterized.class)
 public class ITestS3AContractSeek extends AbstractContractSeekTest {
 
   protected static final int READAHEAD = 1024;
+
+  private final String seekPolicy;
+
+  /**
+   * Test array for parameterized test runs.
+   * @return a list of parameter tuples.
+   */
+  @Parameterized.Parameters
+  public static Collection<Object[]> params() {
+    return Arrays.asList(new Object[][]{
+        {Constants.INPUT_FADV_RANDOM},
+        {Constants.INPUT_FADV_NORMAL},
+        {Constants.INPUT_FADV_SEQUENTIAL},
+    });
+  }
+
+  public ITestS3AContractSeek(final String seekPolicy) {
+    this.seekPolicy = seekPolicy;
+  }
   
   /**
    * Create a configuration, possibly patching in S3Guard options.
@@ -46,6 +72,8 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
     Configuration conf = super.createConfiguration();
     // patch in S3Guard options
     maybeEnableS3Guard(conf);
+    conf.setInt(Constants.READAHEAD_RANGE, READAHEAD);
+    conf.set(Constants.INPUT_FADVISE, seekPolicy);
     return conf;
   }
 
