@@ -77,7 +77,7 @@ public class HealthyPipelineChillModeRule
     // On a fresh installed cluster, there will be zero pipelines in the SCM
     // pipeline DB.
     healthyPipelineThresholdCount =
-        (int) Math.ceil((healthyPipelinesPercent / 100) *  pipelineCount);
+        (int) Math.ceil(healthyPipelinesPercent * pipelineCount);
 
     LOG.info(" Total pipeline count is {}, healthy pipeline " +
         "threshold count is {}", pipelineCount, healthyPipelineThresholdCount);
