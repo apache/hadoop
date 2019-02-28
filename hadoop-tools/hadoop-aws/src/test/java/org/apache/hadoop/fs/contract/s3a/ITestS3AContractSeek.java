@@ -18,9 +18,15 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
+import org.junit.Test;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractContractSeekTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
 
@@ -29,6 +35,8 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
  */
 public class ITestS3AContractSeek extends AbstractContractSeekTest {
 
+  protected static final int READAHEAD = 1024;
+  
   /**
    * Create a configuration, possibly patching in S3Guard options.
    * @return a configuration
@@ -44,5 +52,29 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new S3AContract(conf);
+  }
+
+  /**
+   * Test for HADOOP-16109: Parquet reading S3AFileSystem causes EOF.
+   */
+  @Test
+  public void testReadPastReadahead() throws Throwable {
+    Path path = path("testReadPastReadahead");
+    byte[] dataset = ContractTestUtils.dataset(READAHEAD * 2, 'a', 32);
+    FileSystem fs = getFileSystem();
+    ContractTestUtils.writeDataset(fs, path, dataset, dataset.length, READAHEAD,
+        true);
+    // forward seek reading across readahead boundary
+    try (FSDataInputStream in = fs.open(path)) {
+      final byte[] temp = new byte[5];
+      in.readByte();
+      in.readFully(1023, temp); // <-- works
+    }
+    // forward seek reading from end of readahead boundary
+    try (FSDataInputStream in = fs.open(path)) {
+      final byte[] temp = new byte[5];
+      in.readByte();
+      in.readFully(1024, temp); // <-- throws EOFException
+    }
   }
 }
