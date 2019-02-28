@@ -308,6 +308,7 @@ public class TestDataNodeVolumeFailure {
 
     // DN0 should stop after the number of failure disks exceed tolerated
     // value (1).
+    dn0.checkDiskError();
     assertFalse(dn0.shouldRun());
   }
 
