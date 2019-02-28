@@ -53,7 +53,7 @@ public class AbfsRestOperationException extends AzureBlobFileSystemException {
       final String errorMessage,
       final Exception innerException,
       final AbfsHttpOperation abfsHttpOperation) {
-    super(formatMessage(abfsHttpOperation));
+    super(formatMessage(abfsHttpOperation), innerException);
 
     this.statusCode = statusCode;
     this.errorCode = AzureServiceErrorCode.getAzureServiceCode(this.statusCode, errorCode);
@@ -61,7 +61,7 @@ public class AbfsRestOperationException extends AzureBlobFileSystemException {
   }
 
   public AbfsRestOperationException(final HttpException innerException) {
-    super(innerException.getMessage());
+    super(innerException.getMessage(), innerException);
 
     this.statusCode = innerException.getHttpErrorCode();
     this.errorCode = AzureServiceErrorCode.UNKNOWN;

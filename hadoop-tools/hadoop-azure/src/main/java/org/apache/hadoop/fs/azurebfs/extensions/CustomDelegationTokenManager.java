@@ -29,6 +29,13 @@ import org.apache.hadoop.security.token.Token;
 
 /**
  * Interface for Managing the Delegation tokens.
+ *
+ * Implementations which also implement BoundDTExtension will have
+ * the its {@code bind()} called
+ * after {@code initialize)} and before any calls to
+ * {@link #getDelegationToken(String)}.
+ * It will not be bound during token renew or cancel operations: there is
+ * no Filesystem to bind to in those operations.
  */
 @InterfaceAudience.LimitedPrivate("authorization-subsystems")
 @InterfaceStability.Unstable

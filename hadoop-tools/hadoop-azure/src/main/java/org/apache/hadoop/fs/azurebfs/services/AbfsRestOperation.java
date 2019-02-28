@@ -149,15 +149,19 @@ public class AbfsRestOperation {
 
       // sign the HTTP request
       if (client.getAccessToken() == null) {
+        LOG.debug("Signing request with shared key");
         // sign the HTTP request
         client.getSharedKeyCredentials().signRequest(
                 httpOperation.getConnection(),
                 hasRequestBody ? bufferLength : 0);
       } else {
+        LOG.debug("Authenticating request with OAuth2 access token");
         httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
                 client.getAccessToken());
       }
-
+      // dump the headers
+      AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
+          httpOperation.getConnection().getRequestProperties());
       AbfsClientThrottlingIntercept.sendingRequest(operationType);
 
       if (hasRequestBody) {
