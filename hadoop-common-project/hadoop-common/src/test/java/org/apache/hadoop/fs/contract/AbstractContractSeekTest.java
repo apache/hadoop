@@ -32,7 +32,12 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.util.Random;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyRead;
 
 /**
  * Test Seek operations
@@ -65,7 +70,7 @@ public abstract class AbstractContractSeekTest
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    conf.setInt(CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY, 4096);
+    conf.setInt(IO_FILE_BUFFER_SIZE_KEY, 4096);
     return conf;
   }
 
@@ -133,8 +138,8 @@ public abstract class AbstractContractSeekTest
   @Test
   public void testSeekReadClosedFile() throws Throwable {
     instream = getFileSystem().open(smallSeekFile);
-    getLogger().debug(
-            "Stream is of type " + instream.getClass().getCanonicalName());
+    getLogger().debug("Stream is of type {}",
+        instream.getClass().getCanonicalName());
     instream.close();
     try {
       instream.seek(0);
@@ -336,8 +341,8 @@ public abstract class AbstractContractSeekTest
 
   @Test
   public void testPositionedBulkReadDoesntChangePosition() throws Throwable {
-    describe(
-            "verify that a positioned read does not change the getPos() value");
+    describe("verify that a positioned read" 
+        + " does not change the getPos() value");
     assumeSupportsPositionedReadable();
     Path testSeekFile = path("bigseekfile.txt");
     byte[] block = dataset(65536, 0, 255);
@@ -586,8 +591,9 @@ public abstract class AbstractContractSeekTest
       fail("Expected an exception, got " + r);
     } catch (EOFException e) {
       handleExpectedException(e);
-    } catch (IOException | IllegalArgumentException
-            | IndexOutOfBoundsException e) {
+    } catch (IOException
+        | IllegalArgumentException
+        | IndexOutOfBoundsException e) {
       handleRelaxedException("read() with a negative position ",
           "EOFException",
           e);
