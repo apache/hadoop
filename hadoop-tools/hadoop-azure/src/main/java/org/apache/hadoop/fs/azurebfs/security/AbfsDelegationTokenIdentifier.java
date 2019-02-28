@@ -24,8 +24,17 @@ import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier
 
 /**
  * Delegation token Identifier for ABFS delegation tokens.
+ * The token kind from {@link #getKind()} is {@link #TOKEN_KIND}, always.
+ *
+ * Subclasses have to very careful when looking up tokens (which will of
+ * course be registered in the credentials as of this kind), in case the
+ * incoming credentials are actually of a different subtype.
  */
 public class AbfsDelegationTokenIdentifier extends DelegationTokenIdentifier {
+
+  /**
+   * The token kind of these tokens: ""ABFS delegation".
+   */
   public static final Text TOKEN_KIND = new Text("ABFS delegation");
 
   public AbfsDelegationTokenIdentifier(){
@@ -41,6 +50,13 @@ public class AbfsDelegationTokenIdentifier extends DelegationTokenIdentifier {
     super(kind, owner, renewer, realUser);
   }
 
+  /**
+   * Get the token kind.
+   * Returns {@link #TOKEN_KIND} always.
+   * If a subclass does not want its renew/cancel process to be managed
+   * by {@link AbfsDelegationTokenManager}, this must be overridden.
+   * @return the kind of the token.
+   */
   @Override
   public Text getKind() {
     return TOKEN_KIND;

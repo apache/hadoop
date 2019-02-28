@@ -32,5 +32,6 @@ public class TokenAccessProviderException extends AzureBlobFileSystemException {
 
     public TokenAccessProviderException(String message, Throwable cause) {
         super(message);
+      initCause(cause);
     }
 }

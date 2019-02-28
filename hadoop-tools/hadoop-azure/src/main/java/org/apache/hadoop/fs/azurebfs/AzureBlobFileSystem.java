@@ -74,6 +74,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
@@ -125,6 +126,8 @@ public class AzureBlobFileSystem extends FileSystem {
       if (this.delegationTokenEnabled) {
         LOG.debug("Initializing DelegationTokenManager for {}", uri);
         this.delegationTokenManager = abfsConfiguration.getDelegationTokenManager();
+        delegationTokenManager.bind(getUri(), configuration);
+        LOG.debug("Created DelegationTokenManager {}", delegationTokenManager);
       }
     }
 
@@ -423,9 +426,10 @@ public class AzureBlobFileSystem extends FileSystem {
     if (isClosed) {
       return;
     }
-
+    // does all the delete-on-exit calls, and may be slow.
     super.close();
     LOG.debug("AzureBlobFileSystem.close");
+    IOUtils.cleanupWithLogger(LOG, abfsStore, delegationTokenManager);
     this.isClosed = true;
   }
 
@@ -1139,6 +1143,20 @@ public class AzureBlobFileSystem extends FileSystem {
         : super.getDelegationToken(renewer);
   }
 
+  /**
+   * If Delegation tokens are enabled, the canonical service name of
+   * this filesystem is the filesystem URI.
+   * @return either the filesystem URI as a string, or null.
+   */
+  @Override
+  public String getCanonicalServiceName() {
+    String name = null;
+    if (delegationTokenManager != null) {
+      name = delegationTokenManager.getCanonicalServiceName();
+    }
+    return name != null ? name : super.getCanonicalServiceName();
+  }
+
   @VisibleForTesting
   FileSystem.Statistics getFsStatistics() {
     return this.statistics;
@@ -1167,6 +1185,15 @@ public class AzureBlobFileSystem extends FileSystem {
   @VisibleForTesting
   AbfsClient getAbfsClient() {
     return abfsStore.getClient();
+  }
+
+  /**
+   * Get any Delegation Token manager created by the filesystem.
+   * @return the DT manager or null.
+   */
+  @VisibleForTesting
+  AbfsDelegationTokenManager getDelegationTokenManager() {
+    return delegationTokenManager;
   }
 
   @VisibleForTesting
