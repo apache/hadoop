@@ -72,12 +72,12 @@ public class TestOzoneTokenIdentifier {
   private static String sslConfsDir;
   private static final String EXCLUDE_CIPHERS =
       "TLS_ECDHE_RSA_WITH_RC4_128_SHA,"
-      + "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA,  \n"
-      + "SSL_RSA_WITH_DES_CBC_SHA,"
-      + "SSL_DHE_RSA_WITH_DES_CBC_SHA,  "
-      + "SSL_RSA_EXPORT_WITH_RC4_40_MD5,\t \n"
-      + "SSL_RSA_EXPORT_WITH_DES40_CBC_SHA,"
-      + "SSL_RSA_WITH_RC4_128_MD5";
+          + "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA,  \n"
+          + "SSL_RSA_WITH_DES_CBC_SHA,"
+          + "SSL_DHE_RSA_WITH_DES_CBC_SHA,  "
+          + "SSL_RSA_EXPORT_WITH_RC4_40_MD5,\t \n"
+          + "SSL_RSA_EXPORT_WITH_DES40_CBC_SHA,"
+          + "SSL_RSA_WITH_RC4_128_MD5";
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -87,7 +87,7 @@ public class TestOzoneTokenIdentifier {
   }
 
   private Configuration createConfiguration(boolean clientCert,
-                                            boolean trustStore)
+      boolean trustStore)
       throws Exception {
     Configuration conf = new Configuration();
     KeyStoreTestUtil.setupSSLConfig(KEYSTORES_DIR, sslConfsDir, conf,
@@ -129,6 +129,7 @@ public class TestOzoneTokenIdentifier {
     // Sign the OzoneMaster Token with Ozone Master private key
     PrivateKey privateKey = keyPair.getPrivate();
     OzoneTokenIdentifier tokenId = new OzoneTokenIdentifier();
+    tokenId.setOmCertSerialId("123");
     byte[] signedToken = signTokenAsymmetric(tokenId, privateKey);
 
     // Verify a valid signed OzoneMaster Token with Ozone Master
@@ -140,6 +141,7 @@ public class TestOzoneTokenIdentifier {
     // public key(certificate)
     tokenId = new OzoneTokenIdentifier(new Text("oozie"),
         new Text("rm"), new Text("client"));
+    tokenId.setOmCertSerialId("123");
     LOG.info("Unsigned token {} is {}", tokenId,
         verifyTokenAsymmetric(tokenId, RandomUtils.nextBytes(128), cert));
 
@@ -177,10 +179,12 @@ public class TestOzoneTokenIdentifier {
   }
 
   OzoneTokenIdentifier generateTestToken() {
-    return new OzoneTokenIdentifier(
+    OzoneTokenIdentifier tokenIdentifier = new OzoneTokenIdentifier(
         new Text(RandomStringUtils.randomAlphabetic(6)),
         new Text(RandomStringUtils.randomAlphabetic(5)),
         new Text(RandomStringUtils.randomAlphabetic(4)));
+    tokenIdentifier.setOmCertSerialId("123");
+    return tokenIdentifier;
   }
 
   @Test
@@ -216,7 +220,7 @@ public class TestOzoneTokenIdentifier {
     }
     duration = Time.monotonicNowNanos() - startTime;
     LOG.info("Average token verify time with HmacSha256(RSA/1024 key) "
-            + "is {} ns", duration/testTokenCount);
+        + "is {} ns", duration/testTokenCount);
   }
 
   @Test
@@ -295,6 +299,7 @@ public class TestOzoneTokenIdentifier {
     id.setIssueDate(Time.now());
     id.setMaxDate(Time.now() + 5000);
     id.setSequenceNumber(1);
+    id.setOmCertSerialId("123");
     return id;
   }
 }

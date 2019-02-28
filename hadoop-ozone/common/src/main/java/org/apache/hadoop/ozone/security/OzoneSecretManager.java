@@ -21,6 +21,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.SecretManager;
@@ -56,6 +57,7 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
   private final long tokenMaxLifetime;
   private final long tokenRenewInterval;
   private final Text service;
+  private CertificateClient certClient;
   private volatile boolean running;
   private OzoneSecretKey currentKey;
   private AtomicInteger currentKeyId;
@@ -126,20 +128,6 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
   }
 
   /**
-   * Default implementation for Ozone. Verifies if hash in token is legit.
-   * */
-  @Override
-  public byte[] retrievePassword(T identifier) throws InvalidToken {
-    byte[] password = createPassword(identifier);
-    // TODO: Revisit this when key/certificate rotation is implemented.
-    // i.e Try all valid keys instead of current key only.
-    if (!verifySignature(identifier, password)) {
-      throw new InvalidToken("Tampared/Inavalid token.");
-    }
-    return password;
-  }
-
-  /**
    * Renew a delegation token.
    *
    * @param token the token to renew
@@ -192,25 +180,6 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
     return currentKey;
   }
 
-  /**
-   * Validates if given hash is valid.
-   *
-   * @param identifier
-   * @param password
-   */
-  public boolean verifySignature(T identifier, byte[] password) {
-    try {
-      Signature rsaSignature =
-          Signature.getInstance(getDefaultSignatureAlgorithm());
-      rsaSignature.initVerify(currentKey.getPublicKey());
-      rsaSignature.update(identifier.getBytes());
-      return rsaSignature.verify(password);
-    } catch (NoSuchAlgorithmException | SignatureException |
-        InvalidKeyException e) {
-      return false;
-    }
-  }
-
   public String formatTokenId(T id) {
     return "(" + id + ")";
   }
@@ -218,12 +187,15 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
   /**
    * Should be called before this object is used.
    *
-   * @param keyPair
+   * @param client
    * @throws IOException
    */
-  public synchronized void start(KeyPair keyPair) throws IOException {
+  public synchronized void start(CertificateClient client)
+      throws IOException {
     Preconditions.checkState(!isRunning());
-    updateCurrentKey(keyPair);
+    this.certClient = client;
+    updateCurrentKey(new KeyPair(certClient.getPublicKey(),
+        certClient.getPrivateKey()));
     setIsRunning(true);
   }
 
@@ -275,6 +247,10 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
 
   public AtomicInteger getTokenSequenceNumber() {
     return tokenSequenceNumber;
+  }
+
+  public CertificateClient getCertClient() {
+    return certClient;
   }
 }
 

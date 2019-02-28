@@ -38,7 +38,7 @@ public class OMCertificateClient extends DefaultCertificateClient {
   private static final Logger LOG =
       LoggerFactory.getLogger(OMCertificateClient.class);
 
-  OMCertificateClient(SecurityConfig securityConfig, String component) {
+  public OMCertificateClient(SecurityConfig securityConfig, String component) {
     super(securityConfig, component, LOG);
   }
 

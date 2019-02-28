@@ -23,6 +23,8 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.BlockTokenSecretProto.AccessModeProto;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.client.OMCertificateClient;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -36,6 +38,8 @@ import org.junit.Test;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.security.KeyPair;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.util.EnumSet;
@@ -50,6 +54,7 @@ public class TestOzoneBlockTokenSecretManager {
   private X509Certificate x509Certificate;
   private long expiryTime;
   private String omCertSerialId;
+  private CertificateClient client;
   private static final String BASEDIR = GenericTestUtils
       .getTempPath(TestOzoneBlockTokenSecretManager.class.getSimpleName());
 
@@ -62,12 +67,35 @@ public class TestOzoneBlockTokenSecretManager {
     keyPair = KeyStoreTestUtil.generateKeyPair("RSA");
     expiryTime = Time.monotonicNow() + 60 * 60 * 24;
     // Create Ozone Master certificate (SCM CA issued cert) and key store.
+    SecurityConfig securityConfig = new SecurityConfig(conf);
     x509Certificate = KeyStoreTestUtil
         .generateCertificate("CN=OzoneMaster", keyPair, 30, "SHA256withRSA");
     omCertSerialId = x509Certificate.getSerialNumber().toString();
-    secretManager = new OzoneBlockTokenSecretManager(new SecurityConfig(conf),
+    secretManager = new OzoneBlockTokenSecretManager(securityConfig,
         expiryTime, omCertSerialId);
-    secretManager.start(keyPair);
+    client = getCertificateClient(securityConfig);
+    client.init();
+    secretManager.start(client);
+  }
+
+  private CertificateClient getCertificateClient(SecurityConfig secConf)
+      throws Exception {
+    return new OMCertificateClient(secConf, "om"){
+      @Override
+      public X509Certificate getCertificate() {
+        return x509Certificate;
+      }
+
+      @Override
+      public PrivateKey getPrivateKey() {
+        return keyPair.getPrivate();
+      }
+
+      @Override
+      public PublicKey getPublicKey() {
+        return keyPair.getPublic();
+      }
+    };
   }
 
   @After
@@ -113,7 +141,7 @@ public class TestOzoneBlockTokenSecretManager {
   private void validateHash(byte[] hash, byte[] identifier) throws Exception {
     Signature rsaSignature =
         Signature.getInstance(secretManager.getDefaultSignatureAlgorithm());
-    rsaSignature.initVerify(keyPair.getPublic());
+    rsaSignature.initVerify(client.getPublicKey());
     rsaSignature.update(identifier);
     Assert.assertTrue(rsaSignature.verify(hash));
   }
@@ -143,5 +171,16 @@ public class TestOzoneBlockTokenSecretManager {
             " tokens.", () -> {
           secretManager.cancelToken(null, null);
         });
+  }
+
+  @Test
+  public void testVerifySignatureFailure() throws Exception {
+    OzoneBlockTokenIdentifier id = new OzoneBlockTokenIdentifier(
+        "testUser", "4234", EnumSet.allOf(AccessModeProto.class),
+        Time.now() + 60 * 60 * 24, "123444", 1024);
+    LambdaTestUtils.intercept(UnsupportedOperationException.class, "operation" +
+            " is not supported for block tokens",
+        () -> secretManager.verifySignature(id,
+            client.signData(id.getBytes())));
   }
 }
