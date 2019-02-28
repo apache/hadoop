@@ -514,7 +514,7 @@ public class AbfsConfiguration{
       } catch(IllegalArgumentException e) {
         throw e;
       } catch (Exception e) {
-        throw new TokenAccessProviderException("Unable to load custom token provider class.", e);
+        throw new TokenAccessProviderException("Unable to load custom token provider class: " + e, e);
       }
 
     } else {

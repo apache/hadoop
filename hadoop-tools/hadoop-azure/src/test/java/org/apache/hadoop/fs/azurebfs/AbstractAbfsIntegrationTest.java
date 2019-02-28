@@ -34,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
@@ -342,4 +343,13 @@ public abstract class AbstractAbfsIntegrationTest extends
         new Path(getTestPath(), filepath));
   }
 
+  /**
+   * Get any Delegation Token manager created by the filesystem.
+   * @return the DT manager or null.
+   * @throws IOException failure
+   */
+  protected AbfsDelegationTokenManager getDelegationTokenManager()
+      throws IOException {
+    return getFileSystem().getDelegationTokenManager();
+  }
 }

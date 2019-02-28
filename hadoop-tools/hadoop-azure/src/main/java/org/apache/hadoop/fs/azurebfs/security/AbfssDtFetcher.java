@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,8 +16,21 @@
  * limitations under the License.
  */
 
-@InterfaceAudience.LimitedPrivate("authorization-subsystems")
-@InterfaceStability.Unstable
 package org.apache.hadoop.fs.azurebfs.security;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+
+import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
+
+/**
+ * The DT Fetcher for abfss.
+ */
+public class AbfssDtFetcher extends AbfsDtFetcher {
+
+  /**
+   * Get the scheme for this specific fetcher.
+   * @return a scheme.
+   */
+  protected String getScheme() {
+    return FileSystemUriSchemes.ABFS_SECURE_SCHEME;
+  }
+
+}
