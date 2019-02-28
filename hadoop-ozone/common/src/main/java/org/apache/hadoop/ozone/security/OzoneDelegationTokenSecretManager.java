@@ -21,6 +21,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.exceptions.CertificateException;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.security.OzoneSecretStore.OzoneManagerSecretState;
@@ -36,7 +38,6 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.util.Iterator;
 import java.util.Map;
@@ -59,6 +60,7 @@ public class OzoneDelegationTokenSecretManager
   private final OzoneSecretStore store;
   private Thread tokenRemoverThread;
   private final long tokenRemoverScanInterval;
+  private String omCertificateSerialId;
   /**
    * If the delegation token update thread holds this lock, it will not get
    * interrupted.
@@ -162,6 +164,18 @@ public class OzoneDelegationTokenSecretManager
     identifier.setMasterKeyId(getCurrentKey().getKeyId());
     identifier.setSequenceNumber(sequenceNum);
     identifier.setMaxDate(Time.monotonicNow() + getTokenMaxLifetime());
+    identifier.setOmCertSerialId(getOmCertificateSerialId());
+  }
+
+  /**
+   * Get OM certificate serial id.
+   * */
+  private String getOmCertificateSerialId() {
+    if (omCertificateSerialId == null) {
+      omCertificateSerialId =
+          getCertClient().getCertificate().getSerialNumber().toString();
+    }
+    return omCertificateSerialId;
   }
 
   /**
@@ -291,6 +305,28 @@ public class OzoneDelegationTokenSecretManager
     return info;
   }
 
+  /**
+   * Validates if given hash is valid.
+   *
+   * @param identifier
+   * @param password
+   */
+  public boolean verifySignature(OzoneTokenIdentifier identifier,
+      byte[] password) {
+    try {
+      if (identifier.getOmCertSerialId().equals(getOmCertificateSerialId())) {
+        return getCertClient().verifySignature(identifier.getBytes(), password,
+            getCertClient().getCertificate());
+      } else {
+        // TODO: This delegation token was issued by other OM instance. Fetch
+        // certificate from SCM using certificate serial.
+        return false;
+      }
+    } catch (CertificateException e) {
+      return false;
+    }
+  }
+
   // TODO: handle roll private key/certificate
   private synchronized void removeExpiredKeys() {
     long now = Time.monotonicNow();
@@ -358,8 +394,9 @@ public class OzoneDelegationTokenSecretManager
    * Should be called before this object is used.
    */
   @Override
-  public synchronized void start(KeyPair keyPair) throws IOException {
-    super.start(keyPair);
+  public synchronized void start(CertificateClient certClient)
+      throws IOException {
+    super.start(certClient);
     storeKey(getCurrentKey());
     removeExpiredKeys();
     tokenRemoverThread = new Daemon(new ExpiredTokenRemover());

@@ -574,6 +574,7 @@ message OMTokenProto {
     optional uint32 sequenceNumber = 7;
     optional uint32 masterKeyId    = 8;
     optional uint64 expiryDate     = 9;
+    required string omCertSerialId = 10;
 }
 
 message SecretKeyProto {

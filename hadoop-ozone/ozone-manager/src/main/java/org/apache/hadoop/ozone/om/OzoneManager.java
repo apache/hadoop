@@ -633,7 +633,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     if (secConfig.isBlockTokenEnabled() && blockTokenMgr != null) {
       try {
         LOG.info("Starting OM block token secret manager");
-        blockTokenMgr.start(keyPair);
+        blockTokenMgr.start(certClient);
       } catch (IOException e) {
         // Unable to start secret manager.
         LOG.error("Error starting block token secret manager.", e);
@@ -644,7 +644,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     if (delegationTokenMgr != null) {
       try {
         LOG.info("Starting OM delegation token secret manager");
-        delegationTokenMgr.start(keyPair);
+        delegationTokenMgr.start(certClient);
       } catch (IOException e) {
         // Unable to start secret manager.
         LOG.error("Error starting delegation token secret manager.", e);

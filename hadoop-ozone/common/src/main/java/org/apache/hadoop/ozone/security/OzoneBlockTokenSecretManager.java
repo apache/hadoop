@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.BlockTokenSecretProto.AccessModeProto;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -30,7 +31,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.security.KeyPair;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -148,17 +148,30 @@ public class OzoneBlockTokenSecretManager extends
     }
 
     if (!verifySignature(identifier, createPassword(identifier))) {
-      throw new InvalidToken("Tampared/Inavalid token.");
+      throw new InvalidToken("Tampered/Invalid token.");
     }
     return true;
   }
 
   /**
+   * Validates if given hash is valid.
+   *
+   * @param identifier
+   * @param password
+   */
+  public boolean verifySignature(OzoneBlockTokenIdentifier identifier,
+      byte[] password) {
+    throw new UnsupportedOperationException("This operation is not " +
+        "supported for block tokens.");
+  }
+
+  /**
    * Should be called before this object is used.
+   * @param client
    */
   @Override
-  public synchronized void start(KeyPair keyPair) throws IOException {
-    super.start(keyPair);
+  public synchronized void start(CertificateClient client) throws IOException {
+    super.start(client);
     removeExpiredKeys();
   }
 
