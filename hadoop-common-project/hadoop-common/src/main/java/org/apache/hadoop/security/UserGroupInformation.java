@@ -23,13 +23,14 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_KERBEROS
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_KERBEROS_KEYTAB_LOGIN_AUTORENEWAL_ENABLED;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_KERBEROS_KEYTAB_LOGIN_AUTORENEWAL_ENABLED_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_TOKEN_FILES;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_TOKENS;
 import static org.apache.hadoop.security.UGIExceptionMessages.*;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
+import static org.apache.hadoop.util.StringUtils.getTrimmedStringCollection;
 
 import com.google.common.annotations.VisibleForTesting;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.AccessControlContext;
@@ -42,10 +43,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -88,7 +89,6 @@ import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
 import org.slf4j.Logger;
@@ -298,7 +298,9 @@ public class UserGroupInformation {
   
   /**Environment variable pointing to the token cache file*/
   public static final String HADOOP_TOKEN_FILE_LOCATION = 
-    "HADOOP_TOKEN_FILE_LOCATION";
+      "HADOOP_TOKEN_FILE_LOCATION";
+  /** Environment variable pointing to the base64 tokens. */
+  public static final String HADOOP_TOKEN = "HADOOP_TOKEN";
   
   public static boolean isInitialized() {
     return conf != null;
@@ -752,45 +754,58 @@ public class UserGroupInformation {
       }
       loginUser = proxyUser == null ? realUser : createProxyUser(proxyUser, realUser);
 
-      String tokenFileLocation = System.getProperty(HADOOP_TOKEN_FILES);
-      if (tokenFileLocation == null) {
-        tokenFileLocation = conf.get(HADOOP_TOKEN_FILES);
-      }
-      if (tokenFileLocation != null) {
-        for (String tokenFileName:
-             StringUtils.getTrimmedStrings(tokenFileLocation)) {
-          if (tokenFileName.length() > 0) {
-            File tokenFile = new File(tokenFileName);
-            if (tokenFile.exists() && tokenFile.isFile()) {
-              Credentials cred = Credentials.readTokenStorageFile(
-                  tokenFile, conf);
-              loginUser.addCredentials(cred);
-            } else {
-              LOG.info("tokenFile("+tokenFileName+") does not exist");
-            }
+      // Load tokens from files
+      final Collection<String> tokenFileLocations = new LinkedHashSet<>();
+      tokenFileLocations.addAll(getTrimmedStringCollection(
+          System.getProperty(HADOOP_TOKEN_FILES)));
+      tokenFileLocations.addAll(getTrimmedStringCollection(
+          conf.get(HADOOP_TOKEN_FILES)));
+      tokenFileLocations.addAll(getTrimmedStringCollection(
+          System.getenv(HADOOP_TOKEN_FILE_LOCATION)));
+      for (String tokenFileLocation : tokenFileLocations) {
+        if (tokenFileLocation != null && tokenFileLocation.length() > 0) {
+          File tokenFile = new File(tokenFileLocation);
+          LOG.debug("Reading credentials from location {}",
+              tokenFile.getCanonicalPath());
+          if (tokenFile.exists() && tokenFile.isFile()) {
+            Credentials cred = Credentials.readTokenStorageFile(
+                tokenFile, conf);
+            LOG.debug("Loaded {} tokens from {}", cred.numberOfTokens(),
+                tokenFile.getCanonicalPath());
+            loginUser.addCredentials(cred);
+          } else {
+            LOG.info("Token file {} does not exist",
+                tokenFile.getCanonicalPath());
           }
         }
       }
 
-      String fileLocation = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
-      if (fileLocation != null) {
-        // Load the token storage file and put all of the tokens into the
-        // user. Don't use the FileSystem API for reading since it has a lock
-        // cycle (HADOOP-9212).
-        File source = new File(fileLocation);
-        LOG.debug("Reading credentials from location set in {}: {}",
-            HADOOP_TOKEN_FILE_LOCATION,
-            source.getCanonicalPath());
-        if (!source.isFile()) {
-          throw new FileNotFoundException("Source file "
-              + source.getCanonicalPath() + " from "
-              + HADOOP_TOKEN_FILE_LOCATION
-              + " not found");
+      // Load tokens from base64 encoding
+      final Collection<String> tokensBase64 = new LinkedHashSet<>();
+      tokensBase64.addAll(getTrimmedStringCollection(
+          System.getProperty(HADOOP_TOKENS)));
+      tokensBase64.addAll(getTrimmedStringCollection(
+          conf.get(HADOOP_TOKENS)));
+      tokensBase64.addAll(getTrimmedStringCollection(
+          System.getenv(HADOOP_TOKEN)));
+      int numTokenBase64 = 0;
+      for (String tokenBase64 : tokensBase64) {
+        if (tokenBase64 != null && tokenBase64.length() > 0) {
+          try {
+            Token<TokenIdentifier> token = new Token<>();
+            token.decodeFromUrlString(tokenBase64);
+            Credentials cred = new Credentials();
+            cred.addToken(token.getService(), token);
+            loginUser.addCredentials(cred);
+            numTokenBase64++;
+          } catch (IOException ioe) {
+            LOG.error("Cannot add token {}: {}",
+                tokenBase64, ioe.getMessage());
+          }
         }
-        Credentials cred = Credentials.readTokenStorageFile(
-            source, conf);
-        LOG.debug("Loaded {} tokens", cred.numberOfTokens());
-        loginUser.addCredentials(cred);
+      }
+      if (numTokenBase64 > 0) {
+        LOG.debug("Loaded {} base64 tokens", numTokenBase64);
       }
     } catch (IOException ioe) {
       LOG.debug("failure to load login credentials", ioe);

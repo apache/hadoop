@@ -1056,6 +1056,7 @@ public class TestUserGroupInformation {
     Collection<Token<?>> credsugiTokens = tokenUgi.getTokens();
     assertTrue(credsugiTokens.contains(token1));
     assertTrue(credsugiTokens.contains(token2));
+    System.clearProperty("hadoop.token.files");
   }
 
   @Test
@@ -1269,5 +1270,97 @@ public class TestUserGroupInformation {
     userCredsRunnable.run();
     // isDestroyed should be called at least once
     Mockito.verify(tgt, atLeastOnce()).isDestroyed();
+  }
+
+  @Test
+  public void testImportTokensFromConfig() throws IOException {
+    Configuration config = new Configuration();
+
+    // Add a base64 token
+    String service0 = "testTokenImportService0";
+    byte[] identity = "identityImportConfig".getBytes();
+    byte[] password = "passwordImportConfig".getBytes();
+    Token<TokenIdentifier> expectedToken0 = new Token<>(identity, password,
+        new Text("testTokenKind0"), new Text(service0));
+    String tokenBase64 = expectedToken0.encodeToUrlString();
+    config.set(CommonConfigurationKeysPublic.HADOOP_TOKENS,
+        tokenBase64 + ",badtoken");
+
+    // Add a token from a file
+    String service1 = "testTokenImportService1";
+    Credentials cred0 = new Credentials();
+    Token<TokenIdentifier> expectedToken1 = expectedToken0.copyToken();
+    expectedToken1.setKind(new Text("testTokenKind1"));
+    expectedToken1.setService(new Text(service1));
+    cred0.addToken(expectedToken1.getService(), expectedToken1);
+    Path workDir = new Path(
+        GenericTestUtils.getRandomizedTestDir().getAbsolutePath());
+    Path tokenPath1 = new Path(workDir, "dt.token");
+    cred0.writeTokenStorageFile(tokenPath1, config);
+    config.set(CommonConfigurationKeysPublic.HADOOP_TOKEN_FILES,
+        tokenPath1 + "," + new Path(workDir, "badfile"));
+
+    UserGroupInformation.reset();
+    UserGroupInformation.setConfiguration(config);
+
+    // Check if the tokens were loaded
+    UserGroupInformation ugi = UserGroupInformation.getLoginUser();
+    Credentials outCred = ugi.getCredentials();
+    assertEquals("Tokens: " + outCred.getAllTokens(),
+        2, outCred.getAllTokens().size());
+    boolean found0 = false;
+    boolean found1 = false;
+    for (Token<? extends TokenIdentifier> token : outCred.getAllTokens()) {
+      assertArrayEquals(identity, token.getIdentifier());
+      if (token.getService().toString().equals(service0)) {
+        assertEquals(expectedToken0.encodeToUrlString(),
+            token.encodeToUrlString());
+        found0 = true;
+      }
+      if (token.getService().toString().equals(service1)) {
+        found1 = true;
+      }
+    }
+    assertTrue("Expected token testTokenService0 not found: " + outCred,
+        found0);
+    assertTrue("Expected token testTokenService1 not found: " + outCred,
+        found1);
+
+    // Try to add the same token through configuration and file
+    Credentials cred1 = new Credentials();
+    cred1.addToken(expectedToken0.getService(), expectedToken0);
+    cred1.writeTokenStorageFile(tokenPath1, config);
+
+    UserGroupInformation.reset();
+    UserGroupInformation.setConfiguration(config);
+
+    UserGroupInformation ugi1 = UserGroupInformation.getLoginUser();
+    Credentials outCred1 = ugi1.getCredentials();
+    assertEquals("Tokens: " + outCred1.getAllTokens(),
+        1, outCred1.getAllTokens().size());
+  }
+
+  @Test
+  public void testImportTokensFromProperty() throws IOException {
+    // Add a base64 token
+    Text service = new Text("testTokenProperty");
+    byte[] identity = "identityImportProperty".getBytes();
+    byte[] password = "passwordImportProperty".getBytes();
+    Token<TokenIdentifier> expectedToken0 = new Token<>(identity, password,
+        new Text("testTokenKind0"), service);
+    String tokenBase64 = expectedToken0.encodeToUrlString();
+    System.setProperty(CommonConfigurationKeysPublic.HADOOP_TOKENS,
+        tokenBase64);
+
+    // Check if the tokens were loaded
+    UserGroupInformation.reset();
+    UserGroupInformation ugi = UserGroupInformation.getLoginUser();
+    Credentials creds = ugi.getCredentials();
+    assertEquals("Tokens: " + creds.getAllTokens(),
+        1, creds.getAllTokens().size());
+    assertArrayEquals(creds.getToken(service).getIdentifier(), identity);
+
+    // Cleanup
+    System.clearProperty(CommonConfigurationKeysPublic.HADOOP_TOKENS);
   }
 }
