@@ -25,8 +25,7 @@ weight: -10
 Ozone is a scalable, distributed object store for Hadoop.  Applications like
 Apache Spark, Hive and YARN, can run against Ozone without any
 modifications. Ozone comes with a [Java client library]({{< ref "JavaApi.md"
->}}) and a  [command line interface] ({{< ref "CommandShell.md#shell" >}})  which makes it easy to use Ozone. This client library supports both RPC and REST protocols.
-
+>}}), a [S3]({{< ref "S3.md" >}}) and a  [command line interface] ({{< ref "CommandShell.md#shell" >}})  which makes it easy to use Ozone.
 Ozone consists of volumes, buckets, and Keys.
 
 * Volumes are similar to user accounts. Only administrators can create or delete volumes.
