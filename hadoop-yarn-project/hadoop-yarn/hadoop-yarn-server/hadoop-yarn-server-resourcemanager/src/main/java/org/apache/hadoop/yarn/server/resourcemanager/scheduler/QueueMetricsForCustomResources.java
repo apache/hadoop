@@ -101,4 +101,8 @@ public class QueueMetricsForCustomResources {
   QueueMetricsCustomResource getAggregatePreemptedSeconds() {
     return aggregatePreemptedSeconds;
   }
+
+  public QueueMetricsCustomResource getAvailable() {
+    return available;
+  }
 }

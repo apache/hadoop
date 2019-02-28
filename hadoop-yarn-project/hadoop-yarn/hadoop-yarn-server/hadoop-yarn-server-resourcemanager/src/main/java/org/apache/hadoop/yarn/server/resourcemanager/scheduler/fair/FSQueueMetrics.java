@@ -310,4 +310,8 @@ public class FSQueueMetrics extends QueueMetrics {
 
     return (FSQueueMetrics)metrics;
   }
+
+  FSQueueMetricsForCustomResources getCustomResources() {
+    return customResources;
+  }
 }
