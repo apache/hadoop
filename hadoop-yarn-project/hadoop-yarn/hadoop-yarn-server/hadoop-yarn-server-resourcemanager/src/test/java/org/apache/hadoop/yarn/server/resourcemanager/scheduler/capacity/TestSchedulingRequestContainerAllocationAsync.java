@@ -40,6 +40,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -55,10 +57,11 @@ public class TestSchedulingRequestContainerAllocationAsync {
   RMNodeLabelsManager mgr;
 
   @Parameters
-  public static Object[] placementConstarintHandlers() {
-    return new Object[] {
-        YarnConfiguration.PROCESSOR_RM_PLACEMENT_CONSTRAINTS_HANDLER,
-        YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER};
+  public static Collection<Object[]> placementConstarintHandlers() {
+    Object[][] params = new Object[][] {
+        {YarnConfiguration.PROCESSOR_RM_PLACEMENT_CONSTRAINTS_HANDLER},
+        {YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER} };
+    return Arrays.asList(params);
   }
 
   public TestSchedulingRequestContainerAllocationAsync(
