@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager;
@@ -49,7 +50,13 @@ public class RouterSecurityManager {
       dtSecretManager = null;
 
   public RouterSecurityManager(Configuration conf) {
-    this.dtSecretManager = newSecretManager(conf);
+    AuthenticationMethod authMethodConfigured =
+        SecurityUtil.getAuthenticationMethod(conf);
+    AuthenticationMethod authMethodToInit =
+        AuthenticationMethod.KERBEROS;
+    if (authMethodConfigured.equals(authMethodToInit)) {
+      this.dtSecretManager = newSecretManager(conf);
+    }
   }
 
   @VisibleForTesting
@@ -78,7 +85,8 @@ public class RouterSecurityManager {
           constructor.newInstance(conf);
       LOG.info("Delegation token secret manager object instantiated");
     } catch (ReflectiveOperationException e) {
-      LOG.error("Could not instantiate: {}", clazz.getSimpleName(), e);
+      LOG.error("Could not instantiate: {}", clazz.getSimpleName(),
+          e.getCause());
       return null;
     } catch (RuntimeException e) {
       LOG.error("RuntimeException to instantiate: {}",
