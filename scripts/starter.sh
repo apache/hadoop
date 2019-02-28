@@ -67,8 +67,8 @@ if [ -n "$KERBEROS_ENABLED" ]; then
     sleep "$SLEEP_SECONDS"
   fi
 
-  if [ -z "$KEYTAB_DIR"]; then
-    KEYTAB_DIR=/etc/security/keytabs
+  if [ -z "$KEYTAB_DIR" ]; then
+    KEYTAB_DIR='/etc/security/keytabs'
   fi
   while true
     do
