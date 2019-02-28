@@ -832,4 +832,8 @@ public class QueueMetrics implements MetricsSource {
   public long getAggregatePreemptedContainers() {
     return aggregateContainersPreempted.value();
   }
+
+  public QueueMetricsForCustomResources getQueueMetricsForCustomResources() {
+    return queueMetricsForCustomResources;
+  }
 }
