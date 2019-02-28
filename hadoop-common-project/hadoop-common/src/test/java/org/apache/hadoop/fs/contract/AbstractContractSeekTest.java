@@ -32,16 +32,13 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.util.Random;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyRead;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 
 /**
  * Test Seek operations
  */
-public abstract class AbstractContractSeekTest extends AbstractFSContractTestBase {
+public abstract class AbstractContractSeekTest
+        extends AbstractFSContractTestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractContractSeekTest.class);
 
@@ -99,14 +96,18 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     describe("seek and read a 0 byte file");
     instream = getFileSystem().open(zeroByteFile);
     assertEquals(0, instream.getPos());
+    assertAvailableIsZero(instream);
     //expect initial read to fai;
     int result = instream.read();
     assertMinusOne("initial byte read", result);
+    assertAvailableIsZero(instream);
     byte[] buffer = new byte[1];
     //expect that seek to 0 works
     instream.seek(0);
+    assertAvailableIsZero(instream);
     //reread, expect same exception
     result = instream.read();
+    assertAvailableIsZero(instream);
     assertMinusOne("post-seek byte read", result);
     result = instream.read(buffer, 0, 1);
     assertMinusOne("post-seek buffer read", result);
@@ -133,7 +134,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
   public void testSeekReadClosedFile() throws Throwable {
     instream = getFileSystem().open(smallSeekFile);
     getLogger().debug(
-      "Stream is of type " + instream.getClass().getCanonicalName());
+            "Stream is of type " + instream.getClass().getCanonicalName());
     instream.close();
     try {
       instream.seek(0);
@@ -172,6 +173,22 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
       // sure there's no other exception like an NPE.
 
     }
+    // a closed stream should either fail or return 0 bytes.
+    try {
+      int a = instream.available();
+      LOG.info("available() returns a value on a closed file: {}", a);
+      assertAvailableIsZero(instream);
+    } catch (IOException | IllegalStateException expected) {
+      // expected
+    }
+    // a closed stream should either fail or return 0 bytes.
+    try {
+      int a = instream.available();
+      LOG.info("available() returns a value on a closed file: {}", a);
+      assertAvailableIsZero(instream);
+    } catch (IOException | IllegalStateException expected) {
+      // expected
+    }
     //and close again
     instream.close();
   }
@@ -185,8 +202,8 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
       long p = instream.getPos();
       LOG.warn("Seek to -1 returned a position of " + p);
       int result = instream.read();
-      fail(
-        "expected an exception, got data " + result + " at a position of " + p);
+      fail("expected an exception, got data " + result
+          + " at a position of " + p);
     } catch (EOFException e) {
       //bad seek -expected
       handleExpectedException(e);
@@ -205,6 +222,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     //expect that seek to 0 works
     instream.seek(0);
     int result = instream.read();
+    assertAvailableIsPositive(instream);
     assertEquals(0, result);
     assertEquals(1, instream.read());
     assertEquals(2, instream.getPos());
@@ -226,13 +244,24 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     //go just before the end
     instream.seek(TEST_FILE_LEN - 2);
     assertTrue("Premature EOF", instream.read() != -1);
+    assertAvailableIsPositive(instream);
     assertTrue("Premature EOF", instream.read() != -1);
+    checkAvailabilityAtEOF();
     assertMinusOne("read past end of file", instream.read());
+  }
+
+  /**
+   * This can be overridden if a filesystem always returns 01
+   * @throws IOException
+   */
+  protected void checkAvailabilityAtEOF() throws IOException {
+    assertAvailableIsZero(instream);
   }
 
   @Test
   public void testSeekPastEndOfFileThenReseekAndRead() throws Throwable {
-    describe("do a seek past the EOF, then verify the stream recovers");
+    describe("do a seek past the EOF, " +
+            "then verify the stream recovers");
     instream = getFileSystem().open(smallSeekFile);
     //go just before the end. This may or may not fail; it may be delayed until the
     //read
@@ -261,6 +290,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     //now go back and try to read from a valid point in the file
     instream.seek(1);
     assertTrue("Premature EOF", instream.read() != -1);
+    assertAvailableIsPositive(instream);
   }
 
   /**
@@ -278,6 +308,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     //expect that seek to 0 works
     instream.seek(0);
     int result = instream.read();
+    assertAvailableIsPositive(instream);
     assertEquals(0, result);
     assertEquals(1, instream.read());
     assertEquals(2, instream.read());
@@ -296,6 +327,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     instream.seek(0);
     assertEquals(0, instream.getPos());
     instream.read();
+    assertAvailableIsPositive(instream);
     assertEquals(1, instream.getPos());
     byte[] buf = new byte[80 * 1024];
     instream.readFully(1, buf, 0, buf.length);
@@ -305,7 +337,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
   @Test
   public void testPositionedBulkReadDoesntChangePosition() throws Throwable {
     describe(
-      "verify that a positioned read does not change the getPos() value");
+            "verify that a positioned read does not change the getPos() value");
     assumeSupportsPositionedReadable();
     Path testSeekFile = path("bigseekfile.txt");
     byte[] block = dataset(65536, 0, 255);
@@ -314,7 +346,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     instream.seek(39999);
     assertTrue(-1 != instream.read());
     assertEquals(40000, instream.getPos());
-
+    assertAvailableIsPositive(instream);
     int v = 256;
     byte[] readBuffer = new byte[v];
     assertEquals(v, instream.read(128, readBuffer, 0, v));
@@ -322,6 +354,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     assertEquals(40000, instream.getPos());
     //content is the same too
     assertEquals("@40000", block[40000], (byte) instream.read());
+    assertAvailableIsPositive(instream);
     //now verify the picked up data
     for (int i = 0; i < 256; i++) {
       assertEquals("@" + i, block[i + 128], readBuffer[i]);
@@ -376,6 +409,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     assertEquals(0, instream.getPos());
     byte[] buffer = new byte[1];
     instream.readFully(0, buffer, 0, 0);
+    assertAvailableIsZero(instream);
     assertEquals(0, instream.getPos());
     // seek to 0 read 0 bytes from it
     instream.seek(0);
@@ -424,7 +458,8 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
       fail("Expected an exception");
     } catch (EOFException e) {
       handleExpectedException(e);
-    } catch (IOException |IllegalArgumentException | IndexOutOfBoundsException e) {
+    } catch (IOException |IllegalArgumentException
+            | IndexOutOfBoundsException e) {
       handleRelaxedException("readFully with a negative position ",
           "EOFException",
           e);
@@ -551,7 +586,8 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
       fail("Expected an exception, got " + r);
     } catch (EOFException e) {
       handleExpectedException(e);
-    } catch (IOException | IllegalArgumentException | IndexOutOfBoundsException e) {
+    } catch (IOException | IllegalArgumentException
+            | IndexOutOfBoundsException e) {
       handleRelaxedException("read() with a negative position ",
           "EOFException",
           e);
@@ -587,6 +623,29 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     instream = getFileSystem().open(smallSeekFile);
     instream.seek(TEST_FILE_LEN -1);
     assertTrue("read at last byte", instream.read() > 0);
+    assertAvailableIsZero(instream);
     assertEquals("read just past EOF", -1, instream.read());
+  }
+
+  /**
+   * Assert that the number of bytes available is zero.
+   * @param in input stream
+   */
+  protected static void assertAvailableIsZero(FSDataInputStream in)
+      throws IOException {
+    assertEquals("stream.available() should be zero",
+        0, in.available());
+  }
+
+  /**
+   * Assert that the number of bytes available is greater than zero.
+   * @param in input stream
+   */
+  protected static void assertAvailableIsPositive(FSDataInputStream in)
+      throws IOException {
+    int available = in.available();
+    assertTrue("stream.available() should be positive but is "
+        + available,
+        available > 0);
   }
 }
