@@ -57,8 +57,6 @@ public class OneReplicaPipelineChillModeRule implements
 
     thresholdCount = (int) Math.ceil(percent * totalPipelineCount);
 
-    System.out.print(0.9*7);
-
     LOG.info(" Total pipeline count is {}, pipeline's with atleast one " +
         "datanode reported threshold count is {}", totalPipelineCount,
         thresholdCount);
