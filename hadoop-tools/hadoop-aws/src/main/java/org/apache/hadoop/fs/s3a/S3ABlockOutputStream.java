@@ -46,9 +46,9 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.fs.impl.StreamStateModel;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
-import org.apache.hadoop.fs.store.StoreImplementationUtils.StreamState;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
@@ -99,7 +99,7 @@ class S3ABlockOutputStream extends OutputStream implements
   private MultiPartUpload multiPartUpload;
 
   /** Stream state. */
-  private final StreamState streamState;
+  private final StreamStateModel stateModel;
 
   /** Current data block. Null means none currently active */
   private S3ADataBlocks.DataBlock activeBlock;
@@ -163,7 +163,7 @@ class S3ABlockOutputStream extends OutputStream implements
     this.progressListener = (progress instanceof ProgressListener) ?
         (ProgressListener) progress
         : new ProgressableListener(progress);
-    this.streamState = new StreamState(fs.keyToQualifiedPath(key));
+    this.stateModel = new StreamStateModel(fs.keyToQualifiedPath(key));
     // create that first block. This guarantees that an open + close sequence
     // writes a 0-byte entry.
     createBlockIfNeeded();
@@ -231,16 +231,16 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   @Override
   public void flush() throws IOException {
-    if (StreamState.State.Open.equals(acquireLock(false))) {
+    if (StreamStateModel.State.Open.equals(acquireLock(false))) {
       try {
         S3ADataBlocks.DataBlock dataBlock = getActiveBlock();
         if (dataBlock != null) {
           dataBlock.flush();
         }
       } catch (IOException ex) {
-        throw streamState.enterErrorState(ex);
+        throw stateModel.enterErrorState(ex);
       } finally {
-        streamState.releaseLock();
+        stateModel.releaseLock();
       }
     }
   }
@@ -279,9 +279,9 @@ class S3ABlockOutputStream extends OutputStream implements
     try {
       innerWrite(source, offset, len);
     } catch (IOException ex) {
-      throw streamState.enterErrorState(ex);
+      throw stateModel.enterErrorState(ex);
     } finally {
-      streamState.releaseLock();
+      stateModel.releaseLock();
     }
   }
 
@@ -291,10 +291,10 @@ class S3ABlockOutputStream extends OutputStream implements
    * @return The stream state
    * @throws IOException if the checkOpen operation raises an exception.
    */
-  private synchronized StreamState.State acquireLock(final boolean checkOpen)
+  private synchronized StreamStateModel.State acquireLock(final boolean checkOpen)
       throws IOException {
-    streamState.acquireLock(checkOpen);
-    return streamState.getState();
+    stateModel.acquireLock(checkOpen);
+    return stateModel.getState();
   }
 
   /**
@@ -380,14 +380,14 @@ class S3ABlockOutputStream extends OutputStream implements
         // because the whole close() method is called, calling it on a stream
         // which has just been closed isn't going to block it for the duration
         // of the entire upload.
-        if (!streamState.enterClosedState()) {
+        if (!stateModel.enterClosedState()) {
           // already closed
           LOG.debug("Ignoring close() as stream is not open");
           return;
         }
       }
     } finally {
-      streamState.releaseLock();
+      stateModel.releaseLock();
     }
     S3ADataBlocks.DataBlock block = getActiveBlock();
     boolean hasBlock = hasActiveBlock();
@@ -433,7 +433,7 @@ class S3ABlockOutputStream extends OutputStream implements
       }
       LOG.debug("Upload complete to {} by {}", key, writeOperationHelper);
     } catch (IOException ioe) {
-      streamState.enterErrorState(ioe);
+      stateModel.enterErrorState(ioe);
       writeOperationHelper.writeFailed(ioe);
       throw ioe;
     } finally {
