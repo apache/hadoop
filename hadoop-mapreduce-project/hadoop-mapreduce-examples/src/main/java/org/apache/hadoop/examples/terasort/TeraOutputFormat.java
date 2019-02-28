@@ -30,7 +30,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileAlreadyExistsException;
 import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -44,7 +43,6 @@ import org.slf4j.LoggerFactory;
 public class TeraOutputFormat extends FileOutputFormat<Text,Text> {
   private static final Logger LOG =
       LoggerFactory.getLogger(TeraOutputFormat.class);
-  private OutputCommitter committer = null;
 
   /**
    * Set the requirement for a final sync before the stream is closed.
