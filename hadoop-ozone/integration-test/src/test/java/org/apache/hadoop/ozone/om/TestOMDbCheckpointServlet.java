@@ -53,6 +53,9 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/**
+ * Class used for testing the OM DB Checkpoint provider servlet.
+ */
 public class TestOMDbCheckpointServlet {
   private MiniOzoneCluster cluster = null;
   private OMMetrics omMetrics;
@@ -79,7 +82,7 @@ public class TestOMDbCheckpointServlet {
     omId = UUID.randomUUID().toString();
     conf.setBoolean(OZONE_ACL_ENABLED, true);
     conf.setInt(OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS, 2);
-    cluster =  MiniOzoneCluster.newBuilder(conf)
+    cluster = MiniOzoneCluster.newBuilder(conf)
         .setClusterId(clusterId)
         .setScmId(scmId)
         .setOmId(omId)
@@ -124,25 +127,25 @@ public class TestOMDbCheckpointServlet {
           Matchers.anyString());
 
       tempFile = File.createTempFile("testDoGet_" + System
-          .currentTimeMillis(),".tar.gz");
+          .currentTimeMillis(), ".tar.gz");
 
       FileOutputStream fileOutputStream = new FileOutputStream(tempFile);
       when(responseMock.getOutputStream()).thenReturn(
           new ServletOutputStream() {
-        @Override
-        public boolean isReady() {
-          return true;
-        }
+            @Override
+            public boolean isReady() {
+              return true;
+            }
 
-        @Override
-        public void setWriteListener(WriteListener writeListener) {
-        }
+            @Override
+            public void setWriteListener(WriteListener writeListener) {
+            }
 
-        @Override
-        public void write(int b) throws IOException {
-          fileOutputStream.write(b);
-        }
-      });
+            @Override
+            public void write(int b) throws IOException {
+              fileOutputStream.write(b);
+            }
+          });
 
       doCallRealMethod().when(omDbCheckpointServletMock).doGet(requestMock,
           responseMock);
