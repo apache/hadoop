@@ -577,6 +577,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
 
     private void configureHddsDatanodes() {
       conf.set(ScmConfigKeys.HDDS_REST_HTTP_ADDRESS_KEY, "0.0.0.0:0");
+      conf.set(HddsConfigKeys.HDDS_DATANODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
       conf.set(HDDS_DATANODE_PLUGINS_KEY,
           "org.apache.hadoop.ozone.web.OzoneHddsDatanodeService");
       conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT,
