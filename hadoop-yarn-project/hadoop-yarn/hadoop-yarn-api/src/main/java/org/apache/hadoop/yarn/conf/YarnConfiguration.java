@@ -1620,9 +1620,6 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_GPU_PATH_TO_EXEC =
       NM_GPU_RESOURCE_PREFIX + "path-to-discovery-executables";
 
-  @Private
-  public static final String DEFAULT_NM_GPU_PATH_TO_EXEC = "";
-
   /**
    * Settings to control which implementation of docker plugin for GPU will be
    * used.
