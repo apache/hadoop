@@ -16,34 +16,8 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.client.rpc.ha;
-
-import org.apache.hadoop.ozone.om.protocolPB
-    .OzoneManagerProtocolClientSideTranslatorPB;
-
-import java.net.InetSocketAddress;
+package org.apache.hadoop.ozone.om.ha;
 
 /**
- * Proxy information of OM.
+ * This package contains Ozone Client's OM Proxy classes.
  */
-public final class OMProxyInfo {
-  private InetSocketAddress address;
-  private OzoneManagerProtocolClientSideTranslatorPB omClient;
-
-  public OMProxyInfo(InetSocketAddress addr) {
-    this.address = addr;
-  }
-
-  public InetSocketAddress getAddress() {
-    return address;
-  }
-
-  public OzoneManagerProtocolClientSideTranslatorPB getOMProxy() {
-    return omClient;
-  }
-
-  public void setOMProxy(
-      OzoneManagerProtocolClientSideTranslatorPB clientProxy) {
-    this.omClient = clientProxy;
-  }
-}
