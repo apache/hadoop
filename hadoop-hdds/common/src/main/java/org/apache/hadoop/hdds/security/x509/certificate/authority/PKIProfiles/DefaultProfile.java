@@ -20,6 +20,8 @@
 package org.apache.hadoop.hdds.security.x509.certificate.authority.PKIProfiles;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.codec.DecoderException;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.validator.routines.DomainValidator;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.x500.RDN;
@@ -32,7 +34,6 @@ import org.bouncycastle.asn1.x509.KeyUsage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.xml.bind.DatatypeConverter;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.AbstractMap.SimpleEntry;
@@ -234,10 +235,10 @@ public class DefaultProfile implements PKIProfile {
       // TODO: Fail? if we cannot resolve the Hostname?
       try {
         final InetAddress byAddress = InetAddress.getByAddress(
-            DatatypeConverter.parseHexBinary(value.substring(1)));
+            Hex.decodeHex(value.substring(1)));
         LOG.debug("Host Name/IP Address : {}", byAddress.toString());
         return true;
-      } catch (UnknownHostException e) {
+      } catch (UnknownHostException | DecoderException e) {
         return false;
       }
     case GeneralName.dNSName:
