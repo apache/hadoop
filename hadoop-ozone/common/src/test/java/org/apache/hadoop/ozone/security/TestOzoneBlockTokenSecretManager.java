@@ -80,7 +80,7 @@ public class TestOzoneBlockTokenSecretManager {
 
   private CertificateClient getCertificateClient(SecurityConfig secConf)
       throws Exception {
-    return new OMCertificateClient(secConf, "om"){
+    return new OMCertificateClient(secConf){
       @Override
       public X509Certificate getCertificate() {
         return x509Certificate;

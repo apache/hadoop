@@ -83,6 +83,16 @@ public class CertificateCodec {
   /**
    * Creates an CertificateCodec.
    *
+   * @param config - Security Config.
+   */
+  public CertificateCodec(SecurityConfig config) {
+    this.securityConfig = config;
+    this.location = securityConfig.getCertificateLocation();
+  }
+
+  /**
+   * Creates an CertificateCodec.
+   *
    * @param configuration - Configuration
    */
   public CertificateCodec(Configuration configuration) {
@@ -165,6 +175,22 @@ public class CertificateCodec {
    */
   public Path getLocation() {
     return location;
+  }
+
+  /**
+   * Gets the X.509 Certificate from PEM encoded String.
+   *
+   * @param pemEncodedString - PEM encoded String.
+   * @return X509Certificate  - Certificate.
+   * @throws CertificateException - Thrown on Failure.
+   * @throws IOException          - Thrown on Failure.
+   */
+  public static X509Certificate getX509Cert(String pemEncodedString)
+      throws CertificateException, IOException {
+    CertificateFactory fact = CertificateFactory.getInstance("X.509");
+    try (InputStream input = IOUtils.toInputStream(pemEncodedString, UTF_8)) {
+      return (X509Certificate) fact.generateCertificate(input);
+    }
   }
 
   /**

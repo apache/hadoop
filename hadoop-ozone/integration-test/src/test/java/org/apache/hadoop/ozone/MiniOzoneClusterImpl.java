@@ -392,7 +392,9 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
         scm = createSCM();
         scm.start();
         om = createOM();
-        om.setCertClient(certClient);
+        if(certClient != null) {
+          om.setCertClient(certClient);
+        }
       } catch (AuthenticationException ex) {
         throw new IOException("Unable to build MiniOzoneCluster. ", ex);
       }
@@ -476,6 +478,10 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       omStorage.setClusterId(clusterId);
       omStorage.setScmId(scmId.get());
       omStorage.setOmId(omId.orElse(UUID.randomUUID().toString()));
+      // Initialize ozone certificate client if security is enabled.
+      if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
+        OzoneManager.initializeSecurity(conf, omStorage);
+      }
       omStorage.initialize();
     }
 

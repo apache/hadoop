@@ -21,6 +21,7 @@ package org.apache.hadoop.hdds.security.x509.certificate.client;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.validator.routines.DomainValidator;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest;
@@ -66,20 +67,16 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
   private final Logger logger;
   private final SecurityConfig securityConfig;
-  private final String component;
   private final KeyCodec keyCodec;
   private PrivateKey privateKey;
   private PublicKey publicKey;
   private X509Certificate x509Certificate;
 
 
-  DefaultCertificateClient(SecurityConfig securityConfig, String component,
-      Logger log) {
+  DefaultCertificateClient(SecurityConfig securityConfig, Logger log) {
     Objects.requireNonNull(securityConfig);
-    Objects.requireNonNull(component);
-    this.component = component;
     this.securityConfig = securityConfig;
-    keyCodec = new KeyCodec(securityConfig, component);
+    keyCodec = new KeyCodec(securityConfig);
     this.logger = log;
   }
 
@@ -95,15 +92,14 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       return privateKey;
     }
 
-    Path keyPath = securityConfig.getKeyLocation(component);
+    Path keyPath = securityConfig.getKeyLocation();
     if (OzoneSecurityUtil.checkIfFileExist(keyPath,
         securityConfig.getPrivateKeyFileName())) {
       try {
         privateKey = keyCodec.readPrivateKey();
       } catch (InvalidKeySpecException | NoSuchAlgorithmException
           | IOException e) {
-        getLogger().error("Error while getting private key for {}",
-            component, e);
+        getLogger().error("Error while getting private key.", e);
       }
     }
     return privateKey;
@@ -121,15 +117,14 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       return publicKey;
     }
 
-    Path keyPath = securityConfig.getKeyLocation(component);
+    Path keyPath = securityConfig.getKeyLocation();
     if (OzoneSecurityUtil.checkIfFileExist(keyPath,
         securityConfig.getPublicKeyFileName())) {
       try {
         publicKey = keyCodec.readPublicKey();
       } catch (InvalidKeySpecException | NoSuchAlgorithmException
           | IOException e) {
-        getLogger().error("Error while getting private key for {}",
-            component, e);
+        getLogger().error("Error while getting public key.", e);
       }
     }
     return publicKey;
@@ -147,18 +142,18 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       return x509Certificate;
     }
 
-    Path certPath = securityConfig.getCertificateLocation(component);
+    Path certPath = securityConfig.getCertificateLocation();
     if (OzoneSecurityUtil.checkIfFileExist(certPath,
         securityConfig.getCertificateFileName())) {
       CertificateCodec certificateCodec =
-          new CertificateCodec(securityConfig, component);
+          new CertificateCodec(securityConfig);
       try {
         X509CertificateHolder x509CertificateHolder =
             certificateCodec.readCertificate();
         x509Certificate =
             CertificateCodec.getX509Certificate(x509CertificateHolder);
       } catch (java.security.cert.CertificateException | IOException e) {
-        getLogger().error("Error reading certificate for {}", component, e);
+        getLogger().error("Error reading certificate.", e);
       }
     }
     return x509Certificate;
@@ -318,8 +313,26 @@ public abstract class DefaultCertificateClient implements CertificateClient {
    * @return CertificateSignRequest.Builder
    */
   @Override
-  public CertificateSignRequest.Builder getCSRBuilder() {
-    return new CertificateSignRequest.Builder();
+  public CertificateSignRequest.Builder getCSRBuilder()
+      throws CertificateException {
+    CertificateSignRequest.Builder builder =
+        new CertificateSignRequest.Builder()
+        .setConfiguration(securityConfig.getConfiguration());
+    try {
+      DomainValidator validator = DomainValidator.getInstance();
+      // Add all valid ips.
+      OzoneSecurityUtil.getValidInetsForCurrentHost().forEach(
+          ip -> {
+            builder.addIpAddress(ip.getHostAddress());
+            if(validator.isValid(ip.getCanonicalHostName())) {
+              builder.addDnsName(ip.getCanonicalHostName());
+            }
+          });
+    } catch (IOException e) {
+      throw new CertificateException("Error while adding ip to CSR builder",
+          e, CSR_ERROR);
+    }
+    return builder;
   }
 
   /**
@@ -345,8 +358,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   @Override
   public void storeCertificate(X509Certificate certificate)
       throws CertificateException {
-    CertificateCodec certificateCodec = new CertificateCodec(securityConfig,
-        component);
+    CertificateCodec certificateCodec = new CertificateCodec(securityConfig);
     try {
       certificateCodec.writeCertificate(
           new X509CertificateHolder(certificate.getEncoded()));
@@ -595,7 +607,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
    * location.
    * */
   protected void bootstrapClientKeys() throws CertificateException {
-    Path keyPath = securityConfig.getKeyLocation(component);
+    Path keyPath = securityConfig.getKeyLocation();
     if (Files.notExists(keyPath)) {
       try {
         Files.createDirectories(keyPath);
@@ -618,10 +630,9 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       keyCodec.writePrivateKey(keyPair.getPrivate());
     } catch (NoSuchProviderException | NoSuchAlgorithmException
         | IOException e) {
-      getLogger().error("Error while bootstrapping certificate client for {}",
-          component, e);
-      throw new CertificateException("Error while bootstrapping certificate " +
-          "client for" + component, BOOTSTRAP_ERROR);
+      getLogger().error("Error while bootstrapping certificate client.", e);
+      throw new CertificateException("Error while bootstrapping certificate.",
+          BOOTSTRAP_ERROR);
     }
     return keyPair;
   }
