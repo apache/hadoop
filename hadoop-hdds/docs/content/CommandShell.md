@@ -71,15 +71,8 @@ _\[scheme\]\[server:port\]/volume/bucket/key_
 
 Where,
 
-1. Scheme - Can be one of the following
-    * o3  - Ozone's native RPC protocol. If you specify this scheme, the
-    native RPC protocol is used while communicating with Ozone Manager and
-    data nodes.
-    * http/https - If an HTTP protocol is specified, then Ozone shell assumes
-     that you are interested in using the Ozone Rest protocol and falls back
-     to using the REST protocol instead of RPC.
- If no protocol is specified, the Ozone shell defaults to the native RPC
- protocol.
+1. Scheme - This should be `o3` which is the native RPC protocol to access 
+  Ozone API. The usage of the schema is optional.
 
 2. Server:Port - This is the address of the Ozone Manager. This can be server
  only, in that case, the default port is used. If this value is omitted
