@@ -53,7 +53,6 @@ import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
-import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.apache.hadoop.io.Text;
@@ -65,6 +64,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.client.CertificateClientTestImpl;
+import org.apache.hadoop.ozone.common.Storage;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMStorage;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -80,6 +80,10 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.bouncycastle.asn1.x500.RDN;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -90,6 +94,12 @@ import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.security.cert.X509Certificate;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
+
 
 /**
  * Test class to for security enabled Ozone cluster.
@@ -97,7 +107,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public final class TestSecureOzoneCluster {
 
-  private static final String TEST_USER = "testUgiUser";
+  private static final String TEST_USER = "testUgiUser@EXAMPLE.COM";
   private static final int CLIENT_TIMEOUT = 2 * 1000;
   private Logger logger = LoggerFactory
       .getLogger(TestSecureOzoneCluster.class);
@@ -118,6 +128,7 @@ public final class TestSecureOzoneCluster {
   private UserGroupInformation testKerberosUgi;
   private StorageContainerManager scm;
   private OzoneManager om;
+  private String host;
 
   private static String clusterId;
   private static String scmId;
@@ -137,10 +148,15 @@ public final class TestSecureOzoneCluster {
       final String path = folder.newFolder().toString();
       metaDirPath = Paths.get(path, "om-meta");
       conf.set(OZONE_METADATA_DIRS, metaDirPath.toString());
+      conf.setBoolean(OZONE_SECURITY_ENABLED_KEY, true);
+      conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+          KERBEROS.toString());
+
       startMiniKdc();
       setSecureConfig(conf);
       createCredentialsInKDC(conf, miniKdc);
       generateKeyPair(conf);
+//      OzoneManager.setTestSecureOmFlag(true);
     } catch (IOException e) {
       logger.error("Failed to initialize TestSecureOzoneCluster", e);
     } catch (Exception e) {
@@ -198,7 +214,7 @@ public final class TestSecureOzoneCluster {
   private void setSecureConfig(Configuration configuration) throws IOException {
     configuration.setBoolean(OZONE_SECURITY_ENABLED_KEY, true);
     configuration.setBoolean(OZONE_ENABLED, true);
-    String host = InetAddress.getLocalHost().getCanonicalHostName()
+    host = InetAddress.getLocalHost().getCanonicalHostName()
         .toLowerCase();
     String realm = miniKdc.getRealm();
     curUser = UserGroupInformation.getCurrentUser()
@@ -417,6 +433,7 @@ public final class TestSecureOzoneCluster {
         RPC.getProtocolVersion(OzoneManagerProtocolPB.class);
     try {
       // Start OM
+      om.setCertClient(new CertificateClientTestImpl(conf));
       om.start();
       UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
       String username = ugi.getUserName();
@@ -564,6 +581,7 @@ public final class TestSecureOzoneCluster {
     // Start OM
 
     try {
+      om.setCertClient(new CertificateClientTestImpl(conf));
       om.start();
 
       UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
@@ -643,7 +661,94 @@ public final class TestSecureOzoneCluster {
     omStore.initialize();
     OzoneManager.setTestSecureOmFlag(true);
     om = OzoneManager.createOm(null, config);
-    CertificateClient certClient = new CertificateClientTestImpl(config);
-    om.setCertClient(certClient);
+  }
+
+  /**
+   * Test functionality to get SCM signed certificate for OM.
+   */
+  @Test
+  public void testSecureOmInitSuccess() throws Exception {
+    LogCapturer omLogs =
+        LogCapturer.captureLogs(OzoneManager.getLogger());
+    omLogs.clearOutput();
+    initSCM();
+    try {
+      scm = StorageContainerManager.createSCM(null, conf);
+      scm.start();
+
+      OMStorage omStore = new OMStorage(conf);
+      initializeOmStorage(omStore);
+      OzoneManager.setTestSecureOmFlag(true);
+      om = OzoneManager.createOm(null, conf);
+
+      Assert.assertNotNull(om.getCertificateClient());
+      Assert.assertNotNull(om.getCertificateClient().getPublicKey());
+      Assert.assertNotNull(om.getCertificateClient().getPrivateKey());
+      Assert.assertNotNull(om.getCertificateClient().getCertificate());
+      Assert.assertTrue(omLogs.getOutput().contains("Init response: GETCERT"));
+      Assert.assertTrue(omLogs.getOutput().contains("Successfully stored " +
+          "SCM signed certificate"));
+      X509Certificate certificate = om.getCertificateClient().getCertificate();
+      validateCertificate(certificate);
+    } finally {
+      if (scm != null) {
+        scm.stop();
+      }
+      if (om != null) {
+        om.stop();
+      }
+
+    }
+
+  }
+
+  public void validateCertificate(X509Certificate cert) throws Exception {
+
+    // Assert that we indeed have a self signed certificate.
+    X500Name x500Issuer = new JcaX509CertificateHolder(cert).getIssuer();
+    RDN cn = x500Issuer.getRDNs(BCStyle.CN)[0];
+    String hostName = InetAddress.getLocalHost().getHostName();
+    String scmUser = "scm@" + hostName;
+    Assert.assertEquals(scmUser, cn.getFirst().getValue().toString());
+
+    // Subject name should be om login user in real world but in this test
+    // UGI has scm user context.
+    Assert.assertEquals(scmUser, cn.getFirst().getValue().toString());
+
+    LocalDate today = LocalDateTime.now().toLocalDate();
+    Date invalidDate;
+
+    // Make sure the end date is honored.
+    invalidDate = java.sql.Date.valueOf(today.plus(1, ChronoUnit.DAYS));
+    Assert.assertTrue(cert.getNotAfter().after(invalidDate));
+
+    invalidDate = java.sql.Date.valueOf(today.plus(400, ChronoUnit.DAYS));
+    Assert.assertTrue(cert.getNotAfter().before(invalidDate));
+
+    Assert.assertTrue(cert.getSubjectDN().toString().contains(scmId));
+    Assert.assertTrue(cert.getSubjectDN().toString().contains(clusterId));
+
+    Assert.assertTrue(cert.getIssuerDN().toString().contains(scmUser));
+    Assert.assertTrue(cert.getIssuerDN().toString().contains(scmId));
+    Assert.assertTrue(cert.getIssuerDN().toString().contains(clusterId));
+
+    // Verify that certificate matches the public key.
+    String encodedKey1 = cert.getPublicKey().toString();
+    String encodedKey2 = om.getCertificateClient().getPublicKey().toString();
+    Assert.assertEquals(encodedKey1, encodedKey2);
+  }
+
+  private void initializeOmStorage(OMStorage omStorage) throws IOException {
+    if (omStorage.getState() == Storage.StorageState.INITIALIZED) {
+      return;
+    }
+    omStorage.setClusterId(clusterId);
+    omStorage.setScmId(scmId);
+    omStorage.setOmId(omId);
+    // Initialize ozone certificate client if security is enabled.
+    if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
+      OzoneManager.initializeSecurity(conf, omStorage);
+    }
+    omStorage.initialize();
   }
 }
