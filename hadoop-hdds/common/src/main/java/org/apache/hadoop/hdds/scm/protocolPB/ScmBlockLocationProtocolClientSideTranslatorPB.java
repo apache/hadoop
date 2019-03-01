@@ -32,6 +32,7 @@ import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.Dele
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.KeyBlocks;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
@@ -80,7 +81,7 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
   @Override
   public AllocatedBlock allocateBlock(long size,
       HddsProtos.ReplicationType type, HddsProtos.ReplicationFactor factor,
-      String owner) throws IOException {
+      String owner, ExcludeList excludeList) throws IOException {
     Preconditions.checkArgument(size > 0, "block size must be greater than 0");
 
     AllocateScmBlockRequestProto request =
@@ -90,6 +91,7 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
             .setFactor(factor)
             .setOwner(owner)
             .setTraceID(TracingUtil.exportCurrentSpan())
+            .setExcludeList(excludeList.getProtoBuf())
             .build();
     final AllocateScmBlockResponseProto response;
     try {

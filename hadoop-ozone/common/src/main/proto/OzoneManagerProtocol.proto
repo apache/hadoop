@@ -611,6 +611,7 @@ message CommitKeyResponse {
 message AllocateBlockRequest {
     required KeyArgs keyArgs = 1;
     required uint64 clientID = 2;
+    optional hadoop.hdds.ExcludeListProto excludeList = 3;
 }
 
 message AllocateBlockResponse {

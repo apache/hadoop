@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.om.protocol;
 import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 
@@ -38,6 +39,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAc
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
+
 import org.apache.hadoop.security.KerberosInfo;
 
 /**
@@ -175,11 +177,13 @@ public interface OzoneManagerProtocol
    *
    * @param args the key to append
    * @param clientID the client identification
+   * @param excludeList List of datanodes/containers to exclude during block
+   *                    allocation
    * @return an allocated block
    * @throws IOException
    */
-  OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID)
-      throws IOException;
+  OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID,
+      ExcludeList excludeList) throws IOException;
 
   /**
    * Look up for the container of an existing key.

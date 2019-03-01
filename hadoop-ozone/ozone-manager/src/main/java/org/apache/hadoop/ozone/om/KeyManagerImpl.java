@@ -42,6 +42,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -220,7 +221,8 @@ public class KeyManagerImpl implements KeyManager {
   }
 
   @Override
-  public OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID)
+  public OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID,
+      ExcludeList excludeList)
       throws IOException {
     Preconditions.checkNotNull(args);
     String volumeName = args.getVolumeName();
@@ -242,7 +244,7 @@ public class KeyManagerImpl implements KeyManager {
     try {
       allocatedBlock =
           scmBlockClient.allocateBlock(scmBlockSize, keyInfo.getType(),
-              keyInfo.getFactor(), omId);
+              keyInfo.getFactor(), omId, excludeList);
     } catch (SCMException ex) {
       if (ex.getResult()
           .equals(SCMException.ResultCodes.CHILL_MODE_EXCEPTION)) {
@@ -390,7 +392,8 @@ public class KeyManagerImpl implements KeyManager {
         AllocatedBlock allocatedBlock;
         try {
           allocatedBlock = scmBlockClient
-              .allocateBlock(allocateSize, type, factor, omId);
+              .allocateBlock(allocateSize, type, factor, omId,
+                  new ExcludeList());
         } catch (IOException ex) {
           if (ex instanceof SCMException) {
             if (((SCMException) ex).getResult()

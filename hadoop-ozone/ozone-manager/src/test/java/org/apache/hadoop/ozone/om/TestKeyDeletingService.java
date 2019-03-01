@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
@@ -196,7 +197,8 @@ public class TestKeyDeletingService {
       //Open, Commit and Delete the Keys in the Key Manager.
       OpenKeySession session = keyManager.openKey(arg);
       for (int i = 0; i < numBlocks; i++) {
-        arg.addLocationInfo(keyManager.allocateBlock(arg, session.getId()));
+        arg.addLocationInfo(
+            keyManager.allocateBlock(arg, session.getId(), new ExcludeList()));
       }
       keyManager.commitKey(arg, session.getId());
       keyManager.deleteKey(arg);

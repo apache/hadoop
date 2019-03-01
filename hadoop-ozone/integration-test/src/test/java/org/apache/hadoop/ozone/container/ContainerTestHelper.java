@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.HddsUtils;
@@ -44,8 +45,13 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerC
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.KeyValue;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
+import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -62,6 +68,7 @@ import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.security.token.Token;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.junit.Assert;
 import org.slf4j.Logger;
@@ -696,5 +703,58 @@ public final class ContainerTestHelper {
 
   public static String getFixedLengthString(String string, int length) {
     return String.format("%1$" + length + "s", string);
+  }
+
+  public static void waitForContainerClose(MiniOzoneCluster cluster,
+      Long... containerIdList)
+      throws ContainerNotFoundException, PipelineNotFoundException,
+      TimeoutException, InterruptedException {
+    List<Pipeline> pipelineList = new ArrayList<>();
+    for (long containerID : containerIdList) {
+      ContainerInfo container =
+          cluster.getStorageContainerManager().getContainerManager()
+              .getContainer(ContainerID.valueof(containerID));
+      Pipeline pipeline =
+          cluster.getStorageContainerManager().getPipelineManager()
+              .getPipeline(container.getPipelineID());
+      pipelineList.add(pipeline);
+      List<DatanodeDetails> datanodes = pipeline.getNodes();
+
+      for (DatanodeDetails details : datanodes) {
+        // Client will issue write chunk and it will create the container on
+        // datanodes.
+        // wait for the container to be created
+        GenericTestUtils
+            .waitFor(() -> isContainerPresent(cluster, containerID, details),
+                500, 100 * 1000);
+        Assert.assertTrue(isContainerPresent(cluster, containerID, details));
+
+        // make sure the container gets created first
+        Assert.assertFalse(ContainerTestHelper
+            .isContainerClosed(cluster, containerID, details));
+        // send the order to close the container
+        cluster.getStorageContainerManager().getEventQueue()
+            .fireEvent(SCMEvents.CLOSE_CONTAINER,
+                ContainerID.valueof(containerID));
+      }
+    }
+    int index = 0;
+    for (long containerID : containerIdList) {
+      Pipeline pipeline = pipelineList.get(index);
+      List<DatanodeDetails> datanodes = pipeline.getNodes();
+      // Below condition avoids the case where container has been allocated
+      // but not yet been used by the client. In such a case container is never
+      // created.
+      for (DatanodeDetails datanodeDetails : datanodes) {
+        GenericTestUtils.waitFor(() -> ContainerTestHelper
+                .isContainerClosed(cluster, containerID, datanodeDetails), 500,
+            15 * 1000);
+        //double check if it's really closed
+        // (waitFor also throws an exception)
+        Assert.assertTrue(ContainerTestHelper
+            .isContainerClosed(cluster, containerID, datanodeDetails));
+      }
+      index++;
+    }
   }
 }

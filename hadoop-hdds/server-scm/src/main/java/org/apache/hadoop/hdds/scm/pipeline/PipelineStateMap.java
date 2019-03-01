@@ -20,6 +20,7 @@ package org.apache.hadoop.hdds.scm.pipeline;
 import com.google.common.base.Preconditions;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
@@ -30,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -217,6 +219,57 @@ class PipelineStateMap {
         .collect(Collectors.toList());
   }
 
+  /**
+   * Get list of pipeline corresponding to specified replication type,
+   * replication factor and pipeline state.
+   *
+   * @param type - ReplicationType
+   * @param state - Required PipelineState
+   * @param excludeDns list of dns to exclude
+   * @param excludePipelines pipelines to exclude
+   * @return List of pipelines with specified replication type,
+   * replication factor and pipeline state
+   */
+  List<Pipeline> getPipelines(ReplicationType type, ReplicationFactor factor,
+      PipelineState state, Collection<DatanodeDetails> excludeDns,
+      Collection<PipelineID> excludePipelines) {
+    Preconditions.checkNotNull(type, "Replication type cannot be null");
+    Preconditions.checkNotNull(factor, "Replication factor cannot be null");
+    Preconditions.checkNotNull(state, "Pipeline state cannot be null");
+    Preconditions
+        .checkNotNull(excludeDns, "Datanode exclude list cannot be null");
+    Preconditions
+        .checkNotNull(excludeDns, "Pipeline exclude list cannot be null");
+    return getPipelines(type, factor, state).stream().filter(
+        pipeline -> !discardPipeline(pipeline, excludePipelines)
+            && !discardDatanode(pipeline, excludeDns))
+        .collect(Collectors.toList());
+  }
+
+  private boolean discardPipeline(Pipeline pipeline,
+      Collection<PipelineID> excludePipelines) {
+    if (excludePipelines.isEmpty()) {
+      return false;
+    }
+    Predicate<PipelineID> predicate = p -> p.equals(pipeline.getId());
+    return excludePipelines.parallelStream().anyMatch(predicate);
+  }
+
+  private boolean discardDatanode(Pipeline pipeline,
+      Collection<DatanodeDetails> excludeDns) {
+    if (excludeDns.isEmpty()) {
+      return false;
+    }
+    boolean discard = false;
+    for (DatanodeDetails dn : pipeline.getNodes()) {
+      Predicate<DatanodeDetails> predicate = p -> p.equals(dn);
+      discard = excludeDns.parallelStream().anyMatch(predicate);
+      if (discard) {
+        break;
+      }
+    }
+    return discard;
+  }
   /**
    * Get set of containerIDs corresponding to a pipeline.
    *

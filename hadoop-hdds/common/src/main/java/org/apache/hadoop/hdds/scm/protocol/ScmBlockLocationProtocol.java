@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdds.scm.protocol;
 
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
@@ -47,11 +48,14 @@ public interface ScmBlockLocationProtocol extends Closeable {
    * Asks SCM where a block should be allocated. SCM responds with the
    * set of datanodes that should be used creating this block.
    * @param size - size of the block.
+   * @param excludeList List of datanodes/containers to exclude during block
+   *                    allocation.
    * @return allocated block accessing info (key, pipeline).
    * @throws IOException
    */
   AllocatedBlock allocateBlock(long size, ReplicationType type,
-      ReplicationFactor factor, String owner) throws IOException;
+      ReplicationFactor factor, String owner, ExcludeList excludeList)
+      throws IOException;
 
   /**
    * Delete blocks for a set of object keys.

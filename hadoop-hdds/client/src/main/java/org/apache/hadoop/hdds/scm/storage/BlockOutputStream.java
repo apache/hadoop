@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdds.scm.storage;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.XceiverClientReply;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
@@ -41,6 +42,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.UUID;
 import java.util.List;
 import java.util.ArrayList;
@@ -102,13 +104,16 @@ public class BlockOutputStream extends OutputStream {
   // by all servers
   private long totalAckDataLength;
 
-  // list to hold up all putBlock futures
-  private List<CompletableFuture<ContainerProtos.ContainerCommandResponseProto>>
-      futureList;
+  // future Map to hold up all putBlock futures
+  private ConcurrentHashMap<Long,
+      CompletableFuture<ContainerProtos.ContainerCommandResponseProto>>
+      futureMap;
   // map containing mapping for putBlock logIndex to to flushedDataLength Map.
   private ConcurrentHashMap<Long, Long> commitIndex2flushedDataMap;
 
   private int currentBufferIndex;
+
+  private List<DatanodeDetails> failedServers;
 
   /**
    * Creates a new BlockOutputStream.
@@ -157,10 +162,11 @@ public class BlockOutputStream extends OutputStream {
     responseExecutor = Executors.newSingleThreadExecutor();
     commitIndex2flushedDataMap = new ConcurrentHashMap<>();
     totalAckDataLength = 0;
-    futureList = new ArrayList<>();
+    futureMap = new ConcurrentHashMap<>();
     totalDataFlushedLength = 0;
     currentBufferIndex = 0;
     writtenDataLength = 0;
+    failedServers = Collections.emptyList();
   }
 
   public BlockID getBlockID() {
@@ -182,6 +188,9 @@ public class BlockOutputStream extends OutputStream {
     return dataLength;
   }
 
+  public List<DatanodeDetails> getFailedServers() {
+    return failedServers;
+  }
 
   @Override
   public void write(int b) throws IOException {
@@ -299,7 +308,7 @@ public class BlockOutputStream extends OutputStream {
       Preconditions.checkState(commitIndex2flushedDataMap.containsKey(index));
       totalAckDataLength = commitIndex2flushedDataMap.remove(index);
       LOG.debug("Total data successfully replicated: " + totalAckDataLength);
-      futureList.remove(0);
+      futureMap.remove(totalAckDataLength);
       // Flush has been committed to required servers successful.
       // just swap the bufferList head and tail after clearing.
       ByteBuffer currentBuffer = bufferList.remove(0);
@@ -320,7 +329,7 @@ public class BlockOutputStream extends OutputStream {
   private void handleFullBuffer() throws IOException {
     try {
       checkOpen();
-      if (!futureList.isEmpty()) {
+      if (!futureMap.isEmpty()) {
         waitOnFlushFutures();
       }
     } catch (InterruptedException | ExecutionException e) {
@@ -362,9 +371,22 @@ public class BlockOutputStream extends OutputStream {
   private void watchForCommit(long commitIndex) throws IOException {
     checkOpen();
     Preconditions.checkState(!commitIndex2flushedDataMap.isEmpty());
+    long index;
     try {
-      long index =
+      XceiverClientReply reply =
           xceiverClient.watchForCommit(commitIndex, watchTimeout);
+      if (reply == null) {
+        index = 0;
+      } else {
+        List<DatanodeDetails> dnList = reply.getDatanodes();
+        if (!dnList.isEmpty()) {
+          if (failedServers.isEmpty()) {
+            failedServers = new ArrayList<>();
+          }
+          failedServers.addAll(dnList);
+        }
+        index = reply.getLogIndex();
+      }
       adjustBuffers(index);
     } catch (TimeoutException | InterruptedException | ExecutionException e) {
       LOG.warn("watchForCommit failed for index " + commitIndex, e);
@@ -392,8 +414,7 @@ public class BlockOutputStream extends OutputStream {
         try {
           validateResponse(e);
         } catch (IOException sce) {
-          future.completeExceptionally(sce);
-          return e;
+          throw new CompletionException(sce);
         }
         // if the ioException is not set, putBlock is successful
         if (ioException == null) {
@@ -422,7 +443,7 @@ public class BlockOutputStream extends OutputStream {
       throw new IOException(
           "Unexpected Storage Container Exception: " + e.toString(), e);
     }
-    futureList.add(flushFuture);
+    futureMap.put(flushPos, flushFuture);
     return flushFuture;
   }
 
@@ -516,8 +537,8 @@ public class BlockOutputStream extends OutputStream {
 
   private void waitOnFlushFutures()
       throws InterruptedException, ExecutionException {
-    CompletableFuture<Void> combinedFuture = CompletableFuture
-        .allOf(futureList.toArray(new CompletableFuture[futureList.size()]));
+    CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(
+        futureMap.values().toArray(new CompletableFuture[futureMap.size()]));
     // wait for all the transactions to complete
     combinedFuture.get();
   }
@@ -553,10 +574,10 @@ public class BlockOutputStream extends OutputStream {
     }
     xceiverClientManager = null;
     xceiverClient = null;
-    if (futureList != null) {
-      futureList.clear();
+    if (futureMap != null) {
+      futureMap.clear();
     }
-    futureList = null;
+    futureMap = null;
     if (commitIndex2flushedDataMap != null) {
       commitIndex2flushedDataMap.clear();
     }

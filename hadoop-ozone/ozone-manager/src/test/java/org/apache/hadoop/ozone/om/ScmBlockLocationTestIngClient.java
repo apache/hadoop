@@ -28,6 +28,7 @@ import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.container.common.helpers.DeleteBlockResult;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
@@ -108,13 +109,14 @@ public class ScmBlockLocationTestIngClient implements ScmBlockLocationProtocol {
    * @param type Replication Type
    * @param factor - Replication factor
    * @param owner - String owner.
+   * @param excludeList list of dns/pipelines to exclude
    * @return
    * @throws IOException
    */
   @Override
   public AllocatedBlock allocateBlock(long size,
       HddsProtos.ReplicationType type, HddsProtos.ReplicationFactor factor,
-      String owner) throws IOException {
+      String owner, ExcludeList excludeList) throws IOException {
     DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
     Pipeline pipeline = createPipeline(datanodeDetails);
     long containerID = Time.monotonicNow();

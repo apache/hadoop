@@ -24,6 +24,7 @@ import io.opentracing.Scope;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
@@ -77,7 +78,8 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
             request.getTraceID())) {
       AllocatedBlock allocatedBlock =
           impl.allocateBlock(request.getSize(), request.getType(),
-              request.getFactor(), request.getOwner());
+              request.getFactor(), request.getOwner(),
+              ExcludeList.getFromProtoBuf(request.getExcludeList()));
       if (allocatedBlock != null) {
         return
             AllocateScmBlockResponseProto.newBuilder()

@@ -30,6 +30,7 @@ import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
 import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
@@ -127,7 +128,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
       return !blockManager.isScmInChillMode();
     }, 10, 1000 * 5);
     AllocatedBlock block = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
-        type, factor, containerOwner);
+        type, factor, containerOwner, new ExcludeList());
     Assert.assertNotNull(block);
   }
 
@@ -140,7 +141,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
     long size = 6 * GB;
     thrown.expectMessage("Unsupported block size");
     AllocatedBlock block = blockManager.allocateBlock(size,
-        type, factor, containerOwner);
+        type, factor, containerOwner, new ExcludeList());
   }
 
 
@@ -154,7 +155,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
     thrown.expectMessage("ChillModePrecheck failed for "
         + "allocateBlock");
     blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
-        type, factor, containerOwner);
+        type, factor, containerOwner, new ExcludeList());
   }
 
   @Test
@@ -165,7 +166,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
       return !blockManager.isScmInChillMode();
     }, 10, 1000 * 5);
     Assert.assertNotNull(blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
-        type, factor, containerOwner));
+        type, factor, containerOwner, new ExcludeList()));
   }
 
   @Test(timeout = 10000)
@@ -179,12 +180,14 @@ public class TestBlockManager implements EventHandler<Boolean> {
     pipelineManager.createPipeline(type, factor);
 
     AllocatedBlock allocatedBlock = blockManager
-        .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner);
+        .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner,
+            new ExcludeList());
     // block should be allocated in different pipelines
     GenericTestUtils.waitFor(() -> {
       try {
         AllocatedBlock block = blockManager
-            .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner);
+            .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner,
+                new ExcludeList());
         return !block.getPipeline().getId()
             .equals(allocatedBlock.getPipeline().getId());
       } catch (IOException e) {
@@ -227,7 +230,8 @@ public class TestBlockManager implements EventHandler<Boolean> {
     GenericTestUtils.waitFor(() -> {
       try {
         blockManager
-            .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner);
+            .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner,
+                new ExcludeList());
       } catch (IOException e) {
       }
       return verifyNumberOfContainersInPipelines(
@@ -250,7 +254,8 @@ public class TestBlockManager implements EventHandler<Boolean> {
     GenericTestUtils.waitFor(() -> {
       try {
         blockManager
-            .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner);
+            .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner,
+                new ExcludeList());
       } catch (IOException e) {
       }
       return verifyNumberOfContainersInPipelines(
@@ -271,7 +276,8 @@ public class TestBlockManager implements EventHandler<Boolean> {
     }
     Assert.assertEquals(0, pipelineManager.getPipelines(type, factor).size());
     Assert.assertNotNull(blockManager
-        .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner));
+        .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner,
+            new ExcludeList()));
     Assert.assertEquals(1, pipelineManager.getPipelines(type, factor).size());
   }
 

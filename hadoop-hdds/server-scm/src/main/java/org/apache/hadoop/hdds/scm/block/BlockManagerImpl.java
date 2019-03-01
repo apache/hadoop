@@ -35,9 +35,11 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.ScmUtils;
 import org.apache.hadoop.hdds.scm.chillmode.ChillModePrecheck;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
@@ -60,6 +62,8 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
+import java.util.function.Predicate;
+
 
 /** Block Manager manages the block access for SCM. */
 public class BlockManagerImpl implements EventHandler<Boolean>,
@@ -145,12 +149,14 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
    * @param size - Block Size
    * @param type Replication Type
    * @param factor - Replication Factor
+   * @param excludeList List of datanodes/containers to exclude during block
+   *                    allocation.
    * @return Allocated block
    * @throws IOException on failure.
    */
   @Override
-  public AllocatedBlock allocateBlock(final long size,
-      ReplicationType type, ReplicationFactor factor, String owner)
+  public AllocatedBlock allocateBlock(final long size, ReplicationType type,
+      ReplicationFactor factor, String owner, ExcludeList excludeList)
       throws IOException {
     LOG.trace("Size;{} , type : {}, factor : {} ", size, type, factor);
     ScmUtils.preCheck(ScmOps.allocateBlock, chillModePrecheck);
@@ -177,8 +183,10 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
     ContainerInfo containerInfo;
 
     while (true) {
-      List<Pipeline> availablePipelines = pipelineManager
-          .getPipelines(type, factor, Pipeline.PipelineState.OPEN);
+      List<Pipeline> availablePipelines =
+          pipelineManager
+              .getPipelines(type, factor, Pipeline.PipelineState.OPEN,
+                  excludeList.getDatanodes(), excludeList.getPipelineIds());
       Pipeline pipeline;
       if (availablePipelines.size() == 0) {
         try {
@@ -197,7 +205,13 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
       // look for OPEN containers that match the criteria.
       containerInfo = containerManager
           .getMatchingContainer(size, owner, pipeline);
-      if (containerInfo != null) {
+
+      // TODO: if getMachingContainer results in containers which are in exclude
+      // list, we may end up in this loop forever. This case needs to be
+      // addressed.
+      if (containerInfo != null && (excludeList.getContainerIds() == null
+          || !discardContainer(containerInfo.containerID(),
+          excludeList.getContainerIds()))) {
         return newBlock(containerInfo);
       }
     }
@@ -210,6 +224,11 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
     return null;
   }
 
+  private boolean discardContainer(ContainerID containerId,
+      List<ContainerID> containers) {
+    Predicate<ContainerID> predicate = p -> p.equals(containerId);
+    return containers.parallelStream().anyMatch(predicate);
+  }
   /**
    * newBlock - returns a new block assigned to a container.
    *

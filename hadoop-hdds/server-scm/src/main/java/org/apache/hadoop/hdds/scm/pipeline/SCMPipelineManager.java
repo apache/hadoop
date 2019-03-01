@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
+import java.util.Collection;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -200,6 +201,20 @@ public class SCMPipelineManager implements PipelineManager {
     lock.readLock().lock();
     try {
       return stateManager.getPipelines(type, factor, state);
+    } finally {
+      lock.readLock().unlock();
+    }
+  }
+
+  @Override
+  public List<Pipeline> getPipelines(ReplicationType type,
+      ReplicationFactor factor, Pipeline.PipelineState state,
+      Collection<DatanodeDetails> excludeDns,
+      Collection<PipelineID> excludePipelines) {
+    lock.readLock().lock();
+    try {
+      return stateManager
+          .getPipelines(type, factor, state, excludeDns, excludePipelines);
     } finally {
       lock.readLock().unlock();
     }

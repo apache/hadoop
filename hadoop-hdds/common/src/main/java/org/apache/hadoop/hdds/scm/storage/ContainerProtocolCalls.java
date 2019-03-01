@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.hdds.scm.storage;
 
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.XceiverClientReply;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .BlockNotCommittedException;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenSelector;
 import org.apache.hadoop.io.Text;
@@ -71,7 +73,6 @@ import org.apache.hadoop.hdds.client.BlockID;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -232,7 +233,8 @@ public final class ContainerProtocolCalls  {
    * @throws IOException if there is an I/O error while performing the call
    */
   public static XceiverClientReply readChunk(XceiverClientSpi xceiverClient,
-      ChunkInfo chunk, BlockID blockID, String traceID, List<UUID> excludeDns)
+      ChunkInfo chunk, BlockID blockID, String traceID,
+      List<DatanodeDetails> excludeDns)
       throws IOException {
     ReadChunkRequestProto.Builder readChunkRequest = ReadChunkRequestProto
         .newBuilder()
@@ -563,6 +565,9 @@ public final class ContainerProtocolCalls  {
     } else if (response.getResult()
         == ContainerProtos.Result.BLOCK_NOT_COMMITTED) {
       throw new BlockNotCommittedException(response.getMessage());
+    } else if (response.getResult()
+        == ContainerProtos.Result.CLOSED_CONTAINER_IO) {
+      throw new ContainerNotOpenException(response.getMessage());
     }
     throw new StorageContainerException(
         response.getMessage(), response.getResult());

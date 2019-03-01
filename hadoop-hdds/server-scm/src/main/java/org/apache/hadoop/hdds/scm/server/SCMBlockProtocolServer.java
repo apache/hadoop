@@ -31,6 +31,7 @@ import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.container.common.helpers.DeleteBlockResult;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
@@ -155,9 +156,9 @@ public class SCMBlockProtocolServer implements
   }
 
   @Override
-  public AllocatedBlock allocateBlock(long size, HddsProtos.ReplicationType
-      type, HddsProtos.ReplicationFactor factor, String owner) throws
-      IOException {
+  public AllocatedBlock allocateBlock(long size,
+      HddsProtos.ReplicationType type, HddsProtos.ReplicationFactor factor,
+      String owner, ExcludeList excludeList) throws IOException {
     Map<String, String> auditMap = Maps.newHashMap();
     auditMap.put("size", String.valueOf(size));
     auditMap.put("type", type.name());
@@ -165,7 +166,8 @@ public class SCMBlockProtocolServer implements
     auditMap.put("owner", owner);
     boolean auditSuccess = true;
     try {
-      return scm.getScmBlockManager().allocateBlock(size, type, factor, owner);
+      return scm.getScmBlockManager()
+          .allocateBlock(size, type, factor, owner, excludeList);
     } catch (Exception ex) {
       auditSuccess = false;
       AUDIT.logWriteFailure(

@@ -19,20 +19,28 @@
 package org.apache.hadoop.hdds.scm;
 
 
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
 
-import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * This class represents the Async reply from XceiverClient.
+ * This class represents the reply from XceiverClient.
  */
 public class XceiverClientReply {
 
   private CompletableFuture<ContainerCommandResponseProto> response;
   private Long logIndex;
-  private UUID dnId;
+
+  /**
+   * List of datanodes where the command got executed and reply is received.
+   * If there is an exception in the reply, these datanodes will inform
+   * about the servers where there is a failure.
+   */
+  private List<DatanodeDetails> datanodes;
 
   public XceiverClientReply(
       CompletableFuture<ContainerCommandResponseProto> response) {
@@ -40,10 +48,11 @@ public class XceiverClientReply {
   }
 
   public XceiverClientReply(
-      CompletableFuture<ContainerCommandResponseProto> response, UUID dnId) {
+      CompletableFuture<ContainerCommandResponseProto> response,
+      List<DatanodeDetails> datanodes) {
     this.logIndex = (long) 0;
     this.response = response;
-    this.dnId = dnId;
+    this.datanodes = datanodes == null ? new ArrayList<>() : datanodes;
   }
 
   public CompletableFuture<ContainerCommandResponseProto> getResponse() {
@@ -58,12 +67,12 @@ public class XceiverClientReply {
     this.logIndex = logIndex;
   }
 
-  public UUID getDatanode() {
-    return dnId;
+  public List<DatanodeDetails> getDatanodes() {
+    return datanodes;
   }
 
-  public void setDatanode(UUID datanodeId) {
-    this.dnId = datanodeId;
+  public void addDatanode(DatanodeDetails dn) {
+    datanodes.add(dn);
   }
 
   public void setResponse(
