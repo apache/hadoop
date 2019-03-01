@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.gpu;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -40,11 +41,14 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
+import org.junit.After;
 import org.apache.hadoop.yarn.util.resource.TestResourceUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -72,9 +76,42 @@ public class TestGpuResourceHandler {
   private NMStateStoreService mockNMStateStore;
   private ConcurrentHashMap<ContainerId, Container> runningContainersMap;
   private GpuDiscoverer gpuDiscoverer;
+  private File testDataDirectory;
+
+  public void createTestDataDirectory() throws IOException {
+    String testDirectoryPath = getTestParentDirectory();
+    testDataDirectory = new File(testDirectoryPath);
+    FileUtils.deleteDirectory(testDataDirectory);
+    testDataDirectory.mkdirs();
+  }
+
+  private String getTestParentDirectory() {
+    File f = new File("target/temp/" + TestGpuResourceHandler.class.getName());
+    return f.getAbsolutePath();
+  }
+
+  private void touchFile(File f) throws IOException {
+    new FileOutputStream(f).close();
+  }
+
+  private Configuration createDefaultConfig() throws IOException {
+    Configuration conf = new YarnConfiguration();
+    File fakeBinary = setupFakeGpuDiscoveryBinary();
+    conf.set(YarnConfiguration.NM_GPU_PATH_TO_EXEC,
+        fakeBinary.getAbsolutePath());
+    return conf;
+  }
+
+  private File setupFakeGpuDiscoveryBinary() throws IOException {
+    File fakeBinary = new File(getTestParentDirectory() + "/fake-nvidia-smi");
+    touchFile(fakeBinary);
+    return fakeBinary;
+  }
 
   @Before
-  public void setup() {
+  public void setup() throws IOException {
+    createTestDataDirectory();
+
     TestResourceUtils.addNewTypesToResources(ResourceInformation.GPU_URI);
 
     mockCGroupsHandler = mock(CGroupsHandler.class);
@@ -91,9 +128,14 @@ public class TestGpuResourceHandler {
         mockPrivilegedExecutor, gpuDiscoverer);
   }
 
+  @After
+  public void cleanupTestFiles() throws IOException {
+    FileUtils.deleteDirectory(testDataDirectory);
+  }
+
   @Test
   public void testBootStrap() throws Exception {
-    Configuration conf = new YarnConfiguration();
+    Configuration conf = createDefaultConfig();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0");
 
     gpuDiscoverer.initialize(conf);
@@ -157,7 +199,7 @@ public class TestGpuResourceHandler {
 
   private void commonTestAllocation(boolean dockerContainerEnabled)
       throws Exception {
-    Configuration conf = new YarnConfiguration();
+    Configuration conf = createDefaultConfig();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:3,3:4");
     gpuDiscoverer.initialize(conf);
 
@@ -246,7 +288,7 @@ public class TestGpuResourceHandler {
   @Test
   public void testAssignedGpuWillBeCleanedupWhenStoreOpFails()
       throws Exception {
-    Configuration conf = new YarnConfiguration();
+    Configuration conf = createDefaultConfig();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:3,3:4");
     gpuDiscoverer.initialize(conf);
 
@@ -275,7 +317,7 @@ public class TestGpuResourceHandler {
 
   @Test
   public void testAllocationWithoutAllowedGpus() throws Exception {
-    Configuration conf = new YarnConfiguration();
+    Configuration conf = createDefaultConfig();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, " ");
     gpuDiscoverer.initialize(conf);
 
@@ -310,7 +352,7 @@ public class TestGpuResourceHandler {
 
   @Test
   public void testAllocationStored() throws Exception {
-    Configuration conf = new YarnConfiguration();
+    Configuration conf = createDefaultConfig();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:3,3:4");
     gpuDiscoverer.initialize(conf);
 
@@ -356,7 +398,7 @@ public class TestGpuResourceHandler {
         new GpuResourceHandlerImpl(nmnctx, mockCGroupsHandler,
         mockPrivilegedExecutor, gpuDiscoverer);
 
-    Configuration conf = new YarnConfiguration();
+    Configuration conf = createDefaultConfig();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:3,3:4");
     gpuDiscoverer.initialize(conf);
 
@@ -376,7 +418,7 @@ public class TestGpuResourceHandler {
 
   @Test
   public void testRecoverResourceAllocation() throws Exception {
-    Configuration conf = new YarnConfiguration();
+    Configuration conf = createDefaultConfig();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:3,3:4");
     gpuDiscoverer.initialize(conf);
 
