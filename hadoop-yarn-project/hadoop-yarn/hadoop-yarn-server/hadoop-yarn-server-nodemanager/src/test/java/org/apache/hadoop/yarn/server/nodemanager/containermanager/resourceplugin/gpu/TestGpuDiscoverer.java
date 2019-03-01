@@ -38,6 +38,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class TestGpuDiscoverer {
   @Rule
@@ -52,6 +53,19 @@ public class TestGpuDiscoverer {
     new FileOutputStream(f).close();
   }
 
+  private File setupFakeBinary(Configuration conf) {
+    File fakeBinary;
+    try {
+      fakeBinary = new File(getTestParentFolder(),
+          GpuDiscoverer.DEFAULT_BINARY_NAME);
+      touchFile(fakeBinary);
+      conf.set(YarnConfiguration.NM_GPU_PATH_TO_EXEC, getTestParentFolder());
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to init fake binary", e);
+    }
+    return fakeBinary;
+  }
+
   @Before
   public void before() throws IOException {
     String folder = getTestParentFolder();
@@ -63,6 +77,7 @@ public class TestGpuDiscoverer {
   private Configuration createConfigWithAllowedDevices(String s) {
     Configuration conf = new Configuration(false);
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, s);
+    setupFakeBinary(conf);
     return conf;
   }
 
@@ -83,10 +98,7 @@ public class TestGpuDiscoverer {
         plugin.getEnvironmentToRunCommand().get("PATH").contains("nvidia"));
 
     // test case 2, check mandatory set path.
-    File fakeBinary = new File(getTestParentFolder(),
-        GpuDiscoverer.DEFAULT_BINARY_NAME);
-    touchFile(fakeBinary);
-    conf.set(YarnConfiguration.NM_GPU_PATH_TO_EXEC, getTestParentFolder());
+    File fakeBinary = setupFakeBinary(conf);
     plugin = new GpuDiscoverer();
     plugin.initialize(conf);
     assertEquals(fakeBinary.getAbsolutePath(),
@@ -275,5 +287,23 @@ public class TestGpuDiscoverer {
     GpuDiscoverer plugin = new GpuDiscoverer();
     plugin.initialize(conf);
     plugin.getGpusUsableByYarn();
+  }
+
+  @Test
+  public void testGpuBinaryIsANotExistingFile() {
+    Configuration conf = new Configuration(false);
+    conf.set(YarnConfiguration.NM_GPU_PATH_TO_EXEC, "/blabla");
+    GpuDiscoverer plugin = new GpuDiscoverer();
+    try {
+      plugin.initialize(conf);
+      plugin.getGpusUsableByYarn();
+      fail("Illegal format, should fail.");
+    } catch (YarnException e) {
+      String message = e.getMessage();
+      assertTrue(message.startsWith("Failed to find GPU discovery " +
+          "executable, please double check"));
+      assertTrue(message.contains("Also tried to find the " +
+          "executable in the default directories:"));
+    }
   }
 }
