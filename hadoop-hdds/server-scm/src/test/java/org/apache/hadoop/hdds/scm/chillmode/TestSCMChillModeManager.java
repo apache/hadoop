@@ -237,7 +237,7 @@ public class TestSCMChillModeManager {
     String storageDir = GenericTestUtils.getTempPath(
         TestSCMChillModeManager.class.getName() + UUID.randomUUID());
     try{
-      MockNodeManager nodeManager = new MockNodeManager(true, 1);
+      MockNodeManager nodeManager = new MockNodeManager(true, 3);
       config.set(HddsConfigKeys.OZONE_METADATA_DIRS, storageDir);
       // enable pipeline check
       config.setBoolean(
@@ -245,6 +245,15 @@ public class TestSCMChillModeManager {
 
       PipelineManager pipelineManager = new SCMPipelineManager(config,
           nodeManager, queue);
+
+      Pipeline pipeline = pipelineManager.createPipeline(
+          HddsProtos.ReplicationType.RATIS,
+          HddsProtos.ReplicationFactor.THREE);
+      PipelineReportsProto.Builder reportBuilder = PipelineReportsProto
+          .newBuilder();
+      reportBuilder.addPipelineReport(PipelineReport.newBuilder()
+          .setPipelineID(pipeline.getId().getProtobuf()));
+
       scmChillModeManager = new SCMChillModeManager(
           config, containers, pipelineManager, queue);
       queue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
@@ -254,17 +263,10 @@ public class TestSCMChillModeManager {
           HddsTestUtils.createNodeRegistrationContainerReport(containers));
       assertTrue(scmChillModeManager.getInChillMode());
 
-      // simulation a pipeline report to trigger the rule check
-      Pipeline pipeline = pipelineManager.createPipeline(
-          HddsProtos.ReplicationType.STAND_ALONE,
-          HddsProtos.ReplicationFactor.ONE);
-      PipelineReportsProto.Builder reportBuilder = PipelineReportsProto
-          .newBuilder();
-      reportBuilder.addPipelineReport(PipelineReport.newBuilder()
-          .setPipelineID(pipeline.getId().getProtobuf()));
-
-      queue.fireEvent(SCMEvents.PIPELINE_REPORT, new PipelineReportFromDatanode(
-          pipeline.getNodes().get(0), reportBuilder.build()));
+      // Trigger the processed pipeline report event
+      queue.fireEvent(SCMEvents.PROCESSED_PIPELINE_REPORT,
+          new PipelineReportFromDatanode(pipeline.getNodes().get(0),
+              reportBuilder.build()));
 
       GenericTestUtils.waitFor(() -> {
         return !scmChillModeManager.getInChillMode();
