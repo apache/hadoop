@@ -53,7 +53,7 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class TestOMDbSnapshotServlet {
+public class TestOMDbCheckpointServlet {
   private MiniOzoneCluster cluster = null;
   private OMMetrics omMetrics;
   private OzoneConfiguration conf;
@@ -103,16 +103,16 @@ public class TestOMDbSnapshotServlet {
 
     File tempFile = null;
     try {
-      OMDbSnapshotServlet omDbSnapshotServletMock =
-          mock(OMDbSnapshotServlet.class);
+      OMDBCheckpointServlet omDbCheckpointServletMock =
+          mock(OMDBCheckpointServlet.class);
 
-      doCallRealMethod().when(omDbSnapshotServletMock).init();
+      doCallRealMethod().when(omDbCheckpointServletMock).init();
 
       HttpServletRequest requestMock = mock(HttpServletRequest.class);
       HttpServletResponse responseMock = mock(HttpServletResponse.class);
 
       ServletContext servletContextMock = mock(ServletContext.class);
-      when(omDbSnapshotServletMock.getServletContext())
+      when(omDbCheckpointServletMock.getServletContext())
           .thenReturn(servletContextMock);
 
       when(servletContextMock.getAttribute(OzoneConsts.OM_CONTEXT_ATTRIBUTE))
@@ -144,10 +144,10 @@ public class TestOMDbSnapshotServlet {
         }
       });
 
-      doCallRealMethod().when(omDbSnapshotServletMock).doGet(requestMock,
+      doCallRealMethod().when(omDbCheckpointServletMock).doGet(requestMock,
           responseMock);
 
-      omDbSnapshotServletMock.init();
+      omDbCheckpointServletMock.init();
 
       Assert.assertTrue(
           omMetrics.getLastCheckpointCreationTimeTaken() == 0);
@@ -156,7 +156,7 @@ public class TestOMDbSnapshotServlet {
       Assert.assertTrue(
           omMetrics.getLastCheckpointStreamingTimeTaken() == 0);
 
-      omDbSnapshotServletMock.doGet(requestMock, responseMock);
+      omDbCheckpointServletMock.doGet(requestMock, responseMock);
 
       Assert.assertTrue(tempFile.length() > 0);
       Assert.assertTrue(
