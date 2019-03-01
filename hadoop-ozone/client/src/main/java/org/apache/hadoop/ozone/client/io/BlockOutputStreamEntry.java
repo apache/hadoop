@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ChecksumType;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
@@ -31,6 +32,8 @@ import org.apache.hadoop.hdds.scm.storage.BlockOutputStream;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+
+import java.util.Collection;
 
 /**
  * Helper class used inside {@link BlockOutputStream}.
@@ -157,6 +160,14 @@ public final class BlockOutputStreamEntry extends OutputStream {
       // In such cases, the default blockCommitSequenceId will be 0
       return 0;
     }
+  }
+
+  Collection<DatanodeDetails> getFailedServers() throws IOException {
+    if (outputStream != null) {
+      BlockOutputStream out = (BlockOutputStream) this.outputStream;
+      return out.getFailedServers();
+    }
+    return null;
   }
 
   long getWrittenDataLength() throws IOException {

@@ -24,6 +24,7 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
@@ -626,8 +627,9 @@ public class OzoneManagerRequestHandler {
         .setBucketName(keyArgs.getBucketName())
         .setKeyName(keyArgs.getKeyName())
         .build();
-    OmKeyLocationInfo newLocation = impl.allocateBlock(omKeyArgs,
-        request.getClientID());
+    OmKeyLocationInfo newLocation =
+        impl.allocateBlock(omKeyArgs, request.getClientID(),
+            ExcludeList.getFromProtoBuf(request.getExcludeList()));
     resp.setKeyLocation(newLocation.getProtobuf());
 
     return resp.build();

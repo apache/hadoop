@@ -214,14 +214,14 @@ public class XceiverClientGrpc extends XceiverClientSpi {
 
   @Override
   public XceiverClientReply sendCommand(
-      ContainerCommandRequestProto request, List<UUID> excludeDns)
+      ContainerCommandRequestProto request, List<DatanodeDetails> excludeDns)
       throws IOException {
     Preconditions.checkState(HddsUtils.isReadOnly(request));
     return sendCommandWithRetry(request, excludeDns);
   }
 
   private XceiverClientReply sendCommandWithRetry(
-      ContainerCommandRequestProto request, List<UUID> excludeDns)
+      ContainerCommandRequestProto request, List<DatanodeDetails> excludeDns)
       throws IOException {
     ContainerCommandResponseProto responseProto = null;
 
@@ -231,24 +231,24 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     // TODO: cache the correct leader info in here, so that any subsequent calls
     // should first go to leader
     List<DatanodeDetails> dns = pipeline.getNodes();
-    DatanodeDetails datanode = null;
     List<DatanodeDetails> healthyDns =
         excludeDns != null ? dns.stream().filter(dnId -> {
-          for (UUID excludeId : excludeDns) {
-            if (dnId.getUuid().equals(excludeId)) {
+          for (DatanodeDetails excludeId : excludeDns) {
+            if (dnId.equals(excludeId)) {
               return false;
             }
           }
           return true;
         }).collect(Collectors.toList()) : dns;
+    XceiverClientReply reply = new XceiverClientReply(null);
     for (DatanodeDetails dn : healthyDns) {
       try {
         LOG.debug("Executing command " + request + " on datanode " + dn);
         // In case the command gets retried on a 2nd datanode,
         // sendCommandAsyncCall will create a new channel and async stub
         // in case these don't exist for the specific datanode.
+        reply.addDatanode(dn);
         responseProto = sendCommandAsync(request, dn).getResponse().get();
-        datanode = dn;
         if (responseProto.getResult() == ContainerProtos.Result.SUCCESS) {
           break;
         }
@@ -264,8 +264,8 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     }
 
     if (responseProto != null) {
-      return new XceiverClientReply(
-          CompletableFuture.completedFuture(responseProto), datanode.getUuid());
+      reply.setResponse(CompletableFuture.completedFuture(responseProto));
+      return reply;
     } else {
       throw new IOException(
           "Failed to execute command " + request + " on the pipeline "
@@ -382,11 +382,11 @@ public class XceiverClientGrpc extends XceiverClientSpi {
   }
 
   @Override
-  public long watchForCommit(long index, long timeout)
+  public XceiverClientReply watchForCommit(long index, long timeout)
       throws InterruptedException, ExecutionException, TimeoutException,
       IOException {
     // there is no notion of watch for commit index in standalone pipeline
-    return 0;
+    return null;
   };
 
   public long getReplicatedMinCommitIndex() {

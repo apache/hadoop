@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdds.scm.pipeline;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
@@ -27,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.NavigableSet;
 
@@ -79,6 +81,13 @@ class PipelineStateManager {
   List<Pipeline> getPipelines(ReplicationType type, ReplicationFactor factor,
       PipelineState state) {
     return pipelineStateMap.getPipelines(type, factor, state);
+  }
+
+  List<Pipeline> getPipelines(ReplicationType type, ReplicationFactor factor,
+      PipelineState state, Collection<DatanodeDetails> excludeDns,
+      Collection<PipelineID> excludePipelines) {
+    return pipelineStateMap
+        .getPipelines(type, factor, state, excludeDns, excludePipelines);
   }
 
   List<Pipeline> getPipelines(ReplicationType type, PipelineState... states) {

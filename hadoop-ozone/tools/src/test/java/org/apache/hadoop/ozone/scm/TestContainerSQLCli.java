@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.scm;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
@@ -149,7 +150,7 @@ public class TestContainerSQLCli {
     }
     assertEquals(2, nodeManager.getAllNodes().size());
     AllocatedBlock ab1 = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE, type,
-        factor, CONTAINER_OWNER);
+        factor, CONTAINER_OWNER, new ExcludeList());
     blockContainerMap.put(ab1.getBlockID().getLocalID(),
         ab1.getBlockID().getContainerID());
 
@@ -162,7 +163,8 @@ public class TestContainerSQLCli {
     // the size of blockContainerMap will vary each time the test is run.
     while (true) {
       ab2 = blockManager
-          .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, CONTAINER_OWNER);
+          .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, CONTAINER_OWNER,
+              new ExcludeList());
       blockContainerMap.put(ab2.getBlockID().getLocalID(),
           ab2.getBlockID().getContainerID());
       if (ab1.getBlockID().getContainerID() !=
