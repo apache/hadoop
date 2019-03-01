@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -35,7 +35,7 @@ public class TestOzoneConfiguration {
   private Configuration conf;
 
   @Rule
-  public TemporaryFolder temp_configs = new TemporaryFolder();
+  public TemporaryFolder tempConfigs = new TemporaryFolder();
 
   @Before
   public void setUp() throws Exception {
@@ -47,7 +47,7 @@ public class TestOzoneConfiguration {
     out.write("<configuration>\n");
   }
 
-  private void endConfig(BufferedWriter out) throws IOException{
+  private void endConfig(BufferedWriter out) throws IOException {
     out.write("</configuration>\n");
     out.flush();
     out.close();
@@ -55,9 +55,9 @@ public class TestOzoneConfiguration {
 
   @Test
   public void testGetAllPropertiesByTags() throws Exception {
-    File coreDefault = temp_configs.newFile("core-default-test.xml");
-    File coreSite = temp_configs.newFile("core-site-test.xml");
-    try(BufferedWriter out = new BufferedWriter(new FileWriter(coreDefault))){
+    File coreDefault = tempConfigs.newFile("core-default-test.xml");
+    File coreSite = tempConfigs.newFile("core-site-test.xml");
+    try (BufferedWriter out = new BufferedWriter(new FileWriter(coreDefault))) {
       startConfig(out);
       appendProperty(out, "hadoop.tags.system", "YARN,HDFS,NAMENODE");
       appendProperty(out, "hadoop.tags.custom", "MYCUSTOMTAG");
@@ -70,10 +70,11 @@ public class TestOzoneConfiguration {
 
       Path fileResource = new Path(coreDefault.getAbsolutePath());
       conf.addResource(fileResource);
-      assertEq(conf.getAllPropertiesByTag("MYCUSTOMTAG").getProperty("dfs.random.key"), "XYZ");
+      assertEq(conf.getAllPropertiesByTag("MYCUSTOMTAG")
+          .getProperty("dfs.random.key"), "XYZ");
     }
 
-    try(BufferedWriter out = new BufferedWriter(new FileWriter(coreSite))) {
+    try (BufferedWriter out = new BufferedWriter(new FileWriter(coreSite))) {
       startConfig(out);
       appendProperty(out, "dfs.random.key", "ABC");
       appendProperty(out, "dfs.replication", "3");
@@ -85,9 +86,12 @@ public class TestOzoneConfiguration {
     }
 
     // Test if values are getting overridden even without tags being present
-    assertEq("3", conf.getAllPropertiesByTag("HDFS").getProperty("dfs.replication"));
-    assertEq("ABC", conf.getAllPropertiesByTag("MYCUSTOMTAG").getProperty("dfs.random.key"));
-    assertEq("true", conf.getAllPropertiesByTag("YARN").getProperty("dfs.cblock.trace.io"));
+    assertEq("3", conf.getAllPropertiesByTag("HDFS")
+        .getProperty("dfs.replication"));
+    assertEq("ABC", conf.getAllPropertiesByTag("MYCUSTOMTAG")
+        .getProperty("dfs.random.key"));
+    assertEq("true", conf.getAllPropertiesByTag("YARN")
+        .getProperty("dfs.cblock.trace.io"));
   }
 
   private void appendProperty(BufferedWriter out, String name, String val)
@@ -104,7 +108,7 @@ public class TestOzoneConfiguration {
     out.write("<value>");
     out.write(val);
     out.write("</value>");
-    if(isFinal) {
+    if (isFinal) {
       out.write("<final>true</final>");
     }
     out.write("</property>\n");
@@ -125,7 +129,7 @@ public class TestOzoneConfiguration {
     out.write("<value>");
     out.write(val);
     out.write("</value>");
-    if(isFinal) {
+    if (isFinal) {
       out.write("<final>true</final>");
     }
     out.write("<tag>");
