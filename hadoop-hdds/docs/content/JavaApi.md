@@ -25,31 +25,19 @@ menu:
 Introduction
 -------------
 
-Ozone ships with its own client library that supports both RPC (Remote
-Procedure Call) and REST (Representational State Transfer). This library is
-the primary user interface to ozone.
+Ozone ships with its own client library that supports RPC. For generic use cases the S3 
+compatible REST interface also can be used instead of the Ozone client. 
 
-It is trivial to switch from RPC to REST or vice versa, by setting the
-property _ozone.client.protocol_ in the configuration or by calling the
-appropriate factory method.
 
 ## Creating an Ozone client
-The Ozone client factory creates the ozone client. It allows the user to
-specify the protocol of communication. For example, to get an REST client, we
-can use
-
-{{< highlight java >}}
-OzoneClient ozClient = OzoneClientFactory.getRestClient();
-{{< /highlight >}}
-
-And to get a RPC client we can call
+The Ozone client factory creates the ozone client. To get a RPC client we can call
 
 {{< highlight java >}}
 OzoneClient ozClient = OzoneClientFactory.getRpcClient();
 {{< /highlight >}}
 
 If the user want to create a client based on the configuration, then they can
-call
+call.
 
 {{< highlight java >}}
 OzoneClient ozClient = OzoneClientFactory.getClient();

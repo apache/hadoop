@@ -19,21 +19,10 @@ Library             OperatingSystem
 Resource            ../commonlib.robot
 
 *** Variables ***
-${COMMON_REST_HEADER}   -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H  "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE root"
 ${DATANODE_HOST}        datanode
 
 
 *** Test Cases ***
-
-Test rest interface
-    ${result} =     Execute             curl -i -X POST ${COMMON_RESTHEADER} "http://${DATANODE_HOST}:9880/volume1"
-                    Should contain      ${result}       201 Created
-    ${result} =     Execute             curl -i -X POST ${COMMON_RESTHEADER} "http://${DATANODE_HOST}:9880/volume1/bucket1"
-                    Should contain      ${result}       201 Created
-    ${result} =     Execute             curl -i -X DELETE ${COMMON_RESTHEADER} "http://${DATANODE_HOST}:9880/volume1/bucket1"
-                    Should contain      ${result}       200 OK
-    ${result} =     Execute             curl -i -X DELETE ${COMMON_RESTHEADER} "http://${DATANODE_HOST}:9880/volume1"
-                    Should contain      ${result}       200 OK
 
 Check webui static resources
     ${result} =        Execute                curl -s -I http://scm:9876/static/bootstrap-3.3.7/js/bootstrap.min.js
