@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.client;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
@@ -26,6 +27,7 @@ import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.security.KeyPair;
 import java.security.PrivateKey;
@@ -45,27 +47,14 @@ public class CertificateClientTestImpl implements CertificateClient {
 
   private final SecurityConfig securityConfig;
   private final KeyPair keyPair;
-  private final X509Certificate cert;
+  private final Configuration config;
 
   public CertificateClientTestImpl(OzoneConfiguration conf) throws Exception{
     securityConfig = new SecurityConfig(conf);
     HDDSKeyGenerator keyGen =
         new HDDSKeyGenerator(securityConfig.getConfiguration());
     keyPair = keyGen.generateKey();
-
-    SelfSignedCertificate.Builder builder =
-        SelfSignedCertificate.newBuilder()
-            .setBeginDate(LocalDate.now())
-            .setEndDate(LocalDate.now().plus(365, ChronoUnit.DAYS))
-            .setClusterID("cluster1")
-            .setKey(keyPair)
-            .setSubject("TestCertSub")
-            .setConfiguration(conf)
-            .setScmID("TestScmId1")
-            .makeCA();
-
-    X509CertificateHolder certificateHolder = builder.build();
-    cert = new JcaX509CertificateConverter().getCertificate(certificateHolder);
+    config = conf;
   }
 
   @Override
@@ -80,7 +69,24 @@ public class CertificateClientTestImpl implements CertificateClient {
 
   @Override
   public X509Certificate getCertificate() {
-    return cert;
+    SelfSignedCertificate.Builder builder =
+        SelfSignedCertificate.newBuilder()
+            .setBeginDate(LocalDate.now())
+            .setEndDate(LocalDate.now().plus(365, ChronoUnit.DAYS))
+            .setClusterID("cluster1")
+            .setKey(keyPair)
+            .setSubject("TestCertSub")
+            .setConfiguration(config)
+            .setScmID("TestScmId1")
+            .makeCA();
+    X509CertificateHolder certificateHolder = null;
+    try {
+      certificateHolder = builder.build();
+      return new JcaX509CertificateConverter().getCertificate(
+          certificateHolder);
+    } catch (IOException | java.security.cert.CertificateException e) {
+    }
+    return null;
   }
 
   @Override
@@ -113,7 +119,7 @@ public class CertificateClientTestImpl implements CertificateClient {
 
   @Override
   public CertificateSignRequest.Builder getCSRBuilder() {
-    return null;
+    return new CertificateSignRequest.Builder();
   }
 
   @Override

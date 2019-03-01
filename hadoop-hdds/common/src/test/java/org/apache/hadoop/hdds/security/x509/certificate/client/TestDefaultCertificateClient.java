@@ -64,7 +64,6 @@ public class TestDefaultCertificateClient {
 
   private OMCertificateClient omCertClient;
   private DNCertificateClient dnCertClient;
-  private static final String COMP = "test";
   private HDDSKeyGenerator keyGenerator;
   private Path metaDirPath;
   private SecurityConfig securityConfig;
@@ -81,13 +80,13 @@ public class TestDefaultCertificateClient {
     securityConfig = new SecurityConfig(config);
     getCertClient();
     keyGenerator = new HDDSKeyGenerator(securityConfig);
-    keyCodec = new KeyCodec(securityConfig, COMP);
-    Files.createDirectories(securityConfig.getKeyLocation(COMP));
+    keyCodec = new KeyCodec(securityConfig);
+    Files.createDirectories(securityConfig.getKeyLocation());
   }
 
   private void getCertClient() {
-    omCertClient = new OMCertificateClient(securityConfig, COMP);
-    dnCertClient = new DNCertificateClient(securityConfig, COMP);
+    omCertClient = new OMCertificateClient(securityConfig);
+    dnCertClient = new DNCertificateClient(securityConfig);
   }
 
   @After
@@ -160,7 +159,7 @@ public class TestDefaultCertificateClient {
         () -> omCertClient.signDataStream(IOUtils.toInputStream(data,
             UTF)));
 
-    KeyPair keyPair = generateKeyPairFiles();
+    generateKeyPairFiles();
     byte[] sign = omCertClient.signDataStream(IOUtils.toInputStream(data,
         UTF));
     validateHash(sign, data.getBytes());
@@ -247,11 +246,11 @@ public class TestDefaultCertificateClient {
     omClientLog.clearOutput();
 
     // Case 1. Expect failure when keypair validation fails.
-    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMP)
+    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
         .toString(), securityConfig.getPrivateKeyFileName()).toFile());
     keyCodec.writePrivateKey(keyPair.getPrivate());
 
-    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMP)
+    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
         .toString(), securityConfig.getPublicKeyFileName()).toFile());
     keyCodec.writePublicKey(keyPair2.getPublic());
 
@@ -272,12 +271,12 @@ public class TestDefaultCertificateClient {
     // Case 2. Expect failure when certificate is generated from different
     // private key and keypair validation fails.
     getCertClient();
-    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMP)
+    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
         .toString(), securityConfig.getCertificateFileName()).toFile());
     X509Certificate x509Certificate = KeyStoreTestUtil.generateCertificate(
         "CN=Test", keyGenerator.generateKey(), 10,
         securityConfig.getSignatureAlgo());
-    CertificateCodec codec = new CertificateCodec(securityConfig, COMP);
+    CertificateCodec codec = new CertificateCodec(securityConfig);
     codec.writeCertificate(new X509CertificateHolder(
         x509Certificate.getEncoded()));
 
@@ -299,7 +298,7 @@ public class TestDefaultCertificateClient {
 
     // Re write the correct public key.
     getCertClient();
-    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMP)
+    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
         .toString(), securityConfig.getPublicKeyFileName()).toFile());
     keyCodec.writePublicKey(keyPair.getPublic());
 
@@ -319,7 +318,7 @@ public class TestDefaultCertificateClient {
 
     // Case 4. Failure when public key recovery fails.
     getCertClient();
-    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation(COMP)
+    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
         .toString(), securityConfig.getPublicKeyFileName()).toFile());
 
     // Check for DN.

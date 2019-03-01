@@ -24,9 +24,14 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.BlockingService;
 
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.security.KeyPair;
 import java.util.Collection;
 import java.util.Objects;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
@@ -38,6 +43,9 @@ import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
+import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolPB;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
@@ -48,6 +56,9 @@ import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolCli
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.client.OMCertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -126,6 +137,7 @@ import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.utils.RetriableTask;
 import org.apache.ratis.util.LifeCycle;
+import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -150,8 +162,9 @@ import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForBlockClients;
 import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForClients;
-import static org.apache.hadoop.hdds.HddsUtils.isHddsEnabled;
+import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForSecurityProtocol;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.HEALTHY;
+import static org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest.getEncodedString;
 import static org.apache.hadoop.hdds.server.ServerUtils.updateRPCListenAddress;
 import static org.apache.hadoop.io.retry.RetryPolicies.retryUpToMaximumCountWithFixedSleep;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_AUTHORIZER_CLASS;
@@ -159,8 +172,8 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_METRICS_FILE;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_METRICS_TEMP_FILE;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
 
+import static org.apache.hadoop.ozone.OzoneConsts.RPC_PORT;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys
     .OZONE_OM_HANDLER_COUNT_DEFAULT;
@@ -246,6 +259,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private final SecurityConfig secConfig;
   private final S3SecretManager s3SecretManager;
   private volatile boolean isOmRpcServerRunning = false;
+  private String omComponent;
 
   private KeyProviderCryptoExtension kmsProvider = null;
   private static String keyProviderUriKeyName =
@@ -291,11 +305,13 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     omRpcAddressTxt = new Text(omNodeDetails.getRpcAddressString());
 
     secConfig = new SecurityConfig(configuration);
+    if (secConfig.isSecurityEnabled()) {
+      omComponent = OM_DAEMON + "-" + omId;
+      certClient = new OMCertificateClient(new SecurityConfig(conf));
+      delegationTokenMgr = createDelegationTokenSecretManager(configuration);
+    }
     if (secConfig.isBlockTokenEnabled()) {
       blockTokenMgr = createBlockTokenSecretManager(configuration);
-    }
-    if(secConfig.isSecurityEnabled()){
-      delegationTokenMgr = createDelegationTokenSecretManager(configuration);
     }
 
     omRpcServer = getRpcServer(conf);
@@ -668,11 +684,17 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   private void readKeyPair() throws OzoneSecurityException {
     try {
-      keyPair = new KeyPair(certClient.getPublicKey(),
-          certClient.getPrivateKey());
+      LOG.info("Reading keypair and certificate from file system.");
+      PublicKey pubKey = certClient.getPublicKey();
+      PrivateKey pvtKey = certClient.getPrivateKey();
+      Objects.requireNonNull(pubKey);
+      Objects.requireNonNull(pvtKey);
+      Objects.requireNonNull(certClient.getCertificate());
+
+      keyPair = new KeyPair(pubKey, pvtKey);
     } catch (Exception e) {
-      throw new OzoneSecurityException("Error reading private file for "
-          + "OzoneManager", e, OzoneSecurityException
+      throw new OzoneSecurityException("Error reading keypair & certificate "
+          + "OzoneManager.", e, OzoneSecurityException
           .ResultCodes.OM_PUBLIC_PRIVATE_KEY_FILE_NOT_EXIST);
     }
   }
@@ -728,6 +750,29 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
                 Client.getRpcTimeout(conf)));
     return TracingUtil
         .createProxy(scmBlockLocationClient, ScmBlockLocationProtocol.class);
+  }
+
+  /**
+   * Create a scm security client, used to get SCM signed certificate.
+   *
+   * @return {@link SCMSecurityProtocol}
+   * @throws IOException
+   */
+  private static SCMSecurityProtocol getScmSecurityClient(
+      OzoneConfiguration conf) throws IOException {
+    RPC.setProtocolEngine(conf, SCMSecurityProtocolPB.class,
+        ProtobufRpcEngine.class);
+    long scmVersion =
+        RPC.getProtocolVersion(ScmBlockLocationProtocolPB.class);
+    InetSocketAddress scmSecurityProtoAdd =
+        getScmAddressForSecurityProtocol(conf);
+    SCMSecurityProtocolClientSideTranslatorPB scmSecurityClient =
+        new SCMSecurityProtocolClientSideTranslatorPB(
+            RPC.getProxy(SCMSecurityProtocolPB.class, scmVersion,
+                scmSecurityProtoAdd, UserGroupInformation.getCurrentUser(),
+                conf, NetUtils.getDefaultSocketFactory(conf),
+                Client.getRpcTimeout(conf)));
+    return scmSecurityClient;
   }
 
   /**
@@ -859,11 +904,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private static OzoneManager createOm(String[] argv,
       OzoneConfiguration conf, boolean printBanner)
       throws IOException, AuthenticationException {
-    if (!isHddsEnabled(conf)) {
-      System.err.println("OM cannot be started in secure mode or when " +
-          OZONE_ENABLED + " is set to false");
-      System.exit(1);
-    }
     StartupOption startOpt = parseArguments(argv);
     if (startOpt == null) {
       printUsage(System.err);
@@ -928,6 +968,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
             "OM initialization succeeded.Current cluster id for sd="
                 + omStorage.getStorageDir() + ";cid=" + omStorage
                 .getClusterID());
+
+        if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
+          initializeSecurity(conf, omStorage);
+        }
+
         return true;
       } catch (IOException ioe) {
         LOG.error("Could not initialize OM version file", ioe);
@@ -939,6 +984,41 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
               + omStorage.getStorageDir() + ";cid=" + omStorage
               .getClusterID());
       return true;
+    }
+  }
+
+  /**
+   * Initializes secure OzoneManager.
+   * */
+  @VisibleForTesting
+  public static void initializeSecurity(OzoneConfiguration conf,
+      OMStorage omStore)
+      throws IOException {
+    LOG.info("Initializing secure OzoneManager.");
+
+    CertificateClient certClient =
+        new OMCertificateClient(new SecurityConfig(conf));
+    CertificateClient.InitResponse response = certClient.init();
+    LOG.info("Init response: {}", response);
+    switch (response) {
+    case SUCCESS:
+      LOG.info("Initialization successful.");
+      break;
+    case GETCERT:
+      getSCMSignedCert(certClient, conf, omStore);
+      LOG.info("Successfully stored SCM signed certificate.");
+      break;
+    case FAILURE:
+      LOG.error("OM security initialization failed.");
+      throw new RuntimeException("OM security initialization failed.");
+    case RECOVER:
+      LOG.error("OM security initialization failed. OM certificate is " +
+          "missing.");
+      throw new RuntimeException("OM security initialization failed.");
+    default:
+      LOG.error("OM security initialization failed. Init response: {}",
+          response);
+      throw new RuntimeException("OM security initialization failed.");
     }
   }
 
@@ -1264,6 +1344,65 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         startSecretManager();
       }
     }
+  }
+
+  /**
+   * Get SCM signed certificate and store it using certificate client.
+   * */
+  private static void getSCMSignedCert(CertificateClient client,
+      OzoneConfiguration config, OMStorage omStore) throws IOException {
+    CertificateSignRequest.Builder builder = client.getCSRBuilder();
+    KeyPair keyPair = new KeyPair(client.getPublicKey(),
+        client.getPrivateKey());
+    InetSocketAddress omRpcAdd;
+
+    omRpcAdd = OmUtils.getOmAddress(config);
+    // Get host name.
+    String hostname = omRpcAdd.getAddress().getHostName();
+
+    String subject = UserGroupInformation.getCurrentUser()
+        .getShortUserName() + "@" + hostname;
+
+    builder.setCA(false)
+        .setKey(keyPair)
+        .setConfiguration(config)
+        .setScmID(omStore.getScmId())
+        .setClusterID(omStore.getClusterID())
+        .setSubject(subject)
+        .addIpAddress(omRpcAdd.getAddress().getHostAddress());
+
+    LOG.info("Creating csr for OM->dns:{},ip:{},scmId:{},clusterId:{}," +
+            "subject:{}", hostname, omRpcAdd.getAddress().getHostAddress(),
+        omStore.getScmId(), omStore.getClusterID(), subject);
+
+    HddsProtos.OzoneManagerDetailsProto.Builder omDetailsProtoBuilder =
+        HddsProtos.OzoneManagerDetailsProto.newBuilder()
+            .setHostName(omRpcAdd.getHostName())
+            .setIpAddress(omRpcAdd.getAddress().getHostAddress())
+            .setUuid(omStore.getOmId())
+            .addPorts(HddsProtos.Port.newBuilder()
+                .setName(RPC_PORT)
+                .setValue(omRpcAdd.getPort())
+                .build());
+
+    PKCS10CertificationRequest csr = builder.build();
+    HddsProtos.OzoneManagerDetailsProto omDetailsProto =
+        omDetailsProtoBuilder.build();
+    LOG.info("OzoneManager ports added:{}", omDetailsProto.getPortsList());
+    SCMSecurityProtocol secureScmClient = getScmSecurityClient(config);
+
+    String pemEncodedCert = secureScmClient.getOMCertificate(omDetailsProto,
+        getEncodedString(csr));
+
+    try {
+      X509Certificate x509Certificate =
+          CertificateCodec.getX509Cert(pemEncodedCert);
+      client.storeCertificate(x509Certificate);
+    } catch (IOException | CertificateException e) {
+      LOG.error("Error while storing SCM signed certificate.", e);
+      throw new RuntimeException(e);
+    }
+
   }
 
   /**
@@ -2468,5 +2607,14 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   @Override
   public OMFailoverProxyProvider getOMFailoverProxyProvider() {
     return null;
+  }
+
+  @VisibleForTesting
+  public CertificateClient getCertificateClient() {
+    return certClient;
+  }
+
+  public String getComponent() {
+    return omComponent;
   }
 }

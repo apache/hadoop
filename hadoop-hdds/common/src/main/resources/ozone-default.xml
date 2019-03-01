@@ -1830,7 +1830,7 @@
   </property>
   <property>
     <name>ozone.scm.security.service.address</name>
-    <value>0.0.0.0:9961</value>
+    <value/>
     <tag>OZONE, HDDS, SECURITY</tag>
     <description>Address of SCMSecurityProtocolServer.</description>
   </property>
