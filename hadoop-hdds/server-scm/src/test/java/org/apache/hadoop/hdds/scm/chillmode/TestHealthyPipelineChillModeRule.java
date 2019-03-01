@@ -38,6 +38,7 @@ import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -146,6 +147,82 @@ public class TestHealthyPipelineChillModeRule {
       firePipelineEvent(pipeline1, eventQueue);
       GenericTestUtils.waitFor(() -> healthyPipelineChillModeRule.validate(),
           1000, 5000);
+    } finally {
+      FileUtil.fullyDelete(new File(storageDir));
+    }
+
+  }
+
+
+  @Test
+  public void testHealthyPipelineChillModeRuleWithMixedPipelines()
+      throws Exception {
+
+    String storageDir = GenericTestUtils.getTempPath(
+        TestHealthyPipelineChillModeRule.class.getName() + UUID.randomUUID());
+
+    try {
+      EventQueue eventQueue = new EventQueue();
+      List<ContainerInfo> containers = new ArrayList<>();
+      containers.addAll(HddsTestUtils.getContainerInfo(1));
+
+      OzoneConfiguration config = new OzoneConfiguration();
+
+      // In Mock Node Manager, first 8 nodes are healthy, next 2 nodes are
+      // stale and last one is dead, and this repeats. So for a 12 node, 9
+      // healthy, 2 stale and one dead.
+      MockNodeManager nodeManager = new MockNodeManager(true, 12);
+      config.set(HddsConfigKeys.OZONE_METADATA_DIRS, storageDir);
+      // enable pipeline check
+      config.setBoolean(
+          HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK, true);
+
+
+      PipelineManager pipelineManager = new SCMPipelineManager(config,
+          nodeManager, eventQueue);
+
+      // Create 3 pipelines
+      Pipeline pipeline1 =
+          pipelineManager.createPipeline(HddsProtos.ReplicationType.RATIS,
+              HddsProtos.ReplicationFactor.ONE);
+      Pipeline pipeline2 =
+          pipelineManager.createPipeline(HddsProtos.ReplicationType.RATIS,
+              HddsProtos.ReplicationFactor.THREE);
+      Pipeline pipeline3 =
+          pipelineManager.createPipeline(HddsProtos.ReplicationType.RATIS,
+              HddsProtos.ReplicationFactor.THREE);
+
+
+      SCMChillModeManager scmChillModeManager = new SCMChillModeManager(
+          config, containers, pipelineManager, eventQueue);
+
+      HealthyPipelineChillModeRule healthyPipelineChillModeRule =
+          scmChillModeManager.getHealthyPipelineChillModeRule();
+
+
+      // No datanodes have sent pipelinereport from datanode
+      Assert.assertFalse(healthyPipelineChillModeRule.validate());
+
+
+      GenericTestUtils.LogCapturer logCapturer =
+          GenericTestUtils.LogCapturer.captureLogs(LoggerFactory.getLogger(
+              SCMChillModeManager.class));
+
+      // fire event with pipeline report with ratis type and factor 1
+      // pipeline, validate() should return false
+      firePipelineEvent(pipeline1, eventQueue);
+
+      GenericTestUtils.waitFor(() -> logCapturer.getOutput().contains(
+          "reported count is 0"),
+          1000, 5000);
+      Assert.assertFalse(healthyPipelineChillModeRule.validate());
+
+      firePipelineEvent(pipeline2, eventQueue);
+      firePipelineEvent(pipeline3, eventQueue);
+
+      GenericTestUtils.waitFor(() -> healthyPipelineChillModeRule.validate(),
+          1000, 5000);
+
     } finally {
       FileUtil.fullyDelete(new File(storageDir));
     }
