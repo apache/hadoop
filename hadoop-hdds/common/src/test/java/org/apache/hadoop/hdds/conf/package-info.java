@@ -17,6 +17,6 @@
  */
 
 /**
- * This package contains the OzoneConfiguration related tests
+ * This package contains the OzoneConfiguration related tests.
  */
 package org.apache.hadoop.hdds.conf;

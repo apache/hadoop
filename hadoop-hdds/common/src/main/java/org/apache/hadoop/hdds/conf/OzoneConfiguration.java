@@ -168,7 +168,7 @@ public class OzoneConfiguration extends Configuration {
    * The super class method getAllPropertiesByTag
    * does not override values of properties
    * if there is no tag present in the configs of
-   * newly added resources
+   * newly added resources.
    * @param tag
    * @return Properties that belong to the tag
    */
