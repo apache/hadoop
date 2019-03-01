@@ -88,6 +88,15 @@ public class ObserverReadProxyProvider<T extends ClientProtocol>
   private boolean observerReadEnabled;
 
   /**
+   * A client using an ObserverReadProxyProvider should first sync with the
+   * active NameNode on startup. This ensures that the client reads data which
+   * is consistent with the state of the world as of the time of its
+   * instantiation. This variable will be true after this initial sync has
+   * been performed.
+   */
+  private volatile boolean msynced = false;
+
+  /**
    * The index into the nameNodeProxies list currently being used. Should only
    * be accessed in synchronized methods.
    */
@@ -229,6 +238,22 @@ public class ObserverReadProxyProvider<T extends ClientProtocol>
   }
 
   /**
+   * This will call {@link ClientProtocol#msync()} on the active NameNode
+   * (via the {@link #failoverProxy}) to initialize the state of this client.
+   * Calling it multiple times is a no-op; only the first will perform an
+   * msync.
+   *
+   * @see #msynced
+   */
+  private synchronized void initializeMsync() throws IOException {
+    if (msynced) {
+      return; // No need for an msync
+    }
+    failoverProxy.getProxy().proxy.msync();
+    msynced = true;
+  }
+
+  /**
    * An InvocationHandler to handle incoming requests. This class's invoke
    * method contains the primary logic for redirecting to observers.
    *
@@ -248,6 +273,12 @@ public class ObserverReadProxyProvider<T extends ClientProtocol>
       Object retVal;
 
       if (observerReadEnabled && isRead(method)) {
+        if (!msynced) {
+          // An msync() must first be performed to ensure that this client is
+          // up-to-date with the active's state. This will only be done once.
+          initializeMsync();
+        }
+
         int failedObserverCount = 0;
         int activeCount = 0;
         int standbyCount = 0;
@@ -319,6 +350,9 @@ public class ObserverReadProxyProvider<T extends ClientProtocol>
         // This exception will be handled by higher layers
         throw e.getCause();
       }
+      // If this was reached, the request reached the active, so the
+      // state is up-to-date with active and no further msync is needed.
+      msynced = true;
       lastProxy = activeProxy;
       return retVal;
     }
