@@ -62,6 +62,8 @@ public class SCMChillModeManager implements
   private static final String DN_EXIT_RULE = "DataNodeChillModeRule";
   private static final String HEALTHY_PIPELINE_EXIT_RULE =
       "HealthyPipelineChillModeRule";
+  private static final String ATLEAST_ONE_DATANODE_REPORTED_PIPELINE_EXIT_RULE =
+      "AtleastOneDatanodeReportedRule";
 
   private final EventQueue eventPublisher;
   private final PipelineManager pipelineManager;
@@ -86,8 +88,14 @@ public class SCMChillModeManager implements
           && pipelineManager != null) {
         HealthyPipelineChillModeRule rule = new HealthyPipelineChillModeRule(
             pipelineManager, this, config);
+        OneReplicaPipelineChillModeRule oneReplicaPipelineChillModeRule =
+            new OneReplicaPipelineChillModeRule(pipelineManager, this, conf);
         exitRules.put(HEALTHY_PIPELINE_EXIT_RULE, rule);
+        exitRules.put(ATLEAST_ONE_DATANODE_REPORTED_PIPELINE_EXIT_RULE,
+            oneReplicaPipelineChillModeRule);
         eventPublisher.addHandler(SCMEvents.PROCESSED_PIPELINE_REPORT, rule);
+        eventPublisher.addHandler(SCMEvents.PROCESSED_PIPELINE_REPORT,
+            oneReplicaPipelineChillModeRule);
       }
       emitChillModeStatus();
     } else {
@@ -177,6 +185,12 @@ public class SCMChillModeManager implements
   public HealthyPipelineChillModeRule getHealthyPipelineChillModeRule() {
     return (HealthyPipelineChillModeRule)
         exitRules.get(HEALTHY_PIPELINE_EXIT_RULE);
+  }
+
+  @VisibleForTesting
+  public OneReplicaPipelineChillModeRule getOneReplicaPipelineChillModeRule() {
+    return (OneReplicaPipelineChillModeRule)
+        exitRules.get(ATLEAST_ONE_DATANODE_REPORTED_PIPELINE_EXIT_RULE);
   }
 
 }
