@@ -22,7 +22,10 @@ package org.apache.hadoop.hdds.security.x509.certificate.authority;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.PKIProfiles.PKIProfile;
+import org.apache.hadoop.hdds.security.x509.keys.SecurityUtil;
 import org.apache.hadoop.util.Time;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.cert.X509CertificateHolder;
@@ -67,18 +70,22 @@ public class DefaultApprover extends BaseApprover {
    * @param validFrom - Begin Da te
    * @param validTill - End Date
    * @param certificationRequest - Certification Request.
+   * @param scmId - SCM id.
+   * @param clusterId - Cluster id.
    * @return Signed Certificate.
    * @throws IOException - On Error
    * @throws OperatorCreationException - on Error.
    */
+  @SuppressWarnings("ParameterNumber")
   public  X509CertificateHolder sign(
       SecurityConfig config,
       PrivateKey caPrivate,
       X509CertificateHolder caCertificate,
       Date validFrom,
       Date validTill,
-      PKCS10CertificationRequest certificationRequest)
-      throws IOException, OperatorCreationException {
+      PKCS10CertificationRequest certificationRequest,
+      String scmId,
+      String clusterId) throws IOException, OperatorCreationException {
 
     AlgorithmIdentifier sigAlgId = new
         DefaultSignatureAlgorithmIdentifierFinder().find(
@@ -90,6 +97,29 @@ public class DefaultApprover extends BaseApprover {
         .getEncoded());
     SubjectPublicKeyInfo keyInfo =
         certificationRequest.getSubjectPublicKeyInfo();
+
+    // Get scmId and cluster Id from subject name.
+    X500Name x500Name = certificationRequest.getSubject();
+    String csrScmId = x500Name.getRDNs(BCStyle.OU)[0].getFirst().getValue().
+        toASN1Primitive().toString();
+    String csrClusterId = x500Name.getRDNs(BCStyle.O)[0].getFirst().getValue().
+        toASN1Primitive().toString();
+
+    if (!scmId.equals(csrScmId) || !clusterId.equals(csrClusterId)) {
+      if (csrScmId.equalsIgnoreCase("null") &&
+          csrClusterId.equalsIgnoreCase("null")) {
+        // Special case to handle DN certificate generation as DN might not know
+        // scmId and clusterId before registration. In secure mode registration
+        // will succeed only after datanode has a valid certificate.
+        String cn = x500Name.getRDNs(BCStyle.CN)[0].getFirst().getValue()
+            .toASN1Primitive().toString();
+        x500Name = SecurityUtil.getDistinguishedName(cn, scmId, clusterId);
+      } else {
+        // Throw exception if scmId and clusterId doesn't match.
+        throw new SCMSecurityException("ScmId and ClusterId in CSR subject" +
+            " are incorrect.");
+      }
+    }
 
     RSAKeyParameters rsa =
         (RSAKeyParameters) PublicKeyFactory.createKey(keyInfo);
@@ -104,7 +134,7 @@ public class DefaultApprover extends BaseApprover {
             BigInteger.valueOf(Time.monotonicNowNanos()),
             validFrom,
             validTill,
-            certificationRequest.getSubject(), keyInfo);
+            x500Name, keyInfo);
 
     ContentSigner sigGen = new BcRSAContentSignerBuilder(sigAlgId, digAlgId)
         .build(asymmetricKP);
