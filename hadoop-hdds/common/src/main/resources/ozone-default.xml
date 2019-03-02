@@ -2029,45 +2029,4 @@
     </description>
   </property>
 
-  <property>
-    <name>ozone.client.retry.max.attempts</name>
-    <value>10</value>
-    <description>
-      Max retry attempts for Ozone RpcClient talking to OzoneManagers.
-    </description>
-  </property>
-  <property>
-    <name>ozone.client.failover.max.attempts</name>
-    <value>15</value>
-    <description>
-      Expert only. The number of client failover attempts that should be
-      made before the failover is considered failed.
-    </description>
-  </property>
-  <property>
-    <name>ozone.client.failover.sleep.base.millis</name>
-    <value>500</value>
-    <description>
-      Expert only. The time to wait, in milliseconds, between failover
-      attempts increases exponentially as a function of the number of
-      attempts made so far, with a random factor of +/- 50%. This option
-      specifies the base value used in the failover calculation. The
-      first failover will retry immediately. The 2nd failover attempt
-      will delay at least ozone.client.failover.sleep.base.millis
-      milliseconds. And so on.
-    </description>
-  </property>
-  <property>
-    <name>ozone.client.failover.sleep.max.millis</name>
-    <value>15000</value>
-    <description>
-      Expert only. The time to wait, in milliseconds, between failover
-      attempts increases exponentially as a function of the number of
-      attempts made so far, with a random factor of +/- 50%. This option
-      specifies the maximum value to wait between failovers.
-      Specifically, the time between two failover attempts will not
-      exceed +/- 50% of ozone.client.failover.sleep.max.millis
-      milliseconds.
-    </description>
-  </property>
 </configuration>

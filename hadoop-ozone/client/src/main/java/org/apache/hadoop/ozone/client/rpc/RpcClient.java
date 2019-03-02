@@ -50,8 +50,8 @@ import org.apache.hadoop.ozone.client.io.LengthInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
-import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
 import org.apache.hadoop.ozone.om.helpers.BucketEncryptionKeyInfo;
+import org.apache.hadoop.ozone.client.rpc.ha.OMProxyProvider;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
@@ -66,8 +66,6 @@ import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
-import org.apache.hadoop.ozone.om.protocolPB
-    .OzoneManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
@@ -87,7 +85,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.io.Text;
 import org.apache.logging.log4j.util.Strings;
-import org.apache.ratis.protocol.ClientId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -110,6 +107,7 @@ public class RpcClient implements ClientProtocol {
   private final OzoneConfiguration conf;
   private final StorageContainerLocationProtocol
       storageContainerLocationClient;
+  private final OMProxyProvider omProxyProvider;
   private final OzoneManagerProtocol ozoneManagerClient;
   private final XceiverClientManager xceiverClientManager;
   private final int chunkSize;
@@ -123,7 +121,6 @@ public class RpcClient implements ClientProtocol {
   private final long streamBufferMaxSize;
   private final long blockSize;
   private final long watchTimeout;
-  private final ClientId clientId = ClientId.randomId();
 
    /**
     * Creates RpcClient instance with the given configuration.
@@ -140,8 +137,11 @@ public class RpcClient implements ClientProtocol {
         OMConfigKeys.OZONE_OM_GROUP_RIGHTS_DEFAULT);
     RPC.setProtocolEngine(conf, OzoneManagerProtocolPB.class,
         ProtobufRpcEngine.class);
-    this.ozoneManagerClient = new OzoneManagerProtocolClientSideTranslatorPB(
-        this.conf, clientId.toString(), ugi);
+    this.omProxyProvider = new OMProxyProvider(conf, ugi);
+    this.ozoneManagerClient =
+        TracingUtil.createProxy(
+            this.omProxyProvider.getProxy(),
+            OzoneManagerProtocol.class);
 
     long scmVersion =
         RPC.getProtocolVersion(StorageContainerLocationProtocolPB.class);
@@ -492,8 +492,8 @@ public class RpcClient implements ClientProtocol {
 
   @Override
   @VisibleForTesting
-  public OMFailoverProxyProvider getOMProxyProvider() {
-    return ozoneManagerClient.getOMFailoverProxyProvider();
+  public OMProxyProvider getOMProxyProvider() {
+    return omProxyProvider;
   }
 
   @Override

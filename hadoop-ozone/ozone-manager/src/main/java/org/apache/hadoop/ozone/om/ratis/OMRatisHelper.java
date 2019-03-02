@@ -32,7 +32,6 @@ import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.grpc.GrpcConfigKeys;
 import org.apache.ratis.protocol.Message;
-import org.apache.ratis.protocol.RaftClientReply;
 import org.apache.ratis.protocol.RaftGroup;
 import org.apache.ratis.protocol.RaftPeerId;
 import org.apache.ratis.retry.RetryPolicy;
@@ -101,12 +100,10 @@ public final class OMRatisHelper {
     return Message.valueOf(ByteString.copyFrom(requestBytes));
   }
 
-  static OMResponse getOMResponseFromRaftClientReply(RaftClientReply reply)
+  static OMResponse convertByteStringToOMResponse(ByteString byteString)
       throws InvalidProtocolBufferException {
-    byte[] bytes = reply.getMessage().getContent().toByteArray();
-    return OMResponse.newBuilder(OMResponse.parseFrom(bytes))
-        .setLeaderOMNodeId(reply.getReplierId())
-        .build();
+    byte[] bytes = byteString.toByteArray();
+    return OMResponse.parseFrom(bytes);
   }
 
   static OMResponse getErrorResponse(Type cmdType, Exception e) {

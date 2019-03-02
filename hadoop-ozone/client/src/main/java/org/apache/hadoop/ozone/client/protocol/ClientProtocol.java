@@ -29,7 +29,7 @@ import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
-import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
+import org.apache.hadoop.ozone.client.rpc.ha.OMProxyProvider;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 
@@ -510,5 +510,5 @@ public interface ClientProtocol {
   S3SecretValue getS3Secret(String kerberosID) throws IOException;
 
   @VisibleForTesting
-  OMFailoverProxyProvider getOMProxyProvider();
+  OMProxyProvider getOMProxyProvider();
 }

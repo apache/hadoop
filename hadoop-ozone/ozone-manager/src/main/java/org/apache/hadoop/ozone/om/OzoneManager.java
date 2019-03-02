@@ -70,7 +70,6 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ozone.OzoneIllegalArgumentException;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
-import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.security.OzoneSecurityException;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
@@ -2602,11 +2601,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   @VisibleForTesting
   public List<OMNodeDetails> getPeerNodes() {
     return peerNodes;
-  }
-
-  @Override
-  public OMFailoverProxyProvider getOMFailoverProxyProvider() {
-    return null;
   }
 
   @VisibleForTesting

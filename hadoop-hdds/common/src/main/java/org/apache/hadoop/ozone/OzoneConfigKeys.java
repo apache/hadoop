@@ -379,23 +379,6 @@ public final class OzoneConfigKeys {
   public static final String OZONE_FS_ISOLATED_CLASSLOADER =
       "ozone.fs.isolated-classloader";
 
-  // Ozone Client Retry and Failover configurations
-  public static final String OZONE_CLIENT_RETRY_MAX_ATTEMPTS_KEY =
-      "ozone.client.retry.max.attempts";
-  public static final int OZONE_CLIENT_RETRY_MAX_ATTEMPTS_DEFAULT =
-      10;
-  public static final String OZONE_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY =
-      "ozone.client.failover.max.attempts";
-  public static final int OZONE_CLIENT_FAILOVER_MAX_ATTEMPTS_DEFAULT =
-      15;
-  public static final String OZONE_CLIENT_FAILOVER_SLEEP_BASE_MILLIS_KEY =
-      "ozone.client.failover.sleep.base.millis";
-  public static final int OZONE_CLIENT_FAILOVER_SLEEP_BASE_MILLIS_DEFAULT =
-      500;
-  public static final String OZONE_CLIENT_FAILOVER_SLEEP_MAX_MILLIS_KEY =
-      "ozone.client.failover.sleep.max.millis";
-  public static final int OZONE_CLIENT_FAILOVER_SLEEP_MAX_MILLIS_DEFAULT =
-      15000;
 
   public static final String OZONE_FREON_HTTP_ENABLED_KEY =
       "ozone.freon.http.enabled";
