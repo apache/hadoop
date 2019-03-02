@@ -140,8 +140,6 @@ message OMResponse {
 
   required Status status = 5;
 
-  optional string leaderOMNodeId = 6;
-
   optional CreateVolumeResponse              createVolumeResponse          = 11;
   optional SetVolumePropertyResponse         setVolumePropertyResponse     = 12;
   optional CheckVolumeAccessResponse         checkVolumeAccessResponse     = 13;

@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 package org.apache.hadoop.ozone.om.protocol;
-import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
@@ -385,11 +384,5 @@ public interface OzoneManagerProtocol
    * @throws IOException
    */
   S3SecretValue getS3Secret(String kerberosID) throws IOException;
-
-  /**
-   * Get the OM Client's Retry and Failover Proxy provider.
-   * @return OMFailoverProxyProvider
-   */
-  OMFailoverProxyProvider getOMFailoverProxyProvider();
 }
 
