@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.qjournal.server;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -30,25 +29,16 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
-import org.apache.hadoop.hdfs.qjournal.TestSecureNNWithQJM;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.apache.hadoop.hdfs.server.namenode.FileJournalManager
     .getLogFile;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
-import org.apache.hadoop.http.HttpConfig;
-import org.apache.hadoop.minikdc.MiniKdc;
-import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -56,7 +46,6 @@ import org.junit.rules.TestName;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.Properties;
 import java.util.Random;
 
 /**
@@ -73,85 +62,12 @@ public class TestJournalNodeSync {
   private int activeNNindex=0;
   private static final int DFS_HA_TAILEDITS_PERIOD_SECONDS=1;
 
-  private static HdfsConfiguration baseConf;
-  private static File baseDir;
-  private static String keystoresDir;
-  private static String sslConfDir;
-  private static MiniKdc kdc;
-
   @Rule
   public TestName testName = new TestName();
 
-  @BeforeClass
-  public static void init() throws Exception {
-    // Init Kerberos
-    baseDir =
-        GenericTestUtils.getTestDir(TestSecureNNWithQJM.class.getSimpleName());
-    FileUtil.fullyDelete(baseDir);
-    Assert.assertTrue(baseDir.mkdirs());
-
-    Properties kdcConf = MiniKdc.createConf();
-    kdc = new MiniKdc(kdcConf, baseDir);
-    kdc.start();
-
-    baseConf = new HdfsConfiguration();
-    SecurityUtil.setAuthenticationMethod(
-        UserGroupInformation.AuthenticationMethod.KERBEROS, baseConf);
-    UserGroupInformation.setConfiguration(baseConf);
-    Assert.assertTrue("Expected configuration to enable security",
-        UserGroupInformation.isSecurityEnabled());
-
-    String userName = UserGroupInformation.getLoginUser().getShortUserName();
-    File keytabFile = new File(baseDir, userName + ".keytab");
-    String keytab = keytabFile.getAbsolutePath();
-    // Windows will not reverse name lookup "127.0.0.1" to "localhost".
-    String krbInstance = Path.WINDOWS ? "127.0.0.1" : "localhost";
-    kdc.createPrincipal(keytabFile,
-        userName + "/" + krbInstance,
-        "HTTP/" + krbInstance);
-    String hdfsPrincipal = userName + "/" + krbInstance + "@" + kdc.getRealm();
-    String spnegoPrincipal = "HTTP/" + krbInstance + "@" + kdc.getRealm();
-
-    baseConf.set(DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, hdfsPrincipal);
-    baseConf.set(DFS_NAMENODE_KEYTAB_FILE_KEY, keytab);
-    baseConf.set(DFS_DATANODE_KERBEROS_PRINCIPAL_KEY, hdfsPrincipal);
-    baseConf.set(DFS_DATANODE_KEYTAB_FILE_KEY, keytab);
-    baseConf.set(DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
-        spnegoPrincipal);
-    baseConf.set(DFS_JOURNALNODE_KEYTAB_FILE_KEY, keytab);
-    baseConf.set(DFS_JOURNALNODE_KERBEROS_PRINCIPAL_KEY, hdfsPrincipal);
-    baseConf.set(DFS_JOURNALNODE_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY,
-        spnegoPrincipal);
-    baseConf.setBoolean(DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
-    baseConf.set(DFS_DATA_TRANSFER_PROTECTION_KEY, "authentication");
-    baseConf.set(DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTPS_ONLY.name());
-    baseConf.set(DFS_NAMENODE_HTTPS_ADDRESS_KEY, "localhost:0");
-    baseConf.set(DFS_DATANODE_HTTPS_ADDRESS_KEY, "localhost:0");
-    baseConf.set(DFS_JOURNALNODE_HTTPS_ADDRESS_KEY, "localhost:0");
-    baseConf.setInt(IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY, 10);
-
-    keystoresDir = baseDir.getAbsolutePath();
-    sslConfDir = KeyStoreTestUtil.getClasspathDir(
-        TestSecureNNWithQJM.class);
-    KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, baseConf, false);
-    baseConf.set(DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_KEY,
-        KeyStoreTestUtil.getClientSSLConfigFileName());
-    baseConf.set(DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
-        KeyStoreTestUtil.getServerSSLConfigFileName());
-  }
-
-  @AfterClass
-  public static void destroy() throws Exception {
-    if (kdc != null) {
-      kdc.stop();
-    }
-    FileUtil.fullyDelete(baseDir);
-    KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
-  }
-
   @Before
-  public void setUpMiniCluster() throws Exception {
-    conf = new HdfsConfiguration(baseConf);
+  public void setUpMiniCluster() throws IOException {
+    conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_JOURNALNODE_ENABLE_SYNC_KEY, true);
     conf.setLong(DFSConfigKeys.DFS_JOURNALNODE_SYNC_INTERVAL_KEY, 1000L);
     if (testName.getMethodName().equals(
@@ -602,8 +518,6 @@ public class TestJournalNodeSync {
    * @return the startTxId of next segment after rolling edits.
    */
   private long generateEditLog(int numEdits) throws IOException {
-    // rollEditLog first due to OP_UPDATE_MASTER_KEY
-    dfsCluster.getNameNode(activeNNindex).getRpcServer().rollEditLog();
     long lastWrittenTxId = dfsCluster.getNameNode(activeNNindex).getFSImage()
         .getEditLog().getLastWrittenTxId();
     for (int i = 1; i <= numEdits; i++) {
