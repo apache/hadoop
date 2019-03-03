@@ -341,7 +341,10 @@ public class NamenodeHeartbeatService extends PeriodicService {
                 jsonObject.getInt("NumStaleDataNodes"),
                 jsonObject.getInt("NumDecommissioningDataNodes"),
                 jsonObject.getInt("NumDecomLiveDataNodes"),
-                jsonObject.getInt("NumDecomDeadDataNodes"));
+                jsonObject.getInt("NumDecomDeadDataNodes"),
+                jsonObject.getInt("NumInMaintenanceLiveDataNodes"),
+                jsonObject.getInt("NumInMaintenanceDeadDataNodes"),
+                jsonObject.getInt("NumEnteringMaintenanceDataNodes"));
           } else if (name.equals(
               "Hadoop:service=NameNode,name=FSNamesystem")) {
             report.setNamesystemInfo(
