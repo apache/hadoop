@@ -234,7 +234,7 @@ public class NamenodeBeanMetrics
   @Override
   public String getSafemode() {
     try {
-      if (!getRouter().isRouterState(RouterServiceState.SAFEMODE)) {
+      if (getRouter().isRouterState(RouterServiceState.SAFEMODE)) {
         return "Safe mode is ON. " + this.getSafeModeTip();
       }
     } catch (IOException e) {
