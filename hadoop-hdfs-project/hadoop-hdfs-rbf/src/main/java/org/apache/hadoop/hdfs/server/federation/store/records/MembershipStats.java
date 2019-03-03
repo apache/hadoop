@@ -97,6 +97,18 @@ public abstract class MembershipStats extends BaseRecord {
 
   public abstract int getNumOfDecomDeadDatanodes();
 
+  public abstract void setNumOfInMaintenanceLiveDataNodes(int nodes);
+
+  public abstract int getNumOfInMaintenanceLiveDataNodes();
+
+  public abstract void setNumOfInMaintenanceDeadDataNodes(int nodes);
+
+  public abstract int getNumOfInMaintenanceDeadDataNodes();
+
+  public abstract void setNumOfEnteringMaintenanceDataNodes(int nodes);
+
+  public abstract int getNumOfEnteringMaintenanceDataNodes();
+
   @Override
   public SortedMap<String, String> getPrimaryKeys() {
     // This record is not stored directly, no key needed

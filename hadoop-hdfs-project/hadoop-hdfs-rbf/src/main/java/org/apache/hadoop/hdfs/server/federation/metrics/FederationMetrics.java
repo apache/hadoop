@@ -437,6 +437,24 @@ public class FederationMetrics implements FederationMBean {
         MembershipStats::getNumOfDecomDeadDatanodes);
   }
 
+  @Override
+  public int getNumInMaintenanceLiveDataNodes() {
+    return getNameserviceAggregatedInt(
+        MembershipStats::getNumOfInMaintenanceLiveDataNodes);
+  }
+
+  @Override
+  public int getNumInMaintenanceDeadDataNodes() {
+    return getNameserviceAggregatedInt(
+        MembershipStats::getNumOfInMaintenanceDeadDataNodes);
+  }
+
+  @Override
+  public int getNumEnteringMaintenanceDataNodes() {
+    return getNameserviceAggregatedInt(
+        MembershipStats::getNumOfEnteringMaintenanceDataNodes);
+  }
+
   @Override // NameNodeMXBean
   public String getNodeUsage() {
     float median = 0;

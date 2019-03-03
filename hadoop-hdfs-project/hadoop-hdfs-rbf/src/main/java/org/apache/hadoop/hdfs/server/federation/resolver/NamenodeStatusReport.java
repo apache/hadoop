@@ -50,6 +50,15 @@ public class NamenodeStatusReport {
   /** Dead decommissioned datanodes. */
   private int deadDecomDatanodes = -1;
 
+  /** Live in maintenance datanodes. */
+  private int inMaintenanceLiveDataNodes = -1;
+
+  /** Dead in maintenance datanodes. */
+  private int inMaintenanceDeadDataNodes = -1;
+
+  /** Entering maintenance datanodes. */
+  private int enteringMaintenanceDataNodes = -1;
+
   /** Space stats. */
   private long availableSpace = -1;
   private long numOfFiles = -1;
@@ -228,15 +237,23 @@ public class NamenodeStatusReport {
    * @param numDecom Number of decommissioning nodes.
    * @param numLiveDecom Number of decommissioned live nodes.
    * @param numDeadDecom Number of decommissioned dead nodes.
+   * @param numInMaintenanceLive Number of in maintenance live nodes.
+   * @param numInMaintenanceDead Number of in maintenance dead nodes.
+   * @param numEnteringMaintenance Number of entering maintenance nodes.
    */
   public void setDatanodeInfo(int numLive, int numDead, int numStale,
-      int numDecom, int numLiveDecom, int numDeadDecom) {
+      int numDecom, int numLiveDecom, int numDeadDecom,
+      int numInMaintenanceLive, int numInMaintenanceDead,
+      int numEnteringMaintenance) {
     this.liveDatanodes = numLive;
     this.deadDatanodes = numDead;
     this.staleDatanodes = numStale;
     this.decomDatanodes = numDecom;
     this.liveDecomDatanodes = numLiveDecom;
     this.deadDecomDatanodes = numDeadDecom;
+    this.inMaintenanceLiveDataNodes = numInMaintenanceLive;
+    this.inMaintenanceDeadDataNodes = numInMaintenanceDead;
+    this.enteringMaintenanceDataNodes = numEnteringMaintenance;
     this.statsValid = true;
   }
 
@@ -292,6 +309,33 @@ public class NamenodeStatusReport {
    */
   public int getNumDecomDeadDatanodes() {
     return this.deadDecomDatanodes;
+  }
+
+  /**
+   * Get the number of live in maintenance nodes.
+   *
+   * @return The number of live in maintenance nodes.
+   */
+  public int getNumInMaintenanceLiveDataNodes() {
+    return this.inMaintenanceLiveDataNodes;
+  }
+
+  /**
+   * Get the number of dead in maintenance nodes.
+   *
+   * @return The number of dead in maintenance nodes.
+   */
+  public int getNumInMaintenanceDeadDataNodes() {
+    return this.inMaintenanceDeadDataNodes;
+  }
+
+  /**
+   * Get the number of entering maintenance nodes.
+   *
+   * @return The number of entering maintenance nodes.
+   */
+  public int getNumEnteringMaintenanceDataNodes() {
+    return this.enteringMaintenanceDataNodes;
   }
 
   /**

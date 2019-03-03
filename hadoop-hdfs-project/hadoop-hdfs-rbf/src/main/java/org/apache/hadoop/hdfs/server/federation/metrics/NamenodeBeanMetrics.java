@@ -697,16 +697,34 @@ public class NamenodeBeanMetrics
 
   @Override
   public int getNumInMaintenanceLiveDataNodes() {
+    try {
+      return getFederationMetrics().getNumInMaintenanceLiveDataNodes();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of live in maintenance nodes",
+          e.getMessage());
+    }
     return 0;
   }
 
   @Override
   public int getNumInMaintenanceDeadDataNodes() {
+    try {
+      return getFederationMetrics().getNumInMaintenanceDeadDataNodes();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of dead in maintenance nodes",
+          e.getMessage());
+    }
     return 0;
   }
 
   @Override
   public int getNumEnteringMaintenanceDataNodes() {
+    try {
+      return getFederationMetrics().getNumEnteringMaintenanceDataNodes();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of entering maintenance nodes",
+          e.getMessage());
+    }
     return 0;
   }
 

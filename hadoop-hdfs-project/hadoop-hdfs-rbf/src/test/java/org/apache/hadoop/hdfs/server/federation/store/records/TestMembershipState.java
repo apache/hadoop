@@ -52,6 +52,9 @@ public class TestMembershipState {
   private static final int NUM_DECOM = 700;
   private static final int NUM_DECOM_ACTIVE = 800;
   private static final int NUM_DECOM_DEAD = 900;
+  private static final int NUM_MAIN_LIVE = 151;
+  private static final int NUM_MAIN_DEAD = 303;
+  private static final int NUM_ENTER_MAIN = 144;
   private static final long NUM_BLOCK_MISSING = 1000;
 
   private static final long TOTAL_SPACE = 1100;
@@ -78,6 +81,9 @@ public class TestMembershipState {
     stats.setNumOfDecommissioningDatanodes(NUM_DECOM);
     stats.setNumOfDecomActiveDatanodes(NUM_DECOM_ACTIVE);
     stats.setNumOfDecomDeadDatanodes(NUM_DECOM_DEAD);
+    stats.setNumOfInMaintenanceLiveDataNodes(NUM_MAIN_LIVE);
+    stats.setNumOfInMaintenanceDeadDataNodes(NUM_MAIN_DEAD);
+    stats.setNumOfEnteringMaintenanceDataNodes(NUM_ENTER_MAIN);
     stats.setNumOfBlocksMissing(NUM_BLOCK_MISSING);
     stats.setTotalSpace(TOTAL_SPACE);
     stats.setAvailableSpace(AVAILABLE_SPACE);
@@ -107,6 +113,9 @@ public class TestMembershipState {
     assertEquals(NUM_DECOM, stats.getNumOfDecommissioningDatanodes());
     assertEquals(NUM_DECOM_ACTIVE, stats.getNumOfDecomActiveDatanodes());
     assertEquals(NUM_DECOM_DEAD, stats.getNumOfDecomDeadDatanodes());
+    assertEquals(NUM_MAIN_LIVE, stats.getNumOfInMaintenanceLiveDataNodes());
+    assertEquals(NUM_MAIN_DEAD, stats.getNumOfInMaintenanceDeadDataNodes());
+    assertEquals(NUM_ENTER_MAIN, stats.getNumOfEnteringMaintenanceDataNodes());
     assertEquals(TOTAL_SPACE, stats.getTotalSpace());
     assertEquals(AVAILABLE_SPACE, stats.getAvailableSpace());
   }

@@ -131,6 +131,24 @@ public interface FederationMBean {
   int getNumDecomDeadNodes();
 
   /**
+   * Get the number of live datanodes which are under maintenance.
+   * @return Number of live datanodes which are under maintenance.
+   */
+  int getNumInMaintenanceLiveDataNodes();
+
+  /**
+   * Get the number of dead datanodes which are under maintenance.
+   * @return Number of dead datanodes which are under maintenance.
+   */
+  int getNumInMaintenanceDeadDataNodes();
+
+  /**
+   * Get the number of datanodes which are entering maintenance.
+   * @return Number of datanodes which are entering maintenance.
+   */
+  int getNumEnteringMaintenanceDataNodes();
+
+  /**
    * Get Max, Median, Min and Standard Deviation of DataNodes usage.
    * @return the DataNode usage information, as a JSON string.
    */

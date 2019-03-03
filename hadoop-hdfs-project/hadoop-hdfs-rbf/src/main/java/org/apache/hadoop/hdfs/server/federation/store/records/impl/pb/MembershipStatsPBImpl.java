@@ -208,4 +208,37 @@ public class MembershipStatsPBImpl extends MembershipStats
   public int getNumOfDecomDeadDatanodes() {
     return this.translator.getProtoOrBuilder().getNumOfDecomDeadDatanodes();
   }
+
+  @Override
+  public void setNumOfInMaintenanceLiveDataNodes(int nodes) {
+    this.translator.getBuilder().setNumOfInMaintenanceLiveDataNodes(nodes);
+  }
+
+  @Override
+  public int getNumOfInMaintenanceLiveDataNodes() {
+    return this.translator.getProtoOrBuilder()
+        .getNumOfInMaintenanceLiveDataNodes();
+  }
+
+  @Override
+  public void setNumOfInMaintenanceDeadDataNodes(int nodes) {
+    this.translator.getBuilder().setNumOfInMaintenanceDeadDataNodes(nodes);
+  }
+
+  @Override
+  public int getNumOfInMaintenanceDeadDataNodes() {
+    return this.translator.getProtoOrBuilder()
+        .getNumOfInMaintenanceDeadDataNodes();
+  }
+
+  @Override
+  public void setNumOfEnteringMaintenanceDataNodes(int nodes) {
+    this.translator.getBuilder().setNumOfEnteringMaintenanceDataNodes(nodes);
+  }
+
+  @Override
+  public int getNumOfEnteringMaintenanceDataNodes() {
+    return this.translator.getProtoOrBuilder()
+        .getNumOfEnteringMaintenanceDataNodes();
+  }
 }
