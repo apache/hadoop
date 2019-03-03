@@ -747,6 +747,9 @@ public class TestRouterAdminCLI {
 
     FederationMetrics metrics = router.getMetrics();
     String jsonString = metrics.getRouterStatus();
+    String result = router.getNamenodeMetrics().getSafemode();
+    assertTrue("Wrong safe mode message: " + result,
+        result.startsWith("Safe mode is ON."));
 
     // verify state using FederationMetrics
     assertEquals(RouterServiceState.SAFEMODE.toString(), jsonString);
@@ -756,6 +759,9 @@ public class TestRouterAdminCLI {
     assertEquals(0,
         ToolRunner.run(admin, new String[] {"-safemode", "leave" }));
     jsonString = metrics.getRouterStatus();
+    result = router.getNamenodeMetrics().getSafemode();
+    assertEquals("Wrong safe mode message: " + result, "", result);
+
     // verify state
     assertEquals(RouterServiceState.RUNNING.toString(), jsonString);
     assertFalse(routerContext.getRouter().getSafemodeService().isInSafeMode());
