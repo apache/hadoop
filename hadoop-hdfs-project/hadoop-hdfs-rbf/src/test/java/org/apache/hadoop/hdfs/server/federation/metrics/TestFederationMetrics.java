@@ -145,6 +145,12 @@ public class TestFederationMetrics extends TestMetricsBase {
           stats.getNumOfDecomActiveDatanodes());
       assertEquals(json.getLong("numOfDecomDeadDatanodes"),
           stats.getNumOfDecomDeadDatanodes());
+      assertEquals(json.getLong("numOfInMaintenanceLiveDataNodes"),
+          stats.getNumOfInMaintenanceLiveDataNodes());
+      assertEquals(json.getLong("numOfInMaintenanceDeadDataNodes"),
+          stats.getNumOfInMaintenanceDeadDataNodes());
+      assertEquals(json.getLong("numOfEnteringMaintenanceDataNodes"),
+          stats.getNumOfEnteringMaintenanceDataNodes());
       assertEquals(json.getLong("numOfBlocks"), stats.getNumOfBlocks());
       assertEquals(json.getString("rpcAddress"), mockEntry.getRpcAddress());
       assertEquals(json.getString("webAddress"), mockEntry.getWebAddress());
@@ -197,6 +203,12 @@ public class TestFederationMetrics extends TestMetricsBase {
           json.getLong("numOfDecomActiveDatanodes"));
       assertEquals(stats.getNumOfDecomDeadDatanodes(),
           json.getLong("numOfDecomDeadDatanodes"));
+      assertEquals(stats.getNumOfInMaintenanceLiveDataNodes(),
+          json.getLong("numOfInMaintenanceLiveDataNodes"));
+      assertEquals(stats.getNumOfInMaintenanceDeadDataNodes(),
+          json.getLong("numOfInMaintenanceDeadDataNodes"));
+      assertEquals(stats.getNumOfStaleDatanodes(),
+          json.getLong("numOfEnteringMaintenanceDataNodes"));
       assertEquals(stats.getProvidedSpace(),
           json.getLong("providedSpace"));
       nameservicesFound++;
@@ -268,6 +280,9 @@ public class TestFederationMetrics extends TestMetricsBase {
     long numDecom = 0;
     long numDecomLive = 0;
     long numDecomDead = 0;
+    long numInMaintenanceLive = 0;
+    long numInMaintenanceDead = 0;
+    long numEnteringMaintenance = 0;
     long numFiles = 0;
     for (MembershipState mock : getActiveMemberships()) {
       MembershipStats stats = mock.getStats();
@@ -278,6 +293,9 @@ public class TestFederationMetrics extends TestMetricsBase {
       numDecom += stats.getNumOfDecommissioningDatanodes();
       numDecomLive += stats.getNumOfDecomActiveDatanodes();
       numDecomDead += stats.getNumOfDecomDeadDatanodes();
+      numInMaintenanceLive += stats.getNumOfInMaintenanceLiveDataNodes();
+      numInMaintenanceDead += stats.getNumOfInMaintenanceLiveDataNodes();
+      numEnteringMaintenance += stats.getNumOfEnteringMaintenanceDataNodes();
     }
 
     assertEquals(numBlocks, bean.getNumBlocks());
@@ -287,6 +305,10 @@ public class TestFederationMetrics extends TestMetricsBase {
     assertEquals(numDecom, bean.getNumDecommissioningNodes());
     assertEquals(numDecomLive, bean.getNumDecomLiveNodes());
     assertEquals(numDecomDead, bean.getNumDecomDeadNodes());
+    assertEquals(numInMaintenanceLive, bean.getNumInMaintenanceLiveDataNodes());
+    assertEquals(numInMaintenanceDead, bean.getNumInMaintenanceDeadDataNodes());
+    assertEquals(numEnteringMaintenance,
+        bean.getNumEnteringMaintenanceDataNodes());
     assertEquals(numFiles, bean.getNumFiles());
     assertEquals(getActiveMemberships().size() + getStandbyMemberships().size(),
         bean.getNumNamenodes());
