@@ -46,6 +46,9 @@ message NamenodeMembershipStatsRecordProto {
   optional uint32 numOfDecomActiveDatanodes = 23;
   optional uint32 numOfDecomDeadDatanodes = 24;
   optional uint32 numOfStaleDatanodes = 25;
+  optional uint32 numOfInMaintenanceLiveDataNodes = 26;
+  optional uint32 numOfInMaintenanceDeadDataNodes = 27;
+  optional uint32 numOfEnteringMaintenanceDataNodes = 28;
 }
 
 message NamenodeMembershipRecordProto {
