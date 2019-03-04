@@ -34,8 +34,8 @@ import java.util.Map.Entry;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -80,8 +80,8 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class LeveldbRMStateStore extends RMStateStore {
 
-  public static final Log LOG =
-      LogFactory.getLog(LeveldbRMStateStore.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(LeveldbRMStateStore.class);
 
   private static final String SEPARATOR = "/";
   private static final String DB_NAME = "yarn-rm-state";
@@ -377,7 +377,7 @@ public class LeveldbRMStateStore extends RMStateStore {
     try {
       key.readFields(in);
     } finally {
-      IOUtils.cleanup(LOG, in);
+      IOUtils.cleanupWithLogger(LOG, in);
     }
     return key;
   }
@@ -423,7 +423,7 @@ public class LeveldbRMStateStore extends RMStateStore {
     try {
       tokenData = RMStateStoreUtils.readRMDelegationTokenIdentifierData(in);
     } finally {
-      IOUtils.cleanup(LOG, in);
+      IOUtils.cleanupWithLogger(LOG, in);
     }
     return tokenData;
   }
@@ -441,7 +441,7 @@ public class LeveldbRMStateStore extends RMStateStore {
       try {
         state.rmSecretManagerState.dtSequenceNumber = in.readInt();
       } finally {
-        IOUtils.cleanup(LOG, in);
+        IOUtils.cleanupWithLogger(LOG, in);
       }
     }
   }

@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -50,7 +50,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 @InterfaceAudience.Private
 public class ClusterNodeTracker<N extends SchedulerNode> {
-  private static final Log LOG = LogFactory.getLog(ClusterNodeTracker.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ClusterNodeTracker.class);
 
   private ReadWriteLock readWriteLock = new ReentrantReadWriteLock(true);
   private Lock readLock = readWriteLock.readLock();

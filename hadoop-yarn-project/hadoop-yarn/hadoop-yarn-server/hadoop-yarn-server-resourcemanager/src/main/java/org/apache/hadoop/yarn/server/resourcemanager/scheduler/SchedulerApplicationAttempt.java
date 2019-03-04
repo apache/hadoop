@@ -36,8 +36,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.lang3.time.FastDateFormat;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -100,8 +100,8 @@ import com.google.common.collect.ConcurrentHashMultiset;
 @Unstable
 public class SchedulerApplicationAttempt implements SchedulableEntity {
   
-  private static final Log LOG = LogFactory
-    .getLog(SchedulerApplicationAttempt.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(SchedulerApplicationAttempt.class);
 
   private FastDateFormat fdf =
       FastDateFormat.getInstance("EEE MMM dd HH:mm:ss Z yyyy");

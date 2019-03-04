@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -94,8 +94,8 @@ public class ProportionalCapacityPreemptionPolicy
     PRIORITY_FIRST, USERLIMIT_FIRST;
   }
 
-  private static final Log LOG =
-    LogFactory.getLog(ProportionalCapacityPreemptionPolicy.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ProportionalCapacityPreemptionPolicy.class);
 
   private final Clock clock;
 

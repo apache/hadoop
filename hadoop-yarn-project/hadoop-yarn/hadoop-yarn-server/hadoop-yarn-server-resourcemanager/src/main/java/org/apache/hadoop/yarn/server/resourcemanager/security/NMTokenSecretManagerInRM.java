@@ -24,8 +24,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -43,8 +43,8 @@ import com.google.common.annotations.VisibleForTesting;
 
 public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
 
-  private static Log LOG = LogFactory
-      .getLog(NMTokenSecretManagerInRM.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(NMTokenSecretManagerInRM.class);
 
   private MasterKeyData nextMasterKey;
   private Configuration conf;

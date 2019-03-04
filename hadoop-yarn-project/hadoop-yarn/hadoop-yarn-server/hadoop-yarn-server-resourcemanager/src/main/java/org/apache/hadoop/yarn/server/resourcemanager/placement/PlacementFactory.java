@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -28,7 +28,8 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 public final class PlacementFactory {
 
-  private static final Log LOG = LogFactory.getLog(PlacementFactory.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(PlacementFactory.class);
 
   private PlacementFactory() {
     // Unused.

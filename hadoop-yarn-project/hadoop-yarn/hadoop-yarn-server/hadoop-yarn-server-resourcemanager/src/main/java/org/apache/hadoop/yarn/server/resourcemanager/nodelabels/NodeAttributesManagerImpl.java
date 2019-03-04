@@ -37,8 +37,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import com.google.common.base.Strings;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
@@ -67,8 +67,8 @@ import com.google.common.base.Strings;
  * Manager holding the attributes to Labels.
  */
 public class NodeAttributesManagerImpl extends NodeAttributesManager {
-  protected static final Log LOG =
-      LogFactory.getLog(NodeAttributesManagerImpl.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(NodeAttributesManagerImpl.class);
   /**
    * If a user doesn't specify value for a label, then empty string is
    * considered as default.
@@ -200,10 +200,7 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
             .append(StringUtils.join(entry.getValue().keySet(), ","))
             .append("] ,");
       }
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(logMsg);
-      }
+      LOG.debug("{}", logMsg);
 
       if (null != dispatcher && NodeAttribute.PREFIX_CENTRALIZED
           .equals(attributePrefix)) {

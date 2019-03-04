@@ -33,8 +33,8 @@ import javax.xml.parsers.ParserConfigurationException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -54,8 +54,8 @@ import java.util.Set;
 @Private
 @Unstable
 public class QueueManager {
-  private static final Log LOG =
-      LogFactory.getLog(QueueManager.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(QueueManager.class.getName());
 
   private final class IncompatibleQueueRemovalTask {
 

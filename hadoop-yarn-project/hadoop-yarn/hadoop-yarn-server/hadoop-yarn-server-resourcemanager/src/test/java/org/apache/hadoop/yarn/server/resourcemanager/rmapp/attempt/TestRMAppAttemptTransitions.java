@@ -43,8 +43,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -128,8 +128,8 @@ import org.mockito.stubbing.Answer;
 @RunWith(value = Parameterized.class)
 public class TestRMAppAttemptTransitions {
 
-  private static final Log LOG = 
-      LogFactory.getLog(TestRMAppAttemptTransitions.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRMAppAttemptTransitions.class);
   
   private static final String EMPTY_DIAGNOSTICS = "";
   private static final String FAILED_DIAGNOSTICS = "Attempt failed by user.";

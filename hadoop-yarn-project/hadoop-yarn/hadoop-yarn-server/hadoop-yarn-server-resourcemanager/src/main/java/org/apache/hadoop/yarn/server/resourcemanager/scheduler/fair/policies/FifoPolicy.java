@@ -21,8 +21,8 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.Comparator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -38,7 +38,8 @@ import com.google.common.annotations.VisibleForTesting;
 @Private
 @Unstable
 public class FifoPolicy extends SchedulingPolicy {
-  private static final Log LOG = LogFactory.getLog(FifoPolicy.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FifoPolicy.class);
 
   @VisibleForTesting
   public static final String NAME = "FIFO";

@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.volume.csi.lifecycle;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.CsiAdaptorProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesRequest.VolumeCapability;
@@ -53,7 +53,8 @@ import static org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilit
  */
 public class VolumeImpl implements Volume {
 
-  private static final Log LOG = LogFactory.getLog(VolumeImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(VolumeImpl.class);
 
   private final Lock readLock;
   private final Lock writeLock;

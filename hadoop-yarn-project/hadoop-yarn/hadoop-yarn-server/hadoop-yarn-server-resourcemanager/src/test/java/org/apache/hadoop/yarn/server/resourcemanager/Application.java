@@ -30,8 +30,8 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
@@ -74,7 +74,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 @Private
 public class Application {
-  private static final Log LOG = LogFactory.getLog(Application.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(Application.class);
   
   private AtomicInteger taskCounter = new AtomicInteger(0);
 
