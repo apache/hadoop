@@ -44,7 +44,7 @@ services:
     command: ["/opt/hadoop/bin/ozone","datanode"]
     env_file:
       - docker-config
-  ozoneManager:
+  om:
     image: apache/hadoop-runner
     hostname: om
     volumes:
@@ -57,6 +57,20 @@ services:
     env_file:
       - docker-config
     command: ["/opt/hadoop/bin/ozone","om"]
+  s3g:
+    build:
+      context: docker-image/runner
+      dockerfile: Dockerfile
+      args:
+        buildno: 1
+    hostname: s3g
+    volumes:
+      - ../..:/opt/hadoop
+    ports:
+      - 9878:9878
+    env_file:
+      - ./docker-config
+    command: ["/opt/hadoop/bin/ozone","s3g"]
   scm:
     image: apache/hadoop-runner
     hostname: scm
