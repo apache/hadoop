@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.nodelabels;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -39,8 +39,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * Store implementation for Non Appendable File Store.
  */
 public class NonAppendableFSNodeLabelStore extends FileSystemNodeLabelsStore {
-  protected static final Log
-      LOG = LogFactory.getLog(NonAppendableFSNodeLabelStore.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(NonAppendableFSNodeLabelStore.class);
 
   @Override
   public void close() throws IOException {

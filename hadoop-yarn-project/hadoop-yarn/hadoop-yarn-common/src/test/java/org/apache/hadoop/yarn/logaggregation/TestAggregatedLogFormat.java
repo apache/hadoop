@@ -38,8 +38,8 @@ import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 
 import org.junit.Assert;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileStatus;
@@ -70,8 +70,8 @@ public class TestAggregatedLogFormat {
   private static final Configuration conf = new Configuration();
   private static final FileSystem fs;
   private static final char filler = 'x';
-  private static final Log LOG = LogFactory
-      .getLog(TestAggregatedLogFormat.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestAggregatedLogFormat.class);
 
   static {
     try {

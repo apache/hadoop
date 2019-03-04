@@ -37,8 +37,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
@@ -63,7 +63,8 @@ import com.google.common.collect.ImmutableSet;
 
 @Private
 public class CommonNodeLabelsManager extends AbstractService {
-  protected static final Log LOG = LogFactory.getLog(CommonNodeLabelsManager.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(CommonNodeLabelsManager.class);
   public static final Set<String> EMPTY_STRING_SET = Collections
       .unmodifiableSet(new HashSet<String>(0));
   public static final Set<NodeLabel> EMPTY_NODELABEL_SET = Collections

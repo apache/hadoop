@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.util.resource;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -37,8 +37,8 @@ public class Resources {
 
   private enum RoundingDirection { UP, DOWN }
 
-  private static final Log LOG =
-      LogFactory.getLog(Resources.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(Resources.class);
 
   /**
    * Helper class to create a resource with a fixed value for all resource

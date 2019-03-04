@@ -32,8 +32,8 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
@@ -66,7 +66,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 @LimitedPrivate({"YARN", "MapReduce"})
 public class FSDownload implements Callable<Path> {
 
-  private static final Log LOG = LogFactory.getLog(FSDownload.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FSDownload.class);
 
   private FileContext files;
   private final UserGroupInformation userUgi;

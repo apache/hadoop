@@ -24,8 +24,8 @@ import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
@@ -79,7 +79,8 @@ import org.junit.Test;
  */
 public class TestContainerLaunchRPC {
 
-  static final Log LOG = LogFactory.getLog(TestContainerLaunchRPC.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestContainerLaunchRPC.class);
 
   private static final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
@@ -171,7 +172,7 @@ public class TestContainerLaunchRPC {
         // make the thread sleep to look like its not going to respond
         Thread.sleep(10000);
       } catch (Exception e) {
-        LOG.error(e);
+        LOG.error(e.toString());
         throw new YarnException(e);
       }
       throw new YarnException("Shouldn't happen!!");

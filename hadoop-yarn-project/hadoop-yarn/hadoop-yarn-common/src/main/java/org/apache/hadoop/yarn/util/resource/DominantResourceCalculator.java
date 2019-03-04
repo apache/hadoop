@@ -17,8 +17,8 @@
 */
 package org.apache.hadoop.yarn.util.resource;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -53,7 +53,8 @@ import java.util.Arrays;
 @Private
 @Unstable
 public class DominantResourceCalculator extends ResourceCalculator {
-  static final Log LOG = LogFactory.getLog(DominantResourceCalculator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DominantResourceCalculator.class);
 
   public DominantResourceCalculator() {
   }

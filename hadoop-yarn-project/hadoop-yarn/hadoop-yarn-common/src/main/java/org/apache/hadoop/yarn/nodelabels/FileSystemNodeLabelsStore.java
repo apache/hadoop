@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.nodelabels;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -46,8 +46,8 @@ import java.util.Set;
 public class FileSystemNodeLabelsStore
     extends AbstractFSNodeStore<CommonNodeLabelsManager>
     implements NodeLabelsStore {
-  protected static final Log LOG =
-      LogFactory.getLog(FileSystemNodeLabelsStore.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(FileSystemNodeLabelsStore.class);
 
   protected static final String DEFAULT_DIR_NAME = "node-labels";
   protected static final String MIRROR_FILENAME = "nodelabel.mirror";

@@ -58,8 +58,8 @@ import org.junit.Assert;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -87,7 +87,8 @@ import com.google.common.cache.LoadingCache;
  */
 public class TestFSDownload {
 
-  private static final Log LOG = LogFactory.getLog(TestFSDownload.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestFSDownload.class);
   private static AtomicLong uniqueNumberGenerator =
     new AtomicLong(System.currentTimeMillis());
   private enum TEST_FILE_TYPE {

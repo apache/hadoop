@@ -44,8 +44,8 @@ import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.apache.commons.io.filefilter.RegexFileFilter;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -61,8 +61,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 @InterfaceStability.Unstable
 public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
 
-  static final Log LOG = LogFactory
-      .getLog(ProcfsBasedProcessTree.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(ProcfsBasedProcessTree.class);
 
   private static final String PROCFS = "/proc/";
 
@@ -264,7 +264,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
         }
       }
 
-      LOG.debug(this);
+      LOG.debug(this.toString());
 
       if (smapsEnabled) {
         // Update smaps info
@@ -409,8 +409,8 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
                     + ", total : " + (total * KB_TO_BYTES));
               }
             }
+            LOG.debug(procMemInfo.toString());
           }
-          LOG.debug(procMemInfo);
         }
       }
     }
@@ -807,11 +807,11 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
         }
       }
     } catch (FileNotFoundException f) {
-      LOG.error(f);
+      LOG.error(f.toString());
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error(e.toString());
     } catch (Throwable t) {
-      LOG.error(t);
+      LOG.error(t.toString());
     } finally {
       IOUtils.closeQuietly(in);
     }

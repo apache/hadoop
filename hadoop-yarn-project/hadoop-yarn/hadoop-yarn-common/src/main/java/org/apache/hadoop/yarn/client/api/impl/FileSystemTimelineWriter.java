@@ -38,8 +38,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -78,8 +78,8 @@ import com.sun.jersey.api.client.Client;
 @Unstable
 public class FileSystemTimelineWriter extends TimelineWriter{
 
-  private static final Log LOG = LogFactory
-      .getLog(FileSystemTimelineWriter.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(FileSystemTimelineWriter.class);
 
   // App log directory must be readable by group so server can access logs
   // and writable by group so it can be deleted by server
@@ -267,7 +267,7 @@ public class FileSystemTimelineWriter extends TimelineWriter{
       LOG.debug("Closing cache");
       logFDsCache.flush();
     }
-    IOUtils.cleanup(LOG, logFDsCache, fs);
+    IOUtils.cleanupWithLogger(LOG, logFDsCache, fs);
   }
 
   @Override
@@ -355,8 +355,8 @@ public class FileSystemTimelineWriter extends TimelineWriter{
 
     public void close() {
       if (stream != null) {
-        IOUtils.cleanup(LOG, jsonGenerator);
-        IOUtils.cleanup(LOG, stream);
+        IOUtils.cleanupWithLogger(LOG, jsonGenerator);
+        IOUtils.cleanupWithLogger(LOG, stream);
         stream = null;
         jsonGenerator = null;
       }
@@ -559,7 +559,7 @@ public class FileSystemTimelineWriter extends TimelineWriter{
           flush();
         } catch (Exception e) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug(e);
+            LOG.debug(e.toString());
           }
         }
       }
@@ -636,7 +636,7 @@ public class FileSystemTimelineWriter extends TimelineWriter{
         try {
           cleanInActiveFDs();
         } catch (Exception e) {
-          LOG.warn(e);
+          LOG.warn(e.toString());
         }
       }
     }
