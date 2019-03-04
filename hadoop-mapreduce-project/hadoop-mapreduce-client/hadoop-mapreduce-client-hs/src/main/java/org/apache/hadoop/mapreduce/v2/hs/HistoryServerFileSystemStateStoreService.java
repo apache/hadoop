@@ -402,7 +402,7 @@ public class HistoryServerFileSystemStateStoreService
         loadTokenMasterKey(state, stat.getPath(), stat.getLen());
         ++numKeys;
       } else {
-        LOG.warn("Skipping unexpected file in history server token state: "
+        LOG.warn("Skipping unexpected file in history server token key state: "
             + stat.getPath());
       }
     }

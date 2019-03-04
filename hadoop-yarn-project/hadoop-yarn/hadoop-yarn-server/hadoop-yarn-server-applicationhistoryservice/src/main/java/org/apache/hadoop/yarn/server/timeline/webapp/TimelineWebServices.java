@@ -242,7 +242,7 @@ public class TimelineWebServices {
     } catch (BadRequestException bre) {
       throw bre;
     } catch (Exception e) {
-      LOG.error("Error putting entities", e);
+      LOG.error("Error posting entities", e);
       throw new WebApplicationException(e,
           Response.Status.INTERNAL_SERVER_ERROR);
     }

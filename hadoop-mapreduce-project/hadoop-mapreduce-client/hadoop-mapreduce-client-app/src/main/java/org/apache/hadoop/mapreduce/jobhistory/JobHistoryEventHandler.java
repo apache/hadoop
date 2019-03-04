@@ -1447,7 +1447,7 @@ public class JobHistoryEventHandler extends AbstractService
     try {
       mi.closeWriter();
     } catch (IOException e) {
-      LOG.error("Error closing writer for JobID: " + jobId);
+      LOG.error("Error closing event writer for JobID: " + jobId);
       throw e;
     }
   }
