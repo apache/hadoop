@@ -30,8 +30,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -56,7 +56,8 @@ import com.google.common.annotations.VisibleForTesting;
 @SuppressWarnings("unchecked")
 public class RMProxy<T> {
 
-  private static final Log LOG = LogFactory.getLog(RMProxy.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RMProxy.class);
   private UserGroupInformation user;
 
   protected RMProxy() {

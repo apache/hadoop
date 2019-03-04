@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.security.client;
 
 import java.util.Collection;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.io.Text;
@@ -34,8 +34,8 @@ import org.apache.hadoop.security.token.TokenSelector;
 public class RMDelegationTokenSelector implements
     TokenSelector<RMDelegationTokenIdentifier> {
 
-  private static final Log LOG = LogFactory
-      .getLog(RMDelegationTokenSelector.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(RMDelegationTokenSelector.class);
 
   private boolean checkService(Text service,
       Token<? extends TokenIdentifier> token) {
