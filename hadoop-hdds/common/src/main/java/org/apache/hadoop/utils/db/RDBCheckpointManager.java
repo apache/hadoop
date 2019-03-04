@@ -22,6 +22,8 @@ package org.apache.hadoop.utils.db;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -41,7 +43,6 @@ public class RDBCheckpointManager {
   public static final String RDB_CHECKPOINT_DIR_PREFIX = "rdb_checkpoint_";
   private static final Logger LOG =
       LoggerFactory.getLogger(RDBCheckpointManager.class);
-  public static final String JAVA_TMP_DIR = "java.io.tmpdir";
   private String checkpointNamePrefix = "";
 
   public RDBCheckpointManager(RocksDB rocksDB) {
@@ -79,12 +80,19 @@ public class RDBCheckpointManager {
       checkpointDir += "_" + RDB_CHECKPOINT_DIR_PREFIX + currentTime;
 
       Path checkpointPath = Paths.get(parentDir, checkpointDir);
+      Instant start = Instant.now();
       checkpoint.createCheckpoint(checkpointPath.toString());
+      Instant end = Instant.now();
+
+      long duration = Duration.between(start, end).toMillis();
+      LOG.debug("Created checkpoint at " + checkpointPath.toString() + " in "
+          + duration + " milliseconds");
 
       return new RocksDBCheckpoint(
           checkpointPath,
           currentTime,
-          db.getLatestSequenceNumber()); //Best guesstimate here. Not accurate.
+          db.getLatestSequenceNumber(), //Best guesstimate here. Not accurate.
+          duration);
 
     } catch (RocksDBException e) {
       LOG.error("Unable to create RocksDB Snapshot.", e);
@@ -97,13 +105,16 @@ public class RDBCheckpointManager {
     private Path checkpointLocation;
     private long checkpointTimestamp;
     private long latestSequenceNumber;
+    private long checkpointCreationTimeTaken;
 
     RocksDBCheckpoint(Path checkpointLocation,
                               long snapshotTimestamp,
-                              long latestSequenceNumber) {
+                              long latestSequenceNumber,
+                              long checkpointCreationTimeTaken) {
       this.checkpointLocation = checkpointLocation;
       this.checkpointTimestamp = snapshotTimestamp;
       this.latestSequenceNumber = latestSequenceNumber;
+      this.checkpointCreationTimeTaken = checkpointCreationTimeTaken;
     }
 
     @Override
@@ -122,7 +133,13 @@ public class RDBCheckpointManager {
     }
 
     @Override
+    public long checkpointCreationTimeTaken() {
+      return checkpointCreationTimeTaken;
+    }
+
+    @Override
     public void cleanupCheckpoint() throws IOException {
+      LOG.debug("Cleaning up checkpoint at " + checkpointLocation.toString());
       FileUtils.deleteDirectory(checkpointLocation.toFile());
     }
   }

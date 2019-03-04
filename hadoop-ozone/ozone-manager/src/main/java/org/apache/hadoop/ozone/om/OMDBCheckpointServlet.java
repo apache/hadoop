@@ -24,6 +24,8 @@ import static org.apache.hadoop.ozone.OzoneConsts.
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -53,6 +55,7 @@ public class OMDBCheckpointServlet extends HttpServlet {
   private static final long serialVersionUID = 1L;
 
   private transient DBStore omDbStore;
+  private transient OMMetrics omMetrics;
   private transient DataTransferThrottler throttler = null;
 
   @Override
@@ -67,6 +70,8 @@ public class OMDBCheckpointServlet extends HttpServlet {
     }
 
     omDbStore = om.getMetadataManager().getStore();
+    omMetrics = om.getMetrics();
+
     OzoneConfiguration configuration = om.getConfiguration();
     long transferBandwidth = configuration.getLongBytes(
         OMConfigKeys.OZONE_DB_CHECKPOINT_TRANSFER_RATE_KEY,
@@ -112,19 +117,38 @@ public class OMDBCheckpointServlet extends HttpServlet {
         response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         return;
       }
+      omMetrics.setLastCheckpointCreationTimeTaken(
+          checkpoint.checkpointCreationTimeTaken());
+
+      Instant start = Instant.now();
       checkPointTarFile = OmUtils.createTarFile(
           checkpoint.getCheckpointLocation());
-      LOG.info("Tar location = " + checkPointTarFile.getAbsolutePath());
+      Instant end = Instant.now();
+
+      long duration = Duration.between(start, end).toMillis();
+      LOG.debug("Time taken to archive the checkpoint : " + duration +
+          " milliseconds");
+      LOG.info("Checkpoint Tar location = " +
+          checkPointTarFile.getAbsolutePath());
+      omMetrics.setLastCheckpointTarOperationTimeTaken(duration);
+
       response.setContentType("application/x-tgz");
       response.setHeader("Content-Disposition",
           "attachment; filename=\"" +
               checkPointTarFile.getName() + "\"");
 
       checkpointFileInputStream = new FileInputStream(checkPointTarFile);
+      start = Instant.now();
       TransferFsImage.copyFileToStream(response.getOutputStream(),
           checkPointTarFile,
           checkpointFileInputStream,
           throttler);
+      end = Instant.now();
+
+      duration = Duration.between(start, end).toMillis();
+      LOG.debug("Time taken to write the checkpoint to response output " +
+          "stream: " + duration + " milliseconds");
+      omMetrics.setLastCheckpointStreamingTimeTaken(duration);
 
       checkpoint.cleanupCheckpoint();
     } catch (IOException e) {

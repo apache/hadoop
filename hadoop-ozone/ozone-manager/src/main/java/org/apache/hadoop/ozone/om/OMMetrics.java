@@ -25,6 +25,7 @@ import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 
 /**
  * This class is for maintaining Ozone Manager statistics.
@@ -105,6 +106,10 @@ public class OMMetrics {
   // few minutes before restart may not be included in this count.
   private @Metric MutableCounterLong numKeys;
 
+  // Metrics to track checkpointing statistics from last run.
+  private @Metric MutableGaugeLong lastCheckpointCreationTimeTaken;
+  private @Metric MutableGaugeLong lastCheckpointTarOperationTimeTaken;
+  private @Metric MutableGaugeLong lastCheckpointStreamingTimeTaken;
 
   public OMMetrics() {
   }
@@ -390,6 +395,18 @@ public class OMMetrics {
     numGetServiceListFails.incr();
   }
 
+  public void setLastCheckpointCreationTimeTaken(long val) {
+    this.lastCheckpointCreationTimeTaken.set(val);
+  }
+
+  public void setLastCheckpointTarOperationTimeTaken(long val) {
+    this.lastCheckpointTarOperationTimeTaken.set(val);
+  }
+
+  public void setLastCheckpointStreamingTimeTaken(long val) {
+    this.lastCheckpointStreamingTimeTaken.set(val);
+  }
+
   @VisibleForTesting
   public long getNumVolumeCreates() {
     return numVolumeCreates.value();
@@ -604,6 +621,21 @@ public class OMMetrics {
 
   public long getNumAbortMultipartUploadFails() {
     return numAbortMultipartUploadFails.value();
+  }
+
+  @VisibleForTesting
+  public long getLastCheckpointCreationTimeTaken() {
+    return lastCheckpointCreationTimeTaken.value();
+  }
+
+  @VisibleForTesting
+  public long getLastCheckpointTarOperationTimeTaken() {
+    return lastCheckpointTarOperationTimeTaken.value();
+  }
+
+  @VisibleForTesting
+  public long getLastCheckpointStreamingTimeTaken() {
+    return lastCheckpointStreamingTimeTaken.value();
   }
 
   public void unRegister() {
