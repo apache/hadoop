@@ -208,9 +208,9 @@ public class Router extends CompositeService {
 
       // Create status updater for each monitored Namenode
       this.namenodeHeartbeatServices = createNamenodeHeartbeatServices();
-      for (NamenodeHeartbeatService hearbeatService :
+      for (NamenodeHeartbeatService heartbeatService :
           this.namenodeHeartbeatServices) {
-        addService(hearbeatService);
+        addService(heartbeatService);
       }
 
       if (this.namenodeHeartbeatServices.isEmpty()) {
@@ -487,9 +487,9 @@ public class Router extends CompositeService {
     if (conf.getBoolean(
         RBFConfigKeys.DFS_ROUTER_MONITOR_LOCAL_NAMENODE,
         RBFConfigKeys.DFS_ROUTER_MONITOR_LOCAL_NAMENODE_DEFAULT)) {
-      // Create a local heartbet service
+      // Create a local heartbeat service
       NamenodeHeartbeatService localHeartbeatService =
-          createLocalNamenodeHearbeatService();
+          createLocalNamenodeHeartbeatService();
       if (localHeartbeatService != null) {
         String nnDesc = localHeartbeatService.getNamenodeDesc();
         ret.put(nnDesc, localHeartbeatService);
@@ -514,7 +514,7 @@ public class Router extends CompositeService {
         }
         if (nsId != null) {
           NamenodeHeartbeatService heartbeatService =
-              createNamenodeHearbeatService(nsId, nnId);
+              createNamenodeHeartbeatService(nsId, nnId);
           if (heartbeatService != null) {
             ret.put(heartbeatService.getNamenodeDesc(), heartbeatService);
           }
@@ -530,7 +530,7 @@ public class Router extends CompositeService {
    *
    * @return Updater of the status for the local Namenode.
    */
-  protected NamenodeHeartbeatService createLocalNamenodeHearbeatService() {
+  protected NamenodeHeartbeatService createLocalNamenodeHeartbeatService() {
     // Detect NN running in this machine
     String nsId = DFSUtil.getNamenodeNameServiceId(conf);
     String nnId = null;
@@ -541,7 +541,7 @@ public class Router extends CompositeService {
       }
     }
 
-    return createNamenodeHearbeatService(nsId, nnId);
+    return createNamenodeHeartbeatService(nsId, nnId);
   }
 
   /**
@@ -551,7 +551,7 @@ public class Router extends CompositeService {
    * @param nnId Identifier of the namenode (HA) to monitor.
    * @return Updater of the status for the specified Namenode.
    */
-  protected NamenodeHeartbeatService createNamenodeHearbeatService(
+  protected NamenodeHeartbeatService createNamenodeHeartbeatService(
       String nsId, String nnId) {
 
     LOG.info("Creating heartbeat service for Namenode {} in {}", nnId, nsId);
@@ -739,7 +739,7 @@ public class Router extends CompositeService {
    * Get the list of namenode heartbeat service.
    */
   @VisibleForTesting
-  Collection<NamenodeHeartbeatService> getNamenodeHearbeatServices() {
+  Collection<NamenodeHeartbeatService> getNamenodeHeartbeatServices() {
     return this.namenodeHeartbeatServices;
   }
 
