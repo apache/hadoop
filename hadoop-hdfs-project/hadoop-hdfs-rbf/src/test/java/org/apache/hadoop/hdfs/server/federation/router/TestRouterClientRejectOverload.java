@@ -341,7 +341,7 @@ public class TestRouterClientRejectOverload {
     for (RouterContext routerContext : cluster.getRouters()) {
       // Manually trigger the heartbeat
       Collection<NamenodeHeartbeatService> heartbeatServices = routerContext
-          .getRouter().getNamenodeHearbeatServices();
+          .getRouter().getNamenodeHeartbeatServices();
       for (NamenodeHeartbeatService service : heartbeatServices) {
         service.periodicInvoke();
       }
