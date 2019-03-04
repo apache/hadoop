@@ -1372,7 +1372,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       setTrackingUrlToRMAppPage(stateToBeStored);
     }
     String finalTrackingUrl = getOriginalTrackingUrl();
-    FinalApplicationStatus status = null;
+    FinalApplicationStatus finalStatus = null;
     int exitStatus = ContainerExitStatus.INVALID;
     switch (event.getType()) {
     case LAUNCH_FAILED:
@@ -1387,7 +1387,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       diags.append(unregisterEvent.getDiagnosticMsg());
       // reset finalTrackingUrl to url sent by am
       finalTrackingUrl = sanitizeTrackingUrl(unregisterEvent.getFinalTrackingUrl());
-      status = unregisterEvent.getFinalApplicationStatus();
+      finalStatus = unregisterEvent.getFinalApplicationStatus();
       break;
     case CONTAINER_FINISHED:
       RMAppAttemptContainerFinishedEvent finishEvent =
@@ -1396,10 +1396,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       exitStatus = finishEvent.getContainerStatus().getExitStatus();
       break;
     case KILL:
-      status = FinalApplicationStatus.KILLED;
       break;
     case FAIL:
-      status = FinalApplicationStatus.FAILED;
       diags.append(event.getDiagnosticMsg());
       break;
     case EXPIRE:
@@ -1416,14 +1414,13 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     ApplicationAttemptStateData attemptState = ApplicationAttemptStateData
         .newInstance(applicationAttemptId, getMasterContainer(),
             rmStore.getCredentialsFromAppAttempt(this), startTime,
-            stateToBeStored, finalTrackingUrl, diags.toString(), status,
-            exitStatus, getFinishTime(), resUsage.getResourceUsageSecondsMap(),
+            stateToBeStored, finalTrackingUrl, diags.toString(), finalStatus, exitStatus,
+            getFinishTime(), resUsage.getResourceUsageSecondsMap(),
             this.attemptMetrics.getPreemptedResourceSecondsMap());
     LOG.info("Updating application attempt " + applicationAttemptId
         + " with final state: " + targetedFinalState + ", and exit status: "
         + exitStatus);
     rmStore.updateApplicationAttemptState(attemptState);
-    finalStatus = status;
   }
 
   private static class FinalSavingTransition extends BaseTransition {
@@ -1919,6 +1916,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         (RMAppAttemptUnregistrationEvent) event;
     this.diagnostics.append(unregisterEvent.getDiagnosticMsg());
     originalTrackingUrl = sanitizeTrackingUrl(unregisterEvent.getFinalTrackingUrl());
+    finalStatus = unregisterEvent.getFinalApplicationStatus();
   }
 
   private static final class ContainerFinishedTransition
