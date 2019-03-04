@@ -29,7 +29,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMTokenProto;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
-import org.apache.hadoop.security.token.Token;
 
 /**
  * The token identifier for Ozone Master.
@@ -66,18 +65,6 @@ public class OzoneTokenIdentifier extends
   @Override
   public Text getKind() {
     return KIND_NAME;
-  }
-
-  /**
-   * Default TrivialRenewer.
-   */
-  @InterfaceAudience.Private
-  public static class Renewer extends Token.TrivialRenewer {
-
-    @Override
-    protected Text getKind() {
-      return KIND_NAME;
-    }
   }
 
   /**
