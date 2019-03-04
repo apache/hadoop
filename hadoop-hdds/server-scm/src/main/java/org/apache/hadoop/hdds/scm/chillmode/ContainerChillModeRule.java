@@ -99,22 +99,24 @@ public class ContainerChillModeRule implements
       nodeRegistrationContainerReport, EventPublisher publisher) {
 
     // TODO: when we have remove handlers, we can remove getInChillmode check
-    if (chillModeManager.getInChillMode() || validate()) {
-      return;
-    }
 
-    process(nodeRegistrationContainerReport);
+    if (chillModeManager.getInChillMode()) {
+      if (validate()) {
+        return;
+      }
 
-    if(chillModeManager.getInChillMode()) {
-      SCMChillModeManager.getLogger().info(
-          "SCM in chill mode. {} % containers have at least one"
-              + " reported replica.",
-          (containerWithMinReplicas.get() / maxContainer) * 100);
-    }
+      process(nodeRegistrationContainerReport);
+      if (chillModeManager.getInChillMode()) {
+        SCMChillModeManager.getLogger().info(
+            "SCM in chill mode. {} % containers have at least one"
+                + " reported replica.",
+            (containerWithMinReplicas.get() / maxContainer) * 100);
+      }
 
-    if (validate()) {
-      chillModeManager.validateChillModeExitRules(publisher);
-      return;
+      if (validate()) {
+        chillModeManager.validateChillModeExitRules(publisher);
+      }
+
     }
 
   }

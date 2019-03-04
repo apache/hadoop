@@ -75,21 +75,23 @@ public class DataNodeChillModeRule implements
   public void onMessage(NodeRegistrationContainerReport
       nodeRegistrationContainerReport, EventPublisher publisher) {
     // TODO: when we have remove handlers, we can remove getInChillmode check
-    if (chillModeManager.getInChillMode() || validate()) {
-      return;
-    }
 
-    process(nodeRegistrationContainerReport);
+    if (chillModeManager.getInChillMode()) {
+      if (validate()) {
+        return;
+      }
 
-    if(chillModeManager.getInChillMode()) {
-      SCMChillModeManager.getLogger().info(
-          "SCM in chill mode. {} DataNodes registered, {} required.",
-          registeredDns, requiredDns);
-    }
+      process(nodeRegistrationContainerReport);
 
-    if (validate()) {
-      chillModeManager.validateChillModeExitRules(publisher);
-      return;
+      if (chillModeManager.getInChillMode()) {
+        SCMChillModeManager.getLogger().info(
+            "SCM in chill mode. {} DataNodes registered, {} required.",
+            registeredDns, requiredDns);
+      }
+
+      if (validate()) {
+        chillModeManager.validateChillModeExitRules(publisher);
+      }
     }
   }
 
