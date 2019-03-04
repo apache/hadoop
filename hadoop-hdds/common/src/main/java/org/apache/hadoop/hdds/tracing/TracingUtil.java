@@ -22,6 +22,7 @@ import java.lang.reflect.Proxy;
 import io.jaegertracing.Configuration;
 import io.jaegertracing.internal.JaegerTracer;
 import io.opentracing.Scope;
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.util.GlobalTracer;
@@ -60,6 +61,19 @@ public final class TracingUtil {
     if (GlobalTracer.get().activeSpan() != null) {
       GlobalTracer.get().inject(GlobalTracer.get().activeSpan().context(),
           StringCodec.FORMAT, builder);
+    }
+    return builder.toString();
+  }
+
+  /**
+   * Export the specific span as a string.
+   *
+   * @return encoded tracing context.
+   */
+  public static String exportSpan(Span span) {
+    StringBuilder builder = new StringBuilder();
+    if (span != null) {
+      GlobalTracer.get().inject(span.context(), StringCodec.FORMAT, builder);
     }
     return builder.toString();
   }

@@ -31,10 +31,12 @@ import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.
     StorageContainerException;
 import org.apache.hadoop.hdds.tracing.GrpcServerInterceptor;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 
+import io.opentracing.Scope;
 import org.apache.ratis.thirdparty.io.grpc.BindableService;
 import org.apache.ratis.thirdparty.io.grpc.Server;
 import org.apache.ratis.thirdparty.io.grpc.ServerBuilder;
@@ -168,12 +170,18 @@ public final class XceiverServerGrpc extends XceiverServer {
   @Override
   public void submitRequest(ContainerCommandRequestProto request,
       HddsProtos.PipelineID pipelineID) throws IOException {
-    super.submitRequest(request, pipelineID);
-    ContainerProtos.ContainerCommandResponseProto response =
-        storageContainer.dispatch(request, null);
-    if (response.getResult() != ContainerProtos.Result.SUCCESS) {
-      throw new StorageContainerException(response.getMessage(),
-          response.getResult());
+    try (Scope scope = TracingUtil
+        .importAndCreateScope(
+            "XceiverServerGrpc." + request.getCmdType().name(),
+            request.getTraceID())) {
+
+      super.submitRequest(request, pipelineID);
+      ContainerProtos.ContainerCommandResponseProto response =
+          storageContainer.dispatch(request, null);
+      if (response.getResult() != ContainerProtos.Result.SUCCESS) {
+        throw new StorageContainerException(response.getMessage(),
+            response.getResult());
+      }
     }
   }
 

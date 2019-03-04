@@ -33,6 +33,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers
     .InvalidContainerStateException;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.audit.AuditAction;
 import org.apache.hadoop.ozone.audit.AuditEventStatus;
 import org.apache.hadoop.ozone.audit.AuditLogger;
@@ -61,6 +62,8 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
     ContainerDataProto.State;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
+
+import io.opentracing.Scope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -137,9 +140,18 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
     containerSet.buildMissingContainerSet(createdContainerSet);
   }
 
-  @SuppressWarnings("methodlength")
   @Override
   public ContainerCommandResponseProto dispatch(
+      ContainerCommandRequestProto msg, DispatcherContext dispatcherContext) {
+    String spanName = "HddsDispatcher." + msg.getCmdType().name();
+    try (Scope scope = TracingUtil
+        .importAndCreateScope(spanName, msg.getTraceID())) {
+      return dispatchRequest(msg, dispatcherContext);
+    }
+  }
+
+  @SuppressWarnings("methodlength")
+  private ContainerCommandResponseProto dispatchRequest(
       ContainerCommandRequestProto msg, DispatcherContext dispatcherContext) {
     Preconditions.checkNotNull(msg);
     LOG.trace("Command {}, trace ID: {} ", msg.getCmdType().toString(),

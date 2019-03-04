@@ -486,7 +486,8 @@ public final class XceiverServerRatis extends XceiverServer {
     super.submitRequest(request, pipelineID);
     RaftClientReply reply;
     try (Scope scope = TracingUtil
-        .importAndCreateScope(request.getCmdType().name(),
+        .importAndCreateScope(
+            "XceiverServerRatis." + request.getCmdType().name(),
             request.getTraceID())) {
 
       RaftClientRequest raftClientRequest =
