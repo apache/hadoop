@@ -34,6 +34,8 @@ import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMNodeDetails;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .OMResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.ratis.protocol.RaftGroupId;
@@ -105,6 +107,27 @@ public class TestOzoneManagerRatisServer {
   public void testStartOMRatisServer() throws Exception {
     Assert.assertEquals("Ratis Server should be in running state",
         LifeCycle.State.RUNNING, omRatisServer.getServerState());
+  }
+
+  /**
+   * Submit any request to OM Ratis server and check that the dummy response
+   * message is received.
+   */
+  @Test
+  public void testSubmitRatisRequest() throws Exception {
+    // Wait for leader election
+    Thread.sleep(LEADER_ELECTION_TIMEOUT * 2);
+    OMRequest request = OMRequest.newBuilder()
+        .setCmdType(OzoneManagerProtocolProtos.Type.CreateVolume)
+        .setClientId(clientId)
+        .build();
+
+    OMResponse response = omRatisClient.sendCommand(request);
+
+    Assert.assertEquals(OzoneManagerProtocolProtos.Type.CreateVolume,
+        response.getCmdType());
+    Assert.assertEquals(false, response.getSuccess());
+    Assert.assertEquals(false, response.hasCreateVolumeResponse());
   }
 
   /**

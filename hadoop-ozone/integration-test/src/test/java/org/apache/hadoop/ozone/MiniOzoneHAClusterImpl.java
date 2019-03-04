@@ -32,9 +32,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.BindException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -50,7 +48,6 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
   private static final Logger LOG =
       LoggerFactory.getLogger(MiniOzoneHAClusterImpl.class);
 
-  private Map<String, OzoneManager> ozoneManagerMap;
   private List<OzoneManager> ozoneManagers;
 
   private static final Random RANDOM = new Random();
@@ -66,12 +63,11 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
 
   private MiniOzoneHAClusterImpl(
       OzoneConfiguration conf,
-      Map<String, OzoneManager> omMap,
+      List<OzoneManager> omList,
       StorageContainerManager scm,
       List<HddsDatanodeService> hddsDatanodes) {
     super(conf, scm, hddsDatanodes);
-    this.ozoneManagerMap = omMap;
-    this.ozoneManagers = new ArrayList<>(omMap.values());
+    this.ozoneManagers = omList;
   }
 
   /**
@@ -111,10 +107,6 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
     ozoneManagers.get(index).stop();
   }
 
-  public void stopOzoneManager(String omNodeId) {
-    ozoneManagerMap.get(omNodeId).stop();
-  }
-
   /**
    * Builder for configuring the MiniOzoneCluster to run.
    */
@@ -136,17 +128,17 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
       DefaultMetricsSystem.setMiniClusterMode(true);
       initializeConfiguration();
       StorageContainerManager scm;
-      Map<String, OzoneManager> omMap;
+      List<OzoneManager> omList;
       try {
         scm = createSCM();
         scm.start();
-        omMap = createOMService();
+        omList = createOMService();
       } catch (AuthenticationException ex) {
         throw new IOException("Unable to build MiniOzoneCluster. ", ex);
       }
 
       final List<HddsDatanodeService> hddsDatanodes = createHddsDatanodes(scm);
-      MiniOzoneHAClusterImpl cluster = new MiniOzoneHAClusterImpl(conf, omMap,
+      MiniOzoneHAClusterImpl cluster = new MiniOzoneHAClusterImpl(conf, omList,
           scm, hddsDatanodes);
       if (startDataNodes) {
         cluster.startHddsDatanodes();
@@ -179,10 +171,10 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
      * @throws IOException
      * @throws AuthenticationException
      */
-    private Map<String, OzoneManager> createOMService() throws IOException,
+    private List<OzoneManager> createOMService() throws IOException,
         AuthenticationException {
 
-      Map<String, OzoneManager> omMap = new HashMap<>();
+      List<OzoneManager> omList = new ArrayList<>(numOfOMs);
 
       int retryCount = 0;
       int basePort = 10000;
@@ -194,11 +186,10 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
 
           for (int i = 1; i<= numOfOMs; i++) {
             // Set nodeId
-            String nodeId = nodeIdBaseStr + i;
-            conf.set(OMConfigKeys.OZONE_OM_NODE_ID_KEY, nodeId);
+            conf.set(OMConfigKeys.OZONE_OM_NODE_ID_KEY, nodeIdBaseStr + i);
 
             // Set metadata/DB dir base path
-            String metaDirPath = path + "/" + nodeId;
+            String metaDirPath = path + "/" + nodeIdBaseStr + i;
             conf.set(OZONE_METADATA_DIRS, metaDirPath);
             OMStorage omStore = new OMStorage(conf);
             initializeOmStorage(omStore);
@@ -210,7 +201,7 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
 
             OzoneManager om = OzoneManager.createOm(null, conf);
             om.setCertClient(certClient);
-            omMap.put(nodeId, om);
+            omList.add(om);
 
             om.start();
             LOG.info("Started OzoneManager RPC server at " +
@@ -220,24 +211,23 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
           // Set default OM address to point to the first OM. Clients would
           // try connecting to this address by default
           conf.set(OMConfigKeys.OZONE_OM_ADDRESS_KEY,
-              NetUtils.getHostPortString(omMap.get(nodeIdBaseStr + 1)
-                  .getOmRpcServerAddr()));
+              NetUtils.getHostPortString(omList.get(0).getOmRpcServerAddr()));
 
           break;
         } catch (BindException e) {
-          for (OzoneManager om : omMap.values()) {
+          for (OzoneManager om : omList) {
             om.stop();
             om.join();
             LOG.info("Stopping OzoneManager server at " +
                 om.getOmRpcServerAddr());
           }
-          omMap.clear();
+          omList.clear();
           ++retryCount;
           LOG.info("MiniOzoneHACluster port conflicts, retried " +
               retryCount + " times");
         }
       }
-      return omMap;
+      return omList;
     }
 
     /**
