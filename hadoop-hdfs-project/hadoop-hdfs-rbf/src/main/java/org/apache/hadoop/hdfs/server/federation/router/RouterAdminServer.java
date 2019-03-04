@@ -303,8 +303,15 @@ public class RouterAdminServer extends AbstractService
   public RemoveMountTableEntryResponse removeMountTableEntry(
       RemoveMountTableEntryRequest request) throws IOException {
     // clear sub-cluster's quota definition
-    synchronizeQuota(request.getSrcPath(), HdfsConstants.QUOTA_RESET,
-        HdfsConstants.QUOTA_RESET);
+    try {
+      synchronizeQuota(request.getSrcPath(), HdfsConstants.QUOTA_RESET,
+          HdfsConstants.QUOTA_RESET);
+    } catch (Exception e) {
+      // Ignore exception, if any while reseting quota. Specifically to handle
+      // if the actual destination doesn't exist.
+      LOG.warn("Unable to clear quota at the destinations for {}: {}",
+          request.getSrcPath(), e.getMessage());
+    }
     return getMountTableStore().removeMountTableEntry(request);
   }
 
