@@ -105,6 +105,7 @@ class BPServiceActor implements Runnable {
   private final DataNode dn;
   private final DNConf dnConf;
   private long prevBlockReportId;
+  private long fullBlockReportLeaseId;
   private final SortedSet<Integer> blockReportSizes =
       Collections.synchronizedSortedSet(new TreeSet<>());
   private final int maxDataLength;
@@ -129,6 +130,7 @@ class BPServiceActor implements Runnable {
         dnConf.ibrInterval,
         dn.getMetrics());
     prevBlockReportId = ThreadLocalRandom.current().nextLong();
+    fullBlockReportLeaseId = 0;
     scheduler = new Scheduler(dnConf.heartBeatInterval,
         dnConf.getLifelineIntervalMs(), dnConf.blockReportInterval,
         dnConf.outliersReportIntervalMs);
@@ -616,7 +618,6 @@ class BPServiceActor implements Runnable {
         + "; heartBeatInterval=" + dnConf.heartBeatInterval
         + (lifelineSender != null ?
             "; lifelineIntervalMs=" + dnConf.getLifelineIntervalMs() : ""));
-    long fullBlockReportLeaseId = 0;
 
     //
     // Now loop for a long time....
@@ -782,6 +783,10 @@ class BPServiceActor implements Runnable {
     
     LOG.info("Block pool " + this + " successfully registered with NN");
     bpos.registrationSucceeded(this, bpRegistration);
+
+    // reset lease id whenever registered to NN.
+    // ask for a new lease id at the next heartbeat.
+    fullBlockReportLeaseId = 0;
 
     // random short delay - helps scatter the BR from all DNs
     scheduler.scheduleBlockReport(dnConf.initialBlockReportDelayMs);
