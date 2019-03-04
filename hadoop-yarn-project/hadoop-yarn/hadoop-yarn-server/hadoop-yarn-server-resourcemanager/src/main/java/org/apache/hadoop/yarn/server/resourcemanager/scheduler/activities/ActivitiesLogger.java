@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -34,7 +34,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
  */
 // FIXME: make sure CandidateNodeSet works with this class
 public class ActivitiesLogger {
-  private static final Log LOG = LogFactory.getLog(ActivitiesLogger.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ActivitiesLogger.class);
 
   /**
    * Methods for recording activities from an app

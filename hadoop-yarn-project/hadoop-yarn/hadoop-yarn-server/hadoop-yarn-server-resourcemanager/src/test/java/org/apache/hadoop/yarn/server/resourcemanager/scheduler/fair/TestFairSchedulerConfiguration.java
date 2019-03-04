@@ -28,7 +28,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
@@ -44,6 +43,8 @@ import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
 import org.junit.Assert;
 import org.junit.Test;
@@ -451,8 +452,8 @@ public class TestFairSchedulerConfiguration {
   @Test
   public void testMemoryIncrementConfiguredViaMultipleProperties() {
     TestAppender testAppender = new TestAppender();
-    Log4JLogger logger = (Log4JLogger) FairSchedulerConfiguration.LOG;
-    logger.getLogger().addAppender(testAppender);
+    Logger logger = LogManager.getRootLogger();
+    logger.addAppender(testAppender);
     try {
       Configuration conf = new Configuration();
       conf.set("yarn.scheduler.increment-allocation-mb", "7");
@@ -470,15 +471,15 @@ public class TestFairSchedulerConfiguration {
               "overriding the yarn.scheduler.increment-allocation-mb=7 " +
               "property").equals(e.getMessage())));
     } finally {
-      logger.getLogger().removeAppender(testAppender);
+      logger.removeAppender(testAppender);
     }
   }
 
   @Test
   public void testCpuIncrementConfiguredViaMultipleProperties() {
     TestAppender testAppender = new TestAppender();
-    Log4JLogger logger = (Log4JLogger) FairSchedulerConfiguration.LOG;
-    logger.getLogger().addAppender(testAppender);
+    Logger logger = LogManager.getRootLogger();
+    logger.addAppender(testAppender);
     try {
       Configuration conf = new Configuration();
       conf.set("yarn.scheduler.increment-allocation-vcores", "7");
@@ -496,7 +497,7 @@ public class TestFairSchedulerConfiguration {
               "overriding the yarn.scheduler.increment-allocation-vcores=7 " +
               "property").equals(e.getMessage())));
     } finally {
-      logger.getLogger().removeAppender(testAppender);
+      logger.removeAppender(testAppender);
     }
   }
 }

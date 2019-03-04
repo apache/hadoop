@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -41,8 +41,8 @@ import static org.apache.hadoop.yarn.server.resourcemanager.placement.QueuePlace
 import static org.apache.hadoop.yarn.server.resourcemanager.placement.QueuePlacementRuleUtils.validateAndGetQueueMapping;
 
 public class AppNameMappingPlacementRule extends PlacementRule {
-  private static final Log LOG = LogFactory
-      .getLog(AppNameMappingPlacementRule.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(AppNameMappingPlacementRule.class);
 
   public static final String CURRENT_APP_MAPPING = "%application";
 

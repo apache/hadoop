@@ -23,8 +23,8 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -63,7 +63,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  * delayed scheduling mechanism to get better locality allocation.
  */
 public class RegularContainerAllocator extends AbstractContainerAllocator {
-  private static final Log LOG = LogFactory.getLog(RegularContainerAllocator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RegularContainerAllocator.class);
 
   public RegularContainerAllocator(FiCaSchedulerApp application,
       ResourceCalculator rc, RMContext rmContext,

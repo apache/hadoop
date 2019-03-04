@@ -21,8 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.metrics;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -51,8 +51,8 @@ import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
  */
 public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
 
-  private static final Log LOG =
-      LogFactory.getLog(TimelineServiceV1Publisher.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineServiceV1Publisher.class);
 
   public TimelineServiceV1Publisher() {
     super("TimelineserviceV1Publisher");

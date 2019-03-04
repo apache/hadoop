@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.AppAllocation;
 
@@ -45,7 +45,8 @@ public class AppAllocationInfo {
   protected String timeStamp;
   protected List<ActivityNodeInfo> allocationAttempt;
 
-  private static final Log LOG = LogFactory.getLog(AppAllocationInfo.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AppAllocationInfo.class);
 
   AppAllocationInfo() {
   }

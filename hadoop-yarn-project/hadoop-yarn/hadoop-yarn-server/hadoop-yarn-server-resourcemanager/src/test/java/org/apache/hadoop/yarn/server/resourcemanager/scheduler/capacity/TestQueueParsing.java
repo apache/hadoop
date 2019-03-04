@@ -23,8 +23,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -47,7 +47,8 @@ import com.google.common.collect.ImmutableSet;
 
 public class TestQueueParsing {
 
-  private static final Log LOG = LogFactory.getLog(TestQueueParsing.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestQueueParsing.class);
   
   private static final double DELTA = 0.000001;
   

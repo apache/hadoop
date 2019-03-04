@@ -23,8 +23,8 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 
@@ -32,7 +32,8 @@ import org.apache.hadoop.yarn.api.records.NodeLabel;
  * Node labels utilities.
  */
 public final class NodeLabelsUtils {
-  private static final Log LOG = LogFactory.getLog(NodeLabelsUtils.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NodeLabelsUtils.class);
 
   private NodeLabelsUtils() { /* Hidden constructor */ }
 
