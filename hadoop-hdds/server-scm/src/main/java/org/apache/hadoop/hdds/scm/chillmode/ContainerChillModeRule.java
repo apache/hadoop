@@ -99,12 +99,7 @@ public class ContainerChillModeRule implements
       nodeRegistrationContainerReport, EventPublisher publisher) {
 
     // TODO: when we have remove handlers, we can remove getInChillmode check
-    if (chillModeManager.getInChillMode()) {
-      if (validate()) {
-        chillModeManager.validateChillModeExitRules(publisher);
-        return;
-      }
-    } else {
+    if (chillModeManager.getInChillMode() || validate()) {
       return;
     }
 

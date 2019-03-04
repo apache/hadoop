@@ -75,12 +75,7 @@ public class DataNodeChillModeRule implements
   public void onMessage(NodeRegistrationContainerReport
       nodeRegistrationContainerReport, EventPublisher publisher) {
     // TODO: when we have remove handlers, we can remove getInChillmode check
-    if (chillModeManager.getInChillMode()) {
-      if (validate()) {
-        chillModeManager.validateChillModeExitRules(publisher);
-        return;
-      }
-    } else {
+    if (chillModeManager.getInChillMode() || validate()) {
       return;
     }
 
