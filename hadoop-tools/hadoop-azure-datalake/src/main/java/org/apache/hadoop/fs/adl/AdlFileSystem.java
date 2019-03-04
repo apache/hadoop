@@ -47,6 +47,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.ContentSummary.Builder;
 import org.apache.hadoop.fs.CreateFlag;
@@ -58,7 +59,6 @@ import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.adl.oauth2.AzureADTokenProvider;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -1039,10 +1039,10 @@ public class AdlFileSystem extends FileSystem {
     // query the superclass, which triggers argument validation.
     boolean superCapability = super.hasPathCapability(path, capability);
     switch (capability.toLowerCase(Locale.ENGLISH)) {
-    case PathCapabilities.FS_ACLS:
-    case PathCapabilities.FS_APPEND:
-    case PathCapabilities.FS_CONCAT:
-    case PathCapabilities.FS_PERMISSIONS:
+    case CommonPathCapabilities.FS_ACLS:
+    case CommonPathCapabilities.FS_APPEND:
+    case CommonPathCapabilities.FS_CONCAT:
+    case CommonPathCapabilities.FS_PERMISSIONS:
       return true;
     default:
       return superCapability;

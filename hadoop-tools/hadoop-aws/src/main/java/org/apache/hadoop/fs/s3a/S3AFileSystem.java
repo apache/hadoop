@@ -85,6 +85,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -99,7 +100,6 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
@@ -3620,11 +3620,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // select is only supported if enabled
       return selectBinding.isEnabled();
 
-    case PathCapabilities.FS_CHECKSUMS:
+    case CommonPathCapabilities.FS_CHECKSUMS:
       // capability depends on FS configuration
       return getConf().getBoolean(ETAG_CHECKSUM_ENABLED,
           ETAG_CHECKSUM_ENABLED_DEFAULT);
-      
+
     default:
       return super.hasPathCapability(path, capability);
     }

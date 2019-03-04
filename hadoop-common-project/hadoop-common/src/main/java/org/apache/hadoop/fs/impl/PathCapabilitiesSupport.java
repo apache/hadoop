@@ -18,12 +18,11 @@
 
 package org.apache.hadoop.fs.impl;
 
-
-import com.google.common.base.Preconditions;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -37,8 +36,8 @@ public class PathCapabilitiesSupport {
    */
   public static void validatehasPathCapabilityArgs(
       final Path path, final String capability) {
-    Preconditions.checkArgument(capability != null && !capability.isEmpty(),
+    checkArgument(path != null, "null path");
+    checkArgument(capability != null && !capability.isEmpty(),
         "null/empty capability");
-    Preconditions.checkArgument(path != null, "null path");
   }
 }

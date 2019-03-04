@@ -26,6 +26,7 @@ import java.util.List;
 import com.google.common.base.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.DelegationTokenRenewer;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -34,7 +35,6 @@ import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.fs.StorageType;
@@ -1509,17 +1509,17 @@ public class HttpFSFileSystem extends FileSystem
       throws IOException {
     // query the superclass, which triggers argument validation.
     boolean superCapability = super.hasPathCapability(path, capability);
-    
+
     switch (capability.toLowerCase(Locale.ENGLISH)) {
-    case PathCapabilities.FS_ACLS:
-    case PathCapabilities.FS_APPEND:
-    case PathCapabilities.FS_CONCAT:
-    case PathCapabilities.FS_PERMISSIONS:
-    case PathCapabilities.FS_SNAPSHOTS:
-    case PathCapabilities.FS_STORAGEPOLICY:
-    case PathCapabilities.FS_XATTRS:
+    case CommonPathCapabilities.FS_ACLS:
+    case CommonPathCapabilities.FS_APPEND:
+    case CommonPathCapabilities.FS_CONCAT:
+    case CommonPathCapabilities.FS_PERMISSIONS:
+    case CommonPathCapabilities.FS_SNAPSHOTS:
+    case CommonPathCapabilities.FS_STORAGEPOLICY:
+    case CommonPathCapabilities.FS_XATTRS:
       return true;
-    case PathCapabilities.FS_SYMLINKS:
+    case CommonPathCapabilities.FS_SYMLINKS:
       return false;
     default:
       return superCapability;

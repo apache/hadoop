@@ -39,7 +39,7 @@ import java.util.concurrent.Future;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
-import org.apache.hadoop.fs.PathCapabilities;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientThrottlingIntercept;
 import org.slf4j.Logger;
@@ -1122,12 +1122,12 @@ public class AzureBlobFileSystem extends FileSystem {
     makeQualified(path);
 
     switch (capability) {
-    case PathCapabilities.FS_PERMISSIONS:
-    case PathCapabilities.FS_APPEND:
+    case CommonPathCapabilities.FS_PERMISSIONS:
+    case CommonPathCapabilities.FS_APPEND:
       return true;
-    case PathCapabilities.FS_ACLS:
+    case CommonPathCapabilities.FS_ACLS:
       return getIsNamespaceEnabled();
-    case PathCapabilities.FS_DELEGATION_TOKENS:
+    case CommonPathCapabilities.FS_DELEGATION_TOKENS:
       return delegationTokenEnabled;
     default:
       return super.hasPathCapability(path, capability);

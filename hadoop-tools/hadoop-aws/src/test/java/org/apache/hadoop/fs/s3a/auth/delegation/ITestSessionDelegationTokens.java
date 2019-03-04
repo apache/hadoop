@@ -41,6 +41,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.fs.PathCapabilities.FS_DELEGATION_TOKENS;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasPathCapabilities;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeSessionTestsEnabled;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.roundTrip;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.unsetHadoopCredentialProviders;
@@ -110,6 +112,12 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     String service = fs.getCanonicalServiceName();
     assertEquals("canonical URI and service name mismatch",
         uri, new URI(service));
+  }
+
+  @Test
+  public void testFSDeclaresDTSupport() throws Throwable {
+    S3AFileSystem fs = getFileSystem();
+    assertHasPathCapabilities(fs, fs.getHomeDirectory(), FS_DELEGATION_TOKENS);
   }
 
   @Test

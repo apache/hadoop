@@ -879,12 +879,12 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     // query the superclass, which triggers argument validation.
     boolean superCapability = super.hasPathCapability(path, capability);
     switch (capability.toLowerCase(Locale.ENGLISH)) {
-    case PathCapabilities.FS_APPEND:
-    case PathCapabilities.FS_CONCAT:
+    case CommonPathCapabilities.FS_APPEND:
+    case CommonPathCapabilities.FS_CONCAT:
       return false;
     default:
       return superCapability;
     }
-  }  
-  
+  }
+
 }

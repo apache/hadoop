@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Options.HandleOpt;
 import org.apache.hadoop.io.IOUtils;
@@ -907,11 +908,9 @@ public class HarFileSystem extends FileSystem {
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
-    // query the superclass, which triggers argument validation.
-    super.hasPathCapability(path, capability);
-
+    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
     switch (capability.toLowerCase(Locale.ENGLISH)) {
-    case PathCapabilities.FS_READ_ONLY_CONNECTOR:
+    case CommonPathCapabilities.FS_READ_ONLY_CONNECTOR:
       return true;
     default:
       return false;

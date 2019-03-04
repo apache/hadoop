@@ -47,6 +47,7 @@ import java.util.StringTokenizer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -1065,19 +1066,18 @@ public class RawLocalFileSystem extends FileSystem {
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
-    // query the superclass, which triggers argument validation.
-    boolean superCapability = super.hasPathCapability(path, capability);
+    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
     switch (capability.toLowerCase(Locale.ENGLISH)) {
-    case PathCapabilities.FS_APPEND:
-    case PathCapabilities.FS_CONCAT:
-    case PathCapabilities.FS_PATHHANDLES:
-    case PathCapabilities.FS_PERMISSIONS:
-    case PathCapabilities.FS_TRUNCATE:
+    case CommonPathCapabilities.FS_APPEND:
+    case CommonPathCapabilities.FS_CONCAT:
+    case CommonPathCapabilities.FS_PATHHANDLES:
+    case CommonPathCapabilities.FS_PERMISSIONS:
+    case CommonPathCapabilities.FS_TRUNCATE:
       return true;
-    case PathCapabilities.FS_SYMLINKS:
+    case CommonPathCapabilities.FS_SYMLINKS:
       return FileSystem.areSymlinksEnabled();
     default:
-      return superCapability;
+      return super.hasPathCapability(path, capability);
     }
   }
 }

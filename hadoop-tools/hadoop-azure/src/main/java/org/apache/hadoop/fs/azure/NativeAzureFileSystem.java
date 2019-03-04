@@ -51,6 +51,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BufferedFSInputStream;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -60,7 +61,6 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
@@ -69,6 +69,7 @@ import org.apache.hadoop.fs.azure.metrics.AzureFileSystemMetricsSystem;
 import org.apache.hadoop.fs.azure.security.Constants;
 import org.apache.hadoop.fs.azure.security.RemoteWasbDelegationTokenManager;
 import org.apache.hadoop.fs.azure.security.WasbDelegationTokenManager;
+import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -3871,17 +3872,16 @@ public class NativeAzureFileSystem extends FileSystem {
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
-    // qualify the path to make sure that it refers to the current FS.
-    // query the superclass, which triggers argument validation.
-    boolean superCapability = super.hasPathCapability(path, capability);
+    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
+
     switch (capability) {
-    case PathCapabilities.FS_PERMISSIONS:
+    case CommonPathCapabilities.FS_PERMISSIONS:
       return true;
     // Append support is dynamic
-    case PathCapabilities.FS_APPEND:
+    case CommonPathCapabilities.FS_APPEND:
       return appendSupportEnabled;
     default:
-      return superCapability;
+      return super.hasPathCapability(path, capability);
     }
   }
 }

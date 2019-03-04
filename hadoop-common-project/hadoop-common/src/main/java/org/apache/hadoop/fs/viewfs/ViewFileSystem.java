@@ -39,6 +39,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -57,6 +58,7 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.XAttrSetFlag;
+import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.AclUtil;
@@ -944,11 +946,12 @@ public class ViewFileSystem extends FileSystem {
   @Override
   public boolean hasPathCapability(Path path, String capability)
       throws IOException {
+    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
     // qualify the path to make sure that it refers to the current FS.
     Path p = makeQualified(path);
 
     switch (capability.toLowerCase(Locale.ENGLISH)) {
-    case PathCapabilities.FS_CONCAT:
+    case CommonPathCapabilities.FS_CONCAT:
       // concat is not supported, as it may be invoked across filesystems.
       return false;
     default:

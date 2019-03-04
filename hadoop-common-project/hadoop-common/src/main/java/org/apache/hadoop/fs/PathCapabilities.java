@@ -19,9 +19,6 @@
 package org.apache.hadoop.fs;
 
 import java.io.IOException;
-import java.util.List;
-
-import org.apache.hadoop.fs.permission.FsPermission;
 
 /**
  * The Path counterpoint to {@link StreamCapabilities}; a query to see if,
@@ -29,104 +26,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
  * path.
  */
 public interface PathCapabilities {
-
-  /**
-   * Does the Filesystem support
-   * {@link FileSystem#setAcl(Path, List)},
-   * {@link FileSystem#getAclStatus(Path)} 
-   * and related methods?
-   * Value: {@value}.
-   */
-  String FS_ACLS = "fs.paths.acls";
-
-  /**
-   * Does the Filesystem support {@link FileSystem#append(Path)}?
-   * Value: {@value}.
-   */
-  String FS_APPEND = "fs.paths.append";
-
-  /**
-   * Does the FS support {@link FileSystem#getFileChecksum(Path)}?
-   * Value: {@value}.
-   */
-  String FS_CHECKSUMS = "fs.paths.checksums";
-
-  /**
-   * Does the FS support {@link FileSystem#concat(Path, Path[])}?
-   * Value: {@value}.
-   */
-  String FS_CONCAT = "fs.paths.concat";
-
-  /**
-   * Does the FS support {@link FileSystem#listCorruptFileBlocks(Path)} ()}?
-   * Value: {@value}.
-   */
-  String FS_LIST_CORRUPT_FILE_BLOCKS = "fs.paths.list-corrupt-file-blocks";
-
-  /**
-   * Does the FS support {@link FileSystem#setPermission(Path, FsPermission)}
-   * and related methods?
-   * Value: {@value}.
-   */
-  String FS_PERMISSIONS = "fs.paths.permissions";
-
-  /**
-   * Does the FS support
-   * {@link FileSystem#createPathHandle(FileStatus, Options.HandleOpt...)}
-   * and related methods?
-   * Value: {@value}.
-   */
-  String FS_PATHHANDLES = "fs.paths.pathhandles";
-
-  /**
-   * Does this filesystem connector only support filesystem read operations?
-   * For example, the {@code HttpFileSystem} is always read-only.
-   * This is different from "is the specific instance and path read only?", which
-   * must be determined by checking permissions (where supported), or
-   * attempting write operations under a path.
-   * Value: {@value}.
-   */
-  String FS_READ_ONLY_CONNECTOR = "fs.paths.read-only-connector";
-
-  /**
-   * Does the FS support snapshots through
-   * {@link FileSystem#createSnapshot(Path)} and related methods??
-   * Value: {@value}.
-   */
-  String FS_SNAPSHOTS = "fs.paths.snapshots";
-
-  /**
-   * Does the FS support {@link FileSystem#setStoragePolicy(Path, String)} 
-   * and related methods?
-   * Value: {@value}.
-   */
-  String FS_STORAGEPOLICY = "fs.paths.storagepolicy";
-
-  /**
-   * Does the FS support symlinks through
-   * {@link FileSystem#createSymlink(Path, Path, boolean)} and related methods?
-   * Value: {@value}.
-   */
-  String FS_SYMLINKS = "fs.paths.symlinks";
-
-  /**
-   * Does the FS support {@link FileSystem#truncate(Path, long)} ?
-   * Value: {@value}.
-   */
-  String FS_TRUNCATE = "fs.paths.truncate";
-
-  /**
-   * Does the Filesystem support XAttributes through
-   * {@link FileSystem#setXAttr(Path, String, byte[])} and related methods?
-   * Value: {@value}.
-   */
-  String FS_XATTRS = "fs.paths.xattrs";
-
-  /**
-   * Does the filesystem support Delegation Tokens?
-   * Value: {@value}.
-   */
-  String FS_DELEGATION_TOKENS = "fs.paths.delegation.tokens";
 
   /**
    * Probe for a filesystem instance offering a specific capability under the

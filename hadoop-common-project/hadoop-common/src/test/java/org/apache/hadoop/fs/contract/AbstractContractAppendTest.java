@@ -20,10 +20,14 @@ package org.apache.hadoop.fs.contract;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathCapabilities;
+
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.PathCapabilities.FS_APPEND;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasPathCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
@@ -149,4 +153,11 @@ public abstract class AbstractContractAppendTest extends AbstractFSContractTestB
                                                  dataset.length);
     ContractTestUtils.compareByteArrays(dataset, bytes, dataset.length);
   }
+
+  @Test
+  public void testFileSystemDeclaresCapability() throws Throwable {
+    assertHasPathCapabilities(getFileSystem(), target,
+        PathCapabilities.FS_APPEND);
+  }
+
 }

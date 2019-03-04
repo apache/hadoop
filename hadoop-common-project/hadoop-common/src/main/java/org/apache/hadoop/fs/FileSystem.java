@@ -3229,10 +3229,10 @@ public abstract class FileSystem extends Configured
     // qualify the path to make sure that it refers to the current FS.
     makeQualified(path);
     switch (capability.toLowerCase(Locale.ENGLISH)) {
-    case FS_SYMLINKS:
+    case CommonPathCapabilities.FS_SYMLINKS:
       // delegate to the existing supportsSymlinks() call.
       return supportsSymlinks() && areSymlinksEnabled();
-    case FS_DELEGATION_TOKENS:
+    case CommonPathCapabilities.FS_DELEGATION_TOKENS:
       // this is less efficient than it should be.
       return getCanonicalServiceName() != null;
     default:
