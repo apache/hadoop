@@ -442,8 +442,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(amContainer, applicationAttempt.getMasterContainer());
     assertEquals(0.0, (double)applicationAttempt.getProgress(), 0.0001);
     assertEquals(0, application.getRanNodes().size());
-    assertEquals(FinalApplicationStatus.KILLED,
-        applicationAttempt.getFinalApplicationStatus());
+    assertNull(applicationAttempt.getFinalApplicationStatus());
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
     verifyAttemptFinalStateSaved();
     assertFalse(transferStateFromPreviousAttempt);
