@@ -22,11 +22,9 @@ Resource            commonawslib.robot
 Test Setup          Setup s3 tests
 
 *** Keywords ***
-Create Random file for mac
-    Execute                 dd if=/dev/urandom of=/tmp/part1 bs=1m count=5
-
-Create Random file for linux
-    Execute                 dd if=/dev/urandom of=/tmp/part1 bs=1M count=5
+Create Random file
+    [arguments]             ${size_in_megabytes}
+    Execute                 dd if=/dev/urandom of=/tmp/part1 bs=1048576 count=${size_in_megabytes}
 
 
 *** Variables ***
@@ -55,13 +53,11 @@ Test Multipart Upload
 # multipart upload, uploading each part as 5MB file, exception is for last part
 
 	${system} =         Evaluate    platform.system()    platform
-	Run Keyword if      '${system}' == 'Darwin'  Create Random file for mac
-	Run Keyword if      '${system}' == 'Linux'   Create Random file for linux
+	Run Keyword         Create Random file      5
 	${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key multipartKey --part-number 1 --body /tmp/part1 --upload-id ${nextUploadID}
 	                    Should contain          ${result}    ETag
 # override part
-	Run Keyword if      '${system}' == 'Darwin'    Create Random file for mac
-	Run Keyword if      '${system}' == 'Linux'     Create Random file for linux
+	Run Keyword         Create Random file      5
 	${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key multipartKey --part-number 1 --body /tmp/part1 --upload-id ${nextUploadID}
 	                    Should contain          ${result}    ETag
 
@@ -75,8 +71,7 @@ Test Multipart Upload Complete
 
 #upload parts
 	${system} =         Evaluate    platform.system()    platform
-	Run Keyword if      '${system}' == 'Darwin'  Create Random file for mac
-	Run Keyword if      '${system}' == 'Linux'   Create Random file for linux
+	Run Keyword         Create Random file      5
 	${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key multipartKey1 --part-number 1 --body /tmp/part1 --upload-id ${uploadID}
 	${eTag1} =          Execute and checkrc     echo '${result}' | jq -r '.ETag'   0
 	                    Should contain          ${result}    ETag
@@ -94,11 +89,8 @@ Test Multipart Upload Complete
 
 #read file and check the key
     ${result} =                 Execute AWSS3ApiCli        get-object --bucket ${BUCKET} --key multipartKey1 /tmp/multipartKey1.result
-                                Execute                    cat /tmp/part1 /tmp/part2 >> /tmp/multipartkey1
-    ${checksumbefore} =         Execute                    md5sum /tmp/multipartkey1 | awk '{print $1}'
-    ${checksumafter} =          Execute                    md5sum /tmp/multipartKey1.result | awk '{print $1}'
-                                Should Be Equal            ${checksumbefore}            ${checksumafter}
-
+                                Execute                    cat /tmp/part1 /tmp/part2 >> /tmp/multipartKey1
+    Compare files               /tmp/multipartKey1         /tmp/multipartKey1.result
 
 Test Multipart Upload Complete Entity too small
     ${result} =         Execute AWSS3APICli     create-multipart-upload --bucket ${BUCKET} --key multipartKey2
@@ -172,8 +164,7 @@ Test list parts
 
 #upload parts
 	${system} =         Evaluate    platform.system()    platform
-	Run Keyword if      '${system}' == 'Darwin'  Create Random file for mac
-	Run Keyword if      '${system}' == 'Linux'   Create Random file for linux
+	Run Keyword         Create Random file      5
 	${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key multipartKey5 --part-number 1 --body /tmp/part1 --upload-id ${uploadID}
 	${eTag1} =          Execute and checkrc     echo '${result}' | jq -r '.ETag'   0
 	                    Should contain          ${result}    ETag
@@ -205,3 +196,10 @@ Test list parts
 
 #finally abort it
   ${result} =         Execute AWSS3APICli and checkrc    abort-multipart-upload --bucket ${BUCKET} --key multipartKey5 --upload-id ${uploadID}    0
+
+Test Multipart Upload with the simplified aws s3 cp API
+	                    Create Random file      22
+                        Execute AWSS3Cli        cp /tmp/part1 s3://${BUCKET}/mpyawscli
+                        Execute AWSS3Cli        cp s3://${BUCKET}/mpyawscli /tmp/part1.result
+                        Execute AWSS3Cli        rm s3://${BUCKET}/mpyawscli
+                        Compare files           /tmp/part1        /tmp/part1.result
