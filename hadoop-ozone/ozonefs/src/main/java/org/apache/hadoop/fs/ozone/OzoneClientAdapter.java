@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.fs.ozone;
 
+import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.security.token.Token;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
@@ -52,4 +55,6 @@ public interface OzoneClientAdapter {
 
   Iterator<BasicKeyInfo> listKeys(String pathKey);
 
+  Token<OzoneTokenIdentifier> getDelegationToken(String renewer)
+      throws IOException;
 }
