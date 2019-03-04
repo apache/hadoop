@@ -26,10 +26,6 @@
         },
         controller: function ($http) {
             var ctrl = this;
-            $http.get("jmx?qry=Hadoop:service=BlockManager,name=*")
-                .then(function (result) {
-                    ctrl.blockmanagermetrics = result.data.beans[0];
-                });
             $http.get("jmx?qry=Hadoop:service=SCMNodeManager,name=SCMNodeManagerInfo")
                 .then(function (result) {
                     ctrl.nodemanagermetrics = result.data.beans[0];
