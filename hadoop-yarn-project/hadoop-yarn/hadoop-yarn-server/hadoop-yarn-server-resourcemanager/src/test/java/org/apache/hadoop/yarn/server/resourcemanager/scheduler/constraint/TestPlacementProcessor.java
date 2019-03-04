@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
@@ -74,8 +74,8 @@ public class TestPlacementProcessor {
 
   private static final int GB = 1024;
 
-  private static final Log LOG =
-      LogFactory.getLog(TestPlacementProcessor.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestPlacementProcessor.class);
   private MockRM rm;
   private DrainDispatcher dispatcher;
 

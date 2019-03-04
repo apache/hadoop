@@ -42,8 +42,8 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -108,7 +108,8 @@ import org.mockito.Mockito;
 
 public class TestSchedulerUtils {
 
-  private static final Log LOG = LogFactory.getLog(TestSchedulerUtils.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSchedulerUtils.class);
   private static Resource configuredMaxAllocation;
 
   private RMContext rmContext = getMockRMContext();

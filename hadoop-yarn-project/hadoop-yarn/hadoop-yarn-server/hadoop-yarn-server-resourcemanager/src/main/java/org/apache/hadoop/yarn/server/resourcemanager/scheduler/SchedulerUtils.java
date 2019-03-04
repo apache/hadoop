@@ -27,8 +27,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -104,7 +104,8 @@ public class SchedulerUtils {
     }
   }
 
-  private static final Log LOG = LogFactory.getLog(SchedulerUtils.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SchedulerUtils.class);
 
   private static final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);

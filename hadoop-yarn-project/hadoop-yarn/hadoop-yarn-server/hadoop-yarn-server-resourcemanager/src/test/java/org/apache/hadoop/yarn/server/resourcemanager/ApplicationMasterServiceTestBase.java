@@ -17,8 +17,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
@@ -69,8 +69,8 @@ import static org.junit.Assert.fail;
  * Some implementors are for testing CS and FS.
  */
 public abstract class ApplicationMasterServiceTestBase {
-  private static final Log LOG = LogFactory
-      .getLog(ApplicationMasterServiceTestBase.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(ApplicationMasterServiceTestBase.class);
 
   static final int GB = 1024;
 

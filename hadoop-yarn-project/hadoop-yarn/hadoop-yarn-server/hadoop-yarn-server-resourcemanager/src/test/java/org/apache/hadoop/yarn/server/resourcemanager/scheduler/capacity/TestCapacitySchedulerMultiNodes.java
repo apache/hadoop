@@ -23,8 +23,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
@@ -46,8 +46,8 @@ import org.junit.Test;
  */
 public class TestCapacitySchedulerMultiNodes extends CapacitySchedulerTestBase {
 
-  private static final Log LOG = LogFactory
-      .getLog(TestCapacitySchedulerMultiNodes.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestCapacitySchedulerMultiNodes.class);
   private CapacitySchedulerConfiguration conf;
   private static final String POLICY_CLASS_NAME =
       "org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.ResourceUsageMultiNodeLookupPolicy";

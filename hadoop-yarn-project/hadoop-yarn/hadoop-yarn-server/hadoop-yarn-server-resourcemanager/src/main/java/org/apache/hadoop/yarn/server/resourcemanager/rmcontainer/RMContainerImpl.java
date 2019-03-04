@@ -28,8 +28,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
@@ -68,7 +68,8 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class RMContainerImpl implements RMContainer {
 
-  private static final Log LOG = LogFactory.getLog(RMContainerImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RMContainerImpl.class);
 
   private static final StateMachineFactory<RMContainerImpl, RMContainerState, 
                                            RMContainerEventType, RMContainerEvent> 

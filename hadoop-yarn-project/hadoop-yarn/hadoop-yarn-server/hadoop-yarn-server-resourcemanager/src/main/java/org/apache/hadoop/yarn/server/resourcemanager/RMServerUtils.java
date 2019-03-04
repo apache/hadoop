@@ -31,8 +31,8 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.Sets;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -89,7 +89,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  */
 public class RMServerUtils {
 
-  private static final Log LOG_HANDLE = LogFactory.getLog(RMServerUtils.class);
+  private static final Logger LOG_HANDLE =
+      LoggerFactory.getLogger(RMServerUtils.class);
 
   public static final String UPDATE_OUTSTANDING_ERROR =
       "UPDATE_OUTSTANDING_ERROR";
@@ -377,7 +378,7 @@ public class RMServerUtils {
   }
 
   public static UserGroupInformation verifyAdminAccess(
-      YarnAuthorizationProvider authorizer, String method, final Log LOG)
+      YarnAuthorizationProvider authorizer, String method, final Logger LOG)
       throws IOException {
     // by default, this method will use AdminService as module name
     return verifyAdminAccess(authorizer, method, "AdminService", LOG);
@@ -396,7 +397,7 @@ public class RMServerUtils {
    */
   public static UserGroupInformation verifyAdminAccess(
       YarnAuthorizationProvider authorizer, String method, String module,
-      final Log LOG)
+      final Logger LOG)
       throws IOException {
     UserGroupInformation user;
     try {

@@ -19,9 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy;
 
 import java.util.*;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.*;
 
 //Some policies will use multiple comparators joined together
 class CompoundComparator implements Comparator<SchedulableEntity> {

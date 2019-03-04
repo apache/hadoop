@@ -16,8 +16,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.ams.ApplicationMasterServiceContext;
 import org.apache.hadoop.yarn.ams.ApplicationMasterServiceProcessor;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -52,8 +52,8 @@ import static java.lang.Thread.sleep;
  * in the chain is also invoked.
  */
 public class TestApplicationMasterServiceInterceptor {
-  private static final Log LOG = LogFactory
-      .getLog(TestApplicationMasterServiceInterceptor.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestApplicationMasterServiceInterceptor.class);
 
   private static AtomicInteger beforeRegCount = new AtomicInteger(0);
   private static AtomicInteger afterRegCount = new AtomicInteger(0);

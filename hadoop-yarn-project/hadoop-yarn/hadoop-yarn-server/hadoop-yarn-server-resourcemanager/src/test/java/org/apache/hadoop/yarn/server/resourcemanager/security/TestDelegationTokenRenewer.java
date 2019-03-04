@@ -48,8 +48,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
@@ -118,8 +118,8 @@ import com.google.common.base.Supplier;
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class TestDelegationTokenRenewer {
-  private static final Log LOG = 
-      LogFactory.getLog(TestDelegationTokenRenewer.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDelegationTokenRenewer.class);
   private static final Text KIND =
       DelegationTokenRenewer.HDFS_DELEGATION_KIND;
   

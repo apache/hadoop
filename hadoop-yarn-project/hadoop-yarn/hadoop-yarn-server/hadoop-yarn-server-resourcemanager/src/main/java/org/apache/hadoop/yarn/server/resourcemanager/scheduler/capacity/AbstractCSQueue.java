@@ -29,8 +29,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.AccessControlException;
@@ -79,7 +79,8 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 
 public abstract class AbstractCSQueue implements CSQueue {
 
-  private static final Log LOG = LogFactory.getLog(AbstractCSQueue.class);  
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AbstractCSQueue.class);
   volatile CSQueue parent;
   final String queueName;
   private final String queuePath;

@@ -21,8 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
@@ -45,8 +45,8 @@ import org.junit.Test;
 
 public class TestKillApplicationWithRMHA extends RMHATestBase{
 
-  public static final Log LOG = LogFactory
-      .getLog(TestKillApplicationWithRMHA.class);
+  public static final Logger LOG = LoggerFactory
+      .getLogger(TestKillApplicationWithRMHA.class);
 
   @Test (timeout = 20000)
   public void testKillAppWhenFailoverHappensAtNewState()

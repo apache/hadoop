@@ -31,8 +31,8 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -86,7 +86,8 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class FileSystemRMStateStore extends RMStateStore {
 
-  public static final Log LOG = LogFactory.getLog(FileSystemRMStateStore.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(FileSystemRMStateStore.class);
 
   protected static final String ROOT_DIR_NAME = "FSRMStateRoot";
   protected static final Version CURRENT_VERSION_INFO = Version
@@ -818,7 +819,7 @@ public class FileSystemRMStateStore extends RMStateStore {
       fsIn.readFully(data);
       return data;
     } finally {
-      IOUtils.cleanup(LOG, fsIn);
+      IOUtils.cleanupWithLogger(LOG, fsIn);
     }
   }
 
@@ -852,7 +853,7 @@ public class FileSystemRMStateStore extends RMStateStore {
       fsOut = null;
       fs.rename(tempPath, outputPath);
     } finally {
-      IOUtils.cleanup(LOG, fsOut);
+      IOUtils.cleanupWithLogger(LOG, fsOut);
     }
   }
 

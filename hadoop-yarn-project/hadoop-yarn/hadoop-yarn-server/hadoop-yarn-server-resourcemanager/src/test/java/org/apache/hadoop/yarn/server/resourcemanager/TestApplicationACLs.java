@@ -37,8 +37,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.junit.After;
 import org.junit.Assert;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -84,7 +84,8 @@ public class TestApplicationACLs extends ParameterizedSchedulerTestBase {
   private static final String SUPER_GROUP = "superGroup";
   private static final String UNAVAILABLE = "N/A";
 
-  private static final Log LOG = LogFactory.getLog(TestApplicationACLs.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestApplicationACLs.class);
 
   private MockRM resourceManager;
   private Configuration conf;

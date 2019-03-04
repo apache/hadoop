@@ -26,8 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.collections.IteratorUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -40,8 +40,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 public class MultiNodeSortingManager<N extends SchedulerNode>
     extends AbstractService {
 
-  private static final Log LOG = LogFactory
-      .getLog(MultiNodeSortingManager.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(MultiNodeSortingManager.class);
 
   private RMContext rmContext;
   private Map<String, MultiNodeSorter<N>> runningMultiNodeSorters;

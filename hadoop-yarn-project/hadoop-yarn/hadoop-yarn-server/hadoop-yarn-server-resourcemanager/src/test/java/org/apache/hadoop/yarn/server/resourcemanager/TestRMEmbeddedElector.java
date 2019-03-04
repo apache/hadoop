@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.ClientBaseWithFixes;
 import org.apache.hadoop.ha.ServiceFailedException;
@@ -44,8 +44,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class TestRMEmbeddedElector extends ClientBaseWithFixes {
-  private static final Log LOG =
-      LogFactory.getLog(TestRMEmbeddedElector.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRMEmbeddedElector.class.getName());
 
   private static final String RM1_NODE_ID = "rm1";
   private static final int RM1_PORT_BASE = 10000;

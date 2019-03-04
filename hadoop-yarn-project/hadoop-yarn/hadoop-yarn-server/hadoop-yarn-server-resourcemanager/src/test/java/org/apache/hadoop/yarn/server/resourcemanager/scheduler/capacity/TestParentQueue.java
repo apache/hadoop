@@ -35,8 +35,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
@@ -73,7 +73,8 @@ public class TestParentQueue {
   private static final Resource QUEUE_A_RESOURCE = Resource
       .newInstance(6 * 1024, 10);
 
-  private static final Log LOG = LogFactory.getLog(TestParentQueue.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestParentQueue.class);
   
   RMContext rmContext;
   YarnConfiguration conf;

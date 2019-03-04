@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -43,7 +43,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  * extensible.
  */
 public abstract class AbstractContainerAllocator {
-  private static final Log LOG = LogFactory.getLog(AbstractContainerAllocator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AbstractContainerAllocator.class);
 
   FiCaSchedulerApp application;
   AppSchedulingInfo appInfo;

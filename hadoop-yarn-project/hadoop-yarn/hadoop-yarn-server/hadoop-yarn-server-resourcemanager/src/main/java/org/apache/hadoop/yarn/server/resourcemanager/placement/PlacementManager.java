@@ -23,15 +23,16 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
 import com.google.common.annotations.VisibleForTesting;
 
 public class PlacementManager {  
-  private static final Log LOG = LogFactory.getLog(PlacementManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(PlacementManager.class);
 
   List<PlacementRule> rules;
   ReadLock readLock;

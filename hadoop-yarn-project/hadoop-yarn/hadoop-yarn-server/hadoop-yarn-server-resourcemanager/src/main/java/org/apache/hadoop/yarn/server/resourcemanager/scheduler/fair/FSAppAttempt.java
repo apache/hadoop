@@ -28,8 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -70,7 +70,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 public class FSAppAttempt extends SchedulerApplicationAttempt
     implements Schedulable {
 
-  private static final Log LOG = LogFactory.getLog(FSAppAttempt.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FSAppAttempt.class);
   private static final DefaultResourceCalculator RESOURCE_CALCULATOR
       = new DefaultResourceCalculator();
 
