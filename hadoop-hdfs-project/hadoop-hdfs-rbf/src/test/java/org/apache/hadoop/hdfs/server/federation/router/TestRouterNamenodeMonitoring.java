@@ -113,7 +113,7 @@ public class TestRouterNamenodeMonitoring {
     }
 
     Collection<NamenodeHeartbeatService> heartbeatServices = routerContext
-        .getRouter().getNamenodeHearbeatServices();
+        .getRouter().getNamenodeHeartbeatServices();
     // manually trigger the heartbeat
     for (NamenodeHeartbeatService service : heartbeatServices) {
       service.periodicInvoke();
