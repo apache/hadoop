@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -754,6 +755,12 @@ public class TestRouterQuota {
     assertNull(routerQuota);
     assertEquals(HdfsConstants.QUOTA_RESET, subClusterQuota.getQuota());
     assertEquals(HdfsConstants.QUOTA_RESET, subClusterQuota.getSpaceQuota());
+
+    // Verify removing mount entry with actual destinations not present.
+    mountTable = MountTable.newInstance("/mount",
+        Collections.singletonMap("ns0", "/testdir16"));
+    addMountTable(mountTable);
+    assertTrue(removeMountTable("/mount"));
   }
 
   @Test
