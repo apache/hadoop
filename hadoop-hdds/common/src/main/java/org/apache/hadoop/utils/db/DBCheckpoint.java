@@ -43,6 +43,11 @@ public interface DBCheckpoint {
   long getLatestSequenceNumber();
 
   /**
+   * Time taken in milliseconds for the checkpoint to be created.
+   */
+  long checkpointCreationTimeTaken();
+
+  /**
    * Destroy the contents of the specified checkpoint to ensure
    * proper cleanup of the footprint on disk.
    *

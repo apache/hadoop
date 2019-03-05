@@ -23,8 +23,8 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
@@ -37,8 +37,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class DynamicResourceConfiguration extends Configuration {
 
-  private static final Log LOG =
-    LogFactory.getLog(DynamicResourceConfiguration.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DynamicResourceConfiguration.class);
 
   @Private
   public static final String PREFIX = "yarn.resource.dynamic.";

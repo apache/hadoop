@@ -31,8 +31,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -63,7 +63,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 @Unstable
 public class AppSchedulingInfo {
   
-  private static final Log LOG = LogFactory.getLog(AppSchedulingInfo.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AppSchedulingInfo.class);
 
   private final ApplicationId applicationId;
   private final ApplicationAttemptId applicationAttemptId;

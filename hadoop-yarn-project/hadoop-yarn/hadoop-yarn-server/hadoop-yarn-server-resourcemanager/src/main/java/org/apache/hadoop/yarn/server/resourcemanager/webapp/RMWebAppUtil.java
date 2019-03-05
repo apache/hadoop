@@ -28,8 +28,8 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.lib.StaticUserWebFilter;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -66,7 +66,8 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
  */
 public final class RMWebAppUtil {
 
-  private static final Log LOG = LogFactory.getLog(RMWebAppUtil.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RMWebAppUtil.class);
 
   /**
    * Private constructor.

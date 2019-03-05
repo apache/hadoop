@@ -219,16 +219,20 @@ class Delete {
   // than the retention threshold.
   static class Expunge extends FsCommand {
     public static final String NAME = "expunge";
-    public static final String USAGE = "";
+    public static final String USAGE =
+        "[-immediate]";
     public static final String DESCRIPTION =
         "Delete files from the trash that are older " +
             "than the retention threshold";
 
+    private boolean emptyImmediately = false;
+
     // TODO: should probably allow path arguments for the filesystems
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(0, 0);
+      CommandFormat cf = new CommandFormat(0, 1, "immediate");
       cf.parse(args);
+      emptyImmediately = cf.getOpt("immediate");
     }
 
     @Override
@@ -239,14 +243,23 @@ class Delete {
       if (null != childFileSystems) {
         for (FileSystem fs : childFileSystems) {
           Trash trash = new Trash(fs, getConf());
-          trash.expunge();
-          trash.checkpoint();
+          if (emptyImmediately) {
+            trash.expungeImmediately();
+          } else {
+            trash.expunge();
+            trash.checkpoint();
+          }
         }
       } else {
         Trash trash = new Trash(getConf());
-        trash.expunge();
-        trash.checkpoint();
+        if (emptyImmediately) {
+          trash.expungeImmediately();
+        } else {
+          trash.expunge();
+          trash.checkpoint();
+        }
       }
     }
   }
+
 }

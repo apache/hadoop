@@ -22,8 +22,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -70,8 +70,8 @@ import org.apache.hadoop.yarn.util.SystemClock;
 @Unstable
 public class RMActiveServiceContext {
 
-  private static final Log LOG = LogFactory
-      .getLog(RMActiveServiceContext.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(RMActiveServiceContext.class);
 
   private final ConcurrentMap<ApplicationId, RMApp> applications =
       new ConcurrentHashMap<ApplicationId, RMApp>();

@@ -581,6 +581,7 @@
                     <exclude>**/azurebfs/ITestAzureBlobFileSystemE2EScale.java</exclude>
                     <exclude>**/azurebfs/ITestAbfsReadWriteAndSeek.java</exclude>
                     <exclude>**/azurebfs/ITestAzureBlobFileSystemListStatus.java</exclude>
+                    <exclude>**/azurebfs/extensions/ITestAbfsDelegationTokens.java</exclude>
                   </excludes>
 
                 </configuration>
@@ -619,6 +620,7 @@
                     <include>**/azurebfs/ITestAzureBlobFileSystemE2EScale.java</include>
                     <include>**/azurebfs/ITestAbfsReadWriteAndSeek.java</include>
                     <include>**/azurebfs/ITestAzureBlobFileSystemListStatus.java</include>
+                    <include>**/azurebfs/extensions/ITestAbfsDelegationTokens.java</include>
                   </includes>
                 </configuration>
               </execution>

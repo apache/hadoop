@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
 
 import org.apache.commons.collections.IteratorUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResoureRequestException;
@@ -51,8 +51,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class LocalityAppPlacementAllocator <N extends SchedulerNode>
     extends AppPlacementAllocator<N> {
-  private static final Log LOG =
-      LogFactory.getLog(LocalityAppPlacementAllocator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(LocalityAppPlacementAllocator.class);
 
   private final Map<String, ResourceRequest> resourceRequestMap =
       new ConcurrentHashMap<>();

@@ -26,6 +26,8 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis.DispatcherContext;
 
+import java.util.Set;
+
 /**
  * Dispatcher acts as the bridge between the transport layer and
  * the actual container layer. This layer is capable of transforming
@@ -57,6 +59,12 @@ public interface ContainerDispatcher {
    * Initialize the Dispatcher.
    */
   void init();
+
+  /**
+   * finds and builds the missing containers in case of a lost disk etc
+   * in the ContainerSet.
+   */
+  void buildMissingContainerSet(Set<Long> createdContainers);
 
   /**
    * Shutdown Dispatcher services.

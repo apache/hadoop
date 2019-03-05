@@ -27,7 +27,6 @@ import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKE
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_EXPIRED;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLUME_NOT_FOUND;
 import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod.KERBEROS;
-import org.junit.Ignore;
 import static org.slf4j.event.Level.INFO;
 
 import java.io.File;
@@ -418,7 +417,6 @@ public final class TestSecureOzoneCluster {
    * @throws Exception
    */
   @Test
-  @Ignore("TODO:HDDS-1156")
   public void testDelegationToken() throws Exception {
 
     // Capture logs for assertions
@@ -496,8 +494,7 @@ public final class TestSecureOzoneCluster {
       // initial connection via DT succeeded
       omLogs.clearOutput();
 
-      LambdaTestUtils.intercept(OMException.class, "Renew delegation token " +
-              "failed",
+      LambdaTestUtils.intercept(OMException.class, "INVALID_AUTH_METHOD",
           () -> {
             try {
               omClient.renewDelegationToken(token);
@@ -565,7 +562,6 @@ public final class TestSecureOzoneCluster {
    * @throws Exception
    */
   @Test
-  @Ignore("TODO:HDDS-1156")
   public void testDelegationTokenRenewal() throws Exception {
     GenericTestUtils
         .setLogLevel(LoggerFactory.getLogger(Server.class.getName()), INFO);
@@ -610,7 +606,7 @@ public final class TestSecureOzoneCluster {
       // 1. When token maxExpiryTime exceeds
       Thread.sleep(500);
       LambdaTestUtils.intercept(OMException.class,
-          "Renew delegation token failed",
+          "TOKEN_EXPIRED",
           () -> {
             try {
               omClient.renewDelegationToken(token);
@@ -626,7 +622,7 @@ public final class TestSecureOzoneCluster {
       // null or empty )
       Token token2 = omClient.getDelegationToken(new Text("randomService"));
       LambdaTestUtils.intercept(OMException.class,
-          "Renew delegation token failed",
+          "Delegation token renewal failed",
           () -> omClient.renewDelegationToken(token2));
       Assert.assertTrue(omLogs.getOutput().contains(" with non-matching " +
           "renewer randomService"));
@@ -641,7 +637,7 @@ public final class TestSecureOzoneCluster {
           tokenId.getBytes(), token2.getPassword(), token2.getKind(),
           token2.getService());
       LambdaTestUtils.intercept(OMException.class,
-          "Renew delegation token failed",
+          "Delegation token renewal failed",
           () -> omClient.renewDelegationToken(tamperedToken));
       Assert.assertTrue(omLogs.getOutput().contains("can't be found in " +
           "cache"));

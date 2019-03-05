@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint;
 import java.util.Iterator;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.*;
@@ -48,8 +48,8 @@ import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.NODE_PART
 @Public
 @Unstable
 public final class PlacementConstraintsUtil {
-  private static final Log LOG =
-      LogFactory.getLog(PlacementConstraintsUtil.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(PlacementConstraintsUtil.class);
 
   // Suppresses default constructor, ensuring non-instantiability.
   private PlacementConstraintsUtil() {

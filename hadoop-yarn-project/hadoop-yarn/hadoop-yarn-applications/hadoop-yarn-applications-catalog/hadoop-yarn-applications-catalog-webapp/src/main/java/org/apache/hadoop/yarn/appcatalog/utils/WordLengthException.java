@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,35 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.ozone.client.rpc.ha;
-
-import org.apache.hadoop.ozone.om.protocolPB
-    .OzoneManagerProtocolClientSideTranslatorPB;
-
-import java.net.InetSocketAddress;
+package org.apache.hadoop.yarn.appcatalog.utils;
 
 /**
- * Proxy information of OM.
+ * Word length exception class.
  */
-public final class OMProxyInfo {
-  private InetSocketAddress address;
-  private OzoneManagerProtocolClientSideTranslatorPB omClient;
+public class WordLengthException extends Exception {
+  private static final long serialVersionUID = -217354336577036950L;
 
-  public OMProxyInfo(InetSocketAddress addr) {
-    this.address = addr;
-  }
-
-  public InetSocketAddress getAddress() {
-    return address;
-  }
-
-  public OzoneManagerProtocolClientSideTranslatorPB getOMProxy() {
-    return omClient;
-  }
-
-  public void setOMProxy(
-      OzoneManagerProtocolClientSideTranslatorPB clientProxy) {
-    this.omClient = clientProxy;
+  public WordLengthException(String message){
+    super(message);
   }
 }

@@ -165,6 +165,19 @@ where `service-name` is optional. If omitted, it uses the name defined in the `Y
 Look up your IPs at the RM REST endpoint `http://<RM host>:8088/app/v1/services/httpd-service`.
 Then visit port 8080 for each IP to view the pages.
 
+## Application Catalog - appcatalog
+
+Application Catalog introduces many exciting new features for deploying Hadoop software that benefit both administrators and end users.  With Application Catalog, user gets a personalized view of the software status in Hadoop.  In addition, users can install or register applications by using web-based user interface.
+
+To start Application Catalog service with the command:
+```
+yarn app -launch <service-name> appcatalog
+```
+where `service-name` is user defined name.
+
+The deployment progress of the application catalog is located in Resource Manager UI.  When the service reaches STABLE state, application catalog UI is available at:
+http://appcatalog.${SERVICE_NAME}.${USER}.${DOMAIN}:8080/
+
 ## Docker image ENTRYPOINT support
 
 Docker images may have built with ENTRYPOINT to enable start up of docker image without any parameters.

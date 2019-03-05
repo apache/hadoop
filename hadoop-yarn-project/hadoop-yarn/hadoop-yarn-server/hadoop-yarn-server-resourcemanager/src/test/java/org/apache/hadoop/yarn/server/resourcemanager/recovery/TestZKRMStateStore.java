@@ -22,8 +22,8 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -98,7 +98,8 @@ import javax.crypto.SecretKey;
 
 public class TestZKRMStateStore extends RMStateStoreTestBase {
 
-  public static final Log LOG = LogFactory.getLog(TestZKRMStateStore.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestZKRMStateStore.class);
   private static final int ZK_TIMEOUT_MS = 1000;
   private TestingServer curatorTestingServer;
   private CuratorFramework curatorFramework;

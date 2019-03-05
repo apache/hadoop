@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import com.google.common.collect.Lists;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
@@ -120,7 +120,8 @@ import static org.mockito.Mockito.verify;
 
 @RunWith(value = Parameterized.class)
 public class TestRMAppTransitions {
-  static final Log LOG = LogFactory.getLog(TestRMAppTransitions.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(TestRMAppTransitions.class);
 
   private boolean isSecurityEnabled;
   private Configuration conf;

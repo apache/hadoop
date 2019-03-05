@@ -25,8 +25,8 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -67,8 +67,8 @@ import org.apache.hadoop.yarn.util.MonotonicClock;
  * (the affected map tasks will be rescheduled).
  */
 public class DecommissioningNodesWatcher {
-  private static final Log LOG =
-      LogFactory.getLog(DecommissioningNodesWatcher.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DecommissioningNodesWatcher.class);
 
   private final RMContext rmContext;
 

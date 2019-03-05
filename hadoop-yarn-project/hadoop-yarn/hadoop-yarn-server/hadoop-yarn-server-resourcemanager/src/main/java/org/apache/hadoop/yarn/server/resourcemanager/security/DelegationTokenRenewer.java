@@ -44,8 +44,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -80,8 +80,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @Unstable
 public class DelegationTokenRenewer extends AbstractService {
   
-  private static final Log LOG = 
-      LogFactory.getLog(DelegationTokenRenewer.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DelegationTokenRenewer.class);
   @VisibleForTesting
   public static final Text HDFS_DELEGATION_KIND =
       new Text("HDFS_DELEGATION_TOKEN");

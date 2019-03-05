@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.resource;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
@@ -47,8 +47,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
 
-  private static final Log LOG =
-      LogFactory.getLog(ResourceProfilesManagerImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ResourceProfilesManagerImpl.class);
 
   private final Map<String, Resource> profiles = new ConcurrentHashMap<>();
   private Configuration conf;

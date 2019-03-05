@@ -35,9 +35,11 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.stream.Collectors;
 
 
@@ -50,7 +52,8 @@ public class ContainerSet {
 
   private final ConcurrentSkipListMap<Long, Container> containerMap = new
       ConcurrentSkipListMap<>();
-
+  private final ConcurrentSkipListSet<Long> missingContainerSet =
+      new ConcurrentSkipListSet<>();
   /**
    * Add Container to container map.
    * @param container
@@ -128,6 +131,7 @@ public class ContainerSet {
    * @return containerMap Iterator
    */
   public Iterator<Map.Entry<Long, Container>> getContainerMapIterator() {
+    containerMap.keySet().stream().collect(Collectors.toSet());
     return containerMap.entrySet().iterator();
   }
 
@@ -217,5 +221,21 @@ public class ContainerSet {
             e -> e.getValue().getContainerData()));
     return deletionPolicy
         .chooseContainerForBlockDeletion(count, containerDataMap);
+  }
+
+  public Set<Long> getMissingContainerSet() {
+    return missingContainerSet;
+  }
+
+  /**
+   * Builds the missing container set by taking a diff total no containers
+   * actually found and number of containers which actually got created.
+   * This will only be called during the initialization of Datanode Service
+   * when  it still not a part of any write Pipeline.
+   * @param createdContainerSet ContainerId set persisted in the Ratis snapshot
+   */
+  public void buildMissingContainerSet(Set<Long> createdContainerSet) {
+    missingContainerSet.addAll(createdContainerSet);
+    missingContainerSet.removeAll(containerMap.keySet());
   }
 }

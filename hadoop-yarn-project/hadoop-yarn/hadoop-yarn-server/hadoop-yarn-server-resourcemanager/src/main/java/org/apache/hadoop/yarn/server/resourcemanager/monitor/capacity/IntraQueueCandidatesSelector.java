@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -107,8 +107,8 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
   IntraQueuePreemptionComputePlugin fifoPreemptionComputePlugin = null;
   final CapacitySchedulerPreemptionContext context;
 
-  private static final Log LOG =
-      LogFactory.getLog(IntraQueueCandidatesSelector.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(IntraQueueCandidatesSelector.class);
 
   IntraQueueCandidatesSelector(
       CapacitySchedulerPreemptionContext preemptionContext) {

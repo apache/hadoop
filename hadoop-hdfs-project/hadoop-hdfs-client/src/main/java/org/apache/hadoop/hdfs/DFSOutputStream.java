@@ -119,7 +119,7 @@ public class DFSOutputStream extends FSOutputSummer
   protected int packetSize = 0; // write packet size, not including the header.
   protected int chunksPerPacket = 0;
   protected long lastFlushOffset = 0; // offset when flush was invoked
-  private long initialFileSize = 0; // at time of file open
+  protected long initialFileSize = 0; // at time of file open
   private final short blockReplication; // replication factor of file
   protected boolean shouldSyncBlock = false; // force blocks to disk upon close
   private final EnumSet<AddBlockFlag> addBlockFlags;
@@ -391,14 +391,16 @@ public class DFSOutputStream extends FSOutputSummer
       EnumSet<CreateFlag> flags, Progressable progress, LocatedBlock lastBlock,
       HdfsFileStatus stat, DataChecksum checksum, String[] favoredNodes)
       throws IOException {
-    if(stat.getErasureCodingPolicy() != null) {
-      throw new IOException(
-          "Not support appending to a striping layout file yet.");
-    }
     try (TraceScope ignored =
              dfsClient.newPathTraceScope("newStreamForAppend", src)) {
-      final DFSOutputStream out = new DFSOutputStream(dfsClient, src, flags,
-          progress, lastBlock, stat, checksum, favoredNodes);
+      DFSOutputStream out;
+      if (stat.isErasureCoded()) {
+        out = new DFSStripedOutputStream(dfsClient, src, flags, progress,
+            lastBlock, stat, checksum, favoredNodes);
+      } else {
+        out = new DFSOutputStream(dfsClient, src, flags, progress, lastBlock,
+            stat, checksum, favoredNodes);
+      }
       out.start();
       return out;
     }
