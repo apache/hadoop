@@ -107,8 +107,7 @@ include_directories(BEFORE ${PROTOBUF_INCLUDE_DIR})
 include_directories(SYSTEM
   ${ASIO_INCLUDE_DIR}
   ${RAPIDXML_INCLUDE_DIR}
-  ${OPENSSL_INCLUDE_DIR}
-  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tr2)
+  ${OPENSSL_INCLUDE_DIR})
 
 add_subdirectory(common)
 add_subdirectory(fs)

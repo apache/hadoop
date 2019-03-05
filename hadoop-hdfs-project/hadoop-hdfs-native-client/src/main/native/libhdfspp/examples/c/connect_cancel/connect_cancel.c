@@ -29,7 +29,7 @@
 #include <unistd.h>
 
 #include "hdfspp/hdfs_ext.h"
-#include "common/util_c.h"
+#include "hdfspp/util_c.h"
 
 #define ERROR_BUFFER_SIZE 1024
 

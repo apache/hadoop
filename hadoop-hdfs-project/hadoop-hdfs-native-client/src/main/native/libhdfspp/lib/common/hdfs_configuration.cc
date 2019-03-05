@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "common/hdfs_configuration.h"
+#include "hdfspp/hdfs_configuration.h"
 #include "common/logging.h"
 
 #include <exception>

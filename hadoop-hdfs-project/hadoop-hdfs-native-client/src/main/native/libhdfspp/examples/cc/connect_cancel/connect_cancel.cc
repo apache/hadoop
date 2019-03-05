@@ -19,8 +19,8 @@
 
 
 #include "hdfspp/hdfspp.h"
-#include "common/hdfs_configuration.h"
-#include "common/configuration_loader.h"
+#include "hdfspp/hdfs_configuration.h"
+#include "hdfspp/configuration_loader.h"
 
 #include <google/protobuf/stubs/common.h>
 

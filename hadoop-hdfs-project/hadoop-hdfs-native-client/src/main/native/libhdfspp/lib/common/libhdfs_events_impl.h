@@ -20,7 +20,7 @@
 #define LIBHDFSPP_COMMON_LIBHDFSEVENTS_IMPL
 
 #include "hdfspp/events.h"
-#include "common/optional_wrapper.h"
+#include "hdfspp/optional_wrapper.h"
 
 #include <functional>
 

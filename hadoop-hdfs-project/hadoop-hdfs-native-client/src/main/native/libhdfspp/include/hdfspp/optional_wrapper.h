@@ -33,7 +33,7 @@
   #define TR2_OPTIONAL_DISABLE_EMULATION_OF_TYPE_TRAITS  //For Clang < 3_4_2
 #endif
 
-#include <optional.hpp>
+#include "hdfspp/optional.hpp"
 
 #ifdef __clang__
   #undef TR2_OPTIONAL_DISABLE_EMULATION_OF_TYPE_TRAITS  //For Clang < 3_4_2

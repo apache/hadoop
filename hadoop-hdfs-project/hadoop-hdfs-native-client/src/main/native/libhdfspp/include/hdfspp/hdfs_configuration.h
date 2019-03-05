@@ -19,7 +19,7 @@
 #ifndef COMMON_HDFS_CONFIGURATION_H_
 #define COMMON_HDFS_CONFIGURATION_H_
 
-#include "common/configuration.h"
+#include "hdfspp/configuration.h"
 #include "hdfspp/options.h"
 
 #include <string>

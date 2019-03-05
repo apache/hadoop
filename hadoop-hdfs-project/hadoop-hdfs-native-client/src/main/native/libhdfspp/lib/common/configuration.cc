@@ -31,7 +31,7 @@
  * - hex values
  */
 
-#include "configuration.h"
+#include "hdfspp/configuration.h"
 #include "hdfspp/uri.h"
 
 #include <strings.h>

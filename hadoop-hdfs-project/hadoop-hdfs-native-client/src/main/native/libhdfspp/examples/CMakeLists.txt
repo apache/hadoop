@@ -16,5 +16,27 @@
 # limitations under the License.
 #
 
+cmake_minimum_required(VERSION 2.8.12)
+if (POLICY CMP0042)
+  cmake_policy(SET CMP0042 NEW) # suppress warning about mac rpath
+endif ()
+
+project (HDFSPP_EXAMPLES)
+
+include(DecideSasl)
+
+find_package(ASIO REQUIRED)
+find_package(HDFSPP REQUIRED)
+find_package(Protobuf REQUIRED)
+
+include(HdfsppCompilerOptions)
+
+include_directories(
+  ${HDFSPP_INCLUDE_DIR}
+  ${ASIO_INCLUDE_DIR}
+  )
+
 add_subdirectory(c)
 add_subdirectory(cc)
+
+install(TARGETS)

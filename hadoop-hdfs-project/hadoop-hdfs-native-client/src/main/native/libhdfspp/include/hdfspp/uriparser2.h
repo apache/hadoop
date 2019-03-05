@@ -39,9 +39,12 @@ typedef struct URI {
 #include <ostream>
 #include <cstdlib>
 
-extern "C" void *uri_parse2(const char *uri, URI *target);
-extern "C" char *uri_build(const URI *uri);
-extern "C" int uri_compare(const URI *a, const URI *b);
+extern "C" {
+  URI *uri_parse(const char *uri);
+  void *uri_parse2(const char *uri, URI *target);
+  char *uri_build(const URI *uri);
+  int uri_compare(const URI *a, const URI *b);
+}
 
 inline URI::URI(const char* uri): reserved(uri ? uri_parse2(uri, this) : 0) {
 }

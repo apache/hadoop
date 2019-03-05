@@ -17,8 +17,8 @@
  */
 
 #include "hdfspp/config_parser.h"
-#include "common/hdfs_configuration.h"
-#include "common/configuration_loader.h"
+#include "hdfspp/hdfs_configuration.h"
+#include "hdfspp/configuration_loader.h"
 
 #include <string>
 #include <memory>

@@ -17,8 +17,8 @@
  */
 
 #include "configuration_test.h"
-#include "common/configuration.h"
-#include "common/configuration_loader.h"
+#include "hdfspp/configuration.h"
+#include "hdfspp/configuration_loader.h"
 #include <gmock/gmock.h>
 #include <cstdio>
 #include <fstream>

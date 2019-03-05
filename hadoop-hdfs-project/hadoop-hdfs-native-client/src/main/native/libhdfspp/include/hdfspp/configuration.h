@@ -27,7 +27,7 @@
 #include <set>
 #include <istream>
 #include <stdint.h>
-#include "common/optional_wrapper.h"
+#include "hdfspp/optional_wrapper.h"
 
 namespace hdfs {
 

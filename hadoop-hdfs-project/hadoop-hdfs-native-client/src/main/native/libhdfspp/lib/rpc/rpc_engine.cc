@@ -20,7 +20,7 @@
 #include "common/util.h"
 #include "common/logging.h"
 #include "common/namenode_info.h"
-#include "common/optional_wrapper.h"
+#include "hdfspp/optional_wrapper.h"
 
 #include <algorithm>
 

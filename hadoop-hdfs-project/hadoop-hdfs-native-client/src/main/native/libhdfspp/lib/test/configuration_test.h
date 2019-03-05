@@ -19,8 +19,8 @@
 #define TESTS_CONFIGURATION_H_
 
 #include "hdfspp/config_parser.h"
-#include "common/configuration.h"
-#include "common/configuration_loader.h"
+#include "hdfspp/configuration.h"
+#include "hdfspp/configuration_loader.h"
 #include <cstdio>
 #include <fstream>
 #include <istream>

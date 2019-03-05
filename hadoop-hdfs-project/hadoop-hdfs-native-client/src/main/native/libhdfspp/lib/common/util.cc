@@ -17,7 +17,7 @@
  */
 
 #include "common/util.h"
-#include "common/util_c.h"
+#include "hdfspp/util_c.h"
 
 #include <google/protobuf/message_lite.h>
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>

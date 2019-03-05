@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "common/hdfs_configuration.h"
+#include "hdfspp/hdfs_configuration.h"
 #include "configuration_test.h"
 #include <gmock/gmock.h>
 #include <iostream>

@@ -3,7 +3,7 @@
 #include <errno.h>
 
 #include "uriparser/Uri.h"
-#include "uriparser2.h"
+#include "hdfspp/uriparser2.h"
 
 /* copy n bytes from src to dst and add a nul byte. dst must be large enough to hold n + 1 bytes. */
 static char *memcpyz(char *dst, const char *src, int n) {
@@ -83,7 +83,8 @@ static void parse_user_info(URI *uri, const UriTextRangeA *r, char **buffer) {
 
 	const int size = r->afterLast - r->first;
 	if (size) {
-		char *colon = memchr(r->first, ':', size);
+                const char *colon =
+                  static_cast<const char*>(memchr(r->first, ':', size));
 
 		const int user_size = (colon ? colon : r->afterLast) - r->first;
 		const int pass_size = r->afterLast - (colon ? colon + 1 : r->afterLast);
@@ -119,7 +120,7 @@ URI *uri_parse(const char *input) {
 
 	state.uri = &uu;
 	if (URI_SUCCESS == uriParseUriA(&state, input)) {
-		uri = calloc(1, sizeof(*uri) + uri_size(&uu));
+                uri = static_cast<URI*>(calloc(1, sizeof(*uri) + uri_size(&uu)));
 		if (uri) {
 			init_uri(&uu, uri, (char *) (uri + 1));
 		} else {
@@ -145,7 +146,7 @@ void *uri_parse2(const char *input, URI *uri) {
 
 	state.uri = &uu;
 	if (URI_SUCCESS == uriParseUriA(&state, input)) {
-		buffer = malloc(uri_size(&uu));
+                buffer = static_cast<char*>(malloc(uri_size(&uu)));
 		if (buffer) {
 			init_uri(&uu, uri, buffer);
 		} else {
@@ -203,7 +204,7 @@ char *uri_build(const URI *uri) {
 		size += 1 + strlen(uri->fragment);	/* "#" fragment */
 	}
 
-	char *s = malloc(size + 1);
+	char *s = static_cast<char*>(malloc(size + 1));
 	if (s) {
 		char *p = s;
 		if (uri->scheme) {

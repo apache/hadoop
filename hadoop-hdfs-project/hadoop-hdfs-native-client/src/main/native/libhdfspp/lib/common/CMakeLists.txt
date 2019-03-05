@@ -35,5 +35,6 @@ add_library(common OBJECT
   fsinfo.cc
   content_summary.cc
   locks.cc
-  config_parser.cc)
+  config_parser.cc
+  uriparser2.cc)
 add_dependencies(common proto)

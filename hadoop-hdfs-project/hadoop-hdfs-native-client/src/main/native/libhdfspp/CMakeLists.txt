@@ -143,6 +143,13 @@ if (HADOOP_BUILD AND NOT HDFSPP_LIBRARY_ONLY)
 endif ()
 
 if (NOT HDFSPP_LIBRARY_ONLY)
+  ExternalProject_Add(hdfspp_examples
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/examples
+    CMAKE_ARGS ${HDFSPP_CMAKE_ARGS}
+    INSTALL_DIR ${STAGING_DIR}
+    LIST_SEPARATOR |
+    DEPENDS hdfspp
+  )
   ExternalProject_Add(hdfspp_tools
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tools
     CMAKE_ARGS ${HDFSPP_CMAKE_ARGS}
