@@ -149,7 +149,9 @@ get_filename_component(ABS_DIR ../include/hdfs REALPATH)
 
 install(DIRECTORY ../include/hdfspp DESTINATION include)
 install(DIRECTORY ${ABS_DIR} DESTINATION include)
-install(TARGETS hdfspp LIBRARY DESTINATION lib)
+install(TARGETS hdfspp
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib)
 
 add_custom_target(
     InstallToBuildDirectory

@@ -61,7 +61,12 @@ include_directories(
   ${CMAKE_BINARY_DIR}/test
   )
 
-set (TEST_LIBS hdfspp gmock_main gmock gtest ${CMAKE_THREAD_LIBS_INIT})
+set (TEST_LIBS
+  hdfspp
+  ${SASL_LIBRARIES}
+  ssl crypto
+  gmock_main gmock gtest
+  ${CMAKE_THREAD_LIBS_INIT})
 
 function (define_test name)
   add_executable(${name}_test ${ARGN})
