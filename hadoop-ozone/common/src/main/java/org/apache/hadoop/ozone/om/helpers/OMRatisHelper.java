@@ -109,24 +109,4 @@ public final class OMRatisHelper {
         .setLeaderOMNodeId(reply.getReplierId())
         .build();
   }
-
-  public static OMResponse getErrorResponse(Type cmdType, Exception e) {
-    return OMResponse.newBuilder()
-        .setCmdType(cmdType)
-        .setSuccess(false)
-        .setMessage(e.getMessage())
-        .setStatus(Status.INTERNAL_ERROR)
-        .build();
-  }
-
-  public static OMResponse getReadRequestErrorResponse(Type cmdType,
-      RaftPeerId currentNodeId, RaftPeerId suggestedLeaderId) {
-    return OMResponse.newBuilder()
-        .setCmdType(cmdType)
-        .setSuccess(false)
-        .setMessage(currentNodeId.toString() + " is not the leader")
-        .setStatus(Status.READ_REQUEST_NOT_LEADER_EXCEPTION)
-        .setLeaderOMNodeId(suggestedLeaderId.toString())
-        .build();
-  }
 }

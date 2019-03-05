@@ -142,7 +142,8 @@ public final class OzoneManagerRatisServer {
       @Override
       public void run() {
         // Run this check only on the leader OM
-        if (cachedPeerRole.equals(Optional.of(RaftPeerRole.LEADER))) {
+        if (cachedPeerRole.isPresent() &&
+            cachedPeerRole.get() == RaftPeerRole.LEADER) {
           updateServerRole();
         }
       }
@@ -394,7 +395,8 @@ public final class OzoneManagerRatisServer {
   private boolean checkCachedPeerRoleIsLeader() {
     this.roleCheckLock.readLock().lock();
     try {
-      if (cachedPeerRole.equals(Optional.of(RaftPeerRole.LEADER))) {
+      if (cachedPeerRole.isPresent() &&
+          cachedPeerRole.get() == RaftPeerRole.LEADER) {
         return true;
       }
       return false;
@@ -423,10 +425,10 @@ public final class OzoneManagerRatisServer {
    * Get the suggested leader peer id.
    * @return RaftPeerId of the suggested leader node.
    */
-  public RaftPeerId getCachedLeaderPeerId() {
+  public Optional<RaftPeerId> getCachedLeaderPeerId() {
     this.roleCheckLock.readLock().lock();
     try {
-      return cachedLeaderPeerId.orElse(null);
+      return cachedLeaderPeerId;
     } finally {
       this.roleCheckLock.readLock().unlock();
     }
@@ -470,8 +472,8 @@ public final class OzoneManagerRatisServer {
       RaftPeerId leaderPeerId) {
     this.roleCheckLock.writeLock().lock();
     try {
-      this.cachedPeerRole = Optional.of(currentRole);
-      this.cachedLeaderPeerId = Optional.of(leaderPeerId);
+      this.cachedPeerRole = Optional.ofNullable(currentRole);
+      this.cachedLeaderPeerId = Optional.ofNullable(leaderPeerId);
     } finally {
       this.roleCheckLock.writeLock().unlock();
     }

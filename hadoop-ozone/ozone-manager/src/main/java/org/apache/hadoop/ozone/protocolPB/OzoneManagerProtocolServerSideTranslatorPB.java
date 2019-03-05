@@ -33,6 +33,8 @@ import org.apache.ratis.protocol.RaftPeerId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Optional;
+
 /**
  * This class is the server-side translator that forwards requests received on
  * {@link OzoneManagerProtocolPB}
@@ -103,10 +105,11 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
       return handler.handle(request);
     } else {
       RaftPeerId raftPeerId = omRatisServer.getRaftPeerId();
-      RaftPeerId leaderRaftPeerId = omRatisServer.getCachedLeaderPeerId();
+      Optional<RaftPeerId> leaderRaftPeerId = omRatisServer
+          .getCachedLeaderPeerId();
 
       NotLeaderException notLeaderException;
-      if (leaderRaftPeerId == null) {
+      if (leaderRaftPeerId.isPresent()) {
         notLeaderException = new NotLeaderException(raftPeerId.toString());
       } else {
        notLeaderException = new NotLeaderException(
