@@ -264,7 +264,7 @@ Displays a summary of file lengths.
 expunge
 -------
 
-Usage: `hadoop fs -expunge`
+Usage: `hadoop fs -expunge [-immediate]`
 
 Permanently delete files in checkpoints older than the retention threshold
 from trash directory, and create new checkpoint.
@@ -278,6 +278,9 @@ If the file system supports the feature,
 users can configure to create and delete checkpoints periodically
 by the parameter stored as `fs.trash.checkpoint.interval` (in core-site.xml).
 This value should be smaller or equal to `fs.trash.interval`.
+
+If the `-immediate` option is passed, all files in the trash for the current
+user are immediately deleted, ignoring the `fs.trash.interval` setting.
 
 Refer to the
 [HDFS Architecture guide](../hadoop-hdfs/HdfsDesign.html#File_Deletes_and_Undeletes)

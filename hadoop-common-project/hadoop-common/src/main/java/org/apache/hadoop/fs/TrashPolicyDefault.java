@@ -213,11 +213,20 @@ public class TrashPolicyDefault extends TrashPolicy {
 
   @Override
   public void deleteCheckpoint() throws IOException {
+    deleteCheckpoint(false);
+  }
+
+  @Override
+  public void deleteCheckpointsImmediately() throws IOException {
+    deleteCheckpoint(true);
+  }
+
+  private void deleteCheckpoint(boolean deleteImmediately) throws IOException {
     Collection<FileStatus> trashRoots = fs.getTrashRoots(false);
     for (FileStatus trashRoot : trashRoots) {
       LOG.info("TrashPolicyDefault#deleteCheckpoint for trashRoot: " +
           trashRoot.getPath());
-      deleteCheckpoint(trashRoot.getPath());
+      deleteCheckpoint(trashRoot.getPath(), deleteImmediately);
     }
   }
 
@@ -283,7 +292,7 @@ public class TrashPolicyDefault extends TrashPolicy {
                 continue;
               try {
                 TrashPolicyDefault trash = new TrashPolicyDefault(fs, conf);
-                trash.deleteCheckpoint(trashRoot.getPath());
+                trash.deleteCheckpoint(trashRoot.getPath(), false);
                 trash.createCheckpoint(trashRoot.getPath(), new Date(now));
               } catch (IOException e) {
                 LOG.warn("Trash caught: "+e+". Skipping " +
@@ -341,7 +350,8 @@ public class TrashPolicyDefault extends TrashPolicy {
     }
   }
 
-  private void deleteCheckpoint(Path trashRoot) throws IOException {
+  private void deleteCheckpoint(Path trashRoot, boolean deleteImmediately)
+      throws IOException {
     LOG.info("TrashPolicyDefault#deleteCheckpoint for trashRoot: " + trashRoot);
 
     FileStatus[] dirs = null;
@@ -368,7 +378,7 @@ public class TrashPolicyDefault extends TrashPolicy {
         continue;
       }
 
-      if ((now - deletionInterval) > time) {
+      if (((now - deletionInterval) > time) || deleteImmediately) {
         if (fs.delete(path, true)) {
           LOG.info("Deleted trash checkpoint: "+dir);
         } else {
