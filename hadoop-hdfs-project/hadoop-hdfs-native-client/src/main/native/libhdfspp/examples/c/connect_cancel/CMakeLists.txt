@@ -17,4 +17,6 @@
 #
 
 add_executable(connect_cancel_c connect_cancel.c)
-target_link_libraries(connect_cancel_c hdfspp)
+target_link_libraries(connect_cancel_c
+  hdfspp
+  stdc++)

@@ -18,4 +18,4 @@
 
 add_executable(gendirs gendirs.cc
                ${CMAKE_SOURCE_DIR}/../tools/tools_common.cc)
-target_link_libraries(gendirs hdfspp protobuf)
+target_link_libraries(gendirs hdfspp)

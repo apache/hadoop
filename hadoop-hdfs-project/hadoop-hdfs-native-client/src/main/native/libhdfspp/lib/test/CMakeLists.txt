@@ -64,8 +64,17 @@ include_directories(
 set (TEST_LIBS
   hdfspp
   ${SASL_LIBRARIES}
+  ldap_r
+  lber
+  gssapi_krb5
   ssl crypto
   gmock_main gmock gtest
+  krb5
+  mysqlclient
+  pq
+  sqlite3
+  db
+  dl
   ${CMAKE_THREAD_LIBS_INIT})
 
 function (define_test name)

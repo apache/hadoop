@@ -52,6 +52,7 @@
 #   * cmake -DHDFSPP_LIBRARY_ONLY=1
 
 cmake_minimum_required(VERSION 2.8.12)
+cmake_policy(SET CMP0022 NEW) # support interface_link_libraries
 if (POLICY CMP0042)
   cmake_policy(SET CMP0042 NEW) # suppress warning about mac rpath
 endif ()

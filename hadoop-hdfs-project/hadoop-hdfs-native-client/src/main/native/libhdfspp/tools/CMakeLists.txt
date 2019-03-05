@@ -17,6 +17,7 @@
 #
 
 cmake_minimum_required(VERSION 2.8.12)
+cmake_policy(SET CMP0022 NEW) # support interface_link_libraries
 if (POLICY CMP0042)
   cmake_policy(SET CMP0042 NEW) # suppress warning about mac rpath
 endif ()
@@ -26,13 +27,13 @@ project (HDFSPP_TOOLS)
 include(DecideSasl)
 
 find_package(HDFSPP REQUIRED)
+find_package(Threads REQUIRED)
 
 include(HdfsppCompilerOptions)
 
 function (define_tool name)
   add_executable(${name} ${ARGN} tools_common.cc)
-  target_link_libraries(${name}
-    hdfspp uriparser crypto ssl protobuf ${SASL_LIBRARIES})
+  target_link_libraries(${name} hdfspp)
   install(TARGETS ${name} DESTINATION bin)
 endfunction ()
 

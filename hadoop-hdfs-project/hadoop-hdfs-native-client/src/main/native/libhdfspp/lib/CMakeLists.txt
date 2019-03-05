@@ -17,6 +17,7 @@
 #
 
 cmake_minimum_required(VERSION 2.8.12)
+cmake_policy(SET CMP0022 NEW) # support interface_link_libraries
 if (POLICY CMP0042)
   cmake_policy(SET CMP0042 NEW) # suppress warning about mac rpath
 endif ()
@@ -134,7 +135,13 @@ if (BUILD_SHARED_LIBS)
                         VERSION ${HDFSPP_VERSION})
 else ()
   add_library(hdfspp STATIC ${LIBHDFSPP_ALL_OBJECTS})
+    set_property(TARGET hdfspp
+      PROPERTY INTERFACE_LINK_LIBRARIES
+        sasl2 ldap_r lber gssapi_krb5 ssl crypto krb5 mysqlclient pq sqlite3
+        db protobuf uriparser dl ${CMAKE_THREAD_LIBS_INIT}
+    )
 endif ()
+
 target_link_libraries(hdfspp
   protobuf
   uriparser

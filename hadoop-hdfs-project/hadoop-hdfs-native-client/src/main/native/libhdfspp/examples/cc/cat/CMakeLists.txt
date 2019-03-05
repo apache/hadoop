@@ -18,4 +18,4 @@
 
 add_executable(cat cat.cc
                ${CMAKE_SOURCE_DIR}/../tools/tools_common.cc)
-target_link_libraries(cat hdfspp protobuf)
+target_link_libraries(cat hdfspp)

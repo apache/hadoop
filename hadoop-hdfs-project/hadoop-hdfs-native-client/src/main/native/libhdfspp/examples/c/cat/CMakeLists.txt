@@ -17,4 +17,6 @@
 #
 
 add_executable(cat_c cat.c)
-target_link_libraries(cat_c hdfspp)
+target_link_libraries(cat_c
+  hdfspp
+  stdc++)
