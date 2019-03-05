@@ -39,20 +39,16 @@ import picocli.CommandLine.Command;
     mixinStandardHelpOptions = true)
 public final class Genesis {
 
-  // For adding benchmark to Genesis add the benchmark name in the default value
-  // and description for this option.
-  @Option(names = "-benchmark", required = true, split = ",",
-      defaultValue = "BenchMarkContainerStateMap,BenchMarkOMKeyAllocation,"
-          + "BenchMarkBlockManager,BenchMarkMetadataStoreReads,"
-          + "BenchMarkMetadataStoreWrites,BenchMarkDatanodeDispatcher"
-          + "BenchMarkRocksDbStore",
-      description =
+  // After adding benchmark in genesis package add the benchmark name in the
+  // description for this option.
+  @Option(names = "-benchmark", split = ",", description =
       "Option used for specifying benchmarks to run.\n"
           + "Ex. ozone genesis -benchmark BenchMarkContainerStateMap,"
           + "BenchMarkOMKeyAllocation.\n"
           + "Possible benchmarks which can be used are "
           + "{BenchMarkContainerStateMap, BenchMarkOMKeyAllocation, "
-          + "BenchMarkBlockManager, BenchMarkMetadataStoreReads, "
+          + "BenchMarkOzoneManager, BenchMarkOMClient, "
+          + "BenchMarkSCM, BenchMarkMetadataStoreReads, "
           + "BenchMarkMetadataStoreWrites, BenchMarkDatanodeDispatcher, "
           + "BenchMarkRocksDbStore}")
   private static String[] benchmarks;
@@ -74,8 +70,15 @@ public final class Genesis {
     }
 
     OptionsBuilder optionsBuilder = new OptionsBuilder();
-    for (String benchmark : benchmarks) {
-      optionsBuilder.include(benchmark);
+    if (benchmarks != null) {
+      // The OptionsBuilder#include takes a regular expression as argument.
+      // Therefore it is important to keep the benchmark names unique for
+      // running a benchmark. For example if there are two benchmarks -
+      // BenchMarkOM and BenchMarkOMClient and we include BenchMarkOM then
+      // both the benchmarks will be run.
+      for (String benchmark : benchmarks) {
+        optionsBuilder.include(benchmark);
+      }
     }
     optionsBuilder.warmupIterations(2)
         .measurementIterations(20)
