@@ -96,6 +96,22 @@
 
     'fmt_number': function (v) {
       return v.toLocaleString();
+    },
+
+    'fmt_human_number': function (v) {
+      var UNITS = ['', 'K', 'M'];
+      var prev = 0, i = 0;
+      while (Math.floor(v) > 0 && i < UNITS.length) {
+        prev = v;
+        v /= 1000;
+        i += 1;
+      }
+
+      if (i > 0) {
+        v = prev;
+        i -= 1;
+      }
+      return Math.round(v * 100) / 100 + UNITS[i];
     }
   };
   $.extend(dust.filters, filters);
