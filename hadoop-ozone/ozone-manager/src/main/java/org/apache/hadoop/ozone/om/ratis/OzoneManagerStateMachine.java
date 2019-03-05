@@ -20,10 +20,12 @@ package org.apache.hadoop.ozone.om.ratis;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.ServiceException;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis
     .ContainerStateMachine;
 import org.apache.hadoop.ozone.om.OzoneManager;
+import org.apache.hadoop.ozone.om.helpers.OMRatisHelper;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
@@ -54,11 +56,15 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
       LoggerFactory.getLogger(ContainerStateMachine.class);
   private final SimpleStateMachineStorage storage =
       new SimpleStateMachineStorage();
+  private final OzoneManagerRatisServer omRatisServer;
+  private final OzoneManagerProtocol ozoneManager;
   private final OzoneManagerRequestHandler handler;
   private RaftGroupId raftGroupId;
 
-  public OzoneManagerStateMachine(OzoneManagerProtocol om) {
-    this.handler = new OzoneManagerRequestHandler(om);
+  public OzoneManagerStateMachine(OzoneManagerRatisServer ratisServer) {
+    this.omRatisServer = ratisServer;
+    this.ozoneManager = omRatisServer.getOzoneManager();
+    this.handler = new OzoneManagerRequestHandler(ozoneManager);
   }
 
   /**
@@ -135,6 +141,15 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
     } catch (IOException e) {
       return completeExceptionally(e);
     }
+  }
+
+  /**
+   * Notifies the state machine that the raft peer is no longer leader.
+   */
+  @Override
+  public void notifyNotLeader(Collection<TransactionContext> pendingEntries)
+      throws IOException {
+    omRatisServer.updateServerRole();
   }
 
   /**

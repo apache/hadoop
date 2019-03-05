@@ -15,7 +15,7 @@
  * the License.
  */
 
-package org.apache.hadoop.ozone.om.ratis;
+package org.apache.hadoop.ozone.om.helpers;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.conf.Configuration;
@@ -54,14 +54,15 @@ public final class OMRatisHelper {
 
   /**
    * Creates a new RaftClient object.
-   * @param rpcType Replication Type
-   * @param omId OM id of the client
-   * @param group RaftGroup
+   *
+   * @param rpcType     Replication Type
+   * @param omId        OM id of the client
+   * @param group       RaftGroup
    * @param retryPolicy Retry policy
    * @return RaftClient object
    */
-  static RaftClient newRaftClient(RpcType rpcType, String omId, RaftGroup
-      group, RetryPolicy retryPolicy,   Configuration conf) {
+  public static RaftClient newRaftClient(RpcType rpcType, String omId, RaftGroup
+      group, RetryPolicy retryPolicy, Configuration conf) {
     LOG.trace("newRaftClient: {}, leader={}, group={}", rpcType, omId, group);
     final RaftProperties properties = new RaftProperties();
     RaftConfigKeys.Rpc.setType(properties, rpcType);
@@ -85,23 +86,23 @@ public final class OMRatisHelper {
     return RaftPeerId.valueOf(omId);
   }
 
-  static ByteString convertRequestToByteString(OMRequest request) {
+  public static ByteString convertRequestToByteString(OMRequest request) {
     byte[] requestBytes = request.toByteArray();
     return ByteString.copyFrom(requestBytes);
   }
 
-  static OMRequest convertByteStringToOMRequest(ByteString byteString)
+  public static OMRequest convertByteStringToOMRequest(ByteString byteString)
       throws InvalidProtocolBufferException {
     byte[] bytes = byteString.toByteArray();
     return OMRequest.parseFrom(bytes);
   }
 
-  static Message convertResponseToMessage(OMResponse response) {
+  public static Message convertResponseToMessage(OMResponse response) {
     byte[] requestBytes = response.toByteArray();
     return Message.valueOf(ByteString.copyFrom(requestBytes));
   }
 
-  static OMResponse getOMResponseFromRaftClientReply(RaftClientReply reply)
+  public static OMResponse getOMResponseFromRaftClientReply(RaftClientReply reply)
       throws InvalidProtocolBufferException {
     byte[] bytes = reply.getMessage().getContent().toByteArray();
     return OMResponse.newBuilder(OMResponse.parseFrom(bytes))
@@ -109,12 +110,23 @@ public final class OMRatisHelper {
         .build();
   }
 
-  static OMResponse getErrorResponse(Type cmdType, Exception e) {
+  public static OMResponse getErrorResponse(Type cmdType, Exception e) {
     return OMResponse.newBuilder()
         .setCmdType(cmdType)
         .setSuccess(false)
         .setMessage(e.getMessage())
         .setStatus(Status.INTERNAL_ERROR)
+        .build();
+  }
+
+  public static OMResponse getReadRequestErrorResponse(Type cmdType,
+      RaftPeerId currentNodeId, RaftPeerId suggestedLeaderId) {
+    return OMResponse.newBuilder()
+        .setCmdType(cmdType)
+        .setSuccess(false)
+        .setMessage(currentNodeId.toString() + " is not the leader")
+        .setStatus(Status.READ_REQUEST_NOT_LEADER_EXCEPTION)
+        .setLeaderOMNodeId(suggestedLeaderId.toString())
         .build();
   }
 }
