@@ -59,7 +59,7 @@ public class TestContainerActionsHandler {
             TestUtils.randomDatanodeDetails(), cap);
 
     queue.fireEvent(SCMEvents.CONTAINER_ACTIONS, containerActions);
-
+    queue.processAll(1000L);
     verify(closeContainerEventHandler, times(1))
         .onMessage(ContainerID.valueof(1L), queue);
 
