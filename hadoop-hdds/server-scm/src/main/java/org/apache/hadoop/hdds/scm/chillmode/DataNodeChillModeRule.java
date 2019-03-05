@@ -22,19 +22,17 @@ import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
+import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeProtocolServer.NodeRegistrationContainerReport;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hdds.server.events.EventHandler;
-import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.apache.hadoop.hdds.server.events.EventQueue;
 
 /**
  * Class defining Chill mode exit criteria according to number of DataNodes
  * registered with SCM.
  */
-public class DataNodeChillModeRule implements
-    ChillModeExitRule<NodeRegistrationContainerReport>,
-    EventHandler<NodeRegistrationContainerReport> {
+public class DataNodeChillModeRule extends
+    ChillModeExitRule<NodeRegistrationContainerReport>{
 
   // Min DataNodes required to exit chill mode.
   private int requiredDns;
@@ -42,25 +40,20 @@ public class DataNodeChillModeRule implements
   // Set to track registered DataNodes.
   private HashSet<UUID> registeredDnSet;
 
-  private final SCMChillModeManager chillModeManager;
-
-  public DataNodeChillModeRule(Configuration conf,
+  public DataNodeChillModeRule(String ruleName, EventQueue eventQueue,
+      Configuration conf,
       SCMChillModeManager manager) {
+    super(manager, ruleName);
     requiredDns = conf.getInt(
         HddsConfigKeys.HDDS_SCM_CHILLMODE_MIN_DATANODE,
         HddsConfigKeys.HDDS_SCM_CHILLMODE_MIN_DATANODE_DEFAULT);
     registeredDnSet = new HashSet<>(requiredDns * 2);
-    chillModeManager = manager;
+    eventQueue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT, this);
   }
 
   @Override
   public boolean validate() {
     return registeredDns >= requiredDns;
-  }
-
-  @VisibleForTesting
-  public double getRegisteredDataNodes() {
-    return registeredDns;
   }
 
   @Override
@@ -69,30 +62,12 @@ public class DataNodeChillModeRule implements
     registeredDnSet.add(reportsProto.getDatanodeDetails().getUuid());
     registeredDns = registeredDnSet.size();
 
-  }
-
-  @Override
-  public void onMessage(NodeRegistrationContainerReport
-      nodeRegistrationContainerReport, EventPublisher publisher) {
-    // TODO: when we have remove handlers, we can remove getInChillmode check
-
     if (chillModeManager.getInChillMode()) {
-      if (validate()) {
-        return;
-      }
-
-      process(nodeRegistrationContainerReport);
-
-      if (chillModeManager.getInChillMode()) {
-        SCMChillModeManager.getLogger().info(
-            "SCM in chill mode. {} DataNodes registered, {} required.",
-            registeredDns, requiredDns);
-      }
-
-      if (validate()) {
-        chillModeManager.validateChillModeExitRules(publisher);
-      }
+      SCMChillModeManager.getLogger().info(
+          "SCM in chill mode. {} DataNodes registered, {} required.",
+          registeredDns, requiredDns);
     }
+
   }
 
   @Override

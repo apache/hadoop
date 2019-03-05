@@ -17,21 +17,23 @@
  */
 package org.apache.hadoop.hdds.scm.chillmode;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReport;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode;
-import org.apache.hadoop.hdds.server.events.EventHandler;
-import org.apache.hadoop.hdds.server.events.EventPublisher;
+
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,27 +48,32 @@ import java.util.Set;
  * through in a cluster.
  */
 public class HealthyPipelineChillModeRule
-    implements ChillModeExitRule<PipelineReportFromDatanode>,
-    EventHandler<PipelineReportFromDatanode> {
+    extends ChillModeExitRule<PipelineReportFromDatanode>{
 
   public static final Logger LOG =
       LoggerFactory.getLogger(HealthyPipelineChillModeRule.class);
   private final PipelineManager pipelineManager;
-  private final SCMChillModeManager chillModeManager;
   private final int healthyPipelineThresholdCount;
   private int currentHealthyPipelineCount = 0;
   private final Set<DatanodeDetails> processedDatanodeDetails =
       new HashSet<>();
 
-  HealthyPipelineChillModeRule(PipelineManager pipelineManager,
+  HealthyPipelineChillModeRule(String ruleName, EventQueue eventQueue,
+      PipelineManager pipelineManager,
       SCMChillModeManager manager, Configuration configuration) {
+    super(manager, ruleName);
     this.pipelineManager = pipelineManager;
-    this.chillModeManager = manager;
     double healthyPipelinesPercent =
         configuration.getDouble(HddsConfigKeys.
                 HDDS_SCM_CHILLMODE_HEALTHY_PIPELINE_THRESHOLD_PCT,
             HddsConfigKeys.
                 HDDS_SCM_CHILLMODE_HEALTHY_PIPELINE_THRESHOLD_PCT_DEFAULT);
+
+    if (healthyPipelinesPercent > 1.0 || healthyPipelinesPercent < 0.0) {
+      throw new IllegalArgumentException(HddsConfigKeys.
+          HDDS_SCM_CHILLMODE_HEALTHY_PIPELINE_THRESHOLD_PCT + " value should " +
+          "be >= 0.0 and <= 1.0");
+    }
 
     // As we want to wait for 3 node pipelines
     int pipelineCount =
@@ -78,6 +85,8 @@ public class HealthyPipelineChillModeRule
     // pipeline DB.
     healthyPipelineThresholdCount =
         (int) Math.ceil(healthyPipelinesPercent * pipelineCount);
+
+    eventQueue.addHandler(SCMEvents.PROCESSED_PIPELINE_REPORT, this);
 
     LOG.info(" Total pipeline count is {}, healthy pipeline " +
         "threshold count is {}", pipelineCount, healthyPipelineThresholdCount);
@@ -93,56 +102,36 @@ public class HealthyPipelineChillModeRule
 
   @Override
   public void process(PipelineReportFromDatanode pipelineReportFromDatanode) {
-    Pipeline pipeline;
-    Preconditions.checkNotNull(pipelineReportFromDatanode);
-    PipelineReportsProto pipelineReport =
-        pipelineReportFromDatanode.getReport();
-
-    for (PipelineReport report : pipelineReport.getPipelineReportList()) {
-      PipelineID pipelineID = PipelineID
-          .getFromProtobuf(report.getPipelineID());
-      try {
-        pipeline = pipelineManager.getPipeline(pipelineID);
-      } catch (PipelineNotFoundException e) {
-        continue;
-      }
-
-      if (pipeline.getFactor() == HddsProtos.ReplicationFactor.THREE &&
-          pipeline.getPipelineState() == Pipeline.PipelineState.OPEN) {
-        // If the pipeline is open state mean, all 3 datanodes are reported
-        // for this pipeline.
-        currentHealthyPipelineCount++;
-      }
-    }
-  }
-
-  @Override
-  public void cleanup() {
-    // No need to deal with
-  }
-
-  @Override
-  public void onMessage(PipelineReportFromDatanode pipelineReportFromDatanode,
-      EventPublisher publisher) {
-    // If we have already reached healthy pipeline threshold, skip processing
-    // pipeline report from datanode.
-
-    if (validate()) {
-      chillModeManager.validateChillModeExitRules(publisher);
-      return;
-    }
-
 
     // When SCM is in chill mode for long time, already registered
     // datanode can send pipeline report again, then pipeline handler fires
     // processed report event, we should not consider this pipeline report
     // from datanode again during threshold calculation.
+    Preconditions.checkNotNull(pipelineReportFromDatanode);
     DatanodeDetails dnDetails = pipelineReportFromDatanode.getDatanodeDetails();
     if (!processedDatanodeDetails.contains(
         pipelineReportFromDatanode.getDatanodeDetails())) {
 
-      // Process pipeline report from datanode
-      process(pipelineReportFromDatanode);
+      Pipeline pipeline;
+      PipelineReportsProto pipelineReport =
+          pipelineReportFromDatanode.getReport();
+
+      for (PipelineReport report : pipelineReport.getPipelineReportList()) {
+        PipelineID pipelineID = PipelineID
+            .getFromProtobuf(report.getPipelineID());
+        try {
+          pipeline = pipelineManager.getPipeline(pipelineID);
+        } catch (PipelineNotFoundException e) {
+          continue;
+        }
+
+        if (pipeline.getFactor() == HddsProtos.ReplicationFactor.THREE &&
+            pipeline.getPipelineState() == Pipeline.PipelineState.OPEN) {
+          // If the pipeline is open state mean, all 3 datanodes are reported
+          // for this pipeline.
+          currentHealthyPipelineCount++;
+        }
+      }
 
       if (chillModeManager.getInChillMode()) {
         SCMChillModeManager.getLogger().info(
@@ -154,8 +143,20 @@ public class HealthyPipelineChillModeRule
       processedDatanodeDetails.add(dnDetails);
     }
 
-    if (validate()) {
-      chillModeManager.validateChillModeExitRules(publisher);
-    }
+  }
+
+  @Override
+  public void cleanup() {
+    processedDatanodeDetails.clear();
+  }
+
+  @VisibleForTesting
+  public int getCurrentHealthyPipelineCount() {
+    return currentHealthyPipelineCount;
+  }
+
+  @VisibleForTesting
+  public int getHealthyPipelineThresholdCount() {
+    return healthyPipelineThresholdCount;
   }
 }
