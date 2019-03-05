@@ -18,8 +18,11 @@
 package org.apache.hadoop.fs;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.StatUtils;
 import org.apache.hadoop.util.Shell;
@@ -43,6 +46,19 @@ public class TestRawLocalFileSystemContract extends FileSystemContractBaseTest {
       LoggerFactory.getLogger(TestRawLocalFileSystemContract.class);
   private final static Path TEST_BASE_DIR =
       new Path(GenericTestUtils.getRandomizedTestDir().getAbsolutePath());
+
+  // These are the string values that DF sees as "Filesystem" for a Docker container
+  // accessing a Mac or Windows host's filesystem.
+  private static final String FS_TYPE_MAC =
+          "osxfs";
+  private static boolean looksLikeMac(String filesys) {
+    return filesys.toLowerCase().contains(FS_TYPE_MAC.toLowerCase());
+  }
+  private static final Pattern HAS_DRIVE_LETTER_SPECIFIER =
+          Pattern.compile("^/?[a-zA-Z]:");
+  private static boolean looksLikeWindows(String filesys) {
+    return HAS_DRIVE_LETTER_SPECIFIER.matcher(filesys).find();
+  }
 
   @Before
   public void setUp() throws Exception {
@@ -84,7 +100,27 @@ public class TestRawLocalFileSystemContract extends FileSystemContractBaseTest {
 
   @Override
   protected boolean filesystemIsCaseSensitive() {
-    return !(Shell.WINDOWS || Shell.MAC);
+    if (Shell.WINDOWS || Shell.MAC) {
+      return false;
+    }
+    // osType is linux or unix, but it might be in a container mounting a Mac or Windows volume.
+    // Use DF to try to determine if this is the case.
+    String rfsPathStr = "uninitialized";
+    String rfsType;
+    try {
+      RawLocalFileSystem rfs = new RawLocalFileSystem();
+      Configuration conf = new Configuration();
+      rfs.initialize(rfs.getUri(), conf);
+      rfsPathStr = Path.getPathWithoutSchemeAndAuthority(rfs.getWorkingDirectory()).toString();
+      File rfsPath = new File(rfsPathStr);
+      rfsType = (new DF(rfsPath, conf)).getFilesystem();  // would prefer .getFSType, but not supported
+      LOG.info("DF.Filesystem is {} for path {}", rfsType, rfsPath);
+    }
+    catch (IOException ex) {  // we aren't allowed to change the signature of filesystemIsCaseSensitive()
+      LOG.error ("DF failed on path {}", rfsPathStr);
+      rfsType = Shell.osType.toString();
+    }
+    return !(looksLikeMac(rfsType) || looksLikeWindows(rfsType));
   }
 
   // cross-check getPermission using both native/non-native
