@@ -226,8 +226,14 @@ public class OMFailoverProxyProvider implements
    * not match the current leaderOMNodeId cached by the proxy provider.
    */
   public void performFailoverIfRequired(String newLeaderOMNodeId) {
-    if (updateLeaderOMNodeId(newLeaderOMNodeId)) {
-      LOG.debug("Failing over OM proxy to nodeId: {}", newLeaderOMNodeId);
+    if (newLeaderOMNodeId == null) {
+      LOG.debug("No suggested leader nodeId. Performing failover to next peer" +
+          " node");
+      performFailover(null);
+    } else {
+      if (updateLeaderOMNodeId(newLeaderOMNodeId)) {
+        LOG.debug("Failing over OM proxy to nodeId: {}", newLeaderOMNodeId);
+      }
     }
   }
 

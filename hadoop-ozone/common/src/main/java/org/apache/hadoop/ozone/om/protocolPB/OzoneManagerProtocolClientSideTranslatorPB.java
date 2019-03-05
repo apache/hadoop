@@ -213,7 +213,6 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
             NotLeaderException notLeaderException = (NotLeaderException) cause;
             omFailoverProxyProvider.performFailoverIfRequired(
                 notLeaderException.getSuggestedLeaderNodeId());
-            System.out.println("------ failing over read request");
             return getRetryAction(RetryAction.RETRY, retries, failovers);
           } else {
             return getRetryAction(RetryAction.FAILOVER_AND_RETRY, retries,

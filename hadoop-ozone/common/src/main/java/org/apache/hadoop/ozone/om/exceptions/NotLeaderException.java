@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.ozone.om.exceptions;
 
-import org.apache.ratis.protocol.RaftPeerId;
-
 import java.io.IOException;
 
 /**
@@ -31,6 +29,13 @@ public class NotLeaderException extends IOException {
 
   private final String currentPeerId;
   private final String leaderPeerId;
+
+  public NotLeaderException(String currentPeerIdStr) {
+    super("OM " + currentPeerIdStr + " is not the leader. Could not " +
+        "determine the leader node.");
+    this.currentPeerId = currentPeerIdStr;
+    this.leaderPeerId = null;
+  }
 
   public NotLeaderException(String currentPeerIdStr,
       String suggestedLeaderPeerIdStr) {

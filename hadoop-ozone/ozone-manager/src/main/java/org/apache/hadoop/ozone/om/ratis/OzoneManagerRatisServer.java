@@ -27,6 +27,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -84,12 +85,12 @@ public final class OzoneManagerRatisServer {
   private final ClientId clientId = ClientId.randomId();
 
   private final ScheduledExecutorService scheduledRoleChecker;
-  private long roleCheckInitialDelay = 1000; // 1 second default
+  private long roleCheckInitialDelayMs = 1000; // 1 second default
+  private long roleCheckIntervalMs;
   private ReentrantReadWriteLock roleCheckLock = new ReentrantReadWriteLock();
-  private RaftPeerRole cachedPeerRole;
-  private RaftPeerId cachedLeaderPeerId;
+  private Optional<RaftPeerRole> cachedPeerRole;
+  private Optional<RaftPeerId> cachedLeaderPeerId;
 
-  private static final long ROLE_CHECK_INTERVAL = 15; // 15 seconds
   private static final AtomicLong CALL_ID_COUNTER = new AtomicLong();
 
   private static long nextCallId() {
@@ -141,11 +142,11 @@ public final class OzoneManagerRatisServer {
       @Override
       public void run() {
         // Run this check only on the leader OM
-        if (cachedPeerRole.equals(RaftPeerRole.LEADER)) {
+        if (cachedPeerRole.equals(Optional.of(RaftPeerRole.LEADER))) {
           updateServerRole();
         }
       }
-    }, roleCheckInitialDelay, ROLE_CHECK_INTERVAL, TimeUnit.SECONDS);
+    }, roleCheckInitialDelayMs, roleCheckIntervalMs, TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -365,7 +366,17 @@ public final class OzoneManagerRatisServer {
     RaftServerConfigKeys.Rpc.setSlownessTimeout(properties,
         nodeFailureTimeout);
 
-    this.roleCheckInitialDelay = leaderElectionMinTimeout
+    TimeUnit roleCheckIntervalUnit =
+        OMConfigKeys.OZONE_OM_RATIS_SERVER_ROLE_CHECK_INTERVAL_DEFAULT
+            .getUnit();
+    long roleCheckIntervalDuration = conf.getTimeDuration(
+        OMConfigKeys.OZONE_OM_RATIS_SERVER_ROLE_CHECK_INTERVAL_KEY,
+        OMConfigKeys.OZONE_OM_RATIS_SERVER_ROLE_CHECK_INTERVAL_DEFAULT
+            .getDuration(), nodeFailureTimeoutUnit);
+    this.roleCheckIntervalMs = TimeDuration.valueOf(
+        roleCheckIntervalDuration, roleCheckIntervalUnit)
+        .toLong(TimeUnit.MILLISECONDS);
+    this.roleCheckInitialDelayMs = leaderElectionMinTimeout
         .toLong(TimeUnit.MILLISECONDS);
 
     /**
@@ -376,11 +387,14 @@ public final class OzoneManagerRatisServer {
     return properties;
   }
 
+  /**
+   * Check the cached leader status.
+   * @return true if cached role is Leader, false otherwise.
+   */
   private boolean checkCachedPeerRoleIsLeader() {
     this.roleCheckLock.readLock().lock();
     try {
-      if (cachedPeerRole != null &&
-          cachedPeerRole.equals(RaftPeerRole.LEADER)) {
+      if (cachedPeerRole.equals(Optional.of(RaftPeerRole.LEADER))) {
         return true;
       }
       return false;
@@ -389,6 +403,10 @@ public final class OzoneManagerRatisServer {
     }
   }
 
+  /**
+   * Check if the current OM node is the leader node.
+   * @return true if Leader, false otherwise.
+   */
   public boolean isLeader() {
     if (checkCachedPeerRoleIsLeader()) {
       return true;
@@ -401,15 +419,23 @@ public final class OzoneManagerRatisServer {
     return checkCachedPeerRoleIsLeader();
   }
 
+  /**
+   * Get the suggested leader peer id.
+   * @return RaftPeerId of the suggested leader node.
+   */
   public RaftPeerId getCachedLeaderPeerId() {
     this.roleCheckLock.readLock().lock();
     try {
-      return cachedLeaderPeerId;
+      return cachedLeaderPeerId.orElse(null);
     } finally {
       this.roleCheckLock.readLock().unlock();
     }
   }
 
+  /**
+   * Get the gorup info (peer role and leader peer id) from Ratis server and
+   * update the OM server role.
+   */
   public void updateServerRole() {
     try {
       GroupInfoReply groupInfo = getGroupInfo();
@@ -437,12 +463,15 @@ public final class OzoneManagerRatisServer {
     }
   }
 
+  /**
+   * Set the current server role and the leader peer id.
+   */
   private void setServerRole(RaftPeerRole currentRole,
       RaftPeerId leaderPeerId) {
     this.roleCheckLock.writeLock().lock();
     try {
-      this.cachedPeerRole = currentRole;
-      this.cachedLeaderPeerId = leaderPeerId;
+      this.cachedPeerRole = Optional.of(currentRole);
+      this.cachedLeaderPeerId = Optional.of(leaderPeerId);
     } finally {
       this.roleCheckLock.writeLock().unlock();
     }

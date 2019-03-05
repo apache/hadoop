@@ -105,8 +105,13 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
       RaftPeerId raftPeerId = omRatisServer.getRaftPeerId();
       RaftPeerId leaderRaftPeerId = omRatisServer.getCachedLeaderPeerId();
 
-      NotLeaderException notLeaderException = new NotLeaderException(
-          raftPeerId.toString(), leaderRaftPeerId.toString());
+      NotLeaderException notLeaderException;
+      if (leaderRaftPeerId == null) {
+        notLeaderException = new NotLeaderException(raftPeerId.toString());
+      } else {
+       notLeaderException = new NotLeaderException(
+           raftPeerId.toString(), leaderRaftPeerId.toString());
+      }
 
       if (LOG.isDebugEnabled()) {
         LOG.debug(notLeaderException.getMessage());
