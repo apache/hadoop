@@ -364,8 +364,6 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         replicationStatus.getChillModeStatusListener());
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS,
         (BlockManagerImpl) scmBlockManager);
-    eventQueue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
-        scmChillModeManager);
     registerMXBean();
   }
 

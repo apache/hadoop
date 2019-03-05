@@ -90,8 +90,7 @@ public class TestSCMChillModeManager {
     }
     scmChillModeManager = new SCMChillModeManager(
         config, containers, null, queue);
-    queue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
-        scmChillModeManager);
+
     assertTrue(scmChillModeManager.getInChillMode());
     queue.fireEvent(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
         HddsTestUtils.createNodeRegistrationContainerReport(containers));
@@ -111,8 +110,7 @@ public class TestSCMChillModeManager {
     }
     scmChillModeManager = new SCMChillModeManager(
         config, containers, null, queue);
-    queue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
-        scmChillModeManager);
+
     assertTrue(scmChillModeManager.getInChillMode());
 
     testContainerThreshold(containers.subList(0, 25), 0.25);
@@ -167,8 +165,7 @@ public class TestSCMChillModeManager {
 
     scmChillModeManager = new SCMChillModeManager(
         config, containers, null, queue);
-    queue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
-        scmChillModeManager);
+
     assertTrue(scmChillModeManager.getInChillMode());
 
     // When 10 CLOSED containers are reported by DNs, the computed container
@@ -192,8 +189,7 @@ public class TestSCMChillModeManager {
     conf.setInt(HddsConfigKeys.HDDS_SCM_CHILLMODE_MIN_DATANODE, numOfDns);
     scmChillModeManager = new SCMChillModeManager(
         conf, containers, null, queue);
-    queue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
-        scmChillModeManager);
+
     // Assert SCM is in Chill mode.
     assertTrue(scmChillModeManager.getInChillMode());
 
@@ -256,8 +252,6 @@ public class TestSCMChillModeManager {
 
       scmChillModeManager = new SCMChillModeManager(
           config, containers, pipelineManager, queue);
-      queue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
-          scmChillModeManager);
 
       queue.fireEvent(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
           HddsTestUtils.createNodeRegistrationContainerReport(containers));

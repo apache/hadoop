@@ -25,13 +25,16 @@ import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeProtocolServer.NodeRegistrationContainerReport;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hdds.server.events.EventHandler;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
 
 /**
  * Class defining Chill mode exit criteria according to number of DataNodes
  * registered with SCM.
  */
 public class DataNodeChillModeRule implements
-    ChillModeExitRule<NodeRegistrationContainerReport> {
+    ChillModeExitRule<NodeRegistrationContainerReport>,
+    EventHandler<NodeRegistrationContainerReport> {
 
   // Min DataNodes required to exit chill mode.
   private int requiredDns;
@@ -62,17 +65,33 @@ public class DataNodeChillModeRule implements
 
   @Override
   public void process(NodeRegistrationContainerReport reportsProto) {
-    if (requiredDns == 0) {
-      // No dn check required.
-      return;
-    }
 
-    if(chillModeManager.getInChillMode()) {
-      registeredDnSet.add(reportsProto.getDatanodeDetails().getUuid());
-      registeredDns = registeredDnSet.size();
-      SCMChillModeManager.getLogger().info(
-          "SCM in chill mode. {} DataNodes registered, {} required.",
-          registeredDns, requiredDns);
+    registeredDnSet.add(reportsProto.getDatanodeDetails().getUuid());
+    registeredDns = registeredDnSet.size();
+
+  }
+
+  @Override
+  public void onMessage(NodeRegistrationContainerReport
+      nodeRegistrationContainerReport, EventPublisher publisher) {
+    // TODO: when we have remove handlers, we can remove getInChillmode check
+
+    if (chillModeManager.getInChillMode()) {
+      if (validate()) {
+        return;
+      }
+
+      process(nodeRegistrationContainerReport);
+
+      if (chillModeManager.getInChillMode()) {
+        SCMChillModeManager.getLogger().info(
+            "SCM in chill mode. {} DataNodes registered, {} required.",
+            registeredDns, requiredDns);
+      }
+
+      if (validate()) {
+        chillModeManager.validateChillModeExitRules(publisher);
+      }
     }
   }
 

@@ -29,12 +29,15 @@ import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeProtocolServer.NodeRegistrationContainerReport;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hdds.server.events.EventHandler;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
 
 /**
  * Class defining Chill mode exit criteria for Containers.
  */
 public class ContainerChillModeRule implements
-    ChillModeExitRule<NodeRegistrationContainerReport> {
+    ChillModeExitRule<NodeRegistrationContainerReport>,
+    EventHandler<NodeRegistrationContainerReport> {
 
   // Required cutoff % for containers with at least 1 reported replica.
   private double chillModeCutoff;
@@ -68,9 +71,6 @@ public class ContainerChillModeRule implements
 
   @Override
   public boolean validate() {
-    if (maxContainer == 0) {
-      return true;
-    }
     return getCurrentContainerThreshold() >= chillModeCutoff;
   }
 
@@ -84,10 +84,6 @@ public class ContainerChillModeRule implements
 
   @Override
   public void process(NodeRegistrationContainerReport reportsProto) {
-    if (maxContainer == 0) {
-      // No container to check.
-      return;
-    }
 
     reportsProto.getReport().getReportsList().forEach(c -> {
       if (containerMap.containsKey(c.getContainerID())) {
@@ -96,12 +92,33 @@ public class ContainerChillModeRule implements
         }
       }
     });
-    if(chillModeManager.getInChillMode()) {
-      SCMChillModeManager.getLogger().info(
-          "SCM in chill mode. {} % containers have at least one"
-              + " reported replica.",
-          (containerWithMinReplicas.get() / maxContainer) * 100);
+  }
+
+  @Override
+  public void onMessage(NodeRegistrationContainerReport
+      nodeRegistrationContainerReport, EventPublisher publisher) {
+
+    // TODO: when we have remove handlers, we can remove getInChillmode check
+
+    if (chillModeManager.getInChillMode()) {
+      if (validate()) {
+        return;
+      }
+
+      process(nodeRegistrationContainerReport);
+      if (chillModeManager.getInChillMode()) {
+        SCMChillModeManager.getLogger().info(
+            "SCM in chill mode. {} % containers have at least one"
+                + " reported replica.",
+            (containerWithMinReplicas.get() / maxContainer) * 100);
+      }
+
+      if (validate()) {
+        chillModeManager.validateChillModeExitRules(publisher);
+      }
+
     }
+
   }
 
   @Override

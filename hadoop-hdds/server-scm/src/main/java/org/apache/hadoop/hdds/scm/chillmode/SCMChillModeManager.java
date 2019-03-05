@@ -28,9 +28,6 @@ import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipeline.RatisPipelineUtils;
-import org.apache.hadoop.hdds.scm.server.SCMDatanodeProtocolServer
-    .NodeRegistrationContainerReport;
-import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.slf4j.Logger;
@@ -48,8 +45,7 @@ import org.slf4j.LoggerFactory;
  * for reported containers and validates if cutoff threshold for
  * containers is meet.
  */
-public class SCMChillModeManager implements
-    EventHandler<NodeRegistrationContainerReport> {
+public class SCMChillModeManager {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(SCMChillModeManager.class);
@@ -78,9 +74,16 @@ public class SCMChillModeManager implements
         HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED,
         HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED_DEFAULT);
     if (isChillModeEnabled) {
-      exitRules.put(CONT_EXIT_RULE,
-          new ContainerChillModeRule(config, allContainers, this));
-      exitRules.put(DN_EXIT_RULE, new DataNodeChillModeRule(config, this));
+      ContainerChillModeRule containerChillModeRule =
+          new ContainerChillModeRule(config, allContainers, this);
+      DataNodeChillModeRule dataNodeChillModeRule =
+          new DataNodeChillModeRule(config, this);
+      exitRules.put(CONT_EXIT_RULE, containerChillModeRule);
+      exitRules.put(DN_EXIT_RULE, dataNodeChillModeRule);
+      eventPublisher.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
+          containerChillModeRule);
+      eventPublisher.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
+          dataNodeChillModeRule);
 
       if (conf.getBoolean(
           HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK,
@@ -144,17 +147,6 @@ public class SCMChillModeManager implements
     // creation job needs to stop
     RatisPipelineUtils
         .scheduleFixedIntervalPipelineCreator(pipelineManager, config);
-  }
-
-  @Override
-  public void onMessage(
-      NodeRegistrationContainerReport nodeRegistrationContainerReport,
-      EventPublisher publisher) {
-    if (getInChillMode()) {
-      exitRules.get(CONT_EXIT_RULE).process(nodeRegistrationContainerReport);
-      exitRules.get(DN_EXIT_RULE).process(nodeRegistrationContainerReport);
-      validateChillModeExitRules(publisher);
-    }
   }
 
   public boolean getInChillMode() {
