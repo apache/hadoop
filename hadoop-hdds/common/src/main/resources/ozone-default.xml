@@ -2030,6 +2030,70 @@
   </property>
 
   <property>
+    <name>hdds.datanode.http.kerberos.principal</name>
+    <value>HTTP/_HOST@EXAMPLE.COM</value>
+    <tag>HDDS, SECURITY, MANAGEMENT</tag>
+    <description>
+      The kerberos principal for the datanode http server.
+    </description>
+  </property>
+  <property>
+    <name>hdds.datanode.http.kerberos.keytab</name>
+    <value>/etc/security/keytabs/HTTP.keytab</value>
+    <tag>HDDS, SECURITY, MANAGEMENT</tag>
+    <description>
+      The kerberos keytab file for datanode http server
+    </description>
+  </property>
+  <property>
+    <name>hdds.datanode.http-address</name>
+    <value>0.0.0.0:9882</value>
+    <tag>HDDS, MANAGEMENT</tag>
+    <description>
+      The address and the base port where the Datanode web ui will listen on.
+      If the port is 0 then the server will start on a free port.
+    </description>
+  </property>
+  <property>
+    <name>hdds.datanode.http-bind-host</name>
+    <value>0.0.0.0</value>
+    <tag>HDDS, MANAGEMENT</tag>
+    <description>
+      The actual address the Datanode web server will bind to. If this
+      optional address is set, it overrides only the hostname portion of
+      hdds.datanode.http-address.
+    </description>
+  </property>
+  <property>
+    <name>hdds.datanode.http.enabled</name>
+    <value>true</value>
+    <tag>HDDS, MANAGEMENT</tag>
+    <description>
+      Property to enable or disable Datanode web ui.
+    </description>
+  </property>
+  <property>
+    <name>hdds.datanode.https-address</name>
+    <value>0.0.0.0:9883</value>
+    <tag>HDDS, MANAGEMENT, SECURITY</tag>
+    <description>
+      The address and the base port where the Datanode web UI will listen
+      on using HTTPS.
+
+      If the port is 0 then the server will start on a free port.
+    </description>
+  </property>
+  <property>
+    <name>hdds.datanode.https-bind-host</name>
+    <value>0.0.0.0</value>
+    <tag>HDDS, MANAGEMENT, SECURITY</tag>
+    <description>
+      The actual address the Datanode web server will bind to using HTTPS.
+      If this optional address is set, it overrides only the hostname portion of
+      hdds.datanode.http-address.
+    </description>
+  </property>
+  <property>
     <name>ozone.client.retry.max.attempts</name>
     <value>10</value>
     <description>

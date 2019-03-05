@@ -23,6 +23,7 @@ services:
         - ../..:/opt/hadoop
       ports:
         - 9864
+        - 9882
       command: ["/opt/hadoop/bin/ozone","datanode"]
       env_file:
         - ./docker-config
