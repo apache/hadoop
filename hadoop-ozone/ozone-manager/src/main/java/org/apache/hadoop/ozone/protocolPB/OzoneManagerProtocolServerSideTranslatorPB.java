@@ -80,7 +80,8 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
   /**
    * Submits request to OM's Ratis server.
    */
-  private OMResponse submitRequestToRatis(OMRequest request) {
+  private OMResponse submitRequestToRatis(OMRequest request)
+      throws ServiceException {
     return omRatisClient.sendCommand(request);
   }
 
