@@ -1130,8 +1130,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     DefaultMetricsSystem.initialize("OzoneManager");
 
     metadataManager.start(configuration);
-    // TODO: uncomment this with HDDS-134 to avoid NPE
-    //startSecretManagerIfNecessary();
+    startSecretManagerIfNecessary();
 
     // Set metrics and start metrics back ground thread
     metrics.setNumVolumes(metadataManager.countRowsInTable(metadataManager
