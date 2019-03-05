@@ -58,6 +58,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_BLOCK_TOKEN_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY;
@@ -232,7 +233,10 @@ public class TestSecureContainerServer {
 
     @Override
     public void setScmId(String scmId) {
+    }
 
+    @Override
+    public void buildMissingContainerSet(Set<Long> createdContainerSet) {
     }
   }
 

@@ -59,6 +59,7 @@ import static org.mockito.Mockito.times;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.UUID;
 
 /**
@@ -88,6 +89,8 @@ public class TestKeyValueHandler {
     Mockito.when(dispatcher.dispatch(any(), any())).thenCallRealMethod();
     Mockito.when(dispatcher.getContainer(anyLong())).thenReturn(
         Mockito.mock(KeyValueContainer.class));
+    Mockito.when(dispatcher.getMissingContainerSet())
+        .thenReturn(new HashSet<>());
     Mockito.when(handler.handle(any(), any(), any())).thenCallRealMethod();
     doCallRealMethod().when(dispatcher).setMetricsForTesting(any());
     dispatcher.setMetricsForTesting(Mockito.mock(ContainerMetrics.class));
