@@ -20,6 +20,8 @@ package org.apache.hadoop.ozone.container.common.transport.server.ratis;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import java.util.Set;
+
 /**
  * DispatcherContext class holds transport protocol specific context info
  * required for execution of container commands over the container dispatcher.
@@ -43,12 +45,15 @@ public final class DispatcherContext {
   // the log index in Ratis log to which the request belongs to
   private final long logIndex;
 
+  private final Set<Long> createContainerSet;
+
   private DispatcherContext(long term, long index, WriteChunkStage stage,
-      boolean readFromTmpFile) {
+      boolean readFromTmpFile, Set<Long> containerSet) {
     this.term = term;
     this.logIndex = index;
     this.stage = stage;
     this.readFromTmpFile = readFromTmpFile;
+    this.createContainerSet = containerSet;
   }
 
   public long getLogIndex() {
@@ -67,6 +72,10 @@ public final class DispatcherContext {
     return stage;
   }
 
+  public Set<Long> getCreateContainerSet() {
+    return createContainerSet;
+  }
+
   /**
    * Builder class for building DispatcherContext.
    */
@@ -75,11 +84,12 @@ public final class DispatcherContext {
     private boolean readFromTmpFile = false;
     private long term;
     private long logIndex;
+    private Set<Long> createContainerSet;
 
     /**
      * Sets the WriteChunkStage.
      *
-     * @param stage WriteChunk Stage
+     * @param writeChunkStage WriteChunk Stage
      * @return DispatcherContext.Builder
      */
     public Builder setStage(WriteChunkStage writeChunkStage) {
@@ -90,7 +100,7 @@ public final class DispatcherContext {
     /**
      * Sets the flag for reading from tmp chunk files.
      *
-     * @param readFromTmpFile whether to read from tmp chunk file or not
+     * @param setReadFromTmpFile whether to read from tmp chunk file or not
      * @return DispatcherContext.Builder
      */
     public Builder setReadFromTmpFile(boolean setReadFromTmpFile) {
@@ -101,7 +111,7 @@ public final class DispatcherContext {
     /**
      * Sets the current term for the container request from Ratis.
      *
-     * @param term current term
+     * @param currentTerm current term
      * @return DispatcherContext.Builder
      */
     public Builder setTerm(long currentTerm) {
@@ -112,7 +122,7 @@ public final class DispatcherContext {
     /**
      * Sets the logIndex for the container request from Ratis.
      *
-     * @param logIndex log index
+     * @param index log index
      * @return DispatcherContext.Builder
      */
     public Builder setLogIndex(long index) {
@@ -121,12 +131,23 @@ public final class DispatcherContext {
     }
 
     /**
+     * Sets the createContainerSet to contain all the containerIds per
+     * RaftGroup.
+     * @param set createContainerSet
+     * @return Builder
+     */
+    public Builder setCreateContainerSet(Set<Long> set) {
+      this.createContainerSet = set;
+      return this;
+    }
+    /**
      * Builds and returns DispatcherContext instance.
      *
      * @return DispatcherContext
      */
     public DispatcherContext build() {
-      return new DispatcherContext(term, logIndex, stage, readFromTmpFile);
+      return new DispatcherContext(term, logIndex, stage, readFromTmpFile,
+          createContainerSet);
     }
 
   }
