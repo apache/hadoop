@@ -107,12 +107,6 @@ final class FSDirAppendOp {
       }
       final INodeFile file = INodeFile.valueOf(inode, path, true);
 
-      // not support appending file with striped blocks
-      if (file.isStriped()) {
-        throw new UnsupportedOperationException(
-            "Cannot append to files with striped block " + path);
-      }
-
       BlockManager blockManager = fsd.getBlockManager();
       final BlockStoragePolicy lpPolicy = blockManager
           .getStoragePolicy("LAZY_PERSIST");
@@ -192,6 +186,10 @@ final class FSDirAppendOp {
 
     LocatedBlock ret = null;
     if (!newBlock) {
+      if (file.isStriped()) {
+        throw new UnsupportedOperationException(
+            "Append on EC file without new block is not supported.");
+      }
       FSDirectory fsd = fsn.getFSDirectory();
       ret = fsd.getBlockManager().convertLastBlockToUnderConstruction(file, 0);
       if (ret != null && delta != null) {
