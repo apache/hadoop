@@ -43,6 +43,8 @@ import java.io.StringReader;
 public class GpuDeviceInformationParser {
   private static final Logger LOG = LoggerFactory.getLogger(
       GpuDeviceInformationParser.class);
+  public static final String GPU_SCRIPT_REFERENCE = "GPU device detection " +
+      "script";
 
   private Unmarshaller unmarshaller = null;
   private XMLReader xmlReader = null;
@@ -70,7 +72,9 @@ public class GpuDeviceInformationParser {
       try {
         init();
       } catch (SAXException | ParserConfigurationException | JAXBException e) {
-        LOG.error("Exception while initialize parser", e);
+        String msg = "Exception while initializing parser for " +
+            GPU_SCRIPT_REFERENCE;
+        LOG.error(msg, e);
         throw new YarnException(e);
       }
     }
@@ -80,8 +84,10 @@ public class GpuDeviceInformationParser {
     try {
       return (GpuDeviceInformation) unmarshaller.unmarshal(source);
     } catch (JAXBException e) {
-      LOG.error("Exception while parsing xml", e);
-      throw new YarnException(e);
+      String msg = "Failed to parse XML output of " +
+          GPU_SCRIPT_REFERENCE + "!";
+      LOG.error(msg, e);
+      throw new YarnException(msg, e);
     }
   }
 }
