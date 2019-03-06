@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class GpuDiscoverer {
@@ -75,6 +76,29 @@ public class GpuDiscoverer {
     }
   }
 
+  private String getErrorMessageOfScriptExecution(String msg) {
+    return getFailedToExecuteScriptMessage() +
+        "! Exception message: " + msg;
+  }
+
+  private String getErrorMessageOfScriptExecutionThresholdReached() {
+    return getFailedToExecuteScriptMessage() + " for " +
+        MAX_REPEATED_ERROR_ALLOWED + " times, " +
+        "skipping following executions!";
+  }
+
+  private String getFailedToExecuteScriptMessage() {
+    return "Failed to execute " +
+        GpuDeviceInformationParser.GPU_SCRIPT_REFERENCE +
+        " (" + pathOfGpuBinary + ")";
+  }
+
+  private String getFailedToParseErrorMessage(String msg) {
+    return "Failed to parse XML output of " +
+        GpuDeviceInformationParser.GPU_SCRIPT_REFERENCE
+        + "( " + pathOfGpuBinary + ")" + msg;
+  }
+
   /**
    * Get GPU device information from system.
    * This need to be called after initialize.
@@ -90,10 +114,7 @@ public class GpuDiscoverer {
     validateConfOrThrowException();
 
     if (numOfErrorExecutionSinceLastSucceed == MAX_REPEATED_ERROR_ALLOWED) {
-      String msg =
-          "Failed to execute GPU device information detection script for "
-              + MAX_REPEATED_ERROR_ALLOWED
-              + " times, skip following executions.";
+      String msg = getErrorMessageOfScriptExecutionThresholdReached();
       LOG.error(msg);
       throw new YarnException(msg);
     }
@@ -107,16 +128,14 @@ public class GpuDiscoverer {
       return lastDiscoveredGpuInformation;
     } catch (IOException e) {
       numOfErrorExecutionSinceLastSucceed++;
-      String msg =
-          "Failed to execute " + pathOfGpuBinary + " exception message:" + e
-              .getMessage() + ", continue ...";
+      String msg = getErrorMessageOfScriptExecution(e.getMessage());
       if (LOG.isDebugEnabled()) {
         LOG.debug(msg);
       }
-      throw new YarnException(e);
+      throw new YarnException(msg, e);
     } catch (YarnException e) {
       numOfErrorExecutionSinceLastSucceed++;
-      String msg = "Failed to parse xml output" + e.getMessage();
+      String msg = getFailedToParseErrorMessage(e.getMessage());
       if (LOG.isDebugEnabled()) {
         LOG.warn(msg, e);
       }
