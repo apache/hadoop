@@ -31,7 +31,8 @@ import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineProvider;
+import org.apache.hadoop.hdds.scm.pipeline.MockRatisPipelineProvider;
 import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher;
 import org.apache.hadoop.hdds.server.events.EventQueue;
@@ -69,8 +70,13 @@ public class TestHealthyPipelineChillModeRule {
           HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK, true);
 
 
-      PipelineManager pipelineManager = new SCMPipelineManager(config,
+      SCMPipelineManager pipelineManager = new SCMPipelineManager(config,
           nodeManager, eventQueue);
+      PipelineProvider mockRatisProvider =
+          new MockRatisPipelineProvider(nodeManager,
+              pipelineManager.getStateManager(), config);
+      pipelineManager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
+          mockRatisProvider);
       SCMChillModeManager scmChillModeManager = new SCMChillModeManager(
           config, containers, pipelineManager, eventQueue);
 
@@ -109,8 +115,14 @@ public class TestHealthyPipelineChillModeRule {
           HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK, true);
 
 
-      PipelineManager pipelineManager = new SCMPipelineManager(config,
+      SCMPipelineManager pipelineManager = new SCMPipelineManager(config,
           nodeManager, eventQueue);
+
+      PipelineProvider mockRatisProvider =
+          new MockRatisPipelineProvider(nodeManager,
+              pipelineManager.getStateManager(), config);
+      pipelineManager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
+          mockRatisProvider);
 
       // Create 3 pipelines
       Pipeline pipeline1 =
@@ -178,8 +190,13 @@ public class TestHealthyPipelineChillModeRule {
           HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK, true);
 
 
-      PipelineManager pipelineManager = new SCMPipelineManager(config,
+      SCMPipelineManager pipelineManager = new SCMPipelineManager(config,
           nodeManager, eventQueue);
+      PipelineProvider mockRatisProvider =
+          new MockRatisPipelineProvider(nodeManager,
+              pipelineManager.getStateManager(), config);
+      pipelineManager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
+          mockRatisProvider);
 
       // Create 3 pipelines
       Pipeline pipeline1 =

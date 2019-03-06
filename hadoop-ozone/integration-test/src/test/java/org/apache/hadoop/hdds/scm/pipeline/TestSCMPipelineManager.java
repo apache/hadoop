@@ -71,8 +71,13 @@ public class TestSCMPipelineManager {
 
   @Test
   public void testPipelineReload() throws IOException {
-    PipelineManager pipelineManager =
+    SCMPipelineManager pipelineManager =
         new SCMPipelineManager(conf, nodeManager, new EventQueue());
+    PipelineProvider mockRatisProvider =
+        new MockRatisPipelineProvider(nodeManager,
+            pipelineManager.getStateManager(), conf);
+    pipelineManager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
+        mockRatisProvider);
     Set<Pipeline> pipelines = new HashSet<>();
     for (int i = 0; i < 5; i++) {
       Pipeline pipeline = pipelineManager
@@ -85,6 +90,11 @@ public class TestSCMPipelineManager {
     // new pipeline manager should be able to load the pipelines from the db
     pipelineManager =
         new SCMPipelineManager(conf, nodeManager, new EventQueue());
+    mockRatisProvider =
+        new MockRatisPipelineProvider(nodeManager,
+            pipelineManager.getStateManager(), conf);
+    pipelineManager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
+        mockRatisProvider);
     for (Pipeline p : pipelines) {
       pipelineManager.openPipeline(p.getId());
     }
@@ -102,8 +112,14 @@ public class TestSCMPipelineManager {
 
   @Test
   public void testRemovePipeline() throws IOException {
-    PipelineManager pipelineManager =
+    SCMPipelineManager pipelineManager =
         new SCMPipelineManager(conf, nodeManager, new EventQueue());
+    PipelineProvider mockRatisProvider =
+        new MockRatisPipelineProvider(nodeManager,
+            pipelineManager.getStateManager(), conf);
+    pipelineManager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
+        mockRatisProvider);
+
     Pipeline pipeline = pipelineManager
         .createPipeline(HddsProtos.ReplicationType.RATIS,
             HddsProtos.ReplicationFactor.THREE);
@@ -134,8 +150,14 @@ public class TestSCMPipelineManager {
   @Test
   public void testPipelineReport() throws IOException {
     EventQueue eventQueue = new EventQueue();
-    PipelineManager pipelineManager =
+    SCMPipelineManager pipelineManager =
         new SCMPipelineManager(conf, nodeManager, eventQueue);
+    PipelineProvider mockRatisProvider =
+        new MockRatisPipelineProvider(nodeManager,
+            pipelineManager.getStateManager(), conf);
+    pipelineManager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
+        mockRatisProvider);
+
     SCMChillModeManager scmChillModeManager =
         new SCMChillModeManager(new OzoneConfiguration(),
             new ArrayList<>(), pipelineManager, eventQueue);

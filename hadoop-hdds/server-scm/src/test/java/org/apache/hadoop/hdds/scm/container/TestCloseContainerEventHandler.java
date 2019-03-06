@@ -24,7 +24,8 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.MockRatisPipelineProvider;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineProvider;
 import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
@@ -49,7 +50,7 @@ public class TestCloseContainerEventHandler {
 
   private static Configuration configuration;
   private static MockNodeManager nodeManager;
-  private static PipelineManager pipelineManager;
+  private static SCMPipelineManager pipelineManager;
   private static SCMContainerManager containerManager;
   private static long size;
   private static File testDir;
@@ -67,6 +68,11 @@ public class TestCloseContainerEventHandler {
     nodeManager = new MockNodeManager(true, 10);
     pipelineManager =
         new SCMPipelineManager(configuration, nodeManager, eventQueue);
+    PipelineProvider mockRatisProvider =
+        new MockRatisPipelineProvider(nodeManager,
+            pipelineManager.getStateManager(), configuration);
+    pipelineManager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
+        mockRatisProvider);
     containerManager = new
         SCMContainerManager(configuration, nodeManager,
         pipelineManager, new EventQueue());

@@ -20,12 +20,16 @@ package org.apache.hadoop.hdds.scm.pipeline;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -81,12 +85,29 @@ public class TestRatisPipelineUtils {
     init(3);
     // make sure a pipelines is created
     waitForPipelines(1);
-    for (HddsDatanodeService dn : cluster.getHddsDatanodes()) {
+    List<HddsDatanodeService> dns = new ArrayList<>(cluster.getHddsDatanodes());
+
+    List<Pipeline> pipelines =
+        pipelineManager.getPipelines(HddsProtos.ReplicationType.RATIS,
+            HddsProtos.ReplicationFactor.THREE);
+    for (HddsDatanodeService dn : dns) {
       cluster.shutdownHddsDatanode(dn.getDatanodeDetails());
     }
+
+    // try creating another pipeline now
+    try {
+      RatisPipelineUtils.createPipeline(pipelines.get(0), conf);
+      Assert.fail("pipeline creation should fail after shutting down pipeline");
+    } catch (IOException ioe) {
+      // in case the pipeline creation fails, MultipleIOException is thrown
+      Assert.assertTrue(ioe instanceof MultipleIOException);
+    }
+
     // make sure pipelines is destroyed
     waitForPipelines(0);
-    cluster.startHddsDatanodes();
+    for (HddsDatanodeService dn : dns) {
+      cluster.restartHddsDatanode(dn.getDatanodeDetails(), false);
+    }
     // make sure pipelines is created after node start
     waitForPipelines(1);
   }

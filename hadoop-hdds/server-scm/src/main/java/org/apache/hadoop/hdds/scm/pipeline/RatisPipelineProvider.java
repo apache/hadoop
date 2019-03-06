@@ -143,7 +143,7 @@ public class RatisPipelineProvider implements PipelineProvider {
         .build();
   }
 
-  private void initializePipeline(Pipeline pipeline) throws IOException {
+  protected void initializePipeline(Pipeline pipeline) throws IOException {
     RatisPipelineUtils.createPipeline(pipeline, conf);
   }
 
