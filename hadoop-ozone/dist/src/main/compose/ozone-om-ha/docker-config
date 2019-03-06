@@ -15,11 +15,10 @@
 # limitations under the License.
 
 OZONE-SITE.XML_ozone.om.nodes=om1,om2,om3
-OZONE-SITE.XML_ozone.om.address.om1=ozoneManager1
-OZONE-SITE.XML_ozone.om.address.om2=ozoneManager2
-OZONE-SITE.XML_ozone.om.address.om3=ozoneManager3
+OZONE-SITE.XML_ozone.om.address.om1=om1
+OZONE-SITE.XML_ozone.om.address.om2=om2
+OZONE-SITE.XML_ozone.om.address.om3=om3
 OZONE-SITE.XML_ozone.om.ratis.enable=true
-OZONE-SITE.XML_ozone.om.http-address=ozoneManager:9874
 OZONE-SITE.XML_ozone.scm.names=scm
 OZONE-SITE.XML_ozone.enabled=True
 OZONE-SITE.XML_ozone.scm.datanode.id=/data/datanode.id
