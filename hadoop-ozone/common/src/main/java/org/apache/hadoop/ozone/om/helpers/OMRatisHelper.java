@@ -25,8 +25,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type;
 import org.apache.ratis.RaftConfigKeys;
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.conf.RaftProperties;
@@ -102,8 +100,8 @@ public final class OMRatisHelper {
     return Message.valueOf(ByteString.copyFrom(requestBytes));
   }
 
-  public static OMResponse getOMResponseFromRaftClientReply(RaftClientReply reply)
-      throws InvalidProtocolBufferException {
+  public static OMResponse getOMResponseFromRaftClientReply(
+      RaftClientReply reply) throws InvalidProtocolBufferException {
     byte[] bytes = reply.getMessage().getContent().toByteArray();
     return OMResponse.newBuilder(OMResponse.parseFrom(bytes))
         .setLeaderOMNodeId(reply.getReplierId())

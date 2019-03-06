@@ -112,8 +112,8 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
       if (leaderRaftPeerId.isPresent()) {
         notLeaderException = new NotLeaderException(raftPeerId.toString());
       } else {
-       notLeaderException = new NotLeaderException(
-           raftPeerId.toString(), leaderRaftPeerId.toString());
+        notLeaderException = new NotLeaderException(
+            raftPeerId.toString(), leaderRaftPeerId.toString());
       }
 
       if (LOG.isDebugEnabled()) {
