@@ -23,7 +23,7 @@ Test Timeout        2 minute
 
 *** Test Cases ***
 RpcClient with port
-   Test ozone shell       o3://            ozoneManager:9862     rpcwoport
+   Test ozone shell       o3://            om:9862     rpcwoport
 
 RpcClient without host
    Test ozone shell       o3://            ${EMPTY}              rpcwport

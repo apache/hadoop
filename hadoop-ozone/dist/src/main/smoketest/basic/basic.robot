@@ -27,7 +27,7 @@ ${DATANODE_HOST}        datanode
 Check webui static resources
     ${result} =        Execute                curl -s -I http://scm:9876/static/bootstrap-3.3.7/js/bootstrap.min.js
                        Should contain         ${result}    200
-    ${result} =        Execute                curl -s -I http://ozoneManager:9874/static/bootstrap-3.3.7/js/bootstrap.min.js
+    ${result} =        Execute                curl -s -I http://om:9874/static/bootstrap-3.3.7/js/bootstrap.min.js
                        Should contain         ${result}    200
 
 Start freon testing
