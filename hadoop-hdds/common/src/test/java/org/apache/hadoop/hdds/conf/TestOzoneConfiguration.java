@@ -19,7 +19,10 @@ package org.apache.hadoop.hdds.conf;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.junit.*;
+import org.junit.Rule;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.Assert;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.BufferedWriter;
@@ -70,7 +73,7 @@ public class TestOzoneConfiguration {
 
       Path fileResource = new Path(coreDefault.getAbsolutePath());
       conf.addResource(fileResource);
-      assertEq(conf.getAllPropertiesByTag("MYCUSTOMTAG")
+      Assert.assertEquals(conf.getAllPropertiesByTag("MYCUSTOMTAG")
           .getProperty("dfs.random.key"), "XYZ");
     }
 
@@ -86,11 +89,11 @@ public class TestOzoneConfiguration {
     }
 
     // Test if values are getting overridden even without tags being present
-    assertEq("3", conf.getAllPropertiesByTag("HDFS")
+    Assert.assertEquals("3", conf.getAllPropertiesByTag("HDFS")
         .getProperty("dfs.replication"));
-    assertEq("ABC", conf.getAllPropertiesByTag("MYCUSTOMTAG")
+    Assert.assertEquals("ABC", conf.getAllPropertiesByTag("MYCUSTOMTAG")
         .getProperty("dfs.random.key"));
-    assertEq("true", conf.getAllPropertiesByTag("YARN")
+    Assert.assertEquals("true", conf.getAllPropertiesByTag("YARN")
         .getProperty("dfs.cblock.trace.io"));
   }
 
@@ -136,10 +139,5 @@ public class TestOzoneConfiguration {
     out.write(tag);
     out.write("</tag>");
     out.write("</property>\n");
-  }
-
-  private static void assertEq(Object a, Object b) {
-    System.out.println("assertEq: " + a + ", " + b);
-    Assert.assertEquals(a, b);
   }
 }
