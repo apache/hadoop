@@ -228,6 +228,7 @@ enum Status {
     BUCKET_ENCRYPTION_KEY_NOT_FOUND = 40;
     UNKNOWN_CIPHER_SUITE = 41;
     INVALID_KMS_PROVIDER = 42;
+    TOKEN_CREATION_ERROR = 43;
 
 }
 
@@ -567,16 +568,24 @@ message DeleteKeyResponse {
 }
 
 message OMTokenProto {
-    optional uint32 version        = 1;
-    optional string owner          = 2;
-    optional string renewer        = 3;
-    optional string realUser       = 4;
-    optional uint64 issueDate      = 5;
-    optional uint64 maxDate        = 6;
-    optional uint32 sequenceNumber = 7;
-    optional uint32 masterKeyId    = 8;
-    optional uint64 expiryDate     = 9;
-    required string omCertSerialId = 10;
+    enum Type {
+      DELEGATION_TOKEN = 1;
+      S3TOKEN = 2;
+    };
+    required Type   type           = 1;
+    optional uint32 version        = 2;
+    optional string owner          = 3;
+    optional string renewer        = 4;
+    optional string realUser       = 5;
+    optional uint64 issueDate      = 6;
+    optional uint64 maxDate        = 7;
+    optional uint32 sequenceNumber = 8;
+    optional uint32 masterKeyId    = 9;
+    optional uint64 expiryDate     = 10;
+    optional string omCertSerialId = 11;
+    optional string accessKeyId    = 12;
+    optional string signature      = 13;
+    optional string strToSign      = 14;
 }
 
 message SecretKeyProto {

@@ -373,7 +373,9 @@ public final class OzoneConfigKeys {
       "ozone.acl.enabled";
   public static final boolean OZONE_ACL_ENABLED_DEFAULT =
       false;
-
+  public static final String OZONE_S3_TOKEN_MAX_LIFETIME_KEY =
+      "ozone.s3.token.max.lifetime";
+  public static final String OZONE_S3_TOKEN_MAX_LIFETIME_KEY_DEFAULT = "3m";
   //For technical reasons this is unused and hardcoded to the
   // OzoneFileSystem.initialize.
   public static final String OZONE_FS_ISOLATED_CLASSLOADER =
