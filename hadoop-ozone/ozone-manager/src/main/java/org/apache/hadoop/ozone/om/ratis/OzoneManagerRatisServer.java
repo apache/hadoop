@@ -88,8 +88,8 @@ public final class OzoneManagerRatisServer {
   private long roleCheckInitialDelayMs = 1000; // 1 second default
   private long roleCheckIntervalMs;
   private ReentrantReadWriteLock roleCheckLock = new ReentrantReadWriteLock();
-  private Optional<RaftPeerRole> cachedPeerRole;
-  private Optional<RaftPeerId> cachedLeaderPeerId;
+  private Optional<RaftPeerRole> cachedPeerRole = Optional.empty();
+  private Optional<RaftPeerId> cachedLeaderPeerId = Optional.empty();
 
   private static final AtomicLong CALL_ID_COUNTER = new AtomicLong();
 
