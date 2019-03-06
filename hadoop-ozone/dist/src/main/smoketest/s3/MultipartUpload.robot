@@ -52,7 +52,6 @@ Test Multipart Upload
 # upload we get error entity too small. So, considering further complete
 # multipart upload, uploading each part as 5MB file, exception is for last part
 
-    ${system} =         Evaluate    platform.system()    platform
     Run Keyword         Create Random file      5
     ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key multipartKey --part-number 1 --body /tmp/part1 --upload-id ${nextUploadID}
                         Should contain          ${result}    ETag
@@ -70,7 +69,6 @@ Test Multipart Upload Complete
                         Should contain          ${result}    UploadId
 
 #upload parts
-    ${system} =         Evaluate    platform.system()    platform
     Run Keyword         Create Random file      5
     ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key multipartKey1 --part-number 1 --body /tmp/part1 --upload-id ${uploadID}
     ${eTag1} =          Execute and checkrc     echo '${result}' | jq -r '.ETag'   0
@@ -163,7 +161,6 @@ Test list parts
                         Should contain          ${result}    UploadId
 
 #upload parts
-    ${system} =         Evaluate    platform.system()    platform
     Run Keyword         Create Random file      5
     ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key multipartKey5 --part-number 1 --body /tmp/part1 --upload-id ${uploadID}
     ${eTag1} =          Execute and checkrc     echo '${result}' | jq -r '.ETag'   0
