@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -35,7 +35,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
  * Audit log format is written as key=value pairs. Tab separated.
  */
 public class RMAuditLogger {
-  private static final Log LOG = LogFactory.getLog(RMAuditLogger.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RMAuditLogger.class);
 
   enum Keys {USER, OPERATION, TARGET, RESULT, IP, PERMISSIONS,
                     DESCRIPTION, APPID, APPATTEMPTID, CONTAINERID, 

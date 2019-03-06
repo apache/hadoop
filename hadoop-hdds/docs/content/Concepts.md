@@ -38,7 +38,7 @@ Where the server name is the name of a data node, the port is the data node HTTP
 
 Please look at the [command line interface]({{< ref "CommandShell.md#shell" >}})  for more info.
 
-Ozone supports both REST and RPC protocols. Clients can choose either of these protocols to communicate with Ozone. Please see the [client documentation]({{< ref "JavaApi.md" >}}) for more details.
+Ozone supports both (S3 compatible) REST and RPC protocols. Clients can choose either of these protocols to communicate with Ozone. Please see the [client documentation]({{< ref "JavaApi.md" >}}) for more details.
 
 Ozone separates namespace management and block space management; this helps
 ozone to scale much better. The namespace is managed by a daemon called
@@ -96,13 +96,13 @@ The data node where data is stored. SCM monitors these nodes via heartbeat.
 ### Clients
 Ozone ships with a set of clients. Ozone [CLI]({{< ref "CommandShell.md#shell" >}}) is the command line interface like 'hdfs' command.  [Freon] ({{< ref "Freon.md" >}}) is a  load generation tool for Ozone. 
 
-### REST Handler
-Ozone provides an RPC (Remote Procedure Call) as well as a  REST (Representational State Transfer)  interface. This allows clients to be written in many languages quickly. Ozone strives to maintain an API compatibility between REST and RPC.
-For most purposes, a client can make one line change to switch from REST to RPC or vice versa.   
+## S3 gateway
+
+Ozone provides and [S3 compatible REST gateway server]({{< ref "S3.md">}}). All of the main S3 features are supported and any S3 compatible client library can be used.
 
 ### Ozone File System
-Ozone file system (TODO: Add documentation) is a Hadoop compatible file system. This allows Hadoop services and applications like Hive and Spark to run against
-Ozone without any change.
+[Ozone file system]({{< ref "OzoneFS.md">}}) is a Hadoop compatible file system. This allows Hadoop services and applications like Hive and Spark to run against
+Ozone without any change. (For example: you can use `hdfs dfs -ls o3fs://...` instead of `hdfs dfs -ls hdfs://...`)
 
 ### Ozone Client
-This is similar to DFSClient in HDFS. This is the standard client to talk to Ozone. All other components that we have discussed so far rely on Ozone client. Ozone client supports both RPC and REST protocols.
+This is similar to DFSClient in HDFS. This is the standard client to talk to Ozone. All other components that we have discussed so far rely on Ozone client. Ozone client supports RPC protocol.

@@ -30,8 +30,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
@@ -52,8 +52,8 @@ import com.sun.jersey.api.client.ClientResponse;
 
 public class TestTimelineClientForATS1_5 {
 
-  protected static Log LOG = LogFactory
-    .getLog(TestTimelineClientForATS1_5.class);
+  private final static Logger LOG = LoggerFactory
+      .getLogger(TestTimelineClientForATS1_5.class);
 
   private TimelineClientImpl client;
   private static FileContext localFS;

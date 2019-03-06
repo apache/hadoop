@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hdds.security.x509.certificate.client;
 
+import org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest;
+import org.apache.hadoop.hdds.security.x509.exceptions.CertificateException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,8 +32,22 @@ public class DNCertificateClient extends DefaultCertificateClient {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(DNCertificateClient.class);
-  DNCertificateClient(SecurityConfig securityConfig, String component) {
-    super(securityConfig, component, LOG);
+  public DNCertificateClient(SecurityConfig securityConfig) {
+    super(securityConfig, LOG);
+  }
+
+  /**
+   * Returns a CSR builder that can be used to creates a Certificate signing
+   * request.
+   *
+   * @return CertificateSignRequest.Builder
+   */
+  @Override
+  public CertificateSignRequest.Builder getCSRBuilder()
+      throws CertificateException {
+    return super.getCSRBuilder()
+        .setDigitalEncryption(false)
+        .setDigitalSignature(false);
   }
 
   public Logger getLogger() {

@@ -18,14 +18,14 @@
 
 package org.apache.hadoop.yarn.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Appender;
 import org.apache.log4j.AppenderSkeleton;
-import org.apache.log4j.Logger;
 import org.apache.log4j.Priority;
+import org.apache.log4j.LogManager;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -34,20 +34,22 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.apache.hadoop.util.GenericsUtil.isLog4jLogger;
+
 public class TestAdHocLogDumper {
 
-  private static final Log LOG = LogFactory.getLog(TestAdHocLogDumper.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestAdHocLogDumper.class);
 
   @Test
   public void testDumpingSchedulerLogs() throws Exception {
 
     Map<Appender, Priority> levels = new HashMap<>();
-    String logHierarchy = TestAdHocLogDumper.class.getName();
     String logFilename = "test.log";
-    Log log = LogFactory.getLog(logHierarchy);
-    if (log instanceof Log4JLogger) {
-      for (Enumeration appenders = Logger.getRootLogger().getAllAppenders(); appenders
-        .hasMoreElements();) {
+    Logger logger = LoggerFactory.getLogger(TestAdHocLogDumper.class);
+    if (isLog4jLogger(this.getClass())) {
+      for (Enumeration appenders = LogManager.getRootLogger().
+          getAllAppenders(); appenders.hasMoreElements();) {
         Object obj = appenders.nextElement();
         if (obj instanceof AppenderSkeleton) {
           AppenderSkeleton appender = (AppenderSkeleton) obj;
@@ -56,7 +58,8 @@ public class TestAdHocLogDumper {
       }
     }
 
-    AdHocLogDumper dumper = new AdHocLogDumper(logHierarchy, logFilename);
+    AdHocLogDumper dumper = new AdHocLogDumper(this.getClass().getName(),
+        logFilename);
     dumper.dumpLogs("DEBUG", 1000);
     LOG.debug("test message 1");
     LOG.info("test message 2");
@@ -68,9 +71,9 @@ public class TestAdHocLogDumper {
     Assert.assertTrue(logFile.length() != 0);
 
     // make sure levels are set back to their original values
-    if (log instanceof Log4JLogger) {
-      for (Enumeration appenders = Logger.getRootLogger().getAllAppenders(); appenders
-        .hasMoreElements();) {
+    if (isLog4jLogger(this.getClass())) {
+      for (Enumeration appenders = LogManager.getRootLogger().
+          getAllAppenders(); appenders.hasMoreElements();) {
         Object obj = appenders.nextElement();
         if (obj instanceof AppenderSkeleton) {
           AppenderSkeleton appender = (AppenderSkeleton) obj;

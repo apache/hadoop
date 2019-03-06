@@ -25,8 +25,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -39,8 +39,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 @InterfaceStability.Unstable
 public class ConfiguredRMFailoverProxyProvider<T>
     implements RMFailoverProxyProvider<T> {
-  private static final Log LOG =
-      LogFactory.getLog(ConfiguredRMFailoverProxyProvider.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ConfiguredRMFailoverProxyProvider.class);
 
   private int currentProxyIndex = 0;
   Map<String, T> proxies = new HashMap<String, T>();

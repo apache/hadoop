@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugi
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -40,6 +41,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -74,6 +76,29 @@ public class GpuDiscoverer {
     }
   }
 
+  private String getErrorMessageOfScriptExecution(String msg) {
+    return getFailedToExecuteScriptMessage() +
+        "! Exception message: " + msg;
+  }
+
+  private String getErrorMessageOfScriptExecutionThresholdReached() {
+    return getFailedToExecuteScriptMessage() + " for " +
+        MAX_REPEATED_ERROR_ALLOWED + " times, " +
+        "skipping following executions!";
+  }
+
+  private String getFailedToExecuteScriptMessage() {
+    return "Failed to execute " +
+        GpuDeviceInformationParser.GPU_SCRIPT_REFERENCE +
+        " (" + pathOfGpuBinary + ")";
+  }
+
+  private String getFailedToParseErrorMessage(String msg) {
+    return "Failed to parse XML output of " +
+        GpuDeviceInformationParser.GPU_SCRIPT_REFERENCE
+        + "( " + pathOfGpuBinary + ")" + msg;
+  }
+
   /**
    * Get GPU device information from system.
    * This need to be called after initialize.
@@ -88,17 +113,8 @@ public class GpuDiscoverer {
       throws YarnException {
     validateConfOrThrowException();
 
-    if (null == pathOfGpuBinary) {
-      throw new YarnException(
-          "Failed to find GPU discovery executable, please double check "
-              + YarnConfiguration.NM_GPU_PATH_TO_EXEC + " setting.");
-    }
-
     if (numOfErrorExecutionSinceLastSucceed == MAX_REPEATED_ERROR_ALLOWED) {
-      String msg =
-          "Failed to execute GPU device information detection script for "
-              + MAX_REPEATED_ERROR_ALLOWED
-              + " times, skip following executions.";
+      String msg = getErrorMessageOfScriptExecutionThresholdReached();
       LOG.error(msg);
       throw new YarnException(msg);
     }
@@ -112,16 +128,14 @@ public class GpuDiscoverer {
       return lastDiscoveredGpuInformation;
     } catch (IOException e) {
       numOfErrorExecutionSinceLastSucceed++;
-      String msg =
-          "Failed to execute " + pathOfGpuBinary + " exception message:" + e
-              .getMessage() + ", continue ...";
+      String msg = getErrorMessageOfScriptExecution(e.getMessage());
       if (LOG.isDebugEnabled()) {
         LOG.debug(msg);
       }
-      throw new YarnException(e);
+      throw new YarnException(msg, e);
     } catch (YarnException e) {
       numOfErrorExecutionSinceLastSucceed++;
-      String msg = "Failed to parse xml output" + e.getMessage();
+      String msg = getFailedToParseErrorMessage(e.getMessage());
       if (LOG.isDebugEnabled()) {
         LOG.warn(msg, e);
       }
@@ -227,56 +241,88 @@ public class GpuDiscoverer {
     }
   }
 
-  public synchronized void initialize(Configuration conf) {
-    this.conf = conf;
+  public synchronized void initialize(Configuration config)
+      throws YarnException {
+    this.conf = config;
     numOfErrorExecutionSinceLastSucceed = 0;
-    String pathToExecutable = conf.get(YarnConfiguration.NM_GPU_PATH_TO_EXEC,
-        YarnConfiguration.DEFAULT_NM_GPU_PATH_TO_EXEC);
-    if (pathToExecutable.isEmpty()) {
-      pathToExecutable = DEFAULT_BINARY_NAME;
-    }
-
-    File binaryPath = new File(pathToExecutable);
-    if (!binaryPath.exists()) {
-      // When binary not exist, use default setting.
-      boolean found = false;
-      for (String dir : DEFAULT_BINARY_SEARCH_DIRS) {
-        binaryPath = new File(dir, DEFAULT_BINARY_NAME);
-        if (binaryPath.exists()) {
-          found = true;
-          pathOfGpuBinary = binaryPath.getAbsolutePath();
-          break;
-        }
-      }
-
-      if (!found) {
-        LOG.warn("Failed to locate binary at:" + binaryPath.getAbsolutePath()
-            + ", please double check [" + YarnConfiguration.NM_GPU_PATH_TO_EXEC
-            + "] setting. Now use " + "default binary:" + DEFAULT_BINARY_NAME);
-      }
-    } else{
-      // If path specified by user is a directory, use
-      if (binaryPath.isDirectory()) {
-        binaryPath = new File(binaryPath, DEFAULT_BINARY_NAME);
-        LOG.warn("Specified path is a directory, use " + DEFAULT_BINARY_NAME
-            + " under the directory, updated path-to-executable:" + binaryPath
-            .getAbsolutePath());
-      }
-      // Validated
-      pathOfGpuBinary = binaryPath.getAbsolutePath();
-    }
+    lookUpAutoDiscoveryBinary(config);
 
     // Try to discover GPU information once and print
     try {
       LOG.info("Trying to discover GPU information ...");
       GpuDeviceInformation info = getGpuDeviceInformation();
-      LOG.info(info.toString());
+      LOG.info("Discovered GPU information: " + info.toString());
     } catch (YarnException e) {
       String msg =
           "Failed to discover GPU information from system, exception message:"
               + e.getMessage() + " continue...";
       LOG.warn(msg);
     }
+  }
+
+  private void lookUpAutoDiscoveryBinary(Configuration config)
+      throws YarnException {
+    String configuredBinaryPath = config.get(
+        YarnConfiguration.NM_GPU_PATH_TO_EXEC, DEFAULT_BINARY_NAME);
+    if (configuredBinaryPath.isEmpty()) {
+      configuredBinaryPath = DEFAULT_BINARY_NAME;
+    }
+
+    File binaryPath;
+    File configuredBinaryFile = new File(configuredBinaryPath);
+    if (!configuredBinaryFile.exists()) {
+      binaryPath = lookupBinaryInDefaultDirs();
+    } else if (configuredBinaryFile.isDirectory()) {
+      binaryPath = handleConfiguredBinaryPathIsDirectory(configuredBinaryFile);
+    } else {
+      binaryPath = configuredBinaryFile;
+    }
+    pathOfGpuBinary = binaryPath.getAbsolutePath();
+  }
+
+  private File handleConfiguredBinaryPathIsDirectory(File configuredBinaryFile)
+      throws YarnException {
+    File binaryPath = new File(configuredBinaryFile, DEFAULT_BINARY_NAME);
+    if (!binaryPath.exists()) {
+      throw new YarnException("Failed to find GPU discovery executable, " +
+          "please double check "+ YarnConfiguration.NM_GPU_PATH_TO_EXEC +
+          " setting. The setting points to a directory but " +
+          "no file found in the directory with name:" + DEFAULT_BINARY_NAME);
+    } else {
+      LOG.warn("Specified path is a directory, use " + DEFAULT_BINARY_NAME
+          + " under the directory, updated path-to-executable:"
+          + binaryPath.getAbsolutePath());
+    }
+    return binaryPath;
+  }
+
+  private File lookupBinaryInDefaultDirs() throws YarnException {
+    final File lookedUpBinary = lookupBinaryInDefaultDirsInternal();
+    if (lookedUpBinary == null) {
+      throw new YarnException("Failed to find GPU discovery executable, " +
+          "please double check " + YarnConfiguration.NM_GPU_PATH_TO_EXEC +
+          " setting. Also tried to find the executable " +
+          "in the default directories: " + DEFAULT_BINARY_SEARCH_DIRS);
+    }
+    return lookedUpBinary;
+  }
+
+  private File lookupBinaryInDefaultDirsInternal() {
+    Set<String> triedBinaryPaths = Sets.newHashSet();
+    for (String dir : DEFAULT_BINARY_SEARCH_DIRS) {
+      File binaryPath = new File(dir, DEFAULT_BINARY_NAME);
+      if (binaryPath.exists()) {
+        return binaryPath;
+      } else {
+        triedBinaryPaths.add(binaryPath.getAbsolutePath());
+      }
+    }
+    LOG.warn("Failed to locate GPU device discovery binary, tried paths: "
+        + triedBinaryPaths + "! Please double check the value of config "
+        + YarnConfiguration.NM_GPU_PATH_TO_EXEC +
+        ". Using default binary: " + DEFAULT_BINARY_NAME);
+
+    return null;
   }
 
   @VisibleForTesting

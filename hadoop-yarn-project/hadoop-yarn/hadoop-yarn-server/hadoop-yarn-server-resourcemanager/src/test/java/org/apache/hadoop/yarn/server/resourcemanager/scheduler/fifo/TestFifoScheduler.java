@@ -31,8 +31,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -105,9 +107,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManag
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -115,7 +114,8 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 public class TestFifoScheduler {
-  private static final Log LOG = LogFactory.getLog(TestFifoScheduler.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestFifoScheduler.class);
   private final int GB = 1024;
 
   private ResourceManager resourceManager = null;
@@ -654,8 +654,7 @@ public class TestFifoScheduler {
   @Test(timeout = 60000)
   public void testAllocateContainerOnNodeWithoutOffSwitchSpecified()
       throws Exception {
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
 
     MockRM rm = new MockRM(conf);
     rm.start();
@@ -686,8 +685,7 @@ public class TestFifoScheduler {
 
   @Test(timeout = 60000)
   public void testFifoScheduling() throws Exception {
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     MockRM rm = new MockRM(conf);
     rm.start();
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);

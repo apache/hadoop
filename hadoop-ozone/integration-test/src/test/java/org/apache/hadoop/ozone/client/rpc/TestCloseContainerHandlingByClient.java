@@ -24,9 +24,6 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
-import org.apache.hadoop.hdds.scm.events.SCMEvents;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -43,8 +40,6 @@ import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
-import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -56,7 +51,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_SCM_WATCHER_TIMEOUT;
@@ -232,22 +226,32 @@ public class TestCloseContainerHandlingByClient {
   public void testMultiBlockWrites2() throws Exception {
     String keyName = getKeyName();
     OzoneOutputStream key =
-        createKey(keyName, ReplicationType.RATIS, 4 * blockSize);
+        createKey(keyName, ReplicationType.RATIS, 2 * blockSize);
     KeyOutputStream keyOutputStream =
         (KeyOutputStream) key.getOutputStream();
 
     Assert.assertTrue(key.getOutputStream() instanceof KeyOutputStream);
-    // With the initial size provided, it should have pre allocated 4 blocks
-    Assert.assertEquals(4, keyOutputStream.getStreamEntries().size());
+    // With the initial size provided, it should have pre allocated 2 blocks
+    Assert.assertEquals(2, keyOutputStream.getStreamEntries().size());
     String dataString =
         ContainerTestHelper.getFixedLengthString(keyString, (2 * blockSize));
     byte[] data = dataString.getBytes(UTF_8);
     key.write(data);
-    // 3 block are completely written to the DataNode in 3 blocks.
+    // 2 block are completely written to the DataNode in 3 blocks.
     // Data of length half of chunkSize resides in the chunkOutput stream buffer
     String dataString2 =
-        ContainerTestHelper.getFixedLengthString(keyString, chunkSize * 1 / 2);
+        ContainerTestHelper.getFixedLengthString(keyString, chunkSize);
     key.write(dataString2.getBytes(UTF_8));
+    key.flush();
+
+    String dataString3 =
+        ContainerTestHelper.getFixedLengthString(keyString, chunkSize);
+    key.write(dataString3.getBytes(UTF_8));
+    key.flush();
+
+    String dataString4 =
+        ContainerTestHelper.getFixedLengthString(keyString, chunkSize * 1 / 2);
+    key.write(dataString4.getBytes(UTF_8));
     //get the name of a valid container
     OmKeyArgs keyArgs = new OmKeyArgs.Builder().setVolumeName(volumeName)
         .setBucketName(bucketName).setType(HddsProtos.ReplicationType.RATIS)
@@ -260,15 +264,16 @@ public class TestCloseContainerHandlingByClient {
     // read the key from OM again and match the length.The length will still
     // be the equal to the original data size.
     OmKeyInfo keyInfo = cluster.getOzoneManager().lookupKey(keyArgs);
-    List<OmKeyLocationInfo> keyLocationInfos =
-        keyInfo.getKeyLocationVersions().get(0).getBlocksLatestVersionOnly();
     // Though we have written only block initially, the close will hit
     // closeContainerException and remaining data in the chunkOutputStream
     // buffer will be copied into a different allocated block and will be
     // committed.
-    Assert.assertEquals(dataString.concat(dataString2).getBytes(UTF_8).length,
+
+    String dataCommitted =
+        dataString.concat(dataString2).concat(dataString3).concat(dataString4);
+    Assert.assertEquals(dataCommitted.getBytes(UTF_8).length,
         keyInfo.getDataSize());
-    validateData(keyName, dataString.concat(dataString2).getBytes(UTF_8));
+    validateData(keyName, dataCommitted.getBytes(UTF_8));
   }
 
   @Test
@@ -337,55 +342,8 @@ public class TestCloseContainerHandlingByClient {
       containerIdList.add(info.getContainerID());
     }
     Assert.assertTrue(!containerIdList.isEmpty());
-    waitForContainerClose(containerIdList.toArray(new Long[0]));
-  }
-
-  private void waitForContainerClose(Long... containerIdList)
-      throws ContainerNotFoundException, PipelineNotFoundException,
-      TimeoutException, InterruptedException {
-    List<Pipeline> pipelineList = new ArrayList<>();
-    for (long containerID : containerIdList) {
-      cluster.getStorageContainerManager().getEventQueue()
-          .fireEvent(SCMEvents.CLOSE_CONTAINER,
-              ContainerID.valueof(containerID));
-      ContainerInfo container =
-          cluster.getStorageContainerManager().getContainerManager()
-              .getContainer(ContainerID.valueof(containerID));
-      Pipeline pipeline =
-          cluster.getStorageContainerManager().getPipelineManager()
-              .getPipeline(container.getPipelineID());
-      pipelineList.add(pipeline);
-      List<DatanodeDetails> datanodes = pipeline.getNodes();
-      for (DatanodeDetails details : datanodes) {
-        Assert.assertFalse(ContainerTestHelper
-            .isContainerClosed(cluster, containerID, details));
-        // send the order to close the container
-        cluster.getStorageContainerManager().getScmNodeManager()
-            .addDatanodeCommand(details.getUuid(),
-                new CloseContainerCommand(containerID, pipeline.getId()));
-      }
-    }
-    int index = 0;
-    for (long containerID : containerIdList) {
-      Pipeline pipeline = pipelineList.get(index);
-      List<DatanodeDetails> datanodes = pipeline.getNodes();
-      // Below condition avoids the case where container has been allocated
-      // but not yet been used by the client. In such a case container is never
-      // created.
-      if (datanodes.stream().anyMatch(dn -> ContainerTestHelper
-          .isContainerPresent(cluster, containerID, dn))) {
-        for (DatanodeDetails datanodeDetails : datanodes) {
-          GenericTestUtils.waitFor(() -> ContainerTestHelper
-                  .isContainerClosed(cluster, containerID, datanodeDetails),
-              500, 15 * 1000);
-          //double check if it's really closed
-          // (waitFor also throws an exception)
-          Assert.assertTrue(ContainerTestHelper
-              .isContainerClosed(cluster, containerID, datanodeDetails));
-        }
-      }
-      index++;
-    }
+    ContainerTestHelper
+        .waitForContainerClose(cluster, containerIdList.toArray(new Long[0]));
   }
 
   @Ignore // test needs to be fixed after close container is handled for

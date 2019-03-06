@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -178,7 +178,8 @@ import java.util.Set;
 @Private
 @Unstable
 public class ZKRMStateStore extends RMStateStore {
-  private static final Log LOG = LogFactory.getLog(ZKRMStateStore.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ZKRMStateStore.class);
 
   private static final String RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME =
       "RMDelegationTokensRoot";

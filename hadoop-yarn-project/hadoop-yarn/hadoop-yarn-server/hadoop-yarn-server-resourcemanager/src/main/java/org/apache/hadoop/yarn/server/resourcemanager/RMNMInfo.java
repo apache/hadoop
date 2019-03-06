@@ -27,8 +27,8 @@ import java.util.List;
 import javax.management.NotCompliantMBeanException;
 import javax.management.StandardMBean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -39,7 +39,8 @@ import org.eclipse.jetty.util.ajax.JSON;
  * JMX bean listing statuses of all node managers.
  */
 public class RMNMInfo implements RMNMInfoBeans {
-  private static final Log LOG = LogFactory.getLog(RMNMInfo.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RMNMInfo.class);
   private RMContext rmContext;
   private ResourceScheduler scheduler;
 

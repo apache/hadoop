@@ -26,8 +26,8 @@ import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import javax.ws.rs.core.MediaType;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -52,8 +52,8 @@ import com.sun.jersey.api.client.WebResource;
 @Unstable
 public abstract class TimelineWriter implements Flushable {
 
-  private static final Log LOG = LogFactory
-      .getLog(TimelineWriter.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TimelineWriter.class);
 
   private UserGroupInformation authUgi;
   private Client client;

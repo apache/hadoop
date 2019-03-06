@@ -42,6 +42,7 @@ message AllocateScmBlockRequestProto {
   required hadoop.hdds.ReplicationFactor factor = 3;
   required string owner = 4;
   optional string traceID = 5;
+  optional ExcludeListProto excludeList = 6;
 
 }
 

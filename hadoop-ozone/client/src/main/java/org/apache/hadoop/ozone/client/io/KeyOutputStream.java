@@ -21,20 +21,22 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FileEncryptionInfo;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ChecksumType;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.om.helpers.*;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
-import org.apache.hadoop.hdds.scm.container.common.helpers
-    .StorageContainerException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.ratis.protocol.AlreadyClosedException;
 import org.apache.ratis.protocol.RaftRetryFailureException;
@@ -46,7 +48,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.Collection;
 import java.util.ListIterator;
 import java.util.concurrent.TimeoutException;
 
@@ -84,7 +86,7 @@ public class KeyOutputStream extends OutputStream {
   private List<ByteBuffer> bufferList;
   private OmMultipartCommitUploadPartInfo commitUploadPartInfo;
   private FileEncryptionInfo feInfo;
-
+  private ExcludeList excludeList;
   /**
    * A constructor for testing purpose only.
    */
@@ -181,6 +183,7 @@ public class KeyOutputStream extends OutputStream {
     Preconditions.checkState(streamBufferMaxSize % streamBufferFlushSize == 0);
     Preconditions.checkState(blockSize % streamBufferMaxSize == 0);
     this.bufferList = new ArrayList<>();
+    this.excludeList = new ExcludeList();
   }
 
   /**
@@ -307,9 +310,8 @@ public class KeyOutputStream extends OutputStream {
           current.write(b, off, writeLen);
         }
       } catch (IOException ioe) {
-        boolean retryFailure = checkForRetryFailure(ioe);
-        if (checkIfContainerIsClosed(ioe) || checkIfTimeoutException(ioe)
-            || retryFailure) {
+        Throwable t = checkForException(ioe);
+        if (t != null) {
           // for the current iteration, totalDataWritten - currentPos gives the
           // amount of data already written to the buffer
 
@@ -321,7 +323,7 @@ public class KeyOutputStream extends OutputStream {
           writeLen = retry ? (int) len :
               (int) (current.getWrittenDataLength() - currentPos);
           LOG.debug("writeLen {}, total len {}", writeLen, len);
-          handleException(current, currentStreamIndex, retryFailure);
+          handleException(current, currentStreamIndex, t);
         } else {
           throw ioe;
         }
@@ -340,8 +342,10 @@ public class KeyOutputStream extends OutputStream {
    * Discards the subsequent pre allocated blocks and removes the streamEntries
    * from the streamEntries list for the container which is closed.
    * @param containerID id of the closed container
+   * @param pipelineId id of the associated pipeline
    */
-  private void discardPreallocatedBlocks(long containerID) {
+  private void discardPreallocatedBlocks(long containerID,
+      PipelineID pipelineId) {
     // currentStreamIndex < streamEntries.size() signifies that, there are still
     // pre allocated blocks available.
     if (currentStreamIndex < streamEntries.size()) {
@@ -349,8 +353,10 @@ public class KeyOutputStream extends OutputStream {
           streamEntries.listIterator(currentStreamIndex);
       while (streamEntryIterator.hasNext()) {
         BlockOutputStreamEntry streamEntry = streamEntryIterator.next();
-        if (streamEntry.getBlockID().getContainerID()
-            == containerID && streamEntry.getCurrentPosition() == 0) {
+        if (((pipelineId != null && streamEntry.getPipeline().getId()
+            .equals(pipelineId)) || (containerID != -1
+            && streamEntry.getBlockID().getContainerID() == containerID))
+            && streamEntry.getCurrentPosition() == 0) {
           streamEntryIterator.remove();
         }
       }
@@ -382,17 +388,39 @@ public class KeyOutputStream extends OutputStream {
    *
    * @param streamEntry StreamEntry
    * @param streamIndex Index of the entry
-   * @param retryFailure if true the xceiverClient needs to be invalidated in
-   *                     the client cache.
+   * @param exception actual exception that occurred
    * @throws IOException Throws IOException if Write fails
    */
   private void handleException(BlockOutputStreamEntry streamEntry,
-      int streamIndex, boolean retryFailure) throws IOException {
+      int streamIndex, Throwable exception) throws IOException {
+    boolean retryFailure = checkForRetryFailure(exception);
+    boolean closedContainerException = false;
+    if (!retryFailure) {
+      closedContainerException = checkIfContainerIsClosed(exception);
+    }
+    PipelineID pipelineId = null;
     long totalSuccessfulFlushedData =
         streamEntry.getTotalSuccessfulFlushedData();
     //set the correct length for the current stream
     streamEntry.setCurrentPosition(totalSuccessfulFlushedData);
     long bufferedDataLen = computeBufferData();
+    LOG.warn("Encountered exception {}", exception);
+    LOG.info(
+        "The last committed block length is {}, uncommitted data length is {}",
+        totalSuccessfulFlushedData, bufferedDataLen);
+    Preconditions.checkArgument(bufferedDataLen <= streamBufferMaxSize);
+    long containerId = streamEntry.getBlockID().getContainerID();
+    Collection<DatanodeDetails> failedServers = streamEntry.getFailedServers();
+    Preconditions.checkNotNull(failedServers);
+    if (!failedServers.isEmpty()) {
+      excludeList.addDatanodes(failedServers);
+    }
+    if (checkIfContainerIsClosed(exception)) {
+      excludeList.addConatinerId(ContainerID.valueof(containerId));
+    } else if (retryFailure || exception instanceof TimeoutException) {
+      pipelineId = streamEntry.getPipeline().getId();
+      excludeList.addPipeline(pipelineId);
+    }
     // just clean up the current stream.
     streamEntry.cleanup(retryFailure);
     if (bufferedDataLen > 0) {
@@ -405,21 +433,21 @@ public class KeyOutputStream extends OutputStream {
       streamEntries.remove(streamIndex);
       currentStreamIndex -= 1;
     }
-    // discard subsequent pre allocated blocks from the streamEntries list
-    // from the closed container
-    discardPreallocatedBlocks(streamEntry.getBlockID().getContainerID());
-  }
 
-  private boolean checkIfContainerIsClosed(IOException ioe) {
-    if (ioe.getCause() != null) {
-      return checkForException(ioe, ContainerNotOpenException.class) || Optional
-          .of(ioe.getCause())
-          .filter(e -> e instanceof StorageContainerException)
-          .map(e -> (StorageContainerException) e)
-          .filter(sce -> sce.getResult() == Result.CLOSED_CONTAINER_IO)
-          .isPresent();
+    if (closedContainerException) {
+      // discard subsequent pre allocated blocks from the streamEntries list
+      // from the closed container
+      discardPreallocatedBlocks(streamEntry.getBlockID().getContainerID(),
+          null);
+    } else {
+      // In case there is timeoutException or Watch for commit happening over
+      // majority or the client connection failure to the leader in the
+      // pipeline, just discard all the preallocated blocks on this pipeline.
+      // Next block allocation will happen with excluding this specific pipeline
+      // This will ensure if 2 way commit happens , it cannot span over multiple
+      // blocks
+      discardPreallocatedBlocks(-1, pipelineId);
     }
-    return false;
   }
 
   /**
@@ -427,31 +455,27 @@ public class KeyOutputStream extends OutputStream {
    * In case of retry failure, ratis client throws RaftRetryFailureException
    * and all succeeding operations are failed with AlreadyClosedException.
    */
-  private boolean checkForRetryFailure(IOException ioe) {
-    return checkForException(ioe, RaftRetryFailureException.class,
-        AlreadyClosedException.class);
+  private boolean checkForRetryFailure(Throwable t) {
+    return t instanceof RaftRetryFailureException
+        || t instanceof AlreadyClosedException;
   }
 
-  private boolean checkForException(IOException ioe, Class... classes) {
+  private boolean checkIfContainerIsClosed(Throwable t) {
+    return t instanceof ContainerNotOpenException;
+  }
+
+  private Throwable checkForException(IOException ioe) {
     Throwable t = ioe.getCause();
     while (t != null) {
-      for (Class cls : classes) {
+      for (Class<? extends Exception> cls : OzoneClientUtils
+          .getExceptionList()) {
         if (cls.isInstance(t)) {
-          return true;
+          return t;
         }
       }
       t = t.getCause();
     }
-    return false;
-  }
-
-  private boolean checkIfTimeoutException(IOException ioe) {
-    if (ioe.getCause() != null) {
-      return Optional.of(ioe.getCause())
-          .filter(e -> e instanceof TimeoutException).isPresent();
-    } else {
-      return false;
-    }
+    return null;
   }
 
   private long getKeyLength() {
@@ -469,7 +493,8 @@ public class KeyOutputStream extends OutputStream {
    * @throws IOException
    */
   private void allocateNewBlock(int index) throws IOException {
-    OmKeyLocationInfo subKeyInfo = omClient.allocateBlock(keyArgs, openID);
+    OmKeyLocationInfo subKeyInfo =
+        omClient.allocateBlock(keyArgs, openID, excludeList);
     addKeyLocationInfo(subKeyInfo);
   }
 
@@ -495,19 +520,25 @@ public class KeyOutputStream extends OutputStream {
     BlockOutputStreamEntry entry = streamEntries.get(streamIndex);
     if (entry != null) {
       try {
+        Collection<DatanodeDetails> failedServers = entry.getFailedServers();
+
+        // failed servers can be null in case there is no data written in the
+        // stream
+        if (failedServers != null && !failedServers.isEmpty()) {
+          excludeList.addDatanodes(failedServers);
+        }
         if (close) {
           entry.close();
         } else {
           entry.flush();
         }
       } catch (IOException ioe) {
-        boolean retryFailure = checkForRetryFailure(ioe);
-        if (checkIfContainerIsClosed(ioe) || checkIfTimeoutException(ioe)
-            || retryFailure) {
+        Throwable t = checkForException(ioe);
+        if (t != null) {
           // This call will allocate a new streamEntry and write the Data.
           // Close needs to be retried on the newly allocated streamEntry as
           // as well.
-          handleException(entry, streamIndex, retryFailure);
+          handleException(entry, streamIndex, t);
           handleFlushOrClose(close);
         } else {
           throw ioe;
@@ -562,6 +593,11 @@ public class KeyOutputStream extends OutputStream {
 
   public FileEncryptionInfo getFileEncryptionInfo() {
     return feInfo;
+  }
+
+  @VisibleForTesting
+  public ExcludeList getExcludeList() {
+    return excludeList;
   }
 
   /**

@@ -45,8 +45,8 @@ import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 
 import com.google.common.collect.Sets;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.net.NetworkTopology;
@@ -180,7 +180,8 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 public class TestCapacityScheduler extends CapacitySchedulerTestBase {
-  private static final Log LOG = LogFactory.getLog(TestCapacityScheduler.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestCapacityScheduler.class);
   private final static ContainerUpdates NULL_UPDATE_REQUESTS =
       new ContainerUpdates();
   private ResourceManager resourceManager = null;

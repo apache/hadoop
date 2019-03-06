@@ -144,6 +144,8 @@ public final class CertificateSignRequest {
     private SecurityConfig config;
     private List<GeneralName> altNames;
     private Boolean ca = false;
+    private boolean digitalSignature;
+    private boolean digitalEncryption;
 
     public CertificateSignRequest.Builder setConfiguration(
         Configuration configuration) {
@@ -168,6 +170,16 @@ public final class CertificateSignRequest {
 
     public CertificateSignRequest.Builder setScmID(String s) {
       this.scmID = s;
+      return this;
+    }
+
+    public Builder setDigitalSignature(boolean dSign) {
+      this.digitalSignature = dSign;
+      return this;
+    }
+
+    public Builder setDigitalEncryption(boolean dEncryption) {
+      this.digitalEncryption = dEncryption;
       return this;
     }
 
@@ -200,8 +212,13 @@ public final class CertificateSignRequest {
     }
 
     private Extension getKeyUsageExtension() throws IOException {
-      int keyUsageFlag = KeyUsage.digitalSignature | KeyUsage.keyEncipherment
-          | KeyUsage.dataEncipherment | KeyUsage.keyAgreement;
+      int keyUsageFlag = KeyUsage.keyAgreement;
+      if(digitalEncryption){
+        keyUsageFlag |= KeyUsage.keyEncipherment | KeyUsage.dataEncipherment;
+      }
+      if(digitalSignature) {
+        keyUsageFlag |= KeyUsage.digitalSignature;
+      }
 
       if (ca) {
         keyUsageFlag |= KeyUsage.keyCertSign | KeyUsage.cRLSign;

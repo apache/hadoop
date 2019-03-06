@@ -23,12 +23,12 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMTokenProto;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
-import org.apache.hadoop.security.token.Token;
 
 /**
  * The token identifier for Ozone Master.
@@ -39,6 +39,7 @@ public class OzoneTokenIdentifier extends
     AbstractDelegationTokenIdentifier {
 
   public final static Text KIND_NAME = new Text("OzoneToken");
+  private String omCertSerialId;
 
   /**
    * Create an empty delegation token identifier.
@@ -67,18 +68,6 @@ public class OzoneTokenIdentifier extends
   }
 
   /**
-   * Default TrivialRenewer.
-   */
-  @InterfaceAudience.Private
-  public static class Renewer extends Token.TrivialRenewer {
-
-    @Override
-    protected Text getKind() {
-      return KIND_NAME;
-    }
-  }
-
-  /**
    * Overrides default implementation to write using Protobuf.
    *
    * @param out output stream
@@ -93,7 +82,9 @@ public class OzoneTokenIdentifier extends
         .setIssueDate(getIssueDate())
         .setMaxDate(getMaxDate())
         .setSequenceNumber(getSequenceNumber())
-        .setMasterKeyId(getMasterKeyId()).build();
+        .setMasterKeyId(getMasterKeyId())
+        .setOmCertSerialId(getOmCertSerialId())
+        .build();
     out.write(token.toByteArray());
   }
 
@@ -113,6 +104,7 @@ public class OzoneTokenIdentifier extends
     setMaxDate(token.getMaxDate());
     setSequenceNumber(token.getSequenceNumber());
     setMasterKeyId(token.getMasterKeyId());
+    setOmCertSerialId(token.getOmCertSerialId());
   }
 
   /**
@@ -130,6 +122,7 @@ public class OzoneTokenIdentifier extends
     identifier.setIssueDate(token.getIssueDate());
     identifier.setSequenceNumber(token.getSequenceNumber());
     identifier.setMasterKeyId(token.getMasterKeyId());
+    identifier.setOmCertSerialId(token.getOmCertSerialId());
     return identifier;
   }
 
@@ -169,7 +162,18 @@ public class OzoneTokenIdentifier extends
     if (!(obj instanceof OzoneTokenIdentifier)) {
       return false;
     }
-    return super.equals(obj);
+    OzoneTokenIdentifier that = (OzoneTokenIdentifier) obj;
+    return new EqualsBuilder()
+        .append(getOmCertSerialId(), that.getOmCertSerialId())
+        .append(getMaxDate(), that.getMaxDate())
+        .append(getIssueDate(), that.getIssueDate())
+        .append(getMasterKeyId(), that.getMasterKeyId())
+        .append(getOwner(), that.getOwner())
+        .append(getRealUser(), that.getRealUser())
+        .append(getRenewer(), that.getRenewer())
+        .append(getKind(), that.getKind())
+        .append(getSequenceNumber(), that.getSequenceNumber())
+        .build();
   }
 
   /**
@@ -213,5 +217,13 @@ public class OzoneTokenIdentifier extends
     public String getTrackingId() {
       return trackingId;
     }
+  }
+
+  public String getOmCertSerialId() {
+    return omCertSerialId;
+  }
+
+  public void setOmCertSerialId(String omCertSerialId) {
+    this.omCertSerialId = omCertSerialId;
   }
 }

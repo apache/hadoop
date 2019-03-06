@@ -66,6 +66,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
 
     <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
       <groupId>io.swagger</groupId>
       <artifactId>swagger-annotations</artifactId>
       <version>1.5.9</version>

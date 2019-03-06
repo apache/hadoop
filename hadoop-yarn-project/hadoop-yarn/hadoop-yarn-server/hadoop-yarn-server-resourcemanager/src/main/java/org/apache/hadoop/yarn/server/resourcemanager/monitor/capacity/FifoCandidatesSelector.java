@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -40,8 +40,8 @@ import java.util.TreeSet;
 
 public class FifoCandidatesSelector
     extends PreemptionCandidatesSelector {
-  private static final Log LOG =
-      LogFactory.getLog(FifoCandidatesSelector.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FifoCandidatesSelector.class);
   private PreemptableResourceCalculator preemptableAmountCalculator;
   private boolean allowQueuesBalanceAfterAllQueuesSatisfied;
 

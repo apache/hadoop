@@ -82,6 +82,7 @@ public class CertificateException extends SCMSecurityException {
     CRYPTO_SIGN_ERROR,
     CERTIFICATE_ERROR,
     BOOTSTRAP_ERROR,
+    CSR_ERROR,
     CRYPTO_SIGNATURE_VERIFICATION_ERROR
   }
 }

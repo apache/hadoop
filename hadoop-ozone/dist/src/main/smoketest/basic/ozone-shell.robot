@@ -22,17 +22,8 @@ Test Timeout        2 minute
 *** Variables ***
 
 *** Test Cases ***
-RestClient without http port
-   Test ozone shell       http://          ozoneManager          restwoport
-
-RestClient with http port
-   Test ozone shell       http://          ozoneManager:9874     restwport
-
-RestClient without host name
-   Test ozone shell       http://          ${EMPTY}              restwohost
-
 RpcClient with port
-   Test ozone shell       o3://            ozoneManager:9862     rpcwoport
+   Test ozone shell       o3://            om:9862     rpcwoport
 
 RpcClient without host
    Test ozone shell       o3://            ${EMPTY}              rpcwport

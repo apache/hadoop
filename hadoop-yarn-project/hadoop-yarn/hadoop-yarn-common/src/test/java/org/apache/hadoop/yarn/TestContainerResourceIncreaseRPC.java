@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
@@ -74,7 +74,7 @@ import java.util.List;
  */
 public class TestContainerResourceIncreaseRPC {
 
-  static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       TestContainerResourceIncreaseRPC.class);
 
   @Test
@@ -188,7 +188,7 @@ public class TestContainerResourceIncreaseRPC {
         // make the thread sleep to look like its not going to respond
         Thread.sleep(10000);
       } catch (Exception e) {
-        LOG.error(e);
+        LOG.error(e.toString());
         throw new YarnException(e);
       }
       throw new YarnException("Shouldn't happen!!");
