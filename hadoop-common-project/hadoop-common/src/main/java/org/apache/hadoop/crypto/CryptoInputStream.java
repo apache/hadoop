@@ -740,6 +740,7 @@ public class CryptoInputStream extends FilterInputStream implements
     case StreamCapabilities.READAHEAD:
     case StreamCapabilities.DROPBEHIND:
     case StreamCapabilities.UNBUFFER:
+    case StreamCapabilities.READBYTEBUFFER:
       return true;
     default:
       return false;

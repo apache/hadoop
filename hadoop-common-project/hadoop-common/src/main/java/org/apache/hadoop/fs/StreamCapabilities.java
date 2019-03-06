@@ -60,6 +60,12 @@ public interface StreamCapabilities {
   String UNBUFFER = "in:unbuffer";
 
   /**
+   * Stream read(ByteBuffer) capability implemented by
+   * {@link ByteBufferReadable#read(java.nio.ByteBuffer)}.
+   */
+  String READBYTEBUFFER = "in:readbytebuffer";
+
+  /**
    * Capabilities that a stream can support and be queried for.
    */
   @Deprecated
