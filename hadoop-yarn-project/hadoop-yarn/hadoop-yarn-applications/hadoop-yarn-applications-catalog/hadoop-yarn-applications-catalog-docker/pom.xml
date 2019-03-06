@@ -56,6 +56,7 @@
         <file>
           <exists>/var/run/docker.sock</exists>
         </file>
+        <os><family>linux</family></os>
       </activation>
       <id>application-catalog-docker-image</id>
       <build>
