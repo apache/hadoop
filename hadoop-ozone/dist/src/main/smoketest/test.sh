@@ -45,7 +45,7 @@ wait_for_datanodes(){
 
          #Print it only if a number. Could be not a number if scm is not yet started
          if [[ "$datanodes" ]]; then
-            echo "$datanodes datanode is up and healhty (until now)"
+            echo "$datanodes datanode is up and healthy (until now)"
          fi
       fi
 
