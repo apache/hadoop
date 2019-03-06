@@ -27,9 +27,10 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.scm.HddsTestUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
+import org.apache.hadoop.hdds.scm.pipeline.MockRatisPipelineProvider;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineProvider;
 import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher;
 import org.apache.hadoop.hdds.server.events.EventQueue;
@@ -51,7 +52,7 @@ public class TestOneReplicaPipelineChillModeRule {
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
   private OneReplicaPipelineChillModeRule rule;
-  private PipelineManager pipelineManager;
+  private SCMPipelineManager pipelineManager;
   private EventQueue eventQueue;
 
 
@@ -71,6 +72,12 @@ public class TestOneReplicaPipelineChillModeRule {
     pipelineManager =
         new SCMPipelineManager(ozoneConfiguration, mockNodeManager,
             eventQueue);
+
+    PipelineProvider mockRatisProvider =
+        new MockRatisPipelineProvider(mockNodeManager,
+            pipelineManager.getStateManager(), ozoneConfiguration);
+    pipelineManager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
+        mockRatisProvider);
 
     createPipelines(pipelineFactorThreeCount,
         HddsProtos.ReplicationFactor.THREE);
