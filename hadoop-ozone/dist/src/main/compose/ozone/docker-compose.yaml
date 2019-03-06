@@ -27,7 +27,7 @@ services:
       command: ["/opt/hadoop/bin/ozone","datanode"]
       env_file:
         - ./docker-config
-   ozoneManager:
+   om:
       image: apache/hadoop-runner
       privileged: true #required by the profiler
       volumes:
@@ -35,7 +35,7 @@ services:
       ports:
          - 9874:9874
       environment:
-         ENSURE_OM_INITIALIZED: /data/metadata/ozoneManager/current/VERSION
+         ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
          WAITFOR: scm:9876
       env_file:
           - ./docker-config

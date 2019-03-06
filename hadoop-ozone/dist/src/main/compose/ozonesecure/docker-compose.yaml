@@ -44,7 +44,7 @@ services:
     command: ["/opt/hadoop/bin/ozone","datanode"]
     env_file:
       - docker-config
-  ozoneManager:
+  om:
     image: apache/hadoop-runner
     hostname: om
     volumes:
