@@ -21,6 +21,7 @@ package org.apache.hadoop.hdds.scm.server;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.apache.hadoop.hdds.scm.chillmode.ChillModeHandler;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.server.events.EventQueue;
@@ -42,7 +43,9 @@ public class TestSCMClientProtocolServer {
     config = new OzoneConfiguration();
     eventQueue = new EventQueue();
     scmClientProtocolServer = new SCMClientProtocolServer(config, null);
-    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, scmClientProtocolServer);
+    ChillModeHandler chillModeHandler = new ChillModeHandler(config,
+        scmClientProtocolServer, null, null);
+    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, chillModeHandler);
   }
 
   @After

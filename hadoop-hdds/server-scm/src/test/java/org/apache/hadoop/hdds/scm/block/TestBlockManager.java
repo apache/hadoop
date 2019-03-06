@@ -101,7 +101,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
 
     eventQueue = new EventQueue();
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS,
-        (BlockManagerImpl) scm.getScmBlockManager());
+        scm.getChillModeHandler());
     eventQueue.addHandler(SCMEvents.START_REPLICATION, this);
     CloseContainerEventHandler closeContainerHandler =
         new CloseContainerEventHandler(pipelineManager, mapping);

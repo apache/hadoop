@@ -73,6 +73,7 @@ public class SCMChillModeManager {
     this.isChillModeEnabled = conf.getBoolean(
         HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED,
         HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED_DEFAULT);
+
     if (isChillModeEnabled) {
       ContainerChillModeRule containerChillModeRule =
           new ContainerChillModeRule(config, allContainers, this);

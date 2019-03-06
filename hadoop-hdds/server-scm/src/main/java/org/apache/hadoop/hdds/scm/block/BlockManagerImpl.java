@@ -66,8 +66,7 @@ import java.util.function.Predicate;
 
 
 /** Block Manager manages the block access for SCM. */
-public class BlockManagerImpl implements EventHandler<Boolean>,
-    BlockManager, BlockmanagerMXBean {
+public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   private static final Logger LOG =
       LoggerFactory.getLogger(BlockManagerImpl.class);
   // TODO : FIX ME : Hard coding the owner.
@@ -337,8 +336,8 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
   }
 
   @Override
-  public void onMessage(Boolean inChillMode, EventPublisher publisher) {
-    this.chillModePrecheck.setInChillMode(inChillMode);
+  public void setChillModeStatus(boolean chillModeStatus) {
+    this.chillModePrecheck.setInChillMode(chillModeStatus);
   }
 
   /**

@@ -40,6 +40,7 @@ import org.apache.hadoop.hdds.scm.block.BlockManager;
 import org.apache.hadoop.hdds.scm.block.BlockManagerImpl;
 import org.apache.hadoop.hdds.scm.block.DeletedBlockLogImpl;
 import org.apache.hadoop.hdds.scm.block.PendingDeleteHandler;
+import org.apache.hadoop.hdds.scm.chillmode.ChillModeHandler;
 import org.apache.hadoop.hdds.scm.chillmode.SCMChillModeManager;
 import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler;
 import org.apache.hadoop.hdds.scm.container.CloseContainerEventHandler;
@@ -202,6 +203,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
 
   private JvmPauseMonitor jvmPauseMonitor;
   private final OzoneConfiguration configuration;
+  private final ChillModeHandler chillModeHandler;
 
   /**
    * Creates a new StorageContainerManager. Configuration will be
@@ -336,6 +338,9 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     clientProtocolServer = new SCMClientProtocolServer(conf, this);
     httpServer = new StorageContainerManagerHttpServer(conf);
 
+    chillModeHandler = new ChillModeHandler(configuration,
+        clientProtocolServer, scmBlockManager, replicationStatus);
+
     eventQueue.addHandler(SCMEvents.DATANODE_COMMAND, scmNodeManager);
     eventQueue.addHandler(SCMEvents.RETRIABLE_DATANODE_COMMAND, scmNodeManager);
     eventQueue.addHandler(SCMEvents.NODE_REPORT, nodeReportHandler);
@@ -350,20 +355,13 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         nonHealthyToHealthyNodeHandler);
     eventQueue.addHandler(SCMEvents.DEAD_NODE, deadNodeHandler);
     eventQueue.addHandler(SCMEvents.CMD_STATUS_REPORT, cmdStatusReportHandler);
-    eventQueue.addHandler(SCMEvents.START_REPLICATION,
-        replicationStatus.getReplicationStatusListener());
     eventQueue
         .addHandler(SCMEvents.PENDING_DELETE_STATUS, pendingDeleteHandler);
     eventQueue.addHandler(SCMEvents.DELETE_BLOCK_STATUS,
         (DeletedBlockLogImpl) scmBlockManager.getDeletedBlockLog());
     eventQueue.addHandler(SCMEvents.PIPELINE_ACTIONS, pipelineActionHandler);
-    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, clientProtocolServer);
     eventQueue.addHandler(SCMEvents.PIPELINE_REPORT, pipelineReportHandler);
-
-    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS,
-        replicationStatus.getChillModeStatusListener());
-    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS,
-        (BlockManagerImpl) scmBlockManager);
+    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, chillModeHandler);
     registerMXBean();
   }
 
@@ -1077,6 +1075,11 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   @VisibleForTesting
   public BlockManager getScmBlockManager() {
     return scmBlockManager;
+  }
+
+  @VisibleForTesting
+  public ChillModeHandler getChillModeHandler() {
+    return chillModeHandler;
   }
 
   public void checkAdminAccess(String remoteUser) throws IOException {
