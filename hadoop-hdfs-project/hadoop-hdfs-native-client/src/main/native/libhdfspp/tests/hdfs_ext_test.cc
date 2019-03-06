@@ -503,10 +503,7 @@ TEST_F(HdfsExtTest, TestReadStats) {
   hdfsFileFreeReadStatistics(stats);
 
   EXPECT_EQ(0, hdfsCloseFile(fs, file));
-  // Since libhdfs is not guaranteed to set errno to 0 on successful
-  // operations, we disable this check for now, see HDFS-14325 for a
-  // long term solution to this problem
-  // EXPECT_EQ(0, errno);
+  EXPECT_EQ(0, errno);
 }
 
 //Testing working directory
