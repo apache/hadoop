@@ -100,6 +100,15 @@ public class SCMPipelineManager implements PipelineManager {
     initializePipelineState();
   }
 
+  public PipelineStateManager getStateManager() {
+    return stateManager;
+  }
+
+  public void setPipelineProvider(ReplicationType replicationType,
+                                  PipelineProvider provider) {
+    pipelineFactory.setProvider(replicationType, provider);
+  }
+
   private void initializePipelineState() throws IOException {
     if (pipelineStore.isEmpty()) {
       LOG.info("No pipeline exists in current db");

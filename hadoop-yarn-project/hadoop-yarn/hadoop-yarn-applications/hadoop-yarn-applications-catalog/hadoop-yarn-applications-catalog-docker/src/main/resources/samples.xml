@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+       http://www.apache.org/licenses/LICENSE-2.0
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<add>
+  <doc>
+    <field name="id">appStore_1</field>
+    <field name="type_s">AppStoreEntry</field>
+    <field name="org_s">Apache</field>
+    <field name="name_s">Http Server Project</field>
+    <field name="desc_s">The Number One HTTP Server On The Internet</field>
+    <field name="like_i">50000</field>
+    <field name="download_i">100000</field>
+    <field name="yarnfile_s">{
+  "name": "httpd",
+  "version": "1.0",
+  "components" :
+  [
+    {
+      "name": "httpd",
+      "number_of_containers": 2,
+      "artifact": {
+        "id": "centos/httpd-24-centos7:latest",
+        "type": "DOCKER"
+      },
+      "resource": {
+        "cpus": 1,
+        "memory": "256"
+      },
+      "configuration": {
+        "env": {
+          "YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE":"true",
+          "YARN_CONTAINER_RUNTIME_DOCKER_PORTS_MAPPING":"8080:8080"
+        },
+        "properties": {
+        }
+      }
+    }
+  ],
+  "quicklinks": {
+    "Httpd UI": "http://httpd.${SERVICE_NAME}.${USER}.${DOMAIN}:8080/"
+  }
+}
+    </field>
+  </doc>
+  <doc>
+    <field name="id">appStore_2</field>
+    <field name="type_s">AppStoreEntry</field>
+    <field name="org_s">Jenkins-ci.org</field>
+    <field name="name_s">Jenkins</field>
+    <field name="desc_s">The leading open source automation server</field>
+    <field name="like_i">100000</field>
+    <field name="download_i">1000000</field>
+    <field name="yarnfile_s">{
+  "name": "httpd",
+  "version": "1.0",
+  "components" :
+  [
+    {
+      "name": "jenkins",
+      "number_of_containers": 1,
+      "artifact": {
+        "id": "jenkins/jenkins:latest",
+        "type": "DOCKER"
+      },
+      "resource": {
+        "cpus": 1,
+        "memory": "1024"
+      },
+      "run_privileged_container": true,
+      "configuration": {
+        "env": {
+          "YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE":"true",
+          "YARN_CONTAINER_RUNTIME_DOCKER_PORTS_MAPPING":"8080:8080"
+        },
+        "properties": {
+        }
+      }
+    }
+  ],
+  "quicklinks": {
+    "Jenkins UI": "http://jenkins.${SERVICE_NAME}.${USER}.${DOMAIN}:8080/"
+  }
+}
+    </field>
+  </doc>
+  <doc>
+    <field name="id">appStore_3</field>
+    <field name="type_s">AppStoreEntry</field>
+    <field name="org_s">Docker</field>
+    <field name="name_s">Registry</field>
+    <field name="desc_s">The Docker Registry 2.0 implementation for storing and distributing Docker images.</field>
+    <field name="like_i">360</field>
+    <field name="download_i">1</field>
+    <field name="yarnfile_s">{
+  "name": "docker-registry",
+  "version": "1.0",
+  "components" :
+  [
+    {
+      "name": "registry",
+      "number_of_containers": 1,
+      "artifact": {
+        "id": "registry:latest",
+        "type": "DOCKER"
+      },
+      "resource": {
+        "cpus": 1,
+        "memory": "1024"
+      },
+      "configuration": {
+        "env": {
+          "YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE":"true",
+          "YARN_CONTAINER_RUNTIME_DOCKER_PORTS_MAPPING":"5000:5000"
+        },
+        "properties": {
+        }
+      }
+    }
+  ]
+}
+    </field>
+  </doc>
+</add>

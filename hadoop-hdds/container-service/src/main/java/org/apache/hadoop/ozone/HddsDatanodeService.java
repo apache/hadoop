@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsUtils;
@@ -67,6 +68,7 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
   private DatanodeDetails datanodeDetails;
   private DatanodeStateMachine datanodeStateMachine;
   private List<ServicePlugin> plugins;
+  private HddsDatanodeHttpServer httpServer;
 
   /**
    * Default constructor.
@@ -180,6 +182,12 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
           LOG.info("Hdds Datanode login successful.");
         }
         datanodeStateMachine = new DatanodeStateMachine(datanodeDetails, conf);
+        try {
+          httpServer = new HddsDatanodeHttpServer(conf);
+          httpServer.start();
+        } catch (Exception ex) {
+          LOG.error("HttpServer failed to start.", ex);
+        }
         startPlugins();
         // Starting HDDS Daemons
         datanodeStateMachine.startDaemon();
@@ -294,6 +302,14 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
     if (datanodeStateMachine != null) {
       datanodeStateMachine.stopDaemon();
     }
+    if (httpServer != null) {
+      try {
+        httpServer.stop();
+      } catch (Exception e) {
+        LOG.error("Stopping HttpServer is failed.", e);
+      }
+    }
+
   }
 
   @Override

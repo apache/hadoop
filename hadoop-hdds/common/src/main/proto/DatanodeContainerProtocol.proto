@@ -142,6 +142,8 @@ enum Result {
   UNKNOWN_BCSID = 37;
   BCSID_MISMATCH = 38;
   CONTAINER_NOT_OPEN = 39;
+  CONTAINER_MISSING = 40;
+  BLOCK_TOKEN_VERIFICATION_FAILED = 41;
 }
 
 /**
@@ -243,6 +245,10 @@ message ContainerDataProto {
   optional int64 blockCount = 8;
   optional State state = 9 [default = OPEN];
   optional ContainerType containerType = 10 [default = KeyValueContainer];
+}
+
+message ContainerIdSetProto {
+    repeated int64 containerId = 1;
 }
 
 enum ContainerType {
