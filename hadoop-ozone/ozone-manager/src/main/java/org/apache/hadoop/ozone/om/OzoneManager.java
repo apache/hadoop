@@ -1236,8 +1236,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         ProtobufRpcEngine.class);
 
     BlockingService omService = newReflectiveBlockingService(
-        new OzoneManagerProtocolServerSideTranslatorPB(this, omRatisClient,
-            isRatisEnabled));
+        new OzoneManagerProtocolServerSideTranslatorPB(this, omRatisServer,
+            omRatisClient, isRatisEnabled));
     return startRpcServer(configuration, omNodeRpcAddr,
         OzoneManagerProtocolPB.class, omService,
         handlerCount);
