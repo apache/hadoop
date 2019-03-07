@@ -20,18 +20,18 @@
     <relativePath/>
   </parent>
   <artifactId>hadoop-ozone</artifactId>
-  <version>0.4.0-SNAPSHOT</version>
+  <version>0.5.0-SNAPSHOT</version>
   <description>Apache Hadoop Ozone Project</description>
   <name>Apache Hadoop Ozone</name>
   <packaging>pom</packaging>
 
   <properties>
     <hadoop.version>3.2.0</hadoop.version>
-    <hdds.version>0.4.0-SNAPSHOT</hdds.version>
-    <ozone.version>0.4.0-SNAPSHOT</ozone.version>
+    <hdds.version>0.5.0-SNAPSHOT</hdds.version>
+    <ozone.version>0.5.0-SNAPSHOT</ozone.version>
     <ratis.version>0.4.0-f283ffa-SNAPSHOT</ratis.version>
     <bouncycastle.version>1.60</bouncycastle.version>
-    <ozone.release>Badlands</ozone.release>
+    <ozone.release>Crater Lake</ozone.release>
     <declared.ozone.version>${ozone.version}</declared.ozone.version>
     <maven-surefire-plugin.version>3.0.0-M1</maven-surefire-plugin.version>
   </properties>

@@ -19,12 +19,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-ozone</artifactId>
-    <version>0.4.0-SNAPSHOT</version>
+    <version>0.5.0-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-ozone-datanode</artifactId>
   <name>Apache Hadoop Ozone Datanode</name>
   <packaging>jar</packaging>
-  <version>0.4.0-SNAPSHOT</version>
+  <version>0.5.0-SNAPSHOT</version>
 
   <dependencies>
     <dependency>
