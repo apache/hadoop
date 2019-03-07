@@ -288,8 +288,10 @@ public class NetUtils {
     if (fqHost == null) {
       try {
         fqHost = SecurityUtil.getByName(host).getHostName();
-        // slight race condition, but won't hurt
         canonicalizedHostCache.putIfAbsent(host, fqHost);
+        // ensures that we won't return a canonicalized stale (non-cached)
+        // host name for a given host
+        fqHost = canonicalizedHostCache.get(host);
       } catch (UnknownHostException e) {
         fqHost = host;
       }
