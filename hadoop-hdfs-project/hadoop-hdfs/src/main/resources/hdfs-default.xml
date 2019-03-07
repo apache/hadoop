@@ -2572,7 +2572,7 @@
 
 <property>
   <name>dfs.namenode.edit.log.autoroll.multiplier.threshold</name>
-  <value>2.0</value>
+  <value>0.5</value>
   <description>
     Determines when an active namenode will roll its own edit log.
     The actual threshold (in number of edits) is determined by multiplying
