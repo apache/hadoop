@@ -56,7 +56,7 @@ services:
       env_file:
          - ./docker-config
       environment:
-         HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-0*.jar
+         HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current*.jar
       command: ["watch","-n","100000","ls"]
    hadoop2:
       image: flokkr/hadoop:2.9.0
