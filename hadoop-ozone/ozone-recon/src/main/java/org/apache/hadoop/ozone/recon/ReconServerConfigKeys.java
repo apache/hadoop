@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.ozone.recon;
 
+import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB_SUFFIX;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -25,7 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public final class ReconServerConfiguration {
+public final class ReconServerConfigKeys {
 
   public static final String OZONE_RECON_HTTP_ENABLED_KEY =
       "ozone.recon.http.enabled";
@@ -48,9 +50,17 @@ public final class ReconServerConfiguration {
   public static final String OZONE_RECON_DOMAIN_NAME =
       "ozone.recon.domain.name";
 
+  public static final String OZONE_RECON_CONTAINER_DB_CACHE_SIZE_MB =
+      "ozone.recon.container.db.cache.size.mb";
+  public static final int OZONE_RECON_CONTAINER_DB_CACHE_SIZE_DEFAULT = 128;
+
+  public static final String OZONE_RECON_DB_DIRS = "ozone.recon.db.dirs";
+  public static final String RECON_CONTAINER_DB = "recon-" +
+      CONTAINER_DB_SUFFIX;
+
   /**
    * Private constructor for utility class.
    */
-  private ReconServerConfiguration() {
+  private ReconServerConfigKeys() {
   }
 }
