@@ -65,14 +65,10 @@ public abstract class BaseHttpServer {
   public BaseHttpServer(Configuration conf, String name) throws IOException {
     this.name = name;
     this.conf = conf;
+    policy = DFSUtil.getHttpPolicy(conf);
     if (isEnabled()) {
-      policy = DFSUtil.getHttpPolicy(conf);
-      if (policy.isHttpEnabled()) {
-        this.httpAddress = getHttpBindAddress();
-      }
-      if (policy.isHttpsEnabled()) {
-        this.httpsAddress = getHttpsBindAddress();
-      }
+      this.httpAddress = getHttpBindAddress();
+      this.httpsAddress = getHttpsBindAddress();
       HttpServer2.Builder builder = null;
       builder = DFSUtil.httpServerTemplateForNNAndJN(conf, this.httpAddress,
           this.httpsAddress, name, getSpnegoPrincipal(), getKeytabFile());
