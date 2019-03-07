@@ -40,7 +40,7 @@
     <module>client</module>
     <module>ozone-manager</module>
     <module>ozonefs</module>
-    <module>ozonefs-lib</module>
+    <module>ozonefs-lib-current</module>
     <module>ozonefs-lib-legacy</module>
     <module>tools</module>
     <module>integration-test</module>
@@ -103,7 +103,7 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-ozone-filesystem-lib</artifactId>
+        <artifactId>hadoop-ozone-filesystem-lib-current</artifactId>
         <version>${ozone.version}</version>
       </dependency>
       <dependency>

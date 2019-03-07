@@ -21,7 +21,7 @@
     <artifactId>hadoop-ozone</artifactId>
     <version>0.4.0-SNAPSHOT</version>
   </parent>
-  <artifactId>hadoop-ozone-filesystem-lib</artifactId>
+  <artifactId>hadoop-ozone-filesystem-lib-current</artifactId>
   <name>Apache Hadoop Ozone FileSystem Single Jar Library</name>
   <packaging>jar</packaging>
   <description>This projects creates an uber jar from ozonefs with all the

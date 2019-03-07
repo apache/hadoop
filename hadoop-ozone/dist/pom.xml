@@ -204,7 +204,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-ozone-filesystem-lib</artifactId>
+      <artifactId>hadoop-ozone-filesystem-lib-current</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
