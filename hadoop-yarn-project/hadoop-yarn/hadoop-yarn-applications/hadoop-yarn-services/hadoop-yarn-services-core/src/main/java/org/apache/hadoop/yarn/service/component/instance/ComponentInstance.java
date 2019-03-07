@@ -751,8 +751,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
 
   @Override
   public void handle(ComponentInstanceEvent event) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       ComponentInstanceState oldState = getState();
       try {
         stateMachine.doTransition(event.getType(), event);
@@ -782,8 +782,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
   void updateLocalizationStatuses(
       List<org.apache.hadoop.yarn.api.records.LocalizationStatus> statuses) {
     Map<String, String> resourcesCpy = new HashMap<>();
+    readLock.lock();
     try {
-      readLock.lock();
       if (resolvedParams == null || resolvedParams.didLaunchFail() ||
           resolvedParams.getResolvedRsrcPaths() == null ||
           resolvedParams.getResolvedRsrcPaths().isEmpty()) {
@@ -823,8 +823,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
 
   public void updateResolvedLaunchParams(
       Future<ProviderService.ResolvedLaunchParams> future) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       this.resolvedParams = future.get();
     } catch (InterruptedException | ExecutionException e) {
       LOG.error("{} updating resolved params", getCompInstanceId(), e);
@@ -834,8 +834,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
   }
 
   public ContainerStatus getContainerStatus() {
+    readLock.lock();
     try {
-      readLock.lock();
       return status;
     } finally {
       readLock.unlock();
@@ -844,8 +844,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
 
   private void setContainerStatus(ContainerId containerId,
       ContainerStatus latestStatus) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       this.status = latestStatus;
       org.apache.hadoop.yarn.service.api.records.Container containerRec =
           getCompSpec().getContainer(containerId.toString());

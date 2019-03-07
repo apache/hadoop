@@ -117,8 +117,8 @@ public class ServiceManager implements EventHandler<ServiceEvent> {
 
   @Override
   public void handle(ServiceEvent event) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       State oldState = getState();
       try {
         stateMachine.doTransition(event.getType(), event);

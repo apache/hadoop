@@ -178,8 +178,8 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
 
         // 7. Based on the selected resource demand per partition, select
         // containers with known policy from inter-queue preemption.
+        leafQueue.getReadLock().lock();
         try {
-          leafQueue.getReadLock().lock();
           for (FiCaSchedulerApp app : apps) {
             preemptFromLeastStarvedApp(leafQueue, app, selectedCandidates,
                 curCandidates, clusterResource, totalPreemptedResourceAllowed,

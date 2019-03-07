@@ -279,8 +279,8 @@ public abstract class AbstractCSQueue implements CSQueue {
    * @param maximumCapacity new max capacity
    */
   void setMaxCapacity(float maximumCapacity) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       // Sanity check
       CSQueueUtils.checkMaxCapacity(getQueueName(),
           queueCapacities.getCapacity(), maximumCapacity);
@@ -301,8 +301,8 @@ public abstract class AbstractCSQueue implements CSQueue {
    * @param maximumCapacity new max capacity
    */
   void setMaxCapacity(String nodeLabel, float maximumCapacity) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       // Sanity check
       CSQueueUtils.checkMaxCapacity(getQueueName(),
           queueCapacities.getCapacity(nodeLabel), maximumCapacity);
@@ -333,8 +333,8 @@ public abstract class AbstractCSQueue implements CSQueue {
       CapacitySchedulerConfiguration configuration) throws
       IOException {
 
+    writeLock.lock();
     try {
-      writeLock.lock();
       // get labels
       this.accessibleLabels =
           configuration.getAccessibleNodeLabels(getQueuePath());
@@ -750,8 +750,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   
   void allocateResource(Resource clusterResource,
       Resource resource, String nodePartition) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       queueUsage.incUsed(nodePartition, resource);
 
       ++numContainers;
@@ -765,8 +765,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   
   protected void releaseResource(Resource clusterResource,
       Resource resource, String nodePartition) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       queueUsage.decUsed(nodePartition, resource);
 
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
@@ -785,8 +785,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   
   @Private
   public Map<AccessType, AccessControlList> getACLs() {
+    readLock.lock();
     try {
-      readLock.lock();
       return acls;
     } finally {
       readLock.unlock();
@@ -938,8 +938,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   boolean canAssignToThisQueue(Resource clusterResource,
       String nodePartition, ResourceLimits currentResourceLimits,
       Resource resourceCouldBeUnreserved, SchedulingMode schedulingMode) {
+    readLock.lock();
     try {
-      readLock.lock();
       // Get current limited resource:
       // - When doing RESPECT_PARTITION_EXCLUSIVITY allocation, we will respect
       // queues' max capacity.
@@ -1203,9 +1203,8 @@ public abstract class AbstractCSQueue implements CSQueue {
       Resource netAllocated = Resources.subtract(required,
           request.getTotalReleasedResource());
 
+      readLock.lock();
       try {
-        readLock.lock();
-
         String partition = schedulerContainer.getNodePartition();
         Resource maxResourceLimit;
         if (allocation.getSchedulingMode()
@@ -1254,8 +1253,8 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   @Override
   public void activeQueue() throws YarnException {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
       if (getState() == QueueState.RUNNING) {
         LOG.info("The specified queue:" + queueName
             + " is already in the RUNNING state.");
@@ -1278,8 +1277,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   protected void appFinished() {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
       if (getState() == QueueState.DRAINING) {
         if (getNumApplications() == 0) {
           updateQueueState(QueueState.STOPPED);
@@ -1301,8 +1300,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   public void recoverDrainingState() {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
       if (getState() == QueueState.STOPPED) {
         updateQueueState(QueueState.DRAINING);
       }

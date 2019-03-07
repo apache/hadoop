@@ -986,8 +986,8 @@ public class LeveldbTimelineStore extends AbstractService
 
   @Override
   public TimelinePutResponse put(TimelineEntities entities) {
+    deleteLock.readLock().lock();
     try {
-      deleteLock.readLock().lock();
       TimelinePutResponse response = new TimelinePutResponse();
       for (TimelineEntity entity : entities.getEntities()) {
         put(entity, response, false);
@@ -1001,8 +1001,8 @@ public class LeveldbTimelineStore extends AbstractService
   @Private
   @VisibleForTesting
   public TimelinePutResponse putWithNoDomainId(TimelineEntities entities) {
+    deleteLock.readLock().lock();
     try {
-      deleteLock.readLock().lock();
       TimelinePutResponse response = new TimelinePutResponse();
       for (TimelineEntity entity : entities.getEntities()) {
         put(entity, response, true);
@@ -1525,8 +1525,8 @@ public class LeveldbTimelineStore extends AbstractService
         LeveldbIterator iterator = null;
         LeveldbIterator pfIterator = null;
         long typeCount = 0;
+        deleteLock.writeLock().lock();
         try {
-          deleteLock.writeLock().lock();
           iterator = getDbIterator(false);
           pfIterator = getDbIterator(false);
 

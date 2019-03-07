@@ -953,8 +953,8 @@ public class ContainerImpl implements Container {
 
   @Override
   public void setIpAndHost(String[] ipAndHost) {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
       this.ips = ipAndHost[0];
       this.host = ipAndHost[1];
     } finally {
@@ -2107,9 +2107,8 @@ public class ContainerImpl implements Container {
 
   @Override
   public void handle(ContainerEvent event) {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
-
       ContainerId containerID = event.getContainerID();
       if (LOG.isDebugEnabled()) {
         LOG.debug("Processing " + containerID + " of type " + event.getType());

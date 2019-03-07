@@ -124,8 +124,8 @@ public class VolumeImpl implements Volume {
 
   @Override
   public VolumeState getVolumeState() {
+    readLock.lock();
     try {
-      readLock.lock();
       return stateMachine.getCurrentState();
     } finally {
       readLock.unlock();
@@ -134,8 +134,8 @@ public class VolumeImpl implements Volume {
 
   @Override
   public VolumeId getVolumeId() {
+    readLock.lock();
     try {
-      readLock.lock();
       return this.volumeId;
     } finally {
       readLock.unlock();
@@ -184,8 +184,8 @@ public class VolumeImpl implements Volume {
 
   @Override
   public void handle(VolumeEvent event) {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
       VolumeId volumeId = event.getVolumeId();
 
       if (volumeId == null) {

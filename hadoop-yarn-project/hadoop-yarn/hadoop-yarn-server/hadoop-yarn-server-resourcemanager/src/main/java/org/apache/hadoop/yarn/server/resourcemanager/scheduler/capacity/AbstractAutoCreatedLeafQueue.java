@@ -77,8 +77,8 @@ public class AbstractAutoCreatedLeafQueue extends LeafQueue {
    */
   public void setEntitlement(String nodeLabel, QueueEntitlement entitlement)
       throws SchedulerDynamicEditException {
+    writeLock.lock();
     try {
-      writeLock.lock();
       float capacity = entitlement.getCapacity();
       if (capacity < 0 || capacity > 1.0f) {
         throw new SchedulerDynamicEditException(

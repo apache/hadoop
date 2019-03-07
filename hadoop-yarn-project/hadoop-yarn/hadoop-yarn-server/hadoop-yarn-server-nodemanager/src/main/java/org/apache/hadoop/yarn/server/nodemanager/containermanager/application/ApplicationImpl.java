@@ -667,8 +667,8 @@ public class ApplicationImpl implements Application {
 
   @VisibleForTesting
   public LogAggregationContext getLogAggregationContext() {
+    this.readLock.lock();
     try {
-      this.readLock.lock();
       return this.logAggregationContext;
     } finally {
       this.readLock.unlock();

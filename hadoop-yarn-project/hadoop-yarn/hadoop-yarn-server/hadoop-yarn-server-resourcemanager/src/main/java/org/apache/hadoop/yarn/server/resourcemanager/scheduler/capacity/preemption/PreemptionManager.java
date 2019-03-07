@@ -43,8 +43,8 @@ public class PreemptionManager {
   }
 
   public void refreshQueues(CSQueue parent, CSQueue current) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       PreemptableQueue parentEntity = null;
       if (parent != null) {
         parentEntity = entities.get(parent.getQueueName());
@@ -67,8 +67,8 @@ public class PreemptionManager {
   }
 
   public void addKillableContainer(KillableContainer container) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       PreemptableQueue entity = entities.get(container.getLeafQueueName());
       if (null != entity) {
         entity.addKillableContainer(container);
@@ -80,8 +80,8 @@ public class PreemptionManager {
   }
 
   public void removeKillableContainer(KillableContainer container) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       PreemptableQueue entity = entities.get(container.getLeafQueueName());
       if (null != entity) {
         entity.removeKillableContainer(container);
@@ -106,8 +106,8 @@ public class PreemptionManager {
   @VisibleForTesting
   public Map<ContainerId, RMContainer> getKillableContainersMap(
       String queueName, String partition) {
+    readLock.lock();
     try {
-      readLock.lock();
       PreemptableQueue entity = entities.get(queueName);
       if (entity != null) {
         Map<ContainerId, RMContainer> containers =
@@ -129,8 +129,8 @@ public class PreemptionManager {
   }
 
   public Resource getKillableResource(String queueName, String partition) {
+    readLock.lock();
     try {
-      readLock.lock();
       PreemptableQueue entity = entities.get(queueName);
       if (entity != null) {
         Resource res = entity.getTotalKillableResources().get(partition);
@@ -147,8 +147,8 @@ public class PreemptionManager {
   }
 
   public Map<String, PreemptableQueue> getShallowCopyOfPreemptableQueues() {
+    readLock.lock();
     try {
-      readLock.lock();
       Map<String, PreemptableQueue> map = new HashMap<>();
       for (Map.Entry<String, PreemptableQueue> entry : entities.entrySet()) {
         String key = entry.getKey();
