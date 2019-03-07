@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.ozone.recon.spi.impl;
 
+import static org.apache.commons.compress.utils.CharsetNames.UTF_8;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -31,6 +33,8 @@ import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
 import org.apache.hadoop.utils.MetaStoreIterator;
 import org.apache.hadoop.utils.MetadataStore;
+
+import com.google.common.primitives.Longs;
 
 /**
  * Implementation of the Recon Container DB Service.
@@ -56,10 +60,12 @@ public class ContainerDBServiceProviderImpl
   public void storeContainerKeyMapping(ContainerKeyPrefix containerKeyPrefix,
                                        Integer count)
       throws IOException {
-    String dbKeyStr = String.valueOf(containerKeyPrefix.getContainerId()) +
-        KEY_DELIMITER + containerKeyPrefix.getKeyPrefix();
-    byte[] dbKey = dbKeyStr.getBytes();
-    byte[] dbValue = ByteBuffer.allocate(4).putInt(count).array();
+    byte[] containerIdBytes = Longs.toByteArray(containerKeyPrefix
+        .getContainerId());
+    byte[] keyPrefixBytes = (KEY_DELIMITER + containerKeyPrefix.getKeyPrefix())
+        .getBytes(UTF_8);
+    byte[] dbKey = ArrayUtils.addAll(containerIdBytes, keyPrefixBytes);
+    byte[] dbValue = ByteBuffer.allocate(Integer.BYTES).putInt(count).array();
     containerDBStore.put(dbKey, dbValue);
   }
 
@@ -74,11 +80,13 @@ public class ContainerDBServiceProviderImpl
   @Override
   public Integer getCountForForContainerKeyPrefix(
       ContainerKeyPrefix containerKeyPrefix) throws IOException {
-    String dbKeyStr = String.valueOf(containerKeyPrefix.getContainerId()) +
-        KEY_DELIMITER + containerKeyPrefix.getKeyPrefix();
-    byte[] dbKey = dbKeyStr.getBytes();
-    byte[] value = containerDBStore.get(dbKey);
-    return ByteBuffer.wrap(value).getInt();
+    byte[] containerIdBytes = Longs.toByteArray(containerKeyPrefix
+        .getContainerId());
+    byte[] keyPrefixBytes = (KEY_DELIMITER + containerKeyPrefix
+        .getKeyPrefix()).getBytes(UTF_8);
+    byte[] dbKey = ArrayUtils.addAll(containerIdBytes, keyPrefixBytes);
+    byte[] dbValue = containerDBStore.get(dbKey);
+    return ByteBuffer.wrap(dbValue).getInt();
   }
 
   /**
@@ -94,16 +102,18 @@ public class ContainerDBServiceProviderImpl
     Map<String, Integer> prefixes = new HashMap<>();
     MetaStoreIterator<MetadataStore.KeyValue> containerIterator =
         containerDBStore.iterator();
-    byte[] containerIdPrefixBytes = String.valueOf(containerId).getBytes();
+    byte[] containerIdPrefixBytes = Longs.toByteArray(containerId);
     containerIterator.prefixSeek(containerIdPrefixBytes);
     while (containerIterator.hasNext()) {
       MetadataStore.KeyValue keyValue = containerIterator.next();
       byte[] containerKey = keyValue.getKey();
-      String containerKeyString = new String(containerKey);
+      long containerIdFromDB = ByteBuffer.wrap(ArrayUtils.subarray
+          (containerKey, 0, Long.BYTES)).getLong();
+
       //The prefix seek only guarantees that the iterator's head will be
       // positioned at the first prefix match. We still have to check the key
       // prefix.
-      if (containerKeyString.startsWith(String.valueOf(containerId))) {
+      if (containerIdFromDB == containerId) {
         byte[] keyPrefix = ArrayUtils.subarray(containerKey,
             containerIdPrefixBytes.length + 1,
             containerKey.length);
