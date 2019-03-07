@@ -38,6 +38,10 @@ import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
 import org.apache.hadoop.hdds.scm.pipeline.*;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineProvider;
+import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -157,7 +161,8 @@ public class TestSCMChillModeManager {
   }
 
   @Test
-  public void testFailWithIncorrectValueForHealthyPipelinePercent() throws Exception {
+  public void testFailWithIncorrectValueForHealthyPipelinePercent()
+      throws Exception {
     try {
       OzoneConfiguration conf = createConf(100,
           0.9);
@@ -174,7 +179,8 @@ public class TestSCMChillModeManager {
   }
 
   @Test
-  public void testFailWithIncorrectValueForOneReplicaPipelinePercent() throws Exception {
+  public void testFailWithIncorrectValueForOneReplicaPipelinePercent()
+      throws Exception {
     try {
       OzoneConfiguration conf = createConf(0.9,
           200);
@@ -264,9 +270,9 @@ public class TestSCMChillModeManager {
         checkHealthy(i + 1);
       }
 
-       if (i < oneReplicaThresholdCount) {
-         checkOpen(i + 1);
-       }
+      if (i < oneReplicaThresholdCount) {
+        checkOpen(i + 1);
+      }
     }
 
 

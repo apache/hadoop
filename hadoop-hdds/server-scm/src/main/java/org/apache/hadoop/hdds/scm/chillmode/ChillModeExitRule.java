@@ -38,14 +38,15 @@ public abstract class ChillModeExitRule<T> implements EventHandler<T> {
   protected final SCMChillModeManager chillModeManager;
   protected final String ruleName;
 
-  public ChillModeExitRule(SCMChillModeManager chillModeManager, String ruleName) {
+  public ChillModeExitRule(SCMChillModeManager chillModeManager,
+      String ruleName) {
     this.chillModeManager = chillModeManager;
     this.ruleName = ruleName;
   }
 
   /**
    * Return's the name of this ChillModeExit Rule.
-   * @return
+   * @return ruleName
    */
   public String getRuleName() {
     return ruleName;
