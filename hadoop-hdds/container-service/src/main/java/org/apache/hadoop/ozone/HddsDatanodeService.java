@@ -19,7 +19,6 @@ package org.apache.hadoop.ozone;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsUtils;
@@ -27,17 +26,24 @@ import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.client.DNCertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
+import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
@@ -45,9 +51,13 @@ import picocli.CommandLine.Command;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.security.KeyPair;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.UUID;
 
+import static org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest.getEncodedString;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.HDDS_DATANODE_PLUGINS_KEY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
@@ -68,6 +78,8 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
   private DatanodeDetails datanodeDetails;
   private DatanodeStateMachine datanodeStateMachine;
   private List<ServicePlugin> plugins;
+  private CertificateClient dnCertClient;
+  private String component;
   private HddsDatanodeHttpServer httpServer;
 
   /**
@@ -135,6 +147,10 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
     }
   }
 
+  public static Logger getLogger() {
+    return LOG;
+  }
+
   /**
    * Starts HddsDatanode services.
    *
@@ -160,13 +176,15 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
                 .substring(0, 8));
         LOG.info("HddsDatanodeService host:{} ip:{}", hostname, ip);
         // Authenticate Hdds Datanode service if security is enabled
-        if (conf.getBoolean(OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY,
-            true)) {
+        if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
+          component = "dn-" + datanodeDetails.getUuidString();
+
+          dnCertClient = new DNCertificateClient(new SecurityConfig(conf));
+
           if (SecurityUtil.getAuthenticationMethod(conf).equals(
               UserGroupInformation.AuthenticationMethod.KERBEROS)) {
-            LOG.debug("Ozone security is enabled. Attempting login for Hdds " +
-                    "Datanode user. "
-                    + "Principal: {},keytab: {}", conf.get(
+            LOG.info("Ozone security is enabled. Attempting login for Hdds " +
+                    "Datanode user. Principal: {},keytab: {}", conf.get(
                 DFSConfigKeys.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY),
                 conf.get(DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY));
 
@@ -191,6 +209,9 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
         startPlugins();
         // Starting HDDS Daemons
         datanodeStateMachine.startDaemon();
+        if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
+          initializeCertificateClient(conf);
+        }
       } catch (IOException e) {
         throw new RuntimeException("Can't start the HDDS datanode plugin", e);
       } catch (AuthenticationException ex) {
@@ -198,6 +219,87 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
             " HDDS datanode plugin", ex);
       }
     }
+  }
+
+  /**
+   * Initializes secure Datanode.
+   * */
+  @VisibleForTesting
+  public void initializeCertificateClient(OzoneConfiguration config)
+      throws IOException {
+    LOG.info("Initializing secure Datanode.");
+
+    CertificateClient.InitResponse response = dnCertClient.init();
+    LOG.info("Init response: {}", response);
+    switch (response) {
+    case SUCCESS:
+      LOG.info("Initialization successful, case:{}.", response);
+      break;
+    case GETCERT:
+      getSCMSignedCert(config);
+      LOG.info("Successfully stored SCM signed certificate, case:{}.",
+          response);
+      break;
+    case FAILURE:
+      LOG.error("DN security initialization failed, case:{}.", response);
+      throw new RuntimeException("DN security initialization failed.");
+    case RECOVER:
+      LOG.error("DN security initialization failed, case:{}. OM certificate " +
+          "is missing.", response);
+      throw new RuntimeException("DN security initialization failed.");
+    default:
+      LOG.error("DN security initialization failed. Init response: {}",
+          response);
+      throw new RuntimeException("DN security initialization failed.");
+    }
+  }
+
+  /**
+   * Get SCM signed certificate and store it using certificate client.
+   * @param config
+   * */
+  private void getSCMSignedCert(OzoneConfiguration config) {
+    try {
+      PKCS10CertificationRequest csr = getCSR(config);
+      // TODO: For SCM CA we should fetch certificate from multiple SCMs.
+      SCMSecurityProtocol secureScmClient =
+          HddsUtils.getScmSecurityClient(config,
+              HddsUtils.getScmAddressForSecurityProtocol(config));
+
+      String pemEncodedCert = secureScmClient.getDataNodeCertificate(
+          datanodeDetails.getProtoBufMessage(), getEncodedString(csr));
+
+      X509Certificate x509Certificate =
+          CertificateCodec.getX509Certificate(pemEncodedCert);
+      dnCertClient.storeCertificate(x509Certificate);
+    } catch (IOException | CertificateException e) {
+      LOG.error("Error while storing SCM signed certificate.", e);
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Creates CSR for DN.
+   * @param config
+   * */
+  @VisibleForTesting
+  public PKCS10CertificationRequest getCSR(Configuration config)
+      throws IOException {
+    CertificateSignRequest.Builder builder = dnCertClient.getCSRBuilder();
+    KeyPair keyPair = new KeyPair(dnCertClient.getPublicKey(),
+        dnCertClient.getPrivateKey());
+
+    String hostname = InetAddress.getLocalHost().getCanonicalHostName();
+    String subject = UserGroupInformation.getCurrentUser()
+        .getShortUserName() + "@" + hostname;
+
+    builder.setCA(false)
+        .setKey(keyPair)
+        .setConfiguration(config)
+        .setSubject(subject);
+
+    LOG.info("Creating csr for DN-> subject:{}", subject);
+    return builder.build();
   }
 
   /**
@@ -323,5 +425,19 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
         }
       }
     }
+  }
+
+  @VisibleForTesting
+  public String getComponent() {
+    return component;
+  }
+
+  public CertificateClient getCertificateClient() {
+    return dnCertClient;
+  }
+
+  @VisibleForTesting
+  public void setCertificateClient(CertificateClient client) {
+    dnCertClient = client;
   }
 }
