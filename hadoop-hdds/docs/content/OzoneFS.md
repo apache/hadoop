@@ -56,7 +56,7 @@ This will make this bucket to be the default file system for HDFS dfs commands a
 You also need to add the ozone-filesystem.jar file to the classpath:
 
 {{< highlight bash >}}
-export HADOOP_CLASSPATH=/opt/ozone/share/ozonefs/lib/hadoop-ozone-filesystem-lib-current.*.jar:$HADOOP_CLASSPATH
+export HADOOP_CLASSPATH=/opt/ozone/share/ozonefs/lib/hadoop-ozone-filesystem-lib-current*.jar:$HADOOP_CLASSPATH
 {{< /highlight >}}
 
 Once the default Filesystem has been setup, users can run commands like ls, put, mkdir, etc.
