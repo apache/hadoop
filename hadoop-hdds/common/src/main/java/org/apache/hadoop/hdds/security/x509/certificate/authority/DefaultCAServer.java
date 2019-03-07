@@ -227,7 +227,7 @@ public class DefaultCAServer implements CertificateServer {
         X509CertificateHolder xcert = approver.sign(config,
             getCAKeys().getPrivate(),
             getCACertificate(), java.sql.Date.valueOf(beginDate),
-            java.sql.Date.valueOf(endDate), csr);
+            java.sql.Date.valueOf(endDate), csr, scmID, clusterID);
         store.storeValidCertificate(xcert.getSerialNumber(),
             CertificateCodec.getX509Certificate(xcert));
         xcertHolder.complete(xcert);

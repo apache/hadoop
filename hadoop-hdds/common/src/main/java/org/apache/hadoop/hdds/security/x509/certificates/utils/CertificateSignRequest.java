@@ -269,10 +269,6 @@ public final class CertificateSignRequest {
       Preconditions.checkNotNull(key, "KeyPair cannot be null");
       Preconditions.checkArgument(Strings.isNotBlank(subject), "Subject " +
           "cannot be blank");
-      Preconditions.checkArgument(Strings.isNotBlank(clusterID), "Cluster ID " +
-          "cannot be blank");
-      Preconditions.checkArgument(Strings.isNotBlank(scmID), "SCM ID cannot " +
-          "be blank");
 
       try {
         CertificateSignRequest csr = new CertificateSignRequest(subject, scmID,

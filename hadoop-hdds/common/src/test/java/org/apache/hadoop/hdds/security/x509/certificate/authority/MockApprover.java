@@ -47,9 +47,10 @@ public class MockApprover extends BaseApprover {
 
   @Override
   public X509CertificateHolder sign(SecurityConfig config, PrivateKey caPrivate,
-                                    X509CertificateHolder caCertificate,
-                                    Date validFrom, Date validTill,
-                                    PKCS10CertificationRequest request)
+      X509CertificateHolder caCertificate,
+      Date validFrom, Date validTill,
+      PKCS10CertificationRequest request,
+      String scmId, String clusterId)
       throws IOException, OperatorCreationException {
     return null;
   }
