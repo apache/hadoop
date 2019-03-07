@@ -518,7 +518,7 @@ public class TestSCMNodeManager {
 
       // 3.5 seconds have elapsed for stale node, so it moves into Stale.
       // 7 seconds have elapsed for dead node, so it moves into dead.
-      // 2 Seconds have elapsed for healthy node, so it stays in healhty state.
+      // 2 Seconds have elapsed for healthy node, so it stays in healthy state.
       healthyList = nodeManager.getNodes(HEALTHY);
       List<DatanodeDetails> staleList = nodeManager.getNodes(STALE);
       List<DatanodeDetails> deadList = nodeManager.getNodes(DEAD);
