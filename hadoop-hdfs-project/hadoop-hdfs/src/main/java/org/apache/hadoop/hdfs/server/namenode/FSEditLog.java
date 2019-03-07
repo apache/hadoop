@@ -559,7 +559,8 @@ public class FSEditLog implements LogsPurgeable {
   /**
    * @return the first transaction ID in the current log segment
    */
-  synchronized long getCurSegmentTxId() {
+  @VisibleForTesting
+  public synchronized long getCurSegmentTxId() {
     Preconditions.checkState(isSegmentOpen(),
         "Bad state: %s", state);
     return curSegmentTxId;

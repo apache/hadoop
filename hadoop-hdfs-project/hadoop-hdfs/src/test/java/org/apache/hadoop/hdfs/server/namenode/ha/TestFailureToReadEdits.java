@@ -255,10 +255,10 @@ public class TestFailureToReadEdits {
     
     // Once the standby catches up, it should notice that it needs to
     // do a checkpoint and save one to its local directories.
-    HATestUtil.waitForCheckpoint(cluster, 1, ImmutableList.of(0, 3));
+    HATestUtil.waitForCheckpoint(cluster, 1, ImmutableList.of(0, 5));
     
     // It should also upload it back to the active.
-    HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(0, 3));
+    HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(0, 5));
     
     causeFailureOnEditLogRead();
     
@@ -273,15 +273,15 @@ public class TestFailureToReadEdits {
     }
     
     // 5 because we should get OP_START_LOG_SEGMENT and one successful OP_MKDIR
-    HATestUtil.waitForCheckpoint(cluster, 1, ImmutableList.of(0, 3, 5));
+    HATestUtil.waitForCheckpoint(cluster, 1, ImmutableList.of(0, 5, 7));
     
     // It should also upload it back to the active.
-    HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(0, 3, 5));
+    HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(0, 5, 7));
 
     // Restart the active NN
     cluster.restartNameNode(0);
     
-    HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(0, 3, 5));
+    HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(0, 5, 7));
     
     FileSystem fs0 = null;
     try {
@@ -310,7 +310,7 @@ public class TestFailureToReadEdits {
     HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
     
     // It should also upload it back to the active.
-    HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(0, 3));
+    HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(0, 5));
     
     causeFailureOnEditLogRead();
     
