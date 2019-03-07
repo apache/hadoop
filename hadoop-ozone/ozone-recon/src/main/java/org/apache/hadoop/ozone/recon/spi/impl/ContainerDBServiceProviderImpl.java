@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.recon.spi.impl;
 import static org.apache.commons.compress.utils.CharsetNames.UTF_8;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,10 +30,13 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.hadoop.hdds.scm.server.SCMBlockProtocolServer;
 import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
 import org.apache.hadoop.utils.MetaStoreIterator;
 import org.apache.hadoop.utils.MetadataStore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.primitives.Longs;
 
@@ -43,6 +47,8 @@ import com.google.common.primitives.Longs;
 public class ContainerDBServiceProviderImpl
     implements ContainerDBServiceProvider {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ContainerDBServiceProviderImpl.class);
   private final static String KEY_DELIMITER = "_";
 
   @Inject
@@ -117,8 +123,12 @@ public class ContainerDBServiceProviderImpl
         byte[] keyPrefix = ArrayUtils.subarray(containerKey,
             containerIdPrefixBytes.length + 1,
             containerKey.length);
-        prefixes.put(new String(keyPrefix), ByteBuffer.wrap(keyValue.getValue())
-            .getInt());
+        try {
+          prefixes.put(new String(keyPrefix, UTF_8),
+              ByteBuffer.wrap(keyValue.getValue()).getInt());
+        } catch (UnsupportedEncodingException e) {
+          LOG.warn("Unable to read key prefix from container DB.", e);
+        }
       } else {
         break; //Break when the first mismatch occurs.
       }
