@@ -53,8 +53,6 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_CLIENT_FAILOVER_SLEEP_BASE_MILLIS_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_CLIENT_FAILOVER_SLEEP_BASE_MILLIS_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_CLIENT_RETRY_MAX_ATTEMPTS_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
@@ -75,7 +73,7 @@ public class TestOzoneManagerHA {
   public ExpectedException exception = ExpectedException.none();
 
   @Rule
-  public Timeout timeout = new Timeout(120_000);
+  public Timeout timeout = new Timeout(300_000);
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -93,7 +91,6 @@ public class TestOzoneManagerHA {
     conf.setInt(OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS, 2);
     conf.setInt(OZONE_CLIENT_RETRY_MAX_ATTEMPTS_KEY, 3);
     conf.setInt(OZONE_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY, 3);
-    conf.setInt(OZONE_CLIENT_FAILOVER_SLEEP_BASE_MILLIS_KEY, 50);
 
     cluster = (MiniOzoneHAClusterImpl) MiniOzoneCluster.newHABuilder(conf)
         .setClusterId(clusterId)
@@ -311,6 +308,43 @@ public class TestOzoneManagerHA {
       Assert.assertEquals(1,
           appender.countLinesWithMessage("Failed to connect to OM. Attempted " +
               "3 retries and 3 failovers"));
+    }
+  }
+
+  @Test
+  public void testReadRequest() throws Exception {
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    objectStore.createVolume(volumeName);
+
+    OMFailoverProxyProvider omFailoverProxyProvider =
+        objectStore.getClientProxy().getOMProxyProvider();
+    String currentLeaderNodeId = omFailoverProxyProvider
+        .getCurrentProxyOMNodeId();
+
+    // A read request from any proxy should failover to the current leader OM
+    for (int i = 0; i < numOfOMs; i++) {
+      // Failover OMFailoverProxyProvider to OM at index i
+      OzoneManager ozoneManager = cluster.getOzoneManager(i);
+      String omHostName = ozoneManager.getOmRpcServerAddr().getHostName();
+      int rpcPort = ozoneManager.getOmRpcServerAddr().getPort();
+
+      // Get the ObjectStore and FailoverProxyProvider for OM at index i
+      final ObjectStore store = OzoneClientFactory.getRpcClient(
+          omHostName, rpcPort, conf).getObjectStore();
+      final OMFailoverProxyProvider proxyProvider =
+          store.getClientProxy().getOMProxyProvider();
+
+      // Failover to the OM node that the objectStore points to
+      omFailoverProxyProvider.performFailoverIfRequired(
+          ozoneManager.getOMNodId());
+
+      // A read request should result in the proxyProvider failing over to
+      // leader node.
+      OzoneVolume volume = store.getVolume(volumeName);
+      Assert.assertEquals(volumeName, volume.getName());
+
+      Assert.assertEquals(currentLeaderNodeId,
+          proxyProvider.getCurrentProxyOMNodeId());
     }
   }
 }

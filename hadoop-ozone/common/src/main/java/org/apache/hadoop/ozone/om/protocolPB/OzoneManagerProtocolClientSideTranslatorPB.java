@@ -35,6 +35,7 @@ import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.om.exceptions.NotLeaderException;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
 import org.apache.hadoop.ozone.om.helpers.KeyValueUtil;
@@ -195,29 +196,49 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
   private OzoneManagerProtocolPB createRetryProxy(
       OMFailoverProxyProvider failoverProxyProvider,
       int maxRetries, int maxFailovers, int delayMillis, int maxDelayBase) {
+
     RetryPolicy retryPolicyOnNetworkException = RetryPolicies
         .failoverOnNetworkException(RetryPolicies.TRY_ONCE_THEN_FAIL,
             maxFailovers, maxRetries, delayMillis, maxDelayBase);
+
     RetryPolicy retryPolicy = new RetryPolicy() {
       @Override
       public RetryAction shouldRetry(Exception exception, int retries,
           int failovers, boolean isIdempotentOrAtMostOnce)
           throws Exception {
-        if (exception instanceof EOFException ||
-            exception instanceof  ServiceException) {
-          if (retries < maxRetries && failovers < maxFailovers) {
-            return RetryAction.FAILOVER_AND_RETRY;
+
+        if (exception instanceof ServiceException) {
+          Throwable cause = exception.getCause();
+          if (cause instanceof NotLeaderException) {
+            NotLeaderException notLeaderException = (NotLeaderException) cause;
+            omFailoverProxyProvider.performFailoverIfRequired(
+                notLeaderException.getSuggestedLeaderNodeId());
+            return getRetryAction(RetryAction.RETRY, retries, failovers);
           } else {
-            FAILOVER_PROXY_PROVIDER_LOG.error("Failed to connect to OM. " +
-                "Attempted {} retries and {} failovers", retries, failovers);
-            return RetryAction.FAIL;
+            return getRetryAction(RetryAction.FAILOVER_AND_RETRY, retries,
+                failovers);
           }
+        } else if (exception instanceof EOFException) {
+          return getRetryAction(RetryAction.FAILOVER_AND_RETRY, retries,
+              failovers);
         } else {
           return retryPolicyOnNetworkException.shouldRetry(
-                  exception, retries, failovers, isIdempotentOrAtMostOnce);
+              exception, retries, failovers, isIdempotentOrAtMostOnce);
+        }
+      }
+
+      private RetryAction getRetryAction(RetryAction fallbackAction,
+          int retries, int failovers) {
+        if (retries < maxRetries && failovers < maxFailovers) {
+          return fallbackAction;
+        } else {
+          FAILOVER_PROXY_PROVIDER_LOG.error("Failed to connect to OM. " +
+              "Attempted {} retries and {} failovers", retries, failovers);
+          return RetryAction.FAIL;
         }
       }
     };
+
     OzoneManagerProtocolPB proxy = (OzoneManagerProtocolPB) RetryProxy.create(
         OzoneManagerProtocolPB.class, failoverProxyProvider, retryPolicy);
     return proxy;

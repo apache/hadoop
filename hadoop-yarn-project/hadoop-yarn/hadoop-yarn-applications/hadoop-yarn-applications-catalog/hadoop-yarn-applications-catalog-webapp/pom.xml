@@ -244,6 +244,9 @@
                 <groupId>com.github.eirslett</groupId>
                 <artifactId>frontend-maven-plugin</artifactId>
                 <version>1.6</version>
+                <configuration>
+                    <workingDirectory>target</workingDirectory>
+                </configuration>
                 <executions>
                     <execution>
                         <id>install node and yarn</id>
@@ -411,7 +414,10 @@
                 <configuration>
                     <filesets>
                         <fileset>
-                            <directory>${vendor.loc}</directory>
+                            <directory>node</directory>
+                        </fileset>
+                        <fileset>
+                            <directory>node_modules</directory>
                         </fileset>
                     </filesets>
                 </configuration>
