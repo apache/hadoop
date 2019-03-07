@@ -183,6 +183,13 @@ public final class OMConfigKeys {
       OZONE_OM_RATIS_SERVER_FAILURE_TIMEOUT_DURATION_DEFAULT
       = TimeDuration.valueOf(120, TimeUnit.SECONDS);
 
+  // OM Leader server role check interval
+  public static final String OZONE_OM_RATIS_SERVER_ROLE_CHECK_INTERVAL_KEY
+      = "ozone.om.ratis.server.role.check.interval";
+  public static final TimeDuration
+      OZONE_OM_RATIS_SERVER_ROLE_CHECK_INTERVAL_DEFAULT
+      = TimeDuration.valueOf(15, TimeUnit.SECONDS);
+
   public static final String OZONE_OM_KERBEROS_KEYTAB_FILE_KEY = "ozone.om."
       + "kerberos.keytab.file";
   public static final String OZONE_OM_KERBEROS_PRINCIPAL_KEY = "ozone.om"

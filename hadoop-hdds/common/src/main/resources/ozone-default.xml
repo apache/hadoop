@@ -1646,6 +1646,16 @@
     </description>
   </property>
 
+  <property>
+    <name>ozone.om.ratis.server.role.check.interval</name>
+    <value>15s</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>The interval between OM leader performing a role
+      check on its ratis server. Ratis server informs OM if it
+      loses the leader role. The scheduled check is an secondary
+      check to ensure that the leader role is updated periodically
+      .</description>
+  </property>
 
   <property>
     <name>ozone.acl.authorizer.class</name>
