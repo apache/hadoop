@@ -1938,7 +1938,7 @@
       an isolated classloader.
 
       Default depends from the used jar. true for ozone-filesystem-lib-legacy
-      jar and false for the ozone-filesystem-lib.jar
+      jar and false for the ozone-filesystem-lib-current.jar
     </description>
   </property>
   <property>
