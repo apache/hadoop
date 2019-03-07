@@ -322,8 +322,8 @@ public class CapacityScheduler extends
   @VisibleForTesting
   void initScheduler(Configuration configuration) throws
       IOException {
+    writeLock.lock();
     try {
-      writeLock.lock();
       String confProviderStr = configuration.get(
           YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
           YarnConfiguration.DEFAULT_CONFIGURATION_STORE);
@@ -421,8 +421,8 @@ public class CapacityScheduler extends
   }
 
   private void startSchedulerThreads() {
+    writeLock.lock();
     try {
-      writeLock.lock();
       activitiesManager.start();
       if (scheduleAsynchronously) {
         Preconditions.checkNotNull(asyncSchedulerThreads,
@@ -455,8 +455,8 @@ public class CapacityScheduler extends
 
   @Override
   public void serviceStop() throws Exception {
+    writeLock.lock();
     try {
-      writeLock.lock();
       this.activitiesManager.stop();
       if (scheduleAsynchronously && asyncSchedulerThreads != null) {
         for (Thread t : asyncSchedulerThreads) {
@@ -479,8 +479,8 @@ public class CapacityScheduler extends
   @Override
   public void reinitialize(Configuration newConf, RMContext rmContext)
       throws IOException {
+    writeLock.lock();
     try {
-      writeLock.lock();
       Configuration configuration = new Configuration(newConf);
       CapacitySchedulerConfiguration oldConf = this.conf;
       this.conf = csConfProvider.loadConfiguration(configuration);
@@ -656,9 +656,8 @@ public class CapacityScheduler extends
         try {
           ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode> request =
               backlogs.take();
-
+          cs.writeLock.lock();
           try {
-            cs.writeLock.lock();
             cs.tryCommit(cs.getClusterResource(), request, true);
           } finally {
             cs.writeLock.unlock();
@@ -684,8 +683,8 @@ public class CapacityScheduler extends
 
   @VisibleForTesting
   public PlacementRule getUserGroupMappingPlacementRule() throws IOException {
+    readLock.lock();
     try {
-      readLock.lock();
       UserGroupMappingPlacementRule ugRule = new UserGroupMappingPlacementRule();
       ugRule.initialize(this);
       return ugRule;
@@ -695,8 +694,8 @@ public class CapacityScheduler extends
   }
 
   public PlacementRule getAppNameMappingPlacementRule() throws IOException {
+    readLock.lock();
     try {
-      readLock.lock();
       AppNameMappingPlacementRule anRule = new AppNameMappingPlacementRule();
       anRule.initialize(this);
       return anRule;
@@ -796,8 +795,8 @@ public class CapacityScheduler extends
   private void addApplicationOnRecovery(ApplicationId applicationId,
       String queueName, String user,
       Priority priority, ApplicationPlacementContext placementContext) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       //check if the queue needs to be auto-created during recovery
       CSQueue queue = getOrCreateQueueFromPlacementContext(applicationId, user,
            queueName, placementContext, true);
@@ -920,8 +919,8 @@ public class CapacityScheduler extends
   private void addApplication(ApplicationId applicationId, String queueName,
       String user, Priority priority,
       ApplicationPlacementContext placementContext) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       if (isSystemAppsLimitReached()) {
         String message = "Maximum system application limit reached,"
             + "cannot accept submission of application: " + applicationId;
@@ -1019,8 +1018,8 @@ public class CapacityScheduler extends
       ApplicationAttemptId applicationAttemptId,
       boolean transferStateFromPreviousAttempt,
       boolean isAttemptRecovering) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       SchedulerApplication<FiCaSchedulerApp> application = applications.get(
           applicationAttemptId.getApplicationId());
       if (application == null) {
@@ -1072,8 +1071,8 @@ public class CapacityScheduler extends
 
   private void doneApplication(ApplicationId applicationId,
       RMAppState finalState) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       SchedulerApplication<FiCaSchedulerApp> application = applications.get(
           applicationId);
       if (application == null) {
@@ -1099,8 +1098,8 @@ public class CapacityScheduler extends
   private void doneApplicationAttempt(
       ApplicationAttemptId applicationAttemptId,
       RMAppAttemptState rmAppAttemptFinalState, boolean keepContainers) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       LOG.info("Application Attempt " + applicationAttemptId + " is done."
           + " finalState=" + rmAppAttemptFinalState);
 
@@ -1214,8 +1213,8 @@ public class CapacityScheduler extends
 
     // make sure we aren't stopping/removing the application
     // when the allocate comes in
+    application.getWriteLock().lock();
     try {
-      application.getWriteLock().lock();
       if (application.isStopped()) {
         return EMPTY_ALLOCATION;
       }
@@ -1292,8 +1291,8 @@ public class CapacityScheduler extends
   @Override
   protected void nodeUpdate(RMNode rmNode) {
     long begin = System.nanoTime();
+    readLock.lock();
     try {
-      readLock.lock();
       setLastNodeUpdateTime(Time.now());
       super.nodeUpdate(rmNode);
     } finally {
@@ -1302,8 +1301,8 @@ public class CapacityScheduler extends
 
     // Try to do scheduling
     if (!scheduleAsynchronously) {
+      writeLock.lock();
       try {
-        writeLock.lock();
         ActivitiesLogger.NODE.startNodeUpdateRecording(activitiesManager,
             rmNode.getNodeID());
 
@@ -1329,8 +1328,8 @@ public class CapacityScheduler extends
    */
   private void updateNodeAndQueueResource(RMNode nm,
       ResourceOption resourceOption) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       updateNodeResource(nm, resourceOption);
       Resource clusterResource = getClusterResource();
       getRootQueue().updateClusterResource(clusterResource,
@@ -1917,8 +1916,8 @@ public class CapacityScheduler extends
 
   private void updateNodeAttributes(
       NodeAttributesUpdateSchedulerEvent attributeUpdateEvent) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       for (Entry<String, Set<NodeAttribute>> entry : attributeUpdateEvent
           .getUpdatedNodeToAttributes().entrySet()) {
         String hostname = entry.getKey();
@@ -1944,8 +1943,8 @@ public class CapacityScheduler extends
    */
   private void updateNodeLabelsAndQueueResource(
       NodeLabelsUpdateSchedulerEvent labelUpdateEvent) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       Set<String> updateLabels = new HashSet<String>();
       for (Entry<NodeId, Set<String>> entry : labelUpdateEvent
           .getUpdatedNodeToLabels().entrySet()) {
@@ -1982,8 +1981,8 @@ public class CapacityScheduler extends
   }
 
   private void addNode(RMNode nodeManager) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       FiCaSchedulerNode schedulerNode = new FiCaSchedulerNode(nodeManager,
           usePortForNodeName, nodeManager.getNodeLabels());
       nodeTracker.addNode(schedulerNode);
@@ -2019,8 +2018,8 @@ public class CapacityScheduler extends
   }
 
   private void removeNode(RMNode nodeInfo) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       // update this node to node label manager
       if (labelManager != null) {
         labelManager.deactivateNode(nodeInfo.getNodeID());
@@ -2164,8 +2163,8 @@ public class CapacityScheduler extends
 
   public void markContainerForKillable(
       RMContainer killableContainer) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       if (LOG.isDebugEnabled()) {
         LOG.debug(SchedulerEventType.MARK_CONTAINER_FOR_KILLABLE + ": container"
             + killableContainer.toString());
@@ -2200,8 +2199,8 @@ public class CapacityScheduler extends
 
   private void markContainerForNonKillable(
       RMContainer nonKillableContainer) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       if (LOG.isDebugEnabled()) {
         LOG.debug(
             SchedulerEventType.MARK_CONTAINER_FOR_NONKILLABLE + ": container"
@@ -2269,8 +2268,8 @@ public class CapacityScheduler extends
   private String resolveReservationQueueName(String queueName,
       ApplicationId applicationId, ReservationId reservationID,
       boolean isRecovering) {
+    readLock.lock();
     try {
-      readLock.lock();
       CSQueue queue = getQueue(queueName);
       // Check if the queue is a plan queue
       if ((queue == null) || !(queue instanceof PlanQueue)) {
@@ -2320,8 +2319,8 @@ public class CapacityScheduler extends
   @Override
   public void removeQueue(String queueName)
       throws SchedulerDynamicEditException {
+    writeLock.lock();
     try {
-      writeLock.lock();
       LOG.info("Removing queue: " + queueName);
       CSQueue q = this.getQueue(queueName);
       if (!(AbstractAutoCreatedLeafQueue.class.isAssignableFrom(
@@ -2354,8 +2353,8 @@ public class CapacityScheduler extends
   @Override
   public void addQueue(Queue queue)
       throws SchedulerDynamicEditException, IOException {
+    writeLock.lock();
     try {
-      writeLock.lock();
       if (queue == null) {
         throw new SchedulerDynamicEditException(
             "Queue specified is null. Should be an implementation of "
@@ -2392,8 +2391,8 @@ public class CapacityScheduler extends
   @Override
   public void setEntitlement(String inQueue, QueueEntitlement entitlement)
       throws YarnException {
+    writeLock.lock();
     try {
-      writeLock.lock();
       LeafQueue queue = this.queueManager.getAndCheckLeafQueue(inQueue);
       AbstractManagedParentQueue parent =
           (AbstractManagedParentQueue) queue.getParent();
@@ -2429,8 +2428,8 @@ public class CapacityScheduler extends
   @Override
   public String moveApplication(ApplicationId appId,
       String targetQueueName) throws YarnException {
+    writeLock.lock();
     try {
-      writeLock.lock();
       SchedulerApplication<FiCaSchedulerApp> application =
           applications.get(appId);
       if (application == null) {
@@ -2481,8 +2480,8 @@ public class CapacityScheduler extends
   @Override
   public void preValidateMoveApplication(ApplicationId appId,
       String newQueue) throws YarnException {
+    writeLock.lock();
     try {
-      writeLock.lock();
       SchedulerApplication<FiCaSchedulerApp> application =
           applications.get(appId);
       if (application == null) {
@@ -2604,8 +2603,8 @@ public class CapacityScheduler extends
   public Priority checkAndGetApplicationPriority(
       Priority priorityRequestedByApp, UserGroupInformation user,
       String queueName, ApplicationId applicationId) throws YarnException {
+    readLock.lock();
     try {
-      readLock.lock();
       Priority appPriority = priorityRequestedByApp;
 
       // Verify the scenario where priority is null from submissionContext.
@@ -2660,8 +2659,8 @@ public class CapacityScheduler extends
       ApplicationId applicationId, SettableFuture<Object> future,
       UserGroupInformation user)
       throws YarnException {
+    writeLock.lock();
     try {
-      writeLock.lock();
       Priority appPriority = null;
       SchedulerApplication<FiCaSchedulerApp> application = applications
           .get(applicationId);
@@ -3065,9 +3064,8 @@ public class CapacityScheduler extends
    */
   public boolean moveReservedContainer(RMContainer toBeMovedContainer,
       FiCaSchedulerNode targetNode) {
+    writeLock.lock();
     try {
-      writeLock.lock();
-
       if (LOG.isDebugEnabled()) {
         LOG.debug("Trying to move container=" + toBeMovedContainer + " to node="
             + targetNode.getNodeID());
@@ -3121,8 +3119,8 @@ public class CapacityScheduler extends
   @Override
   public long checkAndGetApplicationLifetime(String queueName,
       long lifetimeRequestedByApp) {
+    readLock.lock();
     try {
-      readLock.lock();
       CSQueue queue = getQueue(queueName);
       if (queue == null || !(queue instanceof LeafQueue)) {
         return lifetimeRequestedByApp;

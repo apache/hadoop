@@ -93,10 +93,10 @@ public class NonAppendableFSNodeLabelStore extends FileSystemNodeLabelsStore {
 
   private void writeNewMirror() throws IOException {
     ReentrantReadWriteLock.ReadLock readLock = manager.readLock;
+    // Acquire readlock to make sure we get cluster node labels and
+    // node-to-labels mapping atomically.
+    readLock.lock();
     try {
-      // Acquire readlock to make sure we get cluster node labels and
-      // node-to-labels mapping atomically.
-      readLock.lock();
       // Write mirror to mirror.new.tmp file
       Path newTmpPath = new Path(fsWorkingPath, MIRROR_FILENAME + ".new.tmp");
       try (FSDataOutputStream os = fs.create(newTmpPath, true)) {

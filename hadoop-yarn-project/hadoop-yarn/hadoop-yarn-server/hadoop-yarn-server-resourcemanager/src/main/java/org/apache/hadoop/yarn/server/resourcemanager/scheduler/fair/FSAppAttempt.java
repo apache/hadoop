@@ -132,8 +132,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   void containerCompleted(RMContainer rmContainer,
       ContainerStatus containerStatus, RMContainerEventType event) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       Container container = rmContainer.getContainer();
       ContainerId containerId = container.getId();
 
@@ -182,8 +182,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   private void unreserveInternal(
       SchedulerRequestKey schedulerKey, FSSchedulerNode node) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       Map<NodeId, RMContainer> reservedContainers = this.reservedContainers.get(
           schedulerKey);
       RMContainer reservedContainer = reservedContainers.remove(
@@ -285,8 +285,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       return NodeType.OFF_SWITCH;
     }
 
+    writeLock.lock();
     try {
-      writeLock.lock();
 
       // Default level is NODE_LOCAL
       if (!allowedLocalityLevel.containsKey(schedulerKey)) {
@@ -355,8 +355,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       return NodeType.OFF_SWITCH;
     }
 
+    writeLock.lock();
     try {
-      writeLock.lock();
 
       // default level is NODE_LOCAL
       if (!allowedLocalityLevel.containsKey(schedulerKey)) {
@@ -426,8 +426,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     RMContainer rmContainer;
     Container container;
 
+    writeLock.lock();
     try {
-      writeLock.lock();
       // Update allowed locality level
       NodeType allowed = allowedLocalityLevel.get(schedulerKey);
       if (allowed != null) {
@@ -499,8 +499,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   void resetAllowedLocalityLevel(
       SchedulerRequestKey schedulerKey, NodeType level) {
     NodeType old;
+    writeLock.lock();
     try {
-      writeLock.lock();
       old = allowedLocalityLevel.put(schedulerKey, level);
     } finally {
       writeLock.unlock();
@@ -665,9 +665,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   @Override
   public synchronized void recoverContainer(SchedulerNode node,
       RMContainer rmContainer) {
+    writeLock.lock();
     try {
-      writeLock.lock();
-
       super.recoverContainer(node, rmContainer);
 
       if (!rmContainer.getState().equals(RMContainerState.COMPLETED)) {
@@ -777,8 +776,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     String rackName =
         node.getRackName() == null ? "NULL" : node.getRackName();
 
+    writeLock.lock();
     try {
-      writeLock.lock();
       Set<String> rackReservations = reservations.get(rackName);
       if (rackReservations == null) {
         rackReservations = new HashSet<>();
@@ -794,8 +793,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     String rackName =
         node.getRackName() == null ? "NULL" : node.getRackName();
 
+    writeLock.lock();
     try {
-      writeLock.lock();
       Set<String> rackReservations = reservations.get(rackName);
       if (rackReservations != null) {
         rackReservations.remove(node.getNodeName());
@@ -964,8 +963,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     // For each priority, see if we can schedule a node local, rack local
     // or off-switch request. Rack of off-switch requests may be delayed
     // (not scheduled) in order to promote better locality.
+    writeLock.lock();
     try {
-      writeLock.lock();
 
       // TODO (wandga): All logics in this method should be added to
       // SchedulerPlacement#canDelayTo which is independent from scheduler.

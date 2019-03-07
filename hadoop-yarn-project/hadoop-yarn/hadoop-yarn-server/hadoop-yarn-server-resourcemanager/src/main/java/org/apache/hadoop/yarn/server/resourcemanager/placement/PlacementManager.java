@@ -45,8 +45,8 @@ public class PlacementManager {
   }
 
   public void updateRules(List<PlacementRule> rules) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       this.rules = rules;
     } finally {
       writeLock.unlock();
@@ -55,10 +55,8 @@ public class PlacementManager {
 
   public ApplicationPlacementContext placeApplication(
       ApplicationSubmissionContext asc, String user) throws YarnException {
-
+    readLock.lock();
     try {
-      readLock.lock();
-
       if (null == rules || rules.isEmpty()) {
         return null;
       }

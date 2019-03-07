@@ -670,8 +670,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   public void handle(RMNodeEvent event) {
     LOG.debug("Processing " + event.getNodeId() + " of type " + event.getType());
+    writeLock.lock();
     try {
-      writeLock.lock();
       NodeState oldState = getState();
       try {
          stateMachine.doTransition(event.getType(), event);
@@ -1515,9 +1515,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   @Override
   public List<Container> pullNewlyIncreasedContainers() {
+    writeLock.lock();
     try {
-      writeLock.lock();
-
       if (nmReportedIncreasedContainers.isEmpty()) {
         return Collections.emptyList();
       } else {

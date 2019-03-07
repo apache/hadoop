@@ -1587,8 +1587,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         && this.getFinishTime() < (end - attemptFailuresValidityInterval)) {
         return false;
     }
+    this.readLock.lock();
     try {
-      this.readLock.lock();
       int exitStatus = getAMContainerExitStatus();
       return !(exitStatus == ContainerExitStatus.PREEMPTED
           || exitStatus == ContainerExitStatus.ABORTED
@@ -2274,8 +2274,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
   @Override
   public long getFinishTime() {
+    this.readLock.lock();
     try {
-      this.readLock.lock();
       return this.finishTime;
     } finally {
       this.readLock.unlock();
@@ -2283,8 +2283,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   }
 
   private void setFinishTime(long finishTime) {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
       this.finishTime = finishTime;
     } finally {
       this.writeLock.unlock();

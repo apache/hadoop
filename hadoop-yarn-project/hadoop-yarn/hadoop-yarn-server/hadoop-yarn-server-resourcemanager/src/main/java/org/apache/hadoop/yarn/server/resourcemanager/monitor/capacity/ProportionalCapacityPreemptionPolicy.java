@@ -566,10 +566,9 @@ public class ProportionalCapacityPreemptionPolicy
       Resource partitionResource, String partitionToLookAt) {
     TempQueuePerPartition ret;
     ReadLock readLock = curQueue.getReadLock();
+    // Acquire a read lock from Parent/LeafQueue.
+    readLock.lock();
     try {
-      // Acquire a read lock from Parent/LeafQueue.
-      readLock.lock();
-
       String queueName = curQueue.getQueueName();
       QueueCapacities qc = curQueue.getQueueCapacities();
       float absCap = qc.getAbsoluteCapacity(partitionToLookAt);

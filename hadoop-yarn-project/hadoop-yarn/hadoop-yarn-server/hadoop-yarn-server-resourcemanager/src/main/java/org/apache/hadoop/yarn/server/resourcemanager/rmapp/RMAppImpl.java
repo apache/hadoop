@@ -1776,8 +1776,8 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   @Override
   public Map<NodeId, LogAggregationReport> getLogAggregationReportsForApp() {
+    this.readLock.lock();
     try {
-      this.readLock.lock();
       if (!isLogAggregationFinished() && isAppInFinalState(this) &&
           systemClock.getTime() > this.logAggregationStartTime
           + this.logAggregationStatusTimeout) {
@@ -1801,8 +1801,8 @@ public class RMAppImpl implements RMApp, Recoverable {
   }
 
   public void aggregateLogReport(NodeId nodeId, LogAggregationReport report) {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
       if (this.logAggregationEnabled && !isLogAggregationFinished()) {
         LogAggregationReport curReport = this.logAggregationStatus.get(nodeId);
         boolean stateChangedToFinal = false;
@@ -1851,8 +1851,8 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   @Override
   public LogAggregationStatus getLogAggregationStatusForAppReport() {
+    this.readLock.lock();
     try {
-      this.readLock.lock();
       if (! logAggregationEnabled) {
         return LogAggregationStatus.DISABLED;
       }
@@ -2022,8 +2022,8 @@ public class RMAppImpl implements RMApp, Recoverable {
   }
 
   public String getLogAggregationFailureMessagesForNM(NodeId nodeId) {
+    this.readLock.lock();
     try {
-      this.readLock.lock();
       List<String> failureMessages =
           this.logAggregationFailureMessagesForNMs.get(nodeId);
       if (failureMessages == null || failureMessages.isEmpty()) {

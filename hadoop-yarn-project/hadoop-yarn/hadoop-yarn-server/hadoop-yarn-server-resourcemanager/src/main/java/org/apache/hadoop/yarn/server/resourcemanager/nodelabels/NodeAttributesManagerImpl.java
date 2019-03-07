@@ -158,9 +158,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
       AttributeMappingOperationType op,
       Map<NodeAttributeKey, RMNodeAttribute> newAttributesToBeAdded,
       String attributePrefix) {
+    writeLock.lock();
     try {
-      writeLock.lock();
-
       // shows node->attributes Mapped as part of this operation.
       StringBuilder logMsg = new StringBuilder(op.name());
       logMsg.append(" attributes on nodes:");
@@ -403,8 +402,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   public Map<NodeAttributeKey,
       Map<String, AttributeValue>> getAttributesToNodes(
       Set<NodeAttributeKey> attributes) {
+    readLock.lock();
     try {
-      readLock.lock();
       boolean fetchAllAttributes = (attributes == null || attributes.isEmpty());
       Map<NodeAttributeKey, Map<String, AttributeValue>> attributesToNodes =
           new HashMap<>();
@@ -423,8 +422,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   }
 
   public Resource getResourceByAttribute(NodeAttribute attribute) {
+    readLock.lock();
     try {
-      readLock.lock();
       return clusterAttributes.containsKey(attribute.getAttributeKey())
           ? clusterAttributes.get(attribute.getAttributeKey()).getResource()
           : Resource.newInstance(0, 0);
@@ -436,8 +435,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   @Override
   public Map<NodeAttribute, AttributeValue> getAttributesForNode(
       String hostName) {
+    readLock.lock();
     try {
-      readLock.lock();
       return nodeCollections.containsKey(hostName)
           ? nodeCollections.get(hostName).getAttributes()
           : new HashMap<>();
@@ -448,8 +447,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
 
   @Override
   public List<NodeToAttributes> getNodeToAttributes(Set<String> prefix) {
+    readLock.lock();
     try {
-      readLock.lock();
       List<NodeToAttributes> nodeToAttributes = new ArrayList<>();
       nodeCollections.forEach((k, v) -> {
         List<NodeAttribute> attrs;
@@ -476,8 +475,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   @Override
   public Map<String, Set<NodeAttribute>> getNodesToAttributes(
       Set<String> hostNames) {
+    readLock.lock();
     try {
-      readLock.lock();
       boolean fetchAllNodes = (hostNames == null || hostNames.isEmpty());
       Map<String, Set<NodeAttribute>> nodeToAttrs = new HashMap<>();
       if (fetchAllNodes) {
@@ -498,8 +497,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   }
 
   public void activateNode(NodeId nodeId, Resource resource) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       String hostName = nodeId.getHost();
       Host host = nodeCollections.get(hostName);
       if (host == null) {
@@ -516,8 +515,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   }
 
   public void deactivateNode(NodeId nodeId) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       Host host = nodeCollections.get(nodeId.getHost());
       for (NodeAttribute attribute : host.getAttributes().keySet()) {
         clusterAttributes.get(attribute.getAttributeKey())

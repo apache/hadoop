@@ -116,8 +116,8 @@ public class LocalizedResource implements EventHandler<ResourceEvent> {
       .append(getState() == ResourceState.LOCALIZED
           ? getLocalPath() + "," + getSize()
           : "pending").append(",[");
+    this.readLock.lock();
     try {
-      this.readLock.lock();
       for (ContainerId c : ref) {
         sb.append("(").append(c.toString()).append(")");
       }
@@ -187,9 +187,8 @@ public class LocalizedResource implements EventHandler<ResourceEvent> {
 
   @Override
   public void handle(ResourceEvent event) {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
-
       Path resourcePath = event.getLocalResourceRequest().getPath();
       if (LOG.isDebugEnabled()) {
         LOG.debug("Processing " + resourcePath + " of type " + event.getType());

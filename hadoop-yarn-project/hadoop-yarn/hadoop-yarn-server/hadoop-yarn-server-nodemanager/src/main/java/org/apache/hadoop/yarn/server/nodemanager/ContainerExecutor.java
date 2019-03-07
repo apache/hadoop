@@ -569,8 +569,8 @@ public abstract class ContainerExecutor implements Configurable {
    * @return the path of the pid-file for the given containerId.
    */
   protected Path getPidFilePath(ContainerId containerId) {
+    readLock.lock();
     try {
-      readLock.lock();
       return (this.pidFiles.get(containerId));
     } finally {
       readLock.unlock();
@@ -720,9 +720,8 @@ public abstract class ContainerExecutor implements Configurable {
    * @return true if the container is active
    */
   protected boolean isContainerActive(ContainerId containerId) {
+    readLock.lock();
     try {
-      readLock.lock();
-
       return (this.pidFiles.containsKey(containerId));
     } finally {
       readLock.unlock();
@@ -742,8 +741,8 @@ public abstract class ContainerExecutor implements Configurable {
    * of the launched process
    */
   public void activateContainer(ContainerId containerId, Path pidFilePath) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       this.pidFiles.put(containerId, pidFilePath);
     } finally {
       writeLock.unlock();
@@ -778,8 +777,8 @@ public abstract class ContainerExecutor implements Configurable {
    * @param containerId the container ID
    */
   public void deactivateContainer(ContainerId containerId) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       this.pidFiles.remove(containerId);
     } finally {
       writeLock.unlock();
