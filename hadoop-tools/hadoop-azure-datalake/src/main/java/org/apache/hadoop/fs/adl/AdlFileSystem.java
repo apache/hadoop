@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -46,6 +47,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.ContentSummary.Builder;
 import org.apache.hadoop.fs.CreateFlag;
@@ -1032,5 +1034,22 @@ public class AdlFileSystem extends FileSystem {
       dest.set(generic, value, key + " via " + origin);
     }
     return dest;
+  }
+
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    // qualify the path to make sure that it refers to the current FS.
+    // query the superclass, which triggers argument validation.
+    boolean superCapability = super.hasPathCapability(path, capability);
+    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    case CommonPathCapabilities.FS_ACLS:
+    case CommonPathCapabilities.FS_APPEND:
+    case CommonPathCapabilities.FS_CONCAT:
+    case CommonPathCapabilities.FS_PERMISSIONS:
+      return true;
+    default:
+      return superCapability;
+    }
   }
 }

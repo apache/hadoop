@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClientThrottlingIntercept;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -66,6 +67,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizationException;
 import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizer;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
+import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -1127,6 +1129,26 @@ public class AzureBlobFileSystem extends FileSystem {
             "User is not authorized for action " + action.toString()
             + " on paths: " + Arrays.toString(paths));
       }
+    }
+  }
+
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
+    // qualify the path to make sure that it refers to the current FS.
+    makeQualified(path);
+
+    switch (capability) {
+    case CommonPathCapabilities.FS_PERMISSIONS:
+    case CommonPathCapabilities.FS_APPEND:
+      return true;
+    case CommonPathCapabilities.FS_ACLS:
+      return getIsNamespaceEnabled();
+    case CommonPathCapabilities.FS_DELEGATION_TOKENS:
+      return delegationTokenEnabled;
+    default:
+      return super.hasPathCapability(path, capability);
     }
   }
 }

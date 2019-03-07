@@ -517,7 +517,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     String name = fs.getUri().toString();
     S3GuardTool.BucketInfo cmd = new S3GuardTool.BucketInfo(
         getConfiguration());
-    if (fs.hasCapability(
+    if (fs.hasPathCapability(fs.getWorkingDirectory(),
         CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER)) {
       // if the FS is magic, expect this to work
       exec(cmd, S3GuardTool.BucketInfo.MAGIC_FLAG, name);

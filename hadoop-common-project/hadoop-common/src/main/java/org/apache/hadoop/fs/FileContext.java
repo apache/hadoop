@@ -46,6 +46,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.impl.FutureDataInputStreamBuilderImpl;
+import org.apache.hadoop.fs.impl.FsLinkResolution;
+import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -171,7 +173,7 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class FileContext {
+public class FileContext implements PathCapabilities {
   
   public static final Logger LOG = LoggerFactory.getLogger(FileContext.class);
   /**
@@ -2934,4 +2936,21 @@ public class FileContext {
       }.resolve(FileContext.this, absF);
     }
   }
+
+  /**
+   * Return the path capabilities of the bonded {@code AbstractFileSystem}.
+   * @param path path to query the capability of.
+   * @param capability string to query the stream support for.
+   * @return true iff the capability is supported under that FS.
+   * @throws IOException path resolution or other IO failure
+   * @throws IllegalArgumentException invalid arguments
+   */
+  public boolean hasPathCapability(Path path, String capability)
+      throws IOException {
+    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
+    return FsLinkResolution.resolve(this,
+        fixRelativePart(path),
+        (fs, p) -> fs.hasPathCapability(p, capability));
+  }
+
 }

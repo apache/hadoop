@@ -82,7 +82,7 @@ public final class CommitConstants {
 
   /**
    * Flag to indicate that a store supports magic committers.
-   * returned in {@code StreamCapabilities}
+   * returned in {@code PathCapabilities}
    * Value: {@value}.
    */
   public static final String STORE_CAPABILITY_MAGIC_COMMITTER

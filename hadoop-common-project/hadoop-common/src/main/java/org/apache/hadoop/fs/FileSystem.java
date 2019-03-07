@@ -35,6 +35,7 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -58,6 +59,7 @@ import org.apache.hadoop.fs.Options.HandleOpt;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
 import org.apache.hadoop.fs.impl.FutureDataInputStreamBuilderImpl;
+import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -134,7 +136,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class FileSystem extends Configured
-    implements Closeable, DelegationTokenIssuer {
+    implements Closeable, DelegationTokenIssuer, PathCapabilities {
   public static final String FS_DEFAULT_NAME_KEY =
                    CommonConfigurationKeys.FS_DEFAULT_NAME_KEY;
   public static final String DEFAULT_FS =
@@ -720,6 +722,7 @@ public abstract class FileSystem extends Configured
    *
    */
   protected void checkPath(Path path) {
+    Preconditions.checkArgument(path != null, "null path");
     URI uri = path.toUri();
     String thatScheme = uri.getScheme();
     if (thatScheme == null)                // fs is relative
@@ -3257,6 +3260,31 @@ public abstract class FileSystem extends Configured
       LOGGER.warn("Cannot get all trash roots", e);
     }
     return ret;
+  }
+
+  /**
+   * The base FileSystem implementation generally has no knowledge
+   * of the capabilities of actual implementations.
+   * Unless it has a way to explicitly determine the capabilities,
+   * this method returns false.
+   * {@inheritDoc}
+   */
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
+    // qualify the path to make sure that it refers to the current FS.
+    makeQualified(path);
+    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    case CommonPathCapabilities.FS_SYMLINKS:
+      // delegate to the existing supportsSymlinks() call.
+      return supportsSymlinks() && areSymlinksEnabled();
+    case CommonPathCapabilities.FS_DELEGATION_TOKENS:
+      // this is less efficient than it should be.
+      return getCanonicalServiceName() != null;
+    default:
+      // the feature is not implemented.
+      return false;
+    }
   }
 
   // making it volatile to be able to do a double checked locking

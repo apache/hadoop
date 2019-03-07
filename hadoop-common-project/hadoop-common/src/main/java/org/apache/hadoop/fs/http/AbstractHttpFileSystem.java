@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.http;
 
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -27,6 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
+import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 
@@ -35,6 +37,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URLConnection;
+import java.util.Locale;
 
 abstract class AbstractHttpFileSystem extends FileSystem {
   private static final long DEFAULT_BLOCK_SIZE = 4096;
@@ -109,6 +112,23 @@ abstract class AbstractHttpFileSystem extends FileSystem {
   @Override
   public FileStatus getFileStatus(Path path) throws IOException {
     return new FileStatus(-1, false, 1, DEFAULT_BLOCK_SIZE, 0, path);
+  }
+
+  /**
+   * Declare that this filesystem connector is always read only.
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
+
+    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    case CommonPathCapabilities.FS_READ_ONLY_CONNECTOR:
+      return true;
+    default:
+      return false;
+    }
   }
 
   private static class HttpDataInputStream extends FilterInputStream

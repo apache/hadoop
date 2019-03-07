@@ -46,6 +46,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -61,6 +62,7 @@ import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderTokenIssuer;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.DelegationTokenRenewer;
@@ -74,6 +76,7 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
 import org.apache.hadoop.fs.QuotaUsage;
+import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsCreateModes;
@@ -1125,6 +1128,11 @@ public class WebHdfsFileSystem extends FileSystem
     ).run();
   }
 
+  @Override
+  public boolean supportsSymlinks() {
+    return true;
+  }
+
   /**
    * Create a symlink pointing to the destination path.
    */
@@ -2077,6 +2085,36 @@ public class WebHdfsFileSystem extends FileSystem
   @VisibleForTesting
   public void setTestProvider(KeyProvider kp) {
     testProvider = kp;
+  }
+
+  /**
+   * This filesystem's capabilities must be in sync with that of HDFS.
+   * @param path path to query the capability of.
+   * @param capability string to query the stream support for.
+   * @return true if a capability is supported.
+   */
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    // query the superclass, which triggers argument validation.
+    boolean superCapability = super.hasPathCapability(path, capability);
+    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    case CommonPathCapabilities.FS_ACLS:
+    case CommonPathCapabilities.FS_APPEND:
+    case CommonPathCapabilities.FS_CHECKSUMS:
+    case CommonPathCapabilities.FS_CONCAT:
+    case CommonPathCapabilities.FS_PERMISSIONS:
+    case CommonPathCapabilities.FS_SNAPSHOTS:
+    case CommonPathCapabilities.FS_STORAGEPOLICY:
+    case CommonPathCapabilities.FS_XATTRS:
+      return true;
+    case CommonPathCapabilities.FS_SYMLINKS:
+      // there's no checking of the {symlinksEnabled} flag in this class,\
+      // so always return true.
+      return true;
+    default:
+      return superCapability;
+    }
   }
 
   /**

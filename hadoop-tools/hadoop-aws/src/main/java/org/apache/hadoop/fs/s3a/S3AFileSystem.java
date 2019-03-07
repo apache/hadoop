@@ -91,6 +91,7 @@ import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -122,6 +123,7 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.fs.s3a.auth.delegation.AWSPolicyProvider;
@@ -4084,14 +4086,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return instrumentation.newCommitterStatistics();
   }
 
-  /**
-   * Return the capabilities of this filesystem instance.
-   * @param capability string to query the stream support for.
-   * @return whether the FS instance has the capability.
-   */
   @Override
-  public boolean hasCapability(String capability) {
-
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
+    // qualify the path to make sure that it refers to the current FS.
+    makeQualified(path);
     switch (capability.toLowerCase(Locale.ENGLISH)) {
 
     case CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER:
@@ -4102,7 +4102,31 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // select is only supported if enabled
       return selectBinding.isEnabled();
 
+    case CommonPathCapabilities.FS_CHECKSUMS:
+      // capability depends on FS configuration
+      return getConf().getBoolean(ETAG_CHECKSUM_ENABLED,
+          ETAG_CHECKSUM_ENABLED_DEFAULT);
+
     default:
+      return super.hasPathCapability(path, capability);
+    }
+  }
+
+  /**
+   * Return the capabilities of this filesystem instance.
+   *
+   * This has been supplanted by {@link #hasPathCapability(Path, String)}.
+   * @param capability string to query the stream support for.
+   * @return whether the FS instance has the capability.
+   */
+  @Deprecated
+  @Override
+  public boolean hasCapability(String capability) {
+    try {
+      return hasPathCapability(workingDir, capability);
+    } catch (IOException ex) {
+      // should never happen, so log and downgrade.
+      LOG.debug("Ignoring exception on hasCapability({}})", capability, ex);
       return false;
     }
   }
