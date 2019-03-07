@@ -122,6 +122,19 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
   }
 
   @Override
+  public void appLaunched(RMApp app, long launchTime) {
+    TimelineEntity entity = createApplicationEntity(app.getApplicationId());
+
+    TimelineEvent tEvent = new TimelineEvent();
+    tEvent.setEventType(ApplicationMetricsConstants.LAUNCHED_EVENT_TYPE);
+    tEvent.setTimestamp(launchTime);
+    entity.addEvent(tEvent);
+
+    getDispatcher().getEventHandler().handle(new TimelineV1PublishEvent(
+        SystemMetricsEventType.PUBLISH_ENTITY, entity, app.getApplicationId()));
+  }
+
+  @Override
   public void appFinished(RMApp app, RMAppState state, long finishedTime) {
     TimelineEntity entity = createApplicationEntity(app.getApplicationId());
 
