@@ -267,7 +267,8 @@ public abstract class ContainerExecutor implements Configurable {
     ContainerLaunch.ShellScriptBuilder sb =
       ContainerLaunch.ShellScriptBuilder.create();
     if (environment != null) {
-      for (Map.Entry<String,String> env : environment.entrySet()) {
+      for (Map.Entry<String, String> env :
+          sb.orderEnvByDependencies(environment).entrySet()) {
         sb.env(env.getKey().toString(), env.getValue().toString());
       }
     }
