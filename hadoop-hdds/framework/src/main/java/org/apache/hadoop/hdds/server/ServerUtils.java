@@ -125,13 +125,29 @@ public final class ServerUtils {
    * @return
    */
   public static File getScmDbDir(Configuration conf) {
-    final Collection<String> metadirs = conf.getTrimmedStringCollection(
-        ScmConfigKeys.OZONE_SCM_DB_DIRS);
+
+    File metadataDir = getDirWithFallBackToOzoneMetadata(conf, ScmConfigKeys
+        .OZONE_SCM_DB_DIRS, "SCM");
+    if (metadataDir != null) {
+      return metadataDir;
+    }
+
+    LOG.warn("{} is not configured. We recommend adding this setting. " +
+        "Falling back to {} instead.",
+        ScmConfigKeys.OZONE_SCM_DB_DIRS, HddsConfigKeys.OZONE_METADATA_DIRS);
+    return getOzoneMetaDirPath(conf);
+  }
+
+  public static File getDirWithFallBackToOzoneMetadata(Configuration conf,
+                                                       String key,
+                                                       String componentName) {
+    final Collection<String> metadirs = conf.getTrimmedStringCollection(key);
 
     if (metadirs.size() > 1) {
       throw new IllegalArgumentException(
-          "Bad config setting " + ScmConfigKeys.OZONE_SCM_DB_DIRS +
-          ". SCM does not support multiple metadata dirs currently");
+          "Bad config setting " + key +
+              ". " + componentName +
+              " does not support multiple metadata dirs currently");
     }
 
     if (metadirs.size() == 1) {
@@ -143,11 +159,7 @@ public final class ServerUtils {
       }
       return dbDirPath;
     }
-
-    LOG.warn("{} is not configured. We recommend adding this setting. " +
-        "Falling back to {} instead.",
-        ScmConfigKeys.OZONE_SCM_DB_DIRS, HddsConfigKeys.OZONE_METADATA_DIRS);
-    return getOzoneMetaDirPath(conf);
+    return null;
   }
 
   /**

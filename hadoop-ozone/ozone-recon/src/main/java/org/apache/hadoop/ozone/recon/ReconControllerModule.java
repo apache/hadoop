@@ -18,6 +18,10 @@
 package org.apache.hadoop.ozone.recon;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.recon.spi.ReconContainerDBProvider;
+import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
+import org.apache.hadoop.ozone.recon.spi.impl.ContainerDBServiceProviderImpl;
+import org.apache.hadoop.utils.MetadataStore;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
@@ -30,6 +34,9 @@ public class ReconControllerModule extends AbstractModule {
   protected void configure() {
     bind(OzoneConfiguration.class).toProvider(OzoneConfigurationProvider.class);
     bind(ReconHttpServer.class).in(Singleton.class);
+    bind(MetadataStore.class).toProvider(ReconContainerDBProvider.class);
+    bind(ContainerDBServiceProvider.class)
+        .to(ContainerDBServiceProviderImpl.class);
   }
 
 

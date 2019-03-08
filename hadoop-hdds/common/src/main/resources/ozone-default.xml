@@ -2144,4 +2144,98 @@
       milliseconds.
     </description>
   </property>
+  <property>
+    <name>ozone.recon.http.enabled</name>
+    <value>true</value>
+    <tag>RECON, MANAGEMENT</tag>
+    <description>
+      Property to enable or disable Recon web user interface.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.http-address</name>
+    <value>0.0.0.0:9888</value>
+    <tag>RECON, MANAGEMENT</tag>
+    <description>
+      The address and the base port where the Recon web UI will listen on.
+
+      If the port is 0, then the server will start on a free port. However, it
+      is best to specify a well-known port, so it is easy to connect and see
+      the Recon management UI.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.http-bind-host</name>
+    <value>0.0.0.0</value>
+    <tag>RECON, MANAGEMENT</tag>
+    <description>
+      The actual address the Recon server will bind to. If this optional
+      the address is set, it overrides only the hostname portion of
+      ozone.recon.http-address.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.https-bind-host</name>
+    <value>0.0.0.0</value>
+    <tag>RECON, MANAGEMENT, SECURITY</tag>
+    <description>
+      The actual address the Recon web server will bind to using HTTPS.
+      If this optional address is set, it overrides only the hostname portion of
+      ozone.recon.https-address.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.https-address</name>
+    <value>0.0.0.0:9889</value>
+    <tag>RECON, MANAGEMENT, SECURITY</tag>
+    <description>
+      The address and the base port where the Recon web UI will listen
+      on using HTTPS. If the port is 0 then the server will start on a free
+      port.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.keytab.file</name>
+    <value/>
+    <tag>RECON, SECURITY</tag>
+    <description>
+      The keytab file for Kerberos authentication in Recon.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.authentication.kerberos.principal</name>
+    <value/>
+    <tag>RECON</tag>
+    <description>The server principal used by Ozone Recon server. This is
+      typically set to HTTP/_HOST@REALM.TLD The SPNEGO server principal
+      begins with the prefix HTTP/ by convention.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.container.db.cache.size.mb</name>
+    <value>128</value>
+    <tag>RECON, PERFORMANCE</tag>
+    <description>
+      The size of Recon DB cache in MB that used for caching files.
+      This value is set to an abnormally low value in the default configuration.
+      That is to make unit testing easy. Generally, this value should be set to
+      something like 16GB or more, if you intend to use Recon at scale.
+
+      A large value for this key allows a proportionally larger amount of Recon
+      container DB to be cached in memory. This makes Recon Container-Key
+      operations faster.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.db.dirs</name>
+    <value/>
+    <tag>OZONE, RECON, STORAGE, PERFORMANCE</tag>
+    <description>
+      Directory where the Recon Server stores its metadata. This should
+      be specified as a single directory. If the directory does not
+      exist then the Recon will attempt to create it.
+      If undefined, then the Recon will log a warning and fallback to
+      ozone.metadata.dirs.
+    </description>
+  </property>
 </configuration>

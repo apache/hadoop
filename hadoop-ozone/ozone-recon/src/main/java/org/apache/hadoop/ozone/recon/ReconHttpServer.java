@@ -37,52 +37,52 @@ public class ReconHttpServer extends BaseHttpServer {
 
   @Override
   protected String getHttpAddressKey() {
-    return ReconServerConfiguration.OZONE_RECON_HTTP_ADDRESS_KEY;
+    return ReconServerConfigKeys.OZONE_RECON_HTTP_ADDRESS_KEY;
   }
 
   @Override
   protected String getHttpsAddressKey() {
-    return ReconServerConfiguration.OZONE_RECON_HTTPS_ADDRESS_KEY;
+    return ReconServerConfigKeys.OZONE_RECON_HTTPS_ADDRESS_KEY;
   }
 
   @Override
   protected String getHttpBindHostKey() {
-    return ReconServerConfiguration.OZONE_RECON_HTTP_BIND_HOST_KEY;
+    return ReconServerConfigKeys.OZONE_RECON_HTTP_BIND_HOST_KEY;
   }
 
   @Override
   protected String getHttpsBindHostKey() {
-    return ReconServerConfiguration.OZONE_RECON_HTTPS_BIND_HOST_KEY;
+    return ReconServerConfigKeys.OZONE_RECON_HTTPS_BIND_HOST_KEY;
   }
 
   @Override
   protected String getBindHostDefault() {
-    return ReconServerConfiguration.OZONE_RECON_HTTP_BIND_HOST_DEFAULT;
+    return ReconServerConfigKeys.OZONE_RECON_HTTP_BIND_HOST_DEFAULT;
   }
 
   @Override
   protected int getHttpBindPortDefault() {
-    return ReconServerConfiguration.OZONE_RECON_HTTP_BIND_PORT_DEFAULT;
+    return ReconServerConfigKeys.OZONE_RECON_HTTP_BIND_PORT_DEFAULT;
   }
 
   @Override
   protected int getHttpsBindPortDefault() {
-    return ReconServerConfiguration.OZONE_RECON_HTTPS_BIND_PORT_DEFAULT;
+    return ReconServerConfigKeys.OZONE_RECON_HTTPS_BIND_PORT_DEFAULT;
   }
 
   @Override
   protected String getKeytabFile() {
-    return ReconServerConfiguration.OZONE_RECON_KEYTAB_FILE;
+    return ReconServerConfigKeys.OZONE_RECON_KEYTAB_FILE;
   }
 
   @Override
   protected String getSpnegoPrincipal() {
-    return ReconServerConfiguration
+    return ReconServerConfigKeys
         .OZONE_RECON_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL;
   }
 
   @Override
   protected String getEnabledKey() {
-    return ReconServerConfiguration.OZONE_RECON_HTTP_ENABLED_KEY;
+    return ReconServerConfigKeys.OZONE_RECON_HTTP_ENABLED_KEY;
   }
 }
