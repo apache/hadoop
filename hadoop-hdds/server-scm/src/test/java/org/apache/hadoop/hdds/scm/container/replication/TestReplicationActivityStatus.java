@@ -27,6 +27,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.block.BlockManager;
 import org.apache.hadoop.hdds.scm.block.BlockManagerImpl;
 import org.apache.hadoop.hdds.scm.chillmode.ChillModeHandler;
+import org.apache.hadoop.hdds.scm.chillmode.SCMChillModeManager;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
 import org.apache.hadoop.hdds.server.events.EventQueue;
@@ -67,11 +68,13 @@ public class TestReplicationActivityStatus {
       throws TimeoutException, InterruptedException {
     assertFalse(replicationActivityStatus.isReplicationEnabled());
     // In chill mode replication process should be stopped.
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, true);
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS,
+        new SCMChillModeManager.ChillModeStatus(true));
     assertFalse(replicationActivityStatus.isReplicationEnabled());
 
     // Replication should be enabled when chill mode if off.
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS,
+        new SCMChillModeManager.ChillModeStatus(false));
     GenericTestUtils.waitFor(() -> {
       return replicationActivityStatus.isReplicationEnabled();
     }, 10, 1000*5);

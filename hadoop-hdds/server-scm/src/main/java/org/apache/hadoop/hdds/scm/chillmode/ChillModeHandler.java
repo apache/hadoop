@@ -23,9 +23,11 @@ import org.apache.hadoop.hdds.scm.block.BlockManager;
 import org.apache.hadoop.hdds.scm.container.replication.
     ReplicationActivityStatus;
 import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
+import org.apache.hadoop.hdds.scm.chillmode.SCMChillModeManager.ChillModeStatus;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -33,12 +35,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Class to handle the activities needed to be performed after exiting chill
  * mode.
  */
-public class ChillModeHandler implements EventHandler<Boolean> {
+public class ChillModeHandler implements EventHandler<ChillModeStatus> {
 
-  private SCMClientProtocolServer scmClientProtocolServer;
-  private BlockManager scmBlockManager;
+  private final SCMClientProtocolServer scmClientProtocolServer;
+  private final BlockManager scmBlockManager;
   private final long waitTime;
-  private AtomicBoolean isInChillMode = new AtomicBoolean(true);
+  private final AtomicBoolean isInChillMode = new AtomicBoolean(true);
   private final ReplicationActivityStatus replicationActivityStatus;
 
 
@@ -53,6 +55,12 @@ public class ChillModeHandler implements EventHandler<Boolean> {
       SCMClientProtocolServer clientProtocolServer,
       BlockManager blockManager,
       ReplicationActivityStatus replicationStatus) {
+    Objects.requireNonNull(configuration, "Configuration cannot be null");
+    Objects.requireNonNull(clientProtocolServer, "SCMClientProtocolServer " +
+        "object cannot be null");
+    Objects.requireNonNull(blockManager, "BlockManager object cannot be null");
+    Objects.requireNonNull(replicationStatus, "ReplicationActivityStatus " +
+        "object cannot be null");
     this.waitTime = configuration.getTimeDuration(
         HddsConfigKeys.HDDS_SCM_WAIT_TIME_AFTER_CHILL_MODE_EXIT,
         HddsConfigKeys.HDDS_SCM_WAIT_TIME_AFTER_CHILL_MODE_EXIT_DEFAULT,
@@ -79,12 +87,14 @@ public class ChillModeHandler implements EventHandler<Boolean> {
    * @param publisher
    */
   @Override
-  public void onMessage(Boolean chillModeStatus, EventPublisher publisher) {
-    isInChillMode.set(chillModeStatus);
+  public void onMessage(ChillModeStatus chillModeStatus,
+      EventPublisher publisher) {
+    isInChillMode.set(chillModeStatus.getChillModeStatus());
 
-    replicationActivityStatus.fireReplicationStart(chillModeStatus, waitTime);
-    scmClientProtocolServer.setChillModeStatus(chillModeStatus);
-    scmBlockManager.setChillModeStatus(chillModeStatus);
+    replicationActivityStatus.fireReplicationStart(isInChillMode.get(),
+        waitTime);
+    scmClientProtocolServer.setChillModeStatus(isInChillMode.get());
+    scmBlockManager.setChillModeStatus(isInChillMode.get());
 
   }
 

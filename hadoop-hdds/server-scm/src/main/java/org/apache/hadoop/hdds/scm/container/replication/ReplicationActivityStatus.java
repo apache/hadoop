@@ -97,7 +97,6 @@ public class ReplicationActivityStatus implements
         LOG.info("Replication Timer sleep for {} ms completed. Enable " +
             "Replication", waitTime);
       });
-
     }
   }
 

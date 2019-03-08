@@ -28,7 +28,6 @@ import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -44,6 +43,7 @@ public class TestChillModeHandler {
   private BlockManager blockManager;
   private ChillModeHandler chillModeHandler;
   private EventQueue eventQueue;
+  private SCMChillModeManager.ChillModeStatus chillModeStatus;
 
   public void setup(boolean enabled) {
     configuration = new OzoneConfiguration();
@@ -63,6 +63,8 @@ public class TestChillModeHandler {
 
     eventQueue = new EventQueue();
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, chillModeHandler);
+    chillModeStatus = new SCMChillModeManager.ChillModeStatus(false);
+
   }
 
   @Test
@@ -71,7 +73,7 @@ public class TestChillModeHandler {
 
     Assert.assertTrue(chillModeHandler.getChillModeStatus());
 
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, chillModeStatus);
 
     GenericTestUtils.waitFor(() -> !chillModeHandler.getChillModeStatus(),
         1000, 5000);
@@ -90,7 +92,7 @@ public class TestChillModeHandler {
 
     Assert.assertFalse(chillModeHandler.getChillModeStatus());
 
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, chillModeStatus);
 
     Assert.assertFalse(chillModeHandler.getChillModeStatus());
     Assert.assertFalse(scmClientProtocolServer.getChillModeStatus());
