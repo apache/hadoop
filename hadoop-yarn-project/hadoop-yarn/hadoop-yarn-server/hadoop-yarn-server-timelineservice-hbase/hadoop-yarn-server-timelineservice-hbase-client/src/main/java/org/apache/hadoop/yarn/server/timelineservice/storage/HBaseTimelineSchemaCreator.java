@@ -55,13 +55,13 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public final class TimelineSchemaCreator {
-  private TimelineSchemaCreator() {
+public final class HBaseTimelineSchemaCreator implements SchemaCreator {
+  public HBaseTimelineSchemaCreator() {
   }
 
-  final static String NAME = TimelineSchemaCreator.class.getSimpleName();
+  final static String NAME = HBaseTimelineSchemaCreator.class.getSimpleName();
   private static final Logger LOG =
-      LoggerFactory.getLogger(TimelineSchemaCreator.class);
+      LoggerFactory.getLogger(HBaseTimelineSchemaCreator.class);
   private static final String SKIP_EXISTING_TABLE_OPTION_SHORT = "s";
   private static final String APP_METRICS_TTL_OPTION_SHORT = "ma";
   private static final String SUB_APP_METRICS_TTL_OPTION_SHORT = "msa";
@@ -73,7 +73,7 @@ public final class TimelineSchemaCreator {
   private static final String HELP_SHORT = "h";
   private static final String CREATE_TABLES_SHORT = "c";
 
-  public static void main(String[] args) throws Exception {
+  public void createTimelineSchema(String[] args) throws Exception {
 
     LOG.info("Starting the schema creation");
     Configuration hbaseConf =
