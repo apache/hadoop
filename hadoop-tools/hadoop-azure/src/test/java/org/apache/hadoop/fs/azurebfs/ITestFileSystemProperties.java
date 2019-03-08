@@ -78,7 +78,7 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
     touch(TEST_PATH);
     fs.getAbfsStore().setPathProperties(TEST_PATH, properties);
     Hashtable<String, String> fetchedProperties =
-            fs.getAbfsStore().getPathProperties(TEST_PATH);
+            fs.getAbfsStore().getPathStatus(TEST_PATH);
 
     assertEquals(properties, fetchedProperties);
   }
@@ -101,7 +101,7 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
     properties.put("key", "{ value: valueTest兩 }");
     touch(TEST_PATH);
     fs.getAbfsStore().setPathProperties(TEST_PATH, properties);
-    Hashtable<String, String> fetchedProperties = fs.getAbfsStore().getPathProperties(TEST_PATH);
+    Hashtable<String, String> fetchedProperties = fs.getAbfsStore().getPathStatus(TEST_PATH);
 
     assertEquals(properties, fetchedProperties);
   }
