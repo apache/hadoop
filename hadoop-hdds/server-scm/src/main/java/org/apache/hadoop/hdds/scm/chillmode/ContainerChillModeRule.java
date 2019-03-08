@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -55,11 +56,11 @@ public class ContainerChillModeRule extends
         HddsConfigKeys.HDDS_SCM_CHILLMODE_THRESHOLD_PCT,
         HddsConfigKeys.HDDS_SCM_CHILLMODE_THRESHOLD_PCT_DEFAULT);
 
-    if (chillModeCutoff > 1.0 || chillModeCutoff < 0.0) {
-      throw new IllegalArgumentException(HddsConfigKeys.
-          HDDS_SCM_CHILLMODE_THRESHOLD_PCT + " value should be >= 0.0 and <= " +
-          "1.0");
-    }
+    Preconditions.checkArgument(
+        (chillModeCutoff >= 0.0 && chillModeCutoff <= 1.0),
+        HddsConfigKeys.HDDS_SCM_CHILLMODE_THRESHOLD_PCT  +
+            " value should be >= 0.0 and <= 1.0");
+
     containerMap = new ConcurrentHashMap<>();
     if(containers != null) {
       containers.forEach(c -> {

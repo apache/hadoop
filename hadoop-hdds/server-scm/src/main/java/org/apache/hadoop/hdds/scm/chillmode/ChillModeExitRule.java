@@ -72,7 +72,7 @@ public abstract class ChillModeExitRule<T> implements EventHandler<T> {
   public abstract void cleanup();
 
   @Override
-  public void onMessage(T report, EventPublisher publisher) {
+  public final void onMessage(T report, EventPublisher publisher) {
 
     // TODO: when we have remove handlers, we can remove getInChillmode check
 

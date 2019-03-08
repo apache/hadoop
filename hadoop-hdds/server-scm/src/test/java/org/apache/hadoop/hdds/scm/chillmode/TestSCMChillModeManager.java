@@ -226,8 +226,13 @@ public class TestSCMChillModeManager {
     containers.addAll(HddsTestUtils.getContainerInfo(containerCount));
 
     MockNodeManager mockNodeManager = new MockNodeManager(true, nodeCount);
-    PipelineManager pipelineManager = new SCMPipelineManager(conf,
+    SCMPipelineManager pipelineManager = new SCMPipelineManager(conf,
         mockNodeManager, queue);
+    PipelineProvider mockRatisProvider =
+        new MockRatisPipelineProvider(mockNodeManager,
+            pipelineManager.getStateManager(), config);
+    pipelineManager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
+        mockRatisProvider);
 
 
     for (int i=0; i < pipelineCount; i++) {

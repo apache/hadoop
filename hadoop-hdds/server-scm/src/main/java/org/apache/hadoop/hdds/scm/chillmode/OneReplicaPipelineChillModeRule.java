@@ -69,11 +69,10 @@ public class OneReplicaPipelineChillModeRule extends
             HddsConfigKeys.
                 HDDS_SCM_CHILLMODE_ONE_NODE_REPORTED_PIPELINE_PCT_DEFAULT);
 
-    if (percent > 1.0 || percent < 0.0) {
-      throw new IllegalArgumentException(HddsConfigKeys.
-          HDDS_SCM_CHILLMODE_ONE_NODE_REPORTED_PIPELINE_PCT + " value should " +
-          "be >= 0.0 and <= 1.0");
-    }
+    Preconditions.checkArgument((percent >= 0.0 && percent <= 1.0),
+        HddsConfigKeys.
+            HDDS_SCM_CHILLMODE_ONE_NODE_REPORTED_PIPELINE_PCT  +
+            " value should be >= 0.0 and <= 1.0");
 
     int totalPipelineCount =
         pipelineManager.getPipelines(HddsProtos.ReplicationType.RATIS,

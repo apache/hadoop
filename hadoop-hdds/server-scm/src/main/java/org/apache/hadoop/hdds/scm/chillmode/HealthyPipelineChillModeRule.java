@@ -69,11 +69,11 @@ public class HealthyPipelineChillModeRule
             HddsConfigKeys.
                 HDDS_SCM_CHILLMODE_HEALTHY_PIPELINE_THRESHOLD_PCT_DEFAULT);
 
-    if (healthyPipelinesPercent > 1.0 || healthyPipelinesPercent < 0.0) {
-      throw new IllegalArgumentException(HddsConfigKeys.
-          HDDS_SCM_CHILLMODE_HEALTHY_PIPELINE_THRESHOLD_PCT + " value should " +
-          "be >= 0.0 and <= 1.0");
-    }
+    Preconditions.checkArgument(
+        (healthyPipelinesPercent >= 0.0 && healthyPipelinesPercent <= 1.0),
+        HddsConfigKeys.
+            HDDS_SCM_CHILLMODE_HEALTHY_PIPELINE_THRESHOLD_PCT
+            + " value should be >= 0.0 and <= 1.0");
 
     // As we want to wait for 3 node pipelines
     int pipelineCount =
