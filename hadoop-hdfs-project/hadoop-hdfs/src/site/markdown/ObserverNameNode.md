@@ -61,9 +61,12 @@ ID, which is implemented using transaction ID within NameNode, is
 introduced in RPC headers. When a client performs write through Active
 NameNode, it updates its state ID using the latest transaction ID from
 the NameNode. When performing a subsequent read, the client passes this
-state ID to Observe NameNode, which will then check against its own
+state ID to Observer NameNode, which will then check against its own
 transaction ID, and will ensure its own transaction ID has caught up
-with the request's state ID, before serving the read request.
+with the request's state ID, before serving the read request. This ensures
+"read your own writes" semantics from a single client. Maintaining
+consistency between multiple clients in the face of out-of-band communication
+is discussed in the "Maintaining Client Consistency" section below.
 
 Edit log tailing is critical for Observer NameNode as it directly affects
 the latency between when a transaction is applied in Active NameNode and
@@ -82,6 +85,32 @@ request, the proxy provider will first try each Observer NameNode
 available in the cluster, and only fall back to Active NameNode if all
 of the former failed. Similarly, ObserverReadProxyProviderWithIPFailover
 is introduced to replace IPFailoverProxyProvider in a IP failover setup.
+
+### Maintaining Client Consistency
+
+As discussed above, a client 'foo' will update its state ID upon every request
+to the Active NameNode, which includes all write operations. Any request
+directed to an Observer NameNode will wait until the Observer has seen
+this transaction ID, ensuring that the client is able to read all of its own
+writes. However, if 'foo' sends an out-of-band (i.e., non-HDFS) message to
+client 'bar' telling it that a write has been performed, a subsequent read by
+'bar' may not see the recent write by 'foo'. To prevent this inconsistent
+behavior, a new `msync()`, or "metadata sync", command has been added. When
+`msync()` is called on a client, it will update its state ID against the
+Active NameNode -- a very lightweight operation -- so that subsequent reads
+are guaranteed to be consistent up to the point of the `msync()`. Thus as long
+as 'bar' calls `msync()` before performing its read, it is guaranteed to see
+the write made by 'foo'.
+
+To make use of `msync()`, an application does not necessarily have to make any
+code changes. Upon startup, a client will automatically call `msync()` before
+performing any reads against an Observer, so that any writes performed prior
+to the initialization of the client will be visible. In addition, there is
+a configurable "auto-msync" mode supported by ObserverReadProxyProvider which
+will automatically perform an `msync()` at some configurable interval, to
+prevent a client from ever seeing data that is more stale than a time bound.
+There is some overhead associated with this, as each refresh requires an RPC
+to the Active NameNode, so it is disabled by default.
 
 Deployment
 -----------
@@ -185,3 +214,18 @@ implementation, in the client-side **hdfs-site.xml** configuration file:
 Clients who do not wish to use Observer NameNode can still use the
 existing ConfiguredFailoverProxyProvider and should not see any behavior
 change.
+
+Clients who wish to make use of the "auto-msync" functionality should adjust
+the configuration below. This will specify some time period after which,
+if the client's state ID has not been updated from the Active NameNode, an
+`msync()` will automatically be performed. If this is specified as 0, an
+`msync()` will be performed before _every_ read operation. If this is a
+positive time duration, an `msync()` will be performed every time a read
+operation is requested and the Active has not been contacted for longer than
+that period. If this is negative (the default), no automatic `msync()` will
+be performed.
+
+    <property>
+        <name>dfs.client.failover.observer.auto-msync-period.<nameservice></name>
+        <value>500ms</value>
+    </property>
