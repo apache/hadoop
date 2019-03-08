@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public final class ReconServerConfiguration {
+public final class ReconServerConfigKeys {
 
   public static final String OZONE_RECON_HTTP_ENABLED_KEY =
       "ozone.recon.http.enabled";
@@ -45,12 +45,16 @@ public final class ReconServerConfiguration {
   public static final int OZONE_RECON_HTTPS_BIND_PORT_DEFAULT = 9889;
   public static final String OZONE_RECON_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL =
       "ozone.recon.authentication.kerberos.principal";
-  public static final String OZONE_RECON_DOMAIN_NAME =
-      "ozone.recon.domain.name";
+
+  public static final String OZONE_RECON_CONTAINER_DB_CACHE_SIZE_MB =
+      "ozone.recon.container.db.cache.size.mb";
+  public static final int OZONE_RECON_CONTAINER_DB_CACHE_SIZE_DEFAULT = 128;
+
+  public static final String OZONE_RECON_DB_DIRS = "ozone.recon.db.dirs";
 
   /**
    * Private constructor for utility class.
    */
-  private ReconServerConfiguration() {
+  private ReconServerConfigKeys() {
   }
 }

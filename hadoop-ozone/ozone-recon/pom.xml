@@ -22,7 +22,7 @@
   </parent>
   <name>Apache Hadoop Ozone Recon</name>
   <modelVersion>4.0.0</modelVersion>
-  <artifactId>ozone-recon</artifactId>
+  <artifactId>hadoop-ozone-recon</artifactId>
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -49,6 +49,17 @@
       <groupId>com.google.inject.extensions</groupId>
       <artifactId>guice-assistedinject</artifactId>
       <version>4.1.0</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-all</artifactId>
+      <version>1.10.19</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>

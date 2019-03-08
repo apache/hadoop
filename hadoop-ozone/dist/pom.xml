@@ -103,6 +103,13 @@
                   <classifier>classpath</classifier>
                   <destFileName>hadoop-ozone-datanode.classpath</destFileName>
                 </artifactItem>
+                <artifactItem>
+                  <groupId>org.apache.hadoop</groupId>
+                  <artifactId>hadoop-ozone-recon</artifactId>
+                  <version>${ozone.version}</version>
+                  <classifier>classpath</classifier>
+                  <destFileName>hadoop-ozone-recon.classpath</destFileName>
+                </artifactItem>
               </artifactItems>
             </configuration>
           </execution>
