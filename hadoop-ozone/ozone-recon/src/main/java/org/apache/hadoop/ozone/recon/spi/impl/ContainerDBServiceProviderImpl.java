@@ -58,7 +58,7 @@ public class ContainerDBServiceProviderImpl
    * count into the container DB store.
    *
    * @param containerKeyPrefix the containerId, key-prefix tuple.
-   * @param count              Count of Keys with that prefix.
+   * @param count Count of the keys matching that prefix.
    * @throws IOException
    */
   @Override
