@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.AmazonClientException;
@@ -47,6 +46,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.fs.impl.StreamStateModel;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
 import org.apache.hadoop.util.Progressable;
@@ -98,8 +98,8 @@ class S3ABlockOutputStream extends OutputStream implements
   /** Multipart upload details; null means none started. */
   private MultiPartUpload multiPartUpload;
 
-  /** Closed flag. */
-  private final AtomicBoolean closed = new AtomicBoolean(false);
+  /** Stream state. */
+  private final StreamStateModel stateModel;
 
   /** Current data block. Null means none currently active */
   private S3ADataBlocks.DataBlock activeBlock;
@@ -163,6 +163,7 @@ class S3ABlockOutputStream extends OutputStream implements
     this.progressListener = (progress instanceof ProgressListener) ?
         (ProgressListener) progress
         : new ProgressableListener(progress);
+    this.stateModel = new StreamStateModel(fs.keyToQualifiedPath(key));
     // create that first block. This guarantees that an open + close sequence
     // writes a 0-byte entry.
     createBlockIfNeeded();
@@ -221,32 +222,26 @@ class S3ABlockOutputStream extends OutputStream implements
   }
 
   /**
-   * Check for the filesystem being open.
-   * @throws IOException if the filesystem is closed.
-   */
-  void checkOpen() throws IOException {
-    if (closed.get()) {
-      throw new IOException("Filesystem " + writeOperationHelper + " closed");
-    }
-  }
-
-  /**
    * The flush operation does not trigger an upload; that awaits
    * the next block being full. What it does do is call {@code flush() }
    * on the current block, leaving it to choose how to react.
+   *
+   * Downgrades to a no-op if called on a closed stream.
    * @throws IOException Any IO problem.
    */
   @Override
-  public synchronized void flush() throws IOException {
-    try {
-      checkOpen();
-    } catch (IOException e) {
-      LOG.warn("Stream closed: " + e.getMessage());
-      return;
-    }
-    S3ADataBlocks.DataBlock dataBlock = getActiveBlock();
-    if (dataBlock != null) {
-      dataBlock.flush();
+  public void flush() throws IOException {
+    if (StreamStateModel.State.Open.equals(acquireLock(false))) {
+      try {
+        S3ADataBlocks.DataBlock dataBlock = getActiveBlock();
+        if (dataBlock != null) {
+          dataBlock.flush();
+        }
+      } catch (IOException ex) {
+        throw stateModel.enterErrorState(ex);
+      } finally {
+        stateModel.releaseLock();
+      }
     }
   }
 
@@ -273,14 +268,47 @@ class S3ABlockOutputStream extends OutputStream implements
    * @throws IOException on any problem
    */
   @Override
-  public synchronized void write(byte[] source, int offset, int len)
+  public void write(byte[] source, int offset, int len)
       throws IOException {
 
     S3ADataBlocks.validateWriteArgs(source, offset, len);
-    checkOpen();
     if (len == 0) {
       return;
     }
+    acquireLock(true);
+    try {
+      innerWrite(source, offset, len);
+    } catch (IOException ex) {
+      throw stateModel.enterErrorState(ex);
+    } finally {
+      stateModel.releaseLock();
+    }
+  }
+
+  /**
+   * Acquire the lock.
+   * @param checkOpen should the lock
+   * @return The stream state
+   * @throws IOException if the checkOpen operation raises an exception.
+   */
+  private synchronized StreamStateModel.State acquireLock(final boolean checkOpen)
+      throws IOException {
+    stateModel.acquireLock(checkOpen);
+    return stateModel.getState();
+  }
+
+  /**
+   * The inner write.
+   * This is called recursively until all the source data is written.
+   * It requires that the stream state has acquired the lock already, so does
+   * not attempt to reacquire or re-release it.
+   * @param source source file.
+   * @param offset offset
+   * @param len length
+   * @throws IOException on a failure
+   */
+  private void innerWrite(final byte[] source, final int offset, final int len)
+      throws IOException {
     S3ADataBlocks.DataBlock block = createBlockIfNeeded();
     int written = block.write(source, offset, len);
     int remainingCapacity = block.remainingCapacity();
@@ -292,7 +320,7 @@ class S3ABlockOutputStream extends OutputStream implements
       uploadCurrentBlock();
       // tail recursion is mildly expensive, but given buffer sizes must be MB.
       // it's unlikely to recurse very deeply.
-      this.write(source, offset + written, len - written);
+      innerWrite(source, offset + written, len - written);
     } else {
       if (remainingCapacity == 0) {
         // the whole buffer is done, trigger an upload
@@ -344,10 +372,22 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   @Override
   public void close() throws IOException {
-    if (closed.getAndSet(true)) {
-      // already closed
-      LOG.debug("Ignoring close() as stream is already closed");
-      return;
+    acquireLock(false);
+    try {
+      synchronized (this) {
+        // this is synchronized to order its execution w.r.t any methods
+        // which are marked as synchronized.
+        // because the whole close() method is called, calling it on a stream
+        // which has just been closed isn't going to block it for the duration
+        // of the entire upload.
+        if (!stateModel.enterClosedState()) {
+          // already closed
+          LOG.debug("Ignoring close() as stream is not open");
+          return;
+        }
+      }
+    } finally {
+      stateModel.releaseLock();
     }
     S3ADataBlocks.DataBlock block = getActiveBlock();
     boolean hasBlock = hasActiveBlock();
@@ -393,6 +433,7 @@ class S3ABlockOutputStream extends OutputStream implements
       }
       LOG.debug("Upload complete to {} by {}", key, writeOperationHelper);
     } catch (IOException ioe) {
+      stateModel.enterErrorState(ioe);
       writeOperationHelper.writeFailed(ioe);
       throw ioe;
     } finally {
