@@ -20,6 +20,12 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga;
 
 
+import static org.apache.hadoop.yarn.api.records.ResourceInformation.FPGA_URI;
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -29,13 +35,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-
-import static org.apache.hadoop.yarn.api.records.ResourceInformation.FPGA_URI;
 
 public class FpgaNodeResourceUpdateHandler extends NodeResourceUpdaterPlugin {
   private static final Logger LOG = LoggerFactory.getLogger(
