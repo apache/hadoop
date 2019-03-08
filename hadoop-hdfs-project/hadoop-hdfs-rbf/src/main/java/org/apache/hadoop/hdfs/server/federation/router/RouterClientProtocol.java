@@ -69,6 +69,7 @@ import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -87,6 +88,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -466,8 +469,12 @@ public class RouterClientProtocol implements ClientProtocol {
     RemoteMethod method = new RemoteMethod("rename",
         new Class<?>[] {String.class, String.class},
         new RemoteParam(), dstParam);
-    return rpcClient.invokeSequential(locs, method, Boolean.class,
-        Boolean.TRUE);
+    if (isMultiDestDirectory(src)) {
+      return rpcClient.invokeAll(locs, method);
+    } else {
+      return rpcClient.invokeSequential(locs, method, Boolean.class,
+          Boolean.TRUE);
+    }
   }
 
   @Override
@@ -488,7 +495,11 @@ public class RouterClientProtocol implements ClientProtocol {
     RemoteMethod method = new RemoteMethod("rename2",
         new Class<?>[] {String.class, String.class, options.getClass()},
         new RemoteParam(), dstParam, options);
-    rpcClient.invokeSequential(locs, method, null, null);
+    if (isMultiDestDirectory(src)) {
+      rpcClient.invokeConcurrent(locs, method);
+    } else {
+      rpcClient.invokeSequential(locs, method, null, null);
+    }
   }
 
   @Override
@@ -1856,5 +1867,35 @@ public class RouterClientProtocol implements ClientProtocol {
       LOG.error("Cannot get mount point", e);
     }
     return modTime;
+  }
+
+  /**
+   * Checks if the path is a directory and is supposed to be present in all
+   * subclusters.
+   * @param src the source path
+   * @return true if the path is directory and is supposed to be present in all
+   *         subclusters else false in all other scenarios.
+   * @throws IOException if unable to get the file status.
+   */
+  @VisibleForTesting
+  boolean isMultiDestDirectory(String src) throws IOException {
+    try {
+      if (rpcServer.isPathAll(src)) {
+        List<RemoteLocation> locations;
+        locations = rpcServer.getLocationsForPath(src, false);
+        RemoteMethod method = new RemoteMethod("getFileInfo",
+            new Class<?>[] {String.class}, new RemoteParam());
+        HdfsFileStatus fileStatus = rpcClient.invokeSequential(locations,
+            method, HdfsFileStatus.class, null);
+        if (fileStatus != null) {
+          return fileStatus.isDirectory();
+        } else {
+          LOG.debug("The destination {} doesn't exist.", src);
+        }
+      }
+    } catch (UnresolvedPathException e) {
+      LOG.debug("The destination {} is a symlink.", src);
+    }
+    return false;
   }
 }
