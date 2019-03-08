@@ -73,6 +73,7 @@ public class SCMChillModeManager {
     this.isChillModeEnabled = conf.getBoolean(
         HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED,
         HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED_DEFAULT);
+
     if (isChillModeEnabled) {
       ContainerChillModeRule containerChillModeRule =
           new ContainerChillModeRule(config, allContainers, this);
@@ -111,7 +112,8 @@ public class SCMChillModeManager {
    */
   @VisibleForTesting
   public void emitChillModeStatus() {
-    eventPublisher.fireEvent(SCMEvents.CHILL_MODE_STATUS, getInChillMode());
+    eventPublisher.fireEvent(SCMEvents.CHILL_MODE_STATUS,
+        new ChillModeStatus(getInChillMode()));
   }
 
   public void validateChillModeExitRules(EventPublisher eventQueue) {
@@ -183,6 +185,22 @@ public class SCMChillModeManager {
   public OneReplicaPipelineChillModeRule getOneReplicaPipelineChillModeRule() {
     return (OneReplicaPipelineChillModeRule)
         exitRules.get(ATLEAST_ONE_DATANODE_REPORTED_PIPELINE_EXIT_RULE);
+  }
+
+
+  /**
+   * Class used during ChillMode status event.
+   */
+  public static class ChillModeStatus {
+
+    private boolean chillModeStatus;
+    public ChillModeStatus(boolean chillModeState) {
+      this.chillModeStatus = chillModeState;
+    }
+
+    public boolean getChillModeStatus() {
+      return chillModeStatus;
+    }
   }
 
 }

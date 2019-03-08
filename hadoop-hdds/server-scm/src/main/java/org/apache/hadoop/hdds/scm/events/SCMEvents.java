@@ -21,6 +21,7 @@ package org.apache.hadoop.hdds.scm.events;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.block.PendingDeleteStatusList;
+import org.apache.hadoop.hdds.scm.chillmode.SCMChillModeManager.ChillModeStatus;
 import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler;
 import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
     .ReplicationStatus;
@@ -253,8 +254,8 @@ public final class SCMEvents {
    */
   public static final TypedEvent<Boolean> START_REPLICATION =
       new TypedEvent<>(Boolean.class);
-  public static final TypedEvent<Boolean> CHILL_MODE_STATUS =
-      new TypedEvent<>(Boolean.class);
+  public static final TypedEvent<ChillModeStatus> CHILL_MODE_STATUS =
+      new TypedEvent<>(ChillModeStatus.class);
 
   /**
    * Private Ctor. Never Constructed.

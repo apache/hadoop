@@ -57,6 +57,7 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.rmi.runtime.Log;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -335,7 +336,8 @@ public class TestScmChillMode {
     assertFalse((scm.getClientProtocolServer()).getChillModeStatus());
     final List<ContainerInfo> containers = scm.getContainerManager()
         .getContainers();
-    scm.getEventQueue().fireEvent(SCMEvents.CHILL_MODE_STATUS, true);
+    scm.getEventQueue().fireEvent(SCMEvents.CHILL_MODE_STATUS,
+        new SCMChillModeManager.ChillModeStatus(true));
     GenericTestUtils.waitFor(() -> {
       return clientProtocolServer.getChillModeStatus();
     }, 50, 1000 * 5);

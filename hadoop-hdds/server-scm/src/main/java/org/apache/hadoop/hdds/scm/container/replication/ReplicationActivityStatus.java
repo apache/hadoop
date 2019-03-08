@@ -20,10 +20,12 @@ package org.apache.hadoop.hdds.scm.container.replication;
 import javax.management.ObjectName;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.hadoop.hdds.server.events.EventHandler;
-import org.apache.hadoop.hdds.server.events.EventPublisher;
+
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.metrics2.util.MBeans;
+
 
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
@@ -39,15 +41,8 @@ public class ReplicationActivityStatus implements
       LoggerFactory.getLogger(ReplicationActivityStatus.class);
 
   private AtomicBoolean replicationEnabled = new AtomicBoolean();
-  private AtomicBoolean replicationStatusSetExternally = new AtomicBoolean();
   private ObjectName jmxObjectName;
-  private ReplicationStatusListener replicationStatusListener;
-  private ChillModeStatusListener chillModeStatusListener;
 
-  public ReplicationActivityStatus(){
-    replicationStatusListener = new ReplicationStatusListener();
-    chillModeStatusListener = new ChillModeStatusListener();
-  }
   @Override
   public boolean isReplicationEnabled() {
     return replicationEnabled.get();
@@ -84,35 +79,26 @@ public class ReplicationActivityStatus implements
   }
 
   /**
-   * Replication status listener.
+   * Waits for
+   * {@link HddsConfigKeys#HDDS_SCM_WAIT_TIME_AFTER_CHILL_MODE_EXIT} and set
+   * replicationEnabled to start replication monitor thread.
    */
-  class ReplicationStatusListener implements EventHandler<Boolean> {
-    @Override
-    public void onMessage(Boolean status, EventPublisher publisher) {
-      replicationStatusSetExternally.set(true);
-      replicationEnabled.set(status);
+  public void fireReplicationStart(boolean chillModeStatus,
+      long waitTime) {
+    if (!chillModeStatus) {
+      CompletableFuture.runAsync(() -> {
+        try {
+          Thread.sleep(waitTime);
+        } catch (InterruptedException ex) {
+          LOG.error("Interrupted during wait, replication event is not fired",
+              ex);
+        }
+        setReplicationEnabled(true);
+        LOG.info("Replication Timer sleep for {} ms completed. Enable " +
+            "Replication", waitTime);
+      });
     }
   }
 
-  /**
-   * Replication status is influenced by Chill mode status as well.
-   */
-  class ChillModeStatusListener implements EventHandler<Boolean> {
-
-    @Override
-    public void onMessage(Boolean inChillMode, EventPublisher publisher) {
-      if (!replicationStatusSetExternally.get()) {
-        replicationEnabled.set(!inChillMode);
-      }
-    }
-  }
-
-  public ReplicationStatusListener getReplicationStatusListener() {
-    return replicationStatusListener;
-  }
-
-  public ChillModeStatusListener getChillModeStatusListener() {
-    return chillModeStatusListener;
-  }
 
 }
