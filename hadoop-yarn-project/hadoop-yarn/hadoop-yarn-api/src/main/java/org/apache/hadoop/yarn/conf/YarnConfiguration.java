@@ -1715,6 +1715,15 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NM_FPGA_VENDOR_PLUGIN =
       "org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.IntelFpgaOpenclPlugin";
 
+  @Private
+  public static final String NM_FPGA_DEVICE_DISCOVERY_SCRIPT =
+      NM_FPGA_RESOURCE_PREFIX + "device-discovery-script";
+
+  @Private
+  public static final String NM_FPGA_AVAILABLE_DEVICES =
+      NM_FPGA_RESOURCE_PREFIX + "available-devices";
+
+
   public static final String NM_NETWORK_TAG_PREFIX = NM_PREFIX
       + "network-tagging";
 
