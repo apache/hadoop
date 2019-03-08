@@ -119,7 +119,7 @@ public class OneReplicaPipelineChillModeRule extends
 
     currentReportedPipelineCount = reportedPipelineIDSet.size();
 
-    if (chillModeManager.getInChillMode()) {
+    if (getChillModeManager().getInChillMode()) {
       SCMChillModeManager.getLogger().info(
           "SCM in chill mode. Pipelines with atleast one datanode reported " +
               "count is {}, required atleast one datanode reported per " +

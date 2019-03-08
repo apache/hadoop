@@ -62,7 +62,7 @@ public class DataNodeChillModeRule extends
     registeredDnSet.add(reportsProto.getDatanodeDetails().getUuid());
     registeredDns = registeredDnSet.size();
 
-    if (chillModeManager.getInChillMode()) {
+    if (getChillModeManager().getInChillMode()) {
       SCMChillModeManager.getLogger().info(
           "SCM in chill mode. {} DataNodes registered, {} required.",
           registeredDns, requiredDns);

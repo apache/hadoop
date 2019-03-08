@@ -35,8 +35,8 @@ import org.apache.hadoop.hdds.server.events.EventPublisher;
  */
 public abstract class ChillModeExitRule<T> implements EventHandler<T> {
 
-  protected final SCMChillModeManager chillModeManager;
-  protected final String ruleName;
+  private final SCMChillModeManager chillModeManager;
+  private final String ruleName;
 
   public ChillModeExitRule(SCMChillModeManager chillModeManager,
       String ruleName) {
@@ -90,6 +90,14 @@ public abstract class ChillModeExitRule<T> implements EventHandler<T> {
         chillModeManager.validateChillModeExitRules(ruleName, publisher);
       }
     }
+  }
+
+  /**
+   * Return SCMChillModeManager.
+   * @return SCMChillModeManager
+   */
+  public SCMChillModeManager getChillModeManager() {
+    return chillModeManager;
   }
 
 }

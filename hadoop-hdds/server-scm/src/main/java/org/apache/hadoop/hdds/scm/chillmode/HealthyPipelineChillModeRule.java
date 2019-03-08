@@ -133,7 +133,7 @@ public class HealthyPipelineChillModeRule
         }
       }
 
-      if (chillModeManager.getInChillMode()) {
+      if (getChillModeManager().getInChillMode()) {
         SCMChillModeManager.getLogger().info(
             "SCM in chill mode. Healthy pipelines reported count is {}, " +
                 "required healthy pipeline reported count is {}",

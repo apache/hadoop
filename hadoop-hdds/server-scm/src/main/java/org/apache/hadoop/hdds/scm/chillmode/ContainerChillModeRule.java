@@ -102,7 +102,7 @@ public class ContainerChillModeRule extends
       }
     });
 
-    if (chillModeManager.getInChillMode()) {
+    if (getChillModeManager().getInChillMode()) {
       SCMChillModeManager.getLogger().info(
           "SCM in chill mode. {} % containers have at least one"
               + " reported replica.",
