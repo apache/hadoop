@@ -881,10 +881,6 @@ registry.json
 
 For further details and parameters that could be configured in the S3 storage driver, please refer https://docs.docker.com/registry/storage-drivers/s3/.
 
-### Docker Registry with CSI Driver
-
-CSI driver enables third party storage system to expose as posix mount point in the container.  This allows Docker Trusted Registry to write docker images to an external storage.
-
 Example: MapReduce
 ------------------
 
