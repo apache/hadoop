@@ -348,7 +348,7 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  public AbfsRestOperation getPathProperties(final String path, boolean isNameSpaceEnabled) throws AzureBlobFileSystemException {
+  public AbfsRestOperation getPathStatus(final String path) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
@@ -356,7 +356,7 @@ public class AbfsClient implements Closeable {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
-            isNameSpaceEnabled ? AbfsRestOperationType.GetPathProperties : AbfsRestOperationType.GetPathStatus,
+            AbfsRestOperationType.GetPathStatus,
             this,
             HTTP_METHOD_HEAD,
             url,

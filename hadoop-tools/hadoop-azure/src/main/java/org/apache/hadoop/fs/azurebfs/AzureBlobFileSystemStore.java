@@ -284,13 +284,13 @@ public class AzureBlobFileSystemStore implements Closeable {
     client.setFilesystemProperties(commaSeparatedProperties);
   }
 
-  public Hashtable<String, String> getPathProperties(final Path path) throws AzureBlobFileSystemException {
-    LOG.debug("getPathProperties for filesystem: {} path: {}",
+  public Hashtable<String, String> getPathStatus(final Path path) throws AzureBlobFileSystemException {
+    LOG.debug("getPathStatus for filesystem: {} path: {}",
             client.getFileSystem(),
            path);
 
     final Hashtable<String, String> parsedXmsProperties;
-    final AbfsRestOperation op = client.getPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), isNamespaceEnabled);
+    final AbfsRestOperation op = client.getPathStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
 
     final String xMsProperties = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES);
 
@@ -372,7 +372,7 @@ public class AzureBlobFileSystemStore implements Closeable {
             client.getFileSystem(),
             path);
 
-    final AbfsRestOperation op = client.getPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), isNamespaceEnabled);
+    final AbfsRestOperation op = client.getPathStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
 
     final String resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
     final long contentLength = Long.parseLong(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
@@ -400,7 +400,7 @@ public class AzureBlobFileSystemStore implements Closeable {
             path,
             overwrite);
 
-    final AbfsRestOperation op = client.getPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), isNamespaceEnabled);
+    final AbfsRestOperation op = client.getPathStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
 
     final String resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
     final Long contentLength = Long.valueOf(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
@@ -476,7 +476,7 @@ public class AzureBlobFileSystemStore implements Closeable {
               ? client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + AbfsHttpConstants.ROOT_PATH)
               : client.getFilesystemProperties();
     } else {
-      op = client.getPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), isNamespaceEnabled);
+      op = client.getPathStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
     }
 
     final long blockSize = abfsConfiguration.getAzureBlockSize();
