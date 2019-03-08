@@ -17,6 +17,9 @@
 package org.apache.hadoop.hdds;
 
 import org.apache.hadoop.utils.db.DBProfile;
+import org.apache.ratis.util.TimeDuration;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * This class contains constants for configuration keys and default values
@@ -69,6 +72,14 @@ public final class HddsConfigKeys {
   public static final String HDDS_SCM_CHILLMODE_MIN_DATANODE =
       "hdds.scm.chillmode.min.datanode";
   public static final int HDDS_SCM_CHILLMODE_MIN_DATANODE_DEFAULT = 1;
+
+
+  public static final String
+      HDDS_SCM_WAIT_TIME_AFTER_CHILL_MODE_EXIT =
+      "hdds.scm.wait.time.after.chillmode.exit";
+
+  public static final String
+      HDDS_SCM_WAIT_TIME_AFTER_CHILL_MODE_EXIT_DEFAULT = "5m";
 
   public static final String HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK =
       "hdds.scm.chillmode.pipeline-availability.check";

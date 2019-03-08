@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
+import org.apache.hadoop.hdds.scm.chillmode.SCMChillModeManager.ChillModeStatus;
 import org.apache.hadoop.hdds.scm.container.CloseContainerEventHandler;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
@@ -71,6 +72,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
   private static EventQueue eventQueue;
   private int numContainerPerOwnerInPipeline;
   private OzoneConfiguration conf;
+  private ChillModeStatus chillModeStatus = new ChillModeStatus(false);
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
@@ -101,7 +103,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
 
     eventQueue = new EventQueue();
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS,
-        (BlockManagerImpl) scm.getScmBlockManager());
+        scm.getChillModeHandler());
     eventQueue.addHandler(SCMEvents.START_REPLICATION, this);
     CloseContainerEventHandler closeContainerHandler =
         new CloseContainerEventHandler(pipelineManager, mapping);
@@ -123,7 +125,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
 
   @Test
   public void testAllocateBlock() throws Exception {
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, chillModeStatus);
     GenericTestUtils.waitFor(() -> {
       return !blockManager.isScmInChillMode();
     }, 10, 1000 * 5);
@@ -134,7 +136,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
 
   @Test
   public void testAllocateOversizedBlock() throws Exception {
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, chillModeStatus);
     GenericTestUtils.waitFor(() -> {
       return !blockManager.isScmInChillMode();
     }, 10, 1000 * 5);
@@ -147,7 +149,8 @@ public class TestBlockManager implements EventHandler<Boolean> {
 
   @Test
   public void testAllocateBlockFailureInChillMode() throws Exception {
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, true);
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS,
+        new ChillModeStatus(true));
     GenericTestUtils.waitFor(() -> {
       return blockManager.isScmInChillMode();
     }, 10, 1000 * 5);
@@ -161,7 +164,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
   @Test
   public void testAllocateBlockSucInChillMode() throws Exception {
     // Test2: Exit chill mode and then try allocateBock again.
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, chillModeStatus);
     GenericTestUtils.waitFor(() -> {
       return !blockManager.isScmInChillMode();
     }, 10, 1000 * 5);
@@ -172,7 +175,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
   @Test(timeout = 10000)
   public void testMultipleBlockAllocation()
       throws IOException, TimeoutException, InterruptedException {
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, chillModeStatus);
     GenericTestUtils
         .waitFor(() -> !blockManager.isScmInChillMode(), 10, 1000 * 5);
 
@@ -214,7 +217,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
   @Test(timeout = 10000)
   public void testMultipleBlockAllocationWithClosedContainer()
       throws IOException, TimeoutException, InterruptedException {
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, chillModeStatus);
     GenericTestUtils
         .waitFor(() -> !blockManager.isScmInChillMode(), 10, 1000 * 5);
 
@@ -266,7 +269,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
   @Test(timeout = 10000)
   public void testBlockAllocationWithNoAvailablePipelines()
       throws IOException, TimeoutException, InterruptedException {
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, chillModeStatus);
     GenericTestUtils
         .waitFor(() -> !blockManager.isScmInChillMode(), 10, 1000 * 5);
 

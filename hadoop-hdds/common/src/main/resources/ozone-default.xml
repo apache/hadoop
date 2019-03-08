@@ -1290,6 +1290,16 @@
   </property>
 
   <property>
+    <name>hdds.scm.wait.time.after.chillmode.exit</name>
+    <value>5m</value>
+    <tag>HDDS,SCM,OPERATION</tag>
+    <description> After exiting chillmode, wait for configured interval of
+      time to start replication monitor and cleanup activities of unhealthy
+      pipelines.
+    </description>
+  </property>
+
+  <property>
     <name>hdds.scm.chillmode.enabled</name>
     <value>true</value>
     <tag>HDDS,SCM,OPERATION</tag>
