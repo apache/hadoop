@@ -1290,7 +1290,7 @@
   </property>
 
   <property>
-    <name>hdds.scm.replication.wait.time.after.exit.chillmode</name>
+    <name>hdds.scm.wait.time.after.chillmode.exit</name>
     <value>5m</value>
     <tag>HDDS,SCM,OPERATION</tag>
     <description> After exiting chillmode, wait for configured interval of
