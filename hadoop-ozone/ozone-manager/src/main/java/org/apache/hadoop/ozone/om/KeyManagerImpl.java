@@ -576,6 +576,14 @@ public class KeyManagerImpl implements KeyManager {
           });
         }
       }
+      // TODO: Refresh container pipeline info from SCM
+      // based on OmKeyArgs.refreshPipeline flag
+      // 1. Client send initial read request OmKeyArgs.refreshPipeline = false
+      // and uses the pipeline cached in OM to access datanode
+      // 2. If succeeded, done.
+      // 3. If failed due to pipeline does not exist or invalid pipeline state
+      //    exception, client should retry lookupKey with
+      //    OmKeyArgs.refreshPipeline = true
       return value;
     } catch (IOException ex) {
       LOG.debug("Get key failed for volume:{} bucket:{} key:{}",
