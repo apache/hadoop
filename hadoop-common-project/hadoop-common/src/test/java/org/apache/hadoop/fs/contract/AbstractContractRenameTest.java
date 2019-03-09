@@ -324,9 +324,17 @@ public abstract class AbstractContractRenameTest extends
         true);
     writeDataset(fs, renameSrc, data, data.length, 1024 * 1024,
         true);
-    boolean renamed = rename(renameSrc, renameTarget);
-    String outcome = action + ": rename (" + renameSrc + ", " + renameTarget
-        + ")= " + renamed;
+    String outcome;
+    boolean renamed;
+    try {
+      renamed = rename(renameSrc, renameTarget);
+      outcome = action + ": rename (" + renameSrc + ", " + renameTarget
+          + ")= " + renamed;
+    } catch (IOException e) {
+      // raw local raises an exception here
+      renamed = false;
+      outcome = "rename raised an exception: " + e;
+    }
     assertPathDoesNotExist("after " + outcome, renameTarget);
     assertFalse(outcome, renamed);
     assertPathExists(action, renameSrc);
