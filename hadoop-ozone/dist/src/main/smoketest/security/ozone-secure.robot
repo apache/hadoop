@@ -23,7 +23,8 @@ Create volume and bucket
     ${rc}              ${output} =                 Run And Return Rc And Output              ozone sh volume create o3://om/fstest --user bilbo --quota 100TB --root
                         Should contain       ${output}       Client cannot authenticate via
                         # Authenticate testuser
-    Execute             kinit -k testuser/datanode@EXAMPLE.COM -t /etc/security/keytabs/testuser.keytab
+    ${hostname}=        Execute                    hostname
+    Execute             kinit -k testuser/${hostname}@EXAMPLE.COM -t /etc/security/keytabs/testuser.keytab
     Execute             ozone sh volume create o3://om/fstest --user bilbo --quota 100TB --root
     Execute             ozone sh volume create o3://om/fstest2 --user bilbo --quota 100TB --root
     Execute             ozone sh bucket create o3://om/fstest/bucket1
@@ -107,5 +108,5 @@ Run ozoneFS tests
                         Execute               ls -l GET.txt
     ${rc}  ${result} =  Run And Return Rc And Output        ozone fs -ls o3fs://abcde.pqrs/
                         Should Be Equal As Integers     ${rc}                1
-                        Should contain    ${result}         VOLUME_NOT_FOUND
+                        Should contain    ${result}         Volume pqrs is not found
 
