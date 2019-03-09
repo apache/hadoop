@@ -512,6 +512,45 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Remove any values from a bucket.
+   * @param bucket bucket whose overrides are to be removed. Can be null/empty
+   * @param conf config
+   * @param options list of fs.s3a options to remove
+   */
+  public static void removeBucketOverrides(final String bucket,
+      final Configuration conf,
+      final String... options) {
+
+    if (StringUtils.isEmpty(bucket)) {
+      return;
+    }
+    final String bucketPrefix = FS_S3A_BUCKET_PREFIX + bucket + '.';
+    for (String option : options) {
+      final String stripped = option.substring("fs.s3a.".length());
+      String target = bucketPrefix + stripped;
+      if (conf.get(target) != null) {
+        LOG.debug("Removing option {}", target);
+        conf.unset(target);
+      }
+    }
+  }
+
+  /**
+   * Remove any values from a bucket and the base values too.
+   * @param bucket bucket whose overrides are to be removed. Can be null/empty.
+   * @param conf config
+   * @param options list of fs.s3a options to remove
+   */
+  public static void removeBaseAndBucketOverrides(final String bucket,
+      final Configuration conf,
+      final String... options) {
+    for (String option : options) {
+      conf.unset(option);
+    }
+    removeBucketOverrides(bucket, conf, options);
+  }
+
+  /**
    * Helper class to do diffs of metrics.
    */
   public static final class MetricDiff {
