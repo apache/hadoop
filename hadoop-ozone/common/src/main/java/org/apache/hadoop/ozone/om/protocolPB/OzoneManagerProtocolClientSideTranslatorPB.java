@@ -17,17 +17,27 @@
  */
 package org.apache.hadoop.ozone.om.protocolPB;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.om.exceptions.NotLeaderException;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
 import org.apache.hadoop.ozone.om.helpers.KeyValueUtil;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
@@ -102,6 +112,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeInfo;
 import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
@@ -111,6 +122,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_ERROR_OTHER;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status.ACCESS_DENIED;
@@ -131,17 +145,108 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
    */
   private static final RpcController NULL_RPC_CONTROLLER = null;
 
+  private final OMFailoverProxyProvider omFailoverProxyProvider;
   private final OzoneManagerProtocolPB rpcProxy;
   private final String clientID;
+  private static final Logger FAILOVER_PROXY_PROVIDER_LOG =
+      LoggerFactory.getLogger(OMFailoverProxyProvider.class);
+
+  public OzoneManagerProtocolClientSideTranslatorPB(
+      OzoneManagerProtocolPB proxy, String clientId) {
+    this.rpcProxy = proxy;
+    this.clientID = clientId;
+    this.omFailoverProxyProvider = null;
+  }
 
   /**
-   * Constructor for KeySpaceManger Client.
-   * @param rpcProxy
+   * Constructor for OM Protocol Client. This creates a {@link RetryProxy}
+   * over {@link OMFailoverProxyProvider} proxy. OMFailoverProxyProvider has
+   * one {@link OzoneManagerProtocolPB} proxy pointing to each OM node in the
+   * cluster.
    */
-  public OzoneManagerProtocolClientSideTranslatorPB(
-      OzoneManagerProtocolPB rpcProxy, String clientId) {
-    this.rpcProxy = rpcProxy;
+  public OzoneManagerProtocolClientSideTranslatorPB(OzoneConfiguration conf,
+      String clientId, UserGroupInformation ugi) throws IOException {
+    this.omFailoverProxyProvider = new OMFailoverProxyProvider(conf, ugi);
+
+    int maxRetries = conf.getInt(
+        OzoneConfigKeys.OZONE_CLIENT_RETRY_MAX_ATTEMPTS_KEY,
+        OzoneConfigKeys.OZONE_CLIENT_RETRY_MAX_ATTEMPTS_DEFAULT);
+    int maxFailovers = conf.getInt(
+        OzoneConfigKeys.OZONE_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY,
+        OzoneConfigKeys.OZONE_CLIENT_FAILOVER_MAX_ATTEMPTS_DEFAULT);
+    int sleepBase = conf.getInt(
+        OzoneConfigKeys.OZONE_CLIENT_FAILOVER_SLEEP_BASE_MILLIS_KEY,
+        OzoneConfigKeys.OZONE_CLIENT_FAILOVER_SLEEP_BASE_MILLIS_DEFAULT);
+    int sleepMax = conf.getInt(
+        OzoneConfigKeys.OZONE_CLIENT_FAILOVER_SLEEP_MAX_MILLIS_KEY,
+        OzoneConfigKeys.OZONE_CLIENT_FAILOVER_SLEEP_MAX_MILLIS_DEFAULT);
+
+    this.rpcProxy = TracingUtil.createProxy(
+        createRetryProxy(omFailoverProxyProvider, maxRetries, maxFailovers,
+            sleepBase, sleepMax),
+        OzoneManagerProtocolPB.class);
     this.clientID = clientId;
+  }
+
+  /**
+   * Creates a {@link RetryProxy} encapsulating the
+   * {@link OMFailoverProxyProvider}. The retry proxy fails over on network
+   * exception or if the current proxy is not the leader OM.
+   */
+  private OzoneManagerProtocolPB createRetryProxy(
+      OMFailoverProxyProvider failoverProxyProvider,
+      int maxRetries, int maxFailovers, int delayMillis, int maxDelayBase) {
+
+    RetryPolicy retryPolicyOnNetworkException = RetryPolicies
+        .failoverOnNetworkException(RetryPolicies.TRY_ONCE_THEN_FAIL,
+            maxFailovers, maxRetries, delayMillis, maxDelayBase);
+
+    RetryPolicy retryPolicy = new RetryPolicy() {
+      @Override
+      public RetryAction shouldRetry(Exception exception, int retries,
+          int failovers, boolean isIdempotentOrAtMostOnce)
+          throws Exception {
+
+        if (exception instanceof ServiceException) {
+          Throwable cause = exception.getCause();
+          if (cause instanceof NotLeaderException) {
+            NotLeaderException notLeaderException = (NotLeaderException) cause;
+            omFailoverProxyProvider.performFailoverIfRequired(
+                notLeaderException.getSuggestedLeaderNodeId());
+            return getRetryAction(RetryAction.RETRY, retries, failovers);
+          } else {
+            return getRetryAction(RetryAction.FAILOVER_AND_RETRY, retries,
+                failovers);
+          }
+        } else if (exception instanceof EOFException) {
+          return getRetryAction(RetryAction.FAILOVER_AND_RETRY, retries,
+              failovers);
+        } else {
+          return retryPolicyOnNetworkException.shouldRetry(
+              exception, retries, failovers, isIdempotentOrAtMostOnce);
+        }
+      }
+
+      private RetryAction getRetryAction(RetryAction fallbackAction,
+          int retries, int failovers) {
+        if (retries < maxRetries && failovers < maxFailovers) {
+          return fallbackAction;
+        } else {
+          FAILOVER_PROXY_PROVIDER_LOG.error("Failed to connect to OM. " +
+              "Attempted {} retries and {} failovers", retries, failovers);
+          return RetryAction.FAIL;
+        }
+      }
+    };
+
+    OzoneManagerProtocolPB proxy = (OzoneManagerProtocolPB) RetryProxy.create(
+        OzoneManagerProtocolPB.class, failoverProxyProvider, retryPolicy);
+    return proxy;
+  }
+
+  @VisibleForTesting
+  public OMFailoverProxyProvider getOMFailoverProxyProvider() {
+    return omFailoverProxyProvider;
   }
 
   /**
@@ -195,7 +300,19 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
       OMRequest payload = OMRequest.newBuilder(omRequest)
           .setTraceID(TracingUtil.exportCurrentSpan())
           .build();
-      return rpcProxy.submitRequest(NULL_RPC_CONTROLLER, payload);
+
+      OMResponse omResponse =
+          rpcProxy.submitRequest(NULL_RPC_CONTROLLER, payload);
+
+      if (omResponse.hasLeaderOMNodeId() && omFailoverProxyProvider != null) {
+        String leaderOmId = omResponse.getLeaderOMNodeId();
+
+        // Failover to the OM node returned by OMReponse leaderOMNodeId if
+        // current proxy is not pointing to that node.
+        omFailoverProxyProvider.performFailoverIfRequired(leaderOmId);
+      }
+
+      return omResponse;
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -581,8 +698,8 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
   }
 
   @Override
-  public OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientId)
-      throws IOException {
+  public OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientId,
+      ExcludeList excludeList) throws IOException {
     AllocateBlockRequest.Builder req = AllocateBlockRequest.newBuilder();
     KeyArgs keyArgs = KeyArgs.newBuilder()
         .setVolumeName(args.getVolumeName())
@@ -591,6 +708,8 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setDataSize(args.getDataSize()).build();
     req.setKeyArgs(keyArgs);
     req.setClientID(clientId);
+    req.setExcludeList(excludeList.getProtoBuf());
+
 
     OMRequest omRequest = createOMRequest(Type.AllocateBlock)
         .setAllocateBlockRequest(req)

@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.ams.ApplicationMasterServiceContext;
 import org.apache.hadoop.yarn.ams.ApplicationMasterServiceUtils;
@@ -103,7 +103,8 @@ import static org.apache.hadoop.yarn.exceptions
  */
 final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
 
-  private static final Log LOG = LogFactory.getLog(DefaultAMSProcessor.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DefaultAMSProcessor.class);
 
   private final static List<Container> EMPTY_CONTAINER_LIST =
       new ArrayList<Container>();

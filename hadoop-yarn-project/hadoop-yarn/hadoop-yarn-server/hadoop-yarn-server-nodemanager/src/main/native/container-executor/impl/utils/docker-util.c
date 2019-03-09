@@ -416,12 +416,6 @@ int get_docker_command(const char *command_file, const struct configuration *con
     return INVALID_COMMAND_FILE;
   }
 
-  char *value = get_configuration_value("use-entry-point", DOCKER_COMMAND_FILE_SECTION, &command_config);
-  if (value != NULL && strcasecmp(value, "true") == 0) {
-    entry_point = 1;
-  }
-  free(value);
-
   char *docker = get_docker_binary(conf);
   ret = add_to_args(args, docker);
   free(docker);
@@ -1527,6 +1521,12 @@ static int set_privileged(const struct configuration *command_config, const stru
     if (privileged_container_enabled != NULL) {
       if (strcmp(privileged_container_enabled, "1") == 0 ||
           strcasecmp(privileged_container_enabled, "True") == 0) {
+        // Disable set privileged if entry point mode is disabled
+        if (get_use_entry_point_flag() != 1) {
+          fprintf(ERRORFILE, "Privileged containers are disabled for non-entry-point mode\n");
+          ret = PRIVILEGED_CONTAINERS_DISABLED;
+          goto free_and_exit;
+        }
         // Disable set privileged if image is not trusted.
         if (check_trusted_image(command_config, conf) != 0) {
           fprintf(ERRORFILE, "Privileged containers are disabled from untrusted source\n");
@@ -1570,11 +1570,18 @@ int get_docker_run_command(const char *command_file, const struct configuration 
   char **launch_command = NULL;
   char *privileged = NULL;
   char *no_new_privileges_enabled = NULL;
+  char *use_entry_point = NULL;
   struct configuration command_config = {0, NULL};
   ret = read_and_verify_command_file(command_file, DOCKER_RUN_COMMAND, &command_config);
   if (ret != 0) {
     goto free_and_exit;
   }
+
+  use_entry_point = get_configuration_value("use-entry-point", DOCKER_COMMAND_FILE_SECTION, &command_config);
+  if (use_entry_point != NULL && strcasecmp(use_entry_point, "true") == 0) {
+    entry_point = 1;
+  }
+  free(use_entry_point);
 
   container_name = get_configuration_value("name", DOCKER_COMMAND_FILE_SECTION, &command_config);
   if (container_name == NULL || validate_container_name(container_name) != 0) {

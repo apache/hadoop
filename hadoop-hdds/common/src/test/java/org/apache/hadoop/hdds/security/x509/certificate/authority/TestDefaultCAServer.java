@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.junit.Before;
@@ -139,14 +140,57 @@ public class TestDefaultCAServer {
   public void testRequestCertificate() throws IOException,
       ExecutionException, InterruptedException,
       NoSuchProviderException, NoSuchAlgorithmException {
+    String scmId =  RandomStringUtils.randomAlphabetic(4);
+    String clusterId =  RandomStringUtils.randomAlphabetic(4);
     KeyPair keyPair =
         new HDDSKeyGenerator(conf).generateKey();
     PKCS10CertificationRequest csr = new CertificateSignRequest.Builder()
         .addDnsName("hadoop.apache.org")
         .addIpAddress("8.8.8.8")
         .setCA(false)
-        .setClusterID("ClusterID")
-        .setScmID("SCMID")
+        .setClusterID(clusterId)
+        .setScmID(scmId)
+        .setSubject("Ozone Cluster")
+        .setConfiguration(conf)
+        .setKey(keyPair)
+        .build();
+
+    // Let us convert this to a string to mimic the common use case.
+    String csrString = CertificateSignRequest.getEncodedString(csr);
+
+    CertificateServer testCA = new DefaultCAServer("testCA",
+        clusterId, scmId, caStore);
+    testCA.init(new SecurityConfig(conf),
+        CertificateServer.CAType.SELF_SIGNED_CA);
+
+    Future<X509CertificateHolder> holder = testCA.requestCertificate(csrString,
+        CertificateApprover.ApprovalType.TESTING_AUTOMATIC);
+    // Right now our calls are synchronous. Eventually this will have to wait.
+    assertTrue(holder.isDone());
+    assertNotNull(holder.get());
+  }
+
+  /**
+   * Tests that we are able
+   * to create a Test CA, creates it own self-Signed CA and then issue a
+   * certificate based on a CSR when scmId and clusterId are not set in
+   * csr subject.
+   * @throws SCMSecurityException - on ERROR.
+   * @throws ExecutionException - on ERROR.
+   * @throws InterruptedException - on ERROR.
+   * @throws NoSuchProviderException - on ERROR.
+   * @throws NoSuchAlgorithmException - on ERROR.
+   */
+  @Test
+  public void testRequestCertificateWithInvalidSubject() throws IOException,
+      ExecutionException, InterruptedException,
+      NoSuchProviderException, NoSuchAlgorithmException {
+    KeyPair keyPair =
+        new HDDSKeyGenerator(conf).generateKey();
+    PKCS10CertificationRequest csr = new CertificateSignRequest.Builder()
+        .addDnsName("hadoop.apache.org")
+        .addIpAddress("8.8.8.8")
+        .setCA(false)
         .setSubject("Ozone Cluster")
         .setConfiguration(conf)
         .setKey(keyPair)
@@ -166,6 +210,42 @@ public class TestDefaultCAServer {
     // Right now our calls are synchronous. Eventually this will have to wait.
     assertTrue(holder.isDone());
     assertNotNull(holder.get());
+  }
+
+  @Test
+  public void testRequestCertificateWithInvalidSubjectFailure()
+      throws Exception {
+    KeyPair keyPair =
+        new HDDSKeyGenerator(conf).generateKey();
+    PKCS10CertificationRequest csr = new CertificateSignRequest.Builder()
+        .addDnsName("hadoop.apache.org")
+        .addIpAddress("8.8.8.8")
+        .setCA(false)
+        .setScmID("wrong one")
+        .setClusterID("223432rf")
+        .setSubject("Ozone Cluster")
+        .setConfiguration(conf)
+        .setKey(keyPair)
+        .build();
+
+    // Let us convert this to a string to mimic the common use case.
+    String csrString = CertificateSignRequest.getEncodedString(csr);
+
+    CertificateServer testCA = new DefaultCAServer("testCA",
+        RandomStringUtils.randomAlphabetic(4),
+        RandomStringUtils.randomAlphabetic(4), caStore);
+    testCA.init(new SecurityConfig(conf),
+        CertificateServer.CAType.SELF_SIGNED_CA);
+
+    LambdaTestUtils.intercept(ExecutionException.class, "ScmId and " +
+            "ClusterId in CSR subject are incorrect",
+        () -> {
+          Future<X509CertificateHolder> holder =
+              testCA.requestCertificate(csrString,
+                  CertificateApprover.ApprovalType.TESTING_AUTOMATIC);
+          holder.isDone();
+          holder.get();
+        });
   }
 
 }

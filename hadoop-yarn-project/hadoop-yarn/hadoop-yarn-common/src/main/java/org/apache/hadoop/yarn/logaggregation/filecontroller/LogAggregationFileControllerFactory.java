@@ -29,8 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -51,7 +51,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 @Unstable
 public class LogAggregationFileControllerFactory {
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       LogAggregationFileControllerFactory.class);
   private final Pattern p = Pattern.compile(
       "^[A-Za-z_]+[A-Za-z0-9_]*$");

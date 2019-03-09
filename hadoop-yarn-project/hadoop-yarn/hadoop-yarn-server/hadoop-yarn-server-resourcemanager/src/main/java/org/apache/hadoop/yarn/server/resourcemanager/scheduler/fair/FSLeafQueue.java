@@ -31,8 +31,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.TreeSet;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -54,7 +54,8 @@ import static org.apache.hadoop.yarn.util.resource.Resources.none;
 @Private
 @Unstable
 public class FSLeafQueue extends FSQueue {
-  private static final Log LOG = LogFactory.getLog(FSLeafQueue.class.getName());
+  private static final Logger LOG = LoggerFactory.
+      getLogger(FSLeafQueue.class.getName());
   private static final List<FSQueue> EMPTY_LIST = Collections.emptyList();
 
   private FSContext context;

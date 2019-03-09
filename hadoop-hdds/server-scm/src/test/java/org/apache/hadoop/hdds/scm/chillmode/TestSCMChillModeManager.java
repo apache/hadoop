@@ -35,9 +35,10 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolPro
 import org.apache.hadoop.hdds.scm.HddsTestUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
+import org.apache.hadoop.hdds.scm.pipeline.MockRatisPipelineProvider;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineProvider;
 import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventQueue;
@@ -90,8 +91,7 @@ public class TestSCMChillModeManager {
     }
     scmChillModeManager = new SCMChillModeManager(
         config, containers, null, queue);
-    queue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
-        scmChillModeManager);
+
     assertTrue(scmChillModeManager.getInChillMode());
     queue.fireEvent(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
         HddsTestUtils.createNodeRegistrationContainerReport(containers));
@@ -111,8 +111,7 @@ public class TestSCMChillModeManager {
     }
     scmChillModeManager = new SCMChillModeManager(
         config, containers, null, queue);
-    queue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
-        scmChillModeManager);
+
     assertTrue(scmChillModeManager.getInChillMode());
 
     testContainerThreshold(containers.subList(0, 25), 0.25);
@@ -167,8 +166,7 @@ public class TestSCMChillModeManager {
 
     scmChillModeManager = new SCMChillModeManager(
         config, containers, null, queue);
-    queue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
-        scmChillModeManager);
+
     assertTrue(scmChillModeManager.getInChillMode());
 
     // When 10 CLOSED containers are reported by DNs, the computed container
@@ -192,8 +190,7 @@ public class TestSCMChillModeManager {
     conf.setInt(HddsConfigKeys.HDDS_SCM_CHILLMODE_MIN_DATANODE, numOfDns);
     scmChillModeManager = new SCMChillModeManager(
         conf, containers, null, queue);
-    queue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
-        scmChillModeManager);
+
     // Assert SCM is in Chill mode.
     assertTrue(scmChillModeManager.getInChillMode());
 
@@ -243,8 +240,14 @@ public class TestSCMChillModeManager {
       config.setBoolean(
           HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK, true);
 
-      PipelineManager pipelineManager = new SCMPipelineManager(config,
+      SCMPipelineManager pipelineManager = new SCMPipelineManager(config,
           nodeManager, queue);
+
+      PipelineProvider mockRatisProvider =
+          new MockRatisPipelineProvider(nodeManager,
+              pipelineManager.getStateManager(), config);
+      pipelineManager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
+          mockRatisProvider);
 
       Pipeline pipeline = pipelineManager.createPipeline(
           HddsProtos.ReplicationType.RATIS,
@@ -256,8 +259,6 @@ public class TestSCMChillModeManager {
 
       scmChillModeManager = new SCMChillModeManager(
           config, containers, pipelineManager, queue);
-      queue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
-          scmChillModeManager);
 
       queue.fireEvent(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
           HddsTestUtils.createNodeRegistrationContainerReport(containers));

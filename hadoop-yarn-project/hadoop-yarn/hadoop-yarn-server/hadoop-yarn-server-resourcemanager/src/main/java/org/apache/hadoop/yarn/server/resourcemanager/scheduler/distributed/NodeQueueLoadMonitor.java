@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
@@ -47,7 +47,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class NodeQueueLoadMonitor implements ClusterMonitor {
 
-  final static Log LOG = LogFactory.getLog(NodeQueueLoadMonitor.class);
+  final static Logger LOG = LoggerFactory.
+      getLogger(NodeQueueLoadMonitor.class);
 
   /**
    * The comparator used to specify the metric against which the load

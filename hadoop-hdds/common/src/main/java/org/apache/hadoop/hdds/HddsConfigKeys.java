@@ -17,6 +17,9 @@
 package org.apache.hadoop.hdds;
 
 import org.apache.hadoop.utils.db.DBProfile;
+import org.apache.ratis.util.TimeDuration;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * This class contains constants for configuration keys and default values
@@ -70,6 +73,14 @@ public final class HddsConfigKeys {
       "hdds.scm.chillmode.min.datanode";
   public static final int HDDS_SCM_CHILLMODE_MIN_DATANODE_DEFAULT = 1;
 
+
+  public static final String
+      HDDS_SCM_WAIT_TIME_AFTER_CHILL_MODE_EXIT =
+      "hdds.scm.wait.time.after.chillmode.exit";
+
+  public static final String
+      HDDS_SCM_WAIT_TIME_AFTER_CHILL_MODE_EXIT_DEFAULT = "5m";
+
   public static final String HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK =
       "hdds.scm.chillmode.pipeline-availability.check";
   public static final boolean
@@ -88,6 +99,11 @@ public final class HddsConfigKeys {
       "hdds.scm.chillmode.healthy.pipelie.pct";
   public static final double
       HDDS_SCM_CHILLMODE_HEALTHY_PIPELINE_THRESHOLD_PCT_DEFAULT = 0.10;
+
+  public static final String HDDS_SCM_CHILLMODE_ONE_NODE_REPORTED_PIPELINE_PCT =
+      "hdds.scm.chillmode.atleast.one.node.reported.pipeline.pct";
+  public static final double
+      HDDS_SCM_CHILLMODE_ONE_NODE_REPORTED_PIPELINE_PCT_DEFAULT = 0.90;
 
   public static final String HDDS_LOCK_MAX_CONCURRENCY =
       "hdds.lock.max.concurrency";
@@ -222,4 +238,24 @@ public final class HddsConfigKeys {
   public static final String HDDS_SECURITY_CLIENT_SCM_CERTIFICATE_PROTOCOL_ACL =
       "hdds.security.client.scm.certificate.protocol.acl";
 
+  public static final String HDDS_DATANODE_HTTP_ENABLED_KEY =
+      "hdds.datanode.http.enabled";
+  public static final String HDDS_DATANODE_HTTP_BIND_HOST_KEY =
+      "hdds.datanode.http-bind-host";
+  public static final String HDDS_DATANODE_HTTPS_BIND_HOST_KEY =
+      "hdds.datanode.https-bind-host";
+  public static final String HDDS_DATANODE_HTTP_ADDRESS_KEY =
+      "hdds.datanode.http-address";
+  public static final String HDDS_DATANODE_HTTPS_ADDRESS_KEY =
+      "hdds.datanode.https-address";
+
+  public static final String HDDS_DATANODE_HTTP_BIND_HOST_DEFAULT = "0.0.0.0";
+  public static final int HDDS_DATANODE_HTTP_BIND_PORT_DEFAULT = 9882;
+  public static final int HDDS_DATANODE_HTTPS_BIND_PORT_DEFAULT = 9883;
+  public static final String
+      HDDS_DATANODE_HTTP_KERBEROS_PRINCIPAL_KEY =
+      "hdds.datanode.http.kerberos.principal";
+  public static final String
+      HDDS_DATANODE_HTTP_KERBEROS_KEYTAB_FILE_KEY =
+      "hdds.datanode.http.kerberos.keytab";
 }

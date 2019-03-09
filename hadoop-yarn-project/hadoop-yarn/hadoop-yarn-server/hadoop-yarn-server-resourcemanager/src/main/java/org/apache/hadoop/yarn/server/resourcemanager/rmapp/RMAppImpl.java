@@ -37,8 +37,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.CallerContext;
@@ -120,7 +120,8 @@ import com.google.common.annotations.VisibleForTesting;
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class RMAppImpl implements RMApp, Recoverable {
 
-  private static final Log LOG = LogFactory.getLog(RMAppImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RMAppImpl.class);
   private static final String UNAVAILABLE = "N/A";
   private static final String UNLIMITED = "UNLIMITED";
   private static final long UNKNOWN = -1L;
@@ -1775,8 +1776,8 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   @Override
   public Map<NodeId, LogAggregationReport> getLogAggregationReportsForApp() {
+    this.readLock.lock();
     try {
-      this.readLock.lock();
       if (!isLogAggregationFinished() && isAppInFinalState(this) &&
           systemClock.getTime() > this.logAggregationStartTime
           + this.logAggregationStatusTimeout) {
@@ -1800,8 +1801,8 @@ public class RMAppImpl implements RMApp, Recoverable {
   }
 
   public void aggregateLogReport(NodeId nodeId, LogAggregationReport report) {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
       if (this.logAggregationEnabled && !isLogAggregationFinished()) {
         LogAggregationReport curReport = this.logAggregationStatus.get(nodeId);
         boolean stateChangedToFinal = false;
@@ -1850,8 +1851,8 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   @Override
   public LogAggregationStatus getLogAggregationStatusForAppReport() {
+    this.readLock.lock();
     try {
-      this.readLock.lock();
       if (! logAggregationEnabled) {
         return LogAggregationStatus.DISABLED;
       }
@@ -2021,8 +2022,8 @@ public class RMAppImpl implements RMApp, Recoverable {
   }
 
   public String getLogAggregationFailureMessagesForNM(NodeId nodeId) {
+    this.readLock.lock();
     try {
-      this.readLock.lock();
       List<String> failureMessages =
           this.logAggregationFailureMessagesForNMs.get(nodeId);
       if (failureMessages == null || failureMessages.isEmpty()) {

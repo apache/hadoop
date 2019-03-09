@@ -23,8 +23,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -51,8 +51,8 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 public class RMContainerTokenSecretManager extends
     BaseContainerTokenSecretManager {
 
-  private static Log LOG = LogFactory
-      .getLog(RMContainerTokenSecretManager.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(RMContainerTokenSecretManager.class);
 
   private MasterKeyData nextMasterKey;
 

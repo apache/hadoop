@@ -28,8 +28,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -63,7 +63,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     CSQueue, CapacitySchedulerConfiguration>{
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       CapacitySchedulerQueueManager.class);
 
   static final Comparator<CSQueue> NON_PARTITIONED_QUEUE_COMPARATOR =

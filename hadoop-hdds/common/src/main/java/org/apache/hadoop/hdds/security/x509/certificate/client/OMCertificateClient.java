@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hdds.security.x509.certificate.client;
 
+import org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,8 +39,8 @@ public class OMCertificateClient extends DefaultCertificateClient {
   private static final Logger LOG =
       LoggerFactory.getLogger(OMCertificateClient.class);
 
-  public OMCertificateClient(SecurityConfig securityConfig, String component) {
-    super(securityConfig, component, LOG);
+  public OMCertificateClient(SecurityConfig securityConfig) {
+    super(securityConfig, LOG);
   }
 
   protected InitResponse handleCase(InitCase init) throws
@@ -95,6 +96,21 @@ public class OMCertificateClient extends DefaultCertificateClient {
       return FAILURE;
     }
   }
+
+  /**
+   * Returns a CSR builder that can be used to creates a Certificate signing
+   * request.
+   *
+   * @return CertificateSignRequest.Builder
+   */
+  @Override
+  public CertificateSignRequest.Builder getCSRBuilder()
+      throws CertificateException {
+    return super.getCSRBuilder()
+        .setDigitalEncryption(true)
+        .setDigitalSignature(true);
+  }
+
 
   public Logger getLogger() {
     return LOG;

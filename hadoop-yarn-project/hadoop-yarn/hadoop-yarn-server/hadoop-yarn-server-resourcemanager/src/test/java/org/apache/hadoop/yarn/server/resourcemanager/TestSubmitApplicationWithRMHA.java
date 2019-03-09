@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import org.junit.Assert;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -34,8 +34,8 @@ import org.junit.Test;
 
 public class TestSubmitApplicationWithRMHA extends RMHATestBase{
 
-  public static final Log LOG = LogFactory
-      .getLog(TestSubmitApplicationWithRMHA.class);
+  public static final Logger LOG = LoggerFactory
+      .getLogger(TestSubmitApplicationWithRMHA.class);
 
   @Test
   public void

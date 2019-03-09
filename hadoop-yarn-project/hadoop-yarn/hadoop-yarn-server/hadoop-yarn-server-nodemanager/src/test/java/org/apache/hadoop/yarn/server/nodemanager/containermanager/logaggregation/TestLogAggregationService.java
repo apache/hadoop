@@ -1194,8 +1194,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     final Lock rLock = rwLock.readLock();
     final Lock wLock = rwLock.writeLock();
 
+    wLock.lock();
     try {
-      wLock.lock();
       Runnable runnable = new Runnable() {
         @Override
         public void run() {

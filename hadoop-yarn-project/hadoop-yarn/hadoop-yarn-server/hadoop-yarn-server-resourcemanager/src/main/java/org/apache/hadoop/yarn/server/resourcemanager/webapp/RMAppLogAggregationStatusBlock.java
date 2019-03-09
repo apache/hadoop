@@ -26,8 +26,8 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
@@ -47,8 +47,8 @@ import com.google.inject.Inject;
 
 public class RMAppLogAggregationStatusBlock extends HtmlBlock {
 
-  private static final Log LOG = LogFactory
-    .getLog(RMAppLogAggregationStatusBlock.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(RMAppLogAggregationStatusBlock.class);
   private final ResourceManager rm;
   private final Configuration conf;
 

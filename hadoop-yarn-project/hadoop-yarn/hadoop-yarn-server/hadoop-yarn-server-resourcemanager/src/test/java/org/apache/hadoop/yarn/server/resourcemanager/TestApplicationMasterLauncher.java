@@ -26,8 +26,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -88,9 +89,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ProxyCAManager;
 import org.apache.hadoop.yarn.server.security.AMSecretKeys;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webproxy.ProxyCA;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -104,8 +102,8 @@ import static org.mockito.Mockito.when;
 
 public class TestApplicationMasterLauncher {
 
-  private static final Log LOG = LogFactory
-      .getLog(TestApplicationMasterLauncher.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestApplicationMasterLauncher.class);
 
   private static final class MyContainerManagerImpl implements
       ContainerManagementProtocol {
@@ -225,8 +223,7 @@ public class TestApplicationMasterLauncher {
 
   @Test
   public void testAMLaunchAndCleanup() throws Exception {
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     MyContainerManagerImpl containerManager = new MyContainerManagerImpl();
     MockRMWithCustomAMLauncher rm = new MockRMWithCustomAMLauncher(
         containerManager);
@@ -383,9 +380,8 @@ public class TestApplicationMasterLauncher {
   @SuppressWarnings("unused")
   @Test(timeout = 100000)
   public void testallocateBeforeAMRegistration() throws Exception {
-    Logger rootLogger = LogManager.getRootLogger();
     boolean thrown = false;
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     MockRM rm = new MockRM();
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 5000);

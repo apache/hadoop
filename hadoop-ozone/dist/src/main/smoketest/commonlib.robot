@@ -29,3 +29,9 @@ Execute and checkrc
     Log                             ${output}
     Should Be Equal As Integers     ${rc}                       ${expected_error_code}
     [return]                        ${output}
+
+Compare files
+    [arguments]                 ${file1}                   ${file2}
+    ${checksumbefore} =         Execute                    md5sum ${file1} | awk '{print $1}'
+    ${checksumafter} =          Execute                    md5sum ${file2} | awk '{print $1}'
+                                Should Be Equal            ${checksumbefore}            ${checksumafter}

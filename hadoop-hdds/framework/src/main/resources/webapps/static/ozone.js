@@ -308,7 +308,6 @@
             ctrl.convertToArray(response.data);
             ctrl.configs = Object.values(ctrl.keyTagMap);
             ctrl.component = 'All';
-            console.log("ajay -> " + JSON.stringify(ctrl.configs));
             ctrl.sortBy('name');
           });
       };
@@ -326,7 +325,6 @@
 
           if (ctrl.component != 'All' && (item['tag'].indexOf(ctrl
               .component) < 0)) {
-            console.log(item['name'] + " false tag " + item['tag']);
             return false;
           }
 

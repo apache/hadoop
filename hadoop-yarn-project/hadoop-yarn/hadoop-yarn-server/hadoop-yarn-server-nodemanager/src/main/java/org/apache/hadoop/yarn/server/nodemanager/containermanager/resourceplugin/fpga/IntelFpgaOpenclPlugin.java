@@ -100,6 +100,7 @@ public class IntelFpgaOpenclPlugin implements AbstractFpgaVendorPlugin {
     if (this.initialized) {
       return true;
     }
+
     // Find the proper toolchain, mainly aocl
     String pluginDefaultBinaryName = getDefaultBinaryName();
     String pathToExecutable = conf.get(YarnConfiguration.NM_FPGA_PATH_TO_EXEC,

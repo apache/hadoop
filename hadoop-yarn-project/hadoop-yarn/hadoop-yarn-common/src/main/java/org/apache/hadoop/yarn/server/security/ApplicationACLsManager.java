@@ -23,8 +23,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
@@ -40,8 +40,8 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 public class ApplicationACLsManager {
 
-  private static final Log LOG = LogFactory
-      .getLog(ApplicationACLsManager.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(ApplicationACLsManager.class);
 
   private static AccessControlList DEFAULT_YARN_APP_ACL 
     = new AccessControlList(YarnConfiguration.DEFAULT_YARN_APP_ACL);

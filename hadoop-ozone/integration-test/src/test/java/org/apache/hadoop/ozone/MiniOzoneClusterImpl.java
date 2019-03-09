@@ -392,7 +392,9 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
         scm = createSCM();
         scm.start();
         om = createOM();
-        om.setCertClient(certClient);
+        if(certClient != null) {
+          om.setCertClient(certClient);
+        }
       } catch (AuthenticationException ex) {
         throw new IOException("Unable to build MiniOzoneCluster. ", ex);
       }
@@ -476,6 +478,10 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       omStorage.setClusterId(clusterId);
       omStorage.setScmId(scmId.get());
       omStorage.setOmId(omId.orElse(UUID.randomUUID().toString()));
+      // Initialize ozone certificate client if security is enabled.
+      if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
+        OzoneManager.initializeSecurity(conf, omStorage);
+      }
       omStorage.initialize();
     }
 
@@ -571,6 +577,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
 
     private void configureHddsDatanodes() {
       conf.set(ScmConfigKeys.HDDS_REST_HTTP_ADDRESS_KEY, "0.0.0.0:0");
+      conf.set(HddsConfigKeys.HDDS_DATANODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
       conf.set(HDDS_DATANODE_PLUGINS_KEY,
           "org.apache.hadoop.ozone.web.OzoneHddsDatanodeService");
       conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT,

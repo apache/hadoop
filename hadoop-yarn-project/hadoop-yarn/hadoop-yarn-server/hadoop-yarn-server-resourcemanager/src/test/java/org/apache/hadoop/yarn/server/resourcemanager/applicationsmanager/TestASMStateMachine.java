@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 
+/*
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Assert;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -39,9 +40,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessM
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+*/
 
 public class TestASMStateMachine {
-//  private static final Log LOG = LogFactory.getLog(TestASMStateMachine.class);
+//  private static final Logger LOG =
+//      LoggerFactory.getLogger(TestASMStateMachine.class);
 //  private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 //  RMContext context = new RMContextImpl(new MemStore());
 //  EventHandler handler;

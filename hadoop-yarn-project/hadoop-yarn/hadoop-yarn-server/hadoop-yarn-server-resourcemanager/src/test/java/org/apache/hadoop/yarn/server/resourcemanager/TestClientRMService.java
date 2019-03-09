@@ -51,8 +51,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.MockApps;
@@ -186,7 +186,8 @@ import com.google.common.collect.Sets;
 
 public class TestClientRMService {
 
-  private static final Log LOG = LogFactory.getLog(TestClientRMService.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestClientRMService.class);
 
   private RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);

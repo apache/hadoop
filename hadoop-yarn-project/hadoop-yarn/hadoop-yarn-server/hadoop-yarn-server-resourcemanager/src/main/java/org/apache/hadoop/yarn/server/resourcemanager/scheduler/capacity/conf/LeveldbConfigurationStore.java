@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -62,8 +62,8 @@ import static org.fusesource.leveldbjni.JniDBFactory.bytes;
  */
 public class LeveldbConfigurationStore extends YarnConfigurationStore {
 
-  public static final Log LOG =
-      LogFactory.getLog(LeveldbConfigurationStore.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(LeveldbConfigurationStore.class);
 
   private static final String DB_NAME = "yarn-conf-store";
   private static final String LOG_KEY = "log";

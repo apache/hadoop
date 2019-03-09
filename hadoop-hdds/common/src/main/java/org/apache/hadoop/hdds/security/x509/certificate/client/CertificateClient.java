@@ -109,7 +109,7 @@ public interface CertificateClient {
    *
    * @return CertificateSignRequest.Builder
    */
-  CertificateSignRequest.Builder getCSRBuilder();
+  CertificateSignRequest.Builder getCSRBuilder() throws CertificateException;
 
   /**
    * Get the certificate of well-known entity from SCM.

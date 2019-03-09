@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -43,7 +43,8 @@ import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import java.util.List;
 
 public class FifoAppAttempt extends FiCaSchedulerApp {
-  private static final Log LOG = LogFactory.getLog(FifoAppAttempt.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FifoAppAttempt.class);
 
   FifoAppAttempt(ApplicationAttemptId appAttemptId, String user,
       Queue queue, ActiveUsersManager activeUsersManager,
@@ -53,9 +54,9 @@ public class FifoAppAttempt extends FiCaSchedulerApp {
 
   public RMContainer allocate(NodeType type, FiCaSchedulerNode node,
       SchedulerRequestKey schedulerKey, Container container) {
-    try {
-      writeLock.lock();
 
+    writeLock.lock();
+    try {
       if (isStopped) {
         return null;
       }

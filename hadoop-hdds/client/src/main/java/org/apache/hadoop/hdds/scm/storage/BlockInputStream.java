@@ -42,7 +42,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -290,7 +289,7 @@ public class BlockInputStream extends InputStream implements Seekable {
     XceiverClientReply reply;
     ReadChunkResponseProto readChunkResponse = null;
     final ChunkInfo chunkInfo = chunks.get(chunkIndex);
-    List<UUID> excludeDns = null;
+    List<DatanodeDetails> excludeDns = null;
     ByteString byteString;
     List<DatanodeDetails> dnList = xceiverClient.getPipeline().getNodes();
     while (true) {
@@ -334,7 +333,7 @@ public class BlockInputStream extends InputStream implements Seekable {
         if (excludeDns == null) {
           excludeDns = new ArrayList<>();
         }
-        excludeDns.add(reply.getDatanode());
+        excludeDns.addAll(reply.getDatanodes());
         if (excludeDns.size() == dnList.size()) {
           throw ioe;
         }

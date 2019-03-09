@@ -36,4 +36,9 @@ public interface MetaStoreIterator<T> extends Iterator<T> {
    */
   void seekToLast();
 
+  /**
+   * seek with prefix.
+   */
+  void prefixSeek(byte[] prefix);
+
 }

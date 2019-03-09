@@ -49,8 +49,6 @@ import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipeline.RatisPipelineUtils;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
-import org.apache.hadoop.hdds.server.events.EventHandler;
-import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
@@ -95,7 +93,7 @@ import static org.apache.hadoop.hdds.scm.server.StorageContainerManager
  * The RPC server that listens to requests from clients.
  */
 public class SCMClientProtocolServer implements
-    StorageContainerLocationProtocol, EventHandler<Boolean>, Auditor {
+    StorageContainerLocationProtocol, Auditor {
   private static final Logger LOG =
       LoggerFactory.getLogger(SCMClientProtocolServer.class);
   private static final AuditLogger AUDIT =
@@ -497,14 +495,6 @@ public class SCMClientProtocolServer implements
   }
 
   /**
-   * Set chill mode status based on SCMEvents.CHILL_MODE_STATUS event.
-   */
-  @Override
-  public void onMessage(Boolean inChillMode, EventPublisher publisher) {
-    chillModePrecheck.setInChillMode(inChillMode);
-  }
-
-  /**
    * Set chill mode status based on .
    */
   public boolean getChillModeStatus() {
@@ -560,5 +550,14 @@ public class SCMClientProtocolServer implements
   @Override
   public void close() throws IOException {
     stop();
+  }
+
+  /**
+   * Set ChillMode status.
+   *
+   * @param chillModeStatus
+   */
+  public void setChillModeStatus(boolean chillModeStatus) {
+    chillModePrecheck.setInChillMode(chillModeStatus);
   }
 }

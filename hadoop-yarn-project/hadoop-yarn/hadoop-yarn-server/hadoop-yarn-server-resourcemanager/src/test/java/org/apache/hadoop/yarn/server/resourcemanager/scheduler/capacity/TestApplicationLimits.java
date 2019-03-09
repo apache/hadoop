@@ -36,8 +36,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -83,7 +83,8 @@ import com.google.common.collect.Sets;
 
 public class TestApplicationLimits {
   
-  private static final Log LOG = LogFactory.getLog(TestApplicationLimits.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestApplicationLimits.class);
   final static int GB = 1024;
 
   LeafQueue queue;

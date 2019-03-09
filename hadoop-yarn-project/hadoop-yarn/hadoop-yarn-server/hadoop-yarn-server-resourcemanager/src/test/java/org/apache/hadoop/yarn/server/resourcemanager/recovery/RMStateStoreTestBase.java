@@ -36,8 +36,8 @@ import java.util.Map;
 
 import javax.crypto.SecretKey;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.CallerContext;
@@ -91,7 +91,8 @@ import org.junit.Assert;
 
 public class RMStateStoreTestBase {
 
-  public static final Log LOG = LogFactory.getLog(RMStateStoreTestBase.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(RMStateStoreTestBase.class);
 
   protected final long epoch = 10L;
 

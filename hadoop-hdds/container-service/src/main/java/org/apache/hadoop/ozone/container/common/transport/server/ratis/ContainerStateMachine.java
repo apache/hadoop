@@ -21,10 +21,13 @@ package org.apache.hadoop.ozone.container.common.transport.server.ratis;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 
 import io.opentracing.Scope;
+import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.ratis.proto.RaftProtos.RaftPeerRole;
 import org.apache.ratis.protocol.RaftGroup;
 import org.apache.ratis.protocol.RaftGroupId;
@@ -36,6 +39,8 @@ import org.apache.ratis.statemachine.impl.SingleFileSnapshotInfo;
 import org.apache.ratis.thirdparty.com.google.protobuf
     .InvalidProtocolBufferException;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Type;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
+    ContainerIdSetProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -73,10 +78,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
+import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.io.FileOutputStream;
+import java.io.FileInputStream;
+import java.io.OutputStream;
+
 
 /** A {@link org.apache.ratis.statemachine.StateMachine} for containers.
  *
@@ -126,6 +136,9 @@ public class ContainerStateMachine extends BaseStateMachine {
   private final XceiverServerRatis ratisServer;
   private final ConcurrentHashMap<Long, CompletableFuture<Message>>
       writeChunkFutureMap;
+
+  // keeps track of the containers created per pipeline
+  private final Set<Long> createContainerSet;
   private ExecutorService[] executors;
   private final int numExecutors;
   private final Map<Long, Long> applyTransactionCompletionMap;
@@ -160,6 +173,7 @@ public class ContainerStateMachine extends BaseStateMachine {
         .maximumSize(chunkExecutor.getCorePoolSize()).build();
     this.isBlockTokenEnabled = isBlockTokenEnabled;
     this.tokenVerifier = tokenVerifier;
+    this.createContainerSet = new ConcurrentSkipListSet<>();
   }
 
   @Override
@@ -181,24 +195,54 @@ public class ContainerStateMachine extends BaseStateMachine {
     loadSnapshot(storage.getLatestSnapshot());
   }
 
-  private long loadSnapshot(SingleFileSnapshotInfo snapshot) {
+  private long loadSnapshot(SingleFileSnapshotInfo snapshot)
+      throws IOException {
     if (snapshot == null) {
-      TermIndex empty = TermIndex.newTermIndex(0,
-          RaftServerConstants.INVALID_LOG_INDEX);
-      LOG.info("The snapshot info is null." +
-          "Setting the last applied index to:" + empty);
+      TermIndex empty =
+          TermIndex.newTermIndex(0, RaftServerConstants.INVALID_LOG_INDEX);
+      LOG.info(
+          "The snapshot info is null." + "Setting the last applied index to:"
+              + empty);
       setLastAppliedTermIndex(empty);
       lastIndex = RaftServerConstants.INVALID_LOG_INDEX;
       return RaftServerConstants.INVALID_LOG_INDEX;
     }
 
+    final File snapshotFile = snapshot.getFile().getPath().toFile();
     final TermIndex last =
-        SimpleStateMachineStorage.getTermIndexFromSnapshotFile(
-            snapshot.getFile().getPath().toFile());
+        SimpleStateMachineStorage.getTermIndexFromSnapshotFile(snapshotFile);
     LOG.info("Setting the last applied index to " + last);
     setLastAppliedTermIndex(last);
     lastIndex = last.getIndex();
+
+    // initialize the dispatcher with snapshot so that it build the missing
+    // container list
+    try (FileInputStream fin = new FileInputStream(snapshotFile)) {
+      byte[] containerIds = IOUtils.toByteArray(fin);
+      ContainerProtos.ContainerIdSetProto proto =
+          ContainerProtos.ContainerIdSetProto.parseFrom(containerIds);
+      // read the created containers list from the snapshot file and add it to
+      // the createContainerSet here.
+      // createContainerSet will further grow as and when containers get created
+      createContainerSet.addAll(proto.getContainerIdList());
+      dispatcher.buildMissingContainerSet(createContainerSet);
+    }
     return last.getIndex();
+  }
+
+  /**
+   * As a part of taking snapshot with Ratis StateMachine, it will persist
+   * the existing container set in the snapshotFile.
+   * @param out OutputStream mapped to the Ratis snapshot file
+   * @throws IOException
+   */
+  public void persistContainerSet(OutputStream out) throws IOException {
+    ContainerIdSetProto.Builder builder = ContainerIdSetProto.newBuilder();
+    builder.addAllContainerId(createContainerSet);
+    // TODO : while snapshot is being taken, deleteContainer call should not
+    // should not happen. Lock protection will be required if delete
+    // container happens outside of Ratis.
+    IOUtils.write(builder.build().toByteArray(), out);
   }
 
   @Override
@@ -211,8 +255,13 @@ public class ContainerStateMachine extends BaseStateMachine {
       LOG.info("Taking a snapshot to file {}", snapshotFile);
       try {
         //TODO: For now, just create the file to save the term index,
-        //persist open container info to snapshot later.
-        snapshotFile.createNewFile();
+        boolean created = snapshotFile.createNewFile();
+        if (!created) {
+          throw new IOException("Failed to create ratis snapshot file");
+        }
+        try (FileOutputStream fos = new FileOutputStream(snapshotFile)) {
+          persistContainerSet(fos);
+        }
       } catch(IOException ioe) {
         LOG.warn("Failed to write snapshot file \"" + snapshotFile
             + "\", last applied index=" + ti);
@@ -227,7 +276,7 @@ public class ContainerStateMachine extends BaseStateMachine {
   public TransactionContext startTransaction(RaftClientRequest request)
       throws IOException {
     final ContainerCommandRequestProto proto =
-        getRequestProto(request.getMessage().getContent());
+        getContainerCommandRequestProto(request.getMessage().getContent());
     Preconditions.checkArgument(request.getRaftGroupId().equals(gid));
     try (Scope scope = TracingUtil
         .importAndCreateScope(proto.getCmdType().name(), proto.getTraceID())) {
@@ -244,17 +293,6 @@ public class ContainerStateMachine extends BaseStateMachine {
       }
       if (proto.getCmdType() == Type.WriteChunk) {
         final WriteChunkRequestProto write = proto.getWriteChunk();
-        // create the state machine data proto
-        final WriteChunkRequestProto dataWriteChunkProto =
-            WriteChunkRequestProto
-                .newBuilder(write)
-                .build();
-        ContainerCommandRequestProto dataContainerCommandProto =
-            ContainerCommandRequestProto
-                .newBuilder(proto)
-                .setWriteChunk(dataWriteChunkProto)
-                .build();
-
         // create the log entry proto
         final WriteChunkRequestProto commitWriteChunkProto =
             WriteChunkRequestProto.newBuilder()
@@ -273,7 +311,7 @@ public class ContainerStateMachine extends BaseStateMachine {
             .setClientRequest(request)
             .setStateMachine(this)
             .setServerRole(RaftPeerRole.LEADER)
-            .setStateMachineData(dataContainerCommandProto.toByteString())
+            .setStateMachineData(write.getData())
             .setLogData(commitContainerCommandProto.toByteString())
             .build();
       } else {
@@ -291,8 +329,8 @@ public class ContainerStateMachine extends BaseStateMachine {
     return entryProto.getStateMachineEntry().getStateMachineData();
   }
 
-  private ContainerCommandRequestProto getRequestProto(ByteString request)
-      throws InvalidProtocolBufferException {
+  private ContainerCommandRequestProto getContainerCommandRequestProto(
+      ByteString request) throws InvalidProtocolBufferException {
     // TODO: We can avoid creating new builder and set pipeline Id if
     // the client is already sending the pipeline id, then we just have to
     // validate the pipeline Id.
@@ -302,13 +340,22 @@ public class ContainerStateMachine extends BaseStateMachine {
   }
 
   private ContainerCommandResponseProto dispatchCommand(
-      ContainerCommandRequestProto requestProto,
-      DispatcherContext context) throws IOException {
-    LOG.trace("dispatch {}", requestProto);
-    if(isBlockTokenEnabled) {
-      // ServerInterceptors intercepts incoming request and creates ugi.
-      tokenVerifier.verify(UserGroupInformation.getCurrentUser()
-          .getShortUserName(), requestProto.getEncodedToken());
+      ContainerCommandRequestProto requestProto, DispatcherContext context) {
+    LOG.trace("dispatch {} containerID={} pipelineID={} traceID={}",
+        requestProto.getCmdType(), requestProto.getContainerID(),
+        requestProto.getPipelineID(), requestProto.getTraceID());
+    if (isBlockTokenEnabled) {
+      try {
+        // ServerInterceptors intercepts incoming request and creates ugi.
+        tokenVerifier
+            .verify(UserGroupInformation.getCurrentUser().getShortUserName(),
+                requestProto.getEncodedToken());
+      } catch (IOException ioe) {
+        StorageContainerException sce = new StorageContainerException(
+            "Block token verification failed. " + ioe.getMessage(), ioe,
+            ContainerProtos.Result.BLOCK_TOKEN_VERIFICATION_FAILED);
+        return ContainerUtils.logAndReturnError(LOG, sce, requestProto);
+      }
     }
     ContainerCommandResponseProto response =
         dispatcher.dispatch(requestProto, context);
@@ -317,7 +364,7 @@ public class ContainerStateMachine extends BaseStateMachine {
   }
 
   private Message runCommand(ContainerCommandRequestProto requestProto,
-      DispatcherContext context) throws IOException {
+      DispatcherContext context) {
     return dispatchCommand(requestProto, context)::toByteString;
   }
 
@@ -344,15 +391,12 @@ public class ContainerStateMachine extends BaseStateMachine {
             .setTerm(term)
             .setLogIndex(entryIndex)
             .setStage(DispatcherContext.WriteChunkStage.WRITE_DATA)
+            .setCreateContainerSet(createContainerSet)
             .build();
-    CompletableFuture<Message> writeChunkFuture;
-    try {
-      Message msg = runCommand(requestProto, context);
-      writeChunkFuture = CompletableFuture
-          .supplyAsync(() -> msg, chunkExecutor);
-    }catch(IOException ie) {
-      writeChunkFuture = completeExceptionally(ie);
-    }
+    // ensure the write chunk happens asynchronously in writeChunkExecutor pool
+    // thread.
+    CompletableFuture<Message> writeChunkFuture = CompletableFuture
+        .supplyAsync(() -> runCommand(requestProto, context), chunkExecutor);
 
     writeChunkFutureMap.put(entryIndex, writeChunkFuture);
     LOG.debug("writeChunk writeStateMachineData : blockId " + write.getBlockID()
@@ -378,8 +422,15 @@ public class ContainerStateMachine extends BaseStateMachine {
   public CompletableFuture<Message> writeStateMachineData(LogEntryProto entry) {
     try {
       metrics.incNumWriteStateMachineOps();
-      final ContainerCommandRequestProto requestProto =
-          getRequestProto(getStateMachineData(entry.getStateMachineLogEntry()));
+      ContainerCommandRequestProto requestProto =
+          getContainerCommandRequestProto(
+              entry.getStateMachineLogEntry().getLogData());
+      WriteChunkRequestProto writeChunk =
+          WriteChunkRequestProto.newBuilder(requestProto.getWriteChunk())
+              .setData(getStateMachineData(entry.getStateMachineLogEntry()))
+              .build();
+      requestProto = ContainerCommandRequestProto.newBuilder(requestProto)
+          .setWriteChunk(writeChunk).build();
       Type cmdType = requestProto.getCmdType();
 
       // For only writeChunk, there will be writeStateMachineData call.
@@ -403,7 +454,7 @@ public class ContainerStateMachine extends BaseStateMachine {
     try {
       metrics.incNumReadStateMachineOps();
       final ContainerCommandRequestProto requestProto =
-          getRequestProto(request.getContent());
+          getContainerCommandRequestProto(request.getContent());
       return CompletableFuture.completedFuture(runCommand(requestProto, null));
     } catch (IOException e) {
       metrics.incNumReadStateMachineFails();
@@ -453,34 +504,8 @@ public class ContainerStateMachine extends BaseStateMachine {
    */
   private ByteString getCachedStateMachineData(Long logIndex, long term,
       ContainerCommandRequestProto requestProto) throws ExecutionException {
-    try {
-      return reconstructWriteChunkRequest(
-          stateMachineDataCache.get(logIndex, new Callable<ByteString>() {
-            @Override
-            public ByteString call() throws Exception {
-              return readStateMachineData(requestProto, term, logIndex);
-            }
-          }), requestProto);
-    } catch (ExecutionException e) {
-      throw e;
-    }
-  }
-
-  private ByteString reconstructWriteChunkRequest(ByteString data,
-      ContainerCommandRequestProto requestProto) {
-    WriteChunkRequestProto writeChunkRequestProto =
-        requestProto.getWriteChunk();
-    // reconstruct the write chunk request
-    final WriteChunkRequestProto.Builder dataWriteChunkProto =
-        WriteChunkRequestProto.newBuilder(writeChunkRequestProto)
-            // adding the state machine data
-            .setData(data);
-
-    ContainerCommandRequestProto.Builder newStateMachineProto =
-        ContainerCommandRequestProto.newBuilder(requestProto)
-            .setWriteChunk(dataWriteChunkProto);
-
-    return newStateMachineProto.build().toByteString();
+    return stateMachineDataCache.get(logIndex,
+        () -> readStateMachineData(requestProto, term, logIndex));
   }
 
   /**
@@ -514,20 +539,23 @@ public class ContainerStateMachine extends BaseStateMachine {
     }
     try {
       final ContainerCommandRequestProto requestProto =
-          getRequestProto(entry.getStateMachineLogEntry().getLogData());
+          getContainerCommandRequestProto(
+              entry.getStateMachineLogEntry().getLogData());
       // readStateMachineData should only be called for "write" to Ratis.
       Preconditions.checkArgument(!HddsUtils.isReadOnly(requestProto));
       if (requestProto.getCmdType() == Type.WriteChunk) {
-        CompletableFuture<ByteString> future = new CompletableFuture<>();
-        return future.supplyAsync(() -> {
+        final CompletableFuture<ByteString> future = new CompletableFuture<>();
+        CompletableFuture.supplyAsync(() -> {
           try {
-            return getCachedStateMachineData(entry.getIndex(), entry.getTerm(),
-                requestProto);
+            future.complete(
+                getCachedStateMachineData(entry.getIndex(), entry.getTerm(),
+                    requestProto));
           } catch (ExecutionException e) {
             future.completeExceptionally(e);
-            return null;
           }
+          return future;
         }, chunkExecutor);
+        return future;
       } else {
         throw new IllegalStateException("Cmd type:" + requestProto.getCmdType()
             + " cannot have state machine data");
@@ -576,9 +604,9 @@ public class ContainerStateMachine extends BaseStateMachine {
     try {
       metrics.incNumApplyTransactionsOps();
       ContainerCommandRequestProto requestProto =
-          getRequestProto(trx.getStateMachineLogEntry().getLogData());
+          getContainerCommandRequestProto(
+              trx.getStateMachineLogEntry().getLogData());
       Type cmdType = requestProto.getCmdType();
-      CompletableFuture<Message> future;
       // Make sure that in write chunk, the user data is not set
       if (cmdType == Type.WriteChunk) {
         Preconditions
@@ -586,13 +614,14 @@ public class ContainerStateMachine extends BaseStateMachine {
         builder
             .setStage(DispatcherContext.WriteChunkStage.COMMIT_DATA);
       }
-      try {
-        Message msg = runCommand(requestProto, builder.build());
-        future = CompletableFuture.supplyAsync(() -> msg,
-            getCommandExecutor(requestProto));
-      } catch (IOException ie) {
-        future = completeExceptionally(ie);
+      if (cmdType == Type.WriteChunk || cmdType ==Type.PutSmallFile) {
+        builder.setCreateContainerSet(createContainerSet);
       }
+      // Ensure the command gets executed in a separate thread than
+      // stateMachineUpdater thread which is calling applyTransaction here.
+      CompletableFuture<Message> future = CompletableFuture
+          .supplyAsync(() -> runCommand(requestProto, builder.build()),
+              getCommandExecutor(requestProto));
 
       lastIndex = index;
       future.thenAccept(m -> {

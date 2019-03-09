@@ -103,6 +103,13 @@
                   <classifier>classpath</classifier>
                   <destFileName>hadoop-ozone-datanode.classpath</destFileName>
                 </artifactItem>
+                <artifactItem>
+                  <groupId>org.apache.hadoop</groupId>
+                  <artifactId>hadoop-ozone-recon</artifactId>
+                  <version>${ozone.version}</version>
+                  <classifier>classpath</classifier>
+                  <destFileName>hadoop-ozone-recon.classpath</destFileName>
+                </artifactItem>
               </artifactItems>
             </configuration>
           </execution>
@@ -126,7 +133,7 @@
         <executions>
           <execution>
             <id>dist</id>
-            <phase>compile</phase>
+            <phase>prepare-package</phase>
             <goals>
               <goal>exec</goal>
             </goals>
@@ -204,7 +211,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-ozone-filesystem-lib</artifactId>
+      <artifactId>hadoop-ozone-filesystem-lib-current</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>

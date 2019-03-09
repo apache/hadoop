@@ -130,8 +130,8 @@ class CGroupsHandlerImpl implements CGroupsHandler {
 
   @Override
   public String getControllerPath(CGroupController controller) {
+    rwLock.readLock().lock();
     try {
-      rwLock.readLock().lock();
       return controllerPaths.get(controller);
     } finally {
       rwLock.readLock().unlock();
@@ -169,8 +169,8 @@ class CGroupsHandlerImpl implements CGroupsHandler {
     }
 
     // we want to do a bulk update without the paths changing concurrently
+    rwLock.writeLock().lock();
     try {
-      rwLock.writeLock().lock();
       controllerPaths = cPaths;
       parsedMtab = newMtab;
     } finally {
@@ -293,10 +293,9 @@ class CGroupsHandlerImpl implements CGroupsHandler {
 
     if (existingMountPath == null ||
         !requestedMountPath.equals(existingMountPath)) {
+      //lock out other readers/writers till we are done
+      rwLock.writeLock().lock();
       try {
-        //lock out other readers/writers till we are done
-        rwLock.writeLock().lock();
-
         // If the controller was already mounted we have to mount it
         // with the same options to clone the mount point otherwise
         // the operation will fail

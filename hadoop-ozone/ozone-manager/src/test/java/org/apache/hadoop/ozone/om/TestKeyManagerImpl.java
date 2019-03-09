@@ -25,6 +25,7 @@ import java.util.Set;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
@@ -91,7 +92,8 @@ public class TestKeyManagerImpl {
   private void setupMocks() throws Exception {
     Mockito.when(scmBlockLocationProtocol
         .allocateBlock(Mockito.anyLong(), Mockito.any(ReplicationType.class),
-            Mockito.any(ReplicationFactor.class), Mockito.anyString()))
+            Mockito.any(ReplicationFactor.class), Mockito.anyString(),
+            Mockito.any(ExcludeList.class)))
         .thenThrow(
             new SCMException("ChillModePrecheck failed for allocateBlock",
                 ResultCodes.CHILL_MODE_EXCEPTION));
@@ -180,7 +182,7 @@ public class TestKeyManagerImpl {
         .setVolumeName(VOLUME_NAME).build();
     LambdaTestUtils.intercept(OMException.class,
         "ChillModePrecheck failed for allocateBlock", () -> {
-          keyManager.allocateBlock(keyArgs, 1);
+          keyManager.allocateBlock(keyArgs, 1, new ExcludeList());
         });
   }
 

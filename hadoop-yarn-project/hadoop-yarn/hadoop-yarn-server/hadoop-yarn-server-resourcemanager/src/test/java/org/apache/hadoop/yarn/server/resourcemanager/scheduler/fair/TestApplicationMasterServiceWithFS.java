@@ -23,8 +23,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -46,8 +46,8 @@ import org.junit.Test;
  */
 public class TestApplicationMasterServiceWithFS {
 
-  private static final Log LOG =
-      LogFactory.getLog(TestApplicationMasterServiceWithFS.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestApplicationMasterServiceWithFS.class);
 
   private static final int GB = 1024;
   private static final int MEMORY_ALLOCATION = 3 * GB;

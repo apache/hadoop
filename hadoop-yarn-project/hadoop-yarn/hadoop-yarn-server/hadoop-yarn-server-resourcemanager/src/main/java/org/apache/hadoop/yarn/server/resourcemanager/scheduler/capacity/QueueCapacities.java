@@ -83,8 +83,8 @@ public class QueueCapacities {
   }
   
   private float _get(String label, CapacityType type) {
+    readLock.lock();
     try {
-      readLock.lock();
       Capacities cap = capacitiesMap.get(label);
       if (null == cap) {
         return LABEL_DOESNT_EXIST_CAP;
@@ -96,8 +96,8 @@ public class QueueCapacities {
   }
   
   private void _set(String label, CapacityType type, float value) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       Capacities cap = capacitiesMap.get(label);
       if (null == cap) {
         cap = new Capacities();
@@ -277,8 +277,8 @@ public class QueueCapacities {
    * configurable fields, and load new values
    */
   public void clearConfigurableFields() {
+    writeLock.lock();
     try {
-      writeLock.lock();
       for (String label : capacitiesMap.keySet()) {
         _set(label, CapacityType.CAP, 0);
         _set(label, CapacityType.MAX_CAP, 0);
@@ -291,8 +291,8 @@ public class QueueCapacities {
   }
   
   public Set<String> getExistingNodeLabels() {
+    readLock.lock();
     try {
-      readLock.lock();
       return new HashSet<String>(capacitiesMap.keySet());
     } finally {
       readLock.unlock();
@@ -301,8 +301,8 @@ public class QueueCapacities {
   
   @Override
   public String toString() {
+    readLock.lock();
     try {
-      readLock.lock();
       return this.capacitiesMap.toString();
     } finally {
       readLock.unlock();
@@ -310,8 +310,8 @@ public class QueueCapacities {
   }
   
   public Set<String> getNodePartitionsSet() {
+    readLock.lock();
     try {
-      readLock.lock();
       return capacitiesMap.keySet();
     } finally {
       readLock.unlock();

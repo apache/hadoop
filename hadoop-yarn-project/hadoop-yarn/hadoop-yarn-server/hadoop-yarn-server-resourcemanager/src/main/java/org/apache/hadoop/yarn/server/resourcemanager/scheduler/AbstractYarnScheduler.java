@@ -34,8 +34,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -92,9 +92,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
-
-
-
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ReleaseContainerEvent;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerContext;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
@@ -116,7 +113,8 @@ public abstract class AbstractYarnScheduler
     <T extends SchedulerApplicationAttempt, N extends SchedulerNode>
     extends AbstractService implements ResourceScheduler {
 
-  private static final Log LOG = LogFactory.getLog(AbstractYarnScheduler.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AbstractYarnScheduler.class);
 
   protected final ClusterNodeTracker<N> nodeTracker =
       new ClusterNodeTracker<>();
@@ -345,8 +343,8 @@ public abstract class AbstractYarnScheduler
 
   protected void containerLaunchedOnNode(
       ContainerId containerId, SchedulerNode node) {
+    readLock.lock();
     try {
-      readLock.lock();
       // Get the application for the finished container
       SchedulerApplicationAttempt application =
           getCurrentAttemptForContainer(containerId);
@@ -487,8 +485,8 @@ public abstract class AbstractYarnScheduler
 
   public void recoverContainersOnNode(List<NMContainerStatus> containerReports,
       RMNode nm) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       if (!rmContext.isWorkPreservingRecoveryEnabled()
           || containerReports == null || (containerReports != null
           && containerReports.isEmpty())) {
@@ -769,13 +767,13 @@ public abstract class AbstractYarnScheduler
   @Override
   public void moveAllApps(String sourceQueue, String destQueue)
       throws YarnException {
+    writeLock.lock();
     try {
-      writeLock.lock();
       // check if destination queue is a valid leaf queue
       try {
         getQueueInfo(destQueue, false, false);
       } catch (IOException e) {
-        LOG.warn(e);
+        LOG.warn(e.toString());
         throw new YarnException(e);
       }
       // check if source queue is a valid
@@ -800,8 +798,8 @@ public abstract class AbstractYarnScheduler
   @Override
   public void killAllAppsInQueue(String queueName)
       throws YarnException {
+    writeLock.lock();
     try {
-      writeLock.lock();
       // check if queue is a valid
       List<ApplicationAttemptId> apps = getAppsInQueue(queueName);
       if (apps == null) {
@@ -826,8 +824,8 @@ public abstract class AbstractYarnScheduler
    */
   public void updateNodeResource(RMNode nm,
       ResourceOption resourceOption) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       SchedulerNode node = getSchedulerNode(nm.getNodeID());
       Resource newResource = resourceOption.getResource();
       Resource oldResource = node.getTotalResource();

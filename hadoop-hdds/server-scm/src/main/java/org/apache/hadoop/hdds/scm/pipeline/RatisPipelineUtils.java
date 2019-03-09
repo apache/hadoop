@@ -28,6 +28,7 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.ratis.RatisHelper;
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.grpc.GrpcTlsConfig;
+import org.apache.ratis.protocol.RaftClientReply;
 import org.apache.ratis.protocol.RaftGroup;
 import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.protocol.RaftPeer;
@@ -71,7 +72,15 @@ public final class RatisPipelineUtils {
     final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
     LOG.debug("creating pipeline:{} with {}", pipeline.getId(), group);
     callRatisRpc(pipeline.getNodes(), ozoneConf,
-        (raftClient, peer) -> raftClient.groupAdd(group, peer.getId()));
+        (raftClient, peer) -> {
+          RaftClientReply reply = raftClient.groupAdd(group, peer.getId());
+          if (reply == null || !reply.isSuccess()) {
+            String msg = "Pipeline initialization failed for pipeline:"
+                + pipeline.getId() + " node:" + peer.getId();
+            LOG.error(msg);
+            throw new IOException(msg);
+          }
+        });
   }
 
   /**
@@ -186,8 +195,8 @@ public final class RatisPipelineUtils {
         rpc.accept(client, p);
       } catch (IOException ioe) {
         exceptions.add(
-            new IOException("Failed invoke Ratis rpc " + rpc + " for " + d,
-                ioe));
+            new IOException("Failed invoke Ratis rpc " + rpc + " for " +
+                d.getUuid(), ioe));
       }
     });
     if (!exceptions.isEmpty()) {

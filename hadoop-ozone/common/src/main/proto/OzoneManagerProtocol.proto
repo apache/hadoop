@@ -140,6 +140,8 @@ message OMResponse {
 
   required Status status = 5;
 
+  optional string leaderOMNodeId = 6;
+
   optional CreateVolumeResponse              createVolumeResponse          = 11;
   optional SetVolumePropertyResponse         setVolumePropertyResponse     = 12;
   optional CheckVolumeAccessResponse         checkVolumeAccessResponse     = 13;
@@ -609,6 +611,7 @@ message CommitKeyResponse {
 message AllocateBlockRequest {
     required KeyArgs keyArgs = 1;
     required uint64 clientID = 2;
+    optional hadoop.hdds.ExcludeListProto excludeList = 3;
 }
 
 message AllocateBlockResponse {

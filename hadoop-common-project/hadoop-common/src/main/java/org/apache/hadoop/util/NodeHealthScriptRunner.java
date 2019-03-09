@@ -249,7 +249,7 @@ public class NodeHealthScriptRunner extends AbstractService {
   }
 
   /**
-   * Sets if the node is healhty or not considering disks' health also.
+   * Sets if the node is healthy or not considering disks' health also.
    * 
    * @param isHealthy
    *          if or not node is healthy

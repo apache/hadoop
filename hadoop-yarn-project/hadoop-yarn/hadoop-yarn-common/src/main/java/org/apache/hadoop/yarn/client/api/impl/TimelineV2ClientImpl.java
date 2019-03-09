@@ -36,8 +36,8 @@ import java.util.concurrent.TimeUnit;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -64,7 +64,8 @@ import com.sun.jersey.core.util.MultivaluedMapImpl;
  *
  */
 public class TimelineV2ClientImpl extends TimelineV2Client {
-  private static final Log LOG = LogFactory.getLog(TimelineV2ClientImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineV2ClientImpl.class);
 
   private static final String RESOURCE_URI_STR_V2 = "/ws/v2/timeline/";
 

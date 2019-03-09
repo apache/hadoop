@@ -42,9 +42,7 @@ Put object to s3
 #This test depends on the previous test case. Can't be executes alone
 Get object from s3
     ${result} =                 Execute AWSS3ApiCli        get-object --bucket ${BUCKET} --key putobject/f1 /tmp/testfile.result
-    ${checksumbefore} =         Execute                    md5sum /tmp/testfile | awk '{print $1}'
-    ${checksumafter} =          Execute                    md5sum /tmp/testfile.result | awk '{print $1}'
-                                Should Be Equal            ${checksumbefore}            ${checksumafter}
+    Compare files               /tmp/testfile              /tmp/testfile.result
 
 Get Partial object from s3 with both start and endoffset
     ${result} =                 Execute AWSS3ApiCli        get-object --bucket ${BUCKET} --key putobject/f1 --range bytes=0-4 /tmp/testfile1.result

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -98,7 +98,7 @@ import static org.mockito.Mockito.when;
 public class TestCapacitySchedulerAutoQueueCreation
     extends TestCapacitySchedulerAutoCreatedQueueBase {
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       TestCapacitySchedulerAutoQueueCreation.class);
 
   private static final Resource TEMPLATE_MAX_RES = Resource.newInstance(16 *

@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn.util;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.google.common.base.Strings;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
@@ -87,6 +89,20 @@ public final class RackResolver {
   }
 
   /**
+   * Utility method for getting a list of hostname resolved to a list of node
+   *  in the network topology. This method initializes the class with the
+   * right resolver implementation.
+   * @param conf
+   * @param hostNames
+   * @return nodes {@link Node} after resolving the hostnames
+   */
+  public static List<Node> resolve(
+      Configuration conf, List<String> hostNames) {
+    init(conf);
+    return coreResolve(hostNames);
+  }
+
+  /**
    * Utility method for getting a hostname resolved to a node in the
    * network topology. This method doesn't initialize the class.
    * Call {@link #init(Configuration)} explicitly.
@@ -100,18 +116,50 @@ public final class RackResolver {
     return coreResolve(hostName);
   }
 
+  /**
+   * Utility method for getting a list of hostname resolved to a list of node
+   *  in the network topology. This method doesn't initialize the class.
+   * Call {@link #init(Configuration)} explicitly.
+   * @param hostNames
+   * @return nodes {@link Node} after resolving the hostnames
+   */
+  public static List<Node> resolve(List<String> hostNames) {
+    if (!initCalled) {
+      throw new IllegalStateException("RackResolver class " +
+          "not yet initialized");
+    }
+    return coreResolve(hostNames);
+  }
+
   private static Node coreResolve(String hostName) {
     List <String> tmpList = Collections.singletonList(hostName);
-    List <String> rNameList = dnsToSwitchMapping.resolve(tmpList);
-    String rName = NetworkTopology.DEFAULT_RACK;
-    if (rNameList == null || rNameList.get(0) == null) {
-      LOG.debug("Could not resolve {}. Falling back to {}", hostName,
-            NetworkTopology.DEFAULT_RACK);
+    return coreResolve(tmpList).get(0);
+  }
+
+  private static List<Node> coreResolve(List<String> hostNames) {
+    List<Node> nodes = new ArrayList<Node>(hostNames.size());
+    List<String> rNameList = dnsToSwitchMapping.resolve(hostNames);
+    if (rNameList == null || rNameList.isEmpty()) {
+      for (String hostName : hostNames) {
+        nodes.add(new NodeBase(hostName, NetworkTopology.DEFAULT_RACK));
+      }
+      LOG.info("Got an error when resolve hostNames. Falling back to "
+          + NetworkTopology.DEFAULT_RACK + " for all.");
     } else {
-      rName = rNameList.get(0);
-      LOG.debug("Resolved {} to {}", hostName, rName);
+      for (int i = 0; i < hostNames.size(); i++) {
+        if (Strings.isNullOrEmpty(rNameList.get(i))) {
+          // fallback to use default rack
+          nodes.add(new NodeBase(hostNames.get(i),
+              NetworkTopology.DEFAULT_RACK));
+          LOG.debug("Could not resolve {}. Falling back to {}",
+              hostNames.get(i), NetworkTopology.DEFAULT_RACK);
+        } else {
+          nodes.add(new NodeBase(hostNames.get(i), rNameList.get(i)));
+          LOG.debug("Resolved {} to {}", hostNames.get(i), rNameList.get(i));
+        }
+      }
     }
-    return new NodeBase(hostName, rName);
+    return nodes;
   }
 
   /**
@@ -121,5 +169,15 @@ public final class RackResolver {
   @VisibleForTesting
   static DNSToSwitchMapping getDnsToSwitchMapping() {
     return dnsToSwitchMapping;
+  }
+
+  /**
+   * Only used by tests.
+   */
+  @Private
+  @VisibleForTesting
+  static void reset() {
+    initCalled = false;
+    dnsToSwitchMapping = null;
   }
 }

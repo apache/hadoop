@@ -791,7 +791,7 @@ namespace ContainerExecutor {
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     std::vector<std::pair<std::string, std::string> >::const_iterator itr;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n  privileged=true\n  image=hadoop/image", "--privileged "));
+        "[docker-command-execution]\n  docker-command=run\n  privileged=true\n  image=hadoop/image\n  use-entry-point=true", "--privileged "));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=run\n  privileged=false\n image=hadoop/image", ""));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
@@ -1459,7 +1459,7 @@ namespace ContainerExecutor {
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=root\n  hostname=host-id\n"
             "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
-            "  network=bridge\n  devices=/dev/test:/dev/test\n  privileged=true\n"
+            "  network=bridge\n  devices=/dev/test:/dev/test\n  privileged=true\n  use-entry-point=true\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
         "run --name=container_e1_12312_11111_02_000001 -d --rm -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
@@ -1471,7 +1471,7 @@ namespace ContainerExecutor {
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=root\n  hostname=host-id\n"
             "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
-            "  network=bridge\n  devices=/dev/test:/dev/test\n  privileged=true\n"
+            "  network=bridge\n  devices=/dev/test:/dev/test\n  privileged=true\n  use-entry-point=true\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n  group-add=1000,1001\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
         "run --name=container_e1_12312_11111_02_000001 -d --rm -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
@@ -1860,7 +1860,7 @@ namespace ContainerExecutor {
 
       std::vector<std::pair<std::string, std::string> > file_cmd_vec;
       file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-          "[docker-command-execution]\n  docker-command=run\n privileged=true\n"
+          "[docker-command-execution]\n  docker-command=run\n privileged=true\n  use-entry-point=true\n"
           "name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=root",
           "run --name=container_e1_12312_11111_02_000001 --privileged --cap-drop=ALL hadoop/docker-image"));
 

@@ -213,24 +213,6 @@ public class TestCertificateSignRequest {
       builder.setSubject(subject);
     }
 
-    // Now try with blank/null SCM ID
-    try {
-      builder.setScmID(null);
-      builder.build();
-      Assert.fail("Null/Blank SCM ID should have thrown.");
-    } catch (IllegalArgumentException e) {
-      builder.setScmID(scmID);
-    }
-
-    // Now try with blank/null SCM ID
-    try {
-      builder.setClusterID(null);
-      builder.build();
-      Assert.fail("Null/Blank Cluster ID should have thrown.");
-    } catch (IllegalArgumentException e) {
-      builder.setClusterID(clusterID);
-    }
-
     // Now try with invalid IP address
     try {
       builder.addIpAddress("255.255.255.*");

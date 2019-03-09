@@ -3961,6 +3961,33 @@
   </property>
 
   <property>
+    <description>
+      Absolute path to a script or executable that returns the available FPGA cards.
+      The returned string must be a single line and follow the format:
+      "deviceA/N:M,deviceB/X:Y". Example: "acl0/243:0,acl1/243:1". The numbers after
+      the "/" character are the device major and minor numbers.
+
+      When the script is enabled, auto-discovery is disabled the "aocl" command is not
+      invoked to verify the available cards.
+    </description>
+    <name>yarn.nodemanager.resource-plugins.fpga.device-discovery-script</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      List of FPGA available devices in the given node.
+      The value must follow the format: "deviceA/N:M,deviceB/X:Y".
+      Example: "acl0/243:0,acl1/243:1". The numbers after
+      the "/" character are the device major and minor numbers.
+
+      When this property is used, both auto-discovery and external script are ignored.
+    </description>
+    <name>yarn.nodemanager.resource-plugins.fpga.available-devices</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>The http address of the timeline reader web application.</description>
     <name>yarn.timeline-service.reader.webapp.address</name>
     <value>${yarn.timeline-service.webapp.address}</value>
