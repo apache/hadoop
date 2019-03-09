@@ -249,20 +249,13 @@ public class ContainerStateMachine extends BaseStateMachine {
   public long takeSnapshot() throws IOException {
     TermIndex ti = getLastAppliedTermIndex();
     LOG.info("Taking snapshot at termIndex:" + ti);
-    if (ti != null) {
+    if (ti != null && ti.getIndex() != RaftServerConstants.INVALID_LOG_INDEX) {
       final File snapshotFile =
           storage.getSnapshotFile(ti.getTerm(), ti.getIndex());
       LOG.info("Taking a snapshot to file {}", snapshotFile);
-      try {
-        //TODO: For now, just create the file to save the term index,
-        boolean created = snapshotFile.createNewFile();
-        if (!created) {
-          throw new IOException("Failed to create ratis snapshot file");
-        }
-        try (FileOutputStream fos = new FileOutputStream(snapshotFile)) {
-          persistContainerSet(fos);
-        }
-      } catch(IOException ioe) {
+      try (FileOutputStream fos = new FileOutputStream(snapshotFile)) {
+        persistContainerSet(fos);
+      } catch (IOException ioe) {
         LOG.warn("Failed to write snapshot file \"" + snapshotFile
             + "\", last applied index=" + ti);
         throw ioe;
