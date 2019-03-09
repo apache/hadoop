@@ -283,7 +283,8 @@ public class KeyManagerImpl implements KeyManager {
       OmKeyLocationInfo.Builder builder = new OmKeyLocationInfo.Builder()
           .setBlockID(new BlockID(allocatedBlock.getBlockID()))
           .setLength(scmBlockSize)
-          .setOffset(0);
+          .setOffset(0)
+          .setPipeline(allocatedBlock.getPipeline());
       if (grpcBlockTokenEnabled) {
         builder.setToken(secretManager
             .generateToken(remoteUser, allocatedBlock.getBlockID().toString(),
