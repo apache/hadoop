@@ -106,7 +106,7 @@ public final class ErasureCodingWorker {
   private void initializeStripedBlkReconstructionThreadPool(int numThreads) {
     LOG.debug("Using striped block reconstruction; pool threads={}",
         numThreads);
-    stripedReconstructionPool = DFSUtilClient.getThreadPoolExecutor(2,
+    stripedReconstructionPool = DFSUtilClient.getThreadPoolExecutor(numThreads,
         numThreads, 60, new LinkedBlockingQueue<>(),
         "StripedBlockReconstruction-", false);
     stripedReconstructionPool.allowCoreThreadTimeOut(true);
