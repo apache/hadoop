@@ -17,9 +17,6 @@
 package org.apache.hadoop.hdds;
 
 import org.apache.hadoop.utils.db.DBProfile;
-import org.apache.ratis.util.TimeDuration;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * This class contains constants for configuration keys and default values
