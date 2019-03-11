@@ -256,7 +256,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
       long forwardSeekLimit = Math.min(remainingInCurrentRequest,
           forwardSeekRange);
       boolean skipForward = remainingInCurrentRequest > 0
-          && diff <= forwardSeekLimit;
+          && diff < forwardSeekLimit;
       if (skipForward) {
         // the forward seek range is within the limits
         LOG.debug("Forward seek on {}, of {} bytes", uri, diff);
@@ -270,6 +270,8 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
 
         if (pos == targetPos) {
           // all is well
+          LOG.debug("Now at {}: bytes remaining in current request: {}",
+              pos, remainingInCurrentRequest());
           return;
         } else {
           // log a warning; continue to attempt to re-open
