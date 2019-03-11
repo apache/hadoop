@@ -103,6 +103,11 @@ public final class OmKeyLocationInfo {
   public void setToken(Token<OzoneBlockTokenIdentifier> token) {
     this.token = token;
   }
+
+  public void setPipeline(Pipeline pipeline) {
+    this.pipeline = pipeline;
+  }
+
   /**
    * Builder of OmKeyLocationInfo.
    */
