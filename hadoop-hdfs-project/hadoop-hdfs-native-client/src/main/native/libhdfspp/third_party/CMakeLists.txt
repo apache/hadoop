@@ -19,7 +19,7 @@
 set(ASIO_VERSION "1.10.2")
 set(CYRUS_SASL_VERSION "2.1.27")
 set(GTEST_VERSION "1.8.1")
-set(MITKERBEROS_VERSION "1.16.3")
+set(MIT_KERBEROS_VERSION "1.16.3")
 set(OPENSSL_VERSION "1.0.2q")
 # The newer versions of protobuf have cmake build files, which is much
 # easier to deal with. If this is a HADOOP_BUILD, we'll use the protobuf
@@ -124,31 +124,31 @@ endif (NOT OPENSSL_FOUND)
 # ----------------------------------------------------------------------
 # MIT Kerberos
 
-find_package(MITKerberos)
-if (NOT MITKERBEROS_FOUND)
+find_package(MIT_Kerberos)
+if (NOT MIT_KERBEROS_FOUND)
   # Get the major/minor versions of MIT Kerberos.
-  string (REGEX MATCHALL "\.?[0-9]+" MIT_VERSION_LIST
-          ${MITKERBEROS_VERSION})
-  list (GET ${MIT_VERSION_LIST} 0 MIT_MAJOR_VERSION)
-  list (GET ${MIT_VERSION_LIST} 1 MIT_MINOR_VERSION)
+  string (REGEX MATCHALL "[.]?[0-9]+" MIT_VERSION_LIST
+          ${MIT_KERBEROS_VERSION})
+  list (GET MIT_VERSION_LIST 0 MIT_MAJOR_VERSION)
+  list (GET MIT_VERSION_LIST 1 MIT_MINOR_VERSION)
 
   # Set the options that we need
-  set (MITKERBEROS_OPTIONS --prefix=${STAGING_DIR})
+  set (MIT_KERBEROS_OPTIONS --prefix=${STAGING_DIR})
   if (BUILD_SHARED_LIBS)
-    list (APPEND MITKERBEROS_OPTIONS --enable-shared=yes)
+    list (APPEND MIT_KERBEROS_OPTIONS --enable-shared=yes)
   else ()
-    list (APPEND MITKERBEROS_OPTIONS --enable-shared=no --enable-static=yes)
+    list (APPEND MIT_KERBEROS_OPTIONS --enable-shared=no --enable-static=yes)
   endif ()
-  set (MITKERBEROS_CONFIG_COMMAND cd src && ./configure ${MITKERBEROS_OPTIONS})
-  ExternalProject_Add (krb5
-    URL "http://web.mit.edu/kerberos/dist/krb5/${MIT_MAJOR_VERSION}${MIT_MINOR_VERSION}/krb5-${MITKERBEROS_VERSION}.tar.gz"
-    CONFIGURE_COMMAND ${MITKERBEROS_CONFIG_COMMAND}
+  set (MIT_KERBEROS_CONFIG_COMMAND src/configure ${MIT_KERBEROS_OPTIONS})
+  ExternalProject_Add (mit_kerberos
+    URL "http://web.mit.edu/kerberos/dist/krb5/${MIT_MAJOR_VERSION}${MIT_MINOR_VERSION}/krb5-${MIT_KERBEROS_VERSION}.tar.gz"
+    CONFIGURE_COMMAND ${MIT_KERBEROS_CONFIG_COMMAND}
     INSTALL_DIR ${STAGING_DIR}
     BUILD_IN_SOURCE TRUE
     LIST_SEPARATOR |
     )
-  add_dependencies(third_party_stage1 openssl)
-endif (NOT MITKERBEROS_FOUND)
+  add_dependencies(third_party_stage1 mit_kerberos)
+endif (NOT MIT_KERBEROS_FOUND)
 
 # ----------------------------------------------------------------------
 # Rapid XML
