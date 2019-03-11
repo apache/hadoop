@@ -22,6 +22,7 @@ import com.google.common.base.Strings;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.exceptions.CertificateException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Time;
@@ -62,7 +63,7 @@ public class BlockTokenVerifier implements TokenVerifier {
 
       if (Strings.isNullOrEmpty(tokenStr) || isTestStub()) {
         throw new BlockTokenException("Fail to find any token (empty or " +
-            "null.");
+            "null.)");
       }
       final Token<OzoneBlockTokenIdentifier> token = new Token();
       OzoneBlockTokenIdentifier tokenId = new OzoneBlockTokenIdentifier();
@@ -78,29 +79,36 @@ public class BlockTokenVerifier implements TokenVerifier {
         throw new BlockTokenException("Failed to decode token : " + tokenStr);
       }
 
-      // TODO: revisit this when caClient is ready, skip signature check now.
-      /**
-       * the final code should like
-       * if (caClient == null) {
-       *   throw new SCMSecurityException("Certificate client not available to
-       *       validate token");
-       * }
-       */
-      if (caClient != null) {
-        X509Certificate singerCert = caClient.queryCertificate(
-            "certId=" + tokenId.getOmCertSerialId());
-        if (singerCert == null) {
-          throw new BlockTokenException("Can't find signer certificate " +
-              "(OmCertSerialId: " + tokenId.getOmCertSerialId() +
-              ") of the block token for user: " + tokenId.getUser());
-        }
-        Boolean validToken = caClient.verifySignature(tokenId.getBytes(),
-            token.getPassword(), singerCert);
-        if (!validToken) {
-          throw new BlockTokenException("Invalid block token for user: " +
-              tokenId.getUser());
-        }
+      if (caClient == null) {
+        throw new SCMSecurityException("Certificate client not available " +
+            "to validate token");
       }
+
+      X509Certificate singerCert;
+      try {
+        singerCert =
+            caClient.getCertificateFromLocal(tokenId.getOmCertSerialId());
+      } catch (CertificateException ex) {
+        // DN doesn't have this certificate, get it from scm.
+        LOGGER.info("Datanode doesn't have certificate with serial id:{}. " +
+                "Will try to retrieve it from SCM.",
+            tokenId.getOmCertSerialId());
+        singerCert =
+            caClient.getCertificateFromScm(tokenId.getOmCertSerialId());
+      }
+
+      if (singerCert == null) {
+        throw new BlockTokenException("Can't find signer certificate " +
+            "(OmCertSerialId: " + tokenId.getOmCertSerialId() +
+            ") of the block token for user: " + tokenId.getUser());
+      }
+      boolean validToken = caClient.verifySignature(tokenId.getBytes(),
+          token.getPassword(), singerCert);
+      if (!validToken) {
+        throw new BlockTokenException("Invalid block token for user: " +
+            tokenId.getUser());
+      }
+
       // check expiration
       if (isExpired(tokenId.getExpiryDate())) {
         UserGroupInformation tokenUser = tokenId.getUser();

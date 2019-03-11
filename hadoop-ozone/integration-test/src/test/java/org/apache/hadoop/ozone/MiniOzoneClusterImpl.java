@@ -28,12 +28,14 @@ import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.ozone.client.CertificateClientTestImpl;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
@@ -95,6 +97,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
 
   // Timeout for the cluster to be ready
   private int waitForClusterToBeReadyTimeout = 60000; // 1 min
+  private CertificateClient caClient;
 
   /**
    * Creates a new MiniOzoneCluster.
@@ -364,7 +367,18 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
    */
   @Override
   public void startHddsDatanodes() {
-    hddsDatanodes.forEach((datanode) -> datanode.start(null));
+    hddsDatanodes.forEach((datanode) -> {
+      datanode.setCertificateClient(getCAClient());
+      datanode.start(null);
+    });
+  }
+
+  private CertificateClient getCAClient() {
+    return this.caClient;
+  }
+
+  private void setCAClient(CertificateClient client) {
+    this.caClient = client;
   }
 
 
@@ -403,6 +417,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       final List<HddsDatanodeService> hddsDatanodes = createHddsDatanodes(scm);
       MiniOzoneClusterImpl cluster = new MiniOzoneClusterImpl(conf, om, scm,
           hddsDatanodes);
+      cluster.setCAClient(certClient);
       if (startDataNodes) {
         cluster.startHddsDatanodes();
       }

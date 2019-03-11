@@ -54,8 +54,17 @@ public interface CertificateClient {
   /**
    * Returns the certificate  of the specified component if it exists on the
    * local system.
+   * @param certSerialId
    *
+   * @return certificate or Null if there is no data.
+   */
+  X509Certificate getCertificateFromLocal(String certSerialId)
+      throws CertificateException;
 
+  /**
+   * Returns the certificate  of the specified component if it exists on the
+   * local system.
+   *
    * @return certificate or Null if there is no data.
    */
   X509Certificate getCertificate();
@@ -121,14 +130,23 @@ public interface CertificateClient {
   X509Certificate queryCertificate(String query);
 
   /**
-   * Stores the Certificate.
+   * Stores the Certificate  for this client. Don't use this api to add
+   * trusted certificates of others.
    *
-   * @param certificate - X509 Certificate
-
+   * @param pemEncodedCert        - pem encoded X509 Certificate
+   * @param force                 - override any existing file
+   * @param isLocalIdentityCert   - true if certificate belongs to the
+   * identity cert for this certificate client.
    * @throws CertificateException - on Error.
+   *
+   * Note: Certificate client can store certificates for other daemons as well.
+   * Local certificate refers to the certificate issued to this certificate
+   * client. This is stored along with public key and private key.
+   * Certificate of other daemons is named after certificate serial id of
+   * certificate.
    */
-  void storeCertificate(X509Certificate certificate)
-      throws CertificateException;
+  void storeCertificate(String pemEncodedCert, boolean force,
+      boolean isLocalIdentityCert) throws CertificateException;
 
   /**
    * Stores the trusted chain of certificates.
@@ -146,6 +164,14 @@ public interface CertificateClient {
    * @throws CertificateException - on Error.
    */
   void storeTrustChain(List<X509Certificate> certificates)
+      throws CertificateException;
+
+  /**
+   * Get certificate from SCM and store it in local file system.
+   * @param certSerialId
+   * @return certificate
+   */
+  X509Certificate getCertificateFromScm(String certSerialId)
       throws CertificateException;
 
   /**

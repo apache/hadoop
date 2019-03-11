@@ -26,8 +26,6 @@ import com.google.protobuf.BlockingService;
 
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
 import java.security.KeyPair;
 import java.util.Collection;
 import java.util.Objects;
@@ -57,7 +55,6 @@ import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.OMCertificateClient;
-import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
@@ -1394,10 +1391,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         getEncodedString(csr));
 
     try {
-      X509Certificate x509Certificate =
-          CertificateCodec.getX509Cert(pemEncodedCert);
-      client.storeCertificate(x509Certificate);
-    } catch (IOException | CertificateException e) {
+      client.storeCertificate(pemEncodedCert, true, true);
+    } catch (IOException e) {
       LOG.error("Error while storing SCM signed certificate.", e);
       throw new RuntimeException(e);
     }

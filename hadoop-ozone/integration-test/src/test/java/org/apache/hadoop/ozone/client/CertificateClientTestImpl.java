@@ -48,13 +48,28 @@ public class CertificateClientTestImpl implements CertificateClient {
   private final SecurityConfig securityConfig;
   private final KeyPair keyPair;
   private final Configuration config;
+  private final X509Certificate x509Certificate;
 
-  public CertificateClientTestImpl(OzoneConfiguration conf) throws Exception{
+  public CertificateClientTestImpl(OzoneConfiguration conf) throws Exception {
     securityConfig = new SecurityConfig(conf);
     HDDSKeyGenerator keyGen =
         new HDDSKeyGenerator(securityConfig.getConfiguration());
     keyPair = keyGen.generateKey();
     config = conf;
+    SelfSignedCertificate.Builder builder =
+        SelfSignedCertificate.newBuilder()
+            .setBeginDate(LocalDate.now())
+            .setEndDate(LocalDate.now().plus(365, ChronoUnit.DAYS))
+            .setClusterID("cluster1")
+            .setKey(keyPair)
+            .setSubject("TestCertSub")
+            .setConfiguration(config)
+            .setScmID("TestScmId1")
+            .makeCA();
+    X509CertificateHolder certificateHolder = null;
+    certificateHolder = builder.build();
+    x509Certificate = new JcaX509CertificateConverter().getCertificate(
+        certificateHolder);
   }
 
   @Override
@@ -67,26 +82,21 @@ public class CertificateClientTestImpl implements CertificateClient {
     return keyPair.getPublic();
   }
 
+  /**
+   * Returns the certificate  of the specified component if it exists on the
+   * local system.
+   *
+   * @return certificate or Null if there is no data.
+   */
+  @Override
+  public X509Certificate getCertificateFromLocal(String certSerialId)
+      throws CertificateException {
+    return x509Certificate;
+  }
+
   @Override
   public X509Certificate getCertificate() {
-    SelfSignedCertificate.Builder builder =
-        SelfSignedCertificate.newBuilder()
-            .setBeginDate(LocalDate.now())
-            .setEndDate(LocalDate.now().plus(365, ChronoUnit.DAYS))
-            .setClusterID("cluster1")
-            .setKey(keyPair)
-            .setSubject("TestCertSub")
-            .setConfiguration(config)
-            .setScmID("TestScmId1")
-            .makeCA();
-    X509CertificateHolder certificateHolder = null;
-    try {
-      certificateHolder = builder.build();
-      return new JcaX509CertificateConverter().getCertificate(
-          certificateHolder);
-    } catch (IOException | java.security.cert.CertificateException e) {
-    }
-    return null;
+    return x509Certificate;
   }
 
   @Override
@@ -128,7 +138,7 @@ public class CertificateClientTestImpl implements CertificateClient {
   }
 
   @Override
-  public void storeCertificate(X509Certificate certificate)
+  public void storeCertificate(String cert, boolean force, boolean isLocalCert)
       throws CertificateException {
 
   }
@@ -148,6 +158,17 @@ public class CertificateClientTestImpl implements CertificateClient {
   public void storeTrustChain(List<X509Certificate> certificates)
       throws CertificateException {
 
+  }
+
+  /**
+   * Get certificate from SCM and store it in local file system.
+   *
+   * @return certificate
+   */
+  @Override
+  public X509Certificate getCertificateFromScm(String certSerialId)
+      throws CertificateException {
+    return null;
   }
 
   @Override

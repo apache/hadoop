@@ -31,7 +31,6 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.DNCertificateClient;
-import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -52,8 +51,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.security.KeyPair;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.UUID;
 
@@ -199,7 +196,11 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
           }
           LOG.info("Hdds Datanode login successful.");
         }
-        datanodeStateMachine = new DatanodeStateMachine(datanodeDetails, conf);
+        if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
+          initializeCertificateClient(conf);
+        }
+        datanodeStateMachine = new DatanodeStateMachine(datanodeDetails, conf,
+            dnCertClient);
         try {
           httpServer = new HddsDatanodeHttpServer(conf);
           httpServer.start();
@@ -209,9 +210,6 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
         startPlugins();
         // Starting HDDS Daemons
         datanodeStateMachine.startDaemon();
-        if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
-          initializeCertificateClient(conf);
-        }
       } catch (IOException e) {
         throw new RuntimeException("Can't start the HDDS datanode plugin", e);
       } catch (AuthenticationException ex) {
@@ -268,11 +266,8 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
 
       String pemEncodedCert = secureScmClient.getDataNodeCertificate(
           datanodeDetails.getProtoBufMessage(), getEncodedString(csr));
-
-      X509Certificate x509Certificate =
-          CertificateCodec.getX509Certificate(pemEncodedCert);
-      dnCertClient.storeCertificate(x509Certificate);
-    } catch (IOException | CertificateException e) {
+      dnCertClient.storeCertificate(pemEncodedCert, true, true);
+    } catch (IOException e) {
       LOG.error("Error while storing SCM signed certificate.", e);
       throw new RuntimeException(e);
     }
