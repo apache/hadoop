@@ -38,7 +38,6 @@ services:
     image: apache/hadoop-runner
     volumes:
       - ../..:/opt/hadoop
-    hostname: datanode
     ports:
       - 9864
     command: ["/opt/hadoop/bin/ozone","datanode"]

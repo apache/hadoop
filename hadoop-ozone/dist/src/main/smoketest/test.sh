@@ -151,6 +151,8 @@ if [ "$RUN_ALL" = true ]; then
    execute_tests ozone-hdfs "${TESTS[@]}"
    TESTS=("s3")
    execute_tests ozones3 "${TESTS[@]}"
+   TESTS=("security")
+   execute_tests ozonesecure "${TESTS[@]}"
 else
    execute_tests "$DOCKERENV" "${POSITIONAL[@]}"
 fi

@@ -224,12 +224,16 @@ public class DefaultCAServer implements CertificateServer {
         break;
       case KERBEROS_TRUSTED:
       case TESTING_AUTOMATIC:
-        X509CertificateHolder xcert = approver.sign(config,
-            getCAKeys().getPrivate(),
-            getCACertificate(), java.sql.Date.valueOf(beginDate),
-            java.sql.Date.valueOf(endDate), csr, scmID, clusterID);
-        store.storeValidCertificate(xcert.getSerialNumber(),
-            CertificateCodec.getX509Certificate(xcert));
+        X509CertificateHolder xcert;
+        try {
+          xcert = signAndStoreCertificate(beginDate, endDate, csr);
+        } catch (SCMSecurityException e) {
+          // Certificate with conflicting serial id, retry again may resolve
+          // this issue.
+          LOG.error("Certificate storage failed, retrying one more time.", e);
+          xcert = signAndStoreCertificate(beginDate, endDate, csr);
+        }
+
         xcertHolder.complete(xcert);
         break;
       default:
@@ -240,6 +244,18 @@ public class DefaultCAServer implements CertificateServer {
       xcertHolder.completeExceptionally(new SCMSecurityException(e));
     }
     return xcertHolder;
+  }
+
+  private X509CertificateHolder signAndStoreCertificate(LocalDate beginDate, LocalDate endDate,
+      PKCS10CertificationRequest csr) throws IOException,
+      OperatorCreationException, CertificateException {
+    X509CertificateHolder xcert = approver.sign(config,
+        getCAKeys().getPrivate(),
+        getCACertificate(), java.sql.Date.valueOf(beginDate),
+        java.sql.Date.valueOf(endDate), csr, scmID, clusterID);
+    store.storeValidCertificate(xcert.getSerialNumber(),
+        CertificateCodec.getX509Certificate(xcert));
+    return xcert;
   }
 
   @Override
