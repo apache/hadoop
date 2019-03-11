@@ -36,15 +36,18 @@ import org.junit.internal.AssumptionViolatedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.*;
 
 /**
@@ -442,6 +445,74 @@ public final class S3ATestUtils {
       S3ATestUtils.MetricDiff... metrics) {
     print(log, metrics);
     reset(metrics);
+  }
+
+  /**
+   * Variant of {@code LambdaTestUtils#intercept() which closes the Closeable
+   * returned by the invoked operation, and using its toString() value
+   * for exception messages.
+   * @param clazz class of exception; the raised exception must be this class
+   * <i>or a subclass</i>.
+   * @param contained string which must be in the {@code toString()} value
+   * of the exception
+   * @param eval expression to eval
+   * @param <T> return type of expression
+   * @param <E> exception class
+   * @return the caught exception if it was of the expected type and contents
+   */
+  public static <E extends Throwable, T extends Closeable> E interceptClosing(
+      Class<E> clazz,
+      String contained,
+      final Callable<T> eval)
+      throws Exception {
+
+    return intercept(clazz, contained,
+        new Callable<String>() {
+          @Override
+          public String call() throws Exception {
+            try (final Closeable c = eval.call()) {
+              return c.toString();
+            }
+          }});
+  }
+
+  /**
+   * Remove any values from a bucket.
+   * @param bucket bucket whose overrides are to be removed. Can be null/empty
+   * @param conf config
+   * @param options list of fs.s3a options to remove
+   */
+  public static void removeBucketOverrides(final String bucket,
+      final Configuration conf,
+      final String... options) {
+
+    if (StringUtils.isEmpty(bucket)) {
+      return;
+    }
+    final String bucketPrefix = FS_S3A_BUCKET_PREFIX + bucket + '.';
+    for (String option : options) {
+      final String stripped = option.substring("fs.s3a.".length());
+      String target = bucketPrefix + stripped;
+      if (conf.get(target) != null) {
+        LOG.debug("Removing option {}", target);
+        conf.unset(target);
+      }
+    }
+  }
+
+  /**
+   * Remove any values from a bucket and the base values too.
+   * @param bucket bucket whose overrides are to be removed. Can be null/empty.
+   * @param conf config
+   * @param options list of fs.s3a options to remove
+   */
+  public static void removeBaseAndBucketOverrides(final String bucket,
+      final Configuration conf,
+      final String... options) {
+    for (String option : options) {
+      conf.unset(option);
+    }
+    removeBucketOverrides(bucket, conf, options);
   }
 
   /**
