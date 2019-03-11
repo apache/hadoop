@@ -29,7 +29,12 @@ import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+<<<<<<< HEAD
 import org.apache.hadoop.ozone.client.rpc.ha.OMProxyProvider;
+=======
+import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
+>>>>>>> 4fc493e511d... HDDS-1236. Fix incorrect Ozone ClientProtocol KerberosInfo annotation. Contributed by Xiaoyu Yao. (#573)
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 
@@ -50,7 +55,7 @@ import org.apache.hadoop.security.token.Token;
  * includes: {@link org.apache.hadoop.ozone.client.rpc.RpcClient} for RPC and
  * {@link  org.apache.hadoop.ozone.client.rest.RestClient} for REST.
  */
-@KerberosInfo(serverPrincipal = ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY)
+@KerberosInfo(serverPrincipal = OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY)
 public interface ClientProtocol {
 
   /**
