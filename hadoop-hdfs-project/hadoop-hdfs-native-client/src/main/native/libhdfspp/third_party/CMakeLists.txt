@@ -19,6 +19,7 @@
 set(ASIO_VERSION "1.10.2")
 set(CYRUS_SASL_VERSION "2.1.27")
 set(GTEST_VERSION "1.8.1")
+set(MITKERBEROS_VERSION "1.16.3")
 set(OPENSSL_VERSION "1.0.2q")
 # The newer versions of protobuf have cmake build files, which is much
 # easier to deal with. If this is a HADOOP_BUILD, we'll use the protobuf
@@ -28,7 +29,8 @@ set(RAPIDXML_VERSION "1.13")
 set(URIPARSER_VERSION "0.9.1")
 
 add_custom_target(third_party_stage1)
-add_custom_target(third_party DEPENDS third_party_stage1)
+add_custom_target(third_party_stage2 DEPENDS third_party_stage1)
+add_custom_target(third_party DEPENDS third_party_stage2)
 
 set(THIRDPARTY_LOG_OPTIONS LOG_CONFIGURE 1
                            LOG_BUILD 1
@@ -120,6 +122,35 @@ if (NOT OPENSSL_FOUND)
 endif (NOT OPENSSL_FOUND)
 
 # ----------------------------------------------------------------------
+# MIT Kerberos
+
+find_package(MITKerberos)
+if (NOT MITKERBEROS_FOUND)
+  # Get the major/minor versions of MIT Kerberos.
+  string (REGEX MATCHALL "\.?[0-9]+" MIT_VERSION_LIST
+          ${MITKERBEROS_VERSION})
+  list (GET ${MIT_VERSION_LIST} 0 MIT_MAJOR_VERSION)
+  list (GET ${MIT_VERSION_LIST} 1 MIT_MINOR_VERSION)
+
+  # Set the options that we need
+  set (MITKERBEROS_OPTIONS --prefix=${STAGING_DIR})
+  if (BUILD_SHARED_LIBS)
+    list (APPEND MITKERBEROS_OPTIONS --enable-shared=yes)
+  else ()
+    list (APPEND MITKERBEROS_OPTIONS --enable-shared=no --enable-static=yes)
+  endif ()
+  set (MITKERBEROS_CONFIG_COMMAND cd src && ./configure ${MITKERBEROS_OPTIONS})
+  ExternalProject_Add (krb5
+    URL "http://web.mit.edu/kerberos/dist/krb5/${MIT_MAJOR_VERSION}${MIT_MINOR_VERSION}/krb5-${MITKERBEROS_VERSION}.tar.gz"
+    CONFIGURE_COMMAND ${MITKERBEROS_CONFIG_COMMAND}
+    INSTALL_DIR ${STAGING_DIR}
+    BUILD_IN_SOURCE TRUE
+    LIST_SEPARATOR |
+    )
+  add_dependencies(third_party_stage1 openssl)
+endif (NOT MITKERBEROS_FOUND)
+
+# ----------------------------------------------------------------------
 # Rapid XML
 
 find_package(RapidXML)
@@ -208,10 +239,11 @@ if (HDFSPP_SASL_IMPL STREQUAL "CYRUS")
       CONFIGURE_COMMAND ./autogen.sh ${SASL_OPTIONS}
       LIST_SEPARATOR |
       INSTALL_DIR ${STAGING_DIR}
+      DEPENDS third_party_stage1
       PATCH_COMMAND patch -u -N -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/cyrus_sasl.patch
       BUILD_IN_SOURCE TRUE
       )
-    add_dependencies(third_party_stage1 cyrus_sasl)
+    add_dependencies(third_party_stage2 cyrus_sasl)
   endif ()
 elseif (HDFSPP_SASL_IMPL STREQUAL "GSASL")
   # GNU SASL is licenced under GPL, so we don't build it.

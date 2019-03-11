@@ -137,8 +137,7 @@ else ()
   add_library(hdfspp STATIC ${LIBHDFSPP_ALL_OBJECTS})
     set_property(TARGET hdfspp
       PROPERTY INTERFACE_LINK_LIBRARIES
-        sasl2 ldap_r lber gssapi_krb5 ssl crypto krb5 mysqlclient pq sqlite3
-        db protobuf uriparser dl ${CMAKE_THREAD_LIBS_INIT}
+        sasl2 ssl crypto krb5 protobuf uriparser dl ${CMAKE_THREAD_LIBS_INIT}
     )
 endif ()
 

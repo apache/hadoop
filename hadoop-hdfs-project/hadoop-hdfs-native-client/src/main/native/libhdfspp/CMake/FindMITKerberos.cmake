@@ -12,18 +12,4 @@
 
 include(${CMAKE_CURRENT_LIST_DIR}/FindPackageExtension.cmake)
 
-if (NOT HDFSPP_FOUND)
-
-  findPackageExtension("hdfspp/hdfspp.h" "hdfspp" true)
-  if (HDFSPP_FOUND)
-    find_package(CyrusSASL)
-    find_package(OpenSSL)
-    find_package(Protobuf)
-    find_package(URIparser)
-    find_package(Threads)
-    set_property(TARGET hdfspp
-      PROPERTY INTERFACE_LINK_LIBRARIES
-        sasl2 ssl crypto protobuf uriparser dl ${CMAKE_THREAD_LIBS_INIT}
-    )
-  endif ()
-endif ()
+findPackageExtension("krb5.h" "krb5;gssapi_krb5" false)
