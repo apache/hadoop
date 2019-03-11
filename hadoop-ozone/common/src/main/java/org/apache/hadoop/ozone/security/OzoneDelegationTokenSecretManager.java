@@ -163,7 +163,7 @@ public class OzoneDelegationTokenSecretManager
     identifier.setIssueDate(now);
     identifier.setMasterKeyId(getCurrentKey().getKeyId());
     identifier.setSequenceNumber(sequenceNum);
-    identifier.setMaxDate(Time.now() + getTokenMaxLifetime());
+    identifier.setMaxDate(now + getTokenMaxLifetime());
     identifier.setOmCertSerialId(getOmCertificateSerialId());
   }
 
