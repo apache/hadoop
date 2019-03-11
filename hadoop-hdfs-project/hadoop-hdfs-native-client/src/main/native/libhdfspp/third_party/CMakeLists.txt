@@ -221,6 +221,8 @@ if (HDFSPP_SASL_IMPL STREQUAL "CYRUS")
   if (NOT CYRUSSASL_FOUND)
     set(SASL_OPTIONS --enable-sample=no
                      --without-saslauthd
+                     --with-gss_impl=mit
+                     --with-dblib=none
                      --prefix=${STAGING_DIR})
     if (BUILD_SHARED_LIBS)
       set(SASL_OPTIONS ${SASL_OPTIONS} --enable-shared=yes)
