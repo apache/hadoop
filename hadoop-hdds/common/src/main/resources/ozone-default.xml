@@ -1089,13 +1089,14 @@
   </property>
 
   <property>
-    <name>ozone.key.preallocation.maxsize</name>
-    <value>134217728</value>
+    <name>ozone.key.preallocation.max.blocks</name>
+    <value>64</value>
     <tag>OZONE, OM, PERFORMANCE</tag>
     <description>
-      When a new key write request is sent to OM, if a size is requested, at most
-      128MB of size is allocated at request time. If client needs more space for the
-      write, separate block allocation requests will be made.
+      While allocating blocks from OM, this configuration limits the maximum
+      number of blocks being allocated. This configuration ensures that the
+      allocated block response do not exceed rpc payload limit. If client needs
+      more space for the write, separate block allocation requests will be made.
     </description>
   </property>
 

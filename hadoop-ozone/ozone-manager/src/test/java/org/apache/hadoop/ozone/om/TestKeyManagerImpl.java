@@ -86,13 +86,14 @@ public class TestKeyManagerImpl {
     scmBlockSize = (long) conf
         .getStorageSize(OZONE_SCM_BLOCK_SIZE, OZONE_SCM_BLOCK_SIZE_DEFAULT,
             StorageUnit.BYTES);
-    conf.setLong(OZONE_KEY_PREALLOCATION_MAXSIZE, scmBlockSize * 10);
+    conf.setLong(OZONE_KEY_PREALLOCATION_BLOCKS_MAX, 10);
 
     keyManager =
         new KeyManagerImpl(scm.getBlockProtocolServer(), metadataManager, conf,
             "om1", null);
     Mockito.when(mockScmBlockLocationProtocol
-        .allocateBlock(Mockito.anyLong(), Mockito.any(ReplicationType.class),
+        .allocateBlock(Mockito.anyLong(), Mockito.anyInt(),
+            Mockito.any(ReplicationType.class),
             Mockito.any(ReplicationFactor.class), Mockito.anyString(),
             Mockito.any(ExcludeList.class))).thenThrow(
         new SCMException("ChillModePrecheck failed for allocateBlock",
