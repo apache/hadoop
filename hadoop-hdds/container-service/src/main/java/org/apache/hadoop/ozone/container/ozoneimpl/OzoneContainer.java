@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.container.ozoneimpl;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto
@@ -69,6 +70,7 @@ public class OzoneContainer {
   private final XceiverServerSpi writeChannel;
   private final XceiverServerSpi readChannel;
   private final ContainerController controller;
+  private ContainerScrubber scrubber;
 
   /**
    * Construct OzoneContainer object.
@@ -82,6 +84,8 @@ public class OzoneContainer {
     this.config = conf;
     this.volumeSet = new VolumeSet(datanodeDetails.getUuidString(), conf);
     this.containerSet = new ContainerSet();
+    this.scrubber = null;
+
     buildContainerSet();
     final ContainerMetrics metrics = ContainerMetrics.create(conf);
     this.handlers = Maps.newHashMap();
@@ -139,6 +143,34 @@ public class OzoneContainer {
 
   }
 
+
+  /**
+   * Start background daemon thread for performing container integrity checks.
+   */
+  private void startContainerScrub() {
+    boolean enabled = config.getBoolean(
+        HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED,
+        HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED_DEFAULT);
+
+    if (!enabled) {
+      LOG.info("Background container scrubber has been disabled by {}",
+              HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED);
+    } else {
+      this.scrubber = new ContainerScrubber(containerSet, config);
+      scrubber.up();
+    }
+  }
+
+  /**
+   * Stop the scanner thread and wait for thread to die.
+   */
+  private void stopContainerScrub() {
+    if (scrubber == null) {
+      return;
+    }
+    scrubber.down();
+  }
+
   /**
    * Starts serving requests to ozone container.
    *
@@ -146,6 +178,7 @@ public class OzoneContainer {
    */
   public void start() throws IOException {
     LOG.info("Attempting to start container services.");
+    startContainerScrub();
     writeChannel.start();
     readChannel.start();
     hddsDispatcher.init();
@@ -157,6 +190,7 @@ public class OzoneContainer {
   public void stop() {
     //TODO: at end of container IO integration work.
     LOG.info("Attempting to stop container services.");
+    stopContainerScrub();
     writeChannel.stop();
     readChannel.stop();
     hddsDispatcher.shutdown();

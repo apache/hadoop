@@ -1347,6 +1347,16 @@
   </property>
 
   <property>
+    <name>hdds.containerscrub.enabled</name>
+    <value>false</value>
+    <tag>DATANODE</tag>
+    <description>
+      Boolean value to enable data and metadata scrubbing in the containers
+      running on each datanode.
+    </description>
+  </property>
+
+  <property>
     <name>hdds.container.action.max.limit</name>
     <value>20</value>
     <tag>DATANODE</tag>
