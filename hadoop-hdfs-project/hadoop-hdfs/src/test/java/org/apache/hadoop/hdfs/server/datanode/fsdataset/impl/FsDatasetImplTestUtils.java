@@ -500,6 +500,7 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
    * @param level the level to set
    */
   public static void setFsDatasetImplLogLevel(Level level) {
-    GenericTestUtils.setLogLevel(FsDatasetImpl.LOG, level);
+    GenericTestUtils.setLogLevel(FsDatasetImpl.LOG,
+        org.slf4j.event.Level.valueOf(level.toString()));
   }
 }

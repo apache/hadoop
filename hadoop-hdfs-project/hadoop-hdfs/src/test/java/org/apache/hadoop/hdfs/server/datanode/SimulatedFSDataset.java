@@ -450,7 +450,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
    * Class used for tracking datanode level storage utilization similar
    * to {@link FSVolumeSet}
    */
-  private static class SimulatedStorage {
+  static class SimulatedStorage {
     private final Map<String, SimulatedBPStorage> map =
         new ConcurrentHashMap<>();
 
@@ -635,7 +635,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
     @Override
     public StorageLocation getStorageLocation() {
-      return null;
+      try {
+        return StorageLocation.parse("[DISK]file:///simulated");
+      } catch (Exception e) {
+        return null;
+      }
     }
 
     @Override
@@ -680,6 +684,10 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   private final List<SimulatedStorage> storages;
   private final String datanodeUuid;
   private final DataNode datanode;
+
+  public List<SimulatedStorage> getStorages() {
+    return storages;
+  }
 
   public SimulatedFSDataset(DataStorage storage, Configuration conf) {
     this(null, storage, conf);
