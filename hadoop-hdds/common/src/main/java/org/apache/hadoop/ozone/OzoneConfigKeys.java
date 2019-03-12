@@ -198,10 +198,10 @@ public final class OzoneConfigKeys {
   public static final String OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT
       = "300s"; // 300s for default
 
-  public static final String OZONE_KEY_PREALLOCATION_MAXSIZE =
-      "ozone.key.preallocation.maxsize";
-  public static final long OZONE_KEY_PREALLOCATION_MAXSIZE_DEFAULT
-      = 128 * OzoneConsts.MB;
+  public static final String OZONE_KEY_PREALLOCATION_BLOCKS_MAX =
+      "ozone.key.preallocation.max.blocks";
+  public static final int OZONE_KEY_PREALLOCATION_BLOCKS_MAX_DEFAULT
+      = 64;
 
   public static final String OZONE_BLOCK_DELETING_LIMIT_PER_CONTAINER =
       "ozone.block.deleting.limit.per.task";
@@ -373,7 +373,9 @@ public final class OzoneConfigKeys {
       "ozone.acl.enabled";
   public static final boolean OZONE_ACL_ENABLED_DEFAULT =
       false;
-
+  public static final String OZONE_S3_TOKEN_MAX_LIFETIME_KEY =
+      "ozone.s3.token.max.lifetime";
+  public static final String OZONE_S3_TOKEN_MAX_LIFETIME_KEY_DEFAULT = "3m";
   //For technical reasons this is unused and hardcoded to the
   // OzoneFileSystem.initialize.
   public static final String OZONE_FS_ISOLATED_CLASSLOADER =

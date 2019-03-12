@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.appcatalog.model;
 
+import java.util.Objects;
+
 import javax.xml.bind.annotation.XmlRootElement;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -64,4 +66,24 @@ public class Application extends Service {
     this.icon = icon;
   }
 
+  @Override
+  public boolean equals(final Object obj) {
+    if (obj == this) {
+      return true;
+    } else if ((obj instanceof Application)) {
+      if (((Application) obj).getName().equals(this.getName())
+          && ((Application) obj).getVersion().equals(this.getVersion())
+          && ((Application) obj).getOrganization()
+              .equals(this.getOrganization())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects
+        .hash(this.getName() + this.getVersion() + this.getOrganization());
+  }
 }

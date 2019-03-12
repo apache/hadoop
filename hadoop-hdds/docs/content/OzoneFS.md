@@ -51,15 +51,13 @@ Please add the following entry to the core-site.xml.
 </property>
 {{< /highlight >}}
 
-This will make this bucket to be the default file system for HDFS dfs commands and register the o3fs file system type..
+This will make this bucket to be the default file system for HDFS dfs commands and register the o3fs file system type.
 
 You also need to add the ozone-filesystem.jar file to the classpath:
 
 {{< highlight bash >}}
 export HADOOP_CLASSPATH=/opt/ozone/share/ozonefs/lib/hadoop-ozone-filesystem-lib-current.*.jar:$HADOOP_CLASSPATH
 {{< /highlight >}}
-
-
 
 Once the default Filesystem has been setup, users can run commands like ls, put, mkdir, etc.
 For example,
@@ -76,7 +74,16 @@ hdfs dfs -mkdir /users
 
 
 Or put command etc. In other words, all programs like Hive, Spark, and Distcp will work against this file system.
-Please note that any keys created/deleted in the bucket using methods apart from OzoneFileSystem will show up as diectories and files in the Ozone File System.
+Please note that any keys created/deleted in the bucket using methods apart from OzoneFileSystem will show up as directories and files in the Ozone File System.
+
+Note: Bucket and volume names are not allowed to have a period in them.
+Moreover, the filesystem URI can take a fully qualified form with the OM host and port as a part of the path following the volume name.
+For example,
+
+{{< highlight bash>}}
+hdfs dfs -ls o3fs://bucket.volume.om-host.example.com:5678/key
+{{< /highlight >}}
+
 
 ## Legacy mode
 

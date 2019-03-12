@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.exceptions.CertificateException;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ozone.om.S3SecretManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.security.OzoneSecretStore.OzoneManagerSecretState;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier.TokenInfo;
@@ -43,7 +44,9 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_EXPIRED;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMTokenProto.Type.S3TOKEN;
 
 /**
  * SecretManager for Ozone Master. Responsible for signing identifiers with
@@ -58,6 +61,7 @@ public class OzoneDelegationTokenSecretManager
       .getLogger(OzoneDelegationTokenSecretManager.class);
   private final Map<OzoneTokenIdentifier, TokenInfo> currentTokens;
   private final OzoneSecretStore store;
+  private final S3SecretManager s3SecretManager;
   private Thread tokenRemoverThread;
   private final long tokenRemoverScanInterval;
   private String omCertificateSerialId;
@@ -80,12 +84,14 @@ public class OzoneDelegationTokenSecretManager
    */
   public OzoneDelegationTokenSecretManager(OzoneConfiguration conf,
       long tokenMaxLifetime, long tokenRenewInterval,
-      long dtRemoverScanInterval, Text service) throws IOException {
+      long dtRemoverScanInterval, Text service,
+      S3SecretManager s3SecretManager) throws IOException {
     super(new SecurityConfig(conf), tokenMaxLifetime, tokenRenewInterval,
         service, LOG);
     currentTokens = new ConcurrentHashMap();
     this.tokenRemoverScanInterval = dtRemoverScanInterval;
     this.store = new OzoneSecretStore(conf);
+    this.s3SecretManager = s3SecretManager;
     loadTokenSecretState(store.loadState());
   }
 
@@ -158,12 +164,12 @@ public class OzoneDelegationTokenSecretManager
    */
   private void updateIdentifierDetails(OzoneTokenIdentifier identifier) {
     int sequenceNum;
-    long now = Time.monotonicNow();
+    long now = Time.now();
     sequenceNum = incrementDelegationTokenSeqNum();
     identifier.setIssueDate(now);
     identifier.setMasterKeyId(getCurrentKey().getKeyId());
     identifier.setSequenceNumber(sequenceNum);
-    identifier.setMaxDate(Time.monotonicNow() + getTokenMaxLifetime());
+    identifier.setMaxDate(now + getTokenMaxLifetime());
     identifier.setOmCertSerialId(getOmCertificateSerialId());
   }
 
@@ -198,7 +204,7 @@ public class OzoneDelegationTokenSecretManager
           formatTokenId(id), currentTokens.size());
     }
 
-    long now = Time.monotonicNow();
+    long now = Time.now();
     if (id.getMaxDate() < now) {
       throw new OMException(renewer + " tried to renew an expired token "
           + formatTokenId(id) + " max expiration date: "
@@ -279,6 +285,9 @@ public class OzoneDelegationTokenSecretManager
   @Override
   public byte[] retrievePassword(OzoneTokenIdentifier identifier)
       throws InvalidToken {
+    if(identifier.getTokenType().equals(S3TOKEN)) {
+      return validateS3Token(identifier);
+    }
     return validateToken(identifier).getPassword();
   }
 
@@ -286,14 +295,14 @@ public class OzoneDelegationTokenSecretManager
    * Checks if TokenInfo for the given identifier exists in database and if the
    * token is expired.
    */
-  public TokenInfo validateToken(OzoneTokenIdentifier identifier)
+  private TokenInfo validateToken(OzoneTokenIdentifier identifier)
       throws InvalidToken {
     TokenInfo info = currentTokens.get(identifier);
     if (info == null) {
       throw new InvalidToken("token " + formatTokenId(identifier)
           + " can't be found in cache");
     }
-    long now = Time.monotonicNow();
+    long now = Time.now();
     if (info.getRenewDate() < now) {
       throw new InvalidToken("token " + formatTokenId(identifier) + " is " +
           "expired, current time: " + Time.formatTime(now) +
@@ -327,9 +336,40 @@ public class OzoneDelegationTokenSecretManager
     }
   }
 
+  /**
+   * Validates if a S3 identifier is valid or not.
+   * */
+  private byte[] validateS3Token(OzoneTokenIdentifier identifier)
+      throws InvalidToken {
+    LOG.trace("Validating S3Token for identifier:{}", identifier);
+    String awsSecret;
+    try {
+      awsSecret = s3SecretManager.getS3UserSecretString(identifier
+          .getAwsAccessId());
+    } catch (IOException e) {
+      LOG.error("Error while validating S3 identifier:{}",
+          identifier, e);
+      throw new InvalidToken("No S3 secret found for S3 identifier:"
+          + identifier);
+    }
+
+    if (awsSecret == null) {
+      throw new InvalidToken("No S3 secret found for S3 identifier:"
+          + identifier);
+    }
+
+    if (AWSV4AuthValidator.validateRequest(identifier.getStrToSign(),
+        identifier.getSignature(), awsSecret)) {
+      return identifier.getSignature().getBytes(UTF_8);
+    }
+    throw new InvalidToken("Invalid S3 identifier:"
+        + identifier);
+
+  }
+
   // TODO: handle roll private key/certificate
   private synchronized void removeExpiredKeys() {
-    long now = Time.monotonicNow();
+    long now = Time.now();
     for (Iterator<Map.Entry<Integer, OzoneSecretKey>> it = allKeys.entrySet()
         .iterator(); it.hasNext();) {
       Map.Entry<Integer, OzoneSecretKey> e = it.next();
@@ -447,7 +487,7 @@ public class OzoneDelegationTokenSecretManager
    * Remove expired delegation tokens from cache and persisted store.
    */
   private void removeExpiredToken() {
-    long now = Time.monotonicNow();
+    long now = Time.now();
     synchronized (this) {
       Iterator<Map.Entry<OzoneTokenIdentifier,
           TokenInfo>> i = currentTokens.entrySet().iterator();
@@ -480,7 +520,7 @@ public class OzoneDelegationTokenSecretManager
           / (60 * 1000) + " min(s)");
       try {
         while (isRunning()) {
-          long now = Time.monotonicNow();
+          long now = Time.now();
           if (lastTokenCacheCleanup + getTokenRemoverScanInterval()
               < now) {
             removeExpiredToken();
