@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone;
 
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -123,6 +124,10 @@ public class TestMiniOzoneCluster {
     id2.setPort(DatanodeDetails.newPort(Port.Name.STANDALONE, 2));
     id3.setPort(DatanodeDetails.newPort(Port.Name.STANDALONE, 3));
 
+    // Add certificate serial  id.
+    String certSerialId = "" + RandomUtils.nextLong();
+    id1.setCertSerialId(certSerialId);
+
     // Write a single ID to the file and read it out
     File validIdsFile = new File(WRITE_TMP, "valid-values.id");
     validIdsFile.delete();
@@ -130,6 +135,7 @@ public class TestMiniOzoneCluster {
     DatanodeDetails validId = ContainerUtils.readDatanodeDetailsFrom(
         validIdsFile);
 
+    assertEquals(validId.getCertSerialId(), certSerialId);
     assertEquals(id1, validId);
     assertEquals(id1.getProtoBufMessage(), validId.getProtoBufMessage());
 

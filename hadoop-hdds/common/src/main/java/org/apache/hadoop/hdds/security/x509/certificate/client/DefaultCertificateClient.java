@@ -87,14 +87,17 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   private PublicKey publicKey;
   private X509Certificate x509Certificate;
   private Map<String, X509Certificate> certificateMap;
+  private String certSerialId;
 
 
-  DefaultCertificateClient(SecurityConfig securityConfig, Logger log) {
+  DefaultCertificateClient(SecurityConfig securityConfig, Logger log,
+      String certSerialId) {
     Objects.requireNonNull(securityConfig);
     this.securityConfig = securityConfig;
     keyCodec = new KeyCodec(securityConfig);
     this.logger = log;
     this.certificateMap = new ConcurrentHashMap<>();
+    this.certSerialId = certSerialId;
 
     loadAllCertificates();
   }
@@ -111,10 +114,10 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       File[] certFiles = certPath.toFile().listFiles();
 
       if (certFiles != null) {
+        CertificateCodec certificateCodec =
+            new CertificateCodec(securityConfig);
         for (File file : certFiles) {
           if (file.isFile()) {
-            CertificateCodec certificateCodec =
-                new CertificateCodec(securityConfig);
             try {
               X509CertificateHolder x509CertificateHolder = certificateCodec
                   .readCertificate(certPath, file.getName());
@@ -125,7 +128,8 @@ public abstract class DefaultCertificateClient implements CertificateClient {
               getLogger().info("Added certificate from file:{}.",
                   file.getAbsolutePath());
             } catch (java.security.cert.CertificateException | IOException e) {
-              getLogger().error("Error reading certificate.", e);
+              getLogger().error("Error reading certificate from file:{}.",
+                  file.getAbsolutePath(), e);
             }
           }
         }
@@ -193,19 +197,15 @@ public abstract class DefaultCertificateClient implements CertificateClient {
       return x509Certificate;
     }
 
-    Path certPath = securityConfig.getCertificateLocation();
-    if (OzoneSecurityUtil.checkIfFileExist(certPath,
-        securityConfig.getCertificateFileName())) {
-      CertificateCodec certificateCodec =
-          new CertificateCodec(securityConfig);
-      try {
-        X509CertificateHolder x509CertificateHolder =
-            certificateCodec.readCertificate();
-        x509Certificate =
-            CertificateCodec.getX509Certificate(x509CertificateHolder);
-      } catch (java.security.cert.CertificateException | IOException e) {
-        getLogger().error("Error reading certificate.", e);
-      }
+    if (certSerialId == null) {
+      getLogger().error("Default certificate serial id is not set. Can't " +
+          "locate the default certificate for this client.");
+      return null;
+    }
+    // Refresh the cache from file system.
+    loadAllCertificates();
+    if (certificateMap.containsKey(certSerialId)) {
+      x509Certificate = certificateMap.get(certSerialId);
     }
     return x509Certificate;
   }
@@ -213,45 +213,45 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   /**
    * Returns the certificate  with the specified certificate serial id if it
    * exists else throws CertificateException.
-   * @param  certSerialId
+   * @param  certId
    *
    * @return certificate or Null if there is no data.
    */
   @Override
-  public X509Certificate getCertificateFromLocal(String certSerialId)
+  public X509Certificate getCertificateFromLocal(String certId)
       throws CertificateException {
     // Check if it is in cache.
-    if (certificateMap.containsKey(certSerialId)) {
-      return certificateMap.get(certSerialId);
+    if (certificateMap.containsKey(certId)) {
+      return certificateMap.get(certId);
     }
 
     throw new CertificateException("Certificate with certSerialId:"
-        + certSerialId + " not found.", CERTIFICATE_NOT_FOUND_ERROR);
+        + certId + " not found.", CERTIFICATE_NOT_FOUND_ERROR);
   }
 
   /**
    * Get certificate from SCM and store it in local file system.
-   * @param certSerialId
+   * @param certId
    * @return certificate
    */
   @Override
-  public X509Certificate getCertificateFromScm(String certSerialId)
+  public X509Certificate getCertificateFromScm(String certId)
       throws CertificateException {
 
     getLogger().info("Getting certificate with certSerialId:{}.",
-        certSerialId);
+        certId);
     try {
       SCMSecurityProtocol scmSecurityProtocolClient = getScmSecurityClient(
           (OzoneConfiguration) securityConfig.getConfiguration());
       String pemEncodedCert =
-          scmSecurityProtocolClient.getCertificate(certSerialId);
-      this.storeCertificate(pemEncodedCert, true, false);
+          scmSecurityProtocolClient.getCertificate(certId);
+      this.storeCertificate(pemEncodedCert, true);
       return CertificateCodec.getX509Certificate(pemEncodedCert);
     } catch (Exception e) {
       getLogger().error("Error while getting Certificate with " +
-          "certSerialId:{} from scm.", certSerialId, e);
+          "certSerialId:{} from scm.", certId, e);
       throw new CertificateException("Error while getting certificate for " +
-          "certSerialId:" + certSerialId, e, CERTIFICATE_ERROR);
+          "certSerialId:" + certId, e, CERTIFICATE_ERROR);
     }
   }
 
@@ -448,31 +448,21 @@ public abstract class DefaultCertificateClient implements CertificateClient {
    *
    * @param pemEncodedCert - pem encoded X509 Certificate
    * @param force - override any existing file
-   * @param isLocalIdentityCert - true if certificate belongs to the identity
-   * cert for this certificate client.
    * @throws CertificateException - on Error.
    *
-   * Note: Certificate client can store certificates for other daemons as well.
-   * Local certificate refers to the certificate issued to this certificate
-   * client. This is stored along with public key and private key. Certificate
-   * of other daemons is stoed in sub dirs named after certificate serial id of
-   * certificate.
    */
   @Override
-  public void storeCertificate(String pemEncodedCert, boolean force,
-      boolean isLocalIdentityCert) throws CertificateException {
+  public void storeCertificate(String pemEncodedCert, boolean force)
+      throws CertificateException {
     CertificateCodec certificateCodec = new CertificateCodec(securityConfig);
     try {
       Path basePath = securityConfig.getCertificateLocation();
       String certName;
       X509Certificate cert =
           CertificateCodec.getX509Certificate(pemEncodedCert);
-      if (isLocalIdentityCert) {
-        certName = securityConfig.getCertificateFileName();
-      } else {
-        certName = String.format(CERT_FILE_NAME_FORMAT,
-            cert.getSerialNumber().toString());
-      }
+      certName = String.format(CERT_FILE_NAME_FORMAT,
+          cert.getSerialNumber().toString());
+
       certificateCodec.writeCertificate(basePath, certName,
           pemEncodedCert, force);
       certificateMap.putIfAbsent(cert.getSerialNumber().toString(), cert);

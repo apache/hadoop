@@ -135,8 +135,6 @@ public interface CertificateClient {
    *
    * @param pemEncodedCert        - pem encoded X509 Certificate
    * @param force                 - override any existing file
-   * @param isLocalIdentityCert   - true if certificate belongs to the
-   * identity cert for this certificate client.
    * @throws CertificateException - on Error.
    *
    * Note: Certificate client can store certificates for other daemons as well.
@@ -145,8 +143,8 @@ public interface CertificateClient {
    * Certificate of other daemons is named after certificate serial id of
    * certificate.
    */
-  void storeCertificate(String pemEncodedCert, boolean force,
-      boolean isLocalIdentityCert) throws CertificateException;
+  void storeCertificate(String pemEncodedCert, boolean force)
+      throws CertificateException;
 
   /**
    * Stores the trusted chain of certificates.

@@ -137,6 +137,7 @@ public final class TestSecureOzoneCluster {
   private Path metaDirPath;
   @Rule
   public TemporaryFolder folder= new TemporaryFolder();
+  private String omCertSerialId = "9879877970576";
 
   @Before
   public void init() {
@@ -374,7 +375,6 @@ public final class TestSecureOzoneCluster {
     initSCM();
     // Create a secure SCM instance as om client will connect to it
     scm = StorageContainerManager.createSCM(null, conf);
-
     setupOm(conf);
     conf.set(OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY,
         "non-existent-user@EXAMPLE.com");
@@ -653,6 +653,7 @@ public final class TestSecureOzoneCluster {
     OMStorage omStore = new OMStorage(config);
     omStore.setClusterId("testClusterId");
     omStore.setScmId("testScmId");
+    omStore.setOmCertSerialId(omCertSerialId);
     // writes the version file properties
     omStore.initialize();
     OzoneManager.setTestSecureOmFlag(true);

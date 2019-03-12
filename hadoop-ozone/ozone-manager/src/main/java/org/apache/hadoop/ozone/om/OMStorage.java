@@ -36,6 +36,7 @@ public class OMStorage extends Storage {
 
   public static final String STORAGE_DIR = "om";
   public static final String OM_ID = "omUuid";
+  public static final String OM_CERT_SERIAL_ID = "omCertSerialId";
 
   /**
    * Construct OMStorage.
@@ -50,6 +51,14 @@ public class OMStorage extends Storage {
       throw new IOException("OM is already initialized.");
     } else {
       getStorageInfo().setProperty(SCM_ID, scmId);
+    }
+  }
+
+  public void setOmCertSerialId(String certSerialId) throws IOException {
+    if (getState() == StorageState.INITIALIZED) {
+      throw new IOException("OM is already initialized.");
+    } else {
+      getStorageInfo().setProperty(OM_CERT_SERIAL_ID, certSerialId);
     }
   }
 
@@ -77,6 +86,14 @@ public class OMStorage extends Storage {
     return getStorageInfo().getProperty(OM_ID);
   }
 
+  /**
+   * Retrieves the serial id of certificate issued by SCM.
+   * @return OM_ID
+   */
+  public String getOmCertSerialId() {
+    return getStorageInfo().getProperty(OM_CERT_SERIAL_ID);
+  }
+
   @Override
   protected Properties getNodeProperties() {
     String omId = getOmId();
@@ -85,6 +102,10 @@ public class OMStorage extends Storage {
     }
     Properties omProperties = new Properties();
     omProperties.setProperty(OM_ID, omId);
+
+    if (getOmCertSerialId() != null) {
+      omProperties.setProperty(OM_CERT_SERIAL_ID, getOmCertSerialId());
+    }
     return omProperties;
   }
 }
