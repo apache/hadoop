@@ -34,6 +34,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -88,33 +89,53 @@ public class OzoneFileSystem extends FileSystem {
   private OzoneClientAdapter adapter;
   private boolean securityEnabled;
 
-
   private OzoneFSStorageStatistics storageStatistics;
 
   private static final Pattern URL_SCHEMA_PATTERN =
-      Pattern.compile("(.+)\\.([^\\.]+)");
+      Pattern.compile("([^\\.]+)\\.([^\\.]+)\\.{0,1}(.*)");
+
+  private static final String URI_EXCEPTION_TEXT = "Ozone file system url " +
+      "should be either one of the two forms: " +
+      "o3fs://bucket.volume/key  OR " +
+      "o3fs://bucket.volume.om-host.example.com:5678/key";
 
   @Override
   public void initialize(URI name, Configuration conf) throws IOException {
     super.initialize(name, conf);
     setConf(conf);
     Objects.requireNonNull(name.getScheme(), "No scheme provided in " + name);
-    assert getScheme().equals(name.getScheme());
+    Preconditions.checkArgument(getScheme().equals(name.getScheme()),
+        "Invalid scheme provided in " + name);
 
     String authority = name.getAuthority();
 
     Matcher matcher = URL_SCHEMA_PATTERN.matcher(authority);
 
     if (!matcher.matches()) {
-      throw new IllegalArgumentException("Ozone file system url should be "
-          + "in the form o3fs://bucket.volume");
+      throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
     }
     String bucketStr = matcher.group(1);
     String volumeStr = matcher.group(2);
+    String remaining = matcher.groupCount() == 3 ? matcher.group(3) : null;
+
+    String omHost = null;
+    String omPort = String.valueOf(-1);
+    if (StringUtils.isNotEmpty(remaining)) {
+      String[] parts = remaining.split(":");
+      if (parts.length != 2) {
+        throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
+      }
+      omHost = parts[0];
+      omPort = parts[1];
+      if (!NumberUtils.isParsable(omPort)) {
+        throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
+      }
+    }
 
     try {
       uri = new URIBuilder().setScheme(OZONE_URI_SCHEME)
-          .setHost(authority).build();
+        .setHost(authority)
+        .build();
       LOG.trace("Ozone URI for ozfs initialization is " + uri);
 
       //isolated is the default for ozonefs-lib-legacy which includes the
@@ -159,11 +180,13 @@ public class OzoneFileSystem extends FileSystem {
         } else {
           ozoneConfiguration = new OzoneConfiguration(conf);
         }
+
         SecurityConfig secConfig = new SecurityConfig(ozoneConfiguration);
         if (secConfig.isSecurityEnabled()) {
           this.securityEnabled = true;
         }
-        this.adapter = new OzoneClientAdapterImpl(ozoneConfiguration,
+        this.adapter = new OzoneClientAdapterImpl(omHost,
+            Integer.parseInt(omPort), ozoneConfiguration,
             volumeStr, bucketStr, storageStatistics);
       }
 
