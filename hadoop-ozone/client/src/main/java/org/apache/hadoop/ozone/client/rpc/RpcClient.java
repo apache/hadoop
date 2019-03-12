@@ -139,7 +139,6 @@ public class RpcClient implements ClientProtocol {
         OMConfigKeys.OZONE_OM_GROUP_RIGHTS_DEFAULT);
     this.ozoneManagerClient = new OzoneManagerProtocolClientSideTranslatorPB(
         this.conf, clientId.toString(), ugi);
-
     long scmVersion =
         RPC.getProtocolVersion(StorageContainerLocationProtocolPB.class);
     InetSocketAddress scmAddress = getScmAddressForClient();
@@ -445,7 +444,18 @@ public class RpcClient implements ClientProtocol {
   @Override
   public Token<OzoneTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
-    return ozoneManagerClient.getDelegationToken(renewer);
+
+    Token<OzoneTokenIdentifier> token =
+        ozoneManagerClient.getDelegationToken(renewer);
+    if (token != null) {
+      Text dtService =
+          getOMProxyProvider().getProxy().getDelegationTokenService();
+      token.setService(dtService);
+      LOG.info("Created " + token.toString());
+    } else {
+      LOG.info("Cannot get ozone delegation token from " + renewer);
+    }
+    return token;
   }
 
   /**

@@ -42,13 +42,16 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.ozone.security.OzoneDelegationTokenSelector;
 import org.apache.hadoop.security.KerberosInfo;
+import org.apache.hadoop.security.token.TokenInfo;
 
 /**
  * Protocol to talk to OM.
  */
 @KerberosInfo(
     serverPrincipal = OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY)
+@TokenInfo(OzoneDelegationTokenSelector.class)
 public interface OzoneManagerProtocol
     extends OzoneManagerSecurityProtocol, Closeable {
 
