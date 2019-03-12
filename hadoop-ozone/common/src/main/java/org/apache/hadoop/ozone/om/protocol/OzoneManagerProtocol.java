@@ -190,6 +190,7 @@ public interface OzoneManagerProtocol
   OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID,
       ExcludeList excludeList) throws IOException;
 
+
   /**
    * Look up for the container of an existing key.
    *

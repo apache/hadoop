@@ -149,7 +149,8 @@ public class TestOmBlockVersioning {
 
     // this block will be appended to the latest version of version 2.
     OmKeyLocationInfo locationInfo =
-        ozoneManager.allocateBlock(keyArgs, openKey.getId(), new ExcludeList());
+        ozoneManager.allocateBlock(keyArgs, openKey.getId(),
+            new ExcludeList());
     List<OmKeyLocationInfo> locationInfoList =
         openKey.getKeyInfo().getLatestVersionLocations()
             .getBlocksLatestVersionOnly();

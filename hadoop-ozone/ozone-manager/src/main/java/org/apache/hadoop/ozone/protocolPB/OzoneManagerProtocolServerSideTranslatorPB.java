@@ -19,7 +19,7 @@ package org.apache.hadoop.ozone.protocolPB;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.exceptions.NotLeaderException;
-import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
+import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisClient;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer;
@@ -46,7 +46,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
       .getLogger(OzoneManagerProtocolServerSideTranslatorPB.class);
   private final OzoneManagerRatisServer omRatisServer;
   private final OzoneManagerRatisClient omRatisClient;
-  private final OzoneManagerRequestHandler handler;
+  private final RequestHandler handler;
   private final boolean isRatisEnabled;
 
   /**
@@ -55,7 +55,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
    * @param impl OzoneManagerProtocolPB
    */
   public OzoneManagerProtocolServerSideTranslatorPB(
-      OzoneManagerProtocol impl, OzoneManagerRatisServer ratisServer,
+      OzoneManagerServerProtocol impl, OzoneManagerRatisServer ratisServer,
       OzoneManagerRatisClient ratisClient, boolean enableRatis) {
     handler = new OzoneManagerRequestHandler(impl);
     this.omRatisServer = ratisServer;
@@ -89,7 +89,6 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
       scope.close();
     }
   }
-
   /**
    * Submits request to OM's Ratis server.
    */
