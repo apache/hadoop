@@ -65,6 +65,9 @@ public final class HddsConfigKeys {
   public static final float HDDS_CONTAINER_CLOSE_THRESHOLD_DEFAULT = 0.9f;
   public static final String HDDS_SCM_CHILLMODE_ENABLED =
       "hdds.scm.chillmode.enabled";
+  public static final String HDDS_CONTAINERSCRUB_ENABLED =
+      "hdds.containerscrub.enabled";
+  public static final boolean HDDS_CONTAINERSCRUB_ENABLED_DEFAULT = false;
   public static final boolean HDDS_SCM_CHILLMODE_ENABLED_DEFAULT = true;
   public static final String HDDS_SCM_CHILLMODE_MIN_DATANODE =
       "hdds.scm.chillmode.min.datanode";

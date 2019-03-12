@@ -565,8 +565,13 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
    */
   @Override
   public File getContainerFile() {
-    return new File(containerData.getMetadataPath(), containerData
-        .getContainerID() + OzoneConsts.CONTAINER_EXTENSION);
+    return getContainerFile(containerData.getMetadataPath(),
+            containerData.getContainerID());
+  }
+
+  static File getContainerFile(String metadataPath, long containerId) {
+    return new File(metadataPath,
+        containerId + OzoneConsts.CONTAINER_EXTENSION);
   }
 
   @Override
@@ -632,6 +637,66 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
   public File getContainerDBFile() {
     return new File(containerData.getMetadataPath(), containerData
         .getContainerID() + OzoneConsts.DN_CONTAINER_DB);
+  }
+
+  /**
+   * run integrity checks on the Container metadata.
+   */
+  public void check() throws StorageContainerException {
+    ContainerCheckLevel level = ContainerCheckLevel.NO_CHECK;
+    long containerId = containerData.getContainerID();
+
+    switch (containerData.getState()) {
+    case OPEN:
+      level = ContainerCheckLevel.FAST_CHECK;
+      LOG.info("Doing Fast integrity checks for Container ID : {},"
+          + " because it is OPEN", containerId);
+      break;
+    case CLOSING:
+      level = ContainerCheckLevel.FAST_CHECK;
+      LOG.info("Doing Fast integrity checks for Container ID : {},"
+          + " because it is CLOSING", containerId);
+      break;
+    case CLOSED:
+    case QUASI_CLOSED:
+      level = ContainerCheckLevel.FULL_CHECK;
+      LOG.debug("Doing Full integrity checks for Container ID : {},"
+              + " because it is in {} state", containerId,
+          containerData.getState());
+      break;
+    default:
+      throw new StorageContainerException(
+          "Invalid Container state found for Container : " + containerData
+              .getContainerID(), INVALID_CONTAINER_STATE);
+    }
+
+    if (level == ContainerCheckLevel.NO_CHECK) {
+      LOG.debug("Skipping integrity checks for Container Id : {}", containerId);
+      return;
+    }
+
+    KeyValueContainerCheck checker =
+        new KeyValueContainerCheck(containerData.getMetadataPath(), config,
+            containerId, containerData);
+
+    switch (level) {
+    case FAST_CHECK:
+      checker.fastCheck();
+      break;
+    case FULL_CHECK:
+      checker.fullCheck();
+      break;
+    case NO_CHECK:
+      LOG.debug("Skipping integrity checks for Container Id : {}", containerId);
+      break;
+    default:
+      // we should not be here at all, scuttle the ship!
+      Preconditions.checkNotNull(0, "Invalid Containercheck level");
+    }
+  }
+
+  private enum ContainerCheckLevel {
+    NO_CHECK, FAST_CHECK, FULL_CHECK
   }
 
   /**
