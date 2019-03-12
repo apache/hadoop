@@ -2498,6 +2498,11 @@ int hadoopRzOptionsSetByteBufferPool(
         return -1;
     }
 
+    if (opts->byteBufferPool) {
+        // Delete any previous ByteBufferPool we had.
+        (*env)->DeleteGlobalRef(env, opts->byteBufferPool);
+    }
+
     if (className) {
       // Note: we don't have to call hadoopRzOptionsClearCached in this
       // function, since the ByteBufferPool is passed separately from the
@@ -2510,12 +2515,15 @@ int hadoopRzOptionsSetByteBufferPool(
           errno = EINVAL;
           return -1;
       }
+      opts->byteBufferPool = (*env)->NewGlobalRef(env, byteBufferPool);
+      if (!opts->byteBufferPool) {
+          printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                  "hadoopRzOptionsSetByteBufferPool(className=%s): ",
+                  className);
+          errno = EINVAL;
+          return -1;
+      }
     }
-    if (opts->byteBufferPool) {
-        // Delete any previous ByteBufferPool we had.
-        (*env)->DeleteGlobalRef(env, opts->byteBufferPool);
-    }
-    opts->byteBufferPool = (*env)->NewGlobalRef(env, byteBufferPool);
     return 0;
 }
 
@@ -2570,8 +2578,7 @@ static jthrowable hadoopRzOptionsGetEnumSet(JNIEnv *env,
     } else {
         jclass clazz = (*env)->FindClass(env, READ_OPTION);
         if (!clazz) {
-            jthr = newRuntimeError(env, "failed "
-                    "to find class for %s", READ_OPTION);
+            jthr = getPendingExceptionAndClear(env);
             goto done;
         }
         jthr = invokeMethod(env, &jVal, STATIC, NULL,
@@ -2896,7 +2903,7 @@ hdfsGetHosts(hdfsFS fs, const char *path, tOffset start, tOffset length)
     for (i = 0; i < jNumFileBlocks; ++i) {
         jFileBlock =
             (*env)->GetObjectArrayElement(env, jBlockLocations, i);
-        if (!jFileBlock) {
+        if ((*env)->ExceptionOccurred || !jFileBlock) {
             ret = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
                 "hdfsGetHosts(path=%s, start=%"PRId64", length=%"PRId64"):"
                 "GetObjectArrayElement(%d)", path, start, length, i);
@@ -2930,7 +2937,7 @@ hdfsGetHosts(hdfsFS fs, const char *path, tOffset start, tOffset length)
         //Now parse each hostname
         for (j = 0; j < jNumBlockHosts; ++j) {
             jHost = (*env)->GetObjectArrayElement(env, jFileBlockHosts, j);
-            if (!jHost) {
+            if ((*env)->ExceptionOccurred || jHost) {
                 ret = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
                     "hdfsGetHosts(path=%s, start=%"PRId64", length=%"PRId64"): "
                     "NewByteArray", path, start, length);
@@ -3419,7 +3426,7 @@ hdfsFileInfo* hdfsListDirectory(hdfsFS fs, const char *path, int *numEntries)
     //Save path information in pathList
     for (i=0; i < jPathListSize; ++i) {
         tmpStat = (*env)->GetObjectArrayElement(env, jPathList, i);
-        if (!tmpStat) {
+        if ((*env)->ExceptionOccurred || !tmpStat) {
             ret = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
                 "hdfsListDirectory(%s): GetObjectArrayElement(%d out of %d)",
                 path, i, jPathListSize);
