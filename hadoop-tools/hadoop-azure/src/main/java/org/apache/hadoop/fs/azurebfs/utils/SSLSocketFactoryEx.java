@@ -120,9 +120,12 @@ public final class SSLSocketFactoryEx extends SSLSocketFactory {
     switch (preferredChannelMode) {
       case Default:
         try {
-          java.util.logging.Logger.getLogger(SSL.class.getName()).setLevel(Level.WARNING);
+          java.util.logging.Logger logger = java.util.logging.Logger.getLogger(SSL.class.getName());
+          logger.setLevel(Level.WARNING);
           ctx = SSLContext.getInstance("openssl.TLS");
           ctx.init(null, null, null);
+          // Strong reference needs to be kept to logger until initialization of SSLContext finished (see HADOOP-16174):
+          logger.setLevel(Level.INFO);
           channelMode = SSLChannelMode.OpenSSL;
         } catch (NoSuchAlgorithmException e) {
           LOG.warn("Failed to load OpenSSL. Falling back to the JSSE default.");
