@@ -17,11 +17,14 @@
  */
 package org.apache.hadoop.fs.ozone;
 
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
@@ -36,9 +39,6 @@ import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.OzoneKey;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
-
-import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
-
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenRenewer;
@@ -100,9 +100,17 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
   public OzoneClientAdapterImpl(OzoneConfiguration conf, String volumeStr,
       String bucketStr, OzoneFSStorageStatistics storageStatistics)
       throws IOException {
+    this(null, -1, conf, volumeStr, bucketStr, storageStatistics);
+  }
+
+  public OzoneClientAdapterImpl(String omHost, int omPort,
+      OzoneConfiguration conf, String volumeStr, String bucketStr,
+      OzoneFSStorageStatistics storageStatistics) throws IOException {
+
     ClassLoader contextClassLoader =
         Thread.currentThread().getContextClassLoader();
     Thread.currentThread().setContextClassLoader(null);
+
     try {
       String replicationTypeConf =
           conf.get(OzoneConfigKeys.OZONE_REPLICATION_TYPE,
@@ -110,8 +118,14 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
 
       int replicationCountConf = conf.getInt(OzoneConfigKeys.OZONE_REPLICATION,
           OzoneConfigKeys.OZONE_REPLICATION_DEFAULT);
-      this.ozoneClient =
-          OzoneClientFactory.getRpcClient(conf);
+
+      if (StringUtils.isNotEmpty(omHost) && omPort != -1) {
+        this.ozoneClient =
+            OzoneClientFactory.getRpcClient(omHost, omPort, conf);
+      } else {
+        this.ozoneClient =
+            OzoneClientFactory.getRpcClient(conf);
+      }
       objectStore = ozoneClient.getObjectStore();
       this.volume = objectStore.getVolume(volumeStr);
       this.bucket = volume.getBucket(bucketStr);
@@ -123,6 +137,7 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
     }
 
   }
+
 
   @Override
   public void close() throws IOException {
