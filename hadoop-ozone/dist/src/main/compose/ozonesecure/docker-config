@@ -29,6 +29,9 @@ OZONE-SITE.XML_hdds.scm.kerberos.principal=scm/scm@EXAMPLE.COM
 OZONE-SITE.XML_hdds.scm.kerberos.keytab.file=/etc/security/keytabs/scm.keytab
 OZONE-SITE.XML_ozone.om.kerberos.principal=om/om@EXAMPLE.COM
 OZONE-SITE.XML_ozone.om.kerberos.keytab.file=/etc/security/keytabs/om.keytab
+OZONE-SITE.XML_ozone.s3g.keytab.file=/etc/security/keytabs/HTTP.keytab
+OZONE-SITE.XML_ozone.s3g.authentication.kerberos.principal=HTTP/s3g@EXAMPLE.COM
+
 OZONE-SITE.XML_ozone.security.enabled=true
 OZONE-SITE.XML_hdds.scm.http.kerberos.principal=HTTP/scm@EXAMPLE.COM
 OZONE-SITE.XML_hdds.scm.http.kerberos.keytab=/etc/security/keytabs/HTTP.keytab
@@ -61,6 +64,7 @@ LOG4J.PROPERTIES_log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
 LOG4J.PROPERTIES_log4j.appender.stdout.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n
 LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop.util.NativeCodeLoader=ERROR
 LOG4J.PROPERTIES_log4j.logger.org.apache.ratis.conf.ConfUtils=WARN
+LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop=INFO
 LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop.security.ShellBasedUnixGroupsMapping=ERROR
 
 #Enable this variable to print out all hadoop rpc traffic to the stdout. See http://byteman.jboss.org/ to define your own instrumentation.

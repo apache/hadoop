@@ -56,6 +56,16 @@ services:
     env_file:
       - docker-config
     command: ["/opt/hadoop/bin/ozone","om"]
+  s3g:
+    image: apache/hadoop-runner
+    hostname: s3g
+    volumes:
+      - ../..:/opt/hadoop
+    ports:
+      - 9878:9878
+    env_file:
+      - ./docker-config
+    command: ["/opt/hadoop/bin/ozone","s3g"]
   scm:
     image: apache/hadoop-runner
     hostname: scm

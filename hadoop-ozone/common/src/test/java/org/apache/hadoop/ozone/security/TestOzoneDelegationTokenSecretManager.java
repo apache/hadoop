@@ -25,8 +25,11 @@ import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.OMCertificateClient;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ozone.om.S3SecretManager;
+import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -43,6 +46,11 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMTokenProto.Type.S3TOKEN;
+
 
 /**
  * Test class for {@link OzoneDelegationTokenSecretManager}.
@@ -60,6 +68,8 @@ public class TestOzoneDelegationTokenSecretManager {
   private final static Text TEST_USER = new Text("testUser");
   private long tokenMaxLifetime = 1000 * 20;
   private long tokenRemoverScanInterval = 1000 * 20;
+  private S3SecretManager s3SecretManager;
+  private String s3Secret = "dbaksbzljandlkandlsd";
 
   @Before
   public void setUp() throws Exception {
@@ -70,6 +80,26 @@ public class TestOzoneDelegationTokenSecretManager {
     certificateClient.init();
     expiryTime = Time.monotonicNow() + 60 * 60 * 24;
     serviceRpcAdd = new Text("localhost");
+    final Map<String, String> s3Secrets = new HashMap<>();
+    s3Secrets.put("testuser1", s3Secret);
+    s3Secrets.put("abc", "djakjahkd");
+    s3SecretManager = new S3SecretManager() {
+      @Override
+      public S3SecretValue getS3Secret(String kerberosID) {
+        if(s3Secrets.containsKey(kerberosID)) {
+          return new S3SecretValue(kerberosID, s3Secrets.get(kerberosID));
+        }
+        return null;
+      }
+
+      @Override
+      public String getS3UserSecretString(String awsAccessKey) {
+        if(s3Secrets.containsKey(awsAccessKey)) {
+          return s3Secrets.get(awsAccessKey);
+        }
+        return null;
+      }
+    };
   }
 
   /**
@@ -250,6 +280,66 @@ public class TestOzoneDelegationTokenSecretManager {
         certificateClient.signData(id.getBytes())));
   }
 
+  @Test
+  public void testValidateS3TOKENSuccess() throws Exception {
+    secretManager = createSecretManager(conf, tokenMaxLifetime,
+        expiryTime, tokenRemoverScanInterval);
+    secretManager.start(certificateClient);
+
+    OzoneTokenIdentifier identifier = new OzoneTokenIdentifier();
+    identifier.setTokenType(S3TOKEN);
+    identifier.setSignature("56ec73ba1974f8feda8365c3caef89c5d4a688d" +
+        "5f9baccf4765f46a14cd745ad");
+    identifier.setStrToSign("AWS4-HMAC-SHA256\n" +
+        "20190221T002037Z\n" +
+        "20190221/us-west-1/s3/aws4_request\n" +
+        "c297c080cce4e0927779823d3fd1f5cae71481a8f7dfc7e18d91851294efc47d");
+    identifier.setAwsAccessId("testuser1");
+    secretManager.retrievePassword(identifier);
+  }
+
+  @Test
+  public void testValidateS3TOKENFailure() throws Exception {
+    secretManager = createSecretManager(conf, tokenMaxLifetime,
+        expiryTime, tokenRemoverScanInterval);
+    secretManager.start(certificateClient);
+
+    OzoneTokenIdentifier identifier = new OzoneTokenIdentifier();
+    identifier.setTokenType(S3TOKEN);
+    identifier.setSignature("56ec73ba1974f8feda8365c3caef89c5d4a688d" +
+        "5f9baccf4765f46a14cd745ad");
+    identifier.setStrToSign("AWS4-HMAC-SHA256\n" +
+        "20190221T002037Z\n" +
+        "20190221/us-west-1/s3/aws4_request\n" +
+        "c297c080cce4e0927779823d3fd1f5cae71481a8f7dfc7e18d91851294efc47d");
+    identifier.setAwsAccessId("testuser2");
+    // Case 1: User don't have aws secret set.
+    LambdaTestUtils.intercept(SecretManager.InvalidToken.class, " No S3 " +
+            "secret found for S3 identifier",
+        () -> secretManager.retrievePassword(identifier));
+
+    // Case 2: Invalid hash in string to sign.
+    identifier.setStrToSign("AWS4-HMAC-SHA256\n" +
+        "20190221T002037Z\n" +
+        "20190221/us-west-1/s3/aws4_request\n" +
+        "c297c080cce4e0927779823d3fd1f5cae71481a8f7dfc7e18d91851294efc47d" +
+        "+invalidhash");
+    LambdaTestUtils.intercept(SecretManager.InvalidToken.class, " No S3 " +
+            "secret found for S3 identifier",
+        () -> secretManager.retrievePassword(identifier));
+
+    // Case 3: Invalid hash in authorization hmac.
+    identifier.setSignature("56ec73ba1974f8feda8365c3caef89c5d4a688d" +
+        "+invalidhash" + "5f9baccf4765f46a14cd745ad");
+    identifier.setStrToSign("AWS4-HMAC-SHA256\n" +
+        "20190221T002037Z\n" +
+        "20190221/us-west-1/s3/aws4_request\n" +
+        "c297c080cce4e0927779823d3fd1f5cae71481a8f7dfc7e18d91851294efc47d");
+    LambdaTestUtils.intercept(SecretManager.InvalidToken.class, " No S3 " +
+            "secret found for S3 identifier",
+        () -> secretManager.retrievePassword(identifier));
+  }
+
   /**
    * Validate hash using public key of KeyPair.
    */
@@ -269,6 +359,6 @@ public class TestOzoneDelegationTokenSecretManager {
       createSecretManager(OzoneConfiguration config, long tokenMaxLife,
       long expiry, long tokenRemoverScanTime) throws IOException {
     return new OzoneDelegationTokenSecretManager(config, tokenMaxLife,
-        expiry, tokenRemoverScanTime, serviceRpcAdd);
+        expiry, tokenRemoverScanTime, serviceRpcAdd, s3SecretManager);
   }
 }
