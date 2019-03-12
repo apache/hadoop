@@ -158,12 +158,12 @@ public class OzoneDelegationTokenSecretManager
    */
   private void updateIdentifierDetails(OzoneTokenIdentifier identifier) {
     int sequenceNum;
-    long now = Time.monotonicNow();
+    long now = Time.now();
     sequenceNum = incrementDelegationTokenSeqNum();
     identifier.setIssueDate(now);
     identifier.setMasterKeyId(getCurrentKey().getKeyId());
     identifier.setSequenceNumber(sequenceNum);
-    identifier.setMaxDate(Time.monotonicNow() + getTokenMaxLifetime());
+    identifier.setMaxDate(now + getTokenMaxLifetime());
     identifier.setOmCertSerialId(getOmCertificateSerialId());
   }
 
@@ -198,7 +198,7 @@ public class OzoneDelegationTokenSecretManager
           formatTokenId(id), currentTokens.size());
     }
 
-    long now = Time.monotonicNow();
+    long now = Time.now();
     if (id.getMaxDate() < now) {
       throw new OMException(renewer + " tried to renew an expired token "
           + formatTokenId(id) + " max expiration date: "
@@ -293,7 +293,7 @@ public class OzoneDelegationTokenSecretManager
       throw new InvalidToken("token " + formatTokenId(identifier)
           + " can't be found in cache");
     }
-    long now = Time.monotonicNow();
+    long now = Time.now();
     if (info.getRenewDate() < now) {
       throw new InvalidToken("token " + formatTokenId(identifier) + " is " +
           "expired, current time: " + Time.formatTime(now) +
@@ -329,7 +329,7 @@ public class OzoneDelegationTokenSecretManager
 
   // TODO: handle roll private key/certificate
   private synchronized void removeExpiredKeys() {
-    long now = Time.monotonicNow();
+    long now = Time.now();
     for (Iterator<Map.Entry<Integer, OzoneSecretKey>> it = allKeys.entrySet()
         .iterator(); it.hasNext();) {
       Map.Entry<Integer, OzoneSecretKey> e = it.next();
@@ -447,7 +447,7 @@ public class OzoneDelegationTokenSecretManager
    * Remove expired delegation tokens from cache and persisted store.
    */
   private void removeExpiredToken() {
-    long now = Time.monotonicNow();
+    long now = Time.now();
     synchronized (this) {
       Iterator<Map.Entry<OzoneTokenIdentifier,
           TokenInfo>> i = currentTokens.entrySet().iterator();
@@ -480,7 +480,7 @@ public class OzoneDelegationTokenSecretManager
           / (60 * 1000) + " min(s)");
       try {
         while (isRunning()) {
-          long now = Time.monotonicNow();
+          long now = Time.now();
           if (lastTokenCacheCleanup + getTokenRemoverScanInterval()
               < now) {
             removeExpiredToken();
