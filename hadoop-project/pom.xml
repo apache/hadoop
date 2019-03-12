@@ -467,19 +467,6 @@
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-yarn-services-api</artifactId>
-        <version>${hadoop.version}</version>
-      </dependency>
-
-      <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-yarn-applications-catalog-webapp</artifactId>
-        <version>${hadoop.version}</version>
-        <type>war</type>
-      </dependency>
-
-      <dependency>
-        <groupId>org.apache.hadoop</groupId>
          <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
         <version>${hadoop.version}</version>
         <type>test-jar</type>
