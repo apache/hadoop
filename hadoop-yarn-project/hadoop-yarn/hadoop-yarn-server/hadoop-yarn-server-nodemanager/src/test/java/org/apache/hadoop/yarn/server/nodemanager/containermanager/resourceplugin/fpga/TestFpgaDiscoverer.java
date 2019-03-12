@@ -20,17 +20,11 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga;
 
 
-import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga.FpgaResourceAllocator;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga.FpgaResourceAllocator.FpgaDevice;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -38,16 +32,20 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga.FpgaResourceAllocator.FpgaDevice;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 public class TestFpgaDiscoverer {
   @Rule
@@ -114,7 +112,7 @@ public class TestFpgaDiscoverer {
     // FpgaDiscoverer.getInstance().diagnose() work in openclPlugin.initPlugin()
     discoverer.setResourceHanderPlugin(openclPlugin);
     openclPlugin.initPlugin(conf);
-    openclPlugin.setShell(mockPuginShell());
+    openclPlugin.setInnerShellExecutor(mockPuginShell());
 
     discoverer.initialize(conf);
     // Case 1. No configuration set for binary(no environment "ALTERAOCLSDKROOT" set)
@@ -158,89 +156,6 @@ public class TestFpgaDiscoverer {
   }
 
   @Test
-  public void testDiscoverPluginParser() throws YarnException {
-    String output = "------------------------- acl0 -------------------------\n" +
-        "Vendor: Nallatech ltd\n" +
-        "Phys Dev Name  Status   Information\n" +
-        "aclnalla_pcie0Passed   nalla_pcie (aclnalla_pcie0)\n" +
-        "                       PCIe dev_id = 2494, bus:slot.func = 02:00.00, Gen3 x8\n" +
-        "                       FPGA temperature = 53.1 degrees C.\n" +
-        "                       Total Card Power Usage = 31.7 Watts.\n" +
-        "                       Device Power Usage = 0.0 Watts.\n" +
-        "DIAGNOSTIC_PASSED" +
-        "---------------------------------------------------------\n";
-    output = output +
-        "------------------------- acl1 -------------------------\n" +
-        "Vendor: Nallatech ltd\n" +
-        "Phys Dev Name  Status   Information\n" +
-        "aclnalla_pcie1Passed   nalla_pcie (aclnalla_pcie1)\n" +
-        "                       PCIe dev_id = 2495, bus:slot.func = 03:00.00, Gen3 x8\n" +
-        "                       FPGA temperature = 43.1 degrees C.\n" +
-        "                       Total Card Power Usage = 11.7 Watts.\n" +
-        "                       Device Power Usage = 0.0 Watts.\n" +
-        "DIAGNOSTIC_PASSED" +
-        "---------------------------------------------------------\n";
-    output = output +
-        "------------------------- acl2 -------------------------\n" +
-        "Vendor: Intel(R) Corporation\n" +
-        "\n" +
-        "Phys Dev Name  Status   Information\n" +
-        "\n" +
-        "acla10_ref0   Passed   Arria 10 Reference Platform (acla10_ref0)\n" +
-        "                       PCIe dev_id = 2494, bus:slot.func = 09:00.00, Gen2 x8\n" +
-        "                       FPGA temperature = 50.5781 degrees C.\n" +
-        "\n" +
-        "DIAGNOSTIC_PASSED\n" +
-        "---------------------------------------------------------\n";
-    Configuration conf = new Configuration(false);
-    IntelFpgaOpenclPlugin openclPlugin = new IntelFpgaOpenclPlugin();
-    FpgaDiscoverer.getInstance().setResourceHanderPlugin(openclPlugin);
-
-    openclPlugin.initPlugin(conf);
-    openclPlugin.setShell(mockPuginShell());
-
-    FpgaDiscoverer.getInstance().initialize(conf);
-
-    List<FpgaResourceAllocator.FpgaDevice> list = new LinkedList<>();
-
-    // Case 1. core parsing
-    openclPlugin.parseDiagnoseInfo(output, list);
-    assertEquals(3, list.size());
-    assertEquals("IntelOpenCL", list.get(0).getType());
-    assertEquals("247", list.get(0).getMajor().toString());
-    assertEquals("0", list.get(0).getMinor().toString());
-    assertEquals("acl0", list.get(0).getAliasDevName());
-    assertEquals("aclnalla_pcie0", list.get(0).getDevName());
-    assertEquals("02:00.00", list.get(0).getBusNum());
-    assertEquals("53.1 degrees C", list.get(0).getTemperature());
-    assertEquals("31.7 Watts", list.get(0).getCardPowerUsage());
-
-    assertEquals("IntelOpenCL", list.get(1).getType());
-    assertEquals("247", list.get(1).getMajor().toString());
-    assertEquals("1", list.get(1).getMinor().toString());
-    assertEquals("acl1", list.get(1).getAliasDevName());
-    assertEquals("aclnalla_pcie1", list.get(1).getDevName());
-    assertEquals("03:00.00", list.get(1).getBusNum());
-    assertEquals("43.1 degrees C", list.get(1).getTemperature());
-    assertEquals("11.7 Watts", list.get(1).getCardPowerUsage());
-
-    assertEquals("IntelOpenCL", list.get(2).getType());
-    assertEquals("246", list.get(2).getMajor().toString());
-    assertEquals("0", list.get(2).getMinor().toString());
-    assertEquals("acl2", list.get(2).getAliasDevName());
-    assertEquals("acla10_ref0", list.get(2).getDevName());
-    assertEquals("09:00.00", list.get(2).getBusNum());
-    assertEquals("50.5781 degrees C", list.get(2).getTemperature());
-    assertEquals("", list.get(2).getCardPowerUsage());
-
-    // Case 2. check alias map
-    Map<String, String> aliasMap = openclPlugin.getAliasMap();
-    assertEquals("acl0", aliasMap.get("247:0"));
-    assertEquals("acl1", aliasMap.get("247:1"));
-    assertEquals("acl2", aliasMap.get("246:0"));
-  }
-
-  @Test
   public void testDiscoveryWhenAvailableDevicesDefined()
       throws YarnException {
     Configuration conf = new Configuration(false);
@@ -251,7 +166,7 @@ public class TestFpgaDiscoverer {
     IntelFpgaOpenclPlugin openclPlugin = new IntelFpgaOpenclPlugin();
     discoverer.setResourceHanderPlugin(openclPlugin);
     openclPlugin.initPlugin(conf);
-    openclPlugin.setShell(mockPuginShell());
+    openclPlugin.setInnerShellExecutor(mockPuginShell());
 
     discoverer.initialize(conf);
     List<FpgaDevice> devices = discoverer.discover();
@@ -282,7 +197,7 @@ public class TestFpgaDiscoverer {
     IntelFpgaOpenclPlugin openclPlugin = new IntelFpgaOpenclPlugin();
     discoverer.setResourceHanderPlugin(openclPlugin);
     openclPlugin.initPlugin(conf);
-    openclPlugin.setShell(mockPuginShell());
+    openclPlugin.setInnerShellExecutor(mockPuginShell());
 
     discoverer.initialize(conf);
     discoverer.discover();
@@ -302,7 +217,7 @@ public class TestFpgaDiscoverer {
     IntelFpgaOpenclPlugin openclPlugin = new IntelFpgaOpenclPlugin();
     discoverer.setResourceHanderPlugin(openclPlugin);
     openclPlugin.initPlugin(conf);
-    openclPlugin.setShell(mockPuginShell());
+    openclPlugin.setInnerShellExecutor(mockPuginShell());
 
     discoverer.initialize(conf);
     discoverer.discover();
@@ -319,7 +234,7 @@ public class TestFpgaDiscoverer {
     IntelFpgaOpenclPlugin openclPlugin = new IntelFpgaOpenclPlugin();
     discoverer.setResourceHanderPlugin(openclPlugin);
     openclPlugin.initPlugin(conf);
-    openclPlugin.setShell(mockPuginShell());
+    openclPlugin.setInnerShellExecutor(mockPuginShell());
     discoverer.setScriptRunner(s -> {
       return Optional.of("acl0/243:0,acl1/244:1"); });
 
@@ -352,7 +267,7 @@ public class TestFpgaDiscoverer {
     IntelFpgaOpenclPlugin openclPlugin = new IntelFpgaOpenclPlugin();
     discoverer.setResourceHanderPlugin(openclPlugin);
     openclPlugin.initPlugin(conf);
-    openclPlugin.setShell(mockPuginShell());
+    openclPlugin.setInnerShellExecutor(mockPuginShell());
     discoverer.setScriptRunner(s -> {
       return Optional.of(""); });
 
@@ -361,7 +276,6 @@ public class TestFpgaDiscoverer {
   }
 
   @Test
-
   public void testDiscoveryWhenExternalScriptFails()
       throws YarnException {
     expected.expect(ResourceHandlerException.class);
@@ -375,7 +289,7 @@ public class TestFpgaDiscoverer {
     IntelFpgaOpenclPlugin openclPlugin = new IntelFpgaOpenclPlugin();
     discoverer.setResourceHanderPlugin(openclPlugin);
     openclPlugin.initPlugin(conf);
-    openclPlugin.setShell(mockPuginShell());
+    openclPlugin.setInnerShellExecutor(mockPuginShell());
     discoverer.setScriptRunner(s -> {
       return Optional.empty(); });
 
@@ -396,7 +310,7 @@ public class TestFpgaDiscoverer {
     IntelFpgaOpenclPlugin openclPlugin = new IntelFpgaOpenclPlugin();
     discoverer.setResourceHanderPlugin(openclPlugin);
     openclPlugin.initPlugin(conf);
-    openclPlugin.setShell(mockPuginShell());
+    openclPlugin.setInnerShellExecutor(mockPuginShell());
 
     discoverer.initialize(conf);
     discoverer.discover();
@@ -421,7 +335,7 @@ public class TestFpgaDiscoverer {
       IntelFpgaOpenclPlugin openclPlugin = new IntelFpgaOpenclPlugin();
       discoverer.setResourceHanderPlugin(openclPlugin);
       openclPlugin.initPlugin(conf);
-      openclPlugin.setShell(mockPuginShell());
+      openclPlugin.setInnerShellExecutor(mockPuginShell());
 
       discoverer.initialize(conf);
       discoverer.discover();
