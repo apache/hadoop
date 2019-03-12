@@ -51,26 +51,26 @@ public class AppDetails {
   }
 
   public String[] getPorts() {
-    return ports.clone();
+    return ports;
   }
 
   public void setPorts(String[] ports2) {
-    this.ports = ports2.clone();
+    this.ports = ports2;
   }
 
   public String[] getVolumes() {
-    return volumes.clone();
+    return volumes;
   }
 
   public void setVolumes(String[] volumes) {
-    this.volumes = volumes.clone();
+    this.volumes = volumes;
   }
 
   public String[] getEnv() {
-    return env.clone();
+    return env;
   }
 
   public void setEnv(String[] env) {
-    this.env = env.clone();
+    this.env = env;
   }
 }
