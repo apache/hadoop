@@ -25,7 +25,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 
-import io.opentracing.Scope;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.ratis.proto.RaftProtos.RaftPeerRole;
@@ -51,7 +50,6 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ReadChunkRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ReadChunkResponseProto;
-import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.hdds.security.token.TokenVerifier;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -249,20 +247,13 @@ public class ContainerStateMachine extends BaseStateMachine {
   public long takeSnapshot() throws IOException {
     TermIndex ti = getLastAppliedTermIndex();
     LOG.info("Taking snapshot at termIndex:" + ti);
-    if (ti != null) {
+    if (ti != null && ti.getIndex() != RaftServerConstants.INVALID_LOG_INDEX) {
       final File snapshotFile =
           storage.getSnapshotFile(ti.getTerm(), ti.getIndex());
       LOG.info("Taking a snapshot to file {}", snapshotFile);
-      try {
-        //TODO: For now, just create the file to save the term index,
-        boolean created = snapshotFile.createNewFile();
-        if (!created) {
-          throw new IOException("Failed to create ratis snapshot file");
-        }
-        try (FileOutputStream fos = new FileOutputStream(snapshotFile)) {
-          persistContainerSet(fos);
-        }
-      } catch(IOException ioe) {
+      try (FileOutputStream fos = new FileOutputStream(snapshotFile)) {
+        persistContainerSet(fos);
+      } catch (IOException ioe) {
         LOG.warn("Failed to write snapshot file \"" + snapshotFile
             + "\", last applied index=" + ti);
         throw ioe;
@@ -278,51 +269,50 @@ public class ContainerStateMachine extends BaseStateMachine {
     final ContainerCommandRequestProto proto =
         getContainerCommandRequestProto(request.getMessage().getContent());
     Preconditions.checkArgument(request.getRaftGroupId().equals(gid));
-    try (Scope scope = TracingUtil
-        .importAndCreateScope(proto.getCmdType().name(), proto.getTraceID())) {
-      try {
-        dispatcher.validateContainerCommand(proto);
-      } catch (IOException ioe) {
-        TransactionContext ctxt = TransactionContext.newBuilder()
-            .setClientRequest(request)
-            .setStateMachine(this)
-            .setServerRole(RaftPeerRole.LEADER)
-            .build();
-        ctxt.setException(ioe);
-        return ctxt;
-      }
-      if (proto.getCmdType() == Type.WriteChunk) {
-        final WriteChunkRequestProto write = proto.getWriteChunk();
-        // create the log entry proto
-        final WriteChunkRequestProto commitWriteChunkProto =
-            WriteChunkRequestProto.newBuilder()
-                .setBlockID(write.getBlockID())
-                .setChunkData(write.getChunkData())
-                // skipping the data field as it is
-                // already set in statemachine data proto
-                .build();
-        ContainerCommandRequestProto commitContainerCommandProto =
-            ContainerCommandRequestProto
-                .newBuilder(proto)
-                .setWriteChunk(commitWriteChunkProto)
-                .build();
-
-        return TransactionContext.newBuilder()
-            .setClientRequest(request)
-            .setStateMachine(this)
-            .setServerRole(RaftPeerRole.LEADER)
-            .setStateMachineData(write.getData())
-            .setLogData(commitContainerCommandProto.toByteString())
-            .build();
-      } else {
-        return TransactionContext.newBuilder()
-            .setClientRequest(request)
-            .setStateMachine(this)
-            .setServerRole(RaftPeerRole.LEADER)
-            .setLogData(request.getMessage().getContent())
-            .build();
-      }
+    try {
+      dispatcher.validateContainerCommand(proto);
+    } catch (IOException ioe) {
+      TransactionContext ctxt = TransactionContext.newBuilder()
+          .setClientRequest(request)
+          .setStateMachine(this)
+          .setServerRole(RaftPeerRole.LEADER)
+          .build();
+      ctxt.setException(ioe);
+      return ctxt;
     }
+    if (proto.getCmdType() == Type.WriteChunk) {
+      final WriteChunkRequestProto write = proto.getWriteChunk();
+      // create the log entry proto
+      final WriteChunkRequestProto commitWriteChunkProto =
+          WriteChunkRequestProto.newBuilder()
+              .setBlockID(write.getBlockID())
+              .setChunkData(write.getChunkData())
+              // skipping the data field as it is
+              // already set in statemachine data proto
+              .build();
+      ContainerCommandRequestProto commitContainerCommandProto =
+          ContainerCommandRequestProto
+              .newBuilder(proto)
+              .setWriteChunk(commitWriteChunkProto)
+              .setTraceID(proto.getTraceID())
+              .build();
+
+      return TransactionContext.newBuilder()
+          .setClientRequest(request)
+          .setStateMachine(this)
+          .setServerRole(RaftPeerRole.LEADER)
+          .setStateMachineData(write.getData())
+          .setLogData(commitContainerCommandProto.toByteString())
+          .build();
+    } else {
+      return TransactionContext.newBuilder()
+          .setClientRequest(request)
+          .setStateMachine(this)
+          .setServerRole(RaftPeerRole.LEADER)
+          .setLogData(request.getMessage().getContent())
+          .build();
+    }
+
   }
 
   private ByteString getStateMachineData(StateMachineLogEntryProto entryProto) {

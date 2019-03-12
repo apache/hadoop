@@ -28,6 +28,7 @@ import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
+import org.apache.hadoop.hdds.scm.storage.BufferPool;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
@@ -45,7 +46,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Collection;
@@ -83,7 +83,7 @@ public class KeyOutputStream extends OutputStream {
   private final long blockSize;
   private final int bytesPerChecksum;
   private final ChecksumType checksumType;
-  private List<ByteBuffer> bufferList;
+  private final BufferPool bufferPool;
   private OmMultipartCommitUploadPartInfo commitUploadPartInfo;
   private FileEncryptionInfo feInfo;
   private ExcludeList excludeList;
@@ -104,9 +104,7 @@ public class KeyOutputStream extends OutputStream {
     closed = false;
     streamBufferFlushSize = 0;
     streamBufferMaxSize = 0;
-    bufferList = new ArrayList<>(1);
-    ByteBuffer buffer = ByteBuffer.allocate(1);
-    bufferList.add(buffer);
+    bufferPool = new BufferPool(chunkSize, 1);
     watchTimeout = 0;
     blockSize = 0;
     this.checksumType = ChecksumType.valueOf(
@@ -182,7 +180,8 @@ public class KeyOutputStream extends OutputStream {
     Preconditions.checkState(streamBufferFlushSize % chunkSize == 0);
     Preconditions.checkState(streamBufferMaxSize % streamBufferFlushSize == 0);
     Preconditions.checkState(blockSize % streamBufferMaxSize == 0);
-    this.bufferList = new ArrayList<>();
+    this.bufferPool =
+        new BufferPool(chunkSize, (int)streamBufferMaxSize / chunkSize);
     this.excludeList = new ExcludeList();
   }
 
@@ -228,7 +227,7 @@ public class KeyOutputStream extends OutputStream {
             .setStreamBufferFlushSize(streamBufferFlushSize)
             .setStreamBufferMaxSize(streamBufferMaxSize)
             .setWatchTimeout(watchTimeout)
-            .setBufferList(bufferList)
+            .setbufferPool(bufferPool)
             .setChecksumType(checksumType)
             .setBytesPerChecksum(bytesPerChecksum)
             .setToken(subKeyInfo.getToken());
@@ -272,8 +271,7 @@ public class KeyOutputStream extends OutputStream {
   }
 
   private long computeBufferData() {
-    return bufferList.stream().mapToInt(value -> value.position())
-        .sum();
+    return bufferPool.computeBufferData();
   }
 
   private void handleWrite(byte[] b, int off, long len, boolean retry)
@@ -580,10 +578,7 @@ public class KeyOutputStream extends OutputStream {
     } catch (IOException ioe) {
       throw ioe;
     } finally {
-      if (bufferList != null) {
-        bufferList.stream().forEach(e -> e.clear());
-      }
-      bufferList = null;
+      bufferPool.clearBufferPool();
     }
   }
 

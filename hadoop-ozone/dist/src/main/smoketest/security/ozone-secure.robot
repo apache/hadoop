@@ -50,7 +50,7 @@ Create volume and bucket
     ${rc}              ${output} =                 Run And Return Rc And Output              ozone sh volume create o3://om/fstest --user bilbo --quota 100TB --root
                         Should contain       ${output}       Client cannot authenticate via
                         # Authenticate testuser
-    ${hostname}=          Execute                    hostname
+    ${hostname}=        Execute                    hostname
     Execute             kinit -k testuser/${hostname}@EXAMPLE.COM -t /etc/security/keytabs/testuser.keytab
     Execute             ozone sh volume create o3://om/fstest --user bilbo --quota 100TB --root
     Execute             ozone sh volume create o3://om/fstest2 --user bilbo --quota 100TB --root
@@ -149,5 +149,5 @@ Secure S3 test Failure
 Secure S3 test Success
     Run Keyword         Setup credentials
     ${output} =         Execute          aws s3api --endpoint-url ${ENDPOINT_URL} create-bucket --bucket bucket-test123
-
+                        Should contain    ${result}         Volume pqrs is not found
 

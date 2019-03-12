@@ -113,7 +113,7 @@ public class EndpointBase {
     try {
       client.getObjectStore().createS3Bucket(userName, bucketName);
     } catch (OMException ex) {
-      if (ex.getResult() != ResultCodes.VOLUME_ALREADY_EXISTS) {
+      if (ex.getResult() != ResultCodes.S3_BUCKET_ALREADY_EXISTS) {
         // S3 does not return error for bucket already exists, it just
         // returns the location.
         throw ex;

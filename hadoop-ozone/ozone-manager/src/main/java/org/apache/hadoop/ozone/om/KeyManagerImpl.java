@@ -85,8 +85,8 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVI
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_KEY_PREALLOCATION_MAXSIZE;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_KEY_PREALLOCATION_MAXSIZE_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_KEY_PREALLOCATION_BLOCKS_MAX;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_KEY_PREALLOCATION_BLOCKS_MAX_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_MULTIPART_MIN_SIZE;
@@ -110,7 +110,7 @@ public class KeyManagerImpl implements KeyManager {
   private final long scmBlockSize;
   private final boolean useRatis;
 
-  private final long preallocateMax;
+  private final int preallocateBlocksMax;
   private final String omId;
   private final OzoneBlockTokenSecretManager secretManager;
   private final boolean grpcBlockTokenEnabled;
@@ -136,9 +136,9 @@ public class KeyManagerImpl implements KeyManager {
             StorageUnit.BYTES);
     this.useRatis = conf.getBoolean(DFS_CONTAINER_RATIS_ENABLED_KEY,
         DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
-    this.preallocateMax = conf.getLong(
-        OZONE_KEY_PREALLOCATION_MAXSIZE,
-        OZONE_KEY_PREALLOCATION_MAXSIZE_DEFAULT);
+    this.preallocateBlocksMax = conf.getInt(
+        OZONE_KEY_PREALLOCATION_BLOCKS_MAX,
+        OZONE_KEY_PREALLOCATION_BLOCKS_MAX_DEFAULT);
     this.omId = omId;
     start(conf);
     this.secretManager = secretManager;
@@ -240,10 +240,37 @@ public class KeyManagerImpl implements KeyManager {
           OMException.ResultCodes.KEY_NOT_FOUND);
     }
 
-    AllocatedBlock allocatedBlock;
+    // current version not committed, so new blocks coming now are added to
+    // the same version
+    List<OmKeyLocationInfo> locationInfos =
+        allocateBlock(keyInfo, excludeList, scmBlockSize);
+    keyInfo.appendNewBlocks(locationInfos);
+    keyInfo.updateModifcationTime();
+    metadataManager.getOpenKeyTable().put(openKey,
+        keyInfo);
+    return locationInfos.get(0);
+  }
+
+  /**
+   * This methods avoids multiple rpc calls to SCM by allocating multiple blocks
+   * in one rpc call.
+   * @param keyInfo - key info for key to be allocated.
+   * @param requestedSize requested length for allocation.
+   * @param excludeList exclude list while allocating blocks.
+   * @param requestedSize requested size to be allocated.
+   * @return
+   * @throws IOException
+   */
+  private List<OmKeyLocationInfo> allocateBlock(OmKeyInfo keyInfo,
+      ExcludeList excludeList, long requestedSize) throws IOException {
+    int numBlocks = Math.min((int) ((requestedSize - 1) / scmBlockSize + 1),
+        preallocateBlocksMax);
+    List<OmKeyLocationInfo> locationInfos = new ArrayList<>(numBlocks);
+    String remoteUser = getRemoteUser().getShortUserName();
+    List<AllocatedBlock> allocatedBlocks;
     try {
-      allocatedBlock =
-          scmBlockClient.allocateBlock(scmBlockSize, keyInfo.getType(),
+      allocatedBlocks = scmBlockClient
+          .allocateBlock(scmBlockSize, numBlocks, keyInfo.getType(),
               keyInfo.getFactor(), omId, excludeList);
     } catch (SCMException ex) {
       if (ex.getResult()
@@ -252,25 +279,19 @@ public class KeyManagerImpl implements KeyManager {
       }
       throw ex;
     }
-    OmKeyLocationInfo.Builder builder = new OmKeyLocationInfo.Builder()
-        .setBlockID(new BlockID(allocatedBlock.getBlockID()))
-        .setLength(scmBlockSize)
-        .setOffset(0);
-    if (grpcBlockTokenEnabled) {
-      String remoteUser = getRemoteUser().getShortUserName();
-      builder.setToken(secretManager.generateToken(remoteUser,
-          allocatedBlock.getBlockID().toString(),
-          getAclForUser(remoteUser),
-          scmBlockSize));
+    for (AllocatedBlock allocatedBlock : allocatedBlocks) {
+      OmKeyLocationInfo.Builder builder = new OmKeyLocationInfo.Builder()
+          .setBlockID(new BlockID(allocatedBlock.getBlockID()))
+          .setLength(scmBlockSize)
+          .setOffset(0);
+      if (grpcBlockTokenEnabled) {
+        builder.setToken(secretManager
+            .generateToken(remoteUser, allocatedBlock.getBlockID().toString(),
+                getAclForUser(remoteUser), scmBlockSize));
+      }
+      locationInfos.add(builder.build());
     }
-    OmKeyLocationInfo info = builder.build();
-    // current version not committed, so new blocks coming now are added to
-    // the same version
-    keyInfo.appendNewBlocks(Collections.singletonList(info));
-    keyInfo.updateModifcationTime();
-    metadataManager.getOpenKeyTable().put(openKey,
-        keyInfo);
-    return info;
+    return locationInfos;
   }
 
   /* Optimize ugi lookup for RPC operations to avoid a trip through
@@ -327,6 +348,9 @@ public class KeyManagerImpl implements KeyManager {
     ReplicationFactor factor = args.getFactor();
     ReplicationType type = args.getType();
     long currentTime = Time.monotonicNowNanos();
+    OmKeyInfo keyInfo;
+    String openKey;
+    long openVersion;
 
     FileEncryptionInfo encInfo = null;
     OmBucketInfo bucketInfo = getBucketInfo(volumeName, bucketName);
@@ -378,55 +402,14 @@ public class KeyManagerImpl implements KeyManager {
           type = useRatis ? ReplicationType.RATIS : ReplicationType.STAND_ALONE;
         }
       }
-      long requestedSize = Math.min(preallocateMax, args.getDataSize());
       List<OmKeyLocationInfo> locations = new ArrayList<>();
       String objectKey = metadataManager.getOzoneKey(
           volumeName, bucketName, keyName);
-      // requested size is not required but more like a optimization:
-      // SCM looks at the requested, if it 0, no block will be allocated at
-      // the point, if client needs more blocks, client can always call
-      // allocateBlock. But if requested size is not 0, OM will preallocate
-      // some blocks and piggyback to client, to save RPC calls.
-      while (requestedSize > 0) {
-        long allocateSize = Math.min(scmBlockSize, requestedSize);
-        AllocatedBlock allocatedBlock;
-        try {
-          allocatedBlock = scmBlockClient
-              .allocateBlock(allocateSize, type, factor, omId,
-                  new ExcludeList());
-        } catch (IOException ex) {
-          if (ex instanceof SCMException) {
-            if (((SCMException) ex).getResult()
-                .equals(SCMException.ResultCodes.CHILL_MODE_EXCEPTION)) {
-              throw new OMException(ex.getMessage(),
-                  ResultCodes.SCM_IN_CHILL_MODE);
-            }
-          }
-          throw ex;
-        }
-        OmKeyLocationInfo.Builder builder = new OmKeyLocationInfo.Builder()
-            .setBlockID(new BlockID(allocatedBlock.getBlockID()))
-            .setLength(allocateSize)
-            .setOffset(0);
-        if (grpcBlockTokenEnabled) {
-          String remoteUser = getRemoteUser().getShortUserName();
-          builder.setToken(secretManager.generateToken(remoteUser,
-              allocatedBlock.getBlockID().toString(),
-              getAclForUser(remoteUser),
-              scmBlockSize));
-        }
-
-        OmKeyLocationInfo subKeyInfo = builder.build();
-        locations.add(subKeyInfo);
-        requestedSize -= allocateSize;
-      }
       // NOTE size of a key is not a hard limit on anything, it is a value that
       // client should expect, in terms of current size of key. If client sets a
       // value, then this value is used, otherwise, we allocate a single block
       // which is the current size, if read by the client.
       long size = args.getDataSize() >= 0 ? args.getDataSize() : scmBlockSize;
-      OmKeyInfo keyInfo;
-      long openVersion;
 
       if (args.getIsMultipartKey()) {
         // For this upload part we don't need to check in KeyTable. As this
@@ -449,7 +432,7 @@ public class KeyManagerImpl implements KeyManager {
           openVersion = 0;
         }
       }
-      String openKey = metadataManager.getOpenKey(
+      openKey = metadataManager.getOpenKey(
           volumeName, bucketName, keyName, currentTime);
       if (metadataManager.getOpenKeyTable().get(openKey) != null) {
         // This should not happen. If this condition is satisfied, it means
@@ -464,10 +447,8 @@ public class KeyManagerImpl implements KeyManager {
         throw new OMException("Cannot allocate key. Not able to get a valid" +
             "open key id.", ResultCodes.KEY_ALLOCATION_ERROR);
       }
-      metadataManager.getOpenKeyTable().put(openKey, keyInfo);
       LOG.debug("Key {} allocated in volume {} bucket {}",
           keyName, volumeName, bucketName);
-      return new OpenKeySession(currentTime, keyInfo, openVersion);
     } catch (OMException e) {
       throw e;
     } catch (IOException ex) {
@@ -478,6 +459,19 @@ public class KeyManagerImpl implements KeyManager {
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
+
+    // requested size is not required but more like a optimization:
+    // SCM looks at the requested, if it 0, no block will be allocated at
+    // the point, if client needs more blocks, client can always call
+    // allocateBlock. But if requested size is not 0, OM will preallocate
+    // some blocks and piggyback to client, to save RPC calls.
+    if (args.getDataSize() > 0) {
+      List<OmKeyLocationInfo> locationInfos =
+          allocateBlock(keyInfo, new ExcludeList(), args.getDataSize());
+      keyInfo.appendNewBlocks(locationInfos);
+    }
+    metadataManager.getOpenKeyTable().put(openKey, keyInfo);
+    return new OpenKeySession(currentTime, keyInfo, openVersion);
   }
 
   /**

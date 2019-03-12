@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -114,7 +115,7 @@ public class ScmBlockLocationTestIngClient implements ScmBlockLocationProtocol {
    * @throws IOException
    */
   @Override
-  public AllocatedBlock allocateBlock(long size,
+  public List<AllocatedBlock> allocateBlock(long size, int num,
       HddsProtos.ReplicationType type, HddsProtos.ReplicationFactor factor,
       String owner, ExcludeList excludeList) throws IOException {
     DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
@@ -125,7 +126,7 @@ public class ScmBlockLocationTestIngClient implements ScmBlockLocationProtocol {
         new AllocatedBlock.Builder()
             .setContainerBlockID(new ContainerBlockID(containerID, localID))
             .setPipeline(pipeline);
-    return abb.build();
+    return Collections.singletonList(abb.build());
   }
 
   private Pipeline createPipeline(DatanodeDetails datanode) {
