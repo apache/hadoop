@@ -185,5 +185,6 @@ public class OMException extends IOException {
 
     INVALID_KMS_PROVIDER,
 
+    TOKEN_CREATION_ERROR
   }
 }

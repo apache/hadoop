@@ -68,6 +68,7 @@ import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMStorage;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
@@ -657,6 +658,50 @@ public final class TestSecureOzoneCluster {
     omStore.initialize();
     OzoneManager.setTestSecureOmFlag(true);
     om = OzoneManager.createOm(null, config);
+  }
+
+  @Test
+  public void testGetS3Secret() throws Exception {
+
+    // Setup secure OM for start
+    setupOm(conf);
+    long omVersion =
+        RPC.getProtocolVersion(OzoneManagerProtocolPB.class);
+    try {
+      // Start OM
+      om.setCertClient(new CertificateClientTestImpl(conf));
+      om.start();
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+      String username = ugi.getUserName();
+
+      // Get first OM client which will authenticate via Kerberos
+      omClient = new OzoneManagerProtocolClientSideTranslatorPB(
+          RPC.getProxy(OzoneManagerProtocolPB.class, omVersion,
+              OmUtils.getOmAddress(conf), ugi, conf,
+              NetUtils.getDefaultSocketFactory(conf),
+              CLIENT_TIMEOUT), RandomStringUtils.randomAscii(5));
+
+      //Creates a secret since it does not exist
+      S3SecretValue firstAttempt = omClient
+          .getS3Secret("HADOOP/JOHNDOE");
+
+      //Fetches the secret from db since it was created in previous step
+      S3SecretValue secondAttempt = omClient
+          .getS3Secret("HADOOP/JOHNDOE");
+
+      //secret fetched on both attempts must be same
+      Assert.assertTrue(firstAttempt.getAwsSecret()
+          .equals(secondAttempt.getAwsSecret()));
+
+      //access key fetched on both attempts must be same
+      Assert.assertTrue(firstAttempt.getAwsAccessKey()
+          .equals(secondAttempt.getAwsAccessKey()));
+
+    } finally {
+      if(om != null){
+        om.stop();
+      }
+    }
   }
 
   /**
