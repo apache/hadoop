@@ -246,8 +246,8 @@ public class DefaultCAServer implements CertificateServer {
     return xcertHolder;
   }
 
-  private X509CertificateHolder signAndStoreCertificate(LocalDate beginDate, LocalDate endDate,
-      PKCS10CertificationRequest csr) throws IOException,
+  private X509CertificateHolder signAndStoreCertificate(LocalDate beginDate,
+      LocalDate endDate, PKCS10CertificationRequest csr) throws IOException,
       OperatorCreationException, CertificateException {
     X509CertificateHolder xcert = approver.sign(config,
         getCAKeys().getPrivate(),
