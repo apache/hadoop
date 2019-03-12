@@ -38,12 +38,12 @@ import "hdds.proto";
 */
 message AllocateScmBlockRequestProto {
   required uint64 size = 1;
-  required ReplicationType type = 2;
-  required hadoop.hdds.ReplicationFactor factor = 3;
-  required string owner = 4;
-  optional string traceID = 5;
-  optional ExcludeListProto excludeList = 6;
-
+  required uint32 numBlocks = 2;
+  required ReplicationType type = 3;
+  required hadoop.hdds.ReplicationFactor factor = 4;
+  required string owner = 5;
+  optional string traceID = 6;
+  optional ExcludeListProto excludeList = 7;
 }
 
 /**
@@ -96,6 +96,11 @@ message DeleteScmBlockResult {
   required BlockID blockID = 2;
 }
 
+message AllocateBlockResponse {
+  optional ContainerBlockID containerBlockID = 1;
+  optional hadoop.hdds.Pipeline pipeline = 2;
+}
+
 /**
  * Reply from SCM indicating that the container.
  */
@@ -107,9 +112,8 @@ message AllocateScmBlockResponseProto {
     unknownFailure = 4;
   }
   required Error errorCode = 1;
-  optional ContainerBlockID containerBlockID = 2;
-  optional hadoop.hdds.Pipeline pipeline = 3;
-  optional string errorMessage = 4;
+  optional string errorMessage = 2;
+  repeated AllocateBlockResponse blocks = 3;
 }
 
 /**
