@@ -87,6 +87,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -1213,6 +1214,7 @@ public class TestOzoneShell {
   }
 
   @Test
+  @Ignore("Can't run without secure cluster.")
   public void testS3Secret() throws Exception {
     String setOmAddress =
         "--set=" + OZONE_OM_ADDRESS_KEY + "=" + getOmAddress();

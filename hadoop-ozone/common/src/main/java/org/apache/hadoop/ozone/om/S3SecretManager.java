@@ -27,4 +27,10 @@ import java.io.IOException;
 public interface S3SecretManager {
 
   S3SecretValue getS3Secret(String kerberosID) throws IOException;
+
+  /**
+   * API to get s3 secret for given awsAccessKey.
+   * @param awsAccessKey
+   * */
+  String getS3UserSecretString(String awsAccessKey) throws IOException;
 }

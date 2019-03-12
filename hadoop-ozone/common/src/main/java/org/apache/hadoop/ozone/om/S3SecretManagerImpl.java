@@ -24,11 +24,15 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.security.OzoneSecurityException;
 import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.hadoop.ozone.security.OzoneSecurityException.ResultCodes.S3_SECRET_NOT_FOUND;
 
 /**
  * S3 Secret manager.
@@ -58,7 +62,8 @@ public class S3SecretManagerImpl implements S3SecretManager {
   public S3SecretValue getS3Secret(String kerberosID) throws IOException {
     Preconditions.checkArgument(Strings.isNotBlank(kerberosID),
         "kerberosID cannot be null or empty.");
-    byte[] awsAccessKey = OmUtils.getMD5Digest(kerberosID);
+    String awsAccessKeyStr = DigestUtils.md5Hex(kerberosID);
+    byte[] awsAccessKey = awsAccessKeyStr.getBytes(UTF_8);
     S3SecretValue result = null;
     omMetadataManager.getLock().acquireS3SecretLock(kerberosID);
     try {
@@ -73,10 +78,36 @@ public class S3SecretManagerImpl implements S3SecretManager {
         result = S3SecretValue.fromProtobuf(
             OzoneManagerProtocolProtos.S3Secret.parseFrom(s3Secret));
       }
-      result.setAwsAccessKey(DigestUtils.md5Hex(awsAccessKey));
+      result.setAwsAccessKey(awsAccessKeyStr);
     } finally {
       omMetadataManager.getLock().releaseS3SecretLock(kerberosID);
     }
+    LOG.trace("Secret for kerberosID:{},accessKey:{}, proto:{}", kerberosID,
+        awsAccessKeyStr, result);
     return result;
+  }
+
+  @Override
+  public String getS3UserSecretString(String awsAccessKeyId)
+      throws IOException {
+    Preconditions.checkArgument(Strings.isNotBlank(awsAccessKeyId),
+        "awsAccessKeyId cannot be null or empty.");
+    LOG.trace("Get secret for awsAccessKey:{}", awsAccessKeyId);
+
+    byte[] s3Secret;
+    omMetadataManager.getLock().acquireS3SecretLock(awsAccessKeyId);
+    try {
+      s3Secret = omMetadataManager.getS3SecretTable()
+          .get(awsAccessKeyId.getBytes(UTF_8));
+      if (s3Secret == null) {
+        throw new OzoneSecurityException("S3 secret not found for " +
+            "awsAccessKeyId " + awsAccessKeyId, S3_SECRET_NOT_FOUND);
+      }
+    } finally {
+      omMetadataManager.getLock().releaseS3SecretLock(awsAccessKeyId);
+    }
+
+    return OzoneManagerProtocolProtos.S3Secret.parseFrom(s3Secret)
+        .getAwsSecret();
   }
 }

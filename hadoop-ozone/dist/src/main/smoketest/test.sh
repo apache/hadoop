@@ -80,7 +80,7 @@ execute_tests(){
      OUTPUT_NAME="$COMPOSE_DIR-${TEST//\//_}"
 	  docker-compose -f "$COMPOSE_FILE" exec -T om python -m robot --log NONE --report NONE "${OZONE_ROBOT_OPTS[@]}" --output "smoketest/$RESULT_DIR/robot-$OUTPUT_NAME.xml" --logtitle "$TITLE" --reporttitle "$TITLE" "smoketest/$TEST"
      set -e
-     docker-compose -f "$COMPOSE_FILE" logs > "$DIR/$RESULT_DIR/docker-$OUTPUT_NAME.log"
+    docker-compose -f "$COMPOSE_FILE" logs > "$DIR/$RESULT_DIR/docker-$OUTPUT_NAME.log"
   done
   if [ "$KEEP_RUNNING" = false ]; then
      docker-compose -f "$COMPOSE_FILE" down

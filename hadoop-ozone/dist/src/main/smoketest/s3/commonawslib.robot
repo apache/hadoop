@@ -17,7 +17,7 @@
 Resource            ../commonlib.robot
 
 *** Variables ***
-${OZONE_S3_HEADER_VERSION}     v2
+${OZONE_S3_HEADER_VERSION}     v4
 ${OZONE_S3_SET_CREDENTIALS}    true
 
 *** Keywords ***

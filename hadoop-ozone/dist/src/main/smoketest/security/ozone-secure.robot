@@ -16,7 +16,34 @@
 *** Settings ***
 Documentation       Smoke test to start cluster with docker-compose environments.
 Library             OperatingSystem
+Library             String
 Resource            ../commonlib.robot
+
+*** Variables ***
+${ENDPOINT_URL}       http://s3g:9878
+
+*** Keywords ***
+Install aws cli s3 centos
+    Execute                    sudo yum install -y awscli
+Install aws cli s3 debian
+    Execute                    sudo apt-get install -y awscli
+
+Install aws cli
+    ${rc}              ${output} =                 Run And Return Rc And Output           which apt-get
+    Run Keyword if     '${rc}' == '0'              Install aws cli s3 debian
+    ${rc}              ${output} =                 Run And Return Rc And Output           yum --help
+    Run Keyword if     '${rc}' == '0'              Install aws cli s3 centos
+
+Setup credentials
+    ${hostname}=        Execute                    hostname
+    Execute             kinit -k testuser/${hostname}@EXAMPLE.COM -t /etc/security/keytabs/testuser.keytab
+    ${result} =         Execute                    ozone sh s3 getsecret
+    ${accessKey} =      Get Regexp Matches         ${result}     (?<=awsAccessKey=).*
+    ${secret} =         Get Regexp Matches	       ${result}     (?<=awsSecret=).*
+                        Execute                    aws configure set default.s3.signature_version s3v4
+                        Execute                    aws configure set aws_access_key_id ${accessKey[0]}
+                        Execute                    aws configure set aws_secret_access_key ${secret[0]}
+                        Execute                    aws configure set region us-west-1
 
 *** Test Cases ***
 Create volume and bucket
@@ -95,8 +122,11 @@ Run ozoneFS tests
 
                         Execute               ozone fs -mkdir -p o3fs://bucket2.fstest/testdir2
                         Execute               ozone fs -mkdir -p o3fs://bucket3.fstest2/testdir3
+
                         Execute               ozone fs -cp o3fs://bucket1.fstest/testdir1/localdir1 o3fs://bucket2.fstest/testdir2/
+
                         Execute               ozone fs -cp o3fs://bucket1.fstest/testdir1/localdir1 o3fs://bucket3.fstest2/testdir3/
+
                         Execute               ozone sh key put o3://om/fstest/bucket1/KEY.txt NOTICE.txt
     ${result} =         Execute               ozone fs -ls o3fs://bucket1.fstest/KEY.txt
                         Should contain    ${result}         KEY.txt
@@ -108,5 +138,16 @@ Run ozoneFS tests
                         Execute               ls -l GET.txt
     ${rc}  ${result} =  Run And Return Rc And Output        ozone fs -ls o3fs://abcde.pqrs/
                         Should Be Equal As Integers     ${rc}                1
+                        Should contain    ${result}         not found
+
+
+Secure S3 test Failure
+    Run Keyword         Install aws cli
+    ${rc}  ${result} =  Run And Return Rc And Output  aws s3api --endpoint-url ${ENDPOINT_URL} create-bucket --bucket bucket-test123
+    Should Be True	${rc} > 0
+
+Secure S3 test Success
+    Run Keyword         Setup credentials
+    ${output} =         Execute          aws s3api --endpoint-url ${ENDPOINT_URL} create-bucket --bucket bucket-test123
                         Should contain    ${result}         Volume pqrs is not found
 

@@ -218,7 +218,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
           + StartupOption.HELP.getName() + " ]\n";
   private static final String OM_DAEMON = "om";
   private static boolean securityEnabled = false;
-  private static OzoneDelegationTokenSecretManager delegationTokenMgr;
+  private OzoneDelegationTokenSecretManager delegationTokenMgr;
   private OzoneBlockTokenSecretManager blockTokenMgr;
   private KeyPair keyPair;
   private CertificateClient certClient;
@@ -257,7 +257,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private final IAccessAuthorizer accessAuthorizer;
   private JvmPauseMonitor jvmPauseMonitor;
   private final SecurityConfig secConfig;
-  private final S3SecretManager s3SecretManager;
+  private S3SecretManager s3SecretManager;
   private volatile boolean isOmRpcServerRunning = false;
   private String omComponent;
 
@@ -305,18 +305,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     omRpcAddressTxt = new Text(omNodeDetails.getRpcAddressString());
 
     secConfig = new SecurityConfig(configuration);
-    if (secConfig.isSecurityEnabled()) {
-      omComponent = OM_DAEMON + "-" + omId;
-      certClient = new OMCertificateClient(new SecurityConfig(conf));
-      delegationTokenMgr = createDelegationTokenSecretManager(configuration);
-    }
-    if (secConfig.isBlockTokenEnabled()) {
-      blockTokenMgr = createBlockTokenSecretManager(configuration);
-    }
 
-    omRpcServer = getRpcServer(conf);
-    omRpcAddress = updateRPCListenAddress(configuration,
-        OZONE_OM_ADDRESS_KEY, omNodeRpcAddr, omRpcServer);
     metadataManager = new OmMetadataManagerImpl(configuration);
     volumeManager = new VolumeManagerImpl(metadataManager, configuration);
 
@@ -333,9 +322,20 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
     s3BucketManager = new S3BucketManagerImpl(configuration, metadataManager,
         volumeManager, bucketManager);
+    if (secConfig.isSecurityEnabled()) {
+      omComponent = OM_DAEMON + "-" + omId;
+      certClient = new OMCertificateClient(new SecurityConfig(conf));
+      s3SecretManager = new S3SecretManagerImpl(configuration, metadataManager);
+      delegationTokenMgr = createDelegationTokenSecretManager(configuration);
+    }
+    if (secConfig.isBlockTokenEnabled()) {
+      blockTokenMgr = createBlockTokenSecretManager(configuration);
+    }
+    omRpcServer = getRpcServer(conf);
+    omRpcAddress = updateRPCListenAddress(configuration,
+        OZONE_OM_ADDRESS_KEY, omNodeRpcAddr, omRpcServer);
     keyManager = new KeyManagerImpl(scmBlockClient, metadataManager,
         configuration, omStorage.getOmId(), blockTokenMgr, getKmsProvider());
-    s3SecretManager = new S3SecretManagerImpl(configuration, metadataManager);
 
     shutdownHook = () -> {
       saveOmMetrics();
@@ -601,7 +601,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
             TimeUnit.MILLISECONDS);
 
     return new OzoneDelegationTokenSecretManager(conf, tokenMaxLifetime,
-        tokenRenewInterval, tokenRemoverScanInterval, omRpcAddressTxt);
+        tokenRenewInterval, tokenRemoverScanInterval, omRpcAddressTxt,
+        s3SecretManager);
   }
 
   private OzoneBlockTokenSecretManager createBlockTokenSecretManager(
@@ -811,7 +812,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    * @return RPC server
    * @throws IOException if there is an I/O error while creating RPC server
    */
-  private static RPC.Server startRpcServer(OzoneConfiguration conf,
+  private RPC.Server startRpcServer(OzoneConfiguration conf,
       InetSocketAddress addr, Class<?> protocol, BlockingService instance,
       int handlerCount) throws IOException {
     RPC.Server rpcServer = new RPC.Builder(conf)

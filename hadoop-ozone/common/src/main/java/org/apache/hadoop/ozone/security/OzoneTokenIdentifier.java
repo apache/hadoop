@@ -28,7 +28,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMTokenProto;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMTokenProto.Type;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
+
+import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMTokenProto.Type.S3TOKEN;
 
 /**
  * The token identifier for Ozone Master.
@@ -40,12 +43,17 @@ public class OzoneTokenIdentifier extends
 
   public final static Text KIND_NAME = new Text("OzoneToken");
   private String omCertSerialId;
+  private Type tokenType;
+  private String awsAccessId;
+  private String signature;
+  private String strToSign;
 
   /**
    * Create an empty delegation token identifier.
    */
   public OzoneTokenIdentifier() {
     super();
+    this.tokenType = Type.DELEGATION_TOKEN;
   }
 
   /**
@@ -57,6 +65,7 @@ public class OzoneTokenIdentifier extends
    */
   public OzoneTokenIdentifier(Text owner, Text renewer, Text realUser) {
     super(owner, renewer, realUser);
+    this.tokenType = Type.DELEGATION_TOKEN;
   }
 
   /**
@@ -75,16 +84,26 @@ public class OzoneTokenIdentifier extends
    */
   @Override
   public void write(DataOutput out) throws IOException {
-    OMTokenProto token = OMTokenProto.newBuilder()
+    OMTokenProto.Builder builder = OMTokenProto.newBuilder()
+        .setMaxDate(getMaxDate())
+        .setType(getTokenType())
         .setOwner(getOwner().toString())
         .setRealUser(getRealUser().toString())
         .setRenewer(getRenewer().toString())
         .setIssueDate(getIssueDate())
         .setMaxDate(getMaxDate())
         .setSequenceNumber(getSequenceNumber())
-        .setMasterKeyId(getMasterKeyId())
-        .setOmCertSerialId(getOmCertSerialId())
-        .build();
+        .setMasterKeyId(getMasterKeyId());
+
+    // Set s3 specific fields.
+    if (getTokenType().equals(S3TOKEN)) {
+      builder.setAccessKeyId(getAwsAccessId())
+          .setSignature(getSignature())
+          .setStrToSign(getStrToSign());
+    } else {
+      builder.setOmCertSerialId(getOmCertSerialId());
+    }
+    OMTokenProto token = builder.build();
     out.write(token.toByteArray());
   }
 
@@ -97,6 +116,8 @@ public class OzoneTokenIdentifier extends
   @Override
   public void readFields(DataInput in) throws IOException {
     OMTokenProto token = OMTokenProto.parseFrom((DataInputStream) in);
+    setTokenType(token.getType());
+    setMaxDate(token.getMaxDate());
     setOwner(new Text(token.getOwner()));
     setRealUser(new Text(token.getRealUser()));
     setRenewer(new Text(token.getRenewer()));
@@ -105,6 +126,13 @@ public class OzoneTokenIdentifier extends
     setSequenceNumber(token.getSequenceNumber());
     setMasterKeyId(token.getMasterKeyId());
     setOmCertSerialId(token.getOmCertSerialId());
+
+    // Set s3 specific fields.
+    if (getTokenType().equals(S3TOKEN)) {
+      setAwsAccessId(token.getAccessKeyId());
+      setSignature(token.getSignature());
+      setStrToSign(token.getStrToSign());
+    }
   }
 
   /**
@@ -115,13 +143,22 @@ public class OzoneTokenIdentifier extends
       throws IOException {
     OMTokenProto token = OMTokenProto.parseFrom((DataInputStream) in);
     OzoneTokenIdentifier identifier = new OzoneTokenIdentifier();
-    identifier.setRenewer(new Text(token.getRenewer()));
-    identifier.setOwner(new Text(token.getOwner()));
-    identifier.setRealUser(new Text(token.getRealUser()));
+    identifier.setTokenType(token.getType());
     identifier.setMaxDate(token.getMaxDate());
-    identifier.setIssueDate(token.getIssueDate());
-    identifier.setSequenceNumber(token.getSequenceNumber());
-    identifier.setMasterKeyId(token.getMasterKeyId());
+
+    // Set type specific fields.
+    if (token.getType().equals(S3TOKEN)) {
+      identifier.setSignature(token.getSignature());
+      identifier.setStrToSign(token.getStrToSign());
+      identifier.setAwsAccessId(token.getAccessKeyId());
+    } else {
+      identifier.setRenewer(new Text(token.getRenewer()));
+      identifier.setOwner(new Text(token.getOwner()));
+      identifier.setRealUser(new Text(token.getRealUser()));
+      identifier.setIssueDate(token.getIssueDate());
+      identifier.setSequenceNumber(token.getSequenceNumber());
+      identifier.setMasterKeyId(token.getMasterKeyId());
+    }
     identifier.setOmCertSerialId(token.getOmCertSerialId());
     return identifier;
   }
@@ -225,5 +262,54 @@ public class OzoneTokenIdentifier extends
 
   public void setOmCertSerialId(String omCertSerialId) {
     this.omCertSerialId = omCertSerialId;
+  }
+
+  public Type getTokenType() {
+    return tokenType;
+  }
+
+  public void setTokenType(Type tokenType) {
+    this.tokenType = tokenType;
+  }
+
+  public String getAwsAccessId() {
+    return awsAccessId;
+  }
+
+  public void setAwsAccessId(String awsAccessId) {
+    this.awsAccessId = awsAccessId;
+  }
+
+  public String getSignature() {
+    return signature;
+  }
+
+  public void setSignature(String signature) {
+    this.signature = signature;
+  }
+
+  public String getStrToSign() {
+    return strToSign;
+  }
+
+  public void setStrToSign(String strToSign) {
+    this.strToSign = strToSign;
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder buffer = new StringBuilder();
+    buffer.append(getKind())
+        .append(" owner=").append(getOwner())
+        .append(", renewer=").append(getRenewer())
+        .append(", realUser=").append(getRealUser())
+        .append(", issueDate=").append(getIssueDate())
+        .append(", maxDate=").append(getMaxDate())
+        .append(", sequenceNumber=").append(getSequenceNumber())
+        .append(", masterKeyId=").append(getMasterKeyId())
+        .append(", strToSign=").append(getStrToSign())
+        .append(", signature=").append(getSignature())
+        .append(", awsAccessKeyId=").append(getAwsAccessId());
+    return buffer.toString();
   }
 }

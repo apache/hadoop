@@ -99,6 +99,7 @@ public class OzoneSecurityException extends IOException {
    */
   public enum ResultCodes {
     OM_PUBLIC_PRIVATE_KEY_FILE_NOT_EXIST,
+    S3_SECRET_NOT_FOUND,
     SECRET_MANAGER_HMAC_ERROR
   }
 }

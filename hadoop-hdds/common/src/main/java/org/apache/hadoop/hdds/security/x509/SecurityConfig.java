@@ -21,6 +21,7 @@ package org.apache.hadoop.hdds.security.x509;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.ratis.thirdparty.io.netty.handler.ssl.SslProvider;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
@@ -32,6 +33,7 @@ import java.nio.file.Paths;
 import java.security.Provider;
 import java.security.Security;
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_DEFAULT_KEY_ALGORITHM;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_DEFAULT_KEY_LEN;
@@ -458,5 +460,15 @@ public class SecurityConfig {
       LOG.error("Security Provider:{} is unknown", provider);
       throw new SecurityException("Unknown security provider:" + provider);
     }
+  }
+
+  /**
+   * Returns max date for which S3 tokens will be valid.
+   * */
+  public long getS3TokenMaxDate() {
+    return getConfiguration().getTimeDuration(
+        OzoneConfigKeys.OZONE_S3_TOKEN_MAX_LIFETIME_KEY,
+        OzoneConfigKeys.OZONE_S3_TOKEN_MAX_LIFETIME_KEY_DEFAULT,
+        TimeUnit.MICROSECONDS);
   }
 }

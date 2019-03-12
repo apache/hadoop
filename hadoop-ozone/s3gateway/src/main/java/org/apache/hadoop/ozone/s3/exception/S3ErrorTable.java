@@ -42,6 +42,14 @@ public final class S3ErrorTable {
   public static final OS3Exception NO_SUCH_BUCKET = new OS3Exception(
       "NoSuchBucket", "The specified bucket does not exist", HTTP_NOT_FOUND);
 
+  public static final OS3Exception AUTH_PROTOCOL_NOT_SUPPORTED =
+      new OS3Exception("AuthProtocolNotSupported", "Auth protocol used for" +
+          " this request is not supported.", HTTP_BAD_REQUEST);
+
+  public static final OS3Exception S3_TOKEN_CREATION_ERROR =
+      new OS3Exception("InvalidRequest", "Error creating s3 token creation.",
+          HTTP_BAD_REQUEST);
+
   public static final OS3Exception BUCKET_NOT_EMPTY = new OS3Exception(
       "BucketNotEmpty", "The bucket you tried to delete is not empty.",
       HTTP_CONFLICT);

@@ -49,5 +49,7 @@ public class TestOzoneConfigurationFields extends TestConfigurationFieldsBase {
     configurationPropsToSkipCompare.add(HddsConfigKeys.HDDS_SECURITY_PROVIDER);
     configurationPropsToSkipCompare.add(HddsConfigKeys.HDDS_GRPC_TLS_TEST_CERT);
     configurationPropsToSkipCompare.add(OMConfigKeys.OZONE_OM_NODES_KEY);
+    configurationPropsToSkipCompare.add(OzoneConfigKeys.
+        OZONE_S3_TOKEN_MAX_LIFETIME_KEY);
   }
 }
