@@ -1,0 +1,126 @@
+{
+  "id": "yarn_cluster!test_user!DistributedShell!1533871599510",
+  "type": "YARN_FLOW_RUN",
+  "clusterId": "yarn_cluster",
+  "username": "test_user",
+  "flowName": "DistributedShell",
+  "flowRunId": 1533871599510,
+  "flowVersion": "1",
+  "minStartTime": 1533871599510,
+  "maxEndTime": 1533871614645,
+  "metrics": {
+    "YARN_APPLICATION_NON_AM_CONTAINER_PREEMPTED": {
+      "valid": true,
+      "singleDataTimestamp": 1533871614645,
+      "singleDataValue": 0,
+      "id": "YARN_APPLICATION_NON_AM_CONTAINER_PREEMPTED",
+      "type": "SINGLE_VALUE",
+      "values": {
+        "1533871614645": 0
+      },
+      "realtimeAggregationOp": "NOP",
+      "valuesJAXB": {
+        "1533871614645": 0
+      }
+    },
+    "YARN_APPLICATION_RESOURCE_PREEMPTED_CPU": {
+      "valid": true,
+      "singleDataTimestamp": 1533871614645,
+      "singleDataValue": 0,
+      "id": "YARN_APPLICATION_RESOURCE_PREEMPTED_CPU",
+      "type": "SINGLE_VALUE",
+      "values": {
+        "1533871614645": 0
+      },
+      "realtimeAggregationOp": "NOP",
+      "valuesJAXB": {
+        "1533871614645": 0
+      }
+    },
+    "YARN_APPLICATION_CPU_PREEMPT_METRIC": {
+      "valid": true,
+      "singleDataTimestamp": 1533871614645,
+      "singleDataValue": 0,
+      "id": "YARN_APPLICATION_CPU_PREEMPT_METRIC",
+      "type": "SINGLE_VALUE",
+      "values": {
+        "1533871614645": 0
+      },
+      "realtimeAggregationOp": "NOP",
+      "valuesJAXB": {
+        "1533871614645": 0
+      }
+    },
+    "YARN_APPLICATION_MEMORY": {
+      "valid": true,
+      "singleDataTimestamp": 1533871614645,
+      "singleDataValue": 19858,
+      "id": "YARN_APPLICATION_MEMORY",
+      "type": "SINGLE_VALUE",
+      "values": {
+        "1533871614645": 19858
+      },
+      "realtimeAggregationOp": "NOP",
+      "valuesJAXB": {
+        "1533871614645": 19858
+      }
+    },
+    "YARN_APPLICATION_MEM_PREEMPT_METRIC": {
+      "valid": true,
+      "singleDataTimestamp": 1533871614645,
+      "singleDataValue": 0,
+      "id": "YARN_APPLICATION_MEM_PREEMPT_METRIC",
+      "type": "SINGLE_VALUE",
+      "values": {
+        "1533871614645": 0
+      },
+      "realtimeAggregationOp": "NOP",
+      "valuesJAXB": {
+        "1533871614645": 0
+      }
+    },
+    "YARN_APPLICATION_CPU": {
+      "valid": true,
+      "singleDataTimestamp": 1533871614645,
+      "singleDataValue": 19,
+      "id": "YARN_APPLICATION_CPU",
+      "type": "SINGLE_VALUE",
+      "values": {
+        "1533871614645": 19
+      },
+      "realtimeAggregationOp": "NOP",
+      "valuesJAXB": {
+        "1533871614645": 19
+      }
+    },
+    "YARN_APPLICATION_RESOURCE_PREEMPTED_MEMORY": {
+      "valid": true,
+      "singleDataTimestamp": 1533871614645,
+      "singleDataValue": 0,
+      "id": "YARN_APPLICATION_RESOURCE_PREEMPTED_MEMORY",
+      "type": "SINGLE_VALUE",
+      "values": {
+        "1533871614645": 0
+      },
+      "realtimeAggregationOp": "NOP",
+      "valuesJAXB": {
+        "1533871614645": 0
+      }
+    },
+    "YARN_APPLICATION_AM_CONTAINER_PREEMPTED": {
+      "valid": true,
+      "singleDataTimestamp": 1533871614645,
+      "singleDataValue": 0,
+      "id": "YARN_APPLICATION_AM_CONTAINER_PREEMPTED",
+      "type": "SINGLE_VALUE",
+      "values": {
+        "1533871614645": 0
+      },
+      "realtimeAggregationOp": "NOP",
+      "valuesJAXB": {
+        "1533871614645": 0
+      }
+    }
+  },
+  "createdTime": 1533871599510
+}
