@@ -146,6 +146,125 @@ public class TestFileSystemTimelineWriterImpl {
     }
   }
 
+  @Test
+  public void testWriteMultipleEntities() throws Exception {
+    String id = "appId";
+    String type = "app";
+
+    TimelineEntities te1 = new TimelineEntities();
+    TimelineEntity entity = new TimelineEntity();
+    entity.setId(id);
+    entity.setType(type);
+    entity.setCreatedTime(1425016501000L);
+    te1.addEntity(entity);
+
+    TimelineEntities te2 = new TimelineEntities();
+    TimelineEntity entity2 = new TimelineEntity();
+    entity2.setId(id);
+    entity2.setType(type);
+    entity2.setCreatedTime(1425016503000L);
+    te2.addEntity(entity2);
+
+    FileSystemTimelineWriterImpl fsi = null;
+    try {
+      fsi = new FileSystemTimelineWriterImpl();
+      Configuration conf = new YarnConfiguration();
+      String outputRoot = tmpFolder.newFolder().getAbsolutePath();
+      conf.set(FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_DIR_ROOT,
+          outputRoot);
+      fsi.init(conf);
+      fsi.start();
+      fsi.write(
+          new TimelineCollectorContext("cluster_id", "user_id", "flow_name",
+              "flow_version", 12345678L, "app_id"),
+          te1, UserGroupInformation.createRemoteUser("user_id"));
+      fsi.write(
+          new TimelineCollectorContext("cluster_id", "user_id", "flow_name",
+              "flow_version", 12345678L, "app_id"),
+          te2, UserGroupInformation.createRemoteUser("user_id"));
+
+      String fileName = outputRoot + File.separator + "entities" +
+          File.separator + "cluster_id" + File.separator + "user_id" +
+          File.separator + "flow_name" + File.separator + "flow_version" +
+          File.separator + "12345678" + File.separator + "app_id" +
+          File.separator + type + File.separator + id +
+          FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
+      Path path = new Path(fileName);
+      FileSystem fs = FileSystem.get(conf);
+      assertTrue("Specified path(" + fileName + ") should exist: ",
+          fs.exists(path));
+      FileStatus fileStatus = fs.getFileStatus(path);
+      assertTrue("Specified path should be a file",
+          !fileStatus.isDirectory());
+      List<String> data = readFromFile(fs, path);
+      assertTrue("data size is:" + data.size(), data.size() == 3);
+      String d = data.get(0);
+      // confirm the contents same as what was written
+      assertEquals(d, TimelineUtils.dumpTimelineRecordtoJSON(entity));
+
+
+      String metricToString = data.get(1);
+      // confirm the contents same as what was written
+      assertEquals(metricToString,
+          TimelineUtils.dumpTimelineRecordtoJSON(entity2));
+    } finally {
+      if (fsi != null) {
+        fsi.close();
+      }
+    }
+  }
+
+  @Test
+  public void testWriteEntitiesWithEmptyFlowName() throws Exception {
+    String id = "appId";
+    String type = "app";
+
+    TimelineEntities te = new TimelineEntities();
+    TimelineEntity entity = new TimelineEntity();
+    entity.setId(id);
+    entity.setType(type);
+    entity.setCreatedTime(1425016501000L);
+    te.addEntity(entity);
+
+    FileSystemTimelineWriterImpl fsi = null;
+    try {
+      fsi = new FileSystemTimelineWriterImpl();
+      Configuration conf = new YarnConfiguration();
+      String outputRoot = tmpFolder.newFolder().getAbsolutePath();
+      conf.set(FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_DIR_ROOT,
+          outputRoot);
+      fsi.init(conf);
+      fsi.start();
+      fsi.write(
+          new TimelineCollectorContext("cluster_id", "user_id", "",
+              "flow_version", 12345678L, "app_id"),
+          te, UserGroupInformation.createRemoteUser("user_id"));
+
+      String fileName = outputRoot + File.separator + "entities" +
+          File.separator + "cluster_id" + File.separator + "user_id" +
+          File.separator + "" + File.separator + "flow_version" +
+          File.separator + "12345678" + File.separator + "app_id" +
+          File.separator + type + File.separator + id +
+          FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
+      Path path = new Path(fileName);
+      FileSystem fs = FileSystem.get(conf);
+      assertTrue("Specified path(" + fileName + ") should exist: ",
+          fs.exists(path));
+      FileStatus fileStatus = fs.getFileStatus(path);
+      assertTrue("Specified path should be a file",
+          !fileStatus.isDirectory());
+      List<String> data = readFromFile(fs, path);
+      assertTrue("data size is:" + data.size(), data.size() == 2);
+      String d = data.get(0);
+      // confirm the contents same as what was written
+      assertEquals(d, TimelineUtils.dumpTimelineRecordtoJSON(entity));
+    } finally {
+      if (fsi != null) {
+        fsi.close();
+      }
+    }
+  }
+
   private List<String> readFromFile(FileSystem fs, Path path)
           throws IOException {
     BufferedReader br = new BufferedReader(
