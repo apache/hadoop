@@ -95,8 +95,8 @@ public class TestOzoneManagerHttpServer {
   @Test public void testHttpPolicy() throws Exception {
     conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, policy.name());
     conf.set(ScmConfigKeys.OZONE_SCM_HTTPS_ADDRESS_KEY, "localhost:0");
-
     InetSocketAddress addr = InetSocketAddress.createUnresolved("localhost", 0);
+
     OzoneManagerHttpServer server = null;
     try {
       server = new OzoneManagerHttpServer(conf, null);
@@ -104,13 +104,14 @@ public class TestOzoneManagerHttpServer {
 
       Assert.assertTrue(implies(policy.isHttpEnabled(),
           canAccess("http", server.getHttpAddress())));
-      Assert.assertTrue(
-          implies(!policy.isHttpEnabled(), server.getHttpAddress() == null));
+      Assert.assertTrue(implies(policy.isHttpEnabled() &&
+              !policy.isHttpsEnabled(),
+          !canAccess("https", server.getHttpsAddress())));
 
       Assert.assertTrue(implies(policy.isHttpsEnabled(),
           canAccess("https", server.getHttpsAddress())));
-      Assert.assertTrue(
-          implies(!policy.isHttpsEnabled(), server.getHttpsAddress() == null));
+      Assert.assertTrue(implies(policy.isHttpsEnabled(),
+          !canAccess("http", server.getHttpsAddress())));
 
     } finally {
       if (server != null) {
