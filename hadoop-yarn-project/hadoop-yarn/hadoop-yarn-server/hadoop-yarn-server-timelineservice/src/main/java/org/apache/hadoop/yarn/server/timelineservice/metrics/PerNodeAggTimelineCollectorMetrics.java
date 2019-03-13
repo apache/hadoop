@@ -62,7 +62,7 @@ final public class PerNodeAggTimelineCollectorMetrics {
       synchronized (PerNodeAggTimelineCollectorMetrics.class) {
         if (instance == null) {
           instance =
-              DefaultMetricsSystem.initialize("TimelineService").register(
+              DefaultMetricsSystem.instance().register(
                   METRICS_INFO.name(), METRICS_INFO.description(),
                   new PerNodeAggTimelineCollectorMetrics());
           isInitialized.set(true);
