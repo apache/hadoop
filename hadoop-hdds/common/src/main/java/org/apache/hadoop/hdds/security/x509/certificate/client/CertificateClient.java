@@ -137,11 +137,6 @@ public interface CertificateClient {
    * @param force                 - override any existing file
    * @throws CertificateException - on Error.
    *
-   * Note: Certificate client can store certificates for other daemons as well.
-   * Local certificate refers to the certificate issued to this certificate
-   * client. This is stored along with public key and private key.
-   * Certificate of other daemons is named after certificate serial id of
-   * certificate.
    */
   void storeCertificate(String pemEncodedCert, boolean force)
       throws CertificateException;

@@ -149,5 +149,6 @@ Secure S3 test Failure
 Secure S3 test Success
     Run Keyword         Setup credentials
     ${output} =         Execute          aws s3api --endpoint-url ${ENDPOINT_URL} create-bucket --bucket bucket-test123
-                        Should contain    ${result}         Volume pqrs is not found
+    ${output} =         Execute          aws s3api --endpoint-url ${ENDPOINT_URL} list-buckets
+                        Should contain    ${output}         bucket-test123
 

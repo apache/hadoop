@@ -163,7 +163,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   }
 
   /**
-   * Returns the public key of the specified  if it exists on the local system.
+   * Returns the public key of the specified if it exists on the local system.
    *
    * @return public key or Null if there is no data.
    */
