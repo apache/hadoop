@@ -16,7 +16,7 @@
 
 FROM centos
 RUN rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-RUN yum install -y sudo python2-pip wget nmap-ncat jq java-11-openjdk
+RUN yum install -y sudo python2-pip wget nmap-ncat jq java-1.8.0-openjdk
 RUN pip install robotframework
 RUN wget -O /usr/local/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.0/dumb-init_1.2.0_amd64
 RUN chmod +x /usr/local/bin/dumb-init
