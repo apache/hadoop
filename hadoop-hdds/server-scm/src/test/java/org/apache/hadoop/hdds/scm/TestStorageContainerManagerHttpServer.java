@@ -106,13 +106,15 @@ public class TestStorageContainerManagerHttpServer {
 
       Assert.assertTrue(implies(policy.isHttpEnabled(),
           canAccess("http", server.getHttpAddress())));
-      Assert.assertTrue(
-          implies(!policy.isHttpEnabled(), server.getHttpAddress() == null));
+      Assert.assertTrue(implies(policy.isHttpEnabled() &&
+              !policy.isHttpsEnabled(),
+          !canAccess("https", server.getHttpsAddress())));
 
       Assert.assertTrue(implies(policy.isHttpsEnabled(),
           canAccess("https", server.getHttpsAddress())));
-      Assert.assertTrue(
-          implies(!policy.isHttpsEnabled(), server.getHttpsAddress() == null));
+      Assert.assertTrue(implies(policy.isHttpsEnabled() &&
+              !policy.isHttpEnabled(),
+          !canAccess("http", server.getHttpAddress())));
 
     } finally {
       if (server != null) {
