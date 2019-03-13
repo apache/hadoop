@@ -225,17 +225,35 @@ if (HDFSPP_SASL_IMPL STREQUAL "CYRUS")
                      --with-dblib=none
                      --prefix=${STAGING_DIR})
     if (BUILD_SHARED_LIBS)
-      set(SASL_OPTIONS ${SASL_OPTIONS} --enable-shared=yes)
+      list (APPEND SASL_OPTIONS --enable-shared=yes)
     else ()
-      set(SASL_OPTIONS ${SASL_OPTIONS} --enable-static=yes --enable-shared=no)
-    endif ()
+      list (APPEND SASL_OPTIONS --enable-static=yes --enable-shared=no)
+    endif (BUILD_SHARED_LIBS)
+    
+    if (OPENSSL_FOUND)
+      list(APPEND SASL_OPTIONS --with-openssl=${OPENSSL_INCLUDE_DIR}/..)
+    else ()
+      list(APPEND SASL_OPTIONS --with-openssl=${STAGING_DIR})
+    endif (OPENSSL_FOUND)
+
+if (MIT_KERBEROS_FOUND)
+      list(APPEND SASL_OPTIONS
+             CPPFLAGS=-I${MIT_KERBEROS_INCLUDE_DIR}
+             LDFLAGS=-L${MIT_KERBEROS_INCLUDE_DIR}/..)
+    else ()
+      list(APPEND SASL_OPTIONS
+             CPPFLAGS=-I${STAGING_DIR}/include
+             LDFLAGS=-L${STAGING_DIR}/lib)
+    endif (MIT_KERBEROS_FOUND)
+    
     if (APPLE)
-      set(SASL_OPTIONS ${SASL_OPTIONS} --disable-macos-framework)
-    endif ()
-    if (CMAKE_MACOSX_RPATH)
-      set(SASL_OPTIONS ${SASL_OPTIONS}
-        LDFLAGS=-Wl,-install_name,@rpath/libsasl2.3.dylib)
-    endif ()
+      list (APPEND SASL_OPTIONS --disable-macos-framework)
+      if (CMAKE_MACOSX_RPATH)
+        list (APPEND SASL_OPTIONS 
+              LDFLAGS=-Wl,-install_name,@rpath/libsasl2.3.dylib)
+      endif (CMAKE_MACOSX_RPATH)
+    endif (APPLE)
+    
     ExternalProject_Add (cyrus_sasl
       URL "https://github.com/cyrusimap/cyrus-sasl/archive/cyrus-sasl-${CYRUS_SASL_VERSION}.tar.gz"
       CONFIGURE_COMMAND ./autogen.sh ${SASL_OPTIONS}
