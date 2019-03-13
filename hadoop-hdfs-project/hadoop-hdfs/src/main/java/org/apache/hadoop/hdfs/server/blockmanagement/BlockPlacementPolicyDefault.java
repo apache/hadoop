@@ -121,7 +121,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     this.host2datanodeMap = host2datanodeMap;
     this.heartbeatInterval = conf.getTimeDuration(
         DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
-        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS) * 1000;
+        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT,
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
     this.tolerateHeartbeatMultiplier = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_TOLERATE_HEARTBEAT_MULTIPLIER_KEY,
         DFSConfigKeys.DFS_NAMENODE_TOLERATE_HEARTBEAT_MULTIPLIER_DEFAULT);

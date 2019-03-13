@@ -199,7 +199,8 @@ public class DNConf {
 
     long initBRDelay = getConf().getTimeDuration(
         DFS_BLOCKREPORT_INITIAL_DELAY_KEY,
-        DFS_BLOCKREPORT_INITIAL_DELAY_DEFAULT, TimeUnit.SECONDS) * 1000L;
+        DFS_BLOCKREPORT_INITIAL_DELAY_DEFAULT,
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
     if (initBRDelay >= blockReportInterval) {
       initBRDelay = 0;
       DataNode.LOG.info("dfs.blockreport.initialDelay is "
@@ -209,11 +210,13 @@ public class DNConf {
     initialBlockReportDelayMs = initBRDelay;
     
     heartBeatInterval = getConf().getTimeDuration(DFS_HEARTBEAT_INTERVAL_KEY,
-        DFS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS) * 1000L;
+        DFS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS,
+        TimeUnit.MILLISECONDS);
     long confLifelineIntervalMs =
         getConf().getLong(DFS_DATANODE_LIFELINE_INTERVAL_SECONDS_KEY,
         3 * getConf().getTimeDuration(DFS_HEARTBEAT_INTERVAL_KEY,
-        DFS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS)) * 1000L;
+        DFS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS,
+            TimeUnit.MILLISECONDS));
     if (confLifelineIntervalMs <= heartBeatInterval) {
       confLifelineIntervalMs = 3 * heartBeatInterval;
       DataNode.LOG.warn(

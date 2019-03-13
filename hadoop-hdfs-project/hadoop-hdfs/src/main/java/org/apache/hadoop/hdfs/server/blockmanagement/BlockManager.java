@@ -519,7 +519,7 @@ public class BlockManager implements BlockStatsMXBean {
     this.redundancyRecheckIntervalMs = conf.getTimeDuration(
         DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
         DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_DEFAULT,
-        TimeUnit.SECONDS) * 1000;
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
 
     this.storageInfoDefragmentInterval =
       conf.getLong(
