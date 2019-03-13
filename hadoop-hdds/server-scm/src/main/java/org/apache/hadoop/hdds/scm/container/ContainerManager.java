@@ -152,4 +152,15 @@ public interface ContainerManager extends Closeable {
    */
   ContainerInfo getMatchingContainer(long size, String owner,
       Pipeline pipeline);
+
+  /**
+   * Returns ContainerInfo which matches the requirements.
+   * @param size - the amount of space required in the container
+   * @param owner - the user which requires space in its owned container
+   * @param pipeline - pipeline to which the container should belong.
+   * @param excludedContainerIDS - containerIds to be excluded.
+   * @return ContainerInfo for the matching container.
+   */
+  ContainerInfo getMatchingContainer(long size, String owner,
+      Pipeline pipeline, List<ContainerID> excludedContainerIDS);
 }

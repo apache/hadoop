@@ -35,7 +35,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.ScmUtils;
 import org.apache.hadoop.hdds.scm.chillmode.ChillModePrecheck;
-import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
@@ -60,7 +59,6 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
-import java.util.function.Predicate;
 
 
 /** Block Manager manages the block access for SCM. */
@@ -200,15 +198,10 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
       }
 
       // look for OPEN containers that match the criteria.
-      containerInfo = containerManager
-          .getMatchingContainer(size, owner, pipeline);
+      containerInfo = containerManager.getMatchingContainer(size, owner,
+          pipeline, excludeList.getContainerIds());
 
-      // TODO: if getMachingContainer results in containers which are in exclude
-      // list, we may end up in this loop forever. This case needs to be
-      // addressed.
-      if (containerInfo != null && (excludeList.getContainerIds() == null
-          || !discardContainer(containerInfo.containerID(),
-          excludeList.getContainerIds()))) {
+      if (containerInfo != null) {
         return newBlock(containerInfo);
       }
     }
@@ -221,11 +214,6 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
     return null;
   }
 
-  private boolean discardContainer(ContainerID containerId,
-      List<ContainerID> containers) {
-    Predicate<ContainerID> predicate = p -> p.equals(containerId);
-    return containers.parallelStream().anyMatch(predicate);
-  }
   /**
    * newBlock - returns a new block assigned to a container.
    *
