@@ -35,7 +35,6 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
-import org.apache.hadoop.hdds.scm.pipeline.RatisPipelineUtils;
 import org.apache.hadoop.hdds.scm.server.SCMConfigurator;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.server.events.EventHandler;
@@ -274,8 +273,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
         .waitFor(() -> !blockManager.isScmInChillMode(), 10, 1000 * 5);
 
     for (Pipeline pipeline : pipelineManager.getPipelines()) {
-      RatisPipelineUtils
-          .finalizeAndDestroyPipeline(pipelineManager, pipeline, conf, false);
+      pipelineManager.finalizeAndDestroyPipeline(pipeline, false);
     }
     Assert.assertEquals(0, pipelineManager.getPipelines(type, factor).size());
     Assert.assertNotNull(blockManager
