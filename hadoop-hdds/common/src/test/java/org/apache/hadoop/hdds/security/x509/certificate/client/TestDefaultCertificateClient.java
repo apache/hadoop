@@ -152,7 +152,7 @@ public class TestDefaultCertificateClient {
 
   @Test
   public void testSignDataStream() throws Exception {
-    String data = RandomStringUtils.random(100);
+    String data = RandomStringUtils.random(100, UTF);
     // Expect error when there is no private key to sign.
     LambdaTestUtils.intercept(IOException.class, "Error while " +
             "signing the stream",
