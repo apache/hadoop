@@ -43,7 +43,6 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
-import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADV_NORMAL;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADV_RANDOM;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADV_SEQUENTIAL;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
@@ -76,7 +75,6 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {INPUT_FADV_RANDOM},
-        {INPUT_FADV_NORMAL},
         {INPUT_FADV_SEQUENTIAL},
     });
   }
