@@ -172,7 +172,8 @@ public class EditLogTailer {
 
     logRollPeriodMs = conf.getTimeDuration(
         DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY,
-        DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_DEFAULT, TimeUnit.SECONDS) * 1000;
+        DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_DEFAULT,
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
     List<RemoteNameNodeInfo> nns = Collections.emptyList();
     if (logRollPeriodMs >= 0) {
       try {
@@ -199,11 +200,13 @@ public class EditLogTailer {
     
     sleepTimeMs = conf.getTimeDuration(
         DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY,
-        DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_DEFAULT, TimeUnit.SECONDS) * 1000;
+        DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_DEFAULT,
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
 
-    rollEditsTimeoutMs = conf.getInt(
+    rollEditsTimeoutMs = conf.getTimeDuration(
         DFSConfigKeys.DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_KEY,
-        DFSConfigKeys.DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_DEFAULT) * 1000;
+        DFSConfigKeys.DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_DEFAULT,
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
 
     rollEditsRpcExecutor = Executors.newSingleThreadExecutor(
         new ThreadFactoryBuilder().setDaemon(true).build());
