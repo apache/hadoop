@@ -86,6 +86,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -121,6 +122,7 @@ import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.getServerSideEncryptionKey;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -189,6 +191,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       createStorageStatistics();
   private long readAhead;
   private S3AInputPolicy inputPolicy;
+  private ChangeDetectionPolicy changeDetectionPolicy;
   private final AtomicBoolean closed = new AtomicBoolean(false);
   private volatile boolean isClosed = false;
   private MetadataStore metadataStore;
@@ -314,6 +317,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
       LOG.debug("Input fadvise policy = {}", inputPolicy);
+      changeDetectionPolicy = ChangeDetectionPolicy.getPolicy(conf);
+      LOG.debug("Change detection policy = {}", changeDetectionPolicy);
       boolean magicCommitterEnabled = conf.getBoolean(
           CommitConstants.MAGIC_COMMITTER_ENABLED,
           CommitConstants.DEFAULT_MAGIC_COMMITTER_ENABLED);
@@ -549,6 +554,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   }
 
   /**
+   * Get the change detection policy for this FS instance.
+   * @return the change detection policy
+   */
+  @VisibleForTesting
+  ChangeDetectionPolicy getChangeDetectionPolicy() {
+    return changeDetectionPolicy;
+  }
+
+  /**
    * Get the encryption algorithm of this endpoint.
    * @return the encryption algorithm.
    */
@@ -705,21 +719,48 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
           + " because it is a directory");
     }
 
+    S3AReadOpContext readContext;
+    readContext = createReadContext(
+        fileStatus,
+        inputPolicy,
+        changeDetectionPolicy,
+        readAhead);
+    LOG.debug("Opening '{}'", readContext);
+
     return new FSDataInputStream(
-        new S3AInputStream(new S3AReadOpContext(hasMetadataStore(),
-            invoker,
-            s3guardInvoker,
-            statistics,
-            instrumentation,
-            fileStatus),
+        new S3AInputStream(
+            readContext,
             new S3ObjectAttributes(bucket,
                 pathToKey(f),
                 serverSideEncryptionAlgorithm,
                 getServerSideEncryptionKey(bucket, getConf())),
             fileStatus.getLen(),
-            s3,
-            readAhead,
-            inputPolicy));
+            s3));
+  }
+
+  /**
+   * Create the read context for reading from the referenced file,
+   * using FS state as well as the status.
+   * @param fileStatus file status.
+   * @param seekPolicy input policy for this operation
+   * @param readAheadRange readahead value.
+   * @return a context for read and select operations.
+   */
+  private S3AReadOpContext createReadContext(
+      final FileStatus fileStatus,
+      final S3AInputPolicy seekPolicy,
+      final ChangeDetectionPolicy changePolicy,
+      final long readAheadRange) {
+    return new S3AReadOpContext(fileStatus.getPath(),
+        hasMetadataStore(),
+        invoker,
+        s3guardInvoker,
+        statistics,
+        instrumentation,
+        fileStatus,
+        seekPolicy,
+        changePolicy,
+        readAheadRange);
   }
 
   /**
