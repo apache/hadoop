@@ -353,6 +353,12 @@ public class SCMContainerManager implements ContainerManager {
    */
   public ContainerInfo getMatchingContainer(final long sizeRequired,
       String owner, Pipeline pipeline) {
+    return getMatchingContainer(sizeRequired, owner, pipeline, Collections
+        .emptyList());
+  }
+
+  public ContainerInfo getMatchingContainer(final long sizeRequired,
+      String owner, Pipeline pipeline, List<ContainerID> excludedContainers) {
     try {
       //TODO: #CLUTIL See if lock is required here
       NavigableSet<ContainerID> containerIDs =
@@ -378,6 +384,7 @@ public class SCMContainerManager implements ContainerManager {
         }
       }
 
+      containerIDs.removeAll(excludedContainers);
       ContainerInfo containerInfo =
           containerStateManager.getMatchingContainer(sizeRequired, owner,
               pipeline.getId(), containerIDs);
