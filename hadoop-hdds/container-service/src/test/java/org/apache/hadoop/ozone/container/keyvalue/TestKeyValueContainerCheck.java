@@ -139,9 +139,11 @@ import static org.junit.Assert.assertTrue;
     String strBlock = "block";
     String strChunk = "-chunkFile";
     byte[] chunkData = new byte[(int) chunkLen];
+    long totalBlks = normalBlocks + deletedBlocks;
 
     containerData = new KeyValueContainerData(containerId,
-        (long) StorageUnit.MB.toBytes(chunksPerBlock * chunkLen),
+        (long) StorageUnit.BYTES.toBytes(
+            chunksPerBlock * chunkLen * totalBlks),
         UUID.randomUUID().toString(), UUID.randomUUID().toString());
     container = new KeyValueContainer(containerData, conf);
     container.create(volumeSet, new RoundRobinVolumeChoosingPolicy(),
@@ -156,7 +158,7 @@ import static org.junit.Assert.assertTrue;
     assertTrue(chunksPath.listFiles().length == 0);
 
     List<ContainerProtos.ChunkInfo> chunkList = new ArrayList<>();
-    for (int i = 0; i < (normalBlocks + deletedBlocks); i++) {
+    for (int i = 0; i < (totalBlks); i++) {
       BlockID blockID = new BlockID(containerId, i);
       BlockData blockData = new BlockData(blockID);
 
