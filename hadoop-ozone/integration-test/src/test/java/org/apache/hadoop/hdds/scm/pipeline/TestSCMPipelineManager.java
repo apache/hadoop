@@ -104,8 +104,7 @@ public class TestSCMPipelineManager {
 
     // clean up
     for (Pipeline pipeline : pipelines) {
-      pipelineManager.finalizePipeline(pipeline.getId());
-      pipelineManager.removePipeline(pipeline.getId());
+      pipelineManager.finalizeAndDestroyPipeline(pipeline, false);
     }
     pipelineManager.close();
   }
@@ -126,10 +125,7 @@ public class TestSCMPipelineManager {
     pipelineManager.openPipeline(pipeline.getId());
     pipelineManager
         .addContainerToPipeline(pipeline.getId(), ContainerID.valueof(1));
-    pipelineManager.finalizePipeline(pipeline.getId());
-    pipelineManager
-        .removeContainerFromPipeline(pipeline.getId(), ContainerID.valueof(1));
-    pipelineManager.removePipeline(pipeline.getId());
+    pipelineManager.finalizeAndDestroyPipeline(pipeline, false);
     pipelineManager.close();
 
     // new pipeline manager should not be able to load removed pipelines
@@ -192,13 +188,12 @@ public class TestSCMPipelineManager {
         .assertTrue(pipelineManager.getPipeline(pipeline.getId()).isOpen());
 
     // close the pipeline
-    pipelineManager.finalizePipeline(pipeline.getId());
+    pipelineManager.finalizeAndDestroyPipeline(pipeline, false);
 
     for (DatanodeDetails dn: pipeline.getNodes()) {
       PipelineReportFromDatanode pipelineReportFromDatanode =
           TestUtils.getPipelineReportFromDatanode(dn, pipeline.getId());
-      // pipeline report for a closed pipeline should destroy the pipeline
-      // and remove it from the pipeline manager
+      // pipeline report for destroyed pipeline should be ignored
       pipelineReportHandler
           .onMessage(pipelineReportFromDatanode, new EventQueue());
     }

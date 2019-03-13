@@ -108,15 +108,6 @@ public class PipelineReportHandler implements
         // if all the dns have reported, pipeline can be moved to OPEN state
         pipelineManager.openPipeline(pipelineID);
       }
-    } else if (pipeline.isClosed()) {
-      int numContainers = pipelineManager.getNumberOfContainers(pipelineID);
-      if (numContainers == 0) {
-        // since all the containers have been closed the pipeline can be
-        // destroyed
-        LOGGER.info("Destroying pipeline {} as all containers are closed",
-            pipeline);
-        RatisPipelineUtils.destroyPipeline(pipelineManager, pipeline, conf);
-      }
     } else {
       // In OPEN state case just report the datanode
       pipeline.reportDatanode(dn);

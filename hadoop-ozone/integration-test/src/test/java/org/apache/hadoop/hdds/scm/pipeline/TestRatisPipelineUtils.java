@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdds.scm.pipeline;
 
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
@@ -46,6 +47,8 @@ public class TestRatisPipelineUtils {
   private static PipelineManager pipelineManager;
 
   public void init(int numDatanodes) throws Exception {
+    conf.set(HddsConfigKeys.OZONE_METADATA_DIRS,
+        GenericTestUtils.getRandomizedTempPath());
     cluster = MiniOzoneCluster.newBuilder(conf)
             .setNumDatanodes(numDatanodes)
             .setHbInterval(1000)
@@ -71,8 +74,7 @@ public class TestRatisPipelineUtils {
         .getPipelines(HddsProtos.ReplicationType.RATIS,
             HddsProtos.ReplicationFactor.THREE, Pipeline.PipelineState.OPEN);
     for (Pipeline pipeline : pipelines) {
-      RatisPipelineUtils
-          .finalizeAndDestroyPipeline(pipelineManager, pipeline, conf, false);
+      pipelineManager.finalizeAndDestroyPipeline(pipeline, false);
     }
     // make sure two pipelines are created
     waitForPipelines(2);
@@ -108,7 +110,13 @@ public class TestRatisPipelineUtils {
     for (HddsDatanodeService dn : dns) {
       cluster.restartHddsDatanode(dn.getDatanodeDetails(), false);
     }
+
+    // destroy the existing pipelines
+    for (Pipeline pipeline : pipelines) {
+      pipelineManager.finalizeAndDestroyPipeline(pipeline, false);
+    }
     // make sure pipelines is created after node start
+    pipelineManager.triggerPipelineCreation();
     waitForPipelines(1);
   }
 
@@ -117,6 +125,6 @@ public class TestRatisPipelineUtils {
     GenericTestUtils.waitFor(() -> pipelineManager
         .getPipelines(HddsProtos.ReplicationType.RATIS,
             HddsProtos.ReplicationFactor.THREE, Pipeline.PipelineState.OPEN)
-        .size() == numPipelines, 100, 20000);
+        .size() == numPipelines, 100, 40000);
   }
 }

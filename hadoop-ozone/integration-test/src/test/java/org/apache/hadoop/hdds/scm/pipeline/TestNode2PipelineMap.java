@@ -112,8 +112,8 @@ public class TestNode2PipelineMap {
         ratisContainer.getPipeline().getId());
     Assert.assertEquals(0, set2.size());
 
-    pipelineManager.finalizePipeline(ratisContainer.getPipeline().getId());
-    pipelineManager.removePipeline(ratisContainer.getPipeline().getId());
+    pipelineManager
+        .finalizeAndDestroyPipeline(ratisContainer.getPipeline(), false);
     pipelines = scm.getScmNodeManager()
         .getPipelines(dns.get(0));
     Assert

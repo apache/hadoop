@@ -21,7 +21,6 @@ package org.apache.hadoop.hdds.scm.node;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
-import org.apache.hadoop.hdds.scm.pipeline.RatisPipelineUtils;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
@@ -41,7 +40,6 @@ public class NewNodeHandler implements EventHandler<DatanodeDetails> {
   @Override
   public void onMessage(DatanodeDetails datanodeDetails,
                         EventPublisher publisher) {
-    RatisPipelineUtils
-        .triggerPipelineCreation(pipelineManager, conf, 0);
+    pipelineManager.triggerPipelineCreation();
   }
 }

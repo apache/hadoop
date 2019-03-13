@@ -59,9 +59,7 @@ public class PipelineActionHandler
           Pipeline pipeline = pipelineManager.getPipeline(pipelineID);
           LOG.info("Received pipeline action {} for {} from datanode [}",
               action.getAction(), pipeline, report.getDatanodeDetails());
-          RatisPipelineUtils
-              .finalizeAndDestroyPipeline(pipelineManager, pipeline, ozoneConf,
-                  true);
+          pipelineManager.finalizeAndDestroyPipeline(pipeline, true);
         } catch (IOException ioe) {
           LOG.error("Could not execute pipeline action={} pipeline={} {}",
               action, pipelineID, ioe);

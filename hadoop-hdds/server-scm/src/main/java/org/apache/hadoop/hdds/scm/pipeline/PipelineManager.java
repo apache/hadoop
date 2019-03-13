@@ -67,9 +67,12 @@ public interface PipelineManager extends Closeable, PipelineManagerMXBean {
 
   int getNumberOfContainers(PipelineID pipelineID) throws IOException;
 
-  void finalizePipeline(PipelineID pipelineID) throws IOException;
-
   void openPipeline(PipelineID pipelineId) throws IOException;
 
-  void removePipeline(PipelineID pipelineID) throws IOException;
+  void finalizeAndDestroyPipeline(Pipeline pipeline, boolean onTimeout)
+      throws IOException;
+
+  void startPipelineCreator();
+
+  void triggerPipelineCreation();
 }
