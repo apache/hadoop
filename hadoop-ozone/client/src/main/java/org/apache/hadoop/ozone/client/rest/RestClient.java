@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
@@ -42,6 +43,7 @@ import org.apache.hadoop.ozone.client.rest.headers.Header;
 import org.apache.hadoop.ozone.client.rest.response.BucketInfo;
 import org.apache.hadoop.ozone.client.rest.response.KeyInfoDetails;
 import org.apache.hadoop.ozone.client.rest.response.VolumeInfo;
+import org.apache.hadoop.ozone.client.rpc.OzoneKMSUtil;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
@@ -730,6 +732,17 @@ public class RestClient implements ClientProtocol {
   }
 
   @Override
+  public KeyProvider getKeyProvider() throws IOException {
+    // TODO: fix me to support kms instances for difference OMs
+    return OzoneKMSUtil.getKeyProvider(conf, getKeyProviderUri());
+  }
+
+  @Override
+  public URI getKeyProviderUri() throws IOException {
+    return OzoneKMSUtil.getKeyProviderUri(ugi, null, null, conf);
+  }
+
+  @Override
   public OzoneInputStream getKey(
       String volumeName, String bucketName, String keyName)
       throws IOException {
@@ -1057,6 +1070,15 @@ public class RestClient implements ClientProtocol {
   public OzoneMultipartUploadPartListParts listParts(String volumeName,
       String bucketName, String keyName, String uploadID, int partNumberMarker,
       int maxParts)  throws IOException {
+    throw new UnsupportedOperationException("Ozone REST protocol does not " +
+        "support this operation.");
+  }
+
+  /**
+   * Get CanonicalServiceName for ozone delegation token.
+   * @return Canonical Service Name of ozone delegation token.
+   */
+  public String getCanonicalServiceName(){
     throw new UnsupportedOperationException("Ozone REST protocol does not " +
         "support this operation.");
   }

@@ -1464,8 +1464,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   @Override
   public Token<OzoneTokenIdentifier> getDelegationToken(Text renewer)
       throws OMException {
-    final boolean success;
-    final String tokenId;
     Token<OzoneTokenIdentifier> token;
     try {
       if (!isAllowedDelegationTokenOp()) {
@@ -1486,7 +1484,9 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         realUser = new Text(ugi.getRealUser().getUserName());
       }
 
-      return delegationTokenMgr.createToken(owner, renewer, realUser);
+      token = delegationTokenMgr.createToken(owner, renewer, realUser);
+      LOG.debug("OmDelegationToken: {} created.", token);
+      return token;
     } catch (OMException oex) {
       throw oex;
     } catch (IOException ex) {
