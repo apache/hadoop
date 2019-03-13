@@ -16,6 +16,8 @@
  */
 package org.apache.hadoop.hdds.scm.container;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -193,6 +195,59 @@ public class TestContainerStateManagerIntegration {
             container1.getPipeline());
     Assert.assertEquals(container1.getContainerInfo().getContainerID(),
         info.getContainerID());
+  }
+
+  @Test
+  public void testGetMatchingContainerWithExcludedList() throws IOException {
+    long cid;
+    ContainerWithPipeline container1 = scm.getClientProtocolServer().
+        allocateContainer(xceiverClientManager.getType(),
+            xceiverClientManager.getFactor(), containerOwner);
+    cid = container1.getContainerInfo().getContainerID();
+
+    // each getMatchingContainer call allocates a container in the
+    // pipeline till the pipeline has numContainerPerOwnerInPipeline number of
+    // containers.
+    for (int i = 1; i < numContainerPerOwnerInPipeline; i++) {
+      ContainerInfo info = containerManager
+          .getMatchingContainer(OzoneConsts.GB * 3, containerOwner,
+              container1.getPipeline());
+      Assert.assertTrue(info.getContainerID() > cid);
+      cid = info.getContainerID();
+    }
+
+    // At this point there are already three containers in the pipeline.
+    // next container should be the same as first container
+    ContainerInfo info = containerManager
+        .getMatchingContainer(OzoneConsts.GB * 3, containerOwner,
+            container1.getPipeline(), Collections.singletonList(new
+                ContainerID(1)));
+    Assert.assertNotEquals(container1.getContainerInfo().getContainerID(),
+        info.getContainerID());
+  }
+
+
+  @Test
+  public void testCreateContainerLogicWithExcludedList() throws IOException {
+    long cid;
+    ContainerWithPipeline container1 = scm.getClientProtocolServer().
+        allocateContainer(xceiverClientManager.getType(),
+            xceiverClientManager.getFactor(), containerOwner);
+    cid = container1.getContainerInfo().getContainerID();
+
+    for (int i = 1; i < numContainerPerOwnerInPipeline; i++) {
+      ContainerInfo info = containerManager
+          .getMatchingContainer(OzoneConsts.GB * 3, containerOwner,
+              container1.getPipeline());
+      Assert.assertTrue(info.getContainerID() > cid);
+      cid = info.getContainerID();
+    }
+
+    ContainerInfo info = containerManager
+        .getMatchingContainer(OzoneConsts.GB * 3, containerOwner,
+            container1.getPipeline(), Arrays.asList(new ContainerID(1), new
+                ContainerID(2), new ContainerID(3)));
+    Assert.assertEquals(info.getContainerID(), 4);
   }
 
   @Test
