@@ -52,7 +52,7 @@ public class GetS3SecretHandler extends Handler {
           ).toString()
       );
     } else {
-      // Throw an error message for unsecured cluster
+      // log a warning message for unsecured cluster
       System.out.println(OZONE_GETS3SECRET_ERROR);
     }
 
