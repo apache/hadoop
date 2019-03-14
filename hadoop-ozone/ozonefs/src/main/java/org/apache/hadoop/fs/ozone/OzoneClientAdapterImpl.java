@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.client.ObjectStore;
@@ -60,7 +61,7 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
   private ReplicationType replicationType;
   private ReplicationFactor replicationFactor;
   private OzoneFSStorageStatistics storageStatistics;
-
+  private boolean securityEnabled;
   /**
    * Create new OzoneClientAdapter implementation.
    *
@@ -104,12 +105,24 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
   }
 
   public OzoneClientAdapterImpl(String omHost, int omPort,
-      OzoneConfiguration conf, String volumeStr, String bucketStr,
+      Configuration hadoopConf, String volumeStr, String bucketStr,
       OzoneFSStorageStatistics storageStatistics) throws IOException {
 
     ClassLoader contextClassLoader =
         Thread.currentThread().getContextClassLoader();
     Thread.currentThread().setContextClassLoader(null);
+    OzoneConfiguration conf;
+    if (hadoopConf instanceof OzoneConfiguration) {
+      conf = (OzoneConfiguration) hadoopConf;
+    } else {
+      conf = new OzoneConfiguration(hadoopConf);
+    }
+
+    SecurityConfig secConfig = new SecurityConfig(conf);
+
+    if (secConfig.isSecurityEnabled()) {
+      this.securityEnabled = true;
+    }
 
     try {
       String replicationTypeConf =
@@ -276,10 +289,14 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
   @Override
   public Token<OzoneTokenIdentifier> getDelegationToken(String renewer)
       throws IOException {
-    Token<OzoneTokenIdentifier> token =
-        ozoneClient.getObjectStore().getDelegationToken(new Text(renewer));
-    token.setKind(OzoneTokenIdentifier.KIND_NAME);
-    return token;
+    if (!securityEnabled) {
+      return null;
+    } else {
+      Token<OzoneTokenIdentifier> token =
+          ozoneClient.getObjectStore().getDelegationToken(new Text(renewer));
+      token.setKind(OzoneTokenIdentifier.KIND_NAME);
+      return token;
+    }
   }
 
   /**
