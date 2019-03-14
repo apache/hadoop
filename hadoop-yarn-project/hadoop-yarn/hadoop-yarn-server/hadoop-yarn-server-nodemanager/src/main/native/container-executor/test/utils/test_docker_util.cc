@@ -782,7 +782,9 @@ namespace ContainerExecutor {
     struct configuration container_cfg, cmd_cfg;
     struct args buff = ARGS_INITIAL_VALUE;
     int ret = 0;
-    std::string container_executor_cfg_contents[] = {"[docker]\n  docker.privileged-containers.enabled=1\n  docker.trusted.registries=hadoop",
+    std::string container_executor_cfg_contents[] = {"[docker]\n  docker.privileged-containers.enabled=1\n"
+                                                     "  docker.trusted.registries=library\n"
+                                                     "  docker.privileged-containers.registries=hadoop",
                                                      "[docker]\n  docker.privileged-containers.enabled=true\n  docker.trusted.registries=hadoop",
                                                      "[docker]\n  docker.privileged-containers.enabled=True\n  docker.trusted.registries=hadoop",
                                                      "[docker]\n  docker.privileged-containers.enabled=0",
