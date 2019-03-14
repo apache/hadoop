@@ -33,7 +33,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY
     description = "returns s3 secret for current user")
 public class GetS3SecretHandler extends Handler {
 
-  private static final String OZONE_GETS3SECRET_ERROR = "This command is not" +
+  public static final String OZONE_GETS3SECRET_ERROR = "This command is not" +
       " supported in unsecure clusters.";
   /**
    * Executes getS3Secret.
