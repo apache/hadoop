@@ -102,7 +102,6 @@ public class SCMNodeManager implements NodeManager {
   public SCMNodeManager(OzoneConfiguration conf, String clusterID,
       StorageContainerManager scmManager, EventPublisher eventPublisher)
       throws IOException {
-    this.metrics = SCMNodeMetrics.create();
     this.nodeStateManager = new NodeStateManager(conf, eventPublisher);
     this.clusterID = clusterID;
     this.version = VersionInfo.getLatestVersion();
@@ -110,6 +109,7 @@ public class SCMNodeManager implements NodeManager {
     this.scmManager = scmManager;
     LOG.info("Entering startup chill mode.");
     registerMXBean();
+    this.metrics = SCMNodeMetrics.create(this);
   }
 
   private void registerMXBean() {
@@ -118,7 +118,7 @@ public class SCMNodeManager implements NodeManager {
   }
 
   private void unregisterMXBean() {
-    if(this.nmInfoBean != null) {
+    if (this.nmInfoBean != null) {
       MBeans.unregister(this.nmInfoBean);
       this.nmInfoBean = null;
     }
