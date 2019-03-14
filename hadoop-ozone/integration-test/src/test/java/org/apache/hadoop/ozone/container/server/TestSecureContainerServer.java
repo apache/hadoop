@@ -30,6 +30,7 @@ import org.apache.hadoop.hdds.scm.XceiverClientRatis;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.RatisTestHelper;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
@@ -179,7 +180,8 @@ public class TestSecureContainerServer {
 
       XceiverClientSpi finalClient = client;
       LambdaTestUtils.intercept(IOException.class,
-          () -> finalClient.sendCommand(request));
+          () -> ContainerProtocolCalls
+              .validateContainerResponse(finalClient.sendCommand(request)));
 
       // Test 2: Test success in request with valid block token.
       final ContainerCommandRequestProto request2 =
@@ -191,7 +193,8 @@ public class TestSecureContainerServer {
 
       XceiverClientSpi finalClient2 = client;
       LambdaTestUtils.intercept(IOException.class, "",
-          () -> finalClient2.sendCommand(request));
+          () -> ContainerProtocolCalls
+              .validateContainerResponse(finalClient2.sendCommand(request)));
     } finally {
       if (client != null) {
         client.close();
