@@ -257,6 +257,14 @@ public final class S3AUtils {
         ioe = new AWSBadRequestException(message, s3Exception);
         break;
 
+      // version/etag id cannot be met in copy.
+      case 412:
+        ioe = new RemoteFileChangedException(path,
+            operation,
+            "Constraints of request were unsatisfiable",
+            ase);
+        break;
+
       // out of range. This may happen if an object is overwritten with
       // a shorter one while it is being read.
       case 416:

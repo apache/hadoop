@@ -74,6 +74,7 @@ import com.amazonaws.services.s3.transfer.Copy;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
 import com.amazonaws.services.s3.transfer.Upload;
+import com.amazonaws.services.s3.transfer.model.CopyResult;
 import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.amazonaws.event.ProgressListener;
 import com.google.common.annotations.VisibleForTesting;
@@ -2864,7 +2865,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException Other IO problems
    */
   @Retries.RetryMixed
-  private void copyFile(String srcKey, String dstKey, long size)
+  private CopyResult copyFile(String srcKey, String dstKey, long size)
       throws IOException, InterruptedIOException  {
     LOG.debug("copyFile {} -> {} ", srcKey, dstKey);
 
@@ -2878,7 +2879,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
     };
 
-    once("copyFile(" + srcKey + ", " + dstKey + ")", srcKey,
+    return once("copyFile(" + srcKey + ", " + dstKey + ")", srcKey,
         () -> {
           ObjectMetadata srcom = getObjectMetadata(srcKey);
           ObjectMetadata dstom = cloneObjectMetadata(srcom);
@@ -2888,12 +2889,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           setOptionalCopyObjectRequestParameters(copyObjectRequest);
           copyObjectRequest.setCannedAccessControlList(cannedACL);
           copyObjectRequest.setNewObjectMetadata(dstom);
+          String id = srcom.getVersionId();
+          if (id != null) {
+            copyObjectRequest.setSourceVersionId(id);
+          } else if (isNotEmpty(srcom.getETag())) {
+            copyObjectRequest.withMatchingETagConstraint(srcom.getETag());
+          }
           Copy copy = transfers.copy(copyObjectRequest);
           copy.addProgressListener(progressListener);
           try {
-            copy.waitForCopyResult();
+            CopyResult r = copy.waitForCopyResult();
             incrementWriteOperations();
             instrumentation.filesCopied(1, size);
+            return r;
           } catch (InterruptedException e) {
             throw new InterruptedIOException("Interrupted copying " + srcKey
                 + " to " + dstKey + ", cancelling");

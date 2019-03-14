@@ -46,4 +46,21 @@ public class RemoteFileChangedException extends PathIOException {
     super(path, message);
     setOperation(operation);
   }
+
+  /**
+   * Constructs a RemoteFileChangedException.
+   *
+   * @param path the path accessed when the change was detected
+   * @param operation the operation (e.g. open, re-open) performed when the
+   * change was detected
+   * @param message a message providing more details about the condition
+   * @param cause inner cause.
+   */
+  public RemoteFileChangedException(final String path,
+      final String operation,
+      final String message,
+      final Throwable cause) {
+    super(path, message, cause);
+    setOperation(operation);
+  }
 }
