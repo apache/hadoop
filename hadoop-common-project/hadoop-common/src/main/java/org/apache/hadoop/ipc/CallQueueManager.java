@@ -222,12 +222,21 @@ public class CallQueueManager<E extends Schedulable>
     } else if (shouldBackOff(e)) {
       throwBackoff();
     } else {
-      add(e);
+      // No need to re-check backoff criteria since they were just checked
+      addInternal(e, false);
     }
   }
 
   @Override
   public boolean add(E e) {
+    return addInternal(e, true);
+  }
+
+  @VisibleForTesting
+  boolean addInternal(E e, boolean checkBackoff) {
+    if (checkBackoff && isClientBackoffEnabled() && shouldBackOff(e)) {
+      throwBackoff();
+    }
     try {
       return putRef.get().add(e);
     } catch (CallQueueOverflowException ex) {
