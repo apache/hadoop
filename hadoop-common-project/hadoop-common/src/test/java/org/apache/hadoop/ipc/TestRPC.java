@@ -52,7 +52,6 @@ import org.apache.hadoop.test.Whitebox;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -95,6 +94,8 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -1131,7 +1132,7 @@ public class TestRPC extends TestRpcBase {
                 return null;
               }
             }));
-        verify(spy, timeout(500).times(i + 1)).add(Mockito.<Call>anyObject());
+        verify(spy, timeout(500).times(i + 1)).addInternal(any(), eq(false));
       }
       try {
         proxy.sleep(null, newSleepRequest(100));
@@ -1202,7 +1203,7 @@ public class TestRPC extends TestRpcBase {
                 return null;
               }
             }));
-        verify(spy, timeout(500).times(i + 1)).add(Mockito.<Call>anyObject());
+        verify(spy, timeout(500).times(i + 1)).addInternal(any(), eq(false));
       }
       // Start another sleep RPC call and verify the call is backed off due to
       // avg response time(3s) exceeds threshold (2s).

@@ -666,6 +666,7 @@ public abstract class Server {
         CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT);
     callQueue.swapQueue(getSchedulerClass(prefix, conf),
         getQueueClass(prefix, conf), maxQueueSize, prefix, conf);
+    callQueue.setClientBackoffEnabled(getClientBackoffEnable(prefix, conf));
   }
 
   /**
