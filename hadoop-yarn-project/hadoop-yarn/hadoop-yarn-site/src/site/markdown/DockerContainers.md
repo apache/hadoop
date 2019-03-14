@@ -280,6 +280,7 @@ are allowed. It contains the following properties:
 | `docker.allowed.volume-drivers` | Comma separated list of volume drivers which are allowed to be used. By default, no volume drivers are allowed. |
 | `docker.host-pid-namespace.enabled` | Set to "true" or "false" to enable or disable using the host's PID namespace. Default value is "false". |
 | `docker.privileged-containers.enabled` | Set to "true" or "false" to enable or disable launching privileged containers. Default value is "false". |
+| `docker.privileged-containers.registries` | Comma separated list of privileged docker registries for running privileged docker containers.  By default, no registries are defined. |
 | `docker.trusted.registries` | Comma separated list of trusted docker registries for running trusted privileged docker containers.  By default, no registries are defined. |
 | `docker.inspect.max.retries` | Integer value to check docker container readiness.  Each inspection is set with 3 seconds delay.  Default value of 10 will wait 30 seconds for docker container to become ready before marked as container failed. |
 | `docker.no-new-privileges.enabled` | Enable/disable the no-new-privileges flag for docker run. Set to "true" to enable, disabled by default. |
@@ -306,6 +307,7 @@ yarn.nodemanager.linux-container-executor.group=yarn
 [docker]
   module.enabled=true
   docker.privileged-containers.enabled=true
+  docker.privileged-containers.registries=local
   docker.trusted.registries=centos
   docker.allowed.capabilities=SYS_CHROOT,MKNOD,SETFCAP,SETPCAP,FSETID,CHOWN,AUDIT_WRITE,SETGID,NET_RAW,FOWNER,SETUID,DAC_OVERRIDE,KILL,NET_BIND_SERVICE
   docker.allowed.networks=bridge,host,none
@@ -647,6 +649,15 @@ When docker images have been certified by developers and testers to be trustwort
 ```
 [docker]
   docker.privileged-containers.enabled=true
+  docker.trusted.registries=library
+```
+
+Fine grained access control can also be defined using `docker.privileged-containers.registries` to allow only a subset of Docker images to run as privileged containers.  If `docker.privileged-containers.registries` is not defined, YARN will fall back to use `docker.trusted.registries` as access control for privileged Docker images.  Fine grained access control example:
+
+```
+[docker]
+  docker.privileged-containers.enabled=true
+  docker.privileged-containers.registries=local/centos:latest
   docker.trusted.registries=library
 ```
 
