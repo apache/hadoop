@@ -69,39 +69,38 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 @InterfaceStability.Stable
 public abstract class InputFormat<K, V> {
 
-  /** 
-   * Logically split the set of input files for the job.  
-   * 
-   * <p>Each {@link InputSplit} is then assigned to an individual {@link Mapper}
-   * for processing.</p>
+  /**
+   * Logically split the set of input files for the job.
    *
-   * <p><i>Note</i>: The split is a <i>logical</i> split of the inputs and the
-   * input files are not physically split into chunks. For e.g. a split could
-   * be <i>&lt;input-file-path, start, offset&gt;</i> tuple. The InputFormat
-   * also creates the {@link RecordReader} to read the {@link InputSplit}.
-   * 
+   * <p>
+   * Each {@link InputSplit} is then assigned to an individual {@link Mapper}
+   * for processing.
+   * </p>
+   *
+   * <p>
+   * <i>Note</i>: The split is a <i>logical</i> split of the inputs and the
+   * input files are not physically split into chunks. For e.g. a split could be
+   * <i>&lt;input-file-path, start, offset&gt;</i> tuple. The InputFormat also
+   * creates the {@link RecordReader} to read the {@link InputSplit}.
+   *
    * @param context job configuration.
    * @return an array of {@link InputSplit}s for the job.
    */
-  public abstract 
-    List<InputSplit> getSplits(JobContext context
-                               ) throws IOException, InterruptedException;
-  
+  public abstract List<InputSplit> getSplits(JobContext context)
+      throws IOException, InterruptedException;
+
   /**
    * Create a record reader for a given split. The framework will call
-   * {@link RecordReader#initialize(InputSplit, TaskAttemptContext)} before
-   * the split is used.
+   * {@link RecordReader#initialize(InputSplit, TaskAttemptContext)} before the
+   * split is used.
+   *
    * @param split the split to be read
    * @param context the information about the task
    * @return a new record reader
    * @throws IOException
    * @throws InterruptedException
    */
-  public abstract 
-    RecordReader<K,V> createRecordReader(InputSplit split,
-                                         TaskAttemptContext context
-                                        ) throws IOException, 
-                                                 InterruptedException;
-
+  public abstract RecordReader<K, V> createRecordReader(InputSplit split,
+      TaskAttemptContext context) throws IOException, InterruptedException;
 }
 
