@@ -172,6 +172,13 @@ public class S3ARetryPolicy implements RetryPolicy {
     policyMap.put(FileNotFoundException.class, fail);
     policyMap.put(InvalidRequestException.class, fail);
 
+    // once the file has changed, trying again is not going to help
+    policyMap.put(RemoteFileChangedException.class, fail);
+
+    // likely only recovered by changing the policy configuration or s3
+    // implementation
+    policyMap.put(NoVersionAttributeException.class, fail);
+
     // should really be handled by resubmitting to new location;
     // that's beyond the scope of this retry policy
     policyMap.put(AWSRedirectException.class, fail);

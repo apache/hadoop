@@ -159,6 +159,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       OBJECT_PUT_BYTES,
       OBJECT_PUT_REQUESTS,
       OBJECT_PUT_REQUESTS_COMPLETED,
+      STREAM_READ_VERSION_MISMATCHES,
       STREAM_WRITE_FAILURES,
       STREAM_WRITE_BLOCK_UPLOADS,
       STREAM_WRITE_BLOCK_UPLOADS_COMMITTED,
@@ -591,6 +592,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     streamReadsIncomplete.incr(statistics.readsIncomplete);
     streamBytesReadInClose.incr(statistics.bytesReadInClose);
     streamBytesDiscardedInAbort.incr(statistics.bytesDiscardedInAbort);
+    incrementCounter(STREAM_READ_VERSION_MISMATCHES,
+        statistics.versionMismatches.get());
   }
 
   @Override
@@ -636,6 +639,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     public long bytesDiscardedInAbort;
     public long policySetCount;
     public long inputPolicy;
+    /** This is atomic so that it can be passed as a reference. */
+    private final AtomicLong versionMismatches = new AtomicLong(0);
 
     private InputStreamStatistics() {
     }
@@ -761,6 +766,14 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     }
 
     /**
+     * Get a reference to the version mismatch counter.
+     * @return a counter which can be incremented.
+     */
+    public AtomicLong getVersionMismatchCounter() {
+      return versionMismatches;
+    }
+
+    /**
      * String operator describes all the current statistics.
      * <b>Important: there are no guarantees as to the stability
      * of this value.</b>
@@ -793,6 +806,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       sb.append(", BytesDiscardedInAbort=").append(bytesDiscardedInAbort);
       sb.append(", InputPolicy=").append(inputPolicy);
       sb.append(", InputPolicySetCount=").append(policySetCount);
+      sb.append(", versionMismatches=").append(versionMismatches.get());
       sb.append('}');
       return sb.toString();
     }
