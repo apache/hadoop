@@ -1135,7 +1135,8 @@ public class TestRPC extends TestRpcBase {
                 return null;
               }
             }));
-        verify(spy, timeout(500).times(i + 1)).add(Mockito.<Call>anyObject());
+        verify(spy, timeout(500).times(i + 1)).addInternal(
+            Mockito.<Call>anyObject(), Mockito.eq(false));
       }
       try {
         proxy.sleep(null, newSleepRequest(100));
@@ -1206,7 +1207,8 @@ public class TestRPC extends TestRpcBase {
                 return null;
               }
             }));
-        verify(spy, timeout(500).times(i + 1)).add(Mockito.<Call>anyObject());
+        verify(spy, timeout(500).times(i + 1)).addInternal(
+            Mockito.<Call>anyObject(), Mockito.eq(false));
       }
       // Start another sleep RPC call and verify the call is backed off due to
       // avg response time(3s) exceeds threshold (2s).
