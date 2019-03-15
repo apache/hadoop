@@ -20,6 +20,8 @@ package org.apache.hadoop.ozone.client;
 import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.rest.response.*;
 import org.apache.ratis.protocol.AlreadyClosedException;
@@ -27,6 +29,7 @@ import org.apache.ratis.protocol.RaftRetryFailureException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /** A utility class for OzoneClient. */
@@ -120,6 +123,14 @@ public final class OzoneClientUtils {
     keyInfo.setKeyLocation(keyLocations);
     keyInfo.setFileEncryptionInfo(key.getFileEncryptionInfo());
     return keyInfo;
+  }
+
+  public static RetryPolicy createRetryPolicy(int maxRetryCount) {
+    // just retry without sleep
+    RetryPolicy retryPolicy = RetryPolicies
+        .retryUpToMaximumCountWithFixedSleep(maxRetryCount, 0,
+            TimeUnit.MILLISECONDS);
+    return retryPolicy;
   }
 
   public static List<Class<? extends Exception>> getExceptionList() {
