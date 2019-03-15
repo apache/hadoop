@@ -44,7 +44,6 @@ import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
 import io.opentracing.Scope;
 import org.apache.ratis.RaftConfigKeys;
 import org.apache.ratis.RatisHelper;
-import org.apache.ratis.client.RaftClientConfigKeys;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.grpc.GrpcConfigKeys;
 import org.apache.ratis.grpc.GrpcFactory;
@@ -176,7 +175,7 @@ public final class XceiverServerRatis extends XceiverServer {
         setRaftSegmentPreallocatedSize(conf, properties);
 
     // Set max write buffer size, which is the scm chunk size
-    final int maxChunkSize = setMaxWriteBuffer(conf, properties);
+    final int maxChunkSize = setMaxWriteBuffer(properties);
     TimeUnit timeUnit;
     long duration;
 
@@ -329,23 +328,10 @@ public final class XceiverServerRatis extends XceiverServer {
         .setRequestTimeout(properties, serverRequestTimeout);
   }
 
-  private int setMaxWriteBuffer(Configuration conf, RaftProperties properties) {
+  private int setMaxWriteBuffer(RaftProperties properties) {
     final int maxChunkSize = OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE;
     RaftServerConfigKeys.Log.setWriteBufferSize(properties,
         SizeInBytes.valueOf(maxChunkSize));
-
-    // Set the client requestTimeout
-    TimeUnit timeUnit =
-        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_DEFAULT
-            .getUnit();
-    long duration = conf.getTimeDuration(
-        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_KEY,
-        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_DEFAULT
-            .getDuration(), timeUnit);
-    final TimeDuration clientRequestTimeout =
-        TimeDuration.valueOf(duration, timeUnit);
-    RaftClientConfigKeys.Rpc
-        .setRequestTimeout(properties, clientRequestTimeout);
     return maxChunkSize;
   }
 
