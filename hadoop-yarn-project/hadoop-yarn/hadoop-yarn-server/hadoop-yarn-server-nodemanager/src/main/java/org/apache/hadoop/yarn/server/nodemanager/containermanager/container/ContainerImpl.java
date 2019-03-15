@@ -2110,9 +2110,7 @@ public class ContainerImpl implements Container {
     this.writeLock.lock();
     try {
       ContainerId containerID = event.getContainerID();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Processing " + containerID + " of type " + event.getType());
-      }
+      LOG.debug("Processing {} of type {}", containerID, event.getType());
       ContainerState oldState = stateMachine.getCurrentState();
       ContainerState newState = null;
       try {

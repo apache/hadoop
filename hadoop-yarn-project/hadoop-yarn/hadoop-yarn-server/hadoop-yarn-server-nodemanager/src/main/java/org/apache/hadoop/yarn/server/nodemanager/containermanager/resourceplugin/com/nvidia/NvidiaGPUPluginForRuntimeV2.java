@@ -159,9 +159,7 @@ public class NvidiaGPUPluginForRuntimeV2 implements DevicePlugin,
       lastTimeFoundDevices = r;
       return r;
     } catch (IOException e) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Failed to get output from " + pathOfGpuBinary);
-      }
+      LOG.debug("Failed to get output from {}", pathOfGpuBinary);
       throw new YarnException(e);
     }
   }
@@ -169,10 +167,8 @@ public class NvidiaGPUPluginForRuntimeV2 implements DevicePlugin,
   @Override
   public DeviceRuntimeSpec onDevicesAllocated(Set<Device> allocatedDevices,
       YarnRuntimeType yarnRuntime) throws Exception {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Generating runtime spec for allocated devices: "
-          + allocatedDevices + ", " + yarnRuntime.getName());
-    }
+    LOG.debug("Generating runtime spec for allocated devices: {}, {}",
+        allocatedDevices, yarnRuntime.getName());
     if (yarnRuntime == YarnRuntimeType.RUNTIME_DOCKER) {
       String nvidiaRuntime = "nvidia";
       String nvidiaVisibleDevices = "NVIDIA_VISIBLE_DEVICES";
@@ -201,14 +197,10 @@ public class NvidiaGPUPluginForRuntimeV2 implements DevicePlugin,
     String output = null;
     // output "major:minor" in hex
     try {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Get major numbers from /dev/" + devName);
-      }
+      LOG.debug("Get major numbers from /dev/{}", devName);
       output = shellExecutor.getMajorMinorInfo(devName);
       String[] strs = output.trim().split(":");
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("stat output:" + output);
-      }
+      LOG.debug("stat output:{}", output);
       output = Integer.toString(Integer.parseInt(strs[0], 16));
     } catch (IOException e) {
       String msg =

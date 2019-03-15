@@ -118,11 +118,9 @@ public class AllocationBasedResourceUtilizationTracker implements
       return false;
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("before cpuCheck [asked={} > allowed={}]",
-          this.containersAllocation.getCPU(),
-          getContainersMonitor().getVCoresAllocatedForContainers());
-    }
+    LOG.debug("before cpuCheck [asked={} > allowed={}]",
+        this.containersAllocation.getCPU(),
+        getContainersMonitor().getVCoresAllocatedForContainers());
     // Check CPU.
     if (this.containersAllocation.getCPU() + cpuVcores >
         getContainersMonitor().getVCoresAllocatedForContainers()) {

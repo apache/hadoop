@@ -205,18 +205,14 @@ public class NMTimelinePublisher extends CompositeService {
           LOG.error(
               "Failed to publish Container metrics for container " +
                   container.getContainerId());
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Failed to publish Container metrics for container " +
-                container.getContainerId(), e);
-          }
+          LOG.debug("Failed to publish Container metrics for container {}",
+              container.getContainerId(), e);
         } catch (YarnException e) {
           LOG.error(
               "Failed to publish Container metrics for container " +
                   container.getContainerId(), e.getMessage());
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Failed to publish Container metrics for container " +
-                container.getContainerId(), e);
-          }
+          LOG.debug("Failed to publish Container metrics for container {}",
+              container.getContainerId(), e);
         }
       }
     }
@@ -317,17 +313,13 @@ public class NMTimelinePublisher extends CompositeService {
       } catch (IOException e) {
         LOG.error("Failed to publish Container metrics for container "
             + container.getContainerId());
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Failed to publish Container metrics for container "
-              + container.getContainerId(), e);
-        }
+        LOG.debug("Failed to publish Container metrics for container {}",
+            container.getContainerId(), e);
       } catch (YarnException e) {
         LOG.error("Failed to publish Container metrics for container "
             + container.getContainerId(), e.getMessage());
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Failed to publish Container metrics for container "
-              + container.getContainerId(), e);
-        }
+        LOG.debug("Failed to publish Container metrics for container {}",
+            container.getContainerId(), e);
       }
     }
   }
@@ -347,8 +339,8 @@ public class NMTimelinePublisher extends CompositeService {
   private void putEntity(TimelineEntity entity, ApplicationId appId) {
     try {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Publishing the entity " + entity + ", JSON-style content: "
-            + TimelineUtils.dumpTimelineRecordtoJSON(entity));
+        LOG.debug("Publishing the entity {} JSON-style content: {}",
+            entity, TimelineUtils.dumpTimelineRecordtoJSON(entity));
       }
       TimelineV2Client timelineClient = getTimelineClient(appId);
       if (timelineClient != null) {
@@ -359,14 +351,10 @@ public class NMTimelinePublisher extends CompositeService {
       }
     } catch (IOException e) {
       LOG.error("Error when publishing entity " + entity);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Error when publishing entity " + entity, e);
-      }
+      LOG.debug("Error when publishing entity {}", entity, e);
     } catch (YarnException e) {
       LOG.error("Error when publishing entity " + entity, e.getMessage());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Error when publishing entity " + entity, e);
-      }
+      LOG.debug("Error when publishing entity {}", entity, e);
     }
   }
 
@@ -388,10 +376,8 @@ public class NMTimelinePublisher extends CompositeService {
       break;
 
     default:
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(event.getType() + " is not a desired ApplicationEvent which"
-            + " needs to be published by NMTimelinePublisher");
-      }
+      LOG.debug("{} is not a desired ApplicationEvent which"
+          + " needs to be published by NMTimelinePublisher", event.getType());
       break;
     }
   }
@@ -404,11 +390,8 @@ public class NMTimelinePublisher extends CompositeService {
       break;
 
     default:
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(event.getType()
-            + " is not a desired ContainerEvent which needs to be published by"
-            + " NMTimelinePublisher");
-      }
+      LOG.debug("{} is not a desired ContainerEvent which needs to be "
+            + " published by NMTimelinePublisher", event.getType());
       break;
     }
   }
@@ -425,11 +408,8 @@ public class NMTimelinePublisher extends CompositeService {
           ContainerMetricsConstants.LOCALIZATION_START_EVENT_TYPE);
       break;
     default:
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(event.getType()
-            + " is not a desired LocalizationEvent which needs to be published"
-            + " by NMTimelinePublisher");
-      }
+      LOG.debug("{} is not a desired LocalizationEvent which needs to be"
+            + " published by NMTimelinePublisher", event.getType());
       break;
     }
   }

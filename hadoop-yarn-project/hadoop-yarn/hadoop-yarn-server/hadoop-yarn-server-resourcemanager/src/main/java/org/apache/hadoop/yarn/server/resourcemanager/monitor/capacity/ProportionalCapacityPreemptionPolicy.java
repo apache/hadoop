@@ -332,11 +332,9 @@ public class ProportionalCapacityPreemptionPolicy
         toPreemptPerSelector.values()) {
       toPreemptCount += containers.size();
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(
-          "Starting to preempt containers for selectedCandidates and size:"
-              + toPreemptCount);
-    }
+    LOG.debug(
+        "Starting to preempt containers for selectedCandidates and size:{}",
+        toPreemptCount);
 
     // preempt (or kill) the selected containers
     // We need toPreemptPerSelector here to match list of containers to

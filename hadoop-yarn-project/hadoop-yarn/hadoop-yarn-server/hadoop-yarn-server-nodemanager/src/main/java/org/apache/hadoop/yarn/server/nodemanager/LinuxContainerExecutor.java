@@ -314,12 +314,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     try {
       resourceHandlerChain = ResourceHandlerModule
           .getConfiguredResourceHandlerChain(conf, nmContext);
-      if (LOG.isDebugEnabled()) {
-        final boolean enabled = resourceHandlerChain != null;
-        LOG.debug("Resource handler chain enabled = " + enabled);
-      }
+      LOG.debug("Resource handler chain enabled = {}",
+          (resourceHandlerChain != null));
       if (resourceHandlerChain != null) {
-        LOG.debug("Bootstrapping resource handler chain: " +
+        LOG.debug("Bootstrapping resource handler chain: {}",
             resourceHandlerChain);
         resourceHandlerChain.bootstrap(conf);
       }

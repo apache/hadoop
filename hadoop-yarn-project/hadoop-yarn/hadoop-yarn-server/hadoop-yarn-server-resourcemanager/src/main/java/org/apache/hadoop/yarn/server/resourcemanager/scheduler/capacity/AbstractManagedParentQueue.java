@@ -105,9 +105,7 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
         CSQueue cs = qiter.next();
         if (cs.equals(childQueue)) {
           qiter.remove();
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Removed child queue: {}" + cs.getQueueName());
-          }
+          LOG.debug("Removed child queue: {}", cs.getQueueName());
         }
       }
     } finally {

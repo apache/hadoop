@@ -511,11 +511,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
             + ", please check error message in log to understand "
             + "why this happens.";
     LOG.error(message);
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("All docker volumes in the system, command="
-          + dockerVolumeInspectCommand.toString());
-    }
+    LOG.debug("All docker volumes in the system, command={}",
+        dockerVolumeInspectCommand);
 
     throw new ContainerExecutionException(message);
   }
@@ -630,30 +627,22 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   protected void addCGroupParentIfRequired(String resourcesOptions,
       String containerIdStr, DockerRunCommand runCommand) {
     if (cGroupsHandler == null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("cGroupsHandler is null. cgroups are not in use. nothing to"
+      LOG.debug("cGroupsHandler is null. cgroups are not in use. nothing to"
             + " do.");
-      }
       return;
     }
 
     if (resourcesOptions.equals(PrivilegedOperation.CGROUP_ARG_PREFIX
             + PrivilegedOperation.CGROUP_ARG_NO_TASKS)) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("no resource restrictions specified. not using docker's "
-            + "cgroup options");
-      }
+      LOG.debug("no resource restrictions specified. not using docker's "
+          + "cgroup options");
     } else {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("using docker's cgroups options");
-      }
+      LOG.debug("using docker's cgroups options");
 
       String cGroupPath = "/"
           + cGroupsHandler.getRelativePathForCGroup(containerIdStr);
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("using cgroup parent: " + cGroupPath);
-      }
+      LOG.debug("using cgroup parent: {}", cGroupPath);
 
       runCommand.setCGroupParent(cGroupPath);
     }
@@ -1368,9 +1357,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     if (tcCommandFile != null) {
       launchOp.appendArgs(tcCommandFile);
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Launching container with cmd: " + command);
-    }
+    LOG.debug("Launching container with cmd: {}", command);
 
     return launchOp;
   }
@@ -1391,8 +1378,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       throws ContainerExecutionException {
     long start = System.currentTimeMillis();
     DockerPullCommand dockerPullCommand = new DockerPullCommand(imageName);
-    LOG.debug("now pulling docker image." + " image name: " + imageName + ","
-        + " container: " + containerIdStr);
+    LOG.debug("now pulling docker image. image name: {}, container: {}",
+        imageName, containerIdStr);
 
     DockerCommandExecutor.executeDockerCommand(dockerPullCommand,
         containerIdStr, null,
@@ -1400,10 +1387,9 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
     long end = System.currentTimeMillis();
     long pullImageTimeMs = end - start;
-    LOG.debug("pull docker image done with "
-        + String.valueOf(pullImageTimeMs) + "ms spent."
-        + " image name: " + imageName + ","
-        + " container: " + containerIdStr);
+
+    LOG.debug("pull docker image done with {}ms specnt. image name: {},"
+        + " container: {}", pullImageTimeMs, imageName, containerIdStr);
   }
 
   private void executeLivelinessCheck(ContainerRuntimeContext ctx)

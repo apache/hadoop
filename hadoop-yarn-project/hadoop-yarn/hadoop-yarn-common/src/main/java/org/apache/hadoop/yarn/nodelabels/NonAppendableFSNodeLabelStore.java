@@ -61,9 +61,7 @@ public class NonAppendableFSNodeLabelStore extends FileSystemNodeLabelsStore {
         fs.delete(oldMirrorPath, false);
       } catch (IOException e) {
         // do nothing
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Exception while removing old mirror", e);
-        }
+        LOG.debug("Exception while removing old mirror", e);
       }
       
       // rename new to old

@@ -51,20 +51,16 @@ public class NoOpTimelineWriterImpl extends AbstractService implements
                                      TimelineEntities data,
                                      UserGroupInformation callerUgi)
                                      throws IOException {
-    if(LOG.isDebugEnabled()){
-      LOG.debug("NoOpTimelineWriter is configured. Not storing " +
+    LOG.debug("NoOpTimelineWriter is configured. Not storing " +
               "TimelineEntities.");
-    }
     return new TimelineWriteResponse();
   }
 
   @Override
   public TimelineWriteResponse write(TimelineCollectorContext context,
                                      TimelineDomain domain) throws IOException {
-    if(LOG.isDebugEnabled()){
-      LOG.debug("NoOpTimelineWriter is configured. Not storing " +
+    LOG.debug("NoOpTimelineWriter is configured. Not storing " +
               "TimelineEntities.");
-    }
     return new TimelineWriteResponse();
   }
 
@@ -72,17 +68,13 @@ public class NoOpTimelineWriterImpl extends AbstractService implements
   public TimelineWriteResponse aggregate(TimelineEntity data,
                                          TimelineAggregationTrack track)
                                          throws IOException {
-    if(LOG.isDebugEnabled()){
-      LOG.debug("NoOpTimelineWriter is configured. Not aggregating " +
+    LOG.debug("NoOpTimelineWriter is configured. Not aggregating " +
               "TimelineEntities.");
-    }
     return new TimelineWriteResponse();
   }
 
   @Override
   public void flush() throws IOException {
-    if(LOG.isDebugEnabled()){
-      LOG.debug("NoOpTimelineWriter is configured. Ignoring flush call");
-    }
+    LOG.debug("NoOpTimelineWriter is configured. Ignoring flush call");
   }
 }

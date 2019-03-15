@@ -175,9 +175,7 @@ public class HBaseTimelineReaderImpl
 
         // on success, reset hbase down flag
         if (hbaseDown.getAndSet(false)) {
-          if(LOG.isDebugEnabled()) {
-            LOG.debug("HBase request succeeded, assuming HBase up");
-          }
+          LOG.debug("HBase request succeeded, assuming HBase up");
         }
       } catch (Exception e) {
         LOG.warn("Got failure attempting to read from timeline storage, " +

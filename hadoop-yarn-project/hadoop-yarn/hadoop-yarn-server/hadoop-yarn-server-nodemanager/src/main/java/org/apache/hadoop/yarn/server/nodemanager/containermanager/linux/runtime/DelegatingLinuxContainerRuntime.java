@@ -129,10 +129,8 @@ public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
       }
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Using container runtime: " + runtime.getClass()
+    LOG.debug("Using container runtime: {}", runtime.getClass()
           .getSimpleName());
-    }
 
     return runtime;
   }

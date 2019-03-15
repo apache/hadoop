@@ -638,9 +638,7 @@ public class AuxServices extends AbstractService
             .getName());
         loadedAuxServices.add(service.getName());
         if (existingService != null && existingService.equals(service)) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Auxiliary service already loaded: " + service.getName());
-          }
+          LOG.debug("Auxiliary service already loaded: {}", service.getName());
           continue;
         }
         foundChanges = true;

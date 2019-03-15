@@ -401,7 +401,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
             amrmToken.decodeFromUrlString(
                 new String(entry.getValue(), STRING_TO_BYTE_FORMAT));
             uamMap.put(scId, amrmToken);
-            LOG.debug("Recovered UAM in " + scId + " from NMSS");
+            LOG.debug("Recovered UAM in {} from NMSS", scId);
           }
         }
         LOG.info("Found {} existing UAMs for application {} in NMStateStore",
@@ -443,8 +443,8 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
               .getContainersFromPreviousAttempts()) {
             containerIdToSubClusterIdMap.put(container.getId(), subClusterId);
             containers++;
-            LOG.debug("  From subcluster " + subClusterId
-                + " running container " + container.getId());
+            LOG.debug("  From subcluster {} running container {}",
+                subClusterId, container.getId());
           }
           LOG.info("Recovered {} running containers from UAM in {}",
               response.getContainersFromPreviousAttempts().size(),
@@ -471,8 +471,8 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
         containerIdToSubClusterIdMap.put(container.getContainerId(),
             this.homeSubClusterId);
         containers++;
-        LOG.debug("  From home RM " + this.homeSubClusterId
-            + " running container " + container.getContainerId());
+        LOG.debug("  From home RM {} running container {}",
+            this.homeSubClusterId, container.getContainerId());
       }
       LOG.info("{} running containers including AM recovered from home RM {}",
           response.getContainerList().size(), this.homeSubClusterId);
@@ -797,10 +797,8 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
         try {
           Future<FinishApplicationMasterResponseInfo> future = compSvc.take();
           FinishApplicationMasterResponseInfo uamResponse = future.get();
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Received finish application response from RM: "
-                + uamResponse.getSubClusterId());
-          }
+          LOG.debug("Received finish application response from RM: {}",
+              uamResponse.getSubClusterId());
           if (uamResponse.getResponse() == null
               || !uamResponse.getResponse().getIsUnregistered()) {
             failedToUnRegister = true;

@@ -102,7 +102,7 @@ public class YarnVersionInfo extends VersionInfo {
   }
   
   public static void main(String[] args) {
-    LOG.debug("version: "+ getVersion());
+    LOG.debug("version: {}", getVersion());
     System.out.println("YARN " + getVersion());
     System.out.println("Subversion " + getUrl() + " -r " + getRevision());
     System.out.println("Compiled by " + getUser() + " on " + getDate());

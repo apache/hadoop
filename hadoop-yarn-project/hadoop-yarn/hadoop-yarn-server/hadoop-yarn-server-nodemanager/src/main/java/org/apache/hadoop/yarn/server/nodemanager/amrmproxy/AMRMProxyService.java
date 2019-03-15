@@ -247,11 +247,11 @@ public class AMRMProxyService extends CompositeService implements
         // Retrieve the AM container credentials from NM context
         Credentials amCred = null;
         for (Container container : this.nmContext.getContainers().values()) {
-          LOG.debug("From NM Context container " + container.getContainerId());
+          LOG.debug("From NM Context container {}", container.getContainerId());
           if (container.getContainerId().getApplicationAttemptId().equals(
               attemptId) && container.getContainerTokenIdentifier() != null) {
-            LOG.debug("Container type "
-                + container.getContainerTokenIdentifier().getContainerType());
+            LOG.debug("Container type {}",
+                container.getContainerTokenIdentifier().getContainerType());
             if (container.getContainerTokenIdentifier()
                 .getContainerType() == ContainerType.APPLICATION_MASTER) {
               LOG.info("AM container {} found in context, has credentials: {}",
@@ -764,9 +764,7 @@ public class AMRMProxyService extends CompositeService implements
           AMRMProxyService.this.stopApplication(event.getApplicationID());
           break;
         default:
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("AMRMProxy is ignoring event: " + event.getType());
-          }
+          LOG.debug("AMRMProxy is ignoring event: {}", event.getType());
           break;
         }
       } else {

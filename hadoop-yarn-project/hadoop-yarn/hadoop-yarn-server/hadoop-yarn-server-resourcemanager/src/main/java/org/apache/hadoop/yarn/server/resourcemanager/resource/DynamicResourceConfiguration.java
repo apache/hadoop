@@ -87,8 +87,9 @@ public class DynamicResourceConfiguration extends Configuration {
 
   public void setVcoresPerNode(String node, int vcores) {
     setInt(getNodePrefix(node) + VCORES, vcores);
-    LOG.debug("DRConf - setVcoresPerNode: nodePrefix=" + getNodePrefix(node) +
-      ", vcores=" + vcores);
+    LOG.debug("DRConf - setVcoresPerNode: nodePrefix={}, vcores={}",
+        getNodePrefix(node), vcores);
+
   }
 
   public int getMemoryPerNode(String node) {
@@ -100,8 +101,9 @@ public class DynamicResourceConfiguration extends Configuration {
 
   public void setMemoryPerNode(String node, int memory) {
     setInt(getNodePrefix(node) + MEMORY, memory);
-    LOG.debug("DRConf - setMemoryPerNode: nodePrefix=" + getNodePrefix(node) +
-      ", memory=" + memory);
+    LOG.debug("DRConf - setMemoryPerNode: nodePrefix={}, memory={}",
+        getNodePrefix(node), memory);
+
   }
 
   public int getOverCommitTimeoutPerNode(String node) {
@@ -113,9 +115,8 @@ public class DynamicResourceConfiguration extends Configuration {
 
   public void setOverCommitTimeoutPerNode(String node, int overCommitTimeout) {
     setInt(getNodePrefix(node) + OVERCOMMIT_TIMEOUT, overCommitTimeout);
-    LOG.debug("DRConf - setOverCommitTimeoutPerNode: nodePrefix=" +
-      getNodePrefix(node) +
-        ", overCommitTimeout=" + overCommitTimeout);
+    LOG.debug("DRConf - setOverCommitTimeoutPerNode: nodePrefix={},"
+        + " overCommitTimeout={}", getNodePrefix(node), overCommitTimeout);
   }
 
   public String[] getNodes() {

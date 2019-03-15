@@ -573,10 +573,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     String user = ctx.getUser();
     String pid = ctx.getPid();
     Signal signal = ctx.getSignal();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Sending signal " + signal.getValue() + " to pid " + pid
-          + " as user " + user);
-    }
+    LOG.debug("Sending signal {} to pid {} as user {}",
+        signal.getValue(), pid, user);
     if (!containerIsAlive(pid)) {
       return false;
     }

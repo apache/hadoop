@@ -356,10 +356,8 @@ public class FSLeafQueue extends FSQueue {
       }
       assigned = sched.assignContainer(node);
       if (!assigned.equals(none())) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Assigned container in queue:" + getName() + " " +
-              "container:" + assigned);
-        }
+        LOG.debug("Assigned container in queue:{} container:{}",
+            getName(), assigned);
         break;
       }
     }

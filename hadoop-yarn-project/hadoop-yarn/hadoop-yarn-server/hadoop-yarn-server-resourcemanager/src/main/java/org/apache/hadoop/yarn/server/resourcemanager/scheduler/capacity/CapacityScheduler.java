@@ -862,10 +862,8 @@ public class CapacityScheduler extends
       applications.put(applicationId, application);
       LOG.info("Accepted application " + applicationId + " from user: " + user
           + ", in queue: " + queueName);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            applicationId + " is recovering. Skip notifying APP_ACCEPTED");
-      }
+      LOG.debug(
+          applicationId + " is recovering. Skip notifying APP_ACCEPTED");
     } finally {
       writeLock.unlock();
     }
@@ -1254,10 +1252,8 @@ public class CapacityScheduler extends
       updateDemandForQueue.getOrderingPolicy().demandUpdated(application);
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.info("Allocation for application " + applicationAttemptId + " : "
-          + allocation + " with cluster resource : " + getClusterResource());
-    }
+    LOG.debug("Allocation for application {} : {} with cluster resource : {}",
+        applicationAttemptId, allocation, getClusterResource());
     return allocation;
   }
 
@@ -1508,10 +1504,8 @@ public class CapacityScheduler extends
         }
 
         if (offswitchCount >= offswitchPerHeartbeatLimit) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Assigned maximum number of off-switch containers: "
-                + offswitchCount + ", assignments so far: " + assignment);
-          }
+          LOG.debug("Assigned maximum number of off-switch containers: {},"
+              + " assignments so far: {}", offswitchCount, assignment);
         }
       }
     }
@@ -1523,11 +1517,8 @@ public class CapacityScheduler extends
   private CSAssignment allocateContainerOnSingleNode(
       CandidateNodeSet<FiCaSchedulerNode> candidates, FiCaSchedulerNode node,
       boolean withNodeHeartbeat) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(
-          "Trying to schedule on node: " + node.getNodeName() + ", available: "
-              + node.getUnallocatedResource());
-    }
+    LOG.debug("Trying to schedule on node: {}, available: {}",
+        node.getNodeName(), node.getUnallocatedResource());
 
     // Backward compatible way to make sure previous behavior which allocation
     // driven by node heartbeat works.
@@ -1555,11 +1546,8 @@ public class CapacityScheduler extends
       }
 
       // Try to fulfill the reservation
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Trying to fulfill reservation for application "
-            + reservedApplication.getApplicationId() + " on node: " + node
-            .getNodeID());
-      }
+      LOG.debug("Trying to fulfill reservation for application {} on node: {}",
+          reservedApplication.getApplicationId(), node.getNodeID());
 
       LeafQueue queue = ((LeafQueue) reservedApplication.getQueue());
       assignment = queue.assignContainers(getClusterResource(), candidates,
@@ -1602,11 +1590,9 @@ public class CapacityScheduler extends
 
     // Do not schedule if there are any reservations to fulfill on the node
     if (node.getReservedContainer() != null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Skipping scheduling since node " + node.getNodeID()
-            + " is reserved by application " + node.getReservedContainer()
-            .getContainerId().getApplicationAttemptId());
-      }
+      LOG.debug("Skipping scheduling since node {} is reserved by"
+          + " application {}", node.getNodeID(), node.getReservedContainer().
+          getContainerId().getApplicationAttemptId());
       return null;
     }
 
@@ -1616,10 +1602,8 @@ public class CapacityScheduler extends
     if (calculator.computeAvailableContainers(Resources
             .add(node.getUnallocatedResource(), node.getTotalKillableResources()),
         minimumAllocation) <= 0) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("This node or node partition doesn't have available or" +
-            " preemptible resource");
-      }
+      LOG.debug("This node or node partition doesn't have available or" +
+          " preemptible resource");
       return null;
     }
 
@@ -1697,10 +1681,8 @@ public class CapacityScheduler extends
         && preemptionManager.getKillableResource(
         CapacitySchedulerConfiguration.ROOT, candidates.getPartition())
         == Resources.none()) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("This node or this node partition doesn't have available or"
-            + "killable resource");
-      }
+      LOG.debug("This node or this node partition doesn't have available or"
+          + "killable resource");
       return null;
     }
 
@@ -2128,10 +2110,8 @@ public class CapacityScheduler extends
 
   @Override
   public void killReservedContainer(RMContainer container) {
-    if(LOG.isDebugEnabled()){
-      LOG.debug(SchedulerEventType.KILL_RESERVED_CONTAINER + ":"
-          + container.toString());
-    }
+    LOG.debug("{}:{}", SchedulerEventType.KILL_RESERVED_CONTAINER, container);
+
     // To think: What happens if this is no longer a reserved container, for
     // e.g if the reservation became an allocation.
     super.completedContainer(container,
@@ -2144,11 +2124,8 @@ public class CapacityScheduler extends
   @Override
   public void markContainerForPreemption(ApplicationAttemptId aid,
       RMContainer cont) {
-    if(LOG.isDebugEnabled()){
-      LOG.debug(SchedulerEventType.MARK_CONTAINER_FOR_PREEMPTION
-            + ": appAttempt:" + aid.toString() + " container: "
-            + cont.toString());
-    }
+    LOG.debug("{}: appAttempt:{} container:{}",
+        SchedulerEventType.MARK_CONTAINER_FOR_PREEMPTION, aid, cont);
     FiCaSchedulerApp app = getApplicationAttempt(aid);
     if (app != null) {
       app.markContainerForPreemption(cont.getContainerId());
@@ -2165,10 +2142,8 @@ public class CapacityScheduler extends
       RMContainer killableContainer) {
     writeLock.lock();
     try {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(SchedulerEventType.MARK_CONTAINER_FOR_KILLABLE + ": container"
-            + killableContainer.toString());
-      }
+      LOG.debug("{}: container {}",
+          SchedulerEventType.MARK_CONTAINER_FOR_KILLABLE, killableContainer);
 
       if (!isLazyPreemptionEnabled) {
         super.completedContainer(killableContainer, SchedulerUtils
@@ -2201,11 +2176,8 @@ public class CapacityScheduler extends
       RMContainer nonKillableContainer) {
     writeLock.lock();
     try {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            SchedulerEventType.MARK_CONTAINER_FOR_NONKILLABLE + ": container"
-                + nonKillableContainer.toString());
-      }
+      LOG.debug("{}: container {}", SchedulerEventType.
+          MARK_CONTAINER_FOR_NONKILLABLE, nonKillableContainer);
 
       FiCaSchedulerNode node = getSchedulerNode(
           nonKillableContainer.getAllocatedNode());
@@ -2233,10 +2205,8 @@ public class CapacityScheduler extends
       QueueACL acl, String queueName) {
     CSQueue queue = getQueue(queueName);
     if (queue == null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("ACL not found for queue access-type " + acl + " for queue "
-            + queueName);
-      }
+      LOG.debug("ACL not found for queue access-type {} for queue {}",
+          acl, queueName);
       return false;
     }
     return queue.hasAccess(acl, callerUGI);
@@ -3001,9 +2971,7 @@ public class CapacityScheduler extends
       }
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Try to commit allocation proposal=" + request);
-    }
+    LOG.debug("Try to commit allocation proposal={}", request);
 
     boolean isSuccess = false;
     if (attemptId != null) {
@@ -3026,10 +2994,8 @@ public class CapacityScheduler extends
           LOG.info("Failed to accept allocation proposal");
         }
 
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Allocation proposal accepted=" + isSuccess + ", proposal="
-              + request);
-        }
+        LOG.debug("Allocation proposal accepted={}, proposal={}", isSuccess,
+            request);
 
         // Update unconfirmed allocated resource.
         if (updateUnconfirmedAllocatedResource) {
@@ -3066,46 +3032,35 @@ public class CapacityScheduler extends
       FiCaSchedulerNode targetNode) {
     writeLock.lock();
     try {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Trying to move container=" + toBeMovedContainer + " to node="
-            + targetNode.getNodeID());
-      }
+      LOG.debug("Trying to move container={} to node={}",
+          toBeMovedContainer, targetNode.getNodeID());
 
       FiCaSchedulerNode sourceNode = getNode(toBeMovedContainer.getNodeId());
       if (null == sourceNode) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Failed to move reservation, cannot find source node="
-              + toBeMovedContainer.getNodeId());
-        }
+        LOG.debug("Failed to move reservation, cannot find source node={}",
+            toBeMovedContainer.getNodeId());
         return false;
       }
 
       // Target node updated?
       if (getNode(targetNode.getNodeID()) != targetNode) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-              "Failed to move reservation, node updated or removed, moving "
-                  + "cancelled.");
-        }
+        LOG.debug("Failed to move reservation, node updated or removed,"
+            + " moving cancelled.");
         return false;
       }
 
       // Target node's reservation status changed?
       if (targetNode.getReservedContainer() != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-              "Target node's reservation status changed, moving cancelled.");
-        }
+        LOG.debug("Target node's reservation status changed,"
+            + " moving cancelled.");
         return false;
       }
 
       FiCaSchedulerApp app = getApplicationAttempt(
           toBeMovedContainer.getApplicationAttemptId());
       if (null == app) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Cannot find to-be-moved container's application="
-              + toBeMovedContainer.getApplicationAttemptId());
-        }
+        LOG.debug("Cannot find to-be-moved container's application={}",
+            toBeMovedContainer.getApplicationAttemptId());
         return false;
       }
 

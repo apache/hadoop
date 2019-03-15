@@ -857,10 +857,7 @@ public class ParentQueue extends AbstractCSQueue {
       super.releaseResource(clusterResource, releasedResource,
           node.getPartition());
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            "completedContainer " + this + ", cluster=" + clusterResource);
-      }
+      LOG.debug("completedContainer {}, cluster={}", this, clusterResource);
 
     } finally {
       writeLock.unlock();

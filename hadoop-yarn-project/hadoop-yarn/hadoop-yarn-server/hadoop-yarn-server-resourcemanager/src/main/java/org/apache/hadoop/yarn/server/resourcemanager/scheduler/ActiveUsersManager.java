@@ -67,10 +67,8 @@ public class ActiveUsersManager implements AbstractUsersManager {
       usersApplications.put(user, userApps);
       ++activeUsers;
       metrics.incrActiveUsers();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("User " + user + " added to activeUsers, currently: "
-            + activeUsers);
-      }
+      LOG.debug("User {} added to activeUsers, currently: {}", user,
+          activeUsers);
     }
     if (userApps.add(applicationId)) {
       metrics.activateApp(user);
@@ -96,10 +94,8 @@ public class ActiveUsersManager implements AbstractUsersManager {
         usersApplications.remove(user);
         --activeUsers;
         metrics.decrActiveUsers();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("User " + user + " removed from activeUsers, currently: "
-              + activeUsers);
-        }
+        LOG.debug("User {} removed from activeUsers, currently: {}", user,
+            activeUsers);
       }
     }
   }

@@ -850,10 +850,10 @@ public class LogAggregationIndexedFileController
       }
       if (uuidReadLen != UUID_LENGTH || !Arrays.equals(this.uuid, uuidRead)) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("the length of loaded UUID:" + uuidReadLen);
-          LOG.debug("the loaded UUID:" + new String(uuidRead,
+          LOG.debug("the length of loaded UUID:{}", uuidReadLen);
+          LOG.debug("the loaded UUID:{}", new String(uuidRead,
               Charset.forName("UTF-8")));
-          LOG.debug("the expected UUID:" + new String(this.uuid,
+          LOG.debug("the expected UUID:{}", new String(this.uuid,
               Charset.forName("UTF-8")));
         }
         throw new IOException("The UUID from "

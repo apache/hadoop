@@ -326,7 +326,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
 
   @Override
   public void write(DataOutput out) throws IOException {
-    LOG.debug("Writing ContainerTokenIdentifier to RPC layer: " + this);
+    LOG.debug("Writing ContainerTokenIdentifier to RPC layer: {}", this);
     out.write(proto.toByteArray());
   }
 

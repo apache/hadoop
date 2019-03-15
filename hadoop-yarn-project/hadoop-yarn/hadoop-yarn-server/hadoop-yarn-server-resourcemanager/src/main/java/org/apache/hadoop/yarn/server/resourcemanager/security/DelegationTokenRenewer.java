@@ -438,10 +438,7 @@ public class DelegationTokenRenewer extends AbstractService {
       return; // nothing to add
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Registering tokens for renewal for:" +
-          " appId = " + applicationId);
-    }
+    LOG.debug("Registering tokens for renewal for: appId = {}", applicationId);
 
     Collection<Token<?>> tokens = ts.getAllTokens();
     long now = System.currentTimeMillis();

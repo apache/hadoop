@@ -45,7 +45,7 @@ public class HadoopYarnProtoRPC extends YarnRPC {
   @Override
   public Object getProxy(Class protocol, InetSocketAddress addr,
       Configuration conf) {
-    LOG.debug("Creating a HadoopYarnProtoRpc proxy for protocol " + protocol);
+    LOG.debug("Creating a HadoopYarnProtoRpc proxy for protocol {}", protocol);
     return RpcFactoryProvider.getClientFactory(conf).getClient(protocol, 1,
         addr, conf);
   }
@@ -60,8 +60,8 @@ public class HadoopYarnProtoRPC extends YarnRPC {
       InetSocketAddress addr, Configuration conf,
       SecretManager<? extends TokenIdentifier> secretManager,
       int numHandlers, String portRangeConfig) {
-    LOG.debug("Creating a HadoopYarnProtoRpc server for protocol " + protocol + 
-        " with " + numHandlers + " handlers");
+    LOG.debug("Creating a HadoopYarnProtoRpc server for protocol {} with {}"
+        + " handlers", protocol, numHandlers);
     
     return RpcFactoryProvider.getServerFactory(conf).getServer(protocol, 
         instance, addr, conf, secretManager, numHandlers, portRangeConfig);

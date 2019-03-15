@@ -164,10 +164,10 @@ public class IntelFpgaOpenclPlugin implements AbstractFpgaVendorPlugin {
       Shell.ShellCommandExecutor shexec = new Shell.ShellCommandExecutor(
           new String[]{"stat", "-c", "%t:%T", "/dev/" + devName});
       try {
-        LOG.debug("Get FPGA major-minor numbers from /dev/" + devName);
+        LOG.debug("Get FPGA major-minor numbers from /dev/{}", devName);
         shexec.execute();
         String[] strs = shexec.getOutput().trim().split(":");
-        LOG.debug("stat output:" + shexec.getOutput());
+        LOG.debug("stat output:{}", shexec.getOutput());
         output = Integer.parseInt(strs[0], 16) + ":" +
             Integer.parseInt(strs[1], 16);
       } catch (IOException e) {
@@ -192,7 +192,7 @@ public class IntelFpgaOpenclPlugin implements AbstractFpgaVendorPlugin {
             "Failed to execute " + binary + " diagnose, exception message:" + e
                 .getMessage() +", output:" + output + ", continue ...";
         LOG.warn(msg);
-        LOG.debug(shexec.getOutput());
+        LOG.debug("{}", shexec.getOutput());
       }
       return shexec.getOutput();
     }
@@ -241,7 +241,7 @@ public class IntelFpgaOpenclPlugin implements AbstractFpgaVendorPlugin {
 
       if (aocxPath.isPresent()) {
         ipFilePath = aocxPath.get().toUri().toString();
-        LOG.debug("Found: " + ipFilePath);
+        LOG.debug("Found: {}", ipFilePath);
       }
     } else {
       LOG.warn("Localized resource is null!");
@@ -278,7 +278,7 @@ public class IntelFpgaOpenclPlugin implements AbstractFpgaVendorPlugin {
     try {
       shexec.execute();
       if (0 == shexec.getExitCode()) {
-        LOG.debug(shexec.getOutput());
+        LOG.debug("{}", shexec.getOutput());
         LOG.info("Intel aocl program " + ipPath + " to " +
             aclName + " successfully");
       } else {

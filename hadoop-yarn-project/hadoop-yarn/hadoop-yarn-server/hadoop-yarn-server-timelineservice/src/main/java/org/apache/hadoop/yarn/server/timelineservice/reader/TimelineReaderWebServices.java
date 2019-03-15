@@ -3594,10 +3594,8 @@ public class TimelineReaderWebServices {
       String entityUser) {
     String authUser = TimelineReaderWebServicesUtils.getUserName(ugi);
     String requestedUser = TimelineReaderWebServicesUtils.parseStr(entityUser);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(
-          "Authenticated User: " + authUser + " Requested User:" + entityUser);
-    }
+    LOG.debug(
+          "Authenticated User: {} Requested User:{}", authUser, entityUser);
     return (readerManager.checkAccess(ugi) || authUser.equals(requestedUser));
   }
 

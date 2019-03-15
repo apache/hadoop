@@ -194,9 +194,7 @@ public class ProxyCA {
     String subject = "OU=YARN-" + UUID.randomUUID();
     caCert = createCert(true, subject, subject, from, to,
         caKeyPair.getPublic(), caKeyPair.getPrivate());
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("CA Certificate: \n{}", caCert);
-    }
+    LOG.debug("CA Certificate: \n{}", caCert);
   }
 
   public byte[] createChildKeyStore(ApplicationId appId, String ksPassword)

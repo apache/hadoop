@@ -108,10 +108,8 @@ public class FifoIntraQueuePreemptionPlugin
       Resources.addTo(actualPreemptNeeded, a1.getActuallyToBePreempted());
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Selected to preempt " + actualPreemptNeeded
-          + " resource from partition:" + partition);
-    }
+    LOG.debug("Selected to preempt {} resource from partition:{}",
+        actualPreemptNeeded, partition);
     return resToObtainByPartition;
   }
 
@@ -445,9 +443,7 @@ public class FifoIntraQueuePreemptionPlugin
             tmpUser.amUsed);
         tmpUser.setUserLimit(userLimitResource);
 
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("TempUser:" + tmpUser);
-        }
+        LOG.debug("TempUser:{}", tmpUser);
 
         tmpUser.idealAssigned = Resources.createResource(0, 0);
         tq.addUserPerPartition(userName, tmpUser);

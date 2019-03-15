@@ -908,8 +908,9 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     try {
       ApplicationId appID = event.getApplicationId();
-      LOG.debug("Processing event for " + appID + " of type "
-          + event.getType());
+      LOG.debug("Processing event for {} of type {}",
+          appID, event.getType());
+
       final RMAppState oldState = getState();
       try {
         /* keep the master in sync with the state machine */
@@ -1025,8 +1026,8 @@ public class RMAppImpl implements RMApp, Recoverable {
   private void processNodeUpdate(RMAppNodeUpdateType type, RMNode node) {
     NodeState nodeState = node.getState();
     updatedNodes.put(node, RMAppNodeUpdateType.convertToNodeUpdateType(type));
-    LOG.debug("Received node update event:" + type + " for node:" + node
-        + " with state:" + nodeState);
+    LOG.debug("Received node update event:{} for node:{} with state:",
+        type, node, nodeState);
   }
 
   private static class RMAppTransition implements

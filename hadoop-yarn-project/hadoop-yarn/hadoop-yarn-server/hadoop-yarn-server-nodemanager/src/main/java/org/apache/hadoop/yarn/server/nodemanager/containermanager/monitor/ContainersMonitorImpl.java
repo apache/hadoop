@@ -468,8 +468,8 @@ public class ContainersMonitorImpl extends AbstractService implements
             tmp.append(p.getPID());
             tmp.append(" ");
           }
-          LOG.debug("Current ProcessTree list : "
-              + tmp.substring(0, tmp.length()) + "]");
+          LOG.debug("Current ProcessTree list : {}",
+              tmp.substring(0, tmp.length()) + "]");
         }
 
         // Temporary structure to calculate the total resource utilization of
@@ -495,10 +495,8 @@ public class ContainersMonitorImpl extends AbstractService implements
             if (pId == null || !isResourceCalculatorAvailable()) {
               continue; // processTree cannot be tracked
             }
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Constructing ProcessTree for : PID = " + pId
-                  + " ContainerId = " + containerId);
-            }
+            LOG.debug("Constructing ProcessTree for : PID = {}"
+                +" ContainerId = {}", pId, containerId);
             ResourceCalculatorProcessTree pTree = ptInfo.getProcessTree();
             pTree.updateProcessTree();    // update process-tree
             long currentVmemUsage = pTree.getVirtualMemorySize();
@@ -536,13 +534,11 @@ public class ContainersMonitorImpl extends AbstractService implements
                 + "while monitoring resource of {}", containerId, e);
           }
         }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Total Resource Usage stats in NM by all containers : "
-              + "Virtual Memory= " + vmemUsageByAllContainers
-              + ", Physical Memory= " + pmemByAllContainers
-              + ", Total CPU usage(% per core)= "
-              + cpuUsagePercentPerCoreByAllContainers);
-        }
+        LOG.debug("Total Resource Usage stats in NM by all containers : "
+            + "Virtual Memory= {}, Physical Memory= {}, "
+            + "Total CPU usage(% per core)= {}", vmemUsageByAllContainers,
+            pmemByAllContainers, cpuUsagePercentPerCoreByAllContainers);
+
 
         // Save the aggregated utilization of the containers
         setContainersUtilization(trackedContainersUtilization);
@@ -587,9 +583,7 @@ public class ContainersMonitorImpl extends AbstractService implements
         if (pId != null) {
           // pId will be null, either if the container is not spawned yet
           // or if the container's pid is removed from ContainerExecutor
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Tracking ProcessTree " + pId + " for the first time");
-          }
+          LOG.debug("Tracking ProcessTree {} for the first time", pId);
           ResourceCalculatorProcessTree pt =
               getResourceCalculatorProcessTree(pId);
           ptInfo.setPid(pId);

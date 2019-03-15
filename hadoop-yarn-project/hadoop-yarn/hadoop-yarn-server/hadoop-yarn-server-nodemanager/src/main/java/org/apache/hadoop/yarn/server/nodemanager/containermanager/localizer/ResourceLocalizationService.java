@@ -345,10 +345,8 @@ public class ResourceLocalizationService extends CompositeService
         LocalizedResourceProto proto = it.next();
         LocalResource rsrc = new LocalResourcePBImpl(proto.getResource());
         LocalResourceRequest req = new LocalResourceRequest(rsrc);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Recovering localized resource " + req + " at "
-              + proto.getLocalPath());
-        }
+        LOG.debug("Recovering localized resource {} at {}",
+            req, proto.getLocalPath());
         tracker.handle(new ResourceRecoveredEvent(req,
             new Path(proto.getLocalPath()), proto.getSize()));
       }
@@ -514,10 +512,8 @@ public class ResourceLocalizationService extends CompositeService
                   .getApplicationId());
       for (LocalResourceRequest req : e.getValue()) {
         tracker.handle(new ResourceRequestEvent(req, e.getKey(), ctxt));
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Localizing " + req.getPath() +
-              " for container " + c.getContainerId());
-        }
+        LOG.debug("Localizing {} for container {}",
+            req.getPath(), c.getContainerId());
       }
     }
   }
@@ -930,17 +926,13 @@ public class ResourceLocalizationService extends CompositeService
                 + " Either queue is full or threadpool is shutdown.", re);
           }
         } else {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Skip downloading resource: " + key + " since it's in"
-                + " state: " + rsrc.getState());
-          }
+          LOG.debug("Skip downloading resource: {} since it's in"
+                + " state: {}", key, rsrc.getState());
           rsrc.unlock();
         }
       } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Skip downloading resource: " + key + " since it is locked"
-              + " by other threads");
-        }
+        LOG.debug("Skip downloading resource: {} since it is locked"
+              + " by other threads", key);
       }
     }
 
@@ -1302,10 +1294,10 @@ public class ResourceLocalizationService extends CompositeService
       if (systemCredentials == null) {
         return null;
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Adding new framework-token for " + appId
-            + " for localization: " + systemCredentials.getAllTokens());
-      }
+
+      LOG.debug("Adding new framework-token for {} for localization: {}",
+          appId, systemCredentials.getAllTokens());
+
       return systemCredentials;
     }
     
@@ -1328,11 +1320,10 @@ public class ResourceLocalizationService extends CompositeService
         LOG.info("Writing credentials to the nmPrivate file "
             + nmPrivateCTokensPath.toString());
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Credentials list in " + nmPrivateCTokensPath.toString()
-              + ": ");
+          LOG.debug("Credentials list in {}: " + nmPrivateCTokensPath);
           for (Token<? extends TokenIdentifier> tk : credentials
               .getAllTokens()) {
-            LOG.debug(tk + " : " + buildTokenFingerprint(tk));
+            LOG.debug("{} : {}", tk, buildTokenFingerprint(tk));
           }
         }
         if (UserGroupInformation.isSecurityEnabled()) {

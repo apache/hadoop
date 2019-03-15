@@ -618,8 +618,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   @Override
   public void handle(RMAppManagerEvent event) {
     ApplicationId applicationId = event.getApplicationId();
-    LOG.debug("RMAppManager processing event for " 
-        + applicationId + " of type " + event.getType());
+    LOG.debug("RMAppManager processing event for {} of type {}",
+        applicationId, event.getType());
     switch (event.getType()) {
     case APP_COMPLETED :
       finishApplication(applicationId);

@@ -292,7 +292,7 @@ public class DecommissioningNodesWatcher {
         }
         // Remove stale non-DECOMMISSIONING node
         if (d.nodeState != NodeState.DECOMMISSIONING) {
-          LOG.debug("remove " + d.nodeState + " " + d.nodeId);
+          LOG.debug("remove {} {}", d.nodeState, d.nodeId);
           it.remove();
           continue;
         } else if (now - d.lastUpdateTime > 60000L) {
@@ -300,7 +300,7 @@ public class DecommissioningNodesWatcher {
           RMNode rmNode = getRmNode(d.nodeId);
           if (rmNode != null &&
               rmNode.getState() == NodeState.DECOMMISSIONED) {
-            LOG.debug("remove " + rmNode.getState() + " " + d.nodeId);
+            LOG.debug("remove {} {}", rmNode.getState(), d.nodeId);
             it.remove();
             continue;
           }
@@ -308,7 +308,7 @@ public class DecommissioningNodesWatcher {
         if (d.timeoutMs >= 0 &&
             d.decommissioningStartTime + d.timeoutMs < now) {
           staleNodes.add(d.nodeId);
-          LOG.debug("Identified stale and timeout node " + d.nodeId);
+          LOG.debug("Identified stale and timeout node {}", d.nodeId);
         }
       }
 
@@ -342,14 +342,14 @@ public class DecommissioningNodesWatcher {
       ApplicationId appId = it.next();
       RMApp rmApp = rmContext.getRMApps().get(appId);
       if (rmApp == null) {
-        LOG.debug("Consider non-existing app " + appId + " as completed");
+        LOG.debug("Consider non-existing app {} as completed", appId);
         it.remove();
         continue;
       }
       if (rmApp.getState() == RMAppState.FINISHED ||
           rmApp.getState() == RMAppState.FAILED ||
           rmApp.getState() == RMAppState.KILLED) {
-        LOG.debug("Remove " + rmApp.getState() + " app " + appId);
+        LOG.debug("Remove {} app {}", rmApp.getState(), appId);
         it.remove();
       }
     }

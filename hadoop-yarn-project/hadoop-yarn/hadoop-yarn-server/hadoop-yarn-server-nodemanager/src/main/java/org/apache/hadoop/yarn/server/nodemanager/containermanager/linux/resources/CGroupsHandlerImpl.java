@@ -464,10 +464,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
   public String createCGroup(CGroupController controller, String cGroupId)
       throws ResourceHandlerException {
     String path = getPathForCGroup(controller, cGroupId);
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("createCgroup: " + path);
-    }
+    LOG.debug("createCgroup: {}", path);
 
     if (!new File(path).mkdir()) {
       throw new ResourceHandlerException("Failed to create cgroup at " + path);
@@ -487,7 +484,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
               + "/tasks"), "UTF-8"))) {
         str = inl.readLine();
         if (str != null) {
-          LOG.debug("First line in cgroup tasks file: " + cgf + " " + str);
+          LOG.debug("First line in cgroup tasks file: {} {}", cgf, str);
         }
       } catch (IOException e) {
         LOG.warn("Failed to read cgroup tasks file. ", e);
@@ -537,9 +534,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
     boolean deleted = false;
     String cGroupPath = getPathForCGroup(controller, cGroupId);
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("deleteCGroup: " + cGroupPath);
-    }
+    LOG.debug("deleteCGroup: {}", cGroupPath);
 
     long start = clock.getTime();
 

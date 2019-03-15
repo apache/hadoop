@@ -462,8 +462,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       throw new IllegalArgumentException(
           "Illegal " + "capacity of " + capacity + " for queue " + queue);
     }
-    LOG.debug("CSConf - getCapacity: queuePrefix=" + getQueuePrefix(queue)
-        + ", capacity=" + capacity);
+    LOG.debug("CSConf - getCapacity: queuePrefix={}, capacity={}",
+        getQueuePrefix(queue), capacity);
+
     return capacity;
   }
   
@@ -473,8 +474,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
           "Cannot set capacity, root queue has a fixed capacity of 100.0f");
     }
     setFloat(getQueuePrefix(queue) + CAPACITY, capacity);
-    LOG.debug("CSConf - setCapacity: queuePrefix=" + getQueuePrefix(queue) + 
-        ", capacity=" + capacity);
+    LOG.debug("CSConf - setCapacity: queuePrefix={}, capacity={}",
+        getQueuePrefix(queue), capacity);
+
   }
 
   @VisibleForTesting
@@ -484,8 +486,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
           "Cannot set capacity, root queue has a fixed capacity");
     }
     set(getQueuePrefix(queue) + CAPACITY, absoluteResourceCapacity);
-    LOG.debug("CSConf - setCapacity: queuePrefix=" + getQueuePrefix(queue)
-        + ", capacity=" + absoluteResourceCapacity);
+    LOG.debug("CSConf - setCapacity: queuePrefix={}, capacity={}",
+        getQueuePrefix(queue), absoluteResourceCapacity);
+
   }
 
   public float getNonLabeledQueueMaximumCapacity(String queue) {
@@ -515,8 +518,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
           "maximum-capacity of " + maxCapacity + " for queue " + queue);
     }
     setFloat(getQueuePrefix(queue) + MAXIMUM_CAPACITY, maxCapacity);
-    LOG.debug("CSConf - setMaxCapacity: queuePrefix=" + getQueuePrefix(queue) + 
-        ", maxCapacity=" + maxCapacity);
+    LOG.debug("CSConf - setMaxCapacity: queuePrefix={}, maxCapacity={}",
+        getQueuePrefix(queue), maxCapacity);
   }
   
   public void setCapacityByLabel(String queue, String label, float capacity) {
@@ -579,8 +582,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public void setUserLimit(String queue, int userLimit) {
     setInt(getQueuePrefix(queue) + USER_LIMIT, userLimit);
-    LOG.debug("here setUserLimit: queuePrefix=" + getQueuePrefix(queue) + 
-        ", userLimit=" + getUserLimit(queue));
+    LOG.debug("here setUserLimit: queuePrefix={}, userLimit={}",
+        getQueuePrefix(queue), getUserLimit(queue));
   }
   
   public float getUserLimitFactor(String queue) {
@@ -846,7 +849,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   public String[] getQueues(String queue) {
-    LOG.debug("CSConf - getQueues called for: queuePrefix=" + getQueuePrefix(queue));
+    LOG.debug("CSConf - getQueues called for: queuePrefix={}",
+        getQueuePrefix(queue));
     String[] queues = getStrings(getQueuePrefix(queue) + QUEUES);
     List<String> trimmedQueueNames = new ArrayList<String>();
     if (null != queues) {
@@ -855,16 +859,18 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       }
       queues = trimmedQueueNames.toArray(new String[0]);
     }
- 
-    LOG.debug("CSConf - getQueues: queuePrefix=" + getQueuePrefix(queue) + 
-        ", queues=" + ((queues == null) ? "" : StringUtils.arrayToString(queues)));
+
+    LOG.debug("CSConf - getQueues: queuePrefix={}, queues={}",
+        getQueuePrefix(queue),
+        ((queues == null) ? "" : StringUtils.arrayToString(queues)));
+
     return queues;
   }
   
   public void setQueues(String queue, String[] subQueues) {
     set(getQueuePrefix(queue) + QUEUES, StringUtils.arrayToString(subQueues));
-    LOG.debug("CSConf - setQueues: qPrefix=" + getQueuePrefix(queue) + 
-        ", queues=" + StringUtils.arrayToString(subQueues));
+    LOG.debug("CSConf - setQueues: qPrefix={}, queues={}",
+        getQueuePrefix(queue), StringUtils.arrayToString(subQueues));
   }
   
   public Resource getMinimumAllocation() {
@@ -1154,8 +1160,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public void setReservable(String queue, boolean isReservable) {
     setBoolean(getQueuePrefix(queue) + IS_RESERVABLE, isReservable);
-    LOG.debug("here setReservableQueue: queuePrefix=" + getQueuePrefix(queue)
-        + ", isReservableQueue=" + isReservable(queue));
+    LOG.debug("here setReservableQueue: queuePrefix={}, isReservableQueue={}",
+        getQueuePrefix(queue), isReservable(queue));
   }
 
   @Override

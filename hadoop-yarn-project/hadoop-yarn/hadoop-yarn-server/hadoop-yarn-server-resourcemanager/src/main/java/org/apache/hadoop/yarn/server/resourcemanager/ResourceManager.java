@@ -1095,8 +1095,8 @@ public class ResourceManager extends CompositeService
               rmApp.getAppAttempts().values().iterator().next();
           if (previousFailedAttempt != null) {
             try {
-              LOG.debug("Event " + event.getType() + " handled by "
-                  + previousFailedAttempt);
+              LOG.debug("Event {} handled by {}", event.getType(),
+                  previousFailedAttempt);
               previousFailedAttempt.handle(event);
             } catch (Throwable t) {
               LOG.error("Error in handling event type " + event.getType()

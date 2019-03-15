@@ -377,9 +377,7 @@ public abstract class RMStateStore extends AbstractService {
       ApplicationAttemptStateData attemptState =
           ((RMStateStoreAppAttemptEvent) event).getAppAttemptState();
       try {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Storing info for attempt: " + attemptState.getAttemptId());
-        }
+        LOG.debug("Storing info for attempt: {}", attemptState.getAttemptId());
         store.storeApplicationAttemptStateInternal(attemptState.getAttemptId(),
             attemptState);
         store.notifyApplicationAttempt(new RMAppAttemptEvent
@@ -408,9 +406,8 @@ public abstract class RMStateStore extends AbstractService {
       ApplicationAttemptStateData attemptState =
           ((RMStateUpdateAppAttemptEvent) event).getAppAttemptState();
       try {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Updating info for attempt: " + attemptState.getAttemptId());
-        }
+        LOG.debug("Updating info for attempt: {}",
+            attemptState.getAttemptId());
         store.updateApplicationAttemptStateInternal(attemptState.getAttemptId(),
             attemptState);
         store.notifyApplicationAttempt(new RMAppAttemptEvent
@@ -1235,9 +1232,7 @@ public abstract class RMStateStore extends AbstractService {
     this.writeLock.lock();
     try {
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Processing event of type " + event.getType());
-      }
+      LOG.debug("Processing event of type {}", event.getType());
 
       final RMStateStoreState oldState = getRMStateStoreState();
 

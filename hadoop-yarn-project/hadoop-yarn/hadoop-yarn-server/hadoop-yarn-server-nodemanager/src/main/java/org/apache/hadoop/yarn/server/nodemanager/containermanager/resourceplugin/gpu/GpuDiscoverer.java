@@ -129,9 +129,7 @@ public class GpuDiscoverer {
     } catch (IOException e) {
       numOfErrorExecutionSinceLastSucceed++;
       String msg = getErrorMessageOfScriptExecution(e.getMessage());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(msg);
-      }
+      LOG.debug(msg);
       throw new YarnException(msg, e);
     } catch (YarnException e) {
       numOfErrorExecutionSinceLastSucceed++;

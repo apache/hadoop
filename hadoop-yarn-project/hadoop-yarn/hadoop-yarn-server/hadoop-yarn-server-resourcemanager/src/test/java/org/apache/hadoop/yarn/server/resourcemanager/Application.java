@@ -465,10 +465,8 @@ public class Application {
     // clone to ensure the RM doesn't manipulate the same obj
     ask.add(ResourceRequest.clone(request));
 
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("updateResourceRequest:" + " application=" + applicationId
-        + " request=" + request);
-    }
+    LOG.debug("updateResourceRequest: application={} request={}",
+        applicationId, request);
   }
 
   private ContainerLaunchContext createCLC() {

@@ -669,7 +669,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   }
 
   public void handle(RMNodeEvent event) {
-    LOG.debug("Processing " + event.getNodeId() + " of type " + event.getType());
+    LOG.debug("Processing {} of type {}", event.getNodeId(), event.getType());
     writeLock.lock();
     try {
       NodeState oldState = getState();
@@ -1405,11 +1405,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
             + " no further processing");
         continue;
       } else if (!runningApplications.contains(containerAppId)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Container " + containerId
-              + " is the first container get launched for application "
-              + containerAppId);
-        }
+        LOG.debug("Container {} is the first container get launched for"
+            + " application {}", containerId, containerAppId);
         handleRunningAppOnNode(this, context, containerAppId, nodeId);
       }
 

@@ -45,10 +45,8 @@ public class ContainerTokenSelector implements
       return null;
     }
     for (Token<? extends TokenIdentifier> token : tokens) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Looking for service: " + service + ". Current token is "
-            + token);
-      }
+      LOG.debug("Looking for service: {}. Current token is {}", service,
+          token);
       if (ContainerTokenIdentifier.KIND.equals(token.getKind()) && 
           service.equals(token.getService())) {
         return (Token<ContainerTokenIdentifier>) token;

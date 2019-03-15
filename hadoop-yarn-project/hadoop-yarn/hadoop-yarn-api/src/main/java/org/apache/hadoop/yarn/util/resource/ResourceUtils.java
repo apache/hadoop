@@ -138,20 +138,17 @@ public class ResourceUtils {
       Map<String, ResourceInformation> res) {
     ResourceInformation ri;
     if (!res.containsKey(MEMORY)) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Adding resource type - name = " + MEMORY + ", units = "
-            + ResourceInformation.MEMORY_MB.getUnits() + ", type = "
-            + ResourceTypes.COUNTABLE);
-      }
+      LOG.debug("Adding resource type - name = {}, units = {}, type = {}",
+          MEMORY, ResourceInformation.MEMORY_MB.getUnits(),
+          ResourceTypes.COUNTABLE);
       ri = ResourceInformation.newInstance(MEMORY,
           ResourceInformation.MEMORY_MB.getUnits());
       res.put(MEMORY, ri);
     }
     if (!res.containsKey(VCORES)) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Adding resource type - name = " + VCORES
-            + ", units = , type = " + ResourceTypes.COUNTABLE);
-      }
+      LOG.debug("Adding resource type - name = {}, units = {}, type = {}",
+          VCORES, ResourceInformation.VCORES.getUnits(),
+          ResourceTypes.COUNTABLE);
       ri = ResourceInformation.newInstance(VCORES);
       res.put(VCORES, ri);
     }
@@ -189,9 +186,9 @@ public class ResourceUtils {
       String resourceTypesKey, String schedulerKey, long schedulerDefault) {
     long value = conf.getLong(resourceTypesKey, -1L);
     if (value == -1) {
-      LOG.debug("Mandatory Resource '" + resourceTypesKey + "' is not "
+      LOG.debug("Mandatory Resource '{}' is not "
           + "configured in resource-types config file. Setting allocation "
-          + "specified using '" + schedulerKey + "'");
+          + "specified using '{}'", resourceTypesKey, schedulerKey);
       value = conf.getLong(schedulerKey, schedulerDefault);
     }
     return value;
@@ -450,9 +447,7 @@ public class ResourceUtils {
       Configuration conf) {
     try {
       InputStream ris = getConfInputStream(resourceFile, conf);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Found " + resourceFile + ", adding to configuration");
-      }
+      LOG.debug("Found {}, adding to configuration", resourceFile);
       conf.addResource(ris);
     } catch (FileNotFoundException fe) {
       LOG.info("Unable to find '" + resourceFile + "'.");
@@ -575,10 +570,8 @@ public class ResourceUtils {
       }
       nodeResources.get(resourceType).setValue(resourceValue);
       nodeResources.get(resourceType).setUnits(units);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Setting value for resource type " + resourceType + " to "
-            + resourceValue + " with units " + units);
-      }
+      LOG.debug("Setting value for resource type {} to {} with units {}",
+          resourceType, resourceValue, units);
     }
   }
 

@@ -201,10 +201,8 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
       // Initialize used resource of a given user for rolling computation.
       rollingResourceUsagePerUser.put(user, Resources.clone(
           leafQueue.getUser(user).getResourceUsage().getUsed(partition)));
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Rolling resource usage for user:" + user + " is : "
-            + rollingResourceUsagePerUser.get(user));
-      }
+      LOG.debug("Rolling resource usage for user:{} is : {}", user,
+          rollingResourceUsagePerUser.get(user));
     }
   }
 
@@ -220,12 +218,8 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
 
     List<RMContainer> liveContainers = new ArrayList<>(app.getLiveContainers());
     sortContainers(liveContainers);
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(
-          "totalPreemptedResourceAllowed for preemption at this round is :"
-              + totalPreemptedResourceAllowed);
-    }
+    LOG.debug("totalPreemptedResourceAllowed for preemption at this"
+        + " round is :{}", totalPreemptedResourceAllowed);
 
     Resource rollingUsedResourcePerUser = rollingResourceUsagePerUser
         .get(app.getUser());
@@ -257,13 +251,11 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
       // UserLimit (or equals to), we must skip such containers.
       if (fifoPreemptionComputePlugin.skipContainerBasedOnIntraQueuePolicy(app,
           clusterResource, rollingUsedResourcePerUser, c)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-              "Skipping container: " + c.getContainerId() + " with resource:"
-                  + c.getAllocatedResource() + " as UserLimit for user:"
-                  + app.getUser() + " with resource usage: "
-                  + rollingUsedResourcePerUser + " is going under UL");
-        }
+        LOG.debug("Skipping container: {} with resource:{} as UserLimit for"
+            + " user:{} with resource usage: {} is going under UL",
+            c.getContainerId(), c.getAllocatedResource(), app.getUser(),
+            rollingUsedResourcePerUser);
+
         break;
       }
 
