@@ -30,7 +30,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY
  * Executes getsecret calls.
  */
 @Command(name = "getsecret",
-    description = "returns s3 secret for current user")
+    description = "Returns s3 secret for current user")
 public class GetS3SecretHandler extends Handler {
 
   public static final String OZONE_GETS3SECRET_ERROR = "This command is not" +

@@ -76,13 +76,11 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.BUCKET_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_NOT_FOUND;
-import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.S3_BUCKET_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLUME_NOT_FOUND;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 
-import static org.apache.hadoop.ozone.web.ozShell.s3.GetS3SecretHandler.OZONE_GETS3SECRET_ERROR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -1174,67 +1172,6 @@ public class TestOzoneShell {
         new String[] {"key", "list", url + "/" + volumeName + "/" + bucketName,
             "--length", "-1"};
     executeWithError(shell, args, "the length should be a positive number");
-  }
-
-  @Test
-  public void testS3BucketMapping() throws  IOException {
-    String setOmAddress =
-        "--set=" + OZONE_OM_ADDRESS_KEY + "=" + getOmAddress();
-
-    String s3Bucket = "bucket1";
-    String commandOutput;
-    createS3Bucket("ozone", s3Bucket);
-
-    //WHEN
-    String[] args =
-        new String[] {setOmAddress, "bucket",
-            "path", s3Bucket};
-    execute(shell, args);
-
-    //THEN
-    commandOutput = out.toString();
-    String volumeName = client.getOzoneVolumeName(s3Bucket);
-    assertTrue(commandOutput.contains("Volume name for S3Bucket is : " +
-        volumeName));
-    assertTrue(commandOutput.contains(OzoneConsts.OZONE_URI_SCHEME + "://" +
-        s3Bucket + "." + volumeName));
-    out.reset();
-
-    //Trying to get map for an unknown bucket
-    args = new String[] {setOmAddress, "bucket", "path",
-        "unknownbucket"};
-    executeWithError(shell, args, S3_BUCKET_NOT_FOUND);
-
-    // No bucket name
-    args = new String[] {setOmAddress, "bucket", "path"};
-    executeWithError(shell, args, "Missing required parameter");
-
-    // Invalid bucket name
-    args = new String[] {setOmAddress, "bucket", "path", "/asd/multipleslash"};
-    executeWithError(shell, args, S3_BUCKET_NOT_FOUND);
-  }
-
-  @Test
-  public void testS3Secret() throws Exception {
-    String setOmAddress =
-        "--set=" + OZONE_OM_ADDRESS_KEY + "=" + getOmAddress();
-
-    String output;
-
-    String[] args = new String[] {setOmAddress, "s3", "getsecret"};
-    execute(shell, args);
-    // Get the first line of output
-    output = out.toString().split("\n")[0];
-
-    assertTrue(output.equals(OZONE_GETS3SECRET_ERROR));
-  }
-
-  private void createS3Bucket(String userName, String s3Bucket) {
-    try {
-      client.createS3Bucket("ozone", s3Bucket);
-    } catch (IOException ex) {
-      GenericTestUtils.assertExceptionContains("S3_BUCKET_ALREADY_EXISTS", ex);
-    }
   }
 
   private OzoneVolume creatVolume() throws OzoneException, IOException {
