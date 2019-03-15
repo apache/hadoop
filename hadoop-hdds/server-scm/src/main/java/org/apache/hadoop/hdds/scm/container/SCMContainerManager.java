@@ -190,7 +190,7 @@ public class SCMContainerManager implements ContainerManager {
       Collections.sort(containersIds);
 
       return containersIds.stream()
-          .filter(id -> id.getId() > startId)
+          .filter(id -> id.getId() >= startId)
           .limit(count)
           .map(id -> {
             try {
