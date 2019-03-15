@@ -81,13 +81,14 @@ import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLU
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+
+import static org.apache.hadoop.ozone.web.ozShell.s3.GetS3SecretHandler.OZONE_GETS3SECRET_ERROR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -1214,36 +1215,18 @@ public class TestOzoneShell {
   }
 
   @Test
-  @Ignore("Can't run without secure cluster.")
   public void testS3Secret() throws Exception {
     String setOmAddress =
         "--set=" + OZONE_OM_ADDRESS_KEY + "=" + getOmAddress();
 
-    err.reset();
-    String outputFirstAttempt;
-    String outputSecondAttempt;
+    String output;
 
-    //First attempt: If secrets are not found in database, they will be created
     String[] args = new String[] {setOmAddress, "s3", "getsecret"};
     execute(shell, args);
-    outputFirstAttempt = out.toString();
-    //Extracting awsAccessKey & awsSecret value from output
-    String[] output = outputFirstAttempt.split("\n");
-    String awsAccessKey = output[0].split("=")[1];
-    String awsSecret = output[1].split("=")[1];
-    assertTrue((awsAccessKey != null && awsAccessKey.length() > 0) &&
-            (awsSecret != null && awsSecret.length() > 0));
+    // Get the first line of output
+    output = out.toString().split("\n")[0];
 
-    out.reset();
-
-    //Second attempt: Since secrets were created in previous attempt, it
-    // should return the same value
-    args = new String[] {setOmAddress, "s3", "getsecret"};
-    execute(shell, args);
-    outputSecondAttempt = out.toString();
-
-    //verifying if secrets from both attempts are same
-    assertTrue(outputFirstAttempt.equals(outputSecondAttempt));
+    assertTrue(output.equals(OZONE_GETS3SECRET_ERROR));
   }
 
   private void createS3Bucket(String userName, String s3Bucket) {
