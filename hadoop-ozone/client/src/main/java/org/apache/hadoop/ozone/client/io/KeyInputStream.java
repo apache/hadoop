@@ -23,7 +23,6 @@ import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
@@ -277,9 +276,7 @@ public class KeyInputStream extends InputStream implements Seekable {
       OmKeyLocationInfo omKeyLocationInfo = keyLocationInfos.get(i);
       BlockID blockID = omKeyLocationInfo.getBlockID();
       long containerID = blockID.getContainerID();
-      ContainerWithPipeline containerWithPipeline =
-          storageContainerLocationClient.getContainerWithPipeline(containerID);
-      Pipeline pipeline = containerWithPipeline.getPipeline();
+      Pipeline pipeline = omKeyLocationInfo.getPipeline();
 
       // irrespective of the container state, we will always read via Standalone
       // protocol.
