@@ -451,9 +451,9 @@ public class RpcClient implements ClientProtocol {
       Text dtService =
           getOMProxyProvider().getProxy().getDelegationTokenService();
       token.setService(dtService);
-      LOG.debug("Created " + token.toString());
+      LOG.debug("Created token {}", token);
     } else {
-      LOG.debug("Cannot get ozone delegation token from " + renewer);
+      LOG.debug("Cannot get ozone delegation token from {}", renewer);
     }
     return token;
   }
