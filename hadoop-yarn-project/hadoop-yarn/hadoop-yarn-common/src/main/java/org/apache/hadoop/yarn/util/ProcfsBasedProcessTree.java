@@ -264,7 +264,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
         }
       }
 
-      LOG.debug(this.toString());
+      LOG.debug("{}", this);
 
       if (smapsEnabled) {
         // Update smaps info
@@ -403,13 +403,10 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
               // memory reclaimable by killing the process
               total += info.anonymous;
 
-              if (LOG.isDebugEnabled()) {
-                LOG.debug(" total(" + olderThanAge + "): PID : " + p.getPid()
-                    + ", info : " + info.toString()
-                    + ", total : " + (total * KB_TO_BYTES));
-              }
+              LOG.debug(" total({}): PID : {}, info : {}, total : {}",
+                  olderThanAge, p.getPid(), info, (total * KB_TO_BYTES));
             }
-            LOG.debug(procMemInfo.toString());
+            LOG.debug("{}", procMemInfo);
           }
         }
       }
@@ -468,9 +465,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
   @Override
   public float getCpuUsagePercent() {
     BigInteger processTotalJiffies = getTotalProcessJiffies();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Process " + pid + " jiffies:" + processTotalJiffies);
-    }
+    LOG.debug("Process {} jiffies:{}", pid, processTotalJiffies);
     cpuTimeTracker.updateElapsedJiffies(processTotalJiffies,
         clock.getTime());
     return cpuTimeTracker.getCpuTrackerUsagePercent();
@@ -793,9 +788,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
           if (memInfo.find()) {
             String key = memInfo.group(1).trim();
             String value = memInfo.group(2).replace(KB, "").trim();
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("MemInfo : " + key + " : Value  : " + value);
-            }
+            LOG.debug("MemInfo : {} : Value  : {}", key, value);
 
             if (memoryMappingInfo != null) {
               memoryMappingInfo.setMemInfo(key, value);
@@ -941,9 +934,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
       if (info == null) {
         return;
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("setMemInfo : memInfo : " + info);
-      }
+      LOG.debug("setMemInfo : memInfo : {}", info);
       switch (info) {
       case SIZE:
         size = val;

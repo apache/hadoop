@@ -237,10 +237,8 @@ public final class DistributedScheduler extends AbstractRequestInterceptor {
     request.setAllocatedContainers(allocatedContainers);
     request.getAllocateRequest().setAskList(partitionedAsks.getGuaranteed());
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Forwarding allocate request to the" +
+    LOG.debug("Forwarding allocate request to the" +
           "Distributed Scheduler Service on YARN RM");
-    }
 
     DistributedSchedulingAllocateResponse dsResp =
         getNextInterceptor().allocateForDistributedScheduling(request);

@@ -183,16 +183,15 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
   @Override
   public void addNode(List<NMContainerStatus> containerStatuses,
       RMNode rmNode) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Node added event from: " + rmNode.getNode().getName());
-    }
+    LOG.debug("Node added event from: {}", rmNode.getNode().getName());
+
     // Ignoring this currently : at least one NODE_UPDATE heartbeat is
     // required to ensure node eligibility.
   }
 
   @Override
   public void removeNode(RMNode removedRMNode) {
-    LOG.debug("Node delete event for: " + removedRMNode.getNode().getName());
+    LOG.debug("Node delete event for: {}", removedRMNode.getNode().getName());
     ReentrantReadWriteLock.WriteLock writeLock = clusterNodesLock.writeLock();
     writeLock.lock();
     ClusterNode node;
@@ -212,7 +211,7 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
 
   @Override
   public void updateNode(RMNode rmNode) {
-    LOG.debug("Node update event from: " + rmNode.getNodeID());
+    LOG.debug("Node update event from: {}", rmNode.getNodeID());
     OpportunisticContainersStatus opportunisticContainersStatus =
         rmNode.getOpportunisticContainersStatus();
     if (opportunisticContainersStatus == null) {
@@ -253,11 +252,10 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
               .setQueueWaitTime(estimatedQueueWaitTime)
               .setQueueLength(waitQueueLength)
               .updateTimestamp();
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Updating ClusterNode [" + rmNode.getNodeID() + "] " +
-                "with queue wait time [" + estimatedQueueWaitTime + "] and " +
-                "wait queue length [" + waitQueueLength + "]");
-          }
+          LOG.debug("Updating ClusterNode [{}] with queue wait time [{}] and"
+              + " wait queue length [{}]", rmNode.getNodeID(),
+              estimatedQueueWaitTime, waitQueueLength);
+
         } else {
           this.clusterNodes.remove(rmNode.getNodeID());
           LOG.info("Deleting ClusterNode [" + rmNode.getNodeID() + "] " +
@@ -272,7 +270,7 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
 
   @Override
   public void updateNodeResource(RMNode rmNode, ResourceOption resourceOption) {
-    LOG.debug("Node resource update event from: " + rmNode.getNodeID());
+    LOG.debug("Node resource update event from: {}", rmNode.getNodeID());
     // Ignoring this currently.
   }
 

@@ -530,10 +530,8 @@ public class FairScheduler extends
           + ", in queue: " + queue.getName()
           + ", currently num of applications: " + applications.size());
       if (isAppRecovering) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(applicationId
-              + " is recovering. Skip notifying APP_ACCEPTED");
-        }
+        LOG.debug("{} is recovering. Skip notifying APP_ACCEPTED",
+            applicationId);
       } else {
         // During tests we do not always have an application object, handle
         // it here but we probably should fix the tests
@@ -586,10 +584,8 @@ public class FairScheduler extends
           + " to scheduler from user: " + user);
 
       if (isAttemptRecovering) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(applicationAttemptId
-              + " is recovering. Skipping notifying ATTEMPT_ADDED");
-        }
+        LOG.debug("{} is recovering. Skipping notifying ATTEMPT_ADDED",
+            applicationAttemptId);
       } else{
         rmContext.getDispatcher().getEventHandler().handle(
             new RMAppAttemptEvent(applicationAttemptId,
@@ -758,15 +754,15 @@ public class FairScheduler extends
       if (rmContainer.getState() == RMContainerState.RESERVED) {
         if (node != null) {
           application.unreserve(rmContainer.getReservedSchedulerKey(), node);
-        } else if (LOG.isDebugEnabled()) {
-          LOG.debug("Skipping unreserve on removed node: " + nodeID);
+        } else {
+          LOG.debug("Skipping unreserve on removed node: {}", nodeID);
         }
       } else {
         application.containerCompleted(rmContainer, containerStatus, event);
         if (node != null) {
           node.releaseContainer(rmContainer.getContainerId(), false);
-        } else if (LOG.isDebugEnabled()) {
-          LOG.debug("Skipping container release on removed node: " + nodeID);
+        } else {
+          LOG.debug("Skipping container release on removed node: {}", nodeID);
         }
         updateRootQueueMetrics();
       }
@@ -1170,9 +1166,7 @@ public class FairScheduler extends
           Resource assignment = queueMgr.getRootQueue().assignContainer(node);
 
           if (assignment.equals(Resources.none())) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("No container is allocated on node " + node);
-            }
+            LOG.debug("No container is allocated on node {}", node);
             break;
           }
 
@@ -1611,10 +1605,8 @@ public class FairScheduler extends
     try {
       FSQueue queue = getQueueManager().getQueue(queueName);
       if (queue == null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("ACL not found for queue access-type " + acl + " for queue "
-              + queueName);
-        }
+        LOG.debug("ACL not found for queue access-type {} for queue {}",
+            acl, queueName);
         return false;
       }
       return queue.hasAccess(acl, callerUGI);

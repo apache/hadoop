@@ -1269,19 +1269,15 @@ public class ApplicationMaster {
 
     @Override
     public void onContainerStopped(ContainerId containerId) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Succeeded to stop Container " + containerId);
-      }
+      LOG.debug("Succeeded to stop Container {}", containerId);
       containers.remove(containerId);
     }
 
     @Override
     public void onContainerStatusReceived(ContainerId containerId,
         ContainerStatus containerStatus) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Container Status: id=" + containerId + ", status=" +
-            containerStatus);
-      }
+      LOG.debug("Container Status: id={}, status={}", containerId,
+          containerStatus);
 
       // If promote_opportunistic_after_start is set, automatically promote
       // opportunistic containers to guaranteed.
@@ -1305,9 +1301,7 @@ public class ApplicationMaster {
     @Override
     public void onContainerStarted(ContainerId containerId,
         Map<String, ByteBuffer> allServiceResponse) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Succeeded to start Container " + containerId);
-      }
+      LOG.debug("Succeeded to start Container {}", containerId);
       Container container = containers.get(containerId);
       if (container != null) {
         applicationMaster.nmClientAsync.getContainerStatusAsync(

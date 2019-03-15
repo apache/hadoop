@@ -67,11 +67,9 @@ public class SimpleBlacklistManager implements BlacklistManager {
     final double failureThreshold = this.blacklistDisableFailureThreshold *
         numberOfNodeManagerHosts;
     if (currentBlacklistSize < failureThreshold) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("blacklist size " + currentBlacklistSize + " is less than " +
-            "failure threshold ratio " + blacklistDisableFailureThreshold +
-            " out of total usable nodes " + numberOfNodeManagerHosts);
-      }
+      LOG.debug("blacklist size {} is less than failure threshold ratio {}"
+          + " out of total usable nodes {}", currentBlacklistSize,
+          blacklistDisableFailureThreshold, numberOfNodeManagerHosts);
       ret = ResourceBlacklistRequest.newInstance(blacklist, EMPTY_LIST);
     } else {
       LOG.warn("Ignoring Blacklists, blacklist size " + currentBlacklistSize

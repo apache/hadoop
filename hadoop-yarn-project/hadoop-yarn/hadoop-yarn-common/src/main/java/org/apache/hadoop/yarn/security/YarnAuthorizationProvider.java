@@ -70,7 +70,7 @@ public abstract class YarnAuthorizationProvider {
   public static void destroy() {
     synchronized (YarnAuthorizationProvider.class) {
       if (authorizer != null) {
-        LOG.debug(authorizer.getClass().getName() + " is destroyed.");
+        LOG.debug("{} is destroyed.", authorizer.getClass().getName());
         authorizer = null;
       }
     }

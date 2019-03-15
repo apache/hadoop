@@ -105,11 +105,9 @@ public class ReservedContainerCandidatesSelector
           CapacitySchedulerPreemptionUtils.addToPreemptMap(selectedCandidates,
               curCandidates, c.getApplicationAttemptId(), c);
 
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(this.getClass().getName() + " Marked container=" + c
-                .getContainerId() + " from queue=" + c.getQueueName()
-                + " to be preemption candidates");
-          }
+          LOG.debug("{} Marked container={} from queue={} to be preemption"
+              + " candidates", this.getClass().getName(), c.getContainerId(),
+              c.getQueueName());
         }
       }
     }
@@ -215,10 +213,9 @@ public class ReservedContainerCandidatesSelector
       // An alternative approach is add a "penalty cost" if AM container is
       // selected. Here for safety, avoid preempt AM container in any cases
       if (c.isAMContainer()) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Skip selecting AM container on host=" + node.getNodeID()
-              + " AM container=" + c.getContainerId());
-        }
+        LOG.debug("Skip selecting AM container on host={} AM container={}",
+            node.getNodeID(), c.getContainerId());
+
         continue;
       }
 

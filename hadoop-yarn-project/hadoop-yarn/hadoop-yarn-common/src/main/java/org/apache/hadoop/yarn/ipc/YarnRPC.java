@@ -57,7 +57,7 @@ public abstract class YarnRPC {
   }
   
   public static YarnRPC create(Configuration conf) {
-    LOG.debug("Creating YarnRPC for " + 
+    LOG.debug("Creating YarnRPC for {}",
         conf.get(YarnConfiguration.IPC_RPC_IMPL));
     String clazzName = conf.get(YarnConfiguration.IPC_RPC_IMPL);
     if (clazzName == null) {

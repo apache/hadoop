@@ -39,10 +39,10 @@ public class ClientToAMTokenSelector implements
     if (service == null) {
       return null;
     }
-    LOG.debug("Looking for a token with service " + service.toString());
+    LOG.debug("Looking for a token with service {}", service);
     for (Token<? extends TokenIdentifier> token : tokens) {
-      LOG.debug("Token kind is " + token.getKind().toString()
-          + " and the token's service name is " + token.getService());
+      LOG.debug("Token kind is {} and the token's service name is {}",
+          token.getKind(), token.getService());
       if (ClientToAMTokenIdentifier.KIND_NAME.equals(token.getKind())
           && service.equals(token.getService())) {
         return (Token<ClientToAMTokenIdentifier>) token;

@@ -240,10 +240,8 @@ public class SchedulerUtils {
     // default label expression of queue
     if (labelExp == null && queueInfo != null && ResourceRequest.ANY
         .equals(resReq.getResourceName())) {
-      if ( LOG.isDebugEnabled()) {
-        LOG.debug("Setting default node label expression : " + queueInfo
-            .getDefaultNodeLabelExpression());
-      }
+      LOG.debug("Setting default node label expression : {}", queueInfo
+          .getDefaultNodeLabelExpression());
       labelExp = queueInfo.getDefaultNodeLabelExpression();
     }
 

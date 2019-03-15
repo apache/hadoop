@@ -297,10 +297,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     for (SchedulerContainer<FiCaSchedulerApp, FiCaSchedulerNode> c : request
         .getContainersToRelease()) {
       if (rmContainerInFinalState(c.getRmContainer())) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("To-release container=" + c.getRmContainer()
-              + " is in final state");
-        }
+        LOG.debug("To-release container={} is in final state",
+            c.getRmContainer());
         return true;
       }
     }
@@ -310,10 +308,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       for (SchedulerContainer<FiCaSchedulerApp, FiCaSchedulerNode> r : c
           .getToRelease()) {
         if (rmContainerInFinalState(r.getRmContainer())) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("To-release container=" + r.getRmContainer()
-                + ", for to a new allocated container, is in final state");
-          }
+          LOG.debug("To-release container={}, for to a new allocated"
+              + " container, is in final state", r.getRmContainer());
           return true;
         }
       }
@@ -321,11 +317,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       if (null != c.getAllocateFromReservedContainer()) {
         if (rmContainerInFinalState(
             c.getAllocateFromReservedContainer().getRmContainer())) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Allocate from reserved container" + c
-                .getAllocateFromReservedContainer().getRmContainer()
-                + " is in final state");
-          }
+          LOG.debug("Allocate from reserved container {} is in final state",
+              c.getAllocateFromReservedContainer().getRmContainer());
           return true;
         }
       }
@@ -336,10 +329,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       for (SchedulerContainer<FiCaSchedulerApp, FiCaSchedulerNode> r : c
           .getToRelease()) {
         if (rmContainerInFinalState(r.getRmContainer())) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("To-release container=" + r.getRmContainer()
-                + ", for a reserved container, is in final state");
-          }
+          LOG.debug("To-release container={}, for a reserved container,"
+              + " is in final state", r.getRmContainer());
           return true;
         }
       }
@@ -364,10 +355,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
           allocation.getAllocateFromReservedContainer().getRmContainer();
 
       if (fromReservedContainer != reservedContainerOnNode) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-              "Try to allocate from a non-existed reserved container");
-        }
+        LOG.debug("Try to allocate from a non-existed reserved container");
         return false;
       }
     }
@@ -858,12 +846,9 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
         // resources, otherwise could affect capacity limits
         if (Resources.fitsIn(resourceCalculator, resourceNeedUnreserve,
             reservedResource)) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(
-                "unreserving node with reservation size: " + reservedResource
-                    + " in order to allocate container with size: "
-                    + resourceNeedUnreserve);
-          }
+          LOG.debug("unreserving node with reservation size: {} in order to"
+              + " allocate container with size: {}", reservedResource,
+              resourceNeedUnreserve);
           return nodeId;
         }
       }
@@ -932,10 +917,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       NodeId idToUnreserve = getNodeIdToUnreserve(schedulerKey,
           minimumUnreservedResource, rc);
       if (idToUnreserve == null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("checked to see if could unreserve for app but nothing "
-              + "reserved that matches for this app");
-        }
+        LOG.debug("checked to see if could unreserve for app but nothing "
+            + "reserved that matches for this app");
         return null;
       }
       FiCaSchedulerNode nodeToUnreserve =
@@ -1178,10 +1161,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     writeLock.lock();
     try {
       if (!sourceNode.getPartition().equals(targetNode.getPartition())) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-              "Failed to move reservation, two nodes are in different partition");
-        }
+        LOG.debug("Failed to move reservation, two nodes are in"
+            + " different partition");
         return false;
       }
 
@@ -1189,17 +1170,13 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       Map<NodeId, RMContainer> map = reservedContainers.get(
           reservedContainer.getReservedSchedulerKey());
       if (null == map) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Cannot find reserved container map.");
-        }
+        LOG.debug("Cannot find reserved container map.");
         return false;
       }
 
       // Check if reserved container changed
       if (sourceNode.getReservedContainer() != reservedContainer) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("To-be-moved container already updated.");
-        }
+        LOG.debug("To-be-moved container already updated.");
         return false;
       }
 
@@ -1207,18 +1184,14 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       // reservation happens transactional
       synchronized (targetNode){
         if (targetNode.getReservedContainer() != null) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Target node is already occupied before moving");
-          }
+          LOG.debug("Target node is already occupied before moving");
         }
 
         try {
           targetNode.reserveResource(this,
               reservedContainer.getReservedSchedulerKey(), reservedContainer);
         } catch (IllegalStateException e) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Reserve on target node failed, e=", e);
-          }
+          LOG.debug("Reserve on target node failed, e={}", e);
           return false;
         }
 

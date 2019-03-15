@@ -99,16 +99,12 @@ public class DefaultCsiAdaptorImpl implements CsiAdaptorPlugin {
   @Override
   public NodePublishVolumeResponse nodePublishVolume(
       NodePublishVolumeRequest request) throws YarnException, IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Received nodePublishVolume call, request: {}",
-          request.toString());
-    }
+    LOG.debug("Received nodePublishVolume call, request: {}",
+        request);
     Csi.NodePublishVolumeRequest req = ProtoTranslatorFactory
         .getTranslator(NodePublishVolumeRequest.class,
             Csi.NodePublishVolumeRequest.class).convertTo(request);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Translate to CSI proto message: {}", req.toString());
-    }
+    LOG.debug("Translate to CSI proto message: {}", req);
     csiClient.nodePublishVolume(req);
     return NodePublishVolumeResponse.newInstance();
   }
@@ -116,16 +112,12 @@ public class DefaultCsiAdaptorImpl implements CsiAdaptorPlugin {
   @Override
   public NodeUnpublishVolumeResponse nodeUnpublishVolume(
       NodeUnpublishVolumeRequest request) throws YarnException, IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Received nodeUnpublishVolume call, request: {}",
-          request.toString());
-    }
+    LOG.debug("Received nodeUnpublishVolume call, request: {}",
+        request);
     Csi.NodeUnpublishVolumeRequest req = ProtoTranslatorFactory
         .getTranslator(NodeUnpublishVolumeRequest.class,
             Csi.NodeUnpublishVolumeRequest.class).convertTo(request);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Translate to CSI proto message: {}", req.toString());
-    }
+    LOG.debug("Translate to CSI proto message: {}", req);
     csiClient.nodeUnpublishVolume(req);
     return NodeUnpublishVolumeResponse.newInstance();
   }

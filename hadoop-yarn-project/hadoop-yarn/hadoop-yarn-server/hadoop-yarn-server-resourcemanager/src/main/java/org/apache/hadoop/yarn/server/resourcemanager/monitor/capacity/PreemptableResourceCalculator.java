@@ -166,10 +166,8 @@ public class PreemptableResourceCalculator
       // check if preemption disabled for the queue
       if (context.getQueueByPartition(queueName,
           RMNodeLabelsManager.NO_LABEL).preemptionDisabled) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("skipping from queue=" + queueName
-              + " because it's a non-preemptable queue");
-        }
+        LOG.debug("skipping from queue={} because it's a non-preemptable"
+            + " queue", queueName);
         continue;
       }
 
@@ -208,10 +206,8 @@ public class PreemptableResourceCalculator
           // Only add resToObtain when it >= 0
           if (Resources.greaterThan(rc, clusterResource, resToObtain,
               Resources.none())) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Queue=" + queueName + " partition=" + qT.partition
-                  + " resource-to-obtain=" + resToObtain);
-            }
+            LOG.debug("Queue={} partition={} resource-to-obtain={}",
+                queueName, qT.partition, resToObtain);
           }
           qT.setActuallyToBePreempted(Resources.clone(resToObtain));
         } else {

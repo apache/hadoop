@@ -152,10 +152,7 @@ public class LeafQueue extends AbstractCSQueue {
     // One time initialization is enough since it is static ordering policy
     this.pendingOrderingPolicy = new FifoOrderingPolicyForPendingApps();
 
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("LeafQueue:" + " name=" + queueName
-          + ", fullname=" + getQueuePath());
-    }
+    LOG.debug("LeafQueue: name={}, fullname={}", queueName, getQueuePath());
 
     setupQueueConfigs(cs.getClusterResource(), configuration);
 
@@ -727,11 +724,9 @@ public class LeafQueue extends AbstractCSQueue {
               Resources.clone(getAMResourceLimitPerPartition(nodePartition)));
       queueUsage.setUserAMLimit(nodePartition, preWeighteduserAMLimit);
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Effective user AM limit for \"" + userName + "\":" +
-            preWeighteduserAMLimit + ". " + "Effective weighted user AM limit: "
-            + userAMLimit + ". User weight: " + userWeight);
-      }
+      LOG.debug("Effective user AM limit for \"{}\":{}. Effective weighted"
+          + " user AM limit: {}. User weight: {}", userName,
+          preWeighteduserAMLimit, userAMLimit, userWeight);
       return userAMLimit;
     } finally {
       readLock.unlock();
@@ -776,17 +771,11 @@ public class LeafQueue extends AbstractCSQueue {
 
       metrics.setAMResouceLimit(nodePartition, amResouceLimit);
       queueUsage.setAMLimit(nodePartition, amResouceLimit);
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Queue: " + getQueueName() + ", node label : " +
-            nodePartition
-            + ", queue "
-            + "partition "
-            + "resource : " + queuePartitionResource + ','
-            + " queue current limit : " + queueCurrentLimit + ","
-            + " queue partition usable resource : "
-            + queuePartitionUsableResource + ","
-            + " amResourceLimit : " + amResouceLimit);
-      }
+      LOG.debug("Queue: {}, node label : {}, queue partition resource : {},"
+          + " queue current limit : {}, queue partition usable resource : {},"
+          + " amResourceLimit : {}", getQueueName(), nodePartition,
+          queuePartitionResource, queueCurrentLimit,
+          queuePartitionUsableResource, amResouceLimit);
       return amResouceLimit;
     } finally {
       writeLock.unlock();
@@ -848,11 +837,8 @@ public class LeafQueue extends AbstractCSQueue {
           } else{
             application.updateAMContainerDiagnostics(AMState.INACTIVATED,
                 CSAMContainerLaunchDiagnosticsConstants.QUEUE_AM_RESOURCE_LIMIT_EXCEED);
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Not activating application " + applicationId
-                  + " as  amIfStarted: " + amIfStarted + " exceeds amLimit: "
-                  + amLimit);
-            }
+            LOG.debug("Not activating application {} as  amIfStarted: {}"
+                + " exceeds amLimit: {}", applicationId, amIfStarted, amLimit);
             continue;
           }
         }
@@ -884,11 +870,9 @@ public class LeafQueue extends AbstractCSQueue {
           } else{
             application.updateAMContainerDiagnostics(AMState.INACTIVATED,
                 CSAMContainerLaunchDiagnosticsConstants.USER_AM_RESOURCE_LIMIT_EXCEED);
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Not activating application " + applicationId
-                  + " for user: " + user + " as userAmIfStarted: "
-                  + userAmIfStarted + " exceeds userAmLimit: " + userAMLimit);
-            }
+            LOG.debug("Not activating application {} for user: {} as"
+                + " userAmIfStarted: {} exceeds userAmLimit: {}",
+                applicationId, user, userAmIfStarted, userAMLimit);
             continue;
           }
         }
@@ -1242,9 +1226,7 @@ public class LeafQueue extends AbstractCSQueue {
         // Deduct resources that we can release
         User user = getUser(username);
         if (user == null) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("User " + username + " has been removed!");
-          }
+          LOG.debug("User {} has been removed!", username);
           return false;
         }
         Resource usedResource = Resources.clone(user.getUsed(p));
@@ -1253,10 +1235,8 @@ public class LeafQueue extends AbstractCSQueue {
 
         if (Resources.greaterThan(resourceCalculator, cluster, usedResource,
             userLimit)) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Used resource=" + usedResource + " exceeded user-limit="
-                + userLimit);
-          }
+          LOG.debug("Used resource={} exceeded user-limit={}",
+              usedResource, userLimit);
           return false;
         }
       } finally {
@@ -1452,9 +1432,7 @@ public class LeafQueue extends AbstractCSQueue {
     String user = application.getUser();
     User queueUser = getUser(user);
     if (queueUser == null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("User " + user + " has been removed!");
-      }
+      LOG.debug("User {} has been removed!", user);
       return Resources.none();
     }
 
@@ -1553,9 +1531,7 @@ public class LeafQueue extends AbstractCSQueue {
     try {
       User user = getUser(userName);
       if (user == null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("User " + userName + " has been removed!");
-        }
+        LOG.debug("User {} has been removed!", userName);
         return false;
       }
 

@@ -73,12 +73,10 @@ public class ProxyUtils {
       HttpServletResponse response,
       String target)
       throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Redirecting {} {} to {}",
+    LOG.debug("Redirecting {} {} to {}",
           request.getMethod(), 
           request.getRequestURI(),
           target);
-    }
     String location = response.encodeRedirectURL(target);
     response.setStatus(HttpServletResponse.SC_FOUND);
     response.setHeader(LOCATION, location);

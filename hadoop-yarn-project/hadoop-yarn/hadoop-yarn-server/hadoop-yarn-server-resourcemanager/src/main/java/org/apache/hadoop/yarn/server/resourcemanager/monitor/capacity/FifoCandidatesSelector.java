@@ -80,10 +80,8 @@ public class FifoCandidatesSelector
       // check if preemption disabled for the queue
       if (preemptionContext.getQueueByPartition(queueName,
           RMNodeLabelsManager.NO_LABEL).preemptionDisabled) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("skipping from queue=" + queueName
-              + " because it's a non-preemptable queue");
-        }
+        LOG.debug("skipping from queue={} because it's a"
+            + " non-preemptable queue", queueName);
         continue;
       }
 

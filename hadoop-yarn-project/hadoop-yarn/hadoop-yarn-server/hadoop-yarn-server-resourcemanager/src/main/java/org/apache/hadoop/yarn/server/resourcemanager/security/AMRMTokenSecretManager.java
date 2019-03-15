@@ -243,9 +243,7 @@ public class AMRMTokenSecretManager extends
     try {
       ApplicationAttemptId applicationAttemptId =
           identifier.getApplicationAttemptId();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Trying to retrieve password for " + applicationAttemptId);
-      }
+      LOG.debug("Trying to retrieve password for {}", applicationAttemptId);
       if (!appAttemptSet.contains(applicationAttemptId)) {
         throw new InvalidToken(applicationAttemptId
             + " not found in AMRMTokenSecretManager.");

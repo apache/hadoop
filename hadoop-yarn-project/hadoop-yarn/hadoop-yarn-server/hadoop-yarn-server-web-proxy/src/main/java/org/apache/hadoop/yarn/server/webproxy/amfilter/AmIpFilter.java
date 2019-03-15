@@ -108,17 +108,15 @@ public class AmIpFilter implements Filter {
         proxyAddresses = new HashSet<>();
         for (String proxyHost : proxyHosts) {
           try {
-              for(InetAddress add : InetAddress.getAllByName(proxyHost)) {
-                if (LOG.isDebugEnabled()) {
-                  LOG.debug("proxy address is: {}", add.getHostAddress());
-                }
-                proxyAddresses.add(add.getHostAddress());
-              }
-              lastUpdate = now;
-            } catch (UnknownHostException e) {
-              LOG.warn("Could not locate {} - skipping", proxyHost, e);
+            for (InetAddress add : InetAddress.getAllByName(proxyHost)) {
+              LOG.debug("proxy address is: {}", add.getHostAddress());
+              proxyAddresses.add(add.getHostAddress());
             }
+            lastUpdate = now;
+          } catch (UnknownHostException e) {
+            LOG.warn("Could not locate {} - skipping", proxyHost, e);
           }
+        }
         if (proxyAddresses.isEmpty()) {
           throw new ServletException("Could not locate any of the proxy hosts");
         }
@@ -140,9 +138,7 @@ public class AmIpFilter implements Filter {
     HttpServletRequest httpReq = (HttpServletRequest)req;
     HttpServletResponse httpResp = (HttpServletResponse)resp;
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Remote address for request is: {}", httpReq.getRemoteAddr());
-    }
+    LOG.debug("Remote address for request is: {}", httpReq.getRemoteAddr());
 
     if (!getProxyAddresses().contains(httpReq.getRemoteAddr())) {
       StringBuilder redirect = new StringBuilder(findRedirectUrl());
@@ -177,11 +173,8 @@ public class AmIpFilter implements Filter {
         }
       }
       if (user == null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Could not find "
-              + WebAppProxyServlet.PROXY_USER_COOKIE_NAME
-              + " cookie, so user will not be set");
-        }
+        LOG.debug("Could not find {} cookie, so user will not be set",
+            WebAppProxyServlet.PROXY_USER_COOKIE_NAME);
 
         chain.doFilter(req, resp);
       } else {

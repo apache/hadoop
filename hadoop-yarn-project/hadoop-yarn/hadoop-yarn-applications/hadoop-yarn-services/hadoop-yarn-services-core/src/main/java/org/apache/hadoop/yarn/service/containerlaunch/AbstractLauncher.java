@@ -196,7 +196,7 @@ public class AbstractLauncher {
 
         String key = entry.getKey();
         LocalResource val = entry.getValue();
-        log.debug(key + "=" + ServiceUtils.stringify(val.getResource()));
+        log.debug("{} = {}", key, ServiceUtils.stringify(val.getResource()));
       }
     }
   }

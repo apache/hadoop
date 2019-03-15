@@ -41,10 +41,8 @@ public class NMTokenSelector implements
       return null;
     }
     for (Token<? extends TokenIdentifier> token : tokens) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Looking for service: " + service + ". Current token is "
-            + token);
-      }
+      LOG.debug("Looking for service: {}. Current token is {}", service,
+          token);
       if (NMTokenIdentifier.KIND.equals(token.getKind()) && 
           service.equals(token.getService())) {
         return (Token<NMTokenIdentifier>) token;

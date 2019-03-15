@@ -245,8 +245,8 @@ public abstract class TimelineEntityReader extends
     augmentParams(hbaseConf, conn);
 
     FilterList filterList = constructFilterListBasedOnFields(new HashSet<>(0));
-    if (LOG.isDebugEnabled() && filterList != null) {
-      LOG.debug("FilterList created for get is - " + filterList);
+    if (filterList != null) {
+      LOG.debug("FilterList created for get is - {}", filterList);
     }
     Result result = getResult(hbaseConf, conn, filterList);
     if (result == null || result.isEmpty()) {
@@ -275,8 +275,8 @@ public abstract class TimelineEntityReader extends
 
     Set<TimelineEntity> entities = new LinkedHashSet<>();
     FilterList filterList = createFilterList();
-    if (LOG.isDebugEnabled() && filterList != null) {
-      LOG.debug("FilterList created for scan is - " + filterList);
+    if (filterList != null) {
+      LOG.debug("FilterList created for scan is - {}", filterList);
     }
     ResultScanner results = getResults(hbaseConf, conn, filterList);
     try {

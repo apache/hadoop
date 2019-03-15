@@ -83,9 +83,8 @@ public final class DockerCommandExecutor {
     if (disableFailureLogging) {
       dockerOp.disableFailureLogging();
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Running docker command: " + dockerCommand);
-    }
+    LOG.debug("Running docker command: {}", dockerCommand);
+
     try {
       String result = privilegedOperationExecutor
           .executePrivilegedOperation(null, dockerOp, null,
@@ -118,17 +117,13 @@ public final class DockerCommandExecutor {
           privilegedOperationExecutor, nmContext);
       DockerContainerStatus dockerContainerStatus = parseContainerStatus(
           currentContainerStatus);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Container Status: " + dockerContainerStatus.getName()
-            + " ContainerId: " + containerId);
-      }
+      LOG.debug("Container Status: {} ContainerId: {}",
+          dockerContainerStatus.getName(), containerId);
+
       return dockerContainerStatus;
     } catch (ContainerExecutionException e) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Container Status: "
-            + DockerContainerStatus.NONEXISTENT.getName()
-            + " ContainerId: " + containerId);
-      }
+      LOG.debug("Container Status: {} ContainerId: {}",
+          DockerContainerStatus.NONEXISTENT.getName(), containerId);
       return DockerContainerStatus.NONEXISTENT;
     }
   }

@@ -212,11 +212,9 @@ public class NodeManager implements ContainerManagementProtocol {
       Resources.subtractFrom(available, tokenId.getResource());
       Resources.addTo(used, tokenId.getResource());
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("startContainer:" + " node=" + containerManagerAddress
-            + " application=" + applicationId + " container=" + container
-            + " available=" + available + " used=" + used);
-      }
+      LOG.debug("startContainer: node={} application={} container={}"
+          +" available={} used={}", containerManagerAddress, applicationId,
+          container, available, used);
 
     }
     StartContainersResponse response =
@@ -279,11 +277,9 @@ public class NodeManager implements ContainerManagementProtocol {
       Resources.addTo(available, container.getResource());
       Resources.subtractFrom(used, container.getResource());
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("stopContainer:" + " node=" + containerManagerAddress
-            + " application=" + applicationId + " container=" + containerID
-            + " available=" + available + " used=" + used);
-      }
+      LOG.debug("stopContainer: node={} application={} container={}"
+          + " available={} used={}", containerManagerAddress, applicationId,
+          containerID, available, used);
     }
     return StopContainersResponse.newInstance(null,null);
   }

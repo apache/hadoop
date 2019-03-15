@@ -151,9 +151,7 @@ public class ContainerLogsPage extends NMView {
                 printAggregatedLogFileDirectory(html, containersLogMeta);
               }
             } catch (Exception ex) {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug(ex.getMessage());
-              }
+              LOG.debug("{}", ex);
             }
           }
         } else {

@@ -265,11 +265,8 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
       // any cluster. Pick a random sub-cluster from active and enabled ones.
       targetId = getSubClusterForUnResolvedRequest(bookkeeper,
           rr.getAllocationRequestId());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("ERROR resolving sub-cluster for resourceName: "
-            + rr.getResourceName() + ", picked a random subcluster to forward:"
-            + targetId);
-      }
+      LOG.debug("ERROR resolving sub-cluster for resourceName: {}, picked a "
+          + "random subcluster to forward:{}", rr.getResourceName(), targetId);
       if (targetIds != null && targetIds.size() > 0) {
         bookkeeper.addRackRR(targetId, rr);
       } else {

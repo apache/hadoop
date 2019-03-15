@@ -296,11 +296,8 @@ public final class PlacementConstraintsUtil {
       AllocationTagsManager atm)
       throws InvalidAllocationTagsQueryException {
     if (constraint == null) {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug(
-            "Constraint is found empty during constraint validation for app:"
-                + appId);
-      }
+      LOG.debug("Constraint is found empty during constraint validation for"
+          + " app:{}", appId);
       return true;
     }
 
@@ -365,9 +362,7 @@ public final class PlacementConstraintsUtil {
   private static NodeAttribute getNodeConstraintFromRequest(String attrKey,
       String attrString) {
     NodeAttribute nodeAttribute = null;
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("Incoming node attribute: " + attrKey + "=" + attrString);
-    }
+    LOG.debug("Incoming node attribute: {}={}", attrKey, attrString);
 
     // Input node attribute could be like 1.8
     String[] name = attrKey.split("/");
