@@ -48,8 +48,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
@@ -87,7 +85,6 @@ public class OzoneFileSystem extends FileSystem {
   private Path workingDir;
 
   private OzoneClientAdapter adapter;
-  private boolean securityEnabled;
 
   private OzoneFSStorageStatistics storageStatistics;
 
@@ -174,19 +171,9 @@ public class OzoneFileSystem extends FileSystem {
               OzoneClientAdapterFactory.createAdapter(volumeStr, bucketStr);
         }
       } else {
-        OzoneConfiguration ozoneConfiguration;
-        if (conf instanceof OzoneConfiguration) {
-          ozoneConfiguration = (OzoneConfiguration) conf;
-        } else {
-          ozoneConfiguration = new OzoneConfiguration(conf);
-        }
 
-        SecurityConfig secConfig = new SecurityConfig(ozoneConfiguration);
-        if (secConfig.isSecurityEnabled()) {
-          this.securityEnabled = true;
-        }
         this.adapter = new OzoneClientAdapterImpl(omHost,
-            Integer.parseInt(omPort), ozoneConfiguration,
+            Integer.parseInt(omPort), conf,
             volumeStr, bucketStr, storageStatistics);
       }
 
@@ -701,8 +688,7 @@ public class OzoneFileSystem extends FileSystem {
 
   @Override
   public Token<?> getDelegationToken(String renewer) throws IOException {
-    return securityEnabled? adapter.getDelegationToken(renewer) :
-        super.getDelegationToken(renewer);
+    return adapter.getDelegationToken(renewer);
   }
 
   /**
