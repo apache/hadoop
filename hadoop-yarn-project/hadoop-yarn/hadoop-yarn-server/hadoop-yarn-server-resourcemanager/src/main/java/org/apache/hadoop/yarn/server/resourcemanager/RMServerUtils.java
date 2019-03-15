@@ -240,7 +240,7 @@ public class RMServerUtils {
   }
 
   /**
-   * Utility method to validate a list resource requests, by insuring that the
+   * Utility method to validate a list resource requests, by ensuring that the
    * requested memory/vcore is non-negative and not greater than max
    */
   public static void normalizeAndValidateRequests(List<ResourceRequest> ask,
