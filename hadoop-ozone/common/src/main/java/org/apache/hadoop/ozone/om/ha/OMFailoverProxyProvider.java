@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.om.ha;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.FailoverProxyProvider;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
@@ -29,6 +30,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,15 +86,22 @@ public class OMFailoverProxyProvider implements
   public final class OMProxyInfo
       extends FailoverProxyProvider.ProxyInfo<OzoneManagerProtocolPB> {
     private InetSocketAddress address;
+    private Text dtService;
 
     OMProxyInfo(OzoneManagerProtocolPB proxy, String proxyInfoStr,
+        Text dtService,
         InetSocketAddress addr) {
       super(proxy, proxyInfoStr);
       this.address = addr;
+      this.dtService = dtService;
     }
 
     public InetSocketAddress getAddress() {
       return address;
+    }
+
+    public Text getDelegationTokenService() {
+      return dtService;
     }
   }
 
@@ -125,11 +134,12 @@ public class OMFailoverProxyProvider implements
 
         // Add the OM client proxy info to list of proxies
         if (addr != null) {
+          Text dtService = SecurityUtil.buildTokenService(addr);
           StringBuilder proxyInfo = new StringBuilder()
               .append(nodeId).append("(")
               .append(NetUtils.getHostPortString(addr)).append(")");
           OMProxyInfo omProxyInfo = new OMProxyInfo(null,
-              proxyInfo.toString(), addr);
+              proxyInfo.toString(), dtService, addr);
 
           // For a non-HA OM setup, nodeId might be null. If so, we assign it
           // a dummy value
