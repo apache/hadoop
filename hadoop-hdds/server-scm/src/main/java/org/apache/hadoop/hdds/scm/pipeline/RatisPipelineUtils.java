@@ -32,6 +32,7 @@ import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.retry.RetryPolicy;
 import org.apache.ratis.rpc.SupportedRpcType;
+import org.apache.ratis.util.TimeDuration;
 import org.apache.ratis.util.function.CheckedBiConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -116,9 +117,11 @@ final class RatisPipelineUtils {
         HddsClientUtils.getMaxOutstandingRequests(ozoneConf);
     final GrpcTlsConfig tlsConfig = RatisHelper.createTlsClientConfig(
         new SecurityConfig(ozoneConf));
+    final TimeDuration requestTimeout =
+        RatisHelper.getClientRequestTimeout(ozoneConf);
     RaftClient client = RatisHelper
         .newRaftClient(SupportedRpcType.valueOfIgnoreCase(rpcType), p,
-            retryPolicy, maxOutstandingRequests, tlsConfig);
+            retryPolicy, maxOutstandingRequests, tlsConfig, requestTimeout);
     client
         .groupRemove(RaftGroupId.valueOf(pipelineID.getId()), true, p.getId());
   }
@@ -141,12 +144,13 @@ final class RatisPipelineUtils {
         HddsClientUtils.getMaxOutstandingRequests(ozoneConf);
     final GrpcTlsConfig tlsConfig = RatisHelper.createTlsClientConfig(new
         SecurityConfig(ozoneConf));
-
+    final TimeDuration requestTimeout =
+        RatisHelper.getClientRequestTimeout(ozoneConf);
     datanodes.parallelStream().forEach(d -> {
       final RaftPeer p = RatisHelper.toRaftPeer(d);
       try (RaftClient client = RatisHelper
           .newRaftClient(SupportedRpcType.valueOfIgnoreCase(rpcType), p,
-              retryPolicy, maxOutstandingRequests, tlsConfig)) {
+              retryPolicy, maxOutstandingRequests, tlsConfig, requestTimeout)) {
         rpc.accept(client, p);
       } catch (IOException ioe) {
         String errMsg =

@@ -39,6 +39,7 @@ import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.retry.RetryPolicy;
 import org.apache.ratis.rpc.SupportedRpcType;
+import org.apache.ratis.util.TimeDuration;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
@@ -49,6 +50,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Test cases to verify CloseContainerCommandHandler in datanode.
@@ -289,8 +291,10 @@ public class TestCloseContainerCommandHandler {
     final RaftGroup group = RatisHelper.newRaftGroup(raftGroupId,
         Collections.singleton(datanodeDetails));
     final int maxOutstandingRequests = 100;
-    final RaftClient client = RatisHelper.newRaftClient(SupportedRpcType.GRPC,
-        peer, retryPolicy, maxOutstandingRequests, null);
+    final RaftClient client = RatisHelper
+        .newRaftClient(SupportedRpcType.GRPC, peer, retryPolicy,
+            maxOutstandingRequests,
+            TimeDuration.valueOf(3, TimeUnit.SECONDS));
     Assert.assertTrue(client.groupAdd(group, peer.getId()).isSuccess());
     Thread.sleep(2000);
     final ContainerID containerId = ContainerID.valueof(

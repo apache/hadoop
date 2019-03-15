@@ -36,6 +36,7 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 
 import org.apache.ratis.client.RaftClient;
+import org.apache.ratis.client.RaftClientConfigKeys;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.grpc.GrpcConfigKeys;
 import org.apache.ratis.grpc.GrpcFactory;
@@ -134,33 +135,51 @@ public interface RatisHelper {
 
   static RaftClient newRaftClient(RpcType rpcType, Pipeline pipeline,
       RetryPolicy retryPolicy, int maxOutStandingRequest,
-      GrpcTlsConfig tlsConfig) throws IOException {
+      GrpcTlsConfig tlsConfig, TimeDuration timeout) throws IOException {
     return newRaftClient(rpcType, toRaftPeerId(pipeline.getFirstNode()),
         newRaftGroup(RaftGroupId.valueOf(pipeline.getId().getId()),
-        pipeline.getNodes()), retryPolicy, maxOutStandingRequest, tlsConfig);
+            pipeline.getNodes()), retryPolicy, maxOutStandingRequest, tlsConfig,
+        timeout);
+  }
+
+  static TimeDuration getClientRequestTimeout(Configuration conf) {
+    // Set the client requestTimeout
+    final TimeUnit timeUnit =
+        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_DEFAULT
+            .getUnit();
+    final long duration = conf.getTimeDuration(
+        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_KEY,
+        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_DEFAULT
+            .getDuration(), timeUnit);
+    final TimeDuration clientRequestTimeout =
+        TimeDuration.valueOf(duration, timeUnit);
+    return clientRequestTimeout;
   }
 
   static RaftClient newRaftClient(RpcType rpcType, RaftPeer leader,
       RetryPolicy retryPolicy, int maxOutstandingRequests,
-      GrpcTlsConfig tlsConfig) {
+      GrpcTlsConfig tlsConfig, TimeDuration clientRequestTimeout) {
     return newRaftClient(rpcType, leader.getId(),
         newRaftGroup(new ArrayList<>(Arrays.asList(leader))), retryPolicy,
-        maxOutstandingRequests, tlsConfig);
+        maxOutstandingRequests, tlsConfig, clientRequestTimeout);
   }
 
   static RaftClient newRaftClient(RpcType rpcType, RaftPeer leader,
-      RetryPolicy retryPolicy, int maxOutstandingRequests) {
+      RetryPolicy retryPolicy, int maxOutstandingRequests,
+      TimeDuration clientRequestTimeout) {
     return newRaftClient(rpcType, leader.getId(),
         newRaftGroup(new ArrayList<>(Arrays.asList(leader))), retryPolicy,
-        maxOutstandingRequests, null);
+        maxOutstandingRequests, null, clientRequestTimeout);
   }
 
   static RaftClient newRaftClient(RpcType rpcType, RaftPeerId leader,
       RaftGroup group, RetryPolicy retryPolicy, int maxOutStandingRequest,
-      GrpcTlsConfig tlsConfig) {
+      GrpcTlsConfig tlsConfig, TimeDuration clientRequestTimeout) {
     LOG.trace("newRaftClient: {}, leader={}, group={}", rpcType, leader, group);
     final RaftProperties properties = new RaftProperties();
     RaftConfigKeys.Rpc.setType(properties, rpcType);
+    RaftClientConfigKeys.Rpc
+        .setRequestTimeout(properties, clientRequestTimeout);
 
     GrpcConfigKeys.setMessageSizeMax(properties,
         SizeInBytes.valueOf(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE));

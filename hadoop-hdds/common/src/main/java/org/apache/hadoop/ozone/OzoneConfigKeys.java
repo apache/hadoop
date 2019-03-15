@@ -133,6 +133,11 @@ public final class OzoneConfigKeys {
   public static final String OZONE_CLIENT_WATCH_REQUEST_TIMEOUT_DEFAULT =
       "30s";
 
+  public static final String OZONE_CLIENT_MAX_RETRIES =
+      "ozone.client.max.retries";
+  public static final int OZONE_CLIENT_MAX_RETRIES_DEFAULT = 5;
+
+
   // This defines the overall connection limit for the connection pool used in
   // RestClient.
   public static final String OZONE_REST_CLIENT_HTTP_CONNECTION_MAX =

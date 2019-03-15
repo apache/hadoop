@@ -231,17 +231,19 @@
     <name>dfs.ratis.client.request.timeout.duration</name>
     <value>3s</value>
     <tag>OZONE, RATIS, MANAGEMENT</tag>
-    <description>The timeout duration for ratis client request.</description>
+    <description>The timeout duration for ratis client request.It should be
+        set greater than leader election timeout in Ratis.
+    </description>
   </property>
   <property>
     <name>dfs.ratis.client.request.max.retries</name>
-    <value>180</value>
+    <value>20</value>
     <tag>OZONE, RATIS, MANAGEMENT</tag>
     <description>Number of retries for ratis client request.</description>
   </property>
   <property>
     <name>dfs.ratis.client.request.retry.interval</name>
-    <value>100ms</value>
+    <value>500ms</value>
     <tag>OZONE, RATIS, MANAGEMENT</tag>
     <description>Interval between successive retries for a ratis client request.
     </description>
@@ -415,6 +417,14 @@
     <tag>OZONE, CLIENT</tag>
     <description>Timeout for the watch API in Ratis client to acknowledge
       a particular request getting replayed to all servers.
+    </description>
+  </property>
+  <property>
+    <name>ozone.client.max.retries</name>
+    <value>5</value>
+    <tag>OZONE, CLIENT</tag>
+    <description>Maximum number of retries by Ozone Client on encountering
+      exception while writing a key.
     </description>
   </property>
   <property>

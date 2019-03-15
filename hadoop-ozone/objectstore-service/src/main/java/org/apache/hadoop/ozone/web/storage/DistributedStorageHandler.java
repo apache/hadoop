@@ -88,6 +88,7 @@ public final class DistributedStorageHandler implements StorageHandler {
   private final ChecksumType checksumType;
   private final int bytesPerChecksum;
   private final boolean verifyChecksum;
+  private final int maxRetryCount;
 
   /**
    * Creates a new DistributedStorageHandler.
@@ -154,6 +155,9 @@ public final class DistributedStorageHandler implements StorageHandler {
     this.verifyChecksum =
         conf.getBoolean(OzoneConfigKeys.OZONE_CLIENT_VERIFY_CHECKSUM,
             OzoneConfigKeys.OZONE_CLIENT_VERIFY_CHECKSUM_DEFAULT);
+    this.maxRetryCount =
+        conf.getInt(OzoneConfigKeys.OZONE_CLIENT_MAX_RETRIES, OzoneConfigKeys.
+            OZONE_CLIENT_MAX_RETRIES_DEFAULT);
   }
 
   @Override
@@ -438,7 +442,7 @@ public final class DistributedStorageHandler implements StorageHandler {
         .build();
     // contact OM to allocate a block for key.
     OpenKeySession openKey = ozoneManagerClient.openKey(keyArgs);
-    KeyOutputStream groupOutputStream =
+    KeyOutputStream keyOutputStream =
         new KeyOutputStream.Builder()
             .setHandler(openKey)
             .setXceiverClientManager(xceiverClientManager)
@@ -454,11 +458,12 @@ public final class DistributedStorageHandler implements StorageHandler {
             .setWatchTimeout(watchTimeout)
             .setChecksumType(checksumType)
             .setBytesPerChecksum(bytesPerChecksum)
+            .setMaxRetryCount(maxRetryCount)
             .build();
-    groupOutputStream.addPreallocateBlocks(
+    keyOutputStream.addPreallocateBlocks(
         openKey.getKeyInfo().getLatestVersionLocations(),
         openKey.getOpenVersion());
-    return new OzoneOutputStream(groupOutputStream);
+    return new OzoneOutputStream(keyOutputStream);
   }
 
   @Override
