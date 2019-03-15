@@ -29,7 +29,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -54,7 +53,6 @@ import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
-import org.apache.hadoop.ozone.client.rest.RestClient;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
@@ -90,8 +88,6 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -104,7 +100,6 @@ import picocli.CommandLine.RunLast;
 /**
  * This test class specified for testing Ozone shell command.
  */
-@RunWith(value = Parameterized.class)
 public class TestOzoneShell {
 
   private static final Logger LOG =
@@ -128,16 +123,6 @@ public class TestOzoneShell {
   private static final PrintStream OLD_OUT = System.out;
   private static final PrintStream OLD_ERR = System.err;
 
-  @Parameterized.Parameters
-  public static Collection<Object[]> clientProtocol() {
-    Object[][] params = new Object[][] {
-        {RpcClient.class}};
-    return Arrays.asList(params);
-  }
-
-  @Parameterized.Parameter
-  @SuppressWarnings("visibilitymodifier")
-  public Class clientProtocol;
   /**
    * Create a MiniDFSCluster for testing with using distributed Ozone
    * handler type.
@@ -182,16 +167,7 @@ public class TestOzoneShell {
   public void setup() {
     System.setOut(new PrintStream(out));
     System.setErr(new PrintStream(err));
-
-    if(clientProtocol.equals(RestClient.class)) {
-      String hostName = cluster.getOzoneManager().getHttpServer()
-          .getHttpAddress().getHostName();
-      int port = cluster
-          .getOzoneManager().getHttpServer().getHttpAddress().getPort();
-      url = String.format("http://%s:%d", hostName, port);
-    } else {
-      url = "o3://" + getOmAddress();
-    }
+    url = "o3://" + getOmAddress();
   }
 
   @After
@@ -552,7 +528,7 @@ public class TestOzoneShell {
   @Test
   public void testListVolume() throws Exception {
     LOG.info("Running testListVolume");
-    String protocol = clientProtocol.getName().toLowerCase();
+    String protocol = "rpcclient";
     String commandOutput, commandError;
     List<VolumeInfo> volumes;
     final int volCount = 20;
