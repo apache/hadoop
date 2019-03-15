@@ -18,21 +18,37 @@
 
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
+import java.nio.MappedByteBuffer;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-
-import java.io.Closeable;
+import org.apache.hadoop.io.nativeio.NativeIO;
 
 /**
- * Represents an HDFS block that is mapped by the DataNode.
+ * Represents an HDFS block that is mapped to memory by the DataNode.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public interface MappableBlock extends Closeable {
+public class MemoryMappedBlock implements MappableBlock {
+  private MappedByteBuffer mmap;
+  private final long length;
 
-  /**
-   * Get the number of bytes that have been cached.
-   * @return the number of bytes that have been cached.
-   */
-  long getLength();
+  MemoryMappedBlock(MappedByteBuffer mmap, long length) {
+    this.mmap = mmap;
+    this.length = length;
+    assert length > 0;
+  }
+
+  @Override
+  public long getLength() {
+    return length;
+  }
+
+  @Override
+  public void close() {
+    if (mmap != null) {
+      NativeIO.POSIX.munmap(mmap);
+      mmap = null;
+    }
+  }
 }
