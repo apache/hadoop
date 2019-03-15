@@ -44,13 +44,14 @@ public final class OmKeyArgs implements Auditable {
   private final String multipartUploadID;
   private final int multipartUploadPartNumber;
   private Map<String, String> metadata;
+  private boolean refreshPipeline;
 
   @SuppressWarnings("parameternumber")
   private OmKeyArgs(String volumeName, String bucketName, String keyName,
       long dataSize, ReplicationType type, ReplicationFactor factor,
       List<OmKeyLocationInfo> locationInfoList, boolean isMultipart,
       String uploadID, int partNumber,
-      Map<String, String> metadataMap) {
+      Map<String, String> metadataMap, boolean refreshPipeline) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.keyName = keyName;
@@ -62,6 +63,7 @@ public final class OmKeyArgs implements Auditable {
     this.multipartUploadID = uploadID;
     this.multipartUploadPartNumber = partNumber;
     this.metadata = metadataMap;
+    this.refreshPipeline = refreshPipeline;
   }
 
   public boolean getIsMultipartKey() {
@@ -120,6 +122,10 @@ public final class OmKeyArgs implements Auditable {
     return locationInfoList;
   }
 
+  public boolean getRefreshPipeline() {
+    return refreshPipeline;
+  }
+
   @Override
   public Map<String, String> toAuditMap() {
     Map<String, String> auditMap = new LinkedHashMap<>();
@@ -159,6 +165,7 @@ public final class OmKeyArgs implements Auditable {
     private String multipartUploadID;
     private int multipartUploadPartNumber;
     private Map<String, String> metadata = new HashMap<>();
+    private boolean refreshPipeline;
 
     public Builder setVolumeName(String volume) {
       this.volumeName = volume;
@@ -220,10 +227,15 @@ public final class OmKeyArgs implements Auditable {
       return this;
     }
 
+    public Builder setRefreshPipeline(boolean refresh) {
+      this.refreshPipeline = refresh;
+      return this;
+    }
+
     public OmKeyArgs build() {
       return new OmKeyArgs(volumeName, bucketName, keyName, dataSize, type,
           factor, locationInfoList, isMultipartKey, multipartUploadID,
-          multipartUploadPartNumber, metadata);
+          multipartUploadPartNumber, metadata, refreshPipeline);
     }
 
   }
