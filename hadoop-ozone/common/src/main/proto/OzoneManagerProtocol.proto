@@ -495,6 +495,13 @@ message KeyLocation {
     // indicated at which version this block gets created.
     optional uint64 createVersion = 5;
     optional hadoop.common.TokenProto token = 6;
+    // Walk around to include pipeline info for client read/write
+    // without talking to scm.
+    // NOTE: the pipeline info may change after pipeline close.
+    // So eventually, we will have to change back to call scm to
+    // get the up to date pipeline information. This will need o3fs
+    // provide not only a OM delegation token but also a SCM delegation token
+    optional hadoop.hdds.Pipeline pipeline = 7;
 }
 
 message KeyLocationList {

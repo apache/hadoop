@@ -26,8 +26,6 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ChecksumType;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.scm.storage.BufferPool;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
@@ -73,7 +71,6 @@ public class KeyOutputStream extends OutputStream {
   private final ArrayList<BlockOutputStreamEntry> streamEntries;
   private int currentStreamIndex;
   private final OzoneManagerProtocol omClient;
-  private final StorageContainerLocationProtocol scmClient;
   private final OmKeyArgs keyArgs;
   private final long openID;
   private final XceiverClientManager xceiverClientManager;
@@ -100,7 +97,6 @@ public class KeyOutputStream extends OutputStream {
   public KeyOutputStream() {
     streamEntries = new ArrayList<>();
     omClient = null;
-    scmClient = null;
     keyArgs = null;
     openID = -1;
     xceiverClientManager = null;
@@ -136,6 +132,7 @@ public class KeyOutputStream extends OutputStream {
           new OmKeyLocationInfo.Builder().setBlockID(streamEntry.getBlockID())
               .setLength(streamEntry.getCurrentPosition()).setOffset(0)
               .setToken(streamEntry.getToken())
+              .setPipeline(streamEntry.getPipeline())
               .build();
       LOG.debug("block written " + streamEntry.getBlockID() + ", length "
           + streamEntry.getCurrentPosition() + " bcsID "
@@ -149,7 +146,6 @@ public class KeyOutputStream extends OutputStream {
   @SuppressWarnings("parameternumber")
   public KeyOutputStream(OpenKeySession handler,
       XceiverClientManager xceiverClientManager,
-      StorageContainerLocationProtocol scmClient,
       OzoneManagerProtocol omClient, int chunkSize,
       String requestId, ReplicationFactor factor, ReplicationType type,
       long bufferFlushSize, long bufferMaxSize, long size, long watchTimeout,
@@ -158,7 +154,6 @@ public class KeyOutputStream extends OutputStream {
     this.streamEntries = new ArrayList<>();
     this.currentStreamIndex = 0;
     this.omClient = omClient;
-    this.scmClient = scmClient;
     OmKeyInfo info = handler.getKeyInfo();
     // Retrieve the file encryption key info, null if file is not in
     // encrypted bucket.
@@ -221,15 +216,14 @@ public class KeyOutputStream extends OutputStream {
 
   private void addKeyLocationInfo(OmKeyLocationInfo subKeyInfo)
       throws IOException {
-    ContainerWithPipeline containerWithPipeline = scmClient
-        .getContainerWithPipeline(subKeyInfo.getContainerID());
+    Preconditions.checkNotNull(subKeyInfo.getPipeline());
     UserGroupInformation.getCurrentUser().addToken(subKeyInfo.getToken());
     BlockOutputStreamEntry.Builder builder =
         new BlockOutputStreamEntry.Builder()
             .setBlockID(subKeyInfo.getBlockID())
             .setKey(keyArgs.getKeyName())
             .setXceiverClientManager(xceiverClientManager)
-            .setPipeline(containerWithPipeline.getPipeline())
+            .setPipeline(subKeyInfo.getPipeline())
             .setRequestId(requestID)
             .setChunkSize(chunkSize)
             .setLength(subKeyInfo.getLength())
@@ -637,7 +631,6 @@ public class KeyOutputStream extends OutputStream {
   public static class Builder {
     private OpenKeySession openHandler;
     private XceiverClientManager xceiverManager;
-    private StorageContainerLocationProtocol scmClient;
     private OzoneManagerProtocol omClient;
     private int chunkSize;
     private String requestID;
@@ -672,11 +665,6 @@ public class KeyOutputStream extends OutputStream {
 
     public Builder setXceiverClientManager(XceiverClientManager manager) {
       this.xceiverManager = manager;
-      return this;
-    }
-
-    public Builder setScmClient(StorageContainerLocationProtocol client) {
-      this.scmClient = client;
       return this;
     }
 
@@ -747,7 +735,7 @@ public class KeyOutputStream extends OutputStream {
     }
 
     public KeyOutputStream build() throws IOException {
-      return new KeyOutputStream(openHandler, xceiverManager, scmClient,
+      return new KeyOutputStream(openHandler, xceiverManager,
           omClient, chunkSize, requestID, factor, type, streamBufferFlushSize,
           streamBufferMaxSize, blockSize, watchTimeout, checksumType,
           bytesPerChecksum, multipartUploadID, multipartNumber, isMultipartKey,

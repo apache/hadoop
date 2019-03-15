@@ -42,6 +42,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
@@ -95,6 +96,8 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.HEAD;
+
 /**
  * Implementation of keyManager.
  */
@@ -105,7 +108,7 @@ public class KeyManagerImpl implements KeyManager {
   /**
    * A SCM block client, used to talk to SCM to allocate block during putKey.
    */
-  private final ScmBlockLocationProtocol scmBlockClient;
+  private final ScmClient scmClient;
   private final OMMetadataManager metadataManager;
   private final long scmBlockSize;
   private final boolean useRatis;
@@ -122,14 +125,15 @@ public class KeyManagerImpl implements KeyManager {
   public KeyManagerImpl(ScmBlockLocationProtocol scmBlockClient,
       OMMetadataManager metadataManager, OzoneConfiguration conf, String omId,
       OzoneBlockTokenSecretManager secretManager) {
-    this(scmBlockClient, metadataManager, conf, omId, secretManager, null);
+    this(new ScmClient(scmBlockClient, null), metadataManager,
+        conf, omId, secretManager, null);
   }
 
-  public KeyManagerImpl(ScmBlockLocationProtocol scmBlockClient,
+  public KeyManagerImpl(ScmClient scmClient,
       OMMetadataManager metadataManager, OzoneConfiguration conf, String omId,
       OzoneBlockTokenSecretManager secretManager,
       KeyProviderCryptoExtension kmsProvider) {
-    this.scmBlockClient = scmBlockClient;
+    this.scmClient = scmClient;
     this.metadataManager = metadataManager;
     this.scmBlockSize = (long) conf
         .getStorageSize(OZONE_SCM_BLOCK_SIZE, OZONE_SCM_BLOCK_SIZE_DEFAULT,
@@ -159,7 +163,7 @@ public class KeyManagerImpl implements KeyManager {
           OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
           OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT,
           TimeUnit.MILLISECONDS);
-      keyDeletingService = new KeyDeletingService(scmBlockClient, this,
+      keyDeletingService = new KeyDeletingService(scmClient.getBlockClient(), this,
           blockDeleteInterval, serviceTimeout, configuration);
       keyDeletingService.start();
     }
@@ -269,7 +273,7 @@ public class KeyManagerImpl implements KeyManager {
     String remoteUser = getRemoteUser().getShortUserName();
     List<AllocatedBlock> allocatedBlocks;
     try {
-      allocatedBlocks = scmBlockClient
+      allocatedBlocks = scmClient.getBlockClient()
           .allocateBlock(scmBlockSize, numBlocks, keyInfo.getType(),
               keyInfo.getFactor(), omId, excludeList);
     } catch (SCMException ex) {
@@ -283,7 +287,8 @@ public class KeyManagerImpl implements KeyManager {
       OmKeyLocationInfo.Builder builder = new OmKeyLocationInfo.Builder()
           .setBlockID(new BlockID(allocatedBlock.getBlockID()))
           .setLength(scmBlockSize)
-          .setOffset(0);
+          .setOffset(0)
+          .setPipeline(allocatedBlock.getPipeline());
       if (grpcBlockTokenEnabled) {
         builder.setToken(secretManager
             .generateToken(remoteUser, allocatedBlock.getBlockID().toString(),
@@ -572,6 +577,33 @@ public class KeyManagerImpl implements KeyManager {
                 k.getBlockID().getContainerBlockID().toString(),
                 getAclForUser(remoteUser),
                 k.getLength()));
+          });
+        }
+      }
+      // Refresh container pipeline info from SCM
+      // based on OmKeyArgs.refreshPipeline flag
+      // 1. Client send initial read request OmKeyArgs.refreshPipeline = false
+      // and uses the pipeline cached in OM to access datanode
+      // 2. If succeeded, done.
+      // 3. If failed due to pipeline does not exist or invalid pipeline state
+      //    exception, client should retry lookupKey with
+      //    OmKeyArgs.refreshPipeline = true
+      if (args.getRefreshPipeline()) {
+        for (OmKeyLocationInfoGroup key : value.getKeyLocationVersions()) {
+          key.getLocationList().forEach(k -> {
+            // TODO: fix Some tests that may not initialize container client
+            // The production should always have containerClient initialized.
+            if (scmClient.getContainerClient() != null) {
+              try {
+                ContainerWithPipeline cp = scmClient.getContainerClient()
+                    .getContainerWithPipeline(k.getContainerID());
+                if (!cp.getPipeline().equals(k.getPipeline())) {
+                  k.setPipeline(cp.getPipeline());
+                }
+              } catch (IOException e) {
+                LOG.debug("Unable to update pipeline for container");
+              }
+            }
           });
         }
       }
