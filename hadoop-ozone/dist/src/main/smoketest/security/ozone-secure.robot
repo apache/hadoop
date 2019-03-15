@@ -37,7 +37,7 @@ Install aws cli
 Setup credentials
     ${hostname}=        Execute                    hostname
     Execute             kinit -k testuser/${hostname}@EXAMPLE.COM -t /etc/security/keytabs/testuser.keytab
-    ${result} =         Execute                    ozone sh s3 getsecret
+    ${result} =         Execute                    ozone s3 getsecret
     ${accessKey} =      Get Regexp Matches         ${result}     (?<=awsAccessKey=).*
     ${secret} =         Get Regexp Matches	       ${result}     (?<=awsSecret=).*
                         Execute                    aws configure set default.s3.signature_version s3v4

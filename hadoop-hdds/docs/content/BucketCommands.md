@@ -119,10 +119,10 @@ ozone sh bucket update --addAcl=user:bilbo:rw /hive/jan
 The above command gives user bilbo read/write permission to the bucket.
 
 ### path
-The bucket command to provide ozone mapping for s3 bucket(Created via aws cli)
+The bucket command to provide ozone mapping for s3 bucket (Created via aws cli)
 
 {{< highlight bash >}}
-ozone sh bucket path <<s3Bucket>>
+ozone s3 path <<s3Bucket>>
 {{< /highlight >}}
 
 The above command will print VolumeName and the mapping created for s3Bucket.

@@ -32,7 +32,7 @@ User should get the kerberos ticket before using this option.
 
 
 {{< highlight bash >}}
-ozone sh s3 getkey
+ozone s3 getsecret
 {{< /highlight >}}
 Prints the AWS_SECRET_ACCESS_KEY and AWS_ACCESS_KEY_ID for the current user.
 
