@@ -42,3 +42,13 @@ python -m pytest -s  blockade/ --containerStatusSleep=<SECONDS>
 
 e.g: python -m pytest -s  blockade/ --containerStatusSleep=720
 ```
+
+By default, second phase of the tests will not be run.
+In order to run the second phase of the tests, you can run following
+command-lines:
+
+```
+cd $DIRECTORY_OF_OZONE
+python -m pytest -s  blockade/ --runSecondPhase=true
+
+```
