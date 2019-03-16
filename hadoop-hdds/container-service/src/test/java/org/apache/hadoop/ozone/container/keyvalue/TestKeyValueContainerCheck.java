@@ -111,7 +111,7 @@ import static org.junit.Assert.assertTrue;
 
     KeyValueContainerCheck kvCheck =
         new KeyValueContainerCheck(containerData.getMetadataPath(), conf,
-            containerID, containerData);
+            containerID);
 
     // first run checks on a Open Container
     error = kvCheck.fastCheck();
