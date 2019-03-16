@@ -52,20 +52,18 @@ public class KeyValueContainerCheck {
   private static final Logger LOG = LoggerFactory.getLogger(Container.class);
 
   private long containerID;
-  private KeyValueContainerData inMemContainerData; //from caller, maybe null
   private KeyValueContainerData onDiskContainerData; //loaded from fs/disk
   private Configuration checkConfig;
 
   private String metadataPath;
 
   public KeyValueContainerCheck(String metadataPath, Configuration conf,
-      long containerID, KeyValueContainerData containerData) {
+      long containerID) {
     Preconditions.checkArgument(metadataPath != null);
 
     this.checkConfig = conf;
     this.containerID = containerID;
     this.onDiskContainerData = null;
-    this.inMemContainerData = containerData;
     this.metadataPath = metadataPath;
   }
 

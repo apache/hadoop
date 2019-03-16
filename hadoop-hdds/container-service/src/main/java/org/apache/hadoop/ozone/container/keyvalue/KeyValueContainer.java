@@ -677,7 +677,7 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
 
     KeyValueContainerCheck checker =
         new KeyValueContainerCheck(containerData.getMetadataPath(), config,
-            containerId, containerData);
+            containerId);
 
     switch (level) {
     case FAST_CHECK:
