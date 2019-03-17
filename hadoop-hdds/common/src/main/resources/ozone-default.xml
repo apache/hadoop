@@ -2269,4 +2269,11 @@
       ozone.metadata.dirs.
     </description>
   </property>
+  <property>
+    <name>ozone.scm.network.topology.schema.file</name>
+    <value>network-topology-default.xm</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>The schema file defines the ozone network topology.
+    </description>
+  </property>
 </configuration>
