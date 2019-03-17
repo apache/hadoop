@@ -354,6 +354,12 @@ public final class ScmConfigKeys {
   public static final String
       HDDS_SCM_HTTP_KERBEROS_KEYTAB_FILE_KEY =
       "hdds.scm.http.kerberos.keytab";
+
+  // Network topology
+  public static final String OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE =
+      "ozone.scm.network.topology.schema.file";
+  public static final String OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE_DEFAULT =
+      "network-topology-default.xml";
   /**
    * Never constructed.
    */
