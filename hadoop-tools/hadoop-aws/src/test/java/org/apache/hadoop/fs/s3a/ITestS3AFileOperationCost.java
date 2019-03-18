@@ -193,11 +193,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
         + "clean up activity");
     S3AFileSystem fs = getFileSystem();
 
-    // As this test uses the s3 metrics to count the number of fake directory
-    // operations, it depends on side effects happening internally. With
-    // metadata store enabled, it is brittle to change. We disable this test
-    // before the internal behavior w/ or w/o metadata store.
-//    assumeFalse(fs.hasMetadataStore());
+    boolean versioned = fs.isVersionedStore();
 
     Path srcBaseDir = path("src");
     mkdirs(srcBaseDir);
@@ -232,10 +228,10 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     mkdirs(srcDir);
     String state = "after mkdir(srcDir) " + summary;
     directoriesCreated.assertDiffEquals(state, 1);
-    deleteRequests.assertDiffEquals(state, 1);
+    deleteRequests.assertDiffEquals(state,  1);
     directoriesDeleted.assertDiffEquals(state, 0);
     // HADOOP-14255 deletes unnecessary fake directory objects in mkdirs()
-    fakeDirectoriesDeleted.assertDiffEquals(state, srcDirDepth - 1);
+    fakeDirectoriesDeleted.assertDiffEquals(state, versioned ? 1 : srcDirDepth - 1);
     reset.call();
 
     // creating a file should trigger demise of the src dir
@@ -245,7 +241,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     deleteRequests.assertDiffEquals(state, 1);
     directoriesCreated.assertDiffEquals(state, 0);
     directoriesDeleted.assertDiffEquals(state, 0);
-    fakeDirectoriesDeleted.assertDiffEquals(state, srcDirDepth);
+    fakeDirectoriesDeleted.assertDiffEquals(state, versioned ? 1 : srcDirDepth);
 
     reset.call();
 
@@ -259,9 +255,9 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
 
     int destDirDepth = directoriesInPath(destDir);
     directoriesCreated.assertDiffEquals(state, 1);
-    deleteRequests.assertDiffEquals(state, 1);
+    deleteRequests.assertDiffEquals(state, versioned ? 0 : 1);
     directoriesDeleted.assertDiffEquals(state, 0);
-    fakeDirectoriesDeleted.assertDiffEquals(state, destDirDepth - 1);
+    fakeDirectoriesDeleted.assertDiffEquals(state, versioned ? 0 : destDirDepth - 1);
 
     // create a new source file.
     // Explicitly use a new path object to guarantee that the parent paths
@@ -284,7 +280,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     // one for the renamed file, one for the parent of the dest dir
     deleteRequests.assertDiffEquals(state, 2);
     directoriesDeleted.assertDiffEquals(state, 0);
-    fakeDirectoriesDeleted.assertDiffEquals(state, destDirDepth);
+    fakeDirectoriesDeleted.assertDiffEquals(state, versioned ? 1 : destDirDepth);
 
     // these asserts come after the checks on iop counts, so they don't
     // interfere

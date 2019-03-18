@@ -1270,6 +1270,46 @@ will be thrown.  When `false` and and eTag or version ID is not returned,
 the stream can be read, but without any version checking.
 
 
+
+### <a name="versioned-store"></a> Working with Versioned Stores
+
+Amazon S3 supports [versioned storage](https://docs.aws.amazon.com/AmazonS3/latest/dev/Versioning.html),
+where the previous versions of files are retained, even after deletion.
+
+To make the S3A connector work better with versioned stores, set
+the configuration option `fs.s3a.versioned.store` to `true`.
+
+```xml
+<property>
+  <name>fs.s3a.versioned.store</name>
+  <value>false</value>
+  <description>
+    Is the S3 Bucket "versioned"? If so, the S3A connector
+    will optimize its behavior for versioned data.
+  </description>
+</property>
+```
+
+Setting this option for non-versioned stores is not dangerous, but likely
+to make some operations slower. 
+
+With a versioned store, the change detection source can be set to use
+the version ID:
+
+```xml
+<property>
+  <name>fs.s3a.change.detection.source</name>
+  <value>versionid</value>
+</property>
+```
+
+Note: the specific optimizations which the S3A client does for versioned
+object stores may change across versions: the goals are
+
+* Reduce the number of needless key deletion requests made, even at the expense of more
+HEAD operations [HADOOP-16090](https://issues.apache.org/jira/browse/HADOOP-16090).
+* Use version IDs where possible. 
+
 ## <a name="per_bucket_configuration"></a>Configuring different S3 buckets with Per-Bucket Configuration
 
 Different S3 buckets can be accessed with different S3A client configurations.

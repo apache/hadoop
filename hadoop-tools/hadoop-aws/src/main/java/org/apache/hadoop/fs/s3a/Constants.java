@@ -721,4 +721,17 @@ public final class Constants {
    * Default change detection require version: true.
    */
   public static final boolean CHANGE_DETECT_REQUIRE_VERSION_DEFAULT = true;
+
+  /**
+   * Is the store versioned?
+   * value: {@value}.
+   */
+  public static final String VERSIONED_STORE
+      = "fs.s3a.versioned.store";
+
+  /**
+   * Default versioned store option: {@value}.
+   */
+  public static final boolean VERSIONED_STORE_DEFAULT = false;
+
 }

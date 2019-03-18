@@ -1916,6 +1916,15 @@
   </description>
 </property>
 
+<property>
+  <name>fs.s3a.versioned.store</name>
+  <value>false</value>
+  <description>
+    Is the S3 Bucket "versioned"? If so, the S3A connector
+    will optimize its behavior for versioned data.
+  </description>
+</property>
+
 <!-- Azure file system properties -->
 <property>
   <name>fs.AbstractFileSystem.wasb.impl</name>

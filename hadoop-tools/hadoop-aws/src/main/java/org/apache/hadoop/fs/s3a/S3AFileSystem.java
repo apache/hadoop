@@ -195,6 +195,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private Listing listing;
   private long partSize;
   private boolean enableMultiObjectsDelete;
+  private boolean versionedStore;
   private TransferManager transfers;
   private ListeningExecutorService boundedThreadPool;
   private ExecutorService unboundedThreadPool;
@@ -316,6 +317,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       //check but do not store the block size
       longBytesOption(conf, FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE, 1);
       enableMultiObjectsDelete = conf.getBoolean(ENABLE_MULTI_DELETE, true);
+      versionedStore = conf.getBoolean(VERSIONED_STORE,
+          VERSIONED_STORE_DEFAULT);
 
       readAhead = longBytesOption(conf, READAHEAD_RANGE,
           DEFAULT_READAHEAD_RANGE, 0);
@@ -671,6 +674,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public String getBucketLocation(String bucketName) throws IOException {
     return invoker.retry("getBucketLocation()", bucketName, true,
         ()-> s3.getBucketLocation(bucketName));
+  }
+
+  /**
+   * Is the store versioned?
+   * @return true if the store was configured as versioned.
+   */
+  @VisibleForTesting
+  boolean isVersionedStore() {
+    return versionedStore;
   }
 
   /**
@@ -3037,14 +3049,27 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryExceptionsSwallowed
   private void deleteUnnecessaryFakeDirectories(Path path) {
     List<DeleteObjectsRequest.KeyVersion> keysToRemove = new ArrayList<>();
-    while (!path.isRoot()) {
-      String key = pathToKey(path);
-      key = (key.endsWith("/")) ? key : (key + "/");
-      LOG.trace("To delete unnecessary fake directory {} for {}", key, path);
-      keysToRemove.add(new DeleteObjectsRequest.KeyVersion(key));
-      path = path.getParent();
-    }
     try {
+      while (!path.isRoot()) {
+        String k = pathToKey(path);
+        final String key = (k.endsWith("/")) ? k : (k + "/");
+        if (versionedStore)  {
+          try {
+            ObjectMetadata metadata = once("getObjectMetadata", key,
+                () -> getObjectMetadata(key));
+            String version = metadata.getVersionId();
+            LOG.debug("Found directory marker {} to delete with version {}",
+                key, version);
+            keysToRemove.add(new DeleteObjectsRequest.KeyVersion(key, version));
+          } catch (FileNotFoundException ignored) {
+            /* this is fine */
+          }
+        } else {
+          LOG.trace("Deleting {}", key);
+          keysToRemove.add(new DeleteObjectsRequest.KeyVersion(key));
+        }
+        path = path.getParent();
+      }
       removeKeys(keysToRemove, false, true);
     } catch(AmazonClientException | IOException e) {
       instrumentation.errorIgnored();
