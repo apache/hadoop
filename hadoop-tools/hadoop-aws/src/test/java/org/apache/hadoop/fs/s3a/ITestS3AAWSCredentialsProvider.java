@@ -148,7 +148,8 @@ public class ITestS3AAWSCredentialsProvider {
     @SuppressWarnings("unused")
     public GoodCredentialsProvider(Configuration conf) {
       super(new BasicAWSCredentialsProvider(conf.get(ACCESS_KEY),
-          conf.get(SECRET_KEY)), new InstanceProfileCredentialsProvider());
+          conf.get(SECRET_KEY)),
+          InstanceProfileCredentialsProvider.getInstance());
     }
   }
 

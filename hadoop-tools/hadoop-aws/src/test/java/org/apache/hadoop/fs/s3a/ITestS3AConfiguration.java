@@ -436,7 +436,8 @@ public class ITestS3AConfiguration {
     assertNotNull(s3);
     ClientConfiguration awsConf = getField(s3, ClientConfiguration.class,
         "clientConfiguration");
-    assertEquals("Hadoop " + VersionInfo.getVersion(), awsConf.getUserAgent());
+    assertEquals("Hadoop " + VersionInfo.getVersion(),
+        awsConf.getUserAgentPrefix());
   }
 
   @Test
@@ -450,7 +451,7 @@ public class ITestS3AConfiguration {
     ClientConfiguration awsConf = getField(s3, ClientConfiguration.class,
         "clientConfiguration");
     assertEquals("MyApp, Hadoop " + VersionInfo.getVersion(),
-        awsConf.getUserAgent());
+        awsConf.getUserAgentPrefix());
   }
 
   @Test
