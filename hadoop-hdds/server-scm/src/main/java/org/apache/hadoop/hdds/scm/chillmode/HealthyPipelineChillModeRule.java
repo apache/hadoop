@@ -34,6 +34,7 @@ import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.Pipeline
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.server.events.EventQueue;
+import org.apache.hadoop.hdds.server.events.TypedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,7 +62,7 @@ public class HealthyPipelineChillModeRule
   HealthyPipelineChillModeRule(String ruleName, EventQueue eventQueue,
       PipelineManager pipelineManager,
       SCMChillModeManager manager, Configuration configuration) {
-    super(manager, ruleName);
+    super(manager, ruleName, eventQueue);
     this.pipelineManager = pipelineManager;
     double healthyPipelinesPercent =
         configuration.getDouble(HddsConfigKeys.
@@ -86,14 +87,17 @@ public class HealthyPipelineChillModeRule
     healthyPipelineThresholdCount =
         (int) Math.ceil(healthyPipelinesPercent * pipelineCount);
 
-    eventQueue.addHandler(SCMEvents.PROCESSED_PIPELINE_REPORT, this);
-
     LOG.info(" Total pipeline count is {}, healthy pipeline " +
         "threshold count is {}", pipelineCount, healthyPipelineThresholdCount);
   }
 
   @Override
-  public boolean validate() {
+  protected TypedEvent<PipelineReportFromDatanode> getEventType() {
+    return SCMEvents.PROCESSED_PIPELINE_REPORT;
+  }
+
+  @Override
+  protected boolean validate() {
     if (currentHealthyPipelineCount >= healthyPipelineThresholdCount) {
       return true;
     }
@@ -101,7 +105,8 @@ public class HealthyPipelineChillModeRule
   }
 
   @Override
-  public void process(PipelineReportFromDatanode pipelineReportFromDatanode) {
+  protected void process(PipelineReportFromDatanode
+      pipelineReportFromDatanode) {
 
     // When SCM is in chill mode for long time, already registered
     // datanode can send pipeline report again, then pipeline handler fires
@@ -133,7 +138,7 @@ public class HealthyPipelineChillModeRule
         }
       }
 
-      if (getChillModeManager().getInChillMode()) {
+      if (scmInChillMode()) {
         SCMChillModeManager.getLogger().info(
             "SCM in chill mode. Healthy pipelines reported count is {}, " +
                 "required healthy pipeline reported count is {}",
@@ -146,7 +151,7 @@ public class HealthyPipelineChillModeRule
   }
 
   @Override
-  public void cleanup() {
+  protected void cleanup() {
     processedDatanodeDetails.clear();
   }
 

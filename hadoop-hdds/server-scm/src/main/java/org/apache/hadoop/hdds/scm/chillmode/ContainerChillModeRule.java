@@ -33,6 +33,7 @@ import org.apache.hadoop.hdds.scm.server.SCMDatanodeProtocolServer
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.server.events.EventQueue;
+import org.apache.hadoop.hdds.server.events.TypedEvent;
 
 /**
  * Class defining Chill mode exit criteria for Containers.
@@ -51,7 +52,7 @@ public class ContainerChillModeRule extends
   public ContainerChillModeRule(String ruleName, EventQueue eventQueue,
       Configuration conf,
       List<ContainerInfo> containers, SCMChillModeManager manager) {
-    super(manager, ruleName);
+    super(manager, ruleName, eventQueue);
     chillModeCutoff = conf.getDouble(
         HddsConfigKeys.HDDS_SCM_CHILLMODE_THRESHOLD_PCT,
         HddsConfigKeys.HDDS_SCM_CHILLMODE_THRESHOLD_PCT_DEFAULT);
@@ -75,11 +76,17 @@ public class ContainerChillModeRule extends
       maxContainer = containerMap.size();
     }
 
-    eventQueue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT, this);
   }
 
+
   @Override
-  public boolean validate() {
+  protected TypedEvent<NodeRegistrationContainerReport> getEventType() {
+    return SCMEvents.NODE_REGISTRATION_CONT_REPORT;
+  }
+
+
+  @Override
+  protected boolean validate() {
     return getCurrentContainerThreshold() >= chillModeCutoff;
   }
 
@@ -92,7 +99,7 @@ public class ContainerChillModeRule extends
   }
 
   @Override
-  public void process(NodeRegistrationContainerReport reportsProto) {
+  protected void process(NodeRegistrationContainerReport reportsProto) {
 
     reportsProto.getReport().getReportsList().forEach(c -> {
       if (containerMap.containsKey(c.getContainerID())) {
@@ -102,7 +109,7 @@ public class ContainerChillModeRule extends
       }
     });
 
-    if (getChillModeManager().getInChillMode()) {
+    if (scmInChillMode()) {
       SCMChillModeManager.getLogger().info(
           "SCM in chill mode. {} % containers have at least one"
               + " reported replica.",
@@ -111,7 +118,7 @@ public class ContainerChillModeRule extends
   }
 
   @Override
-  public void cleanup() {
+  protected void cleanup() {
     containerMap.clear();
   }
 }

@@ -26,6 +26,7 @@ import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeProtocolServer.NodeRegistrationContainerReport;
 
 import org.apache.hadoop.hdds.server.events.EventQueue;
+import org.apache.hadoop.hdds.server.events.TypedEvent;
 
 /**
  * Class defining Chill mode exit criteria according to number of DataNodes
@@ -43,26 +44,30 @@ public class DataNodeChillModeRule extends
   public DataNodeChillModeRule(String ruleName, EventQueue eventQueue,
       Configuration conf,
       SCMChillModeManager manager) {
-    super(manager, ruleName);
+    super(manager, ruleName, eventQueue);
     requiredDns = conf.getInt(
         HddsConfigKeys.HDDS_SCM_CHILLMODE_MIN_DATANODE,
         HddsConfigKeys.HDDS_SCM_CHILLMODE_MIN_DATANODE_DEFAULT);
     registeredDnSet = new HashSet<>(requiredDns * 2);
-    eventQueue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT, this);
   }
 
   @Override
-  public boolean validate() {
+  protected TypedEvent<NodeRegistrationContainerReport> getEventType() {
+    return SCMEvents.NODE_REGISTRATION_CONT_REPORT;
+  }
+
+  @Override
+  protected boolean validate() {
     return registeredDns >= requiredDns;
   }
 
   @Override
-  public void process(NodeRegistrationContainerReport reportsProto) {
+  protected void process(NodeRegistrationContainerReport reportsProto) {
 
     registeredDnSet.add(reportsProto.getDatanodeDetails().getUuid());
     registeredDns = registeredDnSet.size();
 
-    if (getChillModeManager().getInChillMode()) {
+    if (scmInChillMode()) {
       SCMChillModeManager.getLogger().info(
           "SCM in chill mode. {} DataNodes registered, {} required.",
           registeredDns, requiredDns);
@@ -71,7 +76,7 @@ public class DataNodeChillModeRule extends
   }
 
   @Override
-  public void cleanup() {
+  protected void cleanup() {
     registeredDnSet.clear();
   }
 }

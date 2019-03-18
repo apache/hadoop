@@ -34,6 +34,7 @@ import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.
     PipelineReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventQueue;
+import org.apache.hadoop.hdds.server.events.TypedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,7 +61,7 @@ public class OneReplicaPipelineChillModeRule extends
   public OneReplicaPipelineChillModeRule(String ruleName, EventQueue eventQueue,
       PipelineManager pipelineManager,
       SCMChillModeManager chillModeManager, Configuration configuration) {
-    super(chillModeManager, ruleName);
+    super(chillModeManager, ruleName, eventQueue);
     this.pipelineManager = pipelineManager;
 
     double percent =
@@ -80,15 +81,19 @@ public class OneReplicaPipelineChillModeRule extends
 
     thresholdCount = (int) Math.ceil(percent * totalPipelineCount);
 
-    eventQueue.addHandler(SCMEvents.PROCESSED_PIPELINE_REPORT, this);
-
     LOG.info(" Total pipeline count is {}, pipeline's with atleast one " +
         "datanode reported threshold count is {}", totalPipelineCount,
         thresholdCount);
 
   }
+
   @Override
-  public boolean validate() {
+  protected TypedEvent<PipelineReportFromDatanode> getEventType() {
+    return SCMEvents.PROCESSED_PIPELINE_REPORT;
+  }
+
+  @Override
+  protected boolean validate() {
     if (currentReportedPipelineCount >= thresholdCount) {
       return true;
     }
@@ -96,7 +101,8 @@ public class OneReplicaPipelineChillModeRule extends
   }
 
   @Override
-  public void process(PipelineReportFromDatanode pipelineReportFromDatanode) {
+  protected void process(PipelineReportFromDatanode
+      pipelineReportFromDatanode) {
     Pipeline pipeline;
     Preconditions.checkNotNull(pipelineReportFromDatanode);
     PipelineReportsProto pipelineReport =
@@ -119,7 +125,7 @@ public class OneReplicaPipelineChillModeRule extends
 
     currentReportedPipelineCount = reportedPipelineIDSet.size();
 
-    if (getChillModeManager().getInChillMode()) {
+    if (scmInChillMode()) {
       SCMChillModeManager.getLogger().info(
           "SCM in chill mode. Pipelines with atleast one datanode reported " +
               "count is {}, required atleast one datanode reported per " +
@@ -130,7 +136,7 @@ public class OneReplicaPipelineChillModeRule extends
   }
 
   @Override
-  public void cleanup() {
+  protected void cleanup() {
     reportedPipelineIDSet.clear();
   }
 
