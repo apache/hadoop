@@ -227,7 +227,7 @@ public final class MarshalledCredentials implements Writable, Serializable {
       // session/role credentials may have an expiry and role ARN.
       return String.format("session credentials, expiry %s; %s(%s)",
           getExpirationDateTime()
-              .map(x -> x.format(DateTimeFormatter.ISO_DATE))
+              .map(x -> x.format(DateTimeFormatter.ISO_DATE_TIME))
               .orElse("unknown"),
           (isNotEmpty(roleARN)
               ? ("role \"" + roleARN + "\" ")
