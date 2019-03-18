@@ -123,6 +123,7 @@ public final class OmKeyLocationInfo {
       return this;
     }
 
+    @SuppressWarnings("checkstyle:hiddenfield")
     public Builder setPipeline(Pipeline pipeline) {
       this.pipeline = pipeline;
       return this;
