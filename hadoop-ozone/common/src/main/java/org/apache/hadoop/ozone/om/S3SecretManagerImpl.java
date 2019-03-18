@@ -40,7 +40,6 @@ import static org.apache.hadoop.ozone.security.OzoneSecurityException.ResultCode
 public class S3SecretManagerImpl implements S3SecretManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(S3SecretManagerImpl.class);
-
   /**
    * OMMetadataManager is used for accessing OM MetadataDB and ReadWriteLock.
    */
@@ -109,5 +108,9 @@ public class S3SecretManagerImpl implements S3SecretManager {
 
     return OzoneManagerProtocolProtos.S3Secret.parseFrom(s3Secret)
         .getAwsSecret();
+  }
+
+  public OMMetadataManager getOmMetadataManager() {
+    return omMetadataManager;
   }
 }

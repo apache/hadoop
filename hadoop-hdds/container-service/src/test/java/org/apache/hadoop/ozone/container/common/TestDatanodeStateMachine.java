@@ -161,7 +161,7 @@ public class TestDatanodeStateMachine {
   public void testStartStopDatanodeStateMachine() throws IOException,
       InterruptedException, TimeoutException {
     try (DatanodeStateMachine stateMachine =
-        new DatanodeStateMachine(getNewDatanodeDetails(), conf)) {
+        new DatanodeStateMachine(getNewDatanodeDetails(), conf, null)) {
       stateMachine.startDaemon();
       SCMConnectionManager connectionManager =
           stateMachine.getConnectionManager();
@@ -219,7 +219,7 @@ public class TestDatanodeStateMachine {
     ContainerUtils.writeDatanodeDetailsTo(datanodeDetails, idPath);
 
     try (DatanodeStateMachine stateMachine =
-             new DatanodeStateMachine(datanodeDetails, conf)) {
+             new DatanodeStateMachine(datanodeDetails, conf, null)) {
       DatanodeStateMachine.DatanodeStates currentState =
           stateMachine.getContext().getState();
       Assert.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,
@@ -325,7 +325,7 @@ public class TestDatanodeStateMachine {
     datanodeDetails.setPort(port);
 
     try (DatanodeStateMachine stateMachine =
-             new DatanodeStateMachine(datanodeDetails, conf)) {
+             new DatanodeStateMachine(datanodeDetails, conf, null)) {
       DatanodeStateMachine.DatanodeStates currentState =
           stateMachine.getContext().getState();
       Assert.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,
@@ -388,7 +388,7 @@ public class TestDatanodeStateMachine {
       perTestConf.setStrings(entry.getKey(), entry.getValue());
       LOG.info("Test with {} = {}", entry.getKey(), entry.getValue());
       try (DatanodeStateMachine stateMachine = new DatanodeStateMachine(
-          getNewDatanodeDetails(), perTestConf)) {
+          getNewDatanodeDetails(), perTestConf, null)) {
         DatanodeStateMachine.DatanodeStates currentState =
             stateMachine.getContext().getState();
         Assert.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,
