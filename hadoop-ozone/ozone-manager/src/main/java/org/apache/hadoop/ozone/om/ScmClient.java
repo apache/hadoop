@@ -35,7 +35,7 @@ public class ScmClient {
   }
 
   ScmBlockLocationProtocol getBlockClient() {
-     return this.blockClient;
+    return this.blockClient;
   }
 
   StorageContainerLocationProtocol getContainerClient() {
