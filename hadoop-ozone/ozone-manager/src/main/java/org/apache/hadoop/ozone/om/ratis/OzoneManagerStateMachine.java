@@ -108,11 +108,75 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
       ctxt.setException(ioe);
       return ctxt;
     }
+    return handleStartTransactionRequests(raftClientRequest, omRequest);
 
-    if (omRequest.getCmdType() ==
-        OzoneManagerProtocolProtos.Type.AllocateBlock) {
+  }
+
+  /**
+   * Handle the RaftClientRequest and return TransactionContext object.
+   * @param raftClientRequest
+   * @param omRequest
+   * @return TransactionContext
+   */
+  private TransactionContext handleStartTransactionRequests(
+      RaftClientRequest raftClientRequest, OMRequest omRequest) {
+
+    switch (omRequest.getCmdType()) {
+    case AllocateBlock:
       return handleAllocateBlock(raftClientRequest, omRequest);
+    case CreateKey:
+      return handleCreateKeyRequest(raftClientRequest, omRequest);
+    default:
+      return TransactionContext.newBuilder()
+          .setClientRequest(raftClientRequest)
+          .setStateMachine(this)
+          .setServerRole(RaftProtos.RaftPeerRole.LEADER)
+          .setLogData(raftClientRequest.getMessage().getContent())
+          .build();
     }
+
+  }
+
+
+  /**
+   * Handle createKey Request, which needs a special handling. This request
+   * needs to be executed on the leader, and the response received from this
+   * request we need to create a ApplyKeyRequest and create a
+   * TransactionContext object.
+   */
+  private TransactionContext handleCreateKeyRequest(
+      RaftClientRequest raftClientRequest, OMRequest omRequest) {
+    OMResponse omResponse = handler.handle(omRequest);
+
+    if (!omResponse.getSuccess()) {
+      TransactionContext transactionContext = TransactionContext.newBuilder()
+          .setClientRequest(raftClientRequest)
+          .setStateMachine(this)
+          .setServerRole(RaftProtos.RaftPeerRole.LEADER)
+          .build();
+      IOException ioe = new IOException(omResponse.getMessage() +
+          " Status code " + omResponse.getStatus());
+      transactionContext.setException(ioe);
+      return transactionContext;
+    }
+
+    // Get original request
+    OzoneManagerProtocolProtos.CreateKeyRequest createKeyRequest =
+        omRequest.getCreateKeyRequest();
+
+    // Create Applykey Request.
+    OzoneManagerProtocolProtos.ApplyCreateKeyRequest applyCreateKeyRequest =
+        OzoneManagerProtocolProtos.ApplyCreateKeyRequest.newBuilder()
+            .setCreateKeyRequest(createKeyRequest)
+            .setCreateKeyResponse(omResponse.getCreateKeyResponse()).build();
+
+    OMRequest newOmRequest =
+        OMRequest.newBuilder().setCmdType(
+            OzoneManagerProtocolProtos.Type.ApplyCreateKey)
+            .setApplyCreateKeyRequest(applyCreateKeyRequest).build();
+
+    ByteString messageContent = ByteString.copyFrom(newOmRequest.toByteArray());
+
     return TransactionContext.newBuilder()
         .setClientRequest(raftClientRequest)
         .setStateMachine(this)
@@ -120,6 +184,7 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
         .setLogData(messageContent)
         .build();
   }
+
 
   /**
    * Handle AllocateBlock Request, which needs a special handling. This
