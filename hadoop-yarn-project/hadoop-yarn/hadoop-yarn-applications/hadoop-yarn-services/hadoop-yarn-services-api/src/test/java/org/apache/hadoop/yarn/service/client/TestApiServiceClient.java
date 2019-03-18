@@ -27,6 +27,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import com.google.common.collect.Lists;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.eclipse.jetty.server.Server;
@@ -310,5 +311,13 @@ public class TestApiServiceClient {
     }
   }
 
+  @Test
+  public void testNoneSecureApiClient() throws IOException {
+    String url = asc.getServicePath("/foobar");
+    assertTrue("User.name flag is missing in service path.",
+        url.contains("user.name"));
+    assertTrue("User.name flag is not matching JVM user.",
+        url.contains(System.getProperty("user.name")));
+  }
 
 }

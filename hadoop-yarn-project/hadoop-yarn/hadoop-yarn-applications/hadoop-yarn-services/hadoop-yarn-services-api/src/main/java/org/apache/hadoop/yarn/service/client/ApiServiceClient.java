@@ -151,7 +151,7 @@ public class ApiServiceClient extends AppAdminClient {
    * @return URI to API Service
    * @throws IOException
    */
-  private String getServicePath(String appName) throws IOException {
+  protected String getServicePath(String appName) throws IOException {
     String url = getRMWebAddress();
     StringBuilder api = new StringBuilder();
     api.append(url)
@@ -203,12 +203,15 @@ public class ApiServiceClient extends AppAdminClient {
     return api.toString();
   }
 
-  private void appendUserNameIfRequired(StringBuilder builder) {
+  private void appendUserNameIfRequired(StringBuilder builder)
+      throws IOException {
     Configuration conf = getConfig();
-    if (conf.get("hadoop.http.authentication.type").equalsIgnoreCase(
-        "simple")) {
+    if (conf.get("hadoop.http.authentication.type")
+        .equalsIgnoreCase("simple")) {
+      String username = UserGroupInformation.getCurrentUser()
+            .getShortUserName();
       builder.append("?user.name=").append(UrlEncoded
-          .encodeString(System.getProperty("user.name")));
+          .encodeString(username));
     }
   }
 
