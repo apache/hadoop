@@ -719,7 +719,6 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .getAllocateBlockResponse();
     return OmKeyLocationInfo.getFromProtobuf(resp.getKeyLocation());
   }
-
   @Override
   public void commitKey(OmKeyArgs args, long clientId)
       throws IOException {

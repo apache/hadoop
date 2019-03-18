@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.ozone.om.ratis;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.ServiceException;
 import java.io.IOException;
@@ -26,12 +27,14 @@ import org.apache.hadoop.ozone.container.common.transport.server.ratis
     .ContainerStateMachine;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.helpers.OMRatisHelper;
-import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
+import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.ozone.protocolPB.OzoneManagerRequestHandler;
+import org.apache.hadoop.ozone.protocolPB.RequestHandler;
 import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.protocol.Message;
 import org.apache.ratis.protocol.RaftClientRequest;
@@ -57,8 +60,8 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
   private final SimpleStateMachineStorage storage =
       new SimpleStateMachineStorage();
   private final OzoneManagerRatisServer omRatisServer;
-  private final OzoneManagerProtocol ozoneManager;
-  private final OzoneManagerRequestHandler handler;
+  private final OzoneManagerServerProtocol ozoneManager;
+  private RequestHandler handler;
   private RaftGroupId raftGroupId;
 
   public OzoneManagerStateMachine(OzoneManagerRatisServer ratisServer) {
@@ -105,12 +108,77 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
       ctxt.setException(ioe);
       return ctxt;
     }
+
+    if (omRequest.getCmdType() ==
+        OzoneManagerProtocolProtos.Type.AllocateBlock) {
+      return handleAllocateBlock(raftClientRequest, omRequest);
+    }
     return TransactionContext.newBuilder()
         .setClientRequest(raftClientRequest)
         .setStateMachine(this)
         .setServerRole(RaftProtos.RaftPeerRole.LEADER)
         .setLogData(messageContent)
         .build();
+  }
+
+  /**
+   * Handle AllocateBlock Request, which needs a special handling. This
+   * request needs to be executed on the leader, where it connects to SCM and
+   * get Block information.
+   * @param raftClientRequest
+   * @param omRequest
+   * @return TransactionContext
+   */
+  private TransactionContext handleAllocateBlock(
+      RaftClientRequest raftClientRequest, OMRequest omRequest) {
+    OMResponse omResponse = handler.handle(omRequest);
+
+
+    // If request is failed, no need to proceed further.
+    // Setting the exception with omResponse message and code.
+
+    // TODO: the allocate block fails when scm is in chill mode or when scm is
+    //  down, but that error is not correctly received in OM end, once that
+    //  is fixed, we need to see how to handle this failure case or how we
+    //  need to retry or how to handle this scenario. For other errors like
+    //  KEY_NOT_FOUND, we don't need a retry/
+    if (!omResponse.getSuccess()) {
+      TransactionContext transactionContext = TransactionContext.newBuilder()
+          .setClientRequest(raftClientRequest)
+          .setStateMachine(this)
+          .setServerRole(RaftProtos.RaftPeerRole.LEADER)
+          .build();
+      IOException ioe = new IOException(omResponse.getMessage() +
+          " Status code " + omResponse.getStatus());
+      transactionContext.setException(ioe);
+      return transactionContext;
+    }
+
+
+    // Get original request
+    OzoneManagerProtocolProtos.AllocateBlockRequest allocateBlockRequest =
+        omRequest.getAllocateBlockRequest();
+
+    // Create new AllocateBlockRequest with keyLocation set.
+    OzoneManagerProtocolProtos.AllocateBlockRequest newAllocateBlockRequest =
+        OzoneManagerProtocolProtos.AllocateBlockRequest.newBuilder().
+            mergeFrom(allocateBlockRequest)
+            .setKeyLocation(
+                omResponse.getAllocateBlockResponse().getKeyLocation()).build();
+
+    OMRequest newOmRequest = omRequest.toBuilder().setCmdType(
+        OzoneManagerProtocolProtos.Type.AllocateBlock)
+        .setAllocateBlockRequest(newAllocateBlockRequest).build();
+
+    ByteString messageContent = ByteString.copyFrom(newOmRequest.toByteArray());
+
+    return TransactionContext.newBuilder()
+        .setClientRequest(raftClientRequest)
+        .setStateMachine(this)
+        .setServerRole(RaftProtos.RaftPeerRole.LEADER)
+        .setLogData(messageContent)
+        .build();
+
   }
 
   /*
@@ -167,6 +235,16 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
     final CompletableFuture<T> future = new CompletableFuture<>();
     future.completeExceptionally(e);
     return future;
+  }
+
+  @VisibleForTesting
+  public void setHandler(RequestHandler handler) {
+    this.handler = handler;
+  }
+
+  @VisibleForTesting
+  public void setRaftGroupId(RaftGroupId raftGroupId) {
+    this.raftGroupId = raftGroupId;
   }
 
 }
