@@ -45,14 +45,12 @@ public interface OzoneManagerHAProtocol {
    *
    * @param args the key to append
    * @param clientID the client identification
-   * @param excludeList List of datanodes/containers to exclude during block
-   *                    allocation
    * @param keyLocation key location given by allocateBlock
    * @return an allocated block
    * @throws IOException
    */
   OmKeyLocationInfo addAllocatedBlock(OmKeyArgs args, long clientID,
-      ExcludeList excludeList, KeyLocation keyLocation) throws IOException;
+      KeyLocation keyLocation) throws IOException;
 
 
 }

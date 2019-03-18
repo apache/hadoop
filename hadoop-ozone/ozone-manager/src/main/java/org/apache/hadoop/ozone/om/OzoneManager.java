@@ -2040,7 +2040,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
   @Override
   public OmKeyLocationInfo addAllocatedBlock(OmKeyArgs args, long clientID,
-      ExcludeList excludeList, KeyLocation keyLocation) throws IOException {
+      KeyLocation keyLocation) throws IOException {
     if(isAclEnabled) {
       checkAcls(ResourceType.KEY, StoreType.OZONE, ACLType.WRITE,
           args.getVolumeName(), args.getBucketName(), args.getKeyName());
@@ -2051,8 +2051,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     auditMap.put(OzoneConsts.CLIENT_ID, String.valueOf(clientID));
     try {
       metrics.incNumAddAllocateBlockCalls();
-      return keyManager.addAllocatedBlock(args, clientID, excludeList,
-          keyLocation);
+      return keyManager.addAllocatedBlock(args, clientID, keyLocation);
     } catch (Exception ex) {
       metrics.incNumAddAllocateBlockFails();
       auditSuccess = false;

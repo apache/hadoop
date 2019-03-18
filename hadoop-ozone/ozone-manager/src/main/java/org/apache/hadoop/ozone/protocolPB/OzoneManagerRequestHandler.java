@@ -634,7 +634,6 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     if (request.hasKeyLocation()) {
       newLocation =
           impl.addAllocatedBlock(omKeyArgs, request.getClientID(),
-              ExcludeList.getFromProtoBuf(request.getExcludeList()),
               request.getKeyLocation());
     } else {
       newLocation =

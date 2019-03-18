@@ -230,7 +230,6 @@ public class KeyManagerImpl implements KeyManager {
 
   @Override
   public OmKeyLocationInfo addAllocatedBlock(OmKeyArgs args, long clientID,
-      ExcludeList excludeList,
       OzoneManagerProtocolProtos.KeyLocation keyLocation) throws IOException {
     Preconditions.checkNotNull(args);
     Preconditions.checkNotNull(keyLocation);
