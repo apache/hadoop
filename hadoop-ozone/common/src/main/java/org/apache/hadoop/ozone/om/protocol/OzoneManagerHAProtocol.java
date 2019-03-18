@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.ozone.om.protocol;
 
-import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
