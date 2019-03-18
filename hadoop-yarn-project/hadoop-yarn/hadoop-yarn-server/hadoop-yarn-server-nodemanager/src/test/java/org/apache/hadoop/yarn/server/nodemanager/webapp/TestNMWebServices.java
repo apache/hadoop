@@ -457,23 +457,23 @@ public class TestNMWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON, response.getType().toString());
 
     // Access resource-2 should fail (empty NMResourceInfo returned).
-    JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals(0, json.length());
+    String resp = response.getEntity(String.class);
+    assertEquals("null", resp);
 
     // Access resource-3 should fail (unknown plugin)
     response = r.path("ws").path("v1").path("node").path(
         "resources").path("resource-3").accept(MediaType.APPLICATION_JSON).get(
         ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON, response.getType().toString());
-    json = response.getEntity(JSONObject.class);
-    assertEquals(0, json.length());
+    resp = response.getEntity(String.class);
+    assertEquals("null", resp);
 
     // Access resource-1 should success
     response = r.path("ws").path("v1").path("node").path(
         "resources").path("resource-1").accept(MediaType.APPLICATION_JSON).get(
         ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON, response.getType().toString());
-    json = response.getEntity(JSONObject.class);
+    JSONObject json = response.getEntity(JSONObject.class);
     assertEquals(1000, Long.parseLong(json.get("a").toString()));
 
     // Access resource-1 should success (encoded yarn.io/Fresource-1).
