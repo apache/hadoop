@@ -25,7 +25,8 @@ import io.netty.channel.epoll.EpollServerDomainSocketChannel;
 import org.apache.hadoop.yarn.csi.utils.GrpcHelper;
 
 import java.io.IOException;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A fake implementation of CSI driver.
@@ -33,7 +34,7 @@ import java.util.logging.Logger;
  */
 public class FakeCsiDriver {
 
-  private static final Logger LOG = Logger
+  private static final Logger LOG = LoggerFactory
       .getLogger(FakeCsiDriver.class.getName());
 
   private Server server;

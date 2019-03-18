@@ -221,15 +221,10 @@ public class QueueManagementDynamicEditPolicy implements SchedulingEditPolicy {
                 + parentQueue.getQueueName(), e);
       }
     } else{
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            "Skipping queue management updates for parent queue "
-                + parentQueue
-                .getQueuePath() + " "
-                + "since configuration for auto creating queues beyond "
-                + "parent's "
-                + "guaranteed capacity is disabled");
-      }
+      LOG.debug("Skipping queue management updates for parent queue {} "
+          + "since configuration for auto creating queues beyond "
+          + "parent's guaranteed capacity is disabled",
+          parentQueue.getQueuePath());
     }
     return queueManagementChanges;
   }

@@ -19,8 +19,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -37,7 +37,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
 
 public class FpgaResourcePlugin implements ResourcePlugin {
-  private static final Log LOG = LogFactory.getLog(FpgaResourcePlugin.class);
+  private static final Logger LOG = LoggerFactory.
+      getLogger(FpgaResourcePlugin.class);
 
   private ResourceHandler fpgaResourceHandler = null;
 

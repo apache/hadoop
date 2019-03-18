@@ -19,8 +19,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resourc
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -56,8 +56,8 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  * a container to kill. The algorithm that picks the container is a plugin.
  */
 public class CGroupElasticMemoryController extends Thread {
-  protected static final Log LOG = LogFactory
-      .getLog(CGroupElasticMemoryController.class);
+  protected static final Logger LOG = LoggerFactory
+      .getLogger(CGroupElasticMemoryController.class);
   private final Clock clock = new MonotonicClock();
   private String yarnCGroupPath;
   private String oomListenerPath;

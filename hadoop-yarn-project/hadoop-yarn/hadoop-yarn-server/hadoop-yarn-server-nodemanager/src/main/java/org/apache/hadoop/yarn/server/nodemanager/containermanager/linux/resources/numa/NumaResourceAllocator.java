@@ -29,8 +29,8 @@ import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
@@ -51,7 +51,8 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class NumaResourceAllocator {
 
-  private static final Log LOG = LogFactory.getLog(NumaResourceAllocator.class);
+  private static final Logger LOG = LoggerFactory.
+      getLogger(NumaResourceAllocator.class);
 
   // Regex to find node ids, Ex: 'available: 2 nodes (0-1)'
   private static final String NUMA_NODEIDS_REGEX =

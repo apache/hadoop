@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.util.CpuTimeTracker;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.SysInfoLinux;
@@ -63,8 +63,8 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
     Continue,
     Exit
   }
-  protected static final Log LOG = LogFactory
-      .getLog(CGroupsResourceCalculator.class);
+  protected static final Logger LOG = LoggerFactory
+      .getLogger(CGroupsResourceCalculator.class);
   private static final String PROCFS = "/proc";
   static final String CGROUP = "cgroup";
   static final String CPU_STAT = "cpuacct.stat";
@@ -145,9 +145,7 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
 
   @Override
   public float getCpuUsagePercent() {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Process " + pid + " jiffies:" + processTotalJiffies);
-    }
+    LOG.debug("Process {} jiffies:{}", pid, processTotalJiffies);
     return cpuTimeTracker.getCpuTrackerUsagePercent();
   }
 
@@ -187,9 +185,9 @@ public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
     processPhysicalMemory = getMemorySize(memStat);
     if (memswStat.exists()) {
       processVirtualMemory = getMemorySize(memswStat);
-    } else if(LOG.isDebugEnabled()) {
-      LOG.debug("Swap cgroups monitoring is not compiled into the kernel " +
-          memswStat.getAbsolutePath().toString());
+    } else {
+      LOG.debug("Swap cgroups monitoring is not compiled into the kernel {}",
+          memswStat.getAbsolutePath());
     }
   }
 

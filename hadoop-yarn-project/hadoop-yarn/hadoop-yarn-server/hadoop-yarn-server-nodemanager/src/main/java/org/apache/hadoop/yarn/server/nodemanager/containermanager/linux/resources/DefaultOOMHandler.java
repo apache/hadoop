@@ -19,8 +19,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resourc
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
@@ -46,8 +46,8 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class DefaultOOMHandler implements Runnable {
-  protected static final Log LOG = LogFactory
-      .getLog(DefaultOOMHandler.class);
+  protected static final Logger LOG = LoggerFactory
+      .getLogger(DefaultOOMHandler.class);
   private final Context context;
   private final String memoryStatFile;
   private final CGroupsHandler cgroups;

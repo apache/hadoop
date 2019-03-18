@@ -20,8 +20,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -50,7 +50,8 @@ import static org.apache.hadoop.yarn.api.records.ResourceInformation.FPGA_URI;
 @InterfaceAudience.Private
 public class FpgaResourceHandlerImpl implements ResourceHandler {
 
-  static final Log LOG = LogFactory.getLog(FpgaResourceHandlerImpl.class);
+  static final Logger LOG = LoggerFactory.
+      getLogger(FpgaResourceHandlerImpl.class);
 
   private final String REQUEST_FPGA_IP_ID_KEY = "REQUESTED_FPGA_IP_ID";
 

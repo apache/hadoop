@@ -22,8 +22,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -52,7 +52,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * scheduler.
  * */
 public class DeviceMappingManager {
-  static final Log LOG = LogFactory.getLog(DeviceMappingManager.class);
+  static final Logger LOG = LoggerFactory.
+      getLogger(DeviceMappingManager.class);
 
   private Context nmContext;
   private static final int WAIT_MS_PER_LOOP = 1000;
@@ -163,10 +164,7 @@ public class DeviceMappingManager {
     ContainerId containerId = container.getContainerId();
     int requestedDeviceCount = getRequestedDeviceCount(resourceName,
         requestedResource);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Try allocating " + requestedDeviceCount
-          + " " + resourceName);
-    }
+    LOG.debug("Try allocating {} {}", requestedDeviceCount, resourceName);
     // Assign devices to container if requested some.
     if (requestedDeviceCount > 0) {
       if (requestedDeviceCount > getAvailableDevices(resourceName)) {
@@ -266,10 +264,8 @@ public class DeviceMappingManager {
     while (iter.hasNext()) {
       entry = iter.next();
       if (entry.getValue().equals(containerId)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Recycle devices: " + entry.getKey()
-              + ", type: " + resourceName + " from " + containerId);
-        }
+        LOG.debug("Recycle devices: {}, type: {} from {}", entry.getKey(),
+            resourceName, containerId);
         iter.remove();
       }
     }
@@ -317,10 +313,8 @@ public class DeviceMappingManager {
     ContainerId containerId = c.getContainerId();
     Map<String, String> env = c.getLaunchContext().getEnvironment();
     if (null == dps) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Customized device plugin scheduler is preferred "
-            + "but not implemented, use default logic");
-      }
+      LOG.debug("Customized device plugin scheduler is preferred "
+          + "but not implemented, use default logic");
       defaultScheduleAction(allowed, used,
           assigned, containerId, count);
     } else {

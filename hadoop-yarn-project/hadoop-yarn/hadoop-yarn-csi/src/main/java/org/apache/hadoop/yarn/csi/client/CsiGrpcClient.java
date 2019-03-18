@@ -27,8 +27,8 @@ import io.netty.channel.epoll.EpollDomainSocketChannel;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.util.concurrent.DefaultThreadFactory;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -39,7 +39,8 @@ import java.util.concurrent.TimeUnit;
  */
 public final class CsiGrpcClient implements AutoCloseable {
 
-  private static final Log LOG = LogFactory.getLog(CsiGrpcClient.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CsiGrpcClient.class);
 
   private final ManagedChannel channel;
 

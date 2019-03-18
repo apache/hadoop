@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -33,8 +33,8 @@ import java.lang.management.ManagementFactory;
  * Class for testing {@link NodeManagerMXBean} implementation.
  */
 public class TestNodeManagerMXBean {
-  public static final Log LOG = LogFactory.getLog(
-          TestNodeManagerMXBean.class);
+  public static final Logger LOG = LoggerFactory.getLogger(
+      TestNodeManagerMXBean.class);
 
   @Test
   public void testNodeManagerMXBean() throws Exception {
