@@ -60,6 +60,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numVolumeLists;
   private @Metric MutableCounterLong numKeyCommits;
   private @Metric MutableCounterLong numAllocateBlockCalls;
+  private @Metric MutableCounterLong numAddAllocateBlockCalls;
   private @Metric MutableCounterLong numGetServiceLists;
   private @Metric MutableCounterLong numListS3Buckets;
   private @Metric MutableCounterLong numInitiateMultipartUploads;
@@ -85,6 +86,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numVolumeListFails;
   private @Metric MutableCounterLong numKeyCommitFails;
   private @Metric MutableCounterLong numBlockAllocateCallFails;
+  private @Metric MutableCounterLong numAddAllocateBlockCallFails;
   private @Metric MutableCounterLong numGetServiceListFails;
   private @Metric MutableCounterLong numListS3BucketsFails;
   private @Metric MutableCounterLong numInitiateMultipartUploadFails;
@@ -377,6 +379,14 @@ public class OMMetrics {
 
   public void incNumBlockAllocateCallFails() {
     numBlockAllocateCallFails.incr();
+  }
+
+  public void incNumAddAllocateBlockCalls() {
+    numAddAllocateBlockCalls.incr();
+  }
+
+  public void incNumAddAllocateBlockFails() {
+    numAddAllocateBlockCallFails.incr();
   }
 
   public void incNumBucketListFails() {

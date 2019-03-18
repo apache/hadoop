@@ -28,6 +28,7 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.utils.BackgroundService;
 
 import java.io.IOException;
@@ -75,6 +76,20 @@ public interface KeyManager {
    */
   OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID,
       ExcludeList excludeList) throws IOException;
+
+  /**
+   * Ozone manager state machine call's this on an open key, to add allocated
+   * block to the tail of current block list of the open client.
+   *
+   * @param args the key to append
+   * @param clientID the client requesting block.
+   * @param keyLocation key location.
+   * @return the reference to the new block.
+   * @throws IOException
+   */
+  OmKeyLocationInfo addAllocatedBlock(OmKeyArgs args, long clientID,
+      OzoneManagerProtocolProtos.KeyLocation keyLocation) throws IOException;
+
   /**
    * Given the args of a key to put, write an open key entry to meta data.
    *

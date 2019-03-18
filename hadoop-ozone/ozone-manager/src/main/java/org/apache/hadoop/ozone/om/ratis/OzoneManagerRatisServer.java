@@ -40,7 +40,8 @@ import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMNodeDetails;
-import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
+import org.apache.hadoop.ozone.om.OzoneManager;
+import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
 import org.apache.ratis.RaftConfigKeys;
 import org.apache.ratis.client.RaftClientConfigKeys;
 import org.apache.ratis.conf.RaftProperties;
@@ -81,7 +82,7 @@ public final class OzoneManagerRatisServer {
   private final RaftGroup raftGroup;
   private final RaftPeerId raftPeerId;
 
-  private final OzoneManagerProtocol ozoneManager;
+  private final OzoneManagerServerProtocol ozoneManager;
   private final ClientId clientId = ClientId.randomId();
 
   private final ScheduledExecutorService scheduledRoleChecker;
@@ -107,7 +108,8 @@ public final class OzoneManagerRatisServer {
    * @param raftPeers peer nodes in the raft ring
    * @throws IOException
    */
-  private OzoneManagerRatisServer(Configuration conf, OzoneManagerProtocol om,
+  private OzoneManagerRatisServer(Configuration conf,
+      OzoneManagerServerProtocol om,
       String raftGroupIdStr, RaftPeerId localRaftPeerId,
       InetSocketAddress addr, List<RaftPeer> raftPeers)
       throws IOException {
@@ -154,7 +156,7 @@ public final class OzoneManagerRatisServer {
    * Creates an instance of OzoneManagerRatisServer.
    */
   public static OzoneManagerRatisServer newOMRatisServer(
-      Configuration ozoneConf, OzoneManagerProtocol om,
+      Configuration ozoneConf, OzoneManager om,
       OMNodeDetails omNodeDetails, List<OMNodeDetails> peerNodes)
       throws IOException {
 
@@ -199,7 +201,7 @@ public final class OzoneManagerRatisServer {
     return  new OzoneManagerStateMachine(this);
   }
 
-  public OzoneManagerProtocol getOzoneManager() {
+  public OzoneManagerServerProtocol getOzoneManager() {
     return ozoneManager;
   }
 

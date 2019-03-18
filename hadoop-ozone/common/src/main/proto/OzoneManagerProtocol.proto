@@ -628,6 +628,10 @@ message AllocateBlockRequest {
     required KeyArgs keyArgs = 1;
     required uint64 clientID = 2;
     optional hadoop.hdds.ExcludeListProto excludeList = 3;
+    // During HA on one of the OM nodes, we allocate block and send the
+    // AllocateBlockRequest with keyLocation set. If this is set, no need to
+    // call scm again in OM Ratis applyTransaction just append it to DB.
+    optional KeyLocation keyLocation = 4;
 }
 
 message AllocateBlockResponse {

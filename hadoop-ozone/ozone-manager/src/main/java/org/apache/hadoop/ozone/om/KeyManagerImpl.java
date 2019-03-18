@@ -63,6 +63,7 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -120,6 +121,8 @@ public class KeyManagerImpl implements KeyManager {
 
   private final KeyProviderCryptoExtension kmsProvider;
 
+  private final boolean isRatisEnabled;
+
   public KeyManagerImpl(ScmBlockLocationProtocol scmBlockClient,
       OMMetadataManager metadataManager, OzoneConfiguration conf, String omId,
       OzoneBlockTokenSecretManager secretManager) {
@@ -148,6 +151,9 @@ public class KeyManagerImpl implements KeyManager {
         HDDS_BLOCK_TOKEN_ENABLED,
         HDDS_BLOCK_TOKEN_ENABLED_DEFAULT);
     this.kmsProvider = kmsProvider;
+    this.isRatisEnabled = conf.getBoolean(
+        OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
+        OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
   }
 
   @Override
@@ -223,10 +229,41 @@ public class KeyManagerImpl implements KeyManager {
   }
 
   @Override
-  public OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID,
-      ExcludeList excludeList)
-      throws IOException {
+  public OmKeyLocationInfo addAllocatedBlock(OmKeyArgs args, long clientID,
+      OzoneManagerProtocolProtos.KeyLocation keyLocation) throws IOException {
     Preconditions.checkNotNull(args);
+    Preconditions.checkNotNull(keyLocation);
+
+
+    String volumeName = args.getVolumeName();
+    String bucketName = args.getBucketName();
+    String keyName = args.getKeyName();
+    validateBucket(volumeName, bucketName);
+    String openKey = metadataManager.getOpenKey(
+        volumeName, bucketName, keyName, clientID);
+
+    OmKeyInfo keyInfo = metadataManager.getOpenKeyTable().get(openKey);
+    if (keyInfo == null) {
+      LOG.error("Allocate block for a key not in open status in meta store" +
+          " /{}/{}/{} with ID {}", volumeName, bucketName, keyName, clientID);
+      throw new OMException("Open Key not found",
+          OMException.ResultCodes.KEY_NOT_FOUND);
+    }
+
+    OmKeyLocationInfo omKeyLocationInfo =
+        OmKeyLocationInfo.getFromProtobuf(keyLocation);
+    keyInfo.appendNewBlocks(Collections.singletonList(omKeyLocationInfo));
+    keyInfo.updateModifcationTime();
+    metadataManager.getOpenKeyTable().put(openKey, keyInfo);
+    return omKeyLocationInfo;
+  }
+
+  @Override
+  public OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID,
+      ExcludeList excludeList) throws IOException {
+    Preconditions.checkNotNull(args);
+
+
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
     String keyName = args.getKeyName();
@@ -246,11 +283,16 @@ public class KeyManagerImpl implements KeyManager {
     // the same version
     List<OmKeyLocationInfo> locationInfos =
         allocateBlock(keyInfo, excludeList, scmBlockSize);
-    keyInfo.appendNewBlocks(locationInfos);
-    keyInfo.updateModifcationTime();
-    metadataManager.getOpenKeyTable().put(openKey,
-        keyInfo);
+
+    // If om is not managing via ratis, write to db, otherwise write to DB
+    // will happen via ratis apply transaction.
+    if (!isRatisEnabled) {
+      keyInfo.appendNewBlocks(locationInfos);
+      keyInfo.updateModifcationTime();
+      metadataManager.getOpenKeyTable().put(openKey, keyInfo);
+    }
     return locationInfos.get(0);
+
   }
 
   /**

@@ -41,7 +41,7 @@ import org.apache.hadoop.ozone.om.helpers.OmPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
-import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
+import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockResponse;
@@ -123,17 +123,18 @@ import org.slf4j.LoggerFactory;
  * Command Handler for OM requests. OM State Machine calls this handler for
  * deserializing the client request and sending it to OM.
  */
-public class OzoneManagerRequestHandler {
+public class OzoneManagerRequestHandler implements RequestHandler {
   static final Logger LOG =
       LoggerFactory.getLogger(OzoneManagerRequestHandler.class);
-  private final OzoneManagerProtocol impl;
+  private final OzoneManagerServerProtocol impl;
 
-  public OzoneManagerRequestHandler(OzoneManagerProtocol om) {
+  public OzoneManagerRequestHandler(OzoneManagerServerProtocol om) {
     this.impl = om;
   }
 
   //TODO simplify it to make it shorter
   @SuppressWarnings("methodlength")
+  @Override
   public OMResponse handle(OMRequest request) {
     LOG.debug("Received OMRequest: {}, ", request);
     Type cmdType = request.getCmdType();
@@ -344,6 +345,7 @@ public class OzoneManagerRequestHandler {
    * @param omRequest client request to OM
    * @throws OMException thrown if required parameters are set to null.
    */
+  @Override
   public void validateRequest(OMRequest omRequest) throws OMException {
     Type cmdType = omRequest.getCmdType();
     if (cmdType == null) {
@@ -627,9 +629,18 @@ public class OzoneManagerRequestHandler {
         .setBucketName(keyArgs.getBucketName())
         .setKeyName(keyArgs.getKeyName())
         .build();
-    OmKeyLocationInfo newLocation =
-        impl.allocateBlock(omKeyArgs, request.getClientID(),
-            ExcludeList.getFromProtoBuf(request.getExcludeList()));
+
+    OmKeyLocationInfo newLocation;
+    if (request.hasKeyLocation()) {
+      newLocation =
+          impl.addAllocatedBlock(omKeyArgs, request.getClientID(),
+              request.getKeyLocation());
+    } else {
+      newLocation =
+          impl.allocateBlock(omKeyArgs, request.getClientID(),
+              ExcludeList.getFromProtoBuf(request.getExcludeList()));
+    }
+
     resp.setKeyLocation(newLocation.getProtobuf());
 
     return resp.build();
