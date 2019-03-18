@@ -193,7 +193,7 @@ public final class S3AUtils {
         // call considered an sign of connectivity failure
         return (EOFException)new EOFException(message).initCause(exception);
       }
-      if (exception instanceof NoAuthWithAWSException) {
+      if (exception instanceof CredentialInitializationException) {
         // the exception raised by AWSCredentialProvider list if the
         // credentials were not accepted.
         return (AccessDeniedException)new AccessDeniedException(path, null,
