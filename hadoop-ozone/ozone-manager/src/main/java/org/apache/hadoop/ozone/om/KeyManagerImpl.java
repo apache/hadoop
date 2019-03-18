@@ -96,8 +96,6 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.HEAD;
-
 /**
  * Implementation of keyManager.
  */
@@ -163,8 +161,8 @@ public class KeyManagerImpl implements KeyManager {
           OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
           OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT,
           TimeUnit.MILLISECONDS);
-      keyDeletingService = new KeyDeletingService(scmClient.getBlockClient(), this,
-          blockDeleteInterval, serviceTimeout, configuration);
+      keyDeletingService = new KeyDeletingService(scmClient.getBlockClient(),
+          this, blockDeleteInterval, serviceTimeout, configuration);
       keyDeletingService.start();
     }
   }
