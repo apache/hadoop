@@ -237,6 +237,16 @@ define the target region in `auth-keys.xml`.
   <value>s3.eu-central-1.amazonaws.com</value>
 </property>
 ```
+
+Alternatively you can use endpoints defined in [core-site.xml](../../../../test/resources/core-site.xml).
+
+```xml
+<property>
+  <name>fs.s3a.endpoint</name>
+  <value>${frankfurt.endpoint}</value>
+</property>
+```
+
 This is used for all tests expect for scale tests using a Public CSV.gz file
 (see below)
 
