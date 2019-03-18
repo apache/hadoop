@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resourc
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -39,8 +39,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resource
  */
 public class NumaResourceHandlerImpl implements ResourceHandler {
 
-  private static final Log LOG = LogFactory
-      .getLog(NumaResourceHandlerImpl.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(NumaResourceHandlerImpl.class);
   private final NumaResourceAllocator numaResourceAllocator;
   private final String numaCtlCmd;
 

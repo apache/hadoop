@@ -287,9 +287,7 @@ public class FileSystemTimelineWriter extends TimelineWriter{
     Path domainLogPath =
         new Path(attemptDirCache.getAppAttemptDir(appAttemptId),
             DOMAIN_LOG_PREFIX + appAttemptId.toString());
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Writing domains for {} to {}", appAttemptId, domainLogPath);
-    }
+    LOG.debug("Writing domains for {} to {}", appAttemptId, domainLogPath);
     this.logFDsCache.writeDomainLog(
         fs, domainLogPath, objMapper, domain, isAppendSupported);
   }

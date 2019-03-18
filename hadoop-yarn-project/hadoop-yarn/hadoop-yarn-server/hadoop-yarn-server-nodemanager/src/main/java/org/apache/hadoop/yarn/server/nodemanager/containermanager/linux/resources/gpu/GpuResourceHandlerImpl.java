@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.gpu;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -41,8 +41,8 @@ import java.util.Arrays;
 import java.util.List;
 
 public class GpuResourceHandlerImpl implements ResourceHandler {
-  final static Log LOG = LogFactory
-      .getLog(GpuResourceHandlerImpl.class);
+  final static Logger LOG = LoggerFactory
+      .getLogger(GpuResourceHandlerImpl.class);
 
   // This will be used by container-executor to add necessary clis
   public static final String EXCLUDED_GPUS_CLI_OPTION = "--excluded_gpus";

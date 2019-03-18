@@ -154,18 +154,13 @@ public final class PlacementConstraintsUtil {
     if (schedulerNode.getNodeAttributes() == null ||
         !schedulerNode.getNodeAttributes().contains(requestAttribute)) {
       if (opCode == NodeAttributeOpCode.NE) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Incoming requestAttribute:" + requestAttribute
-              + "is not present in " + schedulerNode.getNodeID()
-              + ", however opcode is NE. Hence accept this node.");
-        }
+        LOG.debug("Incoming requestAttribute:{} is not present in {},"
+            + " however opcode is NE. Hence accept this node.",
+            requestAttribute, schedulerNode.getNodeID());
         return true;
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Incoming requestAttribute:" + requestAttribute
-            + "is not present in " + schedulerNode.getNodeID()
-            + ", skip such node.");
-      }
+      LOG.debug("Incoming requestAttribute:{} is not present in {},"
+          + " skip such node.", requestAttribute, schedulerNode.getNodeID());
       return false;
     }
 
@@ -183,21 +178,16 @@ public final class PlacementConstraintsUtil {
       }
       if (requestAttribute.equals(nodeAttribute)) {
         if (isOpCodeMatches(requestAttribute, nodeAttribute, opCode)) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(
-                "Incoming requestAttribute:" + requestAttribute
-                    + " matches with node:" + schedulerNode.getNodeID());
-          }
+          LOG.debug("Incoming requestAttribute:{} matches with node:{}",
+              requestAttribute, schedulerNode.getNodeID());
           found = true;
           return found;
         }
       }
     }
     if (!found) {
-      if (LOG.isDebugEnabled()) {
-        LOG.info("skip this node:" + schedulerNode.getNodeID()
-            + " for requestAttribute:" + requestAttribute);
-      }
+      LOG.debug("skip this node:{} for requestAttribute:{}",
+          schedulerNode.getNodeID(), requestAttribute);
       return false;
     }
     return true;

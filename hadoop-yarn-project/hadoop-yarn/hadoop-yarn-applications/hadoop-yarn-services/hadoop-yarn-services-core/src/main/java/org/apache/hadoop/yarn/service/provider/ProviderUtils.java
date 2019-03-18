@@ -212,11 +212,8 @@ public class ProviderUtils implements YarnServiceConstants {
       log.info("Component instance conf dir already exists: " + compInstanceDir);
     }
 
-    if (log.isDebugEnabled()) {
-      log.debug("Tokens substitution for component instance: " + instance
-          .getCompInstanceName() + System.lineSeparator()
-          + tokensForSubstitution);
-    }
+    log.debug("Tokens substitution for component instance: {}{}{}" + instance
+        .getCompInstanceName(), System.lineSeparator(), tokensForSubstitution);
 
     for (ConfigFile originalFile : compLaunchContext.getConfiguration()
         .getFiles()) {

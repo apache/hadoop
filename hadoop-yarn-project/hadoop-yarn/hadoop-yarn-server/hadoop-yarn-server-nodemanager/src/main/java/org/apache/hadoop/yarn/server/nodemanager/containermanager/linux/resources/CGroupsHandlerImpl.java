@@ -561,11 +561,8 @@ class CGroupsHandlerImpl implements CGroupsHandler {
     String cGroupParamPath = getPathForCGroupParam(controller, cGroupId, param);
     PrintWriter pw = null;
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(
-          String.format("updateCGroupParam for path: %s with value %s",
-              cGroupParamPath, value));
-    }
+    LOG.debug("updateCGroupParam for path: {} with value {}",
+        cGroupParamPath, value);
 
     try {
       File file = new File(cGroupParamPath);
