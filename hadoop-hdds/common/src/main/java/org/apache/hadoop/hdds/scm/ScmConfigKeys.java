@@ -260,7 +260,7 @@ public final class ScmConfigKeys {
   public static final String OZONE_SCM_STALENODE_INTERVAL =
       "ozone.scm.stale.node.interval";
   public static final String OZONE_SCM_STALENODE_INTERVAL_DEFAULT =
-      "5m";
+      "90s";
 
   public static final String OZONE_SCM_HEARTBEAT_RPC_TIMEOUT =
       "ozone.scm.heartbeat.rpc-timeout";
@@ -331,7 +331,7 @@ public final class ScmConfigKeys {
       "ozone.scm.pipeline.destroy.timeout";
 
   public static final String OZONE_SCM_PIPELINE_DESTROY_TIMEOUT_DEFAULT =
-      "66s";
+      "300s";
 
   public static final String OZONE_SCM_PIPELINE_CREATION_INTERVAL =
       "ozone.scm.pipeline.creation.interval";
