@@ -178,7 +178,7 @@ public class TestScmChillMode {
 
     om = miniCluster.get().getOzoneManager();
 
-    LambdaTestUtils.intercept(OMException.class,
+    LambdaTestUtils.intercept(IOException.class,
         "ChillModePrecheck failed for allocateBlock",
         () -> om.openKey(keyArgs));
   }
