@@ -650,13 +650,15 @@ public class AliyunOSSFileSystem extends FileSystem {
             dstPath));
       }
     }
+
+    boolean succeed;
     if (srcStatus.isDirectory()) {
-      copyDirectory(srcPath, dstPath);
+      succeed = copyDirectory(srcPath, dstPath);
     } else {
-      copyFile(srcPath, srcStatus.getLen(), dstPath);
+      succeed = copyFile(srcPath, srcStatus.getLen(), dstPath);
     }
 
-    return srcPath.equals(dstPath) || delete(srcPath, true);
+    return srcPath.equals(dstPath) || (succeed && delete(srcPath, true));
   }
 
   /**
