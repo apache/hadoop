@@ -97,7 +97,7 @@ static void get_current_thread_id(JNIEnv* env, char* id, int max) {
   jthrowable jthr = NULL;
   const char *thr_name_str;
 
-  jthr = invokeMethod(env, &jVal, STATIC, NULL, "java/lang/Thread",
+  jthr = findClassAndInvokeMethod(env, &jVal, STATIC, NULL, "java/lang/Thread",
           "currentThread", "()Ljava/lang/Thread;");
   if (jthr) {
     snprintf(id, max, "%s", UNKNOWN);
@@ -107,8 +107,8 @@ static void get_current_thread_id(JNIEnv* env, char* id, int max) {
   }
   thr = jVal.l;
 
-  jthr = invokeMethod(env, &jVal, INSTANCE, thr, "java/lang/Thread",
-                      "getId", "()J");
+  jthr = findClassAndInvokeMethod(env, &jVal, INSTANCE, thr,
+          "java/lang/Thread", "getId", "()J");
   if (jthr) {
     snprintf(id, max, "%s", UNKNOWN);
     printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -117,8 +117,8 @@ static void get_current_thread_id(JNIEnv* env, char* id, int max) {
   }
   thr_id = jVal.j;
 
-  jthr = invokeMethod(env, &jVal, INSTANCE, thr, "java/lang/Thread",
-                      "toString", "()Ljava/lang/String;");
+  jthr = findClassAndInvokeMethod(env, &jVal, INSTANCE, thr,
+          "java/lang/Thread", "toString", "()Ljava/lang/String;");
   if (jthr) {
     snprintf(id, max, "%s:%ld", UNKNOWN, thr_id);
     printExceptionAndFree(env, jthr, PRINT_EXC_ALL,

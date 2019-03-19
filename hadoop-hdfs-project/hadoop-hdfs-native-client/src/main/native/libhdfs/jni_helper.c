@@ -18,16 +18,14 @@
 
 #include "config.h"
 #include "exception.h"
+#include "jclasses.h"
 #include "jni_helper.h"
 #include "platform.h"
-#include "common/htable.h"
 #include "os/mutexes.h"
 #include "os/thread_local_storage.h"
 
 #include <stdio.h> 
 #include <string.h> 
-
-static struct htable *gClassRefHTable = NULL;
 
 /** The Native return types that methods could return */
 #define JVOID         'V'
@@ -41,13 +39,6 @@ static struct htable *gClassRefHTable = NULL;
 #define JLONG         'J'
 #define JFLOAT        'F'
 #define JDOUBLE       'D'
-
-
-/**
- * MAX_HASH_TABLE_ELEM: The maximum no. of entries in the hashtable.
- * It's set to 4096 to account for (classNames + No. of threads)
- */
-#define MAX_HASH_TABLE_ELEM 4096
 
 /**
  * Length of buffer for retrieving created JVMs.  (We only ever create one.)
@@ -106,32 +97,27 @@ jthrowable newCStr(JNIEnv *env, jstring jstr, char **out)
     return NULL;
 }
 
-jthrowable invokeMethod(JNIEnv *env, jvalue *retval, MethType methType,
-                 jobject instObj, const char *className,
-                 const char *methName, const char *methSignature, ...)
+/**
+ * Does the work to actually execute a Java method. Takes in an existing jclass
+ * object and a va_list of arguments for the Java method to be invoked.
+ */
+static jthrowable invokeMethodOnJclass(JNIEnv *env, jvalue *retval,
+        MethType methType, jobject instObj, jclass cls, const char *className,
+        const char *methName, const char *methSignature, va_list args)
 {
-    va_list args;
-    jclass cls;
     jmethodID mid;
     jthrowable jthr;
-    const char *str; 
+    const char *str;
     char returnType;
-    
-    jthr = validateMethodType(env, methType);
-    if (jthr)
-        return jthr;
-    jthr = globalClassReference(className, env, &cls);
-    if (jthr)
-        return jthr;
-    jthr = methodIdFromClass(className, methName, methSignature, 
-                            methType, env, &mid);
+
+    jthr = methodIdFromClass(cls, className, methName, methSignature, methType,
+                             env, &mid);
     if (jthr)
         return jthr;
     str = methSignature;
     while (*str != ')') str++;
     str++;
     returnType = *str;
-    va_start(args, methSignature);
     if (returnType == JOBJECT || returnType == JARRAYOBJECT) {
         jobject jobj = NULL;
         if (methType == STATIC) {
@@ -190,7 +176,6 @@ jthrowable invokeMethod(JNIEnv *env, jvalue *retval, MethType methType,
         }
         retval->i = ji;
     }
-    va_end(args);
 
     jthr = (*env)->ExceptionOccurred(env);
     if (jthr) {
@@ -200,43 +185,115 @@ jthrowable invokeMethod(JNIEnv *env, jvalue *retval, MethType methType,
     return NULL;
 }
 
-jthrowable constructNewObjectOfClass(JNIEnv *env, jobject *out, const char *className, 
-                                  const char *ctorSignature, ...)
+jthrowable findClassAndInvokeMethod(JNIEnv *env, jvalue *retval,
+        MethType methType, jobject instObj, const char *className,
+        const char *methName, const char *methSignature, ...)
 {
+    jclass cls = NULL;
+    jthrowable jthr = NULL;
+
     va_list args;
-    jclass cls;
-    jmethodID mid; 
+    va_start(args, methSignature);
+
+    jthr = validateMethodType(env, methType);
+    if (jthr) {
+        goto done;
+    }
+
+    cls = (*env)->FindClass(env, className);
+    if (!cls) {
+        jthr = getPendingExceptionAndClear(env);
+        goto done;
+    }
+
+    jthr = invokeMethodOnJclass(env, retval, methType, instObj, cls,
+            className, methName, methSignature, args);
+
+done:
+    va_end(args);
+    destroyLocalReference(env, cls);
+    return jthr;
+}
+
+jthrowable invokeMethod(JNIEnv *env, jvalue *retval, MethType methType,
+        jobject instObj, CachedJavaClass class,
+        const char *methName, const char *methSignature, ...)
+{
+    jthrowable jthr;
+
+    va_list args;
+    va_start(args, methSignature);
+
+    jthr = invokeMethodOnJclass(env, retval, methType, instObj,
+            getJclass(class), getClassName(class), methName, methSignature,
+            args);
+
+    va_end(args);
+    return jthr;
+}
+
+static jthrowable constructNewObjectOfJclass(JNIEnv *env,
+        jobject *out, jclass cls, const char *className,
+                const char *ctorSignature, va_list args) {
+    jmethodID mid;
     jobject jobj;
     jthrowable jthr;
 
-    jthr = globalClassReference(className, env, &cls);
+    jthr = methodIdFromClass(cls, className, "<init>", ctorSignature, INSTANCE,
+            env, &mid);
     if (jthr)
         return jthr;
-    jthr = methodIdFromClass(className, "<init>", ctorSignature, 
-                            INSTANCE, env, &mid);
-    if (jthr)
-        return jthr;
-    va_start(args, ctorSignature);
     jobj = (*env)->NewObjectV(env, cls, mid, args);
-    va_end(args);
     if (!jobj)
         return getPendingExceptionAndClear(env);
     *out = jobj;
     return NULL;
 }
 
-
-jthrowable methodIdFromClass(const char *className, const char *methName, 
-                            const char *methSignature, MethType methType, 
-                            JNIEnv *env, jmethodID *out)
+jthrowable constructNewObjectOfClass(JNIEnv *env, jobject *out,
+        const char *className, const char *ctorSignature, ...)
 {
+    va_list args;
     jclass cls;
+    jthrowable jthr = NULL;
+
+    cls = (*env)->FindClass(env, className);
+    if (!cls) {
+        jthr = getPendingExceptionAndClear(env);
+        goto done;
+    }
+
+    va_start(args, ctorSignature);
+    jthr = constructNewObjectOfJclass(env, out, cls, className,
+            ctorSignature, args);
+    va_end(args);
+done:
+    destroyLocalReference(env, cls);
+    return jthr;
+}
+
+jthrowable constructNewObjectOfCachedClass(JNIEnv *env, jobject *out,
+        CachedJavaClass cachedJavaClass, const char *ctorSignature, ...)
+{
+    jthrowable jthr = NULL;
+    va_list args;
+    va_start(args, ctorSignature);
+
+    jthr = constructNewObjectOfJclass(env, out,
+            getJclass(cachedJavaClass), getClassName(cachedJavaClass),
+            ctorSignature, args);
+
+    va_end(args);
+    return jthr;
+}
+
+jthrowable methodIdFromClass(jclass cls, const char *className,
+        const char *methName, const char *methSignature, MethType methType,
+        JNIEnv *env, jmethodID *out)
+{
     jthrowable jthr;
     jmethodID mid = 0;
 
-    jthr = globalClassReference(className, env, &cls);
-    if (jthr)
-        return jthr;
     jthr = validateMethodType(env, methType);
     if (jthr)
         return jthr;
@@ -253,54 +310,6 @@ jthrowable methodIdFromClass(const char *className, const char *methName,
     }
     *out = mid;
     return NULL;
-}
-
-jthrowable globalClassReference(const char *className, JNIEnv *env, jclass *out)
-{
-    jthrowable jthr = NULL;
-    jclass local_clazz = NULL;
-    jclass clazz = NULL;
-    int ret;
-
-    mutexLock(&hdfsHashMutex);
-    if (!gClassRefHTable) {
-        gClassRefHTable = htable_alloc(MAX_HASH_TABLE_ELEM, ht_hash_string,
-            ht_compare_string);
-        if (!gClassRefHTable) {
-            jthr = newRuntimeError(env, "htable_alloc failed\n");
-            goto done;
-        }
-    }
-    clazz = htable_get(gClassRefHTable, className);
-    if (clazz) {
-        *out = clazz;
-        goto done;
-    }
-    local_clazz = (*env)->FindClass(env,className);
-    if (!local_clazz) {
-        jthr = getPendingExceptionAndClear(env);
-        goto done;
-    }
-    clazz = (*env)->NewGlobalRef(env, local_clazz);
-    if (!clazz) {
-        jthr = getPendingExceptionAndClear(env);
-        goto done;
-    }
-    ret = htable_put(gClassRefHTable, (void*)className, clazz);
-    if (ret) {
-        jthr = newRuntimeError(env, "htable_put failed with error "
-                               "code %d\n", ret);
-        goto done;
-    }
-    *out = clazz;
-    jthr = NULL;
-done:
-    mutexUnlock(&hdfsHashMutex);
-    (*env)->DeleteLocalRef(env, local_clazz);
-    if (jthr && clazz) {
-        (*env)->DeleteGlobalRef(env, clazz);
-    }
-    return jthr;
 }
 
 jthrowable classNameOfObject(jobject jobj, JNIEnv *env, char **name)
@@ -360,7 +369,6 @@ done:
     }
     return jthr;
 }
-
 
 /**
  * Get the global JNI environemnt.
@@ -461,14 +469,17 @@ static JNIEnv* getGlobalJNIEnv(void)
                     "with error: %d\n", rv);
             return NULL;
         }
-        jthr = invokeMethod(env, NULL, STATIC, NULL,
-                         "org/apache/hadoop/fs/FileSystem",
-                         "loadFileSystems", "()V");
+
+        // We use findClassAndInvokeMethod here because the jclasses in
+        // jclasses.h have not loaded yet
+        jthr = findClassAndInvokeMethod(env, NULL, STATIC, NULL, HADOOP_FS,
+                "loadFileSystems", "()V");
         if (jthr) {
-            printExceptionAndFree(env, jthr, PRINT_EXC_ALL, "loadFileSystems");
+            printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                    "FileSystem: loadFileSystems failed");
+            return NULL;
         }
-    }
-    else {
+    } else {
         //Attach this thread to the VM
         vm = vmBuf[0];
         rv = (*vm)->AttachCurrentThread(vm, (void*)&env, 0);
@@ -539,6 +550,15 @@ JNIEnv* getJNIEnv(void)
 
     state->env = getGlobalJNIEnv();
     mutexUnlock(&jvmMutex);
+
+    jthrowable jthr = NULL;
+    jthr = initCachedClasses(state->env);
+    if (jthr) {
+      printExceptionAndFree(state->env, jthr, PRINT_EXC_ALL,
+                            "initCachedClasses failed");
+      goto fail;
+    }
+
     if (!state->env) {
       goto fail;
     }
@@ -628,8 +648,7 @@ jthrowable hadoopConfSetStr(JNIEnv *env, jobject jConfiguration,
     if (jthr)
         goto done;
     jthr = invokeMethod(env, NULL, INSTANCE, jConfiguration,
-            "org/apache/hadoop/conf/Configuration", "set", 
-            "(Ljava/lang/String;Ljava/lang/String;)V",
+            JC_CONFIGURATION, "set", "(Ljava/lang/String;Ljava/lang/String;)V",
             jkey, jvalue);
     if (jthr)
         goto done;

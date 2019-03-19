@@ -18,6 +18,7 @@
 
 #include "exception.h"
 #include "hdfs/hdfs.h"
+#include "jclasses.h"
 #include "jni_helper.h"
 #include "platform.h"
 
@@ -129,9 +130,8 @@ static char* getExceptionUtilString(JNIEnv *env, jthrowable exc, char *methodNam
     jvalue jVal;
     jstring jStr = NULL;
     char *excString = NULL;
-    jthr = invokeMethod(env, &jVal, STATIC, NULL,
-        "org/apache/commons/lang3/exception/ExceptionUtils",
-        methodName, "(Ljava/lang/Throwable;)Ljava/lang/String;", exc);
+    jthr = invokeMethod(env, &jVal, STATIC, NULL, JC_EXCEPTION_UTILS,
+            methodName, "(Ljava/lang/Throwable;)Ljava/lang/String;", exc);
     if (jthr) {
         destroyLocalReference(env, jthr);
         return NULL;
