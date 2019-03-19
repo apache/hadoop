@@ -11,12 +11,46 @@
   See the License for the specific language governing permissions and
   limitations under the License. See accompanying LICENSE file.
 -->
-# Experimental UNSECURE krb5 Kerberos container.
+# Secure Docker-compose with KMS, Yarn RM and NM
+This docker compose allows to test Sample Map Reduce Jobs with OzoneFileSystem
+It is a superset of ozonesecure docker-compose, which add Yarn NM/RM in addition
+to Ozone OM/SCM/NM/DN and Kerberos KDC. 
 
-Only for development. Not for production.
+## Basic setup
 
-#### Dockerfile for KDC:
-* ./docker-image/docker-krb5/Dockerfile-krb5
+```
+docker-compose up -d
+```
 
-#### Dockerfile for SCM,OM and DataNode:
-* ./docker-image/runner/Dockerfile
+## Ozone Manager Setup
+
+```
+kinit -kt /etc/security/keytabs/testuser.keytab testuser/om@EXAMPLE.COM
+
+ozone sh volume create /vol1
+ozone sh bucket create /vol1/bucket1
+ozone sh key put /vol1/bucket1/key1 LICENSE.txt
+
+ozone fs -ls o3fs://bucket1.vol1/
+```
+
+## Yarn Resource Manager Setup
+```
+kinit -kt /etc/security/keytabs/testuser.keytab testuser/rm@EXAMPLE.COM
+export HADOOP_MAPRED_HOME=/opt/hadoop/share/hadoop/mapreduce
+
+export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:/opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-0.5.0-SNAPSHOT.jar
+
+hadoop fs -mkdir /user
+hadoop fs -mkdir /user/root
+
+
+```
+
+## Run Examples
+
+### WordCount
+
+```
+yarn jar $HADOOP_MAPRED_HOME/hadoop-mapreduce-examples-*.jar wordcount o3fs://bucket1.vol1/key1 o3fs://bucket1.vol1/key1.count 
+```
