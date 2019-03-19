@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-#include "jclasses.h"
 #include "config.h"
 #include "exception.h"
+#include "jclasses.h"
 #include "jni_helper.h"
 #include "platform.h"
 #include "os/mutexes.h"
@@ -266,8 +266,8 @@ jthrowable constructNewObjectOfClass(JNIEnv *env, jobject *out,
     va_start(args, ctorSignature);
     jthr = constructNewObjectOfJclass(env, out, cls, className,
             ctorSignature, args);
-done:
     va_end(args);
+done:
     destroyLocalReference(env, cls);
     return jthr;
 }
@@ -551,18 +551,12 @@ JNIEnv* getJNIEnv(void)
     state->env = getGlobalJNIEnv();
     mutexUnlock(&jvmMutex);
 
-    if (!jclassesInitialized) {
-      mutexLock(&jclassInitMutex);
-      if (!jclassesInitialized) {
-        jthrowable jthr = NULL;
-        jthr = initCachedClasses(state->env);
-        if (jthr) {
-          printExceptionAndFree(state->env, jthr, PRINT_EXC_ALL,
-                                "initCachedClasses failed");
-          return NULL;
-        }
-        jclassesInitialized = 1;
-      }
+    jthrowable jthr = NULL;
+    jthr = initCachedClasses(state->env);
+    if (jthr) {
+      printExceptionAndFree(state->env, jthr, PRINT_EXC_ALL,
+                            "initCachedClasses failed");
+      goto fail;
     }
 
     if (!state->env) {
@@ -654,7 +648,7 @@ jthrowable hadoopConfSetStr(JNIEnv *env, jobject jConfiguration,
     if (jthr)
         goto done;
     jthr = invokeMethod(env, NULL, INSTANCE, jConfiguration,
-            JC_CONFIGURATION, "set","(Ljava/lang/String;Ljava/lang/String;)V",
+            JC_CONFIGURATION, "set", "(Ljava/lang/String;Ljava/lang/String;)V",
             jkey, jvalue);
     if (jthr)
         goto done;

@@ -64,13 +64,8 @@ typedef enum {
 } CachedJavaClass;
 
 /**
- * Whether initCachedClasses has been called or not. Protected by the mutex
- * jclassInitMutex.
- */
-extern int jclassesInitialized;
-
-/**
- * Internally initializes all jclass objects listed in the CachedJavaClass enum.
+ * Internally initializes all jclass objects listed in the CachedJavaClass
+ * enum. This method is idempotent and thread-safe.
  */
 jthrowable initCachedClasses(JNIEnv* env);
 

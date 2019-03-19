@@ -2335,7 +2335,7 @@ int hdfsChmod(hdfsFS fs, const char *path, short mode)
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "constructNewObjectOfCachedClass(%s)", HADOOP_FSPERM);
-        return -1;
+        goto done;
     }
 
     //Create an object of org.apache.hadoop.fs.Path
@@ -2584,6 +2584,9 @@ static jthrowable hadoopRzOptionsGetEnumSet(JNIEnv *env,
         }
         jthr = invokeMethod(env, &jVal, STATIC, NULL, JC_ENUM_SET,
                 "noneOf", "(Ljava/lang/Class;)Ljava/util/EnumSet;", clazz);
+        if (jthr) {
+            goto done;
+        }
         enumSetObj = jVal.l;
     }
     // create global ref
