@@ -49,3 +49,9 @@ docker-compose scale datanode=5
 ```
 
 Usually the key webui ports are published on the docker host.
+
+## Known issues
+
+The base image used here is apache/hadoop-runner, which runs with JDK8 by default.
+You may run with JDK11 by specify apache/hadoop-runner:jdk11 as base image in simple mode.
+But in secure mode, JDK 11 is not fully supported yet due to JDK8 dependencies from hadoop-common jars.
