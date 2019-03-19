@@ -252,9 +252,33 @@ For example,
 ```
 
 ##### <a name="Create_schema"> </a>Step 3) Create the timeline service schema
+The schema creation can be run on the hbase cluster which is going to store the timeline
+service tables. The schema creator tool requires both the timelineservice-hbase as well
+as the hbase-server jars. Hence, during schema creation, you need to ensure that the
+hbase classpath contains the yarn-timelineservice-hbase jar.
+
+On the hbase cluster, you can get it from hdfs since we placed it there for the
+coprocessor in the step above.
+
+```
+   hadoop fs -get /hbase/coprocessor/hadoop-yarn-server-timelineservice-hbase-client-${project.version}.jar <local-dir>/.
+   hadoop fs -get /hbase/coprocessor/hadoop-yarn-server-timelineservice-${project.version}.jar <local-dir>/.
+   hadoop fs -get /hbase/coprocessor/hadoop-yarn-server-timelineservice-hbase-common-${project.version}.jar <local-dir>/.
+```
+
+Next, add it to the hbase classpath as follows:
+
+```
+   export HBASE_CLASSPATH=$HBASE_CLASSPATH:/home/yarn/hadoop-current/share/hadoop/yarn/timelineservice/hadoop-yarn-server-timelineservice-hbase-client-${project.version}.jar
+   export HBASE_CLASSPATH=$HBASE_CLASSPATH:/home/yarn/hadoop-current/share/hadoop/yarn/timelineservice/hadoop-yarn-server-timelineservice-${project.version}.jar
+   export HBASE_CLASSPATH=$HBASE_CLASSPATH:/home/yarn/hadoop-current/share/hadoop/yarn/timelineservice/hadoop-yarn-server-timelineservice-hbase-common-${project.version}.jar
+```
+
 Finally, run the schema creator tool to create the necessary tables:
 
-    bin/hadoop org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator -create
+```
+    bin/hbase org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator -create
+```
 
 The `TimelineSchemaCreator` tool supports a few options that may come handy especially when you
 are testing. For example, you can use `-skipExistingTable` (`-s` for short) to skip existing tables
