@@ -245,5 +245,17 @@ public abstract class Storage {
     storageInfo.writeTo(getVersionFile());
   }
 
+  /**
+   * Persists current StorageInfo to file system..
+   * @throws IOException
+   */
+  public void persistCurrentState() throws IOException {
+    if (!getCurrentDir().exists()) {
+      throw new IOException("Metadata dir doesn't exist, dir: " +
+          getCurrentDir());
+    }
+    storageInfo.writeTo(getVersionFile());
+  }
+
 }
 

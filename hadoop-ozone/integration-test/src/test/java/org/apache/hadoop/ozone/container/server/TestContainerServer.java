@@ -21,6 +21,9 @@ package org.apache.hadoop.ozone.container.server;
 import com.google.common.collect.Maps;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.security.x509.certificate.client.DNCertificateClient;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
@@ -82,6 +85,7 @@ public class TestContainerServer {
   static final String TEST_DIR = GenericTestUtils.getTestDir("dfs")
       .getAbsolutePath() + File.separator;
   private static final OzoneConfiguration CONF = new OzoneConfiguration();
+  private static CertificateClient caClient;
 
   private GrpcReplicationService createReplicationService(
       ContainerController containerController) {
@@ -92,6 +96,7 @@ public class TestContainerServer {
   @BeforeClass
   static public void setup() {
     CONF.set(HddsConfigKeys.HDDS_METADATA_DIR_NAME, TEST_DIR);
+    caClient = new DNCertificateClient(new SecurityConfig(CONF));
   }
 
   @Test
@@ -106,7 +111,7 @@ public class TestContainerServer {
                     .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue()),
         XceiverClientGrpc::new,
         (dn, conf) -> new XceiverServerGrpc(datanodeDetails, conf,
-            new TestContainerDispatcher(),
+            new TestContainerDispatcher(), caClient,
             createReplicationService(controller)), (dn, p) -> {
         });
   }
@@ -137,7 +142,7 @@ public class TestContainerServer {
 
     final ContainerDispatcher dispatcher = new TestContainerDispatcher();
     return XceiverServerRatis
-        .newXceiverServerRatis(dn, conf, dispatcher, null);
+        .newXceiverServerRatis(dn, conf, dispatcher, null, caClient);
   }
 
   static void runTestClientServerRatis(RpcType rpc, int numNodes)
@@ -229,7 +234,7 @@ public class TestContainerServer {
       dispatcher.init();
 
       server = new XceiverServerGrpc(datanodeDetails, conf, dispatcher,
-          createReplicationService(
+          caClient, createReplicationService(
               new ContainerController(containerSet, null)));
       client = new XceiverClientGrpc(pipeline, conf);
 

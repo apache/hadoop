@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient
 import org.apache.hadoop.hdds.security.x509.exceptions.CertificateException;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.om.S3SecretManager;
+import org.apache.hadoop.ozone.om.S3SecretManagerImpl;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.security.OzoneSecretStore.OzoneManagerSecretState;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier.TokenInfo;
@@ -39,7 +40,6 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.security.PrivateKey;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -61,7 +61,7 @@ public class OzoneDelegationTokenSecretManager
       .getLogger(OzoneDelegationTokenSecretManager.class);
   private final Map<OzoneTokenIdentifier, TokenInfo> currentTokens;
   private final OzoneSecretStore store;
-  private final S3SecretManager s3SecretManager;
+  private final S3SecretManagerImpl s3SecretManager;
   private Thread tokenRemoverThread;
   private final long tokenRemoverScanInterval;
   private String omCertificateSerialId;
@@ -90,8 +90,9 @@ public class OzoneDelegationTokenSecretManager
         service, LOG);
     currentTokens = new ConcurrentHashMap();
     this.tokenRemoverScanInterval = dtRemoverScanInterval;
-    this.store = new OzoneSecretStore(conf);
-    this.s3SecretManager = s3SecretManager;
+    this.s3SecretManager = (S3SecretManagerImpl) s3SecretManager;
+    this.store = new OzoneSecretStore(conf,
+        this.s3SecretManager.getOmMetadataManager());
     loadTokenSecretState(store.loadState());
   }
 
@@ -129,12 +130,11 @@ public class OzoneDelegationTokenSecretManager
 
     byte[] password = createPassword(identifier.getBytes(),
         getCurrentKey().getPrivateKey());
-    addToTokenStore(identifier, password);
+    long expiryTime = identifier.getIssueDate() + getTokenRenewInterval();
+    addToTokenStore(identifier, password, expiryTime);
     Token<OzoneTokenIdentifier> token = new Token<>(identifier.getBytes(),
-        password,
-        identifier.getKind(), getService());
+        password, identifier.getKind(), getService());
     if (LOG.isTraceEnabled()) {
-      long expiryTime = identifier.getIssueDate() + getTokenRenewInterval();
       String tokenId = identifier.toStringStable();
       LOG.trace("Issued delegation token -> expiryTime:{},tokenId:{}",
           expiryTime, tokenId);
@@ -149,10 +149,11 @@ public class OzoneDelegationTokenSecretManager
    * @param password
    * @throws IOException
    */
-  private void addToTokenStore(OzoneTokenIdentifier identifier, byte[] password)
+  private void addToTokenStore(OzoneTokenIdentifier identifier,
+      byte[] password, long renewTime)
       throws IOException {
-    TokenInfo tokenInfo = new TokenInfo(identifier.getIssueDate()
-        + getTokenRenewInterval(), password, identifier.getTrackingId());
+    TokenInfo tokenInfo = new TokenInfo(renewTime, password,
+        identifier.getTrackingId());
     currentTokens.put(identifier, tokenInfo);
     store.storeToken(identifier, tokenInfo.getRenewDate());
   }
@@ -222,20 +223,10 @@ public class OzoneDelegationTokenSecretManager
           + " tries to renew a token " + formatTokenId(id)
           + " with non-matching renewer " + id.getRenewer());
     }
-    OzoneSecretKey key = allKeys.get(id.getMasterKeyId());
-    if (key == null) {
-      throw new InvalidToken("Unable to find master key for keyId="
-          + id.getMasterKeyId()
-          + " from cache. Failed to renew an unexpired token "
-          + formatTokenId(id) + " with sequenceNumber="
-          + id.getSequenceNumber());
-    }
-    byte[] password = createPassword(token.getIdentifier(),
-        key.getPrivateKey());
 
     long renewTime = Math.min(id.getMaxDate(), now + getTokenRenewInterval());
     try {
-      addToTokenStore(id, password);
+      addToTokenStore(id, token.getPassword(),  renewTime);
     } catch (IOException e) {
       LOG.error("Unable to update token " + id.getSequenceNumber(), e);
     }
@@ -323,14 +314,8 @@ public class OzoneDelegationTokenSecretManager
   public boolean verifySignature(OzoneTokenIdentifier identifier,
       byte[] password) {
     try {
-      if (identifier.getOmCertSerialId().equals(getOmCertificateSerialId())) {
-        return getCertClient().verifySignature(identifier.getBytes(), password,
-            getCertClient().getCertificate());
-      } else {
-        // TODO: This delegation token was issued by other OM instance. Fetch
-        // certificate from SCM using certificate serial.
-        return false;
-      }
+      return getCertClient().verifySignature(identifier.getBytes(), password,
+          getCertClient().getCertificate(identifier.getOmCertSerialId()));
     } catch (CertificateException e) {
       return false;
     }
@@ -367,57 +352,25 @@ public class OzoneDelegationTokenSecretManager
 
   }
 
-  // TODO: handle roll private key/certificate
-  private synchronized void removeExpiredKeys() {
-    long now = Time.now();
-    for (Iterator<Map.Entry<Integer, OzoneSecretKey>> it = allKeys.entrySet()
-        .iterator(); it.hasNext();) {
-      Map.Entry<Integer, OzoneSecretKey> e = it.next();
-      OzoneSecretKey key = e.getValue();
-      if (key.getExpiryDate() < now && key.getExpiryDate() != -1) {
-        if (!key.equals(getCurrentKey())) {
-          it.remove();
-          try {
-            store.removeTokenMasterKey(key);
-          } catch (IOException ex) {
-            LOG.error("Unable to remove master key " + key.getKeyId(), ex);
-          }
-        }
-      }
-    }
-  }
-
   private void loadTokenSecretState(
       OzoneManagerSecretState<OzoneTokenIdentifier> state) throws IOException {
     LOG.info("Loading token state into token manager.");
-    for (OzoneSecretKey key : state.ozoneManagerSecretState()) {
-      allKeys.putIfAbsent(key.getKeyId(), key);
-      incrementCurrentKeyId();
-    }
     for (Map.Entry<OzoneTokenIdentifier, Long> entry :
         state.getTokenState().entrySet()) {
       addPersistedDelegationToken(entry.getKey(), entry.getValue());
     }
   }
 
-  private void addPersistedDelegationToken(
-      OzoneTokenIdentifier identifier, long renewDate)
-      throws IOException {
+  private void addPersistedDelegationToken(OzoneTokenIdentifier identifier,
+      long renewDate) throws IOException {
     if (isRunning()) {
       // a safety check
       throw new IOException(
           "Can't add persisted delegation token to a running SecretManager.");
     }
-    int keyId = identifier.getMasterKeyId();
-    OzoneSecretKey dKey = allKeys.get(keyId);
-    if (dKey == null) {
-      LOG.warn("No KEY found for persisted identifier "
-          + formatTokenId(identifier));
-      return;
-    }
 
-    PrivateKey privateKey = dKey.getPrivateKey();
-    byte[] password = createPassword(identifier.getBytes(), privateKey);
+    byte[] password = createPassword(identifier.getBytes(),
+        getCertClient().getPrivateKey());
     if (identifier.getSequenceNumber() > getDelegationTokenSeqNum()) {
       setDelegationTokenSeqNum(identifier.getSequenceNumber());
     }
@@ -437,17 +390,8 @@ public class OzoneDelegationTokenSecretManager
   public synchronized void start(CertificateClient certClient)
       throws IOException {
     super.start(certClient);
-    storeKey(getCurrentKey());
-    removeExpiredKeys();
     tokenRemoverThread = new Daemon(new ExpiredTokenRemover());
     tokenRemoverThread.start();
-  }
-
-  private void storeKey(OzoneSecretKey key) throws IOException {
-    store.storeTokenMasterKey(key);
-    if (!allKeys.containsKey(key.getKeyId())) {
-      allKeys.put(key.getKeyId(), key);
-    }
   }
 
   public void stopThreads() {

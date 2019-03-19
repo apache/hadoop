@@ -34,6 +34,7 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -113,9 +114,9 @@ public final class XceiverServerRatis extends XceiverServer {
 
   private XceiverServerRatis(DatanodeDetails dd, int port,
       ContainerDispatcher dispatcher, Configuration conf, StateContext
-      context, GrpcTlsConfig tlsConfig)
+      context, GrpcTlsConfig tlsConfig, CertificateClient caClient)
       throws IOException {
-    super(conf);
+    super(conf, caClient);
     Objects.requireNonNull(dd, "id == null");
     this.port = port;
     RaftProperties serverProperties = newRaftProperties(conf);
@@ -380,7 +381,8 @@ public final class XceiverServerRatis extends XceiverServer {
 
   public static XceiverServerRatis newXceiverServerRatis(
       DatanodeDetails datanodeDetails, Configuration ozoneConf,
-      ContainerDispatcher dispatcher, StateContext context) throws IOException {
+      ContainerDispatcher dispatcher, StateContext context,
+      CertificateClient caClient) throws IOException {
     int localPort = ozoneConf.getInt(
         OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_PORT,
         OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_PORT_DEFAULT);
@@ -406,7 +408,7 @@ public final class XceiverServerRatis extends XceiverServer {
     datanodeDetails.setPort(
         DatanodeDetails.newPort(DatanodeDetails.Port.Name.RATIS, localPort));
     return new XceiverServerRatis(datanodeDetails, localPort,
-        dispatcher, ozoneConf, context, tlsConfig);
+        dispatcher, ozoneConf, context, tlsConfig, caClient);
   }
 
   @Override

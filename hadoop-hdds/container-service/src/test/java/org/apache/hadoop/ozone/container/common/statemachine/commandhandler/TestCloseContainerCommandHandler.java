@@ -276,7 +276,7 @@ public class TestCloseContainerCommandHandler {
         .thenReturn(datanodeDetails);
     Mockito.when(context.getParent()).thenReturn(datanodeStateMachine);
     final OzoneContainer ozoneContainer = new  OzoneContainer(
-        datanodeDetails, conf, context);
+        datanodeDetails, conf, context, null);
     ozoneContainer.getDispatcher().setScmId(UUID.randomUUID().toString());
     return ozoneContainer;
   }

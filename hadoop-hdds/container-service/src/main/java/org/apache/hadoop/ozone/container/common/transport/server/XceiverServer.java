@@ -32,6 +32,8 @@ import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
+import static org.apache.hadoop.hdds.security.exception.SCMSecurityException.ErrorCode.MISSING_BLOCK_TOKEN;
+
 /**
  * A server endpoint that acts as the communication layer for Ozone containers.
  */
@@ -39,10 +41,12 @@ public abstract class XceiverServer implements XceiverServerSpi {
 
   private final SecurityConfig secConfig;
   private final TokenVerifier tokenVerifier;
+  private final CertificateClient caClient;
 
-  public XceiverServer(Configuration conf) {
+  public XceiverServer(Configuration conf, CertificateClient client) {
     Preconditions.checkNotNull(conf);
     this.secConfig = new SecurityConfig(conf);
+    this.caClient = client;
     tokenVerifier = new BlockTokenVerifier(secConfig, getCaClient());
   }
 
@@ -59,17 +63,15 @@ public abstract class XceiverServer implements XceiverServerSpi {
       String encodedToken = request.getEncodedToken();
       if (encodedToken == null) {
         throw new SCMSecurityException("Security is enabled but client " +
-            "request is missing block token.",
-            SCMSecurityException.ErrorCode.MISSING_BLOCK_TOKEN);
+            "request is missing block token.", MISSING_BLOCK_TOKEN);
       }
-      tokenVerifier.verify(encodedToken, "");
+      tokenVerifier.verify(encodedToken, encodedToken);
     }
   }
 
   @VisibleForTesting
   protected CertificateClient getCaClient() {
-    // TODO: instantiate CertificateClient
-    return null;
+    return caClient;
   }
 
   protected SecurityConfig getSecurityConfig() {
