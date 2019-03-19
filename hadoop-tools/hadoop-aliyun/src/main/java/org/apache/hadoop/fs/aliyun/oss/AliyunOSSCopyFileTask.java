@@ -50,7 +50,7 @@ public class AliyunOSSCopyFileTask implements Runnable {
   public void run() {
     boolean fail = false;
     try {
-      store.copyFile(srcKey, srcLen, dstKey);
+      fail = !store.copyFile(srcKey, srcLen, dstKey);
     } catch (Exception e) {
       LOG.warn("Exception thrown when copy from "
           + srcKey + " to " + dstKey +  ", exception: " + e);
