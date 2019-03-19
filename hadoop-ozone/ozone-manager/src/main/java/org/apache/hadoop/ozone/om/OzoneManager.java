@@ -26,9 +26,8 @@ import com.google.protobuf.BlockingService;
 
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
 import java.security.KeyPair;
+import java.security.cert.CertificateException;
 import java.util.Collection;
 import java.util.Objects;
 
@@ -219,7 +218,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private static boolean securityEnabled = false;
   private OzoneDelegationTokenSecretManager delegationTokenMgr;
   private OzoneBlockTokenSecretManager blockTokenMgr;
-  private KeyPair keyPair;
   private CertificateClient certClient;
   private static boolean testSecureOmFlag = false;
   private final Text omRpcAddressTxt;
@@ -323,13 +321,19 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         volumeManager, bucketManager);
     if (secConfig.isSecurityEnabled()) {
       omComponent = OM_DAEMON + "-" + omId;
-      certClient = new OMCertificateClient(new SecurityConfig(conf));
+      if(omStorage.getOmCertSerialId() == null) {
+        throw new RuntimeException("OzoneManager started in secure mode but " +
+            "doesn't have SCM signed certificate.");
+      }
+      certClient = new OMCertificateClient(new SecurityConfig(conf),
+          omStorage.getOmCertSerialId());
       s3SecretManager = new S3SecretManagerImpl(configuration, metadataManager);
       delegationTokenMgr = createDelegationTokenSecretManager(configuration);
     }
     if (secConfig.isBlockTokenEnabled()) {
       blockTokenMgr = createBlockTokenSecretManager(configuration);
     }
+
     omRpcServer = getRpcServer(conf);
     omRpcAddress = updateRPCListenAddress(configuration,
         OZONE_OM_ADDRESS_KEY, omNodeRpcAddr, omRpcServer);
@@ -691,8 +695,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       Objects.requireNonNull(pubKey);
       Objects.requireNonNull(pvtKey);
       Objects.requireNonNull(certClient.getCertificate());
-
-      keyPair = new KeyPair(pubKey, pvtKey);
     } catch (Exception e) {
       throw new OzoneSecurityException("Error reading keypair & certificate "
           + "OzoneManager.", e, OzoneSecurityException
@@ -948,7 +950,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    *                     accessible
    */
   @VisibleForTesting
-  static boolean omInit(OzoneConfiguration conf) throws IOException {
+  public static boolean omInit(OzoneConfiguration conf) throws IOException {
     OMStorage omStorage = new OMStorage(conf);
     StorageState state = omStorage.getState();
     if (state != StorageState.INITIALIZED) {
@@ -964,15 +966,14 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         }
         omStorage.setClusterId(clusterId);
         omStorage.setScmId(scmId);
+        if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
+          initializeSecurity(conf, omStorage);
+        }
         omStorage.initialize();
         System.out.println(
             "OM initialization succeeded.Current cluster id for sd="
                 + omStorage.getStorageDir() + ";cid=" + omStorage
                 .getClusterID());
-
-        if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
-          initializeSecurity(conf, omStorage);
-        }
 
         return true;
       } catch (IOException ioe) {
@@ -980,6 +981,12 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         return false;
       }
     } else {
+      if(OzoneSecurityUtil.isSecurityEnabled(conf) &&
+          omStorage.getOmCertSerialId() == null) {
+        LOG.info("OM storage is already initialized. Initializing security");
+        initializeSecurity(conf, omStorage);
+        omStorage.persistCurrentState();
+      }
       System.out.println(
           "OM already initialized.Reusing existing cluster id for sd="
               + omStorage.getStorageDir() + ";cid=" + omStorage
@@ -998,7 +1005,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     LOG.info("Initializing secure OzoneManager.");
 
     CertificateClient certClient =
-        new OMCertificateClient(new SecurityConfig(conf));
+        new OMCertificateClient(new SecurityConfig(conf),
+            omStore.getOmCertSerialId());
     CertificateClient.InitResponse response = certClient.init();
     LOG.info("Init response: {}", response);
     switch (response) {
@@ -1311,7 +1319,9 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       isOmRpcServerRunning = false;
       keyManager.stop();
       stopSecretManager();
-      httpServer.stop();
+      if (httpServer != null) {
+        httpServer.stop();
+      }
       metadataManager.stop();
       metrics.unRegister();
       unregisterMXBean();
@@ -1395,9 +1405,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         getEncodedString(csr));
 
     try {
-      X509Certificate x509Certificate =
-          CertificateCodec.getX509Cert(pemEncodedCert);
-      client.storeCertificate(x509Certificate);
+      client.storeCertificate(pemEncodedCert, true);
+      // Persist om cert serial id.
+      omStore.setOmCertSerialId(CertificateCodec.
+          getX509Certificate(pemEncodedCert).getSerialNumber().toString());
     } catch (IOException | CertificateException e) {
       LOG.error("Error while storing SCM signed certificate.", e);
       throw new RuntimeException(e);

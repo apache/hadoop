@@ -36,8 +36,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.SignatureException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -62,8 +60,6 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
   private OzoneSecretKey currentKey;
   private AtomicInteger currentKeyId;
   private AtomicInteger tokenSequenceNumber;
-  @SuppressWarnings("visibilitymodifier")
-  protected final Map<Integer, OzoneSecretKey> allKeys;
 
   /**
    * Create a secret manager.
@@ -82,7 +78,6 @@ public abstract class OzoneSecretManager<T extends TokenIdentifier>
     this.tokenRenewInterval = tokenRenewInterval;
     currentKeyId = new AtomicInteger();
     tokenSequenceNumber = new AtomicInteger();
-    allKeys = new ConcurrentHashMap<>();
     this.service = service;
     this.logger = logger;
   }

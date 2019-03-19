@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdds.security.x509.certificate.client;
 
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
+import org.apache.hadoop.hdds.security.x509.exceptions.CertificateException;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.junit.After;
@@ -49,8 +50,11 @@ import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_METADATA_DIR_NAME;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_NAMES;
 import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.FAILURE;
+import static org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec.getPEMEncodedString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -62,37 +66,60 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestDefaultCertificateClient {
 
+  private String certSerialId;
+  private X509Certificate x509Certificate;
   private OMCertificateClient omCertClient;
   private DNCertificateClient dnCertClient;
   private HDDSKeyGenerator keyGenerator;
-  private Path metaDirPath;
-  private SecurityConfig securityConfig;
+  private Path omMetaDirPath;
+  private Path dnMetaDirPath;
+  private SecurityConfig omSecurityConfig;
+  private SecurityConfig dnSecurityConfig;
   private final static String UTF = "UTF-8";
-  private KeyCodec keyCodec;
+  private KeyCodec omKeyCodec;
+  private KeyCodec dnKeyCodec;
 
   @Before
   public void setUp() throws Exception {
     OzoneConfiguration config = new OzoneConfiguration();
-    final String path = GenericTestUtils
+    config.setStrings(OZONE_SCM_NAMES, "localhost");
+    config.setInt(IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 2);
+    final String omPath = GenericTestUtils
         .getTempPath(UUID.randomUUID().toString());
-    metaDirPath = Paths.get(path, "test");
-    config.set(HDDS_METADATA_DIR_NAME, metaDirPath.toString());
-    securityConfig = new SecurityConfig(config);
+    final String dnPath = GenericTestUtils
+        .getTempPath(UUID.randomUUID().toString());
+
+    omMetaDirPath = Paths.get(omPath, "test");
+    dnMetaDirPath = Paths.get(dnPath, "test");
+
+    config.set(HDDS_METADATA_DIR_NAME, omMetaDirPath.toString());
+    omSecurityConfig = new SecurityConfig(config);
+    config.set(HDDS_METADATA_DIR_NAME, dnMetaDirPath.toString());
+    dnSecurityConfig = new SecurityConfig(config);
+
+
+    keyGenerator = new HDDSKeyGenerator(omSecurityConfig);
+    omKeyCodec = new KeyCodec(omSecurityConfig);
+    dnKeyCodec = new KeyCodec(dnSecurityConfig);
+
+    Files.createDirectories(omSecurityConfig.getKeyLocation());
+    Files.createDirectories(dnSecurityConfig.getKeyLocation());
+    x509Certificate = generateX509Cert(null);
+    certSerialId = x509Certificate.getSerialNumber().toString();
     getCertClient();
-    keyGenerator = new HDDSKeyGenerator(securityConfig);
-    keyCodec = new KeyCodec(securityConfig);
-    Files.createDirectories(securityConfig.getKeyLocation());
   }
 
   private void getCertClient() {
-    omCertClient = new OMCertificateClient(securityConfig);
-    dnCertClient = new DNCertificateClient(securityConfig);
+    omCertClient = new OMCertificateClient(omSecurityConfig, certSerialId);
+    dnCertClient = new DNCertificateClient(dnSecurityConfig, certSerialId);
   }
 
   @After
   public void tearDown() {
     omCertClient = null;
-    FileUtils.deleteQuietly(metaDirPath.toFile());
+    dnCertClient = null;
+    FileUtils.deleteQuietly(omMetaDirPath.toFile());
+    FileUtils.deleteQuietly(dnMetaDirPath.toFile());
   }
 
   /**
@@ -101,6 +128,7 @@ public class TestDefaultCertificateClient {
    */
   @Test
   public void testKeyOperations() throws Exception {
+    cleanupOldKeyPair();
     PrivateKey pvtKey = omCertClient.getPrivateKey();
     PublicKey publicKey = omCertClient.getPublicKey();
     assertNull(publicKey);
@@ -111,16 +139,31 @@ public class TestDefaultCertificateClient {
     assertNotNull(pvtKey);
     assertEquals(pvtKey, keyPair.getPrivate());
 
-    publicKey = omCertClient.getPublicKey();
+    publicKey = dnCertClient.getPublicKey();
     assertNotNull(publicKey);
     assertEquals(publicKey, keyPair.getPublic());
   }
 
   private KeyPair generateKeyPairFiles() throws Exception {
+    cleanupOldKeyPair();
     KeyPair keyPair = keyGenerator.generateKey();
-    keyCodec.writePrivateKey(keyPair.getPrivate());
-    keyCodec.writePublicKey(keyPair.getPublic());
+    omKeyCodec.writePrivateKey(keyPair.getPrivate());
+    omKeyCodec.writePublicKey(keyPair.getPublic());
+
+    dnKeyCodec.writePrivateKey(keyPair.getPrivate());
+    dnKeyCodec.writePublicKey(keyPair.getPublic());
     return keyPair;
+  }
+
+  private void cleanupOldKeyPair() {
+    FileUtils.deleteQuietly(Paths.get(omSecurityConfig.getKeyLocation()
+        .toString(), omSecurityConfig.getPrivateKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(omSecurityConfig.getKeyLocation()
+        .toString(), omSecurityConfig.getPublicKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(dnSecurityConfig.getKeyLocation()
+        .toString(), dnSecurityConfig.getPrivateKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(dnSecurityConfig.getKeyLocation()
+        .toString(), dnSecurityConfig.getPublicKeyFileName()).toFile());
   }
 
   /**
@@ -130,11 +173,11 @@ public class TestDefaultCertificateClient {
   public void testCertificateOps() throws Exception {
     X509Certificate cert = omCertClient.getCertificate();
     assertNull(cert);
+    omCertClient.storeCertificate(getPEMEncodedString(x509Certificate),
+        true);
 
-    X509Certificate x509Certificate = generateX509Cert(null);
-    omCertClient.storeCertificate(x509Certificate);
-
-    cert = omCertClient.getCertificate();
+    cert = omCertClient.getCertificate(
+        x509Certificate.getSerialNumber().toString());
     assertNotNull(cert);
     assertTrue(cert.getEncoded().length > 0);
     assertEquals(cert, x509Certificate);
@@ -147,12 +190,17 @@ public class TestDefaultCertificateClient {
       keyPair = generateKeyPairFiles();
     }
     return KeyStoreTestUtil.generateCertificate("CN=Test", keyPair, 30,
-        securityConfig.getSignatureAlgo());
+        omSecurityConfig.getSignatureAlgo());
   }
 
   @Test
   public void testSignDataStream() throws Exception {
     String data = RandomStringUtils.random(100, UTF);
+    FileUtils.deleteQuietly(Paths.get(omSecurityConfig.getKeyLocation()
+        .toString(), omSecurityConfig.getPrivateKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(omSecurityConfig.getKeyLocation()
+        .toString(), omSecurityConfig.getPublicKeyFileName()).toFile());
+
     // Expect error when there is no private key to sign.
     LambdaTestUtils.intercept(IOException.class, "Error while " +
             "signing the stream",
@@ -171,8 +219,8 @@ public class TestDefaultCertificateClient {
   private void validateHash(byte[] hash, byte[] data)
       throws Exception {
     Signature rsaSignature =
-        Signature.getInstance(securityConfig.getSignatureAlgo(),
-            securityConfig.getProvider());
+        Signature.getInstance(omSecurityConfig.getSignatureAlgo(),
+            omSecurityConfig.getProvider());
     rsaSignature.initVerify(omCertClient.getPublicKey());
     rsaSignature.update(data);
     Assert.assertTrue(rsaSignature.verify(hash));
@@ -184,8 +232,6 @@ public class TestDefaultCertificateClient {
   @Test
   public void verifySignatureStream() throws Exception {
     String data = RandomStringUtils.random(500, UTF);
-
-    X509Certificate x509Certificate = generateX509Cert(null);
     byte[] sign = omCertClient.signDataStream(IOUtils.toInputStream(data,
         UTF));
 
@@ -209,7 +255,6 @@ public class TestDefaultCertificateClient {
   @Test
   public void verifySignatureDataArray() throws Exception {
     String data = RandomStringUtils.random(500, UTF);
-    X509Certificate x509Certificate = generateX509Cert(null);
     byte[] sign = omCertClient.signData(data.getBytes());
 
     // Positive tests.
@@ -234,6 +279,67 @@ public class TestDefaultCertificateClient {
   }
 
   @Test
+  public void testCertificateLoadingOnInit() throws Exception {
+    KeyPair keyPair = keyGenerator.generateKey();
+    X509Certificate cert1 = generateX509Cert(keyPair);
+    X509Certificate cert2 = generateX509Cert(keyPair);
+    X509Certificate cert3 = generateX509Cert(keyPair);
+
+    Path certPath = dnSecurityConfig.getCertificateLocation();
+    CertificateCodec codec = new CertificateCodec(dnSecurityConfig);
+
+    // Certificate not found.
+    LambdaTestUtils.intercept(CertificateException.class, "Error while" +
+            " getting certificate",
+        () -> dnCertClient.getCertificate(cert1.getSerialNumber()
+            .toString()));
+    LambdaTestUtils.intercept(CertificateException.class, "Error while" +
+            " getting certificate",
+        () -> dnCertClient.getCertificate(cert2.getSerialNumber()
+            .toString()));
+    LambdaTestUtils.intercept(CertificateException.class, "Error while" +
+            " getting certificate",
+        () -> dnCertClient.getCertificate(cert3.getSerialNumber()
+            .toString()));
+    codec.writeCertificate(certPath, "1.crt",
+        getPEMEncodedString(cert1), true);
+    codec.writeCertificate(certPath, "2.crt",
+        getPEMEncodedString(cert2), true);
+    codec.writeCertificate(certPath, "3.crt",
+        getPEMEncodedString(cert3), true);
+
+    // Re instentiate DN client which will load certificates from filesystem.
+    dnCertClient = new DNCertificateClient(dnSecurityConfig, certSerialId);
+
+    assertNotNull(dnCertClient.getCertificate(cert1.getSerialNumber()
+        .toString()));
+    assertNotNull(dnCertClient.getCertificate(cert2.getSerialNumber()
+        .toString()));
+    assertNotNull(dnCertClient.getCertificate(cert3.getSerialNumber()
+        .toString()));
+
+  }
+
+  @Test
+  public void testStoreCertificate() throws Exception {
+    KeyPair keyPair = keyGenerator.generateKey();
+    X509Certificate cert1 = generateX509Cert(keyPair);
+    X509Certificate cert2 = generateX509Cert(keyPair);
+    X509Certificate cert3 = generateX509Cert(keyPair);
+
+    dnCertClient.storeCertificate(getPEMEncodedString(cert1), true);
+    dnCertClient.storeCertificate(getPEMEncodedString(cert2), true);
+    dnCertClient.storeCertificate(getPEMEncodedString(cert3), true);
+
+    assertNotNull(dnCertClient.getCertificate(cert1.getSerialNumber()
+        .toString()));
+    assertNotNull(dnCertClient.getCertificate(cert2.getSerialNumber()
+        .toString()));
+    assertNotNull(dnCertClient.getCertificate(cert3.getSerialNumber()
+        .toString()));
+  }
+
+  @Test
   public void testInitCertAndKeypairValidationFailures() throws Exception {
 
     GenericTestUtils.LogCapturer dnClientLog = GenericTestUtils.LogCapturer
@@ -246,13 +352,23 @@ public class TestDefaultCertificateClient {
     omClientLog.clearOutput();
 
     // Case 1. Expect failure when keypair validation fails.
-    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
-        .toString(), securityConfig.getPrivateKeyFileName()).toFile());
-    keyCodec.writePrivateKey(keyPair.getPrivate());
+    FileUtils.deleteQuietly(Paths.get(omSecurityConfig.getKeyLocation()
+        .toString(), omSecurityConfig.getPrivateKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(omSecurityConfig.getKeyLocation()
+        .toString(), omSecurityConfig.getPublicKeyFileName()).toFile());
 
-    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
-        .toString(), securityConfig.getPublicKeyFileName()).toFile());
-    keyCodec.writePublicKey(keyPair2.getPublic());
+
+    FileUtils.deleteQuietly(Paths.get(dnSecurityConfig.getKeyLocation()
+        .toString(), dnSecurityConfig.getPrivateKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(dnSecurityConfig.getKeyLocation()
+        .toString(), dnSecurityConfig.getPublicKeyFileName()).toFile());
+
+    omKeyCodec.writePrivateKey(keyPair.getPrivate());
+    omKeyCodec.writePublicKey(keyPair2.getPublic());
+
+    dnKeyCodec.writePrivateKey(keyPair.getPrivate());
+    dnKeyCodec.writePublicKey(keyPair2.getPublic());
+
 
     // Check for DN.
     assertEquals(dnCertClient.init(), FAILURE);
@@ -271,15 +387,18 @@ public class TestDefaultCertificateClient {
     // Case 2. Expect failure when certificate is generated from different
     // private key and keypair validation fails.
     getCertClient();
-    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
-        .toString(), securityConfig.getCertificateFileName()).toFile());
-    X509Certificate x509Certificate = KeyStoreTestUtil.generateCertificate(
-        "CN=Test", keyGenerator.generateKey(), 10,
-        securityConfig.getSignatureAlgo());
-    CertificateCodec codec = new CertificateCodec(securityConfig);
-    codec.writeCertificate(new X509CertificateHolder(
+    FileUtils.deleteQuietly(Paths.get(omSecurityConfig.getKeyLocation()
+        .toString(), omSecurityConfig.getCertificateFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(dnSecurityConfig.getKeyLocation()
+        .toString(), dnSecurityConfig.getCertificateFileName()).toFile());
+
+    CertificateCodec omCertCodec = new CertificateCodec(omSecurityConfig);
+    omCertCodec.writeCertificate(new X509CertificateHolder(
         x509Certificate.getEncoded()));
 
+    CertificateCodec dnCertCodec = new CertificateCodec(dnSecurityConfig);
+    dnCertCodec.writeCertificate(new X509CertificateHolder(
+        x509Certificate.getEncoded()));
     // Check for DN.
     assertEquals(dnCertClient.init(), FAILURE);
     assertTrue(dnClientLog.getOutput().contains("Keypair validation " +
@@ -297,10 +416,13 @@ public class TestDefaultCertificateClient {
     // private key and certificate validation fails.
 
     // Re write the correct public key.
+    FileUtils.deleteQuietly(Paths.get(omSecurityConfig.getKeyLocation()
+        .toString(), omSecurityConfig.getPublicKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(dnSecurityConfig.getKeyLocation()
+        .toString(), dnSecurityConfig.getPublicKeyFileName()).toFile());
     getCertClient();
-    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
-        .toString(), securityConfig.getPublicKeyFileName()).toFile());
-    keyCodec.writePublicKey(keyPair.getPublic());
+    omKeyCodec.writePublicKey(keyPair.getPublic());
+    dnKeyCodec.writePublicKey(keyPair.getPublic());
 
     // Check for DN.
     assertEquals(dnCertClient.init(), FAILURE);
@@ -318,8 +440,10 @@ public class TestDefaultCertificateClient {
 
     // Case 4. Failure when public key recovery fails.
     getCertClient();
-    FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
-        .toString(), securityConfig.getPublicKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(omSecurityConfig.getKeyLocation()
+        .toString(), omSecurityConfig.getPublicKeyFileName()).toFile());
+    FileUtils.deleteQuietly(Paths.get(dnSecurityConfig.getKeyLocation()
+        .toString(), dnSecurityConfig.getPublicKeyFileName()).toFile());
 
     // Check for DN.
     assertEquals(dnCertClient.init(), FAILURE);

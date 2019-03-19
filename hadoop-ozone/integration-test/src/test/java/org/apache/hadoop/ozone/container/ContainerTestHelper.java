@@ -376,6 +376,20 @@ public final class ContainerTestHelper {
     return getContainerCommandRequestBuilder(containerID, pipeline).build();
   }
 
+  /**
+   * Returns a create container command with token. There are a bunch of
+   * tests where we need to just send a request and get a reply.
+   *
+   * @return ContainerCommandRequestProto.
+   */
+  public static ContainerCommandRequestProto getCreateContainerRequest(
+      long containerID, Pipeline pipeline, Token token) throws IOException {
+    LOG.trace("addContainer: {}", containerID);
+    return getContainerCommandRequestBuilder(containerID, pipeline)
+        .setEncodedToken(token.encodeToUrlString())
+        .build();
+  }
+
   private static Builder getContainerCommandRequestBuilder(long containerID,
       Pipeline pipeline) throws IOException {
     Builder request =

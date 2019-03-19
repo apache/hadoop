@@ -32,8 +32,13 @@ public class DNCertificateClient extends DefaultCertificateClient {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(DNCertificateClient.class);
+  public DNCertificateClient(SecurityConfig securityConfig,
+      String certSerialId) {
+    super(securityConfig, LOG, certSerialId);
+  }
+
   public DNCertificateClient(SecurityConfig securityConfig) {
-    super(securityConfig, LOG);
+    super(securityConfig, LOG, null);
   }
 
   /**
