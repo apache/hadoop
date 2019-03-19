@@ -28,7 +28,12 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .KeyArgs;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .KeyInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .KeyLocation;
 import org.apache.hadoop.utils.BackgroundService;
 
 import java.io.IOException;
@@ -88,7 +93,7 @@ public interface KeyManager {
    * @throws IOException
    */
   OmKeyLocationInfo addAllocatedBlock(OmKeyArgs args, long clientID,
-      OzoneManagerProtocolProtos.KeyLocation keyLocation) throws IOException;
+      KeyLocation keyLocation) throws IOException;
 
   /**
    * Given the args of a key to put, write an open key entry to meta data.
@@ -102,6 +107,19 @@ public interface KeyManager {
    * @throws IOException
    */
   OpenKeySession openKey(OmKeyArgs args) throws IOException;
+
+  /**
+   * Add the openKey entry with given keyInfo and clientID in to openKeyTable.
+   * This will be called only from applyTransaction, once after calling
+   * applyKey in startTransaction.
+   *
+   * @param omKeyArgs
+   * @param keyInfo
+   * @param clientID
+   * @throws IOException
+   */
+  void applyOpenKey(KeyArgs omKeyArgs, KeyInfo keyInfo, long clientID)
+      throws IOException;
 
   /**
    * Look up an existing key. Return the info of the key to client side, which

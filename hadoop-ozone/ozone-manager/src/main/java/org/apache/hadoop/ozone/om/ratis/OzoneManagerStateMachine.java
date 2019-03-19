@@ -148,6 +148,8 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
       RaftClientRequest raftClientRequest, OMRequest omRequest) {
     OMResponse omResponse = handler.handle(omRequest);
 
+    // TODO: if not success should we retry depending on the error if it is
+    //  retriable?
     if (!omResponse.getSuccess()) {
       TransactionContext transactionContext = TransactionContext.newBuilder()
           .setClientRequest(raftClientRequest)
@@ -173,7 +175,9 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
     OMRequest newOmRequest =
         OMRequest.newBuilder().setCmdType(
             OzoneManagerProtocolProtos.Type.ApplyCreateKey)
-            .setApplyCreateKeyRequest(applyCreateKeyRequest).build();
+            .setApplyCreateKeyRequest(applyCreateKeyRequest)
+            .setClientId(omRequest.getClientId())
+            .setTraceID(omRequest.getTraceID()).build();
 
     ByteString messageContent = ByteString.copyFrom(newOmRequest.toByteArray());
 

@@ -45,6 +45,8 @@ import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .ApplyCreateKeyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CancelDelegationTokenResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CheckVolumeAccessRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CheckVolumeAccessResponse;
@@ -202,6 +204,11 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         CreateKeyResponse createKeyResponse = createKey(
             request.getCreateKeyRequest());
         responseBuilder.setCreateKeyResponse(createKeyResponse);
+        break;
+      case ApplyCreateKey:
+        CreateKeyResponse applyKeyResponse =
+            applyCreateKey(request.getApplyCreateKeyRequest());
+        responseBuilder.setCreateKeyResponse(applyKeyResponse);
         break;
       case LookupKey:
         LookupKeyResponse lookupKeyResponse = lookupKey(
@@ -489,6 +496,20 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     resp.setID(openKey.getId());
     resp.setOpenVersion(openKey.getOpenVersion());
     return resp.build();
+  }
+
+  private CreateKeyResponse applyCreateKey(ApplyCreateKeyRequest request)
+      throws IOException {
+
+    CreateKeyRequest createKeyRequest = request.getCreateKeyRequest();
+    CreateKeyResponse createKeyResponse = request.getCreateKeyResponse();
+
+    impl.applyOpenKey(createKeyRequest.getKeyArgs(),
+        createKeyResponse.getKeyInfo(), createKeyResponse.getID());
+
+    // If applying to om DB successful just return createKeyResponse.
+    return createKeyResponse;
+
   }
 
   private LookupKeyResponse lookupKey(LookupKeyRequest request)

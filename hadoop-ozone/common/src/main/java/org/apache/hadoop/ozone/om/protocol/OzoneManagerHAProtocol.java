@@ -21,6 +21,10 @@ package org.apache.hadoop.ozone.om.protocol;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .KeyArgs;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .KeyInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyLocation;
 
 import java.io.IOException;
@@ -51,5 +55,18 @@ public interface OzoneManagerHAProtocol {
   OmKeyLocationInfo addAllocatedBlock(OmKeyArgs args, long clientID,
       KeyLocation keyLocation) throws IOException;
 
+
+  /**
+   * Add the openKey entry with given keyInfo and clientID in to openKeyTable.
+   * This will be called only from applyTransaction, once after calling
+   * applyKey in startTransaction.
+   *
+   * @param omKeyArgs
+   * @param keyInfo
+   * @param clientID
+   * @throws IOException
+   */
+  void applyOpenKey(KeyArgs omKeyArgs, KeyInfo keyInfo, long clientID)
+      throws IOException;
 
 }

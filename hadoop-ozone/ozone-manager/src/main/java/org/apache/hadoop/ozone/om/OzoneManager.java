@@ -73,7 +73,12 @@ import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyLocation;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .KeyArgs;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .KeyInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .KeyLocation;
 import org.apache.hadoop.ozone.security.OzoneSecurityException;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -1973,6 +1978,51 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
             OMAction.ALLOCATE_KEY, (args == null) ? null : args.toAuditMap()));
       }
     }
+  }
+
+  @Override
+  public void applyOpenKey(KeyArgs omKeyArgs, KeyInfo keyInfo, long clientID)
+      throws IOException {
+    // Do we need to check again Acl's for apply OpenKey call?
+    if(isAclEnabled) {
+      checkAcls(ResourceType.KEY, StoreType.OZONE, ACLType.READ,
+          omKeyArgs.getVolumeName(), omKeyArgs.getBucketName(),
+          omKeyArgs.getKeyName());
+    }
+    boolean auditSuccess = true;
+    try {
+      keyManager.applyOpenKey(omKeyArgs, keyInfo, clientID);
+    } catch (Exception ex) {
+      metrics.incNumKeyAllocateFails();
+      auditSuccess = false;
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(
+          OMAction.APPLY_ALLOCATE_KEY,
+          (omKeyArgs == null) ? null : toAuditMap(omKeyArgs), ex));
+      throw ex;
+    } finally {
+      if(auditSuccess){
+        AUDIT.logWriteSuccess(buildAuditMessageForSuccess(
+            OMAction.ALLOCATE_KEY, (omKeyArgs == null) ? null :
+                toAuditMap(omKeyArgs)));
+      }
+    }
+  }
+
+  private Map<String, String> toAuditMap(KeyArgs omKeyArgs) {
+    Map<String, String> auditMap = new LinkedHashMap<>();
+    auditMap.put(OzoneConsts.VOLUME, omKeyArgs.getVolumeName());
+    auditMap.put(OzoneConsts.BUCKET, omKeyArgs.getBucketName());
+    auditMap.put(OzoneConsts.KEY, omKeyArgs.getKeyName());
+    auditMap.put(OzoneConsts.DATA_SIZE,
+        String.valueOf(omKeyArgs.getDataSize()));
+    auditMap.put(OzoneConsts.REPLICATION_TYPE,
+        omKeyArgs.hasType() ? omKeyArgs.getType().name() : null);
+    auditMap.put(OzoneConsts.REPLICATION_FACTOR,
+        omKeyArgs.hasFactor() ? omKeyArgs.getFactor().name() : null);
+    auditMap.put(OzoneConsts.KEY_LOCATION_INFO,
+        (omKeyArgs.getKeyLocationsList() != null) ?
+            omKeyArgs.getKeyLocationsList().toString() : null);
+    return auditMap;
   }
 
   @Override
