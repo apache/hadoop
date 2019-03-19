@@ -30,6 +30,7 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.
     StorageContainerException;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.tracing.GrpcServerInterceptor;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -75,8 +76,9 @@ public final class XceiverServerGrpc extends XceiverServer {
    * @param conf - Configuration
    */
   public XceiverServerGrpc(DatanodeDetails datanodeDetails, Configuration conf,
-      ContainerDispatcher dispatcher, BindableService... additionalServices) {
-    super(conf);
+      ContainerDispatcher dispatcher, CertificateClient caClient,
+      BindableService... additionalServices) {
+    super(conf, caClient);
     Preconditions.checkNotNull(conf);
 
     this.id = datanodeDetails.getUuid();

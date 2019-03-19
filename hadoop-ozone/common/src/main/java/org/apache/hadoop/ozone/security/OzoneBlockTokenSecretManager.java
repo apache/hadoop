@@ -32,8 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.EnumSet;
-import java.util.Iterator;
-import java.util.Map;
+
 /**
  * SecretManager for Ozone Master block tokens.
  */
@@ -172,7 +171,6 @@ public class OzoneBlockTokenSecretManager extends
   @Override
   public synchronized void start(CertificateClient client) throws IOException {
     super.start(client);
-    removeExpiredKeys();
   }
 
   /**
@@ -190,18 +188,5 @@ public class OzoneBlockTokenSecretManager extends
   @Override
   public synchronized void stop() throws IOException {
     super.stop();
-  }
-
-  private synchronized void removeExpiredKeys() {
-    // TODO: handle roll private key/certificate
-    long now = Time.now();
-    for (Iterator<Map.Entry<Integer, OzoneSecretKey>> it = allKeys.entrySet()
-        .iterator(); it.hasNext();) {
-      Map.Entry<Integer, OzoneSecretKey> e = it.next();
-      OzoneSecretKey key = e.getValue();
-      if (key.getExpiryDate() < now) {
-        it.remove();
-      }
-    }
   }
 }

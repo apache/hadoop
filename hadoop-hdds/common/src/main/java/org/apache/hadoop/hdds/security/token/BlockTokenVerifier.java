@@ -60,9 +60,9 @@ public class BlockTokenVerifier implements TokenVerifier {
     if (conf.isBlockTokenEnabled()) {
       // TODO: add audit logs.
 
-      if (Strings.isNullOrEmpty(tokenStr) || isTestStub()) {
+      if (Strings.isNullOrEmpty(tokenStr)) {
         throw new BlockTokenException("Fail to find any token (empty or " +
-            "null.");
+            "null.)");
       }
       final Token<OzoneBlockTokenIdentifier> token = new Token();
       OzoneBlockTokenIdentifier tokenId = new OzoneBlockTokenIdentifier();
@@ -78,29 +78,26 @@ public class BlockTokenVerifier implements TokenVerifier {
         throw new BlockTokenException("Failed to decode token : " + tokenStr);
       }
 
-      // TODO: revisit this when caClient is ready, skip signature check now.
-      /**
-       * the final code should like
-       * if (caClient == null) {
-       *   throw new SCMSecurityException("Certificate client not available to
-       *       validate token");
-       * }
-       */
-      if (caClient != null) {
-        X509Certificate singerCert = caClient.queryCertificate(
-            "certId=" + tokenId.getOmCertSerialId());
-        if (singerCert == null) {
-          throw new BlockTokenException("Can't find signer certificate " +
-              "(OmCertSerialId: " + tokenId.getOmCertSerialId() +
-              ") of the block token for user: " + tokenId.getUser());
-        }
-        Boolean validToken = caClient.verifySignature(tokenId.getBytes(),
-            token.getPassword(), singerCert);
-        if (!validToken) {
-          throw new BlockTokenException("Invalid block token for user: " +
-              tokenId.getUser());
-        }
+      if (caClient == null) {
+        throw new SCMSecurityException("Certificate client not available " +
+            "to validate token");
       }
+
+      X509Certificate singerCert;
+      singerCert = caClient.getCertificate(tokenId.getOmCertSerialId());
+
+      if (singerCert == null) {
+        throw new BlockTokenException("Can't find signer certificate " +
+            "(OmCertSerialId: " + tokenId.getOmCertSerialId() +
+            ") of the block token for user: " + tokenId.getUser());
+      }
+      boolean validToken = caClient.verifySignature(tokenId.getBytes(),
+          token.getPassword(), singerCert);
+      if (!validToken) {
+        throw new BlockTokenException("Invalid block token for user: " +
+            tokenId.getUser());
+      }
+
       // check expiration
       if (isExpired(tokenId.getExpiryDate())) {
         UserGroupInformation tokenUser = tokenId.getUser();

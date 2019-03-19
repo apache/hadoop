@@ -39,8 +39,13 @@ public class OMCertificateClient extends DefaultCertificateClient {
   private static final Logger LOG =
       LoggerFactory.getLogger(OMCertificateClient.class);
 
+  public OMCertificateClient(SecurityConfig securityConfig,
+      String certSerialId) {
+    super(securityConfig, LOG, certSerialId);
+  }
+
   public OMCertificateClient(SecurityConfig securityConfig) {
-    super(securityConfig, LOG);
+    super(securityConfig, LOG, null);
   }
 
   protected InitResponse handleCase(InitCase init) throws

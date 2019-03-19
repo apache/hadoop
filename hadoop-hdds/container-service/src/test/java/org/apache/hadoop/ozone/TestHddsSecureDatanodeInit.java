@@ -73,6 +73,7 @@ public class TestHddsSecureDatanodeInit {
     conf = new OzoneConfiguration();
     conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, testDir.getPath());
+    //conf.set(ScmConfigKeys.OZONE_SCM_NAMES, "localhost");
     String volumeDir = testDir + "/disk1";
     conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, volumeDir);
 
@@ -113,8 +114,7 @@ public class TestHddsSecureDatanodeInit {
 
   @Before
   public void setUpDNCertClient(){
-    client = new DNCertificateClient(securityConfig);
-    service.setCertificateClient(client);
+
     FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
         .toString(), securityConfig.getPrivateKeyFileName()).toFile());
     FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
@@ -123,7 +123,9 @@ public class TestHddsSecureDatanodeInit {
         .getCertificateLocation().toString(),
         securityConfig.getCertificateFileName()).toFile());
     dnLogs.clearOutput();
-
+    client = new DNCertificateClient(securityConfig,
+        certHolder.getSerialNumber().toString());
+    service.setCertificateClient(client);
   }
 
   @Test

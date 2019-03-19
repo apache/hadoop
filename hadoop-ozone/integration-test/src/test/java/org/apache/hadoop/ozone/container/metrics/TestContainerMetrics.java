@@ -111,7 +111,7 @@ public class TestContainerMetrics {
           volumeSet, handlers, context, metrics);
       dispatcher.setScmId(UUID.randomUUID().toString());
 
-      server = new XceiverServerGrpc(datanodeDetails, conf, dispatcher,
+      server = new XceiverServerGrpc(datanodeDetails, conf, dispatcher, null,
           createReplicationService(new ContainerController(
               containerSet, handlers)));
       client = new XceiverClientGrpc(pipeline, conf);

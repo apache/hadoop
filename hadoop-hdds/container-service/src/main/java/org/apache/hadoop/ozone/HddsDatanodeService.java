@@ -31,7 +31,6 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.DNCertificateClient;
-import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -53,10 +52,10 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.security.KeyPair;
 import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.UUID;
 
+import static org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec.getX509Certificate;
 import static org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest.getEncodedString;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.HDDS_DATANODE_PLUGINS_KEY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
@@ -179,7 +178,8 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
         if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
           component = "dn-" + datanodeDetails.getUuidString();
 
-          dnCertClient = new DNCertificateClient(new SecurityConfig(conf));
+          dnCertClient = new DNCertificateClient(new SecurityConfig(conf),
+              datanodeDetails.getCertSerialId());
 
           if (SecurityUtil.getAuthenticationMethod(conf).equals(
               UserGroupInformation.AuthenticationMethod.KERBEROS)) {
@@ -199,7 +199,11 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
           }
           LOG.info("Hdds Datanode login successful.");
         }
-        datanodeStateMachine = new DatanodeStateMachine(datanodeDetails, conf);
+        if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
+          initializeCertificateClient(conf);
+        }
+        datanodeStateMachine = new DatanodeStateMachine(datanodeDetails, conf,
+            dnCertClient);
         try {
           httpServer = new HddsDatanodeHttpServer(conf);
           httpServer.start();
@@ -209,9 +213,6 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
         startPlugins();
         // Starting HDDS Daemons
         datanodeStateMachine.startDaemon();
-        if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
-          initializeCertificateClient(conf);
-        }
       } catch (IOException e) {
         throw new RuntimeException("Can't start the HDDS datanode plugin", e);
       } catch (AuthenticationException ex) {
@@ -268,10 +269,10 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
 
       String pemEncodedCert = secureScmClient.getDataNodeCertificate(
           datanodeDetails.getProtoBufMessage(), getEncodedString(csr));
-
-      X509Certificate x509Certificate =
-          CertificateCodec.getX509Certificate(pemEncodedCert);
-      dnCertClient.storeCertificate(x509Certificate);
+      dnCertClient.storeCertificate(pemEncodedCert, true);
+      datanodeDetails.setCertSerialId(getX509Certificate(pemEncodedCert).
+          getSerialNumber().toString());
+      persistDatanodeDetails(datanodeDetails);
     } catch (IOException | CertificateException e) {
       LOG.error("Error while storing SCM signed certificate.", e);
       throw new RuntimeException(e);
@@ -329,6 +330,29 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
       String datanodeUuid = UUID.randomUUID().toString();
       return DatanodeDetails.newBuilder().setUuid(datanodeUuid).build();
     }
+  }
+
+  /**
+   * Persist DatanodeDetails to file system.
+   * @param dnDetails
+   *
+   * @return DatanodeDetails
+   */
+  private void persistDatanodeDetails(DatanodeDetails dnDetails)
+      throws IOException {
+    String idFilePath = HddsUtils.getDatanodeIdFilePath(conf);
+    if (idFilePath == null || idFilePath.isEmpty()) {
+      LOG.error("A valid file path is needed for config setting {}",
+          ScmConfigKeys.OZONE_SCM_DATANODE_ID);
+      throw new IllegalArgumentException(ScmConfigKeys.OZONE_SCM_DATANODE_ID +
+          " must be defined. See" +
+          " https://wiki.apache.org/hadoop/Ozone#Configuration" +
+          " for details on configuring Ozone.");
+    }
+
+    Preconditions.checkNotNull(idFilePath);
+    File idFile = new File(idFilePath);
+    ContainerUtils.writeDatanodeDetailsTo(dnDetails, idFile);
   }
 
   /**

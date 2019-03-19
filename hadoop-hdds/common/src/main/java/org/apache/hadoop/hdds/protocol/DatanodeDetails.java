@@ -45,6 +45,7 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
   private String ipAddress;
   private String hostName;
   private List<Port> ports;
+  private String certSerialId;
 
 
   /**
@@ -54,13 +55,15 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
    * @param ipAddress IP Address of this DataNode
    * @param hostName DataNode's hostname
    * @param ports Ports used by the DataNode
+   * @param certSerialId serial id from SCM issued certificate.
    */
   private DatanodeDetails(String uuid, String ipAddress, String hostName,
-      List<Port> ports) {
+      List<Port> ports, String certSerialId) {
     this.uuid = UUID.fromString(uuid);
     this.ipAddress = ipAddress;
     this.hostName = hostName;
     this.ports = ports;
+    this.certSerialId = certSerialId;
   }
 
   protected DatanodeDetails(DatanodeDetails datanodeDetails) {
@@ -177,6 +180,9 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
     if (datanodeDetailsProto.hasHostName()) {
       builder.setHostName(datanodeDetailsProto.getHostName());
     }
+    if (datanodeDetailsProto.hasCertSerialId()) {
+      builder.setCertSerialId(datanodeDetailsProto.getCertSerialId());
+    }
     for (HddsProtos.Port port : datanodeDetailsProto.getPortsList()) {
       builder.addPort(newPort(
           Port.Name.valueOf(port.getName().toUpperCase()), port.getValue()));
@@ -198,6 +204,9 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
     if (hostName != null) {
       builder.setHostName(hostName);
     }
+    if (certSerialId != null) {
+      builder.setCertSerialId(certSerialId);
+    }
     for (Port port : ports) {
       builder.addPorts(HddsProtos.Port.newBuilder()
           .setName(port.getName().toString())
@@ -214,6 +223,7 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
         ipAddress +
         ", host: " +
         hostName +
+        ", certSerialId: " + certSerialId +
         "}";
   }
 
@@ -250,6 +260,7 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
     private String ipAddress;
     private String hostName;
     private List<Port> ports;
+    private String certSerialId;
 
     /**
      * Default private constructor. To create Builder instance use
@@ -305,13 +316,25 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
     }
 
     /**
+     * Adds certificate serial id.
+     *
+     * @param certId Serial id of SCM issued certificate.
+     *
+     * @return DatanodeDetails.Builder
+     */
+    public Builder setCertSerialId(String certId) {
+      this.certSerialId = certId;
+      return this;
+    }
+
+    /**
      * Builds and returns DatanodeDetails instance.
      *
      * @return DatanodeDetails
      */
     public DatanodeDetails build() {
       Preconditions.checkNotNull(id);
-      return new DatanodeDetails(id, ipAddress, hostName, ports);
+      return new DatanodeDetails(id, ipAddress, hostName, ports, certSerialId);
     }
 
   }
@@ -396,6 +419,23 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
       }
       return false;
     }
+  }
+
+  /**
+   * Returns serial id of SCM issued certificate.
+   *
+   * @return certificate serial id
+   */
+  public String getCertSerialId() {
+    return certSerialId;
+  }
+
+  /**
+   * Set certificate serial id of SCM issued certificate.
+   *
+   */
+  public void setCertSerialId(String certSerialId) {
+    this.certSerialId = certSerialId;
   }
 
 }

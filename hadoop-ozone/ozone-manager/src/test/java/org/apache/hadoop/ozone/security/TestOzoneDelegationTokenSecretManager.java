@@ -18,26 +18,29 @@
 
 package org.apache.hadoop.ozone.security;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.OMCertificateClient;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ozone.om.OMMetadataManager;
+import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.S3SecretManager;
+import org.apache.hadoop.ozone.om.S3SecretManagerImpl;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
@@ -63,18 +66,18 @@ public class TestOzoneDelegationTokenSecretManager {
   private long expiryTime;
   private Text serviceRpcAdd;
   private OzoneConfiguration conf;
-  private static final String BASEDIR = GenericTestUtils.getTempPath(
-      TestOzoneDelegationTokenSecretManager.class.getSimpleName());
   private final static Text TEST_USER = new Text("testUser");
   private long tokenMaxLifetime = 1000 * 20;
   private long tokenRemoverScanInterval = 1000 * 20;
   private S3SecretManager s3SecretManager;
   private String s3Secret = "dbaksbzljandlkandlsd";
 
+  @Rule
+  public TemporaryFolder folder = new TemporaryFolder();
+
   @Before
   public void setUp() throws Exception {
-    conf = new OzoneConfiguration();
-    conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, BASEDIR);
+    conf = createNewTestPath();
     securityConfig = new SecurityConfig(conf);
     certificateClient = setupCertificateClient();
     certificateClient.init();
@@ -83,7 +86,8 @@ public class TestOzoneDelegationTokenSecretManager {
     final Map<String, String> s3Secrets = new HashMap<>();
     s3Secrets.put("testuser1", s3Secret);
     s3Secrets.put("abc", "djakjahkd");
-    s3SecretManager = new S3SecretManager() {
+    OMMetadataManager metadataManager = new OmMetadataManagerImpl(conf);
+    s3SecretManager = new S3SecretManagerImpl(conf, metadataManager) {
       @Override
       public S3SecretValue getS3Secret(String kerberosID) {
         if(s3Secrets.containsKey(kerberosID)) {
@@ -100,6 +104,16 @@ public class TestOzoneDelegationTokenSecretManager {
         return null;
       }
     };
+  }
+
+  private OzoneConfiguration createNewTestPath() throws IOException {
+    OzoneConfiguration config = new OzoneConfiguration();
+    File newFolder = folder.newFolder();
+    if (!newFolder.exists()) {
+      Assert.assertTrue(newFolder.mkdirs());
+    }
+    ServerUtils.setOzoneMetaDirPath(config, newFolder.toString());
+    return config;
   }
 
   /**
@@ -125,13 +139,17 @@ public class TestOzoneDelegationTokenSecretManager {
       public PublicKey getPublicKey() {
         return keyPair.getPublic();
       }
+
+      @Override
+      public X509Certificate getCertificate(String serialId) {
+        return cert;
+      }
     };
   }
 
   @After
   public void tearDown() throws IOException {
     secretManager.stop();
-    FileUtils.deleteQuietly(new File(BASEDIR));
   }
 
   @Test
@@ -140,8 +158,7 @@ public class TestOzoneDelegationTokenSecretManager {
         expiryTime, tokenRemoverScanInterval);
     secretManager.start(certificateClient);
     Token<OzoneTokenIdentifier> token = secretManager.createToken(TEST_USER,
-        TEST_USER,
-        TEST_USER);
+        TEST_USER, TEST_USER);
     OzoneTokenIdentifier identifier =
         OzoneTokenIdentifier.readProtoBuf(token.getIdentifier());
     // Check basic details.
@@ -276,8 +293,7 @@ public class TestOzoneDelegationTokenSecretManager {
     id.setOmCertSerialId("1927393");
     id.setMaxDate(Time.now() + 60*60*24);
     id.setOwner(new Text("test"));
-    Assert.assertFalse(secretManager.verifySignature(id,
-        certificateClient.signData(id.getBytes())));
+    Assert.assertFalse(secretManager.verifySignature(id, id.getBytes()));
   }
 
   @Test

@@ -98,7 +98,7 @@ public class TestOzoneContainer {
     // When OzoneContainer is started, the containers from disk should be
     // loaded into the containerSet.
     OzoneContainer ozoneContainer = new
-        OzoneContainer(datanodeDetails, conf, context);
+        OzoneContainer(datanodeDetails, conf, context, null);
     ContainerSet containerset = ozoneContainer.getContainerSet();
     assertEquals(10, containerset.containerCount());
   }

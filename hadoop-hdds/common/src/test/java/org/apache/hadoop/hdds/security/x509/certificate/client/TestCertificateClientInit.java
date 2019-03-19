@@ -59,12 +59,15 @@ import static org.junit.Assert.assertTrue;
 @SuppressWarnings("visibilitymodifier")
 public class TestCertificateClientInit {
 
+  private KeyPair keyPair;
+  private String certSerialId = "3284792342234";
   private CertificateClient dnCertificateClient;
   private CertificateClient omCertificateClient;
   private HDDSKeyGenerator keyGenerator;
   private Path metaDirPath;
   private SecurityConfig securityConfig;
   private KeyCodec keyCodec;
+  private X509Certificate x509Certificate;
 
   @Parameter
   public boolean pvtKeyPresent;
@@ -96,10 +99,16 @@ public class TestCertificateClientInit {
     metaDirPath = Paths.get(path, "test");
     config.set(HDDS_METADATA_DIR_NAME, metaDirPath.toString());
     securityConfig = new SecurityConfig(config);
-    dnCertificateClient = new DNCertificateClient(securityConfig);
-    omCertificateClient = new OMCertificateClient(securityConfig);
     keyGenerator = new HDDSKeyGenerator(securityConfig);
+    keyPair = keyGenerator.generateKey();
+    x509Certificate = getX509Certificate();
+    certSerialId = x509Certificate.getSerialNumber().toString();
+    dnCertificateClient = new DNCertificateClient(securityConfig,
+        certSerialId);
+    omCertificateClient = new OMCertificateClient(securityConfig,
+        certSerialId);
     keyCodec = new KeyCodec(securityConfig);
+
     Files.createDirectories(securityConfig.getKeyLocation());
   }
 
@@ -113,7 +122,6 @@ public class TestCertificateClientInit {
 
   @Test
   public void testInitDatanode() throws Exception {
-    KeyPair keyPair = keyGenerator.generateKey();
     if (pvtKeyPresent) {
       keyCodec.writePrivateKey(keyPair.getPrivate());
     } else {
@@ -131,9 +139,6 @@ public class TestCertificateClientInit {
     }
 
     if (certPresent) {
-      X509Certificate x509Certificate = KeyStoreTestUtil.generateCertificate(
-          "CN=Test", keyPair, 10, securityConfig.getSignatureAlgo());
-
       CertificateCodec codec = new CertificateCodec(securityConfig);
       codec.writeCertificate(new X509CertificateHolder(
           x509Certificate.getEncoded()));
@@ -157,7 +162,6 @@ public class TestCertificateClientInit {
 
   @Test
   public void testInitOzoneManager() throws Exception {
-    KeyPair keyPair = keyGenerator.generateKey();
     if (pvtKeyPresent) {
       keyCodec.writePrivateKey(keyPair.getPrivate());
     } else {
@@ -175,9 +179,6 @@ public class TestCertificateClientInit {
     }
 
     if (certPresent) {
-      X509Certificate x509Certificate = KeyStoreTestUtil.generateCertificate(
-          "CN=Test", keyPair, 10, securityConfig.getSignatureAlgo());
-
       CertificateCodec codec = new CertificateCodec(securityConfig);
       codec.writeCertificate(new X509CertificateHolder(
           x509Certificate.getEncoded()));
@@ -201,5 +202,10 @@ public class TestCertificateClientInit {
           securityConfig.getKeyLocation(),
           securityConfig.getPublicKeyFileName()));
     }
+  }
+
+  private X509Certificate getX509Certificate() throws Exception {
+    return KeyStoreTestUtil.generateCertificate(
+        "CN=Test", keyPair, 10, securityConfig.getSignatureAlgo());
   }
 }
