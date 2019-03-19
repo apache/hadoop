@@ -49,6 +49,7 @@ void hdfsThreadDestructor(void *v)
   struct ThreadLocalState *state = (struct ThreadLocalState*)v;
   JNIEnv *env = state->env;;
   jint ret;
+  jthrowable jthr;
   char thr_name[MAXTHRID];
 
   /* Detach the current thread from the JVM */
@@ -58,7 +59,8 @@ void hdfsThreadDestructor(void *v)
     if (ret != 0) {
       fprintf(stderr, "hdfsThreadDestructor: GetJavaVM failed with error %d\n",
         ret);
-      if ((*env)->ExceptionOccurred) {
+      jthr = (*env)->ExceptionOccurred(env);
+      if (jthr) {
         (*env)->ExceptionDescribe(env);
         (*env)->ExceptionClear(env);
       }
@@ -66,7 +68,8 @@ void hdfsThreadDestructor(void *v)
       ret = (*vm)->DetachCurrentThread(vm);
 
       if (ret != JNI_OK) {
-        if ((*env)->ExceptionOccurred) {
+        jthr = (*env)->ExceptionOccurred(env);
+        if (jthr) {
           (*env)->ExceptionDescribe(env);
           (*env)->ExceptionClear(env);
         }
