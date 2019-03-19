@@ -251,7 +251,7 @@ public class TestOzoneManagerStateMachine {
     // As the request failed, check for keyLocation and  the transaction
     // context error message
     Assert.assertFalse(newOmRequest.getAllocateBlockRequest().hasKeyLocation());
-    Assert.assertEquals("Scm in Chill mode Status code "
+    Assert.assertEquals("Scm in Chill mode " + OMException.STATUS_CODE
             + OMException.ResultCodes.SCM_IN_CHILL_MODE,
         transactionContext.getException().getMessage());
     Assert.assertTrue(transactionContext.getException() instanceof IOException);

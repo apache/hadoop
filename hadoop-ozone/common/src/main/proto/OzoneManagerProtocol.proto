@@ -60,6 +60,7 @@ enum Type {
   ListKeys = 35;
   CommitKey = 36;
   AllocateBlock = 37;
+  ApplyCreateKey = 38;
 
   CreateS3Bucket = 41;
   DeleteS3Bucket = 42;
@@ -73,6 +74,8 @@ enum Type {
   ListMultiPartUploadParts = 50;
 
   ServiceList = 51;
+
+  ApplyInitiateMultiPartUpload = 52;
 
   GetDelegationToken = 61;
   RenewDelegationToken = 62;
@@ -110,6 +113,8 @@ message OMRequest {
   optional ListKeysRequest                  listKeysRequest                = 35;
   optional CommitKeyRequest                 commitKeyRequest               = 36;
   optional AllocateBlockRequest             allocateBlockRequest           = 37;
+  optional ApplyCreateKeyRequest            applyCreateKeyRequest          = 38;
+
 
   optional S3CreateBucketRequest            createS3BucketRequest          = 41;
   optional S3DeleteBucketRequest            deleteS3BucketRequest          = 42;
@@ -123,6 +128,7 @@ message OMRequest {
   optional MultipartUploadListPartsRequest  listMultipartUploadPartsRequest = 50;
 
   optional ServiceListRequest               serviceListRequest             = 51;
+  optional MultipartInfoApplyInitiateRequest initiateMultiPartUploadApplyRequest = 52;
 
   optional hadoop.common.GetDelegationTokenRequestProto getDelegationTokenRequest = 61;
   optional hadoop.common.RenewDelegationTokenRequestProto renewDelegationTokenRequest= 62;
@@ -555,6 +561,11 @@ message CreateKeyResponse {
     optional uint64 openVersion = 4;
 }
 
+message ApplyCreateKeyRequest {
+    required CreateKeyRequest createKeyRequest = 1;
+    required CreateKeyResponse createKeyResponse = 2;
+}
+
 message LookupKeyRequest {
     required KeyArgs keyArgs = 1;
 }
@@ -720,6 +731,11 @@ message S3ListBucketsResponse {
 
 message MultipartInfoInitiateRequest {
     required KeyArgs keyArgs = 1;
+}
+
+message MultipartInfoApplyInitiateRequest {
+    required KeyArgs keyArgs = 1;
+    required string multipartUploadID = 2;
 }
 
 message MultipartInfoInitiateResponse {
