@@ -167,7 +167,7 @@ public class HBaseTimelineReaderImpl
     @Override
     public void run() {
       try {
-        LOG.info("Running HBase liveness monitor");
+        LOG.debug("Running HBase liveness monitor");
         TimelineEntityReader reader =
             TimelineEntityReaderFactory.createMultipleEntitiesReader(
                 monitorContext, MONITOR_FILTERS, DATA_TO_RETRIEVE);
