@@ -39,7 +39,7 @@ ozone fs -ls o3fs://bucket1.vol1/
 kinit -kt /etc/security/keytabs/testuser.keytab testuser/rm@EXAMPLE.COM
 export HADOOP_MAPRED_HOME=/opt/hadoop/share/hadoop/mapreduce
 
-export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:/opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-0.5.0-SNAPSHOT.jar
+export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:/opt/hadoop/share/hadoop/mapreduce/*:/opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-0.5.0-SNAPSHOT.jar
 
 hadoop fs -mkdir /user
 hadoop fs -mkdir /user/root
