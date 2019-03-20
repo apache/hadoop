@@ -99,6 +99,7 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.utils.HddsVersionInfo;
+import org.apache.hadoop.utils.Scheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -175,6 +176,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   private SCMMetadataStore scmMetadataStore;
 
   private final EventQueue eventQueue;
+  private final Scheduler commonScheduler;
   /*
    * HTTP endpoint for JMX access.
    */
@@ -284,7 +286,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     commandWatcherLeaseManager = new LeaseManager<>("CommandWatcher",
         watcherTimeout);
     initalizeSystemManagers(conf, configurator);
-    replicationStatus = new ReplicationActivityStatus();
+    commonScheduler = new Scheduler("SCMCommonScheduler", false, 1);
+    replicationStatus = new ReplicationActivityStatus(commonScheduler);
 
     CloseContainerEventHandler closeContainerHandler =
         new CloseContainerEventHandler(pipelineManager, containerManager);
@@ -1002,6 +1005,13 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       eventQueue.close();
     } catch (Exception ex) {
       LOG.error("SCM Event Queue stop failed", ex);
+    }
+
+    try {
+      LOG.info("Stopping SCM Common Scheduler.");
+      commonScheduler.close();
+    } catch (Exception ex) {
+      LOG.error("SCM Common Scheduler close failed {}", ex);
     }
 
     if (jvmPauseMonitor != null) {
