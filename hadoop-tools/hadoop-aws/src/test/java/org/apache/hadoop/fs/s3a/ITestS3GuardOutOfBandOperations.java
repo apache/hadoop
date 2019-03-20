@@ -24,6 +24,7 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -31,6 +32,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -38,6 +40,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.junit.Assume.assumeTrue;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
@@ -46,11 +49,11 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthori
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
- * <pre>
+ *
  * This integration test is for documenting and defining how S3Guard should
  * behave in case of out-of-band (OOB) operations.
- *
- * The behaviour is the following in case of S3AFileSystem.getFileStatus:
+ * <pre>
+ * The behavior is the following in case of S3AFileSystem.getFileStatus:
  * A client with S3Guard
  * B client without S3Guard (Directly to S3)
  *
@@ -80,13 +83,16 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * As you can see, authoritative and NOT authoritative mode behaves the same
  * at OOB DELETE case.
  *
- * The behaviour is the following in case of S3AFileSystem.listStatus:
+ * The behavior is the following in case of S3AFileSystem.listStatus:
  * * File status in metadata store gets updated during the listing (in
  * S3Guard.dirListingUnion) the same way as in getFileStatus.
  * </pre>
  */
 @RunWith(Parameterized.class)
 public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
+
+  public static final int TIMESTAMP_SLEEP = 2000;
+  public static final int STABILIZE_SLEEP = 2000;
 
   private S3AFileSystem guardedFs;
   private S3AFileSystem rawFS;
@@ -113,6 +119,17 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     this.authoritative = authoritative;
   }
 
+  /**
+   * By changing the method name, the thread name is changed and
+   * so you can see in the logs which mode is being tested.
+   * @return a string to use for the thread namer.
+   */
+  @Override
+  protected String getMethodName() {
+    return super.getMethodName() +
+        (authoritative ? "-auth" : "-nonauth");
+  }
+
   @Before
   public void setup() throws Exception {
     super.setup();
@@ -123,9 +140,18 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     assumeTrue("Metadatastore should persist authoritative bit",
         metadataStorePersistsAuthoritativeBit(fs.getMetadataStore()));
 
+    // This test setup shares a single metadata store across instances,
+    // so that test runs with a local FS work.
+    // but this needs to be addressed in teardown, where the guarded fs
+    // needs to be detached from the metadata store before it is closed,
     realMs = fs.getMetadataStore();
     // now we create a new FS with the auth parameter
     guardedFs = createGuardedFS(authoritative);
+    assertTrue("No S3Guard store for " + guardedFs,
+        guardedFs.hasMetadataStore());
+    assertEquals("Authoritative status in " + guardedFs,
+        authoritative, guardedFs.hasAuthoritativeMetadataStore());
+
     // create raw fs without s3guard
     rawFS = createUnguardedFS();
     assertFalse("Raw FS still has S3Guard " + rawFS,
@@ -134,8 +160,14 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
 
   @Override
   public void teardown() throws Exception {
+    if (guardedFs != null) {
+      // detach from the (shared) metadata store.
+      guardedFs.setMetadataStore(new NullMetadataStore());
+      // and only then close it.
+      IOUtils.cleanupWithLogger(LOG, guardedFs);
+    }
+    IOUtils.cleanupWithLogger(LOG, rawFS);
     super.teardown();
-    IOUtils.cleanupWithLogger(LOG, rawFS, guardedFs);
   }
 
   /**
@@ -150,7 +182,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     Configuration config = new Configuration(testFS.getConf());
     URI uri = testFS.getUri();
 
-    S3ATestUtils.removeBaseAndBucketOverrides(uri.getHost(), config,
+    removeBaseAndBucketOverrides(uri.getHost(), config,
         METADATASTORE_AUTHORITATIVE);
     config.setBoolean(METADATASTORE_AUTHORITATIVE, authoritativeMode);
     final S3AFileSystem gFs = createFS(uri, config);
@@ -168,16 +200,16 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     Configuration config = new Configuration(testFS.getConf());
     URI uri = testFS.getUri();
 
-    S3ATestUtils.removeBaseAndBucketOverrides(uri.getHost(), config,
+    removeBaseAndBucketOverrides(uri.getHost(), config,
         S3_METADATA_STORE_IMPL);
-    S3ATestUtils.removeBaseAndBucketOverrides(uri.getHost(), config,
+    removeBaseAndBucketOverrides(uri.getHost(), config,
         METADATASTORE_AUTHORITATIVE);
     return createFS(uri, config);
   }
 
   /**
    * Create and init a filesystem.
-   * @param uri FSU URI
+   * @param uri FS URI
    * @param config config.
    * @return new instance
    * @throws IOException failure
@@ -205,8 +237,8 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
 
   @Test
   public void testOutOfBandDeletes() throws Exception {
-    Path testFileName = path("/OutOfBandDelete-" + UUID.randomUUID());
-    outOfBandDeletes(testFileName, true);
+    Path testFileName = path("OutOfBandDelete-" + UUID.randomUUID());
+    outOfBandDeletes(testFileName, authoritative);
   }
 
   @Test
@@ -224,9 +256,15 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     deleteFileInListing();
   }
 
-  private void outOfBandDeletes(Path testFileName, boolean allowAuthoritative)
+  /**
+   * perform an out of band delete.
+   * @param testFileName filename
+   * @param allowAuthoritative  is the store authoritative
+   */
+  private void outOfBandDeletes(
+      final Path testFileName,
+      final boolean allowAuthoritative)
       throws Exception {
-    LOG.info("Allow authoritative param: {}", allowAuthoritative);
     try {
       // Create initial file
       String text = "Hello, World!";
@@ -234,6 +272,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
 
       // Delete the file without S3Guard (raw)
       rawFS.delete(testFileName, true);
+      waitS3Stabilization();
 
       // The check is the same if s3guard is authoritative and if it's not
       // it should be in the ms
@@ -261,39 +300,53 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       // Create initial file
       writeTextFile(
           guardedFs, testFilePath, firstText, true);
-
+      // and cache the value for later
+      final FileStatus origStatus = rawFS.getFileStatus(testFilePath);
+      waitForDifferentTimestamps();
       // Delete and recreate the file without S3Guard
-      rawFS.delete(testFilePath, true);
       writeTextFile(
           rawFS, testFilePath, secondText, true);
+      // short pause to let S3 stabilize
+      waitS3Stabilization();
       FileStatus rawFileStatus = rawFS.getFileStatus(testFilePath);
 
       // Read the file and verify the data
       FileStatus guardedFileStatus = guardedFs.getFileStatus(testFilePath);
-      if(allowAuthoritative) {
-        assertNotEquals("Authoritative enabled, so metadata is not "
-                + "updated in ms, so mod_time won't match. Expecting "
-                + "different values for raw and guarded filestatus."
-                + "Raw: " + rawFileStatus.toString() +
-                " Guarded: " + guardedFileStatus.toString(),
-            rawFileStatus.getModificationTime(),
-            guardedFileStatus.getModificationTime());
-      } else {
-        // If authoritative is not enabled metadata is updated, mod_time
-        // will match
-        assertEquals("Authoritative is disabled, so metadata is"
-                + " updated in ms, so mod_time must match. Expecting "
-                + "same values for raw and guarded filestatus."
-                + "Raw: " + rawFileStatus.toString() +
-                " Guarded: " + guardedFileStatus.toString(),
-            rawFileStatus.getModificationTime(),
-            guardedFileStatus.getModificationTime());
-      }
+      verifyFileStatusAsExpected(firstText, secondText, allowAuthoritative,
+          origStatus, rawFileStatus, guardedFileStatus);
     } finally {
       guardedFs.delete(testFilePath, true);
     }
   }
 
+  /**
+   * Assert that an array has a given size; in failure the full string values
+   * of the array will be included, one per line.
+   * @param message message for errors.
+   * @param expected expected length.
+   * @param array the array to probe
+   */
+  private <T> void assertArraySize(
+      final String message,
+      final int expected,
+      final T[] array) {
+    if (expected != array.length) {
+      // condition is not met, build an error which includes all the entries
+      String listing = Arrays.stream(array)
+          .map(Object::toString)
+          .collect(Collectors.joining("\n"));
+      fail(message + ": expected " + expected + " elements but found "
+          + array.length
+          + "\n" + listing);
+    }
+  }
+
+  /**
+   * Overwrite a file, verify that the text is different as is the timestamp.
+   * There are some pauses in the test to ensure that timestamps are different.
+   * @param firstText first text to write
+   * @param secondText second text to write
+   */
   private void overwriteFileInListing(String firstText, String secondText)
       throws Exception {
     boolean allowAuthoritative = authoritative;
@@ -309,68 +362,158 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       // Create initial statusIterator with guarded ms
       writeTextFile(
           guardedFs, testFilePath, firstText, true);
+      // and cache the value for later
+      final FileStatus origStatus = rawFS.getFileStatus(testFilePath);
 
       // Do a listing to cache the lists. Should be authoritative if it's set.
       final FileStatus[] origList = guardedFs.listStatus(testDirPath);
-      assertEquals("Added one file to the new dir, so the number of "
-              + "files in the dir should be one.", 1, origList.length);
+      assertArraySize("Added one file to the new dir, so the number of "
+              + "files in the dir should be one.", 1, origList);
       final DirListingMetadata dirListingMetadata =
           realMs.listChildren(guardedFs.qualify(testDirPath));
-      if (allowAuthoritative) {
-        assertTrue("DirListingMeta should be authoritative if authoritative "
-            + "mode is enabled.",
-            dirListingMetadata.isAuthoritative());
-      } else {
-        assertFalse("DirListingMeta should not be authoritative if "
-            + "authoritative mode is disabled.",
-            dirListingMetadata.isAuthoritative());
-      }
+      assertListingAuthority(allowAuthoritative, dirListingMetadata);
 
-      // Update file with same size without S3Guard (raw)
+      // a brief pause to guarantee timestamps are different.
+      waitForDifferentTimestamps();
+
+      // Update file with second text without S3Guard (raw)
       rawFS.delete(testFilePath, true);
       writeTextFile(
           rawFS, testFilePath, secondText, true);
+      // short pause to let S3 stabilize
+      waitS3Stabilization();
       final FileStatus rawFileStatus = rawFS.getFileStatus(testFilePath);
 
-      // set real ms and check if it failed
+      // check listing in guarded store.
       final FileStatus[] modList = guardedFs.listStatus(testDirPath);
-      assertEquals("Added one file to the new dir and modified the same file, "
+      assertArraySize("Added one file to the new dir and modified the same file, "
           + "so the number of files in the dir should be one.", 1,
-          modList.length);
+          modList);
       assertEquals("The only file path in the directory listing should be "
               + "equal to the testFilePath.", testFilePath,
           modList[0].getPath());
 
       // Read the file and verify the data
-      FileStatus guardedFileStatus = guardedFs.getFileStatus(testFilePath);
-      if (allowAuthoritative) {
-        // If authoritative is allowed metadata is not updated, so mod_time
-        // won't match
-        assertNotEquals("Authoritative is enabled, so metadata is not "
-                + "updated in ms, so mod_time won't match. Expecting "
-                + "different values for raw and guarded filestatus."
-                + " Raw: " + rawFileStatus.toString() +
-                " Guarded: " + guardedFileStatus.toString(),
-            rawFileStatus.getModificationTime(),
-            guardedFileStatus.getModificationTime());
-      } else {
-        // If authoritative is not enabled metadata is updated, mod_time
-        // will match
-        assertEquals("Authoritative is disabled, so metadata is"
-                + " updated in ms, so mod_time must match. Expecting "
-                + " same values for raw and guarded filestatus."
-                + " Raw: " + rawFileStatus.toString() +
-                " Guarded: " + guardedFileStatus.toString(),
-            rawFileStatus.getModificationTime(),
-            guardedFileStatus.getModificationTime());
-      }
+      final FileStatus guardedFileStatus =
+          guardedFs.getFileStatus(testFilePath);
+      verifyFileStatusAsExpected(firstText, secondText, allowAuthoritative,
+          origStatus, rawFileStatus, guardedFileStatus);
     } finally {
       guardedFs.delete(testDirPath, true);
     }
   }
 
+  /**
+   * Verify that the file status of a file which has been overwritten
+   * is as expected, throwing informative exceptions if not.
+   * @param firstText text of the first write
+   * @param secondText text of the second
+   * @param allowAuthoritative is S3Guard being authoritative
+   * @param origStatus filestatus of the first written file
+   * @param rawFileStatus status of the updated file from the raw FS
+   * @param guardedFileStatus status of the updated file from the guarded FS
+   */
+  private void verifyFileStatusAsExpected(final String firstText,
+      final String secondText,
+      final boolean allowAuthoritative,
+      final FileStatus origStatus,
+      final FileStatus rawFileStatus,
+      final FileStatus guardedFileStatus) {
+    String stats = "\nRaw: " + rawFileStatus.toString() +
+        "\nGuarded: " + guardedFileStatus.toString();
+    if (firstText.length() != secondText.length()) {
+      // the file lengths are different, so compare that first.
+      // it's not going to be brittle to timestamps, and easy to understand
+      // when there is an error.
+
+      // check the file length in the raw FS To verify that status is actually
+      // stabilized w.r.t the last write.
+      long expectedLength = secondText.length();
+      assertEquals("Length of raw file status did not match the updated text "
+              + rawFileStatus,
+          expectedLength, rawFileStatus.getLen());
+      // now compare the lengths of the the raw and guarded files
+      long guardedLength = guardedFileStatus.getLen();
+      if (allowAuthoritative) {
+        // expect the length to be out of sync
+        assertNotEquals(
+            "File length in authoritative table with " + stats,
+            expectedLength, guardedLength);
+      } else {
+        assertEquals(
+            "File length in authoritative table with " + stats,
+            expectedLength, guardedLength);
+      }
+    }
+    // Next: modification time.
+    long rawModTime = rawFileStatus.getModificationTime();
+    long guardedModTime = guardedFileStatus.getModificationTime();
+    assertNotEquals(
+        "Updated file still has original timestamp\n"
+            + " original " + origStatus + stats,
+        origStatus.getModificationTime(), rawModTime);
+    if (allowAuthoritative) {
+      // If authoritative is allowed metadata is not updated, so mod_time
+      // won't match
+      assertNotEquals("Authoritative is enabled, so metadata is not "
+              + "updated in ms, so mod_time won't match. Expecting "
+              + "different values for raw and guarded filestatus."
+              + stats,
+          rawModTime,
+          guardedModTime);
+    } else {
+      // If authoritative is not enabled metadata is updated, mod_time
+      // will match
+      assertEquals("Authoritative is disabled, so metadata is"
+              + " updated in ms, so mod_time must match. Expecting "
+              + " same values for raw and guarded filestatus."
+              + stats,
+          rawModTime,
+          guardedModTime);
+    }
+  }
+
+  /**
+   * A brief pause to for update + delete consistency to propagate,
+   * so the state of S3 is consistent enough for our test semantics
+   * to be valid.
+   */
+  private void waitS3Stabilization() throws InterruptedException {
+    Thread.sleep(STABILIZE_SLEEP);
+  }
+
+  /**
+   * A brief pause to guarantee timestamps are different.
+   * This doesn't have to be as long as a stablilization delay.
+   */
+  private void waitForDifferentTimestamps() throws InterruptedException {
+    Thread.sleep(TIMESTAMP_SLEEP);
+  }
+
+  /**
+   * Assert that a listing has the specific authority
+   * @param expectAuthoritative expect authority bit of listing
+   * @param dirListingMetadata listing to check
+   */
+  private void assertListingAuthority(final boolean expectAuthoritative,
+      final DirListingMetadata dirListingMetadata) {
+    if (expectAuthoritative) {
+      assertTrue("DirListingMeta should be authoritative if authoritative "
+              + "mode is enabled.",
+          dirListingMetadata.isAuthoritative());
+    } else {
+      assertFalse("DirListingMeta should not be authoritative if "
+              + "authoritative mode is disabled.",
+          dirListingMetadata.isAuthoritative());
+    }
+  }
+
+  /**
+   * Delete a file and use listStatus to build up the S3Guard cache.
+   */
   private void deleteFileInListing()
       throws Exception {
+
     boolean allowAuthoritative = authoritative;
     LOG.info("Authoritative mode enabled: {}", allowAuthoritative);
     String rUUID = UUID.randomUUID().toString();
@@ -391,19 +534,11 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
           + "files in the dir should be one.", 1, origList.length);
       final DirListingMetadata dirListingMetadata =
           realMs.listChildren(guardedFs.qualify(testDirPath));
-      if (allowAuthoritative) {
-        assertTrue("DirListingMeta should be authoritative if authoritative "
-                + "mode is enabled.",
-            dirListingMetadata.isAuthoritative());
-      } else {
-        assertFalse("DirListingMeta should not be authoritative if "
-                + "authoritative mode is disabled.",
-            dirListingMetadata.isAuthoritative());
-      }
+      assertListingAuthority(allowAuthoritative, dirListingMetadata);
 
       // Delete the file without S3Guard (raw)
       rawFS.delete(testFilePath, true);
-
+      waitS3Stabilization();
       // File status will be still readable from s3guard
       FileStatus status = guardedFs.getFileStatus(testFilePath);
       LOG.info("authoritative: {} status: {}", allowAuthoritative, status);
