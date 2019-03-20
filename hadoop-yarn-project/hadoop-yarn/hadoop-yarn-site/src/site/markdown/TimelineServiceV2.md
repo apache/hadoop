@@ -284,10 +284,21 @@ The `TimelineSchemaCreator` tool supports a few options that may come handy espe
 are testing. For example, you can use `-skipExistingTable` (`-s` for short) to skip existing tables
 and continue to create other tables rather than failing the schema creation. By default, the tables
 will have a schema prefix of "prod.". When no option or '-help' ('-h' for short) is provided, the
-command usage is printed.
-and continue to create other tables rather than failing the schema creation. When no option or '-help'
-('-h' for short) is provided, the command usage is printed. By default, the tables
-will have a schema prefix of "prod."
+command usage is printed. The options (-entityTableName, -appToflowTableName, -applicationTableName,
+-subApplicationTableName) will help to override the default table names. On using custom table names,
+The below corresponding configs with custom table name has to be set in hbase-site.xml configured
+at yarn.timeline-service.hbase.configuration.file.
+
+```
+yarn.timeline-service.app-flow.table.name
+yarn.timeline-service.entity.table.name
+yarn.timeline-service.application.table.name
+yarn.timeline-service.subapplication.table.name
+yarn.timeline-service.flowactivity.table.name
+yarn.timeline-service.flowrun.table.name
+yarn.timeline-service.domain.table.name
+
+```
 
 #### Enabling Timeline Service v.2
 Following are the basic configurations to start Timeline service v.2:
