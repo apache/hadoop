@@ -497,27 +497,25 @@ public class Router extends CompositeService {
     }
 
     // Create heartbeat services for a list specified by the admin
-    String namenodes = this.conf.get(
+    Collection<String> namenodes = this.conf.getTrimmedStringCollection(
         RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE);
-    if (namenodes != null) {
-      for (String namenode : namenodes.split(",")) {
-        String[] namenodeSplit = namenode.split("\\.");
-        String nsId = null;
-        String nnId = null;
-        if (namenodeSplit.length == 2) {
-          nsId = namenodeSplit[0];
-          nnId = namenodeSplit[1];
-        } else if (namenodeSplit.length == 1) {
-          nsId = namenode;
-        } else {
-          LOG.error("Wrong Namenode to monitor: {}", namenode);
-        }
-        if (nsId != null) {
-          NamenodeHeartbeatService heartbeatService =
-              createNamenodeHeartbeatService(nsId, nnId);
-          if (heartbeatService != null) {
-            ret.put(heartbeatService.getNamenodeDesc(), heartbeatService);
-          }
+    for (String namenode : namenodes) {
+      String[] namenodeSplit = namenode.split("\\.");
+      String nsId = null;
+      String nnId = null;
+      if (namenodeSplit.length == 2) {
+        nsId = namenodeSplit[0];
+        nnId = namenodeSplit[1];
+      } else if (namenodeSplit.length == 1) {
+        nsId = namenode;
+      } else {
+        LOG.error("Wrong Namenode to monitor: {}", namenode);
+      }
+      if (nsId != null) {
+        NamenodeHeartbeatService heartbeatService =
+            createNamenodeHeartbeatService(nsId, nnId);
+        if (heartbeatService != null) {
+          ret.put(heartbeatService.getNamenodeDesc(), heartbeatService);
         }
       }
     }
