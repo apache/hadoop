@@ -153,7 +153,7 @@ public class IntelFpgaOpenclPlugin implements AbstractFpgaVendorPlugin {
   }
 
   /**
-   *  Helper class to run aocl diagnose & determine major/minor numbers.
+   *  Helper class to run aocl diagnose &amp; determine major/minor numbers.
    */
   public static class InnerShellExecutor {
 

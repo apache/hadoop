@@ -114,8 +114,11 @@ public class FpgaDiscoverer {
   }
 
   /**
-   * get avialable devices minor numbers from toolchain or static configuration
-   * */
+   * Get available devices minor numbers from toolchain or static configuration.
+   *
+   * @return the list of FPGA devices
+   * @throws ResourceHandlerException if there's any error during discovery
+   **/
   public List<FpgaResourceAllocator.FpgaDevice> discover()
       throws ResourceHandlerException {
     List<FpgaResourceAllocator.FpgaDevice> list;
