@@ -30,7 +30,9 @@ docker-compose up -d
 kinit -kt /etc/security/keytabs/testuser.keytab testuser/om@EXAMPLE.COM
 
 ozone sh volume create /vol1
+
 ozone sh bucket create /vol1/bucket1
+
 ozone sh key put /vol1/bucket1/key1 LICENSE.txt
 
 ozone fs -ls o3fs://bucket1.vol1/
@@ -50,15 +52,21 @@ hadoop fs -mkdir /user/hadoop
 ## Run Examples
 
 ### WordCount
-
-Fully working with HDDS-1299
+Status: Fully working with HDDS-1299
 ```
 yarn jar $HADOOP_MAPRED_HOME/hadoop-mapreduce-examples-*.jar wordcount o3fs://bucket1.vol1/key1 o3fs://bucket1.vol1/key1.count
+
+hadoop fs -cat /key1.count/part-r-00000
+```
+
+### Pi
+Status: Not fully working yet, tracked by HDDS-1317
+```
+yarn jar $HADOOP_MAPRED_HOME/hadoop-mapreduce-examples-*.jar pi 10 100
 ```
 
 ### RandomWrite
-
-Not working yet, tracked by HDDS-1317
+Status: Not fully working yet, tracked by HDDS-1317
 ```
 yarn jar $HADOOP_MAPRED_HOME/hadoop-mapreduce-examples-*.jar randomwriter -Dtest.randomwrite.total_bytes=10000000  o3fs://bucket1.vol1/randomwrite.out
 ```
