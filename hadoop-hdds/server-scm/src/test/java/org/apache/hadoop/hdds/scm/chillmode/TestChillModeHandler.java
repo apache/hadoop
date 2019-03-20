@@ -27,6 +27,7 @@ import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.utils.Scheduler;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -53,8 +54,8 @@ public class TestChillModeHandler {
         "3s");
     scmClientProtocolServer =
         Mockito.mock(SCMClientProtocolServer.class);
-    replicationActivityStatus =
-        new ReplicationActivityStatus();
+    replicationActivityStatus = new ReplicationActivityStatus(
+        new Scheduler("SCMCommonScheduler", false, 1));
     blockManager = Mockito.mock(BlockManagerImpl.class);
     chillModeHandler =
         new ChillModeHandler(configuration, scmClientProtocolServer,

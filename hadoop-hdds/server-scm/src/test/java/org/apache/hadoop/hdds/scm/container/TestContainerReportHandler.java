@@ -32,7 +32,10 @@ import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.server
     .SCMDatanodeHeartbeatDispatcher.ContainerReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.apache.hadoop.utils.Scheduler;
+import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
@@ -60,6 +63,17 @@ import static org.apache.hadoop.hdds.scm.container
  */
 public class TestContainerReportHandler {
 
+  private static Scheduler scheduler;
+
+  @BeforeClass
+  public static void setup() {
+    scheduler = new Scheduler("SCMCommonScheduler", false, 1);
+  }
+
+  @AfterClass
+  public static void tearDown() {
+    scheduler.close();
+  }
 
   @Test
   public void testUnderReplicatedContainer()
@@ -70,7 +84,7 @@ public class TestContainerReportHandler {
     final ContainerManager containerManager = Mockito.mock(
         ContainerManager.class);
     final ReplicationActivityStatus replicationActivityStatus =
-        new ReplicationActivityStatus();
+        new ReplicationActivityStatus(scheduler);
     replicationActivityStatus.enableReplication();
 
     final PipelineManager pipelineManager = Mockito.mock(PipelineManager.class);
@@ -152,7 +166,7 @@ public class TestContainerReportHandler {
     final ContainerManager containerManager = Mockito.mock(
         ContainerManager.class);
     final ReplicationActivityStatus replicationActivityStatus =
-        new ReplicationActivityStatus();
+        new ReplicationActivityStatus(scheduler);
     replicationActivityStatus.enableReplication();
 
     final PipelineManager pipelineManager = Mockito.mock(PipelineManager.class);
@@ -234,7 +248,7 @@ public class TestContainerReportHandler {
     final ContainerManager containerManager = Mockito.mock(
         ContainerManager.class);
     final ReplicationActivityStatus replicationActivityStatus =
-        new ReplicationActivityStatus();
+        new ReplicationActivityStatus(scheduler);
     replicationActivityStatus.enableReplication();
 
     final PipelineManager pipelineManager = Mockito.mock(PipelineManager.class);
@@ -329,7 +343,7 @@ public class TestContainerReportHandler {
     final ContainerManager containerManager = Mockito.mock(
         ContainerManager.class);
     final ReplicationActivityStatus replicationActivityStatus =
-        new ReplicationActivityStatus();
+        new ReplicationActivityStatus(scheduler);
     replicationActivityStatus.enableReplication();
 
     final PipelineManager pipelineManager = Mockito.mock(PipelineManager.class);
@@ -401,7 +415,7 @@ public class TestContainerReportHandler {
     final ContainerManager containerManager = Mockito.mock(
         ContainerManager.class);
     final ReplicationActivityStatus replicationActivityStatus =
-        new ReplicationActivityStatus();
+        new ReplicationActivityStatus(scheduler);
     replicationActivityStatus.enableReplication();
 
     final PipelineManager pipelineManager = Mockito.mock(PipelineManager.class);
@@ -475,7 +489,7 @@ public class TestContainerReportHandler {
     final ContainerManager containerManager = Mockito.mock(
         ContainerManager.class);
     final ReplicationActivityStatus replicationActivityStatus =
-        new ReplicationActivityStatus();
+        new ReplicationActivityStatus(scheduler);
     replicationActivityStatus.enableReplication();
 
     final PipelineManager pipelineManager = Mockito.mock(PipelineManager.class);
@@ -572,7 +586,7 @@ public class TestContainerReportHandler {
     final ContainerManager containerManager = Mockito.mock(
         ContainerManager.class);
     final ReplicationActivityStatus replicationActivityStatus =
-        new ReplicationActivityStatus();
+        new ReplicationActivityStatus(scheduler);
     replicationActivityStatus.enableReplication();
 
     final PipelineManager pipelineManager = Mockito.mock(PipelineManager.class);
