@@ -78,8 +78,8 @@ YARN-SITE.XML_yarn.app.mapreduce.am.staging-dir=/user
 YARN_SITE_yarn.timeline-service.enabled=true
 YARN_SITE_yarn.timeline-service.generic.application.history.enabled=true
 YARN_SITE_yarn.timeline-service.hostname=jhs
-YARN-SITE.yarn.timeline-service.principal=jhs/jhs@EXAMPLE.COM
-YARN-SITE.yarn.timeline-service.keytab=/etc/security/keytabs/jhs.keytab
+YARN-SITE_yarn.timeline-service.principal=jhs/jhs@EXAMPLE.COM
+YARN-SITE_yarn.timeline-service.keytab=/etc/security/keytabs/jhs.keytab
 YARN_SITE_yarn.log.server.url=http://jhs:8188/applicationhistory/logs/
 
 YARN-SITE.XML_yarn.nodemanager.principal=nm/_HOST@EXAMPLE.COM

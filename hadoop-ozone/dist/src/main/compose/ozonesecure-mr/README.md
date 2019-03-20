@@ -51,6 +51,14 @@ hadoop fs -mkdir /user/hadoop
 
 ### WordCount
 
+Fully working with HDDS-1299
 ```
 yarn jar $HADOOP_MAPRED_HOME/hadoop-mapreduce-examples-*.jar wordcount o3fs://bucket1.vol1/key1 o3fs://bucket1.vol1/key1.count
+```
+
+### RandomWrite
+
+Not working yet, tracked by HDDS-1317
+```
+yarn jar $HADOOP_MAPRED_HOME/hadoop-mapreduce-examples-*.jar randomwriter -Dtest.randomwrite.total_bytes=10000000  o3fs://bucket1.vol1/randomwrite.out
 ```
