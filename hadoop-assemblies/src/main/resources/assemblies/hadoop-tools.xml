@@ -175,6 +175,28 @@
       <outputDirectory>/share/hadoop/${hadoop.component}/sls</outputDirectory>
     </fileSet>
     <fileSet>
+    <directory>../hadoop-dynamometer/hadoop-dynamometer-blockgen/target</directory>
+    <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>
+    <includes>
+    <include>*-sources.jar</include>
+    </includes>
+    </fileSet>
+    <fileSet>
+    <directory>../hadoop-dynamometer/hadoop-dynamometer-blockgen/target/hadoop-dynamometer-blockgen-${project.version}/dynamometer-blockgen</directory>
+    <outputDirectory>/share/hadoop/${hadoop.component}/dynamometer-blockgen</outputDirectory>
+    </fileSet>
+    <!--<fileSet>-->
+      <!--<directory>../hadoop-dynamometer/hadoop-dynamometer-blockgen/target</directory>-->
+      <!--<outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>-->
+      <!--<includes>-->
+        <!--<include>*-sources.jar</include>-->
+      <!--</includes>-->
+    <!--</fileSet>-->
+    <!--<fileSet>-->
+      <!--<directory>../hadoop-dynamometer/hadoop-dynamometer-blockgen/target/hadoop-dynamometer-blockgen-${project.version}/dynamometer-blockgen</directory>-->
+      <!--<outputDirectory>/share/hadoop/${hadoop.component}/dynamometer-blockgen</outputDirectory>-->
+    <!--</fileSet>-->
+    <fileSet>
       <directory>../hadoop-resourceestimator/target</directory>
       <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>
       <includes>
@@ -209,7 +231,7 @@
       <excludes>
         <exclude>org.apache.hadoop:hadoop-common</exclude>
         <exclude>org.apache.hadoop:hadoop-hdfs</exclude>
-        <exclude>org.apache.hadoop:hadoop-mapreduce</exclude>
+        <exclude>org.apache.hadoop:hadoop-client</exclude>
         <!-- pipes is native stuff, this just keeps pom from being package-->
         <exclude>org.apache.hadoop:hadoop-pipes</exclude>
         <!-- use slf4j from common to avoid multiple binding warnings -->

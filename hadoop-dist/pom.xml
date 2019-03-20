@@ -196,6 +196,7 @@
                     <argument>${project.version}</argument>
                     <argument>${project.build.directory}</argument>
                     <argument>${basedir}/../hadoop-tools</argument>
+                    <!--<argument>${basedir}/../hadoop-tools/hadoop-dynamometer</argument>-->
                   </arguments>
                 </configuration>
               </execution>
