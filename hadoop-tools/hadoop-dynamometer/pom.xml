@@ -15,41 +15,25 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-                      https://maven.apache.org/xsd/maven-4.0.0.xsd">
+                      http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
     <version>3.3.0-SNAPSHOT</version>
-    <relativePath>../hadoop-project</relativePath>
+    <relativePath>../../hadoop-project</relativePath>
   </parent>
-  <artifactId>hadoop-tools</artifactId>
+  <artifactId>hadoop-dynamometer</artifactId>
   <version>3.3.0-SNAPSHOT</version>
-  <description>Apache Hadoop Tools</description>
-  <name>Apache Hadoop Tools</name>
+  <description>Apache Hadoop Dynamometer</description>
+  <name>Apache Hadoop Dynamometer</name>
   <packaging>pom</packaging>
 
   <modules>
-    <module>hadoop-streaming</module>
-    <module>hadoop-distcp</module>
-    <module>hadoop-dynamometer</module>
-    <module>hadoop-archives</module>
-    <module>hadoop-archive-logs</module>
-    <module>hadoop-rumen</module>
-    <module>hadoop-gridmix</module>
-    <module>hadoop-datajoin</module>
-    <module>hadoop-tools-dist</module>
-    <module>hadoop-extras</module>
-    <module>hadoop-pipes</module>
-    <module>hadoop-openstack</module>
-    <module>hadoop-sls</module>
-    <module>hadoop-resourceestimator</module>
-    <module>hadoop-azure</module>
-    <module>hadoop-aws</module>
-    <module>hadoop-kafka</module>
-    <module>hadoop-azure-datalake</module>
-    <module>hadoop-aliyun</module>
-    <module>hadoop-fs2img</module>
+    <module>hadoop-dynamometer-infra</module>
+    <module>hadoop-dynamometer-workload</module>
+    <module>hadoop-dynamometer-blockgen</module>
+    <module>hadoop-dynamometer-dist</module>
   </modules>
 
   <build>
