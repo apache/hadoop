@@ -14,11 +14,13 @@
 # Secure Docker-compose with KMS, Yarn RM and NM
 This docker compose allows to test Sample Map Reduce Jobs with OzoneFileSystem
 It is a superset of ozonesecure docker-compose, which add Yarn NM/RM in addition
-to Ozone OM/SCM/NM/DN and Kerberos KDC. 
+to Ozone OM/SCM/NM/DN and Kerberos KDC.
 
 ## Basic setup
 
 ```
+cd hadoop-ozone/dist/target/ozone-0.5.0-SNAPSHOT/compose/ozonesecure-mr
+
 docker-compose up -d
 ```
 
@@ -52,5 +54,5 @@ hadoop fs -mkdir /user/root
 ### WordCount
 
 ```
-yarn jar $HADOOP_MAPRED_HOME/hadoop-mapreduce-examples-*.jar wordcount o3fs://bucket1.vol1/key1 o3fs://bucket1.vol1/key1.count 
+yarn jar $HADOOP_MAPRED_HOME/hadoop-mapreduce-examples-*.jar wordcount o3fs://bucket1.vol1/key1 o3fs://bucket1.vol1/key1.count
 ```

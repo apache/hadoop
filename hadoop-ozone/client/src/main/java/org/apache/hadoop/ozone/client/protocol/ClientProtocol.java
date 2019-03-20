@@ -532,5 +532,5 @@ public interface ClientProtocol {
    * Get CanonicalServiceName for ozone delegation token.
    * @return Canonical Service Name of ozone delegation token.
    */
-  public String getCanonicalServiceName();
+  String getCanonicalServiceName();
 }

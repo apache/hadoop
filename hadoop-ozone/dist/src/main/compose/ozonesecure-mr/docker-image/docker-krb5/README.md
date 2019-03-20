@@ -28,7 +28,7 @@ Test:
 docker run --net=host krb5
 
 docker run --net=host -it --entrypoint=bash krb5
-kinit admin/admin 
+kinit admin/admin
 #pwd: Welcome1
 klist
 ```
