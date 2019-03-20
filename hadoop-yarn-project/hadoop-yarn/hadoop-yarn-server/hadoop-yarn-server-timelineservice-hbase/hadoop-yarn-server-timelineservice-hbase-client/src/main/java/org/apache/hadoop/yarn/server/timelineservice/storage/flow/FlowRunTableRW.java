@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.Coprocessor;
 public class FlowRunTableRW extends BaseTableRW<FlowRunTable> {
   /** entity prefix. */
   private static final String PREFIX =
-      YarnConfiguration.TIMELINE_SERVICE_PREFIX + ".flowrun";
+      YarnConfiguration.TIMELINE_SERVICE_PREFIX + "flowrun";
 
   /** config param name that specifies the flowrun table name. */
   public static final String TABLE_NAME_CONF_NAME = PREFIX + ".table.name";
