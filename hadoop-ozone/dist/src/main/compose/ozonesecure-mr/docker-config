@@ -46,7 +46,8 @@ HDFS-SITE.XML_dfs.datanode.address=0.0.0.0:1019
 HDFS-SITE.XML_dfs.datanode.http.address=0.0.0.0:1012
 CORE-SITE.XML_dfs.data.transfer.protection=authentication
 CORE-SITE.XML_hadoop.security.authentication=kerberos
-CORE-SITE.XML_hadoop.security.auth_to_local=RULE:[2:$1@$0](.*)s/.*/root/
+#CORE-SITE.XML_hadoop.security.auth_to_local=RULE:[2:$1@$0](.*)s/.*/root/
+COER-SITE.XML_hadoop.security.auth_to_local=RULE:[2:$1@$0](.*@EXAMPLE.COM)s/@.*///L
 CORE-SITE.XML_hadoop.security.key.provider.path=kms://http@kms:9600/kms
 
 #temporary disable authorization as org.apache.hadoop.yarn.server.api.ResourceTrackerPB is not properly annotated to support it
@@ -71,31 +72,35 @@ MAPRED-SITE.XML_mapreduce.map.env=HADOOP_MAPRED_HOME=/opt/hadoop
 MAPRED-SITE.XML_mapreduce.reduce.env=HADOOP_MAPRED_HOME=/opt/hadoop
 MAPRED-SITE.XML_mapreduce.map.memory.mb=4096
 MAPRED-SITE.XML_mapreduce.reduce.memory.mb=4096
-
+MAPRED-SITE.XML_mapreduce.application.classpath=/opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-0.5.0-SNAPSHOT.jar
 
 YARN-SITE.XML_yarn.app.mapreduce.am.staging-dir=/user
+YARN_SITE_yarn.timeline-service.enabled=true
+YARN_SITE_yarn.timeline-service.generic.application.history.enabled=true
+YARN_SITE_yarn.timeline-service.hostname=jhs
+YARN-SITE.yarn.timeline-service.principal=jhs/jhs@EXAMPLE.COM
+YARN-SITE.yarn.timeline-service.keytab=/etc/security/keytabs/jhs.keytab
+YARN_SITE_yarn.log.server.url=http://jhs:8188/applicationhistory/logs/
 
-YARN-SITE.XML_yarn.resourcemanager.hostname=rm
+YARN-SITE.XML_yarn.nodemanager.principal=nm/_HOST@EXAMPLE.COM
+YARN-SITE.XML_yarn.nodemanager.keytab=/etc/security/keytabs/nm.keytab
 YARN-SITE.XML_yarn.nodemanager.pmem-check-enabled=false
 YARN-SITE.XML_yarn.nodemanager.delete.debug-delay-sec=600
 YARN-SITE.XML_yarn.nodemanager.vmem-check-enabled=false
 YARN-SITE.XML_yarn.nodemanager.aux-services=mapreduce_shuffle
 
+YARN-SITE.XML_yarn.resourcemanager.hostname=rm
 YARN-SITE.XML_yarn.resourcemanager.keytab=/etc/security/keytabs/rm.keytab
 YARN-SITE.XML_yarn.resourcemanager.principal=rm/rm@EXAMPLE.COM
-YARN-SITE.XML_yarn.nodemanager.principal=nm/_HOST@EXAMPLE.COM
-YARN-SITE.XML_yarn.nodemanager.keytab=/etc/security/keytabs/nm.keytab
+YARN_SITE_XML_yarn.resourcemanager.system.metrics.publisher.enabled=true
 
-#YARN-SITE.XML_yarn.log-aggregation-enable=true
-#YARN-SITE.yarn.nodemanager.log-aggregation.roll-monitoring-interval-seconds=3600
+YARN-SITE.XML_yarn.log-aggregation-enable=true
+YARN-SITE.yarn.nodemanager.log-aggregation.roll-monitoring-interval-seconds=3600
 YARN-SITE.yarn.nodemanager.delete.debug-delay-sec=600
 
 YARN-SITE.yarn.nodemanager.container-executor.class=org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor
 YARN-SITE.yarn.nodemanager.linux-container-executor.path=/opt/hadoop/bin/container-executor
-YARN-SITE.yarn.nodemanager.linux-container-executor.group=root
-
-YARN-SITE.yarn.timeline-service.principal=yarn/_HOST@EXAMPLE.COM
-yarn.timeline-service.keytab=/etc/security/keytabs/yarn.keytab
+YARN-SITE.yarn.nodemanager.linux-container-executor.group=hadoop
 
 CAPACITY-SCHEDULER.XML_yarn.scheduler.capacity.maximum-applications=10000
 CAPACITY-SCHEDULER.XML_yarn.scheduler.capacity.maximum-am-resource-percent=0.1
@@ -162,7 +167,7 @@ LOG4J2.PROPERTIES_rootLogger.appenderRef.stdout.ref=STDOUT
 
 OZONE_DATANODE_SECURE_USER=root
 KEYTAB_DIR=/etc/security/keytabs
-KERBEROS_KEYTABS=dn om scm HTTP testuser s3g rm nm yarn
+KERBEROS_KEYTABS=dn om scm HTTP testuser s3g rm nm yarn jhs hadoop
 KERBEROS_KEYSTORES=hadoop
 KERBEROS_SERVER=kdc
 JAVA_HOME=/usr/lib/jvm/jre

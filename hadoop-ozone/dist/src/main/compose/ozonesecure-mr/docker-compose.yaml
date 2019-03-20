@@ -99,3 +99,17 @@ services:
       HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-0.5.0-SNAPSHOT.jar
       WAIT_FOR: rm:8088
     command: ["yarn","nodemanager"]
+  jhs:
+    image: apache/hadoop:${HADOOP_VERSION}
+    hostname: jhs
+    volumes:
+      - ../..:/opt/ozone
+    ports:
+      - 8188:8188
+    env_file:
+      - ./docker-config
+    environment:
+      HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-0.5.0-SNAPSHOT.jar
+      WAIT_FOR: rm:8088
+    command: ["yarn","timelineserver"]
+
