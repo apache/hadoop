@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -230,8 +231,9 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
     try {
       ClusterNode currentNode = this.clusterNodes.get(rmNode.getNodeID());
       if (currentNode == null) {
-        if (estimatedQueueWaitTime != -1
-            || comparator == LoadComparator.QUEUE_LENGTH) {
+        if (rmNode.getState() != NodeState.DECOMMISSIONING &&
+            (estimatedQueueWaitTime != -1 ||
+                comparator == LoadComparator.QUEUE_LENGTH)) {
           this.clusterNodes.put(rmNode.getNodeID(),
               new ClusterNode(rmNode.getNodeID())
                   .setQueueWaitTime(estimatedQueueWaitTime)
@@ -246,8 +248,9 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
               "wait queue length [" + waitQueueLength + "]");
         }
       } else {
-        if (estimatedQueueWaitTime != -1
-            || comparator == LoadComparator.QUEUE_LENGTH) {
+        if (rmNode.getState() != NodeState.DECOMMISSIONING &&
+            (estimatedQueueWaitTime != -1 ||
+                comparator == LoadComparator.QUEUE_LENGTH)) {
           currentNode
               .setQueueWaitTime(estimatedQueueWaitTime)
               .setQueueLength(waitQueueLength)

@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed;
 
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -99,6 +100,23 @@ public class TestNodeQueueLoadMonitor {
     Assert.assertEquals("h3:3", nodeIds.get(0).toString());
     Assert.assertEquals("h2:2", nodeIds.get(1).toString());
     Assert.assertEquals("h1:1", nodeIds.get(2).toString());
+
+    // Now update node 2 to DECOMMISSIONING state
+    selector
+        .updateNode(createRMNode("h2", 2, 1, 10, NodeState.DECOMMISSIONING));
+    selector.computeTask.run();
+    nodeIds = selector.selectNodes();
+    Assert.assertEquals(2, nodeIds.size());
+    Assert.assertEquals("h3:3", nodeIds.get(0).toString());
+    Assert.assertEquals("h1:1", nodeIds.get(1).toString());
+
+    // Now update node 2 back to RUNNING state
+    selector.updateNode(createRMNode("h2", 2, 1, 10, NodeState.RUNNING));
+    selector.computeTask.run();
+    nodeIds = selector.selectNodes();
+    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
+    Assert.assertEquals("h3:3", nodeIds.get(1).toString());
+    Assert.assertEquals("h1:1", nodeIds.get(2).toString());
   }
 
   @Test
@@ -141,6 +159,25 @@ public class TestNodeQueueLoadMonitor {
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
     System.out.println("4-> "+ nodeIds);
+    Assert.assertEquals(3, nodeIds.size());
+    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
+    Assert.assertEquals("h1:1", nodeIds.get(1).toString());
+    Assert.assertEquals("h4:4", nodeIds.get(2).toString());
+
+    // Now update h2 to Decommissioning state
+    selector.updateNode(createRMNode("h2", 2, -1,
+        5, NodeState.DECOMMISSIONING));
+    selector.computeTask.run();
+    nodeIds = selector.selectNodes();
+    Assert.assertEquals(2, nodeIds.size());
+    Assert.assertEquals("h1:1", nodeIds.get(0).toString());
+    Assert.assertEquals("h4:4", nodeIds.get(1).toString());
+
+    // Now update h2 back to Running state
+    selector.updateNode(createRMNode("h2", 2, -1,
+        5, NodeState.RUNNING));
+    selector.computeTask.run();
+    nodeIds = selector.selectNodes();
     Assert.assertEquals(3, nodeIds.size());
     Assert.assertEquals("h2:2", nodeIds.get(0).toString());
     Assert.assertEquals("h1:1", nodeIds.get(1).toString());
@@ -198,10 +235,23 @@ public class TestNodeQueueLoadMonitor {
   }
 
   private RMNode createRMNode(String host, int port,
+      int waitTime, int queueLength, NodeState state) {
+    return createRMNode(host, port, waitTime, queueLength,
+        DEFAULT_MAX_QUEUE_LENGTH, state);
+  }
+
+  private RMNode createRMNode(String host, int port,
       int waitTime, int queueLength, int queueCapacity) {
+    return createRMNode(host, port, waitTime, queueLength, queueCapacity,
+        NodeState.RUNNING);
+  }
+
+  private RMNode createRMNode(String host, int port,
+      int waitTime, int queueLength, int queueCapacity, NodeState state) {
     RMNode node1 = Mockito.mock(RMNode.class);
     NodeId nID1 = new FakeNodeId(host, port);
     Mockito.when(node1.getNodeID()).thenReturn(nID1);
+    Mockito.when(node1.getState()).thenReturn(state);
     OpportunisticContainersStatus status1 =
         Mockito.mock(OpportunisticContainersStatus.class);
     Mockito.when(status1.getEstimatedQueueWaitTime())
