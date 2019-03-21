@@ -36,8 +36,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.mockito.runners.MockitoJUnitRunner;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -46,7 +44,6 @@ import com.google.inject.Injector;
 /**
  * Unit Tests for ContainerDBServiceProviderImpl.
  */
-@RunWith(MockitoJUnitRunner.class)
 public class TestContainerDBServiceProviderImpl {
 
   @Rule

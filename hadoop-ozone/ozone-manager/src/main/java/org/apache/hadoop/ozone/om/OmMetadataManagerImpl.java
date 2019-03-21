@@ -132,6 +132,15 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     start(conf);
   }
 
+  /**
+   * For subclass overriding.
+   */
+  protected OmMetadataManagerImpl() {
+    this.lock = new OzoneManagerLock(new OzoneConfiguration());
+    this.openKeyExpireThresholdMS =
+        OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS_DEFAULT;
+  }
+
   @Override
   public Table<String, VolumeList> getUserTable() {
     return userTable;
@@ -198,65 +207,77 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     if (store == null) {
       File metaDir = OmUtils.getOmDbDir(configuration);
 
-      this.store = DBStoreBuilder.newBuilder(configuration)
+      DBStoreBuilder dbStoreBuilder = DBStoreBuilder.newBuilder(configuration)
           .setName(OM_DB_NAME)
-          .setPath(Paths.get(metaDir.getPath()))
-          .addTable(USER_TABLE)
-          .addTable(VOLUME_TABLE)
-          .addTable(BUCKET_TABLE)
-          .addTable(KEY_TABLE)
-          .addTable(DELETED_TABLE)
-          .addTable(OPEN_KEY_TABLE)
-          .addTable(S3_TABLE)
-          .addTable(MULTIPARTINFO_TABLE)
-          .addTable(S3_SECRET_TABLE)
-          .addTable(DELEGATION_TOKEN_TABLE)
-          .addCodec(OzoneTokenIdentifier.class, new TokenIdentifierCodec())
-          .addCodec(OmKeyInfo.class, new OmKeyInfoCodec())
-          .addCodec(OmBucketInfo.class, new OmBucketInfoCodec())
-          .addCodec(OmVolumeArgs.class, new OmVolumeArgsCodec())
-          .addCodec(VolumeList.class, new VolumeListCodec())
-          .addCodec(OmMultipartKeyInfo.class, new OmMultipartKeyInfoCodec())
-          .build();
-
-      userTable =
-          this.store.getTable(USER_TABLE, String.class, VolumeList.class);
-      checkTableStatus(userTable, USER_TABLE);
-      this.store.getTable(VOLUME_TABLE, String.class,
-          String.class);
-      volumeTable =
-          this.store.getTable(VOLUME_TABLE, String.class, OmVolumeArgs.class);
-      checkTableStatus(volumeTable, VOLUME_TABLE);
-
-      bucketTable =
-          this.store.getTable(BUCKET_TABLE, String.class, OmBucketInfo.class);
-      checkTableStatus(bucketTable, BUCKET_TABLE);
-
-      keyTable = this.store.getTable(KEY_TABLE, String.class, OmKeyInfo.class);
-      checkTableStatus(keyTable, KEY_TABLE);
-
-      deletedTable =
-          this.store.getTable(DELETED_TABLE, String.class, OmKeyInfo.class);
-      checkTableStatus(deletedTable, DELETED_TABLE);
-
-      openKeyTable =
-          this.store.getTable(OPEN_KEY_TABLE, String.class, OmKeyInfo.class);
-      checkTableStatus(openKeyTable, OPEN_KEY_TABLE);
-
-      s3Table = this.store.getTable(S3_TABLE);
-      checkTableStatus(s3Table, S3_TABLE);
-
-      dTokenTable = this.store.getTable(DELEGATION_TOKEN_TABLE,
-          OzoneTokenIdentifier.class, Long.class);
-      checkTableStatus(dTokenTable, DELEGATION_TOKEN_TABLE);
-
-      multipartInfoTable = this.store.getTable(MULTIPARTINFO_TABLE,
-          String.class, OmMultipartKeyInfo.class);
-      checkTableStatus(multipartInfoTable, MULTIPARTINFO_TABLE);
-
-      s3SecretTable = this.store.getTable(S3_SECRET_TABLE);
-      checkTableStatus(s3SecretTable, S3_SECRET_TABLE);
+          .setPath(Paths.get(metaDir.getPath()));
+      this.store = addOMTablesAndCodecs(dbStoreBuilder).build();
+      initializeOmTables();
     }
+  }
+
+  protected DBStoreBuilder addOMTablesAndCodecs(DBStoreBuilder builder) {
+
+    return builder.addTable(USER_TABLE)
+        .addTable(VOLUME_TABLE)
+        .addTable(BUCKET_TABLE)
+        .addTable(KEY_TABLE)
+        .addTable(DELETED_TABLE)
+        .addTable(OPEN_KEY_TABLE)
+        .addTable(S3_TABLE)
+        .addTable(MULTIPARTINFO_TABLE)
+        .addTable(DELEGATION_TOKEN_TABLE)
+        .addTable(S3_SECRET_TABLE)
+        .addCodec(OzoneTokenIdentifier.class, new TokenIdentifierCodec())
+        .addCodec(OmKeyInfo.class, new OmKeyInfoCodec())
+        .addCodec(OmBucketInfo.class, new OmBucketInfoCodec())
+        .addCodec(OmVolumeArgs.class, new OmVolumeArgsCodec())
+        .addCodec(VolumeList.class, new VolumeListCodec())
+        .addCodec(OmMultipartKeyInfo.class, new OmMultipartKeyInfoCodec());
+  }
+
+  /**
+   * Initialize OM Tables.
+   *
+   * @throws IOException
+   */
+  protected void initializeOmTables() throws IOException {
+    userTable =
+        this.store.getTable(USER_TABLE, String.class, VolumeList.class);
+    checkTableStatus(userTable, USER_TABLE);
+    this.store.getTable(VOLUME_TABLE, String.class,
+        String.class);
+    volumeTable =
+        this.store.getTable(VOLUME_TABLE, String.class, OmVolumeArgs.class);
+    checkTableStatus(volumeTable, VOLUME_TABLE);
+
+    bucketTable =
+        this.store.getTable(BUCKET_TABLE, String.class, OmBucketInfo.class);
+    checkTableStatus(bucketTable, BUCKET_TABLE);
+
+    keyTable = this.store.getTable(KEY_TABLE, String.class, OmKeyInfo.class);
+    checkTableStatus(keyTable, KEY_TABLE);
+
+    deletedTable =
+        this.store.getTable(DELETED_TABLE, String.class, OmKeyInfo.class);
+    checkTableStatus(deletedTable, DELETED_TABLE);
+
+    openKeyTable =
+        this.store.getTable(OPEN_KEY_TABLE, String.class, OmKeyInfo.class);
+    checkTableStatus(openKeyTable, OPEN_KEY_TABLE);
+
+    s3Table = this.store.getTable(S3_TABLE);
+    checkTableStatus(s3Table, S3_TABLE);
+
+    multipartInfoTable = this.store.getTable(MULTIPARTINFO_TABLE,
+        String.class, OmMultipartKeyInfo.class);
+    checkTableStatus(multipartInfoTable, MULTIPARTINFO_TABLE);
+
+    dTokenTable = this.store.getTable(DELEGATION_TOKEN_TABLE,
+        OzoneTokenIdentifier.class, Long.class);
+    checkTableStatus(dTokenTable, DELEGATION_TOKEN_TABLE);
+
+    s3SecretTable = this.store.getTable(S3_SECRET_TABLE);
+    checkTableStatus(s3SecretTable, S3_SECRET_TABLE);
   }
 
   /**
@@ -683,4 +704,14 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   public Table<byte[], byte[]> getS3SecretTable() {
     return s3SecretTable;
   }
+
+  /**
+   * Update store used by subclass.
+   *
+   * @param store DB store.
+   */
+  protected void setStore(DBStore store) {
+    this.store = store;
+  }
+
 }

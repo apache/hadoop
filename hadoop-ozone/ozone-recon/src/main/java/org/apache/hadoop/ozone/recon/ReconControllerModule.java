@@ -18,9 +18,13 @@
 package org.apache.hadoop.ozone.recon;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
+import org.apache.hadoop.ozone.recon.recovery.ReconOmMetadataManagerImpl;
+import org.apache.hadoop.ozone.recon.spi.OzoneManagerServiceProvider;
 import org.apache.hadoop.ozone.recon.spi.ReconContainerDBProvider;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
 import org.apache.hadoop.ozone.recon.spi.impl.ContainerDBServiceProviderImpl;
+import org.apache.hadoop.ozone.recon.spi.impl.OzoneManagerServiceProviderImpl;
 import org.apache.hadoop.utils.MetadataStore;
 
 import com.google.inject.AbstractModule;
@@ -34,10 +38,14 @@ public class ReconControllerModule extends AbstractModule {
   protected void configure() {
     bind(OzoneConfiguration.class).toProvider(OzoneConfigurationProvider.class);
     bind(ReconHttpServer.class).in(Singleton.class);
-    bind(MetadataStore.class).toProvider(ReconContainerDBProvider.class);
+    bind(MetadataStore.class)
+        .toProvider(ReconContainerDBProvider.class).in(Singleton.class);
+    bind(ReconOMMetadataManager.class)
+      .to(ReconOmMetadataManagerImpl.class).in(Singleton.class);
     bind(ContainerDBServiceProvider.class)
-        .to(ContainerDBServiceProviderImpl.class);
+      .to(ContainerDBServiceProviderImpl.class).in(Singleton.class);
+    bind(OzoneManagerServiceProvider.class)
+      .to(OzoneManagerServiceProviderImpl.class).in(Singleton.class);
   }
-
 
 }

@@ -18,20 +18,18 @@
 
 package org.apache.hadoop.ozone.recon.spi;
 
-import static org.apache.hadoop.ozone.recon.ReconConstants.
-    RECON_CONTAINER_DB;
-import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.
-    OZONE_RECON_CONTAINER_DB_CACHE_SIZE_DEFAULT;
-import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.
-    OZONE_RECON_CONTAINER_DB_CACHE_SIZE_MB;
-import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.
-    OZONE_RECON_DB_DIRS;
+import static org.apache.hadoop.ozone.recon.ReconConstants.RECON_CONTAINER_DB;
+import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_CONTAINER_DB_CACHE_SIZE_DEFAULT;
+import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_CONTAINER_DB_CACHE_SIZE_MB;
+import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_CONTAINER_DB_STORE_IMPL;
+import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_CONTAINER_DB_STORE_IMPL_DEFAULT;
+import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_DB_DIR;
+import static org.apache.hadoop.ozone.recon.ReconUtils.getReconDbDir;
 
 import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.utils.MetadataStore;
 import org.apache.hadoop.utils.MetadataStoreBuilder;
@@ -41,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+import com.google.inject.ProvisionException;
 
 /**
  * Provider for the Recon container DB (Metadata store).
@@ -57,21 +56,29 @@ public class ReconContainerDBProvider implements
 
   @Override
   public MetadataStore get() {
-    File metaDir = ServerUtils.getDirWithFallBackToOzoneMetadata(configuration,
-        OZONE_RECON_DB_DIRS, "Recon");
-    File containerDBPath = new File(metaDir, RECON_CONTAINER_DB);
+    File metaDir = getReconDbDir(configuration, OZONE_RECON_DB_DIR);
+    File containerDBPath = new File(metaDir,
+        RECON_CONTAINER_DB);
     int cacheSize = configuration.getInt(OZONE_RECON_CONTAINER_DB_CACHE_SIZE_MB,
         OZONE_RECON_CONTAINER_DB_CACHE_SIZE_DEFAULT);
 
+    String dbType = configuration.get(OZONE_RECON_CONTAINER_DB_STORE_IMPL,
+        OZONE_RECON_CONTAINER_DB_STORE_IMPL_DEFAULT);
+    MetadataStore metadataStore = null;
     try {
-      return MetadataStoreBuilder.newBuilder()
+      metadataStore = MetadataStoreBuilder.newBuilder()
           .setConf(configuration)
+          .setDBType(dbType)
           .setDbFile(containerDBPath)
           .setCacheSize(cacheSize * OzoneConsts.MB)
           .build();
     } catch (IOException ioEx) {
       LOG.error("Unable to initialize Recon container metadata store.", ioEx);
     }
-    return null;
+    if (metadataStore == null) {
+      throw new ProvisionException("Unable to provide instance of Metadata " +
+          "store.");
+    }
+    return metadataStore;
   }
 }

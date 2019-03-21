@@ -55,24 +55,24 @@ import org.slf4j.LoggerFactory;
 public class RDBStore implements DBStore {
   private static final Logger LOG =
       LoggerFactory.getLogger(RDBStore.class);
-  private final RocksDB db;
-  private final File dbLocation;
+  private RocksDB db;
+  private File dbLocation;
   private final WriteOptions writeOptions;
   private final DBOptions dbOptions;
   private final CodecRegistry codecRegistry;
   private final Hashtable<String, ColumnFamilyHandle> handleTable;
   private ObjectName statMBeanName;
   private RDBCheckpointManager checkPointManager;
-  private final String checkpointsParentDir;
+  private String checkpointsParentDir;
 
   @VisibleForTesting
   public RDBStore(File dbFile, DBOptions options,
                   Set<TableConfig> families) throws IOException {
-    this(dbFile, options, families, new CodecRegistry());
+    this(dbFile, options, families, new CodecRegistry(), false);
   }
 
   public RDBStore(File dbFile, DBOptions options, Set<TableConfig> families,
-                  CodecRegistry registry)
+                  CodecRegistry registry, boolean readOnly)
       throws IOException {
     Preconditions.checkNotNull(dbFile, "DB file location cannot be null");
     Preconditions.checkNotNull(families);
@@ -93,8 +93,13 @@ public class RDBStore implements DBStore {
     writeOptions = new WriteOptions();
 
     try {
-      db = RocksDB.open(dbOptions, dbLocation.getAbsolutePath(),
-          columnFamilyDescriptors, columnFamilyHandles);
+      if (readOnly) {
+        db = RocksDB.openReadOnly(dbOptions, dbLocation.getAbsolutePath(),
+            columnFamilyDescriptors, columnFamilyHandles);
+      } else {
+        db = RocksDB.open(dbOptions, dbLocation.getAbsolutePath(),
+            columnFamilyDescriptors, columnFamilyHandles);
+      }
 
       for (int x = 0; x < columnFamilyHandles.size(); x++) {
         handleTable.put(
@@ -278,4 +283,10 @@ public class RDBStore implements DBStore {
     return checkPointManager.createCheckpoint(checkpointsParentDir);
   }
 
+  /**
+   * Get current DB Location.
+   */
+  public File getDbLocation() {
+    return dbLocation;
+  }
 }
