@@ -134,11 +134,11 @@ public class TestOzoneManagerStateMachine {
 
     RaftClientRequest raftClientRequest =
         new RaftClientRequest(ClientId.randomId(),
-            RaftPeerId.valueOf("random"), raftGroupId, 1, 1,
+            RaftPeerId.valueOf("random"), raftGroupId, 1,
             Message.valueOf(
                 OMRatisHelper.convertRequestToByteString(omRequest)),
             RaftClientRequest.Type.valueOf(
-                RaftProtos.WriteRequestTypeProto.getDefaultInstance()));
+                RaftProtos.WriteRequestTypeProto.getDefaultInstance()), null);
 
     TransactionContext transactionContext =
         ozoneManagerStateMachine.startTransaction(raftClientRequest);
@@ -232,11 +232,11 @@ public class TestOzoneManagerStateMachine {
 
     RaftClientRequest raftClientRequest =
         new RaftClientRequest(ClientId.randomId(),
-            RaftPeerId.valueOf("random"), raftGroupId, 1, 1,
+            RaftPeerId.valueOf("random"), raftGroupId, 1,
             Message.valueOf(
                 OMRatisHelper.convertRequestToByteString(omRequest)),
             RaftClientRequest.Type.valueOf(
-                RaftProtos.WriteRequestTypeProto.getDefaultInstance()));
+                RaftProtos.WriteRequestTypeProto.getDefaultInstance()), null);
 
     TransactionContext transactionContext =
         ozoneManagerStateMachine.startTransaction(raftClientRequest);
