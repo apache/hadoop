@@ -25,7 +25,6 @@ import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
@@ -94,8 +93,8 @@ public class TestOzoneManagerHttpServer {
 
   @Test public void testHttpPolicy() throws Exception {
     conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, policy.name());
-    conf.set(ScmConfigKeys.OZONE_SCM_HTTPS_ADDRESS_KEY, "localhost:0");
-    InetSocketAddress addr = InetSocketAddress.createUnresolved("localhost", 0);
+    conf.set(OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY, "localhost:0");
+    conf.set(OMConfigKeys.OZONE_OM_HTTPS_ADDRESS_KEY, "localhost:0");
 
     OzoneManagerHttpServer server = null;
     try {
