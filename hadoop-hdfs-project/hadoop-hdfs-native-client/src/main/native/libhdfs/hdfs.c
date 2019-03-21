@@ -2531,6 +2531,7 @@ int hadoopRzOptionsSetByteBufferPool(
         // If the specified className is NULL, delete any previous
         // ByteBufferPool we had.
         (*env)->DeleteGlobalRef(env, opts->byteBufferPool);
+        opts->byteBufferPool = NULL;
     }
     ret = 0;
 done:
