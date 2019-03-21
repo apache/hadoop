@@ -21,6 +21,7 @@ package org.apache.hadoop.utils.db;
 
 import javax.management.MBeanServer;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.nio.charset.StandardCharsets;
@@ -288,5 +289,47 @@ public class TestRDBStore {
       Assert.assertFalse(Files.exists(
           checkpoint.getCheckpointLocation()));
     }
+  }
+
+  @Test
+  public void testReadOnlyRocksDB() throws Exception {
+    File dbFile = folder.newFolder();
+    byte[] key = "Key1".getBytes();
+    byte[] value = "Value1".getBytes();
+
+    //Create Rdb and write some data into it.
+    RDBStore newStore = new RDBStore(dbFile, options, configSet);
+    Assert.assertNotNull("DB Store cannot be null", newStore);
+    Table firstTable = newStore.getTable(families.get(0));
+    Assert.assertNotNull("Table cannot be null", firstTable);
+    firstTable.put(key, value);
+
+    RocksDBCheckpoint checkpoint = (RocksDBCheckpoint) newStore.getCheckpoint(
+        true);
+
+    //Create Read Only DB from snapshot of first DB.
+    RDBStore snapshotStore = new RDBStore(checkpoint.getCheckpointLocation()
+        .toFile(), options, configSet, new CodecRegistry(), true);
+
+    Assert.assertNotNull("DB Store cannot be null", newStore);
+
+    //Verify read is allowed.
+    firstTable = snapshotStore.getTable(families.get(0));
+    Assert.assertNotNull("Table cannot be null", firstTable);
+    Assert.assertTrue(Arrays.equals(((byte[])firstTable.get(key)), value));
+
+    //Verify write is not allowed.
+    byte[] key2 =
+        RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
+    byte[] value2 =
+        RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
+    try {
+      firstTable.put(key2, value2);
+      Assert.fail();
+    } catch (IOException e) {
+      Assert.assertTrue(e.getMessage()
+          .contains("Not supported operation in read only mode"));
+    }
+    checkpoint.cleanupCheckpoint();
   }
 }

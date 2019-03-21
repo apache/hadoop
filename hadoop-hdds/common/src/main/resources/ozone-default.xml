@@ -2258,7 +2258,7 @@
     </description>
   </property>
   <property>
-    <name>ozone.recon.db.dirs</name>
+    <name>ozone.recon.db.dir</name>
     <value/>
     <tag>OZONE, RECON, STORAGE, PERFORMANCE</tag>
     <description>
@@ -2273,7 +2273,88 @@
     <name>ozone.scm.network.topology.schema.file</name>
     <value>network-topology-default.xm</value>
     <tag>OZONE, MANAGEMENT</tag>
-    <description>The schema file defines the ozone network topology.
+    <description>
+      The schema file defines the ozone network topology
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.container.db.impl</name>
+    <value>RocksDB</value>
+    <tag>OZONE, RECON, STORAGE</tag>
+    <description>
+      Ozone Recon container DB store implementation.Supported value is either
+      LevelDB or RocksDB.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.om.db.dir</name>
+  <value/>
+  <tag>OZONE, RECON, STORAGE</tag>
+  <description>
+    Directory where the Recon Server stores its OM snapshot DB. This should
+    be specified as a single directory. If the directory does not
+    exist then the Recon will attempt to create it.
+    If undefined, then the Recon will log a warning and fallback to
+    ozone.metadata.dirs.
+  </description>
+</property>
+  <property>
+    <name>recon.om.connection.request.timeout</name>
+    <value>5000</value>
+    <tag>OZONE, RECON, OM</tag>
+    <description>
+      Connection request timeout in milliseconds for HTTP call made by Recon to
+      request OM DB snapshot.
+    </description>
+  </property>
+  <property>
+    <name>recon.om.connection.timeout</name>
+    <value>5s</value>
+    <tag>OZONE, RECON, OM</tag>
+    <description>
+      Connection timeout for HTTP call in milliseconds made by Recon to request
+      OM snapshot.
+    </description>
+  </property>
+  <property>
+    <name>recon.om.socket.timeout</name>
+    <value>5s</value>
+    <tag>OZONE, RECON, OM</tag>
+    <description>
+      Socket timeout in milliseconds for HTTP call made by Recon to request
+      OM snapshot.
+    </description>
+  </property>
+  <property>
+    <name>recon.om.socket.timeout</name>
+    <value>5s</value>
+    <tag>OZONE, RECON, OM</tag>
+    <description>
+      Socket timeout for HTTP call made by Recon to request OM snapshot.
+    </description>
+  </property>
+  <property>
+    <name>recon.om.snapshot.task.initial.delay</name>
+    <value>1m</value>
+    <tag>OZONE, RECON, OM</tag>
+    <description>
+      Initial delay in MINUTES by Recon to request OM DB Snapshot.
+    </description>
+  </property>
+  <property>
+    <name>recon.om.snapshot.task.interval.delay</name>
+    <value>10m</value>
+    <tag>OZONE, RECON, OM</tag>
+    <description>
+      Interval in MINUTES by Recon to request OM DB Snapshot.
+    </description>
+  </property>
+  <property>
+    <name>recon.om.snapshot.task.flush.param</name>
+    <value>false</value>
+    <tag>OZONE, RECON, OM</tag>
+    <description>
+      Request to flush the OM DB before taking checkpoint snapshot.
     </description>
   </property>
 </configuration>

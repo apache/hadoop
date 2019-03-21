@@ -31,4 +31,7 @@ public final class ReconConstants {
 
   public static final String RECON_CONTAINER_DB = "recon-" +
       CONTAINER_DB_SUFFIX;
+
+  public static final String RECON_OM_SNAPSHOT_DB =
+      "om.snapshot.db";
 }

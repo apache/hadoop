@@ -1,5 +1,3 @@
-package org.apache.hadoop.ozone.recon.spi;
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,23 +16,23 @@ package org.apache.hadoop.ozone.recon.spi;
  * limitations under the License.
  */
 
+package org.apache.hadoop.ozone.recon.recovery;
+
+import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 
 /**
- * Interface to access OM endpoints.
+ * Interface for the OM Metadata Manager + DB store maintained by
+ * Recon.
  */
-public interface OzoneManagerServiceProvider {
+public interface ReconOMMetadataManager extends OMMetadataManager {
 
   /**
-   * Start taking OM Snapshots.
+   * Refresh the DB instance to point to a new location. Get rid of the old
+   * DB instance.
+   * @param dbLocation New location of the OM Snapshot DB.
    */
-  void start() throws IOException;
-
-  /**
-   * Return instance of OM Metadata manager.
-   * @return OM metadata manager instance.
-   */
-  OMMetadataManager getOMMetadataManagerInstance();
+  void updateOmDB(File dbLocation) throws IOException;
 }

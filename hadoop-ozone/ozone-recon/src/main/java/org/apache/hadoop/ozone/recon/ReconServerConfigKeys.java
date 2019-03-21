@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.ozone.recon;
 
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_ROCKSDB;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -50,7 +52,40 @@ public final class ReconServerConfigKeys {
       "ozone.recon.container.db.cache.size.mb";
   public static final int OZONE_RECON_CONTAINER_DB_CACHE_SIZE_DEFAULT = 128;
 
-  public static final String OZONE_RECON_DB_DIRS = "ozone.recon.db.dirs";
+  public static final String OZONE_RECON_DB_DIR = "ozone.recon.db.dir";
+
+  public static final String OZONE_RECON_OM_SNAPSHOT_DB_DIR =
+      "ozone.recon.om.db.dir";
+
+  public static final String RECON_OM_SOCKET_TIMEOUT =
+      "recon.om.socket.timeout";
+  public static final String RECON_OM_SOCKET_TIMEOUT_DEFAULT = "5s";
+
+  public static final String RECON_OM_CONNECTION_TIMEOUT =
+      "recon.om.connection.timeout";
+  public static final String RECON_OM_CONNECTION_TIMEOUT_DEFAULT = "5s";
+
+  public static final String RECON_OM_CONNECTION_REQUEST_TIMEOUT =
+      "recon.om.connection.request.timeout";
+  public static final String RECON_OM_CONNECTION_REQUEST_TIMEOUT_DEFAULT = "5s";
+
+  public static final String RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY =
+      "recon.om.snapshot.task.initial.delay";
+  public static final String
+      RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY_DEFAULT = "1m";
+
+  public static final String OZONE_RECON_CONTAINER_DB_STORE_IMPL =
+      "ozone.recon.container.db.impl";
+  public static final String OZONE_RECON_CONTAINER_DB_STORE_IMPL_DEFAULT =
+      OZONE_METADATA_STORE_IMPL_ROCKSDB;
+
+  public static final String RECON_OM_SNAPSHOT_TASK_INTERVAL =
+      "recon.om.snapshot.task.interval.delay";
+  public static final String RECON_OM_SNAPSHOT_TASK_INTERVAL_DEFAULT
+      = "10m";
+
+  public static final String RECON_OM_SNAPSHOT_TASK_FLUSH_PARAM =
+      "recon.om.snapshot.task.flush.param";
 
   /**
    * Private constructor for utility class.
