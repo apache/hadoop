@@ -321,7 +321,7 @@ public class TeraSort extends Configured implements Tool {
       try {
         TeraInputFormat.writePartitionFile(job, partitionFile);
       } catch (Throwable e) {
-        LOG.error(e.getMessage());
+        LOG.error("{}", e.getMessage(), e);
         return -1;
       }
       job.addCacheFile(partitionUri);  
