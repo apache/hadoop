@@ -2720,6 +2720,7 @@ static int translateZCRException(JNIEnv *env, jthrowable exc)
     }
     if (!strcmp(className, "java.lang.UnsupportedOperationException")) {
         ret = EPROTONOSUPPORT;
+        destroyLocalReference(env, exc);
         goto done;
     }
     ret = printExceptionAndFree(env, exc, PRINT_EXC_ALL,
