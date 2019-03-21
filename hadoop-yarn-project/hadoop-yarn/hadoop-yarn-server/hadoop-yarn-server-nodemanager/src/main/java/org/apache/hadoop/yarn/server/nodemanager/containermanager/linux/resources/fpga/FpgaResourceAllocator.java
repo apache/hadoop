@@ -29,7 +29,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.FpgaDiscoverer;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -143,6 +142,8 @@ public class FpgaResourceAllocator {
     private Integer minor;
     // IP file identifier. matrix multiplication for instance
     private String IPID;
+    // SHA-256 hash of the uploaded aocx file
+    private String aocxHash;
     // the device name under /dev
     private String devName;
     // the alias device name. Intel use acl number acl0 to acl31
@@ -166,6 +167,14 @@ public class FpgaResourceAllocator {
 
     public String getIPID() {
       return IPID;
+    }
+
+    public String getAocxHash() {
+      return aocxHash;
+    }
+
+    public void setAocxHash(String hash) {
+      this.aocxHash = hash;
     }
 
     public void setIPID(String IPID) {
@@ -263,7 +272,8 @@ public class FpgaResourceAllocator {
     @Override
     public String toString() {
       return "FPGA Device:(Type: " + this.type + ", Major: " +
-          this.major + ", Minor: " + this.minor + ", IPID: " + this.IPID + ")";
+          this.major + ", Minor: " + this.minor + ", IPID: " +
+          this.IPID + ", Hash: " + this.aocxHash + ")";
     }
   }
 
@@ -279,11 +289,14 @@ public class FpgaResourceAllocator {
   }
 
   public synchronized void updateFpga(String requestor,
-      FpgaDevice device, String newIPID) {
+      FpgaDevice device, String newIPID, String newHash) {
     List<FpgaDevice> usedFpgas = usedFpgaByRequestor.get(requestor);
     int index = findMatchedFpga(usedFpgas, device);
     if (-1 != index) {
       usedFpgas.get(index).setIPID(newIPID);
+      FpgaDevice fpga = usedFpgas.get(index);
+      fpga.setIPID(newIPID);
+      fpga.setAocxHash(newHash);
     } else {
       LOG.warn("Failed to update FPGA due to unknown reason " +
           "that no record for this allocated device:" + device);
@@ -307,12 +320,12 @@ public class FpgaResourceAllocator {
    * @param type vendor plugin supported FPGA device type
    * @param count requested FPGA slot count
    * @param container container id
-   * @param IPIDPreference allocate slot with this IPID first
+   * @param ipidHash hash of the localized aocx file
    * @return Instance consists two List of allowed and denied {@link FpgaDevice}
    * @throws ResourceHandlerException When failed to allocate or write state store
    * */
   public synchronized FpgaAllocation assignFpga(String type, long count,
-      Container container, String IPIDPreference) throws ResourceHandlerException {
+      Container container, String ipidHash) throws ResourceHandlerException {
     List<FpgaDevice> currentAvailableFpga = availableFpga.get(type);
     String requestor = container.getContainerId().toString();
     if (null == currentAvailableFpga) {
@@ -327,8 +340,9 @@ public class FpgaResourceAllocator {
       List<FpgaDevice> assignedFpgas = new LinkedList<>();
       int matchIPCount = 0;
       for (int i = 0; i < currentAvailableFpga.size(); i++) {
-        if ( null != currentAvailableFpga.get(i).getIPID() &&
-            currentAvailableFpga.get(i).getIPID().equalsIgnoreCase(IPIDPreference)) {
+        String deviceIPIDhash = currentAvailableFpga.get(i).getAocxHash();
+        if (deviceIPIDhash != null &&
+            deviceIPIDhash.equalsIgnoreCase(ipidHash)) {
           assignedFpgas.add(currentAvailableFpga.get(i));
           currentAvailableFpga.remove(i);
           matchIPCount++;
