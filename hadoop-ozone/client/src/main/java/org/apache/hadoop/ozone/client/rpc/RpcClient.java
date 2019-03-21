@@ -460,8 +460,8 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
       token.setService(dtService);
       LOG.debug("Created token {} for dtService {}", token, dtService);
     } else {
-      LOG.debug("Cannot get ozone delegation token from {} for service {}",
-          renewer, dtService);
+      LOG.debug("Cannot get ozone delegation token for renewer {} to access " +
+          "service {}", renewer, dtService);
     }
     return token;
   }

@@ -134,10 +134,8 @@ public class OzoneDelegationTokenSecretManager
     addToTokenStore(identifier, password, expiryTime);
     Token<OzoneTokenIdentifier> token = new Token<>(identifier.getBytes(),
         password, identifier.getKind(), getService());
-    if (LOG.isTraceEnabled()) {
-      String tokenId = identifier.toStringStable();
-      LOG.trace("Issued delegation token -> expiryTime:{},tokenId:{}",
-          expiryTime, tokenId);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Created delegation token: {}", token);
     }
     return token;
   }

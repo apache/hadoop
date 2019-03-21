@@ -1484,9 +1484,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         realUser = new Text(ugi.getRealUser().getUserName());
       }
 
-      token = delegationTokenMgr.createToken(owner, renewer, realUser);
-      LOG.debug("OmDelegationToken: {} created.", token);
-      return token;
+      return delegationTokenMgr.createToken(owner, renewer, realUser);
     } catch (OMException oex) {
       throw oex;
     } catch (IOException ex) {
