@@ -288,6 +288,57 @@ For the default test dataset, hosted in the `landsat-pds` bucket, this is:
 </property>
 ```
 
+## <a name="versions"></a> Testing against versioned buckets
+
+AWS S3 and some third party stores support versioned buckets.
+
+Hadoop is adding awareness of this, including 
+
+* Using version ID to guarantee consistent reads of opened files.
+  [HADOOP-15625](https://issues.apache.org/jira/browse/HADOOP-15625)
+* Using version ID to guarantee consistent multipart copies.
+* Checks to avoid creating needless delete markers.
+
++ maybe more to come.
+
+To test these features, you need to have buckets with object versioning
+enabled.
+
+A full `hadoop-aws` test run implicitly cleans up all files in the bucket
+in `ITestS3AContractRootDir`, so all every test run creates a large set of
+old (deleted) file versions. To avoid large bills, you must
+create a lifecycle rule on the bucket to purge the old versions.
+
+
+
+### How to set up a test bucket for object versioning
+
+1. Find the bucket in the AWS management console.
+1. In the _Properties_ tab, enable versioning.
+1. In the _Management_ tab, add a lifecycle rule with an "expiration" policy
+to delete old versions (included deletion markers)
+in 1-2 days.
+1. Consider also adding an "abort all multipart uploads" option here too.
+
+![expiry rule](../../images/tools/hadoop-aws/delete-old-versions.png)
+
+
+You will be billed for all old versions of every file, so this lifecycle rule _is critical_.
+
+
+Once versioning is enabled, set change detection to `versionid` for the bucket,
+so that it will be used for all IO in the test suite.
+
+```xml
+<property>
+  <name>fs.s3a.bucket.TEST-BUCKET.change.detection.source</name>
+  <value>versionid</value>
+</property>
+```
+
+To verify that the bucket has version support enabled, execute the test
+`ITestS3ARemoteFileChanged` and verify that _no tests are skipped_.
+
 ## <a name="reporting"></a> Viewing Integration Test Reports
 
 
