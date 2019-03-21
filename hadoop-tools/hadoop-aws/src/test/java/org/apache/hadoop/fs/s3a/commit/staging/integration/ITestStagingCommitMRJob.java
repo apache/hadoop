@@ -18,25 +18,53 @@
 
 package org.apache.hadoop.fs.s3a.commit.staging.integration;
 
-import org.junit.Test;
+import java.io.IOException;
 
 import org.hamcrest.core.StringContains;
 import org.hamcrest.core.StringEndsWith;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.AbstractITCommitMRJob;
-import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingCommitter;
-import org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_TMP_PATH;
 import static org.apache.hadoop.fs.s3a.commit.staging.Paths.getMultipartUploadCommitsDirectory;
+import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.STAGING_UPLOADS;
 
 /**
  * Full integration test for the staging committer.
  */
-public class ITStagingCommitMRJob extends AbstractITCommitMRJob {
+public final class ITestStagingCommitMRJob extends AbstractITCommitMRJob {
+
+  /**
+   * The static cluster binding with the lifecycle of this test; served
+   * through instance-level methods for sharing across methods in the
+   * suite.
+   */
+  @SuppressWarnings("StaticNonFinalField")
+  private static ClusterBinding clusterBinding;
+
+  @BeforeClass
+  public static void setupClusters() throws IOException {
+    clusterBinding = createCluster(new JobConf());
+  }
+
+  @AfterClass
+  public static void teardownClusters() throws IOException {
+    clusterBinding.terminate();
+  }
+
+  @Override
+  public ClusterBinding getClusterBinding() {
+    return clusterBinding;
+  }
 
   @Override
   protected String committerName() {
@@ -51,12 +79,12 @@ public class ITStagingCommitMRJob extends AbstractITCommitMRJob {
   public void testStagingDirectory() throws Throwable {
     FileSystem hdfs = getDFS();
     Configuration conf = hdfs.getConf();
-    conf.set(CommitConstants.FS_S3A_COMMITTER_STAGING_TMP_PATH,
-        "private");
+    conf.set(FS_S3A_COMMITTER_STAGING_TMP_PATH, "private");
     Path dir = getMultipartUploadCommitsDirectory(conf, "UUID");
-    assertThat(dir.toString(), StringEndsWith.endsWith(
-        "UUID/"
-        + StagingCommitterConstants.STAGING_UPLOADS));
+    assertThat("Directory " + dir + " path is wrong",
+        dir.toString(),
+        StringEndsWith.endsWith("UUID/"
+        + STAGING_UPLOADS));
     assertTrue("path unqualified", dir.isAbsolute());
     String self = UserGroupInformation.getCurrentUser().getShortUserName();
     assertThat(dir.toString(),

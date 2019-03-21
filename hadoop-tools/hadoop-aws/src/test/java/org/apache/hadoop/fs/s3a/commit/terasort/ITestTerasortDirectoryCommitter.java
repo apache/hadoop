@@ -16,18 +16,47 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.commit.staging.integration;
+package org.apache.hadoop.fs.s3a.commit.terasort;
 
-import org.apache.hadoop.fs.s3a.commit.AbstractITCommitMRJob;
+import java.io.IOException;
+
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+
 import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitter;
+import org.apache.hadoop.mapred.JobConf;
 
 /**
- * Full integration test for the directory committer.
+ * Terasort with the directory committer.
  */
-public class ITDirectoryCommitMRJob extends AbstractITCommitMRJob {
+public final class ITestTerasortDirectoryCommitter extends AbstractCommitTerasortIT {
+
+  /**
+   * The static cluster binding with the lifecycle of this test; served
+   * through instance-level methods for sharing across methods in the
+   * suite.
+   */
+  @SuppressWarnings("StaticNonFinalField")
+  private static ClusterBinding clusterBinding;
+
+  @BeforeClass
+  public static void setupClusters() throws IOException {
+    clusterBinding = createCluster(new JobConf());
+  }
+
+  @AfterClass
+  public static void teardownClusters() throws IOException {
+    clusterBinding.terminate();
+  }
+
+  @Override
+  public ClusterBinding getClusterBinding() {
+    return clusterBinding;
+  }
 
   @Override
   protected String committerName() {
     return DirectoryStagingCommitter.NAME;
   }
+
 }

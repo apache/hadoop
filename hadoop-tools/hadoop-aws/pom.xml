@@ -186,6 +186,7 @@
                     <exclude>**/ITestS3AHuge*.java</exclude>
                     <!-- this sets out to overlaod DynamoDB, so must be run standalone -->
                     <exclude>**/ITestDynamoDBMetadataStoreScale.java</exclude>
+                    <exclude>**/ITestTerasort*.java</exclude>
                   </excludes>
                 </configuration>
               </execution>
@@ -220,6 +221,9 @@
                     <include>**/ITestS3AEncryptionSSEC*.java</include>
                     <!-- this sets out to overlaod DynamoDB, so must be run standalone -->
                     <include>**/ITestDynamoDBMetadataStoreScale.java</include>
+                    <!-- the terasort tests both work with a file in the same path in -->
+                    <!--  the local FS. Running them sequentially guarantees isolation -->
+                    <include>**/ITestTerasort*.java</include>
                   </includes>
                 </configuration>
               </execution>

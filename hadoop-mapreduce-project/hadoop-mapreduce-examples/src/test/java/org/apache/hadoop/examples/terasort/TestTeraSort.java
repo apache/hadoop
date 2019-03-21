@@ -61,7 +61,7 @@ public class TestTeraSort extends HadoopTestCase {
     String[] genArgs = {NUM_ROWS, sortInput.toString()};
 
     // Run TeraGen
-    assertEquals(ToolRunner.run(conf, new TeraGen(), genArgs), 0);
+    assertEquals(0, ToolRunner.run(conf, new TeraGen(), genArgs));
   }
 
   private void runTeraSort(Configuration conf,
@@ -71,7 +71,7 @@ public class TestTeraSort extends HadoopTestCase {
     String[] sortArgs = {sortInput.toString(), sortOutput.toString()};
 
     // Run Sort
-    assertEquals(ToolRunner.run(conf, new TeraSort(), sortArgs), 0);
+    assertEquals(0, ToolRunner.run(conf, new TeraSort(), sortArgs));
   }
 
   private void runTeraValidator(Configuration job,
@@ -80,7 +80,7 @@ public class TestTeraSort extends HadoopTestCase {
     String[] svArgs = {sortOutput.toString(), valOutput.toString()};
 
     // Run Tera-Validator
-    assertEquals(ToolRunner.run(job, new TeraValidate(), svArgs), 0);
+    assertEquals(0, ToolRunner.run(job, new TeraValidate(), svArgs));
   }
 
   @Test
