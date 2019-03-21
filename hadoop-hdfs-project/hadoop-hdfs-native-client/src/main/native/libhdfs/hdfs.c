@@ -300,7 +300,7 @@ int hdfsFileIsOpenForWrite(hdfsFile file)
 
 int hdfsFileUsesDirectRead(hdfsFile file)
 {
-    return !!(file->flags & HDFS_FILE_SUPPORTS_DIRECT_READ);
+    return (file->flags & HDFS_FILE_SUPPORTS_DIRECT_READ) != 0;
 }
 
 void hdfsFileDisableDirectRead(hdfsFile file)
@@ -310,7 +310,7 @@ void hdfsFileDisableDirectRead(hdfsFile file)
 
 int hdfsFileUsesDirectPread(hdfsFile file)
 {
-    return !!(file->flags & HDFS_FILE_SUPPORTS_DIRECT_PREAD);
+    return (file->flags & HDFS_FILE_SUPPORTS_DIRECT_PREAD) != 0;
 }
 
 void hdfsFileDisableDirectPread(hdfsFile file)

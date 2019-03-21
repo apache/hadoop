@@ -19,6 +19,7 @@ package org.apache.hadoop.fs;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -40,9 +41,10 @@ public interface ByteBufferReadable {
    * are undefined, and callers should be prepared to recover from this
    * eventuality.
    * <p>
-   * Many implementations will throw {@link UnsupportedOperationException}, so
-   * callers that are not confident in support for this method from the
-   * underlying filesystem should be prepared to handle that exception.
+   * Callers should use {@link StreamCapabilities#hasCapability(String)} with
+   * {@link StreamCapabilities#READBYTEBUFFER} to check if the underlying
+   * stream supports this interface, otherwise they might get a
+   * {@link UnsupportedOperationException}.
    * <p>
    * Implementations should treat 0-length requests as legitimate, and must not
    * signal an error upon their receipt.

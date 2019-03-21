@@ -370,10 +370,12 @@ public class CryptoInputStream extends FilterInputStream implements
    */
   private void decrypt(long position, byte[] buffer, int offset, int length) 
       throws IOException {
-    ByteBuffer inBuffer = getBuffer();
-    ByteBuffer outBuffer = getBuffer();
+    ByteBuffer inBuffer = null;
+    ByteBuffer outBuffer = null;
     Decryptor decryptor = null;
     try {
+      inBuffer = getBuffer();
+      outBuffer = getBuffer();
       decryptor = getDecryptor();
       byte[] iv = initIV.clone();
       updateDecryptor(decryptor, position, iv);
@@ -423,13 +425,15 @@ public class CryptoInputStream extends FilterInputStream implements
    */
   private void decrypt(long position, ByteBuffer buf, int n, int start)
           throws IOException {
-    ByteBuffer localInBuffer = getBuffer();
-    ByteBuffer localOutBuffer = getBuffer();
+    ByteBuffer localInBuffer = null;
+    ByteBuffer localOutBuffer = null;
     final int pos = buf.position();
     final int limit = buf.limit();
     int len = 0;
     Decryptor localDecryptor = null;
     try {
+      localInBuffer = getBuffer();
+      localOutBuffer = getBuffer();
       localDecryptor = getDecryptor();
       byte[] localIV = initIV.clone();
       updateDecryptor(localDecryptor, position, localIV);
