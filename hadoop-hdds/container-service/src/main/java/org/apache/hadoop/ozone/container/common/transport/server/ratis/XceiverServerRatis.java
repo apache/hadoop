@@ -495,7 +495,8 @@ public final class XceiverServerRatis extends XceiverServer {
       RaftClientRequest.Type type) {
     return new RaftClientRequest(clientId, server.getId(),
         RaftGroupId.valueOf(PipelineID.getFromProtobuf(pipelineID).getId()),
-        nextCallId(), 0, Message.valueOf(request.toByteString()), type);
+        nextCallId(), Message.valueOf(request.toByteString()), type,
+        null);
   }
 
   private void handlePipelineFailure(RaftGroupId groupId,
