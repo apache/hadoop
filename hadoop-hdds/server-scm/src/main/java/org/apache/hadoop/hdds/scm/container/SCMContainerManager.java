@@ -132,6 +132,16 @@ public class SCMContainerManager implements ContainerManager {
   }
 
   @Override
+  public Set<ContainerID> getContainerIDs() {
+    lock.lock();
+    try {
+      return containerStateManager.getAllContainerIDs();
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  @Override
   public List<ContainerInfo> getContainers() {
     lock.lock();
     try {
