@@ -397,7 +397,7 @@ public class KeyOutputStream extends OutputStream {
     }
     PipelineID pipelineId = null;
     long totalSuccessfulFlushedData =
-        streamEntry.getTotalSuccessfulFlushedData();
+        streamEntry.getTotalAckDataLength();
     //set the correct length for the current stream
     streamEntry.setCurrentPosition(totalSuccessfulFlushedData);
     long bufferedDataLen = computeBufferData();
@@ -498,7 +498,7 @@ public class KeyOutputStream extends OutputStream {
     return t instanceof ContainerNotOpenException;
   }
 
-  private Throwable checkForException(IOException ioe) throws IOException {
+  public Throwable checkForException(IOException ioe) throws IOException {
     Throwable t = ioe.getCause();
     while (t != null) {
       for (Class<? extends Exception> cls : OzoneClientUtils

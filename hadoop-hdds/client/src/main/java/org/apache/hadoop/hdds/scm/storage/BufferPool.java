@@ -32,12 +32,12 @@ public class BufferPool {
   private List<ByteBuffer> bufferList;
   private int currentBufferIndex;
   private final int bufferSize;
-  private final int capacity;
+  private final long capacity;
 
-  public BufferPool(int bufferSize, int capacity) {
+  public BufferPool(int bufferSize, long capacity) {
     this.capacity = capacity;
     this.bufferSize = bufferSize;
-    bufferList = new ArrayList<>(capacity);
+    bufferList = new ArrayList<>();
     currentBufferIndex = -1;
   }
 
@@ -90,6 +90,7 @@ public class BufferPool {
   public void checkBufferPoolEmpty() {
     Preconditions.checkArgument(computeBufferData() == 0);
   }
+
   public long computeBufferData() {
     return bufferList.stream().mapToInt(value -> value.position())
         .sum();

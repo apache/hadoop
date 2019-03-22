@@ -75,7 +75,7 @@ public class BlockID {
   @Override
   public String toString() {
     return new StringBuffer().append(getContainerBlockID().toString())
-        .append(" bcId: ")
+        .append(" bcsId: ")
         .append(blockCommitSequenceId)
         .toString();
   }

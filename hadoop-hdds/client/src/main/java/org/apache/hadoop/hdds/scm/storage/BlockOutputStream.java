@@ -17,6 +17,7 @@
  */
 
 package org.apache.hadoop.hdds.scm.storage;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
@@ -112,7 +113,10 @@ public class BlockOutputStream extends OutputStream {
 
   // The map should maintain the keys (logIndexes) in order so that while
   // removing we always end up updating incremented data flushed length.
-  private ConcurrentSkipListMap<Long, Long> commitIndex2flushedDataMap;
+  // Also, corresponding to the chukCount info, these many uffers will be
+  // released from the buffer pool.
+  private ConcurrentSkipListMap<Long, CommitBlockInfo>
+      commitIndex2flushedDataMap;
 
   private List<DatanodeDetails> failedServers;
 
@@ -169,11 +173,43 @@ public class BlockOutputStream extends OutputStream {
     failedServers = Collections.emptyList();
   }
 
+  /**
+   * This class holds the info regarding the no of chunks getting updated
+   * in Datanode Rock's DB with each putBlock call as well as the length of
+   * data actually being flushed till this call.
+   */
+  public static class CommitBlockInfo {
+
+    /**
+     * logIndex associated with the ratis transaction of PutBlock
+     */
+    private final long length;
+
+    /**
+     * No of buffers(partial or full) getting updated with the call
+     */
+    private final int bufCount;
+
+    public CommitBlockInfo(int count, long length) {
+      this.bufCount = count;
+      this.length = length;
+    }
+
+    public long getLength() {
+      return length;
+    }
+
+    public int getBufCount() {
+      return bufCount;
+    }
+  }
+
+
   public BlockID getBlockID() {
     return blockID;
   }
 
-  public long getTotalSuccessfulFlushedData() {
+  public long getTotalAckDataLength() {
     return totalAckDataLength;
   }
 
@@ -224,7 +260,7 @@ public class BlockOutputStream extends OutputStream {
       len -= writeLen;
       writtenDataLength += writeLen;
       if (shouldFlush()) {
-        totalDataFlushedLength += streamBufferFlushSize;
+        updateFlushLength();
         handlePartialFlush();
       }
       // Data in the bufferPool can not exceed streamBufferMaxSize
@@ -236,6 +272,10 @@ public class BlockOutputStream extends OutputStream {
 
   private boolean shouldFlush() {
     return writtenDataLength % streamBufferFlushSize == 0;
+  }
+
+  private void updateFlushLength() {
+    totalDataFlushedLength += writtenDataLength - totalDataFlushedLength;
   }
 
   private boolean isBufferPoolFull() {
@@ -267,7 +307,7 @@ public class BlockOutputStream extends OutputStream {
       if (shouldFlush()) {
         // reset the position to zero as now we will be reading the
         // next buffer in the list
-        totalDataFlushedLength += streamBufferFlushSize;
+        updateFlushLength();
         handlePartialFlush();
       }
 
@@ -289,7 +329,8 @@ public class BlockOutputStream extends OutputStream {
     Preconditions.checkArgument(!commitIndex2flushedDataMap.isEmpty());
     for (long index : indexes) {
       Preconditions.checkState(commitIndex2flushedDataMap.containsKey(index));
-      long length = commitIndex2flushedDataMap.remove(index);
+      CommitBlockInfo info = commitIndex2flushedDataMap.get(index);
+      long length = info.getLength();
 
       // totalAckDataLength replicated yet should always be less than equal to
       // the current length being returned from commitIndex2flushedDataMap.
@@ -300,13 +341,11 @@ public class BlockOutputStream extends OutputStream {
       LOG.debug("Total data successfully replicated: " + totalAckDataLength);
       futureMap.remove(totalAckDataLength);
       // Flush has been committed to required servers successful.
-      // just release the current buffer from the buffer pool.
+      // just release the current buffer from the buffer pool corresponding
+      // to the chunkCounts that benen committed wit the putBlock call.
 
-      // every entry removed from the putBlock future Map signifies
-      // streamBufferFlushSize/chunkSize no of chunks successfully committed.
-      // Release the buffers from the buffer pool to be reused again.
-      int chunkCount = (int) (streamBufferFlushSize / chunkSize);
-      for (int i = 0; i < chunkCount; i++) {
+      int bufCount = info.getBufCount();
+      for (int i = 0; i < bufCount; i++) {
         bufferPool.releaseBuffer();
       }
     }
@@ -325,9 +364,10 @@ public class BlockOutputStream extends OutputStream {
         waitOnFlushFutures();
       }
     } catch (InterruptedException | ExecutionException e) {
-      adjustBuffersOnException();
-      throw new IOException(
+      ioException = new IOException(
           "Unexpected Storage Container Exception: " + e.toString(), e);
+      adjustBuffersOnException();
+      throw ioException;
     }
     if (!commitIndex2flushedDataMap.isEmpty()) {
       watchForCommit(
@@ -393,6 +433,7 @@ public class BlockOutputStream extends OutputStream {
       throws IOException {
     checkOpen();
     long flushPos = totalDataFlushedLength;
+    int bufCount = chunkIndex;
     String requestId =
         traceID + ContainerProtos.Type.PutBlock + chunkIndex + blockID;
     CompletableFuture<ContainerProtos.
@@ -410,17 +451,24 @@ public class BlockOutputStream extends OutputStream {
         }
         // if the ioException is not set, putBlock is successful
         if (ioException == null) {
-          LOG.debug(
-              "Adding index " + asyncReply.getLogIndex() + " commitMap size "
-                  + commitIndex2flushedDataMap.size());
           BlockID responseBlockID = BlockID.getFromProtobuf(
               e.getPutBlock().getCommittedBlockLength().getBlockID());
           Preconditions.checkState(blockID.getContainerBlockID()
               .equals(responseBlockID.getContainerBlockID()));
           // updates the bcsId of the block
           blockID = responseBlockID;
+
+          // num of chunks getting flushed with this putBlock call
+          int numBuffers =
+               bufCount - commitIndex2flushedDataMap.values().stream()
+                  .mapToInt(v -> v.getBufCount()).sum();
+          LOG.info(
+              "Adding index " + asyncReply.getLogIndex() + " commitMap size "
+                  + commitIndex2flushedDataMap.size() + " flushLength "
+                  + flushPos + " numChunks " + numBuffers);
+          CommitBlockInfo info = new CommitBlockInfo(numBuffers, flushPos);
           // for standalone protocol, logIndex will always be 0.
-          commitIndex2flushedDataMap.put(asyncReply.getLogIndex(), flushPos);
+          commitIndex2flushedDataMap.put(asyncReply.getLogIndex(), info);
         }
         return e;
       }, responseExecutor).exceptionally(e -> {
@@ -446,9 +494,12 @@ public class BlockOutputStream extends OutputStream {
       try {
         handleFlush();
       } catch (InterruptedException | ExecutionException e) {
-        adjustBuffersOnException();
-        throw new IOException(
+        // just set the exception here as well in order to maintain sanctity of
+        // ioException field
+        ioException = new IOException(
             "Unexpected Storage Container Exception: " + e.toString(), e);
+        adjustBuffersOnException();
+        throw ioException;
       }
     }
   }
@@ -473,9 +524,12 @@ public class BlockOutputStream extends OutputStream {
     // flush the last chunk data residing on the currentBuffer
     if (totalDataFlushedLength < writtenDataLength) {
       ByteBuffer currentBuffer = bufferPool.getBuffer();
-      int pos = currentBuffer.position();
       writeChunk(currentBuffer);
-      totalDataFlushedLength += pos;
+      // This can be a partially filled chunk. Since we are flushing the buffer
+      // here, we just limit this buffer to the current position. So that next
+      // write will happen in new buffer
+     // currentBuffer.flip();
+      updateFlushLength();
       handlePartialFlush();
     }
     waitOnFlushFutures();
@@ -506,9 +560,10 @@ public class BlockOutputStream extends OutputStream {
           watchForCommit(lastIndex);
         }
       } catch (InterruptedException | ExecutionException e) {
-        adjustBuffersOnException();
-        throw new IOException(
+        ioException = new IOException(
             "Unexpected Storage Container Exception: " + e.toString(), e);
+        adjustBuffersOnException();
+        throw ioException;
       } finally {
         cleanup(false);
       }
