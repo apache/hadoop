@@ -291,14 +291,14 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
   @Override
   public Token<OzoneTokenIdentifier> getDelegationToken(String renewer)
       throws IOException {
-    if (!securityEnabled || renewer == null) {
+    if (!securityEnabled) {
       return null;
-    } else {
-      Token<OzoneTokenIdentifier> token =
-          ozoneClient.getObjectStore().getDelegationToken(new Text(renewer));
-      token.setKind(OzoneTokenIdentifier.KIND_NAME);
-      return token;
     }
+    Token<OzoneTokenIdentifier> token = ozoneClient.getObjectStore()
+        .getDelegationToken(renewer == null ? null : new Text(renewer));
+    token.setKind(OzoneTokenIdentifier.KIND_NAME);
+    return token;
+
   }
 
   @Override
