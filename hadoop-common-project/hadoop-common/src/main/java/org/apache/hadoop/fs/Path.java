@@ -40,7 +40,8 @@ import org.apache.hadoop.conf.Configuration;
 @Stringable
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class Path implements Comparable, Serializable, ObjectInputValidation {
+public class Path
+    implements Comparable<Path>, Serializable, ObjectInputValidation {
 
   /**
    * The directory separator, a slash.
@@ -490,11 +491,10 @@ public class Path implements Comparable, Serializable, ObjectInputValidation {
   }
 
   @Override
-  public int compareTo(Object o) {
-    Path that = (Path)o;
-    return this.uri.compareTo(that.uri);
+  public int compareTo(Path o) {
+    return this.uri.compareTo(o.uri);
   }
-  
+
   /**
    * Returns the number of elements in this path.
    * @return the number of elements in this path
