@@ -27,6 +27,8 @@ docker-compose up -d
 ## Ozone Manager Setup
 
 ```
+docker-compose exec om bash
+
 kinit -kt /etc/security/keytabs/testuser.keytab testuser/om@EXAMPLE.COM
 
 ozone sh volume create /vol1
@@ -40,6 +42,8 @@ ozone fs -ls o3fs://bucket1.vol1/
 
 ## Yarn Resource Manager Setup
 ```
+docker-compose exec rm bash
+
 kinit -kt /etc/security/keytabs/hadoop.keytab hadoop/rm@EXAMPLE.COM
 export HADOOP_MAPRED_HOME=/opt/hadoop/share/hadoop/mapreduce
 
