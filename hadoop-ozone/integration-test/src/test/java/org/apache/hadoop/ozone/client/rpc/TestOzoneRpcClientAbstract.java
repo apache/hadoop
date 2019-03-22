@@ -547,6 +547,7 @@ public abstract class TestOzoneRpcClientAbstract {
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(keyName)
+        .setRefreshPipeline(true)
         .build();
     HddsProtos.ReplicationType replicationType =
         HddsProtos.ReplicationType.valueOf(type.toString());
@@ -619,7 +620,7 @@ public abstract class TestOzoneRpcClientAbstract {
     out.close();
     OmKeyArgs.Builder builder = new OmKeyArgs.Builder();
     builder.setVolumeName(volumeName).setBucketName(bucketName)
-        .setKeyName(keyName);
+        .setKeyName(keyName).setRefreshPipeline(true);
     OmKeyInfo keyInfo = ozoneManager.lookupKey(builder.build());
 
     List<OmKeyLocationInfo> locationInfoList =
@@ -891,7 +892,7 @@ public abstract class TestOzoneRpcClientAbstract {
     // First, confirm the key info from the client matches the info in OM.
     OmKeyArgs.Builder builder = new OmKeyArgs.Builder();
     builder.setVolumeName(volumeName).setBucketName(bucketName)
-        .setKeyName(keyName);
+        .setKeyName(keyName).setRefreshPipeline(true);
     OmKeyLocationInfo keyInfo = ozoneManager.lookupKey(builder.build()).
         getKeyLocationVersions().get(0).getBlocksLatestVersionOnly().get(0);
     long containerID = keyInfo.getContainerID();

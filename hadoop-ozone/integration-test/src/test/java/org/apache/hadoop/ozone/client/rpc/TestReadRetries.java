@@ -144,7 +144,7 @@ public class TestReadRetries {
     // First, confirm the key info from the client matches the info in OM.
     OmKeyArgs.Builder builder = new OmKeyArgs.Builder();
     builder.setVolumeName(volumeName).setBucketName(bucketName)
-        .setKeyName(keyName);
+        .setKeyName(keyName).setRefreshPipeline(true);
     OmKeyLocationInfo keyInfo = ozoneManager.lookupKey(builder.build()).
         getKeyLocationVersions().get(0).getBlocksLatestVersionOnly().get(0);
     long containerID = keyInfo.getContainerID();

@@ -479,6 +479,7 @@ public final class DistributedStorageHandler implements StorageHandler {
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
         .setDataSize(args.getSize())
+        .setRefreshPipeline(true)
         .build();
     OmKeyInfo keyInfo = ozoneManagerClient.lookupKey(keyArgs);
     return KeyInputStream.getFromOmKeyInfo(
@@ -513,6 +514,7 @@ public final class DistributedStorageHandler implements StorageHandler {
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
+        .setRefreshPipeline(true)
         .build();
 
     OmKeyInfo omKeyInfo = ozoneManagerClient.lookupKey(keyArgs);
@@ -534,6 +536,7 @@ public final class DistributedStorageHandler implements StorageHandler {
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
+        .setRefreshPipeline(true)
         .build();
     OmKeyInfo omKeyInfo = ozoneManagerClient.lookupKey(keyArgs);
     List<KeyLocation> keyLocations = new ArrayList<>();

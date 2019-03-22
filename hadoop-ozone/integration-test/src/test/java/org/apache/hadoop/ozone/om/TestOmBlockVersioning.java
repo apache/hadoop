@@ -115,6 +115,7 @@ public class TestOmBlockVersioning {
         .setBucketName(bucketName)
         .setKeyName(keyName)
         .setDataSize(1000)
+        .setRefreshPipeline(true)
         .build();
 
     // 1st update, version 0
@@ -214,6 +215,7 @@ public class TestOmBlockVersioning {
         .setBucketName(bucketName)
         .setKeyName(keyName)
         .setDataSize(1000)
+        .setRefreshPipeline(true)
         .build();
 
     String dataString = RandomStringUtils.randomAlphabetic(100);

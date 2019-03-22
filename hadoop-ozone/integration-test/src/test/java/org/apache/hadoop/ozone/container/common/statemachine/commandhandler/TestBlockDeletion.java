@@ -143,7 +143,9 @@ public class TestBlockDeletion {
     OmKeyArgs keyArgs = new OmKeyArgs.Builder().setVolumeName(volumeName)
         .setBucketName(bucketName).setKeyName(keyName).setDataSize(0)
         .setType(HddsProtos.ReplicationType.RATIS)
-        .setFactor(HddsProtos.ReplicationFactor.ONE).build();
+        .setFactor(HddsProtos.ReplicationFactor.ONE)
+        .setRefreshPipeline(true)
+        .build();
     List<OmKeyLocationInfoGroup> omKeyLocationInfoGroupList =
         om.lookupKey(keyArgs).getKeyLocationVersions();
 
