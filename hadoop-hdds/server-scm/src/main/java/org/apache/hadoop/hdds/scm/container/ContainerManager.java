@@ -34,6 +34,14 @@ import java.util.Set;
  */
 public interface ContainerManager extends Closeable {
 
+
+  /**
+   * Returns all the container Ids managed by ContainerManager.
+   *
+   * @return Set of ContainerID
+   */
+  Set<ContainerID> getContainerIDs();
+
   /**
    * Returns all the containers managed by ContainerManager.
    *

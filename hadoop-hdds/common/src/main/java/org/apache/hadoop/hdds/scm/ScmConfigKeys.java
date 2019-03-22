@@ -348,6 +348,18 @@ public final class ScmConfigKeys {
   public static final String HDDS_SCM_WATCHER_TIMEOUT_DEFAULT =
       "10m";
 
+  public static final String HDDS_SCM_REPLICATION_THREAD_INTERVAL =
+      "hdds.scm.replication.thread.interval";
+
+  public static final String HDDS_SCM_REPLICATION_THREAD_INTERVAL_DEFAULT =
+      "5m";
+
+  public static final String HDDS_SCM_REPLICATION_EVENT_TIMEOUT =
+      "hdds.scm.replication.event.timeout";
+
+  public static final String HDDS_SCM_REPLICATION_EVENT_TIMEOUT_DEFAULT =
+      "10m";
+
   public static final String
       HDDS_SCM_HTTP_KERBEROS_PRINCIPAL_KEY =
       "hdds.scm.http.kerberos.principal";

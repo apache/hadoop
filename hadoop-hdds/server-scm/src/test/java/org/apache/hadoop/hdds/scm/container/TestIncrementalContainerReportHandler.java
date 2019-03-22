@@ -38,10 +38,8 @@ import java.util.Set;
 
 import static org.apache.hadoop.hdds.scm.container
     .TestContainerReportHelper.addContainerToContainerManager;
-import static org.apache.hadoop.hdds.scm.container
-    .TestContainerReportHelper.getContainer;
-import static org.apache.hadoop.hdds.scm.container
-    .TestContainerReportHelper.getReplicas;
+import static org.apache.hadoop.hdds.scm.TestUtils.getContainer;
+import static org.apache.hadoop.hdds.scm.TestUtils.getReplicas;
 import static org.apache.hadoop.hdds.scm.container
     .TestContainerReportHelper.mockUpdateContainerReplica;
 import static org.apache.hadoop.hdds.scm.container

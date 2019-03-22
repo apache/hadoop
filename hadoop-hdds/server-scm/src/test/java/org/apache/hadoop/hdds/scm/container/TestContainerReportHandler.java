@@ -47,10 +47,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.apache.hadoop.hdds.scm.container
-    .TestContainerReportHelper.getReplicas;
-import static org.apache.hadoop.hdds.scm.container
-    .TestContainerReportHelper.getContainer;
+import static org.apache.hadoop.hdds.scm.TestUtils
+    .getReplicas;
+import static org.apache.hadoop.hdds.scm.TestUtils
+    .getContainer;
 import static org.apache.hadoop.hdds.scm.container
     .TestContainerReportHelper.addContainerToContainerManager;
 import static org.apache.hadoop.hdds.scm.container
