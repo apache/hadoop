@@ -363,8 +363,13 @@ public class DatanodeStateMachine implements Closeable {
    * @throws InterruptedException
    */
   public void join() throws InterruptedException {
-    stateMachineThread.join();
-    cmdProcessThread.join();
+    if (stateMachineThread != null) {
+      stateMachineThread.join();
+    }
+
+    if (cmdProcessThread != null) {
+      cmdProcessThread.join();
+    }
   }
 
   /**
