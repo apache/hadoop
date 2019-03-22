@@ -105,6 +105,7 @@ public class TestContainerReportWithKeys {
         .setKeyName(keyName)
         .setType(HddsProtos.ReplicationType.STAND_ALONE)
         .setFactor(HddsProtos.ReplicationFactor.ONE).setDataSize(keySize)
+        .setRefreshPipeline(true)
         .build();
 
 

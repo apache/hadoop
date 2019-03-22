@@ -234,7 +234,9 @@ public class TestDeleteContainerHandler {
             .setBucketName(bucketName)
             .setType(HddsProtos.ReplicationType.STAND_ALONE)
             .setFactor(HddsProtos.ReplicationFactor.ONE)
-            .setKeyName(keyName).build();
+            .setKeyName(keyName)
+            .setRefreshPipeline(true)
+            .build();
 
     OmKeyLocationInfo omKeyLocationInfo =
         cluster.getOzoneManager().lookupKey(keyArgs).getKeyLocationVersions()
