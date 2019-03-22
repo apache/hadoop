@@ -59,13 +59,25 @@ public class Credential {
   @SuppressWarnings("StringSplitter")
   public void parseCredential() throws OS3Exception {
     String[] split = credential.split("/");
-    if (split.length == 5) {
+    switch (split.length) {
+    case 5:
+      // Ex: dkjad922329ddnks/20190321/us-west-1/s3/aws4_request
       accessKeyID = split[0].trim();
       date = split[1].trim();
       awsRegion = split[2].trim();
       awsService = split[3].trim();
       awsRequest = split[4].trim();
-    } else {
+      return;
+    case 6:
+      // Access id is kerberos principal.
+      // Ex: testuser/om@EXAMPLE.COM/20190321/us-west-1/s3/aws4_request
+      accessKeyID = split[0] + "/" +split[1];
+      date = split[2].trim();
+      awsRegion = split[3].trim();
+      awsService = split[4].trim();
+      awsRequest = split[5].trim();
+      return;
+    default:
       LOG.error("Credentials not in expected format. credential:{}",
           credential);
       throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, credential);
