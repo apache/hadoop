@@ -23,6 +23,9 @@
 #include <pthread.h>
 #include <stdio.h>
 
+#include "exception.h"
+#include "jni_helper.h"
+
 #define UNKNOWN "UNKNOWN"
 #define MAXTHRID 256
 
@@ -46,6 +49,7 @@ void hdfsThreadDestructor(void *v)
   struct ThreadLocalState *state = (struct ThreadLocalState*)v;
   JNIEnv *env = state->env;;
   jint ret;
+  jthrowable jthr;
   char thr_name[MAXTHRID];
 
   /* Detach the current thread from the JVM */
@@ -55,12 +59,20 @@ void hdfsThreadDestructor(void *v)
     if (ret != 0) {
       fprintf(stderr, "hdfsThreadDestructor: GetJavaVM failed with error %d\n",
         ret);
-      (*env)->ExceptionDescribe(env);
+      jthr = (*env)->ExceptionOccurred(env);
+      if (jthr) {
+        (*env)->ExceptionDescribe(env);
+        (*env)->ExceptionClear(env);
+      }
     } else {
       ret = (*vm)->DetachCurrentThread(vm);
 
       if (ret != JNI_OK) {
-        (*env)->ExceptionDescribe(env);
+        jthr = (*env)->ExceptionOccurred(env);
+        if (jthr) {
+          (*env)->ExceptionDescribe(env);
+          (*env)->ExceptionClear(env);
+        }
         get_current_thread_id(env, thr_name, MAXTHRID);
 
         fprintf(stderr, "hdfsThreadDestructor: Unable to detach thread %s "
@@ -78,44 +90,60 @@ void hdfsThreadDestructor(void *v)
 }
 
 static void get_current_thread_id(JNIEnv* env, char* id, int max) {
-  jclass cls;
-  jmethodID mth;
-  jobject thr;
-  jstring thr_name;
+  jvalue jVal;
+  jobject thr = NULL;
+  jstring thr_name = NULL;
   jlong thr_id = 0;
+  jthrowable jthr = NULL;
   const char *thr_name_str;
 
-  cls = (*env)->FindClass(env, "java/lang/Thread");
-  mth = (*env)->GetStaticMethodID(env, cls, "currentThread",
-      "()Ljava/lang/Thread;");
-  thr = (*env)->CallStaticObjectMethod(env, cls, mth);
-
-  if (thr != NULL) {
-    mth = (*env)->GetMethodID(env, cls, "getId", "()J");
-    thr_id = (*env)->CallLongMethod(env, thr, mth);
-    (*env)->ExceptionDescribe(env);
-
-    mth = (*env)->GetMethodID(env, cls, "toString", "()Ljava/lang/String;");
-    thr_name = (jstring)(*env)->CallObjectMethod(env, thr, mth);
-
-    if (thr_name != NULL) {
-      thr_name_str = (*env)->GetStringUTFChars(env, thr_name, NULL);
-
-      // Treating the jlong as a long *should* be safe
-      snprintf(id, max, "%s:%ld", thr_name_str, thr_id);
-
-      // Release the char*
-      (*env)->ReleaseStringUTFChars(env, thr_name, thr_name_str);
-    } else {
-      (*env)->ExceptionDescribe(env);
-
-      // Treating the jlong as a long *should* be safe
-      snprintf(id, max, "%s:%ld", UNKNOWN, thr_id);
-    }
-  } else {
-    (*env)->ExceptionDescribe(env);
+  jthr = invokeMethod(env, &jVal, STATIC, NULL, "java/lang/Thread",
+          "currentThread", "()Ljava/lang/Thread;");
+  if (jthr) {
     snprintf(id, max, "%s", UNKNOWN);
+    printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "get_current_thread_id: Thread#currentThread failed: ");
+    goto done;
   }
+  thr = jVal.l;
+
+  jthr = invokeMethod(env, &jVal, INSTANCE, thr, "java/lang/Thread",
+                      "getId", "()J");
+  if (jthr) {
+    snprintf(id, max, "%s", UNKNOWN);
+    printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "get_current_thread_id: Thread#getId failed: ");
+    goto done;
+  }
+  thr_id = jVal.j;
+
+  jthr = invokeMethod(env, &jVal, INSTANCE, thr, "java/lang/Thread",
+                      "toString", "()Ljava/lang/String;");
+  if (jthr) {
+    snprintf(id, max, "%s:%ld", UNKNOWN, thr_id);
+    printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "get_current_thread_id: Thread#toString failed: ");
+    goto done;
+  }
+  thr_name = jVal.l;
+
+  thr_name_str = (*env)->GetStringUTFChars(env, thr_name, NULL);
+  if (!thr_name_str) {
+    printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+            "get_current_thread_id: GetStringUTFChars failed: ");
+    snprintf(id, max, "%s:%ld", UNKNOWN, thr_id);
+    goto done;
+  }
+
+  // Treating the jlong as a long *should* be safe
+  snprintf(id, max, "%s:%ld", thr_name_str, thr_id);
+
+  // Release the char*
+  (*env)->ReleaseStringUTFChars(env, thr_name, thr_name_str);
+
+done:
+  destroyLocalReference(env, thr);
+  destroyLocalReference(env, thr_name);
 
   // Make sure the id is null terminated in case we overflow the max length
   id[max - 1] = '\0';

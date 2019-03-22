@@ -2491,6 +2491,8 @@ int hadoopRzOptionsSetByteBufferPool(
     JNIEnv *env;
     jthrowable jthr;
     jobject byteBufferPool = NULL;
+    jobject globalByteBufferPool = NULL;
+    int ret;
 
     env = getJNIEnv();
     if (!env) {
@@ -2507,15 +2509,37 @@ int hadoopRzOptionsSetByteBufferPool(
       if (jthr) {
           printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
               "hadoopRzOptionsSetByteBufferPool(className=%s): ", className);
-          errno = EINVAL;
-          return -1;
+          ret = EINVAL;
+          goto done;
       }
-    }
-    if (opts->byteBufferPool) {
-        // Delete any previous ByteBufferPool we had.
+      // Only set opts->byteBufferPool if creating a global reference is
+      // successful
+      globalByteBufferPool = (*env)->NewGlobalRef(env, byteBufferPool);
+      if (!globalByteBufferPool) {
+          printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+                  "hadoopRzOptionsSetByteBufferPool(className=%s): ",
+                  className);
+          ret = EINVAL;
+          goto done;
+      }
+      // Delete any previous ByteBufferPool we had before setting a new one.
+      if (opts->byteBufferPool) {
+          (*env)->DeleteGlobalRef(env, opts->byteBufferPool);
+      }
+      opts->byteBufferPool = globalByteBufferPool;
+    } else if (opts->byteBufferPool) {
+        // If the specified className is NULL, delete any previous
+        // ByteBufferPool we had.
         (*env)->DeleteGlobalRef(env, opts->byteBufferPool);
+        opts->byteBufferPool = NULL;
     }
-    opts->byteBufferPool = (*env)->NewGlobalRef(env, byteBufferPool);
+    ret = 0;
+done:
+    destroyLocalReference(env, byteBufferPool);
+    if (ret) {
+        errno = ret;
+        return -1;
+    }
     return 0;
 }
 
@@ -2570,8 +2594,7 @@ static jthrowable hadoopRzOptionsGetEnumSet(JNIEnv *env,
     } else {
         jclass clazz = (*env)->FindClass(env, READ_OPTION);
         if (!clazz) {
-            jthr = newRuntimeError(env, "failed "
-                    "to find class for %s", READ_OPTION);
+            jthr = getPendingExceptionAndClear(env);
             goto done;
         }
         jthr = invokeMethod(env, &jVal, STATIC, NULL,
@@ -2697,6 +2720,7 @@ static int translateZCRException(JNIEnv *env, jthrowable exc)
     }
     if (!strcmp(className, "java.lang.UnsupportedOperationException")) {
         ret = EPROTONOSUPPORT;
+        destroyLocalReference(env, exc);
         goto done;
     }
     ret = printExceptionAndFree(env, exc, PRINT_EXC_ALL,
@@ -2896,8 +2920,9 @@ hdfsGetHosts(hdfsFS fs, const char *path, tOffset start, tOffset length)
     for (i = 0; i < jNumFileBlocks; ++i) {
         jFileBlock =
             (*env)->GetObjectArrayElement(env, jBlockLocations, i);
-        if (!jFileBlock) {
-            ret = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+        jthr = (*env)->ExceptionOccurred(env);
+        if (jthr || !jFileBlock) {
+            ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                 "hdfsGetHosts(path=%s, start=%"PRId64", length=%"PRId64"):"
                 "GetObjectArrayElement(%d)", path, start, length, i);
             goto done;
@@ -2930,8 +2955,9 @@ hdfsGetHosts(hdfsFS fs, const char *path, tOffset start, tOffset length)
         //Now parse each hostname
         for (j = 0; j < jNumBlockHosts; ++j) {
             jHost = (*env)->GetObjectArrayElement(env, jFileBlockHosts, j);
-            if (!jHost) {
-                ret = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+            jthr = (*env)->ExceptionOccurred(env);
+            if (jthr || !jHost) {
+                ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                     "hdfsGetHosts(path=%s, start=%"PRId64", length=%"PRId64"): "
                     "NewByteArray", path, start, length);
                 goto done;
@@ -3419,8 +3445,9 @@ hdfsFileInfo* hdfsListDirectory(hdfsFS fs, const char *path, int *numEntries)
     //Save path information in pathList
     for (i=0; i < jPathListSize; ++i) {
         tmpStat = (*env)->GetObjectArrayElement(env, jPathList, i);
-        if (!tmpStat) {
-            ret = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+        jthr = (*env)->ExceptionOccurred(env);
+        if (jthr || !tmpStat) {
+            ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                 "hdfsListDirectory(%s): GetObjectArrayElement(%d out of %d)",
                 path, i, jPathListSize);
             goto done;

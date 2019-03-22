@@ -328,6 +328,11 @@ jthrowable classNameOfObject(jobject jobj, JNIEnv *env, char **name)
         goto done;
     }
     str = (*env)->CallObjectMethod(env, cls, mid);
+    jthr = (*env)->ExceptionOccurred(env);
+    if (jthr) {
+        (*env)->ExceptionClear(env);
+        goto done;
+    }
     if (str == NULL) {
         jthr = getPendingExceptionAndClear(env);
         goto done;
@@ -644,8 +649,7 @@ jthrowable fetchEnumInstance(JNIEnv *env, const char *className,
 
     clazz = (*env)->FindClass(env, className);
     if (!clazz) {
-        return newRuntimeError(env, "fetchEnum(%s, %s): failed to find class.",
-                className, valueName);
+        return getPendingExceptionAndClear(env);
     }
     if (snprintf(prettyClass, sizeof(prettyClass), "L%s;", className)
           >= sizeof(prettyClass)) {
