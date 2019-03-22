@@ -204,13 +204,12 @@ public class TestApplicationLifetimeMonitor {
         // app4 submitted exceeding queue max lifetime,
         // so killed after queue max lifetime.
         rm.waitForState(app4.getApplicationId(), RMAppState.KILLED);
-        long totalTimeRun =
-            (app4.getFinishTime() - app4.getSubmitTime()) / 1000;
+        long totalTimeRun = app4.getFinishTime() - app4.getSubmitTime();
         Assert.assertTrue("Application killed before lifetime value",
-            totalTimeRun > maxLifetime);
+            totalTimeRun > (maxLifetime * 1000));
         Assert.assertTrue(
             "Application killed before lifetime value " + totalTimeRun,
-            totalTimeRun < maxLifetime + 10L);
+            totalTimeRun < ((maxLifetime + 10L) * 1000));
       }
     } finally {
       stopRM(rm);
