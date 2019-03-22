@@ -249,6 +249,29 @@ public abstract class CopyListing extends Configured {
   }
 
   /**
+   * Returns the key for an entry in the copy listing sequence file.
+   * @param sourcePathRoot the root source path for determining the relative
+   *                       target path
+   * @param fileStatus the copy listing file status
+   * @return the key for the sequence file entry
+   */
+  protected Text getFileListingKey(Path sourcePathRoot,
+      CopyListingFileStatus fileStatus) {
+    return new Text(DistCpUtils.getRelativePath(sourcePathRoot,
+        fileStatus.getPath()));
+  }
+
+  /**
+   * Returns the value for an entry in the copy listing sequence file.
+   * @param fileStatus the copy listing file status
+   * @return the value for the sequence file entry
+   */
+  protected CopyListingFileStatus getFileListingValue(
+      CopyListingFileStatus fileStatus) {
+    return fileStatus;
+  }
+
+  /**
    * Public Factory method with which the appropriate CopyListing implementation may be retrieved.
    * @param configuration The input configuration.
    * @param credentials Credentials object on which the FS delegation tokens are cached
