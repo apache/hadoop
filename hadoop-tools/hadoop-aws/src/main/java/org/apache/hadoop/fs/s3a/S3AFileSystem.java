@@ -2295,10 +2295,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     LOG.debug("Making directory: {}", f);
     entryPoint(INVOCATION_MKDIRS);
     FileStatus fileStatus;
-    List<Path> metadataStoreDirs = null;
-    if (hasMetadataStore()) {
-      metadataStoreDirs = new ArrayList<>();
-    }
 
     try {
       fileStatus = getFileStatus(f);
@@ -2311,9 +2307,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     } catch (FileNotFoundException e) {
       // Walk path to root, ensuring closest ancestor is a directory, not file
       Path fPart = f.getParent();
-      if (metadataStoreDirs != null) {
-        metadataStoreDirs.add(f);
-      }
       while (fPart != null) {
         try {
           fileStatus = getFileStatus(fPart);
@@ -2327,11 +2320,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           }
         } catch (FileNotFoundException fnfe) {
           instrumentation.errorIgnored();
-          // We create all missing directories in MetadataStore; it does not
-          // infer directories exist by prefix like S3.
-          if (metadataStoreDirs != null) {
-            metadataStoreDirs.add(fPart);
-          }
         }
         fPart = fPart.getParent();
       }
