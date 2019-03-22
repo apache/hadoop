@@ -162,7 +162,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   private final SCMDatanodeProtocolServer datanodeProtocolServer;
   private final SCMBlockProtocolServer blockProtocolServer;
   private final SCMClientProtocolServer clientProtocolServer;
-  private  SCMSecurityProtocolServer securityProtocolServer;
+  private SCMSecurityProtocolServer securityProtocolServer;
 
   /*
    * State Managers of SCM.
@@ -206,6 +206,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   private JvmPauseMonitor jvmPauseMonitor;
   private final OzoneConfiguration configuration;
   private final ChillModeHandler chillModeHandler;
+  private SCMContainerMetrics scmContainerMetrics;
 
   /**
    * Creates a new StorageContainerManager. Configuration will be
@@ -239,7 +240,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     Objects.requireNonNull(conf, "configuration cannot not be null");
 
     configuration = conf;
-    StorageContainerManager.initMetrics();
+    initMetrics();
     initContainerReportCache(conf);
     /**
      * It is assumed the scm --init command creates the SCM Storage Config.
@@ -366,6 +367,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     eventQueue.addHandler(SCMEvents.PIPELINE_REPORT, pipelineReportHandler);
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, chillModeHandler);
     registerMXBean();
+    registerMetricsSource(this);
   }
 
   /**
@@ -841,6 +843,10 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         jmxProperties, this);
   }
 
+  private void registerMetricsSource(SCMMXBean scmMBean) {
+    scmContainerMetrics = SCMContainerMetrics.create(scmMBean);
+  }
+
   private void unregisterMXBean() {
     if (this.scmInfoBeanName != null) {
       MBeans.unregister(this.scmInfoBeanName);
@@ -999,6 +1005,10 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     }
 
     unregisterMXBean();
+    if (scmContainerMetrics != null) {
+      scmContainerMetrics.unRegister();
+    }
+
     // Event queue must be stopped before the DB store is closed at the end.
     try {
       LOG.info("Stopping SCM Event Queue.");
@@ -1195,8 +1205,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   public Map<String, Integer> getContainerStateCount() {
     Map<String, Integer> nodeStateCount = new HashMap<>();
     for (HddsProtos.LifeCycleState state : HddsProtos.LifeCycleState.values()) {
-      nodeStateCount.put(state.toString(), containerManager.getContainers(
-          state).size());
+      nodeStateCount.put(state.toString(),
+          containerManager.getContainerCountByState(state));
     }
     return nodeStateCount;
   }

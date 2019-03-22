@@ -57,6 +57,14 @@ public interface ContainerManager extends Closeable {
   List<ContainerInfo> getContainers(HddsProtos.LifeCycleState state);
 
   /**
+   * Returns number of containers in the given,
+   *  {@link org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState}.
+   *
+   * @return Number of containers
+   */
+  Integer getContainerCountByState(HddsProtos.LifeCycleState state);
+
+  /**
    * Returns the ContainerInfo from the container ID.
    *
    * @param containerID - ID of container.
