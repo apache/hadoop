@@ -177,6 +177,16 @@ public class SCMContainerManager implements ContainerManager {
   }
 
   /**
+   * Get number of containers in the given state.
+   *
+   * @param state {@link LifeCycleState}
+   * @return Count
+   */
+  public Integer getContainerCountByState(LifeCycleState state) {
+    return containerStateManager.getContainerCountByState(state);
+  }
+
+  /**
    * {@inheritDoc}
    */
   @Override
