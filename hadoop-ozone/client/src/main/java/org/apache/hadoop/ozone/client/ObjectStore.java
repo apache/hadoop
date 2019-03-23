@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.client;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -26,6 +27,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.io.Text;
@@ -50,6 +52,7 @@ public class ObjectStore {
    * The proxy used for connecting to the cluster and perform
    * client operations.
    */
+  // TODO: remove rest api and client
   private final ClientProtocol proxy;
 
   /**
@@ -259,6 +262,14 @@ public class ObjectStore {
     proxy.deleteVolume(volumeName);
   }
 
+  public KeyProvider getKeyProvider() throws IOException {
+    return proxy.getKeyProvider();
+  }
+
+  public URI getKeyProviderUri() throws IOException {
+    return proxy.getKeyProviderUri();
+  }
+
   /**
    * An Iterator to iterate over {@link OzoneVolume} list.
    */
@@ -426,5 +437,11 @@ public class ObjectStore {
     proxy.cancelDelegationToken(token);
   }
 
+  /**
+   * @return canonical service name of ozone delegation token.
+   */
+  public String getCanonicalServiceName() {
+    return proxy.getCanonicalServiceName();
+  }
 
 }

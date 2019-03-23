@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.fs.ozone;
 
+import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.security.token.Token;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.util.Iterator;
 
 /**
@@ -57,4 +59,10 @@ public interface OzoneClientAdapter {
 
   Token<OzoneTokenIdentifier> getDelegationToken(String renewer)
       throws IOException;
+
+  KeyProvider getKeyProvider() throws IOException;
+
+  URI getKeyProviderUri() throws IOException;
+
+  String getCanonicalServiceName();
 }
