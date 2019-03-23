@@ -38,6 +38,8 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProviderTokenIssuer;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -49,6 +51,7 @@ import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 
@@ -73,7 +76,8 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class OzoneFileSystem extends FileSystem {
+public class OzoneFileSystem extends FileSystem
+    implements KeyProviderTokenIssuer {
   static final Logger LOG = LoggerFactory.getLogger(OzoneFileSystem.class);
 
   /**
@@ -298,6 +302,26 @@ public class OzoneFileSystem extends FileSystem {
                                    Progressable progress) throws IOException {
     throw new UnsupportedOperationException("append() Not implemented by the "
         + getClass().getSimpleName() + " FileSystem implementation");
+  }
+
+  @Override
+  public KeyProvider getKeyProvider() throws IOException {
+    return adapter.getKeyProvider();
+  }
+
+  @Override
+  public URI getKeyProviderUri() throws IOException {
+    return adapter.getKeyProviderUri();
+  }
+
+  @Override
+  public DelegationTokenIssuer[] getAdditionalTokenIssuers()
+      throws IOException {
+    KeyProvider keyProvider = getKeyProvider();
+    if (keyProvider instanceof DelegationTokenIssuer) {
+      return new DelegationTokenIssuer[]{(DelegationTokenIssuer)keyProvider};
+    }
+    return null;
   }
 
   private class RenameIterator extends OzoneListingIterator {
@@ -689,6 +713,16 @@ public class OzoneFileSystem extends FileSystem {
   @Override
   public Token<?> getDelegationToken(String renewer) throws IOException {
     return adapter.getDelegationToken(renewer);
+  }
+
+  /**
+   * Get a canonical service name for this file system. If the URI is logical,
+   * the hostname part of the URI will be returned.
+   * @return a service string that uniquely identifies this file system.
+   */
+  @Override
+  public String getCanonicalServiceName() {
+    return adapter.getCanonicalServiceName();
   }
 
   /**

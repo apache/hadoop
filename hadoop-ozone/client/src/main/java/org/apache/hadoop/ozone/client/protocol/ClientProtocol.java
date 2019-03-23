@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.client.protocol;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.OzoneAcl;
@@ -34,6 +35,7 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
@@ -511,4 +513,24 @@ public interface ClientProtocol {
 
   @VisibleForTesting
   OMFailoverProxyProvider getOMProxyProvider();
+
+  /**
+   * Get KMS client provider.
+   * @return KMS client provider.
+   * @throws IOException
+   */
+  KeyProvider getKeyProvider() throws IOException;
+
+  /**
+   * Get KMS client provider uri.
+   * @return KMS client provider uri.
+   * @throws IOException
+   */
+  URI getKeyProviderUri() throws IOException;
+
+  /**
+   * Get CanonicalServiceName for ozone delegation token.
+   * @return Canonical Service Name of ozone delegation token.
+   */
+  String getCanonicalServiceName();
 }
