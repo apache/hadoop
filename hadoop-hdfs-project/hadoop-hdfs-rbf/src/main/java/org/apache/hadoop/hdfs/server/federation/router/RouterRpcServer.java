@@ -304,12 +304,17 @@ public class RouterRpcServer extends AbstractService
     this.rpcAddress = new InetSocketAddress(
         confRpcAddress.getHostName(), listenAddress.getPort());
 
-    // Create metrics monitor
-    Class<? extends RouterRpcMonitor> rpcMonitorClass = this.conf.getClass(
-        RBFConfigKeys.DFS_ROUTER_METRICS_CLASS,
-        RBFConfigKeys.DFS_ROUTER_METRICS_CLASS_DEFAULT,
-        RouterRpcMonitor.class);
-    this.rpcMonitor = ReflectionUtils.newInstance(rpcMonitorClass, conf);
+    if (conf.getBoolean(RBFConfigKeys.DFS_ROUTER_METRICS_ENABLE,
+        RBFConfigKeys.DFS_ROUTER_METRICS_ENABLE_DEFAULT)) {
+      // Create metrics monitor
+      Class<? extends RouterRpcMonitor> rpcMonitorClass = this.conf.getClass(
+          RBFConfigKeys.DFS_ROUTER_METRICS_CLASS,
+          RBFConfigKeys.DFS_ROUTER_METRICS_CLASS_DEFAULT,
+          RouterRpcMonitor.class);
+      this.rpcMonitor = ReflectionUtils.newInstance(rpcMonitorClass, conf);
+    } else {
+      this.rpcMonitor = null;
+    }
 
     // Create the client
     this.rpcClient = new RouterRpcClient(this.conf, this.router,
@@ -326,7 +331,7 @@ public class RouterRpcServer extends AbstractService
     this.conf = configuration;
 
     if (this.rpcMonitor == null) {
-      LOG.error("Cannot instantiate Router RPC metrics class");
+      LOG.info("Do not start Router RPC metrics");
     } else {
       this.rpcMonitor.init(this.conf, this, this.router.getStateStore());
     }
