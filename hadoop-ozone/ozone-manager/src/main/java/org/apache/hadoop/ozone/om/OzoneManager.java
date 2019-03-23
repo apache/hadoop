@@ -1463,8 +1463,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   @Override
   public Token<OzoneTokenIdentifier> getDelegationToken(Text renewer)
       throws OMException {
-    final boolean success;
-    final String tokenId;
     Token<OzoneTokenIdentifier> token;
     try {
       if (!isAllowedDelegationTokenOp()) {

@@ -21,12 +21,14 @@ import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Iterator;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -291,12 +293,27 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
       throws IOException {
     if (!securityEnabled) {
       return null;
-    } else {
-      Token<OzoneTokenIdentifier> token =
-          ozoneClient.getObjectStore().getDelegationToken(new Text(renewer));
-      token.setKind(OzoneTokenIdentifier.KIND_NAME);
-      return token;
     }
+    Token<OzoneTokenIdentifier> token = ozoneClient.getObjectStore()
+        .getDelegationToken(renewer == null ? null : new Text(renewer));
+    token.setKind(OzoneTokenIdentifier.KIND_NAME);
+    return token;
+
+  }
+
+  @Override
+  public KeyProvider getKeyProvider() throws IOException {
+    return objectStore.getKeyProvider();
+  }
+
+  @Override
+  public URI getKeyProviderUri() throws IOException {
+    return objectStore.getKeyProviderUri();
+  }
+
+  @Override
+  public String getCanonicalServiceName() {
+    return objectStore.getCanonicalServiceName();
   }
 
   /**
