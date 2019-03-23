@@ -33,6 +33,7 @@ import javax.management.StandardMBean;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.federation.metrics.NullStateStoreMetrics;
 import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMBean;
 import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMetrics;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
@@ -172,19 +173,25 @@ public class StateStoreService extends CompositeService {
     this.cacheUpdater = new StateStoreCacheUpdateService(this);
     addService(this.cacheUpdater);
 
-    // Create metrics for the State Store
-    this.metrics = StateStoreMetrics.create(conf);
+    if (conf.getBoolean(RBFConfigKeys.DFS_ROUTER_METRICS_ENABLE,
+        RBFConfigKeys.DFS_ROUTER_METRICS_ENABLE_DEFAULT)) {
+      // Create metrics for the State Store
+      this.metrics = StateStoreMetrics.create(conf);
 
-    // Adding JMX interface
-    try {
-      StandardMBean bean = new StandardMBean(metrics, StateStoreMBean.class);
-      ObjectName registeredObject =
-          MBeans.register("Router", "StateStore", bean);
-      LOG.info("Registered StateStoreMBean: {}", registeredObject);
-    } catch (NotCompliantMBeanException e) {
-      throw new RuntimeException("Bad StateStoreMBean setup", e);
-    } catch (MetricsException e) {
-      LOG.error("Failed to register State Store bean {}", e.getMessage());
+      // Adding JMX interface
+      try {
+        StandardMBean bean = new StandardMBean(metrics, StateStoreMBean.class);
+        ObjectName registeredObject =
+            MBeans.register("Router", "StateStore", bean);
+        LOG.info("Registered StateStoreMBean: {}", registeredObject);
+      } catch (NotCompliantMBeanException e) {
+        throw new RuntimeException("Bad StateStoreMBean setup", e);
+      } catch (MetricsException e) {
+        LOG.error("Failed to register State Store bean {}", e.getMessage());
+      }
+    } else {
+      LOG.info("State Store metrics not enabled");
+      this.metrics = new NullStateStoreMetrics();
     }
 
     super.serviceInit(this.conf);
