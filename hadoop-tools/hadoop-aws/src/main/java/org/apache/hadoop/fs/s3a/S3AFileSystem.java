@@ -698,7 +698,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @return the change detection policy
    */
   @VisibleForTesting
-  ChangeDetectionPolicy getChangeDetectionPolicy() {
+  public ChangeDetectionPolicy getChangeDetectionPolicy() {
     return changeDetectionPolicy;
   }
 
@@ -2920,8 +2920,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           ObjectMetadata srcom = getObjectMetadata(srcKey);
           ObjectMetadata dstom = cloneObjectMetadata(srcom);
           setOptionalObjectMetadata(dstom);
-          CopyObjectRequest copyObjectRequest =
-              new CopyObjectRequest(bucket, srcKey, bucket, dstKey);
 
           ChangeTracker changeTracker = new ChangeTracker(
               keyToQualifiedPath(srcKey).toString(),
@@ -2929,6 +2927,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               readContext.instrumentation.newInputStreamStatistics()
                   .getVersionMismatchCounter(),
               srcAttributes);
+
+          changeTracker.processMetadata(srcom, "copy", 0);
+
+          CopyObjectRequest copyObjectRequest =
+              new CopyObjectRequest(bucket, srcKey, bucket, dstKey);
           changeTracker.maybeApplyConstraint(copyObjectRequest);
 
           setOptionalCopyObjectRequestParameters(copyObjectRequest);

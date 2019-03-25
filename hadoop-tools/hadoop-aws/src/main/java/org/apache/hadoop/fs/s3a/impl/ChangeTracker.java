@@ -188,8 +188,10 @@ public class ChangeTracker {
    */
   public void processResponse(final CopyResult copyResult)
       throws PathIOException {
-    final String newRevisionId = policy.getRevisionId(copyResult);
-    processNewRevision(newRevisionId, "copy", 0);
+    // ETag (sometimes, depending on encryption and/or multipart) is not the
+    // same on the copied object as the original.  Version Id seems to never
+    // be the same on the copy.  As such, there isn't really anything that
+    // can be verified on the response.
   }
 
   /**

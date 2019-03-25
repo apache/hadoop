@@ -29,15 +29,23 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AbstractS3AMockTest;
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
  * Tests to ensure eTag is captured on S3 PUT and used on GET.
  */
 public class TestObjectETag extends AbstractS3AMockTest {
+  @Before
+  public void before() {
+    Assume.assumeTrue("change detection source should be etag",
+        fs.getChangeDetectionPolicy().getSource() == Source.ETag);
+  }
 
   /**
    * Tests a file uploaded with a single PUT to ensure eTag is captured and used

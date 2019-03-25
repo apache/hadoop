@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.amazonaws.services.s3.Headers;
+import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
@@ -49,6 +50,8 @@ public class TestStreamChangeTracker extends HadoopTestBase {
   public static final String BUCKET = "bucket";
 
   public static final String OBJECT = "object";
+
+  public static final String DEST_OBJECT = "new_object";
 
   public static final String URI = "s3a://" + BUCKET + "/" + OBJECT;
 
@@ -183,8 +186,35 @@ public class TestStreamChangeTracker extends HadoopTestBase {
     assertEquals("versionid1", tracker.getRevisionId());
   }
 
+  @Test
+  public void testVersionCheckingETagCopyServer() throws Throwable {
+    ChangeTracker tracker = newTracker(
+        ChangeDetectionPolicy.Mode.Server,
+        ChangeDetectionPolicy.Source.VersionId,
+        false,
+        objectAttributes("etag1", "versionid1"));
+    assertConstraintApplied(tracker, newCopyObjectRequest());
+  }
+
+  @Test
+  public void testVersionCheckingETagCopyClient() throws Throwable {
+    ChangeTracker tracker = newTracker(
+        ChangeDetectionPolicy.Mode.Client,
+        ChangeDetectionPolicy.Source.VersionId,
+        false,
+        objectAttributes("etag1", "versionid1"));
+    assertFalse("Tracker should not have applied contraints " + tracker,
+        tracker.maybeApplyConstraint(newCopyObjectRequest()));
+  }
+
   protected void assertConstraintApplied(final ChangeTracker tracker,
       final GetObjectRequest request) {
+    assertTrue("Tracker should have applied contraints " + tracker,
+        tracker.maybeApplyConstraint(request));
+  }
+
+  protected void assertConstraintApplied(final ChangeTracker tracker,
+      final CopyObjectRequest request) throws PathIOException {
     assertTrue("Tracker should have applied contraints " + tracker,
         tracker.maybeApplyConstraint(request));
   }
@@ -268,6 +298,10 @@ public class TestStreamChangeTracker extends HadoopTestBase {
 
   private GetObjectRequest newGetObjectRequest() {
     return new GetObjectRequest(BUCKET, OBJECT);
+  }
+
+  private CopyObjectRequest newCopyObjectRequest() {
+    return new CopyObjectRequest(BUCKET, OBJECT, BUCKET, DEST_OBJECT);
   }
 
   private S3Object newResponse(String etag, String versionId) {
