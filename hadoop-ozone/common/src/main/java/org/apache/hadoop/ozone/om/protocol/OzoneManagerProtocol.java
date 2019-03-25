@@ -36,6 +36,7 @@ import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 
 import java.io.Closeable;
@@ -397,5 +398,16 @@ public interface OzoneManagerProtocol
    * @return OMFailoverProxyProvider
    */
   OMFailoverProxyProvider getOMFailoverProxyProvider();
+
+  /**
+   * Get File Status for an Ozone key.
+   * @param volumeName volume name.
+   * @param bucketName bucket name.
+   * @param keyName key name.
+   * @return OzoneFileStatus for the key.
+   * @throws IOException
+   */
+  OzoneFileStatus getFileStatus(String volumeName, String bucketName,
+                                String keyName) throws IOException;
 }
 

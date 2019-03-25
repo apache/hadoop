@@ -32,6 +32,7 @@ import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.helpers.WithMetadata;
 
 import java.io.IOException;
@@ -464,8 +465,9 @@ public class OzoneBucket extends WithMetadata {
               partNumberMarker, maxParts);
   }
 
-
-
+  public OzoneFileStatus getFileStatus(String keyName) throws IOException {
+    return proxy.getOzoneFileStatus(volumeName, name, keyName);
+  }
 
   /**
    * An Iterator to iterate over {@link OzoneKey} list.

@@ -43,6 +43,8 @@ import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFileStatusRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFileStatusResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CancelDelegationTokenResponseProto;
@@ -309,6 +311,11 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         GetS3SecretResponse getS3SecretResp = getS3Secret(request
             .getGetS3SecretRequest());
         responseBuilder.setGetS3SecretResponse(getS3SecretResp);
+        break;
+      case GetFileStatus:
+        GetFileStatusResponse getFileStatusResponse =
+            getOzoneFileStatus(request.getGetFileStatusRequest());
+        responseBuilder.setGetFileStatusResponse(getFileStatusResponse);
         break;
       default:
         responseBuilder.setSuccess(false);
@@ -888,6 +895,16 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         OzoneManagerProtocolProtos.GetS3SecretResponse.newBuilder();
 
     rb.setS3Secret(impl.getS3Secret(request.getKerberosID()).getProtobuf());
+
+    return rb.build();
+  }
+
+  private GetFileStatusResponse getOzoneFileStatus(
+      GetFileStatusRequest request) throws IOException {
+    GetFileStatusResponse.Builder rb = GetFileStatusResponse.newBuilder();
+
+    rb.setStatus(impl.getFileStatus(request.getVolumeName(),
+        request.getBucketName(), request.getKeyName()).getProtobuf());
 
     return rb.build();
   }

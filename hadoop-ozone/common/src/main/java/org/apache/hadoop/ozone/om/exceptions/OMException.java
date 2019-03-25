@@ -185,6 +185,8 @@ public class OMException extends IOException {
 
     INVALID_KMS_PROVIDER,
 
-    TOKEN_CREATION_ERROR
+    TOKEN_CREATION_ERROR,
+
+    FILE_NOT_FOUND
   }
 }
