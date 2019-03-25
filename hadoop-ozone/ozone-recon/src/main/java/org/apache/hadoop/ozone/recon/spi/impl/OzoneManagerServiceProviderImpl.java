@@ -27,10 +27,6 @@ import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_CONNE
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_CONNECTION_TIMEOUT;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_CONNECTION_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_SNAPSHOT_TASK_FLUSH_PARAM;
-import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY;
-import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY_DEFAULT;
-import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_SNAPSHOT_TASK_INTERVAL;
-import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_SNAPSHOT_TASK_INTERVAL_DEFAULT;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_SOCKET_TIMEOUT;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_SOCKET_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.ozone.recon.ReconUtils.getReconDbDir;
@@ -42,8 +38,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
@@ -75,7 +69,6 @@ public class OzoneManagerServiceProviderImpl
   private static final Logger LOG =
       LoggerFactory.getLogger(OzoneManagerServiceProviderImpl.class);
 
-  private ScheduledExecutorService executorService;
   private final String dbCheckpointEndPoint = "/dbCheckpoint";
   private final CloseableHttpClient httpClient;
   private File omSnapshotDBParentDir = null;
@@ -89,7 +82,6 @@ public class OzoneManagerServiceProviderImpl
 
   @Inject
   public OzoneManagerServiceProviderImpl(OzoneConfiguration configuration) {
-    executorService = Executors.newSingleThreadScheduledExecutor();
 
     String ozoneManagerHttpAddress = configuration.get(OMConfigKeys
         .OZONE_OM_HTTP_ADDRESS_KEY);
@@ -141,34 +133,25 @@ public class OzoneManagerServiceProviderImpl
   }
 
   @Override
-  public void start() throws IOException {
+  public void init() throws IOException {
+    updateReconOmDBWithNewSnapshot();
+  }
 
-    //Schedule a task to periodically obtain the DB snapshot from OM and
+  @Override
+  public void updateReconOmDBWithNewSnapshot() throws IOException {
+    //Obtain the current DB snapshot from OM and
     //update the in house OM metadata managed DB instance.
-    long initialDelay = configuration.getTimeDuration(
-        RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY,
-        RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY_DEFAULT,
-        TimeUnit.MILLISECONDS);
-    long interval = configuration.getTimeDuration(
-        RECON_OM_SNAPSHOT_TASK_INTERVAL,
-        RECON_OM_SNAPSHOT_TASK_INTERVAL_DEFAULT,
-        TimeUnit.MILLISECONDS);
-
-    LOG.info("Starting thread to get OM DB Snapshot.");
-    executorService.scheduleAtFixedRate(() -> {
-      DBCheckpoint dbSnapshot = getOzoneManagerDBSnapshot();
-      if (dbSnapshot != null && dbSnapshot.getCheckpointLocation() != null) {
-        try {
-          omMetadataManager.updateOmDB(dbSnapshot.getCheckpointLocation()
-              .toFile());
-        } catch (IOException e) {
-          LOG.error("Unable to refresh Recon OM DB Snapshot. ", e);
-        }
-      } else {
-        LOG.error("Null snapshot got from OM, {}",
-            dbSnapshot.getCheckpointLocation());
+    DBCheckpoint dbSnapshot = getOzoneManagerDBSnapshot();
+    if (dbSnapshot != null && dbSnapshot.getCheckpointLocation() != null) {
+      try {
+        omMetadataManager.updateOmDB(dbSnapshot.getCheckpointLocation()
+            .toFile());
+      } catch (IOException e) {
+        LOG.error("Unable to refresh Recon OM DB Snapshot. ", e);
       }
-    }, initialDelay, interval, TimeUnit.MILLISECONDS);
+    } else {
+      LOG.error("Null snapshot location got from OM.");
+    }
   }
 
   @Override

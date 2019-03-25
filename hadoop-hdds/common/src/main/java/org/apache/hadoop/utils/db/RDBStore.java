@@ -283,9 +283,7 @@ public class RDBStore implements DBStore {
     return checkPointManager.createCheckpoint(checkpointsParentDir);
   }
 
-  /**
-   * Get current DB Location.
-   */
+  @Override
   public File getDbLocation() {
     return dbLocation;
   }

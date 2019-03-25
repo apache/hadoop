@@ -1,5 +1,3 @@
-package org.apache.hadoop.ozone.recon.spi;
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,28 +16,23 @@ package org.apache.hadoop.ozone.recon.spi;
  * limitations under the License.
  */
 
+package org.apache.hadoop.utils.db;
+
 import java.io.IOException;
 
-import org.apache.hadoop.ozone.om.OMMetadataManager;
+import com.google.common.primitives.Ints;
 
 /**
- * Interface to access OM endpoints.
+ * Codec to convert Integer to/from byte array.
  */
-public interface OzoneManagerServiceProvider {
+public class IntegerCodec implements Codec<Integer> {
+  @Override
+  public byte[] toPersistedFormat(Integer object) throws IOException {
+    return Ints.toByteArray(object);
+  }
 
-  /**
-   * Initialize Ozone Manager Service Provider Impl.
-   */
-  void init() throws IOException;
-
-  /**
-   * Update Recon OM DB with new snapshot from OM.
-   */
-  void updateReconOmDBWithNewSnapshot() throws IOException;
-
-  /**
-   * Return instance of OM Metadata manager.
-   * @return OM metadata manager instance.
-   */
-  OMMetadataManager getOMMetadataManagerInstance();
+  @Override
+  public Integer fromPersistedFormat(byte[] rawData) throws IOException {
+    return Ints.fromByteArray(rawData);
+  }
 }

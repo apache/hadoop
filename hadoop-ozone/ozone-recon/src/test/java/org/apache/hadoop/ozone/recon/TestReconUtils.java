@@ -63,7 +63,7 @@ public class TestReconUtils {
 
     File file = ReconUtils.getReconDbDir(configuration,
         "TEST_DB_DIR");
-    Assert.assertEquals(file.getAbsolutePath(), filePath);
+    Assert.assertEquals(filePath, file.getAbsolutePath());
   }
 
   @Test
@@ -129,7 +129,7 @@ public class TestReconUtils {
     InputStream inputStream = ReconUtils.makeHttpCall(httpClientMock, url);
     String contents = IOUtils.toString(inputStream, Charset.defaultCharset());
 
-    assertEquals(contents, "File 1 Contents");
+    assertEquals("File 1 Contents", contents);
   }
 
 }

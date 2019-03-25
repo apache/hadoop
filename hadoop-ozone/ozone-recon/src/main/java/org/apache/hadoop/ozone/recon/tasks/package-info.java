@@ -1,5 +1,3 @@
-package org.apache.hadoop.ozone.recon.spi;
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,29 +15,8 @@ package org.apache.hadoop.ozone.recon.spi;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import java.io.IOException;
-
-import org.apache.hadoop.ozone.om.OMMetadataManager;
-
 /**
- * Interface to access OM endpoints.
+ * The classes in this package contains the various scheduled tasks used by
+ * Recon.
  */
-public interface OzoneManagerServiceProvider {
-
-  /**
-   * Initialize Ozone Manager Service Provider Impl.
-   */
-  void init() throws IOException;
-
-  /**
-   * Update Recon OM DB with new snapshot from OM.
-   */
-  void updateReconOmDBWithNewSnapshot() throws IOException;
-
-  /**
-   * Return instance of OM Metadata manager.
-   * @return OM metadata manager instance.
-   */
-  OMMetadataManager getOMMetadataManagerInstance();
-}
+package org.apache.hadoop.ozone.recon.tasks;

@@ -28,7 +28,6 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.utils.db.DBStore;
 import org.apache.hadoop.utils.db.DBStoreBuilder;
-import org.apache.hadoop.utils.db.RDBStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,8 +84,7 @@ public class ReconOmMetadataManagerImpl extends OmMetadataManagerImpl
   @Override
   public void updateOmDB(File newDbLocation) throws IOException {
     if (getStore() != null) {
-      RDBStore rdbStore = (RDBStore) getStore();
-      File oldDBLocation = rdbStore.getDbLocation();
+      File oldDBLocation = getStore().getDbLocation();
       if (oldDBLocation.exists()) {
         LOG.info("Cleaning up old OM snapshot db at {}.",
             oldDBLocation.getAbsolutePath());
