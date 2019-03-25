@@ -149,8 +149,8 @@ final class AoclDiagnosticOutputParser {
 
           devices.add(new FpgaDevice(fpgaType,
               Integer.parseInt(mmn[0]),
-              Integer.parseInt(mmn[1]), null,
-              fields[0], aliasName, fields[1], fields[2], fields[3]));
+              Integer.parseInt(mmn[1]),
+              aliasName));
         } else {
           LOG.warn("Failed to retrieve major/minor number for device");
         }

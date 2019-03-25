@@ -153,7 +153,7 @@ public class FpgaDiscoverer {
       // Replace list with a filtered one
       list = list
         .stream()
-        .filter(dev -> minors.contains(dev.getMinor().toString()))
+        .filter(dev -> minors.contains(String.valueOf(dev.getMinor())))
         .collect(Collectors.toList());
 
       // if the count of user configured is still larger than actual
