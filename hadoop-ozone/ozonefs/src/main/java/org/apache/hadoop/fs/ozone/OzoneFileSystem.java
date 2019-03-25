@@ -648,10 +648,10 @@ public class OzoneFileSystem extends FileSystem
      * @param dirPath path to the dir
      * @throws FileNotFoundException
      */
-    void addSubDirStatus(Path dirPath) throws FileNotFoundException {
+    void addSubDirStatus(Path dirPath) throws IOException {
       // Check if subdir path is already included in statuses.
       if (!subDirStatuses.containsKey(dirPath)) {
-        subDirStatuses.put(dirPath, innerGetFileStatusForDir(dirPath));
+        subDirStatuses.put(dirPath, getFileStatus(dirPath));
       }
     }
 
@@ -803,64 +803,8 @@ public class OzoneFileSystem extends FileSystem
     Path qualifiedPath = f.makeQualified(uri, workingDir);
     String key = pathToKey(qualifiedPath);
 
-    if (key.length() == 0) {
-      return new FileStatus(0, true, 1, 0,
-          adapter.getCreationTime(), qualifiedPath);
-    }
-
-    // Check if the key exists
-    BasicKeyInfo ozoneKey = adapter.getKeyInfo(key);
-    if (ozoneKey != null) {
-      LOG.debug("Found exact file for path {}: normal file", f);
-      return new FileStatus(ozoneKey.getDataSize(), false, 1,
-          getDefaultBlockSize(f), ozoneKey.getModificationTime(), 0,
-          FsPermission.getFileDefault(), getUsername(), getUsername(),
-          qualifiedPath);
-    }
-
-    return innerGetFileStatusForDir(f);
-  }
-
-  /**
-   * Get the FileStatus for input directory path.
-   * They key corresponding to input path is appended with a trailing slash
-   * to return only the corresponding directory key in the bucket.
-   *
-   * @param f directory path
-   * @return FileStatus for the input directory path
-   * @throws FileNotFoundException
-   */
-  public FileStatus innerGetFileStatusForDir(Path f)
-      throws FileNotFoundException {
-    Path qualifiedPath = f.makeQualified(uri, workingDir);
-    String key = pathToKey(qualifiedPath);
-    key = addTrailingSlashIfNeeded(key);
-
-    BasicKeyInfo ozoneKey = adapter.getKeyInfo(key);
-    if (ozoneKey != null) {
-      if (adapter.isDirectory(ozoneKey)) {
-        // Key is a directory
-        LOG.debug("Found file (with /) for path {}: fake directory", f);
-      } else {
-        // Key is a file with trailing slash
-        LOG.warn("Found file (with /) for path {}: real file? should not " +
-            "happen", f, key);
-      }
-      return new FileStatus(0, true, 1, 0,
-          ozoneKey.getModificationTime(), 0,
-          FsPermission.getDirDefault(), getUsername(), getUsername(),
-          qualifiedPath);
-    }
-
-    // File or directory corresponding to input path does not exist.
-    // Check if there exists a key prefixed with this key.
-    boolean hasChildren = adapter.hasNextKey(key);
-    if (hasChildren) {
-      return new FileStatus(0, true, 1, 0, 0, 0, FsPermission.getDirDefault(),
-          getUsername(), getUsername(), qualifiedPath);
-    }
-
-    throw new FileNotFoundException(f + ": No such file or directory!");
+    return adapter.getFileStatus(key)
+        .makeQualified(uri, qualifiedPath, getUsername(), getUsername());
   }
 
   /**

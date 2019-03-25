@@ -40,6 +40,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numVolumeOps;
   private @Metric MutableCounterLong numBucketOps;
   private @Metric MutableCounterLong numKeyOps;
+  private @Metric MutableCounterLong numFSOps;
 
   // OM op metrics
   private @Metric MutableCounterLong numVolumeCreates;
@@ -66,6 +67,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numInitiateMultipartUploads;
   private @Metric MutableCounterLong numCompleteMultipartUploads;
 
+  private @Metric MutableCounterLong numGetFileStatus;
 
   // Failure Metrics
   private @Metric MutableCounterLong numVolumeCreateFails;
@@ -97,6 +99,8 @@ public class OMMetrics {
   private @Metric MutableCounterLong numAbortMultipartUploadFails;
   private @Metric MutableCounterLong numListMultipartUploadParts;
   private @Metric MutableCounterLong numListMultipartUploadPartFails;
+
+  private @Metric MutableCounterLong numGetFileStatusFails;
 
   // Metrics for total number of volumes, buckets and keys
 
@@ -281,6 +285,16 @@ public class OMMetrics {
   public void incNumListMultipartUploadParts() {
     numKeyOps.incr();
     numListMultipartUploadParts.incr();
+  }
+
+  public void incNumGetFileStatus() {
+    numKeyOps.incr();
+    numFSOps.incr();
+    numGetFileStatus.incr();
+  }
+
+  public void incNumGetFileStatusFails() {
+    numGetFileStatusFails.incr();
   }
 
   public void incNumListMultipartUploadPartFails() {
@@ -575,6 +589,17 @@ public class OMMetrics {
   @VisibleForTesting
   public long getNumKeyListFails() {
     return numKeyListFails.value();
+  }
+
+
+  @VisibleForTesting
+  public long getNumFSOps() {
+    return numFSOps.value();
+  }
+
+  @VisibleForTesting
+  public long getNumGetFileStatus() {
+    return numGetFileStatus.value();
   }
 
   @VisibleForTesting

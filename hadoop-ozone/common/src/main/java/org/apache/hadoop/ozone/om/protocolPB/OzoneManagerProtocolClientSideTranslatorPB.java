@@ -53,7 +53,10 @@ import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFileStatusResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFileStatusRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.BucketArgs;
@@ -1219,4 +1222,33 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
     }
   }
 
+  /**
+   * Get File Status for an Ozone key.
+   * @param volumeName volume name.
+   * @param bucketName bucket name.
+   * @param keyName key name.
+   * @return OzoneFileStatus for the key.
+   * @throws IOException
+   */
+  public OzoneFileStatus getFileStatus(String volumeName, String bucketName,
+                                String keyName) throws IOException {
+    GetFileStatusRequest req = GetFileStatusRequest
+        .newBuilder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(keyName)
+        .build();
+
+    OMRequest omRequest = createOMRequest(Type.GetFileStatus)
+        .setGetFileStatusRequest(req)
+        .build();
+
+    final GetFileStatusResponse resp;
+    try {
+      resp = handleError(submitRequest(omRequest)).getGetFileStatusResponse();
+    } catch (IOException e) {
+      throw e;
+    }
+    return OzoneFileStatus.getFromProtobuf(resp.getStatus());
+  }
 }

@@ -39,6 +39,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.security.KerberosInfo;
@@ -533,4 +534,15 @@ public interface ClientProtocol {
    * @return Canonical Service Name of ozone delegation token.
    */
   String getCanonicalServiceName();
+
+  /**
+   * Get the Ozone File Status for a particular Ozone key.
+   * @param volumeName volume name.
+   * @param bucketName bucket name.
+   * @param keyName key name.
+   * @return OzoneFileStatus for the key.
+   * @throws IOException
+   */
+  OzoneFileStatus getOzoneFileStatus(String volumeName,
+      String bucketName, String keyName) throws IOException;
 }

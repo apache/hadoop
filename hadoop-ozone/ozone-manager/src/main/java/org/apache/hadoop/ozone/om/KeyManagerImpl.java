@@ -31,6 +31,7 @@ import java.security.GeneralSecurityException;
 import java.security.PrivilegedExceptionAction;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
@@ -49,6 +50,7 @@ import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.BlockTokenSecretProto.AccessModeProto;
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.helpers.BucketEncryptionKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
@@ -92,6 +94,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_KEY_PREALLOCATION_BL
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_MULTIPART_MIN_SIZE;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 import org.slf4j.Logger;
@@ -1276,4 +1279,59 @@ public class KeyManagerImpl implements KeyManager {
     }
   }
 
+  public OzoneFileStatus getFileStatus(String volumeName, String bucketName,
+                                       String keyName) throws IOException {
+    Preconditions.checkNotNull(volumeName);
+    Preconditions.checkNotNull(bucketName);
+    Preconditions.checkNotNull(keyName);
+
+    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    try {
+      // Check if this is the root of the filesystem.
+      if (keyName.length() == 0) {
+        validateBucket(volumeName, bucketName);
+        return new OzoneFileStatus(3, scmBlockSize, keyName);
+      }
+
+      //Check if the key is a file.
+      String fileKeyBytes = metadataManager.getOzoneKey(
+          volumeName, bucketName, keyName);
+      OmKeyInfo fileKeyInfo = metadataManager.getKeyTable().get(fileKeyBytes);
+      if (fileKeyInfo != null) {
+        // this is a file
+        return new OzoneFileStatus(fileKeyInfo, scmBlockSize, false);
+      }
+
+      String dirKey = addTrailingSlashIfNeeded(keyName);
+      String dirKeyBytes = metadataManager.getOzoneKey(
+          volumeName, bucketName, dirKey);
+      OmKeyInfo dirKeyInfo = metadataManager.getKeyTable().get(dirKeyBytes);
+      if (dirKeyInfo != null) {
+        return new OzoneFileStatus(dirKeyInfo, scmBlockSize, true);
+      }
+
+      List<OmKeyInfo> keys = metadataManager.listKeys(volumeName, bucketName,
+          null, dirKey, 1);
+      if (keys.iterator().hasNext()) {
+        return new OzoneFileStatus(3, scmBlockSize, keyName);
+      }
+
+      LOG.debug("Unable to get file status for the key: volume:" + volumeName +
+          " bucket:" + bucketName + " key:" + keyName + " with error no " +
+          "such file exists:");
+      throw new OMException("Unable to get file status: volume: " +
+          volumeName + "bucket: " + bucketName + "key: " + keyName,
+          ResultCodes.FILE_NOT_FOUND);
+    } finally {
+      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+    }
+  }
+
+  private String addTrailingSlashIfNeeded(String key) {
+    if (StringUtils.isNotEmpty(key) && !key.endsWith(OZONE_URI_DELIMITER)) {
+      return key + OZONE_URI_DELIMITER;
+    } else {
+      return key;
+    }
+  }
 }

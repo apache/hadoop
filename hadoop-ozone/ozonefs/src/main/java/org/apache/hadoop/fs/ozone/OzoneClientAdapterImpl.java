@@ -19,6 +19,7 @@ package org.apache.hadoop.fs.ozone;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -43,6 +44,8 @@ import org.apache.hadoop.ozone.client.OzoneKey;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenRenewer;
 import org.slf4j.Logger;
@@ -187,30 +190,6 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
   }
 
   /**
-   * Helper method to fetch the key metadata info.
-   *
-   * @param keyName key whose metadata information needs to be fetched
-   * @return metadata info of the key
-   */
-  @Override
-  public BasicKeyInfo getKeyInfo(String keyName) {
-    try {
-      if (storageStatistics != null) {
-        storageStatistics.incrementCounter(Statistic.OBJECTS_QUERY, 1);
-      }
-      OzoneKey key = bucket.getKey(keyName);
-      return new BasicKeyInfo(
-          keyName,
-          key.getModificationTime(),
-          key.getDataSize()
-      );
-    } catch (IOException e) {
-      LOG.trace("Key:{} does not exist", keyName);
-      return null;
-    }
-  }
-
-  /**
    * Helper method to check if an Ozone key is representing a directory.
    *
    * @param key key to be checked as a directory
@@ -267,17 +246,19 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
     }
   }
 
-  @Override
-  public long getCreationTime() {
-    return bucket.getCreationTime();
-  }
-
-  @Override
-  public boolean hasNextKey(String key) {
-    if (storageStatistics != null) {
-      storageStatistics.incrementCounter(Statistic.OBJECTS_LIST, 1);
+  public OzoneFileStatus getFileStatus(String pathKey) throws IOException {
+    try {
+      if (storageStatistics != null) {
+        storageStatistics.incrementCounter(Statistic.OBJECTS_QUERY, 1);
+      }
+      return bucket.getFileStatus(pathKey);
+    } catch (OMException e) {
+      if (e.getResult() == OMException.ResultCodes.FILE_NOT_FOUND) {
+        throw new
+            FileNotFoundException(pathKey + ": No such file or directory!");
+      }
+      throw e;
     }
-    return bucket.listKeys(key).hasNext();
   }
 
   @Override

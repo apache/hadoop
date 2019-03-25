@@ -187,6 +187,7 @@ public final class OmUtils {
     case ListS3Buckets:
     case ServiceList:
     case ListMultiPartUploadParts:
+    case GetFileStatus:
       return true;
     case CreateVolume:
     case SetVolumeProperty:

@@ -51,7 +51,10 @@ public enum OMAction implements AuditAction {
   INITIATE_MULTIPART_UPLOAD,
   COMMIT_MULTIPART_UPLOAD_PARTKEY,
   COMPLETE_MULTIPART_UPLOAD,
-  LIST_MULTIPART_UPLOAD_PARTS;
+  LIST_MULTIPART_UPLOAD_PARTS,
+
+  //FS Actions
+  GET_FILE_STATUS;
 
   @Override
   public String getAction() {

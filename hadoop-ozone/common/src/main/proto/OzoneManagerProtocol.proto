@@ -37,6 +37,7 @@ This is similar to Namenode for Ozone.
 
 import "hdds.proto";
 import "Security.proto";
+import "FSProtos.proto";
 
 enum Type {
   CreateVolume = 11;
@@ -76,6 +77,8 @@ enum Type {
   GetDelegationToken = 61;
   RenewDelegationToken = 62;
   CancelDelegationToken = 63;
+
+  GetFileStatus = 70;
 }
 
 message OMRequest {
@@ -125,6 +128,7 @@ message OMRequest {
   optional hadoop.common.RenewDelegationTokenRequestProto renewDelegationTokenRequest= 62;
   optional hadoop.common.CancelDelegationTokenRequestProto cancelDelegationTokenRequest = 63;
 
+  optional GetFileStatusRequest             getFileStatusRequest           = 70;
 }
 
 message OMResponse {
@@ -179,6 +183,8 @@ message OMResponse {
   optional GetDelegationTokenResponseProto getDelegationTokenResponse = 61;
   optional RenewDelegationTokenResponseProto renewDelegationTokenResponse = 62;
   optional CancelDelegationTokenResponseProto cancelDelegationTokenResponse = 63;
+
+  optional GetFileStatusResponse              getFileStatusResponse        = 70;
 }
 
 enum Status {
@@ -230,6 +236,7 @@ enum Status {
     INVALID_KMS_PROVIDER = 42;
     TOKEN_CREATION_ERROR = 43;
 
+    FILE_NOT_FOUND = 44;
 }
 
 
@@ -523,6 +530,16 @@ message KeyInfo {
     optional uint64 latestVersion = 10;
     repeated hadoop.hdds.KeyValue metadata = 11;
     optional FileEncryptionInfoProto fileEncryptionInfo = 12;
+}
+
+message GetFileStatusRequest {
+    required string volumeName = 1;
+    required string bucketName = 2;
+    required string keyName = 3;
+}
+
+message GetFileStatusResponse {
+    required hadoop.fs.FileStatusProto status = 1;
 }
 
 message CreateKeyRequest {

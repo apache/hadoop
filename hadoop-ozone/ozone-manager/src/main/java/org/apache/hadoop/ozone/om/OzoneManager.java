@@ -103,6 +103,7 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisClient;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer;
@@ -2587,6 +2588,28 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       metrics.incNumAbortMultipartUploadFails();
       AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction
           .LIST_MULTIPART_UPLOAD_PARTS, auditMap, ex));
+      throw ex;
+    }
+  }
+
+  @Override
+  public OzoneFileStatus getFileStatus(String volumeName, String bucketName,
+                                       String keyName) throws IOException {
+    Map<String, String> auditMap = new HashMap<>();
+    auditMap.put(OzoneConsts.VOLUME, volumeName);
+    auditMap.put(OzoneConsts.BUCKET, bucketName);
+    auditMap.put(OzoneConsts.KEY, keyName);
+    metrics.incNumGetFileStatus();
+    try {
+      OzoneFileStatus ozoneFileStatus =
+          keyManager.getFileStatus(volumeName, bucketName, keyName);
+      AUDIT.logWriteSuccess(buildAuditMessageForSuccess(OMAction
+          .GET_FILE_STATUS, auditMap));
+      return ozoneFileStatus;
+    } catch (IOException ex) {
+      metrics.incNumGetFileStatusFails();
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction
+          .GET_FILE_STATUS, auditMap, ex));
       throw ex;
     }
   }
