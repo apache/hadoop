@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.client.io;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -148,11 +149,11 @@ public final class BlockOutputStreamEntry extends OutputStream {
     }
   }
 
-  long getTotalSuccessfulFlushedData() throws IOException {
+  long getTotalAckDataLength() {
     if (outputStream != null) {
       BlockOutputStream out = (BlockOutputStream) this.outputStream;
       blockID = out.getBlockID();
-      return out.getTotalSuccessfulFlushedData();
+      return out.getTotalAckDataLength();
     } else {
       // For a pre allocated block for which no write has been initiated,
       // the OutputStream will be null here.
@@ -295,6 +296,7 @@ public final class BlockOutputStreamEntry extends OutputStream {
     }
   }
 
+  @VisibleForTesting
   public OutputStream getOutputStream() {
     return outputStream;
   }
