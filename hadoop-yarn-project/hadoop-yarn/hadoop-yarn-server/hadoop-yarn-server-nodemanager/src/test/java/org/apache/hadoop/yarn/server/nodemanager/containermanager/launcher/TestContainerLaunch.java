@@ -476,10 +476,15 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     for (String envVar : env.keySet()) {
       Assert.assertTrue(shellContent.contains(envVar + "="));
     }
+    // The whitelist vars should not have been added to env
+    // They should only be in the launch script
     for (String wlVar : whitelistVars) {
+      Assert.assertFalse(env.containsKey(wlVar));
       Assert.assertTrue(shellContent.contains(wlVar + "="));
     }
+    // Non-whitelist nm vars should be in neither env nor in launch script
     for (String nwlVar : nonWhiteListEnv) {
+      Assert.assertFalse(env.containsKey(nwlVar));
       Assert.assertFalse(shellContent.contains(nwlVar + "="));
     }
     // Explicitly Set NM vars should be before user vars
