@@ -2940,7 +2940,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           Copy copy = transfers.copy(copyObjectRequest);
           copy.addProgressListener(progressListener);
           try {
-            CopyResult result = copy.waitForCopyResult();
+            CopyOutcome copyOutcome = copyOutcome(copy);
+            InterruptedException interruptedException =
+                copyOutcome.getInterruptedException();
+            if (interruptedException != null) {
+              throw interruptedException;
+            }
+            RuntimeException runtimeException =
+                copyOutcome.getRuntimeException();
+            if (runtimeException != null) {
+              changeTracker.processException(runtimeException, "copy");
+              throw runtimeException;
+            }
+            CopyResult result = copyOutcome.getCopyResult();
             changeTracker.processResponse(result);
             incrementWriteOperations();
             instrumentation.filesCopied(1, size);
@@ -2950,6 +2962,43 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                 + " to " + dstKey + ", cancelling");
           }
         });
+  }
+
+  private static CopyOutcome copyOutcome(Copy copy) {
+    try {
+      CopyResult result = copy.waitForCopyResult();
+      return new CopyOutcome(result, null, null);
+    } catch (RuntimeException e) {
+      return new CopyOutcome(null, null, e);
+    } catch (InterruptedException e) {
+      return new CopyOutcome(null, e, null);
+    }
+  }
+
+  private static class CopyOutcome {
+    private final CopyResult copyResult;
+    private final InterruptedException interruptedException;
+    private final RuntimeException runtimeException;
+
+    private CopyOutcome(CopyResult copyResult,
+        InterruptedException interruptedException,
+        RuntimeException runtimeException) {
+      this.copyResult = copyResult;
+      this.interruptedException = interruptedException;
+      this.runtimeException = runtimeException;
+    }
+
+    public CopyResult getCopyResult() {
+      return copyResult;
+    }
+
+    public InterruptedException getInterruptedException() {
+      return interruptedException;
+    }
+
+    public RuntimeException getRuntimeException() {
+      return runtimeException;
+    }
   }
 
   /**

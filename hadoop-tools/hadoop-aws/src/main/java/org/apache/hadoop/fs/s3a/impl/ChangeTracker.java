@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -192,6 +193,33 @@ public class ChangeTracker {
     // same on the copied object as the original.  Version Id seems to never
     // be the same on the copy.  As such, there isn't really anything that
     // can be verified on the response.
+  }
+
+  /**
+   * Process an exception generated against the change policy.
+   * If the exception indicates the file has changed, this method throws
+   * {@code RemoteFileChangedException} with the original exception as the
+   * cause.
+   * @param e the exception
+   * @param operation the operation performed when the exception was
+   * generated.
+   * @throws RemoteFileChangedException if the remote file has changed.
+   */
+  public void processException(Exception e, String operation) throws
+      RemoteFileChangedException {
+    if (e instanceof AmazonServiceException) {
+      AmazonServiceException serviceException = (AmazonServiceException) e;
+      if (serviceException.getStatusCode() == 412) {
+        versionMismatches.incrementAndGet();
+        throw new RemoteFileChangedException(uri, operation, String.format(
+            RemoteFileChangedException.PRECONDITIONS_NOT_MET
+                + " on %s."
+                + " Version %s was unavailable",
+            getSource(),
+            getRevisionId()),
+            serviceException);
+      }
+    }
   }
 
   /**
