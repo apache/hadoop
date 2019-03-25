@@ -83,31 +83,19 @@ public class TestAoclOutputParser {
 
     assertEquals(3, devices.size());
     assertEquals("IntelOpenCL", devices.get(0).getType());
-    assertEquals("247", devices.get(0).getMajor().toString());
-    assertEquals("0", devices.get(0).getMinor().toString());
+    assertEquals(247, devices.get(0).getMajor());
+    assertEquals(0, devices.get(0).getMinor());
     assertEquals("acl0", devices.get(0).getAliasDevName());
-    assertEquals("aclnalla_pcie0", devices.get(0).getDevName());
-    assertEquals("02:00.00", devices.get(0).getBusNum());
-    assertEquals("53.1 degrees C", devices.get(0).getTemperature());
-    assertEquals("31.7 Watts", devices.get(0).getCardPowerUsage());
 
     assertEquals("IntelOpenCL", devices.get(1).getType());
-    assertEquals("247", devices.get(1).getMajor().toString());
-    assertEquals("1", devices.get(1).getMinor().toString());
+    assertEquals(247, devices.get(1).getMajor());
+    assertEquals(1, devices.get(1).getMinor());
     assertEquals("acl1", devices.get(1).getAliasDevName());
-    assertEquals("aclnalla_pcie1", devices.get(1).getDevName());
-    assertEquals("03:00.00", devices.get(1).getBusNum());
-    assertEquals("43.1 degrees C", devices.get(1).getTemperature());
-    assertEquals("11.7 Watts", devices.get(1).getCardPowerUsage());
 
     assertEquals("IntelOpenCL", devices.get(2).getType());
-    assertEquals("246", devices.get(2).getMajor().toString());
-    assertEquals("0", devices.get(2).getMinor().toString());
+    assertEquals(246, devices.get(2).getMajor());
+    assertEquals(0, devices.get(2).getMinor());
     assertEquals("acl2", devices.get(2).getAliasDevName());
-    assertEquals("acla10_ref0", devices.get(2).getDevName());
-    assertEquals("09:00.00", devices.get(2).getBusNum());
-    assertEquals("50.5781 degrees C", devices.get(2).getTemperature());
-    assertEquals("", devices.get(2).getCardPowerUsage());
 
     // Case 2. check alias map
     assertEquals("acl0", devices.get(0).getAliasDevName());

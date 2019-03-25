@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga;
 
-
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -175,12 +174,12 @@ public class TestFpgaDiscoverer {
     FpgaDevice device1 = devices.get(1);
 
     assertEquals("Device id", "acl0", device0.getAliasDevName());
-    assertEquals("Minor number", new Integer(0), device0.getMinor());
-    assertEquals("Major", new Integer(243), device0.getMajor());
+    assertEquals("Minor number", 0, device0.getMinor());
+    assertEquals("Major", 243, device0.getMajor());
 
     assertEquals("Device id", "acl1", device1.getAliasDevName());
-    assertEquals("Minor number", new Integer(1), device1.getMinor());
-    assertEquals("Major", new Integer(244), device1.getMajor());
+    assertEquals("Minor number", 1, device1.getMinor());
+    assertEquals("Major", 244, device1.getMajor());
   }
 
   @Test
@@ -245,12 +244,12 @@ public class TestFpgaDiscoverer {
     FpgaDevice device1 = devices.get(1);
 
     assertEquals("Device id", "acl0", device0.getAliasDevName());
-    assertEquals("Minor number", new Integer(0), device0.getMinor());
-    assertEquals("Major", new Integer(243), device0.getMajor());
+    assertEquals("Minor number", 0, device0.getMinor());
+    assertEquals("Major", 243, device0.getMajor());
 
     assertEquals("Device id", "acl1", device1.getAliasDevName());
-    assertEquals("Minor number", new Integer(1), device1.getMinor());
-    assertEquals("Major", new Integer(244), device1.getMajor());
+    assertEquals("Minor number", 1, device1.getMinor());
+    assertEquals("Major", 244, device1.getMajor());
   }
 
   @Test

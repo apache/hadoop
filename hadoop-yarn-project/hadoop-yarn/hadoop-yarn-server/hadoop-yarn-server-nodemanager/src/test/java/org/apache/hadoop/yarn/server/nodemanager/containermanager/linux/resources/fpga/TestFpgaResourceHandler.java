@@ -112,7 +112,7 @@ public class TestFpgaResourceHandler {
     // Assumed devices parsed from output
     deviceList = new ArrayList<>();
     for (int i = 0; i < 5; i++) {
-      deviceList.add(new FpgaDevice(vendorType, 247, i, null));
+      deviceList.add(new FpgaDevice(vendorType, 247, i, "acl" + i));
     }
     String aocxPath = getTestParentFolder() + "/test.aocx";
     mockVendorPlugin = mockPlugin(vendorType, deviceList, aocxPath);
@@ -163,11 +163,11 @@ public class TestFpgaResourceHandler {
     for (String s : allowed.split(",")) {
       boolean check = false;
       for (FpgaDevice device : allowedDevices) {
-        if (device.getMinor().toString().equals(s)) {
+        if (String.valueOf(device.getMinor()).equals(s)) {
           check = true;
         }
       }
-      Assert.assertTrue("Minor:" + s +"found", check);
+      Assert.assertTrue("Minor:" + s +" found", check);
     }
     Assert.assertEquals(3,
         fpgaResourceHandler.getFpgaAllocator().getAvailableFpgaCount());
@@ -398,10 +398,10 @@ public class TestFpgaResourceHandler {
   public void testReacquireContainer() throws ResourceHandlerException {
     Container c0 = mockContainer(0, 2, "GEMM");
     List<FpgaDevice> assigned = new ArrayList<>();
-    assigned.add(new
-        FpgaDevice(vendorType, 247, 0, null));
-    assigned.add(new
-        FpgaDevice(vendorType, 247, 1, null));
+    assigned.add(new FpgaDevice(
+        vendorType, 247, 0, "acl0"));
+    assigned.add(new FpgaDevice(
+        vendorType, 247, 1, "acl1"));
     // Mock we've stored the c0 states
     mockStateStoreForContainer(c0, assigned);
     // NM start
@@ -419,10 +419,10 @@ public class TestFpgaResourceHandler {
         getUsedFpga().get(getContainerId(0).toString());
     int count = 0;
     for (FpgaDevice device : used) {
-      if (device.getMinor().equals(0)){
+      if (device.getMinor() == 0){
         count++;
       }
-      if (device.getMinor().equals(1)) {
+      if (device.getMinor() == 1) {
         count++;
       }
     }
@@ -434,7 +434,7 @@ public class TestFpgaResourceHandler {
             .get(vendorType);
     count = 0;
     for (FpgaDevice device : available) {
-      if (device.getMinor().equals(2)) {
+      if (device.getMinor() == 2) {
         count++;
       }
     }
@@ -445,8 +445,8 @@ public class TestFpgaResourceHandler {
     // Case 2. Recover a not allowed device with minor number 5
     Container c1 = mockContainer(1, 1, "GEMM");
     assigned = new ArrayList<>();
-    assigned.add(new
-        FpgaDevice(vendorType, 247, 5, null));
+    assigned.add(new FpgaDevice(
+        vendorType, 247, 5, "acl0"));
     // Mock we've stored the c1 states
     mockStateStoreForContainer(c1, assigned);
     boolean flag = false;
@@ -464,8 +464,8 @@ public class TestFpgaResourceHandler {
     // Case 3. recover a already used device by other container
     Container c2 = mockContainer(2, 1, "GEMM");
     assigned = new ArrayList<>();
-    assigned.add(new
-        FpgaDevice(vendorType, 247, 1, null));
+    assigned.add(new FpgaDevice(
+        vendorType, 247, 1, "acl0"));
     // Mock we've stored the c2 states
     mockStateStoreForContainer(c2, assigned);
     flag = false;
@@ -483,8 +483,8 @@ public class TestFpgaResourceHandler {
     // Case 4. recover a normal container c3 with remaining minor device number 2
     Container c3 = mockContainer(3, 1, "GEMM");
     assigned = new ArrayList<>();
-    assigned.add(new
-        FpgaDevice(vendorType, 247, 2, null));
+    assigned.add(new FpgaDevice(
+        vendorType, 247, 2, "acl2"));
     // Mock we've stored the c2 states
     mockStateStoreForContainer(c3, assigned);
     fpgaResourceHandler.reacquireContainer(getContainerId(3));

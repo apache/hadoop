@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resourc
 
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +52,7 @@ public class FpgaResourceAllocator {
   //key is resource type of FPGA, vendor plugin supported ID
   private LinkedHashMap<String, List<FpgaDevice>> availableFpga = new LinkedHashMap<>();
 
-  //key is requetor, aka. container ID
+  //key is requestor, aka. container ID
   private LinkedHashMap<String, List<FpgaDevice>> usedFpgaByRequestor = new LinkedHashMap<>();
 
   private Context nmContext;
@@ -133,35 +134,33 @@ public class FpgaResourceAllocator {
     }
   }
 
-  public static class FpgaDevice implements Comparable<FpgaDevice>, Serializable {
+  /** A class that represents an FPGA card. */
+  public static class FpgaDevice implements Serializable {
+    private static final long serialVersionUID = -4678487141824092751L;
+    private final String type;
+    private final int major;
+    private final int minor;
 
-    private static final long serialVersionUID = 1L;
-
-    private String type;
-    private Integer major;
-    private Integer minor;
-    // IP file identifier. matrix multiplication for instance
-    private String IPID;
-    // SHA-256 hash of the uploaded aocx file
-    private String aocxHash;
-    // the device name under /dev
-    private String devName;
     // the alias device name. Intel use acl number acl0 to acl31
-    private String aliasDevName;
-    // lspci output's bus number: 02:00.00 (bus:slot.func)
-    private String busNum;
-    private String temperature;
-    private String cardPowerUsage;
+    private final String aliasDevName;
+
+    // IP file identifier. matrix multiplication for instance (mutable)
+    private String IPID;
+    // SHA-256 hash of the uploaded aocx file (mutable)
+    private String aocxHash;
+
+    // cached hash value
+    private Integer hashCode;
 
     public String getType() {
       return type;
     }
 
-    public Integer getMajor() {
+    public int getMajor() {
       return major;
     }
 
-    public Integer getMinor() {
+    public int getMinor() {
       return minor;
     }
 
@@ -181,57 +180,16 @@ public class FpgaResourceAllocator {
       this.IPID = IPID;
     }
 
-    public String getDevName() {
-      return devName;
-    }
-
-    public void setDevName(String devName) {
-      this.devName = devName;
-    }
-
     public String getAliasDevName() {
       return aliasDevName;
     }
 
-    public void setAliasDevName(String aliasDevName) {
-      this.aliasDevName = aliasDevName;
-    }
-
-    public String getBusNum() {
-      return busNum;
-    }
-
-    public void setBusNum(String busNum) {
-      this.busNum = busNum;
-    }
-
-    public String getTemperature() {
-      return temperature;
-    }
-
-    public String getCardPowerUsage() {
-      return cardPowerUsage;
-    }
-
-    public FpgaDevice(String type, Integer major, Integer minor, String IPID) {
-      this.type = type;
+    public FpgaDevice(String type, int major, int minor, String aliasDevName) {
+      this.type = Preconditions.checkNotNull(type, "type must not be null");
       this.major = major;
       this.minor = minor;
-      this.IPID = IPID;
-    }
-
-    public FpgaDevice(String type, Integer major,
-      Integer minor, String IPID, String devName,
-        String aliasDevName, String busNum, String temperature, String cardPowerUsage) {
-      this.type = type;
-      this.major = major;
-      this.minor = minor;
-      this.IPID = IPID;
-      this.devName = devName;
-      this.aliasDevName = aliasDevName;
-      this.busNum = busNum;
-      this.temperature = temperature;
-      this.cardPowerUsage = cardPowerUsage;
+      this.aliasDevName = Preconditions.checkNotNull(aliasDevName,
+          "aliasDevName must not be null");
     }
 
     @Override
@@ -242,31 +200,48 @@ public class FpgaResourceAllocator {
       if (obj == null) {
         return false;
       }
-      if (!(obj instanceof FpgaDevice)) {
+      if (getClass() != obj.getClass()) {
         return false;
       }
       FpgaDevice other = (FpgaDevice) obj;
-      if (other.getType().equals(this.type) &&
-          other.getMajor().equals(this.major) &&
-          other.getMinor().equals(this.minor)) {
-        return true;
+      if (aliasDevName == null) {
+        if (other.aliasDevName != null) {
+          return false;
+        }
+      } else if (!aliasDevName.equals(other.aliasDevName)) {
+        return false;
       }
-      return false;
+      if (major != other.major) {
+        return false;
+      }
+      if (minor != other.minor) {
+        return false;
+      }
+      if (type == null) {
+        if (other.type != null) {
+          return false;
+        }
+      } else if (!type.equals(other.type)) {
+        return false;
+      }
+      return true;
     }
 
     @Override
     public int hashCode() {
-      final int prime = 31;
-      int result = 1;
-      result = prime * result + ((type == null) ? 0 : type.hashCode());
-      result = prime * result + ((major == null) ? 0 : major.hashCode());
-      result = prime * result + ((minor == null) ? 0 : minor.hashCode());
-      return result;
-    }
+      if (hashCode == null) {
+        final int prime = 31;
+        int result = 1;
 
-    @Override
-    public int compareTo(FpgaDevice o) {
-      return 0;
+        result = prime * result + major;
+        result = prime * result + type.hashCode();
+        result = prime * result + minor;
+        result = prime * result + aliasDevName.hashCode();
+
+        hashCode = result;
+      }
+
+      return hashCode;
     }
 
     @Override
