@@ -64,6 +64,13 @@ import java.util.concurrent.TimeoutException;
  */
 public class KeyOutputStream extends OutputStream {
 
+  /**
+   * Defines stream action while calling handleFlushOrClose.
+   */
+  enum StreamAction {
+    FLUSH, CLOSE, FULL
+  }
+
   public static final Logger LOG =
       LoggerFactory.getLogger(KeyOutputStream.class);
 
@@ -326,8 +333,7 @@ public class KeyOutputStream extends OutputStream {
       }
       if (current.getRemaining() <= 0) {
         // since the current block is already written close the stream.
-        handleFlushOrClose(true);
-        currentStreamIndex += 1;
+        handleFlushOrClose(StreamAction.FULL);
       }
       len -= writeLen;
       off += writeLen;
@@ -393,19 +399,21 @@ public class KeyOutputStream extends OutputStream {
     boolean retryFailure = checkForRetryFailure(exception);
     boolean closedContainerException = false;
     if (!retryFailure) {
-      closedContainerException = checkIfContainerIsClosed(exception);
+      closedContainerException = checkIfContainerIsClosed(t);
     }
     PipelineID pipelineId = null;
     long totalSuccessfulFlushedData =
-        streamEntry.getTotalSuccessfulFlushedData();
+        streamEntry.getTotalAckDataLength();
     //set the correct length for the current stream
     streamEntry.setCurrentPosition(totalSuccessfulFlushedData);
     long bufferedDataLen = computeBufferData();
-    LOG.warn("Encountered exception {}", exception);
-    LOG.info(
-        "The last committed block length is {}, uncommitted data length is {}",
+    LOG.warn("Encountered exception {}. The last committed block length is {}, "
+            + "uncommitted data length is {}", exception,
         totalSuccessfulFlushedData, bufferedDataLen);
     Preconditions.checkArgument(bufferedDataLen <= streamBufferMaxSize);
+    Preconditions.checkArgument(
+        streamEntry.getWrittenDataLength() - totalSuccessfulFlushedData
+            == bufferedDataLen);
     long containerId = streamEntry.getBlockID().getContainerID();
     Collection<DatanodeDetails> failedServers = streamEntry.getFailedServers();
     Preconditions.checkNotNull(failedServers);
@@ -498,7 +506,7 @@ public class KeyOutputStream extends OutputStream {
     return t instanceof ContainerNotOpenException;
   }
 
-  private Throwable checkForException(IOException ioe) throws IOException {
+  public Throwable checkForException(IOException ioe) throws IOException {
     Throwable t = ioe.getCause();
     while (t != null) {
       for (Class<? extends Exception> cls : OzoneClientUtils
@@ -513,7 +521,7 @@ public class KeyOutputStream extends OutputStream {
   }
 
   private long getKeyLength() {
-    return streamEntries.parallelStream().mapToLong(e -> e.getCurrentPosition())
+    return streamEntries.stream().mapToLong(e -> e.getCurrentPosition())
         .sum();
   }
 
@@ -535,16 +543,24 @@ public class KeyOutputStream extends OutputStream {
   @Override
   public void flush() throws IOException {
     checkNotClosed();
-    handleFlushOrClose(false);
+    handleFlushOrClose(StreamAction.FLUSH);
   }
 
   /**
-   * Close or Flush the latest outputStream.
-   * @param close Flag which decides whether to call close or flush on the
+   * Close or Flush the latest outputStream depending upon the action.
+   * This function gets called when while write is going on, the current stream
+   * gets full or explicit flush or close request is made by client. when the
+   * stream gets full and we try to close the stream , we might end up hitting
+   * an exception in the exception handling path, we write the data residing in
+   * in the buffer pool to a new Block. In cases, as such, when the data gets
+   * written to new stream , it will be at max half full. In such cases, we
+   * should just write the data and not close the stream as the block won't be
+   * completely full.
+   * @param op Flag which decides whether to call close or flush on the
    *              outputStream.
    * @throws IOException In case, flush or close fails with exception.
    */
-  private void handleFlushOrClose(boolean close) throws IOException {
+  private void handleFlushOrClose(StreamAction op) throws IOException {
     if (streamEntries.size() == 0) {
       return;
     }
@@ -561,10 +577,21 @@ public class KeyOutputStream extends OutputStream {
           if (failedServers != null && !failedServers.isEmpty()) {
             excludeList.addDatanodes(failedServers);
           }
-          if (close) {
+          switch (op) {
+          case CLOSE:
             entry.close();
-          } else {
+            break;
+          case FULL:
+            if (entry.getRemaining() == 0) {
+              entry.close();
+              currentStreamIndex++;
+            }
+            break;
+          case FLUSH:
             entry.flush();
+            break;
+          default:
+            throw new IOException("Invalid Operation");
           }
         } catch (IOException ioe) {
           handleException(entry, streamIndex, ioe);
@@ -587,7 +614,7 @@ public class KeyOutputStream extends OutputStream {
     }
     closed = true;
     try {
-      handleFlushOrClose(true);
+      handleFlushOrClose(StreamAction.CLOSE);
       if (keyArgs != null) {
         // in test, this could be null
         removeEmptyBlocks();
