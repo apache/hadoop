@@ -406,16 +406,6 @@ public abstract class ContainerExecutor implements Configurable {
           sb.env(env.getKey(), env.getValue());
         }
       }
-      // Add the whitelist vars to the environment.  Do this after writing
-      // environment variables so they are not written twice.
-      for(String var : whitelistVars) {
-        if (!environment.containsKey(var)) {
-          String val = getNMEnvVar(var);
-          if (val != null) {
-            environment.put(var, val);
-          }
-        }
-      }
     }
 
     if (resources != null) {
