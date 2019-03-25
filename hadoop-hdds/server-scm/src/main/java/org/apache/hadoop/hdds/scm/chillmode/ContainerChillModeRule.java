@@ -22,22 +22,24 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
-import org.apache.hadoop.hdds.scm.server.SCMDatanodeProtocolServer.NodeRegistrationContainerReport;
+import org.apache.hadoop.hdds.scm.events.SCMEvents;
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeProtocolServer
+    .NodeRegistrationContainerReport;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hdds.server.events.EventHandler;
-import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.apache.hadoop.hdds.server.events.EventQueue;
+import org.apache.hadoop.hdds.server.events.TypedEvent;
 
 /**
  * Class defining Chill mode exit criteria for Containers.
  */
-public class ContainerChillModeRule implements
-    ChillModeExitRule<NodeRegistrationContainerReport>,
-    EventHandler<NodeRegistrationContainerReport> {
+public class ContainerChillModeRule extends
+    ChillModeExitRule<NodeRegistrationContainerReport>{
 
   // Required cutoff % for containers with at least 1 reported replica.
   private double chillModeCutoff;
@@ -46,14 +48,20 @@ public class ContainerChillModeRule implements
   private double maxContainer;
 
   private AtomicLong containerWithMinReplicas = new AtomicLong(0);
-  private final SCMChillModeManager chillModeManager;
 
-  public ContainerChillModeRule(Configuration conf,
+  public ContainerChillModeRule(String ruleName, EventQueue eventQueue,
+      Configuration conf,
       List<ContainerInfo> containers, SCMChillModeManager manager) {
+    super(manager, ruleName, eventQueue);
     chillModeCutoff = conf.getDouble(
         HddsConfigKeys.HDDS_SCM_CHILLMODE_THRESHOLD_PCT,
         HddsConfigKeys.HDDS_SCM_CHILLMODE_THRESHOLD_PCT_DEFAULT);
-    chillModeManager = manager;
+
+    Preconditions.checkArgument(
+        (chillModeCutoff >= 0.0 && chillModeCutoff <= 1.0),
+        HddsConfigKeys.HDDS_SCM_CHILLMODE_THRESHOLD_PCT  +
+            " value should be >= 0.0 and <= 1.0");
+
     containerMap = new ConcurrentHashMap<>();
     if(containers != null) {
       containers.forEach(c -> {
@@ -67,10 +75,18 @@ public class ContainerChillModeRule implements
       });
       maxContainer = containerMap.size();
     }
+
   }
 
+
   @Override
-  public boolean validate() {
+  protected TypedEvent<NodeRegistrationContainerReport> getEventType() {
+    return SCMEvents.NODE_REGISTRATION_CONT_REPORT;
+  }
+
+
+  @Override
+  protected boolean validate() {
     return getCurrentContainerThreshold() >= chillModeCutoff;
   }
 
@@ -83,7 +99,7 @@ public class ContainerChillModeRule implements
   }
 
   @Override
-  public void process(NodeRegistrationContainerReport reportsProto) {
+  protected void process(NodeRegistrationContainerReport reportsProto) {
 
     reportsProto.getReport().getReportsList().forEach(c -> {
       if (containerMap.containsKey(c.getContainerID())) {
@@ -92,37 +108,17 @@ public class ContainerChillModeRule implements
         }
       }
     });
-  }
 
-  @Override
-  public void onMessage(NodeRegistrationContainerReport
-      nodeRegistrationContainerReport, EventPublisher publisher) {
-
-    // TODO: when we have remove handlers, we can remove getInChillmode check
-
-    if (chillModeManager.getInChillMode()) {
-      if (validate()) {
-        return;
-      }
-
-      process(nodeRegistrationContainerReport);
-      if (chillModeManager.getInChillMode()) {
-        SCMChillModeManager.getLogger().info(
-            "SCM in chill mode. {} % containers have at least one"
-                + " reported replica.",
-            (containerWithMinReplicas.get() / maxContainer) * 100);
-      }
-
-      if (validate()) {
-        chillModeManager.validateChillModeExitRules(publisher);
-      }
-
+    if (scmInChillMode()) {
+      SCMChillModeManager.getLogger().info(
+          "SCM in chill mode. {} % containers have at least one"
+              + " reported replica.",
+          (containerWithMinReplicas.doubleValue() / maxContainer) * 100);
     }
-
   }
 
   @Override
-  public void cleanup() {
+  protected void cleanup() {
     containerMap.clear();
   }
 }

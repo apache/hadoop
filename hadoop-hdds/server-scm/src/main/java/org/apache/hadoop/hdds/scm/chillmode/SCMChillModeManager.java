@@ -18,9 +18,12 @@
 package org.apache.hadoop.hdds.scm.chillmode;
 
 import com.google.common.annotations.VisibleForTesting;
+
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
@@ -39,10 +42,38 @@ import org.slf4j.LoggerFactory;
  *
  * ChillModeExitRule defines format to define new rules which must be satisfied
  * to exit Chill mode.
- * ContainerChillModeRule defines the only exit criteria right now.
- * On every new datanode registration event this class adds replicas
- * for reported containers and validates if cutoff threshold for
- * containers is meet.
+ *
+ * Current ChillMode rules:
+ * 1. ContainerChillModeRule:
+ * On every new datanode registration, it fires
+ * {@link SCMEvents#NODE_REGISTRATION_CONT_REPORT}.  This rule handles this
+ * event. This rule process this report, increment the
+ * containerWithMinReplicas count when this reported replica is in the
+ * containerMap. Then validates if cutoff threshold for containers is meet.
+ *
+ * 2. DatanodeChillModeRule:
+ * On every new datanode registration, it fires
+ * {@link SCMEvents#NODE_REGISTRATION_CONT_REPORT}. This rule handles this
+ * event. This rule process this report, and check if this is new node, add
+ * to its reported node list. Then validate it cutoff threshold for minimum
+ * number of datanode registered is met or not.
+ *
+ * 3. HealthyPipelineChillModeRule:
+ * Once the pipelineReportHandler processes the
+ * {@link SCMEvents#PIPELINE_REPORT}, it fires
+ * {@link SCMEvents#PROCESSED_PIPELINE_REPORT}. This rule handles this
+ * event. This rule processes this report, and check if pipeline is healthy
+ * and increments current healthy pipeline count. Then validate it cutoff
+ * threshold for healthy pipeline is met or not.
+ *
+ * 4. OneReplicaPipelineChillModeRule:
+ * Once the pipelineReportHandler processes the
+ * {@link SCMEvents#PIPELINE_REPORT}, it fires
+ * {@link SCMEvents#PROCESSED_PIPELINE_REPORT}. This rule handles this
+ * event. This rule processes this report, and add the reported pipeline to
+ * reported pipeline set. Then validate it cutoff threshold for one replica
+ * per pipeline is met or not.
+ *
  */
 public class SCMChillModeManager {
 
@@ -60,6 +91,8 @@ public class SCMChillModeManager {
   private static final String ATLEAST_ONE_DATANODE_REPORTED_PIPELINE_EXIT_RULE =
       "AtleastOneDatanodeReportedRule";
 
+  private Set<String> validatedRules = new HashSet<>();
+
   private final EventQueue eventPublisher;
   private final PipelineManager pipelineManager;
 
@@ -75,29 +108,26 @@ public class SCMChillModeManager {
 
     if (isChillModeEnabled) {
       ContainerChillModeRule containerChillModeRule =
-          new ContainerChillModeRule(config, allContainers, this);
+          new ContainerChillModeRule(CONT_EXIT_RULE, eventQueue, config,
+              allContainers, this);
       DataNodeChillModeRule dataNodeChillModeRule =
-          new DataNodeChillModeRule(config, this);
+          new DataNodeChillModeRule(DN_EXIT_RULE, eventQueue, config, this);
       exitRules.put(CONT_EXIT_RULE, containerChillModeRule);
       exitRules.put(DN_EXIT_RULE, dataNodeChillModeRule);
-      eventPublisher.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
-          containerChillModeRule);
-      eventPublisher.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
-          dataNodeChillModeRule);
-
       if (conf.getBoolean(
           HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK,
           HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK_DEFAULT)
           && pipelineManager != null) {
-        HealthyPipelineChillModeRule rule = new HealthyPipelineChillModeRule(
-            pipelineManager, this, config);
+        HealthyPipelineChillModeRule healthyPipelineChillModeRule =
+            new HealthyPipelineChillModeRule(HEALTHY_PIPELINE_EXIT_RULE,
+                eventQueue, pipelineManager,
+                this, config);
         OneReplicaPipelineChillModeRule oneReplicaPipelineChillModeRule =
-            new OneReplicaPipelineChillModeRule(pipelineManager, this, conf);
-        exitRules.put(HEALTHY_PIPELINE_EXIT_RULE, rule);
+            new OneReplicaPipelineChillModeRule(
+                ATLEAST_ONE_DATANODE_REPORTED_PIPELINE_EXIT_RULE, eventQueue,
+                pipelineManager, this, conf);
+        exitRules.put(HEALTHY_PIPELINE_EXIT_RULE, healthyPipelineChillModeRule);
         exitRules.put(ATLEAST_ONE_DATANODE_REPORTED_PIPELINE_EXIT_RULE,
-            oneReplicaPipelineChillModeRule);
-        eventPublisher.addHandler(SCMEvents.PROCESSED_PIPELINE_REPORT, rule);
-        eventPublisher.addHandler(SCMEvents.PROCESSED_PIPELINE_REPORT,
             oneReplicaPipelineChillModeRule);
       }
       emitChillModeStatus();
@@ -115,13 +145,24 @@ public class SCMChillModeManager {
         new ChillModeStatus(getInChillMode()));
   }
 
-  public void validateChillModeExitRules(EventPublisher eventQueue) {
-    for (ChillModeExitRule exitRule : exitRules.values()) {
-      if (!exitRule.validate()) {
-        return;
-      }
+
+  public synchronized void validateChillModeExitRules(String ruleName,
+      EventPublisher eventQueue) {
+
+    if (exitRules.get(ruleName) != null) {
+      validatedRules.add(ruleName);
+    } else {
+      // This should never happen
+      LOG.error("No Such Exit rule {}", ruleName);
     }
-    exitChillMode(eventQueue);
+
+
+    if (validatedRules.size() == exitRules.size()) {
+      // All rules are satisfied, we can exit chill mode.
+      LOG.info("ScmChillModeManager, all rules are successfully validated");
+      exitChillMode(eventQueue);
+    }
+
   }
 
   /**
@@ -140,9 +181,6 @@ public class SCMChillModeManager {
     // TODO: Remove handler registration as there is no need to listen to
     // register events anymore.
 
-    for (ChillModeExitRule e : exitRules.values()) {
-      e.cleanup();
-    }
     emitChillModeStatus();
     // TODO: #CLUTIL if we reenter chill mode the fixed interval pipeline
     // creation job needs to stop
