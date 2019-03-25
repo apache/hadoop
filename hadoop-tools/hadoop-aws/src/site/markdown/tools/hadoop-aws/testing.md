@@ -292,7 +292,7 @@ For the default test dataset, hosted in the `landsat-pds` bucket, this is:
 
 AWS S3 and some third party stores support versioned buckets.
 
-Hadoop is adding awareness of this, including 
+Hadoop is adding awareness of this, including
 
 * Using version ID to guarantee consistent reads of opened files.
   [HADOOP-15625](https://issues.apache.org/jira/browse/HADOOP-15625)

@@ -147,7 +147,7 @@ public class TestInvoker extends Assert {
   }
 
   @Test
-  public void test413isPreconditions() throws Exception {
+  public void test412isPreconditions() throws Exception {
     RemoteFileChangedException ex = verifyTranslated(
         412, RemoteFileChangedException.class);
     assertExceptionContains(
