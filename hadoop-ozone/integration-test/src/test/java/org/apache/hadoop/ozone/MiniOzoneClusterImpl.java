@@ -446,14 +446,18 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       if (!blockSize.isPresent()) {
         blockSize = Optional.of(2 * streamBufferMaxSize.get());
       }
+
+      if (!streamBufferSizeUnit.isPresent()) {
+        streamBufferSizeUnit = Optional.of(StorageUnit.MB);
+      }
       conf.setStorageSize(ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY,
-          chunkSize.get(), StorageUnit.MB);
+          chunkSize.get(), streamBufferSizeUnit.get());
       conf.setStorageSize(OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE,
-          streamBufferFlushSize.get(), StorageUnit.MB);
+          streamBufferFlushSize.get(), streamBufferSizeUnit.get());
       conf.setStorageSize(OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_MAX_SIZE,
-          streamBufferMaxSize.get(), StorageUnit.MB);
+          streamBufferMaxSize.get(), streamBufferSizeUnit.get());
       conf.setStorageSize(OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE, blockSize.get(),
-          StorageUnit.MB);
+          streamBufferSizeUnit.get());
       configureTrace();
     }
 

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdds.scm;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.metrics2.MetricsSystem;
@@ -37,7 +38,9 @@ public class XceiverClientMetrics {
       .getSimpleName();
 
   private @Metric MutableCounterLong pendingOps;
+  private @Metric MutableCounterLong totalOps;
   private MutableCounterLong[] pendingOpsArray;
+  private MutableCounterLong[] opsArray;
   private MutableRate[] containerOpsLatency;
   private MetricsRegistry registry;
 
@@ -46,12 +49,17 @@ public class XceiverClientMetrics {
     this.registry = new MetricsRegistry(SOURCE_NAME);
 
     this.pendingOpsArray = new MutableCounterLong[numEnumEntries];
+    this.opsArray = new MutableCounterLong[numEnumEntries];
     this.containerOpsLatency = new MutableRate[numEnumEntries];
     for (int i = 0; i < numEnumEntries; i++) {
       pendingOpsArray[i] = registry.newCounter(
           "numPending" + ContainerProtos.Type.forNumber(i + 1),
           "number of pending" + ContainerProtos.Type.forNumber(i + 1) + " ops",
           (long) 0);
+      opsArray[i] = registry
+          .newCounter("opCount" + ContainerProtos.Type.forNumber(i + 1),
+              "number of" + ContainerProtos.Type.forNumber(i + 1) + " ops",
+              (long) 0);
 
       containerOpsLatency[i] = registry.newRate(
           ContainerProtos.Type.forNumber(i + 1) + "Latency",
@@ -68,6 +76,8 @@ public class XceiverClientMetrics {
 
   public void incrPendingContainerOpsMetrics(ContainerProtos.Type type) {
     pendingOps.incr();
+    totalOps.incr();
+    opsArray[type.ordinal()].incr();
     pendingOpsArray[type.ordinal()].incr();
   }
 
@@ -83,6 +93,16 @@ public class XceiverClientMetrics {
 
   public long getContainerOpsMetrics(ContainerProtos.Type type) {
     return pendingOpsArray[type.ordinal()].value();
+  }
+
+  @VisibleForTesting
+  public long getTotalOpCount() {
+    return totalOps.value();
+  }
+
+  @VisibleForTesting
+  public long getContainerOpCountMetrics(ContainerProtos.Type type) {
+    return opsArray[type.ordinal()].value();
   }
 
   public void unRegister() {
