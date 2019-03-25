@@ -535,6 +535,12 @@ public class ServiceTestUtils {
     waitForServiceToBeInState(client, exampleApp, ServiceState.STARTED);
   }
 
+  protected void waitForServiceToBeExpressUpgrading(ServiceClient client,
+      Service exampleApp) throws TimeoutException, InterruptedException {
+    waitForServiceToBeInState(client, exampleApp,
+        ServiceState.EXPRESS_UPGRADING);
+  }
+
   protected void waitForServiceToBeInState(ServiceClient client,
       Service exampleApp, ServiceState desiredState) throws TimeoutException,
       InterruptedException {
