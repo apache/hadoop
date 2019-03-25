@@ -63,9 +63,4 @@ public class RocksDBStoreIterator implements MetaStoreIterator<KeyValue> {
     rocksDBIterator.seekToLast();
   }
 
-  @Override
-  public void prefixSeek(byte[] prefix) {
-    rocksDBIterator.seek(prefix);
-  }
-
 }

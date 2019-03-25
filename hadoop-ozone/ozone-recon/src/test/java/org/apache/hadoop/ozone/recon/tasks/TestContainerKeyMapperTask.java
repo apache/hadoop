@@ -16,34 +16,44 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.recon.spi.impl;
+package org.apache.hadoop.ozone.recon.tasks;
 
+import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_DB_DIR;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_OM_SNAPSHOT_DB_DIR;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
+import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
+import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.recon.AbstractOMMetadataManagerTest;
 import org.apache.hadoop.ozone.recon.ReconUtils;
+import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
 import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
+import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
 import org.apache.hadoop.ozone.recon.spi.OzoneManagerServiceProvider;
+import org.apache.hadoop.ozone.recon.spi.impl.ContainerDBServiceProviderImpl;
+import org.apache.hadoop.ozone.recon.spi.impl.OzoneManagerServiceProviderImpl;
+import org.apache.hadoop.ozone.recon.spi.impl.ReconContainerDBProvider;
 import org.apache.hadoop.utils.db.DBCheckpoint;
+import org.apache.hadoop.utils.db.DBStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
@@ -53,23 +63,21 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Singleton;
 
 /**
- * Class to test Ozone Manager Service Provider Implementation.
+ * Unit test for Container Key mapper task.
  */
 @RunWith(PowerMockRunner.class)
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*"})
 @PrepareForTest(ReconUtils.class)
-public class TestOzoneManagerServiceProviderImpl extends
-    AbstractOMMetadataManagerTest {
+public class TestContainerKeyMapperTask extends AbstractOMMetadataManagerTest {
 
+  private ContainerDBServiceProvider containerDbServiceProvider;
   private OMMetadataManager omMetadataManager;
   private ReconOMMetadataManager reconOMMetadataManager;
   private Injector injector;
   private OzoneManagerServiceProviderImpl ozoneManagerServiceProvider;
-
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Before
   public void setUp() throws Exception {
@@ -78,32 +86,64 @@ public class TestOzoneManagerServiceProviderImpl extends
       @Override
       protected void configure() {
         try {
-          initializeNewOmMetadataManager();
-          writeDataToOm(omMetadataManager, "key_one");
           bind(OzoneConfiguration.class).toInstance(
               getTestOzoneConfiguration());
+
           reconOMMetadataManager = getTestMetadataManager(omMetadataManager);
           bind(ReconOMMetadataManager.class).toInstance(reconOMMetadataManager);
           ozoneManagerServiceProvider = new OzoneManagerServiceProviderImpl(
               getTestOzoneConfiguration());
           bind(OzoneManagerServiceProvider.class)
               .toInstance(ozoneManagerServiceProvider);
+
+          bind(DBStore.class).toProvider(ReconContainerDBProvider.class).
+              in(Singleton.class);
+          bind(ContainerDBServiceProvider.class).to(
+              ContainerDBServiceProviderImpl.class).in(Singleton.class);
         } catch (IOException e) {
           Assert.fail();
         }
       }
     });
+    containerDbServiceProvider = injector.getInstance(
+        ContainerDBServiceProvider.class);
   }
 
   @Test
-  public void testInit() throws Exception {
+  public void testRun() throws Exception{
 
-    Assert.assertNotNull(reconOMMetadataManager.getKeyTable()
-        .get("/sampleVol/bucketOne/key_one"));
-    Assert.assertNull(reconOMMetadataManager.getKeyTable()
-        .get("/sampleVol/bucketOne/key_two"));
+    Map<ContainerKeyPrefix, Integer> keyPrefixesForContainer =
+        containerDbServiceProvider.getKeyPrefixesForContainer(1);
+    assertTrue(keyPrefixesForContainer.isEmpty());
 
-    writeDataToOm(omMetadataManager, "key_two");
+    keyPrefixesForContainer = containerDbServiceProvider
+        .getKeyPrefixesForContainer(2);
+    assertTrue(keyPrefixesForContainer.isEmpty());
+
+    Pipeline pipeline = getRandomPipeline();
+
+    List<OmKeyLocationInfo> omKeyLocationInfoList = new ArrayList<>();
+    BlockID blockID1 = new BlockID(1, 1);
+    OmKeyLocationInfo omKeyLocationInfo1 = getOmKeyLocationInfo(blockID1,
+        pipeline);
+
+    BlockID blockID2 = new BlockID(2, 1);
+    OmKeyLocationInfo omKeyLocationInfo2
+        = getOmKeyLocationInfo(blockID2, pipeline);
+
+    omKeyLocationInfoList.add(omKeyLocationInfo1);
+    omKeyLocationInfoList.add(omKeyLocationInfo2);
+
+    OmKeyLocationInfoGroup omKeyLocationInfoGroup = new
+        OmKeyLocationInfoGroup(0, omKeyLocationInfoList);
+
+    writeDataToOm(omMetadataManager,
+        "key_one",
+        "bucketOne",
+        "sampleVol",
+        Collections.singletonList(omKeyLocationInfoGroup));
+
+    //Take snapshot of OM DB and copy over to Recon OM DB.
     DBCheckpoint checkpoint = omMetadataManager.getStore()
         .getCheckpoint(true);
     File tarFile = OmUtils.createTarFile(checkpoint.getCheckpointLocation());
@@ -113,60 +153,27 @@ public class TestOzoneManagerServiceProviderImpl extends
         CloseableHttpClient.class, String.class))
         .toReturn(inputStream);
 
-    ozoneManagerServiceProvider.init();
+    ContainerKeyMapperTask containerKeyMapperTask = new ContainerKeyMapperTask(
+        ozoneManagerServiceProvider, containerDbServiceProvider);
+    containerKeyMapperTask.run();
 
-    Assert.assertNotNull(reconOMMetadataManager.getKeyTable()
-        .get("/sampleVol/bucketOne/key_one"));
-    Assert.assertNotNull(reconOMMetadataManager.getKeyTable()
-        .get("/sampleVol/bucketOne/key_two"));
-  }
+    keyPrefixesForContainer =
+        containerDbServiceProvider.getKeyPrefixesForContainer(1);
+    assertTrue(keyPrefixesForContainer.size() == 1);
+    String omKey = omMetadataManager.getOzoneKey("sampleVol",
+        "bucketOne", "key_one");
+    ContainerKeyPrefix containerKeyPrefix = new ContainerKeyPrefix(1,
+        omKey, 0);
+    assertEquals(1,
+        keyPrefixesForContainer.get(containerKeyPrefix).intValue());
 
-  @Test
-  public void testGetOMMetadataManagerInstance() throws Exception {
-    OMMetadataManager omMetaMgr = ozoneManagerServiceProvider
-        .getOMMetadataManagerInstance();
-    assertNotNull(omMetaMgr);
-  }
-
-  @Test
-  public void testGetOzoneManagerDBSnapshot() throws Exception {
-
-    File reconOmSnapshotDbDir = temporaryFolder.newFolder();
-
-    File checkpointDir = Paths.get(reconOmSnapshotDbDir.getAbsolutePath(),
-        "testGetOzoneManagerDBSnapshot").toFile();
-    checkpointDir.mkdir();
-
-    File file1 = Paths.get(checkpointDir.getAbsolutePath(), "file1")
-        .toFile();
-    String str = "File1 Contents";
-    BufferedWriter writer = new BufferedWriter(new FileWriter(
-        file1.getAbsolutePath()));
-    writer.write(str);
-    writer.close();
-
-    File file2 = Paths.get(checkpointDir.getAbsolutePath(), "file2")
-        .toFile();
-    str = "File2 Contents";
-    writer = new BufferedWriter(new FileWriter(file2.getAbsolutePath()));
-    writer.write(str);
-    writer.close();
-
-    //Create test tar file.
-    File tarFile = OmUtils.createTarFile(checkpointDir.toPath());
-
-    InputStream fileInputStream = new FileInputStream(tarFile);
-    PowerMockito.stub(PowerMockito.method(ReconUtils.class,
-        "makeHttpCall",
-        CloseableHttpClient.class, String.class))
-        .toReturn(fileInputStream);
-
-    DBCheckpoint checkpoint = ozoneManagerServiceProvider
-        .getOzoneManagerDBSnapshot();
-    assertNotNull(checkpoint);
-    assertTrue(checkpoint.getCheckpointLocation().toFile().isDirectory());
-    assertTrue(checkpoint.getCheckpointLocation().toFile()
-        .listFiles().length == 2);
+    keyPrefixesForContainer =
+        containerDbServiceProvider.getKeyPrefixesForContainer(2);
+    assertTrue(keyPrefixesForContainer.size() == 1);
+    containerKeyPrefix = new ContainerKeyPrefix(2, omKey,
+        0);
+    assertEquals(1,
+        keyPrefixesForContainer.get(containerKeyPrefix).intValue());
   }
 
   /**
@@ -174,10 +181,13 @@ public class TestOzoneManagerServiceProviderImpl extends
    * @return OzoneConfiguration
    * @throws IOException ioEx.
    */
-  private OzoneConfiguration getTestOzoneConfiguration() throws IOException {
+  private OzoneConfiguration getTestOzoneConfiguration()
+      throws IOException {
     OzoneConfiguration configuration = new OzoneConfiguration();
     configuration.set(OZONE_RECON_OM_SNAPSHOT_DB_DIR,
         temporaryFolder.newFolder().getAbsolutePath());
+    configuration.set(OZONE_RECON_DB_DIR, temporaryFolder.newFolder()
+        .getAbsolutePath());
     return configuration;
   }
 

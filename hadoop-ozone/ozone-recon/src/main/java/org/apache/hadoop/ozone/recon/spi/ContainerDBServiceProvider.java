@@ -31,6 +31,16 @@ import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
 public interface ContainerDBServiceProvider {
 
   /**
+   * Create new container DB and bulk Store the container to Key prefix
+   * mapping.
+   * @param containerKeyPrefixCounts Map of containerId, key-prefix tuple to
+   *                                 key count.
+   */
+  void initNewContainerDB(Map<ContainerKeyPrefix, Integer>
+                                    containerKeyPrefixCounts)
+      throws IOException;
+
+  /**
    * Store the container to Key prefix mapping into the Recon Container DB.
    *
    * @param containerKeyPrefix the containerId, key-prefix tuple.
@@ -54,5 +64,6 @@ public interface ContainerDBServiceProvider {
    * @param containerId the given containerId.
    * @return Map of Key prefix -> count.
    */
-  Map<String, Integer> getKeyPrefixesForContainer(long containerId);
+  Map<ContainerKeyPrefix, Integer> getKeyPrefixesForContainer(long containerId)
+      throws IOException;
 }

@@ -34,4 +34,8 @@ public final class ReconConstants {
 
   public static final String RECON_OM_SNAPSHOT_DB =
       "om.snapshot.db";
+
+  public static final String CONTAINER_KEY_TABLE =
+      "containerKeyTable";
+
 }
