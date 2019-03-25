@@ -30,7 +30,7 @@ public final class OzoneS3Util {
   }
 
   public static String getVolumeName(String userName) {
-    Objects.nonNull(userName);
+    Objects.requireNonNull(userName);
     return DigestUtils.md5Hex(userName);
   }
 }
