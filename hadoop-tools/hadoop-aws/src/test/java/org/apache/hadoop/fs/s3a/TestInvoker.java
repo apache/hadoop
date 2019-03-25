@@ -42,6 +42,7 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.verifyExceptionClass;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 
 /**
@@ -129,10 +130,10 @@ public class TestInvoker extends Assert {
     return ex;
   }
 
-  protected <E extends Throwable> void verifyTranslated(
+  protected <E extends Throwable> E verifyTranslated(
       int status,
       Class<E> expected) throws Exception {
-    verifyTranslated(expected, createS3Exception(status));
+    return verifyTranslated(expected, createS3Exception(status));
   }
 
   private static <E extends Throwable> E verifyTranslated(Class<E> clazz,
@@ -143,6 +144,14 @@ public class TestInvoker extends Assert {
 
   private void resetCounters() {
     retryCount = 0;
+  }
+
+  @Test
+  public void test413isPreconditions() throws Exception {
+    RemoteFileChangedException ex = verifyTranslated(
+        412, RemoteFileChangedException.class);
+    assertExceptionContains(
+        RemoteFileChangedException.PRECONDITIONS_NOT_MET, ex);
   }
 
   @Test

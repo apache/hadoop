@@ -33,6 +33,12 @@ import org.apache.hadoop.fs.PathIOException;
 public class RemoteFileChangedException extends PathIOException {
 
   /**
+   * Error message used when mapping a 412 to this exception.
+   */
+  public static final String PRECONDITIONS_NOT_MET = 
+    "Constraints of request were unsatisfiable";
+
+  /**
    * Constructs a RemoteFileChangedException.
    *
    * @param path the path accessed when the change was detected

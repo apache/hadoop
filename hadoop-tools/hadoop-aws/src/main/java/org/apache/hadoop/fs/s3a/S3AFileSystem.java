@@ -2856,10 +2856,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Copy a single object in the bucket via a COPY operation.
    * There's no update of metadata, directory markers, etc.
-   * Callers must implement.
+   * Callers must add those.
    * @param srcKey source object path
    * @param dstKey destination object path
    * @param size object size
+   * @return the result of the copy.
    * @throws AmazonClientException on failures inside the AWS SDK
    * @throws InterruptedIOException the operation was interrupted
    * @throws IOException Other IO problems

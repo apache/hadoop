@@ -1155,6 +1155,25 @@ java.io.FileNotFoundException: Bucket stevel45r56666 does not exist
 Check the URI. If using a third-party store, verify that you've configured
 the client to talk to the specific server in `fs.s3a.endpoint`.
 
+#### <a name="preconditions_unmet"></a> `RemoteFileChangedException`: `Constraints of request were unsatisfiable`
+
+This error surfaces when the S3 endpoint returns the HTTP error code 412 on
+a request.
+
+This happens during a copy/rename when the etag of the source file
+changed partway through the copy (when a large file is being copied),
+or between the HEAD request to probe for the existence of the file
+and the actual COPY request being initiated.
+
+It may also surface if a file had just overwritten an existing file,
+and, due to AWS S3's eventual consistency, the HEAD request
+returned a different version of the file than the COPY command.
+
+Fixes
+
+1. Don't change files while they are being copied.
+1. Don't rename files or directories immediately after they've been written to/under.
+
 ## Other Issues
 
 ### <a name="logging"></a> Enabling low-level logging

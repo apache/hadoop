@@ -261,7 +261,7 @@ public final class S3AUtils {
       case 412:
         ioe = new RemoteFileChangedException(path,
             operation,
-            "Constraints of request were unsatisfiable",
+            RemoteFileChangedException.PRECONDITIONS_NOT_MET,
             ase);
         break;
 
