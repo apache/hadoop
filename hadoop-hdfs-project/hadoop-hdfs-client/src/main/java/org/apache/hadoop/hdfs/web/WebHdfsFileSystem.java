@@ -1566,6 +1566,9 @@ public class WebHdfsFileSystem extends FileSystem
     } catch (IOException ioe) {
       LOG.debug("Token cancel failed: ", ioe);
     } finally {
+      if (connectionFactory != null) {
+        connectionFactory.destroy();
+      }
       super.close();
     }
   }
