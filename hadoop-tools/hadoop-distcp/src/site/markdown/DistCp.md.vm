@@ -13,6 +13,7 @@
 -->
 
 #set ( $H3 = '###' )
+#set ( $H4 = '####' )
 
 DistCp Guide
 =====================
@@ -23,6 +24,7 @@ DistCp Guide
  - [Usage](#Usage)
      - [Basic Usage](#Basic_Usage)
      - [Update and Overwrite](#Update_and_Overwrite)
+     - [Sync](#Sync)
  - [Command Line Options](#Command_Line_Options)
  - [Architecture of DistCp](#Architecture_of_DistCp)
      - [DistCp Driver](#DistCp_Driver)
@@ -191,6 +193,124 @@ $H3 Update and Overwrite
   If `-update` is used, `1` is skipped because the file-length and contents match. `2` is copied because it doesn’t exist at the target. `10` and `20` are overwritten since the contents don’t match the source. However, if `-append` is additionally used, then only `10` is overwritten (source length less than destination) and `20` is appended with the change in file (if the files match up to the destination's original length).
 
   If `-overwrite` is used, `1` is overwritten as well.
+
+$H3 Sync
+
+  `-diff` option syncs files from a source cluster to a target cluster with a
+  snapshot diff. It copies, renames and removes files in the snapshot diff list.
+
+  `-update` option must be included when `-diff` option is in use.
+
+  Most cloud providers don't work well with sync at the moment.
+
+  Usage:
+
+    hadoop distcp -update -diff <from_snapshot> <to_snapshot> <source> <destination>
+
+  Example:
+
+    hadoop distcp -update -diff snap1 snap2 /src/ /dst/
+
+  The command above applies changes from snapshot `snap1` to `snap2`
+  (i.e. snapshot diff from `snap1` to `snap2`) in `/src/` to `/dst/`.
+  Obviously, it requires `/src/` to have both snapshots `snap1` and `snap2`.
+  But the destination  `/dst/` must also have a snapshot with the same
+  name as `<from_snapshot>`, in this case `snap1`. The destination `/dst/`
+  should not have new file operations (create, rename, delete) since `snap1`.
+  Note that when this command finishes, a new snapshot `snap2` will NOT be
+  created at `/dst/`.
+
+  `-update` is required to use `-diff` option.
+
+  For instance, in `/src/`, if `1.txt` is added and `2.txt` is deleted after
+  the creation of `snap1` and before creation of `snap2`, the command above
+  will copy `1.txt` from `/src/` to `/dst/` and delete `2.txt` from `/dst/`.
+
+  Sync behavior will be elaborated using experiments below.
+
+$H4 Experiment 1: Syncing diff of two adjacent snapshots
+
+  Some preparations before we start.
+
+    # Create source and destination directories
+    hdfs dfs -mkdir /src/ /dst/
+    # Allow snapshot on source
+    hdfs dfsadmin -allowSnapshot /src/
+    # Create a snapshot (empty one)
+    hdfs dfs -createSnapshot /src/ snap1
+    # Allow snapshot on destination
+    hdfs dfsadmin -allowSnapshot /dst/
+    # Create a from_snapshot with the same name
+    hdfs dfs -createSnapshot /dst/ snap1
+
+    # Put one text file under /src/
+    echo "This is the 1st text file." > 1.txt
+    hdfs dfs -put 1.txt /src/
+    # Create the second snapshot
+    hdfs dfs -createSnapshot /src/ snap2
+
+    # Put another text file under /src/
+    echo "This is the 2nd text file." > 2.txt
+    hdfs dfs -put 2.txt /src/
+    # Create the third snapshot
+    hdfs dfs -createSnapshot /src/ snap3
+
+  Then we run distcp sync:
+
+    hadoop distcp -update -diff snap1 snap2 /src/ /dst/
+
+  The command above should succeed. `1.txt` will be copied from `/src/` to
+  `/dst/`. Again, `-update` option is required.
+
+  If we run the same command again, we will get `DistCp sync failed` exception
+  because the destination has added a new file `1.txt` since `snap1`. That
+  being said, if we remove `1.txt` manually from `/dst/` and run the sync, the
+  command will succeed.
+
+$H4 Experiment 2: syncing diff of two non-adjacent snapshots
+
+  First do a clean up from Experiment 1.
+
+    hdfs dfs -rm -skipTrash /dst/1.txt
+
+  Run sync command, note the `<to_snapshot>` has been changed from `snap2` in
+  Experiment 1 to `snap3`.
+
+    hadoop distcp -update -diff snap1 snap3 /src/ /dst/
+
+  Both `1.txt` and `2.txt` will be copied to `/dst/`.
+
+$H4 Experiment 3: syncing file delete operation
+
+  Continuing from the end of Experiment 2:
+
+    hdfs dfs -rm -skipTrash /dst/2.txt
+    # Create snap2 at destination, it contains 1.txt
+    hdfs dfs -createSnapshot /dst/ snap2
+
+    # Delete 1.txt from source
+    hdfs dfs -rm -skipTrash /src/1.txt
+    # Create snap4 at source, it only contains 2.txt
+    hdfs dfs -createSnapshot /src/ snap4
+
+  Run sync command now:
+
+    hadoop distcp -update -diff snap2 snap4 /src/ /dst/
+
+  `2.txt` is copied and `1.txt` is deleted under `/dst/`.
+
+  Note that, though both `/src/` and `/dst/` have snapshot with the same name
+  `snap2`, the snapshots don't need to have the same content.
+  That means, if you have a `1.txt` in `/dst/`'s `snap2` but they have different
+  contents, `1.txt` will still be removed from `/dst/`.
+  The sync command doesn't check the contents of the files that is going to
+  be deleted. It simply follows the snapshot diff list between `<from_snapshot>`
+    and <to_snapshot>.
+
+  Also, if we delete `1.txt` from `/dst/` before creating `snap2` on `/dst/`
+  in the steps above, so that `/dst/`'s `snap2` doesn't have `1.txt` before
+  running sync command, the command will still succeed. It won't throw exception
+  while trying to delete `1.txt` from `/dst/` which doesn't exist.
 
 $H3 raw Namespace Extended Attribute Preservation
 
