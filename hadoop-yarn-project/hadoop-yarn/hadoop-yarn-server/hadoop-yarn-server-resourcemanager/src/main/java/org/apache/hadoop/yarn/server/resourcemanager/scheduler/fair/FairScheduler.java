@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMCriticalThreadUncaughtExceptionHandler;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -214,13 +215,17 @@ public class FairScheduler extends
   public FairScheduler() {
     super(FairScheduler.class.getName());
     context = new FSContext(this);
-    allocsLoader = new AllocationFileLoaderService();
+    allocsLoader = new AllocationFileLoaderService(this);
     queueMgr = new QueueManager(this);
     maxRunningEnforcer = new MaxRunningAppsEnforcer(this);
   }
 
   public FSContext getContext() {
     return context;
+  }
+
+  public RMContext getRMContext() {
+    return rmContext;
   }
 
   public boolean isAtLeastReservationThreshold(
@@ -455,30 +460,50 @@ public class FairScheduler extends
    * configured limits, but the app will not be marked as runnable.
    */
   protected void addApplication(ApplicationId applicationId,
-      String queueName, String user, boolean isAppRecovering) {
-    if (queueName == null || queueName.isEmpty()) {
-      String message =
-          "Reject application " + applicationId + " submitted by user " + user
-              + " with an empty queue name.";
-      rejectApplicationWithMessage(applicationId, message);
-      return;
-    }
-
-    if (queueName.startsWith(".") || queueName.endsWith(".")) {
-      String message =
-          "Reject application " + applicationId + " submitted by user " + user
-              + " with an illegal queue name " + queueName + ". "
-              + "The queue name cannot start/end with period.";
+      String queueName, String user, boolean isAppRecovering,
+      ApplicationPlacementContext placementContext) {
+    // If the  placement was rejected the placementContext will be null.
+    // We ignore placement rules on recovery.
+    if (!isAppRecovering && placementContext == null) {
+      String message = "Reject application " + applicationId +
+          " submitted by user " + user +
+          " application rejected by placement rules.";
       rejectApplicationWithMessage(applicationId, message);
       return;
     }
 
     writeLock.lock();
     try {
-      RMApp rmApp = rmContext.getRMApps().get(applicationId);
-      FSLeafQueue queue = assignToQueue(rmApp, queueName, user, applicationId);
+      // Assign the app to the queue creating and prevent queue delete.
+      FSLeafQueue queue = queueMgr.getLeafQueue(queueName, true,
+          applicationId);
       if (queue == null) {
+        rejectApplicationWithMessage(applicationId,
+            queueName + " is not a leaf queue");
         return;
+      }
+
+      // Enforce ACLs: 2nd check, there could be a time laps between the app
+      // creation in the RMAppManager and getting here. That means we could
+      // have a configuration change (prevent race condition)
+      UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(
+          user);
+
+      if (!queue.hasAccess(QueueACL.SUBMIT_APPLICATIONS, userUgi) &&
+          !queue.hasAccess(QueueACL.ADMINISTER_QUEUE, userUgi)) {
+        String msg = "User " + user + " does not have permission to submit " +
+            applicationId + " to queue " + queueName;
+        rejectApplicationWithMessage(applicationId, msg);
+        queue.removeAssignedApp(applicationId);
+        return;
+      }
+
+      RMApp rmApp = rmContext.getRMApps().get(applicationId);
+      if (rmApp != null) {
+        rmApp.setQueue(queueName);
+      } else {
+        LOG.error("Couldn't find RM app for " + applicationId +
+            " to set queue name on");
       }
 
       if (rmApp != null && rmApp.getAMResourceRequests() != null) {
@@ -499,7 +524,7 @@ public class FairScheduler extends
                           + "it has zero amount of resource for a requested "
                           + "resource! Invalid requested AM resources: %s, "
                           + "maximum queue resources: %s",
-                  applicationId, queue.getName(),
+                  applicationId, queueName,
                   invalidAMResourceRequests, queue.getMaxShare());
           rejectApplicationWithMessage(applicationId, msg);
           queue.removeAssignedApp(applicationId);
@@ -507,27 +532,13 @@ public class FairScheduler extends
         }
       }
 
-      // Enforce ACLs
-      UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(
-          user);
-
-      if (!queue.hasAccess(QueueACL.SUBMIT_APPLICATIONS, userUgi) && !queue
-          .hasAccess(QueueACL.ADMINISTER_QUEUE, userUgi)) {
-        String msg = "User " + userUgi.getUserName()
-            + " cannot submit applications to queue " + queue.getName()
-            + "(requested queuename is " + queueName + ")";
-        rejectApplicationWithMessage(applicationId, msg);
-        queue.removeAssignedApp(applicationId);
-        return;
-      }
-
       SchedulerApplication<FSAppAttempt> application =
-          new SchedulerApplication<FSAppAttempt>(queue, user);
+          new SchedulerApplication<>(queue, user);
       applications.put(applicationId, application);
       queue.getMetrics().submitApp(user);
 
       LOG.info("Accepted application " + applicationId + " from user: " + user
-          + ", in queue: " + queue.getName()
+          + ", in queue: " + queueName
           + ", currently num of applications: " + applications.size());
       if (isAppRecovering) {
         LOG.debug("{} is recovering. Skip notifying APP_ACCEPTED",
@@ -594,60 +605,6 @@ public class FairScheduler extends
     } finally {
       writeLock.unlock();
     }
-  }
-
-  /**
-   * Helper method for the tests to assign the app to a queue.
-   */
-  @VisibleForTesting
-  FSLeafQueue assignToQueue(RMApp rmApp, String queueName, String user) {
-    return assignToQueue(rmApp, queueName, user, null);
-  }
-
-  /**
-   * Helper method that attempts to assign the app to a queue. The method is
-   * responsible to call the appropriate event-handler if the app is rejected.
-   */
-  private FSLeafQueue assignToQueue(RMApp rmApp, String queueName, String user,
-        ApplicationId applicationId) {
-    FSLeafQueue queue = null;
-    String appRejectMsg = null;
-
-    try {
-      QueuePlacementPolicy placementPolicy = allocConf.getPlacementPolicy();
-      queueName = placementPolicy.assignAppToQueue(queueName, user);
-      if (queueName == null) {
-        appRejectMsg = "Application rejected by queue placement policy";
-      } else {
-        queue = queueMgr.getLeafQueue(queueName, true, applicationId);
-        if (queue == null) {
-          appRejectMsg = queueName + " is not a leaf queue";
-        }
-      }
-    } catch (IllegalStateException se) {
-      appRejectMsg = "Unable to match app " + rmApp.getApplicationId() +
-          " to a queue placement policy, and no valid terminal queue " +
-          " placement rule is configured. Please contact an administrator " +
-          " to confirm that the fair scheduler configuration contains a " +
-          " valid terminal queue placement rule.";
-    } catch (InvalidQueueNameException qne) {
-      appRejectMsg = qne.getMessage();
-    } catch (IOException ioe) {
-      // IOException should only happen for a user without groups
-      appRejectMsg = "Error assigning app to a queue: " + ioe.getMessage();
-    }
-
-    if (appRejectMsg != null && rmApp != null) {
-      rejectApplicationWithMessage(rmApp.getApplicationId(), appRejectMsg);
-      return null;
-    }
-
-    if (rmApp != null) {
-      rmApp.setQueue(queue.getName());
-    } else {
-      LOG.error("Couldn't find RM app to set queue name on");
-    }
-    return queue;
   }
 
   private void removeApplication(ApplicationId applicationId,
@@ -1265,7 +1222,8 @@ public class FairScheduler extends
       if (queueName != null) {
         addApplication(appAddedEvent.getApplicationId(),
             queueName, appAddedEvent.getUser(),
-            appAddedEvent.getIsAppRecovering());
+            appAddedEvent.getIsAppRecovering(),
+            appAddedEvent.getPlacementContext());
       }
       break;
     case APP_REMOVED:
@@ -1442,12 +1400,8 @@ public class FairScheduler extends
       // This stores per-application scheduling information
       this.applications = new ConcurrentHashMap<>();
 
-      allocConf = new AllocationConfiguration(conf);
-      try {
-        queueMgr.initialize(conf);
-      } catch (Exception e) {
-        throw new IOException("Failed to start FairScheduler", e);
-      }
+      allocConf = new AllocationConfiguration(this);
+      queueMgr.initialize();
 
       if (continuousSchedulingEnabled) {
         // Continuous scheduling is deprecated log it on startup

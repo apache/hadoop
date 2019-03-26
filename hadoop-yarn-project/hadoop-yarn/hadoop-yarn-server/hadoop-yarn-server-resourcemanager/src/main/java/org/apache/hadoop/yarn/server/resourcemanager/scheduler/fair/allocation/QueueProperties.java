@@ -169,8 +169,7 @@ public class QueueProperties {
     private Set<String> nonPreemptableQueues = new HashSet<>();
     // Remember all queue names so we can display them on web UI, etc.
     // configuredQueues is segregated based on whether it is a leaf queue
-    // or a parent queue. This information is used for creating queues
-    // and also for making queue placement decisions(QueuePlacementRule.java).
+    // or a parent queue. This information is used for creating queues.
     private Map<FSQueueType, Set<String>> configuredQueues = new HashMap<>();
 
     Builder() {

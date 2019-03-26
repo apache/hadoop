@@ -23,7 +23,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.ReservationACL;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -94,10 +93,6 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   //Map for maximum container resource allocation per queues by queue name
   private final Map<String, Resource> queueMaxContainerAllocationMap;
 
-  // Policy for mapping apps to queues
-  @VisibleForTesting
-  QueuePlacementPolicy placementPolicy;
-
   //Configured queues in the alloc xml
   @VisibleForTesting
   Map<FSQueueType, Set<String>> configuredQueues;
@@ -107,9 +102,16 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
 
   private final Set<String> nonPreemptableQueues;
 
+  /**
+   * Create a fully initialised configuration for the scheduler.
+   * @param queueProperties The list of queues and their properties from the
+   *                        configuration.
+   * @param allocationFileParser The allocation file parser
+   * @param globalReservationQueueConfig The reservation queue config
+   * @throws AllocationConfigurationException
+   */
   public AllocationConfiguration(QueueProperties queueProperties,
       AllocationFileParser allocationFileParser,
-      QueuePlacementPolicy newPlacementPolicy,
       ReservationQueueConfiguration globalReservationQueueConfig)
       throws AllocationConfigurationException {
     this.minQueueResources = queueProperties.getMinQueueResources();
@@ -138,14 +140,19 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     this.resAcls = queueProperties.getReservationAcls();
     this.reservableQueues = queueProperties.getReservableQueues();
     this.globalReservationQueueConfig = globalReservationQueueConfig;
-    this.placementPolicy = newPlacementPolicy;
     this.configuredQueues = queueProperties.getConfiguredQueues();
     this.nonPreemptableQueues = queueProperties.getNonPreemptableQueues();
     this.queueMaxContainerAllocationMap =
         queueProperties.getMaxContainerAllocation();
   }
 
-  public AllocationConfiguration(Configuration conf) {
+  /**
+   * Create a base scheduler configuration with just the defaults set.
+   * Should only be called to init a basic setup on scheduler init.
+   * @param scheduler The {@link FairScheduler} to create and initialise the
+   *                  placement policy.
+   */
+  public AllocationConfiguration(FairScheduler scheduler) {
     minQueueResources = new HashMap<>();
     maxChildQueueResources = new HashMap<>();
     maxQueueResources = new HashMap<>();
@@ -169,8 +176,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     for (FSQueueType queueType : FSQueueType.values()) {
       configuredQueues.put(queueType, new HashSet<>());
     }
-    placementPolicy =
-        QueuePlacementPolicy.fromConfiguration(conf, configuredQueues);
+    QueuePlacementPolicy.fromConfiguration(scheduler);
     nonPreemptableQueues = new HashSet<>();
     queueMaxContainerAllocationMap = new HashMap<>();
   }
@@ -307,10 +313,6 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
 
   public Map<FSQueueType, Set<String>> getConfiguredQueues() {
     return configuredQueues;
-  }
-
-  public QueuePlacementPolicy getPlacementPolicy() {
-    return placementPolicy;
   }
 
   @Override
