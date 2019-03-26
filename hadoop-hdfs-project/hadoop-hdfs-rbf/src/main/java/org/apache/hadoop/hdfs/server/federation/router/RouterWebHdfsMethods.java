@@ -472,11 +472,13 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
             (HttpURLConnection)connectionFactory.openConnection(url);
         conn.setRequestMethod(method);
 
+        connectionFactory.destroy();
         return conn;
       } catch (Exception e) {
         LOG.error("Cannot redirect request to {}", namenode, e);
       }
     }
+    connectionFactory.destroy();
     return null;
   }
 
