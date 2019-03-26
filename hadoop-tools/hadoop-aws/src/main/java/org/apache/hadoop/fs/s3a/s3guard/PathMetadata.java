@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.s3a.Tristate;
 @InterfaceStability.Evolving
 public class PathMetadata extends ExpirableMetadata {
 
-  private final S3AFileStatus fileStatus;
+  private S3AFileStatus fileStatus;
   private Tristate isEmptyDirectory;
   private boolean isDeleted;
 
@@ -94,6 +94,10 @@ public class PathMetadata extends ExpirableMetadata {
 
   void setIsEmptyDirectory(Tristate isEmptyDirectory) {
     this.isEmptyDirectory = isEmptyDirectory;
+    if (fileStatus.isDirectory()) {
+      fileStatus = new S3AFileStatus(
+          isEmptyDirectory, fileStatus.getPath(), fileStatus.getOwner());
+    }
   }
 
   public boolean isDeleted() {
