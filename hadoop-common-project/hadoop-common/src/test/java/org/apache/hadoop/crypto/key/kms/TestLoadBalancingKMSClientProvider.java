@@ -917,6 +917,48 @@ public class TestLoadBalancingKMSClientProvider {
   }
 
   @Test
+  public void testTokenSelectionWithUriFormat() throws Exception {
+    // enable security
+    final Configuration conf = new Configuration();
+    conf.set("hadoop.security.authentication", "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+
+    UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
+        "foo", new String[] {"hadoop"});
+
+    String providerUriString = "kms://http@host1;host2;host3:9600/kms/foo";
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+        providerUriString);
+
+    final URI kmsUri = URI.create(providerUriString);
+    // create a fake kms dt
+    final Token token = new Token();
+    token.setKind(TOKEN_KIND);
+    token.setService(new Text(providerUriString));
+    // call getActualUgi() with the current user.
+    UserGroupInformation actualUgi =
+        ugi.doAs(new PrivilegedExceptionAction<UserGroupInformation>(){
+          @Override
+          public UserGroupInformation run() throws Exception {
+            final KeyProvider kp =
+                new KMSClientProvider.Factory().createProvider(kmsUri, conf);
+            final LoadBalancingKMSClientProvider lbkp =
+                (LoadBalancingKMSClientProvider) kp;
+            final Credentials creds = new Credentials();
+            creds.addToken(token.getService(), token);
+            UserGroupInformation.getCurrentUser().addCredentials(creds);
+
+            KMSClientProvider[] providers = lbkp.getProviders();
+            return providers[0].getActualUgi();
+          }
+        });
+    // make sure getActualUgi() returns the current user, not login user.
+    assertEquals(
+        "testTokenSelectionWithUriFormat() should return the" +
+            " current user, not login user", ugi, actualUgi);
+  }
+
+  @Test
   public void testGetActualUGI() throws Exception {
     // enable security
     final Configuration conf = new Configuration();
