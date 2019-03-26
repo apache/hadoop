@@ -333,6 +333,19 @@ public class TestKeyValueContainer {
   }
 
   @Test
+  public void testReportOfUnhealthyContainer() throws Exception {
+    keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
+    Assert.assertNotNull(keyValueContainer.getContainerReport());
+    keyValueContainer.markContainerUnhealthy();
+    File containerFile = keyValueContainer.getContainerFile();
+    keyValueContainerData = (KeyValueContainerData) ContainerDataYaml
+        .readContainerFile(containerFile);
+    assertEquals(ContainerProtos.ContainerDataProto.State.UNHEALTHY,
+        keyValueContainerData.getState());
+    Assert.assertNotNull(keyValueContainer.getContainerReport());
+  }
+
+  @Test
   public void testUpdateContainer() throws IOException {
     keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
     Map<String, String> metadata = new HashMap<>();
