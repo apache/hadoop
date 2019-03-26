@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ClusterNodeTracker;
@@ -113,14 +114,18 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
         1, Resources.createResource(4096, 4), 1, host);
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
-    NodeUpdateSchedulerEvent nodeUpdateEvent = new NodeUpdateSchedulerEvent(node1);
+    NodeUpdateSchedulerEvent nodeUpdateEvent =
+        new NodeUpdateSchedulerEvent(node1);
     scheduler.handle(nodeUpdateEvent);
 
     ApplicationAttemptId appAttemptId =
         createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
     createMockRMApp(appAttemptId);
 
-    scheduler.addApplication(appAttemptId.getApplicationId(), "queue11", "user11", false);
+    ApplicationPlacementContext placementCtx =
+        new ApplicationPlacementContext("queue11");
+    scheduler.addApplication(appAttemptId.getApplicationId(), "queue11",
+        "user11", false, placementCtx);
     scheduler.addApplicationAttempt(appAttemptId, false, false);
     List<ResourceRequest> ask = new ArrayList<>();
     ask.add(createResourceRequest(1024, 1, ResourceRequest.ANY, 1, 1, true));
@@ -148,7 +153,8 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     scheduler.handle(nodeEvent2);
 
     // available resource
-    Assert.assertEquals(scheduler.getClusterResource().getMemorySize(), 16 * 1024);
+    Assert.assertEquals(scheduler.getClusterResource().getMemorySize(),
+        16 * 1024);
     Assert.assertEquals(scheduler.getClusterResource().getVirtualCores(), 16);
 
     // send application request
@@ -156,14 +162,17 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
         createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
     createMockRMApp(appAttemptId);
 
-    scheduler.addApplication(appAttemptId.getApplicationId(),
-        "queue11", "user11", false);
+    ApplicationPlacementContext placementCtx =
+        new ApplicationPlacementContext("queue11");
+    scheduler.addApplication(appAttemptId.getApplicationId(), "queue11",
+        "user11", false, placementCtx);
     scheduler.addApplicationAttempt(appAttemptId, false, false);
     List<ResourceRequest> ask = new ArrayList<>();
     ResourceRequest request =
         createResourceRequest(1024, 1, ResourceRequest.ANY, 1, 1, true);
     ask.add(request);
-    scheduler.allocate(appAttemptId, ask, null, new ArrayList<ContainerId>(), null, null, NULL_UPDATE_REQUESTS);
+    scheduler.allocate(appAttemptId, ask, null, new ArrayList<>(), null, null,
+        NULL_UPDATE_REQUESTS);
     triggerSchedulingAttempt();
 
     FSAppAttempt app = scheduler.getSchedulerApp(appAttemptId);
@@ -174,10 +183,11 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
         createResourceRequest(1024, 1, ResourceRequest.ANY, 2, 1, true);
     ask.clear();
     ask.add(request);
-    scheduler.allocate(appAttemptId, ask, null, new ArrayList<ContainerId>(), null, null, NULL_UPDATE_REQUESTS);
+    scheduler.allocate(appAttemptId, ask, null, new ArrayList<>(), null, null,
+        NULL_UPDATE_REQUESTS);
     triggerSchedulingAttempt();
 
-    checkAppConsumption(app, Resources.createResource(2048,2));
+    checkAppConsumption(app, Resources.createResource(2048, 2));
 
     // 2 containers should be assigned to 2 nodes
     Set<NodeId> nodes = new HashSet<NodeId>();
@@ -353,8 +363,10 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     id11 = createAppAttemptId(1, 1);
     createMockRMApp(id11);
     priority = Priority.newInstance(priorityValue);
+    ApplicationPlacementContext placementCtx =
+        new ApplicationPlacementContext("root.queue1");
     scheduler.addApplication(id11.getApplicationId(), "root.queue1", "user1",
-        false);
+        false, placementCtx);
     scheduler.addApplicationAttempt(id11, false, false);
     fsAppAttempt = scheduler.getApplicationAttempt(id11);
 

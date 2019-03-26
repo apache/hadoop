@@ -81,6 +81,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMW
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -978,14 +979,17 @@ public class TestSchedulerUtils {
   }
 
   public static SchedulerApplication<SchedulerApplicationAttempt>
-  verifyAppAddedAndRemovedFromScheduler(
-          Map<ApplicationId, SchedulerApplication<SchedulerApplicationAttempt>> applications,
+      verifyAppAddedAndRemovedFromScheduler(
+          Map<ApplicationId, SchedulerApplication<SchedulerApplicationAttempt>>
+              applications,
           EventHandler<SchedulerEvent> handler, String queueName) {
 
+    ApplicationPlacementContext apc =
+        new ApplicationPlacementContext(queueName);
     ApplicationId appId =
             ApplicationId.newInstance(System.currentTimeMillis(), 1);
     AppAddedSchedulerEvent appAddedEvent =
-            new AppAddedSchedulerEvent(appId, queueName, "user");
+            new AppAddedSchedulerEvent(appId, queueName, "user", apc);
     handler.handle(appAddedEvent);
     SchedulerApplication<SchedulerApplicationAttempt> app =
             applications.get(appId);

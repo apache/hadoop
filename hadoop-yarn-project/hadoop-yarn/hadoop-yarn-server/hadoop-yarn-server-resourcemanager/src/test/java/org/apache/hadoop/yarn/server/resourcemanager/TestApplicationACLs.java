@@ -466,7 +466,7 @@ public class TestApplicationACLs extends ParameterizedSchedulerTestBase {
     if (conf.get(YarnConfiguration.RM_SCHEDULER)
         .equals(FairScheduler.class.getName())) {
       Assert.assertTrue(appReport.getDiagnostics()
-          .contains("Application rejected by queue placement policy"));
+          .contains("user owner application rejected by placement rules."));
     } else {
       Assert.assertTrue(appReport.getDiagnostics()
           .contains("submitted by user owner to unknown queue: InvalidQueue"));

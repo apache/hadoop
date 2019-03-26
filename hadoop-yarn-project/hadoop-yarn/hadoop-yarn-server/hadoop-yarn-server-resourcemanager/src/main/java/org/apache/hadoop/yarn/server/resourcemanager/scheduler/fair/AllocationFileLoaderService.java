@@ -78,6 +78,7 @@ public class AllocationFileLoaderService extends AbstractService {
       "(?i)(hdfs)|(file)|(s3a)|(viewfs)";
 
   private final Clock clock;
+  private final FairScheduler scheduler;
 
   // Last time we successfully reloaded queues
   private volatile long lastSuccessfulReload;
@@ -95,14 +96,15 @@ public class AllocationFileLoaderService extends AbstractService {
   private Thread reloadThread;
   private volatile boolean running = true;
 
-  public AllocationFileLoaderService() {
-    this(SystemClock.getInstance());
+  AllocationFileLoaderService(FairScheduler scheduler) {
+    this(SystemClock.getInstance(), scheduler);
   }
 
   private List<Permission> defaultPermissions;
 
-  public AllocationFileLoaderService(Clock clock) {
+  AllocationFileLoaderService(Clock clock, FairScheduler scheduler) {
     super(AllocationFileLoaderService.class.getName());
+    this.scheduler = scheduler;
     this.clock = clock;
   }
 
@@ -254,17 +256,15 @@ public class AllocationFileLoaderService extends AbstractService {
         new AllocationFileQueueParser(allocationFileParser.getQueueElements());
     QueueProperties queueProperties = queueParser.parse();
 
-    // Load placement policy and pass it configured queues
-    Configuration conf = getConfig();
-    QueuePlacementPolicy newPlacementPolicy =
-        getQueuePlacementPolicy(allocationFileParser, queueProperties, conf);
+    // Load placement policy
+    getQueuePlacementPolicy(allocationFileParser);
     setupRootQueueProperties(allocationFileParser, queueProperties);
 
     ReservationQueueConfiguration globalReservationQueueConfig =
         createReservationQueueConfig(allocationFileParser);
 
     AllocationConfiguration info = new AllocationConfiguration(queueProperties,
-        allocationFileParser, newPlacementPolicy, globalReservationQueueConfig);
+        allocationFileParser, globalReservationQueueConfig);
 
     lastSuccessfulReload = clock.getTime();
     lastReloadAttemptFailed = false;
@@ -272,17 +272,15 @@ public class AllocationFileLoaderService extends AbstractService {
     reloadListener.onReload(info);
   }
 
-  private QueuePlacementPolicy getQueuePlacementPolicy(
-      AllocationFileParser allocationFileParser,
-      QueueProperties queueProperties, Configuration conf)
+  private void getQueuePlacementPolicy(
+      AllocationFileParser allocationFileParser)
       throws AllocationConfigurationException {
     if (allocationFileParser.getQueuePlacementPolicy().isPresent()) {
-      return QueuePlacementPolicy.fromXml(
+      QueuePlacementPolicy.fromXml(
           allocationFileParser.getQueuePlacementPolicy().get(),
-          queueProperties.getConfiguredQueues(), conf);
+          scheduler);
     } else {
-      return QueuePlacementPolicy.fromConfiguration(conf,
-          queueProperties.getConfiguredQueues());
+      QueuePlacementPolicy.fromConfiguration(scheduler);
     }
   }
 

@@ -28,7 +28,7 @@ import java.io.IOException;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 
 /**
- * Utility class for QueuePlacementRule.
+ * Utility class for Capacity Scheduler queue PlacementRules.
  */
 public final class QueuePlacementRuleUtils {
 

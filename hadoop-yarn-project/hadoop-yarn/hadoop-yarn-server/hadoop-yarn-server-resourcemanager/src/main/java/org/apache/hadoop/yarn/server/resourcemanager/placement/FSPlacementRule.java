@@ -58,10 +58,12 @@ public abstract class FSPlacementRule extends PlacementRule {
   }
 
   /**
-   * Set a rule to generate the parent queue dynamically.
+   * Set a rule to generate the parent queue dynamically. The parent rule
+   * should only be called on rule creation when the policy is read from the
+   * configuration.
    * @param parent A PlacementRule
    */
-  void setParentRule(PlacementRule parent) {
+  public void setParentRule(PlacementRule parent) {
     this.parentRule = parent;
   }
 
@@ -69,7 +71,8 @@ public abstract class FSPlacementRule extends PlacementRule {
    * Get the rule that is set to generate the parent queue dynamically.
    * @return The rule set or <code>null</code> if not set.
    */
-  PlacementRule getParentRule() {
+  @VisibleForTesting
+  public PlacementRule getParentRule() {
     return parentRule;
   }
 
@@ -150,6 +153,14 @@ public abstract class FSPlacementRule extends PlacementRule {
   }
 
   /**
+   * Get the create flag as set during the config setup.
+   * @return The value of the {@link #createQueue} flag
+   */
+  public boolean getCreateFlag() {
+    return createQueue;
+  }
+
+  /**
    * Get the create flag from the xml configuration element.
    * @param conf The FS configuration element for the queue
    * @return <code>false</code> only if the flag is set in the configuration to
@@ -159,7 +170,7 @@ public abstract class FSPlacementRule extends PlacementRule {
   boolean getCreateFlag(Element conf) {
     if (conf != null) {
       String create = conf.getAttribute("create");
-      return Boolean.parseBoolean(create);
+      return create.isEmpty() || Boolean.parseBoolean(create);
     }
     return true;
   }
