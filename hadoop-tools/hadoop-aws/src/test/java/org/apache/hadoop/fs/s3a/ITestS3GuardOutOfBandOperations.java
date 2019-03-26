@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.junit.Assume.assumeTrue;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
@@ -92,7 +93,10 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
 
   public static final int TIMESTAMP_SLEEP = 2000;
-  public static final int STABILIZE_SLEEP = 2000;
+
+  public static final int STABILIZATION_TIME = 20_000;
+
+  public static final int PROBE_INTERVAL_MILLIS = 500;
 
   private S3AFileSystem guardedFs;
   private S3AFileSystem rawFS;
@@ -193,6 +197,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
 
   /**
    * Create a test filesystem which is always unguarded.
+   * This filesystem MUST be closed in test teardown.
    * @return the new FS
    */
   private S3AFileSystem createUnguardedFS() throws Exception {
@@ -208,7 +213,8 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
   }
 
   /**
-   * Create and init a filesystem.
+   * Create and initialize a new filesystem.
+   * This filesystem MUST be closed in test teardown.
    * @param uri FS URI
    * @param config config.
    * @return new instance
@@ -257,36 +263,38 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
   }
 
   /**
-   * perform an out of band delete.
-   * @param testFileName filename
+   * Perform an out-of-band delete.
+   * @param testFilePath filename
    * @param allowAuthoritative  is the store authoritative
+   * @throws Exception failure
    */
   private void outOfBandDeletes(
-      final Path testFileName,
+      final Path testFilePath,
       final boolean allowAuthoritative)
       throws Exception {
     try {
       // Create initial file
       String text = "Hello, World!";
-      writeTextFile(guardedFs, testFileName, text, true);
+      writeTextFile(guardedFs, testFilePath, text, true);
+      awaitFileStatus(rawFS, testFilePath);
 
       // Delete the file without S3Guard (raw)
-      rawFS.delete(testFileName, true);
-      waitS3Stabilization();
+      deleteFile(rawFS, testFilePath);
 
       // The check is the same if s3guard is authoritative and if it's not
       // it should be in the ms
-      FileStatus status = guardedFs.getFileStatus(testFileName);
+      FileStatus status = guardedFs.getFileStatus(testFilePath);
       LOG.info("Authoritative: {} status path: {}",
           allowAuthoritative, status.getPath());
-      expectExceptionWhenReading(testFileName, text);
+      expectExceptionWhenReading(testFilePath, text);
+      expectExceptionWhenReadingOpenFileAPI(testFilePath, text);
     } finally {
-      guardedFs.delete(testFileName, true);
+      guardedFs.delete(testFilePath, true);
     }
   }
 
   /**
-   * Overwrite a file.
+   * Overwrite a file out of band.
    * @param firstText first text
    * @param secondText second text
    * @throws Exception failure
@@ -294,26 +302,31 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
   private void overwriteFile(String firstText, String secondText)
       throws Exception {
     boolean allowAuthoritative = authoritative;
-    Path testFilePath = path("/OverwriteFileTest" + UUID.randomUUID());
+    Path testFilePath = path("OverwriteFileTest-" + UUID.randomUUID());
     LOG.info("Allow authoritative param: {}",  allowAuthoritative);
     try {
       // Create initial file
       writeTextFile(
           guardedFs, testFilePath, firstText, true);
       // and cache the value for later
-      final FileStatus origStatus = rawFS.getFileStatus(testFilePath);
+      final FileStatus origStatus = awaitFileStatus(rawFS, testFilePath);
       waitForDifferentTimestamps();
-      // Delete and recreate the file without S3Guard
+      // Overwrite the file without S3Guard
       writeTextFile(
           rawFS, testFilePath, secondText, true);
-      // short pause to let S3 stabilize
-      waitS3Stabilization();
-      FileStatus rawFileStatus = rawFS.getFileStatus(testFilePath);
 
       // Read the file and verify the data
-      FileStatus guardedFileStatus = guardedFs.getFileStatus(testFilePath);
-      verifyFileStatusAsExpected(firstText, secondText, allowAuthoritative,
-          origStatus, rawFileStatus, guardedFileStatus);
+      eventually(STABILIZATION_TIME, PROBE_INTERVAL_MILLIS,
+          () -> {
+            FileStatus rawFileStatus = rawFS.getFileStatus(testFilePath);
+            final FileStatus guardedFileStatus =
+                guardedFs.getFileStatus(testFilePath);
+            verifyFileStatusAsExpected(firstText, secondText,
+                allowAuthoritative,
+                origStatus,
+                rawFileStatus,
+                guardedFileStatus);
+          });
     } finally {
       guardedFs.delete(testFilePath, true);
     }
@@ -353,17 +366,16 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
 
     LOG.info("Authoritative mode enabled: {}", allowAuthoritative);
     String rUUID = UUID.randomUUID().toString();
-    String testDir = "/dir-" + rUUID + "/";
+    String testDir = "dir-" + rUUID + "/";
     String testFile = testDir + "file-1-" + rUUID;
     Path testDirPath = path(testDir);
     Path testFilePath = guardedFs.qualify(path(testFile));
 
     try {
       // Create initial statusIterator with guarded ms
-      writeTextFile(
-          guardedFs, testFilePath, firstText, true);
+      writeTextFile(guardedFs, testFilePath, firstText, true);
       // and cache the value for later
-      final FileStatus origStatus = rawFS.getFileStatus(testFilePath);
+      final FileStatus origStatus = awaitFileStatus(rawFS, testFilePath);
 
       // Do a listing to cache the lists. Should be authoritative if it's set.
       final FileStatus[] origList = guardedFs.listStatus(testDirPath);
@@ -377,12 +389,12 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       waitForDifferentTimestamps();
 
       // Update file with second text without S3Guard (raw)
-      rawFS.delete(testFilePath, true);
-      writeTextFile(
-          rawFS, testFilePath, secondText, true);
-      // short pause to let S3 stabilize
-      waitS3Stabilization();
-      final FileStatus rawFileStatus = rawFS.getFileStatus(testFilePath);
+      deleteFile(rawFS, testFilePath);
+
+      // write to the test path with the second text
+      writeTextFile(rawFS, testFilePath, secondText, true);
+      // and await it becoming visible again.
+      final FileStatus rawFileStatus = awaitFileStatus(rawFS, testFilePath);
 
       // check listing in guarded store.
       final FileStatus[] modList = guardedFs.listStatus(testDirPath);
@@ -394,14 +406,27 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
           modList[0].getPath());
 
       // Read the file and verify the data
-      final FileStatus guardedFileStatus =
-          guardedFs.getFileStatus(testFilePath);
-      verifyFileStatusAsExpected(firstText, secondText, allowAuthoritative,
-          origStatus, rawFileStatus, guardedFileStatus);
+      eventually(STABILIZATION_TIME, PROBE_INTERVAL_MILLIS,
+          () -> {
+            final FileStatus guardedFileStatus =
+                guardedFs.getFileStatus(testFilePath);
+            verifyFileStatusAsExpected(firstText, secondText,
+                allowAuthoritative,
+                origStatus,
+                rawFileStatus,
+                guardedFileStatus);
+          });
     } finally {
       guardedFs.delete(testDirPath, true);
     }
   }
+
+  private void deleteFile(final S3AFileSystem fs, final Path testFilePath)
+      throws Exception {
+    fs.delete(testFilePath, true);
+    awaitDeletedFileDisappearance(fs, testFilePath);
+  }
+
 
   /**
    * Verify that the file status of a file which has been overwritten
@@ -474,17 +499,8 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
   }
 
   /**
-   * A brief pause to for update + delete consistency to propagate,
-   * so the state of S3 is consistent enough for our test semantics
-   * to be valid.
-   */
-  private void waitS3Stabilization() throws InterruptedException {
-    Thread.sleep(STABILIZE_SLEEP);
-  }
-
-  /**
    * A brief pause to guarantee timestamps are different.
-   * This doesn't have to be as long as a stablilization delay.
+   * This doesn't have to be as long as a stabilization delay.
    */
   private void waitForDifferentTimestamps() throws InterruptedException {
     Thread.sleep(TIMESTAMP_SLEEP);
@@ -517,7 +533,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     boolean allowAuthoritative = authoritative;
     LOG.info("Authoritative mode enabled: {}", allowAuthoritative);
     String rUUID = UUID.randomUUID().toString();
-    String testDir = "/dir-" + rUUID + "/";
+    String testDir = "dir-" + rUUID + "/";
     String testFile = testDir + "file-1-" + rUUID;
     Path testDirPath = path(testDir);
     Path testFilePath = guardedFs.qualify(path(testFile));
@@ -527,6 +543,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       // Create initial statusIterator with real ms
       writeTextFile(
           guardedFs, testFilePath, text, true);
+      awaitFileStatus(rawFS, testFilePath);
 
       // Do a listing to cache the lists. Should be authoritative if it's set.
       final FileStatus[] origList = guardedFs.listStatus(testDirPath);
@@ -537,12 +554,13 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       assertListingAuthority(allowAuthoritative, dirListingMetadata);
 
       // Delete the file without S3Guard (raw)
-      rawFS.delete(testFilePath, true);
-      waitS3Stabilization();
+      deleteFile(rawFS, testFilePath);
+
       // File status will be still readable from s3guard
       FileStatus status = guardedFs.getFileStatus(testFilePath);
       LOG.info("authoritative: {} status: {}", allowAuthoritative, status);
       expectExceptionWhenReading(testFilePath, text);
+      expectExceptionWhenReadingOpenFileAPI(testFilePath, text);
     } finally {
       guardedFs.delete(testDirPath, true);
     }
@@ -562,7 +580,6 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
         return in.read(bytes, 0, bytes.length);
       });
     }
-    expectExceptionWhenReadingOpenFileAPI(testFilePath, text);
   }
 
   /**
@@ -582,6 +599,35 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
         return in.read(bytes, 0, bytes.length);
       });
     }
+  }
+
+  /**
+   * Wait for a deleted file to no longer be visible.
+   * @param fs filesystem
+   * @param testFilePath path to query
+   * @throws Exception failure
+   */
+  private void awaitDeletedFileDisappearance(final S3AFileSystem fs,
+      final Path testFilePath) throws Exception {
+    eventually(
+        STABILIZATION_TIME, PROBE_INTERVAL_MILLIS,
+        () -> intercept(FileNotFoundException.class,
+            () -> fs.getFileStatus(testFilePath)));
+  }
+
+  /**
+   * Wait for a file to be visible.
+   * @param fs filesystem
+   * @param testFilePath path to query
+   * @return the file status.
+   * @throws Exception failure
+   */
+  private FileStatus awaitFileStatus(S3AFileSystem fs,
+      final Path testFilePath)
+      throws Exception {
+    return eventually(
+        STABILIZATION_TIME, PROBE_INTERVAL_MILLIS,
+        () -> fs.getFileStatus(testFilePath));
   }
 
 }
