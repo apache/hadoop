@@ -103,7 +103,8 @@ public final class MultipartDownloaderTest {
   }
 
   @Test
-  public void testCancelPartsIfFailure() throws InterruptedException, IOException {
+  public void testCancelPartsIfFailure()
+      throws InterruptedException, IOException {
     final CountDownLatch interrupted = new CountDownLatch(1);
     final CountDownLatch blockForever = new CountDownLatch(1);
     S3Downloader partDownloader = new S3Downloader() {
@@ -216,6 +217,12 @@ public final class MultipartDownloaderTest {
     Assert.assertArrayEquals(
             Arrays.copyOfRange(bytes, from, to),
             IOUtils.toByteArray(
-                    downloader.download("bucket", "key", from, to, null, null)));
+                    downloader.download(
+                        "bucket",
+                        "key",
+                        from,
+                        to,
+                        null,
+                        null)));
   }
 }

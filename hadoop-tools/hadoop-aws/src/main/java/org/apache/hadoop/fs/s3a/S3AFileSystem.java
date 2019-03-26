@@ -279,6 +279,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * bucket-specific options are patched over the base ones before any use is
    * made of the config.
    */
+  @SuppressWarnings("MethodLength")
   public void initialize(URI name, Configuration originalConf)
       throws IOException {
     // get the host; this is guaranteed to be non-null, non-empty
