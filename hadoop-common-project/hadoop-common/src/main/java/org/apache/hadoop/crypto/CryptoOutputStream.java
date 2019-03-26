@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
+import org.apache.hadoop.fs.impl.StoreImplementationUtils;
 
 import com.google.common.base.Preconditions;
 
@@ -308,9 +309,6 @@ public class CryptoOutputStream extends FilterOutputStream implements
 
   @Override
   public boolean hasCapability(String capability) {
-    if (out instanceof StreamCapabilities) {
-      return ((StreamCapabilities) out).hasCapability(capability);
-    }
-    return false;
+    return StoreImplementationUtils.hasCapability(out, capability);
   }
 }

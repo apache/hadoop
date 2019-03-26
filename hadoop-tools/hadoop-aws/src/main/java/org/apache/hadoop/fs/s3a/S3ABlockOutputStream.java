@@ -238,9 +238,9 @@ class S3ABlockOutputStream extends OutputStream implements
           dataBlock.flush();
         }
       } catch (IOException ex) {
-        throw stateModel.enterErrorState(ex);
+        throw enterErrorState(ex);
       } finally {
-        stateModel.releaseLock();
+        releaseLock();
       }
     }
   }
@@ -279,9 +279,9 @@ class S3ABlockOutputStream extends OutputStream implements
     try {
       innerWrite(source, offset, len);
     } catch (IOException ex) {
-      throw stateModel.enterErrorState(ex);
+      throw enterErrorState(ex);
     } finally {
-      stateModel.releaseLock();
+      releaseLock();
     }
   }
 
@@ -295,6 +295,26 @@ class S3ABlockOutputStream extends OutputStream implements
       throws IOException {
     stateModel.acquireLock(checkOpen);
     return stateModel.getState();
+  }
+
+  /**
+   * Release the state lock through {@link StreamStateModel#releaseLock()}.
+   * Must only be called during the {@code finally} clause following
+   * an {@link #acquireLock(boolean)} call.
+   */
+  private void releaseLock() {
+    stateModel.releaseLock();
+  }
+
+  /**
+   * Change the stream state to error, using the given exception if the stream
+   * was not already in an error state, via
+   * {@link StreamStateModel#enterErrorState(IOException)}.
+   * @param ex exception to record as the cause of the failure.
+   * @return the exception to throw.
+   */
+  private IOException enterErrorState(IOException ex) {
+    return stateModel.enterErrorState(ex);
   }
 
   /**
@@ -387,7 +407,7 @@ class S3ABlockOutputStream extends OutputStream implements
         }
       }
     } finally {
-      stateModel.releaseLock();
+      releaseLock();
     }
     S3ADataBlocks.DataBlock block = getActiveBlock();
     boolean hasBlock = hasActiveBlock();
@@ -433,7 +453,7 @@ class S3ABlockOutputStream extends OutputStream implements
       }
       LOG.debug("Upload complete to {} by {}", key, writeOperationHelper);
     } catch (IOException ioe) {
-      stateModel.enterErrorState(ioe);
+      enterErrorState(ioe);
       writeOperationHelper.writeFailed(ioe);
       throw ioe;
     } finally {

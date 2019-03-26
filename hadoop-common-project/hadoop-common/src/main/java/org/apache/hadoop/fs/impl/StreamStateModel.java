@@ -19,8 +19,11 @@
 package org.apache.hadoop.fs.impl;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+
+import javax.annotation.Nullable;
 
 import com.google.common.base.Preconditions;
 
@@ -33,6 +36,10 @@ import static org.apache.hadoop.fs.FSExceptionMessages.STREAM_IS_CLOSED;
 /**
  * Models a stream's state and can be used for checking this state before
  * any operation.
+ * 
+ * It's designed to ensure that a stream knows when it is closed,
+ * and, once it has entered a failed state, that the failure
+ * is not forgotten.
  *
  * The model has three states: Open, Error, and Closed,
  *
@@ -77,20 +84,26 @@ public class StreamStateModel {
 
   /**
    * Initial state: open.
-   * This is volatile: it can be queried without encountering any locks.
-   * However, to guarantee the state is constant through the life of an
-   * operation, updates must be through the synchronized methods.
    */
-  private volatile State state = State.Open;
+  private final AtomicReference<State> state =
+      new AtomicReference<>(State.Open);
 
   /** Any exception to raise on the next checkOpen call. */
   private IOException exception;
 
-  public StreamStateModel(final Path path) {
-    this.path = path.toString();
+  /**
+   * Create for a path. 
+   * @param path optional path for exception messages.
+   */
+  public StreamStateModel(@Nullable Path path) {
+    this.path = path != null ? path.toString() : "";
   }
 
-  public StreamStateModel(final String path) {
+  /**
+   * Create for a path. 
+   * @param path optional path for exception messages.
+   */  
+  public StreamStateModel(@Nullable final String path) {
     this.path = path;
   }
 
@@ -100,20 +113,15 @@ public class StreamStateModel {
    * @return the current state.
    */
   public State getState() {
-    return state;
+    return state.get();
   }
 
   /**
-   * Change state to closed. No-op if the state was in closed or error
+   * Change state to closed. No-op if the state was in closed or error.
    * @return true if the state changed.
    */
   public synchronized boolean enterClosedState() {
-    if (state == State.Open) {
-      state = State.Closed;
-      return true;
-    } else {
-      return false;
-    }
+    return state.compareAndSet(State.Open, State.Closed);
   }
 
   /**
@@ -124,12 +132,12 @@ public class StreamStateModel {
    */
   public synchronized IOException enterErrorState(final IOException ex) {
     Preconditions.checkArgument(ex != null, "Null exception");
-    switch (state) {
+    switch (state.get()) {
       // a stream can go into the error state when open or closed
     case Open:
     case Closed:
       exception = ex;
-      state = State.Error;
+      state.set(State.Error);
       break;
     case Error:
       // already in this state; retain the previous exception.
@@ -139,13 +147,16 @@ public class StreamStateModel {
   }
 
   /**
-   * Check a stream is open.
+   * Verify that a stream is open, throwing an IOException if
+   * not.
    * If in an error state: rethrow that exception. If closed,
    * throw an exception about that.
-   * @throws IOException if the stream is not open.
+   * @throws IOException if the stream is not in {@link State#Open}.
+   * @throws PathIOException if the stream was not open and a path was given
+   * in the constructor.
    */
   public synchronized void checkOpen() throws IOException {
-    switch (state) {
+    switch (state.get()) {
     case Open:
       return;
 
@@ -187,19 +198,6 @@ public class StreamStateModel {
    */
   public void releaseLock() {
     lock.unlock();
-  }
-
-  /**
-   * Check for a stream being in a specific state.
-   * The check is synchronized, but not locked; if the caller does
-   * not hold a lock then the state may change before any subsequent
-   * operation.
-   * @param expected expected state
-   * @return return true iff the steam was in the state at the time
-   * of checking.
-   */
-  public synchronized boolean isInState(State expected) {
-    return state == expected;
   }
 
 }

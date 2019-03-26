@@ -24,6 +24,7 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.impl.StoreImplementationUtils;
 
 /** Utility that wraps a {@link OutputStream} in a {@link DataOutputStream}.
  */
@@ -122,10 +123,7 @@ public class FSDataOutputStream extends DataOutputStream
 
   @Override
   public boolean hasCapability(String capability) {
-    if (wrappedStream instanceof StreamCapabilities) {
-      return ((StreamCapabilities) wrappedStream).hasCapability(capability);
-    }
-    return false;
+    return StoreImplementationUtils.hasCapability(wrappedStream, capability);
   }
 
   @Override  // Syncable

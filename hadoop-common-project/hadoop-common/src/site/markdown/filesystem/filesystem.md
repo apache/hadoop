@@ -609,13 +609,13 @@ The result is `FSDataOutputStream`, which through its operations may generate ne
  clients creating files with `overwrite==true` to fail if the file is created
  by another client between the two tests.
 
-* S3A, Swift and potentially other Object Stores do not currently change the FS state
+* S3A, Swift and potentially other Object Stores do not currently change the `FS` state
 until the output stream `close()` operation is completed.
 This is a significant difference between the behavior of object stores
 and that of filesystems, as it allows >1 client to create a file with `overwrite==false`,
 and potentially confuse file/directory logic. In particular, using `create()` to acquire
 an exclusive lock on a file (whoever creates the file without an error is considered
-the holder of the lock) is not a valid algorithm when working with object stores.
+the holder of the lock) may not not a safe algorithm to use when working with object stores.
 
 * Object stores may create an empty file as a marker when a file is created.
 However, object stores whith overwrite=true semantics may not implement this atomically,
