@@ -72,7 +72,7 @@ public class DNS {
    * @return The host name associated with the provided IP
    * @throws NamingException If a NamingException is encountered
    */
-  public static String reverseDns(InetAddress hostIp, @Nullable String ns)
+  public static String reverseDns(InetAddress hostIp, String ns)
     throws NamingException {
     //
     // Builds the reverse IP lookup form
@@ -241,7 +241,7 @@ public class DNS {
    * @throws UnknownHostException if the given interface is invalid
    */
   public static String[] getHosts(String strInterface,
-                                  @Nullable String nameserver,
+                                  String nameserver,
                                   boolean tryfallbackResolution)
       throws UnknownHostException {
     final List<String> hosts = new Vector<String>();
@@ -350,8 +350,8 @@ public class DNS {
    * @throws UnknownHostException
    *             If one is encountered while querying the default interface
    */
-  public static String getDefaultHost(@Nullable String strInterface,
-                                      @Nullable String nameserver,
+  public static String getDefaultHost(String strInterface,
+                                      String nameserver,
                                       boolean tryfallbackResolution)
     throws UnknownHostException {
     if (strInterface == null || "default".equals(strInterface)) {
@@ -378,7 +378,7 @@ public class DNS {
    * @throws UnknownHostException
    *             If one is encountered while querying the default interface
    */
-  public static String getDefaultHost(@Nullable String strInterface)
+  public static String getDefaultHost(String strInterface)
     throws UnknownHostException {
     return getDefaultHost(strInterface, null, false);
   }
@@ -394,8 +394,8 @@ public class DNS {
    * @throws UnknownHostException
    *             If one is encountered while querying the default interface
    */
-  public static String getDefaultHost(@Nullable String strInterface,
-                                      @Nullable String nameserver)
+  public static String getDefaultHost(String strInterface,
+                                      String nameserver)
       throws UnknownHostException {
     return getDefaultHost(strInterface, nameserver, false);
   }
