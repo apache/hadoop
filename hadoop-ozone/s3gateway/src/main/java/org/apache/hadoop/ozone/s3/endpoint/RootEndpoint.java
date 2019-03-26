@@ -34,6 +34,8 @@ import org.apache.hadoop.ozone.s3.header.AuthenticationHeaderParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.ozone.s3.util.OzoneS3Util.getVolumeName;
+
 /**
  * Top level rest endpoint.
  */
@@ -63,8 +65,9 @@ public class RootEndpoint extends EndpointBase {
           .header("Location", "/static/")
           .build();
     }
-    String userName = authenticationHeaderParser.getAccessKeyID();
-    Iterator<? extends OzoneBucket> bucketIterator = listS3Buckets(userName,
+    String volumeName = getVolumeName(authenticationHeaderParser.
+        getAccessKeyID());
+    Iterator<? extends OzoneBucket> bucketIterator = listS3Buckets(volumeName,
         null);
 
     while (bucketIterator.hasNext()) {
