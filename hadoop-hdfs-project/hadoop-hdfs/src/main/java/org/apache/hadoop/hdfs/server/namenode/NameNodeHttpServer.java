@@ -32,6 +32,7 @@ import javax.servlet.ServletContext;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -352,5 +353,9 @@ public class NameNodeHttpServer {
   @VisibleForTesting
   public HttpServer2 getHttpServer() {
     return httpServer;
+  }
+
+  public static HAServiceProtocol.HAServiceState getNameNodeStateFromContext(ServletContext context) {
+    return getNameNodeFromContext(context).getServiceState();
   }
 }

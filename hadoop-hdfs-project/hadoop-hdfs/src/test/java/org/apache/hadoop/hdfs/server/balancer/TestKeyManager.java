@@ -54,7 +54,7 @@ public class TestKeyManager {
     final String blockPoolId = "bp-foo";
     FakeTimer fakeTimer = new FakeTimer();
     BlockTokenSecretManager btsm = new BlockTokenSecretManager(
-        keyUpdateInterval, tokenLifeTime, 0, blockPoolId, null);
+        keyUpdateInterval, tokenLifeTime, 0, 1, blockPoolId, null);
     Whitebox.setInternalState(btsm, "timer", fakeTimer);
 
     // When KeyManager asks for block keys, return them from btsm directly

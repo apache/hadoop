@@ -23,6 +23,10 @@ import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.Callable;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -33,6 +37,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -71,21 +77,21 @@ import com.google.common.base.Preconditions;
 @InterfaceStability.Evolving
 public class EditLogTailer {
   public static final Log LOG = LogFactory.getLog(EditLogTailer.class);
-  
+
   private final EditLogTailerThread tailerThread;
-  
+
   private final Configuration conf;
   private final FSNamesystem namesystem;
+  private final Iterator<RemoteNameNodeInfo> nnLookup;
   private FSEditLog editLog;
 
-  private InetSocketAddress activeAddr;
-  private NamenodeProtocol cachedActiveProxy = null;
+  private RemoteNameNodeInfo currentNN;
 
   /**
    * The last transaction ID at which an edit log roll was initiated.
    */
   private long lastRollTriggerTxId = HdfsServerConstants.INVALID_TXID;
-  
+
   /**
    * The highest transaction ID loaded by the Standby.
    */
@@ -120,31 +126,67 @@ public class EditLogTailer {
    * available to be read from.
    */
   private final long sleepTimeMs;
-  
+
+  private final int nnCount;
+  private NamenodeProtocol cachedActiveProxy = null;
+  // count of the number of NNs we have attempted in the current lookup loop
+  private int nnLoopCount = 0;
+
+  /**
+   * maximum number of retries we should give each of the remote namenodes before giving up
+   */
+  private int maxRetries;
+
   public EditLogTailer(FSNamesystem namesystem, Configuration conf) {
     this.tailerThread = new EditLogTailerThread();
     this.conf = conf;
     this.namesystem = namesystem;
     this.editLog = namesystem.getEditLog();
-    
+
     lastLoadTimeMs = monotonicNow();
 
     logRollPeriodMs = conf.getInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY,
         DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_DEFAULT) * 1000;
+    List<RemoteNameNodeInfo> nns = Collections.emptyList();
     if (logRollPeriodMs >= 0) {
-      this.activeAddr = getActiveNodeAddress();
-      Preconditions.checkArgument(activeAddr.getPort() > 0,
-          "Active NameNode must have an IPC port configured. " +
-          "Got address '%s'", activeAddr);
-      LOG.info("Will roll logs on active node at " + activeAddr + " every " +
+      try {
+        nns = RemoteNameNodeInfo.getRemoteNameNodes(conf);
+      } catch (IOException e) {
+        throw new IllegalArgumentException("Remote NameNodes not correctly configured!", e);
+      }
+
+      for (RemoteNameNodeInfo info : nns) {
+        // overwrite the socket address, if we need to
+        InetSocketAddress ipc = NameNode.getServiceAddress(info.getConfiguration(), true);
+        // sanity check the ipc address
+        Preconditions.checkArgument(ipc.getPort() > 0,
+            "Active NameNode must have an IPC port configured. " + "Got address '%s'", ipc);
+        info.setIpcAddress(ipc);
+      }
+
+      LOG.info("Will roll logs on active node every " +
           (logRollPeriodMs / 1000) + " seconds.");
     } else {
       LOG.info("Not going to trigger log rolls on active node because " +
           DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY + " is negative.");
     }
-    
+
     sleepTimeMs = conf.getInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY,
         DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_DEFAULT) * 1000;
+
+    maxRetries = conf.getInt(DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_KEY,
+        DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_DEFAULT);
+    if (maxRetries <= 0) {
+      LOG.error("Specified a non-positive number of retries for the number of retries for the " +
+          "namenode connection when manipulating the edit log (" +
+          DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_KEY + "), setting to default: " +
+          DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_DEFAULT);
+      maxRetries = DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_DEFAULT;
+    }
+
+    nnCount = nns.size();
+    // setup the iterator to endlessly loop the nns
+    this.nnLookup = Iterators.cycle(nns);
 
     rollEditsTimeoutMs = conf.getInt(
         DFSConfigKeys.DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_KEY,
@@ -156,30 +198,11 @@ public class EditLogTailer {
     LOG.debug("logRollPeriodMs=" + logRollPeriodMs +
         " sleepTime=" + sleepTimeMs);
   }
-  
-  private InetSocketAddress getActiveNodeAddress() {
-    Configuration activeConf = HAUtil.getConfForOtherNode(conf);
-    return NameNode.getServiceAddress(activeConf, true);
-  }
-  
-  private NamenodeProtocol getActiveNodeProxy() throws IOException {
-    if (cachedActiveProxy == null) {
-      int rpcTimeout = conf.getInt(
-          DFSConfigKeys.DFS_HA_LOGROLL_RPC_TIMEOUT_KEY,
-          DFSConfigKeys.DFS_HA_LOGROLL_RPC_TIMEOUT_DEFAULT);
-      NamenodeProtocolPB proxy = RPC.waitForProxy(NamenodeProtocolPB.class,
-          RPC.getProtocolVersion(NamenodeProtocolPB.class), activeAddr, conf,
-          rpcTimeout, Long.MAX_VALUE);
-      cachedActiveProxy = new NamenodeProtocolTranslatorPB(proxy);
-    }
-    assert cachedActiveProxy != null;
-    return cachedActiveProxy;
-  }
 
   public void start() {
     tailerThread.start();
   }
-  
+
   public void stop() throws IOException {
     rollEditsRpcExecutor.shutdown();
     tailerThread.setShouldRun(false);
@@ -191,12 +214,12 @@ public class EditLogTailer {
       throw new IOException(e);
     }
   }
-  
+
   @VisibleForTesting
   FSEditLog getEditLog() {
     return editLog;
   }
-  
+
   @VisibleForTesting
   public void setEditLog(FSEditLog editLog) {
     this.editLog = editLog;
@@ -223,7 +246,7 @@ public class EditLogTailer {
       }
     });
   }
-  
+
   @VisibleForTesting
   void doTailEdits() throws IOException, InterruptedException {
     // Write lock needs to be interruptible here because the 
@@ -235,7 +258,7 @@ public class EditLogTailer {
       FSImage image = namesystem.getFSImage();
 
       long lastTxnId = image.getLastAppliedTxId();
-      
+
       if (LOG.isDebugEnabled()) {
         LOG.debug("lastTxnId: " + lastTxnId);
       }
@@ -253,7 +276,7 @@ public class EditLogTailer {
       if (LOG.isDebugEnabled()) {
         LOG.debug("edit streams to load from: " + streams.size());
       }
-      
+
       // Once we have streams to load, errors encountered are legitimate cause
       // for concern, so we don't catch them here. Simple errors reading from
       // disk are ignored.
@@ -290,19 +313,20 @@ public class EditLogTailer {
    * @return true if the configured log roll period has elapsed.
    */
   private boolean tooLongSinceLastLoad() {
-    return logRollPeriodMs >= 0 && 
+    return logRollPeriodMs >= 0 &&
       (monotonicNow() - lastLoadTimeMs) > logRollPeriodMs ;
   }
 
   /**
+   * NameNodeProxy factory method.
    * @return a Callable to roll logs on remote NameNode.
    */
   @VisibleForTesting
-  Callable<Void> getRollEditsTask() {
-    return new Callable<Void>() {
+  Callable<Void> getNameNodeProxy() {
+    return new MultipleNameNodeProxy<Void>() {
       @Override
-      public Void call() throws IOException {
-        getActiveNodeProxy().rollEditLog();
+      protected Void doWork() throws IOException {
+        cachedActiveProxy.rollEditLog();
         return null;
       }
     };
@@ -316,7 +340,7 @@ public class EditLogTailer {
     LOG.info("Triggering log roll on remote NameNode");
     Future<Void> future = null;
     try {
-      future = rollEditsRpcExecutor.submit(getRollEditsTask());
+      future = rollEditsRpcExecutor.submit(getNameNodeProxy());
       future.get(rollEditsTimeoutMs, TimeUnit.MILLISECONDS);
       lastRollTriggerTxId = lastLoadedTxnId;
     } catch (ExecutionException e) {
@@ -347,15 +371,15 @@ public class EditLogTailer {
    */
   private class EditLogTailerThread extends Thread {
     private volatile boolean shouldRun = true;
-    
+
     private EditLogTailerThread() {
       super("Edit log tailer");
     }
-    
+
     private void setShouldRun(boolean shouldRun) {
       this.shouldRun = shouldRun;
     }
-    
+
     @Override
     public void run() {
       SecurityUtil.doAsLoginUserOrFatal(
@@ -367,13 +391,13 @@ public class EditLogTailer {
           }
         });
     }
-    
+
     private void doWork() {
       while (shouldRun) {
         try {
           // There's no point in triggering a log roll if the Standby hasn't
           // read any more transactions since the last time a roll was
-          // triggered. 
+          // triggered.
           if (tooLongSinceLastLoad() &&
               lastRollTriggerTxId < lastLoadedTxnId) {
             triggerActiveLogRoll();
@@ -417,4 +441,78 @@ public class EditLogTailer {
       }
     }
   }
+
+  /**
+   * Manage the 'active namenode proxy'. This cannot just be the a single proxy since we could
+   * failover across a number of NameNodes, rather than just between an active and a standby.
+   * <p>
+   * We - lazily - get a proxy to one of the configured namenodes and attempt to make the request
+   * against it. If it doesn't succeed, either because the proxy failed to be created or the request
+   * failed, we try the next NN in the list. We try this up to the configuration maximum number of
+   * retries before throwing up our hands. A working proxy is retained across attempts since we
+   * expect the active NameNode to switch rarely.
+   * <p>
+   * This mechanism is <b>very bad</b> for cases where we care about being <i>fast</i>; it just
+   * blindly goes and tries namenodes.
+   */
+  private abstract class MultipleNameNodeProxy<T> implements Callable<T> {
+
+    /**
+     * Do the actual work to the remote namenode via the {@link #cachedActiveProxy}.
+     * @return the result of the work, if there is one
+     * @throws IOException if the actions done to the proxy throw an exception.
+     */
+    protected abstract T doWork() throws IOException;
+
+    public T call() throws IOException {
+      while ((cachedActiveProxy = getActiveNodeProxy()) != null) {
+        try {
+          T ret = doWork();
+          // reset the loop count on success
+          nnLoopCount = 0;
+          return ret;
+        } catch (RemoteException e) {
+          Throwable cause = e.unwrapRemoteException(StandbyException.class);
+          // if its not a standby exception, then we need to re-throw it, something bad has happened
+          if (cause == e) {
+            throw e;
+          } else {
+            // it is a standby exception, so we try the other NN
+            LOG.warn("Failed to reach remote node: " + currentNN
+                + ", retrying with remaining remote NNs");
+            cachedActiveProxy = null;
+            // this NN isn't responding to requests, try the next one
+            nnLoopCount++;
+          }
+        }
+      }
+      throw new IOException("Cannot find any valid remote NN to service request!");
+    }
+
+    private NamenodeProtocol getActiveNodeProxy() throws IOException {
+      if (cachedActiveProxy == null) {
+        while (true) {
+          // if we have reached the max loop count, quit by returning null
+          if ((nnLoopCount / nnCount) >= maxRetries) {
+            return null;
+          }
+
+          currentNN = nnLookup.next();
+          try {
+            NamenodeProtocolPB proxy = RPC.waitForProxy(NamenodeProtocolPB.class,
+                RPC.getProtocolVersion(NamenodeProtocolPB.class), currentNN.getIpcAddress(), conf);
+            cachedActiveProxy = new NamenodeProtocolTranslatorPB(proxy);
+            break;
+          } catch (IOException e) {
+            LOG.info("Failed to reach " + currentNN, e);
+            // couldn't even reach this NN, try the next one
+            nnLoopCount++;
+          }
+        }
+      }
+      assert cachedActiveProxy != null;
+      return cachedActiveProxy;
+    }
+  }
 }
+

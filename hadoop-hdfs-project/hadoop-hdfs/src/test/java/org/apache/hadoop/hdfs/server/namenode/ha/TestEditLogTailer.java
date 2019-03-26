@@ -151,7 +151,12 @@ public class TestEditLogTailer {
   public void testNN1TriggersLogRolls() throws Exception {
     testStandbyTriggersLogRolls(1);
   }
-  
+
+  @Test
+  public void testNN2TriggersLogRolls() throws Exception {
+    testStandbyTriggersLogRolls(2);
+  }
+
   private static void testStandbyTriggersLogRolls(int activeIndex)
       throws Exception {
     Configuration conf = getConf();
@@ -163,13 +168,15 @@ public class TestEditLogTailer {
     for (int i = 0; i < 5; i++) {
       try {
         // Have to specify IPC ports so the NNs can talk to each other.
-        int[] ports = ServerSocketUtil.getPorts(2);
+        int[] ports = ServerSocketUtil.getPorts(3);
         MiniDFSNNTopology topology = new MiniDFSNNTopology()
             .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
                 .addNN(new MiniDFSNNTopology.NNConf("nn1")
                     .setIpcPort(ports[0]))
                 .addNN(new MiniDFSNNTopology.NNConf("nn2")
-                    .setIpcPort(ports[1])));
+                    .setIpcPort(ports[1]))
+                .addNN(new MiniDFSNNTopology.NNConf("nn3")
+                    .setIpcPort(ports[2])));
 
         cluster = new MiniDFSCluster.Builder(conf)
           .nnTopology(topology)
@@ -198,7 +205,7 @@ public class TestEditLogTailer {
   
   private static void waitForLogRollInSharedDir(MiniDFSCluster cluster,
       long startTxId) throws Exception {
-    URI sharedUri = cluster.getSharedEditsDir(0, 1);
+    URI sharedUri = cluster.getSharedEditsDir(0, 2);
     File sharedDir = new File(sharedUri.getPath(), "current");
     final File expectedInProgressLog =
         new File(sharedDir, NNStorage.getInProgressEditsFileName(startTxId));
@@ -237,7 +244,7 @@ public class TestEditLogTailer {
       final AtomicInteger flag = new AtomicInteger(0);
 
       // Return a slow roll edit process.
-      when(tailer.getRollEditsTask()).thenReturn(
+      when(tailer.getNameNodeProxy()).thenReturn(
           new Callable<Void>() {
             @Override
             public Void call() throws Exception {

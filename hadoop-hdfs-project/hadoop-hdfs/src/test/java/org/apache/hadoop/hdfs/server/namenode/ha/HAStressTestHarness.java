@@ -42,7 +42,8 @@ public class HAStressTestHarness {
   private MiniDFSCluster cluster;
   static final int BLOCK_SIZE = 1024;
   final TestContext testCtx = new TestContext();
-  
+  private int nns = 2;
+
   public HAStressTestHarness() {
     conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
@@ -55,11 +56,19 @@ public class HAStressTestHarness {
   }
 
   /**
+   * Set the number of namenodes that should be run. This must be set before calling
+   * {@link #startCluster()}
+   */
+  public void setNumberOfNameNodes(int nns) {
+    this.nns = nns;
+  }
+
+  /**
    * Start and return the MiniDFSCluster.
    */
   public MiniDFSCluster startCluster() throws IOException {
     cluster = new MiniDFSCluster.Builder(conf)
-      .nnTopology(MiniDFSNNTopology.simpleHATopology())
+      .nnTopology(MiniDFSNNTopology.simpleHATopology(nns))
       .numDataNodes(3)
       .build();
     return cluster;
@@ -99,28 +108,27 @@ public class HAStressTestHarness {
   }
 
   /**
-   * Add a thread which periodically triggers failover back and forth between
-   * the two namenodes.
+   * Add a thread which periodically triggers failover back and forth between the namenodes.
    */
   public void addFailoverThread(final int msBetweenFailovers) {
     testCtx.addThread(new RepeatingTestThread(testCtx) {
-      
       @Override
       public void doAnAction() throws Exception {
-        System.err.println("==============================\n" +
-            "Failing over from 0->1\n" +
-            "==================================");
-        cluster.transitionToStandby(0);
-        cluster.transitionToActive(1);
-        
-        Thread.sleep(msBetweenFailovers);
-        System.err.println("==============================\n" +
-            "Failing over from 1->0\n" +
-            "==================================");
-
-        cluster.transitionToStandby(1);
-        cluster.transitionToActive(0);
-        Thread.sleep(msBetweenFailovers);
+        // fail over from one namenode to the next, all the way back to the original NN
+        for (int i = 0; i < nns; i++) {
+          // next node, mod nns so we wrap to the 0th NN on the last iteration
+          int next = (i + 1) % nns;
+          System.err.println("==============================\n"
+              + "[Starting] Failing over from " + i + "->" + next + "\n"
+              + "==============================");
+          cluster.transitionToStandby(i);
+          cluster.transitionToActive(next);
+          System.err.println("==============================\n"
+              + "[Completed] Failing over from " + i + "->" + next + ". Sleeping for "+
+              (msBetweenFailovers/1000) +"sec \n"
+              + "==============================");
+          Thread.sleep(msBetweenFailovers);
+        }
       }
     });
   }

@@ -52,7 +52,8 @@ public class TestBootstrapStandbyWithQJM {
 
   private MiniDFSCluster cluster;
   private MiniJournalCluster jCluster;
-  
+  private int nnCount = 3;
+
   @Before
   public void setup() throws Exception {
     Configuration conf = new Configuration();
@@ -62,7 +63,8 @@ public class TestBootstrapStandbyWithQJM {
         CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
         0);
 
-    MiniQJMHACluster miniQjmHaCluster = new MiniQJMHACluster.Builder(conf).build();
+    MiniQJMHACluster miniQjmHaCluster =
+        new MiniQJMHACluster.Builder(conf).setNumNameNodes(nnCount).build();
     cluster = miniQjmHaCluster.getDfsCluster();
     jCluster = miniQjmHaCluster.getJournalCluster();
     
@@ -92,18 +94,7 @@ public class TestBootstrapStandbyWithQJM {
   public void testBootstrapStandbyWithStandbyNN() throws Exception {
     // make the first NN in standby state
     cluster.transitionToStandby(0);
-    Configuration confNN1 = cluster.getConfiguration(1);
-    
-    // shut down nn1
-    cluster.shutdownNameNode(1);
-    
-    int rc = BootstrapStandby.run(new String[] { "-force" }, confNN1);
-    assertEquals(0, rc);
-    
-    // Should have copied over the namespace from the standby
-    FSImageTestUtil.assertNNHasCheckpoints(cluster, 1,
-        ImmutableList.of(0));
-    FSImageTestUtil.assertNNFilesMatch(cluster);
+    bootstrapStandbys();
   }
   
   /** BootstrapStandby when the existing NN is active */
@@ -111,17 +102,23 @@ public class TestBootstrapStandbyWithQJM {
   public void testBootstrapStandbyWithActiveNN() throws Exception {
     // make the first NN in active state
     cluster.transitionToActive(0);
-    Configuration confNN1 = cluster.getConfiguration(1);
-    
-    // shut down nn1
-    cluster.shutdownNameNode(1);
-    
-    int rc = BootstrapStandby.run(new String[] { "-force" }, confNN1);
-    assertEquals(0, rc);
-    
-    // Should have copied over the namespace from the standby
-    FSImageTestUtil.assertNNHasCheckpoints(cluster, 1,
-        ImmutableList.of(0));
+    bootstrapStandbys();
+  }
+
+  private void bootstrapStandbys() throws Exception {
+    // shutdown and bootstrap all the other nns, except the first (start 1, not 0)
+    for (int i = 1; i < nnCount; i++) {
+      Configuration otherNNConf = cluster.getConfiguration(i);
+
+      // shut down other nn
+      cluster.shutdownNameNode(i);
+
+      int rc = BootstrapStandby.run(new String[] { "-force" }, otherNNConf);
+      assertEquals(0, rc);
+
+      // Should have copied over the namespace from the standby
+      FSImageTestUtil.assertNNHasCheckpoints(cluster, i, ImmutableList.of(0));
+    }
     FSImageTestUtil.assertNNFilesMatch(cluster);
   }
 

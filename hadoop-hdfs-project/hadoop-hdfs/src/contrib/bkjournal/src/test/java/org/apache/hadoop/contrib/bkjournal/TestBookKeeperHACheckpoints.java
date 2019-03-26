@@ -37,6 +37,10 @@ import java.util.Random;
  * using a bookkeeper journal manager as the shared directory
  */
 public class TestBookKeeperHACheckpoints extends TestStandbyCheckpoints {
+  //overwrite the nn count
+ static{
+   TestStandbyCheckpoints.NUM_NNS = 2;
+ }
   private static BKJMUtil bkutil = null;
   static int numBookies = 3;
   static int journalCount = 0;
@@ -69,8 +73,7 @@ public class TestBookKeeperHACheckpoints extends TestStandbyCheckpoints {
           .manageNameDfsSharedDirs(false)
           .build();
         cluster.waitActive();
-        nn0 = cluster.getNameNode(0);
-        nn1 = cluster.getNameNode(1);
+        setNNs();
         fs = HATestUtil.configureFailoverFs(cluster, conf);
 
         cluster.transitionToActive(0);
