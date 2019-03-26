@@ -25,12 +25,15 @@ import io.jaegertracing.internal.exceptions.MalformedTracerStateStringException;
 import io.jaegertracing.internal.exceptions.TraceIdOutOfBoundException;
 import io.jaegertracing.spi.Codec;
 import io.opentracing.propagation.Format;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A jaeger codec to save the current tracing context t a string.
  */
 public class StringCodec implements Codec<StringBuilder> {
 
+  public static final Logger LOG  = LoggerFactory.getLogger(StringCodec.class);
   public static final StringFormat FORMAT = new StringFormat();
 
   @Override
@@ -39,6 +42,7 @@ public class StringCodec implements Codec<StringBuilder> {
     if (value != null && !value.equals("")) {
       String[] parts = value.split(":");
       if (parts.length != 4) {
+        LOG.trace("MalformedTracerStateString: {}", value);
         throw new MalformedTracerStateStringException(value);
       } else {
         String traceId = parts[0];

@@ -40,6 +40,7 @@ import org.apache.hadoop.hdds.cli.MissingSubcommandException;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.tracing.StringCodec;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneAcl;
@@ -80,9 +81,12 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.slf4j.event.Level.TRACE;
+
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -884,6 +888,9 @@ public class TestOzoneShell {
 
   @Test
   public void testGetKey() throws Exception {
+    GenericTestUtils.LogCapturer logs = GenericTestUtils.LogCapturer
+        .captureLogs(StringCodec.LOG);
+    GenericTestUtils.setLogLevel(StringCodec.LOG, TRACE);
     LOG.info("Running testGetKey");
     String keyName = "key" + RandomStringUtils.randomNumeric(5);
     OzoneBucket bucket = creatBucket();
@@ -895,6 +902,9 @@ public class TestOzoneShell {
         bucket.createKey(keyName, dataStr.length());
     keyOutputStream.write(dataStr.getBytes());
     keyOutputStream.close();
+    assertFalse("put key without malformed tracing",
+        logs.getOutput().contains("MalformedTracerStateString"));
+    logs.clearOutput();
 
     String tmpPath = baseDir.getAbsolutePath() + "/testfile-"
         + UUID.randomUUID().toString();
@@ -902,6 +912,9 @@ public class TestOzoneShell {
         url + "/" + volumeName + "/" + bucketName + "/" + keyName,
         tmpPath};
     execute(shell, args);
+    assertFalse("get key without malformed tracing",
+        logs.getOutput().contains("MalformedTracerStateString"));
+    logs.clearOutput();
 
     byte[] dataBytes = new byte[dataStr.length()];
     try (FileInputStream randFile = new FileInputStream(new File(tmpPath))) {
