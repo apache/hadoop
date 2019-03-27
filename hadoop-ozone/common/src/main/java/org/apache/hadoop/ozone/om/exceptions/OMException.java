@@ -23,6 +23,8 @@ import java.io.IOException;
  * Exception thrown by Ozone Manager.
  */
 public class OMException extends IOException {
+
+  public static final String STATUS_CODE = "STATUS_CODE=";
   private final OMException.ResultCodes result;
 
   /**
