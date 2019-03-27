@@ -24,17 +24,17 @@ import java.util.List;
 
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.waiters.WaiterTimedOutException;
-import org.apache.hadoop.fs.Path;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.s3a.AWSClientIOException;
 import org.apache.hadoop.test.HadoopTestBase;
-import org.mockito.Mockito;
+import org.apache.hadoop.fs.Path;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.translateTableWaitFailure;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * Unit test suite for misc dynamoDB metastore operations.
@@ -105,7 +105,7 @@ public class TestDynamoDBMiscOperations extends HadoopTestBase {
     when(metas.isEmpty()).thenReturn(false);
     DDBPathMetadata dirPathMeta = null;
 
-    assertEquals(null,
+    assertNull("The return value should be null.",
         ddbms.getDirListingMetadataFromDirMetaAndList(p, metas, dirPathMeta));
   }
 

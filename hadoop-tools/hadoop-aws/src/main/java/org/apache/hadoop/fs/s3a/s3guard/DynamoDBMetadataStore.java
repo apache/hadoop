@@ -661,8 +661,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
     if (!metas.isEmpty() && dirPathMeta == null) {
       // We handle this case as the directory is deleted.
       LOG.warn("Directory marker is deleted, but the list of the directory "
-          + "elements is not empty: {}. This case is handled as the directory"
-          + " was deleted.", metas);
+          + "elements is not empty: {}. This case is handled as if the "
+          + "directory was deleted.", metas);
       return null;
     }
 
