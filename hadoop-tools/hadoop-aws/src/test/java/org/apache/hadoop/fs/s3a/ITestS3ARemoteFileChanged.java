@@ -22,9 +22,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collection;
 
+import org.apache.commons.io.IOUtils;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
@@ -57,8 +59,13 @@ import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
  */
 @RunWith(Parameterized.class)
 public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
+
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3ARemoteFileChanged.class);
+
+  private static final String TEST_DATA = "Some test data";
+  private static final String QUOTED_TEST_DATA =
+      "\"" + TEST_DATA + "\"";
 
   private enum InteractionType {
     READ, READ_AFTER_DELETE, COPY, SELECT
@@ -272,6 +279,18 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   }
 
   /**
+   * Ensures a file can be read when there is no version metadata
+   * (ETag, versionId).
+   */
+  @Test
+  public void testReadWithNoVersionMetadata() throws Throwable {
+    final Path testpath = writeFileWithNoVersionMetadata("readnoversion.dat");
+    final FSDataInputStream instream = fs.open(testpath);
+    assertEquals(TEST_DATA,
+        IOUtils.toString(instream, Charset.forName("UTF-8")).trim());
+  }
+
+  /**
    * Tests using S3 Select on a file where the version visible in S3 does not
    * match the version tracked in the metadata store.
    */
@@ -286,6 +305,20 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
       fs.openFile(testpath)
           .must(SELECT_SQL, "SELECT * FROM S3OBJECT").build().get();
     }
+  }
+
+  /**
+   * Ensures a file can be read via S3 Select when there is no version metadata
+   * (ETag, versionId).
+   */
+  @Test
+  public void testSelectWithNoVersionMetadata() throws Throwable {
+    final Path testpath =
+        writeFileWithNoVersionMetadata("selectnoversion.dat");
+    FSDataInputStream instream = fs.openFile(testpath)
+        .must(SELECT_SQL, "SELECT * FROM S3OBJECT").build().get();
+    assertEquals(QUOTED_TEST_DATA,
+        IOUtils.toString(instream, Charset.forName("UTF-8")).trim());
   }
 
   /**
@@ -308,6 +341,21 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   }
 
   /**
+   * Ensures a file can be renamed when there is no version metadata
+   * (ETag, versionId).
+   */
+  @Test
+  public void testRenameWithNoVersionMetadata() throws Throwable {
+    final Path testpath =
+        writeFileWithNoVersionMetadata("renamenoversion.dat");
+    final Path dest = path("noversiondest.dat");
+    fs.rename(testpath, dest);
+    FSDataInputStream inputStream = fs.open(dest);
+    assertEquals(TEST_DATA,
+        IOUtils.toString(inputStream, Charset.forName("UTF-8")).trim());
+  }
+
+  /**
    * Writes a file with old ETag and versionId in the metadata store such
    * that the metadata is out of sync with S3.  Attempts to read such a file
    * should result in {@link RemoteFileChangedException}.
@@ -316,7 +364,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     final Path testpath = path(filename);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     PrintWriter printWriter = new PrintWriter(out);
-    printWriter.println("Some test data");
+    printWriter.println(TEST_DATA);
     printWriter.close();
     final byte[] dataset = out.toByteArray();
     writeDataset(fs, testpath, dataset, dataset.length,
@@ -330,6 +378,31 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     // put back the original metadata (etag, versionId)
     fs.getMetadataStore().put(
         new PathMetadata(originalStatus, Tristate.FALSE, false));
+
+    return testpath;
+  }
+
+  /**
+   * Writes a file with null ETag and versionId in the metadata store.
+   */
+  private Path writeFileWithNoVersionMetadata(String filename)
+      throws IOException {
+    final Path testpath = path(filename);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintWriter printWriter = new PrintWriter(out);
+    printWriter.println(TEST_DATA);
+    printWriter.close();
+    final byte[] dataset = out.toByteArray();
+    writeDataset(fs, testpath, dataset, dataset.length,
+        1024, false);
+    S3AFileStatus originalStatus = (S3AFileStatus) fs.getFileStatus(testpath);
+
+    // remove ETag and versionId
+    S3AFileStatus newStatus = S3AFileStatus.fromFileStatus(originalStatus,
+        Tristate.FALSE, null, null);
+    fs.getMetadataStore().put(new PathMetadata(newStatus, Tristate.FALSE,
+        false));
+
     return testpath;
   }
 }
