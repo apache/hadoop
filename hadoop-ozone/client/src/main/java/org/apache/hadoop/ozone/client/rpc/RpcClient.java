@@ -270,8 +270,12 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
       builder.addOzoneAcls(OMPBHelper.convertOzoneAcl(ozoneAcl));
     }
 
-    LOG.info("Creating Volume: {}, with {} as owner and quota set to {} bytes.",
-        volumeName, owner, quota);
+    if (volArgs.getQuota() == null) {
+      LOG.info("Creating Volume: {}, with {} as owner.", volumeName, owner);
+    } else {
+      LOG.info("Creating Volume: {}, with {} as owner "
+              + "and quota set to {} bytes.", volumeName, owner, quota);
+    }
     ozoneManagerClient.createVolume(builder.build());
   }
 
