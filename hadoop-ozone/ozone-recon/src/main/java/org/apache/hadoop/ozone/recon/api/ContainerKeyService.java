@@ -41,6 +41,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.recon.ReconServer;
 import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
+import org.apache.hadoop.ozone.recon.api.types.ContainerMetadata;
 import org.apache.hadoop.ozone.recon.api.types.KeyMetadata;
 import org.apache.hadoop.ozone.recon.api.types.KeyMetadata.ContainerBlockMetadata;
 import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
@@ -63,6 +64,24 @@ public class ContainerKeyService {
 
   @Inject
   private ReconOMMetadataManager omMetadataManager;
+
+  /**
+   * Return @{@link org.apache.hadoop.ozone.recon.api.types.ContainerMetadata}
+   * for all the containers.
+   *
+   * @return {@link Response}
+   */
+  @GET
+  public Response getContainers() {
+    Map<Long, ContainerMetadata> containersMap;
+    try {
+       containersMap = containerDBServiceProvider.getContainers();
+    } catch (IOException ioEx) {
+      throw new WebApplicationException(ioEx,
+          Response.Status.INTERNAL_SERVER_ERROR);
+    }
+    return Response.ok(containersMap.values()).build();
+  }
 
   /**
    * Return @{@link org.apache.hadoop.ozone.recon.api.types.KeyMetadata} for
