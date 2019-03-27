@@ -290,7 +290,7 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         new AtomicLong(0), objectAttributes);
     if (objectAttributes.getVersionId() == null
         && objectAttributes.getETag() == null) {
-    assertFalse("Tracker should not have applied constraints " + tracker,
+      assertFalse("Tracker should not have applied constraints " + tracker,
           tracker.maybeApplyConstraint(newGetObjectRequest()));
     }
     return tracker;

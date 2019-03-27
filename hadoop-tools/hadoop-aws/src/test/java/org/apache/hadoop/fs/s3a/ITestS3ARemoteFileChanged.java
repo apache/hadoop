@@ -160,7 +160,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   }
 
   /**
-   * Tests reading a file that is changed while the reader's InputStream is open
+   * Tests reading a file that is changed while the reader's InputStream is
+   * open.
    */
   @Test
   public void testReadFileChangedStreamOpen() throws Throwable {
@@ -281,8 +282,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
       interceptFuture(RemoteFileChangedException.class, "select",
           fs.openFile(testpath)
               .must(SELECT_SQL, "SELECT * FROM S3OBJECT").build());
-    }
-    else {
+    } else {
       fs.openFile(testpath)
           .must(SELECT_SQL, "SELECT * FROM S3OBJECT").build().get();
     }

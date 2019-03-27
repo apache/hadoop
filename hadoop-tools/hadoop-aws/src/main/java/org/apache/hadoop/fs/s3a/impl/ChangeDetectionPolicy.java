@@ -259,7 +259,8 @@ public abstract class ChangeDetectionPolicy {
       if (timesAlreadyDetected == 0) {
         // only warn on the first detection to avoid a noisy log
         LOG.warn(
-            String.format("%s change detected on %s %s at %d. Expected %s got %s",
+            String.format(
+                "%s change detected on %s %s at %d. Expected %s got %s",
                 getSource(), operation, uri, position, revisionId,
                 newRevisionId));
         return new ImmutablePair<>(true, null);

@@ -21,6 +21,9 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.LocatedFileStatus;
 
+/**
+ * {@link LocatedFileStatus} extended to also carry ETag and object version ID.
+ */
 public class S3LocatedFileStatus extends LocatedFileStatus {
   private final String eTag;
   private final String versionId;

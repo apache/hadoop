@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.junit.Assert;

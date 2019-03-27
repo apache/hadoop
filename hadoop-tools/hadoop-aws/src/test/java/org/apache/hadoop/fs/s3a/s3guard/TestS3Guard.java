@@ -99,6 +99,6 @@ public class TestS3Guard extends Assert {
           System.currentTimeMillis(), p);
     }
     return S3AFileStatus.fromFileStatus(fileStatus, Tristate.UNKNOWN,
-        null , null);
+        null, null);
   }
 }

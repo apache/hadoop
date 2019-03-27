@@ -2975,7 +2975,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
   }
 
-  private static class CopyOutcome {
+  private static final class CopyOutcome {
     private final CopyResult copyResult;
     private final InterruptedException interruptedException;
     private final RuntimeException runtimeException;
@@ -3609,37 +3609,38 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     LOG.debug("listLocatedStatus({}, {}", path, filter);
     RemoteIterator<? extends LocatedFileStatus> iterator =
         once("listLocatedStatus", path.toString(),
-        () -> {
-          // lookup dir triggers existence check
-          final S3AFileStatus fileStatus = (S3AFileStatus) getFileStatus(path);
-          if (fileStatus.isFile()) {
-            // simple case: File
-            LOG.debug("Path is a file");
-            return new Listing.SingleStatusRemoteIterator(
-                filter.accept(path) ? toLocatedFileStatus(fileStatus) : null);
-          } else {
-            // directory: trigger a lookup
-            final String key = maybeAddTrailingSlash(pathToKey(path));
-            final Listing.FileStatusAcceptor acceptor =
-                new Listing.AcceptAllButSelfAndS3nDirs(path);
-            DirListingMetadata meta =
-                S3Guard.listChildrenWithTtl(metadataStore, path,
-                    ttlTimeProvider);
-            final RemoteIterator<S3AFileStatus> cachedFileStatusIterator =
-                listing.createProvidedFileStatusIterator(
-                    S3Guard.dirMetaToStatuses(meta), filter, acceptor);
-            return (allowAuthoritative && meta != null
-                && meta.isAuthoritative())
-                ? listing.createLocatedFileStatusIterator(
-                cachedFileStatusIterator)
-                : listing.createLocatedFileStatusIterator(
-                    listing.createFileStatusListingIterator(path,
-                        createListObjectsRequest(key, "/"),
-                        filter,
-                        acceptor,
-                        cachedFileStatusIterator));
-          }
-        });
+          () -> {
+            // lookup dir triggers existence check
+            final S3AFileStatus fileStatus =
+                (S3AFileStatus) getFileStatus(path);
+            if (fileStatus.isFile()) {
+              // simple case: File
+              LOG.debug("Path is a file");
+              return new Listing.SingleStatusRemoteIterator(
+                  filter.accept(path) ? toLocatedFileStatus(fileStatus) : null);
+            } else {
+              // directory: trigger a lookup
+              final String key = maybeAddTrailingSlash(pathToKey(path));
+              final Listing.FileStatusAcceptor acceptor =
+                  new Listing.AcceptAllButSelfAndS3nDirs(path);
+              DirListingMetadata meta =
+                  S3Guard.listChildrenWithTtl(metadataStore, path,
+                      ttlTimeProvider);
+              final RemoteIterator<S3AFileStatus> cachedFileStatusIterator =
+                  listing.createProvidedFileStatusIterator(
+                      S3Guard.dirMetaToStatuses(meta), filter, acceptor);
+              return (allowAuthoritative && meta != null
+                  && meta.isAuthoritative())
+                  ? listing.createLocatedFileStatusIterator(
+                  cachedFileStatusIterator)
+                  : listing.createLocatedFileStatusIterator(
+                      listing.createFileStatusListingIterator(path,
+                          createListObjectsRequest(key, "/"),
+                          filter,
+                          acceptor,
+                          cachedFileStatusIterator));
+            }
+          });
     return toLocatedFileStatusIterator(iterator);
   }
 
