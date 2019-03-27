@@ -83,6 +83,7 @@ public final class OzoneManagerRatisServer {
   private final RaftPeerId raftPeerId;
 
   private final OzoneManagerServerProtocol ozoneManager;
+  private final OzoneManagerStateMachine omStateMachine;
   private final ClientId clientId = ClientId.randomId();
 
   private final ScheduledExecutorService scheduledRoleChecker;
@@ -130,11 +131,13 @@ public final class OzoneManagerRatisServer {
     LOG.info("Instantiating OM Ratis server with GroupID: {} and " +
         "Raft Peers: {}", raftGroupIdStr, raftPeersStr.toString().substring(2));
 
+    this.omStateMachine = getStateMachine(this.raftGroupId);
+
     this.server = RaftServer.newBuilder()
         .setServerId(this.raftPeerId)
         .setGroup(this.raftGroup)
         .setProperties(serverProperties)
-        .setStateMachine(getStateMachine(this.raftGroupId))
+        .setStateMachine(omStateMachine)
         .build();
 
     // Run a scheduler to check and update the server role on the leader
@@ -186,7 +189,7 @@ public final class OzoneManagerRatisServer {
       raftPeers.add(raftPeer);
     }
 
-    return new OzoneManagerRatisServer(ozoneConf, om, omServiceId,
+    return new OzoneManagerRatisServer(ozoneConf, omProtocol, omServiceId,
         localRaftPeerId, ratisAddr, raftPeers);
   }
 
@@ -197,7 +200,7 @@ public final class OzoneManagerRatisServer {
   /**
    * Returns OzoneManager StateMachine.
    */
-  private BaseStateMachine getStateMachine(RaftGroupId gid) {
+  private OzoneManagerStateMachine getStateMachine(RaftGroupId gid) {
     return  new OzoneManagerStateMachine(this);
   }
 
@@ -382,10 +385,13 @@ public final class OzoneManagerRatisServer {
     this.roleCheckInitialDelayMs = leaderElectionMinTimeout
         .toLong(TimeUnit.MILLISECONDS);
 
-    /**
-     * TODO: when ratis snapshots are implemented, set snapshot threshold and
-     * queue size.
-     */
+    long snapshotAutoTriggerThreshold = conf.getLong(
+        OMConfigKeys.OZONE_OM_RATIS_SNAPSHOT_AUTO_TRIGGER_THRESHOLD_KEY,
+        OMConfigKeys.OZONE_OM_RATIS_SNAPSHOT_AUTO_TRIGGER_THRESHOLD_DEFAULT);
+    RaftServerConfigKeys.Snapshot.setAutoTriggerEnabled(
+        properties, true);
+    RaftServerConfigKeys.Snapshot.setAutoTriggerThreshold(
+        properties, snapshotAutoTriggerThreshold);
 
     return properties;
   }
@@ -516,5 +522,9 @@ public final class OzoneManagerRatisServer {
 
   private UUID getRaftGroupIdFromOmServiceId(String omServiceId) {
     return UUID.nameUUIDFromBytes(omServiceId.getBytes(StandardCharsets.UTF_8));
+  }
+
+  public long getStateMachineLastAppliedIndex() {
+    return omStateMachine.getLastAppliedIndex();
   }
 }

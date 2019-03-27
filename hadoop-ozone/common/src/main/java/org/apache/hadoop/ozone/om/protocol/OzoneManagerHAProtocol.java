@@ -37,6 +37,14 @@ import java.io.IOException;
 public interface OzoneManagerHAProtocol {
 
   /**
+   * Store the snapshot index i.e. the raft log index, corresponding to the
+   * last transaction applied to the OM RocksDB, in OM metadata dir on disk.
+   * @return the snapshot index
+   * @throws IOException
+   */
+  long saveRatisSnapshot() throws IOException;
+
+  /**
    * Add a allocate block, it is assumed that the client is having an open
    * key session going on. This block will be appended to this open key session.
    * This will be called only during HA enabled OM, as during HA we get an
@@ -55,7 +63,6 @@ public interface OzoneManagerHAProtocol {
    */
   OmKeyLocationInfo addAllocatedBlock(OmKeyArgs args, long clientID,
       KeyLocation keyLocation) throws IOException;
-
 
   /**
    * Add the openKey entry with given keyInfo and clientID in to openKeyTable.
@@ -81,5 +88,4 @@ public interface OzoneManagerHAProtocol {
    */
   OmMultipartInfo applyInitiateMultipartUpload(OmKeyArgs omKeyArgs,
       String multipartUploadID) throws IOException;
-
 }
