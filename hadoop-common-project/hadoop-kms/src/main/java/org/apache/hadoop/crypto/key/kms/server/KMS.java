@@ -180,8 +180,7 @@ public class KMS {
       requestURL = requestURL.substring(0, idx);
       LOG.trace("Exiting createKey Method.");
       return Response.created(getKeyURI(KMSRESTConstants.SERVICE_VERSION, name))
-          .type(MediaType.APPLICATION_JSON)
-          .header("Location", getKeyURI(requestURL, name)).entity(json).build();
+          .type(MediaType.APPLICATION_JSON).entity(json).build();
     } catch (Exception e) {
       LOG.debug("Exception in createKey.", e);
       throw e;
