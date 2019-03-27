@@ -44,15 +44,15 @@
 
 /**
  * Reads bytes using the read(ByteBuffer) API. By using Java
- * DirectByteBuffers we can avoid copying the bytes from kernel space into
- * user space.
+ * DirectByteBuffers we can avoid copying the bytes onto the Java heap.
+ * Instead the data will be directly copied from kernel space to the C heap.
  */
 tSize readDirect(hdfsFS fs, hdfsFile f, void* buffer, tSize length);
 
 /**
  * Reads bytes using the read(long, ByteBuffer) API. By using Java
- * DirectByteBuffers we can avoid copying the bytes from kernel space into
- * user space.
+ * DirectByteBuffers we can avoid copying the bytes onto the Java heap.
+ * Instead the data will be directly copied from kernel space to the C heap.
  */
 tSize preadDirect(hdfsFS fs, hdfsFile file, tOffset position, void* buffer,
                   tSize length);
@@ -1224,28 +1224,9 @@ static hdfsFile hdfsOpenFileImpl(hdfsFS fs, const char *path, int flags,
     file->flags = 0;
 
     if ((flags & O_WRONLY) == 0) {
-<<<<<<< HEAD
-        // Check the StreamCapabilities of jFile to see if we can do direct reads
-        jthr = newJavaStr(env, "in:readbytebuffer", &jCapabilityString);
-        if (jthr) {
-            ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
-                                        "hdfsOpenFile(%s): newJavaStr", path);
-            goto done;
-        }
-        jthr = invokeMethod(env, &jVal, INSTANCE, jFile,
-                JC_FS_DATA_INPUT_STREAM, "hasCapability",
-                "(Ljava/lang/String;)Z", jCapabilityString);
-        if (jthr) {
-            ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
-                    "hdfsOpenFile(%s): FSDataInputStream#hasCapability", path);
-            goto done;
-        }
-        if (jVal.z) {
-=======
         // Check the StreamCapabilities of jFile to see if we can do direct
         // reads
         if (hdfsHasStreamCapability(jFile, "in:readbytebuffer")) {
->>>>>>> HDFS-3246: pRead equivalent for direct read path
             file->flags |= HDFS_FILE_SUPPORTS_DIRECT_READ;
         }
 
@@ -1470,8 +1451,9 @@ static int readPrepare(JNIEnv* env, hdfsFS fs, hdfsFile f,
 /**
  * If the underlying stream supports the ByteBufferReadable interface then
  * this method will transparently use read(ByteBuffer). This can help
- * improve performance as it avoids unnecessary copies between the kernel
- * space, the Java process space, and the C process space.
+ * improve performance as it avoids unnecessarily copying data on to the Java
+ * heap. Instead the data will be directly copied from kernel space to the C
+ * heap.
  */
 tSize hdfsRead(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
 {
@@ -1592,8 +1574,9 @@ tSize readDirect(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
 /**
  * If the underlying stream supports the ByteBufferPositionedReadable
  * interface then this method will transparently use read(long, ByteBuffer).
- * This can help improve performance as it avoids unnecessary copies between
- * the kernel space, the Java process space, and the C process space.
+ * This can help improve performance as it avoids unnecessarily copying data
+ * on to the Java heap. Instead the data will be directly copied from kernel
+ * space to the C heap.
  */
 tSize hdfsPread(hdfsFS fs, hdfsFile f, tOffset position,
                 void* buffer, tSize length)
@@ -1702,7 +1685,8 @@ tSize preadDirect(hdfsFS fs, hdfsFile f, tOffset position, void* buffer,
     }
 
     jthr = invokeMethod(env, &jVal, INSTANCE, f->file,
-        HADOOP_ISTRM, "read", "(JLjava/nio/ByteBuffer;)I", position, bb);
+            JC_FS_DATA_INPUT_STREAM, "read", "(JLjava/nio/ByteBuffer;)I",
+            position, bb);
     destroyLocalReference(env, bb);
     if (jthr) {
        errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,

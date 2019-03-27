@@ -19,7 +19,6 @@ package org.apache.hadoop.fs;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -37,8 +36,9 @@ public interface ByteBufferReadable {
    * After a successful call, buf.position() will be advanced by the number 
    * of bytes read and buf.limit() should be unchanged.
    * <p>
-   * In the case of an exception, the values of buf.position() and buf.limit()
-   * are undefined, and callers should be prepared to recover from this
+   * In the case of an exception, the state of the buffer (the contents of the
+   * buffer, the {@code buf.position()}, the {@code buf.limit(), etc.) is
+   * undefined, and callers should be prepared to recover from this
    * eventuality.
    * <p>
    * Callers should use {@link StreamCapabilities#hasCapability(String)} with

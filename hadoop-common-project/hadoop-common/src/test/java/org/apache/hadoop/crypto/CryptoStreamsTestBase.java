@@ -564,7 +564,7 @@ public abstract class CryptoStreamsTestBase {
     in.close();
   }
   
-  private void byteBufferReadCheck(InputStream in, ByteBuffer buf,
+  private void byteBufferReadCheck(InputStream in, ByteBuffer buf, 
       int bufPos) throws Exception {
     buf.position(bufPos);
     int n = ((ByteBufferReadable) in).read(buf);

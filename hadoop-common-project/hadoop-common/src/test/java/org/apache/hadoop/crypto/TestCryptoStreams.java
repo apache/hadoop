@@ -179,9 +179,9 @@ public class TestCryptoStreams extends CryptoStreamsTestBase {
   
   static class FakeInputStream extends InputStream
       implements Seekable, PositionedReadable, ByteBufferReadable,
-                 ByteBufferPositionedReadable, HasFileDescriptor,
-                 CanSetDropBehind, CanSetReadahead,
-                 HasEnhancedByteBufferAccess, CanUnbuffer, StreamCapabilities {
+                 HasFileDescriptor, CanSetDropBehind, CanSetReadahead,
+                 HasEnhancedByteBufferAccess, CanUnbuffer,
+                 StreamCapabilities, ByteBufferPositionedReadable {
     private final byte[] oneByteBuf = new byte[1];
     private int pos = 0;
     private final byte[] data;

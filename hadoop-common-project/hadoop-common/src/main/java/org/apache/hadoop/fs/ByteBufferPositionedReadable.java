@@ -43,9 +43,10 @@ public interface ByteBufferPositionedReadable {
    * After a successful call, {@code buf.position()} will be advanced by the
    * number of bytes read and {@code buf.limit()} should be unchanged.
    * <p>
-   * In the case of an exception, the values of {@code buf.position()} and
-   * {@code buf.limit()} are undefined, and callers should be prepared to
-   * recover from this eventuality.
+   * In the case of an exception, the state of the buffer (the contents of the
+   * buffer, the {@code buf.position()}, the {@code buf.limit(), etc.) is
+   * undefined, and callers should be prepared to recover from this
+   * eventuality.
    * <p>
    * Callers should use {@link StreamCapabilities#hasCapability(String)} with
    * {@link StreamCapabilities#PREADBYTEBUFFER} to check if the underlying
