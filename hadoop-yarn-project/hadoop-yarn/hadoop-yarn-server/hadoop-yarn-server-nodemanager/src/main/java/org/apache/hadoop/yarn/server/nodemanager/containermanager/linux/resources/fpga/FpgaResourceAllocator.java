@@ -33,10 +33,14 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resource
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.FPGA_URI;
-
 
 /**
  * This FPGA resource allocator tends to be used by different FPGA vendor's plugin
@@ -50,20 +54,21 @@ public class FpgaResourceAllocator {
   private List<FpgaDevice> allowedFpgas = new LinkedList<>();
 
   //key is resource type of FPGA, vendor plugin supported ID
-  private LinkedHashMap<String, List<FpgaDevice>> availableFpga = new LinkedHashMap<>();
+  private Map<String, List<FpgaDevice>> availableFpgas = new HashMap<>();
 
-  //key is requestor, aka. container ID
-  private LinkedHashMap<String, List<FpgaDevice>> usedFpgaByRequestor = new LinkedHashMap<>();
+  //key is the container ID
+  private Map<String, List<FpgaDevice>> containerToFpgaMapping =
+      new HashMap<>();
 
   private Context nmContext;
 
   @VisibleForTesting
-  public HashMap<String, List<FpgaDevice>> getAvailableFpga() {
-    return availableFpga;
+  Map<String, List<FpgaDevice>> getAvailableFpga() {
+    return availableFpgas;
   }
 
   @VisibleForTesting
-  public List<FpgaDevice> getAllowedFpga() {
+  List<FpgaDevice> getAllowedFpga() {
     return allowedFpgas;
   }
 
@@ -72,25 +77,31 @@ public class FpgaResourceAllocator {
   }
 
   @VisibleForTesting
-  public int getAvailableFpgaCount() {
+  int getAvailableFpgaCount() {
     int count = 0;
-    for (List<FpgaDevice> l : availableFpga.values()) {
-      count += l.size();
-    }
+
+    count = availableFpgas.values()
+      .stream()
+      .mapToInt(i -> i.size())
+      .sum();
+
     return count;
   }
 
   @VisibleForTesting
-  public HashMap<String, List<FpgaDevice>> getUsedFpga() {
-    return usedFpgaByRequestor;
+  Map<String, List<FpgaDevice>> getUsedFpga() {
+    return containerToFpgaMapping;
   }
 
   @VisibleForTesting
-  public int getUsedFpgaCount() {
+  int getUsedFpgaCount() {
     int count = 0;
-    for (List<FpgaDevice> l : usedFpgaByRequestor.values()) {
-      count += l.size();
-    }
+
+    count = containerToFpgaMapping.values()
+        .stream()
+        .mapToInt(i -> i.size())
+        .sum();
+
     return count;
   }
 
@@ -252,42 +263,31 @@ public class FpgaResourceAllocator {
     }
   }
 
-  public synchronized void addFpga(String type, List<FpgaDevice> list) {
-    availableFpga.putIfAbsent(type, new LinkedList<>());
+  // called once during initialization
+  public synchronized void addFpgaDevices(String type, List<FpgaDevice> list) {
+    availableFpgas.putIfAbsent(type, new LinkedList<>());
+    List<FpgaDevice> fpgaDevices = new LinkedList<>();
+
     for (FpgaDevice device : list) {
       if (!allowedFpgas.contains(device)) {
-        allowedFpgas.add(device);
-        availableFpga.get(type).add(device);
+        fpgaDevices.add(device);
+        availableFpgas.get(type).add(device);
+      } else {
+        LOG.warn("Duplicate device found: " + device + ". Ignored");
       }
     }
-    LOG.info("Add a list of FPGA Devices: " + list);
+
+    allowedFpgas = ImmutableList.copyOf(fpgaDevices);
+    LOG.info("Added a list of FPGA Devices: " + allowedFpgas);
   }
 
   public synchronized void updateFpga(String requestor,
       FpgaDevice device, String newIPID, String newHash) {
-    List<FpgaDevice> usedFpgas = usedFpgaByRequestor.get(requestor);
-    int index = findMatchedFpga(usedFpgas, device);
-    if (-1 != index) {
-      usedFpgas.get(index).setIPID(newIPID);
-      FpgaDevice fpga = usedFpgas.get(index);
-      fpga.setIPID(newIPID);
-      fpga.setAocxHash(newHash);
-    } else {
-      LOG.warn("Failed to update FPGA due to unknown reason " +
-          "that no record for this allocated device:" + device);
-    }
+    device.setIPID(newIPID);
+    device.setAocxHash(newHash);
     LOG.info("Update IPID to " + newIPID +
-        " for this allocated device:" + device);
-  }
-
-  private synchronized int findMatchedFpga(List<FpgaDevice> devices, FpgaDevice item) {
-    int i = 0;
-    for (; i < devices.size(); i++) {
-      if (devices.get(i) == item) {
-        return i;
-      }
-    }
-    return -1;
+        " for this allocated device: " + device);
+    LOG.info("Update IP hash to " + newHash);
   }
 
   /**
@@ -301,7 +301,8 @@ public class FpgaResourceAllocator {
    * */
   public synchronized FpgaAllocation assignFpga(String type, long count,
       Container container, String ipidHash) throws ResourceHandlerException {
-    List<FpgaDevice> currentAvailableFpga = availableFpga.get(type);
+    List<FpgaDevice> currentAvailableFpga = availableFpgas.get(type);
+
     String requestor = container.getContainerId().toString();
     if (null == currentAvailableFpga) {
       throw new ResourceHandlerException("No such type of FPGA resource available: " + type);
@@ -341,8 +342,8 @@ public class FpgaResourceAllocator {
         }
 
         // update state store success, update internal used FPGAs
-        usedFpgaByRequestor.putIfAbsent(requestor, new LinkedList<>());
-        usedFpgaByRequestor.get(requestor).addAll(assignedFpgas);
+        containerToFpgaMapping.putIfAbsent(requestor, new LinkedList<>());
+        containerToFpgaMapping.get(requestor).addAll(assignedFpgas);
       }
 
       return new FpgaAllocation(assignedFpgas, currentAvailableFpga);
@@ -390,14 +391,13 @@ public class FpgaResourceAllocator {
   }
 
   public synchronized void cleanupAssignFpgas(String requestor) {
-    List<FpgaDevice> usedFpgas = usedFpgaByRequestor.get(requestor);
+    List<FpgaDevice> usedFpgas = containerToFpgaMapping.get(requestor);
     if (usedFpgas != null) {
       for (FpgaDevice device : usedFpgas) {
         // Add back to availableFpga
-        availableFpga.get(device.getType()).add(device);
+        availableFpgas.get(device.getType()).add(device);
       }
-      usedFpgaByRequestor.remove(requestor);
+      containerToFpgaMapping.remove(requestor);
     }
   }
-
 }

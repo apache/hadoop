@@ -101,7 +101,7 @@ public class FpgaResourceHandlerImpl implements ResourceHandler {
     // Get avialable devices minor numbers from toolchain or static configuration
     List<FpgaResourceAllocator.FpgaDevice> fpgaDeviceList =
         FpgaDiscoverer.getInstance().discover();
-    allocator.addFpga(vendorPlugin.getFpgaType(), fpgaDeviceList);
+    allocator.addFpgaDevices(vendorPlugin.getFpgaType(), fpgaDeviceList);
     this.cGroupsHandler.initializeCGroupController(
         CGroupsHandler.CGroupController.DEVICES);
     return null;
