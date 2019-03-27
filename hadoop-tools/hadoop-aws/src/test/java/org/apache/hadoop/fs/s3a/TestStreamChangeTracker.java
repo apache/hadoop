@@ -25,6 +25,7 @@ import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.transfer.model.CopyResult;
 import org.apache.hadoop.fs.PathIOException;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -207,6 +208,32 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         tracker.maybeApplyConstraint(newCopyObjectRequest()));
   }
 
+  @Test
+  public void testCopyVersionIdRequired() throws Throwable {
+    ChangeTracker tracker = newTracker(
+        ChangeDetectionPolicy.Mode.Client,
+        ChangeDetectionPolicy.Source.VersionId,
+        true,
+        objectAttributes("etag1", "versionId"));
+
+    expectNoVersionAttributeException(tracker, newCopyResult("etag1",
+        null),
+        "policy requires VersionId");
+  }
+
+  @Test
+  public void testCopyETagRequired() throws Throwable {
+    ChangeTracker tracker = newTracker(
+        ChangeDetectionPolicy.Mode.Client,
+        ChangeDetectionPolicy.Source.ETag,
+        true,
+        objectAttributes("etag1", "versionId"));
+
+    expectNoVersionAttributeException(tracker, newCopyResult(null,
+        "versionId"),
+        "policy requires ETag");
+  }
+
   protected void assertConstraintApplied(final ChangeTracker tracker,
       final GetObjectRequest request) {
     assertTrue("Tracker should have applied contraints " + tracker,
@@ -235,6 +262,14 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         NoVersionAttributeException.class);
   }
 
+  protected PathIOException expectNoVersionAttributeException(
+      final ChangeTracker tracker,
+      final CopyResult response,
+      final String message) throws Exception {
+    return expectException(tracker, response, message,
+        NoVersionAttributeException.class);
+  }
+
   protected <T extends Exception> T expectException(
       final ChangeTracker tracker,
       final S3Object response,
@@ -245,6 +280,20 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         message,
         () -> {
           tracker.processResponse(response, "", 0);
+          return tracker;
+        });
+  }
+
+  protected <T extends Exception> T expectException(
+      final ChangeTracker tracker,
+      final CopyResult response,
+      final String message,
+      final Class<T> clazz) throws Exception {
+    return intercept(
+        clazz,
+        message,
+        () -> {
+          tracker.processResponse(response);
           return tracker;
         });
   }
@@ -302,6 +351,17 @@ public class TestStreamChangeTracker extends HadoopTestBase {
 
   private CopyObjectRequest newCopyObjectRequest() {
     return new CopyObjectRequest(BUCKET, OBJECT, BUCKET, DEST_OBJECT);
+  }
+
+  private CopyResult newCopyResult(String eTag, String versionId) {
+    CopyResult copyResult = new CopyResult();
+    copyResult.setSourceBucketName(BUCKET);
+    copyResult.setSourceKey(OBJECT);
+    copyResult.setDestinationBucketName(BUCKET);
+    copyResult.setDestinationKey(DEST_OBJECT);
+    copyResult.setETag(eTag);
+    copyResult.setVersionId(versionId);
+    return copyResult;
   }
 
   private S3Object newResponse(String etag, String versionId) {

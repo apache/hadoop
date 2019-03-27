@@ -192,7 +192,15 @@ public class ChangeTracker {
     // ETag (sometimes, depending on encryption and/or multipart) is not the
     // same on the copied object as the original.  Version Id seems to never
     // be the same on the copy.  As such, there isn't really anything that
-    // can be verified on the response.
+    // can be verified on the response, except that a revision ID is present
+    // if required.
+    String newRevisionId = policy.getRevisionId(copyResult);
+    LOG.debug("Copy result {}: {}", policy.getSource(), newRevisionId);
+    if (newRevisionId == null && policy.isRequireVersion()) {
+      throw new NoVersionAttributeException(uri, String.format(
+          "Change detection policy requires %s",
+          policy.getSource()));
+    }
   }
 
   /**
