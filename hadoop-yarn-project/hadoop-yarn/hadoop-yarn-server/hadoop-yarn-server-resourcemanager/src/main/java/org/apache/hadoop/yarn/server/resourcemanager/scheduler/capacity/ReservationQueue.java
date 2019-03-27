@@ -53,8 +53,8 @@ public class ReservationQueue extends AbstractAutoCreatedLeafQueue {
   @Override
   public void reinitialize(CSQueue newlyParsedQueue,
       Resource clusterResource) throws IOException {
+    writeLock.lock();
     try {
-      writeLock.lock();
       // Sanity check
       if (!(newlyParsedQueue instanceof ReservationQueue) || !newlyParsedQueue
           .getQueuePath().equals(getQueuePath())) {

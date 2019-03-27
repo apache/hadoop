@@ -213,8 +213,8 @@ public final class ServiceUtils {
       return trailing ? separator : "";
     }
     for (Object o : collection) {
-      b.append(o);
-      b.append(separator);
+      b.append(o)
+          .append(separator);
     }
     int length = separator.length();
     String s = b.toString();

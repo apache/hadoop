@@ -276,6 +276,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
   private final int numAllBlocks;
   private final int numDataBlocks;
   private ExtendedBlock currentBlockGroup;
+  private ExtendedBlock prevBlockGroup4Append;
   private final String[] favoredNodes;
   private final List<StripedDataStreamer> failedStreamers;
   private final Map<Integer, Integer> corruptBlockCountMap;
@@ -322,6 +323,16 @@ public class DFSStripedOutputStream extends DFSOutputStream
     }
     currentPackets = new DFSPacket[streamers.size()];
     setCurrentStreamer(0);
+  }
+
+  /** Construct a new output stream for appending to a file. */
+  DFSStripedOutputStream(DFSClient dfsClient, String src,
+      EnumSet<CreateFlag> flags, Progressable progress, LocatedBlock lastBlock,
+      HdfsFileStatus stat, DataChecksum checksum, String[] favoredNodes)
+      throws IOException {
+    this(dfsClient, src, stat, flags, progress, checksum, favoredNodes);
+    initialFileSize = stat.getLen(); // length of file when opened
+    prevBlockGroup4Append = lastBlock != null ? lastBlock.getBlock() : null;
   }
 
   private boolean useDirectBuffer() {
@@ -473,12 +484,17 @@ public class DFSStripedOutputStream extends DFSOutputStream
         + Arrays.asList(excludedNodes));
 
     // replace failed streamers
+    ExtendedBlock prevBlockGroup = currentBlockGroup;
+    if (prevBlockGroup4Append != null) {
+      prevBlockGroup = prevBlockGroup4Append;
+      prevBlockGroup4Append = null;
+    }
     replaceFailedStreamers();
 
     LOG.debug("Allocating new block group. The previous block group: "
-        + currentBlockGroup);
+        + prevBlockGroup);
     final LocatedBlock lb = addBlock(excludedNodes, dfsClient, src,
-        currentBlockGroup, fileId, favoredNodes, getAddBlockFlags());
+         prevBlockGroup, fileId, favoredNodes, getAddBlockFlags());
     assert lb.isStriped();
     // assign the new block to the current block group
     currentBlockGroup = lb.getBlock();

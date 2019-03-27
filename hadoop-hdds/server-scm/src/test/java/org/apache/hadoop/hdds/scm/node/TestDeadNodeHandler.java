@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -36,24 +37,25 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdds.scm.HddsTestUtils;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
 import org.apache.hadoop.hdds.scm.container.ContainerReplica;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
-import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineProvider;
+import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.MockRatisPipelineProvider;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .NodeReportFromDatanode;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
 import org.apache.hadoop.hdds.server.events.EventQueue;
-import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authentication.client
+    .AuthenticationException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -82,13 +84,16 @@ public class TestDeadNodeHandler {
     storageDir = GenericTestUtils.getTempPath(
         TestDeadNodeHandler.class.getSimpleName() + UUID.randomUUID());
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, storageDir);
-    conf.set(HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL, "100ms");
-    conf.set(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, "50ms");
-    conf.set(ScmConfigKeys.OZONE_SCM_STALENODE_INTERVAL, "1s");
-    conf.set(ScmConfigKeys.OZONE_SCM_DEADNODE_INTERVAL, "2s");
     eventQueue = new EventQueue();
     scm = HddsTestUtils.getScm(conf);
     nodeManager = (SCMNodeManager) scm.getScmNodeManager();
+    SCMPipelineManager manager =
+        (SCMPipelineManager)scm.getPipelineManager();
+    PipelineProvider mockRatisProvider =
+        new MockRatisPipelineProvider(nodeManager, manager.getStateManager(),
+            conf);
+    manager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
+        mockRatisProvider);
     containerManager = scm.getContainerManager();
     deadNodeHandler = new DeadNodeHandler(nodeManager, containerManager);
     eventQueue.addHandler(SCMEvents.DEAD_NODE, deadNodeHandler);
@@ -204,59 +209,6 @@ public class TestDeadNodeHandler {
             container4.getContainerID()));
 
 
-  }
-
-  @Test
-  public void testStatisticsUpdate() throws Exception {
-    //GIVEN
-    DatanodeDetails datanode1 = TestUtils.randomDatanodeDetails();
-    DatanodeDetails datanode2 = TestUtils.randomDatanodeDetails();
-
-    String storagePath1 = GenericTestUtils.getRandomizedTempPath()
-        .concat("/" + datanode1.getUuidString());
-    String storagePath2 = GenericTestUtils.getRandomizedTempPath()
-        .concat("/" + datanode2.getUuidString());
-
-    StorageReportProto storageOne = TestUtils.createStorageReport(
-        datanode1.getUuid(), storagePath1, 100, 10, 90, null);
-    StorageReportProto storageTwo = TestUtils.createStorageReport(
-        datanode2.getUuid(), storagePath2, 200, 20, 180, null);
-
-    nodeManager.register(datanode1,
-        TestUtils.createNodeReport(storageOne), null);
-    nodeManager.register(datanode2,
-        TestUtils.createNodeReport(storageTwo), null);
-
-    nodeReportHandler.onMessage(getNodeReport(datanode1, storageOne),
-        Mockito.mock(EventPublisher.class));
-    nodeReportHandler.onMessage(getNodeReport(datanode2, storageTwo),
-        Mockito.mock(EventPublisher.class));
-
-    SCMNodeStat stat = nodeManager.getStats();
-    Assert.assertTrue(stat.getCapacity().get() == 300);
-    Assert.assertTrue(stat.getRemaining().get() == 270);
-    Assert.assertTrue(stat.getScmUsed().get() == 30);
-
-    SCMNodeMetric nodeStat = nodeManager.getNodeStat(datanode1);
-    Assert.assertTrue(nodeStat.get().getCapacity().get() == 100);
-    Assert.assertTrue(nodeStat.get().getRemaining().get() == 90);
-    Assert.assertTrue(nodeStat.get().getScmUsed().get() == 10);
-
-    //TODO: Support logic to mark a node as dead in NodeManager.
-
-    nodeManager.processHeartbeat(datanode2);
-    Thread.sleep(1000);
-    nodeManager.processHeartbeat(datanode2);
-    Thread.sleep(1000);
-    nodeManager.processHeartbeat(datanode2);
-    Thread.sleep(1000);
-    nodeManager.processHeartbeat(datanode2);
-    //THEN statistics in SCM should changed.
-    stat = nodeManager.getStats();
-    Assert.assertEquals(200L, stat.getCapacity().get().longValue());
-    Assert.assertEquals(180L,
-        stat.getRemaining().get().longValue());
-    Assert.assertEquals(20L, stat.getScmUsed().get().longValue());
   }
 
   @Test

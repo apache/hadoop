@@ -272,6 +272,11 @@ public final class OzoneConsts {
   public static final Metadata.Key<String> USER_METADATA_KEY =
       Metadata.Key.of(OZONE_USER, ASCII_STRING_MARSHALLER);
 
+  public static final String RPC_PORT = "RPC";
+
   // Default OMServiceID for OM Ratis servers to use as RaftGroupId
-  public static final String OM_SERVICE_ID_DEFAULT = "om-service-value";
+  public static final String OM_SERVICE_ID_DEFAULT = "omServiceIdDefault";
+
+  // Dummy OMNodeID for OM Clients to use for a non-HA OM setup
+  public static final String OM_NODE_ID_DUMMY = "omNodeIdDummy";
 }

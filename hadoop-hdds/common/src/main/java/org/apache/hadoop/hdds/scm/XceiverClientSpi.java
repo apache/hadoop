@@ -18,21 +18,20 @@
 
 package org.apache.hadoop.hdds.scm;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerCommandRequestProto;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerCommandResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandRequestProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * A Client for the storageContainer protocol.
@@ -124,7 +123,7 @@ public abstract class XceiverClientSpi implements Closeable {
    * @throws IOException
    */
   public XceiverClientReply sendCommand(
-      ContainerCommandRequestProto request, List<UUID> excludeDns)
+      ContainerCommandRequestProto request, List<DatanodeDetails> excludeDns)
       throws IOException {
     try {
       XceiverClientReply reply;
@@ -158,14 +157,14 @@ public abstract class XceiverClientSpi implements Closeable {
    * Check if an specfic commitIndex is replicated to majority/all servers.
    * @param index index to watch for
    * @param timeout timeout provided for the watch ipeartion to complete
-   * @return the min commit index replicated to all or majority servers
-   *         in case of a failure
+   * @return reply containing the min commit index replicated to all or majority
+   *         servers in case of a failure
    * @throws InterruptedException
    * @throws ExecutionException
    * @throws TimeoutException
    * @throws IOException
    */
-  public abstract long watchForCommit(long index, long timeout)
+  public abstract XceiverClientReply watchForCommit(long index, long timeout)
       throws InterruptedException, ExecutionException, TimeoutException,
       IOException;
 

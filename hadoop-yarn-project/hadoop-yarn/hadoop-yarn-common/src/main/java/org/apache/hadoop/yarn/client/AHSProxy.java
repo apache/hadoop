@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -35,7 +35,8 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 @SuppressWarnings("unchecked")
 public class AHSProxy<T> {
 
-  private static final Log LOG = LogFactory.getLog(AHSProxy.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AHSProxy.class);
 
   public static <T> T createAHSProxy(final Configuration conf,
       final Class<T> protocol, InetSocketAddress ahsAddress) throws IOException {

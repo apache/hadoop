@@ -280,6 +280,7 @@ are allowed. It contains the following properties:
 | `docker.allowed.volume-drivers` | Comma separated list of volume drivers which are allowed to be used. By default, no volume drivers are allowed. |
 | `docker.host-pid-namespace.enabled` | Set to "true" or "false" to enable or disable using the host's PID namespace. Default value is "false". |
 | `docker.privileged-containers.enabled` | Set to "true" or "false" to enable or disable launching privileged containers. Default value is "false". |
+| `docker.privileged-containers.registries` | Comma separated list of privileged docker registries for running privileged docker containers.  By default, no registries are defined. |
 | `docker.trusted.registries` | Comma separated list of trusted docker registries for running trusted privileged docker containers.  By default, no registries are defined. |
 | `docker.inspect.max.retries` | Integer value to check docker container readiness.  Each inspection is set with 3 seconds delay.  Default value of 10 will wait 30 seconds for docker container to become ready before marked as container failed. |
 | `docker.no-new-privileges.enabled` | Enable/disable the no-new-privileges flag for docker run. Set to "true" to enable, disabled by default. |
@@ -306,6 +307,7 @@ yarn.nodemanager.linux-container-executor.group=yarn
 [docker]
   module.enabled=true
   docker.privileged-containers.enabled=true
+  docker.privileged-containers.registries=local
   docker.trusted.registries=centos
   docker.allowed.capabilities=SYS_CHROOT,MKNOD,SETFCAP,SETPCAP,FSETID,CHOWN,AUDIT_WRITE,SETGID,NET_RAW,FOWNER,SETUID,DAC_OVERRIDE,KILL,NET_BIND_SERVICE
   docker.allowed.networks=bridge,host,none
@@ -640,9 +642,30 @@ Privileged Container Security Consideration
 
 Privileged docker container can interact with host system devices.  This can cause harm to host operating system without proper care.  In order to mitigate risk of allowing privileged container to run on Hadoop cluster, we implemented a controlled process to sandbox unauthorized privileged docker images.
 
-The default behavior is disallow any privileged docker containers.  When `docker.privileged-containers.enabled` is set to enabled, docker image can run with root privileges in the docker container, but access to host level devices are disabled.  This allows developer and tester to run docker images from internet without causing harm to host operating system.
+The default behavior disallows any privileged docker containers.  Privileged docker is only allowed with ENTRYPOINT enabled docker image, and `docker.privileged-containers.enabled` is set to enabled.  Docker image can run with root privileges in the docker container, but access to host level devices are disabled.  This allows developer and tester to run docker images from internet with some restrictions to prevent harm to host operating system.
 
-When docker images have been certified by developers and testers to be trustworthy.  The trusted image can be promoted to trusted docker registry.  System administrator can define `docker.trusted.registries`, and setup private docker registry server to promote trusted images.
+When docker images have been certified by developers and testers to be trustworthy.  The trusted image can be promoted to trusted docker registry.  System administrator can define `docker.trusted.registries`, and setup private docker registry server to promote trusted images.  System administrator may choose to allow official docker images from Docker Hub to be part of trusted registries.  "library" is the name to use for trusting official docker images.  Container-executor.cfg example:
+
+```
+[docker]
+  docker.privileged-containers.enabled=true
+  docker.trusted.registries=library
+```
+
+Fine grained access control can also be defined using `docker.privileged-containers.registries` to allow only a subset of Docker images to run as privileged containers.  If `docker.privileged-containers.registries` is not defined, YARN will fall back to use `docker.trusted.registries` as access control for privileged Docker images.  Fine grained access control example:
+
+```
+[docker]
+  docker.privileged-containers.enabled=true
+  docker.privileged-containers.registries=local/centos:latest
+  docker.trusted.registries=library
+```
+
+In development environment, local images can be tagged with a repository name prefix to enable trust.  The recommendation of choosing a repository name is using a local hostname and port number to prevent accidentially pulling docker images from Docker Hub or use reserved Docker Hub keyword: "local".  Docker run will look for docker images on Docker Hub, if the image does not exist locally.  Using a local hostname and port in image name can prevent accidental pulling of canonical images from docker hub.  Example of tagging image with localhost:5000 as trusted registry:
+
+```
+docker tag centos:latest localhost:5000/centos:latest
+```
 
 Trusted images are allowed to mount external devices such as HDFS via NFS gateway, or host level Hadoop configuration.  If system administrators allow writing to external volumes using `docker.allow.rw-mounts directive`, privileged docker container can have full control of host level files in the predefined volumes.
 
@@ -801,10 +824,73 @@ When docker-registry application reaches STABLE state in YARN, user can push or 
 ### Docker Registry on S3
 
 Docker Registry provides its own S3 driver and YAML configuration.  YARN service configuration can generate YAML template, and enable direct Docker Registry to S3 storage.  This option is the top choice for deploying Docker Trusted Registry on AWS.
+Configuring Docker registry storage driver to S3 requires mounting /etc/docker/registry/config.yml file (through YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS), which needs to configure an S3 bucket with its corresponding accesskey and secretKey.
 
-### Docker Registry with CSI Driver
+Sample config.yml
+```
+version: 0.1
+log:
+    fields:
+        service: registry
+http:
+    addr: :5000
+storage:
+    cache:
+        blobdescriptor: inmemory
+    s3:
+        accesskey: #AWS_KEY#
+        secretkey: #AWS_SECRET#
+        region: #AWS_REGION#
+        bucket: #AWS_BUCKET#
+        encrypt: #ENCRYPT#
+        secure:  #SECURE#
+        chunksize: 5242880
+        multipartcopychunksize: 33554432
+        multipartcopymaxconcurrency: 100
+        multipartcopythresholdsize: 33554432
+        rootdirectory: #STORAGE_PATH#
+```
 
-CSI driver enables third party storage system to expose as posix mount point in the container.  This allows Docker Trusted Registry to write docker images to an external storage.
+Docker Registry can be started using YARN service:
+registry.json
+
+```
+{
+  "name": "docker-registry",
+  "version": "1.0",
+  "kerberos_principal" : {
+    "principal_name" : "registry/_HOST@EXAMPLE.COM",
+    "keytab" : "file:///etc/security/keytabs/registry.service.keytab"
+  },
+  "components" :
+  [
+    {
+      "name": "registry",
+      "number_of_containers": 1,
+      "artifact": {
+        "id": "registry:latest",
+        "type": "DOCKER"
+      },
+      "resource": {
+        "cpus": 1,
+        "memory": "256"
+      },
+      "run_privileged_container": true,
+      "configuration": {
+        "env": {
+          "YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE":"true",
+          "YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS":"<path to config.yml>:/etc/docker/registry/config.yml",
+        },
+        "properties": {
+          "docker.network": "host"
+        }
+      }
+    }
+  ]
+}
+```
+
+For further details and parameters that could be configured in the S3 storage driver, please refer https://docs.docker.com/registry/storage-drivers/s3/.
 
 Example: MapReduce
 ------------------

@@ -22,6 +22,7 @@ import com.google.common.base.Strings;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
+import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -35,7 +36,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
-import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolClientSideTranslatorPB;
+import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.OzoneConsts.Versioning;
@@ -47,8 +48,6 @@ import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
-import org.apache.hadoop.hdds.scm.protocolPB
-    .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.KeyArgs;
@@ -74,9 +73,9 @@ public final class DistributedStorageHandler implements StorageHandler {
   private static final Logger LOG =
       LoggerFactory.getLogger(DistributedStorageHandler.class);
 
-  private final StorageContainerLocationProtocolClientSideTranslatorPB
+  private final StorageContainerLocationProtocol
       storageContainerLocationClient;
-  private final OzoneManagerProtocolClientSideTranslatorPB
+  private final OzoneManagerProtocol
       ozoneManagerClient;
   private final XceiverClientManager xceiverClientManager;
   private final OzoneAcl.OzoneACLRights userRights;
@@ -88,6 +87,8 @@ public final class DistributedStorageHandler implements StorageHandler {
   private final long blockSize;
   private final ChecksumType checksumType;
   private final int bytesPerChecksum;
+  private final boolean verifyChecksum;
+  private final int maxRetryCount;
 
   /**
    * Creates a new DistributedStorageHandler.
@@ -97,10 +98,8 @@ public final class DistributedStorageHandler implements StorageHandler {
    * @param ozoneManagerClient OzoneManager proxy
    */
   public DistributedStorageHandler(OzoneConfiguration conf,
-      StorageContainerLocationProtocolClientSideTranslatorPB
-          storageContainerLocation,
-      OzoneManagerProtocolClientSideTranslatorPB
-                                       ozoneManagerClient) {
+      StorageContainerLocationProtocol storageContainerLocation,
+      OzoneManagerProtocol ozoneManagerClient) {
     this.ozoneManagerClient = ozoneManagerClient;
     this.storageContainerLocationClient = storageContainerLocation;
     this.xceiverClientManager = new XceiverClientManager(conf);
@@ -153,7 +152,12 @@ public final class DistributedStorageHandler implements StorageHandler {
         OzoneConfigKeys.OZONE_CLIENT_CHECKSUM_TYPE,
         OzoneConfigKeys.OZONE_CLIENT_CHECKSUM_TYPE_DEFAULT);
     this.checksumType = ChecksumType.valueOf(checksumTypeStr);
-
+    this.verifyChecksum =
+        conf.getBoolean(OzoneConfigKeys.OZONE_CLIENT_VERIFY_CHECKSUM,
+            OzoneConfigKeys.OZONE_CLIENT_VERIFY_CHECKSUM_DEFAULT);
+    this.maxRetryCount =
+        conf.getInt(OzoneConfigKeys.OZONE_CLIENT_MAX_RETRIES, OzoneConfigKeys.
+            OZONE_CLIENT_MAX_RETRIES_DEFAULT);
   }
 
   @Override
@@ -438,11 +442,10 @@ public final class DistributedStorageHandler implements StorageHandler {
         .build();
     // contact OM to allocate a block for key.
     OpenKeySession openKey = ozoneManagerClient.openKey(keyArgs);
-    KeyOutputStream groupOutputStream =
+    KeyOutputStream keyOutputStream =
         new KeyOutputStream.Builder()
             .setHandler(openKey)
             .setXceiverClientManager(xceiverClientManager)
-            .setScmClient(storageContainerLocationClient)
             .setOmClient(ozoneManagerClient)
             .setChunkSize(chunkSize)
             .setRequestID(args.getRequestID())
@@ -454,11 +457,12 @@ public final class DistributedStorageHandler implements StorageHandler {
             .setWatchTimeout(watchTimeout)
             .setChecksumType(checksumType)
             .setBytesPerChecksum(bytesPerChecksum)
+            .setMaxRetryCount(maxRetryCount)
             .build();
-    groupOutputStream.addPreallocateBlocks(
+    keyOutputStream.addPreallocateBlocks(
         openKey.getKeyInfo().getLatestVersionLocations(),
         openKey.getOpenVersion());
-    return new OzoneOutputStream(groupOutputStream);
+    return new OzoneOutputStream(keyOutputStream);
   }
 
   @Override
@@ -475,11 +479,12 @@ public final class DistributedStorageHandler implements StorageHandler {
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
         .setDataSize(args.getSize())
+        .setRefreshPipeline(true)
         .build();
     OmKeyInfo keyInfo = ozoneManagerClient.lookupKey(keyArgs);
     return KeyInputStream.getFromOmKeyInfo(
         keyInfo, xceiverClientManager, storageContainerLocationClient,
-        args.getRequestID());
+        args.getRequestID(), verifyChecksum);
   }
 
   @Override
@@ -509,6 +514,7 @@ public final class DistributedStorageHandler implements StorageHandler {
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
+        .setRefreshPipeline(true)
         .build();
 
     OmKeyInfo omKeyInfo = ozoneManagerClient.lookupKey(keyArgs);
@@ -530,6 +536,7 @@ public final class DistributedStorageHandler implements StorageHandler {
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
+        .setRefreshPipeline(true)
         .build();
     OmKeyInfo omKeyInfo = ozoneManagerClient.lookupKey(keyArgs);
     List<KeyLocation> keyLocations = new ArrayList<>();

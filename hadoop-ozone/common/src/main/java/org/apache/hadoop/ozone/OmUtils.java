@@ -187,6 +187,7 @@ public final class OmUtils {
     case ListS3Buckets:
     case ServiceList:
     case ListMultiPartUploadParts:
+    case GetFileStatus:
       return true;
     case CreateVolume:
     case SetVolumeProperty:
@@ -209,6 +210,8 @@ public final class OmUtils {
     case GetDelegationToken:
     case RenewDelegationToken:
     case CancelDelegationToken:
+    case ApplyCreateKey:
+    case ApplyInitiateMultiPartUpload:
       return false;
     default:
       LOG.error("CmdType {} is not categorized as readOnly or not.", cmdType);
@@ -315,8 +318,10 @@ public final class OmUtils {
       tarOs = new TarArchiveOutputStream(gzipOutputStream);
       File folder = new File(sourceDir);
       File[] filesInDir = folder.listFiles();
-      for (File file : filesInDir) {
-        addFilesToArchive(file.getName(), file, tarOs);
+      if (filesInDir != null) {
+        for (File file : filesInDir) {
+          addFilesToArchive(file.getName(), file, tarOs);
+        }
       }
       return new File(fileName);
     } finally {
@@ -343,8 +348,12 @@ public final class OmUtils {
       fileInputStream.close();
     } else if (file.isDirectory()) {
       tarFileOutputStream.closeArchiveEntry();
-      for (File cFile : file.listFiles()) {
-        addFilesToArchive(cFile.getAbsolutePath(), cFile, tarFileOutputStream);
+      File[] filesInDir = file.listFiles();
+      if (filesInDir != null) {
+        for (File cFile : filesInDir) {
+          addFilesToArchive(cFile.getAbsolutePath(), cFile,
+              tarFileOutputStream);
+        }
       }
     }
   }

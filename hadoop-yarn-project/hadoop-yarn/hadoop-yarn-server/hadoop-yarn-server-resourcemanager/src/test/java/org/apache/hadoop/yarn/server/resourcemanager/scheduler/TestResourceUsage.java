@@ -22,8 +22,8 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.junit.Assert;
 import org.junit.Test;
@@ -32,7 +32,8 @@ import org.junit.runners.Parameterized;
 
 @RunWith(Parameterized.class)
 public class TestResourceUsage {
-  private static final Log LOG = LogFactory.getLog(TestResourceUsage.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestResourceUsage.class);
   private String suffix;
 
   @Parameterized.Parameters

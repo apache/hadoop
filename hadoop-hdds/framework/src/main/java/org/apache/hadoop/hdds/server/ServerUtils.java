@@ -125,13 +125,36 @@ public final class ServerUtils {
    * @return
    */
   public static File getScmDbDir(Configuration conf) {
-    final Collection<String> metadirs = conf.getTrimmedStringCollection(
-        ScmConfigKeys.OZONE_SCM_DB_DIRS);
+    File metadataDir = getDirectoryFromConfig(conf, ScmConfigKeys
+        .OZONE_SCM_DB_DIRS, "SCM");
+    if (metadataDir != null) {
+      return metadataDir;
+    }
+
+    LOG.warn("{} is not configured. We recommend adding this setting. " +
+        "Falling back to {} instead.",
+        ScmConfigKeys.OZONE_SCM_DB_DIRS, HddsConfigKeys.OZONE_METADATA_DIRS);
+    return getOzoneMetaDirPath(conf);
+  }
+
+  /**
+   * Utility method to get value of a given key that corresponds to a DB
+   * directory.
+   * @param conf configuration bag
+   * @param key Key to test
+   * @param componentName Which component's key is this
+   * @return File created from the value of the key in conf.
+   */
+  public static File getDirectoryFromConfig(Configuration conf,
+                                             String key,
+                                             String componentName) {
+    final Collection<String> metadirs = conf.getTrimmedStringCollection(key);
 
     if (metadirs.size() > 1) {
       throw new IllegalArgumentException(
-          "Bad config setting " + ScmConfigKeys.OZONE_SCM_DB_DIRS +
-          ". SCM does not support multiple metadata dirs currently");
+          "Bad config setting " + key +
+              ". " + componentName +
+              " does not support multiple metadata dirs currently");
     }
 
     if (metadirs.size() == 1) {
@@ -139,15 +162,11 @@ public final class ServerUtils {
       if (!dbDirPath.exists() && !dbDirPath.mkdirs()) {
         throw new IllegalArgumentException("Unable to create directory " +
             dbDirPath + " specified in configuration setting " +
-            ScmConfigKeys.OZONE_SCM_DB_DIRS);
+            componentName);
       }
       return dbDirPath;
     }
-
-    LOG.warn("{} is not configured. We recommend adding this setting. " +
-        "Falling back to {} instead.",
-        ScmConfigKeys.OZONE_SCM_DB_DIRS, HddsConfigKeys.OZONE_METADATA_DIRS);
-    return getOzoneMetaDirPath(conf);
+    return null;
   }
 
   /**

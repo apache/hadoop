@@ -55,24 +55,24 @@ import org.slf4j.LoggerFactory;
 public class RDBStore implements DBStore {
   private static final Logger LOG =
       LoggerFactory.getLogger(RDBStore.class);
-  private final RocksDB db;
-  private final File dbLocation;
+  private RocksDB db;
+  private File dbLocation;
   private final WriteOptions writeOptions;
   private final DBOptions dbOptions;
   private final CodecRegistry codecRegistry;
   private final Hashtable<String, ColumnFamilyHandle> handleTable;
   private ObjectName statMBeanName;
   private RDBCheckpointManager checkPointManager;
-  private final String checkpointsParentDir;
+  private String checkpointsParentDir;
 
   @VisibleForTesting
   public RDBStore(File dbFile, DBOptions options,
                   Set<TableConfig> families) throws IOException {
-    this(dbFile, options, families, new CodecRegistry());
+    this(dbFile, options, families, new CodecRegistry(), false);
   }
 
   public RDBStore(File dbFile, DBOptions options, Set<TableConfig> families,
-                  CodecRegistry registry)
+                  CodecRegistry registry, boolean readOnly)
       throws IOException {
     Preconditions.checkNotNull(dbFile, "DB file location cannot be null");
     Preconditions.checkNotNull(families);
@@ -93,8 +93,13 @@ public class RDBStore implements DBStore {
     writeOptions = new WriteOptions();
 
     try {
-      db = RocksDB.open(dbOptions, dbLocation.getAbsolutePath(),
-          columnFamilyDescriptors, columnFamilyHandles);
+      if (readOnly) {
+        db = RocksDB.openReadOnly(dbOptions, dbLocation.getAbsolutePath(),
+            columnFamilyDescriptors, columnFamilyHandles);
+      } else {
+        db = RocksDB.open(dbOptions, dbLocation.getAbsolutePath(),
+            columnFamilyDescriptors, columnFamilyHandles);
+      }
 
       for (int x = 0; x < columnFamilyHandles.size(); x++) {
         handleTable.put(
@@ -119,7 +124,10 @@ public class RDBStore implements DBStore {
           OM_DB_CHECKPOINTS_DIR_NAME).toString();
       File checkpointsDir = new File(checkpointsParentDir);
       if (!checkpointsDir.exists()) {
-        checkpointsDir.mkdir();
+        boolean success = checkpointsDir.mkdir();
+        if (!success) {
+          LOG.warn("Unable to create RocksDB checkpoint directory");
+        }
       }
 
       //Initialize checkpoint manager
@@ -265,18 +273,18 @@ public class RDBStore implements DBStore {
   }
 
   @Override
-  public DBCheckpointSnapshot getCheckpointSnapshot(boolean flush)
-      throws IOException {
-    if (flush) {
-      final FlushOptions flushOptions =
-          new FlushOptions().setWaitForFlush(true);
-      try {
-        db.flush(flushOptions);
-      } catch (RocksDBException e) {
-        LOG.error("Unable to Flush RocksDB data before creating snapshot", e);
-      }
+  public DBCheckpoint getCheckpoint(boolean flush) {
+    final FlushOptions flushOptions = new FlushOptions().setWaitForFlush(flush);
+    try {
+      db.flush(flushOptions);
+    } catch (RocksDBException e) {
+      LOG.error("Unable to Flush RocksDB data before creating snapshot", e);
     }
-    return checkPointManager.createCheckpointSnapshot(checkpointsParentDir);
+    return checkPointManager.createCheckpoint(checkpointsParentDir);
   }
 
+  @Override
+  public File getDbLocation() {
+    return dbLocation;
+  }
 }

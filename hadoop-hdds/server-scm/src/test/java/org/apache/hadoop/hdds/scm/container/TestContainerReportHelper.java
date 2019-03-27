@@ -16,19 +16,12 @@
  */
 package org.apache.hadoop.hdds.scm.container;
 
-import org.apache.commons.lang3.RandomUtils;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -77,37 +70,4 @@ public final class TestContainerReportHelper {
         containerInfo.containerID(), event);
   }
 
-  public static ContainerInfo getContainer(final LifeCycleState state) {
-    return new ContainerInfo.Builder()
-        .setContainerID(RandomUtils.nextLong())
-        .setReplicationType(ReplicationType.RATIS)
-        .setReplicationFactor(ReplicationFactor.THREE)
-        .setState(state)
-        .build();
-  }
-
-  static Set<ContainerReplica> getReplicas(
-      final ContainerID containerId,
-      final ContainerReplicaProto.State state,
-      final DatanodeDetails... datanodeDetails) {
-    return getReplicas(containerId, state, 10000L, datanodeDetails);
-  }
-
-  static Set<ContainerReplica> getReplicas(
-      final ContainerID containerId,
-      final ContainerReplicaProto.State state,
-      final long sequenceId,
-      final DatanodeDetails... datanodeDetails) {
-    Set<ContainerReplica> replicas = new HashSet<>();
-    for (DatanodeDetails datanode : datanodeDetails) {
-      replicas.add(ContainerReplica.newBuilder()
-          .setContainerID(containerId)
-          .setContainerState(state)
-          .setDatanodeDetails(datanode)
-          .setOriginNodeId(datanode.getUuid())
-          .setSequenceId(sequenceId)
-          .build());
-    }
-    return replicas;
-  }
 }

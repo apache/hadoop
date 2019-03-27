@@ -44,7 +44,9 @@ import java.util.concurrent.Callable;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.minikdc.MiniKdc;
@@ -144,6 +146,8 @@ public class TestTimelineAuthFilterForV2 {
     // Setup timeline service v2.
     try {
       conf = new Configuration(false);
+      conf.setClass("fs.file.impl", RawLocalFileSystem.class,
+          FileSystem.class);
       conf.setStrings(TimelineAuthenticationFilterInitializer.PREFIX + "type",
           "kerberos");
       conf.set(TimelineAuthenticationFilterInitializer.PREFIX +

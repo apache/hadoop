@@ -31,6 +31,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.OzoneTestUtils;
 import org.apache.hadoop.ozone.client.BucketArgs;
@@ -72,12 +74,14 @@ import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyValueContainerLocat
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
+import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.s3.util.OzoneS3Util;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
@@ -89,6 +93,8 @@ import org.apache.commons.lang3.RandomUtils;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.either;
 import org.junit.Assert;
+
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
@@ -180,6 +186,24 @@ public abstract class TestOzoneRpcClientAbstract {
     TestOzoneRpcClientAbstract.scmId = scmId;
   }
 
+  /**
+   * Test OM Proxy Provider.
+   */
+  @Test
+  public void testOMClientProxyProvider() {
+    OMFailoverProxyProvider omFailoverProxyProvider = store.getClientProxy()
+        .getOMProxyProvider();
+    List<OMFailoverProxyProvider.OMProxyInfo> omProxies =
+        omFailoverProxyProvider.getOMProxies();
+
+    // For a non-HA OM service, there should be only one OM proxy.
+    Assert.assertEquals(1, omProxies.size());
+    // The address in OMProxyInfo object, which client will connect to,
+    // should match the OM's RPC address.
+    Assert.assertTrue(omProxies.get(0).getAddress().equals(
+        ozoneManager.getOmRpcServerAddr()));
+  }
+
   @Test
   public void testSetVolumeQuota()
       throws IOException, OzoneException {
@@ -260,6 +284,23 @@ public abstract class TestOzoneRpcClientAbstract {
     String bucketName = UUID.randomUUID().toString();
     store.createS3Bucket(userName, bucketName);
     String volumeName = store.getOzoneVolumeName(bucketName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    Assert.assertEquals(bucketName, bucket.getName());
+    Assert.assertTrue(bucket.getCreationTime() >= currentTime);
+    Assert.assertTrue(volume.getCreationTime() >= currentTime);
+  }
+
+  @Test
+  public void testCreateSecureS3Bucket() throws IOException {
+    long currentTime = Time.now();
+    String userName = "ozone/localhost@EXAMPLE.COM";
+    String bucketName = UUID.randomUUID().toString();
+    String s3VolumeName = OzoneS3Util.getVolumeName(userName);
+    store.createS3Bucket(s3VolumeName, bucketName);
+    String volumeName = store.getOzoneVolumeName(bucketName);
+    assertEquals(volumeName, "s3" + s3VolumeName);
+
     OzoneVolume volume = store.getVolume(volumeName);
     OzoneBucket bucket = volume.getBucket(bucketName);
     Assert.assertEquals(bucketName, bucket.getName());
@@ -526,6 +567,7 @@ public abstract class TestOzoneRpcClientAbstract {
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(keyName)
+        .setRefreshPipeline(true)
         .build();
     HddsProtos.ReplicationType replicationType =
         HddsProtos.ReplicationType.valueOf(type.toString());
@@ -598,7 +640,7 @@ public abstract class TestOzoneRpcClientAbstract {
     out.close();
     OmKeyArgs.Builder builder = new OmKeyArgs.Builder();
     builder.setVolumeName(volumeName).setBucketName(bucketName)
-        .setKeyName(keyName);
+        .setKeyName(keyName).setRefreshPipeline(true);
     OmKeyInfo keyInfo = ozoneManager.lookupKey(builder.build());
 
     List<OmKeyLocationInfo> locationInfoList =
@@ -685,6 +727,7 @@ public abstract class TestOzoneRpcClientAbstract {
   }
 
 
+  @Ignore("Debug Jenkins Timeout")
   @Test
   public void testPutKeyRatisThreeNodesParallel() throws IOException,
       InterruptedException {
@@ -744,6 +787,95 @@ public abstract class TestOzoneRpcClientAbstract {
 
   }
 
+
+  @Test
+  public void testReadKeyWithVerifyChecksumFlagEnable() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+
+    // Create and corrupt key
+    createAndCorruptKey(volumeName, bucketName, keyName);
+
+    // read corrupt key with verify checksum enabled
+    readCorruptedKey(volumeName, bucketName, keyName, true);
+
+  }
+
+
+  @Test
+  public void testReadKeyWithVerifyChecksumFlagDisable() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String keyName = UUID.randomUUID().toString();
+
+    // Create and corrupt key
+    createAndCorruptKey(volumeName, bucketName, keyName);
+
+    // read corrupt key with verify checksum enabled
+    readCorruptedKey(volumeName, bucketName, keyName, false);
+
+  }
+
+  private void createAndCorruptKey(String volumeName, String bucketName,
+      String keyName) throws IOException {
+    String value = "sample value";
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+
+    // Write data into a key
+    OzoneOutputStream out = bucket.createKey(keyName,
+        value.getBytes().length, ReplicationType.RATIS,
+        ReplicationFactor.ONE, new HashMap<>());
+    out.write(value.getBytes());
+    out.close();
+
+    // We need to find the location of the chunk file corresponding to the
+    // data we just wrote.
+    OzoneKey key = bucket.getKey(keyName);
+    long containerID = ((OzoneKeyDetails) key).getOzoneKeyLocations().get(0)
+        .getContainerID();
+
+    // Get the container by traversing the datanodes. Atleast one of the
+    // datanode must have this container.
+    Container container = null;
+    for (HddsDatanodeService hddsDatanode : cluster.getHddsDatanodes()) {
+      container = hddsDatanode.getDatanodeStateMachine().getContainer()
+          .getContainerSet().getContainer(containerID);
+      if (container != null) {
+        break;
+      }
+    }
+    Assert.assertNotNull("Container not found", container);
+    corruptData(container, key);
+  }
+
+
+  private void readCorruptedKey(String volumeName, String bucketName,
+      String keyName, boolean verifyChecksum) throws IOException {
+    try {
+      Configuration configuration = cluster.getConf();
+      configuration.setBoolean(OzoneConfigKeys.OZONE_CLIENT_VERIFY_CHECKSUM,
+          verifyChecksum);
+      RpcClient client = new RpcClient(configuration);
+      OzoneInputStream is = client.getKey(volumeName, bucketName, keyName);
+      is.read(new byte[100]);
+      is.close();
+      if (verifyChecksum) {
+        fail("Reading corrupted data should fail, as verify checksum is " +
+            "enabled");
+      }
+    } catch (OzoneChecksumException e) {
+      if (!verifyChecksum) {
+        fail("Reading corrupted data should not fail, as verify checksum is " +
+            "disabled");
+      }
+    }
+  }
+
+
   private void readKey(OzoneBucket bucket, String keyName, String data)
       throws IOException {
     OzoneKey key = bucket.getKey(keyName);
@@ -780,7 +912,7 @@ public abstract class TestOzoneRpcClientAbstract {
     // First, confirm the key info from the client matches the info in OM.
     OmKeyArgs.Builder builder = new OmKeyArgs.Builder();
     builder.setVolumeName(volumeName).setBucketName(bucketName)
-        .setKeyName(keyName);
+        .setKeyName(keyName).setRefreshPipeline(true);
     OmKeyLocationInfo keyInfo = ozoneManager.lookupKey(builder.build()).
         getKeyLocationVersions().get(0).getBlocksLatestVersionOnly().get(0);
     long containerID = keyInfo.getContainerID();

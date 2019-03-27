@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.azurebfs;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -66,6 +67,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
+import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformer;
 import org.apache.hadoop.fs.azurebfs.services.AbfsAclHelper;
@@ -84,6 +86,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
@@ -95,7 +98,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_AB
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class AzureBlobFileSystemStore {
+public class AzureBlobFileSystemStore implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(AzureBlobFileSystemStore.class);
 
   private AbfsClient client;
@@ -161,6 +164,11 @@ public class AzureBlobFileSystemStore {
   * */
   public String getPrimaryGroup() {
     return this.primaryUserGroup;
+  }
+
+  @Override
+  public void close() throws IOException {
+    IOUtils.cleanupWithLogger(LOG, client);
   }
 
   private String[] authorityParts(URI uri) throws InvalidUriAuthorityException, InvalidUriException {
@@ -276,13 +284,13 @@ public class AzureBlobFileSystemStore {
     client.setFilesystemProperties(commaSeparatedProperties);
   }
 
-  public Hashtable<String, String> getPathProperties(final Path path) throws AzureBlobFileSystemException {
-    LOG.debug("getPathProperties for filesystem: {} path: {}",
+  public Hashtable<String, String> getPathStatus(final Path path) throws AzureBlobFileSystemException {
+    LOG.debug("getPathStatus for filesystem: {} path: {}",
             client.getFileSystem(),
            path);
 
     final Hashtable<String, String> parsedXmsProperties;
-    final AbfsRestOperation op = client.getPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), isNamespaceEnabled);
+    final AbfsRestOperation op = client.getPathStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
 
     final String xMsProperties = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES);
 
@@ -364,7 +372,7 @@ public class AzureBlobFileSystemStore {
             client.getFileSystem(),
             path);
 
-    final AbfsRestOperation op = client.getPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), isNamespaceEnabled);
+    final AbfsRestOperation op = client.getPathStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
 
     final String resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
     final long contentLength = Long.parseLong(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
@@ -392,7 +400,7 @@ public class AzureBlobFileSystemStore {
             path,
             overwrite);
 
-    final AbfsRestOperation op = client.getPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), isNamespaceEnabled);
+    final AbfsRestOperation op = client.getPathStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
 
     final String resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
     final Long contentLength = Long.valueOf(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
@@ -468,7 +476,7 @@ public class AzureBlobFileSystemStore {
               ? client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + AbfsHttpConstants.ROOT_PATH)
               : client.getFilesystemProperties();
     } else {
-      op = client.getPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), isNamespaceEnabled);
+      op = client.getPathStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
     }
 
     final long blockSize = abfsConfiguration.getAzureBlockSize();
@@ -491,10 +499,12 @@ public class AzureBlobFileSystemStore {
 
     final String transformedOwner = identityTransformer.transformIdentityForGetRequest(
               result.getResponseHeader(HttpHeaderConfigurations.X_MS_OWNER),
+              true,
               userName);
 
     final String transformedGroup = identityTransformer.transformIdentityForGetRequest(
               result.getResponseHeader(HttpHeaderConfigurations.X_MS_GROUP),
+              false,
               primaryUserGroup);
 
     return new VersionedFileStatus(
@@ -536,8 +546,8 @@ public class AzureBlobFileSystemStore {
       long blockSize = abfsConfiguration.getAzureBlockSize();
 
       for (ListResultEntrySchema entry : retrievedSchema.paths()) {
-        final String owner = identityTransformer.transformIdentityForGetRequest(entry.owner(), userName);
-        final String group = identityTransformer.transformIdentityForGetRequest(entry.group(), primaryUserGroup);
+        final String owner = identityTransformer.transformIdentityForGetRequest(entry.owner(), true, userName);
+        final String group = identityTransformer.transformIdentityForGetRequest(entry.group(), false, primaryUserGroup);
         final FsPermission fsPermission = entry.permissions() == null
                 ? new AbfsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL)
                 : AbfsPermission.valueOf(entry.permissions());
@@ -758,9 +768,11 @@ public class AzureBlobFileSystemStore {
 
     final String transformedOwner = identityTransformer.transformIdentityForGetRequest(
             result.getResponseHeader(HttpHeaderConfigurations.X_MS_OWNER),
+            true,
             userName);
     final String transformedGroup = identityTransformer.transformIdentityForGetRequest(
             result.getResponseHeader(HttpHeaderConfigurations.X_MS_GROUP),
+            false,
             primaryUserGroup);
 
     final String permissions = result.getResponseHeader(HttpHeaderConfigurations.X_MS_PERMISSIONS);
@@ -784,7 +796,8 @@ public class AzureBlobFileSystemStore {
     return isKeyForDirectorySet(key, azureAtomicRenameDirSet);
   }
 
-  private void initializeClient(URI uri, String fileSystemName, String accountName, boolean isSecure) throws AzureBlobFileSystemException {
+  private void initializeClient(URI uri, String fileSystemName, String accountName, boolean isSecure)
+      throws IOException {
     if (this.client != null) {
       return;
     }
@@ -813,6 +826,8 @@ public class AzureBlobFileSystemStore {
             abfsConfiguration.getStorageAccountKey());
     } else {
       tokenProvider = abfsConfiguration.getTokenProvider();
+      ExtensionHelper.bind(tokenProvider, uri,
+            abfsConfiguration.getRawConfiguration());
     }
 
     this.client =  new AbfsClient(baseUrl, creds, abfsConfiguration, new ExponentialRetryPolicy(), tokenProvider);

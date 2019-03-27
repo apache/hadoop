@@ -19,30 +19,28 @@ package org.apache.hadoop.hdds.scm.block;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.TestUtils;
+import org.apache.hadoop.hdds.scm.chillmode.SCMChillModeManager.ChillModeStatus;
 import org.apache.hadoop.hdds.scm.container.CloseContainerEventHandler;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
 import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
-import org.apache.hadoop.hdds.scm.pipeline.RatisPipelineUtils;
 import org.apache.hadoop.hdds.scm.server.SCMConfigurator;
-import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.server.events.EventQueue;
-import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
-import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -52,7 +50,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConsts.GB;
 import static org.apache.hadoop.ozone.OzoneConsts.MB;
 
@@ -74,6 +71,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
   private static EventQueue eventQueue;
   private int numContainerPerOwnerInPipeline;
   private OzoneConfiguration conf;
+  private ChillModeStatus chillModeStatus = new ChillModeStatus(false);
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
@@ -95,7 +93,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
     nodeManager = new MockNodeManager(true, 10);
     SCMConfigurator configurator = new SCMConfigurator();
     configurator.setScmNodeManager(nodeManager);
-    scm = getScm(conf, configurator);
+    scm = TestUtils.getScm(conf, configurator);
 
     // Initialize these fields so that the tests can pass.
     mapping = (SCMContainerManager) scm.getContainerManager();
@@ -104,7 +102,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
 
     eventQueue = new EventQueue();
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS,
-        (BlockManagerImpl) scm.getScmBlockManager());
+        scm.getChillModeHandler());
     eventQueue.addHandler(SCMEvents.START_REPLICATION, this);
     CloseContainerEventHandler closeContainerHandler =
         new CloseContainerEventHandler(pipelineManager, mapping);
@@ -124,49 +122,34 @@ public class TestBlockManager implements EventHandler<Boolean> {
     scm.stop();
   }
 
-  private static StorageContainerManager getScm(OzoneConfiguration conf,
-                                                SCMConfigurator configurator)
-      throws IOException, AuthenticationException {
-    conf.setBoolean(OZONE_ENABLED, true);
-    SCMStorageConfig scmStore = new SCMStorageConfig(conf);
-    if(scmStore.getState() != StorageState.INITIALIZED) {
-      String clusterId = UUID.randomUUID().toString();
-      String scmId = UUID.randomUUID().toString();
-      scmStore.setClusterId(clusterId);
-      scmStore.setScmId(scmId);
-      // writes the version file properties
-      scmStore.initialize();
-    }
-    return new StorageContainerManager(conf, configurator);
-  }
-
   @Test
   public void testAllocateBlock() throws Exception {
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, chillModeStatus);
     GenericTestUtils.waitFor(() -> {
       return !blockManager.isScmInChillMode();
     }, 10, 1000 * 5);
     AllocatedBlock block = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
-        type, factor, containerOwner);
+        type, factor, containerOwner, new ExcludeList());
     Assert.assertNotNull(block);
   }
 
   @Test
   public void testAllocateOversizedBlock() throws Exception {
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, chillModeStatus);
     GenericTestUtils.waitFor(() -> {
       return !blockManager.isScmInChillMode();
     }, 10, 1000 * 5);
     long size = 6 * GB;
     thrown.expectMessage("Unsupported block size");
     AllocatedBlock block = blockManager.allocateBlock(size,
-        type, factor, containerOwner);
+        type, factor, containerOwner, new ExcludeList());
   }
 
 
   @Test
   public void testAllocateBlockFailureInChillMode() throws Exception {
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, true);
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS,
+        new ChillModeStatus(true));
     GenericTestUtils.waitFor(() -> {
       return blockManager.isScmInChillMode();
     }, 10, 1000 * 5);
@@ -174,24 +157,24 @@ public class TestBlockManager implements EventHandler<Boolean> {
     thrown.expectMessage("ChillModePrecheck failed for "
         + "allocateBlock");
     blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
-        type, factor, containerOwner);
+        type, factor, containerOwner, new ExcludeList());
   }
 
   @Test
   public void testAllocateBlockSucInChillMode() throws Exception {
     // Test2: Exit chill mode and then try allocateBock again.
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, chillModeStatus);
     GenericTestUtils.waitFor(() -> {
       return !blockManager.isScmInChillMode();
     }, 10, 1000 * 5);
     Assert.assertNotNull(blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
-        type, factor, containerOwner));
+        type, factor, containerOwner, new ExcludeList()));
   }
 
   @Test(timeout = 10000)
   public void testMultipleBlockAllocation()
       throws IOException, TimeoutException, InterruptedException {
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, chillModeStatus);
     GenericTestUtils
         .waitFor(() -> !blockManager.isScmInChillMode(), 10, 1000 * 5);
 
@@ -199,12 +182,14 @@ public class TestBlockManager implements EventHandler<Boolean> {
     pipelineManager.createPipeline(type, factor);
 
     AllocatedBlock allocatedBlock = blockManager
-        .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner);
+        .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner,
+            new ExcludeList());
     // block should be allocated in different pipelines
     GenericTestUtils.waitFor(() -> {
       try {
         AllocatedBlock block = blockManager
-            .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner);
+            .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner,
+                new ExcludeList());
         return !block.getPipeline().getId()
             .equals(allocatedBlock.getPipeline().getId());
       } catch (IOException e) {
@@ -231,7 +216,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
   @Test(timeout = 10000)
   public void testMultipleBlockAllocationWithClosedContainer()
       throws IOException, TimeoutException, InterruptedException {
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, chillModeStatus);
     GenericTestUtils
         .waitFor(() -> !blockManager.isScmInChillMode(), 10, 1000 * 5);
 
@@ -247,7 +232,8 @@ public class TestBlockManager implements EventHandler<Boolean> {
     GenericTestUtils.waitFor(() -> {
       try {
         blockManager
-            .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner);
+            .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner,
+                new ExcludeList());
       } catch (IOException e) {
       }
       return verifyNumberOfContainersInPipelines(
@@ -270,7 +256,8 @@ public class TestBlockManager implements EventHandler<Boolean> {
     GenericTestUtils.waitFor(() -> {
       try {
         blockManager
-            .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner);
+            .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner,
+                new ExcludeList());
       } catch (IOException e) {
       }
       return verifyNumberOfContainersInPipelines(
@@ -281,17 +268,17 @@ public class TestBlockManager implements EventHandler<Boolean> {
   @Test(timeout = 10000)
   public void testBlockAllocationWithNoAvailablePipelines()
       throws IOException, TimeoutException, InterruptedException {
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, chillModeStatus);
     GenericTestUtils
         .waitFor(() -> !blockManager.isScmInChillMode(), 10, 1000 * 5);
 
     for (Pipeline pipeline : pipelineManager.getPipelines()) {
-      RatisPipelineUtils
-          .finalizeAndDestroyPipeline(pipelineManager, pipeline, conf, false);
+      pipelineManager.finalizeAndDestroyPipeline(pipeline, false);
     }
     Assert.assertEquals(0, pipelineManager.getPipelines(type, factor).size());
     Assert.assertNotNull(blockManager
-        .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner));
+        .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner,
+            new ExcludeList()));
     Assert.assertEquals(1, pipelineManager.getPipelines(type, factor).size());
   }
 

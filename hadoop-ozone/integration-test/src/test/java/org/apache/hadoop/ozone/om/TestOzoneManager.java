@@ -750,7 +750,8 @@ public class TestOzoneManager {
       testRenameFails++;
       omException = e;
     }
-    Assert.assertEquals(ResultCodes.KEY_RENAME_ERROR, omException);
+    Assert.assertEquals(ResultCodes.KEY_ALREADY_EXISTS,
+        omException.getResult());
 
     // Rename to empty string should fail
     toKeyName = "";
@@ -761,7 +762,7 @@ public class TestOzoneManager {
       testRenameFails++;
       omException = e;
     }
-    Assert.assertEquals(ResultCodes.KEY_RENAME_ERROR, omException);
+    Assert.assertEquals(ResultCodes.INVALID_KEY_NAME, omException.getResult());
 
     // Rename from empty string should fail
     keyArgs = new KeyArgs("", bucketArgs);
@@ -773,7 +774,7 @@ public class TestOzoneManager {
       testRenameFails++;
       omException = e;
     }
-    Assert.assertEquals(ResultCodes.KEY_RENAME_ERROR, omException);
+    Assert.assertEquals(ResultCodes.INVALID_KEY_NAME, omException.getResult());
 
     Assert.assertEquals(numKeyRenames + testRenames,
         omMetrics.getNumKeyRenames());
@@ -1314,6 +1315,7 @@ public class TestOzoneManager {
     Path metaDirPath = Paths.get(path, "om-meta");
     config.set(HddsConfigKeys.OZONE_METADATA_DIRS, metaDirPath.toString());
     config.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
+    config.set(OZONE_OM_ADDRESS_KEY, "127.0.0.1:0");
     config.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
     config.set(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY,
         conf.get(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY));
@@ -1329,7 +1331,7 @@ public class TestOzoneManager {
           omStore.setScmId("testScmId");
           // writes the version file properties
           omStore.initialize();
-          OzoneManager.createOm(null, conf);
+          OzoneManager.createOm(null, config);
         });
   }
 

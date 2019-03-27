@@ -32,8 +32,8 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
@@ -66,7 +66,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 @LimitedPrivate({"YARN", "MapReduce"})
 public class FSDownload implements Callable<Path> {
 
-  private static final Log LOG = LogFactory.getLog(FSDownload.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FSDownload.class);
 
   private FileContext files;
   private final UserGroupInformation userUgi;
@@ -393,12 +394,8 @@ public class FSDownload implements Callable<Path> {
       throw new IOException("Invalid resource", e);
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(String.format("Starting to download %s %s %s",
-          sCopy,
-          resource.getType(),
-          resource.getPattern()));
-    }
+    LOG.debug("Starting to download {} {} {}", sCopy,
+        resource.getType(), resource.getPattern());
 
     final Path destinationTmp = new Path(destDirPath + "_tmp");
     createDir(destinationTmp, cachePerms);
@@ -419,10 +416,8 @@ public class FSDownload implements Callable<Path> {
       changePermissions(dFinal.getFileSystem(conf), dFinal);
       files.rename(destinationTmp, destDirPath, Rename.OVERWRITE);
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(String.format("File has been downloaded to %s from %s",
-            new Path(destDirPath, sCopy.getName()), sCopy));
-      }
+      LOG.debug("File has been downloaded to {} from {}",
+          new Path(destDirPath, sCopy.getName()), sCopy);
     } catch (Exception e) {
       try {
         files.delete(destDirPath, true);
@@ -469,9 +464,7 @@ public class FSDownload implements Callable<Path> {
       perm = isDir ? PRIVATE_DIR_PERMS : PRIVATE_FILE_PERMS;
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Changing permissions for path " + path + " to perm " + perm);
-    }
+    LOG.debug("Changing permissions for path {} to perm {}", path, perm);
 
     final FsPermission fPerm = perm;
     if (null == userUgi) {

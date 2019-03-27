@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdds.scm.pipeline;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
@@ -45,6 +46,12 @@ public final class PipelineFactory {
         new RatisPipelineProvider(nodeManager, stateManager, conf));
   }
 
+  @VisibleForTesting
+  void setProvider(ReplicationType replicationType,
+                     PipelineProvider provider) {
+    providers.put(replicationType, provider);
+  }
+
   public Pipeline create(ReplicationType type, ReplicationFactor factor)
       throws IOException {
     return providers.get(type).create(factor);
@@ -53,11 +60,5 @@ public final class PipelineFactory {
   public Pipeline create(ReplicationType type, ReplicationFactor factor,
       List<DatanodeDetails> nodes) {
     return providers.get(type).create(factor, nodes);
-  }
-
-  public void close() {
-    for (PipelineProvider p : providers.values()) {
-      p.close();
-    }
   }
 }

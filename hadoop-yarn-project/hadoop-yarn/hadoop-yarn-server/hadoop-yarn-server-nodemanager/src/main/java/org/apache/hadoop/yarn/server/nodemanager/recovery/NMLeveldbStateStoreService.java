@@ -447,10 +447,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   public void storeContainer(ContainerId containerId, int containerVersion,
       long startTime, StartContainerRequest startRequest) throws IOException {
     String idStr = containerId.toString();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("storeContainer: containerId= " + idStr
-          + ", startRequest= " + startRequest);
-    }
+    LOG.debug("storeContainer: containerId= {}, startRequest= {}",
+        idStr, startRequest);
     final String keyVersion = getContainerVersionKey(idStr);
     final String keyRequest =
         getContainerKey(idStr, CONTAINER_REQUEST_KEY_SUFFIX);
@@ -488,9 +486,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   @Override
   public void storeContainerQueued(ContainerId containerId) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("storeContainerQueued: containerId=" + containerId);
-    }
+    LOG.debug("storeContainerQueued: containerId={}", containerId);
 
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_QUEUED_KEY_SUFFIX;
@@ -504,9 +500,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   private void removeContainerQueued(ContainerId containerId)
       throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("removeContainerQueued: containerId=" + containerId);
-    }
+    LOG.debug("removeContainerQueued: containerId={}", containerId);
 
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_QUEUED_KEY_SUFFIX;
@@ -520,9 +514,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   @Override
   public void storeContainerPaused(ContainerId containerId) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("storeContainerPaused: containerId=" + containerId);
-    }
+    LOG.debug("storeContainerPaused: containerId={}", containerId);
 
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_PAUSED_KEY_SUFFIX;
@@ -537,9 +529,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void removeContainerPaused(ContainerId containerId)
       throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("removeContainerPaused: containerId=" + containerId);
-    }
+    LOG.debug("removeContainerPaused: containerId={}", containerId);
 
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_PAUSED_KEY_SUFFIX;
@@ -554,10 +544,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void storeContainerDiagnostics(ContainerId containerId,
       StringBuilder diagnostics) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("storeContainerDiagnostics: containerId=" + containerId
-          + ", diagnostics=" + diagnostics);
-    }
+    LOG.debug("storeContainerDiagnostics: containerId={}, diagnostics=",
+        containerId, diagnostics);
 
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_DIAGS_KEY_SUFFIX;
@@ -572,9 +560,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void storeContainerLaunched(ContainerId containerId)
       throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("storeContainerLaunched: containerId=" + containerId);
-    }
+    LOG.debug("storeContainerLaunched: containerId={}", containerId);
 
     // Removing the container if queued for backward compatibility reasons
     removeContainerQueued(containerId);
@@ -591,9 +577,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void storeContainerUpdateToken(ContainerId containerId,
       ContainerTokenIdentifier containerTokenIdentifier) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("storeContainerUpdateToken: containerId=" + containerId);
-    }
+    LOG.debug("storeContainerUpdateToken: containerId={}", containerId);
 
     String keyUpdateToken = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_UPDATE_TOKEN_SUFFIX;
@@ -621,9 +605,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void storeContainerKilled(ContainerId containerId)
       throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("storeContainerKilled: containerId=" + containerId);
-    }
+    LOG.debug("storeContainerKilled: containerId={}", containerId);
 
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_KILLED_KEY_SUFFIX;
@@ -638,9 +620,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void storeContainerCompleted(ContainerId containerId,
       int exitCode) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("storeContainerCompleted: containerId=" + containerId);
-    }
+    LOG.debug("storeContainerCompleted: containerId={}", containerId);
 
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_EXIT_CODE_KEY_SUFFIX;
@@ -706,9 +686,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void removeContainer(ContainerId containerId)
       throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("removeContainer: containerId=" + containerId);
-    }
+    LOG.debug("removeContainer: containerId={}", containerId);
 
     String keyPrefix = CONTAINERS_KEY_PREFIX + containerId.toString();
     try {
@@ -789,10 +767,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void storeApplication(ApplicationId appId,
       ContainerManagerApplicationProto p) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("storeApplication: appId=" + appId
-          + ", proto=" + p);
-    }
+    LOG.debug("storeApplication: appId={}, proto={}", appId, p);
 
     String key = APPLICATIONS_KEY_PREFIX + appId;
     try {
@@ -806,9 +781,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void removeApplication(ApplicationId appId)
       throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("removeApplication: appId=" + appId);
-    }
+    LOG.debug("removeApplication: appId={}", appId);
 
     try {
       WriteBatch batch = db.createWriteBatch();
@@ -917,9 +890,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         return null;
       }
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Loading completed resource from " + key);
-      }
+      LOG.debug("Loading completed resource from {}", key);
       nextCompletedResource = LocalizedResourceProto.parseFrom(
           entry.getValue());
     }
@@ -952,9 +923,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       }
 
       Path localPath = new Path(key.substring(keyPrefix.length()));
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Loading in-progress resource at " + localPath);
-      }
+      LOG.debug("Loading in-progress resource at {}", localPath);
       nextStartedResource = new SimpleEntry<LocalResourceProto, Path>(
           LocalResourceProto.parseFrom(entry.getValue()), localPath);
     }
@@ -1042,9 +1011,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     String localPath = proto.getLocalPath();
     String startedKey = getResourceStartedKey(user, appId, localPath);
     String completedKey = getResourceCompletedKey(user, appId, localPath);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Storing localized resource to " + completedKey);
-    }
+    LOG.debug("Storing localized resource to {}", completedKey);
     try {
       WriteBatch batch = db.createWriteBatch();
       try {
@@ -1066,9 +1033,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     String localPathStr = localPath.toString();
     String startedKey = getResourceStartedKey(user, appId, localPathStr);
     String completedKey = getResourceCompletedKey(user, appId, localPathStr);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing local resource at " + localPathStr);
-    }
+    LOG.debug("Removing local resource at {}", localPathStr);
     try {
       WriteBatch batch = db.createWriteBatch();
       try {
@@ -1505,9 +1470,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
             break;
           }
           batch.delete(key);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("cleanup " + keyStr + " from leveldb");
-          }
+          LOG.debug("cleanup {} from leveldb", keyStr);
         }
         db.write(batch);
       } catch (DBException e) {

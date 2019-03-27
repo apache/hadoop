@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.security.client;
 
 import java.util.Collection;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.io.Text;
@@ -34,8 +34,8 @@ import org.apache.hadoop.security.token.TokenSelector;
 public class TimelineDelegationTokenSelector
     implements TokenSelector<TimelineDelegationTokenIdentifier> {
 
-  private static final Log LOG = LogFactory
-      .getLog(TimelineDelegationTokenSelector.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TimelineDelegationTokenSelector.class);
 
   @SuppressWarnings("unchecked")
   public Token<TimelineDelegationTokenIdentifier> selectToken(Text service,
@@ -43,14 +43,10 @@ public class TimelineDelegationTokenSelector
     if (service == null) {
       return null;
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Looking for a token with service " + service.toString());
-    }
+    LOG.debug("Looking for a token with service {}", service);
     for (Token<? extends TokenIdentifier> token : tokens) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Token kind is " + token.getKind().toString()
-            + " and the token's service name is " + token.getService());
-      }
+      LOG.debug("Token kind is {} and the token's service name is {}",
+          token.getKind(), token.getService());
       if (TimelineDelegationTokenIdentifier.KIND_NAME.equals(token.getKind())
           && service.equals(token.getService())) {
         return (Token<TimelineDelegationTokenIdentifier>) token;

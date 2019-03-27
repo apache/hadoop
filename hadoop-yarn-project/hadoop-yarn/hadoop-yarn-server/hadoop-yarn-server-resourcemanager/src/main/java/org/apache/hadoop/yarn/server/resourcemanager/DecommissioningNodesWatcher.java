@@ -25,8 +25,8 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -67,8 +67,8 @@ import org.apache.hadoop.yarn.util.MonotonicClock;
  * (the affected map tasks will be rescheduled).
  */
 public class DecommissioningNodesWatcher {
-  private static final Log LOG =
-      LogFactory.getLog(DecommissioningNodesWatcher.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DecommissioningNodesWatcher.class);
 
   private final RMContext rmContext;
 
@@ -292,7 +292,7 @@ public class DecommissioningNodesWatcher {
         }
         // Remove stale non-DECOMMISSIONING node
         if (d.nodeState != NodeState.DECOMMISSIONING) {
-          LOG.debug("remove " + d.nodeState + " " + d.nodeId);
+          LOG.debug("remove {} {}", d.nodeState, d.nodeId);
           it.remove();
           continue;
         } else if (now - d.lastUpdateTime > 60000L) {
@@ -300,7 +300,7 @@ public class DecommissioningNodesWatcher {
           RMNode rmNode = getRmNode(d.nodeId);
           if (rmNode != null &&
               rmNode.getState() == NodeState.DECOMMISSIONED) {
-            LOG.debug("remove " + rmNode.getState() + " " + d.nodeId);
+            LOG.debug("remove {} {}", rmNode.getState(), d.nodeId);
             it.remove();
             continue;
           }
@@ -308,7 +308,7 @@ public class DecommissioningNodesWatcher {
         if (d.timeoutMs >= 0 &&
             d.decommissioningStartTime + d.timeoutMs < now) {
           staleNodes.add(d.nodeId);
-          LOG.debug("Identified stale and timeout node " + d.nodeId);
+          LOG.debug("Identified stale and timeout node {}", d.nodeId);
         }
       }
 
@@ -342,14 +342,14 @@ public class DecommissioningNodesWatcher {
       ApplicationId appId = it.next();
       RMApp rmApp = rmContext.getRMApps().get(appId);
       if (rmApp == null) {
-        LOG.debug("Consider non-existing app " + appId + " as completed");
+        LOG.debug("Consider non-existing app {} as completed", appId);
         it.remove();
         continue;
       }
       if (rmApp.getState() == RMAppState.FINISHED ||
           rmApp.getState() == RMAppState.FAILED ||
           rmApp.getState() == RMAppState.KILLED) {
-        LOG.debug("Remove " + rmApp.getState() + " app " + appId);
+        LOG.debug("Remove {} app {}", rmApp.getState(), appId);
         it.remove();
       }
     }

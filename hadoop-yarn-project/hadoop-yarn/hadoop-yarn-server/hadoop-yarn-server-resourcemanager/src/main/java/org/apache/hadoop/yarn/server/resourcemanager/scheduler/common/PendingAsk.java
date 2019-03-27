@@ -53,11 +53,11 @@ public class PendingAsk {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("<per-allocation-resource=");
-    sb.append(getPerAllocationResource());
-    sb.append(",repeat=");
-    sb.append(getCount());
-    sb.append(">");
+    sb.append("<per-allocation-resource=")
+        .append(getPerAllocationResource())
+        .append(",repeat=")
+        .append(getCount())
+        .append(">");
     return sb.toString();
   }
 }

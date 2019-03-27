@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.security;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
@@ -36,7 +36,8 @@ public class AdminACLsManager {
   /**
    * Log object for this class
    */
-  static Log LOG = LogFactory.getLog(AdminACLsManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AdminACLsManager.class);
 
   /**
    * The current user at the time of object creation

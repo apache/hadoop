@@ -44,8 +44,8 @@ import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.apache.commons.io.filefilter.RegexFileFilter;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -61,8 +61,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 @InterfaceStability.Unstable
 public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
 
-  static final Log LOG = LogFactory
-      .getLog(ProcfsBasedProcessTree.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(ProcfsBasedProcessTree.class);
 
   private static final String PROCFS = "/proc/";
 
@@ -264,7 +264,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
         }
       }
 
-      LOG.debug(this);
+      LOG.debug("{}", this);
 
       if (smapsEnabled) {
         // Update smaps info
@@ -403,14 +403,11 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
               // memory reclaimable by killing the process
               total += info.anonymous;
 
-              if (LOG.isDebugEnabled()) {
-                LOG.debug(" total(" + olderThanAge + "): PID : " + p.getPid()
-                    + ", info : " + info.toString()
-                    + ", total : " + (total * KB_TO_BYTES));
-              }
+              LOG.debug(" total({}): PID : {}, info : {}, total : {}",
+                  olderThanAge, p.getPid(), info, (total * KB_TO_BYTES));
             }
+            LOG.debug("{}", procMemInfo);
           }
-          LOG.debug(procMemInfo);
         }
       }
     }
@@ -468,9 +465,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
   @Override
   public float getCpuUsagePercent() {
     BigInteger processTotalJiffies = getTotalProcessJiffies();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Process " + pid + " jiffies:" + processTotalJiffies);
-    }
+    LOG.debug("Process {} jiffies:{}", pid, processTotalJiffies);
     cpuTimeTracker.updateElapsedJiffies(processTotalJiffies,
         clock.getTime());
     return cpuTimeTracker.getCpuTrackerUsagePercent();
@@ -793,9 +788,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
           if (memInfo.find()) {
             String key = memInfo.group(1).trim();
             String value = memInfo.group(2).replace(KB, "").trim();
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("MemInfo : " + key + " : Value  : " + value);
-            }
+            LOG.debug("MemInfo : {} : Value  : {}", key, value);
 
             if (memoryMappingInfo != null) {
               memoryMappingInfo.setMemInfo(key, value);
@@ -807,11 +800,11 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
         }
       }
     } catch (FileNotFoundException f) {
-      LOG.error(f);
+      LOG.error(f.toString());
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error(e.toString());
     } catch (Throwable t) {
-      LOG.error(t);
+      LOG.error(t.toString());
     } finally {
       IOUtils.closeQuietly(in);
     }
@@ -941,9 +934,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
       if (info == null) {
         return;
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("setMemInfo : memInfo : " + info);
-      }
+      LOG.debug("setMemInfo : memInfo : {}", info);
       switch (info) {
       case SIZE:
         size = val;
@@ -979,9 +970,9 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
 
     public String toString() {
       StringBuilder sb = new StringBuilder();
-      sb.append("\t").append(this.getName()).append("\n");
-      sb.append("\t").append(MemInfo.SIZE.name + ":" + this.getSize())
-        .append(" kB\n");
+      sb.append("\t").append(this.getName()).append("\n")
+          .append("\t").append(MemInfo.SIZE.name + ":" + this.getSize())
+          .append(" kB\n");
       sb.append("\t").append(MemInfo.PSS.name + ":" + this.getPss())
         .append(" kB\n");
       sb.append("\t").append(MemInfo.RSS.name + ":" + this.getRss())

@@ -40,8 +40,8 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.cli.UnrecognizedOptionException;
 import org.apache.commons.lang3.Range;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -209,7 +209,8 @@ public class ClientRMService extends AbstractService implements
     ApplicationClientProtocol {
   private static final ArrayList<ApplicationReport> EMPTY_APPS_REPORT = new ArrayList<ApplicationReport>();
 
-  private static final Log LOG = LogFactory.getLog(ClientRMService.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ClientRMService.class);
 
   final private AtomicInteger applicationCounter = new AtomicInteger(0);
   final private YarnScheduler scheduler;
@@ -236,6 +237,7 @@ public class ClientRMService extends AbstractService implements
       RMAppState.ACCEPTED, RMAppState.RUNNING);
 
   private ResourceProfilesManager resourceProfilesManager;
+  private boolean timelineServiceV2Enabled;
 
   public ClientRMService(RMContext rmContext, YarnScheduler scheduler,
       RMAppManager rmAppManager, ApplicationACLsManager applicationACLsManager,
@@ -306,6 +308,9 @@ public class ClientRMService extends AbstractService implements
                                                YarnConfiguration.RM_ADDRESS,
                                                YarnConfiguration.DEFAULT_RM_ADDRESS,
                                                server.getListenerAddress());
+    this.timelineServiceV2Enabled = YarnConfiguration.
+        timelineServiceV2Enabled(conf);
+
     super.serviceStart();
   }
 
@@ -585,7 +590,7 @@ public class ClientRMService extends AbstractService implements
       throw RPCUtil.getRemoteException(ie);
     }
 
-    if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
+    if (timelineServiceV2Enabled) {
       // Sanity check for flow run
       String value = null;
       try {
@@ -775,8 +780,8 @@ public class ClientRMService extends AbstractService implements
     String diagnostics = org.apache.commons.lang3.StringUtils
         .trimToNull(request.getDiagnostics());
     if (diagnostics != null) {
-      message.append(" with diagnostic message: ");
-      message.append(diagnostics);
+      message.append(" with diagnostic message: ")
+          .append(diagnostics);
     }
 
     this.rmContext.getDispatcher().getEventHandler()
@@ -1465,10 +1470,8 @@ public class ClientRMService extends AbstractService implements
       ReservationDefinition contract, String reservationId) {
     if ((contract.getArrival() - clock.getTime()) < reservationSystem
         .getPlanFollowerTimeStep()) {
-      LOG.debug(MessageFormat
-          .format(
-              "Reservation {0} is within threshold so attempting to create synchronously.",
-              reservationId));
+      LOG.debug("Reservation {} is within threshold so attempting to"
+          + " create synchronously.", reservationId);
       reservationSystem.synchronizePlan(planName, true);
       LOG.info(MessageFormat.format("Created reservation {0} synchronously.",
           reservationId));

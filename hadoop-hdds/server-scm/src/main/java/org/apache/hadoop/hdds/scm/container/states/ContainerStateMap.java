@@ -35,7 +35,6 @@ import org.slf4j.LoggerFactory;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.TreeSet;
@@ -107,9 +106,9 @@ public class ContainerStateMap {
     this.ownerMap = new ContainerAttribute<>();
     this.factorMap = new ContainerAttribute<>();
     this.typeMap = new ContainerAttribute<>();
-    this.containerMap = new HashMap<>();
+    this.containerMap = new ConcurrentHashMap<>();
     this.lock = new ReentrantReadWriteLock();
-    this.replicaMap = new HashMap<>();
+    this.replicaMap = new ConcurrentHashMap<>();
     this.resultCache = new ConcurrentHashMap<>();
   }
 
@@ -208,7 +207,7 @@ public class ContainerStateMap {
     try {
       checkIfContainerExist(containerID);
       return Collections
-          .unmodifiableSet(new HashSet<>(replicaMap.get(containerID)));
+          .unmodifiableSet(replicaMap.get(containerID));
     } finally {
       lock.readLock().unlock();
     }
@@ -342,7 +341,7 @@ public class ContainerStateMap {
   }
 
   public Set<ContainerID> getAllContainerIDs() {
-    return containerMap.keySet();
+    return Collections.unmodifiableSet(containerMap.keySet());
   }
 
   /**

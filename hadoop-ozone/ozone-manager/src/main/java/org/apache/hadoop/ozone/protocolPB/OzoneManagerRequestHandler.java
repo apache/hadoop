@@ -24,6 +24,7 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
@@ -40,10 +41,16 @@ import org.apache.hadoop.ozone.om.helpers.OmPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
-import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
+import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFileStatusRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFileStatusResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .ApplyCreateKeyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .MultipartInfoApplyInitiateRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CancelDelegationTokenResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CheckVolumeAccessRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CheckVolumeAccessResponse;
@@ -122,17 +129,18 @@ import org.slf4j.LoggerFactory;
  * Command Handler for OM requests. OM State Machine calls this handler for
  * deserializing the client request and sending it to OM.
  */
-public class OzoneManagerRequestHandler {
+public class OzoneManagerRequestHandler implements RequestHandler {
   static final Logger LOG =
       LoggerFactory.getLogger(OzoneManagerRequestHandler.class);
-  private final OzoneManagerProtocol impl;
+  private final OzoneManagerServerProtocol impl;
 
-  public OzoneManagerRequestHandler(OzoneManagerProtocol om) {
+  public OzoneManagerRequestHandler(OzoneManagerServerProtocol om) {
     this.impl = om;
   }
 
   //TODO simplify it to make it shorter
   @SuppressWarnings("methodlength")
+  @Override
   public OMResponse handle(OMRequest request) {
     LOG.debug("Received OMRequest: {}, ", request);
     Type cmdType = request.getCmdType();
@@ -201,6 +209,11 @@ public class OzoneManagerRequestHandler {
             request.getCreateKeyRequest());
         responseBuilder.setCreateKeyResponse(createKeyResponse);
         break;
+      case ApplyCreateKey:
+        CreateKeyResponse applyKeyResponse =
+            applyCreateKey(request.getApplyCreateKeyRequest());
+        responseBuilder.setCreateKeyResponse(applyKeyResponse);
+        break;
       case LookupKey:
         LookupKeyResponse lookupKeyResponse = lookupKey(
             request.getLookupKeyRequest());
@@ -258,6 +271,13 @@ public class OzoneManagerRequestHandler {
         responseBuilder.setInitiateMultiPartUploadResponse(
             multipartInfoInitiateResponse);
         break;
+      case ApplyInitiateMultiPartUpload:
+        MultipartInfoInitiateResponse response =
+            applyInitiateMultiPartUpload(
+                request.getInitiateMultiPartUploadApplyRequest());
+        responseBuilder.setInitiateMultiPartUploadResponse(
+            response);
+        break;
       case CommitMultiPartUpload:
         MultipartCommitUploadPartResponse commitUploadPartResponse =
             commitMultipartUploadPart(
@@ -308,6 +328,11 @@ public class OzoneManagerRequestHandler {
             .getGetS3SecretRequest());
         responseBuilder.setGetS3SecretResponse(getS3SecretResp);
         break;
+      case GetFileStatus:
+        GetFileStatusResponse getFileStatusResponse =
+            getOzoneFileStatus(request.getGetFileStatusRequest());
+        responseBuilder.setGetFileStatusResponse(getFileStatusResponse);
+        break;
       default:
         responseBuilder.setSuccess(false);
         responseBuilder.setMessage("Unrecognized Command Type: " + cmdType);
@@ -343,6 +368,7 @@ public class OzoneManagerRequestHandler {
    * @param omRequest client request to OM
    * @throws OMException thrown if required parameters are set to null.
    */
+  @Override
   public void validateRequest(OMRequest omRequest) throws OMException {
     Type cmdType = omRequest.getCmdType();
     if (cmdType == null) {
@@ -488,6 +514,20 @@ public class OzoneManagerRequestHandler {
     return resp.build();
   }
 
+  private CreateKeyResponse applyCreateKey(ApplyCreateKeyRequest request)
+      throws IOException {
+
+    CreateKeyRequest createKeyRequest = request.getCreateKeyRequest();
+    CreateKeyResponse createKeyResponse = request.getCreateKeyResponse();
+
+    impl.applyOpenKey(createKeyRequest.getKeyArgs(),
+        createKeyResponse.getKeyInfo(), createKeyResponse.getID());
+
+    // If applying to om DB successful just return createKeyResponse.
+    return createKeyResponse;
+
+  }
+
   private LookupKeyResponse lookupKey(LookupKeyRequest request)
       throws IOException {
     LookupKeyResponse.Builder resp =
@@ -497,6 +537,7 @@ public class OzoneManagerRequestHandler {
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
         .setKeyName(keyArgs.getKeyName())
+        .setRefreshPipeline(true)
         .build();
     OmKeyInfo keyInfo = impl.lookupKey(omKeyArgs);
     resp.setKeyInfo(keyInfo.getProtobuf());
@@ -513,6 +554,7 @@ public class OzoneManagerRequestHandler {
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
         .setKeyName(keyArgs.getKeyName())
+        .setRefreshPipeline(true)
         .build();
     impl.renameKey(omKeyArgs, request.getToKeyName());
 
@@ -626,8 +668,18 @@ public class OzoneManagerRequestHandler {
         .setBucketName(keyArgs.getBucketName())
         .setKeyName(keyArgs.getKeyName())
         .build();
-    OmKeyLocationInfo newLocation = impl.allocateBlock(omKeyArgs,
-        request.getClientID());
+
+    OmKeyLocationInfo newLocation;
+    if (request.hasKeyLocation()) {
+      newLocation =
+          impl.addAllocatedBlock(omKeyArgs, request.getClientID(),
+              request.getKeyLocation());
+    } else {
+      newLocation =
+          impl.allocateBlock(omKeyArgs, request.getClientID(),
+              ExcludeList.getFromProtoBuf(request.getExcludeList()));
+    }
+
     resp.setKeyLocation(newLocation.getProtobuf());
 
     return resp.build();
@@ -701,6 +753,30 @@ public class OzoneManagerRequestHandler {
         .setFactor(keyArgs.getFactor())
         .build();
     OmMultipartInfo multipartInfo = impl.initiateMultipartUpload(omKeyArgs);
+    resp.setVolumeName(multipartInfo.getVolumeName());
+    resp.setBucketName(multipartInfo.getBucketName());
+    resp.setKeyName(multipartInfo.getKeyName());
+    resp.setMultipartUploadID(multipartInfo.getUploadID());
+
+    return resp.build();
+  }
+
+  private MultipartInfoInitiateResponse applyInitiateMultiPartUpload(
+      MultipartInfoApplyInitiateRequest request) throws IOException {
+    MultipartInfoInitiateResponse.Builder resp = MultipartInfoInitiateResponse
+        .newBuilder();
+
+    KeyArgs keyArgs = request.getKeyArgs();
+    OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(keyArgs.getVolumeName())
+        .setBucketName(keyArgs.getBucketName())
+        .setKeyName(keyArgs.getKeyName())
+        .setType(keyArgs.getType())
+        .setFactor(keyArgs.getFactor())
+        .build();
+    OmMultipartInfo multipartInfo =
+        impl.applyInitiateMultipartUpload(omKeyArgs,
+            request.getMultipartUploadID());
     resp.setVolumeName(multipartInfo.getVolumeName());
     resp.setBucketName(multipartInfo.getBucketName());
     resp.setKeyName(multipartInfo.getKeyName());
@@ -873,6 +949,16 @@ public class OzoneManagerRequestHandler {
         OzoneManagerProtocolProtos.GetS3SecretResponse.newBuilder();
 
     rb.setS3Secret(impl.getS3Secret(request.getKerberosID()).getProtobuf());
+
+    return rb.build();
+  }
+
+  private GetFileStatusResponse getOzoneFileStatus(
+      GetFileStatusRequest request) throws IOException {
+    GetFileStatusResponse.Builder rb = GetFileStatusResponse.newBuilder();
+
+    rb.setStatus(impl.getFileStatus(request.getVolumeName(),
+        request.getBucketName(), request.getKeyName()).getProtobuf());
 
     return rb.build();
   }

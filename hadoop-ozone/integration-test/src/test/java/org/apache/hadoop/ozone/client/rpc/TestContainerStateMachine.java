@@ -56,7 +56,7 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTER
 public class TestContainerStateMachine {
 
   private static MiniOzoneCluster cluster;
-  private static OzoneConfiguration conf;
+  private static OzoneConfiguration conf = new OzoneConfiguration();
   private static OzoneClient client;
   private static ObjectStore objectStore;
   private static String volumeName;
@@ -70,7 +70,6 @@ public class TestContainerStateMachine {
    */
   @BeforeClass
   public static void init() throws Exception {
-    conf = new OzoneConfiguration();
     path = GenericTestUtils
         .getTempPath(TestContainerStateMachine.class.getSimpleName());
     File baseDir = new File(path);

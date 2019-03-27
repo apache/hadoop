@@ -27,8 +27,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -104,7 +104,8 @@ public class SchedulerUtils {
     }
   }
 
-  private static final Log LOG = LogFactory.getLog(SchedulerUtils.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SchedulerUtils.class);
 
   private static final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
@@ -194,7 +195,7 @@ public class SchedulerUtils {
   }
 
   /**
-   * Utility method to normalize a resource request, by insuring that the
+   * Utility method to normalize a resource request, by ensuring that the
    * requested memory is a multiple of minMemory and is not zero.
    */
   @VisibleForTesting
@@ -209,7 +210,7 @@ public class SchedulerUtils {
   }
 
   /**
-   * Utility method to normalize a resource request, by insuring that the
+   * Utility method to normalize a resource request, by ensuring that the
    * requested memory is a multiple of increment resource and is not zero.
    *
    * @return normalized resource
@@ -239,10 +240,8 @@ public class SchedulerUtils {
     // default label expression of queue
     if (labelExp == null && queueInfo != null && ResourceRequest.ANY
         .equals(resReq.getResourceName())) {
-      if ( LOG.isDebugEnabled()) {
-        LOG.debug("Setting default node label expression : " + queueInfo
-            .getDefaultNodeLabelExpression());
-      }
+      LOG.debug("Setting default node label expression : {}", queueInfo
+          .getDefaultNodeLabelExpression());
       labelExp = queueInfo.getDefaultNodeLabelExpression();
     }
 
@@ -303,7 +302,7 @@ public class SchedulerUtils {
   }
 
   /**
-   * Utility method to validate a resource request, by insuring that the
+   * Utility method to validate a resource request, by ensuring that the
    * requested memory/vcore is non-negative and not greater than max
    *
    * @throws InvalidResourceRequestException when there is invalid request

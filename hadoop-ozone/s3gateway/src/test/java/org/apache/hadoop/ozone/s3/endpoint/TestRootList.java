@@ -25,6 +25,7 @@ import org.apache.hadoop.ozone.client.OzoneClientStub;
 import org.apache.hadoop.ozone.s3.header.AuthenticationHeaderParser;
 
 import static org.junit.Assert.assertEquals;
+import org.apache.hadoop.ozone.s3.util.OzoneS3Util;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -61,10 +62,11 @@ public class TestRootList {
     ListBucketResponse response =
         (ListBucketResponse) rootEndpoint.get().getEntity();
     assertEquals(0, response.getBucketsNum());
+    String volumeName = OzoneS3Util.getVolumeName(userName);
 
     String bucketBaseName = "bucket-" + getClass().getName();
     for(int i = 0; i < 10; i++) {
-      objectStoreStub.createS3Bucket(userName, bucketBaseName + i);
+      objectStoreStub.createS3Bucket(volumeName, bucketBaseName + i);
     }
     response = (ListBucketResponse) rootEndpoint.get().getEntity();
     assertEquals(10, response.getBucketsNum());

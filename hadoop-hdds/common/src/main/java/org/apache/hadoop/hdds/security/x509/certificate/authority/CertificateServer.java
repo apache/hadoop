@@ -21,6 +21,7 @@ package org.apache.hadoop.hdds.security.x509.certificate.authority;
 
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateApprover.ApprovalType;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 
@@ -30,8 +31,8 @@ import java.security.cert.X509Certificate;
 import java.util.concurrent.Future;
 
 /**
- * Interface for Certificate Authority. This can be extended to talk to external
- * CAs later or HSMs later.
+ * Interface for Certificate Authority. This can be extended to talk to
+ * external CAs later or HSMs later.
  */
 public interface CertificateServer {
   /**
@@ -54,6 +55,18 @@ public interface CertificateServer {
    * @throws IOException          - on Error.
    */
   X509CertificateHolder getCACertificate()
+      throws CertificateException, IOException;
+
+  /**
+   * Returns the Certificate corresponding to given certificate serial id if
+   * exist. Return null if it doesn't exist.
+   *
+   * @return certSerialId         - Certificate serial id.
+   * @throws CertificateException - usually thrown if this CA is not
+   *                              initialized.
+   * @throws IOException          - on Error.
+   */
+  X509Certificate getCertificate(String certSerialId)
       throws CertificateException, IOException;
 
   /**
@@ -80,11 +93,8 @@ public interface CertificateServer {
    * approved.
    * @throws SCMSecurityException - on Error.
    */
-  Future<X509CertificateHolder>
-      requestCertificate(String csr, CertificateApprover.ApprovalType type)
-      throws IOException;
-
-
+  Future<X509CertificateHolder> requestCertificate(String csr,
+      ApprovalType type) throws IOException;
 
   /**
    * Revokes a Certificate issued by this CertificateServer.
@@ -95,7 +105,7 @@ public interface CertificateServer {
    * @throws SCMSecurityException - on Error.
    */
   Future<Boolean> revokeCertificate(X509Certificate certificate,
-      CertificateApprover.ApprovalType approver) throws SCMSecurityException;
+      ApprovalType approver) throws SCMSecurityException;
 
   /**
    * TODO : CRL, OCSP etc. Later. This is the start of a CertificateServer

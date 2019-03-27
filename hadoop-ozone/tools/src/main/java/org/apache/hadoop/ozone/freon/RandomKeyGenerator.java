@@ -1,3 +1,4 @@
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with this
@@ -214,6 +215,9 @@ public final class RandomKeyGenerator implements Callable<Void> {
     for (FreonOps ops : FreonOps.values()) {
       histograms.add(ops.ordinal(), new Histogram(new UniformReservoir()));
     }
+    if (freon != null) {
+      freon.startHttpServer();
+    }
   }
 
   @Override
@@ -292,7 +296,12 @@ public final class RandomKeyGenerator implements Callable<Void> {
    */
   private void addShutdownHook() {
     Runtime.getRuntime().addShutdownHook(
-        new Thread(() -> printStats(System.out)));
+        new Thread(() -> {
+          printStats(System.out);
+          if (freon != null) {
+            freon.stopHttpServer();
+          }
+        }));
   }
   /**
    * Prints stats of {@link Freon} run to the PrintStream.
@@ -610,9 +619,13 @@ public final class RandomKeyGenerator implements Callable<Void> {
                     .update(keyCreationDuration);
                 keyCreationTime.getAndAdd(keyCreationDuration);
                 long keyWriteStart = System.nanoTime();
-                os.write(keyValue);
-                os.write(randomValue);
-                os.close();
+                try (Scope writeScope = GlobalTracer.get()
+                    .buildSpan("writeKeyData")
+                    .startActive(true)) {
+                  os.write(keyValue);
+                  os.write(randomValue);
+                  os.close();
+                }
 
                 long keyWriteDuration = System.nanoTime() - keyWriteStart;
 

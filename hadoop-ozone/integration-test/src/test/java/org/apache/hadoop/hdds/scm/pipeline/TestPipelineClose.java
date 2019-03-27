@@ -27,13 +27,14 @@ import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
+import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.PipelineActionsFromDatanode;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -119,12 +120,8 @@ public class TestPipelineClose {
         .getContainersInPipeline(ratisContainer.getPipeline().getId());
     Assert.assertEquals(0, setClosed.size());
 
-    pipelineManager.finalizePipeline(ratisContainer.getPipeline().getId());
-    Pipeline pipeline1 = pipelineManager
-        .getPipeline(ratisContainer.getPipeline().getId());
-    Assert.assertEquals(Pipeline.PipelineState.CLOSED,
-        pipeline1.getPipelineState());
-    pipelineManager.removePipeline(pipeline1.getId());
+    pipelineManager
+        .finalizeAndDestroyPipeline(ratisContainer.getPipeline(), false);
     for (DatanodeDetails dn : ratisContainer.getPipeline().getNodes()) {
       // Assert that the pipeline has been removed from Node2PipelineMap as well
       Assert.assertFalse(scm.getScmNodeManager().getPipelines(dn)
@@ -133,21 +130,23 @@ public class TestPipelineClose {
   }
 
   @Test
-  public void testPipelineCloseWithOpenContainer() throws IOException,
-      TimeoutException, InterruptedException {
+  public void testPipelineCloseWithOpenContainer()
+      throws IOException, TimeoutException, InterruptedException {
     Set<ContainerID> setOpen = pipelineManager.getContainersInPipeline(
         ratisContainer.getPipeline().getId());
     Assert.assertEquals(1, setOpen.size());
 
-    ContainerID cId2 = ratisContainer.getContainerInfo().containerID();
-    pipelineManager.finalizePipeline(ratisContainer.getPipeline().getId());
-    Assert.assertEquals(Pipeline.PipelineState.CLOSED,
-        pipelineManager.getPipeline(
-            ratisContainer.getPipeline().getId()).getPipelineState());
-    Pipeline pipeline2 = pipelineManager
-        .getPipeline(ratisContainer.getPipeline().getId());
-    Assert.assertEquals(Pipeline.PipelineState.CLOSED,
-        pipeline2.getPipelineState());
+    pipelineManager
+        .finalizeAndDestroyPipeline(ratisContainer.getPipeline(), false);
+    GenericTestUtils.waitFor(() -> {
+      try {
+        return containerManager
+            .getContainer(ratisContainer.getContainerInfo().containerID())
+            .getState() == HddsProtos.LifeCycleState.CLOSING;
+      } catch (ContainerNotFoundException e) {
+        return false;
+      }
+    }, 100, 10000);
   }
 
   @Test
@@ -181,35 +180,4 @@ public class TestPipelineClose {
     } catch (PipelineNotFoundException e) {
     }
   }
-
-  @Test
-  public void testPipelineCloseWithPipelineReport() throws IOException {
-    Pipeline pipeline = ratisContainer.getPipeline();
-    pipelineManager.finalizePipeline(pipeline.getId());
-    // remove pipeline from SCM
-    pipelineManager.removePipeline(pipeline.getId());
-
-    for (DatanodeDetails dn : pipeline.getNodes()) {
-      PipelineReportFromDatanode pipelineReport =
-          TestUtils.getPipelineReportFromDatanode(dn, pipeline.getId());
-      PipelineReportHandler pipelineReportHandler =
-          new PipelineReportHandler(pipelineManager, conf);
-      // on receiving pipeline report for the pipeline, pipeline report handler
-      // should destroy the pipeline for the dn
-      pipelineReportHandler.onMessage(pipelineReport, new EventQueue());
-    }
-
-    OzoneContainer ozoneContainer =
-        cluster.getHddsDatanodes().get(0).getDatanodeStateMachine()
-            .getContainer();
-    List<PipelineReport> pipelineReports =
-        ozoneContainer.getPipelineReport().getPipelineReportList();
-    for (PipelineReport pipelineReport : pipelineReports) {
-      // pipeline should not be reported by any dn
-      Assert.assertNotEquals(
-          PipelineID.getFromProtobuf(pipelineReport.getPipelineID()),
-          ratisContainer.getPipeline().getId());
-    }
-  }
-
 }

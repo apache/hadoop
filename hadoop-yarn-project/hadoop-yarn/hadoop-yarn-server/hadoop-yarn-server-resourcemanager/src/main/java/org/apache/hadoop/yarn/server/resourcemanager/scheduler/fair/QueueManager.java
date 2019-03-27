@@ -18,34 +18,28 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
-
-import javax.xml.parsers.ParserConfigurationException;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.annotations.VisibleForTesting;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
-import org.xml.sax.SAXException;
-
-import com.google.common.annotations.VisibleForTesting;
-import java.util.Iterator;
-import java.util.Set;
 
 /**
  * Maintains a list of queues as well as scheduling parameters for each queue,
@@ -54,8 +48,8 @@ import java.util.Set;
 @Private
 @Unstable
 public class QueueManager {
-  private static final Log LOG =
-      LogFactory.getLog(QueueManager.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(QueueManager.class.getName());
 
   private final class IncompatibleQueueRemovalTask {
 
@@ -106,8 +100,7 @@ public class QueueManager {
     return rootQueue;
   }
 
-  public void initialize(Configuration conf) throws IOException,
-      SAXException, AllocationConfigurationException, ParserConfigurationException {
+  public void initialize() {
     // Policies of root and default queue are set to
     // SchedulingPolicy.DEFAULT_POLICY since the allocation file hasn't been
     // loaded yet.

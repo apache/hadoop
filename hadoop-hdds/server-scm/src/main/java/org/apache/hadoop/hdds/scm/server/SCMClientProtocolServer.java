@@ -25,6 +25,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.protobuf.BlockingService;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -45,11 +46,8 @@ import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
-import org.apache.hadoop.hdds.scm.pipeline.RatisPipelineUtils;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
-import org.apache.hadoop.hdds.server.events.EventHandler;
-import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
@@ -94,7 +92,7 @@ import static org.apache.hadoop.hdds.scm.server.StorageContainerManager
  * The RPC server that listens to requests from clients.
  */
 public class SCMClientProtocolServer implements
-    StorageContainerLocationProtocol, EventHandler<Boolean>, Auditor {
+    StorageContainerLocationProtocol, Auditor {
   private static final Logger LOG =
       LoggerFactory.getLogger(SCMClientProtocolServer.class);
   private static final AuditLogger AUDIT =
@@ -133,7 +131,10 @@ public class SCMClientProtocolServer implements
     clientRpcAddress =
         updateRPCListenAddress(conf, OZONE_SCM_CLIENT_ADDRESS_KEY,
             scmAddress, clientRpcServer);
-
+    if (conf.getBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
+        false)) {
+      clientRpcServer.refreshServiceAcl(conf, SCMPolicyProvider.getInstance());
+    }
   }
 
   public RPC.Server getClientRpcServer() {
@@ -293,8 +294,13 @@ public class SCMClientProtocolServer implements
     auditMap.put("startContainerID", String.valueOf(startContainerID));
     auditMap.put("count", String.valueOf(count));
     try {
+      // To allow startcontainerId to take the value "0",
+      // "null" is assigned, so that its handled in the
+      // scm.getContainerManager().listContainer method
+      final ContainerID containerId = startContainerID != 0 ? ContainerID
+          .valueof(startContainerID) : null;
       return scm.getContainerManager().
-          listContainer(ContainerID.valueof(startContainerID), count);
+          listContainer(containerId, count);
     } catch (Exception ex) {
       auditSuccess = false;
       AUDIT.logReadFailure(
@@ -409,8 +415,7 @@ public class SCMClientProtocolServer implements
     PipelineManager pipelineManager = scm.getPipelineManager();
     Pipeline pipeline =
         pipelineManager.getPipeline(PipelineID.getFromProtobuf(pipelineID));
-    RatisPipelineUtils
-        .finalizeAndDestroyPipeline(pipelineManager, pipeline, conf, false);
+    pipelineManager.finalizeAndDestroyPipeline(pipeline, false);
     AUDIT.logWriteSuccess(
         buildAuditMessageForSuccess(SCMAction.CLOSE_PIPELINE, null)
     );
@@ -493,14 +498,6 @@ public class SCMClientProtocolServer implements
   }
 
   /**
-   * Set chill mode status based on SCMEvents.CHILL_MODE_STATUS event.
-   */
-  @Override
-  public void onMessage(Boolean inChillMode, EventPublisher publisher) {
-    chillModePrecheck.setInChillMode(inChillMode);
-  }
-
-  /**
    * Set chill mode status based on .
    */
   public boolean getChillModeStatus() {
@@ -551,5 +548,19 @@ public class SCMClientProtocolServer implements
         .withResult(AuditEventStatus.FAILURE.toString())
         .withException(throwable)
         .build();
+  }
+
+  @Override
+  public void close() throws IOException {
+    stop();
+  }
+
+  /**
+   * Set ChillMode status.
+   *
+   * @param chillModeStatus
+   */
+  public void setChillModeStatus(boolean chillModeStatus) {
+    chillModePrecheck.setInChillMode(chillModeStatus);
   }
 }

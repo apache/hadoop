@@ -111,6 +111,11 @@ public class EditLogTailer {
   private long lastLoadTimeMs;
 
   /**
+   * The last time we triggered a edit log roll on active namenode.
+   */
+  private long lastRollTimeMs;
+
+  /**
    * How often the Standby should roll edit logs. Since the Standby only reads
    * from finalized log segments, the Standby will only be as up-to-date as how
    * often the logs are rolled.
@@ -140,7 +145,8 @@ public class EditLogTailer {
   private int nnLoopCount = 0;
 
   /**
-   * maximum number of retries we should give each of the remote namenodes before giving up
+   * Maximum number of retries we should give each of the remote namenodes
+   * before giving up.
    */
   private int maxRetries;
 
@@ -166,10 +172,12 @@ public class EditLogTailer {
     this.editLog = namesystem.getEditLog();
     
     lastLoadTimeMs = monotonicNow();
+    lastRollTimeMs = monotonicNow();
 
     logRollPeriodMs = conf.getTimeDuration(
         DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY,
-        DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_DEFAULT, TimeUnit.SECONDS) * 1000;
+        DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_DEFAULT,
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
     List<RemoteNameNodeInfo> nns = Collections.emptyList();
     if (logRollPeriodMs >= 0) {
       try {
@@ -196,11 +204,13 @@ public class EditLogTailer {
     
     sleepTimeMs = conf.getTimeDuration(
         DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY,
-        DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_DEFAULT, TimeUnit.SECONDS) * 1000;
+        DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_DEFAULT,
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
 
-    rollEditsTimeoutMs = conf.getInt(
+    rollEditsTimeoutMs = conf.getTimeDuration(
         DFSConfigKeys.DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_KEY,
-        DFSConfigKeys.DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_DEFAULT) * 1000;
+        DFSConfigKeys.DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_DEFAULT,
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
 
     rollEditsRpcExecutor = Executors.newSingleThreadExecutor(
         new ThreadFactoryBuilder().setDaemon(true).build());
@@ -354,7 +364,7 @@ public class EditLogTailer {
    */
   private boolean tooLongSinceLastLoad() {
     return logRollPeriodMs >= 0 && 
-      (monotonicNow() - lastLoadTimeMs) > logRollPeriodMs ;
+      (monotonicNow() - lastRollTimeMs) > logRollPeriodMs;
   }
 
   /**
@@ -382,6 +392,7 @@ public class EditLogTailer {
     try {
       future = rollEditsRpcExecutor.submit(getNameNodeProxy());
       future.get(rollEditsTimeoutMs, TimeUnit.MILLISECONDS);
+      lastRollTimeMs = monotonicNow();
       lastRollTriggerTxId = lastLoadedTxnId;
     } catch (ExecutionException e) {
       LOG.warn("Unable to trigger a roll of the active NN", e);

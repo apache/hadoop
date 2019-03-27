@@ -109,9 +109,7 @@ class LocalAllocationTagsManager extends AllocationTagsManager {
         });
       });
       appTempMappings.remove(applicationId);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Removed TEMP containers of app=" + applicationId);
-      }
+      LOG.debug("Removed TEMP containers of app={}", applicationId);
     }
   }
 

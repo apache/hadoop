@@ -332,38 +332,35 @@ public class FSDirAttrOp {
 
     INodeDirectory dirNode =
         INodeDirectory.valueOf(iip.getLastINode(), iip.getPath());
+    final QuotaCounts oldQuota = dirNode.getQuotaCounts();
+    final long oldNsQuota = oldQuota.getNameSpace();
+    final long oldSsQuota = oldQuota.getStorageSpace();
     if (dirNode.isRoot() && nsQuota == HdfsConstants.QUOTA_RESET) {
-      throw new IllegalArgumentException("Cannot clear namespace quota on root.");
-    } else { // a directory inode
-      final QuotaCounts oldQuota = dirNode.getQuotaCounts();
-      final long oldNsQuota = oldQuota.getNameSpace();
-      final long oldSsQuota = oldQuota.getStorageSpace();
+      nsQuota = HdfsConstants.QUOTA_DONT_SET;
+    } else if (nsQuota == HdfsConstants.QUOTA_DONT_SET) {
+      nsQuota = oldNsQuota;
+    } // a directory inode
+    if (ssQuota == HdfsConstants.QUOTA_DONT_SET) {
+      ssQuota = oldSsQuota;
+    }
 
-      if (nsQuota == HdfsConstants.QUOTA_DONT_SET) {
-        nsQuota = oldNsQuota;
-      }
-      if (ssQuota == HdfsConstants.QUOTA_DONT_SET) {
-        ssQuota = oldSsQuota;
-      }
+    // unchanged space/namespace quota
+    if (type == null && oldNsQuota == nsQuota && oldSsQuota == ssQuota) {
+      return null;
+    }
 
-      // unchanged space/namespace quota
-      if (type == null && oldNsQuota == nsQuota && oldSsQuota == ssQuota) {
+    // unchanged type quota
+    if (type != null) {
+      EnumCounters<StorageType> oldTypeQuotas = oldQuota.getTypeSpaces();
+      if (oldTypeQuotas != null && oldTypeQuotas.get(type) == ssQuota) {
         return null;
       }
-
-      // unchanged type quota
-      if (type != null) {
-          EnumCounters<StorageType> oldTypeQuotas = oldQuota.getTypeSpaces();
-          if (oldTypeQuotas != null && oldTypeQuotas.get(type) == ssQuota) {
-              return null;
-          }
-      }
-
-      final int latest = iip.getLatestSnapshotId();
-      dirNode.recordModification(latest);
-      dirNode.setQuota(fsd.getBlockStoragePolicySuite(), nsQuota, ssQuota, type);
-      return dirNode;
     }
+
+    final int latest = iip.getLatestSnapshotId();
+    dirNode.recordModification(latest);
+    dirNode.setQuota(fsd.getBlockStoragePolicySuite(), nsQuota, ssQuota, type);
+    return dirNode;
   }
 
   static BlockInfo[] unprotectedSetReplication(

@@ -54,8 +54,17 @@ public interface CertificateClient {
   /**
    * Returns the certificate  of the specified component if it exists on the
    * local system.
+   * @param certSerialId
    *
+   * @return certificate or Null if there is no data.
+   */
+  X509Certificate getCertificate(String certSerialId)
+      throws CertificateException;
 
+  /**
+   * Returns the certificate  of the specified component if it exists on the
+   * local system.
+   *
    * @return certificate or Null if there is no data.
    */
   X509Certificate getCertificate();
@@ -109,7 +118,7 @@ public interface CertificateClient {
    *
    * @return CertificateSignRequest.Builder
    */
-  CertificateSignRequest.Builder getCSRBuilder();
+  CertificateSignRequest.Builder getCSRBuilder() throws CertificateException;
 
   /**
    * Get the certificate of well-known entity from SCM.
@@ -121,13 +130,15 @@ public interface CertificateClient {
   X509Certificate queryCertificate(String query);
 
   /**
-   * Stores the Certificate.
+   * Stores the Certificate  for this client. Don't use this api to add
+   * trusted certificates of others.
    *
-   * @param certificate - X509 Certificate
-
+   * @param pemEncodedCert        - pem encoded X509 Certificate
+   * @param force                 - override any existing file
    * @throws CertificateException - on Error.
+   *
    */
-  void storeCertificate(X509Certificate certificate)
+  void storeCertificate(String pemEncodedCert, boolean force)
       throws CertificateException;
 
   /**

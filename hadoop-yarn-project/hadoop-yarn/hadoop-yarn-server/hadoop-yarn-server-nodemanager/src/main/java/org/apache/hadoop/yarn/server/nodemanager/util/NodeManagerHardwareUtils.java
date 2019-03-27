@@ -353,7 +353,7 @@ public class NodeManagerHardwareUtils {
     for (Map.Entry<String, ResourceInformation> entry : resourceInformation
         .entrySet()) {
       ret.setResourceInformation(entry.getKey(), entry.getValue());
-      LOG.debug("Setting key " + entry.getKey() + " to " + entry.getValue());
+      LOG.debug("Setting key {} to {}", entry.getKey(), entry.getValue());
     }
     if (resourceInformation.containsKey(memory)) {
       Long value = resourceInformation.get(memory).getValue();
@@ -364,7 +364,7 @@ public class NodeManagerHardwareUtils {
       ResourceInformation memResInfo = resourceInformation.get(memory);
       if(memResInfo.getValue() == 0) {
         ret.setMemorySize(getContainerMemoryMB(conf));
-        LOG.debug("Set memory to " + ret.getMemorySize());
+        LOG.debug("Set memory to {}", ret.getMemorySize());
       }
     }
     if (resourceInformation.containsKey(vcores)) {
@@ -376,10 +376,10 @@ public class NodeManagerHardwareUtils {
       ResourceInformation vcoresResInfo = resourceInformation.get(vcores);
       if(vcoresResInfo.getValue() == 0) {
         ret.setVirtualCores(getVCores(conf));
-        LOG.debug("Set vcores to " + ret.getVirtualCores());
+        LOG.debug("Set vcores to {}", ret.getVirtualCores());
       }
     }
-    LOG.debug("Node resource information map is " + ret);
+    LOG.debug("Node resource information map is {}", ret);
     return ret;
   }
 }

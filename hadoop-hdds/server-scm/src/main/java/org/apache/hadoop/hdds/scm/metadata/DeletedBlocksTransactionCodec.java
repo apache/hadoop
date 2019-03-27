@@ -22,7 +22,8 @@ package org.apache.hadoop.hdds.scm.metadata;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import java.io.IOException;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
 import org.apache.hadoop.utils.db.Codec;
 
 /**

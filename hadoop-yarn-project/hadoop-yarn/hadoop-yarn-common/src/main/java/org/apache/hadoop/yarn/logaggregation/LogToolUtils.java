@@ -89,13 +89,13 @@ public final class LogToolUtils {
       String containerStr = String.format(
           LogToolUtils.CONTAINER_ON_NODE_PATTERN,
           containerId, nodeId);
-      sb.append(containerStr + "\n");
-      sb.append("LogAggregationType: " + logType + "\n");
-      sb.append(StringUtils.repeat("=", containerStr.length()) + "\n");
-      sb.append("LogType:" + fileName + "\n");
-      sb.append("LogLastModifiedTime:" + lastModifiedTime + "\n");
-      sb.append("LogLength:" + Long.toString(fileLength) + "\n");
-      sb.append("LogContents:\n");
+      sb.append(containerStr + "\n")
+          .append("LogAggregationType: " + logType + "\n")
+          .append(StringUtils.repeat("=", containerStr.length()) + "\n")
+          .append("LogType:" + fileName + "\n")
+          .append("LogLastModifiedTime:" + lastModifiedTime + "\n")
+          .append("LogLength:" + Long.toString(fileLength) + "\n")
+          .append("LogContents:\n");
       byte[] b = sb.toString().getBytes(
           Charset.forName("UTF-8"));
       os.write(b, 0, b.length);
@@ -138,13 +138,13 @@ public final class LogToolUtils {
       String containerStr = String.format(
           LogToolUtils.CONTAINER_ON_NODE_PATTERN,
           containerId, nodeId);
-      sb.append(containerStr + "\n");
-      sb.append("LogAggregationType: " + logType + "\n");
-      sb.append(StringUtils.repeat("=", containerStr.length()) + "\n");
-      sb.append("LogType:" + fileName + "\n");
-      sb.append("LogLastModifiedTime:" + lastModifiedTime + "\n");
-      sb.append("LogLength:" + Long.toString(fileLength) + "\n");
-      sb.append("LogContents:\n");
+      sb.append(containerStr + "\n")
+          .append("LogAggregationType: " + logType + "\n")
+          .append(StringUtils.repeat("=", containerStr.length()) + "\n")
+          .append("LogType:" + fileName + "\n")
+          .append("LogLastModifiedTime:" + lastModifiedTime + "\n")
+          .append("LogLength:" + Long.toString(fileLength) + "\n")
+          .append("LogContents:\n");
       byte[] b = sb.toString().getBytes(
           Charset.forName("UTF-8"));
       os.write(b, 0, b.length);

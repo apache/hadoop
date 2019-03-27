@@ -15,7 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.ozone.om.protocol;
+
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
+import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 
@@ -32,18 +36,31 @@ import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
+
+import org.apache.hadoop.ozone.security.OzoneDelegationTokenSelector;
 import org.apache.hadoop.security.KerberosInfo;
+import org.apache.hadoop.security.token.TokenInfo;
 
 /**
  * Protocol to talk to OM.
  */
 @KerberosInfo(
     serverPrincipal = OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY)
-public interface OzoneManagerProtocol  extends OzoneManagerSecurityProtocol {
+@TokenInfo(OzoneDelegationTokenSelector.class)
+public interface OzoneManagerProtocol
+    extends OzoneManagerSecurityProtocol, Closeable {
+
+  @SuppressWarnings("checkstyle:ConstantName")
+  /**
+   * Version 1: Initial version.
+   */
+  long versionID = 1L;
 
   /**
    * Creates a volume.
@@ -166,11 +183,14 @@ public interface OzoneManagerProtocol  extends OzoneManagerSecurityProtocol {
    *
    * @param args the key to append
    * @param clientID the client identification
+   * @param excludeList List of datanodes/containers to exclude during block
+   *                    allocation
    * @return an allocated block
    * @throws IOException
    */
-  OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID)
-      throws IOException;
+  OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID,
+      ExcludeList excludeList) throws IOException;
+
 
   /**
    * Look up for the container of an existing key.
@@ -372,5 +392,22 @@ public interface OzoneManagerProtocol  extends OzoneManagerSecurityProtocol {
    * @throws IOException
    */
   S3SecretValue getS3Secret(String kerberosID) throws IOException;
+
+  /**
+   * Get the OM Client's Retry and Failover Proxy provider.
+   * @return OMFailoverProxyProvider
+   */
+  OMFailoverProxyProvider getOMFailoverProxyProvider();
+
+  /**
+   * Get File Status for an Ozone key.
+   * @param volumeName volume name.
+   * @param bucketName bucket name.
+   * @param keyName key name.
+   * @return OzoneFileStatus for the key.
+   * @throws IOException
+   */
+  OzoneFileStatus getFileStatus(String volumeName, String bucketName,
+                                String keyName) throws IOException;
 }
 

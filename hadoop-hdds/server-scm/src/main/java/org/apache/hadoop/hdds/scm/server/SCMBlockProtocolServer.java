@@ -23,6 +23,7 @@ package org.apache.hadoop.hdds.scm.server;
 
 import com.google.common.collect.Maps;
 import com.google.protobuf.BlockingService;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.container.common.helpers.DeleteBlockResult;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
@@ -117,7 +119,10 @@ public class SCMBlockProtocolServer implements
         updateRPCListenAddress(
             conf, OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY, scmBlockAddress,
             blockRpcServer);
-
+    if (conf.getBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
+        false)) {
+      blockRpcServer.refreshServiceAcl(conf, SCMPolicyProvider.getInstance());
+    }
   }
 
   public RPC.Server getBlockRpcServer() {
@@ -151,17 +156,25 @@ public class SCMBlockProtocolServer implements
   }
 
   @Override
-  public AllocatedBlock allocateBlock(long size, HddsProtos.ReplicationType
-      type, HddsProtos.ReplicationFactor factor, String owner) throws
-      IOException {
+  public List<AllocatedBlock> allocateBlock(long size, int num,
+      HddsProtos.ReplicationType type, HddsProtos.ReplicationFactor factor,
+      String owner, ExcludeList excludeList) throws IOException {
     Map<String, String> auditMap = Maps.newHashMap();
     auditMap.put("size", String.valueOf(size));
     auditMap.put("type", type.name());
     auditMap.put("factor", factor.name());
     auditMap.put("owner", owner);
+    List<AllocatedBlock> blocks = new ArrayList<>(num);
     boolean auditSuccess = true;
     try {
-      return scm.getScmBlockManager().allocateBlock(size, type, factor, owner);
+      for (int i = 0; i < num; i++) {
+        AllocatedBlock block = scm.getScmBlockManager()
+            .allocateBlock(size, type, factor, owner, excludeList);
+        if (block != null) {
+          blocks.add(block);
+        }
+      }
+      return blocks;
     } catch (Exception ex) {
       auditSuccess = false;
       AUDIT.logWriteFailure(
@@ -294,5 +307,10 @@ public class SCMBlockProtocolServer implements
         .withResult(AuditEventStatus.FAILURE.toString())
         .withException(throwable)
         .build();
+  }
+
+  @Override
+  public void close() throws IOException {
+    stop();
   }
 }

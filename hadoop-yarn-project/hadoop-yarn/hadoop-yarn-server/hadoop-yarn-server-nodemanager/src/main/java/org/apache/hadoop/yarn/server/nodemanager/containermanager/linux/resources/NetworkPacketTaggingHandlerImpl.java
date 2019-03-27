@@ -153,9 +153,7 @@ public class NetworkPacketTaggingHandlerImpl
   @Override
   public List<PrivilegedOperation> teardown()
       throws ResourceHandlerException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("teardown(): Nothing to do");
-    }
+    LOG.debug("teardown(): Nothing to do");
 
     return null;
   }

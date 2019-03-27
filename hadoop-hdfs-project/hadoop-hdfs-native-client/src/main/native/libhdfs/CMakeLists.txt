@@ -35,7 +35,7 @@ hadoop_add_dual_library(hdfs
     exception.c
     jni_helper.c
     hdfs.c
-    common/htable.c
+    jclasses.c
     ${OS_DIR}/mutexes.c
     ${OS_DIR}/thread_local_storage.c
 )
@@ -55,11 +55,9 @@ set_target_properties(hdfs PROPERTIES
     SOVERSION ${LIBHDFS_VERSION})
 
 build_libhdfs_test(test_libhdfs_ops hdfs_static test_libhdfs_ops.c)
-link_libhdfs_test(test_libhdfs_ops hdfs_static ${JAVA_JVM_LIBRARY})
-build_libhdfs_test(test_libhdfs_reads hdfs_static test_libhdfs_read.c)
-link_libhdfs_test(test_libhdfs_reads hdfs_static ${JAVA_JVM_LIBRARY})
-build_libhdfs_test(test_libhdfs_write hdfs_static test_libhdfs_write.c)
-link_libhdfs_test(test_libhdfs_write hdfs_static ${JAVA_JVM_LIBRARY})
+link_libhdfs_test(test_libhdfs_ops hdfs_static native_mini_dfs ${JAVA_JVM_LIBRARY})
+add_libhdfs_test(test_libhdfs_ops hdfs_static)
+
 build_libhdfs_test(test_libhdfs_threaded hdfs_static expect.c test_libhdfs_threaded.c ${OS_DIR}/thread.c)
 link_libhdfs_test(test_libhdfs_threaded hdfs_static native_mini_dfs)
 add_libhdfs_test(test_libhdfs_threaded hdfs_static)

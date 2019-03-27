@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.container.ozoneimpl;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto
@@ -28,6 +29,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
@@ -69,19 +71,24 @@ public class OzoneContainer {
   private final XceiverServerSpi writeChannel;
   private final XceiverServerSpi readChannel;
   private final ContainerController controller;
+  private ContainerScrubber scrubber;
 
   /**
    * Construct OzoneContainer object.
    * @param datanodeDetails
    * @param conf
+   * @param certClient
    * @throws DiskOutOfSpaceException
    * @throws IOException
    */
   public OzoneContainer(DatanodeDetails datanodeDetails, OzoneConfiguration
-      conf, StateContext context) throws IOException {
+      conf, StateContext context, CertificateClient certClient)
+      throws IOException {
     this.config = conf;
     this.volumeSet = new VolumeSet(datanodeDetails.getUuidString(), conf);
     this.containerSet = new ContainerSet();
+    this.scrubber = null;
+
     buildContainerSet();
     final ContainerMetrics metrics = ContainerMetrics.create(conf);
     this.handlers = Maps.newHashMap();
@@ -100,9 +107,10 @@ public class OzoneContainer {
      */
     this.controller = new ContainerController(containerSet, handlers);
     this.writeChannel = XceiverServerRatis.newXceiverServerRatis(
-        datanodeDetails, config, hddsDispatcher, context);
+        datanodeDetails, config, hddsDispatcher, context, certClient);
     this.readChannel = new XceiverServerGrpc(
-        datanodeDetails, config, hddsDispatcher, createReplicationService());
+        datanodeDetails, config, hddsDispatcher, certClient,
+        createReplicationService());
 
   }
 
@@ -139,6 +147,34 @@ public class OzoneContainer {
 
   }
 
+
+  /**
+   * Start background daemon thread for performing container integrity checks.
+   */
+  private void startContainerScrub() {
+    boolean enabled = config.getBoolean(
+        HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED,
+        HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED_DEFAULT);
+
+    if (!enabled) {
+      LOG.info("Background container scrubber has been disabled by {}",
+              HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED);
+    } else {
+      this.scrubber = new ContainerScrubber(containerSet, config);
+      scrubber.up();
+    }
+  }
+
+  /**
+   * Stop the scanner thread and wait for thread to die.
+   */
+  private void stopContainerScrub() {
+    if (scrubber == null) {
+      return;
+    }
+    scrubber.down();
+  }
+
   /**
    * Starts serving requests to ozone container.
    *
@@ -146,6 +182,7 @@ public class OzoneContainer {
    */
   public void start() throws IOException {
     LOG.info("Attempting to start container services.");
+    startContainerScrub();
     writeChannel.start();
     readChannel.start();
     hddsDispatcher.init();
@@ -157,6 +194,7 @@ public class OzoneContainer {
   public void stop() {
     //TODO: at end of container IO integration work.
     LOG.info("Attempting to stop container services.");
+    stopContainerScrub();
     writeChannel.stop();
     readChannel.stop();
     hddsDispatcher.shutdown();

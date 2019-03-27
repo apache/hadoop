@@ -28,7 +28,6 @@ import org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacem
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRandom;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline.PipelineState;
-import org.apache.hadoop.utils.Scheduler;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -46,18 +45,12 @@ public class RatisPipelineProvider implements PipelineProvider {
   private final NodeManager nodeManager;
   private final PipelineStateManager stateManager;
   private final Configuration conf;
-  private static Scheduler scheduler;
 
   RatisPipelineProvider(NodeManager nodeManager,
       PipelineStateManager stateManager, Configuration conf) {
     this.nodeManager = nodeManager;
     this.stateManager = stateManager;
     this.conf = conf;
-    scheduler = new Scheduler("RatisPipelineUtilsThread", false, 1);
-  }
-
-  static Scheduler getScheduler() {
-    return scheduler;
   }
 
   /**
@@ -93,7 +86,6 @@ public class RatisPipelineProvider implements PipelineProvider {
           "ContainerPlacementPolicy", e);
     }
   }
-
 
   @Override
   public Pipeline create(ReplicationFactor factor) throws IOException {
@@ -139,12 +131,7 @@ public class RatisPipelineProvider implements PipelineProvider {
         .build();
   }
 
-  private void initializePipeline(Pipeline pipeline) throws IOException {
+  protected void initializePipeline(Pipeline pipeline) throws IOException {
     RatisPipelineUtils.createPipeline(pipeline, conf);
-  }
-
-  @Override
-  public void close() {
-    scheduler.close();
   }
 }

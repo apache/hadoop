@@ -87,14 +87,17 @@ public class Scheduler {
    * yet executed are also cancelled. For the executing tasks the scheduler
    * waits 60 seconds for completion.
    */
-  public void close() {
+  public synchronized void close() {
     isClosed = true;
-    scheduler.shutdownNow();
-    try {
-      scheduler.awaitTermination(60, TimeUnit.SECONDS);
-    } catch (InterruptedException e) {
-      LOG.info(threadName + " interrupted while waiting for task completion {}",
-          e);
+    if (scheduler != null) {
+      scheduler.shutdownNow();
+      try {
+        scheduler.awaitTermination(60, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        LOG.info(
+            threadName + " interrupted while waiting for task completion {}",
+            e);
+      }
     }
     scheduler = null;
   }

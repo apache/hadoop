@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.collections.IteratorUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.ResourceSizing;
@@ -59,8 +59,8 @@ import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.NODE_PART
  */
 public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
     extends AppPlacementAllocator<N> {
-  private static final Log LOG =
-      LogFactory.getLog(SingleConstraintAppPlacementAllocator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SingleConstraintAppPlacementAllocator.class);
 
   private ReentrantReadWriteLock.ReadLock readLock;
   private ReentrantReadWriteLock.WriteLock writeLock;
@@ -363,8 +363,8 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
 
   @Override
   public boolean canAllocate(NodeType type, SchedulerNode node) {
+    readLock.lock();
     try {
-      readLock.lock();
       return checkCardinalityAndPending(node);
     } finally {
       readLock.unlock();
@@ -411,8 +411,8 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
 
   @Override
   public void showRequests() {
+    readLock.lock();
     try {
-      readLock.lock();
       if (schedulingRequest != null) {
         LOG.info(schedulingRequest.toString());
       }

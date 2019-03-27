@@ -25,6 +25,7 @@ import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 
 /**
  * This class is for maintaining Ozone Manager statistics.
@@ -39,6 +40,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numVolumeOps;
   private @Metric MutableCounterLong numBucketOps;
   private @Metric MutableCounterLong numKeyOps;
+  private @Metric MutableCounterLong numFSOps;
 
   // OM op metrics
   private @Metric MutableCounterLong numVolumeCreates;
@@ -59,11 +61,13 @@ public class OMMetrics {
   private @Metric MutableCounterLong numVolumeLists;
   private @Metric MutableCounterLong numKeyCommits;
   private @Metric MutableCounterLong numAllocateBlockCalls;
+  private @Metric MutableCounterLong numAddAllocateBlockCalls;
   private @Metric MutableCounterLong numGetServiceLists;
   private @Metric MutableCounterLong numListS3Buckets;
   private @Metric MutableCounterLong numInitiateMultipartUploads;
   private @Metric MutableCounterLong numCompleteMultipartUploads;
 
+  private @Metric MutableCounterLong numGetFileStatus;
 
   // Failure Metrics
   private @Metric MutableCounterLong numVolumeCreateFails;
@@ -84,6 +88,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numVolumeListFails;
   private @Metric MutableCounterLong numKeyCommitFails;
   private @Metric MutableCounterLong numBlockAllocateCallFails;
+  private @Metric MutableCounterLong numAddAllocateBlockCallFails;
   private @Metric MutableCounterLong numGetServiceListFails;
   private @Metric MutableCounterLong numListS3BucketsFails;
   private @Metric MutableCounterLong numInitiateMultipartUploadFails;
@@ -95,6 +100,8 @@ public class OMMetrics {
   private @Metric MutableCounterLong numListMultipartUploadParts;
   private @Metric MutableCounterLong numListMultipartUploadPartFails;
 
+  private @Metric MutableCounterLong numGetFileStatusFails;
+
   // Metrics for total number of volumes, buckets and keys
 
   private @Metric MutableCounterLong numVolumes;
@@ -105,6 +112,10 @@ public class OMMetrics {
   // few minutes before restart may not be included in this count.
   private @Metric MutableCounterLong numKeys;
 
+  // Metrics to track checkpointing statistics from last run.
+  private @Metric MutableGaugeLong lastCheckpointCreationTimeTaken;
+  private @Metric MutableGaugeLong lastCheckpointTarOperationTimeTaken;
+  private @Metric MutableGaugeLong lastCheckpointStreamingTimeTaken;
 
   public OMMetrics() {
   }
@@ -276,6 +287,16 @@ public class OMMetrics {
     numListMultipartUploadParts.incr();
   }
 
+  public void incNumGetFileStatus() {
+    numKeyOps.incr();
+    numFSOps.incr();
+    numGetFileStatus.incr();
+  }
+
+  public void incNumGetFileStatusFails() {
+    numGetFileStatusFails.incr();
+  }
+
   public void incNumListMultipartUploadPartFails() {
     numListMultipartUploadPartFails.incr();
   }
@@ -374,6 +395,14 @@ public class OMMetrics {
     numBlockAllocateCallFails.incr();
   }
 
+  public void incNumAddAllocateBlockCalls() {
+    numAddAllocateBlockCalls.incr();
+  }
+
+  public void incNumAddAllocateBlockFails() {
+    numAddAllocateBlockCallFails.incr();
+  }
+
   public void incNumBucketListFails() {
     numBucketListFails.incr();
   }
@@ -388,6 +417,18 @@ public class OMMetrics {
 
   public void incNumGetServiceListFails() {
     numGetServiceListFails.incr();
+  }
+
+  public void setLastCheckpointCreationTimeTaken(long val) {
+    this.lastCheckpointCreationTimeTaken.set(val);
+  }
+
+  public void setLastCheckpointTarOperationTimeTaken(long val) {
+    this.lastCheckpointTarOperationTimeTaken.set(val);
+  }
+
+  public void setLastCheckpointStreamingTimeTaken(long val) {
+    this.lastCheckpointStreamingTimeTaken.set(val);
   }
 
   @VisibleForTesting
@@ -550,6 +591,17 @@ public class OMMetrics {
     return numKeyListFails.value();
   }
 
+
+  @VisibleForTesting
+  public long getNumFSOps() {
+    return numFSOps.value();
+  }
+
+  @VisibleForTesting
+  public long getNumGetFileStatus() {
+    return numGetFileStatus.value();
+  }
+
   @VisibleForTesting
   public long getNumVolumeListFails() {
     return numVolumeListFails.value();
@@ -604,6 +656,21 @@ public class OMMetrics {
 
   public long getNumAbortMultipartUploadFails() {
     return numAbortMultipartUploadFails.value();
+  }
+
+  @VisibleForTesting
+  public long getLastCheckpointCreationTimeTaken() {
+    return lastCheckpointCreationTimeTaken.value();
+  }
+
+  @VisibleForTesting
+  public long getLastCheckpointTarOperationTimeTaken() {
+    return lastCheckpointTarOperationTimeTaken.value();
+  }
+
+  @VisibleForTesting
+  public long getLastCheckpointStreamingTimeTaken() {
+    return lastCheckpointStreamingTimeTaken.value();
   }
 
   public void unRegister() {

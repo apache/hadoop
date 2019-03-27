@@ -113,7 +113,7 @@ public class RouterClientProtocol implements ClientProtocol {
   private final ActiveNamenodeResolver namenodeResolver;
 
   /** Identifier for the super user. */
-  private final String superUser;
+  private String superUser;
   /** Identifier for the super group. */
   private final String superGroup;
   /** Erasure coding calls. */
@@ -126,7 +126,13 @@ public class RouterClientProtocol implements ClientProtocol {
     this.namenodeResolver = rpcServer.getNamenodeResolver();
 
     // User and group for reporting
-    this.superUser = System.getProperty("user.name");
+    try {
+      this.superUser = UserGroupInformation.getCurrentUser().getShortUserName();
+    } catch (IOException ex) {
+      LOG.warn("Unable to get user name. Fall back to system property " +
+          "user.name", ex);
+      this.superUser = System.getProperty("user.name");
+    }
     this.superGroup = conf.get(
         DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY,
         DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);

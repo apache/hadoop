@@ -328,9 +328,7 @@ public class NMWebServices {
       } catch (IOException ex) {
         // Something wrong with we tries to access the remote fs for the logs.
         // Skip it and do nothing
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(ex.getMessage());
-        }
+        LOG.debug("{}", ex);
       }
       GenericEntity<List<ContainerLogsInfo>> meta = new GenericEntity<List<
           ContainerLogsInfo>>(containersLogsInfo){};
@@ -433,10 +431,8 @@ public class NMWebServices {
     } catch (Exception ex) {
       // This NM does not have this container any more. We
       // assume the container has already finished.
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Can not find the container:" + containerId
-            + " in this node.");
-      }
+      LOG.debug("Can not find the container:{} in this node.",
+          containerId);
     }
     final boolean isRunning = tempIsRunning;
     File logFile = null;

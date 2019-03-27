@@ -167,7 +167,7 @@ public class HBaseTimelineReaderImpl
     @Override
     public void run() {
       try {
-        LOG.info("Running HBase liveness monitor");
+        LOG.debug("Running HBase liveness monitor");
         TimelineEntityReader reader =
             TimelineEntityReaderFactory.createMultipleEntitiesReader(
                 monitorContext, MONITOR_FILTERS, DATA_TO_RETRIEVE);
@@ -175,9 +175,7 @@ public class HBaseTimelineReaderImpl
 
         // on success, reset hbase down flag
         if (hbaseDown.getAndSet(false)) {
-          if(LOG.isDebugEnabled()) {
-            LOG.debug("HBase request succeeded, assuming HBase up");
-          }
+          LOG.debug("HBase request succeeded, assuming HBase up");
         }
       } catch (Exception e) {
         LOG.warn("Got failure attempting to read from timeline storage, " +

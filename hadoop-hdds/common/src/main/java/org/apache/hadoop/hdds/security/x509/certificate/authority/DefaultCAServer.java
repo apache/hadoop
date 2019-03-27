@@ -36,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -171,6 +172,23 @@ public class DefaultCAServer implements CertificateServer {
     }
   }
 
+  /**
+   * Returns the Certificate corresponding to given certificate serial id if
+   * exist. Return null if it doesn't exist.
+   *
+   * @param certSerialId         - Certificate for this CA.
+   * @return X509CertificateHolder
+   * @throws CertificateException - usually thrown if this CA is not
+   * initialized.
+   * @throws IOException - on Error.
+   */
+  @Override
+  public X509Certificate getCertificate(String certSerialId) throws
+      IOException {
+    return store.getCertificateByID(new BigInteger(certSerialId),
+        CertificateStore.CertType.VALID_CERTS);
+  }
+
   private KeyPair getCAKeys() throws IOException {
     KeyCodec keyCodec = new KeyCodec(config, componentName);
     try {
@@ -206,12 +224,16 @@ public class DefaultCAServer implements CertificateServer {
         break;
       case KERBEROS_TRUSTED:
       case TESTING_AUTOMATIC:
-        X509CertificateHolder xcert = approver.sign(config,
-            getCAKeys().getPrivate(),
-            getCACertificate(), java.sql.Date.valueOf(beginDate),
-            java.sql.Date.valueOf(endDate), csr);
-        store.storeValidCertificate(xcert.getSerialNumber(),
-            CertificateCodec.getX509Certificate(xcert));
+        X509CertificateHolder xcert;
+        try {
+          xcert = signAndStoreCertificate(beginDate, endDate, csr);
+        } catch (SCMSecurityException e) {
+          // Certificate with conflicting serial id, retry again may resolve
+          // this issue.
+          LOG.error("Certificate storage failed, retrying one more time.", e);
+          xcert = signAndStoreCertificate(beginDate, endDate, csr);
+        }
+
         xcertHolder.complete(xcert);
         break;
       default:
@@ -222,6 +244,18 @@ public class DefaultCAServer implements CertificateServer {
       xcertHolder.completeExceptionally(new SCMSecurityException(e));
     }
     return xcertHolder;
+  }
+
+  private X509CertificateHolder signAndStoreCertificate(LocalDate beginDate,
+      LocalDate endDate, PKCS10CertificationRequest csr) throws IOException,
+      OperatorCreationException, CertificateException {
+    X509CertificateHolder xcert = approver.sign(config,
+        getCAKeys().getPrivate(),
+        getCACertificate(), java.sql.Date.valueOf(beginDate),
+        java.sql.Date.valueOf(endDate), csr, scmID, clusterID);
+    store.storeValidCertificate(xcert.getSerialNumber(),
+        CertificateCodec.getX509Certificate(xcert));
+    return xcert;
   }
 
   @Override

@@ -163,6 +163,7 @@ public class TestMetadataStore {
 
   }
 
+
   @Test
   public void testMetaStoreConfigDifferentFromType() throws IOException {
 

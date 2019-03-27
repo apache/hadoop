@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 
+/*
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Assert;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -39,13 +40,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventT
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.junit.Before;
 import org.junit.Test;
+*/
 
 /**
  * A test case that tests the expiry of the application master.
  * More tests can be added to this.
  */
 public class TestApplicationMasterExpiry {
-//  private static final Log LOG = LogFactory.getLog(TestApplicationMasterExpiry.class);
+//  private static final Logger LOG =
+//      LoggerFactory.getLogger(TestApplicationMasterExpiry.class);
 //  private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 //
 //  private final RMContext context = new RMContextImpl(new MemStore());

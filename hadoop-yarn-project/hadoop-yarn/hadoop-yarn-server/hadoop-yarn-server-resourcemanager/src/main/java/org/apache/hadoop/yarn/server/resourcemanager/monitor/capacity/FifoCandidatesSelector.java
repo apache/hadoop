@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -40,8 +40,8 @@ import java.util.TreeSet;
 
 public class FifoCandidatesSelector
     extends PreemptionCandidatesSelector {
-  private static final Log LOG =
-      LogFactory.getLog(FifoCandidatesSelector.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FifoCandidatesSelector.class);
   private PreemptableResourceCalculator preemptableAmountCalculator;
   private boolean allowQueuesBalanceAfterAllQueuesSatisfied;
 
@@ -80,10 +80,8 @@ public class FifoCandidatesSelector
       // check if preemption disabled for the queue
       if (preemptionContext.getQueueByPartition(queueName,
           RMNodeLabelsManager.NO_LABEL).preemptionDisabled) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("skipping from queue=" + queueName
-              + " because it's a non-preemptable queue");
-        }
+        LOG.debug("skipping from queue={} because it's a"
+            + " non-preemptable queue", queueName);
         continue;
       }
 
@@ -96,8 +94,8 @@ public class FifoCandidatesSelector
               .getResToObtainByPartitionForLeafQueue(preemptionContext,
                   queueName, clusterResource);
 
+      leafQueue.getReadLock().lock();
       try {
-        leafQueue.getReadLock().lock();
         // go through all ignore-partition-exclusivity containers first to make
         // sure such containers will be preemptionCandidates first
         Map<String, TreeSet<RMContainer>> ignorePartitionExclusivityContainers =

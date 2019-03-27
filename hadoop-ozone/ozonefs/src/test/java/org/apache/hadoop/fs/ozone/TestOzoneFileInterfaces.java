@@ -26,6 +26,8 @@ import java.util.Collection;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -93,6 +95,10 @@ public class TestOzoneFileInterfaces {
 
   private static OzoneFileSystem o3fs;
 
+  private static String volumeName;
+
+  private static String bucketName;
+
   private static StorageHandler storageHandler;
 
   private OzoneFSStorageStatistics statistics;
@@ -117,8 +123,8 @@ public class TestOzoneFileInterfaces {
     // create a volume and a bucket to be used by OzoneFileSystem
     userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
-    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
-    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
+    volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
     UserArgs userArgs = new UserArgs(null, OzoneUtils.getRequestID(),
         null, null, null, null);
     VolumeArgs volumeArgs = new VolumeArgs(volumeName, userArgs);
@@ -182,7 +188,7 @@ public class TestOzoneFileInterfaces {
     assertEquals(statistics.getLong(
         StorageStatistics.CommonStatisticNames.OP_GET_FILE_STATUS).longValue(),
         2);
-    assertEquals(statistics.getLong("objects_query").longValue(), 1);
+    assertEquals(statistics.getLong("objects_query").longValue(), 2);
     // The timestamp of the newly created file should always be greater than
     // the time when the test was started
     assertTrue("Modification time has not been recorded: " + status,
@@ -242,6 +248,40 @@ public class TestOzoneFileInterfaces {
     FileStatus statusRoot = fs.getFileStatus(createPath("/"));
     assertTrue("Root dir (/) is not a directory.", status.isDirectory());
     assertEquals(0, status.getLen());
+  }
+
+  @Test
+  public void testOzoneManagerFileSystemInterface() throws IOException {
+    String dirPath = RandomStringUtils.randomAlphanumeric(5);
+
+    Path path = createPath("/" + dirPath);
+    assertTrue("Makedirs returned with false for the path " + path,
+        fs.mkdirs(path));
+
+    long numFileStatus =
+        cluster.getOzoneManager().getMetrics().getNumGetFileStatus();
+    FileStatus status = fs.getFileStatus(path);
+
+    Assert.assertEquals(numFileStatus + 1,
+        cluster.getOzoneManager().getMetrics().getNumGetFileStatus());
+    assertTrue(status.isDirectory());
+    assertEquals(FsPermission.getDirDefault(), status.getPermission());
+    verifyOwnerGroup(status);
+
+    long currentTime = System.currentTimeMillis();
+    OzoneFileStatus omStatus =
+        cluster.getOzoneManager().getFileStatus(volumeName,
+        bucketName, o3fs.pathToKey(path));
+    //Another get file status here, incremented the counter.
+    Assert.assertEquals(numFileStatus + 2,
+        cluster.getOzoneManager().getMetrics().getNumGetFileStatus());
+
+    assertTrue("The created path is not directory.", omStatus.isDirectory());
+
+    // For directories, the time returned is the current time.
+    assertEquals(0, omStatus.getLen());
+    assertTrue(omStatus.getModificationTime() >= currentTime);
+    assertEquals(omStatus.getPath().getName(), o3fs.pathToKey(path));
   }
 
   @Test

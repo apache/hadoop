@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.client;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
@@ -45,14 +46,15 @@ public class CertificateClientTestImpl implements CertificateClient {
 
   private final SecurityConfig securityConfig;
   private final KeyPair keyPair;
-  private final X509Certificate cert;
+  private final Configuration config;
+  private final X509Certificate x509Certificate;
 
-  public CertificateClientTestImpl(OzoneConfiguration conf) throws Exception{
+  public CertificateClientTestImpl(OzoneConfiguration conf) throws Exception {
     securityConfig = new SecurityConfig(conf);
     HDDSKeyGenerator keyGen =
         new HDDSKeyGenerator(securityConfig.getConfiguration());
     keyPair = keyGen.generateKey();
-
+    config = conf;
     SelfSignedCertificate.Builder builder =
         SelfSignedCertificate.newBuilder()
             .setBeginDate(LocalDate.now())
@@ -60,12 +62,13 @@ public class CertificateClientTestImpl implements CertificateClient {
             .setClusterID("cluster1")
             .setKey(keyPair)
             .setSubject("TestCertSub")
-            .setConfiguration(conf)
+            .setConfiguration(config)
             .setScmID("TestScmId1")
             .makeCA();
-
-    X509CertificateHolder certificateHolder = builder.build();
-    cert = new JcaX509CertificateConverter().getCertificate(certificateHolder);
+    X509CertificateHolder certificateHolder = null;
+    certificateHolder = builder.build();
+    x509Certificate = new JcaX509CertificateConverter().getCertificate(
+        certificateHolder);
   }
 
   @Override
@@ -78,9 +81,21 @@ public class CertificateClientTestImpl implements CertificateClient {
     return keyPair.getPublic();
   }
 
+  /**
+   * Returns the certificate  of the specified component if it exists on the
+   * local system.
+   *
+   * @return certificate or Null if there is no data.
+   */
+  @Override
+  public X509Certificate getCertificate(String certSerialId)
+      throws CertificateException {
+    return x509Certificate;
+  }
+
   @Override
   public X509Certificate getCertificate() {
-    return cert;
+    return x509Certificate;
   }
 
   @Override
@@ -101,19 +116,19 @@ public class CertificateClientTestImpl implements CertificateClient {
 
   @Override
   public boolean verifySignature(InputStream stream, byte[] signature,
-      X509Certificate x509Certificate) throws CertificateException {
+      X509Certificate cert) throws CertificateException {
     return true;
   }
 
   @Override
   public boolean verifySignature(byte[] data, byte[] signature,
-      X509Certificate x509Certificate) throws CertificateException {
+      X509Certificate cert) throws CertificateException {
     return true;
   }
 
   @Override
   public CertificateSignRequest.Builder getCSRBuilder() {
-    return null;
+    return new CertificateSignRequest.Builder();
   }
 
   @Override
@@ -122,7 +137,7 @@ public class CertificateClientTestImpl implements CertificateClient {
   }
 
   @Override
-  public void storeCertificate(X509Certificate certificate)
+  public void storeCertificate(String cert, boolean force)
       throws CertificateException {
 
   }

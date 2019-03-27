@@ -227,6 +227,8 @@ public class FsDatasetCache {
    */
   private final long maxBytes;
 
+  private final MappableBlockLoader mappableBlockLoader;
+
   /**
    * Number of cache commands that could not be completed successfully
    */
@@ -236,7 +238,7 @@ public class FsDatasetCache {
    */
   final AtomicLong numBlocksFailedToUncache = new AtomicLong(0);
 
-  public FsDatasetCache(FsDatasetImpl dataset) {
+  public FsDatasetCache(FsDatasetImpl dataset) throws IOException {
     this.dataset = dataset;
     this.maxBytes = dataset.datanode.getDnConf().getMaxLockedMemory();
     ThreadFactory workerFactory = new ThreadFactoryBuilder()
@@ -268,6 +270,7 @@ public class FsDatasetCache {
               ".  Reconfigure this to " + minRevocationPollingMs);
     }
     this.revocationPollingMs = confRevocationPollingMs;
+    this.mappableBlockLoader = new MemoryMappableBlockLoader();
   }
 
   /**
@@ -461,14 +464,14 @@ public class FsDatasetCache {
           return;
         }
         try {
-          mappableBlock = MappableBlock.
-              load(length, blockIn, metaIn, blockFileName);
+          mappableBlock = mappableBlockLoader.load(length, blockIn, metaIn,
+              blockFileName, key);
         } catch (ChecksumException e) {
           // Exception message is bogus since this wasn't caused by a file read
           LOG.warn("Failed to cache " + key + ": checksum verification failed.");
           return;
         } catch (IOException e) {
-          LOG.warn("Failed to cache " + key, e);
+          LOG.warn("Failed to cache the block [key=" + key + "]!", e);
           return;
         }
         synchronized (FsDatasetCache.this) {
@@ -498,9 +501,7 @@ public class FsDatasetCache {
           }
           LOG.debug("Caching of {} was aborted.  We are now caching only {} "
                   + "bytes in total.", key, usedBytesCount.get());
-          if (mappableBlock != null) {
-            mappableBlock.close();
-          }
+          IOUtils.closeQuietly(mappableBlock);
           numBlocksFailedToCache.incrementAndGet();
 
           synchronized (FsDatasetCache.this) {

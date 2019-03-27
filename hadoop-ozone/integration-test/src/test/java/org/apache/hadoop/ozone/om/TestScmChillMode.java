@@ -41,7 +41,6 @@ import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.MiniOzoneClusterImpl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.TestStorageContainerManagerHelper;
-import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
@@ -178,7 +177,7 @@ public class TestScmChillMode {
 
     om = miniCluster.get().getOzoneManager();
 
-    LambdaTestUtils.intercept(OMException.class,
+    LambdaTestUtils.intercept(IOException.class,
         "ChillModePrecheck failed for allocateBlock",
         () -> om.openKey(keyArgs));
   }
@@ -335,7 +334,8 @@ public class TestScmChillMode {
     assertFalse((scm.getClientProtocolServer()).getChillModeStatus());
     final List<ContainerInfo> containers = scm.getContainerManager()
         .getContainers();
-    scm.getEventQueue().fireEvent(SCMEvents.CHILL_MODE_STATUS, true);
+    scm.getEventQueue().fireEvent(SCMEvents.CHILL_MODE_STATUS,
+        new SCMChillModeManager.ChillModeStatus(true));
     GenericTestUtils.waitFor(() -> {
       return clientProtocolServer.getChillModeStatus();
     }, 50, 1000 * 5);

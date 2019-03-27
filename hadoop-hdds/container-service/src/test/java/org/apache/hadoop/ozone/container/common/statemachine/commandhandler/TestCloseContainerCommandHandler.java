@@ -39,6 +39,7 @@ import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.retry.RetryPolicy;
 import org.apache.ratis.rpc.SupportedRpcType;
+import org.apache.ratis.util.TimeDuration;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
@@ -49,6 +50,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Test cases to verify CloseContainerCommandHandler in datanode.
@@ -215,6 +217,52 @@ public class TestCloseContainerCommandHandler {
     }
   }
 
+  @Test
+  public void testQuasiCloseClosedContainer()
+      throws Exception {
+    final OzoneConfiguration conf = new OzoneConfiguration();
+    final DatanodeDetails datanodeDetails = randomDatanodeDetails();
+    final OzoneContainer ozoneContainer = getOzoneContainer(
+        conf, datanodeDetails);
+    ozoneContainer.start();
+    try {
+      final Container container = createContainer(
+          conf, datanodeDetails, ozoneContainer);
+      Mockito.verify(context.getParent(),
+          Mockito.times(1)).triggerHeartbeat();
+      final long containerId = container.getContainerData().getContainerID();
+      final PipelineID pipelineId = PipelineID.valueOf(UUID.fromString(
+          container.getContainerData().getOriginPipelineId()));
+
+      final CloseContainerCommandHandler closeHandler =
+          new CloseContainerCommandHandler();
+      final CloseContainerCommand closeCommand = new CloseContainerCommand(
+          containerId, pipelineId);
+
+      closeHandler.handle(closeCommand, ozoneContainer, context, null);
+
+      Assert.assertEquals(ContainerProtos.ContainerDataProto.State.CLOSED,
+          ozoneContainer.getContainerSet().getContainer(containerId)
+              .getContainerState());
+
+      // The container is closed, now we send close command with
+      // pipeline id which doesn't exist.
+      // This should cause the datanode to trigger quasi close, since the
+      // container is already closed, this should do nothing.
+      // The command should not fail either.
+      final PipelineID randomPipeline = PipelineID.randomId();
+      final CloseContainerCommand quasiCloseCommand =
+          new CloseContainerCommand(containerId, randomPipeline);
+      closeHandler.handle(quasiCloseCommand, ozoneContainer, context, null);
+
+      Assert.assertEquals(ContainerProtos.ContainerDataProto.State.CLOSED,
+          ozoneContainer.getContainerSet().getContainer(containerId)
+              .getContainerState());
+    } finally {
+      ozoneContainer.stop();
+    }
+  }
+
   private OzoneContainer getOzoneContainer(final OzoneConfiguration conf,
       final DatanodeDetails datanodeDetails) throws IOException {
     testDir = GenericTestUtils.getTestDir(
@@ -228,7 +276,7 @@ public class TestCloseContainerCommandHandler {
         .thenReturn(datanodeDetails);
     Mockito.when(context.getParent()).thenReturn(datanodeStateMachine);
     final OzoneContainer ozoneContainer = new  OzoneContainer(
-        datanodeDetails, conf, context);
+        datanodeDetails, conf, context, null);
     ozoneContainer.getDispatcher().setScmId(UUID.randomUUID().toString());
     return ozoneContainer;
   }
@@ -243,8 +291,10 @@ public class TestCloseContainerCommandHandler {
     final RaftGroup group = RatisHelper.newRaftGroup(raftGroupId,
         Collections.singleton(datanodeDetails));
     final int maxOutstandingRequests = 100;
-    final RaftClient client = RatisHelper.newRaftClient(SupportedRpcType.GRPC,
-        peer, retryPolicy, maxOutstandingRequests, null);
+    final RaftClient client = RatisHelper
+        .newRaftClient(SupportedRpcType.GRPC, peer, retryPolicy,
+            maxOutstandingRequests,
+            TimeDuration.valueOf(3, TimeUnit.SECONDS));
     Assert.assertTrue(client.groupAdd(group, peer.getId()).isSuccess());
     Thread.sleep(2000);
     final ContainerID containerId = ContainerID.valueof(

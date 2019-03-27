@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.deviceframework;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
@@ -33,7 +33,8 @@ import java.util.Set;
  * */
 public class DeviceResourceUpdaterImpl extends NodeResourceUpdaterPlugin {
 
-  final static Log LOG = LogFactory.getLog(DeviceResourceUpdaterImpl.class);
+  final static Logger LOG = LoggerFactory.
+      getLogger(DeviceResourceUpdaterImpl.class);
 
   private String resourceName;
   private DevicePlugin devicePlugin;

@@ -18,15 +18,17 @@
 
 package org.apache.hadoop.ozone.container.ozoneimpl;
 
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.BlockTokenSecretProto.AccessModeProto;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.client.CertificateClientTestImpl;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
@@ -34,7 +36,7 @@ import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
-import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -52,7 +54,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Collection;
@@ -61,6 +62,7 @@ import java.util.UUID;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_DATANODE_DIR_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -85,6 +87,8 @@ public class TestSecureOzoneContainer {
   private Boolean requireBlockToken;
   private Boolean hasBlockToken;
   private Boolean blockTokeExpired;
+  private CertificateClientTestImpl caClient;
+  private OzoneBlockTokenSecretManager secretManager;
 
 
   public TestSecureOzoneContainer(Boolean requireBlockToken,
@@ -105,14 +109,16 @@ public class TestSecureOzoneContainer {
   }
 
   @Before
-  public void setup() throws IOException{
+  public void setup() throws Exception {
     conf = new OzoneConfiguration();
     String ozoneMetaPath =
         GenericTestUtils.getTempPath("ozoneMeta");
     conf.set(OZONE_METADATA_DIRS, ozoneMetaPath);
-
     secConfig = new SecurityConfig(conf);
-
+    caClient = new CertificateClientTestImpl(conf);
+    secretManager = new OzoneBlockTokenSecretManager(new SecurityConfig(conf),
+        60 * 60 * 24, caClient.getCertificate().
+        getSerialNumber().toString());
   }
 
   @Test
@@ -136,7 +142,7 @@ public class TestSecureOzoneContainer {
           OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, false);
 
       DatanodeDetails dn = TestUtils.randomDatanodeDetails();
-      container = new OzoneContainer(dn, conf, getContext(dn));
+      container = new OzoneContainer(dn, conf, getContext(dn), caClient);
       //Setting scmId, as we start manually ozone container.
       container.getDispatcher().setScmId(UUID.randomUUID().toString());
       container.start();
@@ -148,54 +154,47 @@ public class TestSecureOzoneContainer {
 
       OzoneBlockTokenIdentifier tokenId = new OzoneBlockTokenIdentifier(
           "testUser", "cid:lud:bcsid",
-          EnumSet.allOf(HddsProtos.BlockTokenSecretProto.AccessModeProto.class),
+          EnumSet.allOf(AccessModeProto.class),
           expiryDate, "1234", 128L);
 
       int port = dn.getPort(DatanodeDetails.Port.Name.STANDALONE).getValue();
       if (port == 0) {
         port = secConfig.getConfiguration().getInt(OzoneConfigKeys
-                .DFS_CONTAINER_IPC_PORT,
-            OzoneConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT);
+                .DFS_CONTAINER_IPC_PORT, DFS_CONTAINER_IPC_PORT_DEFAULT);
       }
-      InetSocketAddress addr =
-          new InetSocketAddress(dn.getIpAddress(), port);
-
-      Token<OzoneBlockTokenIdentifier> token =
-          new Token(tokenId.getBytes(), new byte[50], tokenId.getKind(),
-              SecurityUtil.buildTokenService(addr));
+      secretManager.start(caClient);
+      Token<OzoneBlockTokenIdentifier> token = secretManager.generateToken(
+          "123", EnumSet.allOf(AccessModeProto.class), RandomUtils.nextLong());
       if (hasBlockToken) {
         ugi.addToken(token);
       }
 
-      ugi.doAs(new PrivilegedAction<Void>() {
-        @Override
-        public Void run() {
-          try {
-            XceiverClientGrpc client = new XceiverClientGrpc(pipeline, conf);
-            client.connect(token.encodeToUrlString());
-            if (hasBlockToken) {
-              createContainerForTesting(client, containerID, token);
-            } else {
-              createContainerForTesting(client, containerID, null);
-            }
-
-          } catch (Exception e) {
-            if (requireBlockToken && hasBlockToken && !blockTokeExpired) {
-              LOG.error("Unexpected error. ", e);
-              fail("Client with BlockToken should succeed when block token is" +
-                  " required.");
-            }
-            if (requireBlockToken && hasBlockToken && blockTokeExpired) {
-              assertTrue("Receive expected exception",
-                  e instanceof SCMSecurityException);
-            }
-            if (requireBlockToken && !hasBlockToken) {
-              assertTrue("Receive expected exception", e instanceof
-                  IOException);
-            }
+      ugi.doAs((PrivilegedAction<Void>) () -> {
+        try {
+          XceiverClientGrpc client = new XceiverClientGrpc(pipeline, conf);
+          client.connect(token.encodeToUrlString());
+          if (hasBlockToken) {
+            createContainerForTesting(client, containerID, token);
+          } else {
+            createContainerForTesting(client, containerID, null);
           }
-          return null;
+
+        } catch (Exception e) {
+          if (requireBlockToken && hasBlockToken && !blockTokeExpired) {
+            LOG.error("Unexpected error. ", e);
+            fail("Client with BlockToken should succeed when block token is" +
+                " required.");
+          }
+          if (requireBlockToken && hasBlockToken && blockTokeExpired) {
+            assertTrue("Receive expected exception",
+                e instanceof SCMSecurityException);
+          }
+          if (requireBlockToken && !hasBlockToken) {
+            assertTrue("Receive expected exception", e instanceof
+                IOException);
+          }
         }
+        return null;
       });
     } finally {
       if (container != null) {

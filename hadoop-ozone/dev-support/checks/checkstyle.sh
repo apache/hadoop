@@ -15,7 +15,7 @@
 # limitations under the License.
 mvn -fn checkstyle:check -am -pl :hadoop-ozone-dist -Phdds
 
-violations=$(grep -r error --include checkstyle-errors.xml | wc -l)
+violations=$(grep -r error --include checkstyle-errors.xml .| wc -l)
 if [[ $violations -gt 0 ]]; then
     echo "There are $violations checkstyle violations"
     exit -1

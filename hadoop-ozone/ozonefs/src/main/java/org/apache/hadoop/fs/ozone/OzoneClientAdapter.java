@@ -17,8 +17,15 @@
  */
 package org.apache.hadoop.fs.ozone;
 
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.security.token.Token;
+
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
+
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.util.Iterator;
 
 /**
@@ -38,18 +45,22 @@ public interface OzoneClientAdapter {
 
   void renameKey(String key, String newKeyName) throws IOException;
 
-  BasicKeyInfo getKeyInfo(String keyName);
-
   boolean isDirectory(BasicKeyInfo key);
 
   boolean createDirectory(String keyName);
 
   boolean deleteObject(String keyName);
 
-  long getCreationTime();
-
-  boolean hasNextKey(String key);
-
   Iterator<BasicKeyInfo> listKeys(String pathKey);
 
+  Token<OzoneTokenIdentifier> getDelegationToken(String renewer)
+      throws IOException;
+
+  KeyProvider getKeyProvider() throws IOException;
+
+  URI getKeyProviderUri() throws IOException;
+
+  String getCanonicalServiceName();
+
+  OzoneFileStatus getFileStatus(String pathKey) throws IOException;
 }

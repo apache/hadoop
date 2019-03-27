@@ -44,9 +44,9 @@ public class BaseResource implements Serializable {
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();
-    builder.append("BaseResource [uri=");
-    builder.append(uri);
-    builder.append("]");
+    builder.append("BaseResource [uri=")
+        .append(uri)
+        .append("]");
     return builder.toString();
   }
 }

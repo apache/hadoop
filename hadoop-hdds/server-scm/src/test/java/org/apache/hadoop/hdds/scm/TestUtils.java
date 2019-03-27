@@ -17,18 +17,26 @@
 package org.apache.hadoop.hdds.scm;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineAction;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ClosePipelineInfo;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineActionsProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.PipelineAction;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ClosePipelineInfo;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.PipelineActionsProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineReport;
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerReplica;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
-import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.PipelineActionsFromDatanode;
+import org.apache.hadoop.hdds.scm.server.SCMConfigurator;
+import org.apache.hadoop.hdds.scm.server
+    .SCMDatanodeHeartbeatDispatcher.PipelineActionsFromDatanode;
 import org.apache.hadoop.hdds.scm.server
     .SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
@@ -54,13 +62,16 @@ import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.common.Storage;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
-import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authentication.client
+    .AuthenticationException;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -92,7 +103,7 @@ public final class TestUtils {
    *
    * @return DatanodeDetails
    */
-  private static DatanodeDetails createDatanodeDetails(UUID uuid) {
+  public static DatanodeDetails createDatanodeDetails(UUID uuid) {
     String ipAddress = random.nextInt(256)
         + "." + random.nextInt(256)
         + "." + random.nextInt(256)
@@ -440,7 +451,7 @@ public final class TestUtils {
       allocateContainer(ContainerManager containerManager)
       throws IOException {
     return containerManager
-        .allocateContainer(HddsProtos.ReplicationType.STAND_ALONE,
+        .allocateContainer(HddsProtos.ReplicationType.RATIS,
             HddsProtos.ReplicationFactor.THREE, "root");
 
   }
@@ -469,9 +480,40 @@ public final class TestUtils {
 
   }
 
+  /**
+   * Construct and returns StorageContainerManager instance using the given
+   * configuration. The ports used by this StorageContainerManager are
+   * randomly selected from free ports available.
+   *
+   * @param conf OzoneConfiguration
+   * @return StorageContainerManager instance
+   * @throws IOException
+   * @throws AuthenticationException
+   */
   public static StorageContainerManager getScm(OzoneConfiguration conf)
       throws IOException, AuthenticationException {
+    return getScm(conf, new SCMConfigurator());
+  }
+
+  /**
+   * Construct and returns StorageContainerManager instance using the given
+   * configuration and the configurator. The ports used by this
+   * StorageContainerManager are randomly selected from free ports available.
+   *
+   * @param conf OzoneConfiguration
+   * @param configurator SCMConfigurator
+   * @return StorageContainerManager instance
+   * @throws IOException
+   * @throws AuthenticationException
+   */
+  public static StorageContainerManager getScm(OzoneConfiguration conf,
+                                               SCMConfigurator configurator)
+      throws IOException, AuthenticationException {
     conf.setBoolean(OZONE_ENABLED, true);
+    conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
+    conf.set(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
+    conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY, "127.0.0.1:0");
+    conf.set(ScmConfigKeys.OZONE_SCM_HTTP_ADDRESS_KEY, "127.0.0.1:0");
     SCMStorageConfig scmStore = new SCMStorageConfig(conf);
     if(scmStore.getState() != Storage.StorageState.INITIALIZED) {
       String clusterId = UUID.randomUUID().toString();
@@ -481,7 +523,53 @@ public final class TestUtils {
       // writes the version file properties
       scmStore.initialize();
     }
-    return StorageContainerManager.createSCM(null, conf);
+    return new StorageContainerManager(conf, configurator);
+  }
+
+  public static ContainerInfo getContainer(
+      final HddsProtos.LifeCycleState state) {
+    return new ContainerInfo.Builder()
+        .setContainerID(RandomUtils.nextLong())
+        .setReplicationType(HddsProtos.ReplicationType.RATIS)
+        .setReplicationFactor(HddsProtos.ReplicationFactor.THREE)
+        .setState(state)
+        .setOwner("TEST")
+        .build();
+  }
+
+  public static Set<ContainerReplica> getReplicas(
+      final ContainerID containerId,
+      final ContainerReplicaProto.State state,
+      final DatanodeDetails... datanodeDetails) {
+    return getReplicas(containerId, state, 10000L, datanodeDetails);
+  }
+
+  public static Set<ContainerReplica> getReplicas(
+      final ContainerID containerId,
+      final ContainerReplicaProto.State state,
+      final long sequenceId,
+      final DatanodeDetails... datanodeDetails) {
+    Set<ContainerReplica> replicas = new HashSet<>();
+    for (DatanodeDetails datanode : datanodeDetails) {
+      replicas.add(getReplicas(containerId, state,
+          sequenceId, datanode.getUuid(), datanode));
+    }
+    return replicas;
+  }
+
+  public static ContainerReplica getReplicas(
+      final ContainerID containerId,
+      final ContainerReplicaProto.State state,
+      final long sequenceId,
+      final UUID originNodeId,
+      final DatanodeDetails datanodeDetails) {
+    return ContainerReplica.newBuilder()
+        .setContainerID(containerId)
+        .setContainerState(state)
+        .setDatanodeDetails(datanodeDetails)
+        .setOriginNodeId(originNodeId)
+        .setSequenceId(sequenceId)
+        .build();
   }
 
 }

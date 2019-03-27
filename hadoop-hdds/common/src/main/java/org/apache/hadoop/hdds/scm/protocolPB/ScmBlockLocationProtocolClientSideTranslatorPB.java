@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.client.ContainerBlockID;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.AllocateBlockResponse;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.AllocateScmBlockRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.AllocateScmBlockResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.DeleteScmKeyBlocksRequestProto;
@@ -32,8 +33,10 @@ import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.Dele
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.KeyBlocks;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.common.BlockGroup;
@@ -73,18 +76,29 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
    * Asks SCM where a block should be allocated. SCM responds with the
    * set of datanodes that should be used creating this block.
    * @param size - size of the block.
+   * @param num - number of blocks.
+   * @param type - replication type of the blocks.
+   * @param factor - replication factor of the blocks.
+   * @param excludeList - exclude list while allocating blocks.
    * @return allocated block accessing info (key, pipeline).
    * @throws IOException
    */
   @Override
-  public AllocatedBlock allocateBlock(long size,
+  public List<AllocatedBlock> allocateBlock(long size, int num,
       HddsProtos.ReplicationType type, HddsProtos.ReplicationFactor factor,
-      String owner) throws IOException {
+      String owner, ExcludeList excludeList) throws IOException {
     Preconditions.checkArgument(size > 0, "block size must be greater than 0");
 
     AllocateScmBlockRequestProto request =
-        AllocateScmBlockRequestProto.newBuilder().setSize(size).setType(type)
-            .setFactor(factor).setOwner(owner).build();
+        AllocateScmBlockRequestProto.newBuilder()
+            .setSize(size)
+            .setNumBlocks(num)
+            .setType(type)
+            .setFactor(factor)
+            .setOwner(owner)
+            .setTraceID(TracingUtil.exportCurrentSpan())
+            .setExcludeList(excludeList.getProtoBuf())
+            .build();
     final AllocateScmBlockResponseProto response;
     try {
       response = rpcProxy.allocateScmBlock(NULL_RPC_CONTROLLER, request);
@@ -96,11 +110,17 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
       throw new IOException(response.hasErrorMessage() ?
           response.getErrorMessage() : "Allocate block failed.");
     }
-    AllocatedBlock.Builder builder = new AllocatedBlock.Builder()
-        .setContainerBlockID(
-            ContainerBlockID.getFromProtobuf(response.getContainerBlockID()))
-        .setPipeline(Pipeline.getFromProtobuf(response.getPipeline()));
-    return builder.build();
+
+    List<AllocatedBlock> blocks = new ArrayList<>(response.getBlocksCount());
+    for (AllocateBlockResponse resp : response.getBlocksList()) {
+      AllocatedBlock.Builder builder = new AllocatedBlock.Builder()
+          .setContainerBlockID(
+              ContainerBlockID.getFromProtobuf(resp.getContainerBlockID()))
+          .setPipeline(Pipeline.getFromProtobuf(resp.getPipeline()));
+      blocks.add(builder.build());
+    }
+
+    return blocks;
   }
 
   /**
@@ -117,7 +137,9 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
     List<KeyBlocks> keyBlocksProto = keyBlocksInfoList.stream()
         .map(BlockGroup::getProto).collect(Collectors.toList());
     DeleteScmKeyBlocksRequestProto request = DeleteScmKeyBlocksRequestProto
-        .newBuilder().addAllKeyBlocks(keyBlocksProto).build();
+        .newBuilder()
+        .addAllKeyBlocks(keyBlocksProto)
+        .build();
 
     final DeleteScmKeyBlocksResponseProto resp;
     try {

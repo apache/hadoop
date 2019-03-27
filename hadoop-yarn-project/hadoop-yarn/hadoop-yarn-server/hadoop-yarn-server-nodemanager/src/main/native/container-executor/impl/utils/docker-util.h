@@ -35,6 +35,7 @@
 #define DOCKER_VOLUME_COMMAND "volume"
 #define DOCKER_START_COMMAND "start"
 #define DOCKER_EXEC_COMMAND "exec"
+#define DOCKER_IMAGES_COMMAND "images"
 #define DOCKER_ARG_MAX 1024
 #define ARGS_INITIAL_VALUE { 0 };
 
@@ -219,4 +220,15 @@ char** extract_execv_args(args *args);
  * @return value of max retries
  */
 int get_max_retries(const struct configuration *conf);
+
+/**
+ * Get the Docker images command line string. The function will verify that the params file is meant for the images
+ * command.
+ * @param command_file File containing the params for the Docker images command
+ * @param conf Configuration struct containing the container-executor.cfg details
+ * @param args Buffer to construct argv
+ * @return Return code with 0 indicating success and non-zero codes indicating error
+ */
+int get_docker_images_command(const char* command_file, const struct configuration* conf, args *args);
+
 #endif

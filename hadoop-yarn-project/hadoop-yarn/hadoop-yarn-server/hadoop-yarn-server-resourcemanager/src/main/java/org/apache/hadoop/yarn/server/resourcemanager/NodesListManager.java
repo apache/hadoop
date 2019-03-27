@@ -31,8 +31,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.Node;
@@ -66,7 +66,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class NodesListManager extends CompositeService implements
     EventHandler<NodesListManagerEvent> {
 
-  private static final Log LOG = LogFactory.getLog(NodesListManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NodesListManager.class);
 
   private HostsFileReader hostsReader;
   private Configuration conf;
@@ -492,17 +493,17 @@ public class NodesListManager extends CompositeService implements
     RMNode eventNode = event.getNode();
     switch (event.getType()) {
     case NODE_UNUSABLE:
-      LOG.debug(eventNode + " reported unusable");
+      LOG.debug("{} reported unusable", eventNode);
       sendRMAppNodeUpdateEventToNonFinalizedApps(eventNode,
           RMAppNodeUpdateType.NODE_UNUSABLE);
       break;
     case NODE_USABLE:
-      LOG.debug(eventNode + " reported usable");
+      LOG.debug("{} reported usable", eventNode);
       sendRMAppNodeUpdateEventToNonFinalizedApps(eventNode,
           RMAppNodeUpdateType.NODE_USABLE);
       break;
     case NODE_DECOMMISSIONING:
-      LOG.debug(eventNode + " reported decommissioning");
+      LOG.debug("{} reported decommissioning", eventNode);
       sendRMAppNodeUpdateEventToNonFinalizedApps(
           eventNode, RMAppNodeUpdateType.NODE_DECOMMISSIONING);
       break;

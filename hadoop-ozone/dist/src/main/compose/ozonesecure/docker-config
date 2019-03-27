@@ -23,11 +23,15 @@ OZONE-SITE.XML_ozone.scm.block.client.address=scm
 OZONE-SITE.XML_ozone.metadata.dirs=/data/metadata
 OZONE-SITE.XML_ozone.handler.type=distributed
 OZONE-SITE.XML_ozone.scm.client.address=scm
+OZONE-SITE.XML_hdds.block.token.enabled=true
 OZONE-SITE.XML_ozone.replication=1
 OZONE-SITE.XML_hdds.scm.kerberos.principal=scm/scm@EXAMPLE.COM
 OZONE-SITE.XML_hdds.scm.kerberos.keytab.file=/etc/security/keytabs/scm.keytab
 OZONE-SITE.XML_ozone.om.kerberos.principal=om/om@EXAMPLE.COM
 OZONE-SITE.XML_ozone.om.kerberos.keytab.file=/etc/security/keytabs/om.keytab
+OZONE-SITE.XML_ozone.s3g.keytab.file=/etc/security/keytabs/HTTP.keytab
+OZONE-SITE.XML_ozone.s3g.authentication.kerberos.principal=HTTP/s3g@EXAMPLE.COM
+
 OZONE-SITE.XML_ozone.security.enabled=true
 OZONE-SITE.XML_hdds.scm.http.kerberos.principal=HTTP/scm@EXAMPLE.COM
 OZONE-SITE.XML_hdds.scm.http.kerberos.keytab=/etc/security/keytabs/HTTP.keytab
@@ -45,6 +49,13 @@ CORE-SITE.XML_hadoop.security.authentication=kerberos
 CORE-SITE.XML_hadoop.security.auth_to_local=RULE:[2:$1@$0](.*)s/.*/root/
 CORE-SITE.XML_hadoop.security.key.provider.path=kms://http@kms:9600/kms
 
+CORE-SITE.XML_hadoop.security.authorization=true
+HADOOP-POLICY.XML_ozone.om.security.client.protocol.acl=*
+HADOOP-POLICY.XML_hdds.security.client.datanode.container.protocol.acl=*
+HADOOP-POLICY.XML_hdds.security.client.scm.container.protocol.acl=*
+HADOOP-POLICY.XML_hdds.security.client.scm.block.protocol.acl=*
+HADOOP-POLICY.XML_hdds.security.client.scm.certificate.protocol.acl=*
+
 HDFS-SITE.XML_rpc.metrics.quantile.enable=true
 HDFS-SITE.XML_rpc.metrics.percentiles.intervals=60,300
 LOG4J.PROPERTIES_log4j.rootLogger=INFO, stdout
@@ -53,6 +64,7 @@ LOG4J.PROPERTIES_log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
 LOG4J.PROPERTIES_log4j.appender.stdout.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n
 LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop.util.NativeCodeLoader=ERROR
 LOG4J.PROPERTIES_log4j.logger.org.apache.ratis.conf.ConfUtils=WARN
+LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop=INFO
 LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop.security.ShellBasedUnixGroupsMapping=ERROR
 
 #Enable this variable to print out all hadoop rpc traffic to the stdout. See http://byteman.jboss.org/ to define your own instrumentation.
@@ -96,11 +108,11 @@ LOG4J2.PROPERTIES_rootLogger.appenderRefs=stdout
 LOG4J2.PROPERTIES_rootLogger.appenderRef.stdout.ref=STDOUT
 
 OZONE_DATANODE_SECURE_USER=root
-CONF_DIR=/etc/security/keytabs
-KERBEROS_KEYTABS=dn om scm HTTP testuser
+KEYTAB_DIR=/etc/security/keytabs
+KERBEROS_KEYTABS=dn om scm HTTP testuser s3g
 KERBEROS_KEYSTORES=hadoop
 KERBEROS_SERVER=kdc
-JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
+JAVA_HOME=/usr/lib/jvm/jre
 JSVC_HOME=/usr/bin
 SLEEP_SECONDS=5
 KERBEROS_ENABLED=true

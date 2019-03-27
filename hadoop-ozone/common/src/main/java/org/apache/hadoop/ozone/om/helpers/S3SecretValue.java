@@ -17,11 +17,7 @@
  */
 package org.apache.hadoop.ozone.om.helpers;
 
-import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
-
-import java.io.IOException;
 
 /**
  * S3Secret to be saved in database.
@@ -29,13 +25,10 @@ import java.io.IOException;
 public class S3SecretValue {
   private String kerberosID;
   private String awsSecret;
-  private String awsAccessKey;
 
-  public S3SecretValue(String kerberosID, String awsSecret) throws IOException {
+  public S3SecretValue(String kerberosID, String awsSecret) {
     this.kerberosID = kerberosID;
     this.awsSecret = awsSecret;
-    this.awsAccessKey =
-        DigestUtils.md5Hex(OmUtils.getMD5Digest(kerberosID));
   }
 
   public String getKerberosID() {
@@ -55,15 +48,11 @@ public class S3SecretValue {
   }
 
   public String getAwsAccessKey() {
-    return awsAccessKey;
-  }
-
-  public void setAwsAccessKey(String awsAccessKey) {
-    this.awsAccessKey = awsAccessKey;
+    return kerberosID;
   }
 
   public static S3SecretValue fromProtobuf(
-      OzoneManagerProtocolProtos.S3Secret s3Secret) throws IOException {
+      OzoneManagerProtocolProtos.S3Secret s3Secret) {
     return new S3SecretValue(s3Secret.getKerberosID(), s3Secret.getAwsSecret());
   }
 
@@ -76,6 +65,6 @@ public class S3SecretValue {
 
   @Override
   public String toString() {
-    return "awsAccessKey=" + awsAccessKey + "\nawsSecret=" + awsSecret;
+    return "awsAccessKey=" + kerberosID + "\nawsSecret=" + awsSecret;
   }
 }

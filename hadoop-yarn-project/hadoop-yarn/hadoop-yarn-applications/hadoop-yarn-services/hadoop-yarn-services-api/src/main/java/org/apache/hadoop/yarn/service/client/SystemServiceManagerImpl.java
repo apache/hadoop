@@ -361,9 +361,7 @@ public class SystemServiceManagerImpl extends AbstractService
   private Service getServiceDefinition(Path filePath) {
     Service service = null;
     try {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Loading service definition from FS: " + filePath);
-      }
+      LOG.debug("Loading service definition from FS: {}", filePath);
       service = jsonSerDeser.load(fs, filePath);
     } catch (IOException e) {
       LOG.info("Error while loading service definition from FS: {}", e);

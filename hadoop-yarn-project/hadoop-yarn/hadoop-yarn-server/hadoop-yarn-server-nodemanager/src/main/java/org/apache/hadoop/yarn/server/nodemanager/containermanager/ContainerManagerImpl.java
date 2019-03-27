@@ -230,6 +230,7 @@ public class ContainerManagerImpl extends CompositeService implements
 
   // NM metrics publisher is set only if the timeline service v.2 is enabled
   private NMTimelinePublisher nmMetricsPublisher;
+  private boolean timelineServiceV2Enabled;
 
   public ContainerManagerImpl(Context context, ContainerExecutor exec,
       DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
@@ -267,11 +268,13 @@ public class ContainerManagerImpl extends CompositeService implements
     // initialize the metrics publisher if the timeline service v.2 is enabled
     // and the system publisher is enabled
     Configuration conf = context.getConf();
-    if (YarnConfiguration.timelineServiceV2Enabled(conf) &&
-        YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
-      LOG.info("YARN system metrics publishing service is enabled");
-      nmMetricsPublisher = createNMTimelinePublisher(context);
-      context.setNMTimelinePublisher(nmMetricsPublisher);
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      if (YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
+        LOG.info("YARN system metrics publishing service is enabled");
+        nmMetricsPublisher = createNMTimelinePublisher(context);
+        context.setNMTimelinePublisher(nmMetricsPublisher);
+      }
+      this.timelineServiceV2Enabled = true;
     }
     this.containersMonitor = createContainersMonitor(exec);
     addService(this.containersMonitor);
@@ -365,9 +368,7 @@ public class ContainerManagerImpl extends CompositeService implements
                appsState.getIterator()) {
         while (rasIterator.hasNext()) {
           ContainerManagerApplicationProto proto = rasIterator.next();
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Recovering application with state: " + proto.toString());
-          }
+          LOG.debug("Recovering application with state: {}", proto);
           recoverApplication(proto);
         }
       }
@@ -376,9 +377,7 @@ public class ContainerManagerImpl extends CompositeService implements
                stateStore.getContainerStateIterator()) {
         while (rcsIterator.hasNext()) {
           RecoveredContainerState rcs = rcsIterator.next();
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Recovering container with state: " + rcs);
-          }
+          LOG.debug("Recovering container with state: {}", rcs);
           recoverContainer(rcs);
         }
       }
@@ -425,20 +424,16 @@ public class ContainerManagerImpl extends CompositeService implements
       FlowContextProto fcp = p.getFlowContext();
       fc = new FlowContext(fcp.getFlowName(), fcp.getFlowVersion(),
           fcp.getFlowRunId());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            "Recovering Flow context: " + fc + " for an application " + appId);
-      }
+      LOG.debug(
+          "Recovering Flow context: {} for an application {}", fc, appId);
     } else {
       // in upgrade situations, where there is no prior existing flow context,
       // default would be used.
       fc = new FlowContext(TimelineUtils.generateDefaultFlowName(null, appId),
           YarnConfiguration.DEFAULT_FLOW_VERSION, appId.getClusterTimestamp());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            "No prior existing flow context found. Using default Flow context: "
-                + fc + " for an application " + appId);
-      }
+      LOG.debug(
+          "No prior existing flow context found. Using default Flow context: "
+          + "{} for an application {}", fc, appId);
     }
 
     LOG.info("Recovering application " + appId);
@@ -1191,7 +1186,7 @@ public class ContainerManagerImpl extends CompositeService implements
   private FlowContext getFlowContext(ContainerLaunchContext launchContext,
       ApplicationId applicationID) {
     FlowContext flowContext = null;
-    if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
+    if (timelineServiceV2Enabled) {
       String flowName = launchContext.getEnvironment()
           .get(TimelineUtils.FLOW_NAME_TAG_PREFIX);
       String flowVersion = launchContext.getEnvironment()
@@ -1203,11 +1198,8 @@ public class ContainerManagerImpl extends CompositeService implements
         flowRunId = Long.parseLong(flowRunIdStr);
       }
       flowContext = new FlowContext(flowName, flowVersion, flowRunId);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            "Flow context: " + flowContext + " created for an application "
-                + applicationID);
-      }
+      LOG.debug("Flow context: {} created for an application {}",
+          flowContext, applicationID);
     }
     return flowContext;
   }

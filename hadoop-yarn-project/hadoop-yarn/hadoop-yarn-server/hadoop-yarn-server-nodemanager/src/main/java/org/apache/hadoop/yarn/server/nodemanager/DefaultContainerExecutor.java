@@ -331,17 +331,17 @@ public class DefaultContainerExecutor extends ContainerExecutor {
             + containerId + " and exit code: " + exitCode , e);
 
         StringBuilder builder = new StringBuilder();
-        builder.append("Exception from container-launch.\n");
-        builder.append("Container id: ").append(containerId).append("\n");
-        builder.append("Exit code: ").append(exitCode).append("\n");
+        builder.append("Exception from container-launch.\n")
+            .append("Container id: ").append(containerId).append("\n")
+            .append("Exit code: ").append(exitCode).append("\n");
         if (!Optional.fromNullable(e.getMessage()).or("").isEmpty()) {
-          builder.append("Exception message: ");
-          builder.append(e.getMessage()).append("\n");
+          builder.append("Exception message: ")
+              .append(e.getMessage()).append("\n");
         }
 
         if (!shExec.getOutput().isEmpty()) {
-          builder.append("Shell output: ");
-          builder.append(shExec.getOutput()).append("\n");
+          builder.append("Shell output: ")
+              .append(shExec.getOutput()).append("\n");
         }
         String diagnostics = builder.toString();
         logOutput(diagnostics);
@@ -573,10 +573,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     String user = ctx.getUser();
     String pid = ctx.getPid();
     Signal signal = ctx.getSignal();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Sending signal " + signal.getValue() + " to pid " + pid
-          + " as user " + user);
-    }
+    LOG.debug("Sending signal {} to pid {} as user {}",
+        signal.getValue(), pid, user);
     if (!containerIsAlive(pid)) {
       return false;
     }

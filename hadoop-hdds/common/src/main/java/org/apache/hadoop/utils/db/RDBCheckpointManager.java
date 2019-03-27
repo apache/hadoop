@@ -19,11 +19,11 @@
 
 package org.apache.hadoop.utils.db;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.rocksdb.Checkpoint;
 import org.rocksdb.RocksDB;
@@ -41,7 +41,6 @@ public class RDBCheckpointManager {
   public static final String RDB_CHECKPOINT_DIR_PREFIX = "rdb_checkpoint_";
   private static final Logger LOG =
       LoggerFactory.getLogger(RDBCheckpointManager.class);
-  public static final String JAVA_TMP_DIR = "java.io.tmpdir";
   private String checkpointNamePrefix = "";
 
   public RDBCheckpointManager(RocksDB rocksDB) {
@@ -68,8 +67,7 @@ public class RDBCheckpointManager {
    * @param parentDir The directory where the checkpoint needs to be created.
    * @return RocksDB specific Checkpoint information object.
    */
-  public RocksDBCheckpointSnapshot createCheckpointSnapshot(String parentDir)
-      throws IOException {
+  public RocksDBCheckpoint createCheckpoint(String parentDir) {
     try {
       long currentTime = System.currentTimeMillis();
 
@@ -80,51 +78,23 @@ public class RDBCheckpointManager {
       checkpointDir += "_" + RDB_CHECKPOINT_DIR_PREFIX + currentTime;
 
       Path checkpointPath = Paths.get(parentDir, checkpointDir);
+      Instant start = Instant.now();
       checkpoint.createCheckpoint(checkpointPath.toString());
+      Instant end = Instant.now();
 
-      return new RocksDBCheckpointSnapshot(
+      long duration = Duration.between(start, end).toMillis();
+      LOG.debug("Created checkpoint at " + checkpointPath.toString() + " in "
+          + duration + " milliseconds");
+
+      return new RocksDBCheckpoint(
           checkpointPath,
           currentTime,
-          db.getLatestSequenceNumber()); //Best guesstimate here. Not accurate.
+          db.getLatestSequenceNumber(), //Best guesstimate here. Not accurate.
+          duration);
 
     } catch (RocksDBException e) {
       LOG.error("Unable to create RocksDB Snapshot.", e);
     }
     return null;
-  }
-
-  class RocksDBCheckpointSnapshot implements DBCheckpointSnapshot {
-
-    private Path checkpointLocation;
-    private long checkpointTimestamp;
-    private long latestSequenceNumber;
-
-    RocksDBCheckpointSnapshot(Path checkpointLocation,
-                              long snapshotTimestamp,
-                              long latestSequenceNumber) {
-      this.checkpointLocation = checkpointLocation;
-      this.checkpointTimestamp = snapshotTimestamp;
-      this.latestSequenceNumber = latestSequenceNumber;
-    }
-
-    @Override
-    public Path getCheckpointLocation() {
-      return this.checkpointLocation;
-    }
-
-    @Override
-    public long getCheckpointTimestamp() {
-      return this.checkpointTimestamp;
-    }
-
-    @Override
-    public long getLatestSequenceNumber() {
-      return this.latestSequenceNumber;
-    }
-
-    @Override
-    public void cleanupCheckpoint() throws IOException {
-      FileUtils.deleteDirectory(checkpointLocation.toFile());
-    }
   }
 }

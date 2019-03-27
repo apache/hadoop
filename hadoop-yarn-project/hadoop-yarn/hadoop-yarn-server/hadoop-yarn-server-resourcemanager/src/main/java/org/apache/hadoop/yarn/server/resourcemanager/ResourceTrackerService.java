@@ -33,8 +33,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.commons.collections.CollectionUtils;
 import com.google.common.collect.ImmutableMap;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
@@ -98,7 +98,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class ResourceTrackerService extends AbstractService implements
     ResourceTracker {
 
-  private static final Log LOG = LogFactory.getLog(ResourceTrackerService.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ResourceTrackerService.class);
 
   private static final RecordFactory recordFactory = 
     RecordFactoryProvider.getRecordFactory(null);
@@ -128,6 +129,7 @@ public class ResourceTrackerService extends AbstractService implements
 
   private final AtomicLong timelineCollectorVersion = new AtomicLong(0);
   private boolean checkIpHostnameInRegistration;
+  private boolean timelineServiceV2Enabled;
 
   public ResourceTrackerService(RMContext rmContext,
       NodesListManager nodesListManager,
@@ -177,6 +179,8 @@ public class ResourceTrackerService extends AbstractService implements
     minimumNodeManagerVersion = conf.get(
         YarnConfiguration.RM_NODEMANAGER_MINIMUM_VERSION,
         YarnConfiguration.DEFAULT_RM_NODEMANAGER_MINIMUM_VERSION);
+    timelineServiceV2Enabled =  YarnConfiguration.
+        timelineServiceV2Enabled(conf);
 
     if (YarnConfiguration.areNodeLabelsEnabled(conf)) {
       isDistributedNodeLabelsConf =
@@ -292,10 +296,8 @@ public class ResourceTrackerService extends AbstractService implements
     }
 
     if (rmApp.getApplicationSubmissionContext().getUnmanagedAM()) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Ignoring container completion status for unmanaged AM "
-            + rmApp.getApplicationId());
-      }
+      LOG.debug("Ignoring container completion status for unmanaged AM {}",
+          rmApp.getApplicationId());
       return;
     }
 
@@ -389,11 +391,9 @@ public class ResourceTrackerService extends AbstractService implements
 
     Resource dynamicLoadCapability = loadNodeResourceFromDRConfiguration(nid);
     if (dynamicLoadCapability != null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Resource for node: " + nid + " is adjusted from: " +
-            capability + " to: " + dynamicLoadCapability +
-            " due to settings in dynamic-resources.xml.");
-      }
+      LOG.debug("Resource for node: {} is adjusted from: {} to: {} due to"
+          + " settings in dynamic-resources.xml.", nid, capability,
+          dynamicLoadCapability);
       capability = dynamicLoadCapability;
       // sync back with new resource.
       response.setResource(capability);
@@ -621,9 +621,7 @@ public class ResourceTrackerService extends AbstractService implements
           NodeAction.SHUTDOWN, message);
     }
 
-    boolean timelineV2Enabled =
-        YarnConfiguration.timelineServiceV2Enabled(getConfig());
-    if (timelineV2Enabled) {
+    if (timelineServiceV2Enabled) {
       // Check & update collectors info from request.
       updateAppCollectorsMap(request);
     }
@@ -639,7 +637,7 @@ public class ResourceTrackerService extends AbstractService implements
 
     populateTokenSequenceNo(request, nodeHeartBeatResponse);
 
-    if (timelineV2Enabled) {
+    if (timelineServiceV2Enabled) {
       // Return collectors' map that NM needs to know
       setAppCollectorsMapToResponse(rmNode.getRunningApps(),
           nodeHeartBeatResponse);
@@ -748,9 +746,9 @@ public class ResourceTrackerService extends AbstractService implements
       this.rmContext.getNodeAttributesManager()
           .replaceNodeAttributes(NodeAttribute.PREFIX_DISTRIBUTED,
               ImmutableMap.of(nodeId.getHost(), nodeAttributes));
-    } else if (LOG.isDebugEnabled()) {
-      LOG.debug("Skip updating node attributes since there is no change for "
-          + nodeId + " : " + nodeAttributes);
+    } else {
+      LOG.debug("Skip updating node attributes since there is no change"
+          +" for {} : {}", nodeId, nodeAttributes);
     }
   }
 
@@ -773,10 +771,8 @@ public class ResourceTrackerService extends AbstractService implements
         if (appCollectorData != null) {
           liveAppCollectorsMap.put(appId, appCollectorData);
         } else {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Collector for applicaton: " + appId +
-                " hasn't registered yet!");
-          }
+          LOG.debug("Collector for applicaton: {} hasn't registered yet!",
+              appId);
         }
       }
     }
@@ -880,7 +876,7 @@ public class ResourceTrackerService extends AbstractService implements
           .append("} reported from NM with ID ").append(nodeId)
           .append(" was rejected from RM with exception message as : ")
           .append(ex.getMessage());
-      LOG.error(errorMessage, ex);
+      LOG.error(errorMessage.toString(), ex);
       throw new IOException(errorMessage.toString(), ex);
     }
   }
@@ -958,11 +954,8 @@ public class ResourceTrackerService extends AbstractService implements
     }
     if(request.getTokenSequenceNo() != this.rmContext.getTokenSequenceNo()) {
       if (!rmContext.getSystemCredentialsForApps().isEmpty()) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-              "Sending System credentials for apps as part of NodeHeartbeat "
-                  + "response.");
-        }
+        LOG.debug("Sending System credentials for apps as part of"
+            + " NodeHeartbeat response.");
         nodeHeartBeatResponse
             .setSystemCredentialsForApps(
                 rmContext.getSystemCredentialsForApps().values());

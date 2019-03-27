@@ -88,6 +88,17 @@ public class KeyCodec {
   }
 
   /**
+   * Creates an KeyCodec.
+   *
+   * @param config - Security Config.
+   */
+  public KeyCodec(SecurityConfig config) {
+    this.securityConfig = config;
+    isPosixFileSystem = KeyCodec::isPosix;
+    this.location = securityConfig.getKeyLocation();
+  }
+
+  /**
    * Creates an HDDS Key Writer.
    *
    * @param configuration - Configuration

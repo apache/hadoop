@@ -520,7 +520,7 @@ public class BlockManager implements BlockStatsMXBean {
     this.redundancyRecheckIntervalMs = conf.getTimeDuration(
         DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
         DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_DEFAULT,
-        TimeUnit.SECONDS) * 1000;
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
 
     this.storageInfoDefragmentInterval =
       conf.getLong(
@@ -839,8 +839,13 @@ public class BlockManager implements BlockStatsMXBean {
       new ArrayList<DatanodeStorageInfo>();
     
     NumberReplicas numReplicas = new NumberReplicas();
+    BlockInfo blockInfo = getStoredBlock(block);
+    if (blockInfo == null) {
+      out.println("Block "+ block + " is Null");
+      return;
+    }
     // source node returned is not used
-    chooseSourceDatanodes(getStoredBlock(block), containingNodes,
+    chooseSourceDatanodes(blockInfo, containingNodes,
         containingLiveReplicasNodes, numReplicas,
         new ArrayList<Byte>(), LowRedundancyBlocks.LEVEL);
     
@@ -849,7 +854,7 @@ public class BlockManager implements BlockStatsMXBean {
     assert containingLiveReplicasNodes.size() >= numReplicas.liveReplicas();
     int usableReplicas = numReplicas.liveReplicas() +
                          numReplicas.decommissionedAndDecommissioning();
-    
+
     if (block instanceof BlockInfo) {
       BlockCollection bc = getBlockCollection((BlockInfo)block);
       String fileName = (bc == null) ? "[orphaned]" : bc.getName();
@@ -1479,9 +1484,13 @@ public class BlockManager implements BlockStatsMXBean {
    */
   public boolean isSufficientlyReplicated(BlockInfo b) {
     // Compare against the lesser of the minReplication and number of live DNs.
-    final int replication =
-        Math.min(minReplication, getDatanodeManager().getNumLiveDataNodes());
-    return countNodes(b).liveReplicas() >= replication;
+    final int liveReplicas = countNodes(b).liveReplicas();
+    if (liveReplicas >= minReplication) {
+      return true;
+    }
+    // getNumLiveDataNodes() is very expensive and we minimize its use by
+    // comparing with minReplication first.
+    return liveReplicas >= getDatanodeManager().getNumLiveDataNodes();
   }
 
   /** Get all blocks with location information from a datanode. */
@@ -1765,8 +1774,8 @@ public class BlockManager implements BlockStatsMXBean {
     this.shouldPostponeBlocksFromFuture  = postpone;
   }
 
-
-  private void postponeBlock(Block blk) {
+  @VisibleForTesting
+  void postponeBlock(Block blk) {
     postponedMisreplicatedBlocks.add(blk);
   }
   

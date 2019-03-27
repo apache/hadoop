@@ -168,4 +168,13 @@ public class TestProviderUtils {
     Assert.assertEquals(resolved.getResolvedRsrcPaths().get("destFile1"),
         "destFile1");
   }
+
+  @Test
+  public void testReplaceSpacesWithDelimiter() {
+    String command = "ls  -l \" space\"";
+    String expected = "ls,-l, space";
+    String actual = ProviderUtils.replaceSpacesWithDelimiter(command, ",");
+    Assert.assertEquals("replaceSpaceWithDelimiter produces unexpected result.",
+        expected, actual);
+  }
 }

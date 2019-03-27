@@ -639,10 +639,7 @@ public class ApplicationImpl implements Application {
 
     try {
       ApplicationId applicationID = event.getApplicationID();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            "Processing " + applicationID + " of type " + event.getType());
-      }
+      LOG.debug("Processing {} of type {}", applicationID, event.getType());
       ApplicationState oldState = stateMachine.getCurrentState();
       ApplicationState newState = null;
       try {
@@ -667,8 +664,8 @@ public class ApplicationImpl implements Application {
 
   @VisibleForTesting
   public LogAggregationContext getLogAggregationContext() {
+    this.readLock.lock();
     try {
-      this.readLock.lock();
       return this.logAggregationContext;
     } finally {
       this.readLock.unlock();

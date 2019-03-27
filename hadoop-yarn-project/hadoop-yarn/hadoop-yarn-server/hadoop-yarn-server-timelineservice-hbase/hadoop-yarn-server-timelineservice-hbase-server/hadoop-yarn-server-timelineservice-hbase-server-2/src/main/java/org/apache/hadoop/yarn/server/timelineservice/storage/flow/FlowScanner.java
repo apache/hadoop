@@ -107,9 +107,7 @@ class FlowScanner implements RegionScanner, Closeable {
           YarnConfiguration.APP_FINAL_VALUE_RETENTION_THRESHOLD,
           YarnConfiguration.DEFAULT_APP_FINAL_VALUE_RETENTION_THRESHOLD);
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(" batch size=" + batchSize);
-    }
+    LOG.debug(" batch size={}", batchSize);
   }
 
 
@@ -443,11 +441,9 @@ class FlowScanner implements RegionScanner, Closeable {
       return finalCells;
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("In processSummationMajorCompaction,"
-          + " will drop cells older than " + currentTimestamp
-          + " CurrentColumnCells size=" + currentColumnCells.size());
-    }
+    LOG.debug("In processSummationMajorCompaction, will drop cells older"
+        + " than {} CurrentColumnCells size={}", currentTimestamp,
+        currentColumnCells.size());
 
     for (Cell cell : currentColumnCells) {
       AggregationOperation cellAggOp = getCurrentAggOp(cell);

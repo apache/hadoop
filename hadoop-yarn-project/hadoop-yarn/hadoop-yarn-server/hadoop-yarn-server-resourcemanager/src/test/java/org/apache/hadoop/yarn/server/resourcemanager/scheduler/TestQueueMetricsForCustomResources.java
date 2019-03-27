@@ -30,8 +30,6 @@ import org.apache.hadoop.yarn.resourcetypes.ResourceTypesTestHelper;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler
-    .QueueMetricsForCustomResources.QueueMetricsCustomResource;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.Before;
 import org.junit.Test;

@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.service.provider.ProviderUtils;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
+
 import org.apache.hadoop.yarn.service.containerlaunch.AbstractLauncher;
 import org.apache.hadoop.yarn.service.containerlaunch.CommandLineBuilder;
 import org.apache.hadoop.yarn.service.containerlaunch.ContainerLaunchService;
@@ -84,6 +85,11 @@ public class DockerProviderService extends AbstractProviderService
     if (useEntryPoint) {
       String launchCommand = compLaunchContext.getLaunchCommand();
       if (!StringUtils.isEmpty(launchCommand)) {
+        if(launchCommand.contains(" ")) {
+          // convert space delimiter command to exec format
+          launchCommand = ProviderUtils
+              .replaceSpacesWithDelimiter(launchCommand, ",");
+        }
         launcher.addCommand(launchCommand);
       }
     } else {

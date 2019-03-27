@@ -38,27 +38,31 @@ import org.apache.hadoop.hdds.scm.chillmode.ChillModePrecheck;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
-import org.apache.hadoop.hdds.server.events.EventHandler;
-import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes.INVALID_BLOCK_SIZE;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
+import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
+    .INVALID_BLOCK_SIZE;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
+
 
 /** Block Manager manages the block access for SCM. */
-public class BlockManagerImpl implements EventHandler<Boolean>,
-    BlockManager, BlockmanagerMXBean {
+public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   private static final Logger LOG =
       LoggerFactory.getLogger(BlockManagerImpl.class);
   // TODO : FIX ME : Hard coding the owner.
@@ -83,8 +87,8 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
    * @param scm
    * @throws IOException
    */
-  public BlockManagerImpl(final Configuration conf, StorageContainerManager scm)
-      throws IOException {
+  public BlockManagerImpl(final Configuration conf,
+                          final StorageContainerManager scm) {
     Objects.requireNonNull(scm, "SCM cannot be null");
     this.pipelineManager = scm.getPipelineManager();
     this.containerManager = scm.getContainerManager();
@@ -140,12 +144,14 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
    * @param size - Block Size
    * @param type Replication Type
    * @param factor - Replication Factor
+   * @param excludeList List of datanodes/containers to exclude during block
+   *                    allocation.
    * @return Allocated block
    * @throws IOException on failure.
    */
   @Override
-  public AllocatedBlock allocateBlock(final long size,
-      ReplicationType type, ReplicationFactor factor, String owner)
+  public AllocatedBlock allocateBlock(final long size, ReplicationType type,
+      ReplicationFactor factor, String owner, ExcludeList excludeList)
       throws IOException {
     LOG.trace("Size;{} , type : {}, factor : {} ", size, type, factor);
     ScmUtils.preCheck(ScmOps.allocateBlock, chillModePrecheck);
@@ -172,8 +178,10 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
     ContainerInfo containerInfo;
 
     while (true) {
-      List<Pipeline> availablePipelines = pipelineManager
-          .getPipelines(type, factor, Pipeline.PipelineState.OPEN);
+      List<Pipeline> availablePipelines =
+          pipelineManager
+              .getPipelines(type, factor, Pipeline.PipelineState.OPEN,
+                  excludeList.getDatanodes(), excludeList.getPipelineIds());
       Pipeline pipeline;
       if (availablePipelines.size() == 0) {
         try {
@@ -190,8 +198,9 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
       }
 
       // look for OPEN containers that match the criteria.
-      containerInfo = containerManager
-          .getMatchingContainer(size, owner, pipeline);
+      containerInfo = containerManager.getMatchingContainer(size, owner,
+          pipeline, excludeList.getContainerIds());
+
       if (containerInfo != null) {
         return newBlock(containerInfo);
       }
@@ -313,8 +322,8 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
   }
 
   @Override
-  public void onMessage(Boolean inChillMode, EventPublisher publisher) {
-    this.chillModePrecheck.setInChillMode(inChillMode);
+  public void setChillModeStatus(boolean chillModeStatus) {
+    this.chillModePrecheck.setInChillMode(chillModeStatus);
   }
 
   /**

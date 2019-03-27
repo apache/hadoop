@@ -33,6 +33,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.NodeReportProto;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.ozone.container.common.report.ReportManager;
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
     .CloseContainerCommandHandler;
@@ -82,15 +83,17 @@ public class DatanodeStateMachine implements Closeable {
   private final ReplicationSupervisor supervisor;
 
   private JvmPauseMonitor jvmPauseMonitor;
+  private CertificateClient dnCertClient;
 
   /**
    * Constructs a a datanode state machine.
-   *
-   * @param datanodeDetails - DatanodeDetails used to identify a datanode
+   *  @param datanodeDetails - DatanodeDetails used to identify a datanode
    * @param conf - Configuration.
+   * @param certClient - Datanode Certificate client, required if security is
+   *                     enabled
    */
   public DatanodeStateMachine(DatanodeDetails datanodeDetails,
-      Configuration conf) throws IOException {
+      Configuration conf, CertificateClient certClient) throws IOException {
     this.conf = conf;
     this.datanodeDetails = datanodeDetails;
     executorService = HadoopExecutors.newCachedThreadPool(
@@ -99,7 +102,8 @@ public class DatanodeStateMachine implements Closeable {
     connectionManager = new SCMConnectionManager(conf);
     context = new StateContext(this.conf, DatanodeStates.getInitState(), this);
     container = new OzoneContainer(this.datanodeDetails,
-        new OzoneConfiguration(conf), context);
+        new OzoneConfiguration(conf), context, certClient);
+    dnCertClient = certClient;
     nextHB = new AtomicLong(Time.monotonicNow());
 
     ContainerReplicator replicator =
@@ -359,8 +363,13 @@ public class DatanodeStateMachine implements Closeable {
    * @throws InterruptedException
    */
   public void join() throws InterruptedException {
-    stateMachineThread.join();
-    cmdProcessThread.join();
+    if (stateMachineThread != null) {
+      stateMachineThread.join();
+    }
+
+    if (cmdProcessThread != null) {
+      cmdProcessThread.join();
+    }
   }
 
   /**
@@ -388,7 +397,6 @@ public class DatanodeStateMachine implements Closeable {
   @VisibleForTesting
   public boolean isDaemonStopped() {
     return this.executorService.isShutdown()
-        && this.getContext().getExecutionCount() == 0
         && this.getContext().getState() == DatanodeStates.SHUTDOWN;
   }
 

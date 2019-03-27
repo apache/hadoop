@@ -34,6 +34,7 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -44,7 +45,6 @@ import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
 import io.opentracing.Scope;
 import org.apache.ratis.RaftConfigKeys;
 import org.apache.ratis.RatisHelper;
-import org.apache.ratis.client.RaftClientConfigKeys;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.grpc.GrpcConfigKeys;
 import org.apache.ratis.grpc.GrpcFactory;
@@ -114,9 +114,9 @@ public final class XceiverServerRatis extends XceiverServer {
 
   private XceiverServerRatis(DatanodeDetails dd, int port,
       ContainerDispatcher dispatcher, Configuration conf, StateContext
-      context, GrpcTlsConfig tlsConfig)
+      context, GrpcTlsConfig tlsConfig, CertificateClient caClient)
       throws IOException {
-    super(conf);
+    super(conf, caClient);
     Objects.requireNonNull(dd, "id == null");
     this.port = port;
     RaftProperties serverProperties = newRaftProperties(conf);
@@ -176,7 +176,7 @@ public final class XceiverServerRatis extends XceiverServer {
         setRaftSegmentPreallocatedSize(conf, properties);
 
     // Set max write buffer size, which is the scm chunk size
-    final int maxChunkSize = setMaxWriteBuffer(conf, properties);
+    final int maxChunkSize = setMaxWriteBuffer(properties);
     TimeUnit timeUnit;
     long duration;
 
@@ -329,23 +329,10 @@ public final class XceiverServerRatis extends XceiverServer {
         .setRequestTimeout(properties, serverRequestTimeout);
   }
 
-  private int setMaxWriteBuffer(Configuration conf, RaftProperties properties) {
+  private int setMaxWriteBuffer(RaftProperties properties) {
     final int maxChunkSize = OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE;
     RaftServerConfigKeys.Log.setWriteBufferSize(properties,
         SizeInBytes.valueOf(maxChunkSize));
-
-    // Set the client requestTimeout
-    TimeUnit timeUnit =
-        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_DEFAULT
-            .getUnit();
-    long duration = conf.getTimeDuration(
-        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_KEY,
-        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_DEFAULT
-            .getDuration(), timeUnit);
-    final TimeDuration clientRequestTimeout =
-        TimeDuration.valueOf(duration, timeUnit);
-    RaftClientConfigKeys.Rpc
-        .setRequestTimeout(properties, clientRequestTimeout);
     return maxChunkSize;
   }
 
@@ -394,7 +381,8 @@ public final class XceiverServerRatis extends XceiverServer {
 
   public static XceiverServerRatis newXceiverServerRatis(
       DatanodeDetails datanodeDetails, Configuration ozoneConf,
-      ContainerDispatcher dispatcher, StateContext context) throws IOException {
+      ContainerDispatcher dispatcher, StateContext context,
+      CertificateClient caClient) throws IOException {
     int localPort = ozoneConf.getInt(
         OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_PORT,
         OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_PORT_DEFAULT);
@@ -420,7 +408,7 @@ public final class XceiverServerRatis extends XceiverServer {
     datanodeDetails.setPort(
         DatanodeDetails.newPort(DatanodeDetails.Port.Name.RATIS, localPort));
     return new XceiverServerRatis(datanodeDetails, localPort,
-        dispatcher, ozoneConf, context, tlsConfig);
+        dispatcher, ozoneConf, context, tlsConfig, caClient);
   }
 
   @Override
@@ -486,7 +474,8 @@ public final class XceiverServerRatis extends XceiverServer {
     super.submitRequest(request, pipelineID);
     RaftClientReply reply;
     try (Scope scope = TracingUtil
-        .importAndCreateScope(request.getCmdType().name(),
+        .importAndCreateScope(
+            "XceiverServerRatis." + request.getCmdType().name(),
             request.getTraceID())) {
 
       RaftClientRequest raftClientRequest =
@@ -506,7 +495,8 @@ public final class XceiverServerRatis extends XceiverServer {
       RaftClientRequest.Type type) {
     return new RaftClientRequest(clientId, server.getId(),
         RaftGroupId.valueOf(PipelineID.getFromProtobuf(pipelineID).getId()),
-        nextCallId(), 0, Message.valueOf(request.toByteString()), type);
+        nextCallId(), Message.valueOf(request.toByteString()), type,
+        null);
   }
 
   private void handlePipelineFailure(RaftGroupId groupId,

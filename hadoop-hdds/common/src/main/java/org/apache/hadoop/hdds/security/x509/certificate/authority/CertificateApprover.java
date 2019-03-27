@@ -60,17 +60,22 @@ public interface CertificateApprover {
    * @param validFrom - Begin Date
    * @param validTill - End Date
    * @param certificationRequest - Certification Request.
+   * @param scmId - SCM id.
+   * @param clusterId - Cluster id.
    * @return Signed Certificate.
    * @throws IOException - On Error
    * @throws OperatorCreationException - on Error.
    */
+  @SuppressWarnings("ParameterNumber")
   X509CertificateHolder sign(
       SecurityConfig config,
       PrivateKey caPrivate,
       X509CertificateHolder caCertificate,
       Date validFrom,
       Date validTill,
-      PKCS10CertificationRequest certificationRequest)
+      PKCS10CertificationRequest certificationRequest,
+      String scmId,
+      String clusterId)
       throws IOException, OperatorCreationException;
 
 

@@ -42,8 +42,8 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -81,6 +81,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMW
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -108,7 +109,8 @@ import org.mockito.Mockito;
 
 public class TestSchedulerUtils {
 
-  private static final Log LOG = LogFactory.getLog(TestSchedulerUtils.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSchedulerUtils.class);
   private static Resource configuredMaxAllocation;
 
   private RMContext rmContext = getMockRMContext();
@@ -977,14 +979,17 @@ public class TestSchedulerUtils {
   }
 
   public static SchedulerApplication<SchedulerApplicationAttempt>
-  verifyAppAddedAndRemovedFromScheduler(
-          Map<ApplicationId, SchedulerApplication<SchedulerApplicationAttempt>> applications,
+      verifyAppAddedAndRemovedFromScheduler(
+          Map<ApplicationId, SchedulerApplication<SchedulerApplicationAttempt>>
+              applications,
           EventHandler<SchedulerEvent> handler, String queueName) {
 
+    ApplicationPlacementContext apc =
+        new ApplicationPlacementContext(queueName);
     ApplicationId appId =
             ApplicationId.newInstance(System.currentTimeMillis(), 1);
     AppAddedSchedulerEvent appAddedEvent =
-            new AppAddedSchedulerEvent(appId, queueName, "user");
+            new AppAddedSchedulerEvent(appId, queueName, "user", apc);
     handler.handle(appAddedEvent);
     SchedulerApplication<SchedulerApplicationAttempt> app =
             applications.get(appId);

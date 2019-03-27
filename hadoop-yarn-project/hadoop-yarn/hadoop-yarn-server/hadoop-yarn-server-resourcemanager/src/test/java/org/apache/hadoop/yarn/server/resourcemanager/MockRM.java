@@ -31,6 +31,7 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -109,16 +110,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSe
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.slf4j.event.Level;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.junit.Assert;
 
 
 @SuppressWarnings("unchecked")
 public class MockRM extends ResourceManager {
 
-  static final Logger LOG = Logger.getLogger(MockRM.class);
+  static final Logger LOG = LoggerFactory.getLogger(MockRM.class);
   static final String ENABLE_WEBAPP = "mockrm.webapp.enabled";
   private static final int SECOND = 1000;
   private static final int TIMEOUT_MS_FOR_ATTEMPT = 40 * SECOND;
@@ -176,8 +177,7 @@ public class MockRM extends ResourceManager {
         setRMStateStore(mockStateStore);
       }
     }
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     disableDrainEventsImplicitly = false;
   }
 

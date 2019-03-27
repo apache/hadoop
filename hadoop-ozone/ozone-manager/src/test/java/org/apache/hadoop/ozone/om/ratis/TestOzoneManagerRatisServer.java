@@ -34,10 +34,9 @@ import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMNodeDetails;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .OMResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.util.LifeCycle;
 import org.junit.After;
 import org.junit.Assert;
@@ -109,27 +108,6 @@ public class TestOzoneManagerRatisServer {
   }
 
   /**
-   * Submit any request to OM Ratis server and check that the dummy response
-   * message is received.
-   */
-  @Test
-  public void testSubmitRatisRequest() throws Exception {
-    // Wait for leader election
-    Thread.sleep(LEADER_ELECTION_TIMEOUT * 2);
-    OMRequest request = OMRequest.newBuilder()
-        .setCmdType(OzoneManagerProtocolProtos.Type.CreateVolume)
-        .setClientId(clientId)
-        .build();
-
-    OMResponse response = omRatisClient.sendCommand(request);
-
-    Assert.assertEquals(OzoneManagerProtocolProtos.Type.CreateVolume,
-        response.getCmdType());
-    Assert.assertEquals(false, response.getSuccess());
-    Assert.assertEquals(false, response.hasCreateVolumeResponse());
-  }
-
-  /**
    * Test that all of {@link OzoneManagerProtocolProtos.Type} enum values are
    * categorized in {@link OmUtils#isReadOnly(OMRequest)}.
    */
@@ -151,5 +129,53 @@ public class TestOzoneManagerRatisServer {
               "categorized as readOnly or not."));
       logCapturer.clearOutput();
     }
+  }
+
+  @Test
+  public void verifyRaftGroupIdGenerationWithDefaultOmServiceId() throws
+      Exception {
+    UUID uuid = UUID.nameUUIDFromBytes(OzoneConsts.OM_SERVICE_ID_DEFAULT
+        .getBytes());
+    RaftGroupId raftGroupId = omRatisServer.getRaftGroup().getGroupId();
+    Assert.assertEquals(uuid, raftGroupId.getUuid());
+    Assert.assertEquals(raftGroupId.toByteString().size(), 16);
+  }
+
+  @Test
+  public void verifyRaftGroupIdGenerationWithCustomOmServiceId() throws
+      Exception {
+    String customOmServiceId = "omSIdCustom123";
+    OzoneConfiguration newConf = new OzoneConfiguration();
+    String newOmId = UUID.randomUUID().toString();
+    String path = GenericTestUtils.getTempPath(newOmId);
+    Path metaDirPath = Paths.get(path, "om-meta");
+    newConf.set(HddsConfigKeys.OZONE_METADATA_DIRS, metaDirPath.toString());
+    newConf.setTimeDuration(
+        OMConfigKeys.OZONE_OM_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_KEY,
+        LEADER_ELECTION_TIMEOUT, TimeUnit.MILLISECONDS);
+    int ratisPort = 9873;
+    InetSocketAddress rpcAddress = new InetSocketAddress(
+        InetAddress.getLocalHost(), 0);
+    OMNodeDetails omNodeDetails = new OMNodeDetails.Builder()
+        .setRpcAddress(rpcAddress)
+        .setRatisPort(ratisPort)
+        .setOMNodeId(newOmId)
+        .setOMServiceId(customOmServiceId)
+        .build();
+    // Starts a single node Ratis server
+    OzoneManagerRatisServer newOmRatisServer = OzoneManagerRatisServer
+        .newOMRatisServer(newConf, null,
+            omNodeDetails, Collections.emptyList());
+    newOmRatisServer.start();
+    OzoneManagerRatisClient newOmRatisClient = OzoneManagerRatisClient
+        .newOzoneManagerRatisClient(
+            newOmId,
+            newOmRatisServer.getRaftGroup(), newConf);
+    newOmRatisClient.connect();
+
+    UUID uuid = UUID.nameUUIDFromBytes(customOmServiceId.getBytes());
+    RaftGroupId raftGroupId = newOmRatisServer.getRaftGroup().getGroupId();
+    Assert.assertEquals(uuid, raftGroupId.getUuid());
+    Assert.assertEquals(raftGroupId.toByteString().size(), 16);
   }
 }

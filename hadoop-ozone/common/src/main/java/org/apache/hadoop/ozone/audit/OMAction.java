@@ -24,7 +24,9 @@ public enum OMAction implements AuditAction {
 
   // WRITE Actions
   ALLOCATE_BLOCK,
+  ADD_ALLOCATE_BLOCK,
   ALLOCATE_KEY,
+  APPLY_ALLOCATE_KEY,
   COMMIT_KEY,
   CREATE_VOLUME,
   CREATE_BUCKET,
@@ -50,7 +52,10 @@ public enum OMAction implements AuditAction {
   INITIATE_MULTIPART_UPLOAD,
   COMMIT_MULTIPART_UPLOAD_PARTKEY,
   COMPLETE_MULTIPART_UPLOAD,
-  LIST_MULTIPART_UPLOAD_PARTS;
+  LIST_MULTIPART_UPLOAD_PARTS,
+
+  //FS Actions
+  GET_FILE_STATUS;
 
   @Override
   public String getAction() {

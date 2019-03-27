@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -178,7 +178,8 @@ import java.util.Set;
 @Private
 @Unstable
 public class ZKRMStateStore extends RMStateStore {
-  private static final Log LOG = LogFactory.getLog(ZKRMStateStore.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ZKRMStateStore.class);
 
   private static final String RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME =
       "RMDelegationTokensRoot";
@@ -425,7 +426,7 @@ public class ZKRMStateStore extends RMStateStore {
     }
 
     builder.append(getStat.toString());
-    LOG.debug(builder.toString());
+    LOG.debug("{}", builder);
   }
 
   private void setRootNodeAcls() throws Exception {
@@ -535,9 +536,7 @@ public class ZKRMStateStore extends RMStateStore {
     List<String> planNodes = getChildren(reservationRoot);
 
     for (String planName : planNodes) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Loading plan from znode: " + planName);
-      }
+      LOG.debug("Loading plan from znode: {}", planName);
 
       String planNodePath = getNodePath(reservationRoot, planName);
       List<String> reservationNodes = getChildren(planNodePath);
@@ -546,9 +545,7 @@ public class ZKRMStateStore extends RMStateStore {
         String reservationNodePath =
             getNodePath(planNodePath, reservationNodeName);
 
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Loading reservation from znode: " + reservationNodePath);
-        }
+        LOG.debug("Loading reservation from znode: {}", reservationNodePath);
 
         byte[] reservationData = getData(reservationNodePath);
         ReservationAllocationStateProto allocationState =
@@ -609,10 +606,9 @@ public class ZKRMStateStore extends RMStateStore {
           key.readFields(fsIn);
           rmState.rmSecretManagerState.masterKeyState.add(key);
 
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Loaded delegation key: keyId=" + key.getKeyId()
-                + ", expirationDate=" + key.getExpiryDate());
-          }
+          LOG.debug("Loaded delegation key: keyId={}, expirationDate={}",
+              key.getKeyId(), key.getExpiryDate());
+
         }
       }
     }
@@ -655,8 +651,8 @@ public class ZKRMStateStore extends RMStateStore {
         } else if (splitIndex == 0
             && !(childNodeName.equals("1") || childNodeName.equals("2")
             || childNodeName.equals("3") || childNodeName.equals("4"))) {
-          LOG.debug("Unknown child node with name " + childNodeName + " under" +
-              tokenRoot);
+          LOG.debug("Unknown child node with name {} under {}",
+              childNodeName, tokenRoot);
         }
       }
       if (splitIndex != delegationTokenNodeSplitIndex && !dtNodeFound) {
@@ -684,10 +680,8 @@ public class ZKRMStateStore extends RMStateStore {
         long renewDate = identifierData.getRenewDate();
         rmState.rmSecretManagerState.delegationTokenState.put(identifier,
             renewDate);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Loaded RMDelegationTokenIdentifier: " + identifier
-              + " renewDate=" + renewDate);
-        }
+        LOG.debug("Loaded RMDelegationTokenIdentifier: {} renewDate={}",
+            identifier, renewDate);
       }
     }
   }
@@ -695,9 +689,7 @@ public class ZKRMStateStore extends RMStateStore {
   private void loadRMAppStateFromAppNode(RMState rmState, String appNodePath,
       String appIdStr) throws Exception {
     byte[] appData = getData(appNodePath);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Loading application from znode: " + appNodePath);
-    }
+    LOG.debug("Loading application from znode: {}", appNodePath);
     ApplicationId appId = ApplicationId.fromString(appIdStr);
     ApplicationStateDataPBImpl appState = new ApplicationStateDataPBImpl(
         ApplicationStateDataProto.parseFrom(appData));
@@ -735,7 +727,7 @@ public class ZKRMStateStore extends RMStateStore {
             }
           }
         } else if (!childNodeName.equals(RM_APP_ROOT_HIERARCHIES)){
-          LOG.debug("Unknown child node with name " + childNodeName + " under" +
+          LOG.debug("Unknown child node with name {} under {}", childNodeName,
               appRoot);
         }
       }
@@ -797,27 +789,21 @@ public class ZKRMStateStore extends RMStateStore {
       } catch (KeeperException.NoNodeException ke) {
         // It should be fine to swallow this exception as the parent znode we
         // intend to delete is already deleted.
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Unable to remove parent node " + parentZnode +
-              " as it does not exist.");
-        }
+        LOG.debug("Unable to remove parent node {} as it does not exist.",
+            parentZnode);
         return;
       }
       // No apps stored under parent path.
       if (children != null && children.isEmpty()) {
         try {
           zkManager.safeDelete(parentZnode, zkAcl, fencingNodePath);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("No leaf znode exists. Removing parent node " +
-                parentZnode);
-          }
+          LOG.debug("No leaf znode exists. Removing parent node {}",
+              parentZnode);
         } catch (KeeperException.NotEmptyException ke) {
           // It should be fine to swallow this exception as the parent znode
           // has to be deleted only if it has no children. And this node has.
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Unable to remove app parent node " + parentZnode +
-                " as it has children.");
-          }
+          LOG.debug("Unable to remove app parent node {} as it has children.",
+              parentZnode);
         }
       }
     }
@@ -850,19 +836,16 @@ public class ZKRMStateStore extends RMStateStore {
       ApplicationStateData appStateDataPB) throws Exception {
     String nodeCreatePath = getLeafAppIdNodePath(appId.toString(), true);
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Storing info for app: " + appId + " at: " + nodeCreatePath);
-    }
+    LOG.debug("Storing info for app: {} at: {}", appId, nodeCreatePath);
 
     byte[] appStateData = appStateDataPB.getProto().toByteArray();
     if (appStateData.length <= zknodeLimit) {
       zkManager.safeCreate(nodeCreatePath, appStateData, zkAcl,
           CreateMode.PERSISTENT, zkAcl, fencingNodePath);
     } else {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Application state data size for " + appId + " is "
-            + appStateData.length);
-      }
+      LOG.debug("Application state data size for {} is {}",
+          appId, appStateData.length);
+
       throw new StoreLimitException("Application " + appId
           + " exceeds the maximum allowed size for application data. "
           + "See yarn.resourcemanager.zk-max-znode-size.bytes.");
@@ -895,10 +878,8 @@ public class ZKRMStateStore extends RMStateStore {
       }
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Storing final state info for app: " + appId + " at: "
-          + nodeUpdatePath);
-    }
+    LOG.debug("Storing final state info for app: {} at: {}", appId,
+        nodeUpdatePath);
 
     byte[] appStateData = appStateDataPB.getProto().toByteArray();
 
@@ -908,10 +889,8 @@ public class ZKRMStateStore extends RMStateStore {
     } else {
       zkManager.safeCreate(nodeUpdatePath, appStateData, zkAcl,
           CreateMode.PERSISTENT, zkAcl, fencingNodePath);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Path " + nodeUpdatePath + " for " + appId + " didn't " +
-            "exist. Creating a new znode to update the application state.");
-      }
+      LOG.debug("Path {} for {} didn't exist. Creating a new znode to update"
+          + " the application state.", nodeUpdatePath, appId);
     }
   }
 
@@ -943,10 +922,8 @@ public class ZKRMStateStore extends RMStateStore {
     String path = getNodePath(appDirPath, appAttemptId.toString());
     byte[] attemptStateData = (attemptStateDataPB == null) ? null :
         attemptStateDataPB.getProto().toByteArray();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(operation + " info for attempt: " + appAttemptId + " at: "
-          + path);
-    }
+    LOG.debug("{} info for attempt: {} at: {}", operation, appAttemptId, path);
+
     switch (operation) {
     case UPDATE:
       if (exists(path)) {
@@ -955,10 +932,9 @@ public class ZKRMStateStore extends RMStateStore {
       } else {
         zkManager.safeCreate(path, attemptStateData, zkAcl,
             CreateMode.PERSISTENT, zkAcl, fencingNodePath);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Path " + path + " for " + appAttemptId + " didn't exist." +
-              " Created a new znode to update the application attempt state.");
-        }
+        LOG.debug("Path {} for {} didn't exist. Created a new znode to update"
+            + " the application attempt state.", path, appAttemptId);
+
       }
       break;
     case STORE:
@@ -1036,10 +1012,9 @@ public class ZKRMStateStore extends RMStateStore {
       }
     }
     if (safeRemove) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Removing info for app: " + removeAppId + " at: " +
-            appIdRemovePath + " and its attempts.");
-      }
+      LOG.debug("Removing info for app: {} at: {} and its attempts.",
+          removeAppId, appIdRemovePath);
+
       if (attempts != null) {
         for (ApplicationAttemptId attemptId : attempts) {
           String attemptRemovePath =
@@ -1063,10 +1038,8 @@ public class ZKRMStateStore extends RMStateStore {
       throws Exception {
     String nodeCreatePath = getLeafDelegationTokenNodePath(
         rmDTIdentifier.getSequenceNumber(), true);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Storing " + DELEGATION_TOKEN_PREFIX
-          + rmDTIdentifier.getSequenceNumber());
-    }
+    LOG.debug("Storing {}{}", DELEGATION_TOKEN_PREFIX,
+        rmDTIdentifier.getSequenceNumber());
 
     RMDelegationTokenIdentifierData identifierData =
         new RMDelegationTokenIdentifierData(rmDTIdentifier, renewDate);
@@ -1079,10 +1052,8 @@ public class ZKRMStateStore extends RMStateStore {
       // Update Sequence number only while storing DT
       seqOut.writeInt(rmDTIdentifier.getSequenceNumber());
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Storing " + dtSequenceNumberPath + ". SequenceNumber: "
-            + rmDTIdentifier.getSequenceNumber());
-      }
+      LOG.debug("Storing {}. SequenceNumber: {}", dtSequenceNumberPath,
+          rmDTIdentifier.getSequenceNumber());
 
       trx.setData(dtSequenceNumberPath, seqOs.toByteArray(), -1);
       trx.commit();
@@ -1109,10 +1080,8 @@ public class ZKRMStateStore extends RMStateStore {
       }
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing RMDelegationToken_"
-          + rmDTIdentifier.getSequenceNumber());
-    }
+    LOG.debug("Removing RMDelegationToken_{}",
+        rmDTIdentifier.getSequenceNumber());
 
     zkManager.safeDelete(nodeRemovePath, zkAcl, fencingNodePath);
 
@@ -1140,10 +1109,9 @@ public class ZKRMStateStore extends RMStateStore {
     }
 
     if (pathExists) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Updating " + DELEGATION_TOKEN_PREFIX
-            + rmDTIdentifier.getSequenceNumber());
-      }
+      LOG.debug("Updating {}{}", DELEGATION_TOKEN_PREFIX,
+          rmDTIdentifier.getSequenceNumber());
+
       RMDelegationTokenIdentifierData identifierData =
           new RMDelegationTokenIdentifierData(rmDTIdentifier, renewDate);
       zkManager.safeSetData(nodeUpdatePath, identifierData.toByteArray(), -1,
@@ -1158,9 +1126,7 @@ public class ZKRMStateStore extends RMStateStore {
       DelegationKey delegationKey) throws Exception {
     String nodeCreatePath = getNodePath(dtMasterKeysRootPath,
         DELEGATION_KEY_PREFIX + delegationKey.getKeyId());
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Storing RMDelegationKey_" + delegationKey.getKeyId());
-    }
+    LOG.debug("Storing RMDelegationKey_{}", delegationKey.getKeyId());
     ByteArrayOutputStream os = new ByteArrayOutputStream();
     try(DataOutputStream fsOut = new DataOutputStream(os)) {
       delegationKey.write(fsOut);
@@ -1176,9 +1142,7 @@ public class ZKRMStateStore extends RMStateStore {
         getNodePath(dtMasterKeysRootPath, DELEGATION_KEY_PREFIX
             + delegationKey.getKeyId());
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing RMDelegationKey_" + delegationKey.getKeyId());
-    }
+    LOG.debug("Removing RMDelegationKey_{}", delegationKey.getKeyId());
 
     zkManager.safeDelete(nodeRemovePath, zkAcl, fencingNodePath);
   }
@@ -1217,10 +1181,8 @@ public class ZKRMStateStore extends RMStateStore {
     String planNodePath = getNodePath(reservationRoot, planName);
     String reservationPath = getNodePath(planNodePath, reservationIdName);
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing reservationallocation " + reservationIdName
-          + " for" + " plan " + planName);
-    }
+    LOG.debug("Removing reservationallocation {} for plan {}",
+        reservationIdName, planName);
 
     zkManager.safeDelete(reservationPath, zkAcl, fencingNodePath);
 
@@ -1252,24 +1214,18 @@ public class ZKRMStateStore extends RMStateStore {
     byte[] reservationData = reservationAllocation.toByteArray();
 
     if (!exists(planCreatePath)) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Creating plan node: " + planName + " at: " + planCreatePath);
-      }
+      LOG.debug("Creating plan node: {} at: {}", planName, planCreatePath);
 
       trx.create(planCreatePath, null, zkAcl, CreateMode.PERSISTENT);
     }
 
     if (isUpdate) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Updating reservation: " + reservationIdName + " in plan:"
-            + planName + " at: " + reservationPath);
-      }
+      LOG.debug("Updating reservation: {} in plan:{} at: {}",
+          reservationIdName, planName, reservationPath);
       trx.setData(reservationPath, reservationData, -1);
     } else {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Storing reservation: " + reservationIdName + " in plan:"
-            + planName + " at: " + reservationPath);
-      }
+      LOG.debug("Storing reservation: {} in plan:{} at: {}",
+          reservationIdName, planName, reservationPath);
       trx.create(reservationPath, reservationData, zkAcl,
           CreateMode.PERSISTENT);
     }
@@ -1349,10 +1305,8 @@ public class ZKRMStateStore extends RMStateStore {
         zkManager.safeCreate(rootNodePath, null, zkAcl, CreateMode.PERSISTENT,
             zkAcl, fencingNodePath);
       } catch (KeeperException.NodeExistsException e) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Unable to create app parent node " + rootNodePath +
-              " as it already exists.");
-        }
+        LOG.debug("Unable to create app parent node {} as it already exists.",
+            rootNodePath);
       }
     }
     return getNodePath(rootNodePath, nodeName.substring(split));

@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.CloseContainerCommandProto;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.statemachine
     .SCMConnectionManager;
@@ -86,6 +87,12 @@ public class CloseContainerCommandHandler implements CommandHandler {
         return;
       }
 
+      if (container.getContainerState() ==
+          ContainerProtos.ContainerDataProto.State.CLOSED) {
+        // Closing a container is an idempotent operation.
+        return;
+      }
+
       // Move the container to CLOSING state
       controller.markContainerForClose(containerId);
 
@@ -127,6 +134,7 @@ public class CloseContainerCommandHandler implements CommandHandler {
     final ContainerCommandRequestProto.Builder command =
         ContainerCommandRequestProto.newBuilder();
     command.setCmdType(ContainerProtos.Type.CloseContainer);
+    command.setTraceID(TracingUtil.exportCurrentSpan());
     command.setContainerID(containerId);
     command.setCloseContainer(
         ContainerProtos.CloseContainerRequestProto.getDefaultInstance());

@@ -39,8 +39,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RestartContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RollbackResponse;
 import org.junit.Assert;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
@@ -76,7 +76,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 @Private
 public class NodeManager implements ContainerManagementProtocol {
-  private static final Log LOG = LogFactory.getLog(NodeManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NodeManager.class);
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   
   final private String containerManagerAddress;
@@ -211,11 +212,9 @@ public class NodeManager implements ContainerManagementProtocol {
       Resources.subtractFrom(available, tokenId.getResource());
       Resources.addTo(used, tokenId.getResource());
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("startContainer:" + " node=" + containerManagerAddress
-            + " application=" + applicationId + " container=" + container
-            + " available=" + available + " used=" + used);
-      }
+      LOG.debug("startContainer: node={} application={} container={}"
+          +" available={} used={}", containerManagerAddress, applicationId,
+          container, available, used);
 
     }
     StartContainersResponse response =
@@ -278,11 +277,9 @@ public class NodeManager implements ContainerManagementProtocol {
       Resources.addTo(available, container.getResource());
       Resources.subtractFrom(used, container.getResource());
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("stopContainer:" + " node=" + containerManagerAddress
-            + " application=" + applicationId + " container=" + containerID
-            + " available=" + available + " used=" + used);
-      }
+      LOG.debug("stopContainer: node={} application={} container={}"
+          + " available={} used={}", containerManagerAddress, applicationId,
+          containerID, available, used);
     }
     return StopContainersResponse.newInstance(null,null);
   }

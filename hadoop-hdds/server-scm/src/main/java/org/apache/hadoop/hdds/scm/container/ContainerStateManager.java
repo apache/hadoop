@@ -17,29 +17,8 @@
 
 package org.apache.hadoop.hdds.scm.container;
 
-import com.google.common.base.Preconditions;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.StorageUnit;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.scm.container.states.ContainerState;
-import org.apache.hadoop.hdds.scm.container.states.ContainerStateMap;
-import org.apache.hadoop.hdds.scm.exceptions.SCMException;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
-import org.apache.hadoop.ozone.common.statemachine
-    .InvalidStateTransitionException;
-import org.apache.hadoop.ozone.common.statemachine.StateMachine;
-import org.apache.hadoop.util.Time;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
+    .FAILED_TO_CHANGE_CONTAINER_STATE;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -50,8 +29,29 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
-    .FAILED_TO_CHANGE_CONTAINER_STATE;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.StorageUnit;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.container.states.ContainerState;
+import org.apache.hadoop.hdds.scm.container.states.ContainerStateMap;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.ozone.common.statemachine
+    .InvalidStateTransitionException;
+import org.apache.hadoop.ozone.common.statemachine.StateMachine;
+import org.apache.hadoop.util.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.AtomicLongMap;
 
 /**
  * A container state manager keeps track of container states and returns
@@ -121,7 +121,8 @@ public class ContainerStateManager {
   private final ConcurrentHashMap<ContainerState, ContainerID> lastUsedMap;
   private final ContainerStateMap containers;
   private final AtomicLong containerCount;
-  private final int numContainerPerOwnerInPipeline;
+  private final AtomicLongMap<LifeCycleState> containerStateCount =
+      AtomicLongMap.create();
 
   /**
    * Constructs a Container State Manager that tracks all containers owned by
@@ -152,9 +153,6 @@ public class ContainerStateManager {
     this.lastUsedMap = new ConcurrentHashMap<>();
     this.containerCount = new AtomicLong(0);
     this.containers = new ContainerStateMap();
-    this.numContainerPerOwnerInPipeline = configuration
-        .getInt(ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT,
-            ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT_DEFAULT);
   }
 
   /*
@@ -228,11 +226,12 @@ public class ContainerStateManager {
         LifeCycleEvent.CLEANUP);
   }
 
-  void loadContainer(final ContainerInfo containerInfo)
-      throws SCMException {
+
+  void loadContainer(final ContainerInfo containerInfo) throws SCMException {
     containers.addContainer(containerInfo);
     containerCount.set(Long.max(
         containerInfo.getContainerID(), containerCount.get()));
+    containerStateCount.incrementAndGet(containerInfo.getState());
   }
 
   /**
@@ -301,6 +300,7 @@ public class ContainerStateManager {
         ContainerID.valueof(containerID));
     Preconditions.checkNotNull(containerInfo);
     containers.addContainer(containerInfo);
+    containerStateCount.incrementAndGet(containerInfo.getState());
     LOG.trace("New container allocated: {}", containerInfo);
     return containerInfo;
   }
@@ -321,6 +321,8 @@ public class ContainerStateManager {
       final LifeCycleState newState = stateMachine.getNextState(
           info.getState(), event);
       containers.updateState(containerID, info.getState(), newState);
+      containerStateCount.incrementAndGet(newState);
+      containerStateCount.decrementAndGet(info.getState());
       return containers.getContainerInfo(containerID);
     } catch (InvalidStateTransitionException ex) {
       String error = String.format("Failed to update container state %s, " +
@@ -362,55 +364,6 @@ public class ContainerStateManager {
     });
   }
 
-  /**
-   * Return a container matching the attributes specified.
-   *
-   * @param size            - Space needed in the Container.
-   * @param owner           - Owner of the container - A specific nameservice.
-   * @param pipelineManager - Pipeline Manager
-   * @param pipeline        - Pipeline from which container needs to be matched
-   * @return ContainerInfo, null if there is no match found.
-   */
-  ContainerInfo getMatchingContainer(final long size, String owner,
-      PipelineManager pipelineManager, Pipeline pipeline) throws IOException {
-
-    NavigableSet<ContainerID> containerIDs =
-        pipelineManager.getContainersInPipeline(pipeline.getId());
-    if (containerIDs == null) {
-      LOG.error("Container list is null for pipeline=", pipeline.getId());
-      return null;
-    }
-
-    getContainers(containerIDs, owner);
-    if (containerIDs.size() < numContainerPerOwnerInPipeline) {
-      synchronized (pipeline) {
-        // TODO: #CLUTIL Maybe we can add selection logic inside synchronized
-        // as well
-        containerIDs = getContainers(
-            pipelineManager.getContainersInPipeline(pipeline.getId()), owner);
-        if (containerIDs.size() < numContainerPerOwnerInPipeline) {
-          ContainerInfo containerInfo =
-              allocateContainer(pipelineManager, owner, pipeline);
-          lastUsedMap.put(new ContainerState(owner, pipeline.getId()),
-              containerInfo.containerID());
-          return containerInfo;
-        }
-      }
-    }
-
-    ContainerInfo containerInfo =
-        getMatchingContainer(size, owner, pipeline.getId(), containerIDs);
-    if (containerInfo == null) {
-      synchronized (pipeline) {
-        containerInfo =
-            allocateContainer(pipelineManager, owner, pipeline);
-        lastUsedMap.put(new ContainerState(owner, pipeline.getId()),
-            containerInfo.containerID());
-      }
-    }
-    // TODO: #CLUTIL cleanup entries in lastUsedMap
-    return containerInfo;
-  }
 
   /**
    * Return a container matching the attributes specified.
@@ -469,9 +422,6 @@ public class ContainerStateManager {
         final ContainerInfo containerInfo = containers.getContainerInfo(id);
         if (containerInfo.getUsedBytes() + size <= this.containerSize) {
           containerInfo.updateLastUsedTime();
-
-          final ContainerState key = new ContainerState(owner, pipelineID);
-          lastUsedMap.put(key, containerInfo.containerID());
           return containerInfo;
         }
       }
@@ -494,6 +444,16 @@ public class ContainerStateManager {
    */
   Set<ContainerID> getContainerIDsByState(final LifeCycleState state) {
     return containers.getContainerIDsByState(state);
+  }
+
+  /**
+   * Get count of containers in the current {@link LifeCycleState}.
+   *
+   * @param state {@link LifeCycleState}
+   * @return Count of containers
+   */
+  Integer getContainerCountByState(final LifeCycleState state) {
+    return Long.valueOf(containerStateCount.get(state)).intValue();
   }
 
   /**
@@ -521,22 +481,6 @@ public class ContainerStateManager {
   ContainerInfo getContainer(final ContainerID containerID)
       throws ContainerNotFoundException {
     return containers.getContainerInfo(containerID);
-  }
-
-  private NavigableSet<ContainerID> getContainers(
-      NavigableSet<ContainerID> containerIDs, String owner) {
-    for (ContainerID cid : containerIDs) {
-      try {
-        if (!getContainer(cid).getOwner().equals(owner)) {
-          containerIDs.remove(cid);
-        }
-      } catch (ContainerNotFoundException e) {
-        LOG.error("Could not find container info for container id={} {}", cid,
-            e);
-        containerIDs.remove(cid);
-      }
-    }
-    return containerIDs;
   }
 
   void close() throws IOException {
@@ -581,6 +525,18 @@ public class ContainerStateManager {
   void removeContainer(final ContainerID containerID)
       throws ContainerNotFoundException {
     containers.removeContainer(containerID);
+  }
+
+  /**
+   * Update the lastUsedmap to update with ContainerState and containerID.
+   * @param pipelineID
+   * @param containerID
+   * @param owner
+   */
+  public synchronized void updateLastUsedMap(PipelineID pipelineID,
+      ContainerID containerID, String owner) {
+    lastUsedMap.put(new ContainerState(owner, pipelineID),
+        containerID);
   }
 
 }

@@ -21,8 +21,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resourc
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -52,7 +52,8 @@ import static org.apache.hadoop.yarn.api.records.ResourceInformation.GPU_URI;
  * Allocate GPU resources according to requirements
  */
 public class GpuResourceAllocator {
-  final static Log LOG = LogFactory.getLog(GpuResourceAllocator.class);
+  final static Logger LOG = LoggerFactory.
+      getLogger(GpuResourceAllocator.class);
   private static final int WAIT_MS_PER_LOOP = 1000;
 
   private Set<GpuDevice> allowedGpuDevices = new TreeSet<>();
@@ -118,6 +119,7 @@ public class GpuResourceAllocator {
               + containerId);
     }
 
+    LOG.info("Starting recovery of GpuDevice for {}.", containerId);
     for (Serializable gpuDeviceSerializable : c.getResourceMappings()
         .getAssignedResources(GPU_URI)) {
       if (!(gpuDeviceSerializable instanceof GpuDevice)) {
@@ -145,7 +147,10 @@ public class GpuResourceAllocator {
       }
 
       usedDevices.put(gpuDevice, containerId);
+      LOG.info("ContainerId {} is assigned to GpuDevice {} on recovery.",
+          containerId, gpuDevice);
     }
+    LOG.info("Finished recovery of GpuDevice for {}.", containerId);
   }
 
   /**

@@ -34,6 +34,14 @@ import java.util.Set;
  */
 public interface ContainerManager extends Closeable {
 
+
+  /**
+   * Returns all the container Ids managed by ContainerManager.
+   *
+   * @return Set of ContainerID
+   */
+  Set<ContainerID> getContainerIDs();
+
   /**
    * Returns all the containers managed by ContainerManager.
    *
@@ -47,6 +55,14 @@ public interface ContainerManager extends Closeable {
    * @return List of ContainerInfo
    */
   List<ContainerInfo> getContainers(HddsProtos.LifeCycleState state);
+
+  /**
+   * Returns number of containers in the given,
+   *  {@link org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState}.
+   *
+   * @return Number of containers
+   */
+  Integer getContainerCountByState(HddsProtos.LifeCycleState state);
 
   /**
    * Returns the ContainerInfo from the container ID.
@@ -152,4 +168,15 @@ public interface ContainerManager extends Closeable {
    */
   ContainerInfo getMatchingContainer(long size, String owner,
       Pipeline pipeline);
+
+  /**
+   * Returns ContainerInfo which matches the requirements.
+   * @param size - the amount of space required in the container
+   * @param owner - the user which requires space in its owned container
+   * @param pipeline - pipeline to which the container should belong.
+   * @param excludedContainerIDS - containerIds to be excluded.
+   * @return ContainerInfo for the matching container.
+   */
+  ContainerInfo getMatchingContainer(long size, String owner,
+      Pipeline pipeline, List<ContainerID> excludedContainerIDS);
 }

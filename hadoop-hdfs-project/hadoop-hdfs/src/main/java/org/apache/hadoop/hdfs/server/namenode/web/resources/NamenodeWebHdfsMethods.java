@@ -273,11 +273,19 @@ public class NamenodeWebHdfsMethods {
       for (String host : StringUtils
           .getTrimmedStringCollection(excludeDatanodes)) {
         int idx = host.indexOf(":");
-        if (idx != -1) {          
-          excludes.add(bm.getDatanodeManager().getDatanodeByXferAddr(
-              host.substring(0, idx), Integer.parseInt(host.substring(idx + 1))));
+        Node excludeNode = null;
+        if (idx != -1) {
+          excludeNode = bm.getDatanodeManager().getDatanodeByXferAddr(
+             host.substring(0, idx), Integer.parseInt(host.substring(idx + 1)));
         } else {
-          excludes.add(bm.getDatanodeManager().getDatanodeByHost(host));
+          excludeNode = bm.getDatanodeManager().getDatanodeByHost(host);
+        }
+
+        if (excludeNode != null) {
+          excludes.add(excludeNode);
+        } else {
+          LOG.debug("DataNode {} was requested to be excluded, "
+                + "but it was not found.", host);
         }
       }
     }
@@ -350,12 +358,18 @@ public class NamenodeWebHdfsMethods {
     cp.cancelDelegationToken(token);
   }
 
-  public Token<? extends TokenIdentifier> generateDelegationToken(
-      final UserGroupInformation ugi,
+  public Credentials createCredentials(final UserGroupInformation ugi,
       final String renewer) throws IOException {
     final NameNode namenode = (NameNode)context.getAttribute("name.node");
     final Credentials c = DelegationTokenSecretManager.createCredentials(
         namenode, ugi, renewer != null? renewer: ugi.getShortUserName());
+    return c;
+  }
+
+  public Token<? extends TokenIdentifier> generateDelegationToken(
+      final UserGroupInformation ugi,
+      final String renewer) throws IOException {
+    Credentials c = createCredentials(ugi, renewer);
     if (c == null) {
       return null;
     }

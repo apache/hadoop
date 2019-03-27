@@ -21,6 +21,10 @@ package org.apache.hadoop.hdds.scm.server;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.apache.hadoop.hdds.scm.block.BlockManager;
+import org.apache.hadoop.hdds.scm.block.BlockManagerImpl;
+import org.apache.hadoop.hdds.scm.chillmode.ChillModeHandler;
+import org.apache.hadoop.hdds.scm.container.replication.ReplicationActivityStatus;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.server.events.EventQueue;
@@ -28,6 +32,7 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 /**
  * Test class for @{@link SCMClientProtocolServer}.
@@ -42,7 +47,12 @@ public class TestSCMClientProtocolServer {
     config = new OzoneConfiguration();
     eventQueue = new EventQueue();
     scmClientProtocolServer = new SCMClientProtocolServer(config, null);
-    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, scmClientProtocolServer);
+    BlockManager blockManager = Mockito.mock(BlockManagerImpl.class);
+    ReplicationActivityStatus replicationActivityStatus =
+        Mockito.mock(ReplicationActivityStatus.class);
+    ChillModeHandler chillModeHandler = new ChillModeHandler(config,
+        scmClientProtocolServer, blockManager, replicationActivityStatus);
+    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, chillModeHandler);
   }
 
   @After

@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.utils.db;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -143,6 +144,11 @@ public interface DBStore extends AutoCloseable {
    * @return An object that encapsulates the checkpoint information along with
    * location.
    */
-  DBCheckpointSnapshot getCheckpointSnapshot(boolean flush) throws IOException;
+  DBCheckpoint getCheckpoint(boolean flush) throws IOException;
 
+  /**
+   * Get DB Store location.
+   * @return DB file location.
+   */
+  File getDbLocation();
 }

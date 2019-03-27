@@ -45,7 +45,7 @@ wait_for_datanodes(){
 
          #Print it only if a number. Could be not a number if scm is not yet started
          if [[ "$datanodes" ]]; then
-            echo "$datanodes datanode is up and healhty (until now)"
+            echo "$datanodes datanode is up and healthy (until now)"
          fi
       fi
 
@@ -78,9 +78,9 @@ execute_tests(){
      TITLE="Ozone $TEST tests with $COMPOSE_DIR cluster"
      set +e
      OUTPUT_NAME="$COMPOSE_DIR-${TEST//\//_}"
-	  docker-compose -f "$COMPOSE_FILE" exec -T ozoneManager python -m robot --log NONE --report NONE "${OZONE_ROBOT_OPTS[@]}" --output "smoketest/$RESULT_DIR/robot-$OUTPUT_NAME.xml" --logtitle "$TITLE" --reporttitle "$TITLE" "smoketest/$TEST"
+	  docker-compose -f "$COMPOSE_FILE" exec -T om python -m robot --log NONE --report NONE "${OZONE_ROBOT_OPTS[@]}" --output "smoketest/$RESULT_DIR/robot-$OUTPUT_NAME.xml" --logtitle "$TITLE" --reporttitle "$TITLE" "smoketest/$TEST"
      set -e
-     docker-compose -f "$COMPOSE_FILE" logs > "$DIR/$RESULT_DIR/docker-$OUTPUT_NAME.log"
+    docker-compose -f "$COMPOSE_FILE" logs > "$DIR/$RESULT_DIR/docker-$OUTPUT_NAME.log"
   done
   if [ "$KEEP_RUNNING" = false ]; then
      docker-compose -f "$COMPOSE_FILE" down
@@ -151,6 +151,8 @@ if [ "$RUN_ALL" = true ]; then
    execute_tests ozone-hdfs "${TESTS[@]}"
    TESTS=("s3")
    execute_tests ozones3 "${TESTS[@]}"
+   TESTS=("security")
+   execute_tests ozonesecure "${TESTS[@]}"
 else
    execute_tests "$DOCKERENV" "${POSITIONAL[@]}"
 fi

@@ -19,6 +19,7 @@ package org.apache.hadoop.hdds.scm.chillmode;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -35,9 +36,11 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolPro
 import org.apache.hadoop.hdds.scm.HddsTestUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
+import org.apache.hadoop.hdds.scm.pipeline.*;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineProvider;
 import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventQueue;
@@ -45,7 +48,9 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.rules.Timeout;
+import org.mockito.Mockito;
 
 /** Test class for SCMChillModeManager.
  */
@@ -57,7 +62,10 @@ public class TestSCMChillModeManager {
   private List<ContainerInfo> containers;
 
   @Rule
-  public Timeout timeout = new Timeout(1000 * 35);
+  public Timeout timeout = new Timeout(1000 * 300);
+
+  @Rule
+  public final TemporaryFolder tempDir = new TemporaryFolder();
 
   @BeforeClass
   public static void setUp() {
@@ -89,8 +97,7 @@ public class TestSCMChillModeManager {
     }
     scmChillModeManager = new SCMChillModeManager(
         config, containers, null, queue);
-    queue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
-        scmChillModeManager);
+
     assertTrue(scmChillModeManager.getInChillMode());
     queue.fireEvent(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
         HddsTestUtils.createNodeRegistrationContainerReport(containers));
@@ -110,8 +117,7 @@ public class TestSCMChillModeManager {
     }
     scmChillModeManager = new SCMChillModeManager(
         config, containers, null, queue);
-    queue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
-        scmChillModeManager);
+
     assertTrue(scmChillModeManager.getInChillMode());
 
     testContainerThreshold(containers.subList(0, 25), 0.25);
@@ -127,12 +133,193 @@ public class TestSCMChillModeManager {
     }, 100, 1000 * 5);
   }
 
+
+  private OzoneConfiguration createConf(double healthyPercent,
+      double oneReplicaPercent) throws Exception {
+    OzoneConfiguration conf = new OzoneConfiguration();
+    conf.set(HddsConfigKeys.OZONE_METADATA_DIRS,
+        tempDir.newFolder().toString());
+    conf.setBoolean(
+        HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK,
+        true);
+    conf.setDouble(HddsConfigKeys.
+        HDDS_SCM_CHILLMODE_HEALTHY_PIPELINE_THRESHOLD_PCT, healthyPercent);
+    conf.setDouble(HddsConfigKeys.
+        HDDS_SCM_CHILLMODE_ONE_NODE_REPORTED_PIPELINE_PCT, oneReplicaPercent);
+
+    return conf;
+  }
+
+  @Test
+  public void testChillModeExitRuleWithPipelineAvailabilityCheck()
+      throws Exception{
+    testChillModeExitRuleWithPipelineAvailabilityCheck(100, 30, 8, 0.90, 1);
+    testChillModeExitRuleWithPipelineAvailabilityCheck(100, 90, 22, 0.10, 0.9);
+    testChillModeExitRuleWithPipelineAvailabilityCheck(100, 30, 8, 0, 0.9);
+    testChillModeExitRuleWithPipelineAvailabilityCheck(100, 90, 22, 0, 0);
+    testChillModeExitRuleWithPipelineAvailabilityCheck(100, 90, 22, 0, 0.5);
+  }
+
+  @Test
+  public void testFailWithIncorrectValueForHealthyPipelinePercent()
+      throws Exception {
+    try {
+      OzoneConfiguration conf = createConf(100,
+          0.9);
+      MockNodeManager mockNodeManager = new MockNodeManager(true, 10);
+      PipelineManager pipelineManager = new SCMPipelineManager(conf,
+          mockNodeManager, queue);
+      scmChillModeManager = new SCMChillModeManager(
+          conf, containers, pipelineManager, queue);
+      fail("testFailWithIncorrectValueForHealthyPipelinePercent");
+    } catch (IllegalArgumentException ex) {
+      GenericTestUtils.assertExceptionContains("value should be >= 0.0 and <=" +
+          " 1.0", ex);
+    }
+  }
+
+  @Test
+  public void testFailWithIncorrectValueForOneReplicaPipelinePercent()
+      throws Exception {
+    try {
+      OzoneConfiguration conf = createConf(0.9,
+          200);
+      MockNodeManager mockNodeManager = new MockNodeManager(true, 10);
+      PipelineManager pipelineManager = new SCMPipelineManager(conf,
+          mockNodeManager, queue);
+      scmChillModeManager = new SCMChillModeManager(
+          conf, containers, pipelineManager, queue);
+      fail("testFailWithIncorrectValueForOneReplicaPipelinePercent");
+    } catch (IllegalArgumentException ex) {
+      GenericTestUtils.assertExceptionContains("value should be >= 0.0 and <=" +
+          " 1.0", ex);
+    }
+  }
+
+  @Test
+  public void testFailWithIncorrectValueForChillModePercent() throws Exception {
+    try {
+      OzoneConfiguration conf = createConf(0.9, 0.1);
+      conf.setDouble(HddsConfigKeys.HDDS_SCM_CHILLMODE_THRESHOLD_PCT, -1.0);
+      MockNodeManager mockNodeManager = new MockNodeManager(true, 10);
+      PipelineManager pipelineManager = new SCMPipelineManager(conf,
+          mockNodeManager, queue);
+      scmChillModeManager = new SCMChillModeManager(
+          conf, containers, pipelineManager, queue);
+      fail("testFailWithIncorrectValueForChillModePercent");
+    } catch (IllegalArgumentException ex) {
+      GenericTestUtils.assertExceptionContains("value should be >= 0.0 and <=" +
+          " 1.0", ex);
+    }
+  }
+
+
+  public void testChillModeExitRuleWithPipelineAvailabilityCheck(
+      int containerCount, int nodeCount, int pipelineCount,
+      double healthyPipelinePercent, double oneReplicaPercent)
+      throws Exception {
+
+    OzoneConfiguration conf = createConf(healthyPipelinePercent,
+        oneReplicaPercent);
+
+    containers = new ArrayList<>();
+    containers.addAll(HddsTestUtils.getContainerInfo(containerCount));
+
+    MockNodeManager mockNodeManager = new MockNodeManager(true, nodeCount);
+    SCMPipelineManager pipelineManager = new SCMPipelineManager(conf,
+        mockNodeManager, queue);
+    PipelineProvider mockRatisProvider =
+        new MockRatisPipelineProvider(mockNodeManager,
+            pipelineManager.getStateManager(), config);
+    pipelineManager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
+        mockRatisProvider);
+
+
+    for (int i=0; i < pipelineCount; i++) {
+      pipelineManager.createPipeline(HddsProtos.ReplicationType.RATIS,
+          HddsProtos.ReplicationFactor.THREE);
+    }
+
+    for (ContainerInfo container : containers) {
+      container.setState(HddsProtos.LifeCycleState.CLOSED);
+    }
+
+    scmChillModeManager = new SCMChillModeManager(conf, containers,
+        pipelineManager, queue);
+
+    assertTrue(scmChillModeManager.getInChillMode());
+
+    testContainerThreshold(containers, 1.0);
+
+    List<Pipeline> pipelines = pipelineManager.getPipelines();
+
+    int healthyPipelineThresholdCount =
+        scmChillModeManager.getHealthyPipelineChillModeRule()
+            .getHealthyPipelineThresholdCount();
+    int oneReplicaThresholdCount =
+        scmChillModeManager.getOneReplicaPipelineChillModeRule()
+            .getThresholdCount();
+
+    // Because even if no pipelines are there, and threshold we set to zero,
+    // we shall a get an event when datanode is registered. In that case,
+    // validate will return true, and add this to validatedRules.
+    if (Math.max(healthyPipelinePercent, oneReplicaThresholdCount) == 0) {
+      firePipelineEvent(pipelines.get(0));
+    }
+
+    for (int i = 0; i < Math.max(healthyPipelineThresholdCount,
+        oneReplicaThresholdCount); i++) {
+      firePipelineEvent(pipelines.get(i));
+
+      if (i < healthyPipelineThresholdCount) {
+        checkHealthy(i + 1);
+      }
+
+      if (i < oneReplicaThresholdCount) {
+        checkOpen(i + 1);
+      }
+    }
+
+
+    GenericTestUtils.waitFor(() -> {
+      return !scmChillModeManager.getInChillMode();
+    }, 100, 1000 * 5);
+  }
+
+  private void checkHealthy(int expectedCount) throws Exception{
+    GenericTestUtils.waitFor(() -> scmChillModeManager
+            .getHealthyPipelineChillModeRule()
+            .getCurrentHealthyPipelineCount() == expectedCount,
+        100,  5000);
+  }
+
+  private void checkOpen(int expectedCount) throws Exception {
+    GenericTestUtils.waitFor(() -> scmChillModeManager
+            .getOneReplicaPipelineChillModeRule()
+            .getCurrentReportedPipelineCount() == expectedCount,
+        1000,  5000);
+  }
+
+  private void firePipelineEvent(Pipeline pipeline) throws Exception {
+    PipelineReportsProto.Builder reportBuilder =
+        PipelineReportsProto.newBuilder();
+
+    reportBuilder.addPipelineReport(PipelineReport.newBuilder()
+        .setPipelineID(pipeline.getId().getProtobuf()));
+    queue.fireEvent(SCMEvents.PROCESSED_PIPELINE_REPORT,
+        new PipelineReportFromDatanode(pipeline.getNodes().get(0),
+            reportBuilder.build()));
+  }
+
+
   @Test
   public void testDisableChillMode() {
     OzoneConfiguration conf = new OzoneConfiguration(config);
     conf.setBoolean(HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED, false);
-    scmChillModeManager = new SCMChillModeManager(
-        conf, containers, null, queue);
+    PipelineManager pipelineManager = Mockito.mock(PipelineManager.class);
+    Mockito.doNothing().when(pipelineManager).startPipelineCreator();
+    scmChillModeManager =
+        new SCMChillModeManager(conf, containers, pipelineManager, queue);
     assertFalse(scmChillModeManager.getInChillMode());
   }
 
@@ -165,8 +352,7 @@ public class TestSCMChillModeManager {
 
     scmChillModeManager = new SCMChillModeManager(
         config, containers, null, queue);
-    queue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
-        scmChillModeManager);
+
     assertTrue(scmChillModeManager.getInChillMode());
 
     // When 10 CLOSED containers are reported by DNs, the computed container
@@ -190,8 +376,7 @@ public class TestSCMChillModeManager {
     conf.setInt(HddsConfigKeys.HDDS_SCM_CHILLMODE_MIN_DATANODE, numOfDns);
     scmChillModeManager = new SCMChillModeManager(
         conf, containers, null, queue);
-    queue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
-        scmChillModeManager);
+
     // Assert SCM is in Chill mode.
     assertTrue(scmChillModeManager.getInChillMode());
 
@@ -235,34 +420,40 @@ public class TestSCMChillModeManager {
     String storageDir = GenericTestUtils.getTempPath(
         TestSCMChillModeManager.class.getName() + UUID.randomUUID());
     try{
-      MockNodeManager nodeManager = new MockNodeManager(true, 1);
+      MockNodeManager nodeManager = new MockNodeManager(true, 3);
       config.set(HddsConfigKeys.OZONE_METADATA_DIRS, storageDir);
       // enable pipeline check
       config.setBoolean(
           HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK, true);
 
-      PipelineManager pipelineManager = new SCMPipelineManager(config,
+      SCMPipelineManager pipelineManager = new SCMPipelineManager(config,
           nodeManager, queue);
-      scmChillModeManager = new SCMChillModeManager(
-          config, containers, pipelineManager, queue);
-      queue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
-          scmChillModeManager);
 
-      queue.fireEvent(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
-          HddsTestUtils.createNodeRegistrationContainerReport(containers));
-      assertTrue(scmChillModeManager.getInChillMode());
+      PipelineProvider mockRatisProvider =
+          new MockRatisPipelineProvider(nodeManager,
+              pipelineManager.getStateManager(), config);
+      pipelineManager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
+          mockRatisProvider);
 
-      // simulation a pipeline report to trigger the rule check
       Pipeline pipeline = pipelineManager.createPipeline(
-          HddsProtos.ReplicationType.STAND_ALONE,
-          HddsProtos.ReplicationFactor.ONE);
+          HddsProtos.ReplicationType.RATIS,
+          HddsProtos.ReplicationFactor.THREE);
       PipelineReportsProto.Builder reportBuilder = PipelineReportsProto
           .newBuilder();
       reportBuilder.addPipelineReport(PipelineReport.newBuilder()
           .setPipelineID(pipeline.getId().getProtobuf()));
 
-      queue.fireEvent(SCMEvents.PIPELINE_REPORT, new PipelineReportFromDatanode(
-          pipeline.getNodes().get(0), reportBuilder.build()));
+      scmChillModeManager = new SCMChillModeManager(
+          config, containers, pipelineManager, queue);
+
+      queue.fireEvent(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
+          HddsTestUtils.createNodeRegistrationContainerReport(containers));
+      assertTrue(scmChillModeManager.getInChillMode());
+
+      // Trigger the processed pipeline report event
+      queue.fireEvent(SCMEvents.PROCESSED_PIPELINE_REPORT,
+          new PipelineReportFromDatanode(pipeline.getNodes().get(0),
+              reportBuilder.build()));
 
       GenericTestUtils.waitFor(() -> {
         return !scmChillModeManager.getInChillMode();

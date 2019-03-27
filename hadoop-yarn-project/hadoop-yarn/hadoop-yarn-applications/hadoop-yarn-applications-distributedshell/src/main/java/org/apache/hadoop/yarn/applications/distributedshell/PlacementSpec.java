@@ -96,8 +96,12 @@ public class PlacementSpec {
           parsed.entrySet()) {
         LOG.info("Parsed source tag: {}, number of allocations: {}",
             entry.getKey().getTag(), entry.getKey().getNumOfAllocations());
-        LOG.info("Parsed constraint: {}", entry.getValue()
-            .getConstraintExpr().getClass().getSimpleName());
+        if (entry.getValue() != null) {
+          LOG.info("Parsed constraint: {}", entry.getValue()
+              .getConstraintExpr().getClass().getSimpleName());
+        } else {
+          LOG.info("Parsed constraint Empty");
+        }
         pSpecs.put(entry.getKey().getTag(), new PlacementSpec(
             entry.getKey().getTag(),
             entry.getKey().getNumOfAllocations(),

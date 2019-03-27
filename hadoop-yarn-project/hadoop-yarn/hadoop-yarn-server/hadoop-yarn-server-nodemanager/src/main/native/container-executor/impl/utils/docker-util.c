@@ -115,7 +115,15 @@ int check_trusted_image(const struct configuration *command_config, const struct
   int ret = 0;
   int no_registry_prefix_in_image_name = 0;
   char *image_name = get_configuration_value("image", DOCKER_COMMAND_FILE_SECTION, command_config);
-  char **privileged_registry = get_configuration_values_delimiter("docker.trusted.registries", CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
+  char *privileged = NULL;
+  char **privileged_registry = NULL;
+  privileged = get_configuration_value("privileged", DOCKER_COMMAND_FILE_SECTION, command_config);
+  if (privileged != NULL && strcasecmp(privileged, "true") == 0 ) {
+    privileged_registry = get_configuration_values_delimiter("docker.privileged-containers.registries", CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
+  }
+  if (privileged_registry == NULL) {
+    privileged_registry = get_configuration_values_delimiter("docker.trusted.registries", CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
+  }
   char *registry_ptr = NULL;
   if (image_name == NULL) {
     ret = INVALID_DOCKER_IMAGE_NAME;
@@ -158,6 +166,7 @@ int check_trusted_image(const struct configuration *command_config, const struct
   }
 
 free_and_exit:
+  free(privileged);
   free(image_name);
   free_values(privileged_registry);
   return ret;
@@ -416,12 +425,6 @@ int get_docker_command(const char *command_file, const struct configuration *con
     return INVALID_COMMAND_FILE;
   }
 
-  char *value = get_configuration_value("use-entry-point", DOCKER_COMMAND_FILE_SECTION, &command_config);
-  if (value != NULL && strcasecmp(value, "true") == 0) {
-    entry_point = 1;
-  }
-  free(value);
-
   char *docker = get_docker_binary(conf);
   ret = add_to_args(args, docker);
   free(docker);
@@ -458,6 +461,8 @@ int get_docker_command(const char *command_file, const struct configuration *con
     ret = get_docker_start_command(command_file, conf, args);
   } else if (strcmp(DOCKER_EXEC_COMMAND, command) == 0) {
     ret = get_docker_exec_command(command_file, conf, args);
+  } else if (strcmp(DOCKER_IMAGES_COMMAND, command) == 0) {
+      ret = get_docker_images_command(command_file, conf, args);
   } else {
     ret = UNKNOWN_DOCKER_COMMAND;
   }
@@ -1525,6 +1530,12 @@ static int set_privileged(const struct configuration *command_config, const stru
     if (privileged_container_enabled != NULL) {
       if (strcmp(privileged_container_enabled, "1") == 0 ||
           strcasecmp(privileged_container_enabled, "True") == 0) {
+        // Disable set privileged if entry point mode is disabled
+        if (get_use_entry_point_flag() != 1) {
+          fprintf(ERRORFILE, "Privileged containers are disabled for non-entry-point mode\n");
+          ret = PRIVILEGED_CONTAINERS_DISABLED;
+          goto free_and_exit;
+        }
         // Disable set privileged if image is not trusted.
         if (check_trusted_image(command_config, conf) != 0) {
           fprintf(ERRORFILE, "Privileged containers are disabled from untrusted source\n");
@@ -1568,11 +1579,18 @@ int get_docker_run_command(const char *command_file, const struct configuration 
   char **launch_command = NULL;
   char *privileged = NULL;
   char *no_new_privileges_enabled = NULL;
+  char *use_entry_point = NULL;
   struct configuration command_config = {0, NULL};
   ret = read_and_verify_command_file(command_file, DOCKER_RUN_COMMAND, &command_config);
   if (ret != 0) {
     goto free_and_exit;
   }
+
+  use_entry_point = get_configuration_value("use-entry-point", DOCKER_COMMAND_FILE_SECTION, &command_config);
+  if (use_entry_point != NULL && strcasecmp(use_entry_point, "true") == 0) {
+    entry_point = 1;
+  }
+  free(use_entry_point);
 
   container_name = get_configuration_value("name", DOCKER_COMMAND_FILE_SECTION, &command_config);
   if (container_name == NULL || validate_container_name(container_name) != 0) {
@@ -1734,5 +1752,41 @@ free_and_exit:
   free(container_name);
   free_values(launch_command);
   free_configuration(&command_config);
+  return ret;
+}
+
+int get_docker_images_command(const char *command_file, const struct configuration *conf, args *args) {
+  int ret = 0;
+  char *image_name = NULL;
+
+  struct configuration command_config = {0, NULL};
+  ret = read_and_verify_command_file(command_file, DOCKER_IMAGES_COMMAND, &command_config);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  ret = add_to_args(args, DOCKER_IMAGES_COMMAND);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  image_name = get_configuration_value("image", DOCKER_COMMAND_FILE_SECTION, &command_config);
+  if (image_name) {
+    if (validate_docker_image_name(image_name) != 0) {
+      ret = INVALID_DOCKER_IMAGE_NAME;
+       goto free_and_exit;
+    }
+    ret = add_to_args(args, image_name);
+    if (ret != 0) {
+      goto free_and_exit;
+    }
+  }
+
+  ret = add_to_args(args, "--format={{json .}}");
+  ret = add_to_args(args, "--filter=dangling=false");
+
+  free_and_exit:
+    free(image_name);
+    free_configuration(&command_config);
   return ret;
 }

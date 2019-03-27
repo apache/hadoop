@@ -25,15 +25,15 @@ services:
       command: ["/opt/hadoop/bin/ozone","datanode"]
       env_file:
          - ./docker-config
-   ozoneManager:
+   om:
       image: apache/hadoop-runner
-      hostname: ozoneManager
+      hostname: om
       volumes:
          - ../..:/opt/hadoop
       ports:
          - 9874
       environment:
-         ENSURE_OM_INITIALIZED: /data/metadata/ozoneManager/current/VERSION
+         ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
          WAITFOR: scm:9876
       env_file:
          - ./docker-config
@@ -56,7 +56,7 @@ services:
       env_file:
          - ./docker-config
       environment:
-         HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-0*.jar
+         HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current*.jar
       command: ["watch","-n","100000","ls"]
    hadoop2:
       image: flokkr/hadoop:2.9.0

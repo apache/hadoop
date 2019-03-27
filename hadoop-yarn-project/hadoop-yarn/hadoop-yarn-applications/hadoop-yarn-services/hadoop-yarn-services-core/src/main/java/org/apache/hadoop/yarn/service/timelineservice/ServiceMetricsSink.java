@@ -77,16 +77,12 @@ public class ServiceMetricsSink implements MetricsSink {
     }
 
     if (isServiceMetrics && appId != null) {
-      if (log.isDebugEnabled()) {
-        log.debug("Publishing service metrics. " + record);
-      }
+      log.debug("Publishing service metrics. {}", record);
       serviceTimelinePublisher.publishMetrics(record.metrics(), appId,
           ServiceTimelineEntityType.SERVICE_ATTEMPT.toString(),
           record.timestamp());
     } else if (isComponentMetrics) {
-      if (log.isDebugEnabled()) {
-        log.debug("Publishing Component metrics. " + record);
-      }
+      log.debug("Publishing Component metrics. {}", record);
       serviceTimelinePublisher.publishMetrics(record.metrics(), record.name(),
           ServiceTimelineEntityType.COMPONENT.toString(), record.timestamp());
     }

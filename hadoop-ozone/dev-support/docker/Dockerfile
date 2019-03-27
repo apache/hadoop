@@ -46,6 +46,9 @@ RUN mkdir -p /opt && \
 #Install docker-compose
 RUN pip install docker-compose
 
+#Install pytest==2.8.7
+RUN pip install pytest==2.8.7
+
 ENV PATH=$PATH:/opt/findbugs/bin
 
 RUN addgroup -g 1000 default && \

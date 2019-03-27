@@ -216,6 +216,8 @@ public class ServiceTestUtils {
     LOG.info("Starting up YARN cluster");
     if (conf == null) {
       setConf(new YarnConfiguration());
+      conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS, false);
+      conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_USE_RPC, false);
     }
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 128);
     // reduce the teardown waiting time
@@ -533,6 +535,12 @@ public class ServiceTestUtils {
   protected void waitForServiceToBeStarted(ServiceClient client,
       Service exampleApp) throws TimeoutException, InterruptedException {
     waitForServiceToBeInState(client, exampleApp, ServiceState.STARTED);
+  }
+
+  protected void waitForServiceToBeExpressUpgrading(ServiceClient client,
+      Service exampleApp) throws TimeoutException, InterruptedException {
+    waitForServiceToBeInState(client, exampleApp,
+        ServiceState.EXPRESS_UPGRADING);
   }
 
   protected void waitForServiceToBeInState(ServiceClient client,

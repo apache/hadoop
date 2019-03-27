@@ -26,10 +26,12 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Stack;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
@@ -40,9 +42,12 @@ import org.junit.Test;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestSchedulingPolicy {
-  private static final Log LOG = LogFactory.getLog(TestSchedulingPolicy.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSchedulingPolicy.class);
   private final static String ALLOC_FILE =
       new File(FairSchedulerTestBase.TEST_DIR, "test-queues").getAbsolutePath();
   private FairSchedulerConfiguration conf;
@@ -52,6 +57,11 @@ public class TestSchedulingPolicy {
   public void setUp() throws Exception {
     scheduler = new FairScheduler();
     conf = new FairSchedulerConfiguration();
+    // since this runs outside of the normal context we need to set one
+    RMContext rmContext = mock(RMContext.class);
+    PlacementManager placementManager = new PlacementManager();
+    when(rmContext.getQueuePlacementManager()).thenReturn(placementManager);
+    scheduler.setRMContext(rmContext);
   }
 
   public void testParseSchedulingPolicy()
@@ -202,7 +212,7 @@ public class TestSchedulingPolicy {
       if (fairShareComparator.compare(copy[0], copy[2]) <= 0) {
         return true;
       } else {
-        LOG.fatal("Failure data: " + copy[0] + " " + copy[1] + " " + copy[2]);
+        LOG.error("Failure data: " + copy[0] + " " + copy[1] + " " + copy[2]);
         return false;
       }
     }

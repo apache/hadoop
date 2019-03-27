@@ -26,8 +26,8 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
@@ -43,7 +43,8 @@ import com.google.protobuf.BlockingService;
 @Private
 public class RpcServerFactoryPBImpl implements RpcServerFactory {
 
-  private static final Log LOG = LogFactory.getLog(RpcServerFactoryPBImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RpcServerFactoryPBImpl.class);
   private static final String PROTO_GEN_PACKAGE_NAME = "org.apache.hadoop.yarn.proto";
   private static final String PROTO_GEN_CLASS_SUFFIX = "Service";
   private static final String PB_IMPL_PACKAGE_SUFFIX = "impl.pb.service";

@@ -34,9 +34,12 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProviderTokenIssuer;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -47,8 +50,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.DelegationTokenIssuer;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 
 import com.google.common.base.Preconditions;
@@ -72,7 +76,8 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class OzoneFileSystem extends FileSystem {
+public class OzoneFileSystem extends FileSystem
+    implements KeyProviderTokenIssuer {
   static final Logger LOG = LoggerFactory.getLogger(OzoneFileSystem.class);
 
   /**
@@ -85,33 +90,53 @@ public class OzoneFileSystem extends FileSystem {
 
   private OzoneClientAdapter adapter;
 
-
   private OzoneFSStorageStatistics storageStatistics;
 
   private static final Pattern URL_SCHEMA_PATTERN =
-      Pattern.compile("(.+)\\.([^\\.]+)");
+      Pattern.compile("([^\\.]+)\\.([^\\.]+)\\.{0,1}(.*)");
+
+  private static final String URI_EXCEPTION_TEXT = "Ozone file system url " +
+      "should be either one of the two forms: " +
+      "o3fs://bucket.volume/key  OR " +
+      "o3fs://bucket.volume.om-host.example.com:5678/key";
 
   @Override
   public void initialize(URI name, Configuration conf) throws IOException {
     super.initialize(name, conf);
     setConf(conf);
     Objects.requireNonNull(name.getScheme(), "No scheme provided in " + name);
-    assert getScheme().equals(name.getScheme());
+    Preconditions.checkArgument(getScheme().equals(name.getScheme()),
+        "Invalid scheme provided in " + name);
 
     String authority = name.getAuthority();
 
     Matcher matcher = URL_SCHEMA_PATTERN.matcher(authority);
 
     if (!matcher.matches()) {
-      throw new IllegalArgumentException("Ozone file system url should be "
-          + "in the form o3fs://bucket.volume");
+      throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
     }
     String bucketStr = matcher.group(1);
     String volumeStr = matcher.group(2);
+    String remaining = matcher.groupCount() == 3 ? matcher.group(3) : null;
+
+    String omHost = null;
+    String omPort = String.valueOf(-1);
+    if (StringUtils.isNotEmpty(remaining)) {
+      String[] parts = remaining.split(":");
+      if (parts.length != 2) {
+        throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
+      }
+      omHost = parts[0];
+      omPort = parts[1];
+      if (!NumberUtils.isParsable(omPort)) {
+        throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
+      }
+    }
 
     try {
       uri = new URIBuilder().setScheme(OZONE_URI_SCHEME)
-          .setHost(authority).build();
+        .setHost(authority)
+        .build();
       LOG.trace("Ozone URI for ozfs initialization is " + uri);
 
       //isolated is the default for ozonefs-lib-legacy which includes the
@@ -125,22 +150,34 @@ public class OzoneFileSystem extends FileSystem {
       boolean isolatedClassloader =
           conf.getBoolean("ozone.fs.isolated-classloader", defaultValue);
 
-      storageStatistics = (OzoneFSStorageStatistics)
-          GlobalStorageStatistics.INSTANCE
-              .put(OzoneFSStorageStatistics.NAME,
-                  OzoneFSStorageStatistics::new);
+      try {
+        //register only to the GlobalStorageStatistics if the class exists.
+        //This is required to support hadoop versions <2.7
+        Class.forName("org.apache.hadoop.fs.GlobalStorageStatistics");
+        storageStatistics = (OzoneFSStorageStatistics)
+            GlobalStorageStatistics.INSTANCE
+                .put(OzoneFSStorageStatistics.NAME,
+                    OzoneFSStorageStatistics::new);
+      } catch (ClassNotFoundException e) {
+        //we don't support storage statistics for hadoop2.7 and older
+      }
+
       if (isolatedClassloader) {
-        this.adapter =
-            OzoneClientAdapterFactory.createAdapter(volumeStr, bucketStr,
-                storageStatistics);
-      } else {
-        OzoneConfiguration ozoneConfiguration;
-        if (conf instanceof OzoneConfiguration) {
-          ozoneConfiguration = (OzoneConfiguration) conf;
-        } else {
-          ozoneConfiguration = new OzoneConfiguration(conf);
+        try {
+          //register only to the GlobalStorageStatistics if the class exists.
+          //This is required to support hadoop versions <2.7
+          Class.forName("org.apache.hadoop.fs.GlobalStorageStatistics");
+          this.adapter =
+              OzoneClientAdapterFactory.createAdapter(volumeStr, bucketStr,
+                  storageStatistics);
+        } catch (ClassNotFoundException e) {
+          this.adapter =
+              OzoneClientAdapterFactory.createAdapter(volumeStr, bucketStr);
         }
-        this.adapter = new OzoneClientAdapterImpl(ozoneConfiguration,
+      } else {
+
+        this.adapter = new OzoneClientAdapterImpl(omHost,
+            Integer.parseInt(omPort), conf,
             volumeStr, bucketStr, storageStatistics);
       }
 
@@ -188,7 +225,9 @@ public class OzoneFileSystem extends FileSystem {
 
   @Override
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
-    storageStatistics.incrementCounter(Statistic.INVOCATION_OPEN, 1);
+    if (storageStatistics != null) {
+      storageStatistics.incrementCounter(Statistic.INVOCATION_OPEN, 1);
+    }
     statistics.incrementWriteOps(1);
     LOG.trace("open() path:{}", f);
     final FileStatus fileStatus = getFileStatus(f);
@@ -207,7 +246,9 @@ public class OzoneFileSystem extends FileSystem {
                                    short replication, long blockSize,
                                    Progressable progress) throws IOException {
     LOG.trace("create() path:{}", f);
-    storageStatistics.incrementCounter(Statistic.INVOCATION_CREATE, 1);
+    if (storageStatistics != null) {
+      storageStatistics.incrementCounter(Statistic.INVOCATION_CREATE, 1);
+    }
     statistics.incrementWriteOps(1);
     final String key = pathToKey(f);
     final FileStatus status;
@@ -240,8 +281,10 @@ public class OzoneFileSystem extends FileSystem {
       short replication,
       long blockSize,
       Progressable progress) throws IOException {
-    storageStatistics.incrementCounter(
-        Statistic.INVOCATION_CREATE_NON_RECURSIVE, 1);
+    if (storageStatistics != null) {
+      storageStatistics.incrementCounter(
+          Statistic.INVOCATION_CREATE_NON_RECURSIVE, 1);
+    }
     statistics.incrementWriteOps(1);
     final Path parent = path.getParent();
     if (parent != null) {
@@ -259,6 +302,26 @@ public class OzoneFileSystem extends FileSystem {
                                    Progressable progress) throws IOException {
     throw new UnsupportedOperationException("append() Not implemented by the "
         + getClass().getSimpleName() + " FileSystem implementation");
+  }
+
+  @Override
+  public KeyProvider getKeyProvider() throws IOException {
+    return adapter.getKeyProvider();
+  }
+
+  @Override
+  public URI getKeyProviderUri() throws IOException {
+    return adapter.getKeyProviderUri();
+  }
+
+  @Override
+  public DelegationTokenIssuer[] getAdditionalTokenIssuers()
+      throws IOException {
+    KeyProvider keyProvider = getKeyProvider();
+    if (keyProvider instanceof DelegationTokenIssuer) {
+      return new DelegationTokenIssuer[]{(DelegationTokenIssuer)keyProvider};
+    }
+    return null;
   }
 
   private class RenameIterator extends OzoneListingIterator {
@@ -296,7 +359,9 @@ public class OzoneFileSystem extends FileSystem {
    */
   @Override
   public boolean rename(Path src, Path dst) throws IOException {
-    storageStatistics.incrementCounter(Statistic.INVOCATION_RENAME, 1);
+    if (storageStatistics != null) {
+      storageStatistics.incrementCounter(Statistic.INVOCATION_RENAME, 1);
+    }
     statistics.incrementWriteOps(1);
     if (src.equals(dst)) {
       return true;
@@ -431,7 +496,9 @@ public class OzoneFileSystem extends FileSystem {
 
   @Override
   public boolean delete(Path f, boolean recursive) throws IOException {
-    storageStatistics.incrementCounter(Statistic.INVOCATION_DELETE, 1);
+    if (storageStatistics != null) {
+      storageStatistics.incrementCounter(Statistic.INVOCATION_DELETE, 1);
+    }
     statistics.incrementWriteOps(1);
     LOG.debug("Delete path {} - recursive {}", f, recursive);
     FileStatus status;
@@ -581,10 +648,10 @@ public class OzoneFileSystem extends FileSystem {
      * @param dirPath path to the dir
      * @throws FileNotFoundException
      */
-    void addSubDirStatus(Path dirPath) throws FileNotFoundException {
+    void addSubDirStatus(Path dirPath) throws IOException {
       // Check if subdir path is already included in statuses.
       if (!subDirStatuses.containsKey(dirPath)) {
-        subDirStatuses.put(dirPath, innerGetFileStatusForDir(dirPath));
+        subDirStatuses.put(dirPath, getFileStatus(dirPath));
       }
     }
 
@@ -623,7 +690,9 @@ public class OzoneFileSystem extends FileSystem {
 
   @Override
   public FileStatus[] listStatus(Path f) throws IOException {
-    storageStatistics.incrementCounter(Statistic.INVOCATION_LIST_STATUS, 1);
+    if (storageStatistics != null) {
+      storageStatistics.incrementCounter(Statistic.INVOCATION_LIST_STATUS, 1);
+    }
     statistics.incrementReadOps(1);
     LOG.trace("listStatus() path:{}", f);
     ListStatusIterator iterator = new ListStatusIterator(f);
@@ -639,6 +708,21 @@ public class OzoneFileSystem extends FileSystem {
   @Override
   public Path getWorkingDirectory() {
     return workingDir;
+  }
+
+  @Override
+  public Token<?> getDelegationToken(String renewer) throws IOException {
+    return adapter.getDelegationToken(renewer);
+  }
+
+  /**
+   * Get a canonical service name for this file system. If the URI is logical,
+   * the hostname part of the URI will be returned.
+   * @return a service string that uniquely identifies this file system.
+   */
+  @Override
+  public String getCanonicalServiceName() {
+    return adapter.getCanonicalServiceName();
   }
 
   /**
@@ -710,70 +794,17 @@ public class OzoneFileSystem extends FileSystem {
 
   @Override
   public FileStatus getFileStatus(Path f) throws IOException {
-    storageStatistics.incrementCounter(Statistic.INVOCATION_GET_FILE_STATUS, 1);
+    if (storageStatistics != null) {
+      storageStatistics
+          .incrementCounter(Statistic.INVOCATION_GET_FILE_STATUS, 1);
+    }
     statistics.incrementReadOps(1);
     LOG.trace("getFileStatus() path:{}", f);
     Path qualifiedPath = f.makeQualified(uri, workingDir);
     String key = pathToKey(qualifiedPath);
 
-    if (key.length() == 0) {
-      return new FileStatus(0, true, 1, 0,
-          adapter.getCreationTime(), qualifiedPath);
-    }
-
-    // Check if the key exists
-    BasicKeyInfo ozoneKey = adapter.getKeyInfo(key);
-    if (ozoneKey != null) {
-      LOG.debug("Found exact file for path {}: normal file", f);
-      return new FileStatus(ozoneKey.getDataSize(), false, 1,
-          getDefaultBlockSize(f), ozoneKey.getModificationTime(), 0,
-          FsPermission.getFileDefault(), getUsername(), getUsername(),
-          qualifiedPath);
-    }
-
-    return innerGetFileStatusForDir(f);
-  }
-
-  /**
-   * Get the FileStatus for input directory path.
-   * They key corresponding to input path is appended with a trailing slash
-   * to return only the corresponding directory key in the bucket.
-   *
-   * @param f directory path
-   * @return FileStatus for the input directory path
-   * @throws FileNotFoundException
-   */
-  public FileStatus innerGetFileStatusForDir(Path f)
-      throws FileNotFoundException {
-    Path qualifiedPath = f.makeQualified(uri, workingDir);
-    String key = pathToKey(qualifiedPath);
-    key = addTrailingSlashIfNeeded(key);
-
-    BasicKeyInfo ozoneKey = adapter.getKeyInfo(key);
-    if (ozoneKey != null) {
-      if (adapter.isDirectory(ozoneKey)) {
-        // Key is a directory
-        LOG.debug("Found file (with /) for path {}: fake directory", f);
-      } else {
-        // Key is a file with trailing slash
-        LOG.warn("Found file (with /) for path {}: real file? should not " +
-            "happen", f, key);
-      }
-      return new FileStatus(0, true, 1, 0,
-          ozoneKey.getModificationTime(), 0,
-          FsPermission.getDirDefault(), getUsername(), getUsername(),
-          qualifiedPath);
-    }
-
-    // File or directory corresponding to input path does not exist.
-    // Check if there exists a key prefixed with this key.
-    boolean hasChildren = adapter.hasNextKey(key);
-    if (hasChildren) {
-      return new FileStatus(0, true, 1, 0, 0, 0, FsPermission.getDirDefault(),
-          getUsername(), getUsername(), qualifiedPath);
-    }
-
-    throw new FileNotFoundException(f + ": No such file or directory!");
+    return adapter.getFileStatus(key)
+        .makeQualified(uri, qualifiedPath, getUsername(), getUsername());
   }
 
   /**

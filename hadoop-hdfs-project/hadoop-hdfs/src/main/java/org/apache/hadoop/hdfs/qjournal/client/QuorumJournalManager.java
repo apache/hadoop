@@ -490,6 +490,7 @@ public class QuorumJournalManager implements JournalManager {
   @Override
   public void close() throws IOException {
     loggers.close();
+    connectionFactory.destroy();
   }
 
   public void selectInputStreams(Collection<EditLogInputStream> streams,

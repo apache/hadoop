@@ -133,6 +133,11 @@ public final class OzoneConfigKeys {
   public static final String OZONE_CLIENT_WATCH_REQUEST_TIMEOUT_DEFAULT =
       "30s";
 
+  public static final String OZONE_CLIENT_MAX_RETRIES =
+      "ozone.client.max.retries";
+  public static final int OZONE_CLIENT_MAX_RETRIES_DEFAULT = 5;
+
+
   // This defines the overall connection limit for the connection pool used in
   // RestClient.
   public static final String OZONE_REST_CLIENT_HTTP_CONNECTION_MAX =
@@ -198,10 +203,10 @@ public final class OzoneConfigKeys {
   public static final String OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT
       = "300s"; // 300s for default
 
-  public static final String OZONE_KEY_PREALLOCATION_MAXSIZE =
-      "ozone.key.preallocation.maxsize";
-  public static final long OZONE_KEY_PREALLOCATION_MAXSIZE_DEFAULT
-      = 128 * OzoneConsts.MB;
+  public static final String OZONE_KEY_PREALLOCATION_BLOCKS_MAX =
+      "ozone.key.preallocation.max.blocks";
+  public static final int OZONE_KEY_PREALLOCATION_BLOCKS_MAX_DEFAULT
+      = 64;
 
   public static final String OZONE_BLOCK_DELETING_LIMIT_PER_CONTAINER =
       "ozone.block.deleting.limit.per.task";
@@ -362,6 +367,9 @@ public final class OzoneConfigKeys {
   public static final int OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT_BYTES =
       1024 * 1024;
   public static final int OZONE_CLIENT_BYTES_PER_CHECKSUM_MIN_SIZE = 256 * 1024;
+  public static final String OZONE_CLIENT_VERIFY_CHECKSUM =
+      "ozone.client.verify.checksum";
+  public static final boolean OZONE_CLIENT_VERIFY_CHECKSUM_DEFAULT = true;
   public static final String OZONE_ACL_AUTHORIZER_CLASS =
       "ozone.acl.authorizer.class";
   public static final String OZONE_ACL_AUTHORIZER_CLASS_DEFAULT =
@@ -370,13 +378,52 @@ public final class OzoneConfigKeys {
       "ozone.acl.enabled";
   public static final boolean OZONE_ACL_ENABLED_DEFAULT =
       false;
-
+  public static final String OZONE_S3_TOKEN_MAX_LIFETIME_KEY =
+      "ozone.s3.token.max.lifetime";
+  public static final String OZONE_S3_TOKEN_MAX_LIFETIME_KEY_DEFAULT = "3m";
   //For technical reasons this is unused and hardcoded to the
   // OzoneFileSystem.initialize.
   public static final String OZONE_FS_ISOLATED_CLASSLOADER =
       "ozone.fs.isolated-classloader";
 
+  // Ozone Client Retry and Failover configurations
+  public static final String OZONE_CLIENT_RETRY_MAX_ATTEMPTS_KEY =
+      "ozone.client.retry.max.attempts";
+  public static final int OZONE_CLIENT_RETRY_MAX_ATTEMPTS_DEFAULT =
+      10;
+  public static final String OZONE_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY =
+      "ozone.client.failover.max.attempts";
+  public static final int OZONE_CLIENT_FAILOVER_MAX_ATTEMPTS_DEFAULT =
+      15;
+  public static final String OZONE_CLIENT_FAILOVER_SLEEP_BASE_MILLIS_KEY =
+      "ozone.client.failover.sleep.base.millis";
+  public static final int OZONE_CLIENT_FAILOVER_SLEEP_BASE_MILLIS_DEFAULT =
+      500;
+  public static final String OZONE_CLIENT_FAILOVER_SLEEP_MAX_MILLIS_KEY =
+      "ozone.client.failover.sleep.max.millis";
+  public static final int OZONE_CLIENT_FAILOVER_SLEEP_MAX_MILLIS_DEFAULT =
+      15000;
 
+  public static final String OZONE_FREON_HTTP_ENABLED_KEY =
+      "ozone.freon.http.enabled";
+  public static final String OZONE_FREON_HTTP_BIND_HOST_KEY =
+      "ozone.freon.http-bind-host";
+  public static final String OZONE_FREON_HTTPS_BIND_HOST_KEY =
+      "ozone.freon.https-bind-host";
+  public static final String OZONE_FREON_HTTP_ADDRESS_KEY =
+      "ozone.freon.http-address";
+  public static final String OZONE_FREON_HTTPS_ADDRESS_KEY =
+      "ozone.freon.https-address";
+
+  public static final String OZONE_FREON_HTTP_BIND_HOST_DEFAULT = "0.0.0.0";
+  public static final int OZONE_FREON_HTTP_BIND_PORT_DEFAULT = 9884;
+  public static final int OZONE_FREON_HTTPS_BIND_PORT_DEFAULT = 9885;
+  public static final String
+      OZONE_FREON_HTTP_KERBEROS_PRINCIPAL_KEY =
+      "ozone.freon.http.kerberos.principal";
+  public static final String
+      OZONE_FREON_HTTP_KERBEROS_KEYTAB_FILE_KEY =
+      "ozone.freon.http.kerberos.keytab";
 
   /**
    * There is no need to instantiate this class.

@@ -21,8 +21,10 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 import org.apache.curator.framework.AuthInfo;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -164,7 +166,9 @@ public class ResourceManager extends CompositeService
    */
   public static final int EPOCH_BIT_SHIFT = 40;
 
-  private static final Log LOG = LogFactory.getLog(ResourceManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ResourceManager.class);
+  private static final Marker FATAL = MarkerFactory.getMarker("FATAL");
   private static long clusterTimeStamp = System.currentTimeMillis();
 
   /*
@@ -950,15 +954,16 @@ public class ResourceManager extends CompositeService
         // how depends on the event.
         switch(event.getType()) {
         case STATE_STORE_FENCED:
-          LOG.fatal("State store fenced even though the resource manager " +
-              "is not configured for high availability. Shutting down this " +
-              "resource manager to protect the integrity of the state store.");
+          LOG.error(FATAL, "State store fenced even though the resource " +
+              "manager is not configured for high availability. Shutting " +
+              "down this resource manager to protect the integrity of the " +
+              "state store.");
           ExitUtil.terminate(1, event.getExplanation());
           break;
         case STATE_STORE_OP_FAILED:
           if (YarnConfiguration.shouldRMFailFast(getConfig())) {
-            LOG.fatal("Shutting down the resource manager because a state " +
-                "store operation failed, and the resource manager is " +
+            LOG.error(FATAL, "Shutting down the resource manager because a " +
+                "state store operation failed, and the resource manager is " +
                 "configured to fail fast. See the yarn.fail-fast and " +
                 "yarn.resourcemanager.fail-fast properties.");
             ExitUtil.terminate(1, event.getExplanation());
@@ -970,7 +975,7 @@ public class ResourceManager extends CompositeService
           }
           break;
         default:
-          LOG.fatal("Shutting down the resource manager.");
+          LOG.error(FATAL, "Shutting down the resource manager.");
           ExitUtil.terminate(1, event.getExplanation());
         }
       }
@@ -1019,7 +1024,7 @@ public class ResourceManager extends CompositeService
             elector.rejoinElection();
           }
         } catch (Exception e) {
-          LOG.fatal("Failed to transition RM to Standby mode.", e);
+          LOG.error(FATAL, "Failed to transition RM to Standby mode.", e);
           ExitUtil.terminate(1, e);
         }
       }
@@ -1090,8 +1095,8 @@ public class ResourceManager extends CompositeService
               rmApp.getAppAttempts().values().iterator().next();
           if (previousFailedAttempt != null) {
             try {
-              LOG.debug("Event " + event.getType() + " handled by "
-                  + previousFailedAttempt);
+              LOG.debug("Event {} handled by {}", event.getType(),
+                  previousFailedAttempt);
               previousFailedAttempt.handle(event);
             } catch (Throwable t) {
               LOG.error("Error in handling event type " + event.getType()
@@ -1556,7 +1561,7 @@ public class ResourceManager extends CompositeService
         resourceManager.start();
       }
     } catch (Throwable t) {
-      LOG.fatal("Error starting ResourceManager", t);
+      LOG.error(FATAL, "Error starting ResourceManager", t);
       System.exit(-1);
     }
   }

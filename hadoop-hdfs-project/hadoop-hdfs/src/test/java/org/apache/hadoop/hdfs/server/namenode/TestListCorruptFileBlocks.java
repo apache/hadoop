@@ -95,6 +95,7 @@ public class TestListCorruptFileBlocks {
         getNamesystem().listCorruptFileBlocks("/", null);
       assertEquals("Namenode has " + badFiles.size()
           + " corrupt files. Expecting None.", 0, badFiles.size());
+      assertCorruptFilesCount(cluster, badFiles.size());
 
       // Now deliberately corrupt one block
       String bpid = cluster.getNamesystem().getBlockPoolId();
@@ -128,8 +129,9 @@ public class TestListCorruptFileBlocks {
       // fetch bad file list from namenode. There should be one file.
       badFiles = namenode.getNamesystem().listCorruptFileBlocks("/", null);
       LOG.info("Namenode has bad files. " + badFiles.size());
-      assertTrue("Namenode has " + badFiles.size() + " bad files. Expecting 1.",
-          badFiles.size() == 1);
+      assertEquals("Namenode has " + badFiles.size() + " bad files. " +
+          "Expecting 1.", 1, badFiles.size());
+      assertCorruptFilesCount(cluster, badFiles.size());
       util.cleanup(fs, "/srcdat10");
     } finally {
       if (cluster != null) { cluster.shutdown(); }
@@ -176,6 +178,7 @@ public class TestListCorruptFileBlocks {
         cluster.getNameNode().getNamesystem().listCorruptFileBlocks("/", null);
       assertEquals("Namenode has " + badFiles.size()
           + " corrupt files. Expecting None.", 0, badFiles.size());
+      assertCorruptFilesCount(cluster, badFiles.size());
 
       // Now deliberately corrupt one block
       File storageDir = cluster.getInstanceStorageDir(0, 0);
@@ -211,8 +214,9 @@ public class TestListCorruptFileBlocks {
       badFiles = cluster.getNameNode().getNamesystem().
         listCorruptFileBlocks("/", null);
       LOG.info("Namenode has bad files. " + badFiles.size());
-      assertTrue("Namenode has " + badFiles.size() + " bad files. Expecting 1.",
-          badFiles.size() == 1);
+      assertEquals("Namenode has " + badFiles.size() + " bad files. " +
+          "Expecting 1.", 1, badFiles.size());
+      assertCorruptFilesCount(cluster, badFiles.size());
  
       // restart namenode
       cluster.restartNameNode(0);
@@ -243,8 +247,9 @@ public class TestListCorruptFileBlocks {
       badFiles = cluster.getNameNode().getNamesystem().
         listCorruptFileBlocks("/", null);
       LOG.info("Namenode has bad files. " + badFiles.size());
-      assertTrue("Namenode has " + badFiles.size() + " bad files. Expecting 1.",
-          badFiles.size() == 1);
+      assertEquals("Namenode has " + badFiles.size() + " bad files. " +
+          "Expecting 1.", 1, badFiles.size());
+      assertCorruptFilesCount(cluster, badFiles.size());
 
       // check that we are still in safe mode
       assertTrue("Namenode is not in safe mode", 
@@ -288,7 +293,8 @@ public class TestListCorruptFileBlocks {
       Collection<FSNamesystem.CorruptFileBlockInfo> corruptFileBlocks = 
         namenode.getNamesystem().listCorruptFileBlocks("/corruptData", null);
       int numCorrupt = corruptFileBlocks.size();
-      assertTrue(numCorrupt == 0);
+      assertEquals(0, numCorrupt);
+      assertCorruptFilesCount(cluster, numCorrupt);
       // delete the blocks
       String bpid = cluster.getNamesystem().getBlockPoolId();
       for (int i = 0; i < 4; i++) {
@@ -328,6 +334,7 @@ public class TestListCorruptFileBlocks {
       // Validate we get all the corrupt files
       LOG.info("Namenode has bad files. " + numCorrupt);
       assertEquals(3, numCorrupt);
+      assertCorruptFilesCount(cluster, numCorrupt);
 
       // test the paging here
       FSNamesystem.CorruptFileBlockInfo[] cfb = corruptFileBlocks
@@ -400,6 +407,7 @@ public class TestListCorruptFileBlocks {
         dfs.listCorruptFileBlocks(new Path("/corruptData"));
       int numCorrupt = countPaths(corruptFileBlocks);
       assertEquals(0, numCorrupt);
+      assertCorruptFilesCount(cluster, numCorrupt);
       // delete the blocks
       String bpid = cluster.getNamesystem().getBlockPoolId();
       // For loop through number of datadirectories per datanode (2)
@@ -436,6 +444,7 @@ public class TestListCorruptFileBlocks {
       // Validate we get all the corrupt files
       LOG.info("Namenode has bad files. " + numCorrupt);
       assertEquals(3, numCorrupt);
+      assertCorruptFilesCount(cluster, numCorrupt);
 
       util.cleanup(fs, "/corruptData");
       util.cleanup(fs, "/goodData");
@@ -477,6 +486,7 @@ public class TestListCorruptFileBlocks {
       assertEquals(
           "Namenode has " + badFiles.size() + " corrupt files. Expecting none.",
           0, badFiles.size());
+      assertCorruptFilesCount(cluster, badFiles.size());
 
       // Now deliberately blocks from all files
       final String bpid = cluster.getNamesystem().getBlockPoolId();
@@ -520,9 +530,9 @@ public class TestListCorruptFileBlocks {
       badFiles = namenode.getNamesystem().
         listCorruptFileBlocks("/srcdat2", null); 
       LOG.info("Namenode has bad files. " + badFiles.size());
-      assertTrue("Namenode has " + badFiles.size() + " bad files. Expecting " + 
-          maxCorruptFileBlocks + ".",
-          badFiles.size() == maxCorruptFileBlocks);
+      assertEquals("Namenode has " + badFiles.size() + " bad files. " +
+          "Expecting " + maxCorruptFileBlocks + ".", maxCorruptFileBlocks,
+          badFiles.size());
 
       CorruptFileBlockIterator iter = (CorruptFileBlockIterator)
         fs.listCorruptFileBlocks(new Path("/srcdat2"));
@@ -566,6 +576,7 @@ public class TestListCorruptFileBlocks {
           .listCorruptFileBlocks(new Path("corruptData"));
       int numCorrupt = countPaths(corruptFileBlocks);
       assertEquals(0, numCorrupt);
+      assertCorruptFilesCount(cluster, numCorrupt);
 
       // delete the blocks
       String bpid = cluster.getNamesystem().getBlockPoolId();
@@ -607,5 +618,17 @@ public class TestListCorruptFileBlocks {
         cluster.shutdown();
       }
     }
+  }
+
+  /**
+   * Asserts that the number of correct files is equal to the expected value.
+   * @param cluster where to get the number of corrupt files from
+   * @param expectedCorrupt the expected number of corrupt files
+   */
+  private void assertCorruptFilesCount(MiniDFSCluster cluster,
+      int expectedCorrupt) {
+    FSNamesystem fs = cluster.getNameNode().getNamesystem();
+    assertEquals("Incorrect number of corrupt files returned", expectedCorrupt,
+        fs.getCorruptFilesCount());
   }
 }

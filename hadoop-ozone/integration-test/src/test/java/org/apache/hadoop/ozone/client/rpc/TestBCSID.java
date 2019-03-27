@@ -55,8 +55,8 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.
  */
 public class TestBCSID {
 
+  private static OzoneConfiguration conf = new OzoneConfiguration();
   private static MiniOzoneCluster cluster;
-  private static OzoneConfiguration conf;
   private static OzoneClient client;
   private static ObjectStore objectStore;
   private static String volumeName;
@@ -69,7 +69,6 @@ public class TestBCSID {
    */
   @BeforeClass
   public static void init() throws Exception {
-    conf = new OzoneConfiguration();
     String path = GenericTestUtils
         .getTempPath(TestBCSID.class.getSimpleName());
     File baseDir = new File(path);
@@ -118,6 +117,7 @@ public class TestBCSID {
     OmKeyArgs keyArgs = new OmKeyArgs.Builder().setVolumeName(volumeName).
         setBucketName(bucketName).setType(HddsProtos.ReplicationType.RATIS)
         .setFactor(HddsProtos.ReplicationFactor.ONE).setKeyName("ratis")
+        .setRefreshPipeline(true)
         .build();
     OmKeyInfo keyInfo = cluster.getOzoneManager().lookupKey(keyArgs);
     List<OmKeyLocationInfo> keyLocationInfos =

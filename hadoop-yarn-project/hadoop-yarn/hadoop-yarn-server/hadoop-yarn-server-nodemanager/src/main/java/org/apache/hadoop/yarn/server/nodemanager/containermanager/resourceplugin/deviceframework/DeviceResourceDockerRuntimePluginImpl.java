@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.deviceframework;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DevicePlugin;
@@ -47,7 +47,7 @@ import java.util.Set;
 public class DeviceResourceDockerRuntimePluginImpl
     implements DockerCommandPlugin {
 
-  final static Log LOG = LogFactory.getLog(
+  final static Logger LOG = LoggerFactory.getLogger(
       DeviceResourceDockerRuntimePluginImpl.class);
 
   private String resourceName;
@@ -73,9 +73,7 @@ public class DeviceResourceDockerRuntimePluginImpl
   public void updateDockerRunCommand(DockerRunCommand dockerRunCommand,
       Container container) throws ContainerExecutionException {
     String containerId = container.getContainerId().toString();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Try to update docker run command for: " + containerId);
-    }
+    LOG.debug("Try to update docker run command for: {}", containerId);
     if(!requestedDevice(resourceName, container)) {
       return;
     }
@@ -89,17 +87,12 @@ public class DeviceResourceDockerRuntimePluginImpl
     }
     // handle runtime
     dockerRunCommand.addRuntime(deviceRuntimeSpec.getContainerRuntime());
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Handle docker container runtime type: "
-          + deviceRuntimeSpec.getContainerRuntime() + " for container: "
-          + containerId);
-    }
+    LOG.debug("Handle docker container runtime type: {} for container: {}",
+        deviceRuntimeSpec.getContainerRuntime(), containerId);
     // handle device mounts
     Set<MountDeviceSpec> deviceMounts = deviceRuntimeSpec.getDeviceMounts();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Handle device mounts: " + deviceMounts + " for container: "
-          + containerId);
-    }
+    LOG.debug("Handle device mounts: {} for container: {}", deviceMounts,
+        containerId);
     for (MountDeviceSpec mountDeviceSpec : deviceMounts) {
       dockerRunCommand.addDevice(
           mountDeviceSpec.getDevicePathInHost(),
@@ -107,10 +100,8 @@ public class DeviceResourceDockerRuntimePluginImpl
     }
     // handle volume mounts
     Set<MountVolumeSpec> mountVolumeSpecs = deviceRuntimeSpec.getVolumeMounts();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Handle volume mounts: " + mountVolumeSpecs + " for container: "
-          + containerId);
-    }
+    LOG.debug("Handle volume mounts: {} for container: {}", mountVolumeSpecs,
+        containerId);
     for (MountVolumeSpec mountVolumeSpec : mountVolumeSpecs) {
       if (mountVolumeSpec.getReadOnly()) {
         dockerRunCommand.addReadOnlyMountLocation(
@@ -124,10 +115,8 @@ public class DeviceResourceDockerRuntimePluginImpl
     }
     // handle envs
     dockerRunCommand.addEnv(deviceRuntimeSpec.getEnvs());
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Handle envs: " + deviceRuntimeSpec.getEnvs()
-          + " for container: " + containerId);
-    }
+    LOG.debug("Handle envs: {} for container: {}",
+        deviceRuntimeSpec.getEnvs(), containerId);
   }
 
   @Override
@@ -147,10 +136,8 @@ public class DeviceResourceDockerRuntimePluginImpl
             DockerVolumeCommand.VOLUME_CREATE_SUB_COMMAND);
         command.setDriverName(volumeSec.getVolumeDriver());
         command.setVolumeName(volumeSec.getVolumeName());
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Get volume create request from plugin:" + volumeClaims
-              + " for container: " + container.getContainerId().toString());
-        }
+        LOG.debug("Get volume create request from plugin:{} for container: {}",
+            volumeClaims, container.getContainerId());
         return command;
       }
     }
@@ -195,10 +182,8 @@ public class DeviceResourceDockerRuntimePluginImpl
     allocated = devicePluginAdapter
         .getDeviceMappingManager()
         .getAllocatedDevices(resourceName, containerId);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Get allocation from deviceMappingManager: "
-          + allocated + ", " + resourceName + " for container: " + containerId);
-    }
+    LOG.debug("Get allocation from deviceMappingManager: {}, {} for"
+        + " container: {}", allocated, resourceName, containerId);
     cachedAllocation.put(containerId, allocated);
     return allocated;
   }

@@ -19,8 +19,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.volume.csi;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -51,7 +51,8 @@ import java.util.concurrent.TimeUnit;
 public class VolumeManagerImpl extends AbstractService
     implements VolumeManager {
 
-  private static final Log LOG = LogFactory.getLog(VolumeManagerImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(VolumeManagerImpl.class);
 
   private final VolumeStates volumeStates;
   private ScheduledExecutorService provisioningExecutor;
