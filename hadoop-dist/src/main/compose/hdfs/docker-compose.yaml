@@ -1,0 +1,21 @@
+version: "2"
+services:
+  namenode:
+    image: apache/hadoop-runner:jdk8
+    hostname: namenode
+    volumes:
+      - ../..:/opt/hadoop
+    command: ["hdfs","namenode"]
+    ports:
+      - 9870:9870
+    env_file:
+      - ./docker-config
+    environment:
+      ENSURE_NAMENODE_DIR: "/tmp/hadoop-root/dfs/name"
+  datanode:
+    image: apache/hadoop-runner:jdk8
+    command: ["hdfs", "datanode"]
+    volumes:
+      - ../..:/opt/hadoop
+    env_file:
+      - ./docker-config
