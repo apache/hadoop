@@ -54,7 +54,7 @@ public abstract class ChangeDetectionPolicy {
 
   private final Mode mode;
   private final boolean requireVersion;
-  
+
   public abstract String getRevisionId(S3ObjectAttributes s3Attributes);
 
   public abstract String getRevisionId(CopyResult copyResult);
@@ -360,7 +360,7 @@ public abstract class ChangeDetectionPolicy {
       }
       return versionId;
     }
-    
+
     @Override
     public String getRevisionId(S3ObjectAttributes s3Attributes) {
       return s3Attributes.getVersionId();
