@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A jaeger codec to save the current tracing context t a string.
+ * A jaeger codec to save the current tracing context as a string.
  */
 public class StringCodec implements Codec<StringBuilder> {
 
@@ -38,6 +38,9 @@ public class StringCodec implements Codec<StringBuilder> {
 
   @Override
   public JaegerSpanContext extract(StringBuilder s) {
+    if (s == null) {
+      throw new EmptyTracerStateStringException();
+    }
     String value = s.toString();
     if (value != null && !value.equals("")) {
       String[] parts = value.split(":");
