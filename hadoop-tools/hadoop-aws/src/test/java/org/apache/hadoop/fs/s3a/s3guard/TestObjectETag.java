@@ -41,6 +41,7 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import java.io.ByteArrayInputStream;
+import java.nio.charset.Charset;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -90,7 +91,7 @@ public class TestObjectETag extends AbstractS3AMockTest {
         .thenReturn(emptyListing);
 
     FSDataOutputStream outputStream = fs.create(path);
-    outputStream.writeChars(content);
+    outputStream.writeUTF(content);
     outputStream.close();
 
     // make sure the eTag was put into the metadataStore
@@ -111,7 +112,8 @@ public class TestObjectETag extends AbstractS3AMockTest {
     when(s3.getObject(argThat(correctGetObjectRequest("file", eTag))))
         .thenReturn(s3Object);
     FSDataInputStream inputStream = fs.open(path);
-    String readContent = IOUtils.toString(inputStream);
+    String readContent = IOUtils.toString(inputStream,
+        Charset.forName("UTF-8"));
     assertEquals(content, readContent);
   }
 
