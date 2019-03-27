@@ -42,4 +42,14 @@ public class S3LocatedFileStatus extends LocatedFileStatus {
   public String getVersionId() {
     return versionId;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    return super.equals(o);
+  }
+
+  @Override
+  public int hashCode() {
+    return super.hashCode();
+  }
 }
