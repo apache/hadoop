@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis
     .ContainerStateMachine;
@@ -30,11 +31,14 @@ import org.apache.hadoop.ozone.om.helpers.OMRatisHelper;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .MultipartInfoApplyInitiateRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.ozone.protocolPB.OzoneManagerRequestHandler;
 import org.apache.hadoop.ozone.protocolPB.RequestHandler;
+import org.apache.hadoop.util.Time;
 import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.protocol.Message;
 import org.apache.ratis.protocol.RaftClientRequest;
@@ -47,6 +51,8 @@ import org.apache.ratis.statemachine.impl.SimpleStateMachineStorage;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.ozone.om.exceptions.OMException.STATUS_CODE;
 
 /**
  * The OM StateMachine is the state machine for OM Ratis server. It is
@@ -108,11 +114,67 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
       ctxt.setException(ioe);
       return ctxt;
     }
+    return handleStartTransactionRequests(raftClientRequest, omRequest);
 
-    if (omRequest.getCmdType() ==
-        OzoneManagerProtocolProtos.Type.AllocateBlock) {
+  }
+
+  /**
+   * Handle the RaftClientRequest and return TransactionContext object.
+   * @param raftClientRequest
+   * @param omRequest
+   * @return TransactionContext
+   */
+  private TransactionContext handleStartTransactionRequests(
+      RaftClientRequest raftClientRequest, OMRequest omRequest) {
+
+    switch (omRequest.getCmdType()) {
+    case AllocateBlock:
       return handleAllocateBlock(raftClientRequest, omRequest);
+    case CreateKey:
+      return handleCreateKeyRequest(raftClientRequest, omRequest);
+    case InitiateMultiPartUpload:
+      return handleInitiateMultipartUpload(raftClientRequest, omRequest);
+    default:
+      return TransactionContext.newBuilder()
+          .setClientRequest(raftClientRequest)
+          .setStateMachine(this)
+          .setServerRole(RaftProtos.RaftPeerRole.LEADER)
+          .setLogData(raftClientRequest.getMessage().getContent())
+          .build();
     }
+
+  }
+
+
+  private TransactionContext handleInitiateMultipartUpload(
+      RaftClientRequest raftClientRequest, OMRequest omRequest) {
+
+    // Generate a multipart uploadID, and create a new request.
+    // When applyTransaction happen's all OM's use the same multipartUploadID
+    // for the key.
+
+    long time = Time.monotonicNowNanos();
+    String multipartUploadID = UUID.randomUUID().toString() + "-" + time;
+
+    MultipartInfoApplyInitiateRequest multipartInfoApplyInitiateRequest =
+        MultipartInfoApplyInitiateRequest.newBuilder()
+            .setKeyArgs(omRequest.getInitiateMultiPartUploadRequest()
+                .getKeyArgs()).setMultipartUploadID(multipartUploadID).build();
+
+    OMRequest.Builder newOmRequest =
+        OMRequest.newBuilder().setCmdType(
+            OzoneManagerProtocolProtos.Type.ApplyInitiateMultiPartUpload)
+            .setInitiateMultiPartUploadApplyRequest(
+                multipartInfoApplyInitiateRequest)
+            .setClientId(omRequest.getClientId());
+
+    if (omRequest.hasTraceID()) {
+      newOmRequest.setTraceID(omRequest.getTraceID());
+    }
+
+    ByteString messageContent =
+        ByteString.copyFrom(newOmRequest.build().toByteArray());
+
     return TransactionContext.newBuilder()
         .setClientRequest(raftClientRequest)
         .setStateMachine(this)
@@ -120,6 +182,61 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
         .setLogData(messageContent)
         .build();
   }
+
+  /**
+   * Handle createKey Request, which needs a special handling. This request
+   * needs to be executed on the leader, and the response received from this
+   * request we need to create a ApplyKeyRequest and create a
+   * TransactionContext object.
+   */
+  private TransactionContext handleCreateKeyRequest(
+      RaftClientRequest raftClientRequest, OMRequest omRequest) {
+    OMResponse omResponse = handler.handle(omRequest);
+
+    // TODO: if not success should we retry depending on the error if it is
+    //  retriable?
+    if (!omResponse.getSuccess()) {
+      TransactionContext transactionContext = TransactionContext.newBuilder()
+          .setClientRequest(raftClientRequest)
+          .setStateMachine(this)
+          .setServerRole(RaftProtos.RaftPeerRole.LEADER)
+          .build();
+      transactionContext.setException(
+          constructExceptionForFailedRequest(omResponse));
+      return transactionContext;
+    }
+
+    // Get original request
+    OzoneManagerProtocolProtos.CreateKeyRequest createKeyRequest =
+        omRequest.getCreateKeyRequest();
+
+    // Create Applykey Request.
+    OzoneManagerProtocolProtos.ApplyCreateKeyRequest applyCreateKeyRequest =
+        OzoneManagerProtocolProtos.ApplyCreateKeyRequest.newBuilder()
+            .setCreateKeyRequest(createKeyRequest)
+            .setCreateKeyResponse(omResponse.getCreateKeyResponse()).build();
+
+    OMRequest.Builder newOmRequest =
+        OMRequest.newBuilder().setCmdType(
+            OzoneManagerProtocolProtos.Type.ApplyCreateKey)
+            .setApplyCreateKeyRequest(applyCreateKeyRequest)
+            .setClientId(omRequest.getClientId());
+
+    if (omRequest.hasTraceID()) {
+      newOmRequest.setTraceID(omRequest.getTraceID());
+    }
+
+    ByteString messageContent =
+        ByteString.copyFrom(newOmRequest.build().toByteArray());
+
+    return TransactionContext.newBuilder()
+        .setClientRequest(raftClientRequest)
+        .setStateMachine(this)
+        .setServerRole(RaftProtos.RaftPeerRole.LEADER)
+        .setLogData(messageContent)
+        .build();
+  }
+
 
   /**
    * Handle AllocateBlock Request, which needs a special handling. This
@@ -148,9 +265,8 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
           .setStateMachine(this)
           .setServerRole(RaftProtos.RaftPeerRole.LEADER)
           .build();
-      IOException ioe = new IOException(omResponse.getMessage() +
-          " Status code " + omResponse.getStatus());
-      transactionContext.setException(ioe);
+      transactionContext.setException(
+          constructExceptionForFailedRequest(omResponse));
       return transactionContext;
     }
 
@@ -179,6 +295,17 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
         .setLogData(messageContent)
         .build();
 
+  }
+
+  /**
+   * Construct IOException message for failed requests in StartTransaction.
+   * @param omResponse
+   * @return
+   */
+  private IOException constructExceptionForFailedRequest(
+      OMResponse omResponse) {
+    return new IOException(omResponse.getMessage() + " " +
+        STATUS_CODE + omResponse.getStatus());
   }
 
   /*
