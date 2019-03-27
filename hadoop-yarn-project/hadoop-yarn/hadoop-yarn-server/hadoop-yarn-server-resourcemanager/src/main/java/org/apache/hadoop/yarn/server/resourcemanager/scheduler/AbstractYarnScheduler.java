@@ -58,7 +58,6 @@ import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
@@ -797,7 +796,7 @@ public abstract class AbstractYarnScheduler
       writeLock.unlock();
     }
   }
-  
+
   /**
    * Process resource update on a node.
    */
@@ -900,12 +899,12 @@ public abstract class AbstractYarnScheduler
     LOG.info("Updated the cluste max priority to maxClusterLevelAppPriority = "
         + maxClusterLevelAppPriority);
   }
-  
+
   /**
    * Sanity check increase/decrease request, and return
    * SchedulerContainerResourceChangeRequest according to given
    * UpdateContainerRequest.
-   * 
+   *
    * <pre>
    * - Returns non-null value means validation succeeded
    * - Throw exception when any other error happens
@@ -1334,9 +1333,7 @@ public abstract class AbstractYarnScheduler
   }
 
   /*
-   * Get a Resource object with for the minimum allocation possible. If resource
-   * profiles are enabled then the 'minimum' resource profile will be used. If
-   * they are not enabled, use the minimums specified in the config files.
+   * Get a Resource object with for the minimum allocation possible.
    *
    * @return a Resource object with the minimum allocation for the scheduler
    */
@@ -1347,9 +1344,7 @@ public abstract class AbstractYarnScheduler
   }
 
   /**
-   * Get a Resource object with for the maximum allocation possible. If resource
-   * profiles are enabled then the 'maximum' resource profile will be used. If
-   * they are not enabled, use the maximums specified in the config files.
+   * Get a Resource object with for the maximum allocation possible.
    *
    * @return a Resource object with the maximum allocation for the scheduler
    */
