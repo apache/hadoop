@@ -527,8 +527,8 @@ public class LeafQueue extends AbstractCSQueue {
       // since we have already told running AM's the size
       Resource oldMax = getMaximumAllocation();
       Resource newMax = newlyParsedLeafQueue.getMaximumAllocation();
-      if (newMax.getMemorySize() < oldMax.getMemorySize()
-          || newMax.getVirtualCores() < oldMax.getVirtualCores()) {
+
+      if (!Resources.fitsIn(oldMax, newMax)) {
         throw new IOException("Trying to reinitialize " + getQueuePath()
             + " the maximum allocation size can not be decreased!"
             + " Current setting: " + oldMax + ", trying to set it to: "
