@@ -694,7 +694,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Get the change detection policy for this FS instance.
+   * Get the change detection policy for this FS instance.  Only public to allow
+   * access in tests in other packages.
    * @return the change detection policy
    */
   @VisibleForTesting
@@ -2895,6 +2896,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param size object size
    * @param srcAttributes S3 attributes of the source object
    * @param readContext the read context
+   * @return the result of the copy
    * @throws AmazonClientException on failures inside the AWS SDK
    * @throws InterruptedIOException the operation was interrupted
    * @throws IOException Other IO problems

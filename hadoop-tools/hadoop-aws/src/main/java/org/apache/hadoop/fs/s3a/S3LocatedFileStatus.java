@@ -43,6 +43,9 @@ public class S3LocatedFileStatus extends LocatedFileStatus {
     return versionId;
   }
 
+  // equals() and hashCode() overridden to avoid FindBugs warning.
+  // Base implementation is equality on Path only, which is still appropriate.
+
   @Override
   public boolean equals(Object o) {
     return super.equals(o);

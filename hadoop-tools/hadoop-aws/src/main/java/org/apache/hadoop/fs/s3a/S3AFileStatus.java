@@ -67,6 +67,8 @@ public class S3AFileStatus extends FileStatus {
    * @param owner the owner
    * @param group the group
    * @param modification_time the modification time
+   * @param access_time the access time
+   * @param permission the permission
    */
   public S3AFileStatus(Tristate isemptydir,
       Path path,
@@ -112,7 +114,7 @@ public class S3AFileStatus extends FileStatus {
    * @param blockSize block size
    * @param owner owner
    * @param group group
-   * @param permission persmission
+   * @param permission permission
    * @param eTag eTag of the S3 object if available, else null
    * @param versionId versionId of the S3 object if available, else null
    */

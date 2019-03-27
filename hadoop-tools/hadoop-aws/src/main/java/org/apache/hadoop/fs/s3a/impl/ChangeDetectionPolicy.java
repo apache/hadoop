@@ -55,10 +55,6 @@ public abstract class ChangeDetectionPolicy {
   private final Mode mode;
   private final boolean requireVersion;
 
-  public abstract String getRevisionId(S3ObjectAttributes s3Attributes);
-
-  public abstract String getRevisionId(CopyResult copyResult);
-
   /**
    * Version support is only warned about once per S3A instance.
    * This still means that on a long-lived application which destroys
@@ -208,6 +204,28 @@ public abstract class ChangeDetectionPolicy {
       String uri);
 
   /**
+   * Like {{@link #getRevisionId(ObjectMetadata, String)}}, but retrieves the
+   * revision identifier from {@link S3ObjectAttributes}.
+   *
+   * @param s3Attributes the object attributes
+   * @return the revisionId string as interpreted by this policy, or potentially
+   * null if the attribute is unavailable (such as when the policy says to use
+   * versionId but object versioning is not enabled for the bucket).
+   */
+  public abstract String getRevisionId(S3ObjectAttributes s3Attributes);
+
+  /**
+   * Like {{@link #getRevisionId(ObjectMetadata, String)}}, but retrieves the
+   * revision identifier from {@link CopyResult}.
+   *
+   * @param copyResult the copy result
+   * @return the revisionId string as interpreted by this policy, or potentially
+   * null if the attribute is unavailable (such as when the policy says to use
+   * versionId but object versioning is not enabled for the bucket).
+   */
+  public abstract String getRevisionId(CopyResult copyResult);
+
+  /**
    * Applies the given {@link #getRevisionId(ObjectMetadata, String) revisionId}
    * as a server-side qualification on the {@code GetObjectRequest}.
    *
@@ -309,7 +327,7 @@ public abstract class ChangeDetectionPolicy {
     public void applyRevisionConstraint(GetObjectRequest request,
         String revisionId) {
       if (revisionId != null) {
-        LOG.debug("Restricting request to etag {}", revisionId);
+        LOG.debug("Restricting get request to etag {}", revisionId);
         request.withMatchingETagConstraint(revisionId);
       }
     }
@@ -318,7 +336,7 @@ public abstract class ChangeDetectionPolicy {
     public void applyRevisionConstraint(CopyObjectRequest request,
         String revisionId) {
       if (revisionId != null) {
-        LOG.debug("Restricting request to etag {}", revisionId);
+        LOG.debug("Restricting copy request to etag {}", revisionId);
         request.withMatchingETagConstraint(revisionId);
       }
     }
@@ -376,7 +394,7 @@ public abstract class ChangeDetectionPolicy {
     public void applyRevisionConstraint(GetObjectRequest request,
         String revisionId) {
       if (revisionId != null) {
-        LOG.debug("Restricting request to version {}", revisionId);
+        LOG.debug("Restricting get request to version {}", revisionId);
         request.withVersionId(revisionId);
       }
     }
@@ -385,7 +403,7 @@ public abstract class ChangeDetectionPolicy {
     public void applyRevisionConstraint(CopyObjectRequest request,
         String revisionId) {
       if (revisionId != null) {
-        LOG.debug("Restricting request to version {}", revisionId);
+        LOG.debug("Restricting copy request to version {}", revisionId);
         request.withSourceVersionId(revisionId);
       }
     }
