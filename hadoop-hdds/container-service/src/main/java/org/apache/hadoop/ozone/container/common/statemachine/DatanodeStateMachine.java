@@ -397,7 +397,6 @@ public class DatanodeStateMachine implements Closeable {
   @VisibleForTesting
   public boolean isDaemonStopped() {
     return this.executorService.isShutdown()
-        && this.getContext().getExecutionCount() == 0
         && this.getContext().getState() == DatanodeStates.SHUTDOWN;
   }
 
