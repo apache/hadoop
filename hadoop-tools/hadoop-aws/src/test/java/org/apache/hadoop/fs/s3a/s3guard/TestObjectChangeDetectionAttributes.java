@@ -41,29 +41,33 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import java.io.ByteArrayInputStream;
-import java.nio.charset.Charset;
+import java.io.IOException;
+import java.util.Arrays;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AbstractS3AMockTest;
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Tests to ensure eTag is captured on S3 PUT and used on GET.
+ * Tests to ensure object eTag and versionId are captured on S3 PUT and used on
+ * GET.
  */
-public class TestObjectETag extends AbstractS3AMockTest {
+public class TestObjectChangeDetectionAttributes extends AbstractS3AMockTest {
+  private ChangeDetectionPolicy changeDetectionPolicy;
+
   @Before
   public void before() {
-    Assume.assumeTrue("change detection source should be etag",
-        fs.getChangeDetectionPolicy().getSource() == Source.ETag);
+    changeDetectionPolicy = fs.getChangeDetectionPolicy();
   }
 
   /**
@@ -72,49 +76,31 @@ public class TestObjectETag extends AbstractS3AMockTest {
    */
   @Test
   public void testCreateAndReadFileSinglePart() throws Exception {
-    Path path = new Path("s3a://mock-bucket/file");
-    String content = "content";
-
-    PutObjectResult putObjectResult = new PutObjectResult();
-    ObjectMetadata objectMetadata = new ObjectMetadata();
-    objectMetadata.setContentLength(content.length());
-    putObjectResult.setMetadata(objectMetadata);
+    String bucket = "s3a://mock-bucket/";
+    String file = "single-part-file";
+    Path path = new Path(bucket, file);
+    byte[] content = "content".getBytes();
     String eTag = "abc";
-    putObjectResult.setETag(eTag);
+    String versionId = "def";
 
-    when(s3.getObjectMetadata(any(GetObjectMetadataRequest.class)))
-        .thenThrow(NOT_FOUND);
-    when(s3.putObject(argThat(correctPutObjectRequest("file"))))
-        .thenReturn(putObjectResult);
-    ListObjectsV2Result emptyListing = new ListObjectsV2Result();
-    when(s3.listObjectsV2(argThat(correctListObjectsRequest("file/"))))
-        .thenReturn(emptyListing);
+    putObject(file, path, content, eTag, versionId);
 
-    FSDataOutputStream outputStream = fs.create(path);
-    outputStream.writeUTF(content);
-    outputStream.close();
+    // make sure the eTag and versionId were put into the metadataStore
+    assertVersionAttributes(path, eTag, versionId);
 
-    // make sure the eTag was put into the metadataStore
-    MetadataStore metadataStore = fs.getMetadataStore();
-    PathMetadata pathMetadata = metadataStore.get(path);
-    assertNotNull(pathMetadata);
-    String storedETag = pathMetadata.getFileStatus().getETag();
-    assertEquals(eTag, storedETag);
+    // Ensure underlying S3 getObject call uses the stored eTag or versionId
+    // when reading data back.  If it doesn't, the read won't work and the
+    // assert will fail.
+    assertContent(file, path, content, eTag, versionId);
 
-    // Ensure underlying S3 getObject call uses the stored eTag when reading
-    // data back.  If it doesn't, the read won't work and the assert will
-    // fail.
-    S3Object s3Object = new S3Object();
-    s3Object.setObjectContent(new ByteArrayInputStream(content.getBytes()));
-    ObjectMetadata metadata = new ObjectMetadata();
-    metadata.setHeader(Headers.ETAG, eTag);
-    s3Object.setObjectMetadata(metadata);
-    when(s3.getObject(argThat(correctGetObjectRequest("file", eTag))))
-        .thenReturn(s3Object);
-    FSDataInputStream inputStream = fs.open(path);
-    String readContent = IOUtils.toString(inputStream,
-        Charset.forName("UTF-8"));
-    assertEquals(content, readContent);
+    // test overwrite
+    byte[] newConent = "newcontent".getBytes();
+    String newETag = "newETag";
+    String newVersionId = "newVersionId";
+
+    putObject(file, path, newConent, newETag, newVersionId);
+    assertVersionAttributes(path, newETag, newVersionId);
+    assertContent(file, path, newConent, newETag, newVersionId);
   }
 
   /**
@@ -123,13 +109,61 @@ public class TestObjectETag extends AbstractS3AMockTest {
    */
   @Test
   public void testCreateAndReadFileMultiPart() throws Exception {
-    Path path = new Path("s3a://mock-bucket/file");
+    String bucket = "s3a://mock-bucket/";
+    String file = "multi-part-file";
+    Path path = new Path(bucket, file);
     byte[] content = new byte[Constants.MULTIPART_MIN_SIZE + 1];
+    String eTag = "abc";
+    String versionId = "def";
 
+    multipartUpload(file, path, content, eTag, versionId);
+
+    // make sure the eTag and versionId were put into the metadataStore
+    assertVersionAttributes(path, eTag, versionId);
+
+    // Ensure underlying S3 getObject call uses the stored eTag or versionId
+    // when reading data back.  If it doesn't, the read won't work and the
+    // assert will fail.
+    assertContent(file, path, content, eTag, versionId);
+
+    // test overwrite
+    byte[] newConent = new byte[Constants.MULTIPART_MIN_SIZE + 1];
+    Arrays.fill(newConent, (byte) 1);
+    String newETag = "newETag";
+    String newVersionId = "newVersionId";
+
+    multipartUpload(file, path, newConent, newETag, newVersionId);
+    assertVersionAttributes(path, newETag, newVersionId);
+    assertContent(file, path, newConent, newETag, newVersionId);
+  }
+
+  private void putObject(String file, Path path, byte[] content,
+      String eTag, String versionId) throws IOException {
+    PutObjectResult putObjectResult = new PutObjectResult();
+    ObjectMetadata objectMetadata = new ObjectMetadata();
+    objectMetadata.setContentLength(content.length);
+    putObjectResult.setMetadata(objectMetadata);
+    putObjectResult.setETag(eTag);
+    putObjectResult.setVersionId(versionId);
+
+    when(s3.getObjectMetadata(any(GetObjectMetadataRequest.class)))
+        .thenThrow(NOT_FOUND);
+    when(s3.putObject(argThat(correctPutObjectRequest(file))))
+        .thenReturn(putObjectResult);
+    ListObjectsV2Result emptyListing = new ListObjectsV2Result();
+    when(s3.listObjectsV2(argThat(correctListObjectsRequest(file + "/"))))
+        .thenReturn(emptyListing);
+
+    FSDataOutputStream outputStream = fs.create(path);
+    outputStream.write(content);
+    outputStream.close();
+  }
+
+  private void multipartUpload(String file, Path path, byte[] content,
+      String eTag, String versionId) throws IOException {
     CompleteMultipartUploadResult uploadResult =
         new CompleteMultipartUploadResult();
-    String eTag = "abc";
-    uploadResult.setETag(eTag);
+    uploadResult.setVersionId(versionId);
 
     when(s3.getObjectMetadata(any(GetObjectMetadataRequest.class)))
         .thenThrow(NOT_FOUND);
@@ -138,49 +172,83 @@ public class TestObjectETag extends AbstractS3AMockTest {
         new InitiateMultipartUploadResult();
     initiateMultipartUploadResult.setUploadId("uploadId");
     when(s3.initiateMultipartUpload(
-        argThat(correctInitiateMultipartUploadRequest("file"))))
+        argThat(correctInitiateMultipartUploadRequest(file))))
         .thenReturn(initiateMultipartUploadResult);
 
     UploadPartResult uploadPartResult = new UploadPartResult();
     uploadPartResult.setETag("partETag");
-    when(s3.uploadPart(argThat(correctUploadPartRequest("file"))))
+    when(s3.uploadPart(argThat(correctUploadPartRequest(file))))
         .thenReturn(uploadPartResult);
 
     CompleteMultipartUploadResult multipartUploadResult =
         new CompleteMultipartUploadResult();
     multipartUploadResult.setETag(eTag);
+    multipartUploadResult.setVersionId(versionId);
     when(s3.completeMultipartUpload(
-        argThat(correctMultipartUploadRequest("file"))))
+        argThat(correctMultipartUploadRequest(file))))
         .thenReturn(multipartUploadResult);
 
     ListObjectsV2Result emptyListing = new ListObjectsV2Result();
-    when(s3.listObjectsV2(argThat(correctListObjectsRequest("file/"))))
+    when(s3.listObjectsV2(argThat(correctListObjectsRequest(file + "/"))))
         .thenReturn(emptyListing);
 
     FSDataOutputStream outputStream = fs.create(path);
     outputStream.write(content);
     outputStream.close();
+  }
 
-    // make sure the eTag was put into the metadataStore
-    MetadataStore metadataStore = fs.getMetadataStore();
-    PathMetadata pathMetadata = metadataStore.get(path);
-    assertNotNull(pathMetadata);
-    String storedETag = pathMetadata.getFileStatus().getETag();
-    assertEquals(eTag, storedETag);
-
-    // Ensure underlying S3 getObject call uses the stored eTag when reading
-    // data back.  If it doesn't, the read won't work and the assert will
-    // fail.
+  private void assertContent(String file, Path path, byte[] content,
+      String eTag, String versionId) throws IOException {
     S3Object s3Object = new S3Object();
     ObjectMetadata metadata = new ObjectMetadata();
-    metadata.setHeader(Headers.ETAG, eTag);
+    metadata.setHeader(Headers.S3_VERSION_ID, versionId);
     s3Object.setObjectMetadata(metadata);
     s3Object.setObjectContent(new ByteArrayInputStream(content));
-    when(s3.getObject(argThat(correctGetObjectRequest("file", eTag))))
+    when(s3.getObject(argThat(correctGetObjectRequest(file, eTag, versionId))))
         .thenReturn(s3Object);
     FSDataInputStream inputStream = fs.open(path);
     byte[] readContent = IOUtils.toByteArray(inputStream);
     assertArrayEquals(content, readContent);
+  }
+
+  private void assertVersionAttributes(Path path, String eTag, String versionId)
+      throws IOException {
+    MetadataStore metadataStore = fs.getMetadataStore();
+    PathMetadata pathMetadata = metadataStore.get(path);
+    assertNotNull(pathMetadata);
+    S3AFileStatus fileStatus = pathMetadata.getFileStatus();
+    assertEquals(eTag, fileStatus.getETag());
+    assertEquals(versionId, fileStatus.getVersionId());
+  }
+
+  private Matcher<GetObjectRequest> correctGetObjectRequest(final String key,
+      final String eTag, final String versionId) {
+    return new BaseMatcher<GetObjectRequest>() {
+      @Override
+      public boolean matches(Object item) {
+        if (item instanceof GetObjectRequest) {
+          GetObjectRequest getObjectRequest = (GetObjectRequest) item;
+          if (getObjectRequest.getKey().equals(key)) {
+            if (changeDetectionPolicy.getSource().equals(
+                Source.ETag)) {
+              return getObjectRequest.getMatchingETagConstraints()
+                  .contains(eTag);
+            } else if (changeDetectionPolicy.getSource().equals(
+                Source.VersionId)) {
+              return getObjectRequest.getVersionId().equals(versionId);
+            }
+          }
+        }
+        return false;
+      }
+
+      @Override
+      public void describeTo(Description description) {
+        description.appendText("key and "
+            + changeDetectionPolicy.getSource()
+            + " matches");
+      }
+    };
   }
 
   private Matcher<UploadPartRequest> correctUploadPartRequest(
@@ -203,7 +271,7 @@ public class TestObjectETag extends AbstractS3AMockTest {
   }
 
   private Matcher<InitiateMultipartUploadRequest>
-      correctInitiateMultipartUploadRequest(final String key) {
+  correctInitiateMultipartUploadRequest(final String key) {
     return new BaseMatcher<InitiateMultipartUploadRequest>() {
       @Override
       public void describeTo(Description description) {
@@ -223,7 +291,7 @@ public class TestObjectETag extends AbstractS3AMockTest {
   }
 
   private Matcher<CompleteMultipartUploadRequest>
-      correctMultipartUploadRequest(final String key) {
+  correctMultipartUploadRequest(final String key) {
     return new BaseMatcher<CompleteMultipartUploadRequest>() {
       @Override
       public boolean matches(Object item) {
@@ -277,27 +345,6 @@ public class TestObjectETag extends AbstractS3AMockTest {
       @Override
       public void describeTo(Description description) {
         description.appendText("key matches");
-      }
-    };
-  }
-
-  private Matcher<GetObjectRequest> correctGetObjectRequest(final String key,
-      final String eTag) {
-    return new BaseMatcher<GetObjectRequest>() {
-      @Override
-      public boolean matches(Object item) {
-        if (item instanceof GetObjectRequest) {
-          GetObjectRequest getObjectRequest = (GetObjectRequest) item;
-          return getObjectRequest.getKey().equals(key)
-              && getObjectRequest.getMatchingETagConstraints()
-              .contains(eTag);
-        }
-        return false;
-      }
-
-      @Override
-      public void describeTo(Description description) {
-        description.appendText("key and eTag matches");
       }
     };
   }
