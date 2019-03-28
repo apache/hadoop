@@ -638,20 +638,40 @@ public class DynamoDBMetadataStore implements MetadataStore,
             metas.add(meta);
           }
 
+          // Minor race condition here - if the path is deleted between
+          // getting the list of items and the directory metadata we might
+          // get a null in DDBPathMetadata.
           DDBPathMetadata dirPathMeta = get(path);
-          boolean isAuthoritative = false;
-          if(dirPathMeta != null) {
-            isAuthoritative = dirPathMeta.isAuthoritativeDir();
-          }
 
-          LOG.trace("Listing table {} in region {} for {} returning {}",
-              tableName, region, path, metas);
-
-          return (metas.isEmpty() && dirPathMeta == null)
-              ? null
-              : new DirListingMetadata(path, metas, isAuthoritative,
-              dirPathMeta.getLastUpdated());
+          return getDirListingMetadataFromDirMetaAndList(path, metas,
+              dirPathMeta);
         });
+  }
+
+  DirListingMetadata getDirListingMetadataFromDirMetaAndList(Path path,
+      List<PathMetadata> metas, DDBPathMetadata dirPathMeta) {
+    boolean isAuthoritative = false;
+    if (dirPathMeta != null) {
+      isAuthoritative = dirPathMeta.isAuthoritativeDir();
+    }
+
+    LOG.trace("Listing table {} in region {} for {} returning {}",
+        tableName, region, path, metas);
+
+    if (!metas.isEmpty() && dirPathMeta == null) {
+      // We handle this case as the directory is deleted.
+      LOG.warn("Directory marker is deleted, but the list of the directory "
+          + "elements is not empty: {}. This case is handled as if the "
+          + "directory was deleted.", metas);
+      return null;
+    }
+
+    if(metas.isEmpty() && dirPathMeta == null) {
+      return null;
+    }
+
+    return new DirListingMetadata(path, metas, isAuthoritative,
+        dirPathMeta.getLastUpdated());
   }
 
   /**
