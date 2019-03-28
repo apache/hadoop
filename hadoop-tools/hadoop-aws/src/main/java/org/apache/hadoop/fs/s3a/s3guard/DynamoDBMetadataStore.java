@@ -651,7 +651,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   DirListingMetadata getDirListingMetadataFromDirMetaAndList(Path path,
       List<PathMetadata> metas, DDBPathMetadata dirPathMeta) {
     boolean isAuthoritative = false;
-    if(dirPathMeta != null) {
+    if (dirPathMeta != null) {
       isAuthoritative = dirPathMeta.isAuthoritativeDir();
     }
 
