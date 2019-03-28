@@ -101,7 +101,7 @@
     <okhttp.version>2.7.5</okhttp.version>
 
     <!-- define the Java language version used by the compiler -->
-    <javac.version>1.7</javac.version>
+    <javac.version>1.8</javac.version>
 
     <!-- The java version enforced by the maven enforcer -->
     <!-- more complex patterns can be used here, such as
