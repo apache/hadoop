@@ -19,7 +19,7 @@ to Ozone OM/SCM/NM/DN and Kerberos KDC.
 ## Basic setup
 
 ```
-cd hadoop-ozone/dist/target/ozone-0.5.0-SNAPSHOT/compose/ozonesecure-mr
+cd $(git rev-parse --show-toplevel)/hadoop-ozone/dist/target/ozone-*-SNAPSHOT/compose/ozonesecure-mr
 
 docker-compose up -d
 ```
@@ -47,7 +47,7 @@ docker-compose exec rm bash
 kinit -kt /etc/security/keytabs/hadoop.keytab hadoop/rm@EXAMPLE.COM
 export HADOOP_MAPRED_HOME=/opt/hadoop/share/hadoop/mapreduce
 
-export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:/opt/hadoop/share/hadoop/mapreduce/*:/opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-0.5.0-SNAPSHOT.jar
+export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:/opt/hadoop/share/hadoop/mapreduce/*:/opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-*-SNAPSHOT.jar
 
 hadoop fs -mkdir /user
 hadoop fs -mkdir /user/hadoop
@@ -56,7 +56,6 @@ hadoop fs -mkdir /user/hadoop
 ## Run Examples
 
 ### WordCount
-Status: Fully working with HDDS-1299
 ```
 yarn jar $HADOOP_MAPRED_HOME/hadoop-mapreduce-examples-*.jar wordcount o3fs://bucket1.vol1/key1 o3fs://bucket1.vol1/key1.count
 
@@ -64,13 +63,11 @@ hadoop fs -cat /key1.count/part-r-00000
 ```
 
 ### Pi
-Status: Not fully working yet, tracked by HDDS-1317
 ```
 yarn jar $HADOOP_MAPRED_HOME/hadoop-mapreduce-examples-*.jar pi 10 100
 ```
 
 ### RandomWrite
-Status: Not fully working yet, tracked by HDDS-1317
 ```
 yarn jar $HADOOP_MAPRED_HOME/hadoop-mapreduce-examples-*.jar randomwriter -Dtest.randomwrite.total_bytes=10000000  o3fs://bucket1.vol1/randomwrite.out
 ```
