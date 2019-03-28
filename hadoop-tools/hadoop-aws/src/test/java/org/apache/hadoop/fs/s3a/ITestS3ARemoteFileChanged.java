@@ -156,6 +156,11 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
         CHANGE_DETECT_MODE);
     conf.set(CHANGE_DETECT_SOURCE, changeDetectionSource);
     conf.set(CHANGE_DETECT_MODE, changeDetectionMode);
+
+    // reduce retry limit so FileNotFoundException cases timeout faster,
+    // speeding up the tests
+    conf.set(RETRY_LIMIT, "5");
+
     if (conf.getClass(S3_METADATA_STORE_IMPL, MetadataStore.class) ==
         NullMetadataStore.class) {
       // favor LocalMetadataStore over NullMetadataStore
