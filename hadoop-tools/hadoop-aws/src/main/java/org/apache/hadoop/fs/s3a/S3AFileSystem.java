@@ -2880,34 +2880,41 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
     };
 
-    return once("copyFile(" + srcKey + ", " + dstKey + ")", srcKey,
-        () -> {
-          ObjectMetadata srcom = getObjectMetadata(srcKey);
-          ObjectMetadata dstom = cloneObjectMetadata(srcom);
-          setOptionalObjectMetadata(dstom);
-          CopyObjectRequest copyObjectRequest =
-              new CopyObjectRequest(bucket, srcKey, bucket, dstKey);
-          setOptionalCopyObjectRequestParameters(copyObjectRequest);
-          copyObjectRequest.setCannedAccessControlList(cannedACL);
-          copyObjectRequest.setNewObjectMetadata(dstom);
-          String id = srcom.getVersionId();
-          if (id != null) {
-            copyObjectRequest.setSourceVersionId(id);
-          } else if (isNotEmpty(srcom.getETag())) {
-            copyObjectRequest.withMatchingETagConstraint(srcom.getETag());
-          }
-          Copy copy = transfers.copy(copyObjectRequest);
-          copy.addProgressListener(progressListener);
-          try {
-            CopyResult r = copy.waitForCopyResult();
-            incrementWriteOperations();
-            instrumentation.filesCopied(1, size);
-            return r;
-          } catch (InterruptedException e) {
-            throw new InterruptedIOException("Interrupted copying " + srcKey
-                + " to " + dstKey + ", cancelling");
-          }
-        });
+    try {
+      return once("copyFile(" + srcKey + ", " + dstKey + ")", srcKey,
+          () -> {
+            ObjectMetadata srcom = getObjectMetadata(srcKey);
+            ObjectMetadata dstom = cloneObjectMetadata(srcom);
+            setOptionalObjectMetadata(dstom);
+            CopyObjectRequest copyObjectRequest =
+                new CopyObjectRequest(bucket, srcKey, bucket, dstKey);
+            setOptionalCopyObjectRequestParameters(copyObjectRequest);
+            copyObjectRequest.setCannedAccessControlList(cannedACL);
+            copyObjectRequest.setNewObjectMetadata(dstom);
+            String id = srcom.getVersionId();
+            if (id != null) {
+              copyObjectRequest.setSourceVersionId(id);
+            } else if (isNotEmpty(srcom.getETag())) {
+              copyObjectRequest.withMatchingETagConstraint(srcom.getETag());
+            }
+            Copy copy = transfers.copy(copyObjectRequest);
+            copy.addProgressListener(progressListener);
+            try {
+              CopyResult r = copy.waitForCopyResult();
+              incrementWriteOperations();
+              instrumentation.filesCopied(1, size);
+              return r;
+            } catch (InterruptedException e) {
+              throw (IOException) new InterruptedIOException(
+                  "Interrupted copying " + srcKey + " to " + dstKey
+                      + ", cancelling").initCause(e);
+            }
+          });
+    } catch (RemoteFileChangedException e) {
+      // file changed during the copy. Fail, after adding the counter.
+      instrumentation.incrementCounter(STREAM_READ_VERSION_MISMATCHES, 1);
+      throw e;
+    }
   }
 
   /**

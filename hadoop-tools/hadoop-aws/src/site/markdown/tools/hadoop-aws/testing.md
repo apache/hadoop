@@ -305,7 +305,7 @@ To test these features, you need to have buckets with object versioning
 enabled.
 
 A full `hadoop-aws` test run implicitly cleans up all files in the bucket
-in `ITestS3AContractRootDir`, so all every test run creates a large set of
+in `ITestS3AContractRootDir`, so every test run creates a large set of
 old (deleted) file versions. To avoid large bills, you must
 create a lifecycle rule on the bucket to purge the old versions.
 
