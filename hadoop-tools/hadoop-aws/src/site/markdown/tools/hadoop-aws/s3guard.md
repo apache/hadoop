@@ -1022,7 +1022,7 @@ If this happens, reads of the affected file(s) will result in
 
 The S3Guard metadata for a file can be corrected with the `s3guard import`
 command as discussed above.  The command can take a file URI instead of a
-bucket URI to correct the metdata for a single file.  For example:
+bucket URI to correct the metadata for a single file.  For example:
 
 ```bash
 hadoop s3guard import [-meta URI] s3a://my-bucket/file-with-bad-metadata
