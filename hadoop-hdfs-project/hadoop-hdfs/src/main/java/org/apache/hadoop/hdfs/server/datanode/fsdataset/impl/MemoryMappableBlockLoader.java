@@ -42,6 +42,18 @@ import java.nio.channels.FileChannel;
 @InterfaceStability.Unstable
 public class MemoryMappableBlockLoader extends MappableBlockLoader {
 
+  private final FsDatasetCache cacheManager;
+
+  /**
+   * Constructs memory mappable loader.
+   *
+   * @param cacheManager
+   *          FsDatasetCache reference.
+   */
+  MemoryMappableBlockLoader(FsDatasetCache cacheManager) {
+    this.cacheManager = cacheManager;
+  }
+
   /**
    * Load the block.
    *
@@ -90,7 +102,7 @@ public class MemoryMappableBlockLoader extends MappableBlockLoader {
   /**
    * Verifies the block's checksum. This is an I/O intensive operation.
    */
-  public void verifyChecksum(long length, FileInputStream metaIn,
+  private void verifyChecksum(long length, FileInputStream metaIn,
                              FileChannel blockChannel, String blockFileName)
       throws IOException {
     // Verify the checksum from the block's meta file
@@ -138,5 +150,15 @@ public class MemoryMappableBlockLoader extends MappableBlockLoader {
     } finally {
       IOUtils.closeQuietly(metaChannel);
     }
+  }
+
+  @Override
+  long reserve(long bytesCount) {
+    return cacheManager.reserve(bytesCount);
+  }
+
+  @Override
+  long release(long bytesCount) {
+    return cacheManager.release(bytesCount);
   }
 }
