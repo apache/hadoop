@@ -940,7 +940,7 @@ S3Guard achieves this behavior by storing ETags and object version IDs in the
 S3Guard metadata store (e.g. DynamoDB). On opening a file, S3AFileSystem
 will look in S3 for the version of the file indicated by the ETag or object
 version ID stored in the metadata store. If that version is unavailable,
-`RemoteFileChangedException` is thrown. Whether ETag or version ID and 
+`RemoteFileChangedException` is thrown. Whether ETag or version ID and
 server or client mode is used is determed by the
 [fs.s3a.change.detection configuration options](./index.html#Handling_Read-During-Overwrite).
 
