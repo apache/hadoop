@@ -49,21 +49,53 @@ services:
       environment:
          ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
       command: ["/opt/hadoop/bin/ozone","scm"]
-   hadoop3:
+   hadoop32:
       image: flokkr/hadoop:3.1.0
       volumes:
          - ../..:/opt/ozone
       env_file:
          - ./docker-config
       environment:
-         HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current*.jar
+         HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-@project.version@.jar
+         CORE-SITE.XML_fs.o3fs.impl: org.apache.hadoop.fs.ozone.OzoneFileSystem
       command: ["watch","-n","100000","ls"]
-   hadoop2:
+   hadoop31:
+      image: flokkr/hadoop:3.1.0
+      volumes:
+         - ../..:/opt/ozone
+      env_file:
+         - ./docker-config
+      environment:
+         HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-legacy-@project.version@.jar
+         CORE-SITE.XML_fs.o3fs.impl: org.apache.hadoop.fs.ozone.OzoneFileSystem
+      command: ["watch","-n","100000","ls"]
+   hadoop29:
       image: flokkr/hadoop:2.9.0
       volumes:
          - ../..:/opt/ozone
       env_file:
          - ./docker-config
       environment:
-         HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-legacy*.jar
+         HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-legacy-@project.version@.jar
+         CORE-SITE.XML_fs.o3fs.impl: org.apache.hadoop.fs.ozone.BasicOzoneFileSystem
+      command: ["watch","-n","100000","ls"]
+   hadoop27:
+      image: flokkr/hadoop:2.7.3
+      volumes:
+         - ../..:/opt/ozone
+      env_file:
+         - ./docker-config
+      environment:
+         HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-legacy-@project.version@.jar
+         CORE-SITE.XML_fs.o3fs.impl: org.apache.hadoop.fs.ozone.BasicOzoneFileSystem
+      command: ["watch","-n","100000","ls"]
+   spark:
+      image: flokkr/spark
+      volumes:
+         - ../..:/opt/ozone
+      env_file:
+         - ./docker-config
+      environment:
+         HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-legacy-@project.version@.jar
+         CORE-SITE.XML_fs.o3fs.impl: org.apache.hadoop.fs.ozone.BasicOzoneFileSystem
       command: ["watch","-n","100000","ls"]

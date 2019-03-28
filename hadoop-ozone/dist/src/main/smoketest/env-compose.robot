@@ -13,4 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-org.apache.hadoop.fs.ozone.OzoneFileSystem
+*** Settings ***
+Resource            commonlib.robot
+
+
+*** Keywords ***
+
+Run tests on host
+    [arguments]        ${host}       ${robotfile}
+    ${result} =        Execute       docker-compose exec ${host} robot smoketest/${robotfile}
+
+Execute on host
+    [arguments]                     ${host}     ${command}
+    ${rc}                           ${output} =                 Run And Return Rc And Output           docker-compose exec ${host} ${command}
+    Log                             ${output}
+    Should Be Equal As Integers     ${rc}                       0
+    [return]                        ${output}
