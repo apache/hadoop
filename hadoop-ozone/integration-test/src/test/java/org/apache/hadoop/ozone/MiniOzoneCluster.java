@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
@@ -249,6 +250,7 @@ public interface MiniOzoneCluster {
     protected Optional<Long> streamBufferFlushSize = Optional.empty();
     protected Optional<Long> streamBufferMaxSize = Optional.empty();
     protected Optional<Long> blockSize = Optional.empty();
+    protected Optional<StorageUnit> streamBufferSizeUnit = Optional.empty();
     // Use relative smaller number of handlers for testing
     protected int numOfOmHandlers = 20;
     protected int numOfScmHandlers = 20;
@@ -431,6 +433,11 @@ public interface MiniOzoneCluster {
 
     public Builder setNumOfOzoneManagers(int numOMs) {
       this.numOfOMs = numOMs;
+      return this;
+    }
+
+    public Builder setStreamBufferSizeUnit(StorageUnit unit) {
+      this.streamBufferSizeUnit = Optional.of(unit);
       return this;
     }
 

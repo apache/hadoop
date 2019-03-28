@@ -1372,6 +1372,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
+   * Does the filesystem have an authoritative metadata store?
+   * @return true if there is a metadata store and the authoritative flag
+   * is set for this filesystem.
+   */
+  @VisibleForTesting
+  boolean hasAuthoritativeMetadataStore() {
+    return hasMetadataStore() && allowAuthoritative;
+  }
+
+  /**
    * Get the metadata store.
    * This will always be non-null, but may be bound to the
    * {@code NullMetadataStore}.
@@ -2324,10 +2334,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     LOG.debug("Making directory: {}", f);
     entryPoint(INVOCATION_MKDIRS);
     FileStatus fileStatus;
-    List<Path> metadataStoreDirs = null;
-    if (hasMetadataStore()) {
-      metadataStoreDirs = new ArrayList<>();
-    }
 
     try {
       fileStatus = getFileStatus(f);
@@ -2340,9 +2346,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     } catch (FileNotFoundException e) {
       // Walk path to root, ensuring closest ancestor is a directory, not file
       Path fPart = f.getParent();
-      if (metadataStoreDirs != null) {
-        metadataStoreDirs.add(f);
-      }
       while (fPart != null) {
         try {
           fileStatus = getFileStatus(fPart);
@@ -2356,11 +2359,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           }
         } catch (FileNotFoundException fnfe) {
           instrumentation.errorIgnored();
-          // We create all missing directories in MetadataStore; it does not
-          // infer directories exist by prefix like S3.
-          if (metadataStoreDirs != null) {
-            metadataStoreDirs.add(fPart);
-          }
         }
         fPart = fPart.getParent();
       }
@@ -2409,6 +2407,38 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       if (pm.isDeleted()) {
         throw new FileNotFoundException("Path " + f + " is recorded as " +
             "deleted by S3Guard");
+      }
+
+      // if ms is not authoritative, check S3 if there's any recent
+      // modification - compare the modTime to check if metadata is up to date
+      // Skip going to s3 if the file checked is a directory. Because if the
+      // dest is also a directory, there's no difference.
+      // TODO After HADOOP-16085 the modification detection can be done with
+      //  etags or object version instead of modTime
+      if (!pm.getFileStatus().isDirectory() &&
+          !allowAuthoritative) {
+        LOG.debug("Metadata for {} found in the non-auth metastore.", path);
+        final long msModTime = pm.getFileStatus().getModificationTime();
+
+        S3AFileStatus s3AFileStatus;
+        try {
+          s3AFileStatus = s3GetFileStatus(path, key, tombstones);
+        } catch (FileNotFoundException fne) {
+          s3AFileStatus = null;
+        }
+        if (s3AFileStatus == null) {
+          LOG.warn("Failed to find file {}. Either it is not yet visible, or "
+              + "it has been deleted.", path);
+        } else {
+          final long s3ModTime = s3AFileStatus.getModificationTime();
+
+          if(s3ModTime > msModTime) {
+            LOG.debug("S3Guard metadata for {} is outdated, updating it",
+                path);
+            return S3Guard.putAndReturn(metadataStore, s3AFileStatus,
+                instrumentation);
+          }
+        }
       }
 
       S3AFileStatus msStatus = pm.getFileStatus();

@@ -623,6 +623,9 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
     case CLOSED:
       state = ContainerReplicaProto.State.CLOSED;
       break;
+    case UNHEALTHY:
+      state = ContainerReplicaProto.State.UNHEALTHY;
+      break;
     default:
       throw new StorageContainerException("Invalid Container state found: " +
           containerData.getContainerID(), INVALID_CONTAINER_STATE);
@@ -677,7 +680,7 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
 
     KeyValueContainerCheck checker =
         new KeyValueContainerCheck(containerData.getMetadataPath(), config,
-            containerId, containerData);
+            containerId);
 
     switch (level) {
     case FAST_CHECK:

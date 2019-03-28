@@ -66,12 +66,7 @@ public final class DeviceSpecParser {
           fpgaDevices.add(new FpgaDevice(type,
               major,
               minor,
-              null,
-              null,
-              devName,
-              null,
-              null,
-              null));
+              devName));
         } catch (NumberFormatException e) {
           throw new ResourceHandlerException(
               "Cannot parse major/minor number: " + deviceSpec);

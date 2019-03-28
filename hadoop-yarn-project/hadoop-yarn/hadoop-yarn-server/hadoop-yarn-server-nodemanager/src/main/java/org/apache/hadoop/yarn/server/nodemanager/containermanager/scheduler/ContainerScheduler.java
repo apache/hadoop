@@ -137,10 +137,8 @@ public class ContainerScheduler extends AbstractService implements
         resourceHandlerChain = ResourceHandlerModule
             .getConfiguredResourceHandlerChain(conf, context);
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Resource handler chain enabled = " + (resourceHandlerChain
-            != null));
-      }
+      LOG.debug("Resource handler chain enabled = {}",
+          (resourceHandlerChain != null));
       if (resourceHandlerChain != null) {
         LOG.debug("Bootstrapping resource handler chain");
         resourceHandlerChain.bootstrap(conf);

@@ -296,10 +296,8 @@ public class ResourceTrackerService extends AbstractService implements
     }
 
     if (rmApp.getApplicationSubmissionContext().getUnmanagedAM()) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Ignoring container completion status for unmanaged AM "
-            + rmApp.getApplicationId());
-      }
+      LOG.debug("Ignoring container completion status for unmanaged AM {}",
+          rmApp.getApplicationId());
       return;
     }
 
@@ -393,11 +391,9 @@ public class ResourceTrackerService extends AbstractService implements
 
     Resource dynamicLoadCapability = loadNodeResourceFromDRConfiguration(nid);
     if (dynamicLoadCapability != null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Resource for node: " + nid + " is adjusted from: " +
-            capability + " to: " + dynamicLoadCapability +
-            " due to settings in dynamic-resources.xml.");
-      }
+      LOG.debug("Resource for node: {} is adjusted from: {} to: {} due to"
+          + " settings in dynamic-resources.xml.", nid, capability,
+          dynamicLoadCapability);
       capability = dynamicLoadCapability;
       // sync back with new resource.
       response.setResource(capability);
@@ -750,9 +746,9 @@ public class ResourceTrackerService extends AbstractService implements
       this.rmContext.getNodeAttributesManager()
           .replaceNodeAttributes(NodeAttribute.PREFIX_DISTRIBUTED,
               ImmutableMap.of(nodeId.getHost(), nodeAttributes));
-    } else if (LOG.isDebugEnabled()) {
-      LOG.debug("Skip updating node attributes since there is no change for "
-          + nodeId + " : " + nodeAttributes);
+    } else {
+      LOG.debug("Skip updating node attributes since there is no change"
+          +" for {} : {}", nodeId, nodeAttributes);
     }
   }
 
@@ -775,10 +771,8 @@ public class ResourceTrackerService extends AbstractService implements
         if (appCollectorData != null) {
           liveAppCollectorsMap.put(appId, appCollectorData);
         } else {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Collector for applicaton: " + appId +
-                " hasn't registered yet!");
-          }
+          LOG.debug("Collector for applicaton: {} hasn't registered yet!",
+              appId);
         }
       }
     }
@@ -960,11 +954,8 @@ public class ResourceTrackerService extends AbstractService implements
     }
     if(request.getTokenSequenceNo() != this.rmContext.getTokenSequenceNo()) {
       if (!rmContext.getSystemCredentialsForApps().isEmpty()) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-              "Sending System credentials for apps as part of NodeHeartbeat "
-                  + "response.");
-        }
+        LOG.debug("Sending System credentials for apps as part of"
+            + " NodeHeartbeat response.");
         nodeHeartBeatResponse
             .setSystemCredentialsForApps(
                 rmContext.getSystemCredentialsForApps().values());

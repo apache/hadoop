@@ -397,9 +397,8 @@ public class FifoScheduler extends
     LOG.info("Accepted application " + applicationId + " from user: " + user
         + ", currently num of applications: " + applications.size());
     if (isAppRecovering) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(applicationId + " is recovering. Skip notifying APP_ACCEPTED");
-      }
+      LOG.debug("{} is recovering. Skip notifying APP_ACCEPTED",
+          applicationId);
     } else {
       rmContext.getDispatcher().getEventHandler()
         .handle(new RMAppEvent(applicationId, RMAppEventType.APP_ACCEPTED));
@@ -429,10 +428,8 @@ public class FifoScheduler extends
     LOG.info("Added Application Attempt " + appAttemptId
         + " to scheduler from user " + application.getUser());
     if (isAttemptRecovering) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(appAttemptId
-            + " is recovering. Skipping notifying ATTEMPT_ADDED");
-      }
+      LOG.debug("{} is recovering. Skipping notifying ATTEMPT_ADDED",
+          appAttemptId);
     } else {
       rmContext.getDispatcher().getEventHandler().handle(
         new RMAppAttemptEvent(appAttemptId,

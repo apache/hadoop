@@ -719,13 +719,10 @@ public class AppSchedulingInfo {
   public static void updateMetrics(ApplicationId applicationId, NodeType type,
       SchedulerNode node, Container containerAllocated, String user,
       Queue queue) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("allocate: applicationId=" + applicationId + " container="
-          + containerAllocated.getId() + " host=" + containerAllocated
-          .getNodeId().toString() + " user=" + user + " resource="
-          + containerAllocated.getResource() + " type="
-          + type);
-    }
+    LOG.debug("allocate: applicationId={} container={} host={} user={}"
+        + " resource={} type={}", applicationId, containerAllocated.getId(),
+        containerAllocated.getNodeId(), user, containerAllocated.getResource(),
+        type);
     if(node != null) {
       queue.getMetrics().allocateResources(node.getPartition(), user, 1,
           containerAllocated.getResource(), true);

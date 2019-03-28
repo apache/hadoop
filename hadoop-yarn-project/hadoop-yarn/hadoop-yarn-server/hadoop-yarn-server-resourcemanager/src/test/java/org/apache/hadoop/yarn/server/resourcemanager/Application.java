@@ -223,10 +223,8 @@ public class Application {
     if (requests == null) {
       requests = new HashMap<String, ResourceRequest>();
       this.requests.put(schedulerKey, requests);
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Added priority=" + schedulerKey.getPriority()
-            + " application="+ applicationId);
-      }
+      LOG.debug("Added priority={} application={}", schedulerKey.getPriority(),
+          applicationId);
     }
     
     final Resource capability = requestSpec.get(schedulerKey);
@@ -242,10 +240,7 @@ public class Application {
     LOG.info("Added task " + task.getTaskId() + " to application " + 
         applicationId + " at priority " + schedulerKey.getPriority());
     
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("addTask: application=" + applicationId
-        + " #asks=" + ask.size());
-    }
+    LOG.debug("addTask: application={} #asks={}", applicationId, ask.size());
     
     // Create resource requests
     for (String host : task.getHosts()) {
@@ -320,12 +315,12 @@ public class Application {
   
   public synchronized List<Container> getResources() throws IOException {
     if(LOG.isDebugEnabled()) {
-      LOG.debug("getResources begin:" + " application=" + applicationId
-        + " #ask=" + ask.size());
+      LOG.debug("getResources begin: application={} #ask={}",
+          applicationId, ask.size());
 
       for (ResourceRequest request : ask) {
-        LOG.debug("getResources:" + " application=" + applicationId
-          + " ask-request=" + request);
+        LOG.debug("getResources: application={} ask-request={}",
+            applicationId, request);
       }
     }
     
@@ -346,8 +341,8 @@ public class Application {
     ask.clear();
     
     if(LOG.isDebugEnabled()) {
-      LOG.debug("getResources() for " + applicationId + ":"
-        + " ask=" + ask.size() + " received=" + containers.size());
+      LOG.debug("getResources() for {}: ask={} received={}",
+          applicationId, ask.size(), containers.size());
     }
     
     return containers;
@@ -451,10 +446,8 @@ public class Application {
     
     updateResourceRequest(requests.get(ResourceRequest.ANY));
     
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("updateResourceDemands:" + " application=" + applicationId
-        + " #asks=" + ask.size());
-    }
+    LOG.debug("updateResourceDemands: application={} #asks={}",
+        applicationId, ask.size());
   }
   
   private void updateResourceRequest(ResourceRequest request) {
@@ -465,10 +458,8 @@ public class Application {
     // clone to ensure the RM doesn't manipulate the same obj
     ask.add(ResourceRequest.clone(request));
 
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("updateResourceRequest:" + " application=" + applicationId
-        + " request=" + request);
-    }
+    LOG.debug("updateResourceRequest: application={} request={}",
+        applicationId, request);
   }
 
   private ContainerLaunchContext createCLC() {

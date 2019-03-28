@@ -414,6 +414,18 @@ public class OpportunisticContainerAllocatorAMService
       break;
     case RELEASE_CONTAINER:
       break;
+    case NODE_ATTRIBUTES_UPDATE:
+      break;
+    case KILL_RESERVED_CONTAINER:
+      break;
+    case MARK_CONTAINER_FOR_PREEMPTION:
+      break;
+    case MARK_CONTAINER_FOR_KILLABLE:
+      break;
+    case MARK_CONTAINER_FOR_NONKILLABLE:
+      break;
+    case MANAGE_QUEUE:
+      break;
     // <-- IGNORED EVENTS : END -->
     default:
       LOG.error("Unknown event arrived at" +

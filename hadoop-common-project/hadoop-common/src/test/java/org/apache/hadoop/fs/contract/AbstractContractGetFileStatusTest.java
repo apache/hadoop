@@ -22,6 +22,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -395,7 +396,8 @@ public abstract class AbstractContractGetFileStatusTest extends
     Path path = getContract().getTestPath();
     fs.delete(path, true);
     // create a - non-qualified - Path for a subdir
-    Path subfolder = path.suffix('/' + this.methodName.getMethodName());
+    Path subfolder = path.suffix('/' + this.methodName.getMethodName()
+        + "-" + UUID.randomUUID());
     mkdirs(subfolder);
     return subfolder;
   }

@@ -165,57 +165,6 @@ public class TestMetadataStore {
 
 
   @Test
-  public void testIteratorPrefixSeek() throws Exception {
-    Configuration conf = new OzoneConfiguration();
-    conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL, storeImpl);
-    File dbDir = GenericTestUtils.getRandomizedTestDir();
-    MetadataStore dbStore = MetadataStoreBuilder.newBuilder()
-        .setConf(conf)
-        .setCreateIfMissing(true)
-        .setDbFile(dbDir)
-        .build();
-
-    for (int i = 0; i < 5; i++) {
-      dbStore.put(getBytes("a" + i), getBytes("a-value" + i));
-    }
-
-    for (int i = 0; i < 5; i++) {
-      dbStore.put(getBytes("b" + i), getBytes("b-value" + i));
-    }
-
-    for (int i = 0; i < 5; i++) {
-      dbStore.put(getBytes("c" + i), getBytes("c-value" + i));
-    }
-
-    for (int i = 5; i < 10; i++) {
-      dbStore.put(getBytes("b" + i), getBytes("b-value" + i));
-    }
-
-    for (int i = 5; i < 10; i++) {
-      dbStore.put(getBytes("a" + i), getBytes("a-value" + i));
-    }
-
-
-    MetaStoreIterator<KeyValue> metaStoreIterator = dbStore.iterator();
-    metaStoreIterator.prefixSeek(getBytes("b"));
-    int i = 0;
-    while (metaStoreIterator.hasNext()) {
-      KeyValue val = metaStoreIterator.next();
-      String key = getString(val.getKey());
-      if (key.startsWith("b")) {
-        assertEquals("b-value" + i, getString(val.getValue()));
-      } else {
-        break;
-      }
-      i++;
-    }
-    assertTrue(i == 10);
-    dbStore.close();
-    dbStore.destroy();
-    FileUtils.deleteDirectory(dbDir);
-  }
-
-  @Test
   public void testMetaStoreConfigDifferentFromType() throws IOException {
 
     Configuration conf = new OzoneConfiguration();

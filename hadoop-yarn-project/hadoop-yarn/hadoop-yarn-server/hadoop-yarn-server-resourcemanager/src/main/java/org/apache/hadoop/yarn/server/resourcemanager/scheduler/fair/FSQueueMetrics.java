@@ -52,6 +52,15 @@ public class FSQueueMetrics extends QueueMetrics {
   private final FSQueueMetricsForCustomResources customResources;
   private String schedulingPolicy;
 
+  /**
+   * Constructor for {@link FairScheduler} queue metrics data object.
+   *
+   * @param ms the MetricSystem to register with
+   * @param queueName the queue name
+   * @param parent the parent {@link Queue}
+   * @param enableUserMetrics store metrics on user level
+   * @param conf the {@link Configuration} object to build buckets upon
+   */
   FSQueueMetrics(MetricsSystem ms, String queueName, Queue parent,
       boolean enableUserMetrics, Configuration conf) {
     super(ms, queueName, parent, enableUserMetrics, conf);
@@ -72,6 +81,11 @@ public class FSQueueMetrics extends QueueMetrics {
     return fairShareVCores.value();
   }
 
+  /**
+   * Get instantaneous fair share of the queue.
+   *
+   * @return the returned {@link Resource} also contains custom resource types
+   */
   public Resource getFairShare() {
     if (customResources != null) {
       return Resource.newInstance(fairShareMB.value(),
@@ -82,6 +96,12 @@ public class FSQueueMetrics extends QueueMetrics {
         (int) fairShareVCores.value());
   }
 
+  /**
+   * Set instantaneous fair share of the queue.
+   *
+   * @param resource the passed {@link Resource} object may also contain custom
+   *                 resource types
+   */
   public void setFairShare(Resource resource) {
     fairShareMB.set(resource.getMemorySize());
     fairShareVCores.set(resource.getVirtualCores());
@@ -98,6 +118,11 @@ public class FSQueueMetrics extends QueueMetrics {
     return steadyFairShareVCores.value();
   }
 
+  /**
+   * Get steady fair share for queue.
+   *
+   * @return the returned {@link Resource} also contains custom resource types
+   */
   public Resource getSteadyFairShare() {
     if (customResources != null) {
       return Resource.newInstance(steadyFairShareMB.value(),
@@ -108,6 +133,12 @@ public class FSQueueMetrics extends QueueMetrics {
         (int) steadyFairShareVCores.value());
   }
 
+  /**
+   * Set steady fair share for queue.
+   *
+   * @param resource the passed {@link Resource} object may also contain custom
+   *                 resource types
+   */
   public void setSteadyFairShare(Resource resource) {
     steadyFairShareMB.set(resource.getMemorySize());
     steadyFairShareVCores.set(resource.getVirtualCores());
@@ -124,6 +155,11 @@ public class FSQueueMetrics extends QueueMetrics {
     return minShareVCores.value();
   }
 
+  /**
+   * Get minimum required resource share for queue.
+   *
+   * @return the returned {@link Resource} also contains custom resource types
+   */
   public Resource getMinShare() {
     if (customResources != null) {
       return Resource.newInstance(minShareMB.value(),
@@ -134,6 +170,12 @@ public class FSQueueMetrics extends QueueMetrics {
         (int) minShareVCores.value());
   }
 
+  /**
+   * Set minimum required resource share for queue.
+   *
+   * @param resource the passed {@link Resource} object may also contain custom
+   *                 resource types
+   */
   public void setMinShare(Resource resource) {
     minShareMB.set(resource.getMemorySize());
     minShareVCores.set(resource.getVirtualCores());
@@ -150,6 +192,11 @@ public class FSQueueMetrics extends QueueMetrics {
     return maxShareVCores.value();
   }
 
+  /**
+   * Get maximum allowed resource share for queue.
+   *
+   * @return the returned {@link Resource} also contains custom resource types
+   */
   public Resource getMaxShare() {
     if (customResources != null) {
       return Resource.newInstance(maxShareMB.value(),
@@ -160,6 +207,12 @@ public class FSQueueMetrics extends QueueMetrics {
         (int) maxShareVCores.value());
   }
 
+  /**
+   * Set maximum allowed resource share for queue.
+   *
+   * @param resource the passed {@link Resource} object may also contain custom
+   *                 resource types
+   */
   public void setMaxShare(Resource resource) {
     maxShareMB.set(resource.getMemorySize());
     maxShareVCores.set(resource.getVirtualCores());
@@ -194,6 +247,11 @@ public class FSQueueMetrics extends QueueMetrics {
     return maxAMShareVCores.value();
   }
 
+  /**
+   * Get maximum resource AM can use.
+   *
+   * @return the returned {@link Resource} also contains custom resource types
+   */
   public Resource getMaxAMShare() {
     if (customResources != null) {
       return Resource.newInstance(maxAMShareMB.value(),
@@ -207,7 +265,8 @@ public class FSQueueMetrics extends QueueMetrics {
   /**
    * Set the maximum resource AM can use.
    *
-   * @param resource the maximum resource AM can use
+   * @param resource the passed {@link Resource} object may also contain custom
+   *                 resource types
    */
   public void setMaxAMShare(Resource resource) {
     maxAMShareMB.set(resource.getMemorySize());
@@ -235,6 +294,11 @@ public class FSQueueMetrics extends QueueMetrics {
     return amResourceUsageVCores.value();
   }
 
+  /**
+   * Get resource usage of the AM.
+   *
+   * @return the returned {@link Resource} also contains custom resource types
+   */
   public Resource getAMResourceUsage() {
     if (customResources != null) {
       return Resource.newInstance(amResourceUsageMB.value(),
@@ -248,7 +312,8 @@ public class FSQueueMetrics extends QueueMetrics {
   /**
    * Set the AM resource usage.
    *
-   * @param resource the AM resource usage
+   * @param resource the passed {@link Resource} object may also contain custom
+   *                 resource types
    */
   public void setAMResourceUsage(Resource resource) {
     amResourceUsageMB.set(resource.getMemorySize());

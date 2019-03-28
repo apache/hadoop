@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.s3guard;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.List;
 
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.waiters.WaiterTimedOutException;
@@ -27,6 +28,10 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.s3a.AWSClientIOException;
 import org.apache.hadoop.test.HadoopTestBase;
+import org.apache.hadoop.fs.Path;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.translateTableWaitFailure;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -89,6 +94,19 @@ public class TestDynamoDBMiscOperations extends HadoopTestBase {
           throw translateTableWaitFailure("example", e);
         });
     assertEquals(e, ex.getCause());
+  }
+
+  @Test
+  public void testInnerListChildrenDirectoryNpe() throws Exception {
+    DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
+    Path p = mock(Path.class);
+    List<PathMetadata> metas = mock(List.class);
+
+    when(metas.isEmpty()).thenReturn(false);
+    DDBPathMetadata dirPathMeta = null;
+
+    assertNull("The return value should be null.",
+        ddbms.getDirListingMetadataFromDirMetaAndList(p, metas, dirPathMeta));
   }
 
 }

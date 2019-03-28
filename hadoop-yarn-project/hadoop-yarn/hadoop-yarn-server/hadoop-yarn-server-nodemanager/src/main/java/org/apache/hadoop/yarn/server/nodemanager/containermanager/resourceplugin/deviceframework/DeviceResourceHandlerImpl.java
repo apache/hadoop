@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.deviceframework;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -53,7 +53,8 @@ import java.util.Set;
  * */
 public class DeviceResourceHandlerImpl implements ResourceHandler {
 
-  static final Log LOG = LogFactory.getLog(DeviceResourceHandlerImpl.class);
+  static final Logger LOG = LoggerFactory.
+      getLogger(DeviceResourceHandlerImpl.class);
 
   private final String resourceName;
   private final DevicePlugin devicePlugin;
@@ -134,10 +135,7 @@ public class DeviceResourceHandlerImpl implements ResourceHandler {
     String containerIdStr = container.getContainerId().toString();
     DeviceMappingManager.DeviceAllocation allocation =
         deviceMappingManager.assignDevices(resourceName, container);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Allocated to "
-          + containerIdStr + ": " + allocation);
-    }
+    LOG.debug("Allocated to {}: {}", containerIdStr, allocation);
     DeviceRuntimeSpec spec;
     try {
       spec = devicePlugin.onDevicesAllocated(
@@ -291,13 +289,9 @@ public class DeviceResourceHandlerImpl implements ResourceHandler {
     }
     DeviceType deviceType;
     try {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Try to get device type from device path: " + devName);
-      }
+      LOG.debug("Try to get device type from device path: {}", devName);
       String output = shellWrapper.getDeviceFileType(devName);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("stat output:" + output);
-      }
+      LOG.debug("stat output:{}", output);
       deviceType = output.startsWith("c") ? DeviceType.CHAR : DeviceType.BLOCK;
     } catch (IOException e) {
       String msg =

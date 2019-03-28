@@ -224,10 +224,8 @@ public class FileSystemTimelineWriter extends TimelineWriter{
     if (!entitiesToSummaryCache.isEmpty()) {
       Path summaryLogPath =
           new Path(attemptDir, SUMMARY_LOG_PREFIX + appAttemptId.toString());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Writing summary log for " + appAttemptId.toString() + " to "
-            + summaryLogPath);
-      }
+      LOG.debug("Writing summary log for {} to {}", appAttemptId,
+          summaryLogPath);
       this.logFDsCache.writeSummaryEntityLogs(fs, summaryLogPath, objMapper,
           appAttemptId, entitiesToSummaryCache, isAppendSupported);
     }
@@ -235,10 +233,7 @@ public class FileSystemTimelineWriter extends TimelineWriter{
     if (!entitiesToEntityCache.isEmpty()) {
       Path entityLogPath =
           new Path(attemptDir, ENTITY_LOG_PREFIX + groupId.toString());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Writing entity log for " + groupId.toString() + " to "
-            + entityLogPath);
-      }
+      LOG.debug("Writing entity log for {} to {}", groupId, entityLogPath);
       this.logFDsCache.writeEntityLogs(fs, entityLogPath, objMapper,
           appAttemptId, groupId, entitiesToEntityCache, isAppendSupported);
     }
@@ -292,10 +287,7 @@ public class FileSystemTimelineWriter extends TimelineWriter{
     Path domainLogPath =
         new Path(attemptDirCache.getAppAttemptDir(appAttemptId),
             DOMAIN_LOG_PREFIX + appAttemptId.toString());
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Writing domains for " + appAttemptId.toString() + " to "
-          + domainLogPath);
-    }
+    LOG.debug("Writing domains for {} to {}", appAttemptId, domainLogPath);
     this.logFDsCache.writeDomainLog(
         fs, domainLogPath, objMapper, domain, isAppendSupported);
   }
@@ -324,9 +316,7 @@ public class FileSystemTimelineWriter extends TimelineWriter{
       if (writerClosed()) {
         prepareForWrite();
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Writing entity list of size " + entities.size());
-      }
+      LOG.debug("Writing entity list of size {}", entities.size());
       for (TimelineEntity entity : entities) {
         getObjectMapper().writeValue(getJsonGenerator(), entity);
       }
@@ -558,9 +548,7 @@ public class FileSystemTimelineWriter extends TimelineWriter{
         try {
           flush();
         } catch (Exception e) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(e.toString());
-          }
+          LOG.debug("{}", e);
         }
       }
     }
@@ -997,9 +985,7 @@ public class FileSystemTimelineWriter extends TimelineWriter{
       Path attemptDir = new Path(appDir, appAttemptId.toString());
       if (FileSystem.mkdirs(fs, attemptDir,
           new FsPermission(APP_LOG_DIR_PERMISSIONS))) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("New attempt directory created - " + attemptDir);
-        }
+        LOG.debug("New attempt directory created - {}", attemptDir);
       }
       return attemptDir;
     }
@@ -1009,9 +995,7 @@ public class FileSystemTimelineWriter extends TimelineWriter{
       Path appDir = new Path(appRootDir, appId.toString());
       if (FileSystem.mkdirs(fs, appDir,
           new FsPermission(APP_LOG_DIR_PERMISSIONS))) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("New app directory created - " + appDir);
-        }
+        LOG.debug("New app directory created - {}", appDir);
       }
       return appDir;
     }
@@ -1023,9 +1007,7 @@ public class FileSystemTimelineWriter extends TimelineWriter{
       Path userDir = new Path(activePath, user);
       if (FileSystem.mkdirs(fs, userDir,
           new FsPermission(APP_LOG_DIR_PERMISSIONS))) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("New user directory created - " + userDir);
-        }
+        LOG.debug("New user directory created - {}", userDir);
       }
       return userDir;
     }

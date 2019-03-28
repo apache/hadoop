@@ -397,10 +397,8 @@ public class YarnClientImpl extends YarnClient {
       return;
     }
     credentials.addToken(timelineService, timelineDelegationToken);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Add timeline delegation token into credentials: "
-          + timelineDelegationToken);
-    }
+    LOG.debug("Add timeline delegation token into credentials: {}",
+        timelineDelegationToken);
     DataOutputBuffer dob = new DataOutputBuffer();
     credentials.writeTokenStorageToStream(dob);
     tokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());

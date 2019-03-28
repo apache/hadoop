@@ -114,8 +114,11 @@ public class FpgaDiscoverer {
   }
 
   /**
-   * get avialable devices minor numbers from toolchain or static configuration
-   * */
+   * Get available devices minor numbers from toolchain or static configuration.
+   *
+   * @return the list of FPGA devices
+   * @throws ResourceHandlerException if there's any error during discovery
+   **/
   public List<FpgaResourceAllocator.FpgaDevice> discover()
       throws ResourceHandlerException {
     List<FpgaResourceAllocator.FpgaDevice> list;
@@ -150,7 +153,7 @@ public class FpgaDiscoverer {
       // Replace list with a filtered one
       list = list
         .stream()
-        .filter(dev -> minors.contains(dev.getMinor().toString()))
+        .filter(dev -> minors.contains(String.valueOf(dev.getMinor())))
         .collect(Collectors.toList());
 
       // if the count of user configured is still larger than actual

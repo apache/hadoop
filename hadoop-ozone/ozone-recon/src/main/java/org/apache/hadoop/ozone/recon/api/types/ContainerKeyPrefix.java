@@ -20,16 +20,28 @@ package org.apache.hadoop.ozone.recon.api.types;
 
 /**
  * Class to encapsulate the Key information needed for the Recon container DB.
- * Currently, it is containerId and key prefix.
+ * Currently, it is the containerId and the whole key + key version.
  */
 public class ContainerKeyPrefix {
 
   private long containerId;
   private String keyPrefix;
+  private long keyVersion = -1;
 
   public ContainerKeyPrefix(long containerId, String keyPrefix) {
     this.containerId = containerId;
     this.keyPrefix = keyPrefix;
+  }
+
+  public ContainerKeyPrefix(long containerId, String keyPrefix,
+                            long keyVersion) {
+    this.containerId = containerId;
+    this.keyPrefix = keyPrefix;
+    this.keyVersion = keyVersion;
+  }
+
+  public ContainerKeyPrefix(long containerId) {
+    this.containerId = containerId;
   }
 
   public long getContainerId() {
@@ -47,4 +59,31 @@ public class ContainerKeyPrefix {
   public void setKeyPrefix(String keyPrefix) {
     this.keyPrefix = keyPrefix;
   }
+
+  public long getKeyVersion() {
+    return keyVersion;
+  }
+
+  public void setKeyVersion(long keyVersion) {
+    this.keyVersion = keyVersion;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+
+    if (!(o instanceof ContainerKeyPrefix)) {
+      return false;
+    }
+    ContainerKeyPrefix that = (ContainerKeyPrefix) o;
+    return (this.containerId == that.containerId) &&
+        this.keyPrefix.equals(that.keyPrefix) &&
+        this.keyVersion == that.keyVersion;
+  }
+
+  @Override
+  public int hashCode() {
+    return Long.valueOf(containerId).hashCode() + 13 * keyPrefix.hashCode() +
+        17 * Long.valueOf(keyVersion).hashCode();
+  }
+
 }

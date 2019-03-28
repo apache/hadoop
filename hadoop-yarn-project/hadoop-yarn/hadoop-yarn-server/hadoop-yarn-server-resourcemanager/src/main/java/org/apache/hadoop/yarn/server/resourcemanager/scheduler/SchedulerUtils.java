@@ -195,7 +195,7 @@ public class SchedulerUtils {
   }
 
   /**
-   * Utility method to normalize a resource request, by insuring that the
+   * Utility method to normalize a resource request, by ensuring that the
    * requested memory is a multiple of minMemory and is not zero.
    */
   @VisibleForTesting
@@ -210,7 +210,7 @@ public class SchedulerUtils {
   }
 
   /**
-   * Utility method to normalize a resource request, by insuring that the
+   * Utility method to normalize a resource request, by ensuring that the
    * requested memory is a multiple of increment resource and is not zero.
    *
    * @return normalized resource
@@ -240,10 +240,8 @@ public class SchedulerUtils {
     // default label expression of queue
     if (labelExp == null && queueInfo != null && ResourceRequest.ANY
         .equals(resReq.getResourceName())) {
-      if ( LOG.isDebugEnabled()) {
-        LOG.debug("Setting default node label expression : " + queueInfo
-            .getDefaultNodeLabelExpression());
-      }
+      LOG.debug("Setting default node label expression : {}", queueInfo
+          .getDefaultNodeLabelExpression());
       labelExp = queueInfo.getDefaultNodeLabelExpression();
     }
 
@@ -304,7 +302,7 @@ public class SchedulerUtils {
   }
 
   /**
-   * Utility method to validate a resource request, by insuring that the
+   * Utility method to validate a resource request, by ensuring that the
    * requested memory/vcore is non-negative and not greater than max
    *
    * @throws InvalidResourceRequestException when there is invalid request

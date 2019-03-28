@@ -27,7 +27,6 @@ import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.security.KeyPair;
 import java.security.PrivateKey;
@@ -48,13 +47,28 @@ public class CertificateClientTestImpl implements CertificateClient {
   private final SecurityConfig securityConfig;
   private final KeyPair keyPair;
   private final Configuration config;
+  private final X509Certificate x509Certificate;
 
-  public CertificateClientTestImpl(OzoneConfiguration conf) throws Exception{
+  public CertificateClientTestImpl(OzoneConfiguration conf) throws Exception {
     securityConfig = new SecurityConfig(conf);
     HDDSKeyGenerator keyGen =
         new HDDSKeyGenerator(securityConfig.getConfiguration());
     keyPair = keyGen.generateKey();
     config = conf;
+    SelfSignedCertificate.Builder builder =
+        SelfSignedCertificate.newBuilder()
+            .setBeginDate(LocalDate.now())
+            .setEndDate(LocalDate.now().plus(365, ChronoUnit.DAYS))
+            .setClusterID("cluster1")
+            .setKey(keyPair)
+            .setSubject("TestCertSub")
+            .setConfiguration(config)
+            .setScmID("TestScmId1")
+            .makeCA();
+    X509CertificateHolder certificateHolder = null;
+    certificateHolder = builder.build();
+    x509Certificate = new JcaX509CertificateConverter().getCertificate(
+        certificateHolder);
   }
 
   @Override
@@ -67,26 +81,21 @@ public class CertificateClientTestImpl implements CertificateClient {
     return keyPair.getPublic();
   }
 
+  /**
+   * Returns the certificate  of the specified component if it exists on the
+   * local system.
+   *
+   * @return certificate or Null if there is no data.
+   */
+  @Override
+  public X509Certificate getCertificate(String certSerialId)
+      throws CertificateException {
+    return x509Certificate;
+  }
+
   @Override
   public X509Certificate getCertificate() {
-    SelfSignedCertificate.Builder builder =
-        SelfSignedCertificate.newBuilder()
-            .setBeginDate(LocalDate.now())
-            .setEndDate(LocalDate.now().plus(365, ChronoUnit.DAYS))
-            .setClusterID("cluster1")
-            .setKey(keyPair)
-            .setSubject("TestCertSub")
-            .setConfiguration(config)
-            .setScmID("TestScmId1")
-            .makeCA();
-    X509CertificateHolder certificateHolder = null;
-    try {
-      certificateHolder = builder.build();
-      return new JcaX509CertificateConverter().getCertificate(
-          certificateHolder);
-    } catch (IOException | java.security.cert.CertificateException e) {
-    }
-    return null;
+    return x509Certificate;
   }
 
   @Override
@@ -107,13 +116,13 @@ public class CertificateClientTestImpl implements CertificateClient {
 
   @Override
   public boolean verifySignature(InputStream stream, byte[] signature,
-      X509Certificate x509Certificate) throws CertificateException {
+      X509Certificate cert) throws CertificateException {
     return true;
   }
 
   @Override
   public boolean verifySignature(byte[] data, byte[] signature,
-      X509Certificate x509Certificate) throws CertificateException {
+      X509Certificate cert) throws CertificateException {
     return true;
   }
 
@@ -128,7 +137,7 @@ public class CertificateClientTestImpl implements CertificateClient {
   }
 
   @Override
-  public void storeCertificate(X509Certificate certificate)
+  public void storeCertificate(String cert, boolean force)
       throws CertificateException {
 
   }

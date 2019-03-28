@@ -271,7 +271,7 @@ public class TestProcfsBasedProcessTree {
       fReader = new FileReader(pidFileName);
       pidFile = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
-      LOG.debug("PidFile doesn't exist : " + pidFileName);
+      LOG.debug("PidFile doesn't exist : {}", pidFileName);
       return pid;
     }
 

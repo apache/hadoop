@@ -38,6 +38,8 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProviderTokenIssuer;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -48,9 +50,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 
@@ -75,7 +76,8 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class OzoneFileSystem extends FileSystem {
+public class OzoneFileSystem extends FileSystem
+    implements KeyProviderTokenIssuer {
   static final Logger LOG = LoggerFactory.getLogger(OzoneFileSystem.class);
 
   /**
@@ -87,7 +89,6 @@ public class OzoneFileSystem extends FileSystem {
   private Path workingDir;
 
   private OzoneClientAdapter adapter;
-  private boolean securityEnabled;
 
   private OzoneFSStorageStatistics storageStatistics;
 
@@ -174,19 +175,9 @@ public class OzoneFileSystem extends FileSystem {
               OzoneClientAdapterFactory.createAdapter(volumeStr, bucketStr);
         }
       } else {
-        OzoneConfiguration ozoneConfiguration;
-        if (conf instanceof OzoneConfiguration) {
-          ozoneConfiguration = (OzoneConfiguration) conf;
-        } else {
-          ozoneConfiguration = new OzoneConfiguration(conf);
-        }
 
-        SecurityConfig secConfig = new SecurityConfig(ozoneConfiguration);
-        if (secConfig.isSecurityEnabled()) {
-          this.securityEnabled = true;
-        }
         this.adapter = new OzoneClientAdapterImpl(omHost,
-            Integer.parseInt(omPort), ozoneConfiguration,
+            Integer.parseInt(omPort), conf,
             volumeStr, bucketStr, storageStatistics);
       }
 
@@ -311,6 +302,26 @@ public class OzoneFileSystem extends FileSystem {
                                    Progressable progress) throws IOException {
     throw new UnsupportedOperationException("append() Not implemented by the "
         + getClass().getSimpleName() + " FileSystem implementation");
+  }
+
+  @Override
+  public KeyProvider getKeyProvider() throws IOException {
+    return adapter.getKeyProvider();
+  }
+
+  @Override
+  public URI getKeyProviderUri() throws IOException {
+    return adapter.getKeyProviderUri();
+  }
+
+  @Override
+  public DelegationTokenIssuer[] getAdditionalTokenIssuers()
+      throws IOException {
+    KeyProvider keyProvider = getKeyProvider();
+    if (keyProvider instanceof DelegationTokenIssuer) {
+      return new DelegationTokenIssuer[]{(DelegationTokenIssuer)keyProvider};
+    }
+    return null;
   }
 
   private class RenameIterator extends OzoneListingIterator {
@@ -637,10 +648,10 @@ public class OzoneFileSystem extends FileSystem {
      * @param dirPath path to the dir
      * @throws FileNotFoundException
      */
-    void addSubDirStatus(Path dirPath) throws FileNotFoundException {
+    void addSubDirStatus(Path dirPath) throws IOException {
       // Check if subdir path is already included in statuses.
       if (!subDirStatuses.containsKey(dirPath)) {
-        subDirStatuses.put(dirPath, innerGetFileStatusForDir(dirPath));
+        subDirStatuses.put(dirPath, getFileStatus(dirPath));
       }
     }
 
@@ -701,8 +712,17 @@ public class OzoneFileSystem extends FileSystem {
 
   @Override
   public Token<?> getDelegationToken(String renewer) throws IOException {
-    return securityEnabled? adapter.getDelegationToken(renewer) :
-        super.getDelegationToken(renewer);
+    return adapter.getDelegationToken(renewer);
+  }
+
+  /**
+   * Get a canonical service name for this file system. If the URI is logical,
+   * the hostname part of the URI will be returned.
+   * @return a service string that uniquely identifies this file system.
+   */
+  @Override
+  public String getCanonicalServiceName() {
+    return adapter.getCanonicalServiceName();
   }
 
   /**
@@ -783,64 +803,8 @@ public class OzoneFileSystem extends FileSystem {
     Path qualifiedPath = f.makeQualified(uri, workingDir);
     String key = pathToKey(qualifiedPath);
 
-    if (key.length() == 0) {
-      return new FileStatus(0, true, 1, 0,
-          adapter.getCreationTime(), qualifiedPath);
-    }
-
-    // Check if the key exists
-    BasicKeyInfo ozoneKey = adapter.getKeyInfo(key);
-    if (ozoneKey != null) {
-      LOG.debug("Found exact file for path {}: normal file", f);
-      return new FileStatus(ozoneKey.getDataSize(), false, 1,
-          getDefaultBlockSize(f), ozoneKey.getModificationTime(), 0,
-          FsPermission.getFileDefault(), getUsername(), getUsername(),
-          qualifiedPath);
-    }
-
-    return innerGetFileStatusForDir(f);
-  }
-
-  /**
-   * Get the FileStatus for input directory path.
-   * They key corresponding to input path is appended with a trailing slash
-   * to return only the corresponding directory key in the bucket.
-   *
-   * @param f directory path
-   * @return FileStatus for the input directory path
-   * @throws FileNotFoundException
-   */
-  public FileStatus innerGetFileStatusForDir(Path f)
-      throws FileNotFoundException {
-    Path qualifiedPath = f.makeQualified(uri, workingDir);
-    String key = pathToKey(qualifiedPath);
-    key = addTrailingSlashIfNeeded(key);
-
-    BasicKeyInfo ozoneKey = adapter.getKeyInfo(key);
-    if (ozoneKey != null) {
-      if (adapter.isDirectory(ozoneKey)) {
-        // Key is a directory
-        LOG.debug("Found file (with /) for path {}: fake directory", f);
-      } else {
-        // Key is a file with trailing slash
-        LOG.warn("Found file (with /) for path {}: real file? should not " +
-            "happen", f, key);
-      }
-      return new FileStatus(0, true, 1, 0,
-          ozoneKey.getModificationTime(), 0,
-          FsPermission.getDirDefault(), getUsername(), getUsername(),
-          qualifiedPath);
-    }
-
-    // File or directory corresponding to input path does not exist.
-    // Check if there exists a key prefixed with this key.
-    boolean hasChildren = adapter.hasNextKey(key);
-    if (hasChildren) {
-      return new FileStatus(0, true, 1, 0, 0, 0, FsPermission.getDirDefault(),
-          getUsername(), getUsername(), qualifiedPath);
-    }
-
-    throw new FileNotFoundException(f + ": No such file or directory!");
+    return adapter.getFileStatus(key)
+        .makeQualified(uri, qualifiedPath, getUsername(), getUsername());
   }
 
   /**

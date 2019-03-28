@@ -29,8 +29,8 @@ include_directories(
 
 add_library(native_mini_dfs
     native_mini_dfs.c
-    ../libhdfs/common/htable.c
     ../libhdfs/exception.c
+    ../libhdfs/jclasses.c
     ../libhdfs/jni_helper.c
     ${OS_DIR}/mutexes.c
     ${OS_DIR}/thread_local_storage.c
@@ -39,6 +39,3 @@ add_library(native_mini_dfs
 add_executable(test_native_mini_dfs test_native_mini_dfs.c)
 target_link_libraries(test_native_mini_dfs native_mini_dfs ${JAVA_JVM_LIBRARY})
 add_test(test_test_native_mini_dfs test_native_mini_dfs)
-
-add_executable(test_htable ../libhdfs/common/htable.c test_htable.c)
-target_link_libraries(test_htable ${OS_LINK_LIBRARIES})

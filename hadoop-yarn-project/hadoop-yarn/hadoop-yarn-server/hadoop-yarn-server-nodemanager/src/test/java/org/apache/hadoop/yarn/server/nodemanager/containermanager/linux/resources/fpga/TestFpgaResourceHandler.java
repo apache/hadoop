@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -31,7 +32,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -62,11 +65,23 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.IntelFpgaOpenclPlugin;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
+
+import com.google.common.io.Files;
 
 public class TestFpgaResourceHandler {
+  @Rule
+  public ExpectedException expected = ExpectedException.none();
+
+  private static final String HASHABLE_STRING = "abcdef";
+  private static final String EXPECTED_HASH =
+      "bef57ec7f53a6d40beb640a780a639c83bc29ac8a9816f1fc6c5c6dcd93c4721";
+
   private Context mockContext;
   private FpgaResourceHandlerImpl fpgaResourceHandler;
   private Configuration configuration;
@@ -75,10 +90,17 @@ public class TestFpgaResourceHandler {
   private NMStateStoreService mockNMStateStore;
   private ConcurrentHashMap<ContainerId, Container> runningContainersMap;
   private IntelFpgaOpenclPlugin mockVendorPlugin;
+  private List<FpgaDevice> deviceList;
   private static final String vendorType = "IntelOpenCL";
+  private File dummyAocx;
+
+  private String getTestParentFolder() {
+    File f = new File("target/temp/" + TestFpgaResourceHandler.class.getName());
+    return f.getAbsolutePath();
+  }
 
   @Before
-  public void setup() {
+  public void setup() throws IOException {
     CustomResourceTypesConfigurationProvider.
         initResourceTypes(ResourceInformation.FPGA_URI);
     configuration = new YarnConfiguration();
@@ -88,13 +110,12 @@ public class TestFpgaResourceHandler {
     mockNMStateStore = mock(NMStateStoreService.class);
     mockContext = mock(Context.class);
     // Assumed devices parsed from output
-    List<FpgaResourceAllocator.FpgaDevice> list = new ArrayList<>();
-    list.add(new FpgaResourceAllocator.FpgaDevice(vendorType, 247, 0, null));
-    list.add(new FpgaResourceAllocator.FpgaDevice(vendorType, 247, 1, null));
-    list.add(new FpgaResourceAllocator.FpgaDevice(vendorType, 247, 2, null));
-    list.add(new FpgaResourceAllocator.FpgaDevice(vendorType, 247, 3, null));
-    list.add(new FpgaResourceAllocator.FpgaDevice(vendorType, 247, 4, null));
-    mockVendorPlugin = mockPlugin(vendorType, list);
+    deviceList = new ArrayList<>();
+    for (int i = 0; i < 5; i++) {
+      deviceList.add(new FpgaDevice(vendorType, 247, i, "acl" + i));
+    }
+    String aocxPath = getTestParentFolder() + "/test.aocx";
+    mockVendorPlugin = mockPlugin(vendorType, deviceList, aocxPath);
     FpgaDiscoverer.getInstance().setConf(configuration);
     when(mockContext.getNMStateStore()).thenReturn(mockNMStateStore);
     runningContainersMap = new ConcurrentHashMap<>();
@@ -102,6 +123,18 @@ public class TestFpgaResourceHandler {
 
     fpgaResourceHandler = new FpgaResourceHandlerImpl(mockContext,
         mockCGroupsHandler, mockPrivilegedExecutor, mockVendorPlugin);
+
+    dummyAocx = new File(aocxPath);
+    Files.createParentDirs(dummyAocx);
+    Files.touch(dummyAocx);
+    Files.append(HASHABLE_STRING, dummyAocx, StandardCharsets.UTF_8);
+  }
+
+  @After
+  public void teardown() {
+    if (dummyAocx != null) {
+      dummyAocx.delete();
+    }
   }
 
   @Test
@@ -125,16 +158,16 @@ public class TestFpgaResourceHandler {
     fpgaResourceHandler.bootstrap(configuration);
     Assert.assertEquals(3,
         fpgaResourceHandler.getFpgaAllocator().getAllowedFpga().size());
-    List<FpgaResourceAllocator.FpgaDevice> allowedDevices =
+    List<FpgaDevice> allowedDevices =
         fpgaResourceHandler.getFpgaAllocator().getAllowedFpga();
     for (String s : allowed.split(",")) {
       boolean check = false;
-      for (FpgaResourceAllocator.FpgaDevice device : allowedDevices) {
-        if (device.getMinor().toString().equals(s)) {
+      for (FpgaDevice device : allowedDevices) {
+        if (String.valueOf(device.getMinor()).equals(s)) {
           check = true;
         }
       }
-      Assert.assertTrue("Minor:" + s +"found", check);
+      Assert.assertTrue("Minor:" + s +" found", check);
     }
     Assert.assertEquals(3,
         fpgaResourceHandler.getFpgaAllocator().getAvailableFpgaCount());
@@ -212,9 +245,9 @@ public class TestFpgaResourceHandler {
     fpgaResourceHandler.preStart(mockContainer(0, 1, "GEMM"));
     Assert.assertEquals(1, fpgaResourceHandler.getFpgaAllocator().getUsedFpgaCount());
     verifyDeniedDevices(getContainerId(0), Arrays.asList(1, 2));
-    List<FpgaResourceAllocator.FpgaDevice> list = fpgaResourceHandler.getFpgaAllocator()
+    List<FpgaDevice> list = fpgaResourceHandler.getFpgaAllocator()
         .getUsedFpga().get(getContainerId(0).toString());
-    for (FpgaResourceAllocator.FpgaDevice device : list) {
+    for (FpgaDevice device : list) {
       Assert.assertEquals("IP should be updated to GEMM", "GEMM", device.getIPID());
     }
     // Case 2. The id-1 container request 3 FPGA of IntelOpenCL and GEMM IP. this should fail
@@ -254,7 +287,7 @@ public class TestFpgaResourceHandler {
     // IPID should be GEMM for id-3 container
     list = fpgaResourceHandler.getFpgaAllocator()
         .getUsedFpga().get(getContainerId(3).toString());
-    for (FpgaResourceAllocator.FpgaDevice device : list) {
+    for (FpgaDevice device : list) {
       Assert.assertEquals("IPID should be GEMM", "GEMM", device.getIPID());
     }
     Assert.assertEquals(2,
@@ -286,20 +319,21 @@ public class TestFpgaResourceHandler {
 
   @Test
   public void testsAllocationWithExistingIPIDDevices()
-      throws ResourceHandlerException, PrivilegedOperationException {
+      throws ResourceHandlerException, PrivilegedOperationException,
+      IOException {
     configuration.set(YarnConfiguration.NM_FPGA_ALLOWED_DEVICES, "0,1,2");
     fpgaResourceHandler.bootstrap(configuration);
     // The id-0 container request 3 FPGA of IntelOpenCL type and GEMM IP
     fpgaResourceHandler.preStart(mockContainer(0, 3, "GEMM"));
     Assert.assertEquals(3,
         fpgaResourceHandler.getFpgaAllocator().getUsedFpgaCount());
-    List<FpgaResourceAllocator.FpgaDevice> list =
+    List<FpgaDevice> list =
         fpgaResourceHandler
             .getFpgaAllocator()
             .getUsedFpga()
             .get(getContainerId(0).toString());
     fpgaResourceHandler.postComplete(getContainerId(0));
-    for (FpgaResourceAllocator.FpgaDevice device : list) {
+    for (FpgaDevice device : list) {
       Assert.assertEquals("IP should be updated to GEMM", "GEMM",
           device.getIPID());
     }
@@ -314,6 +348,8 @@ public class TestFpgaResourceHandler {
     fpgaResourceHandler.postComplete(getContainerId(2));
 
     // Case 2. id-2 container request preStart, with 1 plugin.configureIP called
+    // Add some characters to the dummy file to have its hash changed
+    Files.append("12345", dummyAocx, StandardCharsets.UTF_8);
     fpgaResourceHandler.preStart(mockContainer(1, 1, "GZIP"));
     // we should have 4 times invocation
     verify(mockVendorPlugin, times(4)).configureIP(anyString(),
@@ -342,7 +378,7 @@ public class TestFpgaResourceHandler {
     fpgaResourceHandler.bootstrap(configuration);
     Container container0 = mockContainer(0, 3, "GEMM");
     fpgaResourceHandler.preStart(container0);
-    List<FpgaResourceAllocator.FpgaDevice> assigned =
+    List<FpgaDevice> assigned =
         fpgaResourceHandler
             .getFpgaAllocator()
             .getUsedFpga()
@@ -361,11 +397,11 @@ public class TestFpgaResourceHandler {
   @Test
   public void testReacquireContainer() throws ResourceHandlerException {
     Container c0 = mockContainer(0, 2, "GEMM");
-    List<FpgaResourceAllocator.FpgaDevice> assigned = new ArrayList<>();
-    assigned.add(new
-        FpgaResourceAllocator.FpgaDevice(vendorType, 247, 0, null));
-    assigned.add(new
-        FpgaResourceAllocator.FpgaDevice(vendorType, 247, 1, null));
+    List<FpgaDevice> assigned = new ArrayList<>();
+    assigned.add(new FpgaDevice(
+        vendorType, 247, 0, "acl0"));
+    assigned.add(new FpgaDevice(
+        vendorType, 247, 1, "acl1"));
     // Mock we've stored the c0 states
     mockStateStoreForContainer(c0, assigned);
     // NM start
@@ -378,27 +414,27 @@ public class TestFpgaResourceHandler {
     // Case 1. try recover state for id-0 container
     fpgaResourceHandler.reacquireContainer(getContainerId(0));
     // minor number matches
-    List<FpgaResourceAllocator.FpgaDevice> used =
+    List<FpgaDevice> used =
         fpgaResourceHandler.getFpgaAllocator().
         getUsedFpga().get(getContainerId(0).toString());
     int count = 0;
-    for (FpgaResourceAllocator.FpgaDevice device : used) {
-      if (device.getMinor().equals(0)){
+    for (FpgaDevice device : used) {
+      if (device.getMinor() == 0){
         count++;
       }
-      if (device.getMinor().equals(1)) {
+      if (device.getMinor() == 1) {
         count++;
       }
     }
     Assert.assertEquals("Unexpected used minor number in allocator",2, count);
-    List<FpgaResourceAllocator.FpgaDevice> available =
+    List<FpgaDevice> available =
         fpgaResourceHandler
             .getFpgaAllocator()
             .getAvailableFpga()
             .get(vendorType);
     count = 0;
-    for (FpgaResourceAllocator.FpgaDevice device : available) {
-      if (device.getMinor().equals(2)) {
+    for (FpgaDevice device : available) {
+      if (device.getMinor() == 2) {
         count++;
       }
     }
@@ -409,8 +445,8 @@ public class TestFpgaResourceHandler {
     // Case 2. Recover a not allowed device with minor number 5
     Container c1 = mockContainer(1, 1, "GEMM");
     assigned = new ArrayList<>();
-    assigned.add(new
-        FpgaResourceAllocator.FpgaDevice(vendorType, 247, 5, null));
+    assigned.add(new FpgaDevice(
+        vendorType, 247, 5, "acl0"));
     // Mock we've stored the c1 states
     mockStateStoreForContainer(c1, assigned);
     boolean flag = false;
@@ -428,8 +464,8 @@ public class TestFpgaResourceHandler {
     // Case 3. recover a already used device by other container
     Container c2 = mockContainer(2, 1, "GEMM");
     assigned = new ArrayList<>();
-    assigned.add(new
-        FpgaResourceAllocator.FpgaDevice(vendorType, 247, 1, null));
+    assigned.add(new FpgaDevice(
+        vendorType, 247, 1, "acl0"));
     // Mock we've stored the c2 states
     mockStateStoreForContainer(c2, assigned);
     flag = false;
@@ -447,8 +483,8 @@ public class TestFpgaResourceHandler {
     // Case 4. recover a normal container c3 with remaining minor device number 2
     Container c3 = mockContainer(3, 1, "GEMM");
     assigned = new ArrayList<>();
-    assigned.add(new
-        FpgaResourceAllocator.FpgaDevice(vendorType, 247, 2, null));
+    assigned.add(new FpgaDevice(
+        vendorType, 247, 2, "acl2"));
     // Mock we've stored the c2 states
     mockStateStoreForContainer(c3, assigned);
     fpgaResourceHandler.reacquireContainer(getContainerId(3));
@@ -456,6 +492,33 @@ public class TestFpgaResourceHandler {
         fpgaResourceHandler.getFpgaAllocator().getUsedFpgaCount());
     Assert.assertEquals(0,
         fpgaResourceHandler.getFpgaAllocator().getAvailableFpgaCount());
+  }
+
+  @Test
+  public void testSha256CalculationFails() throws ResourceHandlerException {
+    expected.expect(ResourceHandlerException.class);
+    expected.expectMessage("Could not calculate SHA-256");
+
+    dummyAocx.delete();
+    fpgaResourceHandler.preStart(mockContainer(0, 1, "GEMM"));
+  }
+
+  @Test
+  public void testSha256CalculationSucceeds()
+      throws IOException, ResourceHandlerException {
+    mockVendorPlugin =
+        mockPlugin(vendorType, deviceList, dummyAocx.getAbsolutePath());
+    fpgaResourceHandler = new FpgaResourceHandlerImpl(mockContext,
+        mockCGroupsHandler, mockPrivilegedExecutor, mockVendorPlugin);
+
+    fpgaResourceHandler.bootstrap(configuration);
+    fpgaResourceHandler.preStart(mockContainer(0, 1, "GEMM"));
+
+    // IP file is assigned to the first device
+    List<FpgaDevice> devices =
+        fpgaResourceHandler.getFpgaAllocator().getAllowedFpga();
+    FpgaDevice device = devices.get(0);
+    assertEquals("Hash value", EXPECTED_HASH, device.getAocxHash());
   }
 
   private void verifyDeniedDevices(ContainerId containerId,
@@ -480,18 +543,17 @@ public class TestFpgaResourceHandler {
   }
 
   private static IntelFpgaOpenclPlugin mockPlugin(String type,
-      List<FpgaResourceAllocator.FpgaDevice> list) {
+      List<FpgaDevice> list, String aocxPath) {
     IntelFpgaOpenclPlugin plugin = mock(IntelFpgaOpenclPlugin.class);
     when(plugin.initPlugin(any())).thenReturn(true);
     when(plugin.getFpgaType()).thenReturn(type);
     when(plugin.retrieveIPfilePath(anyString(),
-        anyString(), anyMap())).thenReturn("/tmp");
+        anyString(), anyMap())).thenReturn(aocxPath);
     when(plugin.configureIP(anyString(), any()))
         .thenReturn(true);
     when(plugin.discover(anyInt())).thenReturn(list);
     return plugin;
   }
-
 
   private static Container mockContainer(int id, int numFpga, String IPID) {
     Container c = mock(Container.class);
@@ -519,7 +581,7 @@ public class TestFpgaResourceHandler {
   }
 
   private void mockStateStoreForContainer(Container container,
-      List<FpgaResourceAllocator.FpgaDevice> assigned) {
+      List<FpgaDevice> assigned) {
     ResourceMappings rmap = new ResourceMappings();
     ResourceMappings.AssignedResources ar =
         new ResourceMappings.AssignedResources();

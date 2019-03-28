@@ -33,6 +33,7 @@ message DatanodeDetailsProto {
     required string ipAddress = 2;     // IP address
     required string hostName = 3;      // hostname
     repeated Port ports = 4;
+    optional string certSerialId = 5;   // Certificate serial id.
 }
 
 /**

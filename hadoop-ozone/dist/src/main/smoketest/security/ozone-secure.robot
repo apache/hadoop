@@ -37,7 +37,7 @@ Install aws cli
 Setup credentials
     ${hostname}=        Execute                    hostname
     Execute             kinit -k testuser/${hostname}@EXAMPLE.COM -t /etc/security/keytabs/testuser.keytab
-    ${result} =         Execute                    ozone sh s3 getsecret
+    ${result} =         Execute                    ozone s3 getsecret
     ${accessKey} =      Get Regexp Matches         ${result}     (?<=awsAccessKey=).*
     ${secret} =         Get Regexp Matches	       ${result}     (?<=awsSecret=).*
                         Execute                    aws configure set default.s3.signature_version s3v4
@@ -149,5 +149,6 @@ Secure S3 test Failure
 Secure S3 test Success
     Run Keyword         Setup credentials
     ${output} =         Execute          aws s3api --endpoint-url ${ENDPOINT_URL} create-bucket --bucket bucket-test123
-                        Should contain    ${result}         Volume pqrs is not found
+    ${output} =         Execute          aws s3api --endpoint-url ${ENDPOINT_URL} list-buckets
+                        Should contain    ${output}         bucket-test123
 

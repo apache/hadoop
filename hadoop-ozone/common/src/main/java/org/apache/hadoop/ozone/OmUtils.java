@@ -187,6 +187,7 @@ public final class OmUtils {
     case ListS3Buckets:
     case ServiceList:
     case ListMultiPartUploadParts:
+    case GetFileStatus:
       return true;
     case CreateVolume:
     case SetVolumeProperty:
@@ -209,6 +210,8 @@ public final class OmUtils {
     case GetDelegationToken:
     case RenewDelegationToken:
     case CancelDelegationToken:
+    case ApplyCreateKey:
+    case ApplyInitiateMultiPartUpload:
       return false;
     default:
       LOG.error("CmdType {} is not categorized as readOnly or not.", cmdType);

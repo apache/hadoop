@@ -118,9 +118,7 @@ public class QueuePriorityContainerCandidateSelector
   }
 
   private void initializePriorityDigraph() {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Initializing priority preemption directed graph:");
-    }
+    LOG.debug("Initializing priority preemption directed graph:");
     // Make sure we iterate all leaf queue combinations
     for (String q1 : preemptionContext.getLeafQueueNames()) {
       for (String q2 : preemptionContext.getLeafQueueNames()) {
@@ -148,14 +146,10 @@ public class QueuePriorityContainerCandidateSelector
           int p2 = path2.get(j).relativePriority;
           if (p1 < p2) {
             priorityDigraph.put(q2, q1, true);
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("- Added priority ordering edge: " + q2 + " >> " + q1);
-            }
+            LOG.debug("- Added priority ordering edge: {} >> {}", q2, q1);
           } else if (p2 < p1) {
             priorityDigraph.put(q1, q2, true);
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("- Added priority ordering edge: " + q1 + " >> " + q2);
-            }
+            LOG.debug("- Added priority ordering edge: {} >> {}", q1, q2);
           }
         }
       }
@@ -463,21 +457,17 @@ public class QueuePriorityContainerCandidateSelector
       if (canPreempt) {
         touchedNodes.add(node.getNodeID());
 
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Trying to preempt following containers to make reserved "
-              + "container=" + reservedContainer.getContainerId() + " on node="
-              + node.getNodeID() + " can be allocated:");
-        }
+        LOG.debug("Trying to preempt following containers to make reserved "
+            + "container={} on node={} can be allocated:",
+            reservedContainer.getContainerId(), node.getNodeID());
 
         // Update to-be-preempt
         incToPreempt(demandingQueueName, node.getPartition(),
             reservedContainer.getReservedResource());
 
         for (RMContainer c : newlySelectedToBePreemptContainers) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(" --container=" + c.getContainerId() + " resource=" + c
-                .getReservedResource());
-          }
+          LOG.debug(" --container={} resource={}", c.getContainerId(),
+              c.getReservedResource());
 
           // Add to preemptMap
           CapacitySchedulerPreemptionUtils.addToPreemptMap(selectedCandidates,

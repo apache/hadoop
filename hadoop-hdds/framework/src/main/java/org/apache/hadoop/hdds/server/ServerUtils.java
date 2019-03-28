@@ -125,8 +125,7 @@ public final class ServerUtils {
    * @return
    */
   public static File getScmDbDir(Configuration conf) {
-
-    File metadataDir = getDirWithFallBackToOzoneMetadata(conf, ScmConfigKeys
+    File metadataDir = getDirectoryFromConfig(conf, ScmConfigKeys
         .OZONE_SCM_DB_DIRS, "SCM");
     if (metadataDir != null) {
       return metadataDir;
@@ -138,9 +137,17 @@ public final class ServerUtils {
     return getOzoneMetaDirPath(conf);
   }
 
-  public static File getDirWithFallBackToOzoneMetadata(Configuration conf,
-                                                       String key,
-                                                       String componentName) {
+  /**
+   * Utility method to get value of a given key that corresponds to a DB
+   * directory.
+   * @param conf configuration bag
+   * @param key Key to test
+   * @param componentName Which component's key is this
+   * @return File created from the value of the key in conf.
+   */
+  public static File getDirectoryFromConfig(Configuration conf,
+                                             String key,
+                                             String componentName) {
     final Collection<String> metadirs = conf.getTrimmedStringCollection(key);
 
     if (metadirs.size() > 1) {
@@ -155,7 +162,7 @@ public final class ServerUtils {
       if (!dbDirPath.exists() && !dbDirPath.mkdirs()) {
         throw new IllegalArgumentException("Unable to create directory " +
             dbDirPath + " specified in configuration setting " +
-            ScmConfigKeys.OZONE_SCM_DB_DIRS);
+            componentName);
       }
       return dbDirPath;
     }

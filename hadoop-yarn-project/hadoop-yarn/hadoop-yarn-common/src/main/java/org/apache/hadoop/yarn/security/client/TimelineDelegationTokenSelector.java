@@ -43,14 +43,10 @@ public class TimelineDelegationTokenSelector
     if (service == null) {
       return null;
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Looking for a token with service " + service.toString());
-    }
+    LOG.debug("Looking for a token with service {}", service);
     for (Token<? extends TokenIdentifier> token : tokens) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Token kind is " + token.getKind().toString()
-            + " and the token's service name is " + token.getService());
-      }
+      LOG.debug("Token kind is {} and the token's service name is {}",
+          token.getKind(), token.getService());
       if (TimelineDelegationTokenIdentifier.KIND_NAME.equals(token.getKind())
           && service.equals(token.getService())) {
         return (Token<TimelineDelegationTokenIdentifier>) token;

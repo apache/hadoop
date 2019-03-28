@@ -27,10 +27,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.junit.Before;
@@ -46,26 +46,27 @@ public class TestMaxRunningAppsEnforcer {
   private FairScheduler scheduler;
   
   @Before
-  public void setup() throws Exception {
-    Configuration conf = new Configuration();
+  public void setup() {
+    FairSchedulerConfiguration conf = new FairSchedulerConfiguration();
+    PlacementManager placementManager = new PlacementManager();
+    rmContext = mock(RMContext.class);
+    when(rmContext.getQueuePlacementManager()).thenReturn(placementManager);
+    when(rmContext.getEpoch()).thenReturn(0L);
     clock = new ControlledClock();
     scheduler = mock(FairScheduler.class);
-    when(scheduler.getConf()).thenReturn(
-        new FairSchedulerConfiguration(conf));
+    when(scheduler.getConf()).thenReturn(conf);
+    when(scheduler.getConfig()).thenReturn(conf);
     when(scheduler.getClock()).thenReturn(clock);
-    AllocationConfiguration allocConf = new AllocationConfiguration(
-        conf);
-    when(scheduler.getAllocationConfiguration()).thenReturn(allocConf);
     when(scheduler.getResourceCalculator()).thenReturn(
         new DefaultResourceCalculator());
-
+    when(scheduler.getRMContext()).thenReturn(rmContext);
+    AllocationConfiguration allocConf = new AllocationConfiguration(scheduler);
+    when(scheduler.getAllocationConfiguration()).thenReturn(allocConf);
     queueManager = new QueueManager(scheduler);
-    queueManager.initialize(conf);
+    queueManager.initialize();
     userMaxApps = allocConf.userMaxApps;
     maxAppsEnforcer = new MaxRunningAppsEnforcer(scheduler);
     appNum = 0;
-    rmContext = mock(RMContext.class);
-    when(rmContext.getEpoch()).thenReturn(0L);
   }
   
   private FSAppAttempt addApp(FSLeafQueue queue, String user) {

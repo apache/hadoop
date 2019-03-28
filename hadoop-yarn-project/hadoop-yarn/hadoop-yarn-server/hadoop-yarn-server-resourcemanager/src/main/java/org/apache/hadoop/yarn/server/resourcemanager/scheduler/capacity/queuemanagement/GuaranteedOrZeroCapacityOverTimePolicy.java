@@ -669,19 +669,15 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
           if (updatedQueueTemplate.getQueueCapacities().
               getCapacity(nodeLabel) > 0) {
             if (isActive(leafQueue, nodeLabel)) {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Queue is already active." + " Skipping activation : "
-                    + leafQueue.getQueueName());
-              }
+              LOG.debug("Queue is already active. Skipping activation : {}",
+                  leafQueue.getQueueName());
             } else{
               activate(leafQueue, nodeLabel);
             }
           } else{
             if (!isActive(leafQueue, nodeLabel)) {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Queue is already de-activated. Skipping "
-                    + "de-activation : " + leafQueue.getQueueName());
-              }
+              LOG.debug("Queue is already de-activated. Skipping "
+                  + "de-activation : {}", leafQueue.getQueueName());
             } else{
               deactivate(leafQueue, nodeLabel);
             }

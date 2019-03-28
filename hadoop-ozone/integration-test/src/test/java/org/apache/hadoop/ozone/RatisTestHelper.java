@@ -31,6 +31,7 @@ import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
+import org.apache.ratis.util.TimeDuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -126,9 +127,11 @@ public interface RatisTestHelper {
     final OzoneConfiguration conf = new OzoneConfiguration();
     final int maxOutstandingRequests =
         HddsClientUtils.getMaxOutstandingRequests(conf);
+    final TimeDuration requestTimeout =
+        RatisHelper.getClientRequestTimeout(conf);
     final RaftClient client =
         newRaftClient(rpc, p, RatisHelper.createRetryPolicy(conf),
-            maxOutstandingRequests);
+            maxOutstandingRequests, requestTimeout);
     client.groupAdd(RatisHelper.newRaftGroup(pipeline), p.getId());
   }
 }

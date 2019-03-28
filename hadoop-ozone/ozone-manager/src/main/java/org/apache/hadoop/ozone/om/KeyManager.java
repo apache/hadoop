@@ -28,6 +28,13 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.fs.OzoneManagerFS;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .KeyArgs;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .KeyInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .KeyLocation;
 import org.apache.hadoop.utils.BackgroundService;
 
 import java.io.IOException;
@@ -36,7 +43,7 @@ import java.util.List;
 /**
  * Handles key level commands.
  */
-public interface KeyManager {
+public interface KeyManager extends OzoneManagerFS {
 
   /**
    * Start key manager.
@@ -75,6 +82,20 @@ public interface KeyManager {
    */
   OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID,
       ExcludeList excludeList) throws IOException;
+
+  /**
+   * Ozone manager state machine call's this on an open key, to add allocated
+   * block to the tail of current block list of the open client.
+   *
+   * @param args the key to append
+   * @param clientID the client requesting block.
+   * @param keyLocation key location.
+   * @return the reference to the new block.
+   * @throws IOException
+   */
+  OmKeyLocationInfo addAllocatedBlock(OmKeyArgs args, long clientID,
+      KeyLocation keyLocation) throws IOException;
+
   /**
    * Given the args of a key to put, write an open key entry to meta data.
    *
@@ -87,6 +108,19 @@ public interface KeyManager {
    * @throws IOException
    */
   OpenKeySession openKey(OmKeyArgs args) throws IOException;
+
+  /**
+   * Add the openKey entry with given keyInfo and clientID in to openKeyTable.
+   * This will be called only from applyTransaction, once after calling
+   * applyKey in startTransaction.
+   *
+   * @param omKeyArgs
+   * @param keyInfo
+   * @param clientID
+   * @throws IOException
+   */
+  void applyOpenKey(KeyArgs omKeyArgs, KeyInfo keyInfo, long clientID)
+      throws IOException;
 
   /**
    * Look up an existing key. Return the info of the key to client side, which
@@ -196,6 +230,17 @@ public interface KeyManager {
    * @throws IOException
    */
   OmMultipartInfo initiateMultipartUpload(OmKeyArgs keyArgs) throws IOException;
+
+  /**
+   * Initiate multipart upload for the specified key.
+   *
+   * @param keyArgs
+   * @param multipartUploadID
+   * @return MultipartInfo
+   * @throws IOException
+   */
+  OmMultipartInfo applyInitiateMultipartUpload(OmKeyArgs keyArgs,
+      String multipartUploadID) throws IOException;
 
   /**
    * Commit Multipart upload part file.

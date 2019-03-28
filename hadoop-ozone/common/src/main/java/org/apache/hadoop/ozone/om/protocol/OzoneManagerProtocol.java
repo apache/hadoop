@@ -36,19 +36,23 @@ import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.ozone.security.OzoneDelegationTokenSelector;
 import org.apache.hadoop.security.KerberosInfo;
+import org.apache.hadoop.security.token.TokenInfo;
 
 /**
  * Protocol to talk to OM.
  */
 @KerberosInfo(
     serverPrincipal = OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY)
+@TokenInfo(OzoneDelegationTokenSelector.class)
 public interface OzoneManagerProtocol
     extends OzoneManagerSecurityProtocol, Closeable {
 
@@ -186,6 +190,7 @@ public interface OzoneManagerProtocol
    */
   OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID,
       ExcludeList excludeList) throws IOException;
+
 
   /**
    * Look up for the container of an existing key.
@@ -393,5 +398,16 @@ public interface OzoneManagerProtocol
    * @return OMFailoverProxyProvider
    */
   OMFailoverProxyProvider getOMFailoverProxyProvider();
+
+  /**
+   * Get File Status for an Ozone key.
+   * @param volumeName volume name.
+   * @param bucketName bucket name.
+   * @param keyName key name.
+   * @return OzoneFileStatus for the key.
+   * @throws IOException
+   */
+  OzoneFileStatus getFileStatus(String volumeName, String bucketName,
+                                String keyName) throws IOException;
 }
 

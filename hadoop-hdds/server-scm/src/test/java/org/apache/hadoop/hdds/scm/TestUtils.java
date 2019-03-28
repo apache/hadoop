@@ -17,6 +17,7 @@
 package org.apache.hadoop.hdds.scm;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineAction;
@@ -30,6 +31,8 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineReport;
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerReplica;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.server.SCMConfigurator;
 import org.apache.hadoop.hdds.scm.server
@@ -66,7 +69,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -98,7 +103,7 @@ public final class TestUtils {
    *
    * @return DatanodeDetails
    */
-  private static DatanodeDetails createDatanodeDetails(UUID uuid) {
+  public static DatanodeDetails createDatanodeDetails(UUID uuid) {
     String ipAddress = random.nextInt(256)
         + "." + random.nextInt(256)
         + "." + random.nextInt(256)
@@ -519,6 +524,52 @@ public final class TestUtils {
       scmStore.initialize();
     }
     return new StorageContainerManager(conf, configurator);
+  }
+
+  public static ContainerInfo getContainer(
+      final HddsProtos.LifeCycleState state) {
+    return new ContainerInfo.Builder()
+        .setContainerID(RandomUtils.nextLong())
+        .setReplicationType(HddsProtos.ReplicationType.RATIS)
+        .setReplicationFactor(HddsProtos.ReplicationFactor.THREE)
+        .setState(state)
+        .setOwner("TEST")
+        .build();
+  }
+
+  public static Set<ContainerReplica> getReplicas(
+      final ContainerID containerId,
+      final ContainerReplicaProto.State state,
+      final DatanodeDetails... datanodeDetails) {
+    return getReplicas(containerId, state, 10000L, datanodeDetails);
+  }
+
+  public static Set<ContainerReplica> getReplicas(
+      final ContainerID containerId,
+      final ContainerReplicaProto.State state,
+      final long sequenceId,
+      final DatanodeDetails... datanodeDetails) {
+    Set<ContainerReplica> replicas = new HashSet<>();
+    for (DatanodeDetails datanode : datanodeDetails) {
+      replicas.add(getReplicas(containerId, state,
+          sequenceId, datanode.getUuid(), datanode));
+    }
+    return replicas;
+  }
+
+  public static ContainerReplica getReplicas(
+      final ContainerID containerId,
+      final ContainerReplicaProto.State state,
+      final long sequenceId,
+      final UUID originNodeId,
+      final DatanodeDetails datanodeDetails) {
+    return ContainerReplica.newBuilder()
+        .setContainerID(containerId)
+        .setContainerState(state)
+        .setDatanodeDetails(datanodeDetails)
+        .setOriginNodeId(originNodeId)
+        .setSequenceId(sequenceId)
+        .build();
   }
 
 }

@@ -200,11 +200,8 @@ public class NodeManager extends CompositeService
                 + e.getMessage(), e);
       }
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Distributed Node Attributes is enabled"
-          + " with provider class as : "
-          + attributesProvider.getClass().toString());
-    }
+    LOG.debug("Distributed Node Attributes is enabled with provider class"
+        + " as : {}", attributesProvider.getClass());
     return attributesProvider;
   }
 
@@ -238,10 +235,8 @@ public class NodeManager extends CompositeService
             "Failed to create NodeLabelsProvider : " + e.getMessage(), e);
       }
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Distributed Node Labels is enabled"
-          + " with provider class as : " + provider.getClass().toString());
-    }
+    LOG.debug("Distributed Node Labels is enabled"
+        + " with provider class as : {}", provider.getClass());
     return provider;
   }
 
@@ -617,14 +612,10 @@ public class NodeManager extends CompositeService
           && !ApplicationState.FINISHED.equals(app.getApplicationState())) {
         registeringCollectors.putIfAbsent(entry.getKey(), entry.getValue());
         AppCollectorData data = entry.getValue();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(entry.getKey() + " : " + data.getCollectorAddr() + "@<"
-              + data.getRMIdentifier() + ", " + data.getVersion() + ">");
-        }
+        LOG.debug("{} : {}@<{}, {}>", entry.getKey(), data.getCollectorAddr(),
+            data.getRMIdentifier(), data.getVersion());
       } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Remove collector data for done app " + entry.getKey());
-        }
+        LOG.debug("Remove collector data for done app {}", entry.getKey());
       }
     }
     knownCollectors.clear();

@@ -132,6 +132,7 @@ public class TestCloseContainerHandlingByClient {
     OmKeyArgs keyArgs = new OmKeyArgs.Builder().setVolumeName(volumeName)
         .setBucketName(bucketName).setType(HddsProtos.ReplicationType.RATIS)
         .setFactor(HddsProtos.ReplicationFactor.ONE).setKeyName(keyName)
+        .setRefreshPipeline(true)
         .build();
 
     waitForContainerClose(key);
@@ -165,6 +166,7 @@ public class TestCloseContainerHandlingByClient {
         .setBucketName(bucketName)
         .setType(HddsProtos.ReplicationType.RATIS)
         .setFactor(HddsProtos.ReplicationFactor.ONE).setKeyName(keyName)
+        .setRefreshPipeline(true)
         .build();
 
     waitForContainerClose(key);
@@ -198,6 +200,7 @@ public class TestCloseContainerHandlingByClient {
     OmKeyArgs keyArgs = new OmKeyArgs.Builder().setVolumeName(volumeName)
         .setBucketName(bucketName).setType(HddsProtos.ReplicationType.RATIS)
         .setFactor(HddsProtos.ReplicationFactor.ONE).setKeyName(keyName)
+        .setRefreshPipeline(true)
         .build();
 
     waitForContainerClose(key);
@@ -257,6 +260,7 @@ public class TestCloseContainerHandlingByClient {
     OmKeyArgs keyArgs = new OmKeyArgs.Builder().setVolumeName(volumeName)
         .setBucketName(bucketName).setType(HddsProtos.ReplicationType.RATIS)
         .setFactor(HddsProtos.ReplicationFactor.THREE).setKeyName(keyName)
+        .setRefreshPipeline(true)
         .build();
 
     waitForContainerClose(key);
@@ -300,6 +304,7 @@ public class TestCloseContainerHandlingByClient {
     OmKeyArgs keyArgs = new OmKeyArgs.Builder().setVolumeName(volumeName)
         .setBucketName(bucketName).setType(HddsProtos.ReplicationType.RATIS)
         .setFactor(HddsProtos.ReplicationFactor.ONE).setKeyName(keyName)
+        .setRefreshPipeline(true)
         .build();
 
     waitForContainerClose(key);
@@ -333,17 +338,8 @@ public class TestCloseContainerHandlingByClient {
 
   private void waitForContainerClose(OzoneOutputStream outputStream)
       throws Exception {
-    KeyOutputStream keyOutputStream =
-        (KeyOutputStream) outputStream.getOutputStream();
-    List<OmKeyLocationInfo> locationInfoList =
-        keyOutputStream.getLocationInfoList();
-    List<Long> containerIdList = new ArrayList<>();
-    for (OmKeyLocationInfo info : locationInfoList) {
-      containerIdList.add(info.getContainerID());
-    }
-    Assert.assertTrue(!containerIdList.isEmpty());
     ContainerTestHelper
-        .waitForContainerClose(cluster, containerIdList.toArray(new Long[0]));
+        .waitForContainerClose(outputStream, cluster);
   }
 
   @Ignore // test needs to be fixed after close container is handled for
@@ -418,6 +414,7 @@ public class TestCloseContainerHandlingByClient {
     OmKeyArgs keyArgs = new OmKeyArgs.Builder().setVolumeName(volumeName).
         setBucketName(bucketName).setType(HddsProtos.ReplicationType.RATIS)
         .setFactor(HddsProtos.ReplicationFactor.THREE).setKeyName(keyName)
+        .setRefreshPipeline(true)
         .build();
 
     Assert.assertTrue(key.getOutputStream() instanceof KeyOutputStream);
@@ -451,6 +448,7 @@ public class TestCloseContainerHandlingByClient {
     OmKeyArgs keyArgs = new OmKeyArgs.Builder().setVolumeName(volumeName)
         .setBucketName(bucketName).setType(HddsProtos.ReplicationType.RATIS)
         .setFactor(HddsProtos.ReplicationFactor.ONE).setKeyName(keyName)
+        .setRefreshPipeline(true)
         .build();
 
     waitForContainerClose(key);

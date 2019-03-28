@@ -522,12 +522,10 @@ public class UsersManager implements AbstractUsersManager {
       user.setUserResourceLimit(userSpecificUserLimit);
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("userLimit is fetched. userLimit=" + userLimitResource
-          + ", userSpecificUserLimit=" + userSpecificUserLimit
-          + ", schedulingMode=" + schedulingMode
-          + ", partition=" + nodePartition);
-    }
+    LOG.debug("userLimit is fetched. userLimit={}, userSpecificUserLimit={},"
+        + " schedulingMode={}, partition={}", userLimitResource,
+        userSpecificUserLimit, schedulingMode, nodePartition);
+
     return userSpecificUserLimit;
   }
 
@@ -576,12 +574,9 @@ public class UsersManager implements AbstractUsersManager {
         Resources.multiplyAndNormalizeDown(resourceCalculator,
             userLimitResource, weight, lQueue.getMinimumAllocation());
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("userLimit is fetched. userLimit=" + userLimitResource
-          + ", userSpecificUserLimit=" + userSpecificUserLimit
-          + ", schedulingMode=" + schedulingMode
-          + ", partition=" + nodePartition);
-    }
+    LOG.debug("userLimit is fetched. userLimit={}, userSpecificUserLimit={},"
+        + " schedulingMode={}, partition={}", userLimitResource,
+        userSpecificUserLimit, schedulingMode, nodePartition);
 
     return userSpecificUserLimit;
   }
@@ -870,10 +865,8 @@ public class UsersManager implements AbstractUsersManager {
         // A user is added to active list. Invalidate user-limit cache.
         userLimitNeedsRecompute();
         updateActiveUsersResourceUsage(user);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("User " + user + " added to activeUsers, currently: "
-              + activeUsers);
-        }
+        LOG.debug("User {} added to activeUsers, currently: {}",
+            user, activeUsers);
       }
       if (userApps.add(applicationId)) {
         metrics.activateApp(user);
@@ -901,10 +894,8 @@ public class UsersManager implements AbstractUsersManager {
           // A user is removed from active list. Invalidate user-limit cache.
           userLimitNeedsRecompute();
           updateNonActiveUsersResourceUsage(user);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("User " + user + " removed from activeUsers, currently: "
-                + activeUsers);
-          }
+          LOG.debug("User {} removed from activeUsers, currently: {}",
+              user, activeUsers);
         }
       }
     } finally {

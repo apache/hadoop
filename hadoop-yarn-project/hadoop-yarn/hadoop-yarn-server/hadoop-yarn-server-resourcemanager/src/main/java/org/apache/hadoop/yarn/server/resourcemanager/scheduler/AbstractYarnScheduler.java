@@ -405,9 +405,7 @@ public abstract class AbstractYarnScheduler
       ApplicationAttemptId appAttemptId) {
     SchedulerApplicationAttempt attempt = getApplicationAttempt(appAttemptId);
     if (attempt == null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Request for appInfo of unknown attempt " + appAttemptId);
-      }
+      LOG.debug("Request for appInfo of unknown attempt {}", appAttemptId);
       return null;
     }
     return new SchedulerAppReport(attempt);
@@ -418,9 +416,7 @@ public abstract class AbstractYarnScheduler
       ApplicationAttemptId appAttemptId) {
     SchedulerApplicationAttempt attempt = getApplicationAttempt(appAttemptId);
     if (attempt == null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Request for appInfo of unknown attempt " + appAttemptId);
-      }
+      LOG.debug("Request for appInfo of unknown attempt {}", appAttemptId);
       return null;
     }
     return attempt.getResourceUsageReport();
@@ -687,10 +683,9 @@ public abstract class AbstractYarnScheduler
       if (schedulerAttempt != null) {
         schedulerAttempt.removeRMContainer(containerId);
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Completed container: " + rmContainer.getContainerId() +
-            " in state: " + rmContainer.getState() + " event:" + event);
-      }
+      LOG.debug("Completed container: {} in state: {} event:{}",
+          rmContainer.getContainerId(), rmContainer.getState(), event);
+
       SchedulerNode node = getSchedulerNode(rmContainer.getNodeId());
       if (node != null) {
         node.releaseContainer(rmContainer.getContainerId(), false);
@@ -1082,7 +1077,7 @@ public abstract class AbstractYarnScheduler
     List<ContainerId> untrackedContainerIdList = new ArrayList<ContainerId>();
     for (ContainerStatus completedContainer : completedContainers) {
       ContainerId containerId = completedContainer.getContainerId();
-      LOG.debug("Container FINISHED: " + containerId);
+      LOG.debug("Container FINISHED: {}", containerId);
       RMContainer container = getRMContainer(containerId);
       completedContainer(container,
           completedContainer, RMContainerEventType.FINISHED);
@@ -1147,10 +1142,8 @@ public abstract class AbstractYarnScheduler
    * @param nm The RMNode corresponding to the NodeManager
    */
   protected void nodeUpdate(RMNode nm) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("nodeUpdate: " + nm +
-          " cluster capacity: " + getClusterResource());
-    }
+    LOG.debug("nodeUpdate: {} cluster capacity: {}",
+        nm, getClusterResource());
 
     // Process new container information
     // NOTICE: it is possible to not find the NodeID as a node can be

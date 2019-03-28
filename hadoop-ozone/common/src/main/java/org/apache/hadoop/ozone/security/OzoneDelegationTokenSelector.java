@@ -44,7 +44,9 @@ public class OzoneDelegationTokenSelector
   public Token selectToken(Text service,
       Collection<Token<? extends TokenIdentifier>> tokens) {
     LOG.trace("Getting token for service {}", service);
-    return super.selectToken(service, tokens);
+    Token token = super.selectToken(service, tokens);
+    LOG.debug("Got tokens: {} for service {}", token, service);
+    return token;
   }
 
 }

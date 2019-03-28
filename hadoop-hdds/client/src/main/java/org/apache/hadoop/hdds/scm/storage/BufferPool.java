@@ -41,7 +41,7 @@ public class BufferPool {
     currentBufferIndex = -1;
   }
 
-  public ByteBuffer getBuffer() {
+  public ByteBuffer getCurrentBuffer() {
     return currentBufferIndex == -1 ? null : bufferList.get(currentBufferIndex);
   }
 
@@ -56,7 +56,7 @@ public class BufferPool {
    *
    */
   public ByteBuffer allocateBufferIfNeeded() {
-    ByteBuffer buffer = getBuffer();
+    ByteBuffer buffer = getCurrentBuffer();
     if (buffer != null && buffer.hasRemaining()) {
       return buffer;
     }
@@ -74,11 +74,14 @@ public class BufferPool {
     return buffer;
   }
 
-  public void releaseBuffer() {
+  public void releaseBuffer(ByteBuffer byteBuffer) {
     // always remove from head of the list and append at last
     ByteBuffer buffer = bufferList.remove(0);
+    // Ensure the buffer to be removed is always at the head of the list.
+    Preconditions.checkArgument(buffer.equals(byteBuffer));
     buffer.clear();
     bufferList.add(buffer);
+    Preconditions.checkArgument(currentBufferIndex >= 0);
     currentBufferIndex--;
   }
 
@@ -90,6 +93,7 @@ public class BufferPool {
   public void checkBufferPoolEmpty() {
     Preconditions.checkArgument(computeBufferData() == 0);
   }
+
   public long computeBufferData() {
     return bufferList.stream().mapToInt(value -> value.position())
         .sum();
@@ -99,8 +103,12 @@ public class BufferPool {
     return bufferList.size();
   }
 
-  ByteBuffer getBuffer(int index) {
+  public ByteBuffer getBuffer(int index) {
     return bufferList.get(index);
+  }
+
+  int getCurrentBufferIndex() {
+    return currentBufferIndex;
   }
 
 }

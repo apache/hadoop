@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.client.protocol;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.OzoneAcl;
@@ -34,9 +35,11 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.security.KerberosInfo;
@@ -511,4 +514,35 @@ public interface ClientProtocol {
 
   @VisibleForTesting
   OMFailoverProxyProvider getOMProxyProvider();
+
+  /**
+   * Get KMS client provider.
+   * @return KMS client provider.
+   * @throws IOException
+   */
+  KeyProvider getKeyProvider() throws IOException;
+
+  /**
+   * Get KMS client provider uri.
+   * @return KMS client provider uri.
+   * @throws IOException
+   */
+  URI getKeyProviderUri() throws IOException;
+
+  /**
+   * Get CanonicalServiceName for ozone delegation token.
+   * @return Canonical Service Name of ozone delegation token.
+   */
+  String getCanonicalServiceName();
+
+  /**
+   * Get the Ozone File Status for a particular Ozone key.
+   * @param volumeName volume name.
+   * @param bucketName bucket name.
+   * @param keyName key name.
+   * @return OzoneFileStatus for the key.
+   * @throws IOException
+   */
+  OzoneFileStatus getOzoneFileStatus(String volumeName,
+      String bucketName, String keyName) throws IOException;
 }

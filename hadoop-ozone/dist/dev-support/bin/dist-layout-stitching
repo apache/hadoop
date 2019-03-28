@@ -90,6 +90,8 @@ run cp "${ROOT}/hadoop-ozone/dist/src/main/conf/dn-audit-log4j2.properties" "etc
 run cp "${ROOT}/hadoop-ozone/dist/src/main/conf/scm-audit-log4j2.properties" "etc/hadoop"
 run cp "${ROOT}/hadoop-ozone/dist/src/main/conf/ozone-site.xml" "etc/hadoop"
 run cp -f "${ROOT}/hadoop-ozone/dist/src/main/conf/log4j.properties" "etc/hadoop"
+run cp "${ROOT}/hadoop-hdds/common/src/main/resources/network-topology-default.xml" "etc/hadoop"
+run cp "${ROOT}/hadoop-hdds/common/src/main/resources/network-topology-nodegroup.xml" "etc/hadoop"
 run cp "${ROOT}/hadoop-common-project/hadoop-common/src/main/bin/hadoop" "bin/"
 run cp "${ROOT}/hadoop-common-project/hadoop-common/src/main/bin/hadoop.cmd" "bin/"
 run cp "${ROOT}/hadoop-ozone/common/src/main/bin/ozone" "bin/"

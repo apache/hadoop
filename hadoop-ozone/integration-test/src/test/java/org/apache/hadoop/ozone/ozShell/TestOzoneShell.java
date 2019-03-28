@@ -29,7 +29,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -54,7 +53,6 @@ import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
-import org.apache.hadoop.ozone.client.rest.RestClient;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
@@ -76,23 +74,20 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.BUCKET_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_NOT_FOUND;
-import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.S3_BUCKET_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLUME_NOT_FOUND;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -105,7 +100,6 @@ import picocli.CommandLine.RunLast;
 /**
  * This test class specified for testing Ozone shell command.
  */
-@RunWith(value = Parameterized.class)
 public class TestOzoneShell {
 
   private static final Logger LOG =
@@ -129,16 +123,6 @@ public class TestOzoneShell {
   private static final PrintStream OLD_OUT = System.out;
   private static final PrintStream OLD_ERR = System.err;
 
-  @Parameterized.Parameters
-  public static Collection<Object[]> clientProtocol() {
-    Object[][] params = new Object[][] {
-        {RpcClient.class}};
-    return Arrays.asList(params);
-  }
-
-  @Parameterized.Parameter
-  @SuppressWarnings("visibilitymodifier")
-  public Class clientProtocol;
   /**
    * Create a MiniDFSCluster for testing with using distributed Ozone
    * handler type.
@@ -183,16 +167,7 @@ public class TestOzoneShell {
   public void setup() {
     System.setOut(new PrintStream(out));
     System.setErr(new PrintStream(err));
-
-    if(clientProtocol.equals(RestClient.class)) {
-      String hostName = cluster.getOzoneManager().getHttpServer()
-          .getHttpAddress().getHostName();
-      int port = cluster
-          .getOzoneManager().getHttpServer().getHttpAddress().getPort();
-      url = String.format("http://%s:%d", hostName, port);
-    } else {
-      url = "o3://" + getOmAddress();
-    }
+    url = "o3://" + getOmAddress();
   }
 
   @After
@@ -553,7 +528,7 @@ public class TestOzoneShell {
   @Test
   public void testListVolume() throws Exception {
     LOG.info("Running testListVolume");
-    String protocol = clientProtocol.getName().toLowerCase();
+    String protocol = "rpcclient";
     String commandOutput, commandError;
     List<VolumeInfo> volumes;
     final int volCount = 20;
@@ -1173,85 +1148,6 @@ public class TestOzoneShell {
         new String[] {"key", "list", url + "/" + volumeName + "/" + bucketName,
             "--length", "-1"};
     executeWithError(shell, args, "the length should be a positive number");
-  }
-
-  @Test
-  public void testS3BucketMapping() throws  IOException {
-    String setOmAddress =
-        "--set=" + OZONE_OM_ADDRESS_KEY + "=" + getOmAddress();
-
-    String s3Bucket = "bucket1";
-    String commandOutput;
-    createS3Bucket("ozone", s3Bucket);
-
-    //WHEN
-    String[] args =
-        new String[] {setOmAddress, "bucket",
-            "path", s3Bucket};
-    execute(shell, args);
-
-    //THEN
-    commandOutput = out.toString();
-    String volumeName = client.getOzoneVolumeName(s3Bucket);
-    assertTrue(commandOutput.contains("Volume name for S3Bucket is : " +
-        volumeName));
-    assertTrue(commandOutput.contains(OzoneConsts.OZONE_URI_SCHEME + "://" +
-        s3Bucket + "." + volumeName));
-    out.reset();
-
-    //Trying to get map for an unknown bucket
-    args = new String[] {setOmAddress, "bucket", "path",
-        "unknownbucket"};
-    executeWithError(shell, args, S3_BUCKET_NOT_FOUND);
-
-    // No bucket name
-    args = new String[] {setOmAddress, "bucket", "path"};
-    executeWithError(shell, args, "Missing required parameter");
-
-    // Invalid bucket name
-    args = new String[] {setOmAddress, "bucket", "path", "/asd/multipleslash"};
-    executeWithError(shell, args, S3_BUCKET_NOT_FOUND);
-  }
-
-  @Test
-  @Ignore("Can't run without secure cluster.")
-  public void testS3Secret() throws Exception {
-    String setOmAddress =
-        "--set=" + OZONE_OM_ADDRESS_KEY + "=" + getOmAddress();
-
-    err.reset();
-    String outputFirstAttempt;
-    String outputSecondAttempt;
-
-    //First attempt: If secrets are not found in database, they will be created
-    String[] args = new String[] {setOmAddress, "s3", "getsecret"};
-    execute(shell, args);
-    outputFirstAttempt = out.toString();
-    //Extracting awsAccessKey & awsSecret value from output
-    String[] output = outputFirstAttempt.split("\n");
-    String awsAccessKey = output[0].split("=")[1];
-    String awsSecret = output[1].split("=")[1];
-    assertTrue((awsAccessKey != null && awsAccessKey.length() > 0) &&
-            (awsSecret != null && awsSecret.length() > 0));
-
-    out.reset();
-
-    //Second attempt: Since secrets were created in previous attempt, it
-    // should return the same value
-    args = new String[] {setOmAddress, "s3", "getsecret"};
-    execute(shell, args);
-    outputSecondAttempt = out.toString();
-
-    //verifying if secrets from both attempts are same
-    assertTrue(outputFirstAttempt.equals(outputSecondAttempt));
-  }
-
-  private void createS3Bucket(String userName, String s3Bucket) {
-    try {
-      client.createS3Bucket("ozone", s3Bucket);
-    } catch (IOException ex) {
-      GenericTestUtils.assertExceptionContains("S3_BUCKET_ALREADY_EXISTS", ex);
-    }
   }
 
   private OzoneVolume creatVolume() throws OzoneException, IOException {

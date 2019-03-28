@@ -29,6 +29,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
@@ -76,11 +77,13 @@ public class OzoneContainer {
    * Construct OzoneContainer object.
    * @param datanodeDetails
    * @param conf
+   * @param certClient
    * @throws DiskOutOfSpaceException
    * @throws IOException
    */
   public OzoneContainer(DatanodeDetails datanodeDetails, OzoneConfiguration
-      conf, StateContext context) throws IOException {
+      conf, StateContext context, CertificateClient certClient)
+      throws IOException {
     this.config = conf;
     this.volumeSet = new VolumeSet(datanodeDetails.getUuidString(), conf);
     this.containerSet = new ContainerSet();
@@ -104,9 +107,10 @@ public class OzoneContainer {
      */
     this.controller = new ContainerController(containerSet, handlers);
     this.writeChannel = XceiverServerRatis.newXceiverServerRatis(
-        datanodeDetails, config, hddsDispatcher, context);
+        datanodeDetails, config, hddsDispatcher, context, certClient);
     this.readChannel = new XceiverServerGrpc(
-        datanodeDetails, config, hddsDispatcher, createReplicationService());
+        datanodeDetails, config, hddsDispatcher, certClient,
+        createReplicationService());
 
   }
 

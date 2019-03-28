@@ -121,12 +121,12 @@ public final class ScmConfigKeys {
       TimeDuration.valueOf(3000, TimeUnit.MILLISECONDS);
   public static final String DFS_RATIS_CLIENT_REQUEST_MAX_RETRIES_KEY =
       "dfs.ratis.client.request.max.retries";
-  public static final int DFS_RATIS_CLIENT_REQUEST_MAX_RETRIES_DEFAULT = 180;
+  public static final int DFS_RATIS_CLIENT_REQUEST_MAX_RETRIES_DEFAULT = 20;
   public static final String DFS_RATIS_CLIENT_REQUEST_RETRY_INTERVAL_KEY =
       "dfs.ratis.client.request.retry.interval";
   public static final TimeDuration
       DFS_RATIS_CLIENT_REQUEST_RETRY_INTERVAL_DEFAULT =
-      TimeDuration.valueOf(100, TimeUnit.MILLISECONDS);
+      TimeDuration.valueOf(500, TimeUnit.MILLISECONDS);
   public static final String DFS_RATIS_SERVER_RETRY_CACHE_TIMEOUT_DURATION_KEY =
       "dfs.ratis.server.retry-cache.timeout.duration";
   public static final TimeDuration
@@ -348,12 +348,30 @@ public final class ScmConfigKeys {
   public static final String HDDS_SCM_WATCHER_TIMEOUT_DEFAULT =
       "10m";
 
+  public static final String HDDS_SCM_REPLICATION_THREAD_INTERVAL =
+      "hdds.scm.replication.thread.interval";
+
+  public static final String HDDS_SCM_REPLICATION_THREAD_INTERVAL_DEFAULT =
+      "5m";
+
+  public static final String HDDS_SCM_REPLICATION_EVENT_TIMEOUT =
+      "hdds.scm.replication.event.timeout";
+
+  public static final String HDDS_SCM_REPLICATION_EVENT_TIMEOUT_DEFAULT =
+      "10m";
+
   public static final String
       HDDS_SCM_HTTP_KERBEROS_PRINCIPAL_KEY =
       "hdds.scm.http.kerberos.principal";
   public static final String
       HDDS_SCM_HTTP_KERBEROS_KEYTAB_FILE_KEY =
       "hdds.scm.http.kerberos.keytab";
+
+  // Network topology
+  public static final String OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE =
+      "ozone.scm.network.topology.schema.file";
+  public static final String OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE_DEFAULT =
+      "network-topology-default.xml";
   /**
    * Never constructed.
    */

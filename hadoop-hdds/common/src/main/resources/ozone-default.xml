@@ -231,17 +231,19 @@
     <name>dfs.ratis.client.request.timeout.duration</name>
     <value>3s</value>
     <tag>OZONE, RATIS, MANAGEMENT</tag>
-    <description>The timeout duration for ratis client request.</description>
+    <description>The timeout duration for ratis client request.It should be
+        set greater than leader election timeout in Ratis.
+    </description>
   </property>
   <property>
     <name>dfs.ratis.client.request.max.retries</name>
-    <value>180</value>
+    <value>20</value>
     <tag>OZONE, RATIS, MANAGEMENT</tag>
     <description>Number of retries for ratis client request.</description>
   </property>
   <property>
     <name>dfs.ratis.client.request.retry.interval</name>
-    <value>100ms</value>
+    <value>500ms</value>
     <tag>OZONE, RATIS, MANAGEMENT</tag>
     <description>Interval between successive retries for a ratis client request.
     </description>
@@ -415,6 +417,14 @@
     <tag>OZONE, CLIENT</tag>
     <description>Timeout for the watch API in Ratis client to acknowledge
       a particular request getting replayed to all servers.
+    </description>
+  </property>
+  <property>
+    <name>ozone.client.max.retries</name>
+    <value>5</value>
+    <tag>OZONE, CLIENT</tag>
+    <description>Maximum number of retries by Ozone Client on encountering
+      exception while writing a key.
     </description>
   </property>
   <property>
@@ -2248,7 +2258,7 @@
     </description>
   </property>
   <property>
-    <name>ozone.recon.db.dirs</name>
+    <name>ozone.recon.db.dir</name>
     <value/>
     <tag>OZONE, RECON, STORAGE, PERFORMANCE</tag>
     <description>
@@ -2257,6 +2267,114 @@
       exist then the Recon will attempt to create it.
       If undefined, then the Recon will log a warning and fallback to
       ozone.metadata.dirs.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.network.topology.schema.file</name>
+    <value>network-topology-default.xm</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The schema file defines the ozone network topology
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.container.db.impl</name>
+    <value>RocksDB</value>
+    <tag>OZONE, RECON, STORAGE</tag>
+    <description>
+      Ozone Recon container DB store implementation.Supported value is either
+      LevelDB or RocksDB.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.om.db.dir</name>
+  <value/>
+  <tag>OZONE, RECON, STORAGE</tag>
+  <description>
+    Directory where the Recon Server stores its OM snapshot DB. This should
+    be specified as a single directory. If the directory does not
+    exist then the Recon will attempt to create it.
+    If undefined, then the Recon will log a warning and fallback to
+    ozone.metadata.dirs.
+  </description>
+</property>
+  <property>
+    <name>recon.om.connection.request.timeout</name>
+    <value>5000</value>
+    <tag>OZONE, RECON, OM</tag>
+    <description>
+      Connection request timeout in milliseconds for HTTP call made by Recon to
+      request OM DB snapshot.
+    </description>
+  </property>
+  <property>
+    <name>recon.om.connection.timeout</name>
+    <value>5s</value>
+    <tag>OZONE, RECON, OM</tag>
+    <description>
+      Connection timeout for HTTP call in milliseconds made by Recon to request
+      OM snapshot.
+    </description>
+  </property>
+  <property>
+    <name>recon.om.socket.timeout</name>
+    <value>5s</value>
+    <tag>OZONE, RECON, OM</tag>
+    <description>
+      Socket timeout in milliseconds for HTTP call made by Recon to request
+      OM snapshot.
+    </description>
+  </property>
+  <property>
+    <name>recon.om.socket.timeout</name>
+    <value>5s</value>
+    <tag>OZONE, RECON, OM</tag>
+    <description>
+      Socket timeout for HTTP call made by Recon to request OM snapshot.
+    </description>
+  </property>
+  <property>
+    <name>recon.om.snapshot.task.initial.delay</name>
+    <value>1m</value>
+    <tag>OZONE, RECON, OM</tag>
+    <description>
+      Initial delay in MINUTES by Recon to request OM DB Snapshot.
+    </description>
+  </property>
+  <property>
+    <name>recon.om.snapshot.task.interval.delay</name>
+    <value>10m</value>
+    <tag>OZONE, RECON, OM</tag>
+    <description>
+      Interval in MINUTES by Recon to request OM DB Snapshot.
+    </description>
+  </property>
+  <property>
+    <name>recon.om.snapshot.task.flush.param</name>
+    <value>false</value>
+    <tag>OZONE, RECON, OM</tag>
+    <description>
+      Request to flush the OM DB before taking checkpoint snapshot.
+    </description>
+  </property>
+  <property>
+    <name>hdds.scm.replication.thread.interval</name>
+    <value>5m</value>
+    <tag>OZONE, SCM</tag>
+    <description>
+      There is a replication monitor thread running inside SCM which
+      takes care of replicating the containers in the cluster. This
+      property is used to configure the interval in which that thread
+      runs.
+    </description>
+  </property>
+  <property>
+    <name>hdds.scm.replication.event.timeout</name>
+    <value>10m</value>
+    <tag>OZONE, SCM</tag>
+    <description>
+      Timeout for the container replication/deletion commands sent
+      to datanodes. After this timeout the command will be retried.
     </description>
   </property>
 </configuration>

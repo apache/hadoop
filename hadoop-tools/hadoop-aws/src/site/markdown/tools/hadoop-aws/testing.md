@@ -237,6 +237,16 @@ define the target region in `auth-keys.xml`.
   <value>s3.eu-central-1.amazonaws.com</value>
 </property>
 ```
+
+Alternatively you can use endpoints defined in [core-site.xml](../../../../test/resources/core-site.xml).
+
+```xml
+<property>
+  <name>fs.s3a.endpoint</name>
+  <value>${frankfurt.endpoint}</value>
+</property>
+```
+
 This is used for all tests expect for scale tests using a Public CSV.gz file
 (see below)
 
@@ -300,7 +310,7 @@ By their very nature they are slow. And, as their execution time is often
 limited by bandwidth between the computer running the tests and the S3 endpoint,
 parallel execution does not speed these tests up.
 
-***Note: Running scale tests with -Ds3guard and -Ddynamo requires that
+***Note: Running scale tests with `-Ds3guard` and `-Ddynamo` requires that
 you use a private, testing-only DynamoDB table.*** The tests do disruptive
 things such as deleting metadata and setting the provisioned throughput
 to very low values.

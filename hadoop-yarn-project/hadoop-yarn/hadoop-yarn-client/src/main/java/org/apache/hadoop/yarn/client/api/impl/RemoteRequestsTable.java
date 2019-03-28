@@ -137,27 +137,21 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
     if (locationMap == null) {
       locationMap = new HashMap<>();
       this.remoteRequestsTable.put(priority, locationMap);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Added priority=" + priority);
-      }
+      LOG.debug("Added priority={}", priority);
     }
     Map<ExecutionType, TreeMap<Resource, ResourceRequestInfo>>
         execTypeMap = locationMap.get(resourceName);
     if (execTypeMap == null) {
       execTypeMap = new HashMap<>();
       locationMap.put(resourceName, execTypeMap);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Added resourceName=" + resourceName);
-      }
+      LOG.debug("Added resourceName={}", resourceName);
     }
     TreeMap<Resource, ResourceRequestInfo> capabilityMap =
         execTypeMap.get(execType);
     if (capabilityMap == null) {
       capabilityMap = new TreeMap<>(new AMRMClientImpl.ResourceReverseComparator());
       execTypeMap.put(execType, capabilityMap);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Added Execution Type=" + execType);
-      }
+      LOG.debug("Added Execution Type={}", execType);
     }
     capabilityMap.put(capability, resReqInfo);
   }
@@ -168,25 +162,19 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
     Map<String, Map<ExecutionType, TreeMap<Resource,
         ResourceRequestInfo>>> locationMap = remoteRequestsTable.get(priority);
     if (locationMap == null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("No such priority=" + priority);
-      }
+      LOG.debug("No such priority={}", priority);
       return null;
     }
     Map<ExecutionType, TreeMap<Resource, ResourceRequestInfo>>
         execTypeMap = locationMap.get(resourceName);
     if (execTypeMap == null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("No such resourceName=" + resourceName);
-      }
+      LOG.debug("No such resourceName={}", resourceName);
       return null;
     }
     TreeMap<Resource, ResourceRequestInfo> capabilityMap =
         execTypeMap.get(execType);
     if (capabilityMap == null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("No such Execution Type=" + execType);
-      }
+      LOG.debug("No such Execution Type={}", execType);
       return null;
     }
     retVal = capabilityMap.remove(capability);
@@ -286,9 +274,8 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
     if (ResourceRequest.ANY.equals(resourceName)) {
       resourceRequestInfo.remoteRequest.setNodeLabelExpression(labelExpression);
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Adding request to ask " + resourceRequestInfo.remoteRequest);
-    }
+    LOG.debug("Adding request to ask {}", resourceRequestInfo.remoteRequest);
+
     return resourceRequestInfo;
   }
 
@@ -298,22 +285,16 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
         execTypeReq.getExecutionType(), capability);
 
     if (resourceRequestInfo == null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Not decrementing resource as ResourceRequestInfo with" +
-            "priority=" + priority + ", " +
-            "resourceName=" + resourceName + ", " +
-            "executionType=" + execTypeReq + ", " +
-            "capability=" + capability + " is not present in request table");
-      }
+      LOG.debug("Not decrementing resource as ResourceRequestInfo with"
+          + " priority={} resourceName={} executionType={} capability={} is"
+          + " not present in request table", priority, resourceName,
+          execTypeReq, capability);
       return null;
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("BEFORE decResourceRequest:" + " applicationId="
-          + " priority=" + priority.getPriority()
-          + " resourceName=" + resourceName + " numContainers="
-          + resourceRequestInfo.remoteRequest.getNumContainers());
-    }
+    LOG.debug("BEFORE decResourceRequest: applicationId= priority={}"
+        +" resourceName={} numContainers={}", priority.getPriority(),
+        resourceName, resourceRequestInfo.remoteRequest.getNumContainers());
 
     resourceRequestInfo.remoteRequest.setNumContainers(
         resourceRequestInfo.remoteRequest.getNumContainers() - 1);

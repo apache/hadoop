@@ -115,7 +115,15 @@ int check_trusted_image(const struct configuration *command_config, const struct
   int ret = 0;
   int no_registry_prefix_in_image_name = 0;
   char *image_name = get_configuration_value("image", DOCKER_COMMAND_FILE_SECTION, command_config);
-  char **privileged_registry = get_configuration_values_delimiter("docker.trusted.registries", CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
+  char *privileged = NULL;
+  char **privileged_registry = NULL;
+  privileged = get_configuration_value("privileged", DOCKER_COMMAND_FILE_SECTION, command_config);
+  if (privileged != NULL && strcasecmp(privileged, "true") == 0 ) {
+    privileged_registry = get_configuration_values_delimiter("docker.privileged-containers.registries", CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
+  }
+  if (privileged_registry == NULL) {
+    privileged_registry = get_configuration_values_delimiter("docker.trusted.registries", CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
+  }
   char *registry_ptr = NULL;
   if (image_name == NULL) {
     ret = INVALID_DOCKER_IMAGE_NAME;
@@ -158,6 +166,7 @@ int check_trusted_image(const struct configuration *command_config, const struct
   }
 
 free_and_exit:
+  free(privileged);
   free(image_name);
   free_values(privileged_registry);
   return ret;

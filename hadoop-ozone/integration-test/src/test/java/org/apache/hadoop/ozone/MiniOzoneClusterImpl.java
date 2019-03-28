@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ipc.Client;
@@ -95,6 +96,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
 
   // Timeout for the cluster to be ready
   private int waitForClusterToBeReadyTimeout = 60000; // 1 min
+  private CertificateClient caClient;
 
   /**
    * Creates a new MiniOzoneCluster.
@@ -364,7 +366,18 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
    */
   @Override
   public void startHddsDatanodes() {
-    hddsDatanodes.forEach((datanode) -> datanode.start(null));
+    hddsDatanodes.forEach((datanode) -> {
+      datanode.setCertificateClient(getCAClient());
+      datanode.start(null);
+    });
+  }
+
+  private CertificateClient getCAClient() {
+    return this.caClient;
+  }
+
+  private void setCAClient(CertificateClient client) {
+    this.caClient = client;
   }
 
 
@@ -403,6 +416,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       final List<HddsDatanodeService> hddsDatanodes = createHddsDatanodes(scm);
       MiniOzoneClusterImpl cluster = new MiniOzoneClusterImpl(conf, om, scm,
           hddsDatanodes);
+      cluster.setCAClient(certClient);
       if (startDataNodes) {
         cluster.startHddsDatanodes();
       }
@@ -432,14 +446,18 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       if (!blockSize.isPresent()) {
         blockSize = Optional.of(2 * streamBufferMaxSize.get());
       }
+
+      if (!streamBufferSizeUnit.isPresent()) {
+        streamBufferSizeUnit = Optional.of(StorageUnit.MB);
+      }
       conf.setStorageSize(ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY,
-          chunkSize.get(), StorageUnit.MB);
+          chunkSize.get(), streamBufferSizeUnit.get());
       conf.setStorageSize(OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_FLUSH_SIZE,
-          streamBufferFlushSize.get(), StorageUnit.MB);
+          streamBufferFlushSize.get(), streamBufferSizeUnit.get());
       conf.setStorageSize(OzoneConfigKeys.OZONE_CLIENT_STREAM_BUFFER_MAX_SIZE,
-          streamBufferMaxSize.get(), StorageUnit.MB);
+          streamBufferMaxSize.get(), streamBufferSizeUnit.get());
       conf.setStorageSize(OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE, blockSize.get(),
-          StorageUnit.MB);
+          streamBufferSizeUnit.get());
       configureTrace();
     }
 

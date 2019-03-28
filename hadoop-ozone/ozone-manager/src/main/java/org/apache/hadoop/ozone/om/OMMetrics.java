@@ -40,6 +40,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numVolumeOps;
   private @Metric MutableCounterLong numBucketOps;
   private @Metric MutableCounterLong numKeyOps;
+  private @Metric MutableCounterLong numFSOps;
 
   // OM op metrics
   private @Metric MutableCounterLong numVolumeCreates;
@@ -60,11 +61,13 @@ public class OMMetrics {
   private @Metric MutableCounterLong numVolumeLists;
   private @Metric MutableCounterLong numKeyCommits;
   private @Metric MutableCounterLong numAllocateBlockCalls;
+  private @Metric MutableCounterLong numAddAllocateBlockCalls;
   private @Metric MutableCounterLong numGetServiceLists;
   private @Metric MutableCounterLong numListS3Buckets;
   private @Metric MutableCounterLong numInitiateMultipartUploads;
   private @Metric MutableCounterLong numCompleteMultipartUploads;
 
+  private @Metric MutableCounterLong numGetFileStatus;
 
   // Failure Metrics
   private @Metric MutableCounterLong numVolumeCreateFails;
@@ -85,6 +88,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numVolumeListFails;
   private @Metric MutableCounterLong numKeyCommitFails;
   private @Metric MutableCounterLong numBlockAllocateCallFails;
+  private @Metric MutableCounterLong numAddAllocateBlockCallFails;
   private @Metric MutableCounterLong numGetServiceListFails;
   private @Metric MutableCounterLong numListS3BucketsFails;
   private @Metric MutableCounterLong numInitiateMultipartUploadFails;
@@ -95,6 +99,8 @@ public class OMMetrics {
   private @Metric MutableCounterLong numAbortMultipartUploadFails;
   private @Metric MutableCounterLong numListMultipartUploadParts;
   private @Metric MutableCounterLong numListMultipartUploadPartFails;
+
+  private @Metric MutableCounterLong numGetFileStatusFails;
 
   // Metrics for total number of volumes, buckets and keys
 
@@ -281,6 +287,16 @@ public class OMMetrics {
     numListMultipartUploadParts.incr();
   }
 
+  public void incNumGetFileStatus() {
+    numKeyOps.incr();
+    numFSOps.incr();
+    numGetFileStatus.incr();
+  }
+
+  public void incNumGetFileStatusFails() {
+    numGetFileStatusFails.incr();
+  }
+
   public void incNumListMultipartUploadPartFails() {
     numListMultipartUploadPartFails.incr();
   }
@@ -377,6 +393,14 @@ public class OMMetrics {
 
   public void incNumBlockAllocateCallFails() {
     numBlockAllocateCallFails.incr();
+  }
+
+  public void incNumAddAllocateBlockCalls() {
+    numAddAllocateBlockCalls.incr();
+  }
+
+  public void incNumAddAllocateBlockFails() {
+    numAddAllocateBlockCallFails.incr();
   }
 
   public void incNumBucketListFails() {
@@ -565,6 +589,17 @@ public class OMMetrics {
   @VisibleForTesting
   public long getNumKeyListFails() {
     return numKeyListFails.value();
+  }
+
+
+  @VisibleForTesting
+  public long getNumFSOps() {
+    return numFSOps.value();
+  }
+
+  @VisibleForTesting
+  public long getNumGetFileStatus() {
+    return numGetFileStatus.value();
   }
 
   @VisibleForTesting

@@ -179,9 +179,7 @@ import java.security.PrivilegedExceptionAction;
           nodeHttpAddress =
               LogWebServiceUtils.getNMWebAddressFromRM(yarnConf, nmId);
         } catch (Exception ex) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(ex.getMessage());
-          }
+          LOG.debug("{}", ex);
         }
       }
       if (nodeHttpAddress == null || nodeHttpAddress.isEmpty()) {
@@ -384,9 +382,7 @@ import java.security.PrivilegedExceptionAction;
           nodeHttpAddress =
               LogWebServiceUtils.getNMWebAddressFromRM(yarnConf, nmId);
         } catch (Exception ex) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(ex.getMessage());
-          }
+          LOG.debug("{}", ex);
         }
       }
       if (nodeHttpAddress == null || nodeHttpAddress.isEmpty()) {

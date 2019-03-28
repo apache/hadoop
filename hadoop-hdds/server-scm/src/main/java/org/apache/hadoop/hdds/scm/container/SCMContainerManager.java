@@ -132,6 +132,16 @@ public class SCMContainerManager implements ContainerManager {
   }
 
   @Override
+  public Set<ContainerID> getContainerIDs() {
+    lock.lock();
+    try {
+      return containerStateManager.getAllContainerIDs();
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  @Override
   public List<ContainerInfo> getContainers() {
     lock.lock();
     try {
@@ -164,6 +174,16 @@ public class SCMContainerManager implements ContainerManager {
     } finally {
       lock.unlock();
     }
+  }
+
+  /**
+   * Get number of containers in the given state.
+   *
+   * @param state {@link LifeCycleState}
+   * @return Count
+   */
+  public Integer getContainerCountByState(LifeCycleState state) {
+    return containerStateManager.getContainerCountByState(state);
   }
 
   /**

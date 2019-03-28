@@ -23,7 +23,6 @@ import java.util.Iterator;
 import java.util.Random;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
-import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -471,7 +470,7 @@ public class TestGSet {
 
     @Override
     public boolean equals(Object obj) {
-      return obj != null && obj instanceof IntElement
+      return obj instanceof IntElement
           && value == ((IntElement)obj).value;
     }
 

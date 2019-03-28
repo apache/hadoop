@@ -18,26 +18,27 @@
 
 package org.apache.hadoop.ozone.recon.spi.impl;
 
-import static org.apache.commons.compress.utils.CharsetNames.UTF_8;
+import static org.apache.hadoop.ozone.recon.ReconConstants.CONTAINER_KEY_TABLE;
 
+import java.io.File;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
-import org.apache.hadoop.utils.MetaStoreIterator;
-import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.utils.db.DBStore;
+import org.apache.hadoop.utils.db.Table;
+import org.apache.hadoop.utils.db.Table.KeyValue;
+import org.apache.hadoop.utils.db.TableIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.primitives.Longs;
 
 /**
  * Implementation of the Recon Container DB Service.
@@ -48,10 +49,52 @@ public class ContainerDBServiceProviderImpl
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ContainerDBServiceProviderImpl.class);
-  private final static String KEY_DELIMITER = "_";
+
+  private Table<ContainerKeyPrefix, Integer> containerKeyTable;
 
   @Inject
-  private MetadataStore containerDBStore;
+  private OzoneConfiguration configuration;
+
+  @Inject
+  private DBStore containerDbStore;
+
+  @Inject
+  public ContainerDBServiceProviderImpl(DBStore dbStore) {
+    try {
+      this.containerKeyTable = dbStore.getTable(CONTAINER_KEY_TABLE,
+          ContainerKeyPrefix.class, Integer.class);
+    } catch (IOException e) {
+      LOG.error("Unable to create Container Key Table. " + e);
+    }
+  }
+
+  /**
+   * Initialize a new container DB instance, getting rid of the old instance
+   * and then storing the passed in container prefix counts into the created
+   * DB instance.
+   * @param containerKeyPrefixCounts Map of containerId, key-prefix tuple to
+   * @throws IOException
+   */
+  @Override
+  public void initNewContainerDB(Map<ContainerKeyPrefix, Integer>
+                                     containerKeyPrefixCounts)
+      throws IOException {
+
+    File oldDBLocation = containerDbStore.getDbLocation();
+    containerDbStore = ReconContainerDBProvider.getNewDBStore(configuration);
+    containerKeyTable = containerDbStore.getTable(CONTAINER_KEY_TABLE,
+        ContainerKeyPrefix.class, Integer.class);
+
+    if (oldDBLocation.exists()) {
+      LOG.info("Cleaning up old Recon Container DB at {}.",
+          oldDBLocation.getAbsolutePath());
+      FileUtils.deleteQuietly(oldDBLocation);
+    }
+    for (Map.Entry<ContainerKeyPrefix, Integer> entry :
+        containerKeyPrefixCounts.entrySet()) {
+      containerKeyTable.put(entry.getKey(), entry.getValue());
+    }
+  }
 
   /**
    * Concatenate the containerId and Key Prefix using a delimiter and store the
@@ -65,13 +108,7 @@ public class ContainerDBServiceProviderImpl
   public void storeContainerKeyMapping(ContainerKeyPrefix containerKeyPrefix,
                                        Integer count)
       throws IOException {
-    byte[] containerIdBytes = Longs.toByteArray(containerKeyPrefix
-        .getContainerId());
-    byte[] keyPrefixBytes = (KEY_DELIMITER + containerKeyPrefix.getKeyPrefix())
-        .getBytes(UTF_8);
-    byte[] dbKey = ArrayUtils.addAll(containerIdBytes, keyPrefixBytes);
-    byte[] dbValue = ByteBuffer.allocate(Integer.BYTES).putInt(count).array();
-    containerDBStore.put(dbKey, dbValue);
+    containerKeyTable.put(containerKeyPrefix, count);
   }
 
   /**
@@ -85,13 +122,8 @@ public class ContainerDBServiceProviderImpl
   @Override
   public Integer getCountForForContainerKeyPrefix(
       ContainerKeyPrefix containerKeyPrefix) throws IOException {
-    byte[] containerIdBytes = Longs.toByteArray(containerKeyPrefix
-        .getContainerId());
-    byte[] keyPrefixBytes = (KEY_DELIMITER + containerKeyPrefix
-        .getKeyPrefix()).getBytes(UTF_8);
-    byte[] dbKey = ArrayUtils.addAll(containerIdBytes, keyPrefixBytes);
-    byte[] dbValue = containerDBStore.get(dbKey);
-    return ByteBuffer.wrap(dbValue).getInt();
+    Integer count =  containerKeyTable.get(containerKeyPrefix);
+    return count == null ? Integer.valueOf(0) : count;
   }
 
   /**
@@ -102,31 +134,27 @@ public class ContainerDBServiceProviderImpl
    * @return Map of (Key-Prefix,Count of Keys).
    */
   @Override
-  public Map<String, Integer> getKeyPrefixesForContainer(long containerId) {
+  public Map<ContainerKeyPrefix, Integer> getKeyPrefixesForContainer(
+      long containerId) throws IOException {
 
-    Map<String, Integer> prefixes = new HashMap<>();
-    MetaStoreIterator<MetadataStore.KeyValue> containerIterator =
-        containerDBStore.iterator();
-    byte[] containerIdPrefixBytes = Longs.toByteArray(containerId);
-    containerIterator.prefixSeek(containerIdPrefixBytes);
+    Map<ContainerKeyPrefix, Integer> prefixes = new HashMap<>();
+    TableIterator<ContainerKeyPrefix, ? extends KeyValue<ContainerKeyPrefix,
+        Integer>> containerIterator = containerKeyTable.iterator();
+    containerIterator.seek(new ContainerKeyPrefix(containerId));
     while (containerIterator.hasNext()) {
-      MetadataStore.KeyValue keyValue = containerIterator.next();
-      byte[] containerKey = keyValue.getKey();
-      long containerIdFromDB = ByteBuffer.wrap(ArrayUtils.subarray(
-          containerKey, 0, Long.BYTES)).getLong();
-
+      KeyValue<ContainerKeyPrefix, Integer> keyValue = containerIterator.next();
+      ContainerKeyPrefix containerKeyPrefix = keyValue.getKey();
       //The prefix seek only guarantees that the iterator's head will be
       // positioned at the first prefix match. We still have to check the key
       // prefix.
-      if (containerIdFromDB == containerId) {
-        byte[] keyPrefix = ArrayUtils.subarray(containerKey,
-            containerIdPrefixBytes.length + 1,
-            containerKey.length);
-        try {
-          prefixes.put(new String(keyPrefix, UTF_8),
-              ByteBuffer.wrap(keyValue.getValue()).getInt());
-        } catch (UnsupportedEncodingException e) {
-          LOG.warn("Unable to read key prefix from container DB.", e);
+      if (containerKeyPrefix.getContainerId() == containerId) {
+        if (StringUtils.isNotEmpty(containerKeyPrefix.getKeyPrefix())) {
+          prefixes.put(new ContainerKeyPrefix(containerId,
+              containerKeyPrefix.getKeyPrefix(),
+              containerKeyPrefix.getKeyVersion()),
+              keyValue.getValue());
+        } else {
+          LOG.warn("Null key prefix returned for containerId = " + containerId);
         }
       } else {
         break; //Break when the first mismatch occurs.

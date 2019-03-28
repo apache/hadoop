@@ -42,11 +42,16 @@ public interface AbstractFpgaVendorPlugin {
 
   /**
    * Check vendor's toolchain and required environment
+   * @param conf Hadoop configuration
+   * @return true if the initialization was successful
    * */
   boolean initPlugin(Configuration conf);
 
   /**
    * Diagnose the devices using vendor toolchain but no need to parse device information
+   *
+   * @param timeout timeout in milliseconds
+   * @return true if the diagnostics was successful
    * */
   boolean diagnose(int timeout);
 
@@ -60,6 +65,8 @@ public interface AbstractFpgaVendorPlugin {
   /**
    * Since all vendor plugins share a {@link org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga.FpgaResourceAllocator}
    * which distinguish FPGA devices by type. Vendor plugin must report this.
+   *
+   * @return the type of FPGA plugin represented as a string
    * */
   String getFpgaType();
 

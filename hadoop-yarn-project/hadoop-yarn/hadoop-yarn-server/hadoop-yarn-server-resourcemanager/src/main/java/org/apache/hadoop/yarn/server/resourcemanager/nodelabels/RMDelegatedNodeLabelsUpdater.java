@@ -191,9 +191,9 @@ public class RMDelegatedNodeLabelsUpdater extends CompositeService {
           + "delegated-centralized node label configuration is enabled";
       LOG.error(msg);
       throw new IOException(msg);
-    } else if (LOG.isDebugEnabled()) {
-      LOG.debug("RM Node labels mapping provider class is : "
-          + nodeLabelsMappingProvider.getClass().toString());
+    } else {
+      LOG.debug("RM Node labels mapping provider class is : {}",
+          nodeLabelsMappingProvider.getClass());
     }
 
     return nodeLabelsMappingProvider;

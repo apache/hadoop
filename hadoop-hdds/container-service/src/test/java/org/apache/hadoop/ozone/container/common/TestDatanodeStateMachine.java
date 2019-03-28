@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.container.common;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
@@ -161,12 +162,16 @@ public class TestDatanodeStateMachine {
   public void testStartStopDatanodeStateMachine() throws IOException,
       InterruptedException, TimeoutException {
     try (DatanodeStateMachine stateMachine =
-        new DatanodeStateMachine(getNewDatanodeDetails(), conf)) {
+        new DatanodeStateMachine(getNewDatanodeDetails(), conf, null)) {
       stateMachine.startDaemon();
       SCMConnectionManager connectionManager =
           stateMachine.getConnectionManager();
-      GenericTestUtils.waitFor(() -> connectionManager.getValues().size() == 1,
-          1000, 30000);
+      GenericTestUtils.waitFor(
+          () -> {
+            LOG.info("connectionManager.getValues().size() is {}",
+                connectionManager.getValues().size());
+            return connectionManager.getValues().size() == 1;
+          }, 1000, 30000);
 
       stateMachine.stopDaemon();
       assertTrue(stateMachine.isDaemonStopped());
@@ -219,7 +224,7 @@ public class TestDatanodeStateMachine {
     ContainerUtils.writeDatanodeDetailsTo(datanodeDetails, idPath);
 
     try (DatanodeStateMachine stateMachine =
-             new DatanodeStateMachine(datanodeDetails, conf)) {
+             new DatanodeStateMachine(datanodeDetails, conf, null)) {
       DatanodeStateMachine.DatanodeStates currentState =
           stateMachine.getContext().getState();
       Assert.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,
@@ -325,7 +330,7 @@ public class TestDatanodeStateMachine {
     datanodeDetails.setPort(port);
 
     try (DatanodeStateMachine stateMachine =
-             new DatanodeStateMachine(datanodeDetails, conf)) {
+             new DatanodeStateMachine(datanodeDetails, conf, null)) {
       DatanodeStateMachine.DatanodeStates currentState =
           stateMachine.getContext().getState();
       Assert.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,
@@ -388,7 +393,7 @@ public class TestDatanodeStateMachine {
       perTestConf.setStrings(entry.getKey(), entry.getValue());
       LOG.info("Test with {} = {}", entry.getKey(), entry.getValue());
       try (DatanodeStateMachine stateMachine = new DatanodeStateMachine(
-          getNewDatanodeDetails(), perTestConf)) {
+          getNewDatanodeDetails(), perTestConf, null)) {
         DatanodeStateMachine.DatanodeStates currentState =
             stateMachine.getContext().getState();
         Assert.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,

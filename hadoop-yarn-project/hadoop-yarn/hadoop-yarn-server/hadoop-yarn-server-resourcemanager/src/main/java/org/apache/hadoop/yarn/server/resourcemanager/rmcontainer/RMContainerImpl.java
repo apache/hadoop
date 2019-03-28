@@ -467,10 +467,8 @@ public class RMContainerImpl implements RMContainer {
   
   @Override
   public void handle(RMContainerEvent event) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Processing " + event.getContainerId() + " of type " + event
-              .getType());
-    }
+    LOG.debug("Processing {} of type {}", event.getContainerId(),
+        event.getType());
 
     writeLock.lock();
     try {

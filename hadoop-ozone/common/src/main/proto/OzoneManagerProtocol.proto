@@ -37,6 +37,7 @@ This is similar to Namenode for Ozone.
 
 import "hdds.proto";
 import "Security.proto";
+import "FSProtos.proto";
 
 enum Type {
   CreateVolume = 11;
@@ -59,6 +60,7 @@ enum Type {
   ListKeys = 35;
   CommitKey = 36;
   AllocateBlock = 37;
+  ApplyCreateKey = 38;
 
   CreateS3Bucket = 41;
   DeleteS3Bucket = 42;
@@ -73,9 +75,13 @@ enum Type {
 
   ServiceList = 51;
 
+  ApplyInitiateMultiPartUpload = 52;
+
   GetDelegationToken = 61;
   RenewDelegationToken = 62;
   CancelDelegationToken = 63;
+
+  GetFileStatus = 70;
 }
 
 message OMRequest {
@@ -107,6 +113,8 @@ message OMRequest {
   optional ListKeysRequest                  listKeysRequest                = 35;
   optional CommitKeyRequest                 commitKeyRequest               = 36;
   optional AllocateBlockRequest             allocateBlockRequest           = 37;
+  optional ApplyCreateKeyRequest            applyCreateKeyRequest          = 38;
+
 
   optional S3CreateBucketRequest            createS3BucketRequest          = 41;
   optional S3DeleteBucketRequest            deleteS3BucketRequest          = 42;
@@ -120,11 +128,13 @@ message OMRequest {
   optional MultipartUploadListPartsRequest  listMultipartUploadPartsRequest = 50;
 
   optional ServiceListRequest               serviceListRequest             = 51;
+  optional MultipartInfoApplyInitiateRequest initiateMultiPartUploadApplyRequest = 52;
 
   optional hadoop.common.GetDelegationTokenRequestProto getDelegationTokenRequest = 61;
   optional hadoop.common.RenewDelegationTokenRequestProto renewDelegationTokenRequest= 62;
   optional hadoop.common.CancelDelegationTokenRequestProto cancelDelegationTokenRequest = 63;
 
+  optional GetFileStatusRequest             getFileStatusRequest           = 70;
 }
 
 message OMResponse {
@@ -179,6 +189,8 @@ message OMResponse {
   optional GetDelegationTokenResponseProto getDelegationTokenResponse = 61;
   optional RenewDelegationTokenResponseProto renewDelegationTokenResponse = 62;
   optional CancelDelegationTokenResponseProto cancelDelegationTokenResponse = 63;
+
+  optional GetFileStatusResponse              getFileStatusResponse        = 70;
 }
 
 enum Status {
@@ -230,6 +242,7 @@ enum Status {
     INVALID_KMS_PROVIDER = 42;
     TOKEN_CREATION_ERROR = 43;
 
+    FILE_NOT_FOUND = 44;
 }
 
 
@@ -495,6 +508,13 @@ message KeyLocation {
     // indicated at which version this block gets created.
     optional uint64 createVersion = 5;
     optional hadoop.common.TokenProto token = 6;
+    // Walk around to include pipeline info for client read/write
+    // without talking to scm.
+    // NOTE: the pipeline info may change after pipeline close.
+    // So eventually, we will have to change back to call scm to
+    // get the up to date pipeline information. This will need o3fs
+    // provide not only a OM delegation token but also a SCM delegation token
+    optional hadoop.hdds.Pipeline pipeline = 7;
 }
 
 message KeyLocationList {
@@ -518,6 +538,16 @@ message KeyInfo {
     optional FileEncryptionInfoProto fileEncryptionInfo = 12;
 }
 
+message GetFileStatusRequest {
+    required string volumeName = 1;
+    required string bucketName = 2;
+    required string keyName = 3;
+}
+
+message GetFileStatusResponse {
+    required hadoop.fs.FileStatusProto status = 1;
+}
+
 message CreateKeyRequest {
     required KeyArgs keyArgs = 1;
 }
@@ -529,6 +559,11 @@ message CreateKeyResponse {
     // (similar to a cookie).
     optional uint64 ID = 3;
     optional uint64 openVersion = 4;
+}
+
+message ApplyCreateKeyRequest {
+    required CreateKeyRequest createKeyRequest = 1;
+    required CreateKeyResponse createKeyResponse = 2;
 }
 
 message LookupKeyRequest {
@@ -621,6 +656,10 @@ message AllocateBlockRequest {
     required KeyArgs keyArgs = 1;
     required uint64 clientID = 2;
     optional hadoop.hdds.ExcludeListProto excludeList = 3;
+    // During HA on one of the OM nodes, we allocate block and send the
+    // AllocateBlockRequest with keyLocation set. If this is set, no need to
+    // call scm again in OM Ratis applyTransaction just append it to DB.
+    optional KeyLocation keyLocation = 4;
 }
 
 message AllocateBlockResponse {
@@ -692,6 +731,11 @@ message S3ListBucketsResponse {
 
 message MultipartInfoInitiateRequest {
     required KeyArgs keyArgs = 1;
+}
+
+message MultipartInfoApplyInitiateRequest {
+    required KeyArgs keyArgs = 1;
+    required string multipartUploadID = 2;
 }
 
 message MultipartInfoInitiateResponse {

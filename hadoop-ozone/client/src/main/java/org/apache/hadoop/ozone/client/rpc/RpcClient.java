@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.crypto.CryptoInputStream;
 import org.apache.hadoop.crypto.CryptoOutputStream;
 import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProviderTokenIssuer;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.StorageType;
@@ -65,6 +66,7 @@ import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.ozone.om.protocolPB
     .OzoneManagerProtocolClientSideTranslatorPB;
@@ -92,6 +94,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -101,7 +104,7 @@ import java.util.stream.Collectors;
  * to execute client calls. This uses RPC protocol for communication
  * with the servers.
  */
-public class RpcClient implements ClientProtocol {
+public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(RpcClient.class);
@@ -123,6 +126,8 @@ public class RpcClient implements ClientProtocol {
   private final long blockSize;
   private final long watchTimeout;
   private final ClientId clientId = ClientId.randomId();
+  private final int maxRetryCount;
+  private Text dtService;
 
    /**
     * Creates RpcClient instance with the given configuration.
@@ -139,7 +144,6 @@ public class RpcClient implements ClientProtocol {
         OMConfigKeys.OZONE_OM_GROUP_RIGHTS_DEFAULT);
     this.ozoneManagerClient = new OzoneManagerProtocolClientSideTranslatorPB(
         this.conf, clientId.toString(), ugi);
-
     long scmVersion =
         RPC.getProtocolVersion(StorageContainerLocationProtocolPB.class);
     InetSocketAddress scmAddress = getScmAddressForClient();
@@ -205,6 +209,11 @@ public class RpcClient implements ClientProtocol {
     this.verifyChecksum =
         conf.getBoolean(OzoneConfigKeys.OZONE_CLIENT_VERIFY_CHECKSUM,
             OzoneConfigKeys.OZONE_CLIENT_VERIFY_CHECKSUM_DEFAULT);
+    maxRetryCount =
+        conf.getInt(OzoneConfigKeys.OZONE_CLIENT_MAX_RETRIES, OzoneConfigKeys.
+            OZONE_CLIENT_MAX_RETRIES_DEFAULT);
+    dtService =
+        getOMProxyProvider().getProxy().getDelegationTokenService();
   }
 
   private InetSocketAddress getScmAddressForClient() throws IOException {
@@ -261,8 +270,12 @@ public class RpcClient implements ClientProtocol {
       builder.addOzoneAcls(OMPBHelper.convertOzoneAcl(ozoneAcl));
     }
 
-    LOG.info("Creating Volume: {}, with {} as owner and quota set to {} bytes.",
-        volumeName, owner, quota);
+    if (volArgs.getQuota() == null) {
+      LOG.info("Creating Volume: {}, with {} as owner.", volumeName, owner);
+    } else {
+      LOG.info("Creating Volume: {}, with {} as owner "
+              + "and quota set to {} bytes.", volumeName, owner, quota);
+    }
     ozoneManagerClient.createVolume(builder.build());
   }
 
@@ -445,7 +458,17 @@ public class RpcClient implements ClientProtocol {
   @Override
   public Token<OzoneTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
-    return ozoneManagerClient.getDelegationToken(renewer);
+
+    Token<OzoneTokenIdentifier> token =
+        ozoneManagerClient.getDelegationToken(renewer);
+    if (token != null) {
+      token.setService(dtService);
+      LOG.debug("Created token {} for dtService {}", token, dtService);
+    } else {
+      LOG.debug("Cannot get ozone delegation token for renewer {} to access " +
+          "service {}", renewer, dtService);
+    }
+    return token;
   }
 
   /**
@@ -594,11 +617,10 @@ public class RpcClient implements ClientProtocol {
         .build();
 
     OpenKeySession openKey = ozoneManagerClient.openKey(keyArgs);
-    KeyOutputStream groupOutputStream =
+    KeyOutputStream keyOutputStream =
         new KeyOutputStream.Builder()
             .setHandler(openKey)
             .setXceiverClientManager(xceiverClientManager)
-            .setScmClient(storageContainerLocationClient)
             .setOmClient(ozoneManagerClient)
             .setChunkSize(chunkSize)
             .setRequestID(requestId)
@@ -610,20 +632,21 @@ public class RpcClient implements ClientProtocol {
             .setBlockSize(blockSize)
             .setChecksumType(checksumType)
             .setBytesPerChecksum(bytesPerChecksum)
+            .setMaxRetryCount(maxRetryCount)
             .build();
-    groupOutputStream.addPreallocateBlocks(
+    keyOutputStream.addPreallocateBlocks(
         openKey.getKeyInfo().getLatestVersionLocations(),
         openKey.getOpenVersion());
-    final FileEncryptionInfo feInfo = groupOutputStream
+    final FileEncryptionInfo feInfo = keyOutputStream
         .getFileEncryptionInfo();
     if (feInfo != null) {
       KeyProvider.KeyVersion decrypted = getDEK(feInfo);
       final CryptoOutputStream cryptoOut = new CryptoOutputStream(
-          groupOutputStream, OzoneKMSUtil.getCryptoCodec(conf, feInfo),
+          keyOutputStream, OzoneKMSUtil.getCryptoCodec(conf, feInfo),
           decrypted.getMaterial(), feInfo.getIV());
       return new OzoneOutputStream(cryptoOut);
     } else {
-      return new OzoneOutputStream(groupOutputStream);
+      return new OzoneOutputStream(keyOutputStream);
     }
   }
 
@@ -632,10 +655,8 @@ public class RpcClient implements ClientProtocol {
     // check crypto protocol version
     OzoneKMSUtil.checkCryptoProtocolVersion(feInfo);
     KeyProvider.KeyVersion decrypted;
-    // TODO: support get kms uri from om rpc server.
     decrypted = OzoneKMSUtil.decryptEncryptedDataEncryptionKey(feInfo,
-        OzoneKMSUtil.getKeyProvider(conf, OzoneKMSUtil.getKeyProviderUri(
-            ugi, null, null, conf)));
+        getKeyProvider());
     return decrypted;
   }
 
@@ -650,6 +671,7 @@ public class RpcClient implements ClientProtocol {
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(keyName)
+        .setRefreshPipeline(true)
         .build();
     OmKeyInfo keyInfo = ozoneManagerClient.lookupKey(keyArgs);
     LengthInputStream lengthInputStream =
@@ -725,6 +747,7 @@ public class RpcClient implements ClientProtocol {
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(keyName)
+        .setRefreshPipeline(true)
         .build();
     OmKeyInfo keyInfo = ozoneManagerClient.lookupKey(keyArgs);
 
@@ -856,11 +879,10 @@ public class RpcClient implements ClientProtocol {
         .build();
 
     OpenKeySession openKey = ozoneManagerClient.openKey(keyArgs);
-    KeyOutputStream groupOutputStream =
+    KeyOutputStream keyOutputStream =
         new KeyOutputStream.Builder()
             .setHandler(openKey)
             .setXceiverClientManager(xceiverClientManager)
-            .setScmClient(storageContainerLocationClient)
             .setOmClient(ozoneManagerClient)
             .setChunkSize(chunkSize)
             .setRequestID(requestId)
@@ -875,11 +897,12 @@ public class RpcClient implements ClientProtocol {
             .setMultipartNumber(partNumber)
             .setMultipartUploadID(uploadID)
             .setIsMultipartKey(true)
+            .setMaxRetryCount(maxRetryCount)
             .build();
-    groupOutputStream.addPreallocateBlocks(
+    keyOutputStream.addPreallocateBlocks(
         openKey.getKeyInfo().getLatestVersionLocations(),
         openKey.getOpenVersion());
-    return new OzoneOutputStream(groupOutputStream);
+    return new OzoneOutputStream(keyOutputStream);
   }
 
   @Override
@@ -952,4 +975,31 @@ public class RpcClient implements ClientProtocol {
 
   }
 
+  @Override
+  public OzoneFileStatus getOzoneFileStatus(String volumeName,
+      String bucketName, String keyName) throws IOException {
+    return ozoneManagerClient.getFileStatus(volumeName, bucketName, keyName);
+  }
+
+  @Override
+  public KeyProvider getKeyProvider() throws IOException {
+    return OzoneKMSUtil.getKeyProvider(conf, getKeyProviderUri());
+  }
+
+  @Override
+  public URI getKeyProviderUri() throws IOException {
+    // TODO: fix me to support kms instances for difference OMs
+    return OzoneKMSUtil.getKeyProviderUri(ugi,
+        null, null, conf);
+  }
+
+  @Override
+  public String getCanonicalServiceName() {
+    return (dtService != null) ? dtService.toString() : null;
+  }
+
+  @Override
+  public Token<?> getDelegationToken(String renewer) throws IOException {
+    return getDelegationToken(renewer == null ? null : new Text(renewer));
+  }
 }

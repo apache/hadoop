@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.junit.Before;
@@ -29,23 +31,27 @@ import static org.mockito.Mockito.when;
 
 public class TestFSParentQueue {
 
-  private FairSchedulerConfiguration conf;
   private QueueManager queueManager;
 
   @Before
-  public void setUp() throws Exception {
-    conf = new FairSchedulerConfiguration();
+  public void setUp() {
+    FairSchedulerConfiguration conf = new FairSchedulerConfiguration();
+    RMContext rmContext = mock(RMContext.class);
+    SystemClock clock = SystemClock.getInstance();
+    PlacementManager placementManager = new PlacementManager();
     FairScheduler scheduler = mock(FairScheduler.class);
-    AllocationConfiguration allocConf = new AllocationConfiguration(conf);
-    when(scheduler.getAllocationConfiguration()).thenReturn(allocConf);
+    when(scheduler.getRMContext()).thenReturn(rmContext);
+    when(scheduler.getConfig()).thenReturn(conf);
     when(scheduler.getConf()).thenReturn(conf);
     when(scheduler.getResourceCalculator()).thenReturn(
         new DefaultResourceCalculator());
-    SystemClock clock = SystemClock.getInstance();
     when(scheduler.getClock()).thenReturn(clock);
+    when(rmContext.getQueuePlacementManager()).thenReturn(placementManager);
+    AllocationConfiguration allocConf = new AllocationConfiguration(scheduler);
+    when(scheduler.getAllocationConfiguration()).thenReturn(allocConf);
     queueManager = new QueueManager(scheduler);
     FSQueueMetrics.forQueue("root", null, true, conf);
-    queueManager.initialize(conf);
+    queueManager.initialize();
   }
 
   @Test

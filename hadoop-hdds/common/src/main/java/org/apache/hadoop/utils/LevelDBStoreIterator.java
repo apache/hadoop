@@ -62,8 +62,4 @@ public class LevelDBStoreIterator implements MetaStoreIterator<KeyValue> {
     levelDBIterator.seekToLast();
   }
 
-  @Override
-  public void prefixSeek(byte[] prefix) {
-    levelDBIterator.seek(prefix);
-  }
 }
