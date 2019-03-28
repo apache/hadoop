@@ -105,8 +105,9 @@ two different reasons:
 
 * Authoritative S3Guard
     * S3Guard can be set as authoritative, which means that an S3A client will
-    avoid round-trips to S3 when **getting directory listings** if there is a fully
-    cached version of the directory stored in metadata store.
+    avoid round-trips to S3 when **getting file metadata**, and **getting
+    directory listings** if there is a fully cached version of the directory
+    stored in metadata store.
     * This mode can be set as a configuration property
     `fs.s3a.metadatastore.authoritative`
     * All interactions with the S3 bucket(s) must be through S3A clients sharing
@@ -128,16 +129,20 @@ two different reasons:
 
 More on Authoritative S3Guard:
 
-* It is not treating the MetadataStore (e.g. dynamodb) as the source of truth
- in general.
-* It is the ability to short-circuit S3 list objects and serve listings from
-the MetadataStore in some circumstances.
+* This setting is about treating the MetadataStore (e.g. dynamodb) as the source
+ of truth in general, and also to short-circuit S3 list objects and serve
+ listings from the MetadataStore in some circumstances.
+* For S3A to skip S3's get object metadata, and serve it directly from the
+MetadataStore, the following things must all be true:
+    1. The S3A client is configured to allow MetadataStore to be authoritative
+    source of a file metadata (`fs.s3a.metadatastore.authoritative=true`).
+    1. The MetadataStore has the file metadata for the path stored in it.
 * For S3A to skip S3's list objects on some path, and serve it directly from
 the MetadataStore, the following things must all be true:
     1. The MetadataStore implementation persists the bit
     `DirListingMetadata.isAuthorititative` set when calling
     `MetadataStore#put` (`DirListingMetadata`)
-    1. The S3A client is configured to allow metadatastore to be authoritative
+    1. The S3A client is configured to allow MetadataStore to be authoritative
     source of a directory listing (`fs.s3a.metadatastore.authoritative=true`).
     1. The MetadataStore has a **full listing for path** stored in it.  This only
     happens if the FS client (s3a) explicitly has stored a full directory
@@ -154,8 +159,9 @@ recommended that you leave the default setting here:
 </property>
 ```
 
-Note that a MetadataStore MAY persist this bit. (Not MUST).
 Setting this to `true` is currently an experimental feature.
+Note that a MetadataStore MAY persist this bit in the directory listings. (Not
+MUST).
 
 Note that if this is set to true, it may exacerbate or persist existing race
 conditions around multiple concurrent modifications and listings of a given
@@ -394,6 +400,48 @@ regions.
 Together then, this configuration enables the DynamoDB Metadata Store
 for two buckets with a shared table, while disabling it for the public
 bucket.
+
+
+### Out-of-band operations with S3Guard
+
+We call an operation out-of-band (OOB) when a bucket is used by a client with
+ S3Guard, and another client runs a write (e.g delete, move, rename,
+ overwrite) operation on an object in the same bucket without S3Guard.
+
+The definition of behaviour in S3AFileSystem/MetadataStore in case of OOBs:
+* A client with S3Guard
+* B client without S3Guard (Directly to S3)
+
+
+* OOB OVERWRITE, authoritative mode:
+  * A client creates F1 file
+  * B client overwrites F1 file with F2 (Same, or different file size)
+  * A client's getFileStatus returns F1 metadata
+
+* OOB OVERWRITE, NOT authoritative mode:
+  * A client creates F1 file
+  * B client overwrites F1 file with F2 (Same, or different file size)
+  * A client's getFileStatus returns F2 metadata. In not authoritative mode we
+ check S3 for the file. If the modification time of the file in S3 is greater
+ than in S3Guard, we can safely return the S3 file metadata and update the
+ cache.
+
+* OOB DELETE, authoritative mode:
+  * A client creates F file
+  * B client deletes F file
+  * A client's getFileStatus returns that the file is still there
+
+* OOB DELETE, NOT authoritative mode:
+  * A client creates F file
+  * B client deletes F file
+  * A client's getFileStatus returns that the file is still there
+
+Note: authoritative and NOT authoritative mode behaves the same at
+OOB DELETE case.
+
+The behaviour in case of getting directory listings:
+* File status in metadata store gets updated during the listing the same way
+as in getFileStatus.
 
 
 ## S3Guard Command Line Interface (CLI)

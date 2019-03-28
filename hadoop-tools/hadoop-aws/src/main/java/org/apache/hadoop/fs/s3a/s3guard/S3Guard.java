@@ -24,7 +24,9 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -184,6 +186,9 @@ public final class S3Guard {
    *
    * Also update the MetadataStore to reflect the resulting directory listing.
    *
+   * In not authoritative case: update file metadata if mod_time in listing
+   * of a file is greater then what is currently in the ms
+   *
    * @param ms MetadataStore to use.
    * @param path path to directory
    * @param backingStatuses Directory listing from the backing store.
@@ -219,11 +224,24 @@ public final class S3Guard {
     // Since the authoritative case is already handled outside this function,
     // we will basically start with the set of directory entries in the
     // DirListingMetadata, and add any that only exist in the backingStatuses.
-
     boolean changed = false;
+    final Map<Path, FileStatus> dirMetaMap = dirMeta.getListing().stream()
+        .collect(Collectors.toMap(
+            pm -> pm.getFileStatus().getPath(), PathMetadata::getFileStatus)
+        );
+
     for (FileStatus s : backingStatuses) {
       if (deleted.contains(s.getPath())) {
         continue;
+      }
+
+      if (!isAuthoritative){
+        FileStatus status = dirMetaMap.get(s.getPath());
+        if (status != null
+            && s.getModificationTime() > status.getModificationTime()) {
+          LOG.debug("Update ms with newer metadata of: {}", status);
+          ms.put(new PathMetadata(s));
+        }
       }
 
       // Minor race condition here.  Multiple threads could add to this

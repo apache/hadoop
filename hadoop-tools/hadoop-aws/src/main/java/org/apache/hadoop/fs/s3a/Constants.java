@@ -545,7 +545,7 @@ public final class Constants {
   public static final String S3GUARD_METASTORE_LOCAL_ENTRY_TTL =
       "fs.s3a.s3guard.local.ttl";
   public static final int DEFAULT_S3GUARD_METASTORE_LOCAL_ENTRY_TTL
-      = 10 * 1000;
+      = 60 * 1000;
 
   /**
    * Use DynamoDB for the metadata: {@value}.
