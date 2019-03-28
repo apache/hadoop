@@ -131,7 +131,7 @@ public final class OzoneManagerRatisServer {
     LOG.info("Instantiating OM Ratis server with GroupID: {} and " +
         "Raft Peers: {}", raftGroupIdStr, raftPeersStr.toString().substring(2));
 
-    this.omStateMachine = getStateMachine(this.raftGroupId);
+    this.omStateMachine = getStateMachine();
 
     this.server = RaftServer.newBuilder()
         .setServerId(this.raftPeerId)
@@ -159,7 +159,7 @@ public final class OzoneManagerRatisServer {
    * Creates an instance of OzoneManagerRatisServer.
    */
   public static OzoneManagerRatisServer newOMRatisServer(
-      Configuration ozoneConf, OzoneManager om,
+      Configuration ozoneConf, OzoneManagerServerProtocol omProtocol,
       OMNodeDetails omNodeDetails, List<OMNodeDetails> peerNodes)
       throws IOException {
 
@@ -200,7 +200,7 @@ public final class OzoneManagerRatisServer {
   /**
    * Returns OzoneManager StateMachine.
    */
-  private OzoneManagerStateMachine getStateMachine(RaftGroupId gid) {
+  private OzoneManagerStateMachine getStateMachine() {
     return  new OzoneManagerStateMachine(this);
   }
 

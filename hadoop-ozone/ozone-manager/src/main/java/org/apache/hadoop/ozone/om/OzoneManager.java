@@ -1332,9 +1332,14 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   @Override
   public long saveRatisSnapshot() throws IOException {
     snapshotIndex = omRatisServer.getStateMachineLastAppliedIndex();
+
+    // Flush the OM state to disk
+    getMetadataManager().getStore().flush();
+
     PersistentLongFile.writeFile(ratisSnapshotFile, snapshotIndex);
     LOG.info("Saved Ratis Snapshot on the OM with snapshotIndex {}",
         snapshotIndex );
+
     return snapshotIndex;
   }
 

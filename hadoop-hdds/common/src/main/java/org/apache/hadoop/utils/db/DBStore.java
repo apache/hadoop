@@ -66,6 +66,12 @@ public interface DBStore extends AutoCloseable {
   ArrayList<Table> listTables() throws IOException;
 
   /**
+   * Flush the DB buffer onto persistent storage.
+   * @throws IOException
+   */
+  void flush() throws IOException;
+
+  /**
    * Compact the entire database.
    *
    * @throws IOException on Failure

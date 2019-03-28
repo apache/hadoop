@@ -561,14 +561,7 @@ public class TestOzoneManagerHA {
 
     long appliedLogIndex = 0;
     while (appliedLogIndex <= SNAPSHOT_THRESHOLD) {
-      String keyName = "key" + RandomStringUtils.randomNumeric(5);
-      String data = "data" + RandomStringUtils.randomNumeric(5);
-      OzoneOutputStream ozoneOutputStream = ozoneBucket.createKey(keyName,
-          data.length(), ReplicationType.STAND_ALONE,
-          ReplicationFactor.ONE, new HashMap<>());
-      ozoneOutputStream.write(data.getBytes(), 0, data.length());
-      ozoneOutputStream.close();
-
+      createKey(ozoneBucket);
       appliedLogIndex = ozoneManager.getOmRatisServer()
           .getStateMachineLastAppliedIndex();
     }
@@ -589,5 +582,35 @@ public class TestOzoneManagerHA {
             + smLastAppliedIndex + ") is less than the saved snapshot index("
             + ratisSnapshotIndex + ").",
         smLastAppliedIndex >= ratisSnapshotIndex);
+
+    // Add more transactions to Ratis to trigger another snapshot
+    while (appliedLogIndex <= (smLastAppliedIndex + SNAPSHOT_THRESHOLD)) {
+      createKey(ozoneBucket);
+      appliedLogIndex = ozoneManager.getOmRatisServer()
+          .getStateMachineLastAppliedIndex();
+    }
+
+    GenericTestUtils.waitFor(() -> {
+      if (ozoneManager.loadRatisSnapshotIndex() > 0) {
+        return true;
+      }
+      return false;
+    }, 1000, 100000);
+
+    // The new snapshot index must be greater than the previous snapshot index
+    long ratisSnapshotIndexNew = ozoneManager.loadRatisSnapshotIndex();
+    Assert.assertTrue("Latest snapshot index must be greater than previous " +
+            "snapshot indices", ratisSnapshotIndexNew > ratisSnapshotIndex);  
+
+  }
+
+  private void createKey(OzoneBucket ozoneBucket) throws IOException {
+    String keyName = "key" + RandomStringUtils.randomNumeric(5);
+    String data = "data" + RandomStringUtils.randomNumeric(5);
+    OzoneOutputStream ozoneOutputStream = ozoneBucket.createKey(keyName,
+        data.length(), ReplicationType.STAND_ALONE,
+        ReplicationFactor.ONE, new HashMap<>());
+    ozoneOutputStream.write(data.getBytes(), 0, data.length());
+    ozoneOutputStream.close();
   }
 }

@@ -161,7 +161,10 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
   @Override
   public long takeSnapshot() throws IOException {
     LOG.info("Saving Ratis snapshot on the OM.");
-    return ozoneManager.saveRatisSnapshot();
+    if (ozoneManager != null) {
+      return ozoneManager.saveRatisSnapshot();
+    }
+    return 0;
   }
 
   /**
@@ -365,9 +368,7 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
    */
   private Message runCommand(OMRequest request, long trxLogIndex) {
     OMResponse response = handler.handle(request);
-    if (response.getSuccess()) {
-      lastAppliedIndex = trxLogIndex;
-    }
+    lastAppliedIndex = trxLogIndex;
     return OMRatisHelper.convertResponseToMessage(response);
   }
 

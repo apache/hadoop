@@ -64,6 +64,7 @@ public class RDBStore implements DBStore {
   private ObjectName statMBeanName;
   private RDBCheckpointManager checkPointManager;
   private String checkpointsParentDir;
+  private final FlushOptions flushOptions;
 
   @VisibleForTesting
   public RDBStore(File dbFile, DBOptions options,
@@ -91,6 +92,7 @@ public class RDBStore implements DBStore {
     dbLocation = dbFile;
     // TODO: Read from the next Config.
     writeOptions = new WriteOptions();
+    flushOptions = new FlushOptions().setWaitForFlush(true);
 
     try {
       if (readOnly) {
@@ -270,6 +272,16 @@ public class RDBStore implements DBStore {
       returnList.add(new RDBTable(db, handle, writeOptions));
     }
     return returnList;
+  }
+
+  @Override
+  public void flush() throws IOException {
+    try {
+      db.flush(flushOptions);
+    } catch (RocksDBException e) {
+      LOG.error("Unable to Flush RocksDB data", e);
+      throw toIOException("Unable to Flush RocksDB data", e);
+    }
   }
 
   @Override
