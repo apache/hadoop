@@ -1020,6 +1020,14 @@ If this happens, reads of the affected file(s) will result in
 * the file is overwritten (causing an S3Guard metadata update)
 * the S3Guard metadata is pruned
 
+The S3Guard metadata for a file can be corrected with the `s3guard import`
+command as discussed above.  The command can take a file URI instead of a
+bucket URI to correct the metdata for a single file.  For example:
+
+```bash
+hadoop s3guard import [-meta URI] s3a://my-bucket/file-with-bad-metadata
+```
+
 ## Troubleshooting
 
 ### Error: `S3Guard table lacks version marker.`

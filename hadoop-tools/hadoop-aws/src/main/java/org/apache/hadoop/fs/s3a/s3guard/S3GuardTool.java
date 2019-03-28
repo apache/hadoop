@@ -724,7 +724,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
       long items = 0;
 
       while (it.hasNext()) {
-        LocatedFileStatus located = it.next();
+        S3LocatedFileStatus located = it.next();
         S3AFileStatus child;
         if (located.isDirectory()) {
           child = DynamoDBMetadataStore.makeDirStatus(located.getPath(),
@@ -736,8 +736,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
               located.getPath(),
               located.getBlockSize(),
               located.getOwner(),
-              null,
-              null);
+              located.getETag(),
+              located.getVersionId());
         }
         putParentsIfNotPresent(child);
         getStore().put(new PathMetadata(child));
