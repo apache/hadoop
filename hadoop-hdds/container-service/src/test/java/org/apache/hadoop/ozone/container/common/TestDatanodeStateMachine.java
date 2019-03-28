@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.ozone.container.common;
 
-import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
