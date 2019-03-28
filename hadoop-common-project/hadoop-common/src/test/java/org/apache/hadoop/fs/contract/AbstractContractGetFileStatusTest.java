@@ -397,7 +397,7 @@ public abstract class AbstractContractGetFileStatusTest extends
     fs.delete(path, true);
     // create a - non-qualified - Path for a subdir
     Path subfolder = path.suffix('/' + this.methodName.getMethodName()
-      + "-" + UUID.randomUUID());
+        + "-" + UUID.randomUUID());
     mkdirs(subfolder);
     return subfolder;
   }

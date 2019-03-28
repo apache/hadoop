@@ -398,7 +398,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
 
       // check listing in guarded store.
       final FileStatus[] modList = guardedFs.listStatus(testDirPath);
-      assertArraySize("Added one file to the new dir and modified the same file, "
+      assertArraySize("Added one file to the new dir then modified it, "
           + "so the number of files in the dir should be one.", 1,
           modList);
       assertEquals("The only file path in the directory listing should be "
@@ -507,7 +507,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
   }
 
   /**
-   * Assert that a listing has the specific authority
+   * Assert that a listing has the specific authority.
    * @param expectAuthoritative expect authority bit of listing
    * @param dirListingMetadata listing to check
    */
