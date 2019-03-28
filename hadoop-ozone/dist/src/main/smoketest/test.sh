@@ -72,13 +72,20 @@ execute_tests(){
   docker-compose -f "$COMPOSE_FILE" down
   docker-compose -f "$COMPOSE_FILE" up -d --scale datanode=3
   wait_for_datanodes "$COMPOSE_FILE"
+
+  if [ "${COMPOSE_DIR}" == "ozonesecure" ]; then
+   SECURITY_ENABLED="true"
+  else
+   SECURITY_ENABLED="false"
+  fi
+
   #TODO: we need to wait for the OM here
   sleep 10
   for TEST in "${TESTS[@]}"; do
      TITLE="Ozone $TEST tests with $COMPOSE_DIR cluster"
      set +e
      OUTPUT_NAME="$COMPOSE_DIR-${TEST//\//_}"
-	  docker-compose -f "$COMPOSE_FILE" exec -T om python -m robot --log NONE --report NONE "${OZONE_ROBOT_OPTS[@]}" --output "smoketest/$RESULT_DIR/robot-$OUTPUT_NAME.xml" --logtitle "$TITLE" --reporttitle "$TITLE" "smoketest/$TEST"
+	  docker-compose -f "$COMPOSE_FILE" exec -T om python -m robot --log NONE --report NONE "${OZONE_ROBOT_OPTS[@]}" --output "smoketest/$RESULT_DIR/robot-$OUTPUT_NAME.xml" --logtitle "$TITLE" -e SECURITY_ENABLED:$SECURITY_ENABLED --reporttitle "$TITLE" "smoketest/$TEST"
      set -e
     docker-compose -f "$COMPOSE_FILE" logs > "$DIR/$RESULT_DIR/docker-$OUTPUT_NAME.log"
   done
@@ -152,7 +159,7 @@ if [ "$RUN_ALL" = true ]; then
    TESTS=("s3")
    execute_tests ozones3 "${TESTS[@]}"
    TESTS=("security")
-   execute_tests ozonesecure "${TESTS[@]}"
+   execute_tests ozonesecure .
 else
    execute_tests "$DOCKERENV" "${POSITIONAL[@]}"
 fi

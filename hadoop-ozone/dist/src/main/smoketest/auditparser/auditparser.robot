@@ -16,7 +16,17 @@
 *** Settings ***
 Documentation       Smoketest ozone cluster startup
 Library             OperatingSystem
+Library             BuiltIn
 Resource            ../commonlib.robot
+
+*** Variables ***
+${user}        hadaoop
+
+*** Keywords ***
+Set username
+    ${hostname} =          Execute         hostname
+    Set Suite Variable     ${user}         testuser/${hostname}@EXAMPLE.COM
+    [return]               ${user}
 
 *** Test Cases ***
 
@@ -31,7 +41,8 @@ Testing audit parser
     ${result} =        Execute              ozone auditparser /opt/hadoop/audit.db template top5cmds
                        Should Contain       ${result}  ALLOCATE_KEY
     ${result} =        Execute              ozone auditparser /opt/hadoop/audit.db template top5users
-                       Should Contain       ${result}  hadoop
+    Run Keyword If     '${SECURITY_ENABLED}' == 'true'      Set username
+                       Should Contain       ${result}  ${user}
     ${result} =        Execute              ozone auditparser /opt/hadoop/audit.db query "select count(*) from audit where op='CREATE_VOLUME' and RESULT='SUCCESS'"
                        Should Contain       ${result}  5
     ${result} =        Execute              ozone auditparser /opt/hadoop/audit.db query "select count(*) from audit where op='CREATE_BUCKET' and RESULT='SUCCESS'"
