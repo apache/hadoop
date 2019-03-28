@@ -112,8 +112,6 @@ public class TestContainerReplication {
 
     Assert.assertNotNull(response);
     Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
-    Assert.assertTrue(
-        putBlockRequest.getTraceID().equals(response.getTraceID()));
 
     HddsDatanodeService destinationDatanode =
         chooseDatanodeWithoutContainer(sourcePipelines,

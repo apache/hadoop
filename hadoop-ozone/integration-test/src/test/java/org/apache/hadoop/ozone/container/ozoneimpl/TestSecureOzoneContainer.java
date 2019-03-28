@@ -212,7 +212,6 @@ public class TestSecureOzoneContainer {
     ContainerProtos.ContainerCommandResponseProto response =
         client.sendCommand(request);
     Assert.assertNotNull(response);
-    Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
   }
 
   private StateContext getContext(DatanodeDetails datanodeDetails) {

@@ -33,6 +33,8 @@ import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.tracing.GrpcClientInterceptor;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -136,7 +138,8 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     NettyChannelBuilder channelBuilder = NettyChannelBuilder.forAddress(dn
             .getIpAddress(), port).usePlaintext()
             .maxInboundMessageSize(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE)
-            .intercept(new ClientCredentialInterceptor(userName, encodedToken));
+            .intercept(new ClientCredentialInterceptor(userName, encodedToken),
+                new GrpcClientInterceptor());
     if (secConfig.isGrpcTlsEnabled()) {
       File trustCertCollectionFile = secConfig.getTrustStoreFile();
       File privateKeyFile = secConfig.getClientPrivateKeyFile();
@@ -204,7 +207,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
       ContainerCommandRequestProto request) throws IOException {
     try {
       XceiverClientReply reply;
-      reply = sendCommandWithRetry(request, null);
+      reply = sendCommandWithTraceIDAndRetry(request, null);
       ContainerCommandResponseProto responseProto = reply.getResponse().get();
       return responseProto;
     } catch (ExecutionException | InterruptedException e) {
@@ -217,7 +220,21 @@ public class XceiverClientGrpc extends XceiverClientSpi {
       ContainerCommandRequestProto request, List<DatanodeDetails> excludeDns)
       throws IOException {
     Preconditions.checkState(HddsUtils.isReadOnly(request));
-    return sendCommandWithRetry(request, excludeDns);
+    return sendCommandWithTraceIDAndRetry(request, excludeDns);
+  }
+
+  private XceiverClientReply sendCommandWithTraceIDAndRetry(
+      ContainerCommandRequestProto request, List<DatanodeDetails> excludeDns)
+      throws IOException {
+    try (Scope scope = GlobalTracer.get()
+        .buildSpan("XceiverClientGrpc." + request.getCmdType().name())
+        .startActive(true)) {
+      ContainerCommandRequestProto finalPayload =
+          ContainerCommandRequestProto.newBuilder(request)
+              .setTraceID(TracingUtil.exportCurrentSpan())
+              .build();
+      return sendCommandWithRetry(finalPayload, excludeDns);
+    }
   }
 
   private XceiverClientReply sendCommandWithRetry(
