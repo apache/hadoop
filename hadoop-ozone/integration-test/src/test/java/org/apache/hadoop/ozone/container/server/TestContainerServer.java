@@ -188,7 +188,6 @@ public class TestContainerServer {
       Assert.assertNotNull(request.getTraceID());
 
       ContainerCommandResponseProto response = client.sendCommand(request);
-      Assert.assertEquals(request.getTraceID(), response.getTraceID());
     } finally {
       if (client != null) {
         client.close();
@@ -245,7 +244,6 @@ public class TestContainerServer {
           ContainerTestHelper.getCreateContainerRequest(
               ContainerTestHelper.getTestContainerID(), pipeline);
       ContainerCommandResponseProto response = client.sendCommand(request);
-      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
       Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
     } finally {
       if (client != null) {

@@ -545,7 +545,6 @@ public final class ContainerTestHelper {
    */
   public static void verifyGetBlock(ContainerCommandRequestProto request,
       ContainerCommandResponseProto response, int expectedChunksCount) {
-    Assert.assertEquals(request.getTraceID(), response.getTraceID());
     Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
     Assert.assertEquals(expectedChunksCount,
         response.getGetBlock().getBlockData().getChunksCount());
