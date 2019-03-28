@@ -58,6 +58,26 @@ public abstract class MappableBlockLoader {
       throws IOException;
 
   /**
+   * Try to reserve some given bytes.
+   *
+   * @param bytesCount
+   *          The number of bytes to add.
+   *
+   * @return The new number of usedBytes if we succeeded; -1 if we failed.
+   */
+  abstract long reserve(long bytesCount);
+
+  /**
+   * Release some bytes that we're using.
+   *
+   * @param bytesCount
+   *          The number of bytes to release.
+   *
+   * @return The new number of usedBytes.
+   */
+  abstract long release(long bytesCount);
+
+  /**
    * Reads bytes into a buffer until EOF or the buffer's limit is reached.
    */
   protected int fillBuffer(FileChannel channel, ByteBuffer buf)
