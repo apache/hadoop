@@ -54,7 +54,7 @@ public class ChangeTracker {
   private static final Logger LOG =
       LoggerFactory.getLogger(ChangeTracker.class);
 
-  public static final String CHANGE_REPORTED_BY_S3 = "reported by S3";
+  public static final String CHANGE_REPORTED_BY_S3 = "Change reported by S3";
 
   /** Policy to use. */
   private final ChangeDetectionPolicy policy;
@@ -164,13 +164,12 @@ public class ChangeTracker {
         // object was not returned.
         versionMismatches.incrementAndGet();
         throw new RemoteFileChangedException(uri, operation,
-            String.format("%s change "
-                    + CHANGE_REPORTED_BY_S3
+            String.format(CHANGE_REPORTED_BY_S3
                     + " while reading"
                     + " at position %s."
-                    + " Version %s was unavailable",
-                getSource(),
+                    + " %s %s was unavailable",
                 pos,
+                getSource(),
                 getRevisionId()));
       } else {
         throw new PathIOException(uri, "No data returned from GET request");

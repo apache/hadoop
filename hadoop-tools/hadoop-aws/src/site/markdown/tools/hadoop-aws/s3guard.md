@@ -1136,8 +1136,8 @@ the file.
 
 ```
 org.apache.hadoop.fs.s3a.RemoteFileChangedException: open 's3a://my-bucket/test/file.txt':
-  ETag change reported by S3 while reading at position 0.
-  Version 4e886e26c072fef250cfaf8037675405 was unavailable
+  Change reported by S3 while reading at position 0.
+  ETag 4e886e26c072fef250cfaf8037675405 was unavailable
   at org.apache.hadoop.fs.s3a.impl.ChangeTracker.processResponse(ChangeTracker.java:167)
   at org.apache.hadoop.fs.s3a.S3AInputStream.reopen(S3AInputStream.java:207)
   at org.apache.hadoop.fs.s3a.S3AInputStream.lambda$lazySeek$1(S3AInputStream.java:355)
