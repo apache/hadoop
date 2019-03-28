@@ -926,10 +926,11 @@ some throttling, but not to time out other applications.
 ## Read-After-Overwrite Consistency
 
 S3Guard provides read-after-overwrite consistency through ETags (default) or
-object versioning. This works such that a reader reading a file after an
-overwrite either sees the new version of the file or an error. Without S3Guard,
-new readers may see the original version. Once S3 reaches eventual consistency,
-new readers will see the new version.
+object versioning checked either on the server (default) or client. This works
+such that a reader reading a file after an overwrite either sees the new version
+of the file or an error. Without S3Guard, new readers may see the original
+version. Once S3 reaches eventual consistency, new readers will see the new
+version.
 
 Readers using S3Guard will usually see the new file version, but may
 in rare cases see `RemoteFileChangedException` instead. This would occur if
@@ -939,8 +940,8 @@ S3Guard achieves this behavior by storing ETags and object version IDs in the
 S3Guard metadata store (e.g. DynamoDB). On opening a file, S3AFileSystem
 will look in S3 for the version of the file indicated by the ETag or object
 version ID stored in the metadata store. If that version is unavailable,
-`RemoteFileChangedException` is thrown. Whether ETag or version ID is used is
-determed by the
+`RemoteFileChangedException` is thrown. Whether ETag or version ID and 
+server or client mode is used is determed by the
 [fs.s3a.change.detection configuration options](./index.html#Handling_Read-During-Overwrite).
 
 ### No Versioning Metadata Available
@@ -955,9 +956,9 @@ will S3Guard start tracking ETag and object version ID and as such generating
 
 Similarly, when S3Guard metadata is pruned, S3Guard will no longer be able to
 detect an inconsistent read.  S3Guard metadata should be retained for at least
-as long as the perceived read-after-overwrite eventual consistency window.
-That window is expected to be short, but there are no guarantees so it is at the
-administrator's discretion to weigh the risk.
+as long as the perceived possible read-after-overwrite temporary inconsistency
+window. That window is expected to be short, but there are no guarantees so it
+is at the administrator's discretion to weigh the risk.
 
 ### Known Limitations
 
@@ -999,7 +1000,7 @@ copied object will be correct.
 All this said, with the defaults of fs.s3.change.detection.mode=server and
 fs.s3.change.detection.source=etag against Amazon's S3, copy should in fact
 either copy the expected file version or, in the case of an eventual consistency
-anamoly, generate `RemoteFileChangedException`.  The same should be true with
+anomaly, generate `RemoteFileChangedException`.  The same should be true with
 fs.s3.change.detection.source=versionid.
 
 #### Out of Sync Metadata
@@ -1016,7 +1017,7 @@ If this happens, reads of the affected file(s) will result in
 `RemoteFileChangedException` until one of:
 
 * the S3Guard metadata is corrected out-of-band
-* the file is overwritten (causing an S3Guard update)
+* the file is overwritten (causing an S3Guard metadata update)
 * the S3Guard metadata is pruned
 
 ## Troubleshooting
@@ -1125,9 +1126,9 @@ An exception like the following could occur for a couple of reasons:
 example, the S3Guard DynamoDB table is tracking a different ETag than the ETag
 shown in the exception.  This may suggest the object was updated in S3 without
 involvement from S3Guard or there was a transient failure when S3Guard tried to
-write to S3.
+write to DynamoDB.
 
-* S3 is exhibiting read-after-overwrite eventual consistency.  The S3Guard
+* S3 is exhibiting read-after-overwrite temporary inconsistency.  The S3Guard
 metadata was updated with a new ETag during a recent write, but the current read
 is not seeing that ETag due to S3 eventual consistency.  This exception prevents
 the reader from an inconsistent read where the reader sees an older version of
