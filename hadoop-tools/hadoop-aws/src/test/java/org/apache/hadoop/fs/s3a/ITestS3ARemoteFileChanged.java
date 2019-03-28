@@ -380,9 +380,14 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     writeDataset(fs, testpath, dataset, dataset.length / 2,
         1024, true);
 
-    // put back the original metadata (etag, versionId)
+    S3AFileStatus newStatus = (S3AFileStatus) fs.getFileStatus(testpath);
+
+    // put back the original etag, versionId
+    S3AFileStatus forgedStatus =
+        S3AFileStatus.fromFileStatus(newStatus, Tristate.FALSE,
+            originalStatus.getETag(), originalStatus.getVersionId());
     fs.getMetadataStore().put(
-        new PathMetadata(originalStatus, Tristate.FALSE, false));
+        new PathMetadata(forgedStatus, Tristate.FALSE, false));
 
     return testpath;
   }
