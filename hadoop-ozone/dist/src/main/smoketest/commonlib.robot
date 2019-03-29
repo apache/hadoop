@@ -13,9 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+*** Settings ***
+Library             OperatingSystem
+Library             String
+Library             BuiltIn
+
+*** Variables ***
+${SECURITY_ENABLED}                 %{SECURITY_ENABLED}
+
 *** Keywords ***
-
-
 Execute
     [arguments]                     ${command}
     ${rc}                           ${output} =                 Run And Return Rc And Output           ${command}
@@ -35,3 +41,14 @@ Compare files
     ${checksumbefore} =         Execute                    md5sum ${file1} | awk '{print $1}'
     ${checksumafter} =          Execute                    md5sum ${file2} | awk '{print $1}'
                                 Should Be Equal            ${checksumbefore}            ${checksumafter}
+
+Install aws cli
+    ${rc}              ${output} =                 Run And Return Rc And Output           which apt-get
+    Run Keyword if     '${rc}' == '0'              Install aws cli s3 debian
+    ${rc}              ${output} =                 Run And Return Rc And Output           yum --help
+    Run Keyword if     '${rc}' == '0'              Install aws cli s3 centos
+
+Kinit test user
+    ${hostname} =       Execute                    hostname
+    Set Suite Variable  ${TEST_USER}               testuser/${hostname}@EXAMPLE.COM
+    Execute             kinit -k ${TEST_USER} -t /etc/security/keytabs/testuser.keytab
