@@ -16,124 +16,146 @@
  */
 package org.apache.hadoop.hdds.scm.container;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
-import org.apache.hadoop.hdds.scm.container.replication
-    .ReplicationActivityStatus;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.server
     .SCMDatanodeHeartbeatDispatcher.ContainerReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
-import org.apache.hadoop.utils.Scheduler;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.mockito.stubbing.Answer;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.apache.hadoop.hdds.scm.TestUtils
-    .getReplicas;
-import static org.apache.hadoop.hdds.scm.TestUtils
-    .getContainer;
-import static org.apache.hadoop.hdds.scm.container
-    .TestContainerReportHelper.addContainerToContainerManager;
-import static org.apache.hadoop.hdds.scm.container
-    .TestContainerReportHelper.mockUpdateContainerReplica;
-import static org.apache.hadoop.hdds.scm.container
-    .TestContainerReportHelper.mockUpdateContainerState;
+import static org.apache.hadoop.hdds.scm.TestUtils.getReplicas;
+import static org.apache.hadoop.hdds.scm.TestUtils.getContainer;
 
 /**
  * Test the behaviour of the ContainerReportHandler.
  */
 public class TestContainerReportHandler {
 
-  private static Scheduler scheduler;
+  private NodeManager nodeManager;
+  private ContainerManager containerManager;
+  private ContainerStateManager containerStateManager;
+  private EventPublisher publisher;
 
-  @BeforeClass
-  public static void setup() {
-    scheduler = new Scheduler("SCMCommonScheduler", false, 1);
+  @Before
+  public void setup() throws IOException {
+    final Configuration conf = new OzoneConfiguration();
+    this.nodeManager = new MockNodeManager(true, 10);
+    this.containerManager = Mockito.mock(ContainerManager.class);
+    this.containerStateManager = new ContainerStateManager(conf);
+    this.publisher = Mockito.mock(EventPublisher.class);
+
+
+    Mockito.when(containerManager.getContainer(Mockito.any(ContainerID.class)))
+        .thenAnswer(invocation -> containerStateManager
+            .getContainer((ContainerID)invocation.getArguments()[0]));
+
+    Mockito.when(containerManager.getContainerReplicas(
+        Mockito.any(ContainerID.class)))
+        .thenAnswer(invocation -> containerStateManager
+            .getContainerReplicas((ContainerID)invocation.getArguments()[0]));
+
+    Mockito.doAnswer(invocation -> {
+      containerStateManager
+          .updateContainerState((ContainerID)invocation.getArguments()[0],
+              (HddsProtos.LifeCycleEvent)invocation.getArguments()[1]);
+      return null;
+    }).when(containerManager).updateContainerState(
+        Mockito.any(ContainerID.class),
+        Mockito.any(HddsProtos.LifeCycleEvent.class));
+
+    Mockito.doAnswer(invocation -> {
+      containerStateManager.updateContainerReplica(
+          (ContainerID) invocation.getArguments()[0],
+          (ContainerReplica) invocation.getArguments()[1]);
+      return null;
+    }).when(containerManager).updateContainerReplica(
+        Mockito.any(ContainerID.class), Mockito.any(ContainerReplica.class));
+
+    Mockito.doAnswer(invocation -> {
+      containerStateManager.removeContainerReplica(
+          (ContainerID) invocation.getArguments()[0],
+          (ContainerReplica) invocation.getArguments()[1]);
+      return null;
+    }).when(containerManager).removeContainerReplica(
+        Mockito.any(ContainerID.class), Mockito.any(ContainerReplica.class));
+
   }
 
-  @AfterClass
-  public static void tearDown() {
-    scheduler.close();
+  @After
+  public void tearDown() throws IOException {
+    containerStateManager.close();
   }
 
   @Test
   public void testUnderReplicatedContainer()
-      throws NodeNotFoundException, ContainerNotFoundException,
-      ContainerReplicaNotFoundException {
+      throws NodeNotFoundException, ContainerNotFoundException, SCMException {
 
-    final NodeManager nodeManager = new MockNodeManager(true, 10);
-    final ContainerManager containerManager = Mockito.mock(
-        ContainerManager.class);
-    final ReplicationActivityStatus replicationActivityStatus =
-        new ReplicationActivityStatus(scheduler);
-    replicationActivityStatus.enableReplication();
-
-    final PipelineManager pipelineManager = Mockito.mock(PipelineManager.class);
     final ContainerReportHandler reportHandler = new ContainerReportHandler(
-        nodeManager, pipelineManager, containerManager,
-        replicationActivityStatus);
+        nodeManager, containerManager);
     final Iterator<DatanodeDetails> nodeIterator = nodeManager.getNodes(
         NodeState.HEALTHY).iterator();
     final DatanodeDetails datanodeOne = nodeIterator.next();
     final DatanodeDetails datanodeTwo = nodeIterator.next();
     final DatanodeDetails datanodeThree = nodeIterator.next();
+
     final ContainerInfo containerOne = getContainer(LifeCycleState.CLOSED);
     final ContainerInfo containerTwo = getContainer(LifeCycleState.CLOSED);
     final Set<ContainerID> containerIDSet = Stream.of(
         containerOne.containerID(), containerTwo.containerID())
         .collect(Collectors.toSet());
-    final Set<ContainerReplica> containerOneReplicas = getReplicas(
-        containerOne.containerID(), ContainerReplicaProto.State.CLOSED,
-        datanodeOne, datanodeTwo, datanodeThree);
-    final Set<ContainerReplica> containerTwoReplicas = getReplicas(
-        containerTwo.containerID(), ContainerReplicaProto.State.CLOSED,
-        datanodeOne, datanodeTwo, datanodeThree);
 
     nodeManager.setContainers(datanodeOne, containerIDSet);
     nodeManager.setContainers(datanodeTwo, containerIDSet);
     nodeManager.setContainers(datanodeThree, containerIDSet);
 
-    addContainerToContainerManager(
-        containerManager, containerOne, containerOneReplicas);
-    addContainerToContainerManager(
-        containerManager, containerTwo, containerTwoReplicas);
+    containerStateManager.loadContainer(containerOne);
+    containerStateManager.loadContainer(containerTwo);
 
-    Mockito.doAnswer((Answer<Void>) invocation -> {
-      Object[] args = invocation.getArguments();
-      if (args[0].equals(containerOne.containerID())) {
-        ContainerReplica replica = (ContainerReplica) args[1];
-        containerOneReplicas.remove(replica);
-      }
-      return null;
-    }).when(containerManager).removeContainerReplica(
-        Mockito.any(ContainerID.class), Mockito.any(ContainerReplica.class));
+    getReplicas(containerOne.containerID(),
+        ContainerReplicaProto.State.CLOSED,
+        datanodeOne, datanodeTwo, datanodeThree)
+        .forEach(r -> {
+          try {
+            containerStateManager.updateContainerReplica(
+                containerOne.containerID(), r);
+          } catch (ContainerNotFoundException ignored) {
 
+          }
+        });
 
-    Mockito.when(
-        containerManager.getContainerReplicas(containerOne.containerID()))
-        .thenReturn(containerOneReplicas);
-    Mockito.when(
-        containerManager.getContainerReplicas(containerTwo.containerID()))
-        .thenReturn(containerTwoReplicas);
+    getReplicas(containerTwo.containerID(),
+        ContainerReplicaProto.State.CLOSED,
+        datanodeOne, datanodeTwo, datanodeThree)
+        .forEach(r -> {
+          try {
+            containerStateManager.updateContainerReplica(
+                containerTwo.containerID(), r);
+          } catch (ContainerNotFoundException ignored) {
+
+          }
+        });
+
 
     // SCM expects both containerOne and containerTwo to be in all the three
     // datanodes datanodeOne, datanodeTwo and datanodeThree
@@ -145,70 +167,65 @@ public class TestContainerReportHandler {
     final ContainerReportsProto containerReport = getContainerReportsProto(
         containerTwo.containerID(), ContainerReplicaProto.State.CLOSED,
         datanodeOne.getUuidString());
-    final EventPublisher publisher = Mockito.mock(EventPublisher.class);
     final ContainerReportFromDatanode containerReportFromDatanode =
         new ContainerReportFromDatanode(datanodeOne, containerReport);
     reportHandler.onMessage(containerReportFromDatanode, publisher);
+    Assert.assertEquals(2, containerManager.getContainerReplicas(
+        containerOne.containerID()).size());
 
-    // Now we should get a replication request for containerOne
-    Mockito.verify(publisher, Mockito.times(1))
-        .fireEvent(Mockito.any(), Mockito.any());
-
-    // TODO: verify whether are actually getting a replication request event
-    // for containerOne
   }
 
   @Test
   public void testOverReplicatedContainer() throws NodeNotFoundException,
-      ContainerNotFoundException {
+      SCMException, ContainerNotFoundException {
 
-    final NodeManager nodeManager = new MockNodeManager(true, 10);
-    final ContainerManager containerManager = Mockito.mock(
-        ContainerManager.class);
-    final ReplicationActivityStatus replicationActivityStatus =
-        new ReplicationActivityStatus(scheduler);
-    replicationActivityStatus.enableReplication();
-
-    final PipelineManager pipelineManager = Mockito.mock(PipelineManager.class);
     final ContainerReportHandler reportHandler = new ContainerReportHandler(
-        nodeManager, pipelineManager, containerManager,
-        replicationActivityStatus);
+        nodeManager, containerManager);
+
     final Iterator<DatanodeDetails> nodeIterator = nodeManager.getNodes(
         NodeState.HEALTHY).iterator();
     final DatanodeDetails datanodeOne = nodeIterator.next();
     final DatanodeDetails datanodeTwo = nodeIterator.next();
     final DatanodeDetails datanodeThree = nodeIterator.next();
     final DatanodeDetails datanodeFour = nodeIterator.next();
+
     final ContainerInfo containerOne = getContainer(LifeCycleState.CLOSED);
     final ContainerInfo containerTwo = getContainer(LifeCycleState.CLOSED);
+
     final Set<ContainerID> containerIDSet = Stream.of(
         containerOne.containerID(), containerTwo.containerID())
         .collect(Collectors.toSet());
-    final Set<ContainerReplica> containerOneReplicas = getReplicas(
-        containerOne.containerID(), ContainerReplicaProto.State.CLOSED,
-        datanodeOne, datanodeTwo, datanodeThree);
-    final Set<ContainerReplica> containerTwoReplicas = getReplicas(
-        containerTwo.containerID(), ContainerReplicaProto.State.CLOSED,
-        datanodeOne, datanodeTwo, datanodeThree);
 
     nodeManager.setContainers(datanodeOne, containerIDSet);
     nodeManager.setContainers(datanodeTwo, containerIDSet);
     nodeManager.setContainers(datanodeThree, containerIDSet);
 
-    addContainerToContainerManager(
-        containerManager, containerOne, containerOneReplicas);
-    addContainerToContainerManager(
-        containerManager, containerTwo, containerTwoReplicas);
+    containerStateManager.loadContainer(containerOne);
+    containerStateManager.loadContainer(containerTwo);
 
-    Mockito.doAnswer((Answer<Void>) invocation -> {
-      Object[] args = invocation.getArguments();
-      if (args[0].equals(containerOne.containerID())) {
-        containerOneReplicas.add((ContainerReplica) args[1]);
-      }
-      return null;
-    }).when(containerManager).updateContainerReplica(
-        Mockito.any(ContainerID.class), Mockito.any(ContainerReplica.class));
+    getReplicas(containerOne.containerID(),
+        ContainerReplicaProto.State.CLOSED,
+        datanodeOne, datanodeTwo, datanodeThree)
+        .forEach(r -> {
+          try {
+            containerStateManager.updateContainerReplica(
+                containerOne.containerID(), r);
+          } catch (ContainerNotFoundException ignored) {
 
+          }
+        });
+
+    getReplicas(containerTwo.containerID(),
+        ContainerReplicaProto.State.CLOSED,
+        datanodeOne, datanodeTwo, datanodeThree)
+        .forEach(r -> {
+          try {
+            containerStateManager.updateContainerReplica(
+                containerTwo.containerID(), r);
+          } catch (ContainerNotFoundException ignored) {
+
+          }
+        });
 
 
     // SCM expects both containerOne and containerTwo to be in all the three
@@ -220,114 +237,15 @@ public class TestContainerReportHandler {
 
     final ContainerReportsProto containerReport = getContainerReportsProto(
         containerOne.containerID(), ContainerReplicaProto.State.CLOSED,
-        datanodeOne.getUuidString());
-    final EventPublisher publisher = Mockito.mock(EventPublisher.class);
+        datanodeFour.getUuidString());
     final ContainerReportFromDatanode containerReportFromDatanode =
         new ContainerReportFromDatanode(datanodeFour, containerReport);
     reportHandler.onMessage(containerReportFromDatanode, publisher);
-    Mockito.verify(publisher, Mockito.times(1))
-        .fireEvent(Mockito.any(), Mockito.any());
 
-    // TODO: verify whether are actually getting a replication request event
-    // for containerOne
+    Assert.assertEquals(4, containerManager.getContainerReplicas(
+        containerOne.containerID()).size());
   }
 
-  @Test
-  public void testOpenToClosing()
-      throws NodeNotFoundException, ContainerNotFoundException {
-    /*
-     * The container is in CLOSING state and all the replicas are either in
-     * OPEN or CLOSING state.
-     *
-     * The datanode reports that the replica is still in OPEN state.
-     *
-     * In this case SCM should trigger close container event to the datanode.
-     */
-
-    final NodeManager nodeManager = new MockNodeManager(true, 10);
-    final ContainerManager containerManager = Mockito.mock(
-        ContainerManager.class);
-    final ReplicationActivityStatus replicationActivityStatus =
-        new ReplicationActivityStatus(scheduler);
-    replicationActivityStatus.enableReplication();
-
-    final PipelineManager pipelineManager = Mockito.mock(PipelineManager.class);
-    final ContainerReportHandler reportHandler = new ContainerReportHandler(
-        nodeManager, pipelineManager, containerManager,
-        replicationActivityStatus);
-    final Iterator<DatanodeDetails> nodeIterator = nodeManager.getNodes(
-        NodeState.HEALTHY).iterator();
-    final DatanodeDetails datanodeOne = nodeIterator.next();
-    final DatanodeDetails datanodeTwo = nodeIterator.next();
-    final DatanodeDetails datanodeThree = nodeIterator.next();
-    final ContainerInfo containerOne = getContainer(LifeCycleState.CLOSING);
-    final ContainerInfo containerTwo = getContainer(LifeCycleState.CLOSED);
-    final Set<ContainerID> containerIDSet = Stream.of(
-        containerOne.containerID(), containerTwo.containerID())
-        .collect(Collectors.toSet());
-    final Set<ContainerReplica> containerOneReplicas = getReplicas(
-        containerOne.containerID(), ContainerReplicaProto.State.OPEN,
-        datanodeOne);
-
-    containerOneReplicas.addAll(getReplicas(
-        containerOne.containerID(), ContainerReplicaProto.State.CLOSING,
-        datanodeTwo, datanodeThree));
-
-    final Set<ContainerReplica> containerTwoReplicas = getReplicas(
-        containerTwo.containerID(), ContainerReplicaProto.State.CLOSED,
-        datanodeOne, datanodeTwo, datanodeThree);
-
-    nodeManager.setContainers(datanodeOne, containerIDSet);
-    nodeManager.setContainers(datanodeTwo, containerIDSet);
-    nodeManager.setContainers(datanodeThree, containerIDSet);
-
-    addContainerToContainerManager(
-        containerManager, containerOne, containerOneReplicas);
-    addContainerToContainerManager(
-        containerManager, containerTwo, containerTwoReplicas);
-    mockUpdateContainerReplica(
-        containerManager, containerOne, containerOneReplicas);
-
-    // Replica in datanodeOne of containerOne is in OPEN state.
-    final ContainerReportsProto containerReport = getContainerReportsProto(
-        containerOne.containerID(), ContainerReplicaProto.State.OPEN,
-        datanodeOne.getUuidString());
-    final EventPublisher publisher = Mockito.mock(EventPublisher.class);
-    final ContainerReportFromDatanode containerReportFromDatanode =
-        new ContainerReportFromDatanode(datanodeOne, containerReport);
-    reportHandler.onMessage(containerReportFromDatanode, publisher);
-
-    // Now we should get close container event for containerOne on datanodeOne
-    Mockito.verify(publisher, Mockito.times(1))
-        .fireEvent(Mockito.any(), Mockito.any());
-
-    // TODO: verify whether are actually getting a close container
-    // datanode command for containerOne/datanodeOne
-
-    /*
-     * The container is in CLOSING state and all the replicas are either in
-     * OPEN or CLOSING state.
-     *
-     * The datanode reports that the replica is in CLOSING state.
-     *
-     * In this case SCM should trigger close container event to the datanode.
-     */
-
-    // Replica in datanodeOne of containerOne is in OPEN state.
-    final ContainerReportsProto containerReportTwo = getContainerReportsProto(
-        containerOne.containerID(), ContainerReplicaProto.State.OPEN,
-        datanodeOne.getUuidString());
-    final ContainerReportFromDatanode containerReportTwoFromDatanode =
-        new ContainerReportFromDatanode(datanodeOne, containerReportTwo);
-    reportHandler.onMessage(containerReportTwoFromDatanode, publisher);
-
-    // Now we should get close container event for containerOne on datanodeOne
-    Mockito.verify(publisher, Mockito.times(2))
-        .fireEvent(Mockito.any(), Mockito.any());
-
-    // TODO: verify whether are actually getting a close container
-    // datanode command for containerOne/datanodeOne
-  }
 
   @Test
   public void testClosingToClosed() throws NodeNotFoundException, IOException {
@@ -339,27 +257,23 @@ public class TestContainerReportHandler {
      *
      * In this case SCM should mark the container as CLOSED.
      */
-    final NodeManager nodeManager = new MockNodeManager(true, 10);
-    final ContainerManager containerManager = Mockito.mock(
-        ContainerManager.class);
-    final ReplicationActivityStatus replicationActivityStatus =
-        new ReplicationActivityStatus(scheduler);
-    replicationActivityStatus.enableReplication();
 
-    final PipelineManager pipelineManager = Mockito.mock(PipelineManager.class);
     final ContainerReportHandler reportHandler = new ContainerReportHandler(
-        nodeManager, pipelineManager, containerManager,
-        replicationActivityStatus);
+        nodeManager, containerManager);
+
     final Iterator<DatanodeDetails> nodeIterator = nodeManager.getNodes(
         NodeState.HEALTHY).iterator();
     final DatanodeDetails datanodeOne = nodeIterator.next();
     final DatanodeDetails datanodeTwo = nodeIterator.next();
     final DatanodeDetails datanodeThree = nodeIterator.next();
+
     final ContainerInfo containerOne = getContainer(LifeCycleState.CLOSING);
     final ContainerInfo containerTwo = getContainer(LifeCycleState.CLOSED);
+
     final Set<ContainerID> containerIDSet = Stream.of(
         containerOne.containerID(), containerTwo.containerID())
         .collect(Collectors.toSet());
+
     final Set<ContainerReplica> containerOneReplicas = getReplicas(
         containerOne.containerID(),
         ContainerReplicaProto.State.CLOSING,
@@ -379,25 +293,36 @@ public class TestContainerReportHandler {
     nodeManager.setContainers(datanodeTwo, containerIDSet);
     nodeManager.setContainers(datanodeThree, containerIDSet);
 
-    addContainerToContainerManager(
-        containerManager, containerOne, containerOneReplicas);
-    addContainerToContainerManager(
-        containerManager, containerTwo, containerTwoReplicas);
-    mockUpdateContainerReplica(
-        containerManager, containerOne, containerOneReplicas);
-    mockUpdateContainerState(containerManager, containerOne,
-        LifeCycleEvent.CLOSE, LifeCycleState.CLOSED);
+    containerStateManager.loadContainer(containerOne);
+    containerStateManager.loadContainer(containerTwo);
+
+    containerOneReplicas.forEach(r -> {
+      try {
+        containerStateManager.updateContainerReplica(
+            containerTwo.containerID(), r);
+      } catch (ContainerNotFoundException ignored) {
+
+      }
+    });
+
+    containerTwoReplicas.forEach(r -> {
+      try {
+        containerStateManager.updateContainerReplica(
+            containerTwo.containerID(), r);
+      } catch (ContainerNotFoundException ignored) {
+
+      }
+    });
+
 
     final ContainerReportsProto containerReport = getContainerReportsProto(
         containerOne.containerID(), ContainerReplicaProto.State.CLOSED,
         datanodeOne.getUuidString());
-    final EventPublisher publisher = Mockito.mock(EventPublisher.class);
     final ContainerReportFromDatanode containerReportFromDatanode =
         new ContainerReportFromDatanode(datanodeOne, containerReport);
     reportHandler.onMessage(containerReportFromDatanode, publisher);
 
-    Assert.assertEquals(
-        LifeCycleState.CLOSED, containerOne.getState());
+    Assert.assertEquals(LifeCycleState.CLOSED, containerOne.getState());
   }
 
   @Test
@@ -411,29 +336,23 @@ public class TestContainerReportHandler {
      *
      * In this case SCM should move the container to QUASI_CLOSED.
      */
-    final NodeManager nodeManager = new MockNodeManager(true, 10);
-    final ContainerManager containerManager = Mockito.mock(
-        ContainerManager.class);
-    final ReplicationActivityStatus replicationActivityStatus =
-        new ReplicationActivityStatus(scheduler);
-    replicationActivityStatus.enableReplication();
 
-    final PipelineManager pipelineManager = Mockito.mock(PipelineManager.class);
     final ContainerReportHandler reportHandler = new ContainerReportHandler(
-        nodeManager, pipelineManager, containerManager,
-        replicationActivityStatus);
+        nodeManager, containerManager);
+
     final Iterator<DatanodeDetails> nodeIterator = nodeManager.getNodes(
         NodeState.HEALTHY).iterator();
     final DatanodeDetails datanodeOne = nodeIterator.next();
     final DatanodeDetails datanodeTwo = nodeIterator.next();
     final DatanodeDetails datanodeThree = nodeIterator.next();
-    final ContainerInfo containerOne =
-        getContainer(LifeCycleState.CLOSING);
-    final ContainerInfo containerTwo =
-        getContainer(LifeCycleState.CLOSED);
+
+    final ContainerInfo containerOne = getContainer(LifeCycleState.CLOSING);
+    final ContainerInfo containerTwo = getContainer(LifeCycleState.CLOSED);
+
     final Set<ContainerID> containerIDSet = Stream.of(
         containerOne.containerID(), containerTwo.containerID())
         .collect(Collectors.toSet());
+
     final Set<ContainerReplica> containerOneReplicas = getReplicas(
         containerOne.containerID(),
         ContainerReplicaProto.State.CLOSING,
@@ -451,60 +370,65 @@ public class TestContainerReportHandler {
     nodeManager.setContainers(datanodeTwo, containerIDSet);
     nodeManager.setContainers(datanodeThree, containerIDSet);
 
-    addContainerToContainerManager(
-        containerManager, containerOne, containerOneReplicas);
-    addContainerToContainerManager(
-        containerManager, containerTwo, containerTwoReplicas);
-    mockUpdateContainerReplica(
-        containerManager, containerOne, containerOneReplicas);
-    mockUpdateContainerState(containerManager, containerOne,
-        LifeCycleEvent.QUASI_CLOSE, LifeCycleState.QUASI_CLOSED);
+    containerStateManager.loadContainer(containerOne);
+    containerStateManager.loadContainer(containerTwo);
+
+    containerOneReplicas.forEach(r -> {
+      try {
+        containerStateManager.updateContainerReplica(
+            containerTwo.containerID(), r);
+      } catch (ContainerNotFoundException ignored) {
+
+      }
+    });
+
+    containerTwoReplicas.forEach(r -> {
+      try {
+        containerStateManager.updateContainerReplica(
+            containerTwo.containerID(), r);
+      } catch (ContainerNotFoundException ignored) {
+
+      }
+    });
+
 
     final ContainerReportsProto containerReport = getContainerReportsProto(
         containerOne.containerID(), ContainerReplicaProto.State.QUASI_CLOSED,
         datanodeOne.getUuidString());
-    final EventPublisher publisher = Mockito.mock(EventPublisher.class);
     final ContainerReportFromDatanode containerReportFromDatanode =
         new ContainerReportFromDatanode(datanodeOne, containerReport);
     reportHandler.onMessage(containerReportFromDatanode, publisher);
 
-    Assert.assertEquals(
-        LifeCycleState.QUASI_CLOSED, containerOne.getState());
+    Assert.assertEquals(LifeCycleState.QUASI_CLOSED, containerOne.getState());
   }
 
   @Test
-  public void testQuasiClosedWithDifferentOriginNodeReplica()
+  public void testQuasiClosedToClosed()
       throws NodeNotFoundException, IOException {
     /*
      * The container is in QUASI_CLOSED state.
      *  - One of the replica is in QUASI_CLOSED state
      *  - The other two replica are in OPEN/CLOSING state
      *
-     * The datanode reports the second replica is now QUASI_CLOSED.
+     * The datanode reports the second replica is now CLOSED.
      *
-     * In this case SCM should CLOSE the container with highest BCSID and
-     * send force close command to the datanode.
+     * In this case SCM should CLOSE the container.
      */
-    final NodeManager nodeManager = new MockNodeManager(true, 10);
-    final ContainerManager containerManager = Mockito.mock(
-        ContainerManager.class);
-    final ReplicationActivityStatus replicationActivityStatus =
-        new ReplicationActivityStatus(scheduler);
-    replicationActivityStatus.enableReplication();
 
-    final PipelineManager pipelineManager = Mockito.mock(PipelineManager.class);
     final ContainerReportHandler reportHandler = new ContainerReportHandler(
-        nodeManager, pipelineManager, containerManager,
-        replicationActivityStatus);
+        nodeManager, containerManager);
     final Iterator<DatanodeDetails> nodeIterator = nodeManager.getNodes(
         NodeState.HEALTHY).iterator();
+
     final DatanodeDetails datanodeOne = nodeIterator.next();
     final DatanodeDetails datanodeTwo = nodeIterator.next();
     final DatanodeDetails datanodeThree = nodeIterator.next();
+
     final ContainerInfo containerOne =
         getContainer(LifeCycleState.QUASI_CLOSED);
     final ContainerInfo containerTwo =
         getContainer(LifeCycleState.CLOSED);
+
     final Set<ContainerID> containerIDSet = Stream.of(
         containerOne.containerID(), containerTwo.containerID())
         .collect(Collectors.toSet());
@@ -526,139 +450,42 @@ public class TestContainerReportHandler {
     nodeManager.setContainers(datanodeTwo, containerIDSet);
     nodeManager.setContainers(datanodeThree, containerIDSet);
 
-    addContainerToContainerManager(
-        containerManager, containerOne, containerOneReplicas);
-    addContainerToContainerManager(
-        containerManager, containerTwo, containerTwoReplicas);
-    mockUpdateContainerReplica(
-        containerManager, containerOne, containerOneReplicas);
-    mockUpdateContainerState(containerManager, containerOne,
-        LifeCycleEvent.FORCE_CLOSE, LifeCycleState.CLOSED);
+    containerStateManager.loadContainer(containerOne);
+    containerStateManager.loadContainer(containerTwo);
 
-    // Container replica with datanodeOne as originNodeId is already
-    // QUASI_CLOSED. Now we will tell SCM that container replica from
-    // datanodeTwo is also QUASI_CLOSED, but has higher sequenceId.
+    containerOneReplicas.forEach(r -> {
+      try {
+        containerStateManager.updateContainerReplica(
+            containerTwo.containerID(), r);
+      } catch (ContainerNotFoundException ignored) {
+
+      }
+    });
+
+    containerTwoReplicas.forEach(r -> {
+      try {
+        containerStateManager.updateContainerReplica(
+            containerTwo.containerID(), r);
+      } catch (ContainerNotFoundException ignored) {
+
+      }
+    });
+
+
     final ContainerReportsProto containerReport = getContainerReportsProto(
-        containerOne.containerID(), ContainerReplicaProto.State.QUASI_CLOSED,
-        datanodeTwo.getUuidString(), 999999L);
-
-    final EventPublisher publisher = Mockito.mock(EventPublisher.class);
-    final ContainerReportFromDatanode containerReportFromDatanode =
-        new ContainerReportFromDatanode(datanodeTwo, containerReport);
-    reportHandler.onMessage(containerReportFromDatanode, publisher);
-
-    // Now we should get force close container event for containerOne on
-    // datanodeTwo
-    Mockito.verify(publisher, Mockito.times(1))
-        .fireEvent(Mockito.any(), Mockito.any());
-    // TODO: verify whether are actually getting a force close container
-    // datanode command for containerOne/datanodeTwo
-
-    // The sequence id of the container should have been updated.
-    Assert.assertEquals(999999L, containerOne.getSequenceId());
-
-    // Now datanodeTwo should close containerOne.
-    final ContainerReportsProto containerReportTwo = getContainerReportsProto(
         containerOne.containerID(), ContainerReplicaProto.State.CLOSED,
-        datanodeTwo.getUuidString(), 999999L);
-    final ContainerReportFromDatanode containerReportFromDatanodeTwo =
-        new ContainerReportFromDatanode(datanodeTwo, containerReportTwo);
-    reportHandler.onMessage(containerReportFromDatanodeTwo, publisher);
-
-    // The container should be closed in SCM now.
-    Assert.assertEquals(LifeCycleState.CLOSED, containerOne.getState());
-  }
-
-  @Test
-  public void testQuasiClosedWithSameOriginNodeReplica()
-      throws NodeNotFoundException, IOException {
-    /*
-     * The container is in QUASI_CLOSED state.
-     *  - One of the replica is in QUASI_CLOSED state
-     *  - The other two replica are in OPEN/CLOSING state
-     *
-     * The datanode reports a QUASI_CLOSED replica which has the same
-     * origin node id as the existing QUASI_CLOSED replica.
-     *
-     * In this case SCM should not CLOSE the container.
-     */
-    final NodeManager nodeManager = new MockNodeManager(true, 10);
-    final ContainerManager containerManager = Mockito.mock(
-        ContainerManager.class);
-    final ReplicationActivityStatus replicationActivityStatus =
-        new ReplicationActivityStatus(scheduler);
-    replicationActivityStatus.enableReplication();
-
-    final PipelineManager pipelineManager = Mockito.mock(PipelineManager.class);
-    final ContainerReportHandler reportHandler = new ContainerReportHandler(
-        nodeManager, pipelineManager, containerManager,
-        replicationActivityStatus);
-    final Iterator<DatanodeDetails> nodeIterator = nodeManager.getNodes(
-        NodeState.HEALTHY).iterator();
-    final DatanodeDetails datanodeOne = nodeIterator.next();
-    final DatanodeDetails datanodeTwo = nodeIterator.next();
-    final DatanodeDetails datanodeThree = nodeIterator.next();
-    final ContainerInfo containerOne =
-        getContainer(LifeCycleState.QUASI_CLOSED);
-    final ContainerInfo containerTwo =
-        getContainer(LifeCycleState.CLOSED);
-    final Set<ContainerID> containerIDSet = Stream.of(
-        containerOne.containerID(), containerTwo.containerID())
-        .collect(Collectors.toSet());
-    final Set<ContainerReplica> containerOneReplicas = getReplicas(
-        containerOne.containerID(),
-        ContainerReplicaProto.State.QUASI_CLOSED,
-        datanodeOne);
-    containerOneReplicas.addAll(getReplicas(
-        containerOne.containerID(),
-        ContainerReplicaProto.State.CLOSING,
-        datanodeTwo));
-    final Set<ContainerReplica> containerTwoReplicas = getReplicas(
-        containerTwo.containerID(),
-        ContainerReplicaProto.State.CLOSED,
-        datanodeOne, datanodeTwo, datanodeThree);
-
-    nodeManager.setContainers(datanodeOne, containerIDSet);
-    nodeManager.setContainers(datanodeTwo, containerIDSet);
-    nodeManager.setContainers(datanodeThree,
-        Collections.singleton(containerTwo.containerID()));
-
-    addContainerToContainerManager(
-        containerManager, containerOne, containerOneReplicas);
-    addContainerToContainerManager(
-        containerManager, containerTwo, containerTwoReplicas);
-
-    mockUpdateContainerReplica(
-        containerManager, containerOne, containerOneReplicas);
-    mockUpdateContainerState(containerManager, containerOne,
-        LifeCycleEvent.FORCE_CLOSE, LifeCycleState.CLOSED);
-
-    // containerOne is QUASI_CLOSED in datanodeOne and CLOSING in datanodeTwo.
-    // Now datanodeThree is sending container report which says that it has
-    // containerOne replica, but the originNodeId of this replica is
-    // datanodeOne. In this case we should not force close the container even
-    // though we got two QUASI_CLOSED replicas.
-    final ContainerReportsProto containerReport = getContainerReportsProto(
-        containerOne.containerID(), ContainerReplicaProto.State.QUASI_CLOSED,
         datanodeOne.getUuidString());
-    final EventPublisher publisher = Mockito.mock(EventPublisher.class);
+
     final ContainerReportFromDatanode containerReportFromDatanode =
-        new ContainerReportFromDatanode(datanodeThree, containerReport);
+        new ContainerReportFromDatanode(datanodeOne, containerReport);
     reportHandler.onMessage(containerReportFromDatanode, publisher);
 
-    Mockito.verify(publisher, Mockito.times(0))
-        .fireEvent(Mockito.any(), Mockito.any());
+    Assert.assertEquals(LifeCycleState.CLOSED, containerOne.getState());
   }
 
   private static ContainerReportsProto getContainerReportsProto(
       final ContainerID containerId, final ContainerReplicaProto.State state,
       final String originNodeId) {
-    return getContainerReportsProto(containerId, state, originNodeId, 100L);
-  }
-
-  private static ContainerReportsProto getContainerReportsProto(
-      final ContainerID containerId, final ContainerReplicaProto.State state,
-      final String originNodeId, final long bcsid) {
     final ContainerReportsProto.Builder crBuilder =
         ContainerReportsProto.newBuilder();
     final ContainerReplicaProto replicaProto =
@@ -674,7 +501,7 @@ public class TestContainerReportHandler {
             .setWriteCount(100000000L)
             .setReadBytes(2000000000L)
             .setWriteBytes(2000000000L)
-            .setBlockCommitSequenceId(bcsid)
+            .setBlockCommitSequenceId(10000L)
             .setDeleteTransactionId(0)
             .build();
     return crBuilder.addReports(replicaProto).build();

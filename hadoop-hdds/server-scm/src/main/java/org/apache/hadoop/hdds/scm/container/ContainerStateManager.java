@@ -310,20 +310,19 @@ public class ContainerStateManager {
    *
    * @param containerID - ContainerID
    * @param event - LifeCycle Event
-   * @return Updated ContainerInfo.
    * @throws SCMException  on Failure.
    */
-  ContainerInfo updateContainerState(final ContainerID containerID,
+  void updateContainerState(final ContainerID containerID,
       final HddsProtos.LifeCycleEvent event)
       throws SCMException, ContainerNotFoundException {
     final ContainerInfo info = containers.getContainerInfo(containerID);
     try {
+      final LifeCycleState oldState = info.getState();
       final LifeCycleState newState = stateMachine.getNextState(
           info.getState(), event);
       containers.updateState(containerID, info.getState(), newState);
       containerStateCount.incrementAndGet(newState);
-      containerStateCount.decrementAndGet(info.getState());
-      return containers.getContainerInfo(containerID);
+      containerStateCount.decrementAndGet(oldState);
     } catch (InvalidStateTransitionException ex) {
       String error = String.format("Failed to update container state %s, " +
               "reason: invalid state transition from state: %s upon " +
@@ -332,18 +331,6 @@ public class ContainerStateManager {
       LOG.error(error);
       throw new SCMException(error, FAILED_TO_CHANGE_CONTAINER_STATE);
     }
-  }
-
-  /**
-   * Update the container State.
-   * @param info - Container Info
-   * @return  ContainerInfo
-   * @throws SCMException - on Error.
-   */
-  ContainerInfo updateContainerInfo(final ContainerInfo info)
-      throws ContainerNotFoundException {
-    containers.updateContainerInfo(info);
-    return containers.getContainerInfo(info.containerID());
   }
 
   /**
