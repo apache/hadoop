@@ -19,15 +19,18 @@ package org.apache.hadoop.ozone.recon.api.types;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 /**
  * Metadata object represents one key in the object store.
  */
+@XmlRootElement (name = "KeyMetadata")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class KeyMetadata {
 
@@ -45,6 +48,9 @@ public class KeyMetadata {
 
   @XmlElement(name = "Versions")
   private List<Long> versions;
+
+  @XmlElement(name = "Blocks")
+  private Map<Long, List<ContainerBlockMetadata>> blockIds;
 
   @XmlJavaTypeAdapter(IsoDateAdapter.class)
   @XmlElement(name = "CreationTime")
@@ -108,5 +114,34 @@ public class KeyMetadata {
 
   public void setVersions(List<Long> versions) {
     this.versions = versions;
+  }
+
+  public Map<Long, List<ContainerBlockMetadata>> getBlockIds() {
+    return blockIds;
+  }
+
+  public void setBlockIds(Map<Long, List<ContainerBlockMetadata>> blockIds) {
+    this.blockIds = blockIds;
+  }
+
+  /**
+   * Class to hold ContainerID and BlockID.
+   */
+  public static class ContainerBlockMetadata {
+    private long containerID;
+    private long localID;
+
+    public ContainerBlockMetadata(long containerID, long localID) {
+      this.containerID = containerID;
+      this.localID = localID;
+    }
+
+    public long getContainerID() {
+      return containerID;
+    }
+
+    public long getLocalID() {
+      return localID;
+    }
   }
 }

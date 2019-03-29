@@ -31,6 +31,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
@@ -81,7 +82,7 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
   private ReconOMMetadataManager reconOMMetadataManager;
   private Injector injector;
   private OzoneManagerServiceProviderImpl ozoneManagerServiceProvider;
-  private ContainerKeyService containerKeyService = new ContainerKeyService();
+  private ContainerKeyService containerKeyService;
 
   @Before
   public void setUp() throws Exception {
@@ -98,11 +99,12 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
               in(Singleton.class);
           bind(ContainerDBServiceProvider.class).to(
               ContainerDBServiceProviderImpl.class).in(Singleton.class);
-          bind(ContainerKeyService.class).toInstance(containerKeyService);
           ozoneManagerServiceProvider = new OzoneManagerServiceProviderImpl(
               getTestOzoneConfiguration());
           bind(OzoneManagerServiceProvider.class)
               .toInstance(ozoneManagerServiceProvider);
+          containerKeyService = new ContainerKeyService();
+          bind(ContainerKeyService.class).toInstance(containerKeyService);
         } catch (IOException e) {
           Assert.fail();
         }
@@ -119,12 +121,12 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
     Pipeline pipeline = getRandomPipeline();
 
     List<OmKeyLocationInfo> omKeyLocationInfoList = new ArrayList<>();
-    BlockID blockID1 = new BlockID(1, 1);
+    BlockID blockID1 = new BlockID(1, 101);
     OmKeyLocationInfo omKeyLocationInfo1 = getOmKeyLocationInfo(blockID1,
         pipeline);
     omKeyLocationInfoList.add(omKeyLocationInfo1);
 
-    BlockID blockID2 = new BlockID(2, 1);
+    BlockID blockID2 = new BlockID(2, 102);
     OmKeyLocationInfo omKeyLocationInfo2 = getOmKeyLocationInfo(blockID2,
         pipeline);
     omKeyLocationInfoList.add(omKeyLocationInfo2);
@@ -138,7 +140,7 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
         Collections.singletonList(omKeyLocationInfoGroup));
 
     List<OmKeyLocationInfoGroup> infoGroups = new ArrayList<>();
-    BlockID blockID3 = new BlockID(1, 2);
+    BlockID blockID3 = new BlockID(1, 103);
     OmKeyLocationInfo omKeyLocationInfo3 = getOmKeyLocationInfo(blockID3,
         pipeline);
 
@@ -147,7 +149,7 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
     infoGroups.add(new OmKeyLocationInfoGroup(0,
         omKeyLocationInfoListNew));
 
-    BlockID blockID4 = new BlockID(1, 3);
+    BlockID blockID4 = new BlockID(1, 104);
     OmKeyLocationInfo omKeyLocationInfo4 = getOmKeyLocationInfo(blockID4,
         pipeline);
 
@@ -186,12 +188,20 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
     KeyMetadata keyMetadata = iterator.next();
     assertTrue(keyMetadata.getKey().equals("key_one"));
     assertTrue(keyMetadata.getVersions().size() == 1);
+    assertTrue(keyMetadata.getBlockIds().size() == 1);
+    Map<Long, List<KeyMetadata.ContainerBlockMetadata>> blockIds =
+        keyMetadata.getBlockIds();
+    assertTrue(blockIds.get(0L).iterator().next().getLocalID() == 101);
 
     keyMetadata = iterator.next();
     assertTrue(keyMetadata.getKey().equals("key_two"));
     assertTrue(keyMetadata.getVersions().size() == 2);
     assertTrue(keyMetadata.getVersions().contains(0L) && keyMetadata
         .getVersions().contains(1L));
+    assertTrue(keyMetadata.getBlockIds().size() == 2);
+    blockIds = keyMetadata.getBlockIds();
+    assertTrue(blockIds.get(0L).iterator().next().getLocalID() == 103);
+    assertTrue(blockIds.get(1L).iterator().next().getLocalID() == 104);
 
     response = containerKeyService.getKeysForContainer(3L);
     keyMetadataList = (Collection<KeyMetadata>) response.getEntity();

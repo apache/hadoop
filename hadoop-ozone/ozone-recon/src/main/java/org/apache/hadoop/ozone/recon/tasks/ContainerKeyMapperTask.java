@@ -85,8 +85,13 @@ public class ContainerKeyMapperTask implements Runnable {
               long containerId = omKeyLocationInfo.getContainerID();
               ContainerKeyPrefix containerKeyPrefix = new ContainerKeyPrefix(
                   containerId, key.toString(), keyVersion);
-              containerDBServiceProvider.storeContainerKeyMapping(
-                  containerKeyPrefix, 1);
+              if (containerDBServiceProvider.getCountForForContainerKeyPrefix(
+                  containerKeyPrefix) == 0) {
+                // Save on writes. No need to save same container-key prefix
+                // mapping again.
+                containerDBServiceProvider.storeContainerKeyMapping(
+                    containerKeyPrefix, 1);
+              }
               containerCount++;
             }
           }
