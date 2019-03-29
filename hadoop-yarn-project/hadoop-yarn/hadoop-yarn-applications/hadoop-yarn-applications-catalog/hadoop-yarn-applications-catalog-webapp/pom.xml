@@ -229,6 +229,9 @@
             <plugin>
                 <groupId>com.github.eirslett</groupId>
                 <artifactId>frontend-maven-plugin</artifactId>
+                <configuration>
+                    <workingDirectory>target</workingDirectory>
+                </configuration>
                 <executions>
                     <execution>
                         <id>install node and yarn</id>
@@ -416,15 +419,49 @@
         </plugins>
     </build>
 
-<!--
     <profiles>
       <profile>
+        <id>parallel-tests</id>
+        <build>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.hadoop</groupId>
+              <artifactId>hadoop-maven-plugins</artifactId>
+              <executions>
+                <execution>
+                  <id>parallel-tests-createdir</id>
+                  <goals>
+                    <goal>parallel-tests-createdir</goal>
+                  </goals>
+                </execution>
+              </executions>
+            </plugin>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-surefire-plugin</artifactId>
+              <configuration>
+                <forkCount>${testsThreadCount}</forkCount>
+                <reuseForks>false</reuseForks>
+                <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
+                <systemPropertyVariables>
+                  <testsThreadCount>${testsThreadCount}</testsThreadCount>
+                  <test.build.data>${test.build.data}/${surefire.forkNumber}</test.build.data>
+                  <test.build.dir>${test.build.dir}/${surefire.forkNumber}</test.build.dir>
+                  <hadoop.tmp.dir>${hadoop.tmp.dir}/${surefire.forkNumber}</hadoop.tmp.dir>
+
+                  <!-- Due to a Maven quirk, setting this to just -->
+                  <!-- surefire.forkNumber won't do the parameter substitution. -->
+                  <!-- Putting a prefix in front of it like "fork-" makes it -->
+                  <!-- work. -->
+                  <test.unique.fork.id>fork-${surefire.forkNumber}</test.unique.fork.id>
+                </systemPropertyVariables>
+              </configuration>
+            </plugin>
+          </plugins>
+        </build>
+      </profile>
+      <profile>
         <id>rest-docs</id>
-        <activation>
-          <file>
-            <exists>${basedir}/node_modules/.bin/apidoc</exists>
-          </file>
-        </activation>
         <build>
           <plugins>
             <plugin>
@@ -450,6 +487,5 @@
         </build>
       </profile>
     </profiles>
--->
 
 </project>
