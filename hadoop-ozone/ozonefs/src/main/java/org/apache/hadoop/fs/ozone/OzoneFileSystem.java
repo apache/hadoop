@@ -230,14 +230,8 @@ public class OzoneFileSystem extends FileSystem
     }
     statistics.incrementWriteOps(1);
     LOG.trace("open() path:{}", f);
-    final FileStatus fileStatus = getFileStatus(f);
     final String key = pathToKey(f);
-    if (fileStatus.isDirectory()) {
-      throw new FileNotFoundException("Can't open directory " + f + " to read");
-    }
-
-    return new FSDataInputStream(
-        new OzoneFSInputStream(adapter.createInputStream(key)));
+    return new FSDataInputStream(new OzoneFSInputStream(adapter.readFile(key)));
   }
 
   @Override
@@ -251,26 +245,9 @@ public class OzoneFileSystem extends FileSystem
     }
     statistics.incrementWriteOps(1);
     final String key = pathToKey(f);
-    final FileStatus status;
-    try {
-      status = getFileStatus(f);
-      if (status.isDirectory()) {
-        throw new FileAlreadyExistsException(f + " is a directory");
-      } else {
-        if (!overwrite) {
-          // path references a file and overwrite is disabled
-          throw new FileAlreadyExistsException(f + " already exists");
-        }
-        LOG.trace("Overwriting file {}", f);
-        adapter.deleteObject(key);
-      }
-    } catch (FileNotFoundException ignored) {
-      // this means the file is not found
-    }
-
     // We pass null to FSDataOutputStream so it won't count writes that
     // are being buffered to a file
-    return new FSDataOutputStream(adapter.createKey(key), statistics);
+    return createOutputStream(key, overwrite, true);
   }
 
   @Override
@@ -286,6 +263,7 @@ public class OzoneFileSystem extends FileSystem
           Statistic.INVOCATION_CREATE_NON_RECURSIVE, 1);
     }
     statistics.incrementWriteOps(1);
+    final String key = pathToKey(path);
     final Path parent = path.getParent();
     if (parent != null) {
       // expect this to raise an exception if there is no parent
@@ -293,8 +271,13 @@ public class OzoneFileSystem extends FileSystem
         throw new FileAlreadyExistsException("Not a directory: " + parent);
       }
     }
-    return create(path, permission, flags.contains(CreateFlag.OVERWRITE),
-        bufferSize, replication, blockSize, progress);
+    return createOutputStream(key, flags.contains(CreateFlag.OVERWRITE), false);
+  }
+
+  private FSDataOutputStream createOutputStream(String key, boolean overwrite,
+      boolean recursive) throws IOException {
+    return new FSDataOutputStream(adapter.createFile(key, overwrite, recursive),
+        statistics);
   }
 
   @Override
@@ -737,48 +720,14 @@ public class OzoneFileSystem extends FileSystem
   /**
    * Check whether the path is valid and then create directories.
    * Directory is represented using a key with no value.
-   * All the non-existent parent directories are also created.
    *
    * @param path directory path to be created
    * @return true if directory exists or created successfully.
    * @throws IOException
    */
   private boolean mkdir(Path path) throws IOException {
-    Path fPart = path;
-    Path prevfPart = null;
-    do {
-      LOG.trace("validating path:{}", fPart);
-      try {
-        FileStatus fileStatus = getFileStatus(fPart);
-        if (fileStatus.isDirectory()) {
-          // If path exists and a directory, exit
-          break;
-        } else {
-          // Found a file here, rollback and delete newly created directories
-          LOG.trace("Found a file with same name as directory, path:{}", fPart);
-          if (prevfPart != null) {
-            delete(prevfPart, true);
-          }
-          throw new FileAlreadyExistsException(String.format(
-              "Can't make directory for path '%s', it is a file.", fPart));
-        }
-      } catch (FileNotFoundException fnfe) {
-        LOG.trace("creating directory for fpart:{}", fPart);
-        String key = pathToKey(fPart);
-        String dirKey = addTrailingSlashIfNeeded(key);
-        if (!adapter.createDirectory(dirKey)) {
-          // Directory creation failed here,
-          // rollback and delete newly created directories
-          LOG.trace("Directory creation failed, path:{}", fPart);
-          if (prevfPart != null) {
-            delete(prevfPart, true);
-          }
-          return false;
-        }
-      }
-      prevfPart = fPart;
-      fPart = fPart.getParent();
-    } while (fPart != null);
+    String key = pathToKey(path);
+    adapter.createDirectory(key);
     return true;
   }
 

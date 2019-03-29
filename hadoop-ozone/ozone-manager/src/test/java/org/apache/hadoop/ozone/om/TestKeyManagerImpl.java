@@ -20,9 +20,12 @@ package org.apache.hadoop.ozone.om;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.UUID;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -133,12 +136,8 @@ public class TestKeyManagerImpl {
   public void allocateBlockFailureInChillMode() throws Exception {
     KeyManager keyManager1 = new KeyManagerImpl(mockScmBlockLocationProtocol,
         metadataManager, conf, "om1", null);
-    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+    OmKeyArgs keyArgs = createBuilder()
         .setKeyName(KEY_NAME)
-        .setBucketName(BUCKET_NAME)
-        .setFactor(ReplicationFactor.ONE)
-        .setType(ReplicationType.STAND_ALONE)
-        .setVolumeName(VOLUME_NAME)
         .build();
     OpenKeySession keySession = keyManager1.openKey(keyArgs);
     LambdaTestUtils.intercept(OMException.class,
@@ -152,13 +151,10 @@ public class TestKeyManagerImpl {
   public void openKeyFailureInChillMode() throws Exception {
     KeyManager keyManager1 = new KeyManagerImpl(mockScmBlockLocationProtocol,
         metadataManager, conf, "om1", null);
-    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+    OmKeyArgs keyArgs = createBuilder()
         .setKeyName(KEY_NAME)
-        .setBucketName(BUCKET_NAME)
-        .setFactor(ReplicationFactor.ONE)
         .setDataSize(1000)
-        .setType(ReplicationType.STAND_ALONE)
-        .setVolumeName(VOLUME_NAME).build();
+        .build();
     LambdaTestUtils.intercept(OMException.class,
         "ChillModePrecheck failed for allocateBlock", () -> {
           keyManager1.openKey(keyArgs);
@@ -167,17 +163,180 @@ public class TestKeyManagerImpl {
 
   @Test
   public void openKeyWithMultipleBlocks() throws IOException {
-    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+    OmKeyArgs keyArgs = createBuilder()
         .setKeyName(UUID.randomUUID().toString())
-        .setBucketName(BUCKET_NAME)
-        .setFactor(ReplicationFactor.ONE)
         .setDataSize(scmBlockSize * 10)
-        .setType(ReplicationType.STAND_ALONE)
-        .setVolumeName(VOLUME_NAME)
         .build();
     OpenKeySession keySession = keyManager.openKey(keyArgs);
     OmKeyInfo keyInfo = keySession.getKeyInfo();
     Assert.assertEquals(10,
         keyInfo.getLatestVersionLocations().getLocationList().size());
+  }
+
+  @Test
+  public void testCreateDirectory() throws IOException {
+    // Create directory where the parent directory does not exist
+    String keyName = RandomStringUtils.randomAlphabetic(5);
+    OmKeyArgs keyArgs = createBuilder()
+        .setKeyName(keyName)
+        .build();
+    for (int i =0; i< 5; i++) {
+      keyName += "/" + RandomStringUtils.randomAlphabetic(5);
+    }
+    keyManager.createDirectory(keyArgs);
+    Path path = Paths.get(keyName);
+    while (path != null) {
+      // verify parent directories are created
+      Assert.assertTrue(keyManager.getFileStatus(keyArgs).isDirectory());
+      path = path.getParent();
+    }
+
+    // make sure create directory fails where parent is a file
+    keyName = RandomStringUtils.randomAlphabetic(5);
+    keyArgs = createBuilder()
+        .setKeyName(keyName)
+        .build();
+    OpenKeySession keySession = keyManager.openKey(keyArgs);
+    keyArgs.setLocationInfoList(
+        keySession.getKeyInfo().getLatestVersionLocations().getLocationList());
+    keyManager.commitKey(keyArgs, keySession.getId());
+    for (int i =0; i< 5; i++) {
+      keyName += "/" + RandomStringUtils.randomAlphabetic(5);
+    }
+    try {
+      keyManager.createDirectory(keyArgs);
+      Assert.fail("Creation should fail for directory.");
+    } catch (OMException e) {
+      Assert.assertEquals(e.getResult(),
+          OMException.ResultCodes.FILE_ALREADY_EXISTS);
+    }
+
+    // create directory for root directory
+    keyName = "";
+    keyArgs = createBuilder()
+        .setKeyName(keyName)
+        .build();
+    keyManager.createDirectory(keyArgs);
+    Assert.assertTrue(keyManager.getFileStatus(keyArgs).isDirectory());
+
+    // create directory where parent is root
+    keyName = RandomStringUtils.randomAlphabetic(5);
+    keyArgs = createBuilder()
+        .setKeyName(keyName)
+        .build();
+    keyManager.createDirectory(keyArgs);
+    Assert.assertTrue(keyManager.getFileStatus(keyArgs).isDirectory());
+  }
+
+  @Test
+  public void testOpenFile() throws IOException {
+    // create key
+    String keyName = RandomStringUtils.randomAlphabetic(5);
+    OmKeyArgs keyArgs = createBuilder()
+        .setKeyName(keyName)
+        .build();
+    OpenKeySession keySession = keyManager.createFile(keyArgs, false, false);
+    keyArgs.setLocationInfoList(
+        keySession.getKeyInfo().getLatestVersionLocations().getLocationList());
+    keyManager.commitKey(keyArgs, keySession.getId());
+
+    // try to open created key with overWrite flag set to false
+    try {
+      keyManager.createFile(keyArgs, false, false);
+      Assert.fail("Open key should fail for non overwrite create");
+    } catch (OMException ex) {
+      if (ex.getResult() != OMException.ResultCodes.FILE_ALREADY_EXISTS) {
+        throw ex;
+      }
+    }
+
+    // create file should pass with overwrite flag set to true
+    keyManager.createFile(keyArgs, true, false);
+
+    // try to create a file where parent directories do not exist and
+    // recursive flag is set to false
+    keyName = RandomStringUtils.randomAlphabetic(5);
+    for (int i =0; i< 5; i++) {
+      keyName += "/" + RandomStringUtils.randomAlphabetic(5);
+    }
+    keyArgs = createBuilder()
+        .setKeyName(keyName)
+        .build();
+    try {
+      keyManager.createFile(keyArgs, false, false);
+      Assert.fail("Open file should fail for non recursive write");
+    } catch (OMException ex) {
+      if (ex.getResult() != OMException.ResultCodes.DIRECTORY_NOT_FOUND) {
+        throw ex;
+      }
+    }
+
+    // file create should pass when recursive flag is set to true
+    keySession = keyManager.createFile(keyArgs, false, true);
+    keyArgs.setLocationInfoList(
+        keySession.getKeyInfo().getLatestVersionLocations().getLocationList());
+    keyManager.commitKey(keyArgs, keySession.getId());
+    Assert.assertTrue(keyManager
+        .getFileStatus(keyArgs).isFile());
+
+    // try creating a file over a directory
+    keyArgs = createBuilder()
+        .setKeyName("")
+        .build();
+    try {
+      keyManager.createFile(keyArgs, true, true);
+      Assert.fail("Open file should fail for non recursive write");
+    } catch (OMException ex) {
+      if (ex.getResult() != OMException.ResultCodes.NOT_A_FILE) {
+        throw ex;
+      }
+    }
+  }
+
+  @Test
+  public void testLookupFile() throws IOException {
+    String keyName = RandomStringUtils.randomAlphabetic(5);
+    OmKeyArgs keyArgs = createBuilder()
+        .setKeyName(keyName)
+        .build();
+
+    // lookup for a non-existent file
+    try {
+      keyManager.lookupFile(keyArgs);
+      Assert.fail("Lookup file should fail for non existent file");
+    } catch (OMException ex) {
+      if (ex.getResult() != OMException.ResultCodes.FILE_NOT_FOUND) {
+        throw ex;
+      }
+    }
+
+    // create a file
+    OpenKeySession keySession = keyManager.createFile(keyArgs, false, false);
+    keyArgs.setLocationInfoList(
+        keySession.getKeyInfo().getLatestVersionLocations().getLocationList());
+    keyManager.commitKey(keyArgs, keySession.getId());
+    Assert.assertEquals(keyManager.lookupFile(keyArgs).getKeyName(), keyName);
+
+    // lookup for created file
+    keyArgs = createBuilder()
+        .setKeyName("")
+        .build();
+    try {
+      keyManager.lookupFile(keyArgs);
+      Assert.fail("Lookup file should fail for a directory");
+    } catch (OMException ex) {
+      if (ex.getResult() != OMException.ResultCodes.NOT_A_FILE) {
+        throw ex;
+      }
+    }
+  }
+
+  private OmKeyArgs.Builder createBuilder() {
+    return new OmKeyArgs.Builder()
+        .setBucketName(BUCKET_NAME)
+        .setFactor(ReplicationFactor.ONE)
+        .setDataSize(0)
+        .setType(ReplicationType.STAND_ALONE)
+        .setVolumeName(VOLUME_NAME);
   }
 }

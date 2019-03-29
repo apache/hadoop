@@ -2665,24 +2665,103 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   }
 
   @Override
-  public OzoneFileStatus getFileStatus(String volumeName, String bucketName,
-                                       String keyName) throws IOException {
-    Map<String, String> auditMap = new HashMap<>();
-    auditMap.put(OzoneConsts.VOLUME, volumeName);
-    auditMap.put(OzoneConsts.BUCKET, bucketName);
-    auditMap.put(OzoneConsts.KEY, keyName);
-    metrics.incNumGetFileStatus();
+  public OzoneFileStatus getFileStatus(OmKeyArgs args) throws IOException {
+    if (isAclEnabled) {
+      checkAcls(ResourceType.KEY, StoreType.OZONE, ACLType.READ,
+          args.getVolumeName(), args.getBucketName(), args.getKeyName());
+    }
+    boolean auditSuccess = true;
     try {
-      OzoneFileStatus ozoneFileStatus =
-          keyManager.getFileStatus(volumeName, bucketName, keyName);
-      AUDIT.logWriteSuccess(buildAuditMessageForSuccess(OMAction
-          .GET_FILE_STATUS, auditMap));
-      return ozoneFileStatus;
+      metrics.incNumGetFileStatus();
+      return keyManager.getFileStatus(args);
     } catch (IOException ex) {
       metrics.incNumGetFileStatusFails();
-      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction
-          .GET_FILE_STATUS, auditMap, ex));
+      auditSuccess = false;
+      AUDIT.logWriteFailure(
+          buildAuditMessageForFailure(OMAction.GET_FILE_STATUS,
+              (args == null) ? null : args.toAuditMap(), ex));
       throw ex;
+    } finally {
+      if (auditSuccess) {
+        AUDIT.logWriteSuccess(
+            buildAuditMessageForSuccess(OMAction.GET_FILE_STATUS,
+                (args == null) ? null : args.toAuditMap()));
+      }
+    }
+  }
+
+  @Override
+  public void createDirectory(OmKeyArgs args) throws IOException {
+    if (isAclEnabled) {
+      checkAcls(ResourceType.KEY, StoreType.OZONE, ACLType.WRITE,
+          args.getVolumeName(), args.getBucketName(), args.getKeyName());
+    }
+    boolean auditSuccess = true;
+    try {
+      metrics.incNumCreateDirectory();
+      keyManager.createDirectory(args);
+    } catch (IOException ex) {
+      metrics.incNumCreateDirectoryFails();
+      auditSuccess = false;
+      AUDIT.logWriteFailure(
+          buildAuditMessageForFailure(OMAction.CREATE_DIRECTORY,
+              (args == null) ? null : args.toAuditMap(), ex));
+      throw ex;
+    } finally {
+      if (auditSuccess) {
+        AUDIT.logWriteSuccess(
+            buildAuditMessageForSuccess(OMAction.CREATE_DIRECTORY,
+                (args == null) ? null : args.toAuditMap()));
+      }
+    }
+  }
+
+  @Override
+  public OpenKeySession createFile(OmKeyArgs args, boolean overWrite,
+      boolean recursive) throws IOException {
+    if (isAclEnabled) {
+      checkAcls(ResourceType.KEY, StoreType.OZONE, ACLType.WRITE,
+          args.getVolumeName(), args.getBucketName(), args.getKeyName());
+    }
+    boolean auditSuccess = true;
+    try {
+      metrics.incNumCreateFile();
+      return keyManager.createFile(args, overWrite, recursive);
+    } catch (Exception ex) {
+      metrics.incNumCreateFileFails();
+      auditSuccess = false;
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.CREATE_FILE,
+          (args == null) ? null : args.toAuditMap(), ex));
+      throw ex;
+    } finally {
+      if(auditSuccess){
+        AUDIT.logWriteSuccess(buildAuditMessageForSuccess(
+            OMAction.CREATE_FILE, (args == null) ? null : args.toAuditMap()));
+      }
+    }
+  }
+
+  @Override
+  public OmKeyInfo lookupFile(OmKeyArgs args) throws IOException {
+    if(isAclEnabled) {
+      checkAcls(ResourceType.KEY, StoreType.OZONE, ACLType.READ,
+          args.getVolumeName(), args.getBucketName(), args.getKeyName());
+    }
+    boolean auditSuccess = true;
+    try {
+      metrics.incNumLookupFile();
+      return keyManager.lookupFile(args);
+    } catch (Exception ex) {
+      metrics.incNumLookupFileFails();
+      auditSuccess = false;
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.LOOKUP_FILE,
+          (args == null) ? null : args.toAuditMap(), ex));
+      throw ex;
+    } finally {
+      if(auditSuccess){
+        AUDIT.logWriteSuccess(buildAuditMessageForSuccess(
+            OMAction.LOOKUP_FILE, (args == null) ? null : args.toAuditMap()));
+      }
     }
   }
 

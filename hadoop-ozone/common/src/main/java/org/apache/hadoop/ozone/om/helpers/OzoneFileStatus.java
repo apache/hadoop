@@ -33,9 +33,15 @@ import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
  * File Status of the Ozone Key.
  */
 public class OzoneFileStatus extends FileStatus {
+
+  private static final long serialVersionUID = 1L;
+
+  transient private OmKeyInfo keyInfo;
+
   public OzoneFileStatus(OmKeyInfo key, long blockSize, boolean isDirectory) {
     super(key.getDataSize(), isDirectory, key.getFactor().getNumber(),
         blockSize, key.getModificationTime(), getPath(key.getKeyName()));
+    keyInfo = key;
   }
 
   public OzoneFileStatus(FileStatus status) throws IOException {
@@ -43,10 +49,8 @@ public class OzoneFileStatus extends FileStatus {
   }
 
   // Use this constructor only for directories
-  public OzoneFileStatus(int replication, long blockSize,
-                         String keyName) {
-    super(0, true, replication, blockSize, 0,
-        getPath(keyName));
+  public OzoneFileStatus(String keyName) {
+    super(0, true, 0, 0, 0, getPath(keyName));
   }
 
   public FileStatusProto getProtobuf() throws IOException {
@@ -93,5 +97,19 @@ public class OzoneFileStatus extends FileStatus {
     } else {
       return super.getModificationTime();
     }
+  }
+
+  public OmKeyInfo getKeyInfo() {
+    return keyInfo;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    return super.equals(o);
+  }
+
+  @Override
+  public int hashCode() {
+    return super.hashCode();
   }
 }

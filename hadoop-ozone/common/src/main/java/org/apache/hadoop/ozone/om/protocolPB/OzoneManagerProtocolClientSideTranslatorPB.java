@@ -55,6 +55,8 @@ import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateDirectoryRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFileStatusResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFileStatusRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockRequest;
@@ -1224,20 +1226,21 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
 
   /**
    * Get File Status for an Ozone key.
-   * @param volumeName volume name.
-   * @param bucketName bucket name.
-   * @param keyName key name.
+   *
+   * @param args
    * @return OzoneFileStatus for the key.
    * @throws IOException
    */
-  public OzoneFileStatus getFileStatus(String volumeName, String bucketName,
-                                String keyName) throws IOException {
-    GetFileStatusRequest req = GetFileStatusRequest
-        .newBuilder()
-        .setVolumeName(volumeName)
-        .setBucketName(bucketName)
-        .setKeyName(keyName)
+  public OzoneFileStatus getFileStatus(OmKeyArgs args) throws IOException {
+    KeyArgs keyArgs = KeyArgs.newBuilder()
+        .setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setKeyName(args.getKeyName())
         .build();
+    GetFileStatusRequest req =
+        GetFileStatusRequest.newBuilder()
+            .setKeyArgs(keyArgs)
+            .build();
 
     OMRequest omRequest = createOMRequest(Type.GetFileStatus)
         .setGetFileStatusRequest(req)
@@ -1250,5 +1253,69 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
       throw e;
     }
     return OzoneFileStatus.getFromProtobuf(resp.getStatus());
+  }
+
+  @Override
+  public void createDirectory(OmKeyArgs args) throws IOException {
+    KeyArgs keyArgs = KeyArgs.newBuilder()
+        .setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setKeyName(args.getKeyName())
+        .build();
+    CreateDirectoryRequest request = CreateDirectoryRequest.newBuilder()
+        .setKeyArgs(keyArgs)
+        .build();
+
+    OMRequest omRequest = createOMRequest(Type.CreateDirectory)
+        .setCreateDirectoryRequest(request)
+        .build();
+
+    handleError(submitRequest(omRequest));
+  }
+
+  @Override
+  public OmKeyInfo lookupFile(OmKeyArgs args)
+      throws IOException {
+    KeyArgs keyArgs = KeyArgs.newBuilder()
+        .setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setKeyName(args.getKeyName())
+        .build();
+    OzoneManagerProtocolProtos.LookupFileRequest lookupFileRequest =
+        OzoneManagerProtocolProtos.LookupFileRequest.newBuilder()
+            .setKeyArgs(keyArgs)
+            .build();
+    OMRequest omRequest = createOMRequest(Type.LookupFile)
+        .setLookupFileRequest(lookupFileRequest)
+        .build();
+    OzoneManagerProtocolProtos.LookupFileResponse resp =
+        handleError(submitRequest(omRequest)).getLookupFileResponse();
+    return OmKeyInfo.getFromProtobuf(resp.getKeyInfo());
+  }
+
+  @Override
+  public OpenKeySession createFile(OmKeyArgs args,
+      boolean overWrite, boolean recursive) throws IOException {
+    KeyArgs keyArgs = KeyArgs.newBuilder()
+        .setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setKeyName(args.getKeyName())
+        .setDataSize(args.getDataSize())
+        .setType(args.getType())
+        .setFactor(args.getFactor())
+        .build();
+    OzoneManagerProtocolProtos.CreateFileRequest createFileRequest =
+        OzoneManagerProtocolProtos.CreateFileRequest.newBuilder()
+            .setKeyArgs(keyArgs)
+            .setIsOverwrite(overWrite)
+            .setIsRecursive(recursive)
+            .build();
+    OMRequest omRequest = createOMRequest(Type.CreateFile)
+        .setCreateFileRequest(createFileRequest)
+        .build();
+    OzoneManagerProtocolProtos.CreateFileResponse resp =
+        handleError(submitRequest(omRequest)).getCreateFileResponse();
+    return new OpenKeySession(resp.getID(),
+        OmKeyInfo.getFromProtobuf(resp.getKeyInfo()), resp.getOpenVersion());
   }
 }

@@ -58,6 +58,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CommitK
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CommitKeyResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateBucketRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateBucketResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateDirectoryRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateKeyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateKeyResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateVolumeRequest;
@@ -332,6 +333,19 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         GetFileStatusResponse getFileStatusResponse =
             getOzoneFileStatus(request.getGetFileStatusRequest());
         responseBuilder.setGetFileStatusResponse(getFileStatusResponse);
+        break;
+      case CreateDirectory:
+        createDirectory(request.getCreateDirectoryRequest());
+        break;
+      case CreateFile:
+        OzoneManagerProtocolProtos.CreateFileResponse createFileResponse =
+            createFile(request.getCreateFileRequest());
+        responseBuilder.setCreateFileResponse(createFileResponse);
+        break;
+      case LookupFile:
+        OzoneManagerProtocolProtos.LookupFileResponse lookupFileResponse =
+            lookupFile(request.getLookupFileRequest());
+        responseBuilder.setLookupFileResponse(lookupFileResponse);
         break;
       default:
         responseBuilder.setSuccess(false);
@@ -955,11 +969,62 @@ public class OzoneManagerRequestHandler implements RequestHandler {
 
   private GetFileStatusResponse getOzoneFileStatus(
       GetFileStatusRequest request) throws IOException {
-    GetFileStatusResponse.Builder rb = GetFileStatusResponse.newBuilder();
+    KeyArgs keyArgs = request.getKeyArgs();
+    OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(keyArgs.getVolumeName())
+        .setBucketName(keyArgs.getBucketName())
+        .setKeyName(keyArgs.getKeyName())
+        .build();
 
-    rb.setStatus(impl.getFileStatus(request.getVolumeName(),
-        request.getBucketName(), request.getKeyName()).getProtobuf());
+    GetFileStatusResponse.Builder rb = GetFileStatusResponse.newBuilder();
+    rb.setStatus(impl.getFileStatus(omKeyArgs).getProtobuf());
 
     return rb.build();
+  }
+
+  private void createDirectory(CreateDirectoryRequest request)
+      throws IOException {
+    KeyArgs keyArgs = request.getKeyArgs();
+    OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(keyArgs.getVolumeName())
+        .setBucketName(keyArgs.getBucketName())
+        .setKeyName(keyArgs.getKeyName())
+        .build();
+    impl.createDirectory(omKeyArgs);
+  }
+
+  private OzoneManagerProtocolProtos.CreateFileResponse createFile(
+      OzoneManagerProtocolProtos.CreateFileRequest request) throws IOException {
+    KeyArgs keyArgs = request.getKeyArgs();
+    OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(keyArgs.getVolumeName())
+        .setBucketName(keyArgs.getBucketName())
+        .setKeyName(keyArgs.getKeyName())
+        .setDataSize(keyArgs.getDataSize())
+        .setType(keyArgs.getType())
+        .setFactor(keyArgs.getFactor())
+        .build();
+    OpenKeySession keySession =
+        impl.createFile(omKeyArgs, request.getIsOverwrite(),
+            request.getIsRecursive());
+    return OzoneManagerProtocolProtos.CreateFileResponse.newBuilder()
+        .setKeyInfo(keySession.getKeyInfo().getProtobuf())
+        .setID(keySession.getId())
+        .setOpenVersion(keySession.getOpenVersion())
+        .build();
+  }
+
+  private OzoneManagerProtocolProtos.LookupFileResponse lookupFile(
+      OzoneManagerProtocolProtos.LookupFileRequest request)
+      throws IOException {
+    KeyArgs keyArgs = request.getKeyArgs();
+    OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(keyArgs.getVolumeName())
+        .setBucketName(keyArgs.getBucketName())
+        .setKeyName(keyArgs.getKeyName())
+        .build();
+    return OzoneManagerProtocolProtos.LookupFileResponse.newBuilder()
+        .setKeyInfo(impl.lookupFile(omKeyArgs).getProtobuf())
+        .build();
   }
 }

@@ -68,6 +68,9 @@ public class OMMetrics {
   private @Metric MutableCounterLong numCompleteMultipartUploads;
 
   private @Metric MutableCounterLong numGetFileStatus;
+  private @Metric MutableCounterLong numCreateDirectory;
+  private @Metric MutableCounterLong numCreateFile;
+  private @Metric MutableCounterLong numLookupFile;
 
   // Failure Metrics
   private @Metric MutableCounterLong numVolumeCreateFails;
@@ -101,6 +104,9 @@ public class OMMetrics {
   private @Metric MutableCounterLong numListMultipartUploadPartFails;
 
   private @Metric MutableCounterLong numGetFileStatusFails;
+  private @Metric MutableCounterLong numCreateDirectoryFails;
+  private @Metric MutableCounterLong numCreateFileFails;
+  private @Metric MutableCounterLong numLookupFileFails;
 
   // Metrics for total number of volumes, buckets and keys
 
@@ -295,6 +301,36 @@ public class OMMetrics {
 
   public void incNumGetFileStatusFails() {
     numGetFileStatusFails.incr();
+  }
+
+  public void incNumCreateDirectory() {
+    numKeyOps.incr();
+    numFSOps.incr();
+    numCreateDirectory.incr();
+  }
+
+  public void incNumCreateDirectoryFails() {
+    numCreateDirectoryFails.incr();
+  }
+
+  public void incNumCreateFile() {
+    numKeyOps.incr();
+    numFSOps.incr();
+    numCreateFile.incr();
+  }
+
+  public void incNumCreateFileFails() {
+    numCreateFileFails.incr();
+  }
+
+  public void incNumLookupFile() {
+    numKeyOps.incr();
+    numFSOps.incr();
+    numLookupFile.incr();
+  }
+
+  public void incNumLookupFileFails() {
+    numLookupFileFails.incr();
   }
 
   public void incNumListMultipartUploadPartFails() {

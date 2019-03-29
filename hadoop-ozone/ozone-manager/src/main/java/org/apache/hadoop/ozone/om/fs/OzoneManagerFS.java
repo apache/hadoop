@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.ozone.om.fs;
 
+import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 
 import java.io.IOException;
@@ -26,6 +29,12 @@ import java.io.IOException;
  * Ozone Manager FileSystem interface.
  */
 public interface OzoneManagerFS {
-  OzoneFileStatus getFileStatus(String volumeName, String bucketName,
-                                String keyName) throws IOException;
+  OzoneFileStatus getFileStatus(OmKeyArgs args) throws IOException;
+
+  void createDirectory(OmKeyArgs args) throws IOException;
+
+  OpenKeySession createFile(OmKeyArgs args, boolean isOverWrite,
+      boolean isRecursive) throws IOException;
+
+  OmKeyInfo lookupFile(OmKeyArgs args) throws IOException;
 }

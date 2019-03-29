@@ -26,6 +26,7 @@ import java.util.Collection;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.junit.Assert;
 import org.junit.Before;
@@ -187,8 +188,8 @@ public class TestOzoneFileInterfaces {
     FileStatus status = fs.getFileStatus(path);
     assertEquals(statistics.getLong(
         StorageStatistics.CommonStatisticNames.OP_GET_FILE_STATUS).longValue(),
-        2);
-    assertEquals(statistics.getLong("objects_query").longValue(), 2);
+        1);
+    assertEquals(statistics.getLong("objects_query").longValue(), 1);
     // The timestamp of the newly created file should always be greater than
     // the time when the test was started
     assertTrue("Modification time has not been recorded: " + status,
@@ -269,9 +270,13 @@ public class TestOzoneFileInterfaces {
     verifyOwnerGroup(status);
 
     long currentTime = System.currentTimeMillis();
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(o3fs.pathToKey(path))
+        .build();
     OzoneFileStatus omStatus =
-        cluster.getOzoneManager().getFileStatus(volumeName,
-        bucketName, o3fs.pathToKey(path));
+        cluster.getOzoneManager().getFileStatus(keyArgs);
     //Another get file status here, incremented the counter.
     Assert.assertEquals(numFileStatus + 2,
         cluster.getOzoneManager().getMetrics().getNumGetFileStatus());

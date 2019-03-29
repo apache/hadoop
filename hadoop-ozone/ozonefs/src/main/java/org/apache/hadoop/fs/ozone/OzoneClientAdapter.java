@@ -39,15 +39,14 @@ public interface OzoneClientAdapter {
 
   void close() throws IOException;
 
-  InputStream createInputStream(String key) throws IOException;
+  InputStream readFile(String key) throws IOException;
 
-  OzoneFSOutputStream createKey(String key) throws IOException;
+  OzoneFSOutputStream createFile(String key, boolean overWrite,
+      boolean recursive) throws IOException;
 
   void renameKey(String key, String newKeyName) throws IOException;
 
-  boolean isDirectory(BasicKeyInfo key);
-
-  boolean createDirectory(String keyName);
+  boolean createDirectory(String keyName) throws IOException;
 
   boolean deleteObject(String keyName);
 
