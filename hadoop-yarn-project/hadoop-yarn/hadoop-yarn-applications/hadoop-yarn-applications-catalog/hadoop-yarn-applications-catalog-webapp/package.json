@@ -1,0 +1,40 @@
+{
+    "name": "AppCatalog",
+    "private": true,
+    "version": "0.0.0",
+    "description": "YARN App Catalog",
+    "repository": "git://git.apache.org/hadoop.git",
+    "license": "Apache 2.0",
+    "dependencies": {
+        "jquery": "3.3.1",
+        "angular-loader": "~1.6.4",
+        "angular-mocks": "~1.6.4",
+        "angular-route": "~1.6.4",
+        "angular": "~1.6.4",
+        "bootstrap": "~3.3.7",
+        "roboto-fontface": "0.10.0"
+    },
+    "devDependencies": {
+        "http-server": "^0.6.1",
+        "requirejs": "^2.1.0",
+        "karma": "4.0.0",
+        "karma-requirejs": "^0.2.2",
+        "karma-script-launcher": "^0.1.0",
+        "karma-chrome-launcher": "^0.1.4",
+        "karma-firefox-launcher": "^0.1.3",
+        "karma-jasmine": "^0.1.5",
+        "karma-junit-reporter": "^0.2.2",
+        "shelljs": "^0.2.6",
+        "apidoc": "0.17.7"
+    },
+    "scripts": {
+        "prestart": "npm install & mvn clean package",
+        "start": "http-server target/app -a localhost -p 8000",
+        "pretest": "npm install",
+        "test": "karma start src/test/javascript/karma.conf.js",
+        "test-single-run": "karma start src/test/javascript/karma.conf.js  --single-run",
+        "preupdate-webdriver": "npm install",
+        "update-webdriver": "webdriver-manager update",
+        "update-index-async": "node -e \"require('shelljs/global'); sed('-i', /\\/\\/@@NG_LOADER_START@@[\\s\\S]*\\/\\/@@NG_LOADER_END@@/, '//@@NG_LOADER_START@@\\n' + cat('src/main/webapp/vendor/angular-loader/angular-loader.min.js') + '\\n//@@NG_LOADER_END@@', 'src/main/webapp/index.html');\""
+    }
+}
