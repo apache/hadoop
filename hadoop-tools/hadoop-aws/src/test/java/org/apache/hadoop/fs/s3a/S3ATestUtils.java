@@ -31,6 +31,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 
+import org.apache.hadoop.service.Service;
+import org.apache.hadoop.service.ServiceOperations;
+
 import org.hamcrest.core.Is;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -561,6 +564,65 @@ public final class S3ATestUtils {
       conf.unset(option);
     }
     removeBucketOverrides(bucket, conf, options);
+  }
+
+  /**
+   * Call a function; any exception raised is logged at info.
+   * This is for test teardowns.
+   * @param log log to use.
+   * @param operation operation to invoke
+   * @param <T> type of operation.
+   */
+  public static <T> void callQuietly(final Logger log,
+      final Invoker.Operation<T> operation) {
+    try {
+      operation.execute();
+    } catch (Exception e) {
+      log.info(e.toString(), e);
+    }
+  }
+
+  /**
+   * Call a void operation; any exception raised is logged at info.
+   * This is for test teardowns.
+   * @param log log to use.
+   * @param operation operation to invoke
+   */
+  public static void callQuietly(final Logger log,
+      final Invoker.VoidOperation operation) {
+    try {
+      operation.execute();
+    } catch (Exception e) {
+      log.info(e.toString(), e);
+    }
+  }
+
+  /**
+   * Deploy a hadoop service: init and start it.
+   * @param conf configuration to use
+   * @param service service to configure
+   * @param <T> type of service
+   * @return the started service
+   */
+  public static <T extends Service> T deployService(
+      final Configuration conf,
+      final T service) {
+    service.init(conf);
+    service.start();
+    return service;
+  }
+
+  /**
+   * Terminate a service, returning {@code null} cast at compile-time
+   * to the type of the service, for ease of setting fields to null.
+   * @param service service.
+   * @param <T> type of the service
+   * @return null, always
+   */
+  @SuppressWarnings("ThrowableNotThrown")
+  public static <T extends Service> T terminateService(final T service) {
+    ServiceOperations.stopQuietly(LOG, service);
+    return null;
   }
 
   /**

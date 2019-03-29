@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.fs.s3a.commit.magic;
 
+import java.io.IOException;
+
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.AbstractITCommitMRJob;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
@@ -33,7 +38,30 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
  * the settings in {@link AbstractITCommitMRJob#applyCustomConfigOptions(JobConf)} are
  * passed down to these processes.
  */
-public class ITMagicCommitMRJob extends AbstractITCommitMRJob {
+public final class ITestMagicCommitMRJob extends AbstractITCommitMRJob {
+
+  /**
+   * The static cluster binding with the lifecycle of this test; served
+   * through instance-level methods for sharing across methods in the
+   * suite.
+   */
+  @SuppressWarnings("StaticNonFinalField")
+  private static ClusterBinding clusterBinding;
+
+  @BeforeClass
+  public static void setupClusters() throws IOException {
+    clusterBinding = createCluster(new JobConf());
+  }
+
+  @AfterClass
+  public static void teardownClusters() throws IOException {
+    clusterBinding.terminate();
+  }
+
+  @Override
+  public ClusterBinding getClusterBinding() {
+    return clusterBinding;
+  }
 
   /**
    * Need consistency here.
