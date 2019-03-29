@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga;
 
-
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.FPGA_URI;
 
 import java.util.LinkedList;
@@ -30,22 +29,28 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga.FpgaResourceAllocator;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga.FpgaResourceAllocator.FpgaDevice;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.NodeResourceUpdaterPlugin;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class FpgaNodeResourceUpdateHandler extends NodeResourceUpdaterPlugin {
+  private final FpgaDiscoverer fpgaDiscoverer;
+
   private static final Logger LOG = LoggerFactory.getLogger(
       FpgaNodeResourceUpdateHandler.class);
+
+  public FpgaNodeResourceUpdateHandler(FpgaDiscoverer fpgaDiscoverer) {
+    this.fpgaDiscoverer = fpgaDiscoverer;
+  }
 
   @Override
   public void updateConfiguredResource(Resource res) throws YarnException {
     LOG.info("Initializing configured FPGA resources for the NodeManager.");
-    List<FpgaResourceAllocator.FpgaDevice> list = FpgaDiscoverer.getInstance().getCurrentFpgaInfo();
+    List<FpgaDevice> list = fpgaDiscoverer.getCurrentFpgaInfo();
     List<Integer> minors = new LinkedList<>();
-    for (FpgaResourceAllocator.FpgaDevice device : list) {
+    for (FpgaDevice device : list) {
       minors.add(device.getMinor());
     }
     if (minors.isEmpty()) {

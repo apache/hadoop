@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
@@ -91,16 +92,18 @@ public class TestFpgaResourceHandler {
   private ConcurrentHashMap<ContainerId, Container> runningContainersMap;
   private IntelFpgaOpenclPlugin mockVendorPlugin;
   private List<FpgaDevice> deviceList;
+  private FpgaDiscoverer fpgaDiscoverer;
   private static final String vendorType = "IntelOpenCL";
   private File dummyAocx;
 
   private String getTestParentFolder() {
-    File f = new File("target/temp/" + TestFpgaResourceHandler.class.getName());
+    File f = new File("target/temp/" +
+        TestFpgaResourceHandler.class.getName());
     return f.getAbsolutePath();
   }
 
   @Before
-  public void setup() throws IOException {
+  public void setup() throws IOException, YarnException {
     CustomResourceTypesConfigurationProvider.
         initResourceTypes(ResourceInformation.FPGA_URI);
     configuration = new YarnConfiguration();
@@ -116,13 +119,16 @@ public class TestFpgaResourceHandler {
     }
     String aocxPath = getTestParentFolder() + "/test.aocx";
     mockVendorPlugin = mockPlugin(vendorType, deviceList, aocxPath);
-    FpgaDiscoverer.getInstance().setConf(configuration);
+    fpgaDiscoverer = new FpgaDiscoverer();
+    fpgaDiscoverer.setResourceHanderPlugin(mockVendorPlugin);
+    fpgaDiscoverer.initialize(configuration);
     when(mockContext.getNMStateStore()).thenReturn(mockNMStateStore);
     runningContainersMap = new ConcurrentHashMap<>();
     when(mockContext.getContainers()).thenReturn(runningContainersMap);
 
     fpgaResourceHandler = new FpgaResourceHandlerImpl(mockContext,
-        mockCGroupsHandler, mockPrivilegedExecutor, mockVendorPlugin);
+        mockCGroupsHandler, mockPrivilegedExecutor, mockVendorPlugin,
+        fpgaDiscoverer);
 
     dummyAocx = new File(aocxPath);
     Files.createParentDirs(dummyAocx);
@@ -143,7 +149,8 @@ public class TestFpgaResourceHandler {
     String allowed = "auto";
     configuration.set(YarnConfiguration.NM_FPGA_ALLOWED_DEVICES, allowed);
     fpgaResourceHandler.bootstrap(configuration);
-    verify(mockVendorPlugin, times(1)).initPlugin(configuration);
+    // initPlugin() was also called in setup()
+    verify(mockVendorPlugin, times(2)).initPlugin(configuration);
     verify(mockCGroupsHandler, times(1)).initializeCGroupController(
         CGroupsHandler.CGroupController.DEVICES);
     Assert.assertEquals(5, fpgaResourceHandler.getFpgaAllocator()
@@ -152,7 +159,8 @@ public class TestFpgaResourceHandler {
         .getAllowedFpga().size());
     // Case 2. subset of devices
     fpgaResourceHandler = new FpgaResourceHandlerImpl(mockContext,
-        mockCGroupsHandler, mockPrivilegedExecutor, mockVendorPlugin);
+        mockCGroupsHandler, mockPrivilegedExecutor, mockVendorPlugin,
+        fpgaDiscoverer);
     allowed = "0,1,2";
     configuration.set(YarnConfiguration.NM_FPGA_ALLOWED_DEVICES, allowed);
     fpgaResourceHandler.bootstrap(configuration);
@@ -174,7 +182,8 @@ public class TestFpgaResourceHandler {
 
     // Case 3. User configuration contains invalid minor device number
     fpgaResourceHandler = new FpgaResourceHandlerImpl(mockContext,
-        mockCGroupsHandler, mockPrivilegedExecutor, mockVendorPlugin);
+        mockCGroupsHandler, mockPrivilegedExecutor, mockVendorPlugin,
+        fpgaDiscoverer);
     allowed = "0,1,7";
     configuration.set(YarnConfiguration.NM_FPGA_ALLOWED_DEVICES, allowed);
     fpgaResourceHandler.bootstrap(configuration);
@@ -509,7 +518,8 @@ public class TestFpgaResourceHandler {
     mockVendorPlugin =
         mockPlugin(vendorType, deviceList, dummyAocx.getAbsolutePath());
     fpgaResourceHandler = new FpgaResourceHandlerImpl(mockContext,
-        mockCGroupsHandler, mockPrivilegedExecutor, mockVendorPlugin);
+        mockCGroupsHandler, mockPrivilegedExecutor, mockVendorPlugin,
+        fpgaDiscoverer);
 
     fpgaResourceHandler.bootstrap(configuration);
     fpgaResourceHandler.preStart(mockContainer(0, 1, "GEMM"));
