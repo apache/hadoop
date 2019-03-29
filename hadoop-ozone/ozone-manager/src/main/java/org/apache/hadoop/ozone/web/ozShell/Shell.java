@@ -39,17 +39,7 @@ import picocli.CommandLine.Command;
  * This class uses dispatch method to make calls
  * to appropriate handlers that execute the ozone functions.
  */
-@Command(name = "ozone sh",
-    description = "Shell for Ozone object store",
-    subcommands = {
-        VolumeCommands.class,
-        BucketCommands.class,
-        KeyCommands.class,
-        TokenCommands.class
-    },
-    versionProvider = HddsVersionProvider.class,
-    mixinStandardHelpOptions = true)
-public class Shell extends GenericCli {
+public abstract class Shell extends GenericCli {
 
   private static final Logger LOG = LoggerFactory.getLogger(Shell.class);
 
@@ -75,23 +65,7 @@ public class Shell extends GenericCli {
   // General options
   public static final int DEFAULT_OZONE_PORT = 50070;
 
-  @Override
-  public void execute(String[] argv) {
-    TracingUtil.initTracing("shell");
-    try (Scope scope = GlobalTracer.get().buildSpan("main").startActive(true)) {
-      super.execute(argv);
-    }
-  }
 
-  /**
-   * Main for the ozShell Command handling.
-   *
-   * @param argv - System Args Strings[]
-   * @throws Exception
-   */
-  public static void main(String[] argv) throws Exception {
-    new Shell().run(argv);
-  }
 
   @Override
   protected void printError(Throwable errorArg) {

@@ -59,6 +59,7 @@ import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServicePort;
+import org.apache.hadoop.ozone.web.ozShell.OzoneShell;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
@@ -142,7 +143,7 @@ public class TestOzoneShell {
     baseDir = new File(path);
     baseDir.mkdirs();
 
-    shell = new Shell();
+    shell = new OzoneShell();
 
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(3)
