@@ -77,6 +77,13 @@ public class ApiServiceClient extends AppAdminClient {
   private static final Base64 BASE_64_CODEC = new Base64(0);
   protected YarnClient yarnClient;
 
+  public ApiServiceClient() {
+  }
+
+  public ApiServiceClient(Configuration c) throws Exception {
+    serviceInit(c);
+  }
+
   @Override protected void serviceInit(Configuration configuration)
       throws Exception {
     yarnClient = YarnClient.createYarnClient();
@@ -151,7 +158,7 @@ public class ApiServiceClient extends AppAdminClient {
    * @return URI to API Service
    * @throws IOException
    */
-  protected String getServicePath(String appName) throws IOException {
+  public String getServicePath(String appName) throws IOException {
     String url = getRMWebAddress();
     StringBuilder api = new StringBuilder();
     api.append(url)
@@ -215,7 +222,7 @@ public class ApiServiceClient extends AppAdminClient {
     }
   }
 
-  private Builder getApiClient() throws IOException {
+  public Builder getApiClient() throws IOException {
     return getApiClient(getServicePath(null));
   }
 
@@ -226,7 +233,7 @@ public class ApiServiceClient extends AppAdminClient {
    * @return
    * @throws IOException
    */
-  private Builder getApiClient(String requestPath)
+  public Builder getApiClient(String requestPath)
       throws IOException {
     Client client = Client.create(getClientConfig());
     client.setChunkedEncodingSize(null);
