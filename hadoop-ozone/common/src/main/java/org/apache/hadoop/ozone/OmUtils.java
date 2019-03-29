@@ -188,6 +188,7 @@ public final class OmUtils {
     case ServiceList:
     case ListMultiPartUploadParts:
     case GetFileStatus:
+    case LookupFile:
       return true;
     case CreateVolume:
     case SetVolumeProperty:
@@ -212,6 +213,8 @@ public final class OmUtils {
     case CancelDelegationToken:
     case ApplyCreateKey:
     case ApplyInitiateMultiPartUpload:
+    case CreateDirectory:
+    case CreateFile:
       return false;
     default:
       LOG.error("CmdType {} is not categorized as readOnly or not.", cmdType);

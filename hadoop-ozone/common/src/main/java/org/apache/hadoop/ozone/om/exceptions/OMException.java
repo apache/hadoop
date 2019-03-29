@@ -189,6 +189,12 @@ public class OMException extends IOException {
 
     TOKEN_CREATION_ERROR,
 
-    FILE_NOT_FOUND
+    FILE_NOT_FOUND,
+
+    DIRECTORY_NOT_FOUND,
+
+    FILE_ALREADY_EXISTS,
+
+    NOT_A_FILE
   }
 }

@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.om.protocol;
 
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
@@ -400,14 +401,54 @@ public interface OzoneManagerProtocol
   OMFailoverProxyProvider getOMFailoverProxyProvider();
 
   /**
-   * Get File Status for an Ozone key.
-   * @param volumeName volume name.
-   * @param bucketName bucket name.
-   * @param keyName key name.
-   * @return OzoneFileStatus for the key.
-   * @throws IOException
+   * OzoneFS api to get file status for an entry.
+   *
+   * @param keyArgs Key args
+   * @throws OMException if file does not exist
+   *                     if bucket does not exist
+   * @throws IOException if there is error in the db
+   *                     invalid arguments
    */
-  OzoneFileStatus getFileStatus(String volumeName, String bucketName,
-                                String keyName) throws IOException;
+  OzoneFileStatus getFileStatus(OmKeyArgs keyArgs) throws IOException;
+
+  /**
+   * Ozone FS api to create a directory. Parent directories if do not exist
+   * are created for the input directory.
+   *
+   * @param args Key args
+   * @throws OMException if any entry in the path exists as a file
+   *                     if bucket does not exist
+   * @throws IOException if there is error in the db
+   *                     invalid arguments
+   */
+  void createDirectory(OmKeyArgs args) throws IOException;
+
+  /**
+   * OzoneFS api to creates an output stream for a file.
+   *
+   * @param keyArgs   Key args
+   * @param overWrite if true existing file at the location will be overwritten
+   * @param recursive if true file would be created even if parent directories
+   *                  do not exist
+   * @throws OMException if given key is a directory
+   *                     if file exists and isOverwrite flag is false
+   *                     if an ancestor exists as a file
+   *                     if bucket does not exist
+   * @throws IOException if there is error in the db
+   *                     invalid arguments
+   */
+  OpenKeySession createFile(OmKeyArgs keyArgs, boolean overWrite,
+      boolean recursive) throws IOException;
+
+  /**
+   * OzoneFS api to lookup for a file.
+   *
+   * @param keyArgs Key args
+   * @throws OMException if given key is not found or it is not a file
+   *                     if bucket does not exist
+   * @throws IOException if there is error in the db
+   *                     invalid arguments
+   */
+  OmKeyInfo lookupFile(OmKeyArgs keyArgs) throws IOException;
 }
 

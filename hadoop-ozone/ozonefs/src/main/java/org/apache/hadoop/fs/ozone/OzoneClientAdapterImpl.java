@@ -17,19 +17,18 @@
  */
 package org.apache.hadoop.fs.ozone;
 
-import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.HashMap;
 import java.util.Iterator;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -163,22 +162,43 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
   }
 
   @Override
-  public InputStream createInputStream(String key) throws IOException {
+  public InputStream readFile(String key) throws IOException {
     if (storageStatistics != null) {
       storageStatistics.incrementCounter(Statistic.OBJECTS_READ, 1);
     }
-    return bucket.readKey(key).getInputStream();
+    try {
+      return bucket.readFile(key).getInputStream();
+    } catch (OMException ex) {
+      if (ex.getResult() == OMException.ResultCodes.FILE_NOT_FOUND
+          || ex.getResult() == OMException.ResultCodes.NOT_A_FILE) {
+        throw new FileNotFoundException(
+            ex.getResult().name() + ": " + ex.getMessage());
+      } else {
+        throw ex;
+      }
+    }
   }
 
   @Override
-  public OzoneFSOutputStream createKey(String key) throws IOException {
+  public OzoneFSOutputStream createFile(String key, boolean overWrite,
+      boolean recursive) throws IOException {
     if (storageStatistics != null) {
       storageStatistics.incrementCounter(Statistic.OBJECTS_CREATED, 1);
     }
-    OzoneOutputStream ozoneOutputStream =
-        bucket.createKey(key, 0, replicationType, replicationFactor,
-            new HashMap<>());
-    return new OzoneFSOutputStream(ozoneOutputStream.getOutputStream());
+    try {
+      OzoneOutputStream ozoneOutputStream = bucket
+          .createFile(key, 0, replicationType, replicationFactor, overWrite,
+              recursive);
+      return new OzoneFSOutputStream(ozoneOutputStream.getOutputStream());
+    } catch (OMException ex) {
+      if (ex.getResult() == OMException.ResultCodes.FILE_ALREADY_EXISTS
+          || ex.getResult() == OMException.ResultCodes.NOT_A_FILE) {
+        throw new FileAlreadyExistsException(
+            ex.getResult().name() + ": " + ex.getMessage());
+      } else {
+        throw ex;
+      }
+    }
   }
 
   @Override
@@ -190,39 +210,26 @@ public class OzoneClientAdapterImpl implements OzoneClientAdapter {
   }
 
   /**
-   * Helper method to check if an Ozone key is representing a directory.
-   *
-   * @param key key to be checked as a directory
-   * @return true if key is a directory, false otherwise
-   */
-  @Override
-  public boolean isDirectory(BasicKeyInfo key) {
-    LOG.trace("key name:{} size:{}", key.getName(),
-        key.getDataSize());
-    return key.getName().endsWith(OZONE_URI_DELIMITER)
-        && (key.getDataSize() == 0);
-  }
-
-  /**
    * Helper method to create an directory specified by key name in bucket.
    *
    * @param keyName key name to be created as directory
    * @return true if the key is created, false otherwise
    */
   @Override
-  public boolean createDirectory(String keyName) {
-    try {
-      LOG.trace("creating dir for key:{}", keyName);
-      if (storageStatistics != null) {
-        storageStatistics.incrementCounter(Statistic.OBJECTS_CREATED, 1);
-      }
-      bucket.createKey(keyName, 0, replicationType, replicationFactor,
-          new HashMap<>()).close();
-      return true;
-    } catch (IOException ioe) {
-      LOG.error("create key failed for key:{}", keyName, ioe);
-      return false;
+  public boolean createDirectory(String keyName) throws IOException {
+    LOG.trace("creating dir for key:{}", keyName);
+    if (storageStatistics != null) {
+      storageStatistics.incrementCounter(Statistic.OBJECTS_CREATED, 1);
     }
+    try {
+      bucket.createDirectory(keyName);
+    } catch (OMException e) {
+      if (e.getResult() == OMException.ResultCodes.FILE_ALREADY_EXISTS) {
+        throw new FileAlreadyExistsException(e.getMessage());
+      }
+      throw e;
+    }
+    return true;
   }
 
   /**

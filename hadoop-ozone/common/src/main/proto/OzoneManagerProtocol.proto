@@ -82,6 +82,9 @@ enum Type {
   CancelDelegationToken = 63;
 
   GetFileStatus = 70;
+  CreateDirectory = 71;
+  CreateFile = 72;
+  LookupFile = 73;
 }
 
 message OMRequest {
@@ -135,6 +138,9 @@ message OMRequest {
   optional hadoop.common.CancelDelegationTokenRequestProto cancelDelegationTokenRequest = 63;
 
   optional GetFileStatusRequest             getFileStatusRequest           = 70;
+  optional CreateDirectoryRequest           createDirectoryRequest         = 71;
+  optional CreateFileRequest                createFileRequest              = 72;
+  optional LookupFileRequest                lookupFileRequest              = 73;
 }
 
 message OMResponse {
@@ -191,6 +197,9 @@ message OMResponse {
   optional CancelDelegationTokenResponseProto cancelDelegationTokenResponse = 63;
 
   optional GetFileStatusResponse              getFileStatusResponse        = 70;
+  optional CreateDirectoryResponse            createDirectoryResponse      = 71;
+  optional CreateFileResponse                 createFileResponse           = 72;
+  optional LookupFileResponse                 lookupFileResponse           = 73;
 }
 
 enum Status {
@@ -243,6 +252,9 @@ enum Status {
     TOKEN_CREATION_ERROR = 43;
 
     FILE_NOT_FOUND = 44;
+    DIRECTORY_NOT_FOUND = 45;
+    FILE_ALREADY_EXISTS = 46;
+    NOT_A_FILE = 47;
 }
 
 
@@ -539,13 +551,41 @@ message KeyInfo {
 }
 
 message GetFileStatusRequest {
-    required string volumeName = 1;
-    required string bucketName = 2;
-    required string keyName = 3;
+    required KeyArgs keyArgs = 1;
 }
 
 message GetFileStatusResponse {
     required hadoop.fs.FileStatusProto status = 1;
+}
+
+message CreateDirectoryRequest {
+    required KeyArgs keyArgs = 1;
+}
+
+message CreateDirectoryResponse {
+}
+
+message CreateFileRequest {
+    required KeyArgs keyArgs = 1;
+    required bool isRecursive = 2;
+    required bool isOverwrite = 3;
+}
+
+message CreateFileResponse {
+
+    optional KeyInfo keyInfo = 1;
+    // clients' followup request may carry this ID for stateful operations
+    // (similar to a cookie).
+    optional uint64 ID = 2;
+    optional uint64 openVersion = 3;
+}
+
+message LookupFileRequest {
+    required KeyArgs keyArgs = 1;
+}
+
+message LookupFileResponse {
+    optional KeyInfo keyInfo = 1;
 }
 
 message CreateKeyRequest {
