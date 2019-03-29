@@ -203,9 +203,12 @@ public final class NodeSchemaLoader {
   private NodeSchemaLoadResult loadSchemaFromYaml(File schemaFile) {
     LOG.info("Loading network topology layer schema file " + schemaFile);
     NodeSchemaLoadResult finalSchema;
-    Yaml yaml = new Yaml();
+
     try {
-      NodeSchema nodeTree = yaml.loadAs(new FileInputStream(schemaFile), NodeSchema.class);
+      FileInputStream fileInputStream = new FileInputStream(schemaFile);
+      Yaml yaml = new Yaml();
+      NodeSchema nodeTree = yaml.loadAs(fileInputStream, NodeSchema.class);
+      fileInputStream.close();
       List<NodeSchema> schemaList = new ArrayList<>();
       if (nodeTree.getType() != LayerType.ROOT) {
         throw new IllegalArgumentException("First layer is not a ROOT node."
