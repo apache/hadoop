@@ -98,7 +98,6 @@ public class TestStorageContainerManagerHttpServer {
     conf.set(ScmConfigKeys.OZONE_SCM_HTTP_ADDRESS_KEY, "localhost:0");
     conf.set(ScmConfigKeys.OZONE_SCM_HTTPS_ADDRESS_KEY, "localhost:0");
 
-    InetSocketAddress.createUnresolved("localhost", 0);
     StorageContainerManagerHttpServer server = null;
     try {
       server = new StorageContainerManagerHttpServer(conf);
