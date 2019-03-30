@@ -140,9 +140,8 @@ public class TestSCMNodeMetrics {
     NodeReportProto nodeReport = NodeReportProto.newBuilder()
         .addStorageReport(storageReport).build();
     datanode.getDatanodeStateMachine().getContext().addReport(nodeReport);
-    datanode.getDatanodeStateMachine().triggerHeartbeat();
-    // Give some time so that SCM receives and processes the heartbeat.
-    Thread.sleep(300L);
+    cluster.getStorageContainerManager().getScmNodeManager()
+        .processNodeReport(datanode.getDatanodeDetails(), nodeReport);
 
     assertGauge("HealthyNodes", 1,
         getMetrics(SCMNodeMetrics.class.getSimpleName()));
