@@ -19,7 +19,6 @@ package org.apache.hadoop.ozone.web.ozShell;
 
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
-import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.ozShell.bucket.BucketCommands;
 import org.apache.hadoop.ozone.web.ozShell.keys.KeyCommands;
 import org.apache.hadoop.ozone.web.ozShell.token.TokenCommands;

@@ -19,19 +19,10 @@
 package org.apache.hadoop.ozone.web.ozShell;
 
 import org.apache.hadoop.hdds.cli.GenericCli;
-import org.apache.hadoop.hdds.cli.HddsVersionProvider;
-import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
-import org.apache.hadoop.ozone.web.ozShell.bucket.BucketCommands;
-import org.apache.hadoop.ozone.web.ozShell.keys.KeyCommands;
-import org.apache.hadoop.ozone.web.ozShell.token.TokenCommands;
-import org.apache.hadoop.ozone.web.ozShell.volume.VolumeCommands;
 
-import io.opentracing.Scope;
-import io.opentracing.util.GlobalTracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import picocli.CommandLine.Command;
 
 /**
  * Ozone user interface commands.
