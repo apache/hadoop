@@ -74,7 +74,7 @@ public class TestRouterNamenodeMonitoring {
     for (String nsId : nsIds) {
       nns.put(nsId, new HashMap<>());
       for (String nnId : asList("nn0", "nn1")) {
-        nns.get(nsId).put(nnId, new MockNamenode());
+        nns.get(nsId).put(nnId, new MockNamenode(nsId));
       }
     }
 

@@ -210,7 +210,13 @@ public class RemoteMethod {
 
   @Override
   public String toString() {
-    return this.protocol.getSimpleName() + "#" + this.methodName + " " +
-        Arrays.toString(this.params);
+    return new StringBuilder()
+        .append(this.protocol.getSimpleName())
+        .append("#")
+        .append(this.methodName)
+        .append("(")
+        .append(Arrays.deepToString(this.params))
+        .append(")")
+        .toString();
   }
 }

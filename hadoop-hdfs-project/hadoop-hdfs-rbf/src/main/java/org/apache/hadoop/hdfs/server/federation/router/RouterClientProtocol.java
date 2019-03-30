@@ -84,6 +84,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.slf4j.Logger;
@@ -93,6 +94,8 @@ import com.google.common.annotations.VisibleForTesting;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.ConnectException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -103,6 +106,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Module that implements all the RPC calls in {@link ClientProtocol} in the
@@ -119,6 +123,8 @@ public class RouterClientProtocol implements ClientProtocol {
 
   /** If it requires response from all subclusters. */
   private final boolean allowPartialList;
+  /** Time out when getting the mount statistics. */
+  private long mountStatusTimeOut;
 
   /** Identifier for the super user. */
   private String superUser;
@@ -140,6 +146,10 @@ public class RouterClientProtocol implements ClientProtocol {
     this.allowPartialList = conf.getBoolean(
         RBFConfigKeys.DFS_ROUTER_ALLOW_PARTIAL_LIST,
         RBFConfigKeys.DFS_ROUTER_ALLOW_PARTIAL_LIST_DEFAULT);
+    this.mountStatusTimeOut = conf.getTimeDuration(
+        RBFConfigKeys.DFS_ROUTER_CLIENT_MOUNT_TIME_OUT,
+        RBFConfigKeys.DFS_ROUTER_CLIENT_MOUNT_TIME_OUT_DEFAULT,
+        TimeUnit.SECONDS);
 
     // User and group for reporting
     try {
@@ -234,15 +244,92 @@ public class RouterClientProtocol implements ClientProtocol {
       }
     }
 
-    RemoteLocation createLocation = rpcServer.getCreateLocation(src);
     RemoteMethod method = new RemoteMethod("create",
         new Class<?>[] {String.class, FsPermission.class, String.class,
             EnumSetWritable.class, boolean.class, short.class,
             long.class, CryptoProtocolVersion[].class,
             String.class, String.class},
-        createLocation.getDest(), masked, clientName, flag, createParent,
+        new RemoteParam(), masked, clientName, flag, createParent,
         replication, blockSize, supportedVersions, ecPolicyName, storagePolicy);
-    return (HdfsFileStatus) rpcClient.invokeSingle(createLocation, method);
+    final List<RemoteLocation> locations =
+        rpcServer.getLocationsForPath(src, true);
+    RemoteLocation createLocation = null;
+    try {
+      createLocation = rpcServer.getCreateLocation(src);
+      return (HdfsFileStatus) rpcClient.invokeSingle(createLocation, method);
+    } catch (IOException ioe) {
+      final List<RemoteLocation> newLocations = checkFaultTolerantRetry(
+          method, src, ioe, createLocation, locations);
+      return rpcClient.invokeSequential(
+          newLocations, method, HdfsFileStatus.class, null);
+    }
+  }
+
+  /**
+   * Check if an exception is caused by an unavailable subcluster or not. It
+   * also checks the causes.
+   * @param ioe IOException to check.
+   * @return If caused by an unavailable subcluster. False if the should not be
+   *         retried (e.g., NSQuotaExceededException).
+   */
+  private static boolean isUnavailableSubclusterException(
+      final IOException ioe) {
+    if (ioe instanceof ConnectException ||
+        ioe instanceof ConnectTimeoutException ||
+        ioe instanceof NoNamenodesAvailableException) {
+      return true;
+    }
+    if (ioe.getCause() instanceof IOException) {
+      IOException cause = (IOException)ioe.getCause();
+      return isUnavailableSubclusterException(cause);
+    }
+    return false;
+  }
+
+  /**
+   * Check if a remote method can be retried in other subclusters when it
+   * failed in the original destination. This method returns the list of
+   * locations to retry in. This is used by fault tolerant mount points.
+   * @param method Method that failed and might be retried.
+   * @param src Path where the method was invoked.
+   * @param e Exception that was triggered.
+   * @param excludeLoc Location that failed and should be excluded.
+   * @param locations All the locations to retry.
+   * @return The locations where we should retry (excluding the failed ones).
+   * @throws IOException If this path is not fault tolerant or the exception
+   *                     should not be retried (e.g., NSQuotaExceededException).
+   */
+  private List<RemoteLocation> checkFaultTolerantRetry(
+      final RemoteMethod method, final String src, final IOException ioe,
+      final RemoteLocation excludeLoc, final List<RemoteLocation> locations)
+          throws IOException {
+
+    if (!isUnavailableSubclusterException(ioe)) {
+      LOG.debug("{} exception cannot be retried",
+          ioe.getClass().getSimpleName());
+      throw ioe;
+    }
+    if (!rpcServer.isPathFaultTolerant(src)) {
+      LOG.debug("{} does not allow retrying a failed subcluster", src);
+      throw ioe;
+    }
+
+    final List<RemoteLocation> newLocations;
+    if (excludeLoc == null) {
+      LOG.error("Cannot invoke {} for {}: {}", method, src, ioe.getMessage());
+      newLocations = locations;
+    } else {
+      LOG.error("Cannot invoke {} for {} in {}: {}",
+          method, src, excludeLoc, ioe.getMessage());
+      newLocations = new ArrayList<>();
+      for (final RemoteLocation loc : locations) {
+        if (!loc.equals(excludeLoc)) {
+          newLocations.add(loc);
+        }
+      }
+    }
+    LOG.info("{} allows retrying failed subclusters in {}", src, newLocations);
+    return newLocations;
   }
 
   @Override
@@ -604,13 +691,20 @@ public class RouterClientProtocol implements ClientProtocol {
         }
       } catch (IOException ioe) {
         // Can't query if this file exists or not.
-        LOG.error("Error requesting file info for path {} while proxing mkdirs",
-            src, ioe);
+        LOG.error("Error getting file info for {} while proxying mkdirs: {}",
+            src, ioe.getMessage());
       }
     }
 
-    RemoteLocation firstLocation = locations.get(0);
-    return (boolean) rpcClient.invokeSingle(firstLocation, method);
+    final RemoteLocation firstLocation = locations.get(0);
+    try {
+      return (boolean) rpcClient.invokeSingle(firstLocation, method);
+    } catch (IOException ioe) {
+      final List<RemoteLocation> newLocations = checkFaultTolerantRetry(
+          method, src, ioe, firstLocation, locations);
+      return rpcClient.invokeSequential(
+          newLocations, method, Boolean.class, Boolean.TRUE);
+    }
   }
 
   @Override
@@ -1702,10 +1796,26 @@ public class RouterClientProtocol implements ClientProtocol {
    */
   private HdfsFileStatus getFileInfoAll(final List<RemoteLocation> locations,
       final RemoteMethod method) throws IOException {
+    return getFileInfoAll(locations, method, -1);
+  }
+
+  /**
+   * Get the file info from all the locations.
+   *
+   * @param locations Locations to check.
+   * @param method The file information method to run.
+   * @param timeOutMs Time out for the operation in milliseconds.
+   * @return The first file info if it's a file, the directory if it's
+   *         everywhere.
+   * @throws IOException If all the locations throw an exception.
+   */
+  private HdfsFileStatus getFileInfoAll(final List<RemoteLocation> locations,
+      final RemoteMethod method, long timeOutMs) throws IOException {
 
     // Get the file info from everybody
     Map<RemoteLocation, HdfsFileStatus> results =
-        rpcClient.invokeConcurrent(locations, method, HdfsFileStatus.class);
+        rpcClient.invokeConcurrent(locations, method, false, false, timeOutMs,
+            HdfsFileStatus.class);
     int children = 0;
     // We return the first file
     HdfsFileStatus dirStatus = null;
@@ -1762,9 +1872,10 @@ public class RouterClientProtocol implements ClientProtocol {
         MountTableResolver mountTable = (MountTableResolver) subclusterResolver;
         MountTable entry = mountTable.getMountPoint(mName);
         if (entry != null) {
-          HdfsFileStatus fInfo = getFileInfoAll(entry.getDestinations(),
-              new RemoteMethod("getFileInfo", new Class<?>[] {String.class},
-                  new RemoteParam()));
+          RemoteMethod method = new RemoteMethod("getFileInfo",
+              new Class<?>[] {String.class}, new RemoteParam());
+          HdfsFileStatus fInfo = getFileInfoAll(
+              entry.getDestinations(), method, mountStatusTimeOut);
           if (fInfo != null) {
             permission = fInfo.getPermission();
             owner = fInfo.getOwner();

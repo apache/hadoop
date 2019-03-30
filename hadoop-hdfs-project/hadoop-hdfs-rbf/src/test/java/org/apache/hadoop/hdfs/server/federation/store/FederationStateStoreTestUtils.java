@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipStats;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 
 /**
@@ -93,7 +94,7 @@ public final class FederationStateStoreTestUtils {
 
     conf.setClass(FEDERATION_STORE_DRIVER_CLASS, clazz, StateStoreDriver.class);
 
-    if (clazz.isAssignableFrom(StateStoreFileBaseImpl.class)) {
+    if (StateStoreFileBaseImpl.class.isAssignableFrom(clazz)) {
       setFileConfiguration(conf);
     }
     return conf;
@@ -178,8 +179,7 @@ public final class FederationStateStoreTestUtils {
    * @param conf Configuration to extend.
    */
   public static void setFileConfiguration(Configuration conf) {
-    String workingPath = System.getProperty("user.dir");
-    String stateStorePath = workingPath + "/statestore";
+    String stateStorePath = GenericTestUtils.getRandomizedTempPath();
     conf.set(FEDERATION_STORE_FILE_DIRECTORY, stateStorePath);
   }
 

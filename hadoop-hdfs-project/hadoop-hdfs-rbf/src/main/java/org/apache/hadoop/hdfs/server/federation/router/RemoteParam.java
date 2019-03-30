@@ -68,4 +68,13 @@ public class RemoteParam {
       return context.getDest();
     }
   }
+
+  @Override
+  public String toString() {
+    return new StringBuilder()
+        .append("RemoteParam(")
+        .append(this.paramMap)
+        .append(")")
+        .toString();
+  }
 }

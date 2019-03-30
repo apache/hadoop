@@ -152,7 +152,7 @@ public class TestRouterAdminCLI {
 
   @Test
   public void testAddMountTable() throws Exception {
-    String nsId = "ns0";
+    String nsId = "ns0,ns1";
     String src = "/test-addmounttable";
     String dest = "/addmounttable";
     String[] argv = new String[] {"-add", src, nsId, dest};
@@ -166,26 +166,35 @@ public class TestRouterAdminCLI {
     MountTable mountTable = getResponse.getEntries().get(0);
 
     List<RemoteLocation> destinations = mountTable.getDestinations();
-    assertEquals(1, destinations.size());
+    assertEquals(2, destinations.size());
 
     assertEquals(src, mountTable.getSourcePath());
-    assertEquals(nsId, destinations.get(0).getNameserviceId());
+    assertEquals("ns0", destinations.get(0).getNameserviceId());
     assertEquals(dest, destinations.get(0).getDest());
+    assertEquals("ns1", destinations.get(1).getNameserviceId());
+    assertEquals(dest, destinations.get(1).getDest());
     assertFalse(mountTable.isReadOnly());
+    assertFalse(mountTable.isFaultTolerant());
 
     // test mount table update behavior
     dest = dest + "-new";
-    argv = new String[] {"-add", src, nsId, dest, "-readonly"};
+    argv = new String[] {"-add", src, nsId, dest, "-readonly",
+        "-faulttolerant", "-order", "HASH_ALL"};
     assertEquals(0, ToolRunner.run(admin, argv));
     stateStore.loadCache(MountTableStoreImpl.class, true);
 
     getResponse = client.getMountTableManager()
         .getMountTableEntries(getRequest);
     mountTable = getResponse.getEntries().get(0);
-    assertEquals(2, mountTable.getDestinations().size());
-    assertEquals(nsId, mountTable.getDestinations().get(1).getNameserviceId());
-    assertEquals(dest, mountTable.getDestinations().get(1).getDest());
+    assertEquals(4, mountTable.getDestinations().size());
+    RemoteLocation loc2 = mountTable.getDestinations().get(2);
+    assertEquals("ns0", loc2.getNameserviceId());
+    assertEquals(dest, loc2.getDest());
+    RemoteLocation loc3 = mountTable.getDestinations().get(3);
+    assertEquals("ns1", loc3.getNameserviceId());
+    assertEquals(dest, loc3.getDest());
     assertTrue(mountTable.isReadOnly());
+    assertTrue(mountTable.isFaultTolerant());
   }
 
   @Test
@@ -211,6 +220,7 @@ public class TestRouterAdminCLI {
     assertEquals(nsId, destinations.get(0).getNameserviceId());
     assertEquals(dest, destinations.get(0).getDest());
     assertFalse(mountTable.isReadOnly());
+    assertFalse(mountTable.isFaultTolerant());
 
     // test mount table update behavior
     dest = dest + "-new";
@@ -516,17 +526,19 @@ public class TestRouterAdminCLI {
     System.setOut(new PrintStream(out));
     String[] argv = new String[] {"-add", src, nsId};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue(out.toString().contains(
+    assertTrue("Wrong message: " + out, out.toString().contains(
         "\t[-add <source> <nameservice1, nameservice2, ...> <destination> "
-            + "[-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] "
+            + "[-readonly] [-faulttolerant] "
+            + "[-order HASH|LOCAL|RANDOM|HASH_ALL] "
             + "-owner <owner> -group <group> -mode <mode>]"));
     out.reset();
 
     argv = new String[] {"-update", src, nsId};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue(out.toString().contains(
+    assertTrue("Wrong message: " + out, out.toString().contains(
         "\t[-update <source> <nameservice1, nameservice2, ...> <destination> "
-            + "[-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] "
+            + "[-readonly] [-faulttolerant] "
+            + "[-order HASH|LOCAL|RANDOM|HASH_ALL] "
             + "-owner <owner> -group <group> -mode <mode>]"));
     out.reset();
 
@@ -567,10 +579,11 @@ public class TestRouterAdminCLI {
     assertEquals(-1, ToolRunner.run(admin, argv));
     String expected = "Usage: hdfs dfsrouteradmin :\n"
         + "\t[-add <source> <nameservice1, nameservice2, ...> <destination> "
-        + "[-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] "
+        + "[-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL] "
         + "-owner <owner> -group <group> -mode <mode>]\n"
         + "\t[-update <source> <nameservice1, nameservice2, ...> "
-        + "<destination> " + "[-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] "
+        + "<destination> "
+        + "[-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL] "
         + "-owner <owner> -group <group> -mode <mode>]\n" + "\t[-rm <source>]\n"
         + "\t[-ls <path>]\n"
         + "\t[-getDestination <path>]\n"
@@ -579,7 +592,7 @@ public class TestRouterAdminCLI {
         + "\t[-safemode enter | leave | get]\n"
         + "\t[-nameservice enable | disable <nameservice>]\n"
         + "\t[-getDisabledNameservices]";
-    assertTrue(out.toString(), out.toString().contains(expected));
+    assertTrue("Wrong message: " + out, out.toString().contains(expected));
     out.reset();
   }
 
@@ -1158,5 +1171,29 @@ public class TestRouterAdminCLI {
     assertEquals(-1, ToolRunner.run(admin, argv));
     argv = new String[] {"-getDestination /file1.txt /file2.txt"};
     assertEquals(-1, ToolRunner.run(admin, argv));
+  }
+
+  @Test
+  public void testErrorFaultTolerant() throws Exception {
+
+    System.setErr(new PrintStream(err));
+    String[] argv = new String[] {"-add", "/mntft", "ns01", "/tmp",
+        "-faulttolerant"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(err.toString(), err.toString().contains(
+        "Invalid entry, fault tolerance requires multiple destinations"));
+    err.reset();
+
+    System.setErr(new PrintStream(err));
+    argv = new String[] {"-add", "/mntft", "ns0,ns1", "/tmp",
+        "-order", "HASH", "-faulttolerant"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(err.toString(), err.toString().contains(
+        "Invalid entry, fault tolerance only supported for ALL order"));
+    err.reset();
+
+    argv = new String[] {"-add", "/mntft", "ns0,ns1", "/tmp",
+        "-order", "HASH_ALL", "-faulttolerant"};
+    assertEquals(0, ToolRunner.run(admin, argv));
   }
 }
