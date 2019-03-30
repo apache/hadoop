@@ -49,5 +49,3 @@ Testing audit parser
     ${result} =        Execute              ozone auditparser /opt/hadoop/audit.db query "select count(*) from audit where op='CREATE_BUCKET' and RESULT='SUCCESS'"
     ${result} =        Convert To Number     ${result}
                        Should be true       ${result}>${count}
-    ${result} =        Execute              ozone auditparser /opt/hadoop/audit.db query "select count(*) from audit where RESULT='FAILURE'"
-                       Should Contain       ${result}  0
