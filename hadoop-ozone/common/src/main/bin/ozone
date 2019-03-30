@@ -128,7 +128,7 @@ function ozonecmd_case
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-ozone-manager"
     ;;
     sh | shell)
-      HADOOP_CLASSNAME=org.apache.hadoop.ozone.web.ozShell.Shell
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.web.ozShell.OzoneShell
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-ozone-manager"
     ;;
     s3)
