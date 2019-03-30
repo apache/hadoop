@@ -66,6 +66,7 @@ public class MountTableStoreImpl extends MountTableStore {
       if (pc != null) {
         pc.checkPermission(mountTable, FsAction.WRITE);
       }
+      mountTable.validate();
     }
 
     boolean status = getDriver().put(mountTable, false, true);
@@ -85,6 +86,7 @@ public class MountTableStoreImpl extends MountTableStore {
       if (pc != null) {
         pc.checkPermission(mountTable, FsAction.WRITE);
       }
+      mountTable.validate();
     }
 
     boolean status = getDriver().put(mountTable, true, true);

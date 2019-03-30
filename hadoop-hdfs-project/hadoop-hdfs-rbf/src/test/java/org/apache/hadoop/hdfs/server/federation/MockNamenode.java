@@ -18,19 +18,44 @@
 package org.apache.hadoop.hdfs.server.federation;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyShort;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceProtocolService;
 import org.apache.hadoop.ha.protocolPB.HAServiceProtocolPB;
 import org.apache.hadoop.ha.protocolPB.HAServiceProtocolServerSideTranslatorPB;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeProtocolService;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.NamenodeProtocolService;
@@ -40,15 +65,29 @@ import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolServerSideTranslatorPB;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
+import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
+import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.StandbyException;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.DataChecksum.Type;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.BlockingService;
 
@@ -59,9 +98,15 @@ import com.google.protobuf.BlockingService;
  */
 public class MockNamenode {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MockNamenode.class);
+
+
   /** Mock implementation of the Namenode. */
   private final NamenodeProtocols mockNn;
 
+  /** Name service identifier (subcluster). */
+  private String nsId;
   /** HA state of the Namenode. */
   private HAServiceState haState = HAServiceState.STANDBY;
 
@@ -71,9 +116,13 @@ public class MockNamenode {
   private HttpServer2 httpServer;
 
 
-  public MockNamenode() throws Exception {
-    Configuration conf = new Configuration();
+  public MockNamenode(final String nsIdentifier) throws IOException {
+    this(nsIdentifier, new HdfsConfiguration());
+  }
 
+  public MockNamenode(final String nsIdentifier, final Configuration conf)
+      throws IOException {
+    this.nsId = nsIdentifier;
     this.mockNn = mock(NamenodeProtocols.class);
     setupMock();
     setupRPCServer(conf);
@@ -86,7 +135,7 @@ public class MockNamenode {
    * @throws IOException If the mock cannot be setup.
    */
   protected void setupMock() throws IOException {
-    NamespaceInfo nsInfo = new NamespaceInfo(1, "clusterId", "bpId", 1);
+    NamespaceInfo nsInfo = new NamespaceInfo(1, this.nsId, this.nsId, 1);
     when(mockNn.versionRequest()).thenReturn(nsInfo);
 
     when(mockNn.getServiceStatus()).thenAnswer(new Answer<HAServiceStatus>() {
@@ -115,11 +164,16 @@ public class MockNamenode {
         ClientNamenodeProtocol.newReflectiveBlockingService(
             clientNNProtoXlator);
 
+    int numHandlers = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_HANDLER_COUNT_KEY,
+        DFSConfigKeys.DFS_NAMENODE_HANDLER_COUNT_DEFAULT);
+
     rpcServer = new RPC.Builder(conf)
         .setProtocol(ClientNamenodeProtocolPB.class)
         .setInstance(clientNNPbService)
         .setBindAddress("0.0.0.0")
         .setPort(0)
+        .setNumHandlers(numHandlers)
         .build();
 
     NamenodeProtocolServerSideTranslatorPB nnProtoXlator =
@@ -145,6 +199,18 @@ public class MockNamenode {
             haServiceProtoXlator);
     DFSUtil.addPBProtocol(
         conf, HAServiceProtocolPB.class, haProtoPbService, rpcServer);
+
+    this.rpcServer.addTerseExceptions(
+        RemoteException.class,
+        SafeModeException.class,
+        FileNotFoundException.class,
+        FileAlreadyExistsException.class,
+        AccessControlException.class,
+        LeaseExpiredException.class,
+        NotReplicatedYetException.class,
+        IOException.class,
+        ConnectException.class,
+        StandbyException.class);
 
     rpcServer.start();
   }
@@ -189,6 +255,14 @@ public class MockNamenode {
   }
 
   /**
+   * Get the name service id (subcluster) of the Mock Namenode.
+   * @return Name service identifier.
+   */
+  public String getNameserviceId() {
+    return nsId;
+  }
+
+  /**
    * Get the HA state of the Mock Namenode.
    * @return HA state (ACTIVE or STANDBY).
    */
@@ -217,9 +291,158 @@ public class MockNamenode {
   public void stop() throws Exception {
     if (rpcServer != null) {
       rpcServer.stop();
+      rpcServer = null;
     }
     if (httpServer != null) {
       httpServer.stop();
+      httpServer = null;
     }
+  }
+
+  /**
+   * Add the mock for the FileSystem calls in ClientProtocol.
+   * @throws IOException If it cannot be setup.
+   */
+  public void addFileSystemMock() throws IOException {
+    final SortedMap<String, String> fs =
+        new ConcurrentSkipListMap<String, String>();
+
+    DirectoryListing l = mockNn.getListing(anyString(), any(), anyBoolean());
+    when(l).thenAnswer(invocation -> {
+      String src = getSrc(invocation);
+      LOG.info("{} getListing({})", nsId, src);
+      if (!src.endsWith("/")) {
+        src += "/";
+      }
+      Map<String, String> files =
+          fs.subMap(src, src + Character.MAX_VALUE);
+      List<HdfsFileStatus> list = new ArrayList<>();
+      for (String file : files.keySet()) {
+        if (file.substring(src.length()).indexOf('/') < 0) {
+          HdfsFileStatus fileStatus =
+              getMockHdfsFileStatus(file, fs.get(file));
+          list.add(fileStatus);
+        }
+      }
+      HdfsFileStatus[] array = list.toArray(
+          new HdfsFileStatus[list.size()]);
+      return new DirectoryListing(array, 0);
+    });
+    when(mockNn.getFileInfo(anyString())).thenAnswer(invocation -> {
+      String src = getSrc(invocation);
+      LOG.info("{} getFileInfo({})", nsId, src);
+      return getMockHdfsFileStatus(src, fs.get(src));
+    });
+    HdfsFileStatus c = mockNn.create(anyString(), any(), anyString(), any(),
+        anyBoolean(), anyShort(), anyLong(), any(), any(), any());
+    when(c).thenAnswer(invocation -> {
+      String src = getSrc(invocation);
+      LOG.info("{} create({})", nsId, src);
+      fs.put(src, "FILE");
+      return getMockHdfsFileStatus(src, "FILE");
+    });
+    LocatedBlocks b = mockNn.getBlockLocations(
+        anyString(), anyLong(), anyLong());
+    when(b).thenAnswer(invocation -> {
+      String src = getSrc(invocation);
+      LOG.info("{} getBlockLocations({})", nsId, src);
+      if (!fs.containsKey(src)) {
+        LOG.error("{} cannot find {} for getBlockLocations", nsId, src);
+        throw new FileNotFoundException("File does not exist " + src);
+      }
+      return mock(LocatedBlocks.class);
+    });
+    boolean f = mockNn.complete(anyString(), anyString(), any(), anyLong());
+    when(f).thenAnswer(invocation -> {
+      String src = getSrc(invocation);
+      if (!fs.containsKey(src)) {
+        LOG.error("{} cannot find {} for complete", nsId, src);
+        throw new FileNotFoundException("File does not exist " + src);
+      }
+      return true;
+    });
+    LocatedBlock a = mockNn.addBlock(
+        anyString(), anyString(), any(), any(), anyLong(), any(), any());
+    when(a).thenAnswer(invocation -> {
+      String src = getSrc(invocation);
+      if (!fs.containsKey(src)) {
+        LOG.error("{} cannot find {} for addBlock", nsId, src);
+        throw new FileNotFoundException("File does not exist " + src);
+      }
+      return getMockLocatedBlock(nsId);
+    });
+    boolean m = mockNn.mkdirs(anyString(), any(), anyBoolean());
+    when(m).thenAnswer(invocation -> {
+      String src = getSrc(invocation);
+      LOG.info("{} mkdirs({})", nsId, src);
+      fs.put(src, "DIRECTORY");
+      return true;
+    });
+    when(mockNn.getServerDefaults()).thenAnswer(invocation -> {
+      LOG.info("{} getServerDefaults", nsId);
+      FsServerDefaults defaults = mock(FsServerDefaults.class);
+      when(defaults.getChecksumType()).thenReturn(
+          Type.valueOf(DataChecksum.CHECKSUM_CRC32));
+      when(defaults.getKeyProviderUri()).thenReturn(nsId);
+      return defaults;
+    });
+  }
+
+  private static String getSrc(InvocationOnMock invocation) {
+    return (String) invocation.getArguments()[0];
+  }
+
+  /**
+   * Get a mock HDFS file status.
+   * @param filename Name of the file.
+   * @param type Type of the file (FILE, DIRECTORY, or null).
+   * @return HDFS file status
+   */
+  private static HdfsFileStatus getMockHdfsFileStatus(
+      final String filename, final String type) {
+    if (type == null) {
+      return null;
+    }
+    HdfsFileStatus fileStatus = mock(HdfsFileStatus.class);
+    when(fileStatus.getLocalNameInBytes()).thenReturn(filename.getBytes());
+    when(fileStatus.getPermission()).thenReturn(mock(FsPermission.class));
+    when(fileStatus.getOwner()).thenReturn("owner");
+    when(fileStatus.getGroup()).thenReturn("group");
+    if (type.equals("FILE")) {
+      when(fileStatus.getLen()).thenReturn(100L);
+      when(fileStatus.getReplication()).thenReturn((short) 1);
+      when(fileStatus.getBlockSize()).thenReturn(
+          HdfsClientConfigKeys.DFS_BLOCK_SIZE_DEFAULT);
+    } else if (type.equals("DIRECTORY")) {
+      when(fileStatus.isDir()).thenReturn(true);
+      when(fileStatus.isDirectory()).thenReturn(true);
+    }
+    return fileStatus;
+  }
+
+  /**
+   * Get a mock located block pointing to one of the subclusters. It is
+   * allocated in a fake Datanode.
+   * @param nsId Name service identifier (subcluster).
+   * @return Mock located block.
+   */
+  private static LocatedBlock getMockLocatedBlock(final String nsId) {
+    LocatedBlock lb = mock(LocatedBlock.class);
+    when(lb.getCachedLocations()).thenReturn(new DatanodeInfo[0]);
+    DatanodeID nodeId = new DatanodeID("localhost", "localhost", "dn0",
+        1111, 1112, 1113, 1114);
+    DatanodeInfo dnInfo = new DatanodeDescriptor(nodeId);
+    when(lb.getLocations()).thenReturn(new DatanodeInfo[] {dnInfo});
+    ExtendedBlock eb = mock(ExtendedBlock.class);
+    when(eb.getBlockPoolId()).thenReturn(nsId);
+    when(lb.getBlock()).thenReturn(eb);
+    @SuppressWarnings("unchecked")
+    Token<BlockTokenIdentifier> tok = mock(Token.class);
+    when(tok.getIdentifier()).thenReturn(nsId.getBytes());
+    when(tok.getPassword()).thenReturn(nsId.getBytes());
+    when(tok.getKind()).thenReturn(new Text(nsId));
+    when(tok.getService()).thenReturn(new Text(nsId));
+    when(lb.getBlockToken()).thenReturn(tok);
+    return lb;
   }
 }

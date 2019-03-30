@@ -504,6 +504,36 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.client.mount-status.time-out</name>
+    <value>1s</value>
+    <description>
+      Set a timeout for the Router when listing folders containing mount
+      points. In this process, the Router checks the mount table and then it
+      checks permissions in the subcluster. After the time out, we return the
+      default values.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.connect.max.retries.on.timeouts</name>
+    <value>0</value>
+    <description>
+      Maximum number of retries for the IPC Client when connecting to the
+      subclusters. By default, it doesn't let the IPC retry and the Router
+      handles it.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.connect.timeout</name>
+    <value>2s</value>
+    <description>
+      Time out for the IPC client connecting to the subclusters. This should be
+      short as the Router has knowledge of the state of the Routers.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.keytab.file</name>
     <value></value>
     <description>

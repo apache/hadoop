@@ -135,7 +135,17 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final String DFS_ROUTER_ALLOW_PARTIAL_LIST =
       FEDERATION_ROUTER_PREFIX + "client.allow-partial-listing";
   public static final boolean DFS_ROUTER_ALLOW_PARTIAL_LIST_DEFAULT = true;
-
+  public static final String DFS_ROUTER_CLIENT_MOUNT_TIME_OUT =
+      FEDERATION_ROUTER_PREFIX + "client.mount-status.time-out";
+  public static final long DFS_ROUTER_CLIENT_MOUNT_TIME_OUT_DEFAULT =
+      TimeUnit.SECONDS.toMillis(1);
+  public static final String DFS_ROUTER_CLIENT_MAX_RETRIES_TIME_OUT =
+      FEDERATION_ROUTER_PREFIX + "connect.max.retries.on.timeouts";
+  public static final int DFS_ROUTER_CLIENT_MAX_RETRIES_TIME_OUT_DEFAULT = 0;
+  public static final String DFS_ROUTER_CLIENT_CONNECT_TIMEOUT =
+      FEDERATION_ROUTER_PREFIX + "connect.timeout";
+  public static final long DFS_ROUTER_CLIENT_CONNECT_TIMEOUT_DEFAULT =
+      TimeUnit.SECONDS.toMillis(2);
 
   // HDFS Router State Store connection
   public static final String FEDERATION_FILE_RESOLVER_CLIENT_CLASS =

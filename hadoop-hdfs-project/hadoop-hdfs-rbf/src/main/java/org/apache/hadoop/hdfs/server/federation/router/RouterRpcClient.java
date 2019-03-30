@@ -18,11 +18,15 @@
 
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_TIMEOUT_KEY;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -62,6 +66,7 @@ import org.apache.hadoop.io.retry.RetryPolicy.RetryAction.RetryDecision;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
+import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -126,7 +131,8 @@ public class RouterRpcClient {
 
     this.namenodeResolver = resolver;
 
-    this.connectionManager = new ConnectionManager(conf);
+    Configuration clientConf = getClientConfiguration(conf);
+    this.connectionManager = new ConnectionManager(clientConf);
     this.connectionManager.start();
 
     int numThreads = conf.getInt(
@@ -163,6 +169,31 @@ public class RouterRpcClient {
     this.retryPolicy = RetryPolicies.failoverOnNetworkException(
         RetryPolicies.TRY_ONCE_THEN_FAIL, maxFailoverAttempts, maxRetryAttempts,
         failoverSleepBaseMillis, failoverSleepMaxMillis);
+  }
+
+  /**
+   * Get the configuration for the RPC client. It takes the Router
+   * configuration and transforms it into regular RPC Client configuration.
+   * @param conf Input configuration.
+   * @return Configuration for the RPC client.
+   */
+  private Configuration getClientConfiguration(final Configuration conf) {
+    Configuration clientConf = new Configuration(conf);
+    int maxRetries = conf.getInt(
+        RBFConfigKeys.DFS_ROUTER_CLIENT_MAX_RETRIES_TIME_OUT,
+        RBFConfigKeys.DFS_ROUTER_CLIENT_MAX_RETRIES_TIME_OUT_DEFAULT);
+    if (maxRetries >= 0) {
+      clientConf.setInt(
+          IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY, maxRetries);
+    }
+    long connectTimeOut = conf.getTimeDuration(
+        RBFConfigKeys.DFS_ROUTER_CLIENT_CONNECT_TIMEOUT,
+        RBFConfigKeys.DFS_ROUTER_CLIENT_CONNECT_TIMEOUT_DEFAULT,
+        TimeUnit.MILLISECONDS);
+    if (connectTimeOut >= 0) {
+      clientConf.setLong(IPC_CLIENT_CONNECT_TIMEOUT_KEY, connectTimeOut);
+    }
+    return clientConf;
   }
 
   /**
@@ -341,17 +372,19 @@ public class RouterRpcClient {
    * @param method Remote ClientProtcol method to invoke.
    * @param params Variable list of parameters matching the method.
    * @return The result of invoking the method.
-   * @throws IOException
+   * @throws ConnectException If it cannot connect to any Namenode.
+   * @throws StandbyException If all Namenodes are in Standby.
+   * @throws IOException If it cannot invoke the method.
    */
   private Object invokeMethod(
       final UserGroupInformation ugi,
       final List<? extends FederationNamenodeContext> namenodes,
       final Class<?> protocol, final Method method, final Object... params)
-          throws IOException {
+          throws ConnectException, StandbyException, IOException {
 
     if (namenodes == null || namenodes.isEmpty()) {
       throw new IOException("No namenodes to invoke " + method.getName() +
-          " with params " + Arrays.toString(params) + " from "
+          " with params " + Arrays.deepToString(params) + " from "
           + router.getRouterId());
     }
 
@@ -388,6 +421,12 @@ public class RouterRpcClient {
             this.rpcMonitor.proxyOpFailureStandby();
           }
           failover = true;
+        } else if (ioe instanceof ConnectException ||
+            ioe instanceof ConnectTimeoutException) {
+          if (this.rpcMonitor != null) {
+            this.rpcMonitor.proxyOpFailureCommunicate();
+          }
+          failover = true;
         } else if (ioe instanceof RemoteException) {
           if (this.rpcMonitor != null) {
             this.rpcMonitor.proxyOpComplete(true);
@@ -408,7 +447,7 @@ public class RouterRpcClient {
           if (this.rpcMonitor != null) {
             this.rpcMonitor.proxyOpNoNamenodes();
           }
-          LOG.error("Can not get available namenode for {} {} error: {}",
+          LOG.error("Cannot get available namenode for {} {} error: {}",
               nsId, rpcAddress, ioe.getMessage());
           // Throw RetriableException so that client can retry
           throw new RetriableException(ioe);
@@ -433,24 +472,33 @@ public class RouterRpcClient {
 
     // All namenodes were unavailable or in standby
     String msg = "No namenode available to invoke " + method.getName() + " " +
-        Arrays.toString(params);
+        Arrays.deepToString(params) + " in " + namenodes + " from " +
+        router.getRouterId();
     LOG.error(msg);
+    int exConnect = 0;
     for (Entry<FederationNamenodeContext, IOException> entry :
         ioes.entrySet()) {
       FederationNamenodeContext namenode = entry.getKey();
-      String nsId = namenode.getNameserviceId();
-      String nnId = namenode.getNamenodeId();
+      String nnKey = namenode.getNamenodeKey();
       String addr = namenode.getRpcAddress();
       IOException ioe = entry.getValue();
       if (ioe instanceof StandbyException) {
-        LOG.error("{} {} at {} is in Standby: {}", nsId, nnId, addr,
-            ioe.getMessage());
+        LOG.error("{} at {} is in Standby: {}",
+            nnKey, addr, ioe.getMessage());
+      } else if (ioe instanceof ConnectException ||
+          ioe instanceof ConnectTimeoutException) {
+        exConnect++;
+        LOG.error("{} at {} cannot be reached: {}",
+            nnKey, addr, ioe.getMessage());
       } else {
-        LOG.error("{} {} at {} error: \"{}\"",
-            nsId, nnId, addr, ioe.getMessage());
+        LOG.error("{} at {} error: \"{}\"", nnKey, addr, ioe.getMessage());
       }
     }
-    throw new StandbyException(msg);
+    if (exConnect == ioes.size()) {
+      throw new ConnectException(msg);
+    } else {
+      throw new StandbyException(msg);
+    }
   }
 
   /**
@@ -496,6 +544,9 @@ public class RouterRpcClient {
         } else if (decision == RetryDecision.FAILOVER_AND_RETRY) {
           // failover, invoker looks for standby exceptions for failover.
           if (ioe instanceof StandbyException) {
+            throw ioe;
+          } else if (ioe instanceof ConnectException ||
+              ioe instanceof ConnectTimeoutException) {
             throw ioe;
           } else {
             throw new StandbyException(ioe.getMessage());
@@ -1043,7 +1094,7 @@ public class RouterRpcClient {
 
     if (locations.isEmpty()) {
       throw new IOException("No remote locations available");
-    } else if (locations.size() == 1) {
+    } else if (locations.size() == 1 && timeOutMs <= 0) {
       // Shortcut, just one call
       T location = locations.iterator().next();
       String ns = location.getNameserviceId();

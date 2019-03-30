@@ -270,6 +270,7 @@ public class FederationMetrics implements FederationMBean {
           innerInfo.put("order", "");
         }
         innerInfo.put("readonly", entry.isReadOnly());
+        innerInfo.put("faulttolerant", entry.isFaultTolerant());
         info.add(Collections.unmodifiableMap(innerInfo));
       }
     } catch (IOException e) {

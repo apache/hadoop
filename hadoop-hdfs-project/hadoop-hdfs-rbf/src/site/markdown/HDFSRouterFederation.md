@@ -266,6 +266,14 @@ To determine which subcluster contains a file:
     [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -getDestination /user/user1/file.txt
 
 Note that consistency of the data across subclusters is not guaranteed by the Router.
+By default, if one subcluster is unavailable, writes may fail if they target that subcluster.
+To allow writing in another subcluster, one can make the mount point fault tolerant:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -add /data ns1,ns2 /data -order HASH_ALL -faulttolerant
+
+Note that this can lead to a file to be written in multiple subclusters or a folder missing in one.
+One needs to be aware of the possibility of these inconsistencies and target this `faulttolerant` approach to resilient paths.
+An example for this is the `/app-logs` folder which will mostly write once into a subfolder.
 
 ### Disabling nameservices
 

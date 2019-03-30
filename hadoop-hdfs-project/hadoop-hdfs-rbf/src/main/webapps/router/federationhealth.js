@@ -324,8 +324,20 @@
         }
       }
 
+      function augment_fault_tolerant(mountTable) {
+        for (var i = 0, e = mountTable.length; i < e; ++i) {
+          if (mountTable[i].faulttolerant == true) {
+            mountTable[i].faulttolerant = "true"
+            mountTable[i].ftStatus = "Fault tolerant"
+          } else {
+            mountTable[i].faulttolerant = "false"
+          }
+        }
+      }
+
       resource.MountTable = JSON.parse(resource.MountTable)
       augment_read_only(resource.MountTable)
+      augment_fault_tolerant(resource.MountTable)
       return resource;
     }
 

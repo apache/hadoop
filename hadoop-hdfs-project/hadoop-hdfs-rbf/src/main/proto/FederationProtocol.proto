@@ -143,6 +143,8 @@ message MountTableRecordProto {
   optional int32 mode = 12;
 
   optional QuotaUsageProto quota = 13;
+
+  optional bool faultTolerant = 14 [default = false];
 }
 
 message AddMountTableEntryRequestProto {

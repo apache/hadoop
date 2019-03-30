@@ -30,6 +30,7 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Array;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -133,6 +134,7 @@ import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.AccessControlException;
@@ -294,7 +296,9 @@ public class RouterRpcServer extends AbstractService
         AccessControlException.class,
         LeaseExpiredException.class,
         NotReplicatedYetException.class,
-        IOException.class);
+        IOException.class,
+        ConnectException.class,
+        RetriableException.class);
 
     this.rpcServer.addSuppressedLoggingExceptions(
         StandbyException.class);
@@ -520,7 +524,7 @@ public class RouterRpcServer extends AbstractService
     // If default Ns is not present return result from first namespace.
     Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
     if (nss.isEmpty()) {
-      throw new IOException("No namespace availaible.");
+      throw new IOException("No namespace available.");
     }
     nsId = nss.iterator().next().getNameserviceId();
     return rpcClient.invokeSingle(nsId, method, clazz);
@@ -566,6 +570,7 @@ public class RouterRpcServer extends AbstractService
         replication, blockSize, supportedVersions, ecPolicyName, storagePolicy);
   }
 
+
   /**
    * Get the location to create a file. It checks if the file already existed
    * in one of the locations.
@@ -574,10 +579,24 @@ public class RouterRpcServer extends AbstractService
    * @return The remote location for this file.
    * @throws IOException If the file has no creation location.
    */
-  RemoteLocation getCreateLocation(final String src)
+  RemoteLocation getCreateLocation(final String src) throws IOException {
+    final List<RemoteLocation> locations = getLocationsForPath(src, true);
+    return getCreateLocation(src, locations);
+  }
+
+  /**
+   * Get the location to create a file. It checks if the file already existed
+   * in one of the locations.
+   *
+   * @param src Path of the file to check.
+   * @param locations Prefetched locations for the file.
+   * @return The remote location for this file.
+   * @throws IOException If the file has no creation location.
+   */
+  RemoteLocation getCreateLocation(
+      final String src, final List<RemoteLocation> locations)
       throws IOException {
 
-    final List<RemoteLocation> locations = getLocationsForPath(src, true);
     if (locations == null || locations.isEmpty()) {
       throw new IOException("Cannot get locations to create " + src);
     }
@@ -1560,6 +1579,27 @@ public class RouterRpcServer extends AbstractService
         MountTable entry = mountTable.getMountPoint(path);
         if (entry != null) {
           return entry.isAll();
+        }
+      } catch (IOException e) {
+        LOG.error("Cannot get mount point", e);
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Check if a path supports failed subclusters.
+   *
+   * @param path Path to check.
+   * @return If a path should support failed subclusters.
+   */
+  boolean isPathFaultTolerant(final String path) {
+    if (subclusterResolver instanceof MountTableResolver) {
+      try {
+        MountTableResolver mountTable = (MountTableResolver) subclusterResolver;
+        MountTable entry = mountTable.getMountPoint(path);
+        if (entry != null) {
+          return entry.isFaultTolerant();
         }
       } catch (IOException e) {
         LOG.error("Cannot get mount point", e);
