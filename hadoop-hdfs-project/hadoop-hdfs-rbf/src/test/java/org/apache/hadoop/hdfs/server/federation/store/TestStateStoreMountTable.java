@@ -78,15 +78,17 @@ public class TestStateStoreMountTable extends TestStateStoreBase {
     assertFalse(getStateStore().isDriverReady());
 
     // Test APIs that access the store to check they throw the correct exception
+    MountTable entry = MountTable.newInstance(
+        "/mnt", Collections.singletonMap("ns0", "/tmp"));
     AddMountTableEntryRequest addRequest =
-        AddMountTableEntryRequest.newInstance();
+        AddMountTableEntryRequest.newInstance(entry);
     verifyException(mountStore, "addMountTableEntry",
         StateStoreUnavailableException.class,
         new Class[] {AddMountTableEntryRequest.class},
         new Object[] {addRequest});
 
     UpdateMountTableEntryRequest updateRequest =
-        UpdateMountTableEntryRequest.newInstance();
+        UpdateMountTableEntryRequest.newInstance(entry);
     verifyException(mountStore, "updateMountTableEntry",
         StateStoreUnavailableException.class,
         new Class[] {UpdateMountTableEntryRequest.class},
