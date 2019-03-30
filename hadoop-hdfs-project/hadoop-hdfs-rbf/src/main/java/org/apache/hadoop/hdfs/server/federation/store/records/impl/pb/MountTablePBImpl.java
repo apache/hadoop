@@ -196,6 +196,20 @@ public class MountTablePBImpl extends MountTable implements PBRecord {
   }
 
   @Override
+  public boolean isFaultTolerant() {
+    MountTableRecordProtoOrBuilder proto = this.translator.getProtoOrBuilder();
+    if (!proto.hasFaultTolerant()) {
+      return false;
+    }
+    return proto.getFaultTolerant();
+  }
+
+  @Override
+  public void setFaultTolerant(boolean faultTolerant) {
+    this.translator.getBuilder().setFaultTolerant(faultTolerant);
+  }
+
+  @Override
   public String getOwnerName() {
     MountTableRecordProtoOrBuilder proto = this.translator.getProtoOrBuilder();
     if (!proto.hasOwnerName()) {
