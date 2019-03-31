@@ -35,6 +35,11 @@ import java.nio.channels.FileChannel;
 public abstract class MappableBlockLoader {
 
   /**
+   * Initialize a specific MappableBlockLoader.
+   */
+  abstract void initialize(FsDatasetCache cacheManager) throws IOException;
+
+  /**
    * Load the block.
    *
    * Map the block, and then verify its checksum.
@@ -60,22 +65,46 @@ public abstract class MappableBlockLoader {
   /**
    * Try to reserve some given bytes.
    *
-   * @param bytesCount
-   *          The number of bytes to add.
+   * @param bytesCount    The number of bytes to add.
    *
-   * @return The new number of usedBytes if we succeeded; -1 if we failed.
+   * @return              The new number of usedBytes if we succeeded;
+   *                      -1 if we failed.
    */
   abstract long reserve(long bytesCount);
 
   /**
    * Release some bytes that we're using.
    *
-   * @param bytesCount
-   *          The number of bytes to release.
+   * @param bytesCount    The number of bytes to release.
    *
-   * @return The new number of usedBytes.
+   * @return              The new number of usedBytes.
    */
   abstract long release(long bytesCount);
+
+  /**
+   * Get the config key of cache capacity.
+   */
+  abstract String getCacheCapacityConfigKey();
+
+  /**
+   * Get the approximate amount of cache space used.
+   */
+  abstract long getCacheUsed();
+
+  /**
+   * Get the maximum amount of cache bytes.
+   */
+  abstract long getCacheCapacity();
+
+  /**
+   * Check whether the cache is non-volatile.
+   */
+  abstract boolean isTransientCache();
+
+  /**
+   * Get a cache file path if applicable. Otherwise return null.
+   */
+  abstract String getCachedPath(ExtendedBlockId key);
 
   /**
    * Reads bytes into a buffer until EOF or the buffer's limit is reached.
