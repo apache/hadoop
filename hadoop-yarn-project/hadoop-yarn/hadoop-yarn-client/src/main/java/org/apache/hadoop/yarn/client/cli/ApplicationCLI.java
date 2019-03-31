@@ -366,7 +366,8 @@ public class ApplicationCLI extends YarnCLI {
           java.util.Arrays.asList(SignalContainerCommand.values()) +
           " Default command is OUTPUT_THREAD_DUMP.");
       opts.getOption(SIGNAL_CMD).setArgName("container ID [signal command]");
-      opts.getOption(SIGNAL_CMD).setArgs(3);
+
+      opts.getOption(SIGNAL_CMD).setArgs(2);
       opts.addOption(CLUSTER_ID_OPTION, true, "ClusterId. "
           + "By default, it will take default cluster id from the RM");
       opts.getOption(CLUSTER_ID_OPTION).setArgName("Cluster ID");
