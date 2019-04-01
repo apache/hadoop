@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import com.amazonaws.AmazonServiceException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.amazonaws.services.s3.Headers;
@@ -234,6 +235,25 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         "policy requires ETag");
   }
 
+  @Test
+  public void testCopyVersionMismatch() throws Throwable {
+    ChangeTracker tracker = newTracker(
+        ChangeDetectionPolicy.Mode.Server,
+        ChangeDetectionPolicy.Source.ETag,
+        true,
+        objectAttributes("etag", "versionId"));
+
+    // 412 is translated to RemoteFileChangedException
+    AmazonServiceException awsException =
+        new AmazonServiceException("aws exception");
+    awsException.setStatusCode(412);
+    expectChangeException(tracker, awsException, "copy",
+        RemoteFileChangedException.PRECONDITIONS_NOT_MET);
+
+    // processing another type of exception does nothing
+    tracker.processException(new RuntimeException(), "copy");
+  }
+
   protected void assertConstraintApplied(final ChangeTracker tracker,
       final GetObjectRequest request) {
     assertTrue("Tracker should have applied contraints " + tracker,
@@ -251,6 +271,15 @@ public class TestStreamChangeTracker extends HadoopTestBase {
       final S3Object response,
       final String message) throws Exception {
     return expectException(tracker, response, message,
+        RemoteFileChangedException.class);
+  }
+
+  protected RemoteFileChangedException expectChangeException(
+      final ChangeTracker tracker,
+      final Exception exception,
+      final String operation,
+      final String message) throws Exception {
+    return expectException(tracker, exception, operation, message,
         RemoteFileChangedException.class);
   }
 
@@ -294,6 +323,21 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         message,
         () -> {
           tracker.processResponse(response);
+          return tracker;
+        });
+  }
+
+  protected <T extends Exception> T expectException(
+      final ChangeTracker tracker,
+      final Exception exception,
+      final String operation,
+      final String message,
+      final Class<T> clazz) throws Exception {
+    return intercept(
+        clazz,
+        message,
+        () -> {
+          tracker.processException(exception, operation);
           return tracker;
         });
   }
