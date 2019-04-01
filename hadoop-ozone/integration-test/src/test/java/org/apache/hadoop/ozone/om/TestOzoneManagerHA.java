@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.ozone.om;
 
-
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
@@ -222,7 +221,7 @@ public class TestOzoneManagerHA {
     // Stop one of the ozone manager, to see when the OM leader changes
     // multipart upload is happening successfully or not.
     cluster.stopOzoneManager(leaderOMNodeId);
-
+    Thread.sleep(NODE_FAILURE_TIMEOUT * 2);
 
     createMultipartKeyAndReadKey(ozoneBucket, keyName, uploadID);
 
