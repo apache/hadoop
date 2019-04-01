@@ -202,6 +202,7 @@ public class TestObjectChangeDetectionAttributes extends AbstractS3AMockTest {
     S3Object s3Object = new S3Object();
     ObjectMetadata metadata = new ObjectMetadata();
     metadata.setHeader(Headers.S3_VERSION_ID, versionId);
+    metadata.setHeader(Headers.ETAG, eTag);
     s3Object.setObjectMetadata(metadata);
     s3Object.setObjectContent(new ByteArrayInputStream(content));
     when(s3.getObject(argThat(correctGetObjectRequest(file, eTag, versionId))))
