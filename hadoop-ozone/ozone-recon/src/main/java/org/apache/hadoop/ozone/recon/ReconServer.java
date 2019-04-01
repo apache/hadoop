@@ -28,7 +28,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hdds.cli.GenericCli;
-import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
 import org.apache.hadoop.ozone.recon.spi.OzoneManagerServiceProvider;
@@ -40,15 +39,10 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 
-import picocli.CommandLine.Command;
 
 /**
  * Recon server main class that stops and starts recon services.
  */
-@Command(name = "ozone recon",
-    hidden = true, description = "File system health and other stats server.",
-    versionProvider = HddsVersionProvider.class,
-    mixinStandardHelpOptions = true)
 public class ReconServer extends GenericCli {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReconServer.class);
