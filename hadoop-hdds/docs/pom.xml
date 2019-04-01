@@ -49,8 +49,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <workingDirectory>${project.build.directory}</workingDirectory>
               <arguments>
                 <argument>${basedir}/dev-support/bin/generate-site.sh</argument>
-                <argument>${hdds.version}</argument>
-                <argument>${project.build.directory}</argument>
               </arguments>
             </configuration>
           </execution>
