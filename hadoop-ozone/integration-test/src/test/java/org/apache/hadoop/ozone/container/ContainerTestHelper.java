@@ -700,6 +700,15 @@ public final class ContainerTestHelper {
         .createKey(keyName, size, type, factor, new HashMap<>());
   }
 
+  public static OzoneOutputStream createKey(String keyName,
+      ReplicationType type,
+      org.apache.hadoop.hdds.client.ReplicationFactor factor, long size,
+      ObjectStore objectStore, String volumeName, String bucketName)
+      throws Exception {
+    return objectStore.getVolume(volumeName).getBucket(bucketName)
+        .createKey(keyName, size, type, factor, new HashMap<>());
+  }
+
   public static void validateData(String keyName, byte[] data,
       ObjectStore objectStore, String volumeName, String bucketName)
       throws Exception {
