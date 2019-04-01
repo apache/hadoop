@@ -96,6 +96,7 @@ import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -147,6 +148,7 @@ public class Client {
   private YarnClient yarnClient;
   // Application master specific info to register a new Application with RM/ASM
   private String appName = "";
+  private ApplicationId applicationId;
   // App master priority
   private int amPriority = 0;
   // Queue for App master
@@ -759,7 +761,7 @@ public class Client {
     
     // set the application name
     ApplicationSubmissionContext appContext = app.getApplicationSubmissionContext();
-    ApplicationId appId = appContext.getApplicationId();
+    applicationId = appContext.getApplicationId();
 
     // Set up resource type requirements
     // For now, both memory and vcores are supported, so we set memory and
@@ -800,13 +802,13 @@ public class Client {
     // Copy the application master jar to the filesystem 
     // Create a local resource to point to the destination jar path 
     FileSystem fs = FileSystem.get(conf);
-    addToLocalResources(fs, appMasterJar, appMasterJarPath, appId.toString(),
-        localResources, null);
+    addToLocalResources(fs, appMasterJar, appMasterJarPath,
+        applicationId.toString(), localResources, null);
 
     // Set the log4j properties if needed 
     if (!log4jPropFile.isEmpty()) {
-      addToLocalResources(fs, log4jPropFile, log4jPath, appId.toString(),
-          localResources, null);
+      addToLocalResources(fs, log4jPropFile, log4jPath,
+          applicationId.toString(), localResources, null);
     }
 
     // Process local files for localization
@@ -833,7 +835,7 @@ public class Client {
 
       try {
         String fileName = f.getName();
-        uploadFile(fs, path, fileName, appId.toString());
+        uploadFile(fs, path, fileName, applicationId.toString());
         if (localizableFiles.length() == 0) {
           localizableFiles.append(fileName);
         } else {
@@ -857,7 +859,7 @@ public class Client {
       Path shellSrc = new Path(shellScriptPath);
       String shellPathSuffix =
           ApplicationMaster.getRelativePath(appName,
-              appId.toString(),
+              applicationId.toString(),
               SCRIPT_PATH);
       Path shellDst =
           new Path(fs.getHomeDirectory(), shellPathSuffix);
@@ -869,12 +871,12 @@ public class Client {
     }
 
     if (!shellCommand.isEmpty()) {
-      addToLocalResources(fs, null, shellCommandPath, appId.toString(),
+      addToLocalResources(fs, null, shellCommandPath, applicationId.toString(),
           localResources, shellCommand);
     }
 
     if (shellArgs.length > 0) {
-      addToLocalResources(fs, null, shellArgsPath, appId.toString(),
+      addToLocalResources(fs, null, shellArgsPath, applicationId.toString(),
           localResources, StringUtils.join(shellArgs, " "));
     }
 
@@ -1033,7 +1035,7 @@ public class Client {
     if (dockerClientConfig != null) {
       dockerCredentials =
           DockerClientConfigHandler.readCredentialsFromConfigFile(
-              new Path(dockerClientConfig), conf, appId.toString());
+              new Path(dockerClientConfig), conf, applicationId.toString());
     }
 
     if (rmCredentials != null || dockerCredentials != null) {
@@ -1071,7 +1073,7 @@ public class Client {
     // app submission failure?
 
     // Monitor the application
-    return monitorApplication(appId);
+    return monitorApplication(applicationId);
 
   }
 
@@ -1198,6 +1200,11 @@ public class Client {
         new Path(fs.getHomeDirectory(), relativePath);
     LOG.info("Uploading file: " + fileSrcPath + " to " + dst);
     fs.copyFromLocalFile(new Path(fileSrcPath), dst);
+  }
+
+  @VisibleForTesting
+  ApplicationId getAppId() {
+    return applicationId;
   }
 
   private void prepareTimelineDomain() {

@@ -389,8 +389,9 @@ public class ApplicationMaster {
    */
   public static void main(String[] args) {
     boolean result = false;
+    ApplicationMaster appMaster = null;
     try {
-      ApplicationMaster appMaster = new ApplicationMaster();
+      appMaster = new ApplicationMaster();
       LOG.info("Initializing ApplicationMaster");
       boolean doRun = appMaster.init(args);
       if (!doRun) {
@@ -402,6 +403,10 @@ public class ApplicationMaster {
       LOG.error("Error running ApplicationMaster", t);
       LogManager.shutdown();
       ExitUtil.terminate(1, t);
+    } finally {
+      if (appMaster != null) {
+        appMaster.cleanup();
+      }
     }
     if (result) {
       LOG.info("Application Master completed successfully. exiting");
@@ -766,6 +771,18 @@ public class ApplicationMaster {
    */
   private void printUsage(Options opts) {
     new HelpFormatter().printHelp("ApplicationMaster", opts);
+  }
+
+  private void cleanup() {
+    Path dst = null;
+    try {
+      FileSystem fs = FileSystem.get(conf);
+      dst = new Path(fs.getHomeDirectory(), getRelativePath(appName,
+          appId.toString(), ""));
+      fs.delete(dst, true);
+    } catch(IOException e) {
+      LOG.warn("Failed to remove application staging directory {}", dst);
+    }
   }
 
   /**

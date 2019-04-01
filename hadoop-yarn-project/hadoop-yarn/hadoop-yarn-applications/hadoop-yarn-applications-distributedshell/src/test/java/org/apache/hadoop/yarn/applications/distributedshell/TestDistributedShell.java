@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.applications.distributedshell;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -1808,5 +1809,41 @@ public class TestDistributedShell {
     Client client = new Client(new Configuration(yarnCluster.getConfig()));
     client.init(args);
     client.run();
+  }
+
+
+  @Test
+  public void testDistributedShellCleanup()
+      throws Exception {
+    String appName = "DistributedShellCleanup";
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "1",
+        "--shell_command",
+        Shell.WINDOWS ? "dir" : "ls",
+        "--appname",
+        appName
+    };
+    Configuration config = new Configuration(yarnCluster.getConfig());
+    Client client = new Client(config);
+    client.init(args);
+    client.run();
+    ApplicationId appId = client.getAppId();
+    String relativePath =
+        ApplicationMaster.getRelativePath(appName, appId.toString(), "");
+    FileSystem fs1 = FileSystem.get(config);
+    Path path = new Path(fs1.getHomeDirectory(), relativePath);
+
+    GenericTestUtils.waitFor(() -> {
+      try {
+        return !fs1.exists(path);
+      } catch (IOException e) {
+        return false;
+      }
+    }, 10, 60000);
+
+    assertFalse("Distributed Shell Cleanup failed", fs1.exists(path));
   }
 }
