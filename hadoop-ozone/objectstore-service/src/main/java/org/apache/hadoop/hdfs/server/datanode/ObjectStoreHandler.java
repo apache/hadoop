@@ -104,7 +104,7 @@ public final class ObjectStoreHandler implements Closeable {
                     scmAddress, UserGroupInformation.getCurrentUser(), conf,
                     NetUtils.getDefaultSocketFactory(conf),
                     Client.getRpcTimeout(conf))),
-            StorageContainerLocationProtocol.class);
+            StorageContainerLocationProtocol.class, conf);
 
     InetSocketAddress scmBlockAddress =
         getScmAddressForBlockClients(conf);
@@ -115,7 +115,7 @@ public final class ObjectStoreHandler implements Closeable {
                     scmBlockAddress, UserGroupInformation.getCurrentUser(),
                     conf, NetUtils.getDefaultSocketFactory(conf),
                     Client.getRpcTimeout(conf))),
-            ScmBlockLocationProtocol.class);
+            ScmBlockLocationProtocol.class, conf);
 
     RPC.setProtocolEngine(conf, OzoneManagerProtocolPB.class,
         ProtobufRpcEngine.class);
@@ -129,12 +129,12 @@ public final class ObjectStoreHandler implements Closeable {
                     omAddress, UserGroupInformation.getCurrentUser(), conf,
                     NetUtils.getDefaultSocketFactory(conf),
                     Client.getRpcTimeout(conf)), clientId.toString()),
-            OzoneManagerProtocol.class);
+            OzoneManagerProtocol.class, conf);
 
     storageHandler = new DistributedStorageHandler(
         new OzoneConfiguration(conf),
         TracingUtil.createProxy(storageContainerLocationClient,
-            StorageContainerLocationProtocol.class),
+            StorageContainerLocationProtocol.class, conf),
         this.ozoneManagerClient);
     ApplicationAdapter aa =
         new ApplicationAdapter(new ObjectStoreApplication());

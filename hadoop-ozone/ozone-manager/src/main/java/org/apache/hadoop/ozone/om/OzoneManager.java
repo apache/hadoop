@@ -760,7 +760,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
                 NetUtils.getDefaultSocketFactory(conf),
                 Client.getRpcTimeout(conf)));
     return TracingUtil
-        .createProxy(scmBlockLocationClient, ScmBlockLocationProtocol.class);
+        .createProxy(scmBlockLocationClient, ScmBlockLocationProtocol.class,
+            conf);
   }
 
   /**
@@ -807,7 +808,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
                 scmAddr, UserGroupInformation.getCurrentUser(), conf,
                 NetUtils.getDefaultSocketFactory(conf),
                 Client.getRpcTimeout(conf))),
-            StorageContainerLocationProtocol.class);
+            StorageContainerLocationProtocol.class, conf);
     return scmContainerClient;
   }
 
