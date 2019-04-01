@@ -246,13 +246,16 @@ public class TestContainer {
       wc.initContainer();
       wc.localizeResources();
       int running = metrics.getRunningContainers();
+      int paused = metrics.getPausedContainers();
       wc.launchContainer();
       assertEquals(running + 1, metrics.getRunningContainers());
       reset(wc.localizerBus);
       wc.pauseContainer();
       assertEquals(ContainerState.PAUSED,
           wc.c.getContainerState());
+      assertEquals(paused + 1, metrics.getPausedContainers());
       wc.resumeContainer();
+      assertEquals(paused, metrics.getPausedContainers());
       assertEquals(ContainerState.RUNNING,
           wc.c.getContainerState());
       wc.containerKilledOnRequest();
