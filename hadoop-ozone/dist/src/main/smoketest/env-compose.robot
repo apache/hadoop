@@ -14,6 +14,7 @@
 # limitations under the License.
 
 *** Settings ***
+Documentation       High level utilities to execute commands and tests in docker-compose based environments.
 Resource            commonlib.robot
 
 

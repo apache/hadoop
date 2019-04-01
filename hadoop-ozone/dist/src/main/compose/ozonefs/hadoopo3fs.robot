@@ -26,11 +26,11 @@ ${DATANODE_HOST}        datanode
 *** Keywords ***
 
 Test hadoop dfs
-    [arguments]        ${imagename}
-    ${postfix} =       Generate Random String  5  [NUMBERS]
-    ${result} =        Execute on host            ${imagename}       hdfs dfs -put /opt/hadoop/NOTICE.txt o3fs://bucket1.vol1/${imagename}-${postfix}
-    ${result} =        Execute on host            ${imagename}       hdfs dfs -ls o3fs://bucket1.vol1/
-                       Should contain             ${result}          ${imagename}-${postfix}
+    [arguments]        ${prefix}
+    ${random} =        Generate Random String  5  [NUMBERS]
+    ${result} =        Execute on host            ${prefix}       hdfs dfs -put /opt/hadoop/NOTICE.txt o3fs://bucket1.vol1/${prefix}-${random}
+    ${result} =        Execute on host            ${prefix}       hdfs dfs -ls o3fs://bucket1.vol1/
+                       Should contain             ${result}       ${prefix}-${random}
 
 *** Test Cases ***
 

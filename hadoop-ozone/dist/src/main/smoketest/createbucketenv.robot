@@ -39,3 +39,5 @@ Test ozone shell
                     Run Keyword if      "VOLUME_NOT_FOUND" in """${result}"""       Create volume
                     Run Keyword if      "VOLUME_NOT_FOUND" in """${result}"""       Create bucket
                     Run Keyword if      "BUCKET_NOT_FOUND" in """${result}"""       Create bucket
+    ${result} =     Execute             ozone sh bucket info /${volume}/${bucket}
+                    Should not contain  ${result}  NOT_FOUND
