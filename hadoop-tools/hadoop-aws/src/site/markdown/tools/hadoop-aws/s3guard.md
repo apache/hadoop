@@ -971,6 +971,111 @@ from previous days, and and choosing a combination of
 retry counts and an interval which allow for the clients to cope with
 some throttling, but not to time out other applications.
 
+## Read-After-Overwrite Consistency
+
+S3Guard provides read-after-overwrite consistency through ETags (default) or
+object versioning checked either on the server (default) or client. This works
+such that a reader reading a file after an overwrite either sees the new version
+of the file or an error. Without S3Guard, new readers may see the original
+version. Once S3 reaches eventual consistency, new readers will see the new
+version.
+
+Readers using S3Guard will usually see the new file version, but may
+in rare cases see `RemoteFileChangedException` instead. This would occur if
+an S3 object read cannot provide the version tracked in S3Guard metadata.
+
+S3Guard achieves this behavior by storing ETags and object version IDs in the
+S3Guard metadata store (e.g. DynamoDB). On opening a file, S3AFileSystem
+will look in S3 for the version of the file indicated by the ETag or object
+version ID stored in the metadata store. If that version is unavailable,
+`RemoteFileChangedException` is thrown. Whether ETag or version ID and
+server or client mode is used is determed by the
+[fs.s3a.change.detection configuration options](./index.html#Handling_Read-During-Overwrite).
+
+### No Versioning Metadata Available
+
+When the first S3AFileSystem clients are upgraded to the version of
+S3AFileSystem that contains these change tracking features, any existing
+S3Guard metadata will not contain ETags or object version IDs.  Reads of files
+tracked in such S3Guard metadata will access whatever version of the file is
+available in S3 at the time of read.  Only if the file is subsequently updated
+will S3Guard start tracking ETag and object version ID and as such generating
+`RemoteFileChangedException` if an inconsistency is detected.
+
+Similarly, when S3Guard metadata is pruned, S3Guard will no longer be able to
+detect an inconsistent read.  S3Guard metadata should be retained for at least
+as long as the perceived possible read-after-overwrite temporary inconsistency
+window. That window is expected to be short, but there are no guarantees so it
+is at the administrator's discretion to weigh the risk.
+
+### Known Limitations
+
+#### S3 Select
+
+S3 Select does not provide a capability for server-side ETag or object
+version ID qualification. Whether fs.s3a.change.detection.mode is client or
+server, S3Guard will cause a client-side check of the file version before
+opening the file with S3 Select.  If the current version does not match the
+version tracked in S3Guard, `RemoteFileChangedException` is thrown.
+
+It is still possible that the S3 Select read will access a different version of
+the file, if the visible file version changes between the version check and
+the opening of the file.  This can happen due to eventual consistency or
+an overwrite of the file between the version check and the open of the file.
+
+#### Rename
+
+Rename is implemented via copy in S3.  With fs.s3a.change.detection.mode=client,
+a fully reliable mechansim for ensuring the copied content is the expected
+content is not possible. This is the case since there isn't necessarily a way
+to know the expected ETag or version ID to appear on the object resulting from
+the copy.
+
+Furthermore, if fs.s3a.change.detection.mode=server and a third-party S3
+implemntation is used that doesn't honor the provided ETag or version ID,
+S3AFileSystem and S3Guard cannot detect it.
+
+In either fs.s3.change.detection.mode=server or client, a client-side check
+will be performed before the copy to ensure the current version of the file
+matches S3Guard metadata.  If not, `RemoteFileChangedException` is thrown.
+Similar to as discussed with regard to S3 Select, this is not sufficient to
+guarantee that same version is the version copied.
+
+When fs.s3.change.detection.mode=server, the expected version is also specified
+in the underlying S3 CopyObjectRequest.  As long as the server honors it, the
+copied object will be correct.
+
+All this said, with the defaults of fs.s3.change.detection.mode=server and
+fs.s3.change.detection.source=etag against Amazon's S3, copy should in fact
+either copy the expected file version or, in the case of an eventual consistency
+anomaly, generate `RemoteFileChangedException`.  The same should be true with
+fs.s3.change.detection.source=versionid.
+
+#### Out of Sync Metadata
+
+The S3Guard version tracking metadata (ETag or object version ID) could become
+out of sync with the true current object metadata in S3.  For example, S3Guard
+is still tracking v1 of some file after v2 has been written.  This could occur
+for reasons such as a writer writing without utilizing S3Guard and/or
+S3AFileSystem or simply due to a write with S3AFileSystem and S3Guard that wrote
+successfully to S3, but failed in communication with S3Guard's metadata store
+(e.g. DynamoDB).
+
+If this happens, reads of the affected file(s) will result in
+`RemoteFileChangedException` until one of:
+
+* the S3Guard metadata is corrected out-of-band
+* the file is overwritten (causing an S3Guard metadata update)
+* the S3Guard metadata is pruned
+
+The S3Guard metadata for a file can be corrected with the `s3guard import`
+command as discussed above.  The command can take a file URI instead of a
+bucket URI to correct the metadata for a single file.  For example:
+
+```bash
+hadoop s3guard import [-meta URI] s3a://my-bucket/file-with-bad-metadata
+```
+
 ## Troubleshooting
 
 ### Error: `S3Guard table lacks version marker.`
@@ -1068,6 +1173,41 @@ java.io.IOException: Invalid region specified "iceland-2":
 ```
 
 The region specified in `fs.s3a.s3guard.ddb.region` is invalid.
+
+### Error `RemoteFileChangedException`
+
+An exception like the following could occur for a couple of reasons:
+
+* the S3Guard metadata is out of sync with the true S3 metadata.  For
+example, the S3Guard DynamoDB table is tracking a different ETag than the ETag
+shown in the exception.  This may suggest the object was updated in S3 without
+involvement from S3Guard or there was a transient failure when S3Guard tried to
+write to DynamoDB.
+
+* S3 is exhibiting read-after-overwrite temporary inconsistency.  The S3Guard
+metadata was updated with a new ETag during a recent write, but the current read
+is not seeing that ETag due to S3 eventual consistency.  This exception prevents
+the reader from an inconsistent read where the reader sees an older version of
+the file.
+
+```
+org.apache.hadoop.fs.s3a.RemoteFileChangedException: open 's3a://my-bucket/test/file.txt':
+  Change reported by S3 while reading at position 0.
+  ETag 4e886e26c072fef250cfaf8037675405 was unavailable
+  at org.apache.hadoop.fs.s3a.impl.ChangeTracker.processResponse(ChangeTracker.java:167)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.reopen(S3AInputStream.java:207)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.lambda$lazySeek$1(S3AInputStream.java:355)
+  at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$2(Invoker.java:195)
+  at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:109)
+  at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$3(Invoker.java:265)
+  at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:322)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:261)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:193)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:215)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.lazySeek(S3AInputStream.java:348)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.read(S3AInputStream.java:381)
+  at java.io.FilterInputStream.read(FilterInputStream.java:83)
+```
 
 ## Other Topics
 

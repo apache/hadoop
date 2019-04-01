@@ -74,6 +74,7 @@ import com.amazonaws.services.s3.transfer.Copy;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
 import com.amazonaws.services.s3.transfer.Upload;
+import com.amazonaws.services.s3.transfer.model.CopyResult;
 import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.amazonaws.event.ProgressListener;
 import com.google.common.annotations.VisibleForTesting;
@@ -115,6 +116,7 @@ import org.apache.hadoop.fs.s3a.auth.delegation.AbstractS3ATokenIdentifier;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
 import org.apache.hadoop.fs.s3a.commit.MagicCommitIntegration;
+import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.select.SelectBinding;
 import org.apache.hadoop.fs.s3a.select.SelectConstants;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
@@ -692,11 +694,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Get the change detection policy for this FS instance.
+   * Get the change detection policy for this FS instance.  Only public to allow
+   * access in tests in other packages.
    * @return the change detection policy
    */
   @VisibleForTesting
-  ChangeDetectionPolicy getChangeDetectionPolicy() {
+  public ChangeDetectionPolicy getChangeDetectionPolicy() {
     return changeDetectionPolicy;
   }
 
@@ -873,7 +876,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throws IOException {
 
     entryPoint(INVOCATION_OPEN);
-    final FileStatus fileStatus = getFileStatus(path);
+    final S3AFileStatus fileStatus = (S3AFileStatus) getFileStatus(path);
     if (fileStatus.isDirectory()) {
       throw new FileNotFoundException("Can't open " + path
           + " because it is a directory");
@@ -906,7 +909,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return new FSDataInputStream(
         new S3AInputStream(
             readContext,
-            createObjectAttributes(path),
+            createObjectAttributes(
+                path,
+                fileStatus.getETag(),
+                fileStatus.getVersionId()),
             fileStatus.getLen(),
             s3));
   }
@@ -939,13 +945,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Create the attributes of an object for a get/select request.
    * @param f path path of the request.
+   * @param eTag the eTag of the S3 object
+   * @param versionId S3 object version ID
    * @return attributes to use when building the query.
    */
-  private S3ObjectAttributes createObjectAttributes(final Path f) {
+  private S3ObjectAttributes createObjectAttributes(
+      final Path f,
+      final String eTag,
+      final String versionId) {
     return new S3ObjectAttributes(bucket,
         pathToKey(f),
         getServerSideEncryptionAlgorithm(),
-        encryptionSecrets.getEncryptionKey());
+        encryptionSecrets.getEncryptionKey(),
+        eTag,
+        versionId);
   }
 
   /**
@@ -1209,19 +1222,27 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     if (srcStatus.isFile()) {
       LOG.debug("rename: renaming file {} to {}", src, dst);
       long length = srcStatus.getLen();
+      S3ObjectAttributes objectAttributes =
+          createObjectAttributes(srcStatus.getPath(),
+              srcStatus.getETag(), srcStatus.getVersionId());
+      S3AReadOpContext readContext = createReadContext(srcStatus, inputPolicy,
+          changeDetectionPolicy, readAhead);
       if (dstStatus != null && dstStatus.isDirectory()) {
         String newDstKey = maybeAddTrailingSlash(dstKey);
         String filename =
             srcKey.substring(pathToKey(src.getParent()).length()+1);
         newDstKey = newDstKey + filename;
-        copyFile(srcKey, newDstKey, length);
+        CopyResult copyResult = copyFile(srcKey, newDstKey, length,
+            objectAttributes, readContext);
         S3Guard.addMoveFile(metadataStore, srcPaths, dstMetas, src,
             keyToQualifiedPath(newDstKey), length, getDefaultBlockSize(dst),
-            username);
+            username, copyResult.getETag(), copyResult.getVersionId());
       } else {
-        copyFile(srcKey, dstKey, srcStatus.getLen());
+        CopyResult copyResult = copyFile(srcKey, dstKey, srcStatus.getLen(),
+            objectAttributes, readContext);
         S3Guard.addMoveFile(metadataStore, srcPaths, dstMetas, src, dst,
-            length, getDefaultBlockSize(dst), username);
+            length, getDefaultBlockSize(dst), username,
+            copyResult.getETag(), copyResult.getVersionId());
       }
       innerDelete(srcStatus, false);
     } else {
@@ -1244,10 +1265,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
 
       Path parentPath = keyToQualifiedPath(srcKey);
-      RemoteIterator<LocatedFileStatus> iterator = listFilesAndEmptyDirectories(
-          parentPath, true);
+      RemoteIterator<S3LocatedFileStatus> iterator =
+          listFilesAndEmptyDirectories(parentPath, true);
       while (iterator.hasNext()) {
-        LocatedFileStatus status = iterator.next();
+        S3LocatedFileStatus status = iterator.next();
         long length = status.getLen();
         String key = pathToKey(status.getPath());
         if (status.isDirectory() && !key.endsWith("/")) {
@@ -1257,7 +1278,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             .add(new DeleteObjectsRequest.KeyVersion(key));
         String newDstKey =
             dstKey + key.substring(srcKey.length());
-        copyFile(key, newDstKey, length);
+        S3ObjectAttributes objectAttributes =
+            createObjectAttributes(status.getPath(),
+                status.getETag(), status.getVersionId());
+        S3AReadOpContext readContext = createReadContext(status, inputPolicy,
+            changeDetectionPolicy, readAhead);
+        CopyResult copyResult = copyFile(key, newDstKey, length,
+            objectAttributes, readContext);
 
         if (hasMetadataStore()) {
           // with a metadata store, the object entries need to be updated,
@@ -1269,7 +1296,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                 childDst, username);
           } else {
             S3Guard.addMoveFile(metadataStore, srcPaths, dstMetas, childSrc,
-                childDst, length, getDefaultBlockSize(childDst), username);
+                childDst, length, getDefaultBlockSize(childDst), username,
+                copyResult.getETag(), copyResult.getVersionId());
           }
           // Ancestor directories may not be listed, so we explicitly add them
           S3Guard.addMoveAncestors(metadataStore, srcPaths, dstMetas,
@@ -1795,7 +1823,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       PutObjectResult result = s3.putObject(putObjectRequest);
       incrementPutCompletedStatistics(true, len);
       // update metadata
-      finishedWrite(putObjectRequest.getKey(), len);
+      finishedWrite(putObjectRequest.getKey(), len,
+          result.getETag(), result.getVersionId());
       return result;
     } catch (AmazonClientException e) {
       incrementPutCompletedStatistics(false, len);
@@ -2153,7 +2182,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     LOG.debug("List status for path: {}", path);
     entryPoint(INVOCATION_LIST_STATUS);
 
-    List<FileStatus> result;
+    List<S3AFileStatus> result;
     final FileStatus fileStatus =  getFileStatus(path);
 
     if (fileStatus.isDirectory()) {
@@ -2412,11 +2441,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         }
       }
 
-      FileStatus msStatus = pm.getFileStatus();
+      S3AFileStatus msStatus = pm.getFileStatus();
       if (needEmptyDirectoryFlag && msStatus.isDirectory()) {
         if (pm.isEmptyDirectory() != Tristate.UNKNOWN) {
           // We have a definitive true / false from MetadataStore, we are done.
-          return S3AFileStatus.fromFileStatus(msStatus, pm.isEmptyDirectory());
+          return msStatus;
         } else {
           DirListingMetadata children =
               S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider);
@@ -2427,7 +2456,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         }
       } else {
         // Either this is not a directory, or we don't care if it is empty
-        return S3AFileStatus.fromFileStatus(msStatus, pm.isEmptyDirectory());
+        return msStatus;
       }
 
       // If the metadata store has no children for it and it's not listed in
@@ -2436,7 +2465,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       try {
         s3FileStatus = s3GetFileStatus(path, key, tombstones);
       } catch (FileNotFoundException e) {
-        return S3AFileStatus.fromFileStatus(msStatus, Tristate.TRUE);
+        return S3AFileStatus.fromFileStatus(msStatus, Tristate.TRUE,
+            null, null);
       }
       // entry was found, save in S3Guard
       return S3Guard.putAndReturn(metadataStore, s3FileStatus, instrumentation);
@@ -2475,7 +2505,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               dateToLong(meta.getLastModified()),
               path,
               getDefaultBlockSize(path),
-              username);
+              username,
+              meta.getETag(),
+              meta.getVersionId());
         }
       } catch (AmazonServiceException e) {
         if (e.getStatusCode() != 404) {
@@ -2502,7 +2534,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                     dateToLong(meta.getLastModified()),
                     path,
                     getDefaultBlockSize(path),
-                    username);
+                    username,
+                    meta.getETag(),
+                    meta.getVersionId());
           }
         } catch (AmazonServiceException e) {
           if (e.getStatusCode() != 404) {
@@ -2724,7 +2758,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     UploadResult result = waitForUploadCompletion(key, info);
     listener.uploadCompleted();
     // post-write actions
-    finishedWrite(key, info.getLength());
+    finishedWrite(key, info.getLength(),
+        result.getETag(), result.getVersionId());
     return result;
   }
 
@@ -2889,12 +2924,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param srcKey source object path
    * @param dstKey destination object path
    * @param size object size
+   * @param srcAttributes S3 attributes of the source object
+   * @param readContext the read context
+   * @return the result of the copy
    * @throws AmazonClientException on failures inside the AWS SDK
    * @throws InterruptedIOException the operation was interrupted
    * @throws IOException Other IO problems
    */
   @Retries.RetryMixed
-  private void copyFile(String srcKey, String dstKey, long size)
+  private CopyResult copyFile(String srcKey, String dstKey, long size,
+      S3ObjectAttributes srcAttributes, S3AReadOpContext readContext)
       throws IOException, InterruptedIOException  {
     LOG.debug("copyFile {} -> {} ", srcKey, dstKey);
 
@@ -2908,27 +2947,90 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
     };
 
-    once("copyFile(" + srcKey + ", " + dstKey + ")", srcKey,
+    return once("copyFile(" + srcKey + ", " + dstKey + ")", srcKey,
         () -> {
           ObjectMetadata srcom = getObjectMetadata(srcKey);
           ObjectMetadata dstom = cloneObjectMetadata(srcom);
           setOptionalObjectMetadata(dstom);
+
+          ChangeTracker changeTracker = new ChangeTracker(
+              keyToQualifiedPath(srcKey).toString(),
+              changeDetectionPolicy,
+              readContext.instrumentation.newInputStreamStatistics()
+                  .getVersionMismatchCounter(),
+              srcAttributes);
+
+          changeTracker.processMetadata(srcom, "copy", 0);
+
           CopyObjectRequest copyObjectRequest =
               new CopyObjectRequest(bucket, srcKey, bucket, dstKey);
+          changeTracker.maybeApplyConstraint(copyObjectRequest);
+
           setOptionalCopyObjectRequestParameters(copyObjectRequest);
           copyObjectRequest.setCannedAccessControlList(cannedACL);
           copyObjectRequest.setNewObjectMetadata(dstom);
           Copy copy = transfers.copy(copyObjectRequest);
           copy.addProgressListener(progressListener);
           try {
-            copy.waitForCopyResult();
+            CopyOutcome copyOutcome = copyOutcome(copy);
+            InterruptedException interruptedException =
+                copyOutcome.getInterruptedException();
+            if (interruptedException != null) {
+              throw interruptedException;
+            }
+            RuntimeException runtimeException =
+                copyOutcome.getRuntimeException();
+            if (runtimeException != null) {
+              changeTracker.processException(runtimeException, "copy");
+              throw runtimeException;
+            }
+            CopyResult result = copyOutcome.getCopyResult();
+            changeTracker.processResponse(result);
             incrementWriteOperations();
             instrumentation.filesCopied(1, size);
+            return result;
           } catch (InterruptedException e) {
             throw new InterruptedIOException("Interrupted copying " + srcKey
                 + " to " + dstKey + ", cancelling");
           }
         });
+  }
+
+  private static CopyOutcome copyOutcome(Copy copy) {
+    try {
+      CopyResult result = copy.waitForCopyResult();
+      return new CopyOutcome(result, null, null);
+    } catch (RuntimeException e) {
+      return new CopyOutcome(null, null, e);
+    } catch (InterruptedException e) {
+      return new CopyOutcome(null, e, null);
+    }
+  }
+
+  private static final class CopyOutcome {
+    private final CopyResult copyResult;
+    private final InterruptedException interruptedException;
+    private final RuntimeException runtimeException;
+
+    private CopyOutcome(CopyResult copyResult,
+        InterruptedException interruptedException,
+        RuntimeException runtimeException) {
+      this.copyResult = copyResult;
+      this.interruptedException = interruptedException;
+      this.runtimeException = runtimeException;
+    }
+
+    public CopyResult getCopyResult() {
+      return copyResult;
+    }
+
+    public InterruptedException getInterruptedException() {
+      return interruptedException;
+    }
+
+    public RuntimeException getRuntimeException() {
+      return runtimeException;
+    }
   }
 
   /**
@@ -3034,10 +3136,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * </ol>
    * @param key key written to
    * @param length  total length of file written
+   * @param eTag eTag of the written object
+   * @param versionId S3 object versionId of the written object
    */
   @InterfaceAudience.Private
   @Retries.RetryExceptionsSwallowed
-  void finishedWrite(String key, long length) {
+  void finishedWrite(String key, long length, String eTag, String versionId) {
     LOG.debug("Finished write to {}, len {}", key, length);
     Path p = keyToQualifiedPath(key);
     Preconditions.checkArgument(length >= 0, "content length is negative");
@@ -3049,7 +3153,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         S3Guard.addAncestors(metadataStore, p, username);
         S3AFileStatus status = createUploadFileStatus(p,
             S3AUtils.objectRepresentsDirectory(key, length), length,
-            getDefaultBlockSize(p), username);
+            getDefaultBlockSize(p), username, eTag, versionId);
         S3Guard.putAndReturn(metadataStore, status, instrumentation);
       }
     } catch (IOException e) {
@@ -3417,26 +3521,41 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.OnceTranslated
   public RemoteIterator<LocatedFileStatus> listFiles(Path f,
       boolean recursive) throws FileNotFoundException, IOException {
-    return innerListFiles(f, recursive,
-        new Listing.AcceptFilesOnly(qualify(f)));
+    return toLocatedFileStatusIterator(innerListFiles(f, recursive,
+        new Listing.AcceptFilesOnly(qualify(f))));
+  }
+
+  private static RemoteIterator<LocatedFileStatus> toLocatedFileStatusIterator(
+      RemoteIterator<? extends LocatedFileStatus> iterator) {
+    return new RemoteIterator<LocatedFileStatus>() {
+      @Override
+      public boolean hasNext() throws IOException {
+        return iterator.hasNext();
+      }
+
+      @Override
+      public LocatedFileStatus next() throws IOException {
+        return iterator.next();
+      }
+    };
   }
 
   @Retries.OnceTranslated
-  public RemoteIterator<LocatedFileStatus> listFilesAndEmptyDirectories(Path f,
-      boolean recursive) throws IOException {
+  public RemoteIterator<S3LocatedFileStatus> listFilesAndEmptyDirectories(
+      Path f, boolean recursive) throws IOException {
     return innerListFiles(f, recursive,
         new Listing.AcceptAllButS3nDirs());
   }
 
   @Retries.OnceTranslated
-  private RemoteIterator<LocatedFileStatus> innerListFiles(Path f, boolean
+  private RemoteIterator<S3LocatedFileStatus> innerListFiles(Path f, boolean
       recursive, Listing.FileStatusAcceptor acceptor) throws IOException {
     entryPoint(INVOCATION_LIST_FILES);
     Path path = qualify(f);
     LOG.debug("listFiles({}, {})", path, recursive);
     try {
       // lookup dir triggers existence check
-      final FileStatus fileStatus = getFileStatus(path);
+      final S3AFileStatus fileStatus = (S3AFileStatus) getFileStatus(path);
       if (fileStatus.isFile()) {
         // simple case: File
         LOG.debug("Path is a file");
@@ -3448,7 +3567,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         String delimiter = recursive ? null : "/";
         LOG.debug("Requesting all entries under {} with delimiter '{}'",
             key, delimiter);
-        final RemoteIterator<FileStatus> cachedFilesIterator;
+        final RemoteIterator<S3AFileStatus> cachedFilesIterator;
         final Set<Path> tombstones;
         if (recursive) {
           final PathMetadata pm = metadataStore.get(path, true);
@@ -3520,52 +3639,55 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     entryPoint(INVOCATION_LIST_LOCATED_STATUS);
     Path path = qualify(f);
     LOG.debug("listLocatedStatus({}, {}", path, filter);
-    return once("listLocatedStatus", path.toString(),
-        () -> {
-          // lookup dir triggers existence check
-          final FileStatus fileStatus = getFileStatus(path);
-          if (fileStatus.isFile()) {
-            // simple case: File
-            LOG.debug("Path is a file");
-            return new Listing.SingleStatusRemoteIterator(
-                filter.accept(path) ? toLocatedFileStatus(fileStatus) : null);
-          } else {
-            // directory: trigger a lookup
-            final String key = maybeAddTrailingSlash(pathToKey(path));
-            final Listing.FileStatusAcceptor acceptor =
-                new Listing.AcceptAllButSelfAndS3nDirs(path);
-            DirListingMetadata meta =
-                S3Guard.listChildrenWithTtl(metadataStore, path,
-                    ttlTimeProvider);
-            final RemoteIterator<FileStatus> cachedFileStatusIterator =
-                listing.createProvidedFileStatusIterator(
-                    S3Guard.dirMetaToStatuses(meta), filter, acceptor);
-            return (allowAuthoritative && meta != null
-                && meta.isAuthoritative())
-                ? listing.createLocatedFileStatusIterator(
-                cachedFileStatusIterator)
-                : listing.createLocatedFileStatusIterator(
-                    listing.createFileStatusListingIterator(path,
-                        createListObjectsRequest(key, "/"),
-                        filter,
-                        acceptor,
-                        cachedFileStatusIterator));
-          }
-        });
+    RemoteIterator<? extends LocatedFileStatus> iterator =
+        once("listLocatedStatus", path.toString(),
+          () -> {
+            // lookup dir triggers existence check
+            final S3AFileStatus fileStatus =
+                (S3AFileStatus) getFileStatus(path);
+            if (fileStatus.isFile()) {
+              // simple case: File
+              LOG.debug("Path is a file");
+              return new Listing.SingleStatusRemoteIterator(
+                  filter.accept(path) ? toLocatedFileStatus(fileStatus) : null);
+            } else {
+              // directory: trigger a lookup
+              final String key = maybeAddTrailingSlash(pathToKey(path));
+              final Listing.FileStatusAcceptor acceptor =
+                  new Listing.AcceptAllButSelfAndS3nDirs(path);
+              DirListingMetadata meta =
+                  S3Guard.listChildrenWithTtl(metadataStore, path,
+                      ttlTimeProvider);
+              final RemoteIterator<S3AFileStatus> cachedFileStatusIterator =
+                  listing.createProvidedFileStatusIterator(
+                      S3Guard.dirMetaToStatuses(meta), filter, acceptor);
+              return (allowAuthoritative && meta != null
+                  && meta.isAuthoritative())
+                  ? listing.createLocatedFileStatusIterator(
+                  cachedFileStatusIterator)
+                  : listing.createLocatedFileStatusIterator(
+                      listing.createFileStatusListingIterator(path,
+                          createListObjectsRequest(key, "/"),
+                          filter,
+                          acceptor,
+                          cachedFileStatusIterator));
+            }
+          });
+    return toLocatedFileStatusIterator(iterator);
   }
 
   /**
-   * Build a {@link LocatedFileStatus} from a {@link FileStatus} instance.
+   * Build a {@link S3LocatedFileStatus} from a {@link FileStatus} instance.
    * @param status file status
    * @return a located status with block locations set up from this FS.
    * @throws IOException IO Problems.
    */
-  LocatedFileStatus toLocatedFileStatus(FileStatus status)
+  S3LocatedFileStatus toLocatedFileStatus(S3AFileStatus status)
       throws IOException {
-    return new LocatedFileStatus(status,
+    return new S3LocatedFileStatus(status,
         status.isFile() ?
           getFileBlockLocations(status, 0, status.getLen())
-          : null);
+          : null, status.getETag(), status.getVersionId());
   }
 
   /**
@@ -3724,17 +3846,36 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // so the operation will fail if it is not there or S3Guard believes it has
     // been deleted.
     // validation of the file status are delegated to the binding.
-    final FileStatus fileStatus = getFileStatus(path);
+    final S3AFileStatus fileStatus = (S3AFileStatus) getFileStatus(path);
 
     // readahead range can be dynamically set
     long ra = options.getLong(READAHEAD_RANGE, readAhead);
+    S3ObjectAttributes objectAttributes = createObjectAttributes(
+        path, fileStatus.getETag(), fileStatus.getVersionId());
+    S3AReadOpContext readContext = createReadContext(fileStatus, inputPolicy,
+        changeDetectionPolicy, ra);
+
+    if (!fileStatus.isDirectory()) {
+      // check that the object metadata lines up with what is expected
+      // based on the object attributes (which may contain an eTag or versionId)
+      // from S3Guard
+      ChangeTracker changeTracker =
+          new ChangeTracker(uri.toString(),
+              changeDetectionPolicy,
+              readContext.instrumentation.newInputStreamStatistics()
+                  .getVersionMismatchCounter(),
+              objectAttributes);
+      ObjectMetadata objectMetadata = getObjectMetadata(path);
+      changeTracker.processMetadata(objectMetadata, "select", 0);
+    }
+
     // build and execute the request
     return selectBinding.select(
-        createReadContext(fileStatus, inputPolicy, changeDetectionPolicy, ra),
+        readContext,
         expression,
         options,
         generateSSECustomerKey(),
-        createObjectAttributes(path));
+        objectAttributes);
   }
 
   /**

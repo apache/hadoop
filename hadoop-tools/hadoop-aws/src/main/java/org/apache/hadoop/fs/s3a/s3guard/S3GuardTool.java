@@ -51,6 +51,7 @@ import org.apache.hadoop.fs.s3a.MultipartUtils;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
+import org.apache.hadoop.fs.s3a.S3LocatedFileStatus;
 import org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.select.SelectTool;
@@ -703,7 +704,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
         if (dirCache.contains(parent)) {
           return;
         }
-        FileStatus dir = DynamoDBMetadataStore.makeDirStatus(parent,
+        S3AFileStatus dir = DynamoDBMetadataStore.makeDirStatus(parent,
             f.getOwner());
         getStore().put(new PathMetadata(dir));
         dirCache.add(parent);
@@ -718,13 +719,13 @@ public abstract class S3GuardTool extends Configured implements Tool {
      */
     private long importDir(FileStatus status) throws IOException {
       Preconditions.checkArgument(status.isDirectory());
-      RemoteIterator<LocatedFileStatus> it = getFilesystem()
+      RemoteIterator<S3LocatedFileStatus> it = getFilesystem()
           .listFilesAndEmptyDirectories(status.getPath(), true);
       long items = 0;
 
       while (it.hasNext()) {
-        LocatedFileStatus located = it.next();
-        FileStatus child;
+        S3LocatedFileStatus located = it.next();
+        S3AFileStatus child;
         if (located.isDirectory()) {
           child = DynamoDBMetadataStore.makeDirStatus(located.getPath(),
               located.getOwner());
@@ -734,7 +735,9 @@ public abstract class S3GuardTool extends Configured implements Tool {
               located.getModificationTime(),
               located.getPath(),
               located.getBlockSize(),
-              located.getOwner());
+              located.getOwner(),
+              located.getETag(),
+              located.getVersionId());
         }
         putParentsIfNotPresent(child);
         getStore().put(new PathMetadata(child));
@@ -761,7 +764,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
         filePath = "/";
       }
       Path path = new Path(filePath);
-      FileStatus status = getFilesystem().getFileStatus(path);
+      S3AFileStatus status = (S3AFileStatus) getFilesystem()
+          .getFileStatus(path);
 
       try {
         initMetadataStore(false);

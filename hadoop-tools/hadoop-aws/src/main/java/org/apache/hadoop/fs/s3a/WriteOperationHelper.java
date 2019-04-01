@@ -226,7 +226,8 @@ public class WriteOperationHelper {
   /**
    * Finalize a multipart PUT operation.
    * This completes the upload, and, if that works, calls
-   * {@link S3AFileSystem#finishedWrite(String, long)} to update the filesystem.
+   * {@link S3AFileSystem#finishedWrite(String, long, String, String)}
+   * to update the filesystem.
    * Retry policy: retrying, translated.
    * @param destKey destination of the commit
    * @param uploadId multipart operation Id
@@ -259,7 +260,8 @@ public class WriteOperationHelper {
                       destKey,
                       uploadId,
                       new ArrayList<>(partETags)));
-          owner.finishedWrite(destKey, length);
+          owner.finishedWrite(destKey, length, result.getETag(),
+              result.getVersionId());
           return result;
         }
     );

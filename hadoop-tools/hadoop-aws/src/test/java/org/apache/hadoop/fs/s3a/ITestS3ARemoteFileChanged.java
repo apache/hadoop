@@ -18,11 +18,17 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collection;
 
+import org.apache.commons.io.IOUtils;
 import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -33,63 +39,112 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
+import org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore;
+import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
+import org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore;
+import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
+import static org.apache.hadoop.fs.s3a.select.SelectConstants.SELECT_SQL;
 import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 
 /**
  * Test S3A remote file change detection.
  */
 @RunWith(Parameterized.class)
 public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
+
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3ARemoteFileChanged.class);
 
+  private static final String TEST_DATA = "Some test data";
+  private static final String QUOTED_TEST_DATA =
+      "\"" + TEST_DATA + "\"";
+
+  private enum InteractionType {
+    READ, READ_AFTER_DELETE, COPY, SELECT
+  }
+
   private final String changeDetectionSource;
   private final String changeDetectionMode;
-  private final boolean expectChangeException;
-  private final boolean expectFileNotFoundException;
+  private final Collection<InteractionType> expectedExceptionInteractions;
+  private S3AFileSystem fs;
 
   @Parameterized.Parameters
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         // make sure it works with invalid config
-        {"bogus", "bogus", true, true},
+        {"bogus", "bogus",
+            Arrays.asList(
+                InteractionType.READ,
+                InteractionType.READ_AFTER_DELETE,
+                InteractionType.COPY,
+                InteractionType.SELECT)},
 
         // test with etag
-        {CHANGE_DETECT_SOURCE_ETAG, CHANGE_DETECT_MODE_SERVER, true, true},
-        {CHANGE_DETECT_SOURCE_ETAG, CHANGE_DETECT_MODE_CLIENT, true, true},
-        {CHANGE_DETECT_SOURCE_ETAG, CHANGE_DETECT_MODE_WARN, false, true},
-        {CHANGE_DETECT_SOURCE_ETAG, CHANGE_DETECT_MODE_NONE, false, true},
+        {CHANGE_DETECT_SOURCE_ETAG, CHANGE_DETECT_MODE_SERVER,
+            Arrays.asList(
+                InteractionType.READ,
+                InteractionType.READ_AFTER_DELETE,
+                InteractionType.COPY,
+                InteractionType.SELECT)},
+        {CHANGE_DETECT_SOURCE_ETAG, CHANGE_DETECT_MODE_CLIENT,
+            Arrays.asList(
+                InteractionType.READ,
+                InteractionType.READ_AFTER_DELETE,
+                InteractionType.COPY,
+                InteractionType.SELECT)},
+        {CHANGE_DETECT_SOURCE_ETAG, CHANGE_DETECT_MODE_WARN,
+            Arrays.asList(
+                InteractionType.READ_AFTER_DELETE)},
+        {CHANGE_DETECT_SOURCE_ETAG, CHANGE_DETECT_MODE_NONE,
+            Arrays.asList(
+                InteractionType.READ_AFTER_DELETE)},
 
         // test with versionId
-        // when using server-side versionId, the exceptions shouldn't happen
-        // since the previous version will still be available
-        {CHANGE_DETECT_SOURCE_VERSION_ID, CHANGE_DETECT_MODE_SERVER, false,
-            false},
+        // when using server-side versionId, the read exceptions shouldn't
+        // happen since the previous version will still be available, but
+        // they will still happen on rename and select since we always do a
+        // client-side check against the current version
+        {CHANGE_DETECT_SOURCE_VERSION_ID, CHANGE_DETECT_MODE_SERVER,
+            Arrays.asList(
+                InteractionType.COPY,
+                InteractionType.SELECT)},
 
         // with client-side versionId it will behave similar to client-side eTag
-        {CHANGE_DETECT_SOURCE_VERSION_ID, CHANGE_DETECT_MODE_CLIENT, true,
-            true},
+        {CHANGE_DETECT_SOURCE_VERSION_ID, CHANGE_DETECT_MODE_CLIENT,
+            Arrays.asList(
+                InteractionType.READ,
+                InteractionType.READ_AFTER_DELETE,
+                InteractionType.COPY,
+                InteractionType.SELECT)},
 
-        {CHANGE_DETECT_SOURCE_VERSION_ID, CHANGE_DETECT_MODE_WARN, false, true},
-        {CHANGE_DETECT_SOURCE_VERSION_ID, CHANGE_DETECT_MODE_NONE, false, true}
+        {CHANGE_DETECT_SOURCE_VERSION_ID, CHANGE_DETECT_MODE_WARN,
+            Arrays.asList(
+                InteractionType.READ_AFTER_DELETE)},
+        {CHANGE_DETECT_SOURCE_VERSION_ID, CHANGE_DETECT_MODE_NONE,
+            Arrays.asList(
+                InteractionType.READ_AFTER_DELETE)}
     });
   }
 
   public ITestS3ARemoteFileChanged(String changeDetectionSource,
       String changeDetectionMode,
-      boolean expectException,
-      boolean expectFileNotFoundException) {
+      Collection<InteractionType> expectedExceptionInteractions) {
     this.changeDetectionSource = changeDetectionSource;
     this.changeDetectionMode = changeDetectionMode;
-    this.expectChangeException = expectException;
-    this.expectFileNotFoundException = expectFileNotFoundException;
+    this.expectedExceptionInteractions = expectedExceptionInteractions;
+  }
+
+  @Before
+  public void setUp() {
+    fs = getFileSystem();
   }
 
   @Override
@@ -101,17 +156,31 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
         CHANGE_DETECT_MODE);
     conf.set(CHANGE_DETECT_SOURCE, changeDetectionSource);
     conf.set(CHANGE_DETECT_MODE, changeDetectionMode);
+
+    // reduce retry limit so FileNotFoundException cases timeout faster,
+    // speeding up the tests
+    conf.set(RETRY_LIMIT, "5");
+
+    if (conf.getClass(S3_METADATA_STORE_IMPL, MetadataStore.class) ==
+        NullMetadataStore.class) {
+      // favor LocalMetadataStore over NullMetadataStore
+      conf.setClass(S3_METADATA_STORE_IMPL,
+          LocalMetadataStore.class, MetadataStore.class);
+    }
     S3ATestUtils.disableFilesystemCaching(conf);
     return conf;
   }
 
+  /**
+   * Tests reading a file that is changed while the reader's InputStream is
+   * open.
+   */
   @Test
-  public void testReadFileChanged() throws Throwable {
+  public void testReadFileChangedStreamOpen() throws Throwable {
     final int originalLength = 8192;
     final byte[] originalDataset = dataset(originalLength, 'a', 32);
     final int newLength = originalLength + 1;
     final byte[] newDataset = dataset(newLength, 'A', 32);
-    final S3AFileSystem fs = getFileSystem();
     final Path testpath = path("readFileToChange.txt");
     // initial write
     writeDataset(fs, testpath, originalDataset, originalDataset.length,
@@ -152,7 +221,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
       // now check seek backward
       instream.seek(instream.getPos() - 100);
 
-      if (expectChangeException) {
+      if (expectedExceptionInteractions.contains(InteractionType.READ)) {
         intercept(RemoteFileChangedException.class, "", "read",
             () -> instream.read());
       } else {
@@ -164,7 +233,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
       // seek backward
       instream.seek(0);
 
-      if (expectChangeException) {
+      if (expectedExceptionInteractions.contains(InteractionType.READ)) {
         intercept(RemoteFileChangedException.class, "", "read",
             () -> instream.read(buf));
         intercept(RemoteFileChangedException.class, "", "read",
@@ -183,7 +252,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
       // seek backward
       instream.seek(0);
 
-      if (expectFileNotFoundException) {
+      if (expectedExceptionInteractions.contains(
+          InteractionType.READ_AFTER_DELETE)) {
         intercept(FileNotFoundException.class, "", "read()",
             () -> instream.read());
         intercept(FileNotFoundException.class, "", "readfully",
@@ -193,5 +263,156 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
         instream.readFully(2048, buf);
       }
     }
+  }
+
+  /**
+   * Tests reading a file where the version visible in S3 does not match the
+   * version tracked in the metadata store.
+   */
+  @Test
+  public void testReadFileChangedOutOfSyncMetadata() throws Throwable {
+    final Path testpath = writeOutOfSyncFileVersion("read.dat");
+    final FSDataInputStream instream = fs.open(testpath);
+    if (expectedExceptionInteractions.contains(InteractionType.READ)) {
+      intercept(RemoteFileChangedException.class, "", "read()",
+          () -> {
+            instream.read();
+          });
+    } else {
+      instream.read();
+    }
+  }
+
+  /**
+   * Ensures a file can be read when there is no version metadata
+   * (ETag, versionId).
+   */
+  @Test
+  public void testReadWithNoVersionMetadata() throws Throwable {
+    final Path testpath = writeFileWithNoVersionMetadata("readnoversion.dat");
+    final FSDataInputStream instream = fs.open(testpath);
+    assertEquals(TEST_DATA,
+        IOUtils.toString(instream, Charset.forName("UTF-8")).trim());
+  }
+
+  /**
+   * Tests using S3 Select on a file where the version visible in S3 does not
+   * match the version tracked in the metadata store.
+   */
+  @Test
+  public void testSelectChangedFile() throws Throwable {
+    final Path testpath = writeOutOfSyncFileVersion("select.dat");
+    if (expectedExceptionInteractions.contains(InteractionType.SELECT)) {
+      interceptFuture(RemoteFileChangedException.class, "select",
+          fs.openFile(testpath)
+              .must(SELECT_SQL, "SELECT * FROM S3OBJECT").build());
+    } else {
+      fs.openFile(testpath)
+          .must(SELECT_SQL, "SELECT * FROM S3OBJECT").build().get();
+    }
+  }
+
+  /**
+   * Ensures a file can be read via S3 Select when there is no version metadata
+   * (ETag, versionId).
+   */
+  @Test
+  public void testSelectWithNoVersionMetadata() throws Throwable {
+    final Path testpath =
+        writeFileWithNoVersionMetadata("selectnoversion.dat");
+    FSDataInputStream instream = fs.openFile(testpath)
+        .must(SELECT_SQL, "SELECT * FROM S3OBJECT").build().get();
+    assertEquals(QUOTED_TEST_DATA,
+        IOUtils.toString(instream, Charset.forName("UTF-8")).trim());
+  }
+
+  /**
+   * Tests doing a rename() on a file where the version visible in S3 does not
+   * match the version tracked in the metadata store.
+   * @throws Throwable
+   */
+  @Test
+  public void testRenameChangedFile() throws Throwable {
+    final Path testpath = writeOutOfSyncFileVersion("rename.dat");
+    final Path dest = path("dest.dat");
+    if (expectedExceptionInteractions.contains(InteractionType.COPY)) {
+      intercept(RemoteFileChangedException.class, "", "copy()",
+          () -> {
+            fs.rename(testpath, dest);
+          });
+    } else {
+      fs.rename(testpath, dest);
+    }
+  }
+
+  /**
+   * Ensures a file can be renamed when there is no version metadata
+   * (ETag, versionId).
+   */
+  @Test
+  public void testRenameWithNoVersionMetadata() throws Throwable {
+    final Path testpath =
+        writeFileWithNoVersionMetadata("renamenoversion.dat");
+    final Path dest = path("noversiondest.dat");
+    fs.rename(testpath, dest);
+    FSDataInputStream inputStream = fs.open(dest);
+    assertEquals(TEST_DATA,
+        IOUtils.toString(inputStream, Charset.forName("UTF-8")).trim());
+  }
+
+  /**
+   * Writes a file with old ETag and versionId in the metadata store such
+   * that the metadata is out of sync with S3.  Attempts to read such a file
+   * should result in {@link RemoteFileChangedException}.
+   */
+  private Path writeOutOfSyncFileVersion(String filename) throws IOException {
+    final Path testpath = path(filename);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintWriter printWriter = new PrintWriter(out);
+    printWriter.println(TEST_DATA);
+    printWriter.close();
+    final byte[] dataset = out.toByteArray();
+    writeDataset(fs, testpath, dataset, dataset.length,
+        1024, false);
+    S3AFileStatus originalStatus = (S3AFileStatus) fs.getFileStatus(testpath);
+
+    // overwrite with half the content
+    writeDataset(fs, testpath, dataset, dataset.length / 2,
+        1024, true);
+
+    S3AFileStatus newStatus = (S3AFileStatus) fs.getFileStatus(testpath);
+
+    // put back the original etag, versionId
+    S3AFileStatus forgedStatus =
+        S3AFileStatus.fromFileStatus(newStatus, Tristate.FALSE,
+            originalStatus.getETag(), originalStatus.getVersionId());
+    fs.getMetadataStore().put(
+        new PathMetadata(forgedStatus, Tristate.FALSE, false));
+
+    return testpath;
+  }
+
+  /**
+   * Writes a file with null ETag and versionId in the metadata store.
+   */
+  private Path writeFileWithNoVersionMetadata(String filename)
+      throws IOException {
+    final Path testpath = path(filename);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintWriter printWriter = new PrintWriter(out);
+    printWriter.println(TEST_DATA);
+    printWriter.close();
+    final byte[] dataset = out.toByteArray();
+    writeDataset(fs, testpath, dataset, dataset.length,
+        1024, false);
+    S3AFileStatus originalStatus = (S3AFileStatus) fs.getFileStatus(testpath);
+
+    // remove ETag and versionId
+    S3AFileStatus newStatus = S3AFileStatus.fromFileStatus(originalStatus,
+        Tristate.FALSE, null, null);
+    fs.getMetadataStore().put(new PathMetadata(newStatus, Tristate.FALSE,
+        false));
+
+    return testpath;
   }
 }

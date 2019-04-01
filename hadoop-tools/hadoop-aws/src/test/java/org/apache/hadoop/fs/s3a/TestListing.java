@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.junit.Assert;
@@ -40,11 +39,11 @@ import static org.apache.hadoop.fs.s3a.Listing.ProvidedFileStatusIterator;
  */
 public class TestListing extends AbstractS3AMockTest {
 
-  private static class MockRemoteIterator<FileStatus> implements
-      RemoteIterator<FileStatus> {
-    private Iterator<FileStatus> iterator;
+  private static class MockRemoteIterator<S3AFileStatus> implements
+      RemoteIterator<S3AFileStatus> {
+    private Iterator<S3AFileStatus> iterator;
 
-    MockRemoteIterator(Collection<FileStatus> source) {
+    MockRemoteIterator(Collection<S3AFileStatus> source) {
       iterator = source.iterator();
     }
 
@@ -52,13 +51,16 @@ public class TestListing extends AbstractS3AMockTest {
       return iterator.hasNext();
     }
 
-    public FileStatus next() {
+    public S3AFileStatus next() {
       return iterator.next();
     }
   }
 
-  private FileStatus blankFileStatus(Path path) {
-    return new FileStatus(0, true, 0, 0, 0, path);
+  private S3AFileStatus blankFileStatus(Path path) {
+    FileStatus fileStatus = new FileStatus(0, true, 0, 0, 0, path);
+    S3AFileStatus s3aStatus = S3AFileStatus.fromFileStatus(
+        fileStatus, Tristate.UNKNOWN, null, null);
+    return s3aStatus;
   }
 
   @Test
@@ -78,11 +80,11 @@ public class TestListing extends AbstractS3AMockTest {
     Set<Path> tombstones = new HashSet<>();
     tombstones.add(deletedChild);
 
-    RemoteIterator<FileStatus> sourceIterator = new MockRemoteIterator(
+    RemoteIterator<S3AFileStatus> sourceIterator = new MockRemoteIterator(
         statuses);
-    RemoteIterator<LocatedFileStatus> locatedIterator =
+    RemoteIterator<S3LocatedFileStatus> locatedIterator =
         listing.createLocatedFileStatusIterator(sourceIterator);
-    RemoteIterator<LocatedFileStatus> reconcilingIterator =
+    RemoteIterator<S3LocatedFileStatus> reconcilingIterator =
         listing.createTombstoneReconcilingIterator(locatedIterator, tombstones);
 
     Set<Path> expectedPaths = new HashSet<>();
@@ -98,8 +100,13 @@ public class TestListing extends AbstractS3AMockTest {
 
   @Test
   public void testProvidedFileStatusIteratorEnd() throws Exception {
-    FileStatus[] statuses = {
-        new FileStatus(100, false, 1, 8192, 0, new Path("s3a://blah/blah"))
+    FileStatus status = new FileStatus(100, false, 1, 8192, 0,
+        new Path("s3a://blah/blah"));
+    S3AFileStatus s3aStatus = S3AFileStatus.fromFileStatus(status,
+        Tristate.FALSE, null, null);
+
+    S3AFileStatus[] statuses = {
+        s3aStatus
     };
     ProvidedFileStatusIterator it = new ProvidedFileStatusIterator(statuses,
         ACCEPT_ALL, new Listing.AcceptAllButS3nDirs());
