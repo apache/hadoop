@@ -42,7 +42,8 @@ import org.apache.hadoop.metrics2.lib.Interns;
 public class SCMContainerMetrics implements MetricsSource {
 
   private final SCMMXBean scmmxBean;
-  private static final String SOURCE = SCMContainerMetrics.class.getName();
+  private static final String SOURCE =
+      SCMContainerMetrics.class.getSimpleName();
 
   public SCMContainerMetrics(SCMMXBean scmmxBean) {
     this.scmmxBean = scmmxBean;
