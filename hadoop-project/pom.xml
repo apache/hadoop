@@ -890,6 +890,11 @@
         <version>${jersey2.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.glassfish.jersey.media</groupId>
+        <artifactId>jersey-media-json-jettison</artifactId>
+        <version>${jersey2.version}</version>
+      </dependency>
+      <dependency>
         <groupId>com.google.inject</groupId>
         <artifactId>guice</artifactId>
         <version>${guice.version}</version>

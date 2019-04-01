@@ -21,42 +21,30 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
+import javax.ws.rs.container.ContainerRequestContext;
+import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.UriBuilder;
+import javax.ws.rs.core.UriInfo;
+import javax.ws.rs.ext.Provider;
 
-import com.sun.jersey.spi.container.ContainerRequest;
-import com.sun.jersey.spi.container.ContainerRequestFilter;
-import com.sun.jersey.spi.container.ContainerResponseFilter;
-import com.sun.jersey.spi.container.ResourceFilter;
 import org.apache.hadoop.util.StringUtils;
 
 /**
  * A filter to change parameter names to lower cases
  * so that parameter names are considered as case insensitive.
  */
-public class ParamFilter implements ResourceFilter {
-  private static final ContainerRequestFilter LOWER_CASE
-      = new ContainerRequestFilter() {
-    @Override
-    public ContainerRequest filter(final ContainerRequest request) {
-      final MultivaluedMap<String, String> parameters = request.getQueryParameters();
-      if (containsUpperCase(parameters.keySet())) {
-        //rebuild URI
-        final URI lower = rebuildQuery(request.getRequestUri(), parameters);
-        request.setUris(request.getBaseUri(), lower);
-      }
-      return request;
+@Provider
+public class ParamFilter implements ContainerRequestFilter {
+  @Override
+  public void filter(ContainerRequestContext requestContext) {
+    final MultivaluedMap<String, String> parameters =
+        requestContext.getHeaders();
+    if (containsUpperCase(parameters.keySet())) {
+      final UriInfo uriInfo = requestContext.getUriInfo();
+      final URI lower = rebuildQuery(uriInfo.getRequestUri(), parameters);
+      requestContext.setRequestUri(uriInfo.getBaseUri(), lower);
     }
-  };
-
-  @Override
-  public ContainerRequestFilter getRequestFilter() {
-    return LOWER_CASE;
-  }
-
-  @Override
-  public ContainerResponseFilter getResponseFilter() {
-    return null;
   }
 
   /** Do the strings contain upper case letters? */

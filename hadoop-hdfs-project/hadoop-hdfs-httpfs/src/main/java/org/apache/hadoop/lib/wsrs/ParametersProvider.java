@@ -19,17 +19,15 @@
 package org.apache.hadoop.lib.wsrs;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
-import com.sun.jersey.api.core.HttpContext;
-import com.sun.jersey.core.spi.component.ComponentContext;
-import com.sun.jersey.core.spi.component.ComponentScope;
-import com.sun.jersey.server.impl.inject.AbstractHttpContextInjectable;
-import com.sun.jersey.spi.inject.Injectable;
-import com.sun.jersey.spi.inject.InjectableProvider;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.util.StringUtils;
+import org.glassfish.hk2.api.Factory;
 
+import javax.servlet.ServletContext;
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MultivaluedMap;
+import javax.xml.ws.spi.http.HttpContext;
 import java.lang.reflect.Type;
 import java.text.MessageFormat;
 import java.util.HashMap;
@@ -41,13 +39,14 @@ import java.util.Map;
  * given parameter definition. 
  */
 @InterfaceAudience.Private
-public class ParametersProvider
-  extends AbstractHttpContextInjectable<Parameters>
-  implements InjectableProvider<Context, Type> {
+public class ParametersProvider implements Factory<Parameters> {
 
   private String driverParam;
   private Class<? extends Enum> enumClass;
   private Map<Enum, Class<Param<?>>[]> paramsDef;
+  @Context HttpContext httpContext;
+  @Context ServletContext servletcontext;
+  @Context HttpServletRequest request;
 
   public ParametersProvider(String driverParam, Class<? extends Enum> enumClass,
                             Map<Enum, Class<Param<?>>[]> paramsDef) {
@@ -57,11 +56,10 @@ public class ParametersProvider
   }
 
   @Override
-  @SuppressWarnings("unchecked")
-  public Parameters getValue(HttpContext httpContext) {
+  public Parameters provide() {
     Map<String, List<Param<?>>> map = new HashMap<String, List<Param<?>>>();
-    Map<String, List<String>> queryString =
-      httpContext.getRequest().getQueryParameters();
+    
+    Map<String, String[]> queryString = request.getParameterMap();
     String str = ((MultivaluedMap<String, String>) queryString).
         getFirst(driverParam);
     if (str == null) {

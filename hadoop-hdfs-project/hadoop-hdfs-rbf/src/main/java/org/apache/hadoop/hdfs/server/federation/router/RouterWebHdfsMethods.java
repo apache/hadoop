@@ -31,11 +31,14 @@ import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMetho
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Path;
+import javax.ws.rs.container.DynamicFeature;
+import javax.ws.rs.container.ResourceInfo;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.FeatureContext;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.ext.Provider;
 
-import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.hdfs.web.ParamFilter;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
@@ -110,7 +113,6 @@ import java.util.Random;
  * {@link NamenodeWebHdfsMethods}, and tries to reuse as much as possible.
  */
 @Path("")
-@ResourceFilters(ParamFilter.class)
 public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterWebHdfsMethods.class);

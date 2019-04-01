@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.TokenVerifier;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
+import org.apache.hadoop.hdfs.web.ParamFilter;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.AclPermissionParam;
 import org.apache.hadoop.hdfs.web.resources.Param;
@@ -100,6 +101,11 @@ public class NameNodeHttpServer {
           restCsrfClassName, restCsrfClassName, restCsrfParams,
           new String[] {pathSpec});
     }
+
+    // add a filter to change parameter names to lower cases
+    HttpServer2.defineFilter(httpServer2.getWebAppContext(),
+        ParamFilter.class.getName(), ParamFilter.class.getName(), null,
+        new String[] {pathSpec});
 
     // add webhdfs packages
     final Map<String, String> params = new HashMap<>();
