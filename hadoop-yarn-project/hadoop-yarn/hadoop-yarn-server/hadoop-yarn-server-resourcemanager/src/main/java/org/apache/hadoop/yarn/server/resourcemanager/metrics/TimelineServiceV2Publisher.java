@@ -458,6 +458,8 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
       ContainerId containerId) {
     ContainerEntity entity = new ContainerEntity();
     entity.setId(containerId.toString());
+    entity.setIdPrefix(TimelineServiceHelper.invertLong(
+        containerId.getContainerId()));
     entity.setParent(new Identifier(TimelineEntityType.YARN_APPLICATION_ATTEMPT
         .name(), containerId.getApplicationAttemptId().toString()));
     return entity;

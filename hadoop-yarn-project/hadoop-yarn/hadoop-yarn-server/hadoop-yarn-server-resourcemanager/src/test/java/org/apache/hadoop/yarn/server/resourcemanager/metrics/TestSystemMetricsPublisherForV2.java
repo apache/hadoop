@@ -289,7 +289,8 @@ public class TestSystemMetricsPublisherForV2 {
     File appFile = new File(outputDirApp, timelineServiceFileName);
     Assert.assertTrue(appFile.exists());
     verifyEntity(appFile, 2,
-        ContainerMetricsConstants.CREATED_IN_RM_EVENT_TYPE, 0, 0);
+        ContainerMetricsConstants.CREATED_IN_RM_EVENT_TYPE, 0,
+        TimelineServiceHelper.invertLong(containerId.getContainerId()));
   }
 
   private RMApp createAppAndRegister(ApplicationId appId) {

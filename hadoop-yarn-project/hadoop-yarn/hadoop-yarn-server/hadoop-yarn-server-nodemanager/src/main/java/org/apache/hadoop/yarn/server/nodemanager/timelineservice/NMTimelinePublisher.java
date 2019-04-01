@@ -186,8 +186,6 @@ public class NMTimelinePublisher extends CompositeService {
               Math.round(cpuUsagePercentPerCore));
           entity.addMetric(cpuMetric);
         }
-        entity.setIdPrefix(TimelineServiceHelper.
-            invertLong(container.getContainerStartTime()));
         ApplicationId appId = container.getContainerId().
             getApplicationAttemptId().getApplicationId();
         try {
@@ -249,7 +247,6 @@ public class NMTimelinePublisher extends CompositeService {
       long containerStartTime = container.getContainerStartTime();
       entity.addEvent(tEvent);
       entity.setCreatedTime(containerStartTime);
-      entity.setIdPrefix(TimelineServiceHelper.invertLong(containerStartTime));
       dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
           containerId.getApplicationAttemptId().getApplicationId()));
     }
@@ -277,7 +274,6 @@ public class NMTimelinePublisher extends CompositeService {
       tEvent.setId(ContainerMetricsConstants.FINISHED_EVENT_TYPE);
       tEvent.setTimestamp(containerFinishTime);
       entity.addEvent(tEvent);
-      entity.setIdPrefix(TimelineServiceHelper.invertLong(containerStartTime));
 
       dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
           containerId.getApplicationAttemptId().getApplicationId()));
@@ -295,8 +291,6 @@ public class NMTimelinePublisher extends CompositeService {
       tEvent.setId(eventType);
       tEvent.setTimestamp(event.getTimestamp());
       entity.addEvent(tEvent);
-      entity.setIdPrefix(TimelineServiceHelper.
-          invertLong(container.getContainerStartTime()));
 
       ApplicationId appId = container.getContainerId().
           getApplicationAttemptId().getApplicationId();
@@ -328,6 +322,8 @@ public class NMTimelinePublisher extends CompositeService {
       ContainerId containerId) {
     ContainerEntity entity = new ContainerEntity();
     entity.setId(containerId.toString());
+    entity.setIdPrefix(TimelineServiceHelper.invertLong(
+        containerId.getContainerId()));
     Identifier parentIdentifier = new Identifier();
     parentIdentifier
         .setType(TimelineEntityType.YARN_APPLICATION_ATTEMPT.name());
