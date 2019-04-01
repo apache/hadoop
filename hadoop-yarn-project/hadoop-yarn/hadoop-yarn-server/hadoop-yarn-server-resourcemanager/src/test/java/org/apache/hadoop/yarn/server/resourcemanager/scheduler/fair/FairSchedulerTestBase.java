@@ -293,11 +293,16 @@ public class FairSchedulerTestBase {
       Resource amResource, List<ResourceRequest> amReqs) {
     RMContext rmContext = resourceManager.getRMContext();
     ApplicationId appId = attId.getApplicationId();
+    // This fakes the placement which is not part of the scheduler anymore
+    ApplicationPlacementContext placementCtx =
+        new ApplicationPlacementContext(queue);
+    // Set the placement in the app and not just in the event in the next call
+    // otherwise with out of order event processing we might remove the app.
     RMApp rmApp = new RMAppImpl(appId, rmContext, conf, null, user, null,
         ApplicationSubmissionContext.newInstance(appId, null, queue, null,
             mock(ContainerLaunchContext.class), false, false, 0, amResource,
             null),
-        scheduler, null, 0, null, null, amReqs);
+        scheduler, null, 0, null, null, amReqs, placementCtx, -1);
     rmContext.getRMApps().put(appId, rmApp);
   }
 
