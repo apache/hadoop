@@ -465,11 +465,11 @@ public class EditLogTailer {
     protected abstract T doWork() throws IOException;
 
     public T call() throws IOException {
+      // reset the loop count on success
+      nnLoopCount = 0;
       while ((cachedActiveProxy = getActiveNodeProxy()) != null) {
         try {
           T ret = doWork();
-          // reset the loop count on success
-          nnLoopCount = 0;
           return ret;
         } catch (RemoteException e) {
           Throwable cause = e.unwrapRemoteException(StandbyException.class);
