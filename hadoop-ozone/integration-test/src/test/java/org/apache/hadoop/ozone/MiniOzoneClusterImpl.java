@@ -510,7 +510,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
      *
      * @throws IOException
      */
-    private OzoneManager createOM()
+    OzoneManager createOM()
         throws IOException, AuthenticationException {
       configureOM();
       OMStorage omStore = new OMStorage(conf);
