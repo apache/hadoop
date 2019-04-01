@@ -1379,4 +1379,19 @@ public class TestMRJobs {
       }
     }
   }
+
+  @Test
+  public void testSleepJobName() throws IOException {
+    SleepJob sleepJob = new SleepJob();
+    sleepJob.setConf(conf);
+
+    Job job1 = sleepJob.createJob(1, 1, 1, 1, 1, 1);
+    Assert.assertEquals("Wrong default name of sleep job.",
+        job1.getJobName(), SleepJob.SLEEP_JOB_NAME);
+
+    String expectedJob2Name = SleepJob.SLEEP_JOB_NAME + " - test";
+    Job job2 = sleepJob.createJob(1, 1, 1, 1, 1, 1, "test");
+    Assert.assertEquals("Wrong name of sleep job.",
+        job2.getJobName(), expectedJob2Name);
+  }
 }
