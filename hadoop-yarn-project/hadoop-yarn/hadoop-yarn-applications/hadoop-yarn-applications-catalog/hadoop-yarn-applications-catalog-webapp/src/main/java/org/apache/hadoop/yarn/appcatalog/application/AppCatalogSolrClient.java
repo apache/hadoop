@@ -38,6 +38,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
+import org.apache.solr.client.solrj.SolrQuery.ORDER;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.HttpSolrClient;
 import org.apache.solr.client.solrj.response.QueryResponse;
@@ -64,10 +65,14 @@ public class AppCatalogSolrClient {
     Properties properties = new Properties();
     try {
       properties.load(input);
-      urlString = properties.getProperty("solr_url");
+      setSolrUrl(properties.getProperty("solr_url"));
     } catch (IOException e) {
       LOG.error("Error reading appcatalog configuration: ", e);
     }
+  }
+
+  private synchronized static void setSolrUrl(String url) {
+    urlString = url;
   }
 
   public SolrClient getSolrClient() {
@@ -79,6 +84,7 @@ public class AppCatalogSolrClient {
     SolrClient solr = getSolrClient();
     SolrQuery query = new SolrQuery();
     query.setQuery("*:*");
+    query.setSort("download_i", ORDER.desc);
     query.setFilterQueries("type_s:AppStoreEntry");
     query.setRows(40);
     QueryResponse response;
@@ -95,8 +101,8 @@ public class AppCatalogSolrClient {
         if (d.get("icon_s")!=null) {
           entry.setIcon(d.get("icon_s").toString());
         }
-        entry.setLike(Integer.valueOf(d.get("like_i").toString()));
-        entry.setDownload(Integer.valueOf(d.get("download_i").toString()));
+        entry.setLike(Integer.parseInt(d.get("like_i").toString()));
+        entry.setDownload(Integer.parseInt(d.get("download_i").toString()));
         apps.add(entry);
       }
     } catch (SolrServerException | IOException e) {
@@ -128,8 +134,8 @@ public class AppCatalogSolrClient {
         entry.setOrg(d.get("org_s").toString());
         entry.setName(d.get("name_s").toString());
         entry.setDesc(d.get("desc_s").toString());
-        entry.setLike(Integer.valueOf(d.get("like_i").toString()));
-        entry.setDownload(Integer.valueOf(d.get("download_i").toString()));
+        entry.setLike(Integer.parseInt(d.get("like_i").toString()));
+        entry.setDownload(Integer.parseInt(d.get("download_i").toString()));
         apps.add(entry);
       }
     } catch (SolrServerException | IOException e) {
@@ -189,8 +195,8 @@ public class AppCatalogSolrClient {
         entry.setOrg(d.get("org_s").toString());
         entry.setName(d.get("name_s").toString());
         entry.setDesc(d.get("desc_s").toString());
-        entry.setLike(Integer.valueOf(d.get("like_i").toString()));
-        entry.setDownload(Integer.valueOf(d.get("download_i").toString()));
+        entry.setLike(Integer.parseInt(d.get("like_i").toString()));
+        entry.setDownload(Integer.parseInt(d.get("download_i").toString()));
         Service yarnApp = mapper.readValue(d.get("yarnfile_s").toString(),
             Service.class);
         String name;
@@ -263,8 +269,8 @@ public class AppCatalogSolrClient {
       entry.setOrg(d.get("org_s").toString());
       entry.setName(d.get("name_s").toString());
       entry.setDesc(d.get("desc_s").toString());
-      entry.setLike(Integer.valueOf(d.get("like_i").toString()));
-      entry.setDownload(Integer.valueOf(d.get("download_i").toString()));
+      entry.setLike(Integer.parseInt(d.get("like_i").toString()));
+      entry.setDownload(Integer.parseInt(d.get("download_i").toString()));
       download = entry.getDownload() + 1;
 
       // Update download count
@@ -303,7 +309,8 @@ public class AppCatalogSolrClient {
         s.addField(name, doc.getFieldValues(name));
       }
     }
-    s.setField("download_i", download++);
+    download++;
+    s.setField("download_i", download);
     return s;
   }
 
@@ -356,4 +363,42 @@ public class AppCatalogSolrClient {
     }
   }
 
+  protected void register(AppStoreEntry app) throws IOException {
+    Collection<SolrInputDocument> docs = new HashSet<SolrInputDocument>();
+    SolrClient solr = getSolrClient();
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    try {
+      SolrInputDocument buffer = new SolrInputDocument();
+      buffer.setField("id", java.util.UUID.randomUUID().toString()
+          .substring(0, 11));
+      buffer.setField("org_s", app.getOrg());
+      buffer.setField("name_s", app.getName());
+      buffer.setField("desc_s", app.getDesc());
+      if (app.getIcon() != null) {
+        buffer.setField("icon_s", app.getIcon());
+      }
+      buffer.setField("type_s", "AppStoreEntry");
+      buffer.setField("like_i", app.getLike());
+      buffer.setField("download_i", app.getDownload());
+
+      // Keep only YARN data model for yarnfile field
+      String yarnFile = mapper.writeValueAsString(app);
+      LOG.info("app:"+yarnFile);
+      Service yarnApp = mapper.readValue(yarnFile, Service.class);
+      buffer.setField("yarnfile_s", mapper.writeValueAsString(yarnApp));
+
+      docs.add(buffer);
+      // Commit Solr changes.
+      UpdateResponse detailsResponse = solr.add(docs);
+      if (detailsResponse.getStatus() != 0) {
+        throw new IOException("Unable to register application " +
+            "in Application Store.");
+      }
+      solr.commit();
+    } catch (SolrServerException | IOException e) {
+      throw new IOException("Unable to register application " +
+          "in Application Store. "+ e.getMessage());
+    }
+  }
 }
