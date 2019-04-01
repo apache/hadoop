@@ -89,7 +89,7 @@ def test_client_failure_isolate_two_datanodes():
     exit_code, output = \
         ClusterUtils.run_freon(FILE, 1, 1, 1, 10240, "RATIS", "THREE")
     assert re.search(
-        "Allocate block failed, error:INTERNAL_ERROR",
+        "Status: Failed",
         output) is not None
     ClusterUtils.get_key(FILE, TEST_BUCKET_NAME, TEST_VOLUME_NAME,
                          test_key_name, "/tmp/")
