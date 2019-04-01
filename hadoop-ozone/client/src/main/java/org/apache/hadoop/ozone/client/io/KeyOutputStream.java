@@ -96,6 +96,7 @@ public class KeyOutputStream extends OutputStream {
   private ExcludeList excludeList;
   private final RetryPolicy retryPolicy;
   private int retryCount;
+  private long offset;
   /**
    * A constructor for testing purpose only.
    */
@@ -121,6 +122,7 @@ public class KeyOutputStream extends OutputStream {
         .OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT_BYTES; // Default is 1MB
     this.retryPolicy = RetryPolicies.TRY_ONCE_THEN_FAIL;
     retryCount = 0;
+    offset = 0;
   }
 
   @VisibleForTesting
@@ -149,6 +151,10 @@ public class KeyOutputStream extends OutputStream {
     return locationInfoList;
   }
 
+  @VisibleForTesting
+  public int getRetryCount() {
+    return retryCount;
+  }
 
   @SuppressWarnings("parameternumber")
   public KeyOutputStream(OpenKeySession handler,
@@ -316,6 +322,7 @@ public class KeyOutputStream extends OutputStream {
           current.writeOnRetry(len);
         } else {
           current.write(b, off, writeLen);
+          offset += writeLen;
         }
       } catch (IOException ioe) {
         // for the current iteration, totalDataWritten - currentPos gives the
@@ -326,8 +333,12 @@ public class KeyOutputStream extends OutputStream {
         // The len specified here is the combined sum of the data length of
         // the buffers
         Preconditions.checkState(!retry || len <= streamBufferMaxSize);
-        writeLen = retry ? (int) len :
-            (int) (current.getWrittenDataLength() - currentPos);
+        int dataWritten  = (int) (current.getWrittenDataLength() - currentPos);
+        writeLen = retry ? (int) len : dataWritten;
+        // In retry path, the data written is already accounted in offset.
+        if (!retry) {
+          offset += writeLen;
+        }
         LOG.debug("writeLen {}, total len {}", writeLen, len);
         handleException(current, currentStreamIndex, ioe);
       }
@@ -345,20 +356,24 @@ public class KeyOutputStream extends OutputStream {
    * from the streamEntries list for the container which is closed.
    * @param containerID id of the closed container
    * @param pipelineId id of the associated pipeline
+   * @param streamIndex index of the stream
    */
   private void discardPreallocatedBlocks(long containerID,
-      PipelineID pipelineId) {
-    // currentStreamIndex < streamEntries.size() signifies that, there are still
+      PipelineID pipelineId, int streamIndex) {
+    // streamIndex < streamEntries.size() signifies that, there are still
     // pre allocated blocks available.
-    if (currentStreamIndex < streamEntries.size()) {
+
+    // This will be called only to discard the next subsequent unused blocks
+    // in the sreamEntryList.
+    if (streamIndex < streamEntries.size()) {
       ListIterator<BlockOutputStreamEntry> streamEntryIterator =
-          streamEntries.listIterator(currentStreamIndex);
+          streamEntries.listIterator(streamIndex);
       while (streamEntryIterator.hasNext()) {
         BlockOutputStreamEntry streamEntry = streamEntryIterator.next();
+        Preconditions.checkArgument(streamEntry.getCurrentPosition() == 0);
         if (((pipelineId != null && streamEntry.getPipeline().getId()
             .equals(pipelineId)) || (containerID != -1
-            && streamEntry.getBlockID().getContainerID() == containerID))
-            && streamEntry.getCurrentPosition() == 0) {
+            && streamEntry.getBlockID().getContainerID() == containerID))) {
           streamEntryIterator.remove();
         }
       }
@@ -396,7 +411,7 @@ public class KeyOutputStream extends OutputStream {
   private void handleException(BlockOutputStreamEntry streamEntry,
       int streamIndex, IOException exception) throws IOException {
     Throwable t = checkForException(exception);
-    boolean retryFailure = checkForRetryFailure(exception);
+    boolean retryFailure = checkForRetryFailure(t);
     boolean closedContainerException = false;
     if (!retryFailure) {
       closedContainerException = checkIfContainerIsClosed(t);
@@ -411,16 +426,14 @@ public class KeyOutputStream extends OutputStream {
             + "uncommitted data length is {}", exception,
         totalSuccessfulFlushedData, bufferedDataLen);
     Preconditions.checkArgument(bufferedDataLen <= streamBufferMaxSize);
-    Preconditions.checkArgument(
-        streamEntry.getWrittenDataLength() - totalSuccessfulFlushedData
-            == bufferedDataLen);
+    Preconditions.checkArgument(offset - getKeyLength() == bufferedDataLen);
     long containerId = streamEntry.getBlockID().getContainerID();
     Collection<DatanodeDetails> failedServers = streamEntry.getFailedServers();
     Preconditions.checkNotNull(failedServers);
     if (!failedServers.isEmpty()) {
       excludeList.addDatanodes(failedServers);
     }
-    if (checkIfContainerIsClosed(t)) {
+    if (closedContainerException) {
       excludeList.addConatinerId(ContainerID.valueof(containerId));
     } else if (retryFailure || t instanceof TimeoutException) {
       pipelineId = streamEntry.getPipeline().getId();
@@ -428,22 +441,15 @@ public class KeyOutputStream extends OutputStream {
     }
     // just clean up the current stream.
     streamEntry.cleanup(retryFailure);
-    if (bufferedDataLen > 0) {
-      // If the data is still cached in the underlying stream, we need to
-      // allocate new block and write this data in the datanode.
-      currentStreamIndex += 1;
-      handleRetry(exception, bufferedDataLen);
-    }
-    if (totalSuccessfulFlushedData == 0) {
-      streamEntries.remove(streamIndex);
-      currentStreamIndex -= 1;
-    }
 
+    // discard all sunsequent blocks the containers and pipelines which
+    // are in the exclude list so that, the very next retry should never
+    // write data on the  closed container/pipeline
     if (closedContainerException) {
       // discard subsequent pre allocated blocks from the streamEntries list
       // from the closed container
       discardPreallocatedBlocks(streamEntry.getBlockID().getContainerID(),
-          null);
+          null, streamIndex + 1);
     } else {
       // In case there is timeoutException or Watch for commit happening over
       // majority or the client connection failure to the leader in the
@@ -451,7 +457,19 @@ public class KeyOutputStream extends OutputStream {
       // Next block allocation will happen with excluding this specific pipeline
       // This will ensure if 2 way commit happens , it cannot span over multiple
       // blocks
-      discardPreallocatedBlocks(-1, pipelineId);
+      discardPreallocatedBlocks(-1, pipelineId, streamIndex + 1);
+    }
+    if (bufferedDataLen > 0) {
+      // If the data is still cached in the underlying stream, we need to
+      // allocate new block and write this data in the datanode.
+      currentStreamIndex += 1;
+      handleRetry(exception, bufferedDataLen);
+      // reset the retryCount after handling the exception
+      retryCount = 0;
+    }
+    if (totalSuccessfulFlushedData == 0) {
+      streamEntries.remove(streamIndex);
+      currentStreamIndex -= 1;
     }
   }
 
@@ -618,7 +636,9 @@ public class KeyOutputStream extends OutputStream {
       if (keyArgs != null) {
         // in test, this could be null
         removeEmptyBlocks();
-        keyArgs.setDataSize(getKeyLength());
+        long length = getKeyLength();
+        Preconditions.checkArgument(offset == length);
+        keyArgs.setDataSize(length);
         keyArgs.setLocationInfoList(getLocationInfoList());
         // When the key is multipart upload part file upload, we should not
         // commit the key, as this is not an actual key, this is a just a
