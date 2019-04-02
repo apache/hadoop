@@ -55,6 +55,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls
@@ -100,7 +101,7 @@ public class BlockOutputStream extends OutputStream {
   // The IOException will be set by response handling thread in case there is an
   // exception received in the response. If the exception is set, the next
   // request will fail upfront.
-  private IOException ioException;
+  private AtomicReference<IOException> ioException;
   private ExecutorService responseExecutor;
 
   // the effective length of data flushed so far
@@ -187,6 +188,7 @@ public class BlockOutputStream extends OutputStream {
     writtenDataLength = 0;
     failedServers = Collections.emptyList();
     bufferList = null;
+    ioException = new AtomicReference<>(null);
   }
 
 
@@ -221,9 +223,8 @@ public class BlockOutputStream extends OutputStream {
     return bufferPool;
   }
 
-  @VisibleForTesting
   public IOException getIoException() {
-    return ioException;
+    return ioException.get();
   }
 
   @VisibleForTesting
@@ -372,10 +373,9 @@ public class BlockOutputStream extends OutputStream {
         waitOnFlushFutures();
       }
     } catch (InterruptedException | ExecutionException e) {
-      ioException = new IOException(
-          "Unexpected Storage Container Exception: " + e.toString(), e);
+      setIoException(e);
       adjustBuffersOnException();
-      throw ioException;
+      throw getIoException();
     }
     if (!commitIndex2flushedDataMap.isEmpty()) {
       watchForCommit(
@@ -430,9 +430,9 @@ public class BlockOutputStream extends OutputStream {
       adjustBuffers(index);
     } catch (TimeoutException | InterruptedException | ExecutionException e) {
       LOG.warn("watchForCommit failed for index " + commitIndex, e);
+      setIoException(e);
       adjustBuffersOnException();
-      throw new IOException(
-          "Unexpected Storage Container Exception: " + e.toString(), e);
+      throw getIoException();
     }
   }
 
@@ -461,7 +461,7 @@ public class BlockOutputStream extends OutputStream {
           throw new CompletionException(sce);
         }
         // if the ioException is not set, putBlock is successful
-        if (ioException == null) {
+        if (getIoException() == null) {
           BlockID responseBlockID = BlockID.getFromProtobuf(
               e.getPutBlock().getCommittedBlockLength().getBlockID());
           Preconditions.checkState(blockID.getContainerBlockID()
@@ -505,10 +505,9 @@ public class BlockOutputStream extends OutputStream {
       } catch (InterruptedException | ExecutionException e) {
         // just set the exception here as well in order to maintain sanctity of
         // ioException field
-        ioException = new IOException(
-            "Unexpected Storage Container Exception: " + e.toString(), e);
+        setIoException(e);
         adjustBuffersOnException();
-        throw ioException;
+        throw getIoException();
       }
     }
   }
@@ -580,10 +579,9 @@ public class BlockOutputStream extends OutputStream {
       try {
         handleFlush();
       } catch (InterruptedException | ExecutionException e) {
-        ioException = new IOException(
-            "Unexpected Storage Container Exception: " + e.toString(), e);
+        setIoException(e);
         adjustBuffersOnException();
-        throw ioException;
+        throw getIoException();
       } finally {
         cleanup(false);
       }
@@ -611,8 +609,9 @@ public class BlockOutputStream extends OutputStream {
       // if the ioException is already set, it means a prev request has failed
       // just throw the exception. The current operation will fail with the
       // original error
-      if (ioException != null) {
-        throw ioException;
+      IOException exception = getIoException();
+      if (exception != null) {
+        throw exception;
       }
       ContainerProtocolCalls.validateContainerResponse(responseProto);
     } catch (StorageContainerException sce) {
@@ -622,10 +621,12 @@ public class BlockOutputStream extends OutputStream {
     }
   }
 
+
   private void setIoException(Exception e) {
-    if (ioException != null) {
-      ioException =  new IOException(
+    if (getIoException() == null) {
+      IOException exception =  new IOException(
           "Unexpected Storage Container Exception: " + e.toString(), e);
+      ioException.compareAndSet(null, exception);
     }
   }
 
@@ -659,9 +660,9 @@ public class BlockOutputStream extends OutputStream {
   private void checkOpen() throws IOException {
     if (xceiverClient == null) {
       throw new IOException("BlockOutputStream has been closed.");
-    } else if (ioException != null) {
+    } else if (getIoException() != null) {
       adjustBuffersOnException();
-      throw ioException;
+      throw getIoException();
     }
   }
 

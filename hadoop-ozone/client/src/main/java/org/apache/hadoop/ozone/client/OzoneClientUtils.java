@@ -25,6 +25,7 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.rest.response.*;
 import org.apache.ratis.protocol.AlreadyClosedException;
+import org.apache.ratis.protocol.GroupMismatchException;
 import org.apache.ratis.protocol.RaftRetryFailureException;
 
 import java.util.ArrayList;
@@ -43,6 +44,7 @@ public final class OzoneClientUtils {
         add(ContainerNotOpenException.class);
         add(RaftRetryFailureException.class);
         add(AlreadyClosedException.class);
+        add(GroupMismatchException.class);
       }};
   /**
    * Returns a BucketInfo object constructed using fields of the input

@@ -40,6 +40,7 @@ import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.ratis.protocol.AlreadyClosedException;
+import org.apache.ratis.protocol.GroupMismatchException;
 import org.apache.ratis.protocol.RaftRetryFailureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -423,8 +424,8 @@ public class KeyOutputStream extends OutputStream {
     streamEntry.setCurrentPosition(totalSuccessfulFlushedData);
     long bufferedDataLen = computeBufferData();
     LOG.warn("Encountered exception {}. The last committed block length is {}, "
-            + "uncommitted data length is {}", exception,
-        totalSuccessfulFlushedData, bufferedDataLen);
+            + "uncommitted data length is {} retry count {}", exception,
+        totalSuccessfulFlushedData, bufferedDataLen, retryCount);
     Preconditions.checkArgument(bufferedDataLen <= streamBufferMaxSize);
     Preconditions.checkArgument(offset - getKeyLength() == bufferedDataLen);
     long containerId = streamEntry.getBlockID().getContainerID();
@@ -435,7 +436,8 @@ public class KeyOutputStream extends OutputStream {
     }
     if (closedContainerException) {
       excludeList.addConatinerId(ContainerID.valueof(containerId));
-    } else if (retryFailure || t instanceof TimeoutException) {
+    } else if (retryFailure || t instanceof TimeoutException
+        || t instanceof GroupMismatchException) {
       pipelineId = streamEntry.getPipeline().getId();
       excludeList.addPipeline(pipelineId);
     }
@@ -482,11 +484,12 @@ public class KeyOutputStream extends OutputStream {
       throw e instanceof IOException ? (IOException) e : new IOException(e);
     }
     if (action.action == RetryPolicy.RetryAction.RetryDecision.FAIL) {
+      String msg = "";
       if (action.reason != null) {
-        LOG.error("Retry request failed. " + action.reason,
-            exception);
+        msg = "Retry request failed. " + action.reason;
+        LOG.error(msg, exception);
       }
-      throw exception;
+      throw new IOException(msg, exception);
     }
 
     // Throw the exception if the thread is interrupted

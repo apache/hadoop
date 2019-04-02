@@ -142,7 +142,13 @@ public class TestContainerStateMachineFailures {
             .getContainer().getContainerSet()
             .getContainer(omKeyLocationInfo.getContainerID()).getContainerData()
             .getContainerPath()));
-    key.close();
+    try {
+      key.close();
+      Assert.fail();
+    } catch (IOException ioe) {
+      Assert.assertTrue(ioe.getMessage().contains(
+          "Requested operation not allowed as ContainerState is UNHEALTHY"));
+    }
     long containerID = omKeyLocationInfo.getContainerID();
 
     // Make sure the container is marked unhealthy

@@ -66,6 +66,8 @@ import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
+import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerSpi;
+import org.apache.hadoop.ozone.container.common.transport.server.ratis.XceiverServerRatis;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.security.token.Token;
 
@@ -740,8 +742,76 @@ public final class ContainerTestHelper {
       containerIdList.add(info.getContainerID());
     }
     Assert.assertTrue(!containerIdList.isEmpty());
-    ContainerTestHelper
-        .waitForContainerClose(cluster, containerIdList.toArray(new Long[0]));
+    waitForContainerClose(cluster, containerIdList.toArray(new Long[0]));
+  }
+
+  public static void waitForPipelineClose(OzoneOutputStream outputStream,
+      MiniOzoneCluster cluster, boolean waitForContainerCreation)
+      throws Exception {
+    KeyOutputStream keyOutputStream =
+        (KeyOutputStream) outputStream.getOutputStream();
+    List<OmKeyLocationInfo> locationInfoList =
+        keyOutputStream.getLocationInfoList();
+    List<Long> containerIdList = new ArrayList<>();
+    for (OmKeyLocationInfo info : locationInfoList) {
+      containerIdList.add(info.getContainerID());
+    }
+    Assert.assertTrue(!containerIdList.isEmpty());
+    waitForPipelineClose(cluster, waitForContainerCreation,
+        containerIdList.toArray(new Long[0]));
+  }
+
+  public static void waitForPipelineClose(MiniOzoneCluster cluster,
+      boolean waitForContainerCreation, Long... containerIdList)
+      throws TimeoutException, InterruptedException, IOException {
+    List<Pipeline> pipelineList = new ArrayList<>();
+    for (long containerID : containerIdList) {
+      ContainerInfo container =
+          cluster.getStorageContainerManager().getContainerManager()
+              .getContainer(ContainerID.valueof(containerID));
+      Pipeline pipeline =
+          cluster.getStorageContainerManager().getPipelineManager()
+              .getPipeline(container.getPipelineID());
+      if (!pipelineList.contains(pipeline)) {
+        pipelineList.add(pipeline);
+      }
+      List<DatanodeDetails> datanodes = pipeline.getNodes();
+
+      if (waitForContainerCreation) {
+        for (DatanodeDetails details : datanodes) {
+          // Client will issue write chunk and it will create the container on
+          // datanodes.
+          // wait for the container to be created
+          GenericTestUtils
+              .waitFor(() -> isContainerPresent(cluster, containerID, details),
+                  500, 100 * 1000);
+          Assert.assertTrue(isContainerPresent(cluster, containerID, details));
+
+          // make sure the container gets created first
+          Assert.assertFalse(ContainerTestHelper
+              .isContainerClosed(cluster, containerID, details));
+        }
+      }
+    }
+    for (Pipeline pipeline1 : pipelineList) {
+      // issue pipeline destroy command
+      cluster.getStorageContainerManager().getPipelineManager()
+          .finalizeAndDestroyPipeline(pipeline1, false);
+    }
+
+    // wait for the pipeline to get destroyed in the datanodes
+    for (Pipeline pipeline : pipelineList) {
+      for (DatanodeDetails dn : pipeline.getNodes()) {
+        XceiverServerSpi server =
+            cluster.getHddsDatanodes().get(cluster.getHddsDatanodeIndex(dn))
+                .getDatanodeStateMachine().getContainer().getWriteChannel();
+        Assert.assertTrue(server instanceof XceiverServerRatis);
+        XceiverServerRatis raftServer = (XceiverServerRatis) server;
+        GenericTestUtils.waitFor(
+            () -> (!raftServer.getPipelineIds().contains(pipeline.getId())),
+            500, 100 * 1000);
+      }
+    }
   }
 
   public static void waitForContainerClose(MiniOzoneCluster cluster,
@@ -785,13 +855,13 @@ public final class ContainerTestHelper {
       // but not yet been used by the client. In such a case container is never
       // created.
       for (DatanodeDetails datanodeDetails : datanodes) {
-        GenericTestUtils.waitFor(() -> ContainerTestHelper
-                .isContainerClosed(cluster, containerID, datanodeDetails), 500,
+        GenericTestUtils.waitFor(
+            () -> isContainerClosed(cluster, containerID, datanodeDetails), 500,
             15 * 1000);
         //double check if it's really closed
         // (waitFor also throws an exception)
-        Assert.assertTrue(ContainerTestHelper
-            .isContainerClosed(cluster, containerID, datanodeDetails));
+        Assert.assertTrue(
+            isContainerClosed(cluster, containerID, datanodeDetails));
       }
       index++;
     }
