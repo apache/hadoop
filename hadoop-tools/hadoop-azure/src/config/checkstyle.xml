@@ -41,6 +41,9 @@
 -->
 
 <module name="Checker">
+
+    <property name="cacheFile" value="${checkstyle.cache.file}"/>
+
     <!-- Checks that each Java package has a Javadoc file used for commenting. -->
     <!-- See http://checkstyle.sf.net/config_javadoc.html#JavadocPackage       -->
     <module name="JavadocPackage">
@@ -60,8 +63,6 @@
     </module>
 
     <module name="TreeWalker">
-
-        <property name="cacheFile" value="${checkstyle.cache.file}"/>
 
         <!-- Checks for Javadoc comments.                     -->
         <!-- See http://checkstyle.sf.net/config_javadoc.html -->
