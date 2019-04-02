@@ -181,6 +181,8 @@ public interface MiniOzoneCluster {
   void restartHddsDatanode(int i, boolean waitForDatanode)
       throws InterruptedException, TimeoutException;
 
+  int getHddsDatanodeIndex(DatanodeDetails dn) throws IOException;
+
   /**
    * Restart a particular HddsDatanode.
    *

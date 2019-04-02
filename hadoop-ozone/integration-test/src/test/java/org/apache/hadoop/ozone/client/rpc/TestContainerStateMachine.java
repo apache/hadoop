@@ -139,7 +139,13 @@ public class TestContainerStateMachine {
             .getContainer(omKeyLocationInfo.getContainerID()).getContainerData()
             .getContainerPath()));
 
-    key.close();
+    try {
+      key.close();
+      Assert.fail();
+    } catch (IOException ioe) {
+      Assert.assertTrue(ioe.getMessage().contains(
+          "Requested operation not allowed as ContainerState is UNHEALTHY"));
+    }
     // Make sure the container is marked unhealthy
     Assert.assertTrue(
         cluster.getHddsDatanodes().get(0).getDatanodeStateMachine()

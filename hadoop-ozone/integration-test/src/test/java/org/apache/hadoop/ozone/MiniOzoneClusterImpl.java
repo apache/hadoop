@@ -192,7 +192,8 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
     return hddsDatanodes;
   }
 
-  private int getHddsDatanodeIndex(DatanodeDetails dn) throws IOException {
+  @Override
+  public int getHddsDatanodeIndex(DatanodeDetails dn) throws IOException {
     for (HddsDatanodeService service : hddsDatanodes) {
       if (service.getDatanodeDetails().equals(dn)) {
         return hddsDatanodes.indexOf(service);
