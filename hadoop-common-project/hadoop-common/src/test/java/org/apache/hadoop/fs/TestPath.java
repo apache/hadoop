@@ -121,7 +121,9 @@ public class TestPath {
     assertEquals("/foo", new Path("/foo/").toString());
     assertEquals("foo", new Path("foo/").toString());
     assertEquals("foo", new Path("foo//").toString());
+    assertEquals("foo", new Path("foo///").toString());
     assertEquals("foo/bar", new Path("foo//bar").toString());
+    assertEquals("foo/bar", new Path("foo///bar").toString());
     assertEquals("hdfs://foo/foo2/bar/baz/",
         new Path(new URI("hdfs://foo//foo2///bar/baz///")).toString());
     if (Path.WINDOWS) {
