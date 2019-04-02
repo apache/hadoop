@@ -1366,8 +1366,12 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     KeyPair keyPair = new KeyPair(client.getPublicKey(),
         client.getPrivateKey());
     InetSocketAddress omRpcAdd;
-
     omRpcAdd = OmUtils.getOmAddress(config);
+    if (omRpcAdd == null || omRpcAdd.getAddress() == null) {
+      LOG.error("Incorrect om rpc address. omRpcAdd:{}", omRpcAdd);
+      throw new RuntimeException("Can't get SCM signed certificate. " +
+          "omRpcAdd: " + omRpcAdd);
+    }
     // Get host name.
     String hostname = omRpcAdd.getAddress().getHostName();
 
@@ -1380,7 +1384,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         .setScmID(omStore.getScmId())
         .setClusterID(omStore.getClusterID())
         .setSubject(subject)
-        .addIpAddress(omRpcAdd.getAddress().getHostAddress());
+        .addIpAddress(hostname);
 
     LOG.info("Creating csr for OM->dns:{},ip:{},scmId:{},clusterId:{}," +
             "subject:{}", hostname, omRpcAdd.getAddress().getHostAddress(),
@@ -1389,7 +1393,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     HddsProtos.OzoneManagerDetailsProto.Builder omDetailsProtoBuilder =
         HddsProtos.OzoneManagerDetailsProto.newBuilder()
             .setHostName(omRpcAdd.getHostName())
-            .setIpAddress(omRpcAdd.getAddress().getHostAddress())
+            .setIpAddress(hostname)
             .setUuid(omStore.getOmId())
             .addPorts(HddsProtos.Port.newBuilder()
                 .setName(RPC_PORT)
