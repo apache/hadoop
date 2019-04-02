@@ -1338,7 +1338,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
     PersistentLongFile.writeFile(ratisSnapshotFile, snapshotIndex);
     LOG.info("Saved Ratis Snapshot on the OM with snapshotIndex {}",
-        snapshotIndex );
+        snapshotIndex);
 
     return snapshotIndex;
   }
