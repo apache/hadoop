@@ -24,7 +24,8 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientMetrics;
 import org.apache.hadoop.hdds.scm.XceiverClientRatis;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
+import org.apache.hadoop.hdds.scm.container.common.helpers
+    .ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.storage.BlockOutputStream;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -35,7 +36,7 @@ import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.io.KeyOutputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
-import org.apache.ratis.protocol.AlreadyClosedException;
+import org.apache.ratis.protocol.RaftRetryFailureException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -510,7 +511,7 @@ public class TestBlockOutputStreamWithFailures {
     // and one flush for partial chunk
     key.flush();
     Assert.assertTrue(keyOutputStream.checkForException(blockOutputStream
-        .getIoException()) instanceof AlreadyClosedException);
+        .getIoException()) instanceof RaftRetryFailureException);
     // Make sure the retryCount is reset after the exception is handled
     Assert.assertTrue(keyOutputStream.getRetryCount() == 0);
     // now close the stream, It will update the ack length after watchForCommit
@@ -1041,7 +1042,7 @@ public class TestBlockOutputStreamWithFailures {
     key.flush();
 
     Assert.assertTrue(keyOutputStream.checkForException(blockOutputStream
-        .getIoException()) instanceof AlreadyClosedException);
+        .getIoException()) instanceof RaftRetryFailureException);
     Assert.assertEquals(1, raftClient.getCommitInfoMap().size());
     // Make sure the retryCount is reset after the exception is handled
     Assert.assertTrue(keyOutputStream.getRetryCount() == 0);
@@ -1183,7 +1184,7 @@ public class TestBlockOutputStreamWithFailures {
     key.flush();
 
     Assert.assertTrue(keyOutputStream.checkForException(blockOutputStream
-        .getIoException()) instanceof AlreadyClosedException);
+        .getIoException()) instanceof RaftRetryFailureException);
 
     // Make sure the retryCount is reset after the exception is handled
     Assert.assertTrue(keyOutputStream.getRetryCount() == 0);

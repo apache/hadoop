@@ -572,6 +572,17 @@ public final class XceiverServerRatis extends XceiverServer {
     }
   }
 
+  @VisibleForTesting
+  public List<PipelineID> getPipelineIds() {
+    Iterable<RaftGroupId> gids = server.getGroupIds();
+    List<PipelineID> pipelineIDs = new ArrayList<>();
+    for (RaftGroupId groupId : gids) {
+      pipelineIDs.add(PipelineID.valueOf(groupId.getUuid()));
+      LOG.info("pipeline id {}", PipelineID.valueOf(groupId.getUuid()));
+    }
+    return pipelineIDs;
+  }
+
   void handleNodeSlowness(RaftGroup group, RoleInfoProto roleInfoProto) {
     handlePipelineFailure(group.getGroupId(), roleInfoProto);
   }
