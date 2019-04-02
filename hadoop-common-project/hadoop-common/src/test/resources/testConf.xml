@@ -714,7 +714,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-checksum &lt;src&gt; \.\.\. :\s*</expected-output>
+          <expected-output>^-checksum \[-v\] &lt;src&gt; \.\.\. :\s*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>

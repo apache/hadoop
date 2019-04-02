@@ -73,9 +73,13 @@ Returns 0 on success and -1 on error.
 checksum
 --------
 
-Usage: `hadoop fs -checksum URI`
+Usage: `hadoop fs -checksum [-v] URI`
 
 Returns the checksum information of a file.
+
+Options
+
+* The `-v` option displays blocks size for the file.
 
 Example:
 

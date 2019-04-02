@@ -71,6 +71,7 @@ import org.junit.rules.Timeout;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
+import org.junit.Assert;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
@@ -1118,6 +1119,31 @@ public class TestDFSShell {
       if (null != bak) {
         System.setOut(bak);
       }
+    }
+  }
+
+  @Test (timeout = 30000)
+  public void testChecksum() throws Exception {
+    PrintStream printStream = System.out;
+    try {
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      System.setOut(new PrintStream(out));
+      FsShell shell = new FsShell(dfs.getConf());
+      final Path filePath = new Path("/testChecksum/file1");
+      writeFile(dfs, filePath);
+      FileStatus fileStatus = dfs.getFileStatus(filePath);
+      FileChecksum checksum = dfs.getFileChecksum(filePath);
+      String[] args = {"-checksum", "-v", filePath.toString()};
+      assertEquals(0, shell.run(args));
+      // verify block size is printed in the output
+      assertTrue(out.toString()
+          .contains(String.format("BlockSize=%s", fileStatus.getBlockSize())));
+      // verify checksum is printed in the output
+      assertTrue(out.toString().contains(StringUtils
+          .byteToHexString(checksum.getBytes(), 0, checksum.getLength())));
+    } finally {
+      Assert.assertNotNull(printStream);
+      System.setOut(printStream);
     }
   }
 
