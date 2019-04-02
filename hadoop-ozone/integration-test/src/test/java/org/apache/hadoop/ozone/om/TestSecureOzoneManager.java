@@ -51,6 +51,7 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_NAMES;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod.KERBEROS;
 import static org.apache.hadoop.test.GenericTestUtils.*;
 
@@ -219,6 +220,22 @@ public class TestSecureOzoneManager {
     Assert.assertNotNull(client.getCertificate());
     Assert.assertTrue(omLogs.getOutput().contains("Init response: SUCCESS"));
     omLogs.clearOutput();
+  }
+
+  /**
+   * Test om bind socket address.
+   */
+  @Test
+  public void testSecureOmInitFailure() throws Exception {
+    OzoneConfiguration config = new OzoneConfiguration(conf);
+    OMStorage omStorage = new OMStorage(config);
+    omStorage.setClusterId(clusterId);
+    omStorage.setScmId(scmId);
+    omStorage.setOmId(omId);
+    config.set(OZONE_OM_ADDRESS_KEY, "om-unknown");
+    LambdaTestUtils.intercept(RuntimeException.class, "Can't get SCM signed" +
+            " certificate",
+        () -> OzoneManager.initializeSecurity(config, omStorage));
   }
 
 }
