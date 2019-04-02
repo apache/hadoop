@@ -156,7 +156,8 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
                 scmAddress, ugi, conf, NetUtils.getDefaultSocketFactory(conf),
                 Client.getRpcTimeout(conf)));
     this.storageContainerLocationClient =
-        TracingUtil.createProxy(client, StorageContainerLocationProtocol.class);
+        TracingUtil.createProxy(client, StorageContainerLocationProtocol.class,
+            conf);
     this.xceiverClientManager = new XceiverClientManager(conf);
 
     int configuredChunkSize = (int) conf

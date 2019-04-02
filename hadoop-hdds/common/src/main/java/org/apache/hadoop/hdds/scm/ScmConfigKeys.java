@@ -372,6 +372,10 @@ public final class ScmConfigKeys {
       "ozone.scm.network.topology.schema.file";
   public static final String OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE_DEFAULT =
       "network-topology-default.xml";
+
+  public static final String HDDS_TRACING_ENABLED = "hdds.tracing.enabled";
+  public static final boolean HDDS_TRACING_ENABLED_DEFAULT = true;
+
   /**
    * Never constructed.
    */

@@ -66,7 +66,7 @@ public class ObjectStore {
    * @param proxy ClientProtocol proxy.
    */
   public ObjectStore(Configuration conf, ClientProtocol proxy) {
-    this.proxy = TracingUtil.createProxy(proxy, ClientProtocol.class);
+    this.proxy = TracingUtil.createProxy(proxy, ClientProtocol.class, conf);
     this.listCacheSize = HddsClientUtils.getListCacheSize(conf);
   }
 
