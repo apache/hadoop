@@ -52,6 +52,7 @@ function hadoop_usage
   hadoop_add_subcommand "s3" client "command line interface for s3 related operations"
   hadoop_add_subcommand "version" client "print the version"
   hadoop_add_subcommand "dtutil" client "operations related to delegation tokens"
+  hadoop_add_subcommand "upgrade" client "HDFS to Ozone in-place upgrade tool"
 
   hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" false
 }
@@ -173,6 +174,10 @@ function ozonecmd_case
     dtutil)
       HADOOP_CLASSNAME=org.apache.hadoop.security.token.DtUtilShell
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-tools"
+    ;;
+    upgrade)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.upgrade.InPlaceUpgrade
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-upgrade"
     ;;
     *)
       HADOOP_CLASSNAME="${subcmd}"
