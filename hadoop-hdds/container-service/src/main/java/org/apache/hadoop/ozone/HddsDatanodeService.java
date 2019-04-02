@@ -27,6 +27,7 @@ import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
+import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
@@ -308,7 +309,7 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
    */
   private DatanodeDetails initializeDatanodeDetails()
       throws IOException {
-    String idFilePath = HddsUtils.getDatanodeIdFilePath(conf);
+    String idFilePath = HddsServerUtil.getDatanodeIdFilePath(conf);
     if (idFilePath == null || idFilePath.isEmpty()) {
       LOG.error("A valid file path is needed for config setting {}",
           ScmConfigKeys.OZONE_SCM_DATANODE_ID);
@@ -338,7 +339,7 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
    */
   private void persistDatanodeDetails(DatanodeDetails dnDetails)
       throws IOException {
-    String idFilePath = HddsUtils.getDatanodeIdFilePath(conf);
+    String idFilePath = HddsServerUtil.getDatanodeIdFilePath(conf);
     if (idFilePath == null || idFilePath.isEmpty()) {
       LOG.error("A valid file path is needed for config setting {}",
           ScmConfigKeys.OZONE_SCM_DATANODE_ID);
