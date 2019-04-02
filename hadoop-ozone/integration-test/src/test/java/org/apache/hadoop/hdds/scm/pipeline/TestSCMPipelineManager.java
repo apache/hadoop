@@ -267,5 +267,4 @@ public class TestSCMPipelineManager {
         "NumPipelineCreationFailed", metrics);
     Assert.assertTrue(numPipelineCreateFailed == 0);
   }
-  
 }
