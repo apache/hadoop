@@ -189,7 +189,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
     this.rpcProxy = TracingUtil.createProxy(
         createRetryProxy(omFailoverProxyProvider, maxRetries, maxFailovers,
             sleepBase, sleepMax),
-        OzoneManagerProtocolPB.class);
+        OzoneManagerProtocolPB.class, conf);
     this.clientID = clientId;
   }
 

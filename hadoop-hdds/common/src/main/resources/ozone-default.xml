@@ -2377,4 +2377,12 @@
       to datanodes. After this timeout the command will be retried.
     </description>
   </property>
+  <property>
+    <name>hdds.tracing.enabled</name>
+    <value>true</value>
+    <tag>OZONE, HDDS</tag>
+    <description>
+      If enabled, tracing information is sent to tracing server.
+    </description>
+  </property>
 </configuration>
