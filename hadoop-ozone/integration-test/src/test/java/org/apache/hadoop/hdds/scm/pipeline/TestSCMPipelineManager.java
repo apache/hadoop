@@ -215,10 +215,12 @@ public class TestSCMPipelineManager {
 
   @Test
   public void testPipelineCreationFailedMetric() throws Exception {
+    MockNodeManager nodeManagerMock = new MockNodeManager(true,
+        20);
     SCMPipelineManager pipelineManager =
-        new SCMPipelineManager(conf, nodeManager, new EventQueue());
+        new SCMPipelineManager(conf, nodeManagerMock, new EventQueue());
     PipelineProvider mockRatisProvider =
-        new MockRatisPipelineProvider(nodeManager,
+        new MockRatisPipelineProvider(nodeManagerMock,
             pipelineManager.getStateManager(), conf);
     pipelineManager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
         mockRatisProvider);
