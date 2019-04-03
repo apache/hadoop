@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
@@ -180,7 +179,7 @@ public abstract class AbstractNNFailoverProxyProvider<T> implements
 
     Collection<InetSocketAddress> addressesOfNns = addressesInNN.values();
     try {
-      addressesOfNns = getResolvedAddressesIfNecessary(addressesOfNns, uri);
+      addressesOfNns = getResolvedHostsIfNecessary(addressesOfNns, uri);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -209,7 +208,7 @@ public abstract class AbstractNNFailoverProxyProvider<T> implements
    * @return The collection of resolved IP addresses.
    * @throws IOException If there are issues resolving the addresses.
    */
-  Collection<InetSocketAddress> getResolvedAddressesIfNecessary(
+  Collection<InetSocketAddress> getResolvedHostsIfNecessary(
       Collection<InetSocketAddress> addressesOfNns, URI nameNodeUri)
           throws IOException {
     // 'host' here is usually the ID of the nameservice when address
@@ -223,6 +222,11 @@ public abstract class AbstractNNFailoverProxyProvider<T> implements
       // Early return is no resolve is necessary
       return addressesOfNns;
     }
+    // decide whether to access server by IP or by host name
+    String useFQDNKeyWithHost =
+        HdfsClientConfigKeys.Failover.RESOLVE_ADDRESS_TO_FQDN + "." + host;
+    boolean requireFQDN = conf.getBoolean(useFQDNKeyWithHost,
+        HdfsClientConfigKeys.Failover.RESOLVE_ADDRESS_TO_FQDN_DEFAULT);
 
     Collection<InetSocketAddress> addressOfResolvedNns = new ArrayList<>();
     DomainNameResolver dnr = DomainNameResolverFactory.newInstance(
@@ -232,12 +236,12 @@ public abstract class AbstractNNFailoverProxyProvider<T> implements
     LOG.info("Namenode domain name will be resolved with {}",
         dnr.getClass().getName());
     for (InetSocketAddress address : addressesOfNns) {
-      InetAddress[] resolvedAddresses = dnr.getAllByDomainName(
-          address.getHostName());
+      String[] resolvedHostNames = dnr.getAllResolvedHostnameByDomainName(
+          address.getHostName(), requireFQDN);
       int port = address.getPort();
-      for (InetAddress raddress : resolvedAddresses) {
+      for (String hostname : resolvedHostNames) {
         InetSocketAddress resolvedAddress = new InetSocketAddress(
-            raddress, port);
+            hostname, port);
         addressOfResolvedNns.add(resolvedAddress);
       }
     }
