@@ -47,11 +47,8 @@ def setup():
     exit_code, output = Blockade.blockade_status()
     assert exit_code == 0, "blockade status command failed with output=[%s]" % \
                            output
-    OM = filter(lambda x: 'ozoneManager' in x, CONTAINER_LIST)
-    SCM = filter(lambda x: 'scm' in x, CONTAINER_LIST)
-    DATANODES = sorted(list(filter(lambda x: 'datanode' in x, CONTAINER_LIST)))
-    CLIENT = filter(lambda x: 'ozone_client' in x, CONTAINER_LIST)
-
+    OM, SCM, CLIENT, DATANODES = \
+        ClusterUtils.find_om_scm_client_datanodes(CONTAINER_LIST)
     exit_code, output = ClusterUtils.run_freon(FILE, 1, 1, 1, 10240, "RATIS",
                                                "THREE", "ozone_client")
     assert exit_code == 0, "freon run failed with output=[%s]" % output

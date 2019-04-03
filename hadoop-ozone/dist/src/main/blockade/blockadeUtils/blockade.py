@@ -45,9 +45,8 @@ class Blockade(object):
     @classmethod
     def make_flaky(cls, flaky_node, container_list):
         # make the network flaky
-        om = filter(lambda x: 'ozoneManager' in x, container_list)
-        scm = filter(lambda x: 'scm' in x, container_list)
-        datanodes = filter(lambda x: 'datanode' in x, container_list)
+        om, scm, _, datanodes = \
+            ClusterUtils.find_om_scm_client_datanodes(container_list)
         node_dict = {
                 "all": "--all",
                 "scm" : scm[0],

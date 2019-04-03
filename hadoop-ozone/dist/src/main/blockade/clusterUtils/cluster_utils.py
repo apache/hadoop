@@ -71,7 +71,7 @@ class ClusterUtils(object):
   @classmethod
   def run_freon(cls, docker_compose_file, num_volumes, num_buckets,
                 num_keys, key_size, replication_type, replication_factor,
-                freon_client='ozoneManager'):
+                freon_client='om'):
     # run freon
     cmd = "docker-compose -f %s " \
           "exec %s /opt/hadoop/bin/ozone " \
@@ -115,7 +115,7 @@ class ClusterUtils(object):
   @classmethod
   def get_ozone_confkey_value(cls, docker_compose_file, key_name):
     cmd = "docker-compose -f %s " \
-          "exec ozoneManager /opt/hadoop/bin/ozone " \
+          "exec om /opt/hadoop/bin/ozone " \
           "getconf -confKey %s" \
           % (docker_compose_file, key_name)
     exit_code, output = cls.run_cmd(cmd)
@@ -307,3 +307,22 @@ class ClusterUtils(object):
     checksum = finaloutput.split(" ")
     logger.info("Checksum of %s is : %s", filepath, checksum[0])
     return checksum[0]
+
+  @classmethod
+  def get_pipelines(cls, docker_compose_file):
+    command = "docker-compose -f %s " \
+                         + "exec ozone_client /opt/hadoop/bin/ozone scmcli " \
+                         + "listPipelines" % (docker_compose_file)
+    exit_code, output = cls.run_cmd(command)
+    assert exit_code == 0, "list pipeline command failed"
+    return output
+
+  @classmethod
+  def find_om_scm_client_datanodes(cls, container_list):
+
+      om = filter(lambda x: 'om_1' in x, container_list)
+      scm = filter(lambda x: 'scm' in x, container_list)
+      datanodes = sorted(
+          list(filter(lambda x: 'datanode' in x, container_list)))
+      client = filter(lambda x: 'ozone_client' in x, container_list)
+      return om, scm, client, datanodes
