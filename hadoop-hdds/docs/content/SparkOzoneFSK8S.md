@@ -83,7 +83,7 @@ And create a custom `core-site.xml`:
 </configuration>
 ```
 
-_Note_: You may also use `org.apache.hadoop.fs.ozone.OzoneFileSystem` without the `Basic` prefix. The `Basic` version doesn't support FS statistics and security tokens but can work together with older hadoop versions.
+_Note_: You may also use `org.apache.hadoop.fs.ozone.OzoneFileSystem` without the `Basic` prefix. The `Basic` version doesn't support FS statistics and encryption zones but can work together with older hadoop versions.
 
 Copy the `ozonefs.jar` file from an ozone distribution (__use the legacy version!__)
 
