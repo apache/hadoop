@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.om;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -38,7 +37,6 @@ import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.MiniOzoneClusterImpl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.TestStorageContainerManagerHelper;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
@@ -116,10 +114,8 @@ public class TestScmChillMode {
     }
   }
 
-  @Test
+  @Test(timeout = 300_000)
   public void testChillModeOperations() throws Exception {
-    final AtomicReference<MiniOzoneCluster> miniCluster =
-        new AtomicReference<>();
     // Create {numKeys} random names keys.
     TestStorageContainerManagerHelper helper =
         new TestStorageContainerManagerHelper(cluster, conf);
@@ -158,25 +154,21 @@ public class TestScmChillMode {
 
     cluster.stop();
 
-    new Thread(() -> {
-      try {
-        miniCluster.set(builder.build());
-      } catch (IOException e) {
-        fail("failed");
-      }
-    }).start();
+    try {
+      cluster = builder.build();
+    } catch (IOException e) {
+      fail("failed");
+    }
+
 
     StorageContainerManager scm;
-    GenericTestUtils.waitFor(() -> {
-      return miniCluster.get() != null;
-    }, 100, 1000 * 3);
-    cluster = miniCluster.get();
 
     scm = cluster.getStorageContainerManager();
     Assert.assertTrue(scm.isInChillMode());
 
-    om = miniCluster.get().getOzoneManager();
+    om = cluster.getOzoneManager();
 
+// As cluster is restarted with out datanodes restart
     LambdaTestUtils.intercept(IOException.class,
         "ChillModePrecheck failed for allocateBlock",
         () -> om.openKey(keyArgs));
@@ -185,25 +177,18 @@ public class TestScmChillMode {
   /**
    * Tests inChillMode & forceExitChillMode api calls.
    */
-  @Test
+  @Test(timeout = 300_000)
   public void testIsScmInChillModeAndForceExit() throws Exception {
-    final AtomicReference<MiniOzoneCluster> miniCluster =
-        new AtomicReference<>();
     // Test 1: SCM should be out of chill mode.
     Assert.assertFalse(storageContainerLocationClient.inChillMode());
     cluster.stop();
     // Restart the cluster with same metadata dir.
-    new Thread(() -> {
-      try {
-        miniCluster.set(builder.build());
-      } catch (IOException e) {
-        Assert.fail("Cluster startup failed.");
-      }
-    }).start();
-    GenericTestUtils.waitFor(() -> {
-      return miniCluster.get() != null;
-    }, 10, 1000 * 3);
-    cluster = miniCluster.get();
+
+    try {
+      cluster = builder.build();
+    } catch (IOException e) {
+      Assert.fail("Cluster startup failed.");
+    }
 
     // Test 2: Scm should be in chill mode as datanodes are not started yet.
     storageContainerLocationClient = cluster
@@ -225,36 +210,36 @@ public class TestScmChillMode {
 
   }
 
-  @Test(timeout=300_000)
+  @Test(timeout = 300_000)
   public void testSCMChillMode() throws Exception {
-    MiniOzoneCluster.Builder clusterBuilder = MiniOzoneCluster.newBuilder(conf)
-        .setHbInterval(1000)
-        .setNumDatanodes(3)
-        .setStartDataNodes(false)
-        .setHbProcessorInterval(500);
-    MiniOzoneClusterImpl miniCluster = (MiniOzoneClusterImpl) clusterBuilder
-        .build();
     // Test1: Test chill mode  when there are no containers in system.
-    assertTrue(miniCluster.getStorageContainerManager().isInChillMode());
-    miniCluster.startHddsDatanodes();
-    miniCluster.waitForClusterToBeReady();
-    assertFalse(miniCluster.getStorageContainerManager().isInChillMode());
+    cluster.stop();
+
+    try {
+      cluster = builder.build();
+    } catch (IOException e) {
+      Assert.fail("Cluster startup failed.");
+    }
+    assertTrue(cluster.getStorageContainerManager().isInChillMode());
+    cluster.startHddsDatanodes();
+    cluster.waitForClusterToBeReady();
+    assertFalse(cluster.getStorageContainerManager().isInChillMode());
 
     // Test2: Test chill mode  when containers are there in system.
     // Create {numKeys} random names keys.
     TestStorageContainerManagerHelper helper =
-        new TestStorageContainerManagerHelper(miniCluster, conf);
+        new TestStorageContainerManagerHelper(cluster, conf);
     Map<String, OmKeyInfo> keyLocations = helper.createKeys(100 * 2, 4096);
-    final List<ContainerInfo> containers = miniCluster
+    final List<ContainerInfo> containers = cluster
         .getStorageContainerManager().getContainerManager().getContainers();
-    GenericTestUtils.waitFor(() -> containers.size() >= 3, 100, 1000 * 2);
+    GenericTestUtils.waitFor(() -> containers.size() >= 3, 100, 1000 * 30);
 
     // Removing some container to keep them open.
     containers.remove(0);
     containers.remove(0);
 
     // Close remaining containers
-    SCMContainerManager mapping = (SCMContainerManager) miniCluster
+    SCMContainerManager mapping = (SCMContainerManager) cluster
         .getStorageContainerManager().getContainerManager();
     containers.forEach(c -> {
       try {
@@ -266,38 +251,30 @@ public class TestScmChillMode {
         LOG.info("Failed to change state of open containers.", e);
       }
     });
-    miniCluster.stop();
+    cluster.stop();
 
     GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
         .captureLogs(SCMChillModeManager.getLogger());
     logCapturer.clearOutput();
-    AtomicReference<MiniOzoneCluster> miniClusterOzone
-        = new AtomicReference<>();
-    new Thread(() -> {
-      try {
-        miniClusterOzone.set(clusterBuilder.setStartDataNodes(false).build());
-      } catch (IOException e) {
-        fail("failed");
-      }
-    }).start();
+
+    try {
+      cluster = builder.build();
+    } catch (IOException ex) {
+      fail("failed");
+    }
 
     StorageContainerManager scm;
-    GenericTestUtils.waitFor(() -> {
-      return miniClusterOzone.get() != null;
-    }, 100, 1000 * 3);
 
-    miniCluster = (MiniOzoneClusterImpl) miniClusterOzone.get();
-
-    scm = miniCluster.getStorageContainerManager();
+    scm = cluster.getStorageContainerManager();
     assertTrue(scm.isInChillMode());
     assertFalse(logCapturer.getOutput().contains("SCM exiting chill mode."));
     assertTrue(scm.getCurrentContainerThreshold() == 0);
-    for (HddsDatanodeService dn : miniCluster.getHddsDatanodes()) {
+    for (HddsDatanodeService dn : cluster.getHddsDatanodes()) {
       dn.start(null);
     }
     GenericTestUtils
         .waitFor(() -> scm.getCurrentContainerThreshold() == 1.0, 100, 20000);
-    cluster = miniCluster;
+
     double chillModeCutoff = conf
         .getDouble(HddsConfigKeys.HDDS_SCM_CHILLMODE_THRESHOLD_PCT,
             HddsConfigKeys.HDDS_SCM_CHILLMODE_THRESHOLD_PCT_DEFAULT);
@@ -306,7 +283,7 @@ public class TestScmChillMode {
     assertFalse(scm.isInChillMode());
   }
 
-  @Test
+  @Test(timeout = 300_000)
   public void testSCMChillModeRestrictedOp() throws Exception {
     conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL,
         OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_LEVELDB);
@@ -338,7 +315,7 @@ public class TestScmChillMode {
         new SCMChillModeManager.ChillModeStatus(true));
     GenericTestUtils.waitFor(() -> {
       return clientProtocolServer.getChillModeStatus();
-    }, 50, 1000 * 5);
+    }, 50, 1000 * 30);
     assertTrue(clientProtocolServer.getChillModeStatus());
 
     LambdaTestUtils.intercept(SCMException.class,
