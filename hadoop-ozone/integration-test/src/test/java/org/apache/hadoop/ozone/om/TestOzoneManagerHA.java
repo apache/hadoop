@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.ozone.om;
 
-
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
@@ -98,8 +97,8 @@ public class TestOzoneManagerHA {
     scmId = UUID.randomUUID().toString();
     conf.setBoolean(OZONE_ACL_ENABLED, true);
     conf.setInt(OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS, 2);
-    conf.setInt(OZONE_CLIENT_RETRY_MAX_ATTEMPTS_KEY, 3);
-    conf.setInt(OZONE_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY, 3);
+    conf.setInt(OZONE_CLIENT_RETRY_MAX_ATTEMPTS_KEY, 10);
+    conf.setInt(OZONE_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY, 10);
 
     cluster = (MiniOzoneHAClusterImpl) MiniOzoneCluster.newHABuilder(conf)
         .setClusterId(clusterId)
@@ -222,7 +221,7 @@ public class TestOzoneManagerHA {
     // Stop one of the ozone manager, to see when the OM leader changes
     // multipart upload is happening successfully or not.
     cluster.stopOzoneManager(leaderOMNodeId);
-
+    Thread.sleep(NODE_FAILURE_TIMEOUT * 2);
 
     createMultipartKeyAndReadKey(ozoneBucket, keyName, uploadID);
 
@@ -488,13 +487,13 @@ public class TestOzoneManagerHA {
       Assert.fail("TestOMRetryProxy should fail when there are no OMs running");
     } catch (ConnectException e) {
       // Each retry attempt tries upto 10 times to connect. So there should be
-      // 3*10 "Retrying connect to server" messages
-      Assert.assertEquals(30,
+      // 10*10 "Retrying connect to server" messages
+      Assert.assertEquals(100,
           appender.countLinesWithMessage("Retrying connect to server:"));
 
       Assert.assertEquals(1,
           appender.countLinesWithMessage("Failed to connect to OM. Attempted " +
-              "3 retries and 3 failovers"));
+              "10 retries and 10 failovers"));
     }
   }
 
