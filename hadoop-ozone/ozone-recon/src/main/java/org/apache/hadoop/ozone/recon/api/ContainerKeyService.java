@@ -19,31 +19,44 @@ package org.apache.hadoop.ozone.recon.api;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
+import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
+import org.apache.hadoop.ozone.recon.ReconServer;
 import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
 import org.apache.hadoop.ozone.recon.api.types.KeyMetadata;
+import org.apache.hadoop.ozone.recon.api.types.KeyMetadata.ContainerBlockMetadata;
 import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.inject.Inject;
 
 /**
  * Endpoint for querying keys that belong to a container.
  */
 @Path("/containers")
+@Produces(MediaType.APPLICATION_JSON)
 public class ContainerKeyService {
+
+  private static final Logger LOG = LoggerFactory.getLogger(ReconServer.class);
 
   @Inject
   private ContainerDBServiceProvider containerDBServiceProvider;
@@ -59,7 +72,7 @@ public class ContainerKeyService {
    * @return {@link Response}
    */
   @GET
-  @Path("{id}")
+  @Path("/{id}")
   public Response getKeysForContainer(@PathParam("id") Long containerId) {
     Map<String, KeyMetadata> keyMetadataMap = new HashMap<>();
     try {
@@ -80,19 +93,36 @@ public class ContainerKeyService {
         }
 
         // Filter keys by version.
-        List<Long> matchedVersions = omKeyInfo.getKeyLocationVersions()
+        List<OmKeyLocationInfoGroup> matchedKeys = omKeyInfo
+            .getKeyLocationVersions()
             .stream()
             .filter(k -> (k.getVersion() == containerKeyPrefix.getKeyVersion()))
-            .mapToLong(OmKeyLocationInfoGroup::getVersion)
-            .boxed()
             .collect(Collectors.toList());
+
+        List<ContainerBlockMetadata> blockIds = new ArrayList<>();
+        for (OmKeyLocationInfoGroup omKeyLocationInfoGroup : matchedKeys) {
+          List<OmKeyLocationInfo> omKeyLocationInfos = omKeyLocationInfoGroup
+              .getLocationList()
+              .stream()
+              .filter(c -> c.getContainerID() == containerId)
+              .collect(Collectors.toList());
+          for (OmKeyLocationInfo omKeyLocationInfo : omKeyLocationInfos) {
+            blockIds.add(new ContainerBlockMetadata(omKeyLocationInfo
+                .getContainerID(), omKeyLocationInfo.getLocalID()));
+          }
+        }
 
         String ozoneKey = omMetadataManager.getOzoneKey(
             omKeyInfo.getVolumeName(),
             omKeyInfo.getBucketName(),
             omKeyInfo.getKeyName());
         if (keyMetadataMap.containsKey(ozoneKey)) {
-          keyMetadataMap.get(ozoneKey).getVersions().addAll(matchedVersions);
+          keyMetadataMap.get(ozoneKey).getVersions()
+              .add(containerKeyPrefix.getKeyVersion());
+
+          keyMetadataMap.get(ozoneKey).getBlockIds().putAll(
+              Collections.singletonMap(containerKeyPrefix.getKeyVersion(),
+                  blockIds));
         } else {
           KeyMetadata keyMetadata = new KeyMetadata();
           keyMetadata.setBucket(omKeyInfo.getBucketName());
@@ -103,8 +133,14 @@ public class ContainerKeyService {
           keyMetadata.setModificationTime(
               Instant.ofEpochMilli(omKeyInfo.getModificationTime()));
           keyMetadata.setDataSize(omKeyInfo.getDataSize());
-          keyMetadata.setVersions(matchedVersions);
+          keyMetadata.setVersions(new ArrayList<Long>() {{
+              add(containerKeyPrefix.getKeyVersion());
+            }});
           keyMetadataMap.put(ozoneKey, keyMetadata);
+          keyMetadata.setBlockIds(new TreeMap<Long,
+              List<ContainerBlockMetadata>>() {{
+              put(containerKeyPrefix.getKeyVersion(), blockIds);
+            }});
         }
       }
     } catch (IOException ioEx) {

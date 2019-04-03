@@ -88,7 +88,7 @@ public class ReconOmMetadataManagerImpl extends OmMetadataManagerImpl
       if (oldDBLocation.exists()) {
         LOG.info("Cleaning up old OM snapshot db at {}.",
             oldDBLocation.getAbsolutePath());
-        FileUtils.deleteQuietly(oldDBLocation);
+        FileUtils.deleteDirectory(oldDBLocation);
       }
     }
     initializeNewRdbStore(newDbLocation);

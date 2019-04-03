@@ -88,7 +88,7 @@ public class ContainerDBServiceProviderImpl
     if (oldDBLocation.exists()) {
       LOG.info("Cleaning up old Recon Container DB at {}.",
           oldDBLocation.getAbsolutePath());
-      FileUtils.deleteQuietly(oldDBLocation);
+      FileUtils.deleteDirectory(oldDBLocation);
     }
     for (Map.Entry<ContainerKeyPrefix, Integer> entry :
         containerKeyPrefixCounts.entrySet()) {
