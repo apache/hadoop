@@ -23,6 +23,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.
     OMResponse;
 
+import java.io.IOException;
+
 /**
  * Handler to handle the OmRequests.
  */
@@ -35,6 +37,22 @@ public interface RequestHandler {
    * @return OmResponse
    */
   OMResponse handle(OMRequest request);
+
+  /**
+   * Handle start Transaction Requests from OzoneManager StateMachine.
+   * @param omRequest
+   * @return OMRequest - New OM Request which will be applied during apply
+   * Transaction
+   * @throws IOException
+   */
+  OMRequest handleStartTransaction(OMRequest omRequest) throws IOException;
+
+  /**
+   * Handle Apply Transaction Requests from OzoneManager StateMachine.
+   * @param omRequest
+   * @return OMResponse
+   */
+  OMResponse handleApplyTransaction(OMRequest omRequest);
 
   /**
    * Validates that the incoming OM request has required parameters.
