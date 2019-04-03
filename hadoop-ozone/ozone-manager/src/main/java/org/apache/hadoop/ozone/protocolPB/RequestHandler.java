@@ -28,13 +28,13 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.
  */
 public interface RequestHandler {
 
-
   /**
    * Handle the OmRequest, and returns OmResponse.
    * @param request
    * @return OmResponse
    */
   OMResponse handle(OMRequest request);
+
 
   /**
    * Validates that the incoming OM request has required parameters.

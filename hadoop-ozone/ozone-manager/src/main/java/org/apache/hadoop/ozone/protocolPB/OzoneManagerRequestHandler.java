@@ -364,7 +364,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   }
 
   // Convert and exception to corresponding status code
-  private Status exceptionToResponseStatus(IOException ex) {
+  protected Status exceptionToResponseStatus(IOException ex) {
     if (ex instanceof OMException) {
       return Status.values()[((OMException) ex).getResult().ordinal()];
     } else {
@@ -1026,5 +1026,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     return OzoneManagerProtocolProtos.LookupFileResponse.newBuilder()
         .setKeyInfo(impl.lookupFile(omKeyArgs).getProtobuf())
         .build();
+  }
+
+  protected OzoneManagerServerProtocol getOzoneManagerServerProtocol() {
+    return impl;
   }
 }

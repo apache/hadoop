@@ -71,6 +71,8 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ozone.OzoneIllegalArgumentException;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
+import org.apache.hadoop.ozone.om.helpers.OmDeleteVolumeResponse;
+import org.apache.hadoop.ozone.om.helpers.OmVolumeOwnerChangeResponse;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -79,6 +81,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyLocation;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .VolumeList;
 import org.apache.hadoop.ozone.security.OzoneSecurityException;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -1629,6 +1633,79 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       throw ex;
     }
   }
+
+  @Override
+  public VolumeList startCreateVolume(OmVolumeArgs args) throws IOException {
+    // TODO: Need to add metrics and Audit log for HA requests
+    if(isAclEnabled) {
+      checkAcls(ResourceType.VOLUME, StoreType.OZONE, ACLType.CREATE,
+          args.getVolume(), null, null);
+    }
+    VolumeList volumeList = volumeManager.createVolume(args);
+    return volumeList;
+  }
+
+  public void applyCreateVolume(OmVolumeArgs omVolumeArgs,
+      VolumeList volumeList) throws IOException {
+    // TODO: Need to add metrics and Audit log for HA requests
+    volumeManager.applyCreateVolume(omVolumeArgs, volumeList);
+  }
+
+  @Override
+  public OmVolumeOwnerChangeResponse startSetOwner(String volume,
+      String owner) throws IOException {
+    // TODO: Need to add metrics and Audit log for HA requests
+    if (isAclEnabled) {
+      checkAcls(ResourceType.VOLUME, StoreType.OZONE, ACLType.WRITE_ACL, volume,
+          null, null);
+    }
+    return volumeManager.setOwner(volume, owner);
+  }
+
+  @Override
+  public void applySetOwner(String oldOwner, VolumeList oldOwnerVolumeList,
+      VolumeList newOwnerVolumeList, OmVolumeArgs newOwnerVolumeArgs)
+      throws IOException {
+    // TODO: Need to add metrics and Audit log for HA requests
+    volumeManager.applySetOwner(oldOwner, oldOwnerVolumeList,
+        newOwnerVolumeList, newOwnerVolumeArgs);
+  }
+
+  @Override
+  public OmVolumeArgs startSetQuota(String volume, long quota)
+      throws IOException {
+    // TODO: Need to add metrics and Audit log for HA requests
+    if (isAclEnabled) {
+      checkAcls(ResourceType.VOLUME, StoreType.OZONE, ACLType.WRITE_ACL, volume,
+          null, null);
+    }
+    return volumeManager.setQuota(volume, quota);
+  }
+
+  @Override
+  public void applySetQuota(OmVolumeArgs omVolumeArgs) throws IOException {
+      // TODO: Need to add metrics and Audit log for HA requests
+    volumeManager.applySetQuota(omVolumeArgs);
+  }
+
+  @Override
+  public OmDeleteVolumeResponse startDeleteVolume(String volume)
+      throws IOException {
+    if(isAclEnabled) {
+      checkAcls(ResourceType.VOLUME, StoreType.OZONE, ACLType.DELETE, volume,
+          null, null);
+    }
+    // TODO: Need to add metrics and Audit log for HA requests
+    return volumeManager.deleteVolume(volume);
+  }
+
+  @Override
+  public void applyDeleteVolume(String volume, String owner,
+      VolumeList newVolumeList) throws IOException {
+    // TODO: Need to add metrics and Audit log for HA requests
+    volumeManager.applyDeleteVolume(volume, owner, newVolumeList);
+  }
+
 
   /**
    * Checks if current caller has acl permissions.
