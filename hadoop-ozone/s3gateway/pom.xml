@@ -55,6 +55,22 @@
       <groupId>org.glassfish.jersey.inject</groupId>
       <artifactId>jersey-hk2</artifactId>
       <version>2.27</version>
+      <!-- The versions of these excluded dependencies are 2.5.0-beta. The
+      newer and release version 2.5.0 is being brought in by ozone-recon -->
+      <exclusions>
+        <exclusion>
+          <artifactId>hk2-api</artifactId>
+          <groupId>org.glassfish.hk2</groupId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.glassfish.hk2.external</groupId>
+          <artifactId>aopalliance-repackaged</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.glassfish.hk2</groupId>
+          <artifactId>hk2-utils</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.dataformat</groupId>

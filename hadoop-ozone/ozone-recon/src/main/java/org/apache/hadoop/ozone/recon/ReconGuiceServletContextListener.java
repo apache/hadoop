@@ -15,15 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.ozone.recon;
 
-import org.glassfish.jersey.server.ResourceConfig;
+import com.google.inject.Injector;
+import com.google.inject.servlet.GuiceServletContextListener;
 
 /**
- * JaxRS resource definition.
+ * Servlet Context Listener that provides the Guice injector.
  */
-public class ReconApplication extends ResourceConfig {
-  public ReconApplication() {
-    packages("org.apache.hadoop.ozone.recon.api");
+public class ReconGuiceServletContextListener
+    extends GuiceServletContextListener {
+
+  private static Injector injector;
+
+  @Override
+  public Injector getInjector() {
+    return injector;
+  }
+
+  static void setInjector(Injector inj) {
+    injector = inj;
   }
 }
