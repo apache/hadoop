@@ -96,6 +96,17 @@ can be queried to find if the path has an ACL. `getFileStatus(Path p).isEncrypte
 can be queried to find if the path is encrypted. `getFileStatus(Path p).isErasureCoded()`
 will tell if the path is erasure coded or not.
 
+YARN's distributed cache lets applications add paths to be cached across
+containers and applications via `Job.addCacheFile()` and `Job.addCacheArchive()`.
+The cache treats world-readable resources paths added as shareable across
+applications, and downloads them differently, unless they are declared as encrypted.
+
+To avoid failures during container launching, especially when delegation tokens
+are used, filesystems and object stores which not implement POSIX access permissions
+for both files and directories, MUST always return `true` to the `isEncrypted()`
+predicate. This can be done by setting the `encrypted` flag to true when creating
+the `FileStatus` instance.
+
 ### `Path getHomeDirectory()`
 
 The function `getHomeDirectory` returns the home directory for the FileSystem
