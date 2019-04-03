@@ -2889,7 +2889,7 @@
 
 <property>
   <name>hadoop.security.secure.random.impl</name>
-  <value></value>
+  <value>org.apache.hadoop.crypto.random.OpensslSecureRandom</value>
   <description>
     Implementation of secure random.
   </description>
