@@ -909,7 +909,6 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
 
     httpServer.start();
     scmBlockManager.start();
-    replicationManager.start();
 
     // Start jvm monitor
     jvmPauseMonitor = new JvmPauseMonitor();

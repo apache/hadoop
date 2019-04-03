@@ -53,7 +53,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -161,33 +160,14 @@ public class ReplicationManager {
    * Starts Replication Monitor thread.
    */
   public synchronized void start() {
-    start(0);
-  }
-
-  /**
-   * Starts Replication Monitor thread after the given initial delay.
-   *
-   * @param delay initial delay in milliseconds
-   */
-  public void start(final long delay) {
     if (!running) {
+      LOG.info("Starting Replication Monitor Thread.");
       running = true;
-      CompletableFuture.runAsync(() -> {
-        try {
-          LOG.info("Replication Monitor Thread will be started" +
-              " in {} milliseconds.", delay);
-          Thread.sleep(delay);
-        } catch (InterruptedException ignored) {
-          // InterruptedException is ignored.
-        }
-        LOG.info("Starting Replication Monitor Thread.");
-        replicationMonitor.start();
-      });
+      replicationMonitor.start();
     } else {
       LOG.info("Replication Monitor Thread is already running.");
     }
   }
-
 
   /**
    * Returns true if the Replication Monitor Thread is running.
