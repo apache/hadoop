@@ -1382,6 +1382,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
     // Get host name.
     String hostname = omRpcAdd.getAddress().getHostName();
+    String ip = omRpcAdd.getAddress().getHostAddress();
 
     String subject = UserGroupInformation.getCurrentUser()
         .getShortUserName() + "@" + hostname;
@@ -1392,16 +1393,16 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         .setScmID(omStore.getScmId())
         .setClusterID(omStore.getClusterID())
         .setSubject(subject)
-        .addIpAddress(hostname);
+        .addIpAddress(ip);
 
     LOG.info("Creating csr for OM->dns:{},ip:{},scmId:{},clusterId:{}," +
-            "subject:{}", hostname, omRpcAdd.getAddress().getHostAddress(),
+            "subject:{}", hostname, ip,
         omStore.getScmId(), omStore.getClusterID(), subject);
 
     HddsProtos.OzoneManagerDetailsProto.Builder omDetailsProtoBuilder =
         HddsProtos.OzoneManagerDetailsProto.newBuilder()
             .setHostName(omRpcAdd.getHostName())
-            .setIpAddress(hostname)
+            .setIpAddress(ip)
             .setUuid(omStore.getOmId())
             .addPorts(HddsProtos.Port.newBuilder()
                 .setName(RPC_PORT)
