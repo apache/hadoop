@@ -600,7 +600,7 @@ public class TestOzoneManagerHA {
     // The new snapshot index must be greater than the previous snapshot index
     long ratisSnapshotIndexNew = ozoneManager.loadRatisSnapshotIndex();
     Assert.assertTrue("Latest snapshot index must be greater than previous " +
-            "snapshot indices", ratisSnapshotIndexNew > ratisSnapshotIndex);  
+        "snapshot indices", ratisSnapshotIndexNew > ratisSnapshotIndex);
 
   }
 
