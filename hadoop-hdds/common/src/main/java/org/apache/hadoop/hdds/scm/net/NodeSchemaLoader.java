@@ -238,6 +238,8 @@ public final class NodeSchemaLoader {
         }
       }
       finalSchema = new NodeSchemaLoadResult(schemaList, true);
+    } catch (RuntimeException e) {
+      throw  e;
     } catch (Exception e) {
       throw new IllegalArgumentException("Fail to load network topology node"
               + " schema file: " + schemaFile.getAbsolutePath() + " , error:" + e.getMessage());

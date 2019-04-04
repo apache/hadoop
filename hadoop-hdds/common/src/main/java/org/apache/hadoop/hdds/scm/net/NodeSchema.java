@@ -128,7 +128,8 @@ public final class NodeSchema {
   }
 
   /**
-   * Constructor. This constructor is only used when build NodeSchema from YAML file.
+   * Constructor. This constructor is only used when build NodeSchema from
+   * YAML file.
    */
   public NodeSchema() {
     this.type = LayerType.INNER_NODE;
@@ -144,16 +145,23 @@ public final class NodeSchema {
   public LayerType getType() {
     return this.type;
   }
-  public void setType(LayerType type) {this.type = type;}
+
+  public void setType(LayerType type) {
+    this.type = type;
+  }
 
   public String getPrefix() {
     return this.prefix;
   }
-  public void setPrefix(String prefix) {this.prefix = prefix;}
+
+  public void setPrefix(String prefix) {
+    this.prefix = prefix;
+  }
 
   public String getDefaultName() {
     return this.defaultName;
   }
+
   public void setDefaultName(String name) {
     this.defaultName = name;
   }
@@ -161,7 +169,9 @@ public final class NodeSchema {
   public int getCost() {
     return this.cost;
   }
-  public void setCost(int cost) {this.cost = cost;}
+  public void setCost(int cost) {
+    this.cost = cost;
+  }
 
   public void setSublayer(List<NodeSchema> sublayer) {
     this.sublayer = sublayer;
