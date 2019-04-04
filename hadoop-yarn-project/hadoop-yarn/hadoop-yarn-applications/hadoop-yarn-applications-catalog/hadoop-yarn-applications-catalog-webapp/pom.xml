@@ -26,7 +26,7 @@
     <version>3.3.0-SNAPSHOT</version>
   </parent>
 
-  <name>YARN Application Catalog Webapp</name>
+  <name>Apache Hadoop YARN Application Catalog Webapp</name>
 
   <url>http://hadoop.apache.org</url>
 

@@ -26,7 +26,7 @@
     <artifactId>hadoop-yarn-applications-catalog</artifactId>
     <packaging>pom</packaging>
 
-    <name>YARN Application Catalog</name>
+    <name>Apache Hadoop YARN Application Catalog</name>
 
     <url>http://hadoop.apache.org</url>
 
