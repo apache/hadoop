@@ -24,7 +24,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.block.BlockManager;
 import org.apache.hadoop.hdds.scm.block.BlockManagerImpl;
 import org.apache.hadoop.hdds.scm.chillmode.ChillModeHandler;
-import org.apache.hadoop.hdds.scm.container.replication.ReplicationActivityStatus;
+import org.apache.hadoop.hdds.scm.container.ReplicationManager;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.server.events.EventQueue;
@@ -48,10 +48,10 @@ public class TestSCMClientProtocolServer {
     eventQueue = new EventQueue();
     scmClientProtocolServer = new SCMClientProtocolServer(config, null);
     BlockManager blockManager = Mockito.mock(BlockManagerImpl.class);
-    ReplicationActivityStatus replicationActivityStatus =
-        Mockito.mock(ReplicationActivityStatus.class);
+    ReplicationManager replicationManager =
+        Mockito.mock(ReplicationManager.class);
     ChillModeHandler chillModeHandler = new ChillModeHandler(config,
-        scmClientProtocolServer, blockManager, replicationActivityStatus);
+        scmClientProtocolServer, blockManager, replicationManager);
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, chillModeHandler);
   }
 

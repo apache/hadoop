@@ -20,8 +20,7 @@ package org.apache.hadoop.hdds.scm.chillmode;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.scm.block.BlockManager;
-import org.apache.hadoop.hdds.scm.container.replication.
-    ReplicationActivityStatus;
+import org.apache.hadoop.hdds.scm.container.ReplicationManager;
 import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
 import org.apache.hadoop.hdds.scm.chillmode.SCMChillModeManager.ChillModeStatus;
 import org.apache.hadoop.hdds.server.events.EventHandler;
@@ -41,7 +40,7 @@ public class ChillModeHandler implements EventHandler<ChillModeStatus> {
   private final BlockManager scmBlockManager;
   private final long waitTime;
   private final AtomicBoolean isInChillMode = new AtomicBoolean(true);
-  private final ReplicationActivityStatus replicationActivityStatus;
+  private final ReplicationManager replicationManager;
 
 
   /**
@@ -49,27 +48,27 @@ public class ChillModeHandler implements EventHandler<ChillModeStatus> {
    * @param configuration
    * @param clientProtocolServer
    * @param blockManager
-   * @param replicationStatus
+   * @param replicationManager
    */
   public ChillModeHandler(Configuration configuration,
       SCMClientProtocolServer clientProtocolServer,
       BlockManager blockManager,
-      ReplicationActivityStatus replicationStatus) {
+      ReplicationManager replicationManager) {
     Objects.requireNonNull(configuration, "Configuration cannot be null");
     Objects.requireNonNull(clientProtocolServer, "SCMClientProtocolServer " +
         "object cannot be null");
     Objects.requireNonNull(blockManager, "BlockManager object cannot be null");
-    Objects.requireNonNull(replicationStatus, "ReplicationActivityStatus " +
+    Objects.requireNonNull(replicationManager, "ReplicationManager " +
         "object cannot be null");
     this.waitTime = configuration.getTimeDuration(
         HddsConfigKeys.HDDS_SCM_WAIT_TIME_AFTER_CHILL_MODE_EXIT,
         HddsConfigKeys.HDDS_SCM_WAIT_TIME_AFTER_CHILL_MODE_EXIT_DEFAULT,
         TimeUnit.MILLISECONDS);
-    scmClientProtocolServer = clientProtocolServer;
-    scmBlockManager = blockManager;
-    replicationActivityStatus = replicationStatus;
+    this.scmClientProtocolServer = clientProtocolServer;
+    this.scmBlockManager = blockManager;
+    this.replicationManager = replicationManager;
 
-    boolean chillModeEnabled = configuration.getBoolean(
+    final boolean chillModeEnabled = configuration.getBoolean(
         HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED,
         HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED_DEFAULT);
     isInChillMode.set(chillModeEnabled);
@@ -89,13 +88,16 @@ public class ChillModeHandler implements EventHandler<ChillModeStatus> {
   @Override
   public void onMessage(ChillModeStatus chillModeStatus,
       EventPublisher publisher) {
-    isInChillMode.set(chillModeStatus.getChillModeStatus());
-
-    replicationActivityStatus.fireReplicationStart(isInChillMode.get(),
-        waitTime);
-    scmClientProtocolServer.setChillModeStatus(isInChillMode.get());
-    scmBlockManager.setChillModeStatus(isInChillMode.get());
-
+    try {
+      isInChillMode.set(chillModeStatus.getChillModeStatus());
+      scmClientProtocolServer.setChillModeStatus(isInChillMode.get());
+      scmBlockManager.setChillModeStatus(isInChillMode.get());
+      Thread.sleep(waitTime);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    } finally {
+      replicationManager.start();
+    }
   }
 
   public boolean getChillModeStatus() {

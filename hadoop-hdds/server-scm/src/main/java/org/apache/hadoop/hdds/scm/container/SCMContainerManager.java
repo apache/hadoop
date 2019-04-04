@@ -295,18 +295,20 @@ public class SCMContainerManager implements ContainerManager {
     // Should we return the updated ContainerInfo instead of LifeCycleState?
     lock.lock();
     try {
-      ContainerInfo container = containerStateManager.getContainer(containerID);
-      ContainerInfo updatedContainer =
-          updateContainerStateInternal(containerID, event);
-      if (updatedContainer.getState() != LifeCycleState.OPEN
-          && container.getState() == LifeCycleState.OPEN) {
+      final ContainerInfo container = containerStateManager
+          .getContainer(containerID);
+      final LifeCycleState oldState = container.getState();
+      containerStateManager.updateContainerState(containerID, event);
+      final LifeCycleState newState = container.getState();
+
+      if (oldState == LifeCycleState.OPEN && newState != LifeCycleState.OPEN) {
         pipelineManager
-            .removeContainerFromPipeline(updatedContainer.getPipelineID(),
+            .removeContainerFromPipeline(container.getPipelineID(),
                 containerID);
       }
       final byte[] dbKey = Longs.toByteArray(containerID.getId());
-      containerStore.put(dbKey, updatedContainer.getProtobuf().toByteArray());
-      return updatedContainer.getState();
+      containerStore.put(dbKey, container.getProtobuf().toByteArray());
+      return newState;
     } catch (ContainerNotFoundException cnfe) {
       throw new SCMException(
           "Failed to update container state"
@@ -316,11 +318,6 @@ public class SCMContainerManager implements ContainerManager {
     } finally {
       lock.unlock();
     }
-  }
-
-  private ContainerInfo updateContainerStateInternal(ContainerID containerID,
-      HddsProtos.LifeCycleEvent event) throws IOException {
-    return containerStateManager.updateContainerState(containerID, event);
   }
 
 

@@ -18,55 +18,40 @@
 
 package org.apache.hadoop.hdds.scm.container;
 
-import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
-import org.apache.hadoop.hdds.scm.server
-    .SCMDatanodeHeartbeatDispatcher.IncrementalContainerReportFromDatanode;
+import java.io.IOException;
+
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos
+    .ContainerReplicaProto;
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
+    .IncrementalContainerReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-
 /**
  * Handles incremental container reports from datanode.
  */
-public class IncrementalContainerReportHandler implements
-    EventHandler<IncrementalContainerReportFromDatanode> {
+public class IncrementalContainerReportHandler extends
+    AbstractContainerReportHandler
+    implements EventHandler<IncrementalContainerReportFromDatanode> {
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(IncrementalContainerReportHandler.class);
-
-  private final PipelineManager pipelineManager;
-  private final ContainerManager containerManager;
+  private static final Logger LOG = LoggerFactory.getLogger(
+      IncrementalContainerReportHandler.class);
 
   public IncrementalContainerReportHandler(
-      final PipelineManager pipelineManager,
       final ContainerManager containerManager)  {
-    Preconditions.checkNotNull(pipelineManager);
-    Preconditions.checkNotNull(containerManager);
-    this.pipelineManager = pipelineManager;
-    this.containerManager = containerManager;
+    super(containerManager, LOG);
   }
 
   @Override
-  public void onMessage(
-      final IncrementalContainerReportFromDatanode containerReportFromDatanode,
-      final EventPublisher publisher) {
+  public void onMessage(final IncrementalContainerReportFromDatanode report,
+                        final EventPublisher publisher) {
 
     for (ContainerReplicaProto replicaProto :
-         containerReportFromDatanode.getReport().getReportList()) {
+        report.getReport().getReportList()) {
       try {
-        final DatanodeDetails datanodeDetails = containerReportFromDatanode
-            .getDatanodeDetails();
-        final ContainerID containerID = ContainerID
-            .valueof(replicaProto.getContainerID());
-        ReportHandlerHelper.processContainerReplica(containerManager,
-            containerID, replicaProto, datanodeDetails, publisher, LOG);
+        processContainerReplica(report.getDatanodeDetails(), replicaProto);
       } catch (ContainerNotFoundException e) {
         LOG.warn("Container {} not found!", replicaProto.getContainerID());
       } catch (IOException e) {

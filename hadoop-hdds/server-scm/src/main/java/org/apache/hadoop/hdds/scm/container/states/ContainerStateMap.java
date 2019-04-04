@@ -296,8 +296,7 @@ public class ContainerStateMap {
       checkIfContainerExist(containerID);
       final ContainerInfo currentInfo = containerMap.get(containerID);
       try {
-        final ContainerInfo newInfo = new ContainerInfo(currentInfo);
-        newInfo.setState(newState);
+        currentInfo.setState(newState);
 
         // We are updating two places before this update is done, these can
         // fail independently, since the code needs to handle it.
@@ -309,13 +308,12 @@ public class ContainerStateMap {
         // roll back the earlier change we did. If the rollback fails, we can
         // be in an inconsistent state,
 
-        containerMap.put(containerID, newInfo);
         lifeCycleStateMap.update(currentState, newState, containerID);
         LOG.trace("Updated the container {} to new state. Old = {}, new = " +
             "{}", containerID, currentState, newState);
 
         // Just flush both old and new data sets from the result cache.
-        flushCache(currentInfo, newInfo);
+        flushCache(currentInfo);
       } catch (SCMException ex) {
         LOG.error("Unable to update the container state. {}", ex);
         // we need to revert the change in this attribute since we are not
@@ -324,7 +322,7 @@ public class ContainerStateMap {
                 "old state. Old = {}, Attempted state = {}", currentState,
             newState);
 
-        containerMap.put(containerID, currentInfo);
+        currentInfo.setState(currentState);
 
         // if this line throws, the state map can be in an inconsistent
         // state, since we will have modified the attribute by the
