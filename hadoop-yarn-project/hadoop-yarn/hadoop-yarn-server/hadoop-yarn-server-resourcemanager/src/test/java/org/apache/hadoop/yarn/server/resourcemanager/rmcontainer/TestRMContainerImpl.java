@@ -150,7 +150,7 @@ public class TestRMContainerImpl {
         RMContainerEventType.LAUNCHED));
     drainDispatcher.await();
     assertEquals(RMContainerState.RUNNING, rmContainer.getState());
-    verify(publisher, times(2)).containerCreated(any(RMContainer.class),
+    verify(publisher, times(1)).containerCreated(any(RMContainer.class),
         anyLong());
     assertEquals("http://host:3465/node/containerlogs/container_1_0001_01_000001/user",
         rmContainer.getLogURL());
@@ -253,7 +253,7 @@ public class TestRMContainerImpl {
         RMContainerEventType.ACQUIRED));
     drainDispatcher.await();
     assertEquals(RMContainerState.ACQUIRED, rmContainer.getState());
-    verify(publisher, times(2)).containerCreated(any(RMContainer.class),
+    verify(publisher, times(1)).containerCreated(any(RMContainer.class),
         anyLong());
 
     rmContainer.handle(new RMContainerEvent(containerId,
@@ -345,7 +345,7 @@ public class TestRMContainerImpl {
     // RMContainer should be publishing system metrics for all containers.
     // Since there is 1 AM container and 1 non-AM container, there should be 2
     // container created events and 2 container finished events.
-    verify(publisher, times(4)).containerCreated(any(RMContainer.class),
+    verify(publisher, times(2)).containerCreated(any(RMContainer.class),
         anyLong());
     verify(publisher, times(2)).containerFinished(any(RMContainer.class), anyLong());
   }

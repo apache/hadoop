@@ -608,7 +608,10 @@ public class RMContainerImpl implements RMContainer {
       container.eventHandler.handle(new RMAppRunningOnNodeEvent(container
           .getApplicationAttemptId().getApplicationId(), container.nodeId));
 
-      publishNonAMContainerEventstoATS(container);
+      // Opportunistic containers move directly from NEW to ACQUIRED
+      if (container.getState() == RMContainerState.NEW) {
+        publishNonAMContainerEventstoATS(container);
+      }
     }
   }
 
