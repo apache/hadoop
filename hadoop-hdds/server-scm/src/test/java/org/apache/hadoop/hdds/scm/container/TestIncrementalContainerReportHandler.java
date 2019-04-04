@@ -17,47 +17,78 @@
  */
 package org.apache.hadoop.hdds.scm.container;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.IncrementalContainerReportProto;
 import org.apache.hadoop.hdds.scm.TestUtils;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .IncrementalContainerReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.Set;
 
-import static org.apache.hadoop.hdds.scm.container
-    .TestContainerReportHelper.addContainerToContainerManager;
 import static org.apache.hadoop.hdds.scm.TestUtils.getContainer;
 import static org.apache.hadoop.hdds.scm.TestUtils.getReplicas;
-import static org.apache.hadoop.hdds.scm.container
-    .TestContainerReportHelper.mockUpdateContainerReplica;
-import static org.apache.hadoop.hdds.scm.container
-    .TestContainerReportHelper.mockUpdateContainerState;
 
 /**
  * Test cases to verify the functionality of IncrementalContainerReportHandler.
  */
 public class TestIncrementalContainerReportHandler {
 
+  private ContainerManager containerManager;
+  private ContainerStateManager containerStateManager;
+  private EventPublisher publisher;
+
+  @Before
+  public void setup() throws IOException {
+    final Configuration conf = new OzoneConfiguration();
+    this.containerManager = Mockito.mock(ContainerManager.class);
+    this.containerStateManager = new ContainerStateManager(conf);
+    this.publisher = Mockito.mock(EventPublisher.class);
+
+
+    Mockito.when(containerManager.getContainer(Mockito.any(ContainerID.class)))
+        .thenAnswer(invocation -> containerStateManager
+            .getContainer((ContainerID)invocation.getArguments()[0]));
+
+    Mockito.when(containerManager.getContainerReplicas(
+        Mockito.any(ContainerID.class)))
+        .thenAnswer(invocation -> containerStateManager
+            .getContainerReplicas((ContainerID)invocation.getArguments()[0]));
+
+    Mockito.doAnswer(invocation -> {
+      containerStateManager
+          .updateContainerState((ContainerID)invocation.getArguments()[0],
+              (HddsProtos.LifeCycleEvent)invocation.getArguments()[1]);
+      return null;
+    }).when(containerManager).updateContainerState(
+        Mockito.any(ContainerID.class),
+        Mockito.any(HddsProtos.LifeCycleEvent.class));
+
+  }
+
+  @After
+  public void tearDown() throws IOException {
+    containerStateManager.close();
+  }
+
+
   @Test
   public void testClosingToClosed() throws IOException {
-    final ContainerManager containerManager = Mockito.mock(
-        ContainerManager.class);
-    final PipelineManager pipelineManager = Mockito.mock(PipelineManager.class);
     final IncrementalContainerReportHandler reportHandler =
-        new IncrementalContainerReportHandler(
-            pipelineManager, containerManager);
+        new IncrementalContainerReportHandler(containerManager);
     final ContainerInfo container = getContainer(LifeCycleState.CLOSING);
     final DatanodeDetails datanodeOne = TestUtils.randomDatanodeDetails();
     final DatanodeDetails datanodeTwo = TestUtils.randomDatanodeDetails();
@@ -67,34 +98,31 @@ public class TestIncrementalContainerReportHandler {
         ContainerReplicaProto.State.CLOSING,
         datanodeOne, datanodeTwo, datanodeThree);
 
-    addContainerToContainerManager(
-        containerManager, container, containerReplicas);
-    mockUpdateContainerReplica(
-        containerManager, container, containerReplicas);
-    mockUpdateContainerState(containerManager, container,
-        LifeCycleEvent.CLOSE, LifeCycleState.CLOSED);
+    containerStateManager.loadContainer(container);
+    containerReplicas.forEach(r -> {
+      try {
+        containerStateManager.updateContainerReplica(
+            container.containerID(), r);
+      } catch (ContainerNotFoundException ignored) {
+
+      }
+    });
 
     final IncrementalContainerReportProto containerReport =
         getIncrementalContainerReportProto(container.containerID(),
             ContainerReplicaProto.State.CLOSED,
             datanodeOne.getUuidString());
-    final EventPublisher publisher = Mockito.mock(EventPublisher.class);
     final IncrementalContainerReportFromDatanode icrFromDatanode =
         new IncrementalContainerReportFromDatanode(
             datanodeOne, containerReport);
     reportHandler.onMessage(icrFromDatanode, publisher);
-    Assert.assertEquals(
-        LifeCycleState.CLOSED, container.getState());
+    Assert.assertEquals(LifeCycleState.CLOSED, container.getState());
   }
 
   @Test
   public void testClosingToQuasiClosed() throws IOException {
-    final ContainerManager containerManager = Mockito.mock(
-        ContainerManager.class);
-    final PipelineManager pipelineManager = Mockito.mock(PipelineManager.class);
     final IncrementalContainerReportHandler reportHandler =
-        new IncrementalContainerReportHandler(
-            pipelineManager, containerManager);
+        new IncrementalContainerReportHandler(containerManager);
     final ContainerInfo container = getContainer(LifeCycleState.CLOSING);
     final DatanodeDetails datanodeOne = TestUtils.randomDatanodeDetails();
     final DatanodeDetails datanodeTwo = TestUtils.randomDatanodeDetails();
@@ -104,34 +132,32 @@ public class TestIncrementalContainerReportHandler {
         ContainerReplicaProto.State.CLOSING,
         datanodeOne, datanodeTwo, datanodeThree);
 
-    addContainerToContainerManager(
-        containerManager, container, containerReplicas);
-    mockUpdateContainerReplica(
-        containerManager, container, containerReplicas);
-    mockUpdateContainerState(containerManager, container,
-        LifeCycleEvent.QUASI_CLOSE, LifeCycleState.QUASI_CLOSED);
+    containerStateManager.loadContainer(container);
+    containerReplicas.forEach(r -> {
+      try {
+        containerStateManager.updateContainerReplica(
+            container.containerID(), r);
+      } catch (ContainerNotFoundException ignored) {
+
+      }
+    });
+
 
     final IncrementalContainerReportProto containerReport =
         getIncrementalContainerReportProto(container.containerID(),
             ContainerReplicaProto.State.QUASI_CLOSED,
             datanodeOne.getUuidString());
-    final EventPublisher publisher = Mockito.mock(EventPublisher.class);
     final IncrementalContainerReportFromDatanode icrFromDatanode =
         new IncrementalContainerReportFromDatanode(
             datanodeOne, containerReport);
     reportHandler.onMessage(icrFromDatanode, publisher);
-    Assert.assertEquals(
-        LifeCycleState.QUASI_CLOSED, container.getState());
+    Assert.assertEquals(LifeCycleState.QUASI_CLOSED, container.getState());
   }
 
   @Test
   public void testQuasiClosedToClosed() throws IOException {
-    final ContainerManager containerManager = Mockito.mock(
-        ContainerManager.class);
-    final PipelineManager pipelineManager = Mockito.mock(PipelineManager.class);
     final IncrementalContainerReportHandler reportHandler =
-        new IncrementalContainerReportHandler(
-            pipelineManager, containerManager);
+        new IncrementalContainerReportHandler(containerManager);
     final ContainerInfo container = getContainer(LifeCycleState.QUASI_CLOSED);
     final DatanodeDetails datanodeOne = TestUtils.randomDatanodeDetails();
     final DatanodeDetails datanodeTwo = TestUtils.randomDatanodeDetails();
@@ -145,38 +171,25 @@ public class TestIncrementalContainerReportHandler {
         ContainerReplicaProto.State.QUASI_CLOSED,
         datanodeThree));
 
+    containerStateManager.loadContainer(container);
+    containerReplicas.forEach(r -> {
+      try {
+        containerStateManager.updateContainerReplica(
+            container.containerID(), r);
+      } catch (ContainerNotFoundException ignored) {
 
-    addContainerToContainerManager(
-        containerManager, container, containerReplicas);
-    mockUpdateContainerReplica(
-        containerManager, container, containerReplicas);
-    mockUpdateContainerState(containerManager, container,
-        LifeCycleEvent.FORCE_CLOSE, LifeCycleState.CLOSED);
+      }
+    });
 
     final IncrementalContainerReportProto containerReport =
         getIncrementalContainerReportProto(container.containerID(),
-            ContainerReplicaProto.State.QUASI_CLOSED,
-            datanodeOne.getUuidString(), 999999L);
-    final EventPublisher publisher = Mockito.mock(EventPublisher.class);
-    final IncrementalContainerReportFromDatanode icrFromDatanode =
+            ContainerReplicaProto.State.CLOSED,
+            datanodeThree.getUuidString());
+    final IncrementalContainerReportFromDatanode icr =
         new IncrementalContainerReportFromDatanode(
             datanodeOne, containerReport);
-    reportHandler.onMessage(icrFromDatanode, publisher);
-
-    // SCM should issue force close.
-    Mockito.verify(publisher, Mockito.times(1))
-        .fireEvent(Mockito.any(), Mockito.any());
-
-    final IncrementalContainerReportProto containerReportTwo =
-        getIncrementalContainerReportProto(container.containerID(),
-            ContainerReplicaProto.State.CLOSED,
-            datanodeOne.getUuidString(), 999999L);
-    final IncrementalContainerReportFromDatanode icrTwoFromDatanode =
-        new IncrementalContainerReportFromDatanode(
-            datanodeOne, containerReportTwo);
-    reportHandler.onMessage(icrTwoFromDatanode, publisher);
-    Assert.assertEquals(
-        LifeCycleState.CLOSED, container.getState());
+    reportHandler.onMessage(icr, publisher);
+    Assert.assertEquals(LifeCycleState.CLOSED, container.getState());
   }
 
   private static IncrementalContainerReportProto
@@ -184,15 +197,6 @@ public class TestIncrementalContainerReportHandler {
           final ContainerID containerId,
           final ContainerReplicaProto.State state,
           final String originNodeId) {
-    return getIncrementalContainerReportProto(
-        containerId, state, originNodeId, 100L);
-  }
-
-  private static IncrementalContainerReportProto
-      getIncrementalContainerReportProto(
-          final ContainerID containerId,
-          final ContainerReplicaProto.State state,
-          final String originNodeId, final long bcsid) {
     final IncrementalContainerReportProto.Builder crBuilder =
         IncrementalContainerReportProto.newBuilder();
     final ContainerReplicaProto replicaProto =
@@ -208,7 +212,7 @@ public class TestIncrementalContainerReportHandler {
             .setWriteCount(100000000L)
             .setReadBytes(2000000000L)
             .setWriteBytes(2000000000L)
-            .setBlockCommitSequenceId(bcsid)
+            .setBlockCommitSequenceId(10000L)
             .setDeleteTransactionId(0)
             .build();
     return crBuilder.addReport(replicaProto).build();

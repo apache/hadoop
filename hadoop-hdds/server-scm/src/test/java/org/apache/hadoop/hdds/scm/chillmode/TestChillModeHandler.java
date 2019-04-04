@@ -22,15 +22,19 @@ import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.block.BlockManager;
 import org.apache.hadoop.hdds.scm.block.BlockManagerImpl;
-import org.apache.hadoop.hdds.scm.container.replication.ReplicationActivityStatus;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
+import org.apache.hadoop.hdds.scm.container.ReplicationManager;
+import org.apache.hadoop.hdds.scm.container.placement.algorithms
+    .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.utils.Scheduler;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import java.util.HashSet;
 
 /**
  * Tests ChillModeHandler behavior.
@@ -40,7 +44,7 @@ public class TestChillModeHandler {
 
   private OzoneConfiguration configuration;
   private SCMClientProtocolServer scmClientProtocolServer;
-  private ReplicationActivityStatus replicationActivityStatus;
+  private ReplicationManager replicationManager;
   private BlockManager blockManager;
   private ChillModeHandler chillModeHandler;
   private EventQueue eventQueue;
@@ -54,15 +58,19 @@ public class TestChillModeHandler {
         "3s");
     scmClientProtocolServer =
         Mockito.mock(SCMClientProtocolServer.class);
-    replicationActivityStatus = new ReplicationActivityStatus(
-        new Scheduler("SCMCommonScheduler", false, 1));
+    eventQueue = new EventQueue();
+    final ContainerManager containerManager =
+        Mockito.mock(ContainerManager.class);
+    Mockito.when(containerManager.getContainerIDs())
+        .thenReturn(new HashSet<>());
+    replicationManager = new ReplicationManager(configuration,
+        containerManager, Mockito.mock(ContainerPlacementPolicy.class),
+        eventQueue);
     blockManager = Mockito.mock(BlockManagerImpl.class);
     chillModeHandler =
         new ChillModeHandler(configuration, scmClientProtocolServer,
-            blockManager, replicationActivityStatus);
+            blockManager, replicationManager);
 
-
-    eventQueue = new EventQueue();
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, chillModeHandler);
     chillModeStatus = new SCMChillModeManager.ChillModeStatus(false);
 
@@ -82,7 +90,7 @@ public class TestChillModeHandler {
     Assert.assertFalse(scmClientProtocolServer.getChillModeStatus());
     Assert.assertFalse(((BlockManagerImpl) blockManager).isScmInChillMode());
     GenericTestUtils.waitFor(() ->
-            replicationActivityStatus.isReplicationEnabled(), 1000, 5000);
+            replicationManager.isRunning(), 1000, 5000);
   }
 
 
@@ -99,6 +107,6 @@ public class TestChillModeHandler {
     Assert.assertFalse(scmClientProtocolServer.getChillModeStatus());
     Assert.assertFalse(((BlockManagerImpl) blockManager).isScmInChillMode());
     GenericTestUtils.waitFor(() ->
-        replicationActivityStatus.isReplicationEnabled(), 1000, 5000);
+        replicationManager.isRunning(), 1000, 5000);
   }
 }

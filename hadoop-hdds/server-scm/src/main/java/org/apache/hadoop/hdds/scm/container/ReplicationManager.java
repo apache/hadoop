@@ -170,6 +170,15 @@ public class ReplicationManager {
   }
 
   /**
+   * Returns true if the Replication Monitor Thread is running.
+   *
+   * @return true if running, false otherwise
+   */
+  public boolean isRunning() {
+    return replicationMonitor.isAlive();
+  }
+
+  /**
    * Process all the containers immediately.
    */
   @VisibleForTesting
