@@ -51,6 +51,7 @@ public class FilteredClassLoader extends URLClassLoader {
   public FilteredClassLoader(URL[] urls, ClassLoader parent) {
     super(urls, null);
     delegatedClasses.add("org.apache.hadoop.fs.ozone.OzoneClientAdapter");
+    delegatedClasses.add("org.apache.hadoop.security.token.Token");
     delegatedClasses.add("org.apache.hadoop.fs.ozone.BasicKeyInfo");
     delegatedClasses.add("org.apache.hadoop.fs.ozone.OzoneFSOutputStream");
     delegatedClasses.add("org.apache.hadoop.fs.ozone.OzoneFSStorageStatistics");

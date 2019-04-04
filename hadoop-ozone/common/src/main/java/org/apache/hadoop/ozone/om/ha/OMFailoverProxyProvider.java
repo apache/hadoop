@@ -83,7 +83,7 @@ public class OMFailoverProxyProvider implements
   /**
    * Class to store proxy information.
    */
-  public final class OMProxyInfo
+  public class OMProxyInfo
       extends FailoverProxyProvider.ProxyInfo<OzoneManagerProtocolPB> {
     private InetSocketAddress address;
     private Text dtService;
