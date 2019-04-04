@@ -193,8 +193,7 @@ public final class ContainerDataYaml {
    */
   private static class ContainerDataRepresenter extends Representer {
     @Override
-    protected Set<Property> getProperties(Class<? extends Object> type)
-        throws IntrospectionException {
+    protected Set<Property> getProperties(Class<? extends Object> type) {
       Set<Property> set = super.getProperties(type);
       Set<Property> filtered = new TreeSet<Property>();
 
