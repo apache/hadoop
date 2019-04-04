@@ -68,10 +68,10 @@ public final class NodeSchemaManager {
 
     NodeSchemaLoadResult result;
     try {
-      if (schemaFileType.compareTo("yaml") == 0) {
+      if (schemaFileType.toLowerCase().compareTo("yaml") == 0) {
         result = NodeSchemaLoader.getInstance().loadSchemaFromYaml(schemaFile);
       } else {
-        result = NodeSchemaLoader.getInstance().loadSchemaFromFile(schemaFile);
+        result = NodeSchemaLoader.getInstance().loadSchemaFromXml(schemaFile);
       }
       allSchema = result.getSchemaList();
       enforcePrefix = result.isEnforePrefix();

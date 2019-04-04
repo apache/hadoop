@@ -80,7 +80,7 @@ public class TestYamlSchemaLoader {
     String filePath = classLoader.getResource(
         "./networkTopologyTestFiles/good.xml").getPath() + ".backup";
     try {
-      NodeSchemaLoader.getInstance().loadSchemaFromFile(filePath);
+      NodeSchemaLoader.getInstance().loadSchemaFromXml(filePath);
       fail("should fail");
     } catch (Throwable e) {
       assertTrue(e.getMessage().contains("file " + filePath + " is not found"));

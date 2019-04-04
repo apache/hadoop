@@ -99,7 +99,7 @@ public final class NodeSchemaLoader {
    * @param schemaFilePath path of schema file
    * @return all valid node schemas defined in schema file
    */
-  public NodeSchemaLoadResult loadSchemaFromFile(String schemaFilePath)
+  public NodeSchemaLoadResult loadSchemaFromXml(String schemaFilePath)
       throws IllegalArgumentException {
     try {
       File schemaFile = new File(schemaFilePath);
@@ -201,14 +201,16 @@ public final class NodeSchemaLoader {
    * @throws IllegalArgumentException xml file content is logically invalid
    */
   private NodeSchemaLoadResult loadSchemaFromYaml(File schemaFile) {
-    LOG.info("Loading network topology layer schema file " + schemaFile);
+    LOG.info("Loading network topology layer schema file {}", schemaFile);
     NodeSchemaLoadResult finalSchema;
 
     try {
-      FileInputStream fileInputStream = new FileInputStream(schemaFile);
       Yaml yaml = new Yaml();
-      NodeSchema nodeTree = yaml.loadAs(fileInputStream, NodeSchema.class);
-      fileInputStream.close();
+      NodeSchema nodeTree;
+
+      try (FileInputStream fileInputStream = new FileInputStream(schemaFile)) {
+         nodeTree = yaml.loadAs(fileInputStream, NodeSchema.class);
+      }
       List<NodeSchema> schemaList = new ArrayList<>();
       if (nodeTree.getType() != LayerType.ROOT) {
         throw new IllegalArgumentException("First layer is not a ROOT node."
