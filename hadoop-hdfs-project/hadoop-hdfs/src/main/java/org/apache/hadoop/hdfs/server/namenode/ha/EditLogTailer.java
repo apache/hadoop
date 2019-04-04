@@ -57,8 +57,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.SecurityUtil;
 
 import static org.apache.hadoop.util.Time.monotonicNow;
@@ -344,15 +342,6 @@ public class EditLogTailer {
       future.get(rollEditsTimeoutMs, TimeUnit.MILLISECONDS);
       lastRollTriggerTxId = lastLoadedTxnId;
     } catch (ExecutionException e) {
-      Throwable cause = e.getCause();
-      if (cause instanceof RemoteException) {
-        IOException ioe = ((RemoteException) cause).unwrapRemoteException();
-        if (ioe instanceof StandbyException) {
-          LOG.info("Skipping log roll. Remote node is not in Active state: " +
-              ioe.getMessage().split("\n")[0]);
-          return;
-        }
-      }
       LOG.warn("Unable to trigger a roll of the active NN", e);
     } catch (TimeoutException e) {
       if (future != null) {
@@ -455,7 +444,8 @@ public class EditLogTailer {
    * This mechanism is <b>very bad</b> for cases where we care about being <i>fast</i>; it just
    * blindly goes and tries namenodes.
    */
-  private abstract class MultipleNameNodeProxy<T> implements Callable<T> {
+  @VisibleForTesting
+  abstract class MultipleNameNodeProxy<T> implements Callable<T> {
 
     /**
      * Do the actual work to the remote namenode via the {@link #cachedActiveProxy}.
@@ -471,19 +461,13 @@ public class EditLogTailer {
         try {
           T ret = doWork();
           return ret;
-        } catch (RemoteException e) {
-          Throwable cause = e.unwrapRemoteException(StandbyException.class);
-          // if its not a standby exception, then we need to re-throw it, something bad has happened
-          if (cause == e) {
-            throw e;
-          } else {
-            // it is a standby exception, so we try the other NN
-            LOG.warn("Failed to reach remote node: " + currentNN
-                + ", retrying with remaining remote NNs");
-            cachedActiveProxy = null;
-            // this NN isn't responding to requests, try the next one
-            nnLoopCount++;
-          }
+        } catch (IOException e) {
+          LOG.warn("Exception from remote name node " + currentNN
+              + ", try next.", e);
+
+          // Try next name node if exception happens.
+          cachedActiveProxy = null;
+          nnLoopCount++;
         }
       }
       throw new IOException("Cannot find any valid remote NN to service request!");
