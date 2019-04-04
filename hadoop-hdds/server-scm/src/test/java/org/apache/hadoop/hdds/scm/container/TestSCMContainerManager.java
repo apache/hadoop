@@ -216,10 +216,8 @@ public class TestSCMContainerManager {
         try {
           containerManager.removeContainerReplica(cId, cReplica);
           containerManager.updateContainerReplica(cId, cReplica);
-        } catch (ContainerNotFoundException e) {
-          e.printStackTrace();
-        } catch (ContainerReplicaNotFoundException e) {
-          Assert.fail("Missing Container Replica for " + id);
+        } catch (ContainerException e) {
+          Assert.fail("Container Exception: " + e.getMessage());
         }
       }
     });
@@ -227,7 +225,7 @@ public class TestSCMContainerManager {
     updaterThread.setDaemon(true);
     updaterThread.start();
 
-    IntStream.range(0, 10).forEach(i -> {
+    IntStream.range(0, 100).forEach(i -> {
       try {
         Assert.assertNotNull(containerManager
             .getContainerReplicas(cId)
