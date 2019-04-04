@@ -87,6 +87,10 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
     return this.ozoneManagers.get(index);
   }
 
+  public OzoneManager getOzoneManager(String omNodeId) {
+    return this.ozoneManagerMap.get(omNodeId);
+  }
+
   @Override
   public void restartOzoneManager() throws IOException {
     for (OzoneManager ozoneManager : ozoneManagers) {
