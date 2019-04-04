@@ -72,7 +72,7 @@ MAPRED-SITE.XML_mapreduce.reduce.env=HADOOP_MAPRED_HOME=$HADOOP_HOME
 MAPRED-SITE.XML_mapreduce.map.memory.mb=2048
 MAPRED-SITE.XML_mapreduce.reduce.memory.mb=2048
 #MAPRED-SITE.XML_mapred.child.java.opts=-Xmx2048
-MAPRED-SITE.XML_mapreduce.application.classpath=/opt/hadoop/share/hadoop/mapreduce/*:/opt/hadoop/share/hadoop/mapreduce/lib/*:/opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-0.5.0-SNAPSHOT.jar
+MAPRED-SITE.XML_mapreduce.application.classpath=/opt/hadoop/share/hadoop/mapreduce/*:/opt/hadoop/share/hadoop/mapreduce/lib/*:/opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-@project.version@.jar
 
 YARN-SITE.XML_yarn.app.mapreduce.am.staging-dir=/user
 YARN_SITE.XML_yarn.timeline-service.enabled=true
