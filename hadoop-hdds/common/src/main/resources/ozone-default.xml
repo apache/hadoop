@@ -2394,4 +2394,99 @@
       If enabled, tracing information is sent to tracing server.
     </description>
   </property>
+  <property>
+    <name>ozone.recon.sql.db.driver</name>
+    <value>org.sqlite.JDBC</value>
+    <tag>OZONE, RECON</tag>
+    <description>
+      Database driver class name available on the
+      Ozone Recon classpath.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.sql.db.jdbc.url</name>
+    <value>jdbc:sqlite:/${ozone.recon.db.dir}/ozone_recon_sqlite.db</value>
+    <tag>OZONE, RECON</tag>
+    <description>
+      Ozone Recon SQL database jdbc url.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.sql.db.username</name>
+    <value/>
+    <tag>OZONE, RECON</tag>
+    <description>
+      Ozone Recon SQL database username.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.sql.db.password</name>
+    <value/>
+    <tag>OZONE, RECON</tag>
+    <description>
+      Ozone Recon datbase password.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.sql.db.auto.commit</name>
+    <value>false</value>
+    <tag>OZONE, RECON</tag>
+    <description>
+      Sets the Ozone Recon database connection property of auto-commit to
+      true/false.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.sql.db.conn.timeout</name>
+    <value>30000</value>
+    <tag>OZONE, RECON</tag>
+    <description>
+      Sets time in milliseconds before call to getConnection is timed out.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.sql.db.conn.max.active</name>
+    <value>1</value>
+    <tag>OZONE, RECON</tag>
+    <description>
+      The max active connections to the SQL database. The default SQLite
+      database only allows single active connection, set this to a
+      resonable value like 10, for external production database.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.sql.db.conn.max.age</name>
+    <value>1800</value>
+    <tag>OZONE, RECON</tag>
+    <description>
+      Sets maximum time a connection can be active in seconds.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.sql.db.conn.idle.max.age</name>
+    <value>3600</value>
+    <tag>OZONE, RECON</tag>
+    <description>
+      Sets maximum time to live for idle connection in seconds.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.sql.db.conn.idle.test.period</name>
+    <value>60</value>
+    <tag>OZONE, RECON</tag>
+    <description>
+      This sets the time (in seconds), for a connection to remain idle before
+      sending a test query to the DB. This is useful to prevent a DB from
+      timing out connections on its end.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.sql.db.conn.idle.test</name>
+    <value>SELECT 1</value>
+    <tag>OZONE, RECON</tag>
+    <description>
+      The query to send to the DB to maintain keep-alives and test for dead
+      connections.
+    </description>
+  </property>
 </configuration>

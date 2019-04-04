@@ -49,6 +49,7 @@
     <module>s3gateway</module>
     <module>dist</module>
     <module>ozone-recon</module>
+    <module>ozone-recon-codegen</module>
   </modules>
 
   <repositories>

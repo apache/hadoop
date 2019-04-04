@@ -49,9 +49,8 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>org.xerial</groupId>
       <artifactId>sqlite-jdbc</artifactId>
-      <version>3.8.7</version>
+      <version>3.25.2</version>
     </dependency>
-
 
   </dependencies>
 </project>
