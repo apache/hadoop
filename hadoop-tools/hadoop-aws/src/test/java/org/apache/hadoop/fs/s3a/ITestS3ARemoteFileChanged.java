@@ -186,13 +186,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     writeDataset(fs, testpath, originalDataset, originalDataset.length,
         1024, false);
 
-    if (fs.getChangeDetectionPolicy().getSource() == Source.VersionId) {
-      // skip versionId tests if the bucket doesn't have object versioning
-      // enabled
-      Assume.assumeTrue(
-          "Target filesystem does not support versioning",
-          fs.getObjectMetadata(fs.pathToKey(testpath)).getVersionId() != null);
-    }
+    skipIfVersionPolicyAndNoVersionId(testpath);
 
     try(FSDataInputStream instream = fs.open(testpath)) {
       // seek forward and read successfully
@@ -272,6 +266,9 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   @Test
   public void testReadFileChangedOutOfSyncMetadata() throws Throwable {
     final Path testpath = writeOutOfSyncFileVersion("read.dat");
+
+    skipIfVersionPolicyAndNoVersionId(testpath);
+
     final FSDataInputStream instream = fs.open(testpath);
     if (expectedExceptionInteractions.contains(InteractionType.READ)) {
       intercept(RemoteFileChangedException.class, "", "read()",
@@ -290,6 +287,9 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   @Test
   public void testReadWithNoVersionMetadata() throws Throwable {
     final Path testpath = writeFileWithNoVersionMetadata("readnoversion.dat");
+
+    skipIfVersionPolicyAndNoVersionId(testpath);
+
     final FSDataInputStream instream = fs.open(testpath);
     assertEquals(TEST_DATA,
         IOUtils.toString(instream, Charset.forName("UTF-8")).trim());
@@ -302,6 +302,9 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   @Test
   public void testSelectChangedFile() throws Throwable {
     final Path testpath = writeOutOfSyncFileVersion("select.dat");
+
+    skipIfVersionPolicyAndNoVersionId(testpath);
+
     if (expectedExceptionInteractions.contains(InteractionType.SELECT)) {
       interceptFuture(RemoteFileChangedException.class, "select",
           fs.openFile(testpath)
@@ -320,6 +323,9 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   public void testSelectWithNoVersionMetadata() throws Throwable {
     final Path testpath =
         writeFileWithNoVersionMetadata("selectnoversion.dat");
+
+    skipIfVersionPolicyAndNoVersionId(testpath);
+
     FSDataInputStream instream = fs.openFile(testpath)
         .must(SELECT_SQL, "SELECT * FROM S3OBJECT").build().get();
     assertEquals(QUOTED_TEST_DATA,
@@ -334,6 +340,9 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   @Test
   public void testRenameChangedFile() throws Throwable {
     final Path testpath = writeOutOfSyncFileVersion("rename.dat");
+
+    skipIfVersionPolicyAndNoVersionId(testpath);
+
     final Path dest = path("dest.dat");
     if (expectedExceptionInteractions.contains(InteractionType.COPY)) {
       intercept(RemoteFileChangedException.class, "", "copy()",
@@ -353,6 +362,9 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   public void testRenameWithNoVersionMetadata() throws Throwable {
     final Path testpath =
         writeFileWithNoVersionMetadata("renamenoversion.dat");
+
+    skipIfVersionPolicyAndNoVersionId(testpath);
+
     final Path dest = path("noversiondest.dat");
     fs.rename(testpath, dest);
     FSDataInputStream inputStream = fs.open(dest);
@@ -414,5 +426,19 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
         false));
 
     return testpath;
+  }
+
+  /**
+   * The test is invalid if the policy uses versionId but the bucket doesn't
+   * have versioning enabled.
+   */
+  private void skipIfVersionPolicyAndNoVersionId(Path testpath) throws IOException {
+    if (fs.getChangeDetectionPolicy().getSource() == Source.VersionId) {
+      // skip versionId tests if the bucket doesn't have object versioning
+      // enabled
+      Assume.assumeTrue(
+          "Target filesystem does not support versioning",
+          fs.getObjectMetadata(fs.pathToKey(testpath)).getVersionId() != null);
+    }
   }
 }
