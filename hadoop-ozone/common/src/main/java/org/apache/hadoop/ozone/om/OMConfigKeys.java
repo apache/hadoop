@@ -136,6 +136,12 @@ public final class OMConfigKeys {
   public static final String
       OZONE_OM_RATIS_LOG_APPENDER_QUEUE_BYTE_LIMIT_DEFAULT = "32MB";
 
+  // OM Snapshot configurations
+  public static final String OZONE_OM_RATIS_SNAPSHOT_AUTO_TRIGGER_THRESHOLD_KEY
+      = "ozone.om.ratis.snapshot.auto.trigger.threshold";
+  public static final long
+      OZONE_OM_RATIS_SNAPSHOT_AUTO_TRIGGER_THRESHOLD_DEFAULT
+      = 400000;
 
   // OM Ratis server configurations
   public static final String OZONE_OM_RATIS_SERVER_REQUEST_TIMEOUT_KEY

@@ -61,6 +61,7 @@ import org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRe
 import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.util.PersistentLongFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.Client;
@@ -179,6 +180,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_METRICS_FILE;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_METRICS_TEMP_FILE;
 
+import static org.apache.hadoop.ozone.OzoneConsts.OM_RATIS_SNAPSHOT_INDEX;
 import static org.apache.hadoop.ozone.OzoneConsts.RPC_PORT;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys
@@ -233,11 +235,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private RPC.Server omRpcServer;
   private InetSocketAddress omRpcAddress;
   private String omId;
-  private OMNodeDetails omNodeDetails;
   private List<OMNodeDetails> peerNodes;
-  private boolean isRatisEnabled;
-  private OzoneManagerRatisServer omRatisServer;
-  private OzoneManagerRatisClient omRatisClient;
   private final OMMetadataManager metadataManager;
   private final VolumeManager volumeManager;
   private final BucketManager bucketManager;
@@ -265,6 +263,13 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private S3SecretManager s3SecretManager;
   private volatile boolean isOmRpcServerRunning = false;
   private String omComponent;
+
+  private boolean isRatisEnabled;
+  private OzoneManagerRatisServer omRatisServer;
+  private OzoneManagerRatisClient omRatisClient;
+  private OMNodeDetails omNodeDetails;
+  private final File ratisSnapshotFile;
+  private long snapshotIndex;
 
   private KeyProviderCryptoExtension kmsProvider = null;
   private static String keyProviderUriKeyName =
@@ -305,6 +310,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
     startRatisServer();
     startRatisClient();
+
+    this.ratisSnapshotFile = new File(omStorage.getCurrentDir(),
+        OM_RATIS_SNAPSHOT_INDEX);
+    this.snapshotIndex = loadRatisSnapshotIndex();
 
     InetSocketAddress omNodeRpcAddr = omNodeDetails.getRpcAddress();
     omRpcAddressTxt = new Text(omNodeDetails.getRpcAddressString());
@@ -1307,6 +1316,33 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
   }
 
+  @VisibleForTesting
+  public long loadRatisSnapshotIndex() {
+    if (ratisSnapshotFile.exists()) {
+      try {
+        return PersistentLongFile.readFile(ratisSnapshotFile, 0);
+      } catch (IOException e) {
+        LOG.error("Unable to read the ratis snapshot index (last applied " +
+            "transaction log index)", e);
+      }
+    }
+    return 0;
+  }
+
+  @Override
+  public long saveRatisSnapshot() throws IOException {
+    snapshotIndex = omRatisServer.getStateMachineLastAppliedIndex();
+
+    // Flush the OM state to disk
+    getMetadataManager().getStore().flush();
+
+    PersistentLongFile.writeFile(ratisSnapshotFile, snapshotIndex);
+    LOG.info("Saved Ratis Snapshot on the OM with snapshotIndex {}",
+        snapshotIndex);
+
+    return snapshotIndex;
+  }
+
   /**
    * Stop service.
    */
@@ -2102,7 +2138,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       }
     }
   }
-
 
   @Override
   public OmKeyLocationInfo addAllocatedBlock(OmKeyArgs args, long clientID,

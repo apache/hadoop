@@ -273,6 +273,17 @@ public class RDBStore implements DBStore {
   }
 
   @Override
+  public void flush() throws IOException {
+    final FlushOptions flushOptions = new FlushOptions().setWaitForFlush(true);
+    try {
+      db.flush(flushOptions);
+    } catch (RocksDBException e) {
+      LOG.error("Unable to Flush RocksDB data", e);
+      throw toIOException("Unable to Flush RocksDB data", e);
+    }
+  }
+
+  @Override
   public DBCheckpoint getCheckpoint(boolean flush) {
     final FlushOptions flushOptions = new FlushOptions().setWaitForFlush(flush);
     try {

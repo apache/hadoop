@@ -1603,15 +1603,24 @@
   <property>
     <name>ozone.om.ratis.log.appender.queue.num-elements</name>
     <value>1024</value>
-    <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
+    <tag>OZONE, DEBUG, OM, RATIS</tag>
     <description>Number of operation pending with Raft's Log Worker.
     </description>
   </property>
   <property>
     <name>ozone.om.ratis.log.appender.queue.byte-limit</name>
     <value>32MB</value>
-    <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
+    <tag>OZONE, DEBUG, OM, RATIS</tag>
     <description>Byte limit for Raft's Log Worker queue.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.snapshot.auto.trigger.threshold</name>
+    <value>400000</value>
+    <tag>OZONE, DEBUG, OM, RATIS</tag>
+    <description>The log index threshold after ratis will auto trigger
+      snapshot on the OM state machine.
     </description>
   </property>
 

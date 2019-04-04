@@ -145,7 +145,7 @@ public abstract class Storage {
    *
    * @return the directory path
    */
-  private File getCurrentDir() {
+  public File getCurrentDir() {
     return new File(storageDir, STORAGE_DIR_CURRENT);
   }
 

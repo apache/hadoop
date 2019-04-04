@@ -76,6 +76,7 @@ public class TestOzoneManagerHA {
   private String clusterId;
   private String scmId;
   private int numOfOMs = 3;
+  private static final long SNAPSHOT_THRESHOLD = 50;
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -99,7 +100,9 @@ public class TestOzoneManagerHA {
     conf.setInt(OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS, 2);
     conf.setInt(OZONE_CLIENT_RETRY_MAX_ATTEMPTS_KEY, 10);
     conf.setInt(OZONE_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY, 10);
-
+    conf.setLong(
+        OMConfigKeys.OZONE_OM_RATIS_SNAPSHOT_AUTO_TRIGGER_THRESHOLD_KEY,
+        SNAPSHOT_THRESHOLD);
     cluster = (MiniOzoneHAClusterImpl) MiniOzoneCluster.newHABuilder(conf)
         .setClusterId(clusterId)
         .setScmId(scmId)
@@ -326,9 +329,8 @@ public class TestOzoneManagerHA {
         throw e;
       }
     }
-
-
   }
+
   /**
    * Create a volume and test its attribute.
    */
@@ -369,8 +371,6 @@ public class TestOzoneManagerHA {
       }
     }
   }
-
-
 
   /**
    * Test that OMFailoverProxyProvider creates an OM proxy for each OM in the
@@ -532,5 +532,85 @@ public class TestOzoneManagerHA {
       Assert.assertEquals(currentLeaderNodeId,
           proxyProvider.getCurrentProxyOMNodeId());
     }
+  }
+
+  @Test
+  public void testOMRatisSnapshot() throws Exception {
+    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
+
+    VolumeArgs createVolumeArgs = VolumeArgs.newBuilder()
+        .setOwner(userName)
+        .setAdmin(adminName)
+        .build();
+
+    objectStore.createVolume(volumeName, createVolumeArgs);
+    OzoneVolume retVolumeinfo = objectStore.getVolume(volumeName);
+
+    retVolumeinfo.createBucket(bucketName);
+    OzoneBucket ozoneBucket = retVolumeinfo.getBucket(bucketName);
+
+    String leaderOMNodeId = objectStore.getClientProxy().getOMProxyProvider()
+        .getCurrentProxyOMNodeId();
+    OzoneManager ozoneManager = cluster.getOzoneManager(leaderOMNodeId);
+
+    // Send commands to ratis to increase the log index so that ratis
+    // triggers a snapshot on the state machine.
+
+    long appliedLogIndex = 0;
+    while (appliedLogIndex <= SNAPSHOT_THRESHOLD) {
+      createKey(ozoneBucket);
+      appliedLogIndex = ozoneManager.getOmRatisServer()
+          .getStateMachineLastAppliedIndex();
+    }
+
+    GenericTestUtils.waitFor(() -> {
+      if (ozoneManager.loadRatisSnapshotIndex() > 0) {
+        return true;
+      }
+      return false;
+    }, 1000, 100000);
+
+    // The current lastAppliedLogIndex on the state machine should be greater
+    // than or equal to the saved snapshot index.
+    long smLastAppliedIndex =
+        ozoneManager.getOmRatisServer().getStateMachineLastAppliedIndex();
+    long ratisSnapshotIndex = ozoneManager.loadRatisSnapshotIndex();
+    Assert.assertTrue("LastAppliedIndex on OM State Machine ("
+            + smLastAppliedIndex + ") is less than the saved snapshot index("
+            + ratisSnapshotIndex + ").",
+        smLastAppliedIndex >= ratisSnapshotIndex);
+
+    // Add more transactions to Ratis to trigger another snapshot
+    while (appliedLogIndex <= (smLastAppliedIndex + SNAPSHOT_THRESHOLD)) {
+      createKey(ozoneBucket);
+      appliedLogIndex = ozoneManager.getOmRatisServer()
+          .getStateMachineLastAppliedIndex();
+    }
+
+    GenericTestUtils.waitFor(() -> {
+      if (ozoneManager.loadRatisSnapshotIndex() > 0) {
+        return true;
+      }
+      return false;
+    }, 1000, 100000);
+
+    // The new snapshot index must be greater than the previous snapshot index
+    long ratisSnapshotIndexNew = ozoneManager.loadRatisSnapshotIndex();
+    Assert.assertTrue("Latest snapshot index must be greater than previous " +
+        "snapshot indices", ratisSnapshotIndexNew > ratisSnapshotIndex);
+
+  }
+
+  private void createKey(OzoneBucket ozoneBucket) throws IOException {
+    String keyName = "key" + RandomStringUtils.randomNumeric(5);
+    String data = "data" + RandomStringUtils.randomNumeric(5);
+    OzoneOutputStream ozoneOutputStream = ozoneBucket.createKey(keyName,
+        data.length(), ReplicationType.STAND_ALONE,
+        ReplicationFactor.ONE, new HashMap<>());
+    ozoneOutputStream.write(data.getBytes(), 0, data.length());
+    ozoneOutputStream.close();
   }
 }
