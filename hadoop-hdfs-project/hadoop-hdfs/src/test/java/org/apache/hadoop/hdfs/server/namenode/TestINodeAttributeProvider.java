@@ -405,4 +405,37 @@ public class TestINodeAttributeProvider {
       return null;
     });
   }
+
+  @Test
+  // HDFS-14389 - Ensure getAclStatus returns the owner, group and permissions
+  // from the Attribute Provider, and not from HDFS.
+  public void testGetAclStatusReturnsProviderOwnerPerms() throws Exception {
+    FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
+    final Path userPath = new Path("/user");
+    final Path authz = new Path("/user/authz");
+    final Path authzChild = new Path("/user/authz/child2");
+
+    fs.mkdirs(userPath);
+    fs.setPermission(userPath, new FsPermission(HDFS_PERMISSION));
+    fs.mkdirs(authz);
+    fs.setPermission(authz, new FsPermission(HDFS_PERMISSION));
+    fs.mkdirs(authzChild);
+    fs.setPermission(authzChild, new FsPermission(HDFS_PERMISSION));
+    UserGroupInformation ugi = UserGroupInformation.createUserForTesting("u1",
+        new String[]{"g1"});
+    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
+        Assert.assertEquals(PROVIDER_PERMISSION,
+            fs.getFileStatus(authzChild).getPermission().toShort());
+
+        Assert.assertEquals("foo", fs.getAclStatus(authzChild).getOwner());
+        Assert.assertEquals("bar", fs.getAclStatus(authzChild).getGroup());
+        Assert.assertEquals(PROVIDER_PERMISSION,
+            fs.getAclStatus(authzChild).getPermission().toShort());
+        return null;
+      }
+    });
+  }
 }
