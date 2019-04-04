@@ -67,6 +67,7 @@ public final class ReconServerConfigKeys {
 
   public static final String RECON_OM_CONNECTION_REQUEST_TIMEOUT =
       "recon.om.connection.request.timeout";
+
   public static final String RECON_OM_CONNECTION_REQUEST_TIMEOUT_DEFAULT = "5s";
 
   public static final String RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY =
@@ -86,6 +87,30 @@ public final class ReconServerConfigKeys {
 
   public static final String RECON_OM_SNAPSHOT_TASK_FLUSH_PARAM =
       "recon.om.snapshot.task.flush.param";
+
+  // Persistence properties
+  public static final String OZONE_RECON_SQL_DB_DRIVER =
+      "ozone.recon.sql.db.driver";
+  public static final String OZONE_RECON_SQL_DB_JDBC_URL =
+      "ozone.recon.sql.db.jdbc.url";
+  public static final String OZONE_RECON_SQL_DB_USER =
+      "ozone.recon.sql.db.username";
+  public static final String OZONE_RECON_SQL_DB_PASSWORD =
+      "ozone.recon.sql.db.password";
+  public static final String OZONE_RECON_SQL_AUTO_COMMIT =
+      "ozone.recon.sql.db.auto.commit";
+  public static final String OZONE_RECON_SQL_CONNECTION_TIMEOUT =
+      "ozone.recon.sql.db.conn.timeout";
+  public static final String OZONE_RECON_SQL_MAX_ACTIVE_CONNECTIONS =
+      "ozone.recon.sql.db.conn.max.active";
+  public static final String OZONE_RECON_SQL_MAX_CONNECTION_AGE =
+      "ozone.recon.sql.db.conn.max.age";
+  public static final String OZONE_RECON_SQL_MAX_IDLE_CONNECTION_AGE =
+      "ozone.recon.sql.db.conn.idle.max.age";
+  public static final String OZONE_RECON_SQL_IDLE_CONNECTION_TEST_PERIOD =
+      "ozone.recon.sql.db.conn.idle.test.period";
+  public static final String OZONE_RECON_SQL_MAX_IDLE_CONNECTION_TEST_STMT =
+      "ozone.recon.sql.db.conn.idle.test";
 
   /**
    * Private constructor for utility class.
