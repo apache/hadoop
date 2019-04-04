@@ -31,9 +31,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -187,7 +185,8 @@ public final class NodeSchemaLoader {
       return loadSchemaFromYaml(schemaFile);
     } catch (Exception e) {
       throw new IllegalArgumentException("Fail to load network topology node"
-              + " schema file: " + schemaFilePath + " , error:" + e.getMessage());
+              + " schema file: " + schemaFilePath + " , error:"
+              + e.getMessage());
     }
   }
 
@@ -209,7 +208,7 @@ public final class NodeSchemaLoader {
       NodeSchema nodeTree;
 
       try (FileInputStream fileInputStream = new FileInputStream(schemaFile)) {
-         nodeTree = yaml.loadAs(fileInputStream, NodeSchema.class);
+        nodeTree = yaml.loadAs(fileInputStream, NodeSchema.class);
       }
       List<NodeSchema> schemaList = new ArrayList<>();
       if (nodeTree.getType() != LayerType.ROOT) {
@@ -222,7 +221,8 @@ public final class NodeSchemaLoader {
       }
 
       while (nodeTree != null) {
-        if (nodeTree.getType() == LayerType.LEAF_NODE && nodeTree.getSublayer() != null) {
+        if (nodeTree.getType() == LayerType.LEAF_NODE
+                && nodeTree.getSublayer() != null) {
           throw new IllegalArgumentException("Leaf node in the middle of path."
                   + " schema file: " + schemaFile.getAbsolutePath());
         }
@@ -242,7 +242,8 @@ public final class NodeSchemaLoader {
       throw  e;
     } catch (Exception e) {
       throw new IllegalArgumentException("Fail to load network topology node"
-              + " schema file: " + schemaFile.getAbsolutePath() + " , error:" + e.getMessage());
+              + " schema file: " + schemaFile.getAbsolutePath() + " , error:"
+              + e.getMessage());
     }
 
     return finalSchema;
