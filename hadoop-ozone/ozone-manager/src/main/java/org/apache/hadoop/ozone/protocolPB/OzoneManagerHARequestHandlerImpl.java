@@ -19,8 +19,6 @@ package org.apache.hadoop.ozone.protocolPB;
 
 import java.io.IOException;
 
-
-import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmDeleteVolumeResponse;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeOwnerChangeResponse;
@@ -68,23 +66,18 @@ public class OzoneManagerHARequestHandlerImpl
     LOG.debug("Received OMRequest: {}, ", omRequest);
     Type cmdType = omRequest.getCmdType();
     OMRequest newOmRequest = null;
-    try {
-      switch (cmdType) {
-      case CreateVolume:
-        newOmRequest = handleCreateVolumeStart(omRequest);
-        break;
-      case SetVolumeProperty:
-        newOmRequest = handleSetVolumePropertyStart(omRequest);
-        break;
-      case DeleteVolume:
-        newOmRequest = handleDeleteVolumeStart(omRequest);
-        break;
-      default:
-        new OMException("Unrecognized Command Type:" + cmdType,
-            OMException.ResultCodes.INVALID_REQUEST);
-      }
-    } catch (IOException ex) {
-      throw ex;
+    switch (cmdType) {
+    case CreateVolume:
+      newOmRequest = handleCreateVolumeStart(omRequest);
+      break;
+    case SetVolumeProperty:
+      newOmRequest = handleSetVolumePropertyStart(omRequest);
+      break;
+    case DeleteVolume:
+      newOmRequest = handleDeleteVolumeStart(omRequest);
+      break;
+    default:
+      throw new IOException("Unrecognized Command Type:" + cmdType);
     }
     return newOmRequest;
   }
