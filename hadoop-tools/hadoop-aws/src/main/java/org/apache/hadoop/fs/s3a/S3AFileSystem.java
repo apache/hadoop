@@ -3044,31 +3044,39 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Delete mock parent directories which are no longer needed.
    * Retry policy: retrying; exceptions swallowed.
-   * @param path path
+   * @param path the parent directory for which fake markers should be deleted.
    */
   @Retries.RetryExceptionsSwallowed
   private void deleteUnnecessaryFakeDirectories(Path path) {
     List<DeleteObjectsRequest.KeyVersion> keysToRemove = new ArrayList<>();
     try {
-      while (!path.isRoot()) {
+      if (versionedStore) {
+        // in the versioned store, we only check once.
+        // if somehow an empty directory marker has got in up the tree, it
+        // won't get caught, but this cleanup is faster and less likely to
+        // trigger S3 throttling
         String k = pathToKey(path);
         final String key = (k.endsWith("/")) ? k : (k + "/");
-        if (versionedStore)  {
-          try {
-            ObjectMetadata metadata = once("getObjectMetadata", key,
-                () -> getObjectMetadata(key));
-            String version = metadata.getVersionId();
-            LOG.debug("Found directory marker {} to delete with version {}",
-                key, version);
-            keysToRemove.add(new DeleteObjectsRequest.KeyVersion(key, version));
-          } catch (FileNotFoundException ignored) {
-            /* this is fine */
-          }
-        } else {
+        try {
+          ObjectMetadata metadata = once("getObjectMetadata", key,
+              () -> getObjectMetadata(key));
+          String version = metadata.getVersionId();
+          LOG.debug("Found directory marker {} to delete with version {}",
+              key, version);
+          keysToRemove.add(new DeleteObjectsRequest.KeyVersion(key, version));
+        } catch (FileNotFoundException ignored) {
+          /* this is fine */
+        }
+
+      } else {
+        // unversioned store, build a bulk delete all the way up the tree.
+        while (!path.isRoot()) {
+          String k = pathToKey(path);
+          final String key = (k.endsWith("/")) ? k : (k + "/");
           LOG.trace("Deleting {}", key);
           keysToRemove.add(new DeleteObjectsRequest.KeyVersion(key));
+          path = path.getParent();
         }
-        path = path.getParent();
       }
       removeKeys(keysToRemove, false, true);
     } catch(AmazonClientException | IOException e) {
