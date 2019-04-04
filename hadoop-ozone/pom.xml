@@ -52,6 +52,7 @@
     <module>ozone-recon</module>
     <module>ozone-recon-codegen</module>
     <module>upgrade</module>
+    <module>csi</module>
   </modules>
 
   <repositories>
@@ -87,6 +88,11 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-ozone-s3gateway</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-csi</artifactId>
         <version>${ozone.version}</version>
       </dependency>
       <dependency>

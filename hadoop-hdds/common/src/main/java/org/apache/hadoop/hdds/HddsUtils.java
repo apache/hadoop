@@ -226,7 +226,12 @@ public final class HddsUtils {
     if ((value == null) || value.isEmpty()) {
       return Optional.empty();
     }
-    return Optional.of(HostAndPort.fromString(value).getHostText());
+    String hostname = value.replaceAll("\\:[0-9]+$", "");
+    if (hostname.length() == 0) {
+      return Optional.empty();
+    } else {
+      return Optional.of(hostname);
+    }
   }
 
   /**
