@@ -152,6 +152,8 @@ public class SCMPipelineManager implements PipelineManager {
       nodeManager.addPipeline(pipeline);
       metrics.incNumPipelineCreated();
       return pipeline;
+    } catch (InsufficientDatanodesException idEx) {
+      throw idEx;
     } catch (IOException ex) {
       metrics.incNumPipelineCreationFailed();
       throw ex;
