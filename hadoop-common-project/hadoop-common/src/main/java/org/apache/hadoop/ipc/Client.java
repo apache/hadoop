@@ -1445,10 +1445,12 @@ public class Client implements AutoCloseable {
         connection.sendRpcRequest(call);                 // send the rpc request
       } catch (RejectedExecutionException e) {
         throw new IOException("connection has been closed", e);
-      } catch (InterruptedException e) {
+      } catch (InterruptedException ie) {
         Thread.currentThread().interrupt();
-        LOG.warn("interrupted waiting to send rpc request to server", e);
-        throw new IOException(e);
+        IOException ioe = new InterruptedIOException(
+            "Interrupted waiting to send RPC request to server");
+        ioe.initCause(ie);
+        throw ioe;
       }
     } catch(Exception e) {
       if (isAsynchronousMode()) {
