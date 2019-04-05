@@ -429,7 +429,7 @@ Usage:
 
       hdfs dfsrouteradmin
           [-add <source> <nameservice1, nameservice2, ...> <destination> [-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
-          [-update <source> <nameservice1, nameservice2, ...> <destination> [-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
+          [-update <source> [<nameservice1, nameservice2, ...> <destination>] [-readonly true|false] [-faulttolerant true|false] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
           [-rm <source>]
           [-ls <path>]
           [-getDestination <path>]
@@ -444,7 +444,7 @@ Usage:
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
 | `-add` *source* *nameservices* *destination* | Add a mount table entry or update if it exists. |
-| `-update` *source* *nameservices* *destination* | Update a mount table entry or create one if it does not exist. |
+| `-update` *source* *nameservices* *destination* | Update a mount table entry attribures. |
 | `-rm` *source* | Remove mount point of specified path. |
 | `-ls` *path* | List mount points under specified path. |
 | `-getDestination` *path* | Get the subcluster where a file is or should be created. |
