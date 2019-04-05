@@ -88,16 +88,25 @@ public class ChillModeHandler implements EventHandler<ChillModeStatus> {
   @Override
   public void onMessage(ChillModeStatus chillModeStatus,
       EventPublisher publisher) {
-    try {
-      isInChillMode.set(chillModeStatus.getChillModeStatus());
-      scmClientProtocolServer.setChillModeStatus(isInChillMode.get());
-      scmBlockManager.setChillModeStatus(isInChillMode.get());
-      Thread.sleep(waitTime);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    } finally {
-      replicationManager.start();
+
+    isInChillMode.set(chillModeStatus.getChillModeStatus());
+    scmClientProtocolServer.setChillModeStatus(isInChillMode.get());
+    scmBlockManager.setChillModeStatus(isInChillMode.get());
+
+    if (!isInChillMode.get()) {
+      final Thread chillModeExitThread = new Thread(() -> {
+        try {
+          Thread.sleep(waitTime);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+        replicationManager.start();
+      });
+
+      chillModeExitThread.setDaemon(true);
+      chillModeExitThread.start();
     }
+
   }
 
   public boolean getChillModeStatus() {
