@@ -154,8 +154,6 @@ public class TestDatanodeStateMachine {
 
   /**
    * Assert that starting statemachine executes the Init State.
-   *
-   * @throws InterruptedException
    */
   @Test
   public void testStartStopDatanodeStateMachine() throws IOException,
@@ -167,9 +165,9 @@ public class TestDatanodeStateMachine {
           stateMachine.getConnectionManager();
       GenericTestUtils.waitFor(
           () -> {
-            LOG.info("connectionManager.getValues().size() is {}",
-                connectionManager.getValues().size());
-            return connectionManager.getValues().size() == 1;
+            int size = connectionManager.getValues().size();
+            LOG.info("connectionManager.getValues().size() is {}", size);
+            return size == 1;
           }, 1000, 30000);
 
       stateMachine.stopDaemon();
