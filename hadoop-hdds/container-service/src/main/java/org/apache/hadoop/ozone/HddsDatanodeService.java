@@ -105,7 +105,7 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
   @VisibleForTesting
   public static HddsDatanodeService createHddsDatanodeService(
       String[] args, Configuration conf) {
-    return createHddsDatanodeService(args, conf, true);
+    return createHddsDatanodeService(args, conf, false);
   }
 
   /**
@@ -124,11 +124,9 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
     if (args.length == 0 && printBanner) {
       StringUtils
           .startupShutdownMessage(HddsDatanodeService.class, args, LOG);
-      return new HddsDatanodeService(conf);
-    } else {
-      new HddsDatanodeService().run(args);
-      return null;
+
     }
+    return new HddsDatanodeService(conf);
   }
 
   public static void main(String[] args) {
