@@ -115,7 +115,7 @@ public interface OzoneManagerHAProtocol {
    * Start setOwner Transaction.
    * @param volume
    * @param owner
-   * @return
+   * @return OmVolumeOwnerChangeResponse
    * @throws IOException
    */
   OmVolumeOwnerChangeResponse startSetOwner(String volume,
