@@ -19,7 +19,7 @@ to Ozone OM/SCM/NM/DN and Kerberos KDC.
 ## Basic setup
 
 ```
-cd $(git rev-parse --show-toplevel)/hadoop-ozone/dist/target/ozone-*-SNAPSHOT/compose/ozonesecure-mr
+cd $(git rev-parse --show-toplevel)/hadoop-ozone/dist/target/ozone-@project.version@/compose/ozonesecure-mr
 
 docker-compose up -d
 ```
@@ -47,7 +47,7 @@ docker-compose exec rm bash
 kinit -kt /etc/security/keytabs/hadoop.keytab hadoop/rm@EXAMPLE.COM
 export HADOOP_MAPRED_HOME=/opt/hadoop/share/hadoop/mapreduce
 
-export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:/opt/hadoop/share/hadoop/mapreduce/*:/opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-*-SNAPSHOT.jar
+export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:/opt/hadoop/share/hadoop/mapreduce/*:/opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-@project.version@.jar
 
 hadoop fs -mkdir /user
 hadoop fs -mkdir /user/hadoop
