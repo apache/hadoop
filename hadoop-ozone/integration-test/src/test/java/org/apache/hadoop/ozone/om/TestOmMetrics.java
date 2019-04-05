@@ -87,11 +87,11 @@ public class TestOmMetrics {
             ozoneManager, "volumeManager");
     VolumeManager mockVm = Mockito.spy(volumeManager);
 
-    Mockito.doNothing().when(mockVm).createVolume(null);
-    Mockito.doNothing().when(mockVm).deleteVolume(null);
+    Mockito.doReturn(null).when(mockVm).createVolume(null);
+    Mockito.doReturn(null).when(mockVm).deleteVolume(null);
     Mockito.doReturn(null).when(mockVm).getVolumeInfo(null);
     Mockito.doReturn(true).when(mockVm).checkVolumeAccess(null, null);
-    Mockito.doNothing().when(mockVm).setOwner(null, null);
+    Mockito.doReturn(null).when(mockVm).setOwner(null, null);
     Mockito.doReturn(null).when(mockVm).listVolumes(null, null, null, 0);
 
     HddsWhiteboxTestUtils.setInternalState(

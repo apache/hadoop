@@ -27,6 +27,7 @@ import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis
     .ContainerStateMachine;
 import org.apache.hadoop.ozone.om.OzoneManager;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OMRatisHelper;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -36,8 +37,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
-import org.apache.hadoop.ozone.protocolPB.OzoneManagerRequestHandler;
-import org.apache.hadoop.ozone.protocolPB.RequestHandler;
+import org.apache.hadoop.ozone.protocolPB.OzoneManagerHARequestHandler;
+import org.apache.hadoop.ozone.protocolPB.OzoneManagerHARequestHandlerImpl;
 import org.apache.hadoop.util.Time;
 import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.protocol.Message;
@@ -67,14 +68,14 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
       new SimpleStateMachineStorage();
   private final OzoneManagerRatisServer omRatisServer;
   private final OzoneManagerServerProtocol ozoneManager;
-  private RequestHandler handler;
+  private OzoneManagerHARequestHandler handler;
   private RaftGroupId raftGroupId;
   private long lastAppliedIndex = 0;
 
   public OzoneManagerStateMachine(OzoneManagerRatisServer ratisServer) {
     this.omRatisServer = ratisServer;
     this.ozoneManager = omRatisServer.getOzoneManager();
-    this.handler = new OzoneManagerRequestHandler(ozoneManager);
+    this.handler = new OzoneManagerHARequestHandlerImpl(ozoneManager);
   }
 
   /**
@@ -185,21 +186,53 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
   private TransactionContext handleStartTransactionRequests(
       RaftClientRequest raftClientRequest, OMRequest omRequest) {
 
-    switch (omRequest.getCmdType()) {
-    case AllocateBlock:
-      return handleAllocateBlock(raftClientRequest, omRequest);
-    case CreateKey:
-      return handleCreateKeyRequest(raftClientRequest, omRequest);
-    case InitiateMultiPartUpload:
-      return handleInitiateMultipartUpload(raftClientRequest, omRequest);
-    default:
-      return TransactionContext.newBuilder()
+    OMRequest newOmRequest = null;
+    try {
+      switch (omRequest.getCmdType()) {
+      case CreateVolume:
+      case SetVolumeProperty:
+      case DeleteVolume:
+        newOmRequest = handler.handleStartTransaction(omRequest);
+        break;
+      case AllocateBlock:
+        return handleAllocateBlock(raftClientRequest, omRequest);
+      case CreateKey:
+        return handleCreateKeyRequest(raftClientRequest, omRequest);
+      case InitiateMultiPartUpload:
+        return handleInitiateMultipartUpload(raftClientRequest, omRequest);
+      default:
+        return TransactionContext.newBuilder()
+            .setClientRequest(raftClientRequest)
+            .setStateMachine(this)
+            .setServerRole(RaftProtos.RaftPeerRole.LEADER)
+            .setLogData(raftClientRequest.getMessage().getContent())
+            .build();
+      }
+    } catch (IOException ex) {
+      TransactionContext transactionContext = TransactionContext.newBuilder()
           .setClientRequest(raftClientRequest)
           .setStateMachine(this)
           .setServerRole(RaftProtos.RaftPeerRole.LEADER)
-          .setLogData(raftClientRequest.getMessage().getContent())
           .build();
+      if (ex instanceof OMException) {
+        IOException ioException =
+            new IOException(ex.getMessage() + STATUS_CODE +
+                ((OMException) ex).getResult());
+        transactionContext.setException(ioException);
+      } else {
+        transactionContext.setException(ex);
+      }
+      LOG.error("Exception in startTransaction for cmdType " +
+          omRequest.getCmdType(), ex);
+      return transactionContext;
     }
+    TransactionContext transactionContext = TransactionContext.newBuilder()
+        .setClientRequest(raftClientRequest)
+        .setStateMachine(this)
+        .setServerRole(RaftProtos.RaftPeerRole.LEADER)
+        .setLogData(OMRatisHelper.convertRequestToByteString(newOmRequest))
+        .build();
+    return transactionContext;
   }
 
   private TransactionContext handleInitiateMultipartUpload(
@@ -367,7 +400,7 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
    * @throws ServiceException
    */
   private Message runCommand(OMRequest request, long trxLogIndex) {
-    OMResponse response = handler.handle(request);
+    OMResponse response = handler.handleApplyTransaction(request);
     lastAppliedIndex = trxLogIndex;
     return OMRatisHelper.convertResponseToMessage(response);
   }
@@ -394,7 +427,7 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
   }
 
   @VisibleForTesting
-  public void setHandler(RequestHandler handler) {
+  public void setHandler(OzoneManagerHARequestHandler handler) {
     this.handler = handler;
   }
 
