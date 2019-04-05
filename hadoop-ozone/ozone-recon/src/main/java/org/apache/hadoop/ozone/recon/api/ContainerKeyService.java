@@ -39,7 +39,6 @@ import javax.ws.rs.core.Response;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
-import org.apache.hadoop.ozone.recon.ReconServer;
 import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
 import org.apache.hadoop.ozone.recon.api.types.ContainerMetadata;
 import org.apache.hadoop.ozone.recon.api.types.KeyMetadata;
@@ -57,7 +56,8 @@ import org.slf4j.LoggerFactory;
 @Produces(MediaType.APPLICATION_JSON)
 public class ContainerKeyService {
 
-  private static final Logger LOG = LoggerFactory.getLogger(ReconServer.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ContainerKeyService.class);
 
   @Inject
   private ContainerDBServiceProvider containerDBServiceProvider;
