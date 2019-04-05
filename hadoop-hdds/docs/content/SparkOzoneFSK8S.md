@@ -78,10 +78,12 @@ And create a custom `core-site.xml`:
 <configuration>
     <property>
         <name>fs.o3fs.impl</name>
-        <value>org.apache.hadoop.fs.ozone.OzoneFileSystem</value>
+        <value>org.apache.hadoop.fs.ozone.BasicOzoneFileSystem</value>
     </property>
 </configuration>
 ```
+
+_Note_: You may also use `org.apache.hadoop.fs.ozone.OzoneFileSystem` without the `Basic` prefix. The `Basic` version doesn't support FS statistics and encryption zones but can work together with older hadoop versions.
 
 Copy the `ozonefs.jar` file from an ozone distribution (__use the legacy version!__)
 
@@ -134,7 +136,7 @@ Write down the ozone filesystem uri as it should be used with the spark-submit c
 
 ```
 kubectl create serviceaccount spark -n yournamespace
-kubectl create clusterrolebinding spark-role --clusterrole=edit --serviceaccount=poc:yournamespace --namespace=yournamespace
+kubectl create clusterrolebinding spark-role --clusterrole=edit --serviceaccount=yournamespace:spark --namespace=yournamespace
 ```
 ## Execute the job
 

@@ -29,6 +29,12 @@ Execute
     Should Be Equal As Integers     ${rc}                       0
     [return]                        ${output}
 
+Execute And Ignore Error
+    [arguments]                     ${command}
+    ${rc}                           ${output} =                 Run And Return Rc And Output           ${command}
+    Log                             ${output}
+    [return]                        ${output}
+
 Execute and checkrc
     [arguments]                     ${command}                  ${expected_error_code}
     ${rc}                           ${output} =                 Run And Return Rc And Output           ${command}

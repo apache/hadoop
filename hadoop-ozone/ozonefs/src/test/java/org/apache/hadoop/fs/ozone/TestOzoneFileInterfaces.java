@@ -146,7 +146,7 @@ public class TestOzoneFileInterfaces {
       fs = FileSystem.get(new URI(rootPath + "/test.txt"), conf);
     }
     o3fs = (OzoneFileSystem) fs;
-    statistics = o3fs.getOzoneFSOpsCountStatistics();
+    statistics = (OzoneFSStorageStatistics) o3fs.getOzoneFSOpsCountStatistics();
   }
 
   @After

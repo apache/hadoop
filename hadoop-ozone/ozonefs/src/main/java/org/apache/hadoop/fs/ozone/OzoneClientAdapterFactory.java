@@ -25,6 +25,8 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 
+import org.apache.hadoop.fs.StorageStatistics;
+
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +46,7 @@ public final class OzoneClientAdapterFactory {
   public static OzoneClientAdapter createAdapter(
       String volumeStr,
       String bucketStr) throws IOException {
-    return createAdapter(volumeStr, bucketStr,
+    return createAdapter(volumeStr, bucketStr, true,
         (aClass) -> (OzoneClientAdapter) aClass
             .getConstructor(String.class, String.class)
             .newInstance(
@@ -56,9 +58,8 @@ public final class OzoneClientAdapterFactory {
   public static OzoneClientAdapter createAdapter(
       String volumeStr,
       String bucketStr,
-      OzoneFSStorageStatistics storageStatistics)
-      throws IOException {
-    return createAdapter(volumeStr, bucketStr,
+      StorageStatistics storageStatistics) throws IOException {
+    return createAdapter(volumeStr, bucketStr, false,
         (aClass) -> (OzoneClientAdapter) aClass
             .getConstructor(String.class, String.class,
                 OzoneFSStorageStatistics.class)
@@ -72,9 +73,11 @@ public final class OzoneClientAdapterFactory {
   public static OzoneClientAdapter createAdapter(
       String volumeStr,
       String bucketStr,
+      boolean basic,
       OzoneClientAdapterCreator creator) throws IOException {
 
-    ClassLoader currentClassLoader = OzoneFileSystem.class.getClassLoader();
+    ClassLoader currentClassLoader =
+        OzoneClientAdapterFactory.class.getClassLoader();
     List<URL> urls = new ArrayList<>();
 
     findEmbeddedLibsUrl(urls, currentClassLoader);
@@ -99,10 +102,18 @@ public final class OzoneClientAdapterFactory {
       reflectionUtils.getMethod("getClassByName", String.class)
           .invoke(null, "org.apache.ratis.grpc.GrpcFactory");
 
-      Class<?> aClass = classLoader
-          .loadClass("org.apache.hadoop.fs.ozone.OzoneClientAdapterImpl");
+      Class<?> adapterClass = null;
+      if (basic) {
+        adapterClass = classLoader
+            .loadClass(
+                "org.apache.hadoop.fs.ozone.BasicOzoneClientAdapterImpl");
+      } else {
+        adapterClass = classLoader
+            .loadClass(
+                "org.apache.hadoop.fs.ozone.OzoneClientAdapterImpl");
+      }
       OzoneClientAdapter ozoneClientAdapter =
-          creator.createOzoneClientAdapter(aClass);
+          creator.createOzoneClientAdapter(adapterClass);
 
       Thread.currentThread().setContextClassLoader(contextClassLoader);
 
@@ -134,7 +145,8 @@ public final class OzoneClientAdapterFactory {
     //marker file is added to the jar to make it easier to find the URL
     // for the current jar.
     String markerFile = "ozonefs.txt";
-    ClassLoader currentClassLoader = OzoneFileSystem.class.getClassLoader();
+    ClassLoader currentClassLoader =
+        OzoneClientAdapterFactory.class.getClassLoader();
 
     URL ozFs = currentClassLoader
         .getResource(markerFile);
