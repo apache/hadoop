@@ -35,6 +35,15 @@ public class ContainerMetricsConstants {
       "YARN_RM_CONTAINER_CREATED";
 
   // Event of this type will be emitted by NM.
+  public static final String PAUSED_EVENT_TYPE = "YARN_CONTAINER_PAUSED";
+
+  // Event of this type will be emitted by NM.
+  public static final String RESUMED_EVENT_TYPE = "YARN_CONTAINER_RESUMED";
+
+  // Event of this type will be emitted by NM.
+  public static final String KILLED_EVENT_TYPE = "YARN_CONTAINER_KILLED";
+
+  // Event of this type will be emitted by NM.
   public static final String FINISHED_EVENT_TYPE = "YARN_CONTAINER_FINISHED";
 
   // Event of this type will be emitted by RM.
