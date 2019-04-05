@@ -241,7 +241,7 @@ public class DatasetVolumeChecker {
     // Wait until our timeout elapses, after which we give up on
     // the remaining volumes.
     if (!latch.await(maxAllowedTimeForCheckMs, TimeUnit.MILLISECONDS)) {
-      LOG.warn("checkAllVolumes timed out after {} ms" +
+      LOG.warn("checkAllVolumes timed out after {} ms",
           maxAllowedTimeForCheckMs);
     }
 
