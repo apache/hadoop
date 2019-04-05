@@ -22,7 +22,7 @@ import java.util.concurrent.Callable;
 import picocli.CommandLine.Command;
 
 /**
- * Execute Ozone specific HDFS ballanced..
+ * Command to move blocks between HDFS datanodes.
  */
 @Command(name = "balance",
     description = "Move the HDFS blocks for a better distribution "

@@ -22,6 +22,12 @@ import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 
 import picocli.CommandLine.Command;
 
+/**
+ * Command  line interface for the In-Place upgrade utility.
+ * <p>
+ * In-Place upgrade can convert HDFS cluster data to Ozone data without
+ * (or minimal) data moving.
+ */
 @Command(name = "ozone upgrade",
     description = "Convert raw HDFS data to Ozone data without data movement.",
     subcommands = {
