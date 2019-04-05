@@ -40,7 +40,7 @@ import org.junit.Test;
  */
 public class TestHddsDatanodeService {
   private File testDir;
-  private Configuration conf;
+  private OzoneConfiguration conf;
   private HddsDatanodeService service;
   private String[] args = new String[] {};
 
@@ -64,8 +64,8 @@ public class TestHddsDatanodeService {
 
   @Test
   public void testStartup() throws IOException {
-    service = HddsDatanodeService.createHddsDatanodeService(args, conf);
-    service.start(null);
+    service = HddsDatanodeService.createHddsDatanodeService(args);
+    service.start(conf);
     service.join();
 
     assertNotNull(service.getDatanodeDetails());

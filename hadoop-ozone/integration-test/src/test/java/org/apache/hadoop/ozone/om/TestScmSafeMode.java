@@ -270,7 +270,7 @@ public class TestScmSafeMode {
     assertFalse(logCapturer.getOutput().contains("SCM exiting safe mode."));
     assertTrue(scm.getCurrentContainerThreshold() == 0);
     for (HddsDatanodeService dn : cluster.getHddsDatanodes()) {
-      dn.start(null);
+      dn.start();
     }
     GenericTestUtils
         .waitFor(() -> scm.getCurrentContainerThreshold() == 1.0, 100, 20000);

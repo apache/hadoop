@@ -52,7 +52,7 @@ public class VolumeCommands implements GenericParentCommand, Callable<Void> {
   @Override
   public Void call() throws Exception {
     throw new MissingSubcommandException(
-        this.shell.getCmd().getSubcommands().get("volume").getUsageMessage());
+        this.shell.getCmd().getSubcommands().get("volume"));
   }
 
   @Override

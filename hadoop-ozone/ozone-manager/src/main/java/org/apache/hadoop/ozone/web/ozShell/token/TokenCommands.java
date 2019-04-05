@@ -49,7 +49,7 @@ public class TokenCommands implements GenericParentCommand, Callable<Void> {
   @Override
   public Void call() throws Exception {
     throw new MissingSubcommandException(
-        this.shell.getCmd().getSubcommands().get("token").getUsageMessage());
+        this.shell.getCmd().getSubcommands().get("token"));
   }
 
   @Override
