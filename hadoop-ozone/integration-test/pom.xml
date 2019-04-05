@@ -55,12 +55,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-ozone-recon</artifactId>
-      <exclusions>
-        <exclusion>
-          <artifactId>hk2-api</artifactId>
-          <groupId>org.glassfish.hk2</groupId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
