@@ -291,7 +291,7 @@ public interface HdfsClientConfigKeys {
     String  RESOLVE_ADDRESS_NEEDED_KEY = PREFIX + "resolve-needed";
     boolean RESOLVE_ADDRESS_NEEDED_DEFAULT = false;
     String RESOLVE_SERVICE_KEY = PREFIX + "resolver.impl";
-    String  RESOLVE_ADDRESS_TO_FQDN = PREFIX + "useFQDN";
+    String  RESOLVE_ADDRESS_TO_FQDN = PREFIX + "resolver.useFQDN";
     boolean RESOLVE_ADDRESS_TO_FQDN_DEFAULT = true;
   }
 
