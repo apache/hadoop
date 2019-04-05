@@ -39,8 +39,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
-import org.apache.hadoop.ozone.protocolPB.OzoneManagerRequestHandler;
-import org.apache.hadoop.ozone.protocolPB.RequestHandler;
+import org.apache.hadoop.ozone.protocolPB.OzoneManagerHARequestHandler;
+import org.apache.hadoop.ozone.protocolPB.OzoneManagerHARequestHandlerImpl;
 import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.protocol.ClientId;
 import org.apache.ratis.protocol.Message;
@@ -72,7 +72,7 @@ public class TestOzoneManagerStateMachine {
   private OzoneConfiguration conf;
   private OzoneManagerRatisServer omRatisServer;
   private String omID;
-  private RequestHandler requestHandler;
+  private OzoneManagerHARequestHandler requestHandler;
   private RaftGroupId raftGroupId;
   private OzoneManagerStateMachine ozoneManagerStateMachine;
 
@@ -105,7 +105,7 @@ public class TestOzoneManagerStateMachine {
     ozoneManagerStateMachine =
         new OzoneManagerStateMachine(omRatisServer);
 
-    requestHandler = Mockito.mock(OzoneManagerRequestHandler.class);
+    requestHandler = Mockito.mock(OzoneManagerHARequestHandlerImpl.class);
     raftGroupId = omRatisServer.getRaftGroup().getGroupId();
 
     ozoneManagerStateMachine.setHandler(requestHandler);

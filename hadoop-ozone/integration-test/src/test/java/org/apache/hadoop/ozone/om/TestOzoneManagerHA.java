@@ -24,11 +24,13 @@ import org.apache.hadoop.hdfs.LogVerificationAppender;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.MiniOzoneHAClusterImpl;
+import org.apache.hadoop.ozone.OzoneTestUtils;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
@@ -121,6 +123,33 @@ public class TestOzoneManagerHA {
     if (cluster != null) {
       cluster.shutdown();
     }
+  }
+
+  @Test
+  public void testAllVolumeOperations() throws Exception {
+    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+
+    VolumeArgs createVolumeArgs = VolumeArgs.newBuilder()
+        .setOwner(userName)
+        .setAdmin(adminName)
+        .build();
+
+    objectStore.createVolume(volumeName, createVolumeArgs);
+    OzoneVolume retVolumeinfo = objectStore.getVolume(volumeName);
+
+    Assert.assertTrue(retVolumeinfo.getName().equals(volumeName));
+    Assert.assertTrue(retVolumeinfo.getOwner().equals(userName));
+    Assert.assertTrue(retVolumeinfo.getAdmin().equals(adminName));
+
+    objectStore.deleteVolume(volumeName);
+
+    OzoneTestUtils.expectOmException(OMException.ResultCodes.VOLUME_NOT_FOUND,
+        () -> objectStore.getVolume(volumeName));
+
+    OzoneTestUtils.expectOmException(OMException.ResultCodes.VOLUME_NOT_FOUND,
+        () -> objectStore.deleteVolume(volumeName));
   }
 
   /**

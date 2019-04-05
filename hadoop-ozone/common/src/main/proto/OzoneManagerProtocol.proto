@@ -273,6 +273,7 @@ message VolumeInfo {
 */
 message CreateVolumeRequest {
     required VolumeInfo volumeInfo = 1;
+    optional VolumeList volumeList = 2;
 }
 
 message CreateVolumeResponse {
@@ -290,6 +291,10 @@ message SetVolumePropertyRequest {
     required string volumeName = 1;
     optional string ownerName = 2;
     optional uint64 quotaInBytes = 3;
+    optional string originalOwner = 4;
+    optional VolumeList oldOwnerVolumeList = 5;
+    optional VolumeList newOwnerVolumeList = 6;
+    optional VolumeInfo volumeInfo = 7;
 }
 
 message SetVolumePropertyResponse {
@@ -326,6 +331,8 @@ message InfoVolumeResponse {
 */
 message DeleteVolumeRequest {
     required string volumeName = 1;
+    optional string owner = 2;
+    optional VolumeList volumeList = 3;
 }
 
 message DeleteVolumeResponse {

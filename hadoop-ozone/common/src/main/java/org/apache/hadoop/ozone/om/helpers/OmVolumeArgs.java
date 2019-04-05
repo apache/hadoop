@@ -36,10 +36,10 @@ import com.google.common.base.Preconditions;
  */
 public final class OmVolumeArgs extends WithMetadata implements Auditable {
   private final String adminName;
-  private final String ownerName;
+  private String ownerName;
   private final String volume;
-  private final long creationTime;
-  private final long quotaInBytes;
+  private long creationTime;
+  private long quotaInBytes;
   private final OmOzoneAclMap aclMap;
 
   /**
@@ -62,6 +62,19 @@ public final class OmVolumeArgs extends WithMetadata implements Auditable {
     this.metadata = metadata;
     this.aclMap = aclMap;
     this.creationTime = creationTime;
+  }
+
+
+  public void setOwnerName(String newOwner) {
+    this.ownerName = newOwner;
+  }
+
+  public void setQuotaInBytes(long quotaInBytes) {
+    this.quotaInBytes = quotaInBytes;
+  }
+
+  public void setCreationTime(long time) {
+    this.creationTime = time;
   }
 
   /**

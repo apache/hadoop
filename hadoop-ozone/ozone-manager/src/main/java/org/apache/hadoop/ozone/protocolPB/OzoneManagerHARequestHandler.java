@@ -17,32 +17,32 @@
 
 package org.apache.hadoop.ozone.protocolPB;
 
-import org.apache.hadoop.ozone.om.exceptions.OMException;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.
-    OMRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.
-    OMResponse;
+import java.io.IOException;
+
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .OMRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .OMResponse;
 
 /**
- * Handler to handle the OmRequests.
+ * Handler to handle OM requests in OM HA.
  */
-public interface RequestHandler {
+public interface OzoneManagerHARequestHandler extends RequestHandler {
 
   /**
-   * Handle the OmRequest, and returns OmResponse.
-   * @param request
-   * @return OmResponse
+   * Handle start Transaction Requests from OzoneManager StateMachine.
+   * @param omRequest
+   * @return OMRequest - New OM Request which will be applied during apply
+   * Transaction
+   * @throws IOException
    */
-  OMResponse handle(OMRequest request);
-
+  OMRequest handleStartTransaction(OMRequest omRequest) throws IOException;
 
   /**
-   * Validates that the incoming OM request has required parameters.
-   * TODO: Add more validation checks before writing the request to Ratis log.
-   *
-   * @param omRequest client request to OM
-   * @throws OMException thrown if required parameters are set to null.
+   * Handle Apply Transaction Requests from OzoneManager StateMachine.
+   * @param omRequest
+   * @return OMResponse
    */
-  void validateRequest(OMRequest omRequest) throws OMException;
+  OMResponse handleApplyTransaction(OMRequest omRequest);
 
 }
