@@ -479,6 +479,7 @@ message InfoBucketResponse {
 
 message SetBucketPropertyRequest {
     required BucketArgs bucketArgs = 1;
+    optional BucketInfo bucketInfo = 2;
 }
 
 message SetBucketPropertyResponse {
