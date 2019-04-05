@@ -30,7 +30,6 @@ import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -237,13 +236,7 @@ public class SshFenceByTcpPort extends Configured
     
     public Args(String arg) 
         throws BadFencingConfigurationException {
-      try {
-        user = UserGroupInformation.getCurrentUser().getShortUserName();
-      } catch(IOException ex) {
-        LOG.warn("Unable to get user name. Fall back to system property " +
-            "user.name", ex);
-        user = System.getProperty("user.name");
-      }
+      user = System.getProperty("user.name");
       sshPort = DEFAULT_SSH_PORT;
 
       // Parse optional user and ssh port
