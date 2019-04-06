@@ -14,8 +14,6 @@
 
 package org.apache.hadoop.yarn.submarine.client.cli.param;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.submarine.client.cli.CliConstants;
@@ -35,33 +33,36 @@ public abstract class RunParameters extends BaseParameters {
   private String queue;
 
   @Override
-  public void updateParametersByParsedCommandline(CommandLine parsedCommandLine,
-      Options options, ClientContext clientContext) throws ParseException,
+  public void updateParameters(ParametersHolder parametersHolder,
+      ClientContext clientContext) throws ParseException,
       IOException, YarnException {
-    String savedModelPath = parsedCommandLine.getOptionValue(
+    String savedModelPath = parametersHolder.getOptionValue(
         CliConstants.SAVED_MODEL_PATH);
     this.setSavedModelPath(savedModelPath);
 
-    // Envars
-    List<String> envarsList = new ArrayList<>();
-    String[] envars = parsedCommandLine.getOptionValues(CliConstants.ENV);
-    if (envars != null) {
-      for (String envar : envars) {
-        envarsList.add(envar);
-      }
-    }
-    this.setEnvars(envarsList);
+    List<String> envVars = getEnvVars(parametersHolder);
+    this.setEnvars(envVars);
 
-    String queue = parsedCommandLine.getOptionValue(
+    String queue = parametersHolder.getOptionValue(
         CliConstants.QUEUE);
     this.setQueue(queue);
 
-    String dockerImage = parsedCommandLine.getOptionValue(
+    String dockerImage = parametersHolder.getOptionValue(
         CliConstants.DOCKER_IMAGE);
     this.setDockerImageName(dockerImage);
 
-    super.updateParametersByParsedCommandline(parsedCommandLine,
-        options, clientContext);
+    super.updateParameters(parametersHolder, clientContext);
+  }
+
+  private List<String> getEnvVars(ParametersHolder parametersHolder)
+      throws YarnException {
+    List<String> result = new ArrayList<>();
+    List<String> envVarsArray = parametersHolder.getOptionValues(
+        CliConstants.ENV);
+    if (envVarsArray != null) {
+      result.addAll(envVarsArray);
+    }
+    return result;
   }
 
   public String getQueue() {
