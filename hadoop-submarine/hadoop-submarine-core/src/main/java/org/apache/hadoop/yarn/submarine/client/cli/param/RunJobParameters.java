@@ -14,8 +14,8 @@
 
 package org.apache.hadoop.yarn.submarine.client.cli.param;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Options;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.CaseFormat;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -23,7 +23,10 @@ import org.apache.hadoop.yarn.submarine.client.cli.CliConstants;
 import org.apache.hadoop.yarn.submarine.client.cli.CliUtils;
 import org.apache.hadoop.yarn.submarine.common.ClientContext;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.yaml.snakeyaml.introspector.Property;
+import org.yaml.snakeyaml.introspector.PropertyUtils;
 
+import java.beans.IntrospectionException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,28 +61,31 @@ public class RunJobParameters extends RunParameters {
   private boolean distributeKeytab = false;
 
   @Override
-  public void updateParametersByParsedCommandline(CommandLine parsedCommandLine,
-      Options options, ClientContext clientContext)
+  public void updateParameters(ParametersHolder parametersHolder,
+      ClientContext clientContext)
       throws ParseException, IOException, YarnException {
 
-    String input = parsedCommandLine.getOptionValue(CliConstants.INPUT_PATH);
-    String jobDir = parsedCommandLine.getOptionValue(CliConstants.CHECKPOINT_PATH);
+    String input = parametersHolder.getOptionValue(CliConstants.INPUT_PATH);
+    String jobDir = parametersHolder.getOptionValue(
+        CliConstants.CHECKPOINT_PATH);
     int nWorkers = 1;
-    if (parsedCommandLine.getOptionValue(CliConstants.N_WORKERS) != null) {
+    if (parametersHolder.getOptionValue(CliConstants.N_WORKERS) != null) {
       nWorkers = Integer.parseInt(
-          parsedCommandLine.getOptionValue(CliConstants.N_WORKERS));
+          parametersHolder.getOptionValue(CliConstants.N_WORKERS));
       // Only check null value.
       // Training job shouldn't ignore INPUT_PATH option
-      // But if nWorkers is 0, INPUT_PATH can be ignored because user can only run Tensorboard
+      // But if nWorkers is 0, INPUT_PATH can be ignored because
+      // user can only run Tensorboard
       if (null == input && 0 != nWorkers) {
-        throw new ParseException("\"--" + CliConstants.INPUT_PATH + "\" is absent");
+        throw new ParseException("\"--" + CliConstants.INPUT_PATH +
+            "\" is absent");
       }
     }
 
     int nPS = 0;
-    if (parsedCommandLine.getOptionValue(CliConstants.N_PS) != null) {
+    if (parametersHolder.getOptionValue(CliConstants.N_PS) != null) {
       nPS = Integer.parseInt(
-          parsedCommandLine.getOptionValue(CliConstants.N_PS));
+          parametersHolder.getOptionValue(CliConstants.N_PS));
     }
 
     // Check #workers and #ps.
@@ -91,15 +97,15 @@ public class RunJobParameters extends RunParameters {
           + "please double check.");
     }
 
-    String kerberosKeytab = parsedCommandLine.getOptionValue(
+    String kerberosKeytab = parametersHolder.getOptionValue(
         CliConstants.KEYTAB);
-    String kerberosPrincipal = parsedCommandLine.getOptionValue(
+    String kerberosPrincipal = parametersHolder.getOptionValue(
         CliConstants.PRINCIPAL);
     CliUtils.doLoginIfSecure(kerberosKeytab, kerberosPrincipal);
 
     workerResource = null;
     if (nWorkers > 0) {
-      String workerResourceStr = parsedCommandLine.getOptionValue(
+      String workerResourceStr = parametersHolder.getOptionValue(
           CliConstants.WORKER_RES);
       if (workerResourceStr == null) {
         throw new ParseException(
@@ -112,7 +118,8 @@ public class RunJobParameters extends RunParameters {
 
     Resource psResource = null;
     if (nPS > 0) {
-      String psResourceStr = parsedCommandLine.getOptionValue(CliConstants.PS_RES);
+      String psResourceStr = parametersHolder.getOptionValue(
+          CliConstants.PS_RES);
       if (psResourceStr == null) {
         throw new ParseException("--" + CliConstants.PS_RES + " is absent.");
       }
@@ -121,9 +128,9 @@ public class RunJobParameters extends RunParameters {
     }
 
     boolean tensorboard = false;
-    if (parsedCommandLine.hasOption(CliConstants.TENSORBOARD)) {
+    if (parametersHolder.hasOption(CliConstants.TENSORBOARD)) {
       tensorboard = true;
-      String tensorboardResourceStr = parsedCommandLine.getOptionValue(
+      String tensorboardResourceStr = parametersHolder.getOptionValue(
           CliConstants.TENSORBOARD_RESOURCES);
       if (tensorboardResourceStr == null || tensorboardResourceStr.isEmpty()) {
         tensorboardResourceStr = CliConstants.TENSORBOARD_DEFAULT_RESOURCES;
@@ -131,17 +138,17 @@ public class RunJobParameters extends RunParameters {
       tensorboardResource = ResourceUtils.createResourceFromString(
           tensorboardResourceStr,
           clientContext.getOrCreateYarnClient().getResourceTypeInfo());
-      tensorboardDockerImage = parsedCommandLine.getOptionValue(
+      tensorboardDockerImage = parametersHolder.getOptionValue(
           CliConstants.TENSORBOARD_DOCKER_IMAGE);
       this.setTensorboardResource(tensorboardResource);
     }
 
-    if (parsedCommandLine.hasOption(CliConstants.WAIT_JOB_FINISH)) {
+    if (parametersHolder.hasOption(CliConstants.WAIT_JOB_FINISH)) {
       this.waitJobFinish = true;
     }
 
     // Quicklinks
-    String[] quicklinkStrs = parsedCommandLine.getOptionValues(
+    List<String> quicklinkStrs = parametersHolder.getOptionValues(
         CliConstants.QUICKLINK);
     if (quicklinkStrs != null) {
       for (String ql : quicklinkStrs) {
@@ -151,18 +158,18 @@ public class RunJobParameters extends RunParameters {
       }
     }
 
-    psDockerImage = parsedCommandLine.getOptionValue(
+    psDockerImage = parametersHolder.getOptionValue(
         CliConstants.PS_DOCKER_IMAGE);
-    workerDockerImage = parsedCommandLine.getOptionValue(
+    workerDockerImage = parametersHolder.getOptionValue(
         CliConstants.WORKER_DOCKER_IMAGE);
 
-    String workerLaunchCmd = parsedCommandLine.getOptionValue(
+    String workerLaunchCmd = parametersHolder.getOptionValue(
         CliConstants.WORKER_LAUNCH_CMD);
-    String psLaunchCommand = parsedCommandLine.getOptionValue(
+    String psLaunchCommand = parametersHolder.getOptionValue(
         CliConstants.PS_LAUNCH_CMD);
 
     // Localizations
-    String[] localizationsStr = parsedCommandLine.getOptionValues(
+    List<String> localizationsStr = parametersHolder.getOptionValues(
         CliConstants.LOCALIZATION);
     if (null != localizationsStr) {
       for (String loc : localizationsStr) {
@@ -171,10 +178,11 @@ public class RunJobParameters extends RunParameters {
         localizations.add(localization);
       }
     }
-    boolean distributeKerberosKeytab = parsedCommandLine.hasOption(CliConstants
+    boolean distributeKerberosKeytab = parametersHolder.hasOption(CliConstants
         .DISTRIBUTE_KEYTAB);
 
-    this.setInputPath(input).setCheckpointPath(jobDir).setNumPS(nPS).setNumWorkers(nWorkers)
+    this.setInputPath(input).setCheckpointPath(jobDir)
+        .setNumPS(nPS).setNumWorkers(nWorkers)
         .setPSLaunchCmd(psLaunchCommand).setWorkerLaunchCmd(workerLaunchCmd)
         .setPsResource(psResource)
         .setTensorboardEnabled(tensorboard)
@@ -182,8 +190,7 @@ public class RunJobParameters extends RunParameters {
         .setPrincipal(kerberosPrincipal)
         .setDistributeKeytab(distributeKerberosKeytab);
 
-    super.updateParametersByParsedCommandline(parsedCommandLine,
-        options, clientContext);
+    super.updateParameters(parametersHolder, clientContext);
   }
 
   public String getInputPath() {
@@ -330,5 +337,21 @@ public class RunJobParameters extends RunParameters {
       boolean distributeKerberosKeytab) {
     this.distributeKeytab = distributeKerberosKeytab;
     return this;
+  }
+
+  @VisibleForTesting
+  public static class UnderscoreConverterPropertyUtils extends PropertyUtils {
+    @Override
+    public Property getProperty(Class<? extends Object> type, String name)
+        throws IntrospectionException {
+      if (name.indexOf('_') > -1) {
+        name = convertName(name);
+      }
+      return super.getProperty(type, name);
+    }
+
+    private static String convertName(String name) {
+      return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, name);
+    }
   }
 }
