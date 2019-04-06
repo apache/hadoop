@@ -195,7 +195,7 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
   }
 
   @Test
-  public void testGetKeysForContainer() throws Exception {
+  public void testGetKeysForContainer() {
 
     Response response = containerKeyService.getKeysForContainer(1L);
 
@@ -229,12 +229,12 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
   }
 
   @Test
-  public void testGetContainers() throws Exception {
+  public void testGetContainers() {
 
     Response response = containerKeyService.getContainers();
 
-    List<ContainerMetadata> containers = new ArrayList<>
-        ((Collection<ContainerMetadata>) response.getEntity());
+    List<ContainerMetadata> containers = new ArrayList<> (
+        (Collection<ContainerMetadata>) response.getEntity());
 
     assertTrue(containers.size() == 2);
 

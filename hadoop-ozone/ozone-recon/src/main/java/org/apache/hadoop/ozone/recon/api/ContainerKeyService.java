@@ -75,7 +75,7 @@ public class ContainerKeyService {
   public Response getContainers() {
     Map<Long, ContainerMetadata> containersMap;
     try {
-       containersMap = containerDBServiceProvider.getContainers();
+      containersMap = containerDBServiceProvider.getContainers();
     } catch (IOException ioEx) {
       throw new WebApplicationException(ioEx,
           Response.Status.INTERNAL_SERVER_ERROR);
