@@ -1502,7 +1502,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
               && !appAttempt.submissionContext.getUnmanagedAM()) {
             int numberOfFailure = ((RMAppImpl)appAttempt.rmApp)
                 .getNumFailedAppAttempts();
-            if (numberOfFailure < appAttempt.rmApp.getMaxAppAttempts()) {
+            if (appAttempt.rmApp.getMaxAppAttempts() > 1
+                && numberOfFailure < appAttempt.rmApp.getMaxAppAttempts()) {
               keepContainersAcrossAppAttempts = true;
             }
           }
