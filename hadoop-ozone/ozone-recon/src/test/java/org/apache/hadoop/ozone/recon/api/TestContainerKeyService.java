@@ -233,7 +233,7 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
 
     Response response = containerKeyService.getContainers();
 
-    List<ContainerMetadata> containers = new ArrayList<> (
+    List<ContainerMetadata> containers = new ArrayList<>(
         (Collection<ContainerMetadata>) response.getEntity());
 
     assertTrue(containers.size() == 2);
