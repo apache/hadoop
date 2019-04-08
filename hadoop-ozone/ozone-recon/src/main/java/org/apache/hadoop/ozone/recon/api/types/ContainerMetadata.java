@@ -27,32 +27,22 @@ import javax.xml.bind.annotation.XmlElement;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class ContainerMetadata {
 
-  @XmlElement(name = "ContainerId")
-  private long containerId;
-
-  @XmlElement(name = "UserBytes")
-  private long usedBytes;
+  @XmlElement(name = "ContainerID")
+  private long containerID;
 
   @XmlElement(name = "NumberOfKeys")
   private long numberOfKeys;
 
-  @XmlElement(name = "Owner")
-  private String owner;
-
-  public long getContainerId() {
-    return containerId;
+  public ContainerMetadata(long containerID) {
+    this.containerID = containerID;
   }
 
-  public void setContainerId(long containerId) {
-    this.containerId = containerId;
+  public long getContainerID() {
+    return containerID;
   }
 
-  public long getUsedBytes() {
-    return usedBytes;
-  }
-
-  public void setUsedBytes(long usedBytes) {
-    this.usedBytes = usedBytes;
+  public void setContainerID(long containerID) {
+    this.containerID = containerID;
   }
 
   public long getNumberOfKeys() {
@@ -63,11 +53,4 @@ public class ContainerMetadata {
     this.numberOfKeys = numberOfKeys;
   }
 
-  public String getOwner() {
-    return owner;
-  }
-
-  public void setOwner(String owner) {
-    this.owner = owner;
-  }
 }
