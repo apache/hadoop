@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.service.AbstractService;
@@ -46,8 +47,13 @@ import java.util.ArrayList;
 public class ActivitiesManager extends AbstractService {
   private static final Logger LOG =
       LoggerFactory.getLogger(ActivitiesManager.class);
-  private ConcurrentMap<NodeId, List<NodeAllocation>> recordingNodesAllocation;
-  private ConcurrentMap<NodeId, List<NodeAllocation>> completedNodeAllocations;
+  // An empty node ID, we use this variable as a placeholder
+  // in the activity records when recording multiple nodes assignments.
+  public static final NodeId EMPTY_NODE_ID = NodeId.newInstance("", 0);
+  private ThreadLocal<Map<NodeId, List<NodeAllocation>>>
+      recordingNodesAllocation;
+  @VisibleForTesting
+  ConcurrentMap<NodeId, List<NodeAllocation>> completedNodeAllocations;
   private Set<NodeId> activeRecordedNodes;
   private ConcurrentMap<ApplicationId, Long>
       recordingAppActivitiesUntilSpecifiedTime;
@@ -63,7 +69,7 @@ public class ActivitiesManager extends AbstractService {
 
   public ActivitiesManager(RMContext rmContext) {
     super(ActivitiesManager.class.getName());
-    recordingNodesAllocation = new ConcurrentHashMap<>();
+    recordingNodesAllocation = ThreadLocal.withInitial(() -> new HashMap());
     completedNodeAllocations = new ConcurrentHashMap<>();
     appsAllocation = new ConcurrentHashMap<>();
     completedAppAllocations = new ConcurrentHashMap<>();
@@ -173,9 +179,11 @@ public class ActivitiesManager extends AbstractService {
     if (recordNextAvailableNode) {
       recordNextNodeUpdateActivities(nodeID.toString());
     }
-    if (activeRecordedNodes.contains(nodeID)) {
+    // Removing from activeRecordedNodes immediately is to ensure that
+    // activities will be recorded just once in multiple threads.
+    if (activeRecordedNodes.remove(nodeID)) {
       List<NodeAllocation> nodeAllocation = new ArrayList<>();
-      recordingNodesAllocation.put(nodeID, nodeAllocation);
+      recordingNodesAllocation.get().put(nodeID, nodeAllocation);
     }
   }
 
@@ -199,12 +207,11 @@ public class ActivitiesManager extends AbstractService {
   }
 
   // Add queue, application or container activity into specific node allocation.
-  void addSchedulingActivityForNode(SchedulerNode node, String parentName,
+  void addSchedulingActivityForNode(NodeId nodeId, String parentName,
       String childName, String priority, ActivityState state, String diagnostic,
       String type) {
-    if (shouldRecordThisNode(node.getNodeID())) {
-      NodeAllocation nodeAllocation = getCurrentNodeAllocation(
-          node.getNodeID());
+    if (shouldRecordThisNode(nodeId)) {
+      NodeAllocation nodeAllocation = getCurrentNodeAllocation(nodeId);
       nodeAllocation.addAllocationActivity(parentName, childName, priority,
           state, diagnostic, type);
     }
@@ -262,7 +269,7 @@ public class ActivitiesManager extends AbstractService {
   }
 
   void finishNodeUpdateRecording(NodeId nodeID) {
-    List<NodeAllocation> value = recordingNodesAllocation.get(nodeID);
+    List<NodeAllocation> value = recordingNodesAllocation.get().get(nodeID);
     long timeStamp = SystemClock.getInstance().getTime();
 
     if (value != null) {
@@ -278,9 +285,8 @@ public class ActivitiesManager extends AbstractService {
       }
 
       if (shouldRecordThisNode(nodeID)) {
-        recordingNodesAllocation.remove(nodeID);
+        recordingNodesAllocation.get().remove(nodeID);
         completedNodeAllocations.put(nodeID, value);
-        stopRecordNodeUpdateActivities(nodeID);
       }
     }
   }
@@ -291,12 +297,15 @@ public class ActivitiesManager extends AbstractService {
   }
 
   boolean shouldRecordThisNode(NodeId nodeID) {
-    return activeRecordedNodes.contains(nodeID) && recordingNodesAllocation
+    return isRecordingMultiNodes() || recordingNodesAllocation.get()
         .containsKey(nodeID);
   }
 
   private NodeAllocation getCurrentNodeAllocation(NodeId nodeID) {
-    List<NodeAllocation> nodeAllocations = recordingNodesAllocation.get(nodeID);
+    NodeId recordingKey =
+        isRecordingMultiNodes() ? EMPTY_NODE_ID : nodeID;
+    List<NodeAllocation> nodeAllocations =
+        recordingNodesAllocation.get().get(recordingKey);
     NodeAllocation nodeAllocation;
     // When this node has already stored allocation activities, get the
     // last allocation for this node.
@@ -323,11 +332,29 @@ public class ActivitiesManager extends AbstractService {
     return nodeAllocation;
   }
 
-  private void stopRecordNodeUpdateActivities(NodeId nodeId) {
-    activeRecordedNodes.remove(nodeId);
-  }
-
   private void turnOffActivityMonitoringForApp(ApplicationId applicationId) {
     recordingAppActivitiesUntilSpecifiedTime.remove(applicationId);
+  }
+
+  public boolean isRecordingMultiNodes() {
+    return recordingNodesAllocation.get().containsKey(EMPTY_NODE_ID);
+  }
+
+  /**
+   * Get recording node id:
+   * 1. node id of the input node if it is not null.
+   * 2. EMPTY_NODE_ID if input node is null and activities manager is
+   *    recording multi-nodes.
+   * 3. null otherwise.
+   * @param node - input node
+   * @return recording nodeId
+   */
+  public NodeId getRecordingNodeId(SchedulerNode node) {
+    if (node != null) {
+      return node.getNodeID();
+    } else if (isRecordingMultiNodes()) {
+      return ActivitiesManager.EMPTY_NODE_ID;
+    }
+    return null;
   }
 }

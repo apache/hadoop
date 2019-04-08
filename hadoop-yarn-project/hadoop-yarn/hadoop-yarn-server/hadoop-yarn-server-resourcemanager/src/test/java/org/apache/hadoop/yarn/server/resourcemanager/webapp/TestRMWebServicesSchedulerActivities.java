@@ -95,16 +95,12 @@ public class TestRMWebServicesSchedulerActivities
           response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
-      verifyNumberOfAllocations(json, 11);
-
-      JSONArray allocations = json.getJSONArray("allocations");
-      for (int i = 0; i < allocations.length(); i++) {
-        if (i != allocations.length() - 1) {
-          verifyStateOfAllocations(allocations.getJSONObject(i),
-              "finalAllocationState", "ALLOCATED");
-          verifyQueueOrder(allocations.getJSONObject(i), "root-a-b-b2-b3-b1");
-        }
-      }
+      // Collection logic of scheduler activities changed after YARN-9313,
+      // only one allocation should be recorded for all scenarios.
+      verifyNumberOfAllocations(json, 1);
+      verifyStateOfAllocations(json.getJSONObject("allocations"),
+          "finalAllocationState", "ALLOCATED");
+      verifyQueueOrder(json.getJSONObject("allocations"), "root-a-b-b2-b3-b1");
     }
     finally {
       rm.stop();
