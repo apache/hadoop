@@ -46,8 +46,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions
-        .SchedulerInvalidResoureRequestException;
+import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
@@ -873,7 +872,7 @@ public class FairScheduler extends
     // scheduler would clear them right away and AM
     // would not get this information.
     if (!invalidAsks.isEmpty()) {
-      throw new SchedulerInvalidResoureRequestException(String.format(
+      throw new SchedulerInvalidResourceRequestException(String.format(
               "Resource request is invalid for application %s because queue %s "
                       + "has 0 amount of resource for a resource type! "
                       + "Validation result: %s",
