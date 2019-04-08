@@ -78,11 +78,9 @@ public class S3AFileStatus extends FileStatus {
       long access_time,
       FsPermission permission) {
     super(0, true, 1, 0, modification_time,
-        access_time, permission, owner, group, null,
+        access_time, permission, owner, groupOrOwner(group, owner), null,
         path, false, true, false);
     isEmptyDirectory = isemptydir;
-    setOwner(owner);
-    setGroup(group);
   }
 
   /**
@@ -98,13 +96,11 @@ public class S3AFileStatus extends FileStatus {
   public S3AFileStatus(long length, long modification_time, Path path,
       long blockSize, String owner, String eTag, String versionId) {
     super(length, false, 1, blockSize, modification_time,
-        0, null, null, null, null,
+        0, null, owner, owner, null,
         path, false, true, false);
     isEmptyDirectory = Tristate.FALSE;
     this.eTag = eTag;
     this.versionId = versionId;
-    setOwner(owner);
-    setGroup(owner);
   }
 
   /**
@@ -155,6 +151,12 @@ public class S3AFileStatus extends FileStatus {
     }
   }
 
+  private static String groupOrOwner(String group, String owner) {
+    if (group != null && !group.isEmpty()) {
+      return group;
+    }
+    return owner;
+  }
 
   /**
    * @return FALSE if status is not a directory, or its a dir, but known to
