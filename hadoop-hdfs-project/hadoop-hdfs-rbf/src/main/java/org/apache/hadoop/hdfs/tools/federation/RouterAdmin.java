@@ -26,12 +26,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -92,6 +92,9 @@ public class RouterAdmin extends Configured implements Tool {
   private static final Logger LOG = LoggerFactory.getLogger(RouterAdmin.class);
 
   private RouterClient client;
+
+  /** Pre-compiled regular expressions to detect duplicated slashes. */
+  private static final Pattern SLASHES = Pattern.compile("/+");
 
   public static void main(String[] argv) throws Exception {
     Configuration conf = new HdfsConfiguration();
@@ -1062,12 +1065,15 @@ public class RouterAdmin extends Configured implements Tool {
   /**
    * Normalize a path for that filesystem.
    *
-   * @param path Path to normalize.
+   * @param str Path to normalize. The path doesn't have scheme or authority.
    * @return Normalized path.
    */
-  private static String normalizeFileSystemPath(final String path) {
-    Path normalizedPath = new Path(path);
-    return normalizedPath.toString();
+  public static String normalizeFileSystemPath(final String str) {
+    String path = SLASHES.matcher(str).replaceAll("/");
+    if (path.length() > 1 && path.endsWith("/")) {
+      path = path.substring(0, path.length()-1);
+    }
+    return path;
   }
 
   /**

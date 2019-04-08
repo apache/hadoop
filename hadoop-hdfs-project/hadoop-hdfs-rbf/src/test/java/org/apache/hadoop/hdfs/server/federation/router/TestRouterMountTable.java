@@ -442,4 +442,36 @@ public class TestRouterMountTable {
         "Directory/File does not exist /mount/file",
         () -> routerFs.setOwner(new Path("/mount/file"), "user", "group"));
   }
+
+  /**
+   * Regression test for HDFS-14369.
+   * Verify that getListing works with the path with trailing slash.
+   */
+  @Test
+  public void testGetListingWithTrailingSlash() throws IOException {
+    try {
+      // Add mount table entry
+      MountTable addEntry = MountTable.newInstance("/testlist",
+          Collections.singletonMap("ns0", "/testlist"));
+      assertTrue(addMountTable(addEntry));
+      addEntry = MountTable.newInstance("/testlist/tmp0",
+          Collections.singletonMap("ns0", "/testlist/tmp0"));
+      assertTrue(addMountTable(addEntry));
+      addEntry = MountTable.newInstance("/testlist/tmp1",
+          Collections.singletonMap("ns1", "/testlist/tmp1"));
+      assertTrue(addMountTable(addEntry));
+
+      nnFs0.mkdirs(new Path("/testlist/tmp0"));
+      nnFs1.mkdirs(new Path("/testlist/tmp1"));
+      // Fetch listing
+      DirectoryListing list = routerProtocol.getListing(
+          "/testlist/", HdfsFileStatus.EMPTY_NAME, false);
+      HdfsFileStatus[] statuses = list.getPartialListing();
+      // should return tmp0 and tmp1
+      assertEquals(2, statuses.length);
+    } finally {
+      nnFs0.delete(new Path("/testlist/tmp0"), true);
+      nnFs1.delete(new Path("/testlist/tmp1"), true);
+    }
+  }
 }
