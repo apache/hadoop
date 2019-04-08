@@ -120,7 +120,7 @@ public class S3AFileStatus extends FileStatus {
       Path path, long blockSize, String owner, String group,
       FsPermission permission, String eTag, String versionId) {
     super(length, false, 1, blockSize, modification_time,
-        access_time, permission, owner, group, null,
+        access_time, permission, owner, groupOrOwner(group, owner), null,
         path, false, true, false);
     isEmptyDirectory = Tristate.FALSE;
     this.eTag = eTag;
