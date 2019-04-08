@@ -185,6 +185,23 @@ public class TestMountTableResolver {
   }
 
   @Test
+  public void testDestinationOfConsecutiveSlash() throws IOException {
+    // Check files
+    assertEquals("1->/tesfile1.txt",
+        mountTable.getDestinationForPath("//tesfile1.txt///").toString());
+
+    assertEquals("3->/user/testfile2.txt",
+        mountTable.getDestinationForPath("/user///testfile2.txt").toString());
+
+    assertEquals("2->/user/test/testfile3.txt",
+        mountTable.getDestinationForPath("///user/a/testfile3.txt").toString());
+
+    assertEquals("3->/user/b/testfile4.txt",
+        mountTable.getDestinationForPath("/user/b/testfile4.txt//").toString());
+  }
+
+
+  @Test
   public void testDefaultNameServiceEnable() throws IOException {
     assertTrue(mountTable.isDefaultNSEnable());
     mountTable.setDefaultNameService("3");
@@ -232,60 +249,118 @@ public class TestMountTableResolver {
     // Check get the mount table entry for a path
     MountTable mtEntry;
     mtEntry = mountTable.getMountPoint("/");
-    assertTrue(mtEntry.getSourcePath().equals("/"));
+    assertEquals("/", mtEntry.getSourcePath());
 
     mtEntry = mountTable.getMountPoint("/user");
-    assertTrue(mtEntry.getSourcePath().equals("/user"));
+    assertEquals("/user", mtEntry.getSourcePath());
 
     mtEntry = mountTable.getMountPoint("/user/a");
-    assertTrue(mtEntry.getSourcePath().equals("/user/a"));
+    assertEquals("/user/a", mtEntry.getSourcePath());
 
     mtEntry = mountTable.getMountPoint("/user/a/");
-    assertTrue(mtEntry.getSourcePath().equals("/user/a"));
+    assertEquals("/user/a", mtEntry.getSourcePath());
 
     mtEntry = mountTable.getMountPoint("/user/a/11");
-    assertTrue(mtEntry.getSourcePath().equals("/user/a"));
+    assertEquals("/user/a", mtEntry.getSourcePath());
 
     mtEntry = mountTable.getMountPoint("/user/a1");
-    assertTrue(mtEntry.getSourcePath().equals("/user"));
+    assertEquals("/user", mtEntry.getSourcePath());
+  }
+
+  @Test
+  public void testGetMountPointOfConsecutiveSlashes() throws IOException {
+    // Check get the mount table entry for a path
+    MountTable mtEntry;
+    mtEntry = mountTable.getMountPoint("///");
+    assertEquals("/", mtEntry.getSourcePath());
+
+    mtEntry = mountTable.getMountPoint("///user//");
+    assertEquals("/user", mtEntry.getSourcePath());
+
+    mtEntry = mountTable.getMountPoint("/user///a");
+    assertEquals("/user/a", mtEntry.getSourcePath());
+
+    mtEntry = mountTable.getMountPoint("/user/a////");
+    assertEquals("/user/a", mtEntry.getSourcePath());
+
+    mtEntry = mountTable.getMountPoint("///user/a/11//");
+    assertEquals("/user/a", mtEntry.getSourcePath());
+
+    mtEntry = mountTable.getMountPoint("/user///a1///");
+    assertEquals("/user", mtEntry.getSourcePath());
+  }
+
+  @Test
+  public void testTrailingSlashInInputPath() throws IOException {
+    // Check mount points beneath the path with trailing slash.
+    getMountPoints(true);
   }
 
   @Test
   public void testGetMountPoints() throws IOException {
+    // Check mount points beneath the path without trailing slash.
+    getMountPoints(false);
+  }
 
+  private void getMountPoints(boolean trailingSlash) throws IOException {
     // Check getting all mount points (virtual and real) beneath a path
     List<String> mounts = mountTable.getMountPoints("/");
     assertEquals(5, mounts.size());
     compareLists(mounts, new String[] {"tmp", "user", "usr",
         "readonly", "multi"});
 
-    mounts = mountTable.getMountPoints("/user");
+    String path = trailingSlash ? "/user/" : "/user";
+    mounts = mountTable.getMountPoints(path);
     assertEquals(2, mounts.size());
     compareLists(mounts, new String[] {"a", "b"});
 
-    mounts = mountTable.getMountPoints("/user/a");
+    path = trailingSlash ? "/user/a/" : "/user/a";
+    mounts = mountTable.getMountPoints(path);
     assertEquals(1, mounts.size());
     compareLists(mounts, new String[] {"demo"});
 
-    mounts = mountTable.getMountPoints("/user/a/demo");
+    path = trailingSlash ? "/user/a/demo/" : "/user/a/demo";
+    mounts = mountTable.getMountPoints(path);
     assertEquals(1, mounts.size());
     compareLists(mounts, new String[] {"test"});
 
-    mounts = mountTable.getMountPoints("/user/a/demo/test");
+    path = trailingSlash ? "/user/a/demo/test/" : "/user/a/demo/test";
+    mounts = mountTable.getMountPoints(path);
     assertEquals(2, mounts.size());
     compareLists(mounts, new String[] {"a", "b"});
 
-    mounts = mountTable.getMountPoints("/tmp");
+    path = trailingSlash ? "/tmp/" : "/tmp";
+    mounts = mountTable.getMountPoints(path);
     assertEquals(0, mounts.size());
 
-    mounts = mountTable.getMountPoints("/t");
+    path = trailingSlash ? "/t/" : "/t";
+    mounts = mountTable.getMountPoints(path);
     assertNull(mounts);
 
-    mounts = mountTable.getMountPoints("/unknownpath");
+    path = trailingSlash ? "/unknownpath/" : "/unknownpath";
+    mounts = mountTable.getMountPoints(path);
     assertNull(mounts);
 
-    mounts = mountTable.getMountPoints("/multi");
+    path = trailingSlash ? "/multi/" : "/multi";
+    mounts = mountTable.getMountPoints(path);
     assertEquals(0, mounts.size());
+  }
+
+  @Test
+  public void testSuccessiveSlashesInInputPath() throws IOException {
+    // Check getting all mount points (virtual and real) beneath a path
+    List<String> mounts = mountTable.getMountPoints("///");
+    assertEquals(5, mounts.size());
+    compareLists(mounts, new String[] {"tmp", "user", "usr",
+        "readonly", "multi"});
+    String path = "///user//";
+    mounts = mountTable.getMountPoints(path);
+    assertEquals(2, mounts.size());
+    compareLists(mounts, new String[] {"a", "b"});
+    path = "/user///a";
+    mounts = mountTable.getMountPoints(path);
+    assertEquals(1, mounts.size());
+    compareLists(mounts, new String[] {"demo"});
   }
 
   private void compareRecords(List<MountTable> list1, String[] list2) {
@@ -332,6 +407,26 @@ public class TestMountTableResolver {
     records = mountTable.getMounts("/multi");
     assertEquals(1, records.size());
     compareRecords(records, new String[] {"/multi"});
+  }
+
+  @Test
+  public void testGetMountsOfConsecutiveSlashes() throws IOException {
+    // Check listing the mount table records at or beneath a path
+    List<MountTable> records = mountTable.getMounts("///");
+    assertEquals(10, records.size());
+    compareRecords(records, new String[] {"/", "/tmp", "/user", "/usr/bin",
+        "user/a", "/user/a/demo/a", "/user/a/demo/b", "/user/b/file1.txt",
+        "readonly", "multi"});
+
+    records = mountTable.getMounts("/user///");
+    assertEquals(5, records.size());
+    compareRecords(records, new String[] {"/user", "/user/a/demo/a",
+        "/user/a/demo/b", "user/a", "/user/b/file1.txt"});
+
+    records = mountTable.getMounts("///user///a");
+    assertEquals(3, records.size());
+    compareRecords(records,
+        new String[] {"/user/a/demo/a", "/user/a/demo/b", "/user/a"});
   }
 
   @Test
