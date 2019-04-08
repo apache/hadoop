@@ -23,6 +23,7 @@ import static org.apache.hadoop.ozone.recon.ReconConstants.CONTAINER_KEY_TABLE;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.inject.Inject;
@@ -32,6 +33,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
+import org.apache.hadoop.ozone.recon.api.types.ContainerMetadata;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
 import org.apache.hadoop.utils.db.DBStore;
 import org.apache.hadoop.utils.db.Table;
@@ -144,7 +146,7 @@ public class ContainerDBServiceProviderImpl
     while (containerIterator.hasNext()) {
       KeyValue<ContainerKeyPrefix, Integer> keyValue = containerIterator.next();
       ContainerKeyPrefix containerKeyPrefix = keyValue.getKey();
-      //The prefix seek only guarantees that the iterator's head will be
+      // The prefix seek only guarantees that the iterator's head will be
       // positioned at the first prefix match. We still have to check the key
       // prefix.
       if (containerKeyPrefix.getContainerId() == containerId) {
@@ -163,4 +165,30 @@ public class ContainerDBServiceProviderImpl
     return prefixes;
   }
 
+  /**
+   * Iterate the DB to construct a Map of containerID -> containerMetadata.
+   *
+   * @return Map of containerID -> containerMetadata.
+   * @throws IOException
+   */
+  @Override
+  public Map<Long, ContainerMetadata> getContainers() throws IOException {
+    Map<Long, ContainerMetadata> containers = new LinkedHashMap<>();
+    TableIterator<ContainerKeyPrefix, ? extends KeyValue<ContainerKeyPrefix,
+        Integer>> containerIterator = containerKeyTable.iterator();
+    while (containerIterator.hasNext()) {
+      KeyValue<ContainerKeyPrefix, Integer> keyValue = containerIterator.next();
+      Long containerID = keyValue.getKey().getContainerId();
+      Integer numberOfKeys = keyValue.getValue();
+
+      // initialize containerMetadata with 0 as number of keys.
+      containers.computeIfAbsent(containerID, ContainerMetadata::new);
+      // increment number of keys for the containerID
+      ContainerMetadata containerMetadata = containers.get(containerID);
+      containerMetadata.setNumberOfKeys(containerMetadata.getNumberOfKeys() +
+          numberOfKeys);
+      containers.put(containerID, containerMetadata);
+    }
+    return containers;
+  }
 }
