@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ReadChunkResponseProto;
+import org.apache.hadoop.hdds.scm.ByteStringHelper;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.io.IOUtils;
@@ -33,7 +34,6 @@ import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.keyvalue.impl.ChunkManagerImpl;
-import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hadoop.ozone.container.common.volume.VolumeIOStats;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
@@ -315,7 +315,8 @@ public final class ChunkUtils {
     ReadChunkResponseProto.Builder response =
         ReadChunkResponseProto.newBuilder();
     response.setChunkData(info.getProtoBufMessage());
-    response.setData(ByteString.copyFrom(data));
+    response.setData(
+        ByteStringHelper.getByteString(data));
     response.setBlockID(msg.getReadChunk().getBlockID());
 
     ContainerCommandResponseProto.Builder builder =

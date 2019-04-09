@@ -23,18 +23,15 @@ import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
  * Tests Freon, with MiniOzoneCluster and validate data.
  */
-public class TestDataValidate {
+public abstract class TestDataValidate {
 
-  private static MiniOzoneCluster cluster;
-  private static OzoneConfiguration conf;
+  private static MiniOzoneCluster cluster = null;
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -42,9 +39,7 @@ public class TestDataValidate {
    * Ozone is made active by setting OZONE_ENABLED = true
    *
    */
-  @BeforeClass
-  public static void init() throws Exception {
-    conf = new OzoneConfiguration();
+  static void startCluster(OzoneConfiguration conf) throws Exception {
     conf.set(OzoneConfigKeys.OZONE_CLIENT_WATCH_REQUEST_TIMEOUT, "5000ms");
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(5).build();
@@ -54,8 +49,7 @@ public class TestDataValidate {
   /**
    * Shutdown MiniDFSCluster.
    */
-  @AfterClass
-  public static void shutdown() {
+  static void shutdownCluster() {
     if (cluster != null) {
       cluster.shutdown();
     }
