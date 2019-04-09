@@ -32,7 +32,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.Collections;
 import java.util.Map;
@@ -138,7 +137,7 @@ public class ContainerStateMap {
       ownerMap.insert(info.getOwner(), id);
       factorMap.insert(info.getReplicationFactor(), id);
       typeMap.insert(info.getReplicationType(), id);
-      replicaMap.put(id, new HashSet<>());
+      replicaMap.put(id, ConcurrentHashMap.newKeySet());
 
       // Flush the cache of this container type, will be added later when
       // get container queries are executed.
