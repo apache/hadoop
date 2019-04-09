@@ -107,9 +107,9 @@ public final class ContainerCache extends LRUMap {
    */
   @Override
   protected boolean removeLRU(LinkEntry entry) {
-    lock.lock();
     MetadataStore db = (MetadataStore) entry.getValue();
     String dbFile = (String)entry.getKey();
+    lock.lock();
     try {
       closeDB(dbFile, db);
       return true;
