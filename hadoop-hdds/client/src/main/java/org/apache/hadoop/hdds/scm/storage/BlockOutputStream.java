@@ -21,6 +21,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.scm.ByteStringHelper;
 import org.apache.hadoop.hdds.scm.XceiverClientReply;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
@@ -585,7 +586,7 @@ public class BlockOutputStream extends OutputStream {
       } finally {
         cleanup(false);
       }
-      // TODO: Turn the below buffer empty check on whne Standalone pipeline
+      // TODO: Turn the below buffer empty check on when Standalone pipeline
       // is removed in the write path in tests
       // Preconditions.checkArgument(buffer.position() == 0);
       // bufferPool.checkBufferPoolEmpty();
@@ -676,9 +677,9 @@ public class BlockOutputStream extends OutputStream {
    */
   private void writeChunkToContainer(ByteBuffer chunk) throws IOException {
     int effectiveChunkSize = chunk.remaining();
-    ByteString data = ByteString.copyFrom(chunk);
+    ByteString data = ByteStringHelper.getByteString(chunk);
     Checksum checksum = new Checksum(checksumType, bytesPerChecksum);
-    ChecksumData checksumData = checksum.computeChecksum(data);
+    ChecksumData checksumData = checksum.computeChecksum(chunk);
     ChunkInfo chunkInfo = ChunkInfo.newBuilder()
         .setChunkName(DigestUtils.md5Hex(key) + "_stream_" + streamId +
             "_chunk_" + ++chunkIndex)

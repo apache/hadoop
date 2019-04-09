@@ -94,6 +94,11 @@ public final class OzoneConfigKeys {
   public static final String OZONE_METADATA_STORE_ROCKSDB_STATISTICS_OFF =
       "OFF";
 
+  public static final String OZONE_UNSAFEBYTEOPERATIONS_ENABLED =
+      "ozone.UnsafeByteOperations.enabled";
+  public static final boolean OZONE_UNSAFEBYTEOPERATIONS_ENABLED_DEFAULT
+      = true;
+
   public static final String OZONE_CONTAINER_CACHE_SIZE =
       "ozone.container.cache.size";
   public static final int OZONE_CONTAINER_CACHE_DEFAULT = 1024;

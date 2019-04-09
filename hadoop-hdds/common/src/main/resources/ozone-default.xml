@@ -387,6 +387,14 @@
     </description>
   </property>
   <property>
+    <name>ozone.UnsafeByteOperations.enabled</name>
+    <value>true</value>
+    <tag>OZONE, PERFORMANCE, CLIENT</tag>
+    <description>It specifies whether to use unsafe or safe buffer to byteString
+      copy.
+    </description>
+  </property>
+  <property>
     <name>ozone.client.connection.timeout</name>
     <value>5000ms</value>
     <tag>OZONE, PERFORMANCE, CLIENT</tag>
