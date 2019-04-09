@@ -346,7 +346,6 @@ public class OzoneManagerHARequestHandlerImpl
 
     SetBucketPropertyRequest newSetBucketPropertyRequest =
         SetBucketPropertyRequest.newBuilder()
-            .setBucketArgs(setBucketPropertyRequest.getBucketArgs())
             .setBucketInfo(omBucketInfo.getProtobuf()).build();
 
     return omRequest.toBuilder().setSetBucketPropertyRequest(
