@@ -159,11 +159,12 @@ public interface MiniOzoneCluster {
   /**
    * Restarts StorageContainerManager instance.
    *
+   * @param waitForDatanode
    * @throws IOException
    * @throws TimeoutException
    * @throws InterruptedException
    */
-  void restartStorageContainerManager() throws InterruptedException,
+  void restartStorageContainerManager(boolean waitForDatanode) throws InterruptedException,
       TimeoutException, IOException, AuthenticationException;
 
   /**

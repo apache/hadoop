@@ -27,6 +27,8 @@ import org.apache.hadoop.hdds.scm.chillmode.ChillModeHandler;
 import org.apache.hadoop.hdds.scm.container.ReplicationManager;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
@@ -50,8 +52,10 @@ public class TestSCMClientProtocolServer {
     BlockManager blockManager = Mockito.mock(BlockManagerImpl.class);
     ReplicationManager replicationManager =
         Mockito.mock(ReplicationManager.class);
+    PipelineManager pipelineManager = Mockito.mock(SCMPipelineManager.class);
     ChillModeHandler chillModeHandler = new ChillModeHandler(config,
-        scmClientProtocolServer, blockManager, replicationManager);
+        scmClientProtocolServer, blockManager, replicationManager,
+        pipelineManager);
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, chillModeHandler);
   }
 
