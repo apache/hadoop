@@ -20,11 +20,13 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdfs.LogVerificationAppender;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.MiniOzoneHAClusterImpl;
 import org.apache.hadoop.ozone.OzoneTestUtils;
+import org.apache.hadoop.ozone.client.BucketArgs;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
@@ -38,6 +40,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.VolumeArgs;
+import org.apache.hadoop.util.Time;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Assert;
@@ -125,23 +128,32 @@ public class TestOzoneManagerHA {
     }
   }
 
-  @Test
-  public void testAllVolumeOperations() throws Exception {
+
+  private OzoneVolume createAndCheckVolume(String volumeName)
+      throws Exception {
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
-    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
-
     VolumeArgs createVolumeArgs = VolumeArgs.newBuilder()
         .setOwner(userName)
         .setAdmin(adminName)
         .build();
 
     objectStore.createVolume(volumeName, createVolumeArgs);
-    OzoneVolume retVolumeinfo = objectStore.getVolume(volumeName);
 
-    Assert.assertTrue(retVolumeinfo.getName().equals(volumeName));
-    Assert.assertTrue(retVolumeinfo.getOwner().equals(userName));
-    Assert.assertTrue(retVolumeinfo.getAdmin().equals(adminName));
+    OzoneVolume retVolume = objectStore.getVolume(volumeName);
+
+    Assert.assertTrue(retVolume.getName().equals(volumeName));
+    Assert.assertTrue(retVolume.getOwner().equals(userName));
+    Assert.assertTrue(retVolume.getAdmin().equals(adminName));
+
+    return retVolume;
+  }
+  @Test
+  public void testAllVolumeOperations() throws Exception {
+
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+
+    createAndCheckVolume(volumeName);
 
     objectStore.deleteVolume(volumeName);
 
@@ -150,6 +162,47 @@ public class TestOzoneManagerHA {
 
     OzoneTestUtils.expectOmException(OMException.ResultCodes.VOLUME_NOT_FOUND,
         () -> objectStore.deleteVolume(volumeName));
+  }
+
+
+  @Test
+  public void testAllBucketOperations() throws Exception {
+
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    String bucketName = "volume" + RandomStringUtils.randomNumeric(5);
+
+    OzoneVolume retVolume = createAndCheckVolume(volumeName);
+
+    BucketArgs bucketArgs =
+        BucketArgs.newBuilder().setStorageType(StorageType.DISK)
+            .setVersioning(true).build();
+
+
+    retVolume.createBucket(bucketName, bucketArgs);
+
+
+    OzoneBucket ozoneBucket = retVolume.getBucket(bucketName);
+
+    Assert.assertEquals(volumeName, ozoneBucket.getVolumeName());
+    Assert.assertEquals(bucketName, ozoneBucket.getName());
+    Assert.assertTrue(ozoneBucket.getVersioning());
+    Assert.assertEquals(StorageType.DISK, ozoneBucket.getStorageType());
+    Assert.assertTrue(ozoneBucket.getCreationTime() <= Time.now());
+
+
+    // Change versioning to false
+    ozoneBucket.setVersioning(false);
+
+    ozoneBucket = retVolume.getBucket(bucketName);
+    Assert.assertFalse(ozoneBucket.getVersioning());
+
+    retVolume.deleteBucket(bucketName);
+
+    OzoneTestUtils.expectOmException(OMException.ResultCodes.BUCKET_NOT_FOUND,
+        () -> retVolume.deleteBucket(bucketName));
+
+
+
   }
 
   /**
