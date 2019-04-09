@@ -19,15 +19,25 @@ package org.apache.hadoop.ozone.protocolPB;
 
 import java.io.IOException;
 
+import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmDeleteVolumeResponse;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeOwnerChangeResponse;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .CreateBucketRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .CreateBucketResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .CreateVolumeRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .CreateVolumeResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .DeleteBucketRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .DeleteBucketResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .DeleteVolumeRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -36,6 +46,10 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .SetBucketPropertyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .SetBucketPropertyResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .SetVolumePropertyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -76,6 +90,15 @@ public class OzoneManagerHARequestHandlerImpl
     case DeleteVolume:
       newOmRequest = handleDeleteVolumeStart(omRequest);
       break;
+    case CreateBucket:
+      newOmRequest = handleCreateBucketStart(omRequest);
+      break;
+    case SetBucketProperty:
+      newOmRequest = handleSetBucketPropertyStart(omRequest);
+      break;
+    case DeleteBucket:
+      newOmRequest = handleDeleteBucketRequestStart(omRequest);
+      break;
     default:
       throw new IOException("Unrecognized Command Type:" + cmdType);
     }
@@ -103,6 +126,18 @@ public class OzoneManagerHARequestHandlerImpl
       case DeleteVolume:
         responseBuilder.setDeleteVolumeResponse(
             handleDeleteVolumeApply(omRequest));
+        break;
+      case CreateBucket:
+        responseBuilder.setCreateBucketResponse(
+            handleCreateBucketApply(omRequest));
+        break;
+      case SetBucketProperty:
+        responseBuilder.setSetBucketPropertyResponse(
+            handleSetBucketPropertyApply(omRequest));
+        break;
+      case DeleteBucket:
+        responseBuilder.setDeleteBucketResponse(
+            handleDeleteBucketApply(omRequest));
         break;
       default:
         // As all request types are not changed so we need to call handle
@@ -243,5 +278,91 @@ public class OzoneManagerHARequestHandlerImpl
 
     return DeleteVolumeResponse.newBuilder().build();
   }
+
+  private OMRequest handleCreateBucketStart(OMRequest omRequest)
+      throws IOException {
+
+    CreateBucketRequest createBucketRequest =
+        omRequest.getCreateBucketRequest();
+
+    OmBucketInfo omBucketInfo =
+        getOzoneManagerServerProtocol().startCreateBucket(
+        OmBucketInfo.getFromProtobuf(createBucketRequest.getBucketInfo()));
+
+    CreateBucketRequest newCreateBucketRequest =
+        CreateBucketRequest.newBuilder().setBucketInfo(
+            omBucketInfo.getProtobuf()).build();
+    return omRequest.toBuilder().setCreateBucketRequest(newCreateBucketRequest)
+        .build();
+
+  }
+
+
+  private CreateBucketResponse handleCreateBucketApply(OMRequest omRequest)
+      throws IOException {
+    CreateBucketRequest createBucketRequest =
+        omRequest.getCreateBucketRequest();
+
+    getOzoneManagerServerProtocol().applyCreateBucket(
+        OmBucketInfo.getFromProtobuf(createBucketRequest.getBucketInfo()));
+
+    return CreateBucketResponse.newBuilder().build();
+  }
+
+
+  private OMRequest handleDeleteBucketRequestStart(OMRequest omRequest)
+      throws IOException {
+
+    DeleteBucketRequest deleteBucketRequest =
+        omRequest.getDeleteBucketRequest();
+    getOzoneManagerServerProtocol().startDeleteBucket(
+        deleteBucketRequest.getVolumeName(),
+        deleteBucketRequest.getBucketName());
+
+    return omRequest;
+  }
+
+  private DeleteBucketResponse handleDeleteBucketApply(OMRequest omRequest)
+      throws IOException {
+
+    DeleteBucketRequest deleteBucketRequest =
+        omRequest.getDeleteBucketRequest();
+
+    getOzoneManagerServerProtocol().applyDeleteBucket(
+        deleteBucketRequest.getVolumeName(),
+        deleteBucketRequest.getBucketName());
+
+    return DeleteBucketResponse.newBuilder().build();
+  }
+
+  private OMRequest handleSetBucketPropertyStart(
+      OMRequest omRequest) throws IOException {
+    SetBucketPropertyRequest setBucketPropertyRequest =
+        omRequest.getSetBucketPropertyRequest();
+
+    OmBucketInfo omBucketInfo =
+        getOzoneManagerServerProtocol().startSetBucketProperty(
+        OmBucketArgs.getFromProtobuf(setBucketPropertyRequest.getBucketArgs()));
+
+    SetBucketPropertyRequest newSetBucketPropertyRequest =
+        SetBucketPropertyRequest.newBuilder()
+            .setBucketInfo(omBucketInfo.getProtobuf()).build();
+
+    return omRequest.toBuilder().setSetBucketPropertyRequest(
+        newSetBucketPropertyRequest).build();
+  }
+
+  private SetBucketPropertyResponse handleSetBucketPropertyApply(
+      OMRequest omRequest) throws IOException {
+    SetBucketPropertyRequest setBucketPropertyRequest =
+        omRequest.getSetBucketPropertyRequest();
+
+    getOzoneManagerServerProtocol().applySetBucketProperty(
+        OmBucketInfo.getFromProtobuf(setBucketPropertyRequest.getBucketInfo()));
+
+    return SetBucketPropertyResponse.newBuilder().build();
+  }
+
+
 
 }
