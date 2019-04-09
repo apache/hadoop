@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  * Utility class for Ratis pipelines. Contains methods to create and destroy
@@ -50,6 +51,15 @@ final class RatisPipelineUtils {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(RatisPipelineUtils.class);
+
+  // Set parallelism at 3, as now in Ratis we create 1 and 3 node pipelines.
+  private static int parallelismForPool =
+      (Runtime.getRuntime().availableProcessors() > 3) ? 3 :
+          Runtime.getRuntime().availableProcessors();
+
+  private static ForkJoinPool pool = new ForkJoinPool(parallelismForPool);
+
+
 
   private RatisPipelineUtils() {
   }
@@ -146,18 +156,21 @@ final class RatisPipelineUtils {
         SecurityConfig(ozoneConf));
     final TimeDuration requestTimeout =
         RatisHelper.getClientRequestTimeout(ozoneConf);
-    datanodes.parallelStream().forEach(d -> {
-      final RaftPeer p = RatisHelper.toRaftPeer(d);
-      try (RaftClient client = RatisHelper
-          .newRaftClient(SupportedRpcType.valueOfIgnoreCase(rpcType), p,
-              retryPolicy, maxOutstandingRequests, tlsConfig, requestTimeout)) {
-        rpc.accept(client, p);
-      } catch (IOException ioe) {
-        String errMsg =
-            "Failed invoke Ratis rpc " + rpc + " for " + d.getUuid();
-        LOG.error(errMsg, ioe);
-        exceptions.add(new IOException(errMsg, ioe));
-      }
+    pool.submit(() -> {
+      datanodes.parallelStream().forEach(d -> {
+        final RaftPeer p = RatisHelper.toRaftPeer(d);
+        try (RaftClient client = RatisHelper
+            .newRaftClient(SupportedRpcType.valueOfIgnoreCase(rpcType), p,
+                retryPolicy, maxOutstandingRequests, tlsConfig,
+                requestTimeout)) {
+          rpc.accept(client, p);
+        } catch (IOException ioe) {
+          String errMsg =
+              "Failed invoke Ratis rpc " + rpc + " for " + d.getUuid();
+          LOG.error(errMsg, ioe);
+          exceptions.add(new IOException(errMsg, ioe));
+        }
+      });
     });
     if (!exceptions.isEmpty()) {
       throw MultipleIOException.createIOException(exceptions);
