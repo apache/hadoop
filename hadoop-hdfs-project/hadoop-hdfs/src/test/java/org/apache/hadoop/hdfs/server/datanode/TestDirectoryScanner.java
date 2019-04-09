@@ -26,16 +26,13 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -44,6 +41,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -69,6 +67,10 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.Time;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.SimpleLayout;
+import org.apache.log4j.WriterAppender;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -409,6 +411,95 @@ public class TestDirectoryScanner {
       // Ensure that the copy on RAM_DISK was deleted.
       verifyStorageType(blocks.get(0).getBlock().getBlockId(), false);
       scan(1, 0, 0, 0, 0, 0);
+
+    } finally {
+      if (scanner != null) {
+        scanner.shutdown();
+        scanner = null;
+      }
+      cluster.shutdown();
+      cluster = null;
+    }
+  }
+
+  /**
+   * test if added logger appender can receive the log.
+   */
+  private ByteArrayOutputStream testLogAppender(){
+    LOG.info("logger started, Logger class is "+Log.class);
+    if(LOG instanceof Log4JLogger){
+      Logger rootLogger = Logger.getRootLogger();
+      rootLogger.setLevel(Level.INFO);
+      ByteArrayOutputStream loggerStream = new ByteArrayOutputStream();
+      WriterAppender writerAppender =
+              new WriterAppender(new SimpleLayout(), loggerStream);
+      rootLogger.addAppender(writerAppender);
+      String randomLog= UUID.randomUUID().toString();
+      LOG.info(randomLog);
+
+      String logContent= getLogContent(loggerStream);
+
+      assertTrue(logContent.contains(randomLog));
+
+      return loggerStream;
+    } else {
+      LOG.warn("not log4j logger, not doing log action tests");
+      return null;
+    }
+  }
+
+  private String getLogContent(ByteArrayOutputStream loggerStream){
+    return new String(loggerStream.toByteArray());
+  }
+
+  /**
+   * test scan only meta file NOT generate wrong folder structure warn log.
+   */
+  @Test
+  public void testScanDirectoryStructureWarn() throws IOException {
+
+    ByteArrayOutputStream loggerStream = testLogAppender();
+
+    cluster = new MiniDFSCluster
+            .Builder(CONF)
+            .storageTypes(new StorageType[] {
+                StorageType.RAM_DISK, StorageType.DEFAULT })
+            .numDataNodes(1)
+            .build();
+    try {
+      cluster.waitActive();
+      bpid = cluster.getNamesystem().getBlockPoolId();
+      DataNode dataNode = cluster.getDataNodes().get(0);
+      fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
+      client = cluster.getFileSystem().getClient();
+      scanner = new DirectoryScanner(dataNode, fds, CONF);
+      scanner.setRetainDiffs(true);
+      FsDatasetTestUtil.stopLazyWriter(cluster.getDataNodes().get(0));
+
+      // Create a file file on RAM_DISK
+      List<LocatedBlock> blocks =
+              createFile(GenericTestUtils.getMethodName(), BLOCK_LENGTH, true);
+
+      // Ensure no difference between volumeMap and disk.
+      scan(1, 0, 0, 0, 0, 0);
+
+      //delete thre block file , left the meta file alone
+      deleteBlockFile();
+
+      //scan to ensure log warn not printed
+      scan(1, 1, 0, 1, 0, 0, 0);
+
+      //ensure the warn log not appear
+      if(loggerStream!=null) {
+        String logContent = getLogContent(loggerStream);
+        String logWarnContent=" found in invalid directory."
+            + "  Expected directory: ";
+        assertTrue("dirctory check print no meaning warn message"
+                , !logContent.contains(logWarnContent));
+        LOG.info("check pass");
+      } else {
+        LOG.warn("logger stream is null, not support logger?");
+      }
 
     } finally {
       if (scanner != null) {
