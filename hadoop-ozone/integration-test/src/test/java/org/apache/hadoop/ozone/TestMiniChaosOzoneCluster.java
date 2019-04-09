@@ -96,7 +96,7 @@ public class TestMiniChaosOzoneCluster implements Runnable {
   public void run() {
     try {
       init();
-      cluster.startChaos(5, failureInterval, TimeUnit.SECONDS);
+      cluster.startChaos(failureInterval, failureInterval, TimeUnit.SECONDS);
       loadGenerator.startIO(numMinutes, TimeUnit.MINUTES);
     } catch (Exception e) {
     } finally {
@@ -109,8 +109,8 @@ public class TestMiniChaosOzoneCluster implements Runnable {
   }
 
   @Test
-  public void testReadWriteWithChaosCluster() throws Exception {
-    cluster.startChaos(5, 1, TimeUnit.SECONDS);
+  public void testReadWriteWithChaosCluster() {
+    cluster.startChaos(5, 10, TimeUnit.SECONDS);
     loadGenerator.startIO(1, TimeUnit.MINUTES);
   }
 }

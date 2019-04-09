@@ -81,7 +81,8 @@ public class MiniOzoneLoadGenerator {
 
   // Start IO load on an Ozone bucket.
   private void load(long runTimeMillis) {
-    LOG.info("Started IO Thread" + Thread.currentThread().getId());
+    long threadID = Thread.currentThread().getId();
+    LOG.info("Started IO Thread:{}.", threadID);
     String threadName = Thread.currentThread().getName();
     long startTime = Time.monotonicNow();
 
@@ -98,8 +99,11 @@ public class MiniOzoneLoadGenerator {
           new HashMap<>())) {
         stream.write(buffer.array());
       } catch (Exception e) {
-        LOG.error("LOADGEN: Create key:{} failed with exception", keyName, e);
-        break;
+        LOG.error("LOADGEN: Create key:{} failed with exception, skipping",
+            keyName, e);
+        continue;
+        // TODO: HDDS-1403.A key write can fail after multiple block writes
+        //  to closed container. add a break here once that is fixed.
       }
 
       try (OzoneInputStream stream = ozoneBucket.readKey(keyName)) {
@@ -119,17 +123,20 @@ public class MiniOzoneLoadGenerator {
         }
 
       } catch (Exception e) {
-        LOG.error("Read key:{} failed with exception", keyName, e);
+        LOG.error("LOADGEN: Read key:{} failed with exception", keyName, e);
         break;
       }
 
     }
     // This will terminate other threads too.
     isWriteThreadRunning.set(false);
+    LOG.info("Terminating IO thread:{}.", threadID);
   }
 
   public void startIO(long time, TimeUnit timeUnit) {
     List<CompletableFuture<Void>> writeFutures = new ArrayList<>();
+    LOG.info("Starting MiniOzoneLoadGenerator for time {}:{} with {} buffers " +
+            "and {} threads", time, timeUnit, numBuffers, numWriteThreads);
     if (isWriteThreadRunning.compareAndSet(false, true)) {
       // Start the IO thread
       for (int i = 0; i < numWriteThreads; i++) {
