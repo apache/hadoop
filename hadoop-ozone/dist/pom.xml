@@ -110,6 +110,13 @@
                   <classifier>classpath</classifier>
                   <destFileName>hadoop-ozone-recon.classpath</destFileName>
                 </artifactItem>
+                <artifactItem>
+                  <groupId>org.apache.hadoop</groupId>
+                  <artifactId>hadoop-ozone-upgrade</artifactId>
+                  <version>${ozone.version}</version>
+                  <classifier>classpath</classifier>
+                  <destFileName>hadoop-ozone-upgrade.classpath</destFileName>
+                </artifactItem>
               </artifactItems>
             </configuration>
           </execution>
@@ -254,6 +261,10 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdds-docs</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-ozone-upgrade</artifactId>
     </dependency>
   </dependencies>
 </project>
