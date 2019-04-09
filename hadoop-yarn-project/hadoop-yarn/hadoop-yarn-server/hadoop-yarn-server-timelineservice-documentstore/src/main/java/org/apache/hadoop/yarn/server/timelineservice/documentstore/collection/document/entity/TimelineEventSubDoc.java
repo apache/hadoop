@@ -77,7 +77,7 @@ public class TimelineEventSubDoc {
     return 31 * timelineEvent.getId().hashCode();
   }
 
-  // Only check if id is equal
+  // Only check if id is equal.
   @Override
   public boolean equals(Object obj) {
     if (this == obj) {

@@ -16,11 +16,7 @@
 -->
 <FindBugsFilter>
 
-  <!--
-    The called method signature is
-    isNullOrEmpty(@Nullable String string) in guava 27,
-    so this should be ignored.
-  -->
+  <!-- The called method signature is isNullOrEmpty(@Nullable String string) in guava 27, so this should be ignored. -->
   <Match>
     <Class name="org.apache.hadoop.crypto.key.kms.server.KMSAudit"/>
     <Method name="op" />

@@ -145,7 +145,7 @@ public class TimelineMetricSubDoc {
     return result;
   }
 
-  // Only check if timestamp and id are equal
+  // Only check if timestamp and id are equal.
   @Override
   public boolean equals(Object obj) {
     if (this == obj) {

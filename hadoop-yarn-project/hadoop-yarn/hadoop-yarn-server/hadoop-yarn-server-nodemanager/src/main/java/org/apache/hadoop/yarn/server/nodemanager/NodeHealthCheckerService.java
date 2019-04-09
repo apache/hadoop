@@ -60,7 +60,7 @@ public class NodeHealthCheckerService extends CompositeService {
   }
 
   /**
-   * @return the reporting string of health of the node
+   * @return the reporting string of health of the node.
    */
   String getHealthReport() {
     String scriptReport = Strings.emptyToNull(
