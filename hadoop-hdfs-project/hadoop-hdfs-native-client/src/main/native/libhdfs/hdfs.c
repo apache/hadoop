@@ -40,7 +40,7 @@
 
 // Bit fields for hdfsFile_internal flags
 #define HDFS_FILE_SUPPORTS_DIRECT_READ (1<<0)
-#define HDFS_FILE_SUPPORTS_DIRECT_PREAD (1<<0)
+#define HDFS_FILE_SUPPORTS_DIRECT_PREAD (1<<1)
 
 /**
  * Reads bytes using the read(ByteBuffer) API. By using Java
@@ -1011,6 +1011,19 @@ int hdfsStreamBuilderSetDefaultBlockSize(struct hdfsStreamBuilder *bld,
     return 0;
 }
 
+/**
+ * Delegates to FsDataInputStream#hasCapability(String). Used to check if a
+ * given input stream supports certain methods, such as
+ * ByteBufferReadable#read(ByteBuffer).
+ *
+ * @param jFile the FsDataInputStream to call hasCapability on
+ * @param capability the name of the capability to query; for a full list of
+ *        possible values see StreamCapabilities
+ *
+ * @return true if the given jFile has the given capability, false otherwise
+ *
+ * @see org.apache.hadoop.fs.StreamCapabilities
+ */
 static int hdfsHasStreamCapability(jobject jFile,
         const char *capability) {
     int ret = 0;
@@ -1033,7 +1046,7 @@ static int hdfsHasStreamCapability(jobject jFile,
     }
     jthr = invokeMethod(env, &jVal, INSTANCE, jFile,
             JC_FS_DATA_INPUT_STREAM, "hasCapability", "(Ljava/lang/String;)Z",
-	    jCapabilityString);
+            jCapabilityString);
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                 "hdfsHasStreamCapability(%s): FSDataInputStream#hasCapability",
@@ -1568,7 +1581,16 @@ tSize readDirect(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
             "readDirect: FSDataInputStream#read");
         return -1;
     }
-    return (jVal.i < 0) ? 0 : jVal.i;
+    // Reached EOF, return 0
+    if (jVal.i < 0) {
+        return 0;
+    }
+    // 0 bytes read, return error
+    if (jVal.i == 0) {
+        errno = EINTR;
+        return -1;
+    }
+    return jVal.i;
 }
 
 /**
@@ -1693,7 +1715,16 @@ tSize preadDirect(hdfsFS fs, hdfsFile f, tOffset position, void* buffer,
            "preadDirect: FSDataInputStream#read");
        return -1;
     }
-    return (jVal.i < 0) ? 0 : jVal.i;
+    // Reached EOF, return 0
+    if (jVal.i < 0) {
+        return 0;
+    }
+    // 0 bytes read, return error
+    if (jVal.i == 0) {
+        errno = EINTR;
+        return -1;
+    }
+    return jVal.i;
 }
 
 tSize hdfsWrite(hdfsFS fs, hdfsFile f, const void* buffer, tSize length)

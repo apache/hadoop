@@ -41,10 +41,10 @@ public interface ByteBufferPositionedReadable {
    * should be written to.
    * <p>
    * After a successful call, {@code buf.position()} will be advanced by the
-   * number of bytes read and {@code buf.limit()} should be unchanged.
+   * number of bytes read and {@code buf.limit()} will be unchanged.
    * <p>
    * In the case of an exception, the state of the buffer (the contents of the
-   * buffer, the {@code buf.position()}, the {@code buf.limit(), etc.) is
+   * buffer, the {@code buf.position()}, the {@code buf.limit()}, etc.) is
    * undefined, and callers should be prepared to recover from this
    * eventuality.
    * <p>

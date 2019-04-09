@@ -260,6 +260,17 @@ int main(int argc, char **argv) {
         // read path
         hdfsFileDisableDirectRead(readFile);
 
+        if (hdfsFileUsesDirectRead(readFile)) {
+            fprintf(stderr, "Disabled direct reads, but it is still enabled");
+            shutdown_and_exit(cl, -1);
+        }
+
+        if (!hdfsFileUsesDirectPread(readFile)) {
+            fprintf(stderr, "Disabled direct reads, but direct preads was "
+                            "disabled as well");
+            shutdown_and_exit(cl, -1);
+        }
+
         num_read_bytes = hdfsRead(fs, readFile, (void*)buffer,
                 sizeof(buffer));
         if (strncmp(fileContents, buffer, strlen(fileContents)) != 0) {
@@ -352,6 +363,17 @@ int main(int argc, char **argv) {
         // Disable the direct pread path so that we really go through the slow
         // read path
         hdfsFileDisableDirectPread(preadFile);
+
+        if (hdfsFileUsesDirectPread(preadFile)) {
+            fprintf(stderr, "Disabled direct preads, but it is still enabled");
+            shutdown_and_exit(cl, -1);
+        }
+
+        if (!hdfsFileUsesDirectRead(preadFile)) {
+            fprintf(stderr, "Disabled direct preads, but direct read was "
+                            "disabled as well");
+            shutdown_and_exit(cl, -1);
+        }
 
         num_pread_bytes = hdfsPread(fs, preadFile, 0, (void*)buffer, sizeof(buffer));
         if (strncmp(fileContents, buffer, strlen(fileContents)) != 0) {
