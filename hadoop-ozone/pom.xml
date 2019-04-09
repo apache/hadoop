@@ -50,6 +50,7 @@
     <module>dist</module>
     <module>ozone-recon</module>
     <module>ozone-recon-codegen</module>
+    <module>upgrade</module>
   </modules>
 
   <repositories>
@@ -163,6 +164,11 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-ozone-recon</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-upgrade</artifactId>
         <version>${ozone.version}</version>
       </dependency>
       <dependency>
