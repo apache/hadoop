@@ -681,4 +681,20 @@
     <Bug pattern="URF_UNREAD_FIELD"/>
   </Match>
 
+  <!-- The called method signature is public boolean set(@Nullable V value) in guava 27, so this should be ignored -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore$UpdateAppTransition"/>
+    <Method name="transition" />
+    <Local name="result" />
+    <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
+  </Match>
+
+  <!-- The called method signature is public boolean set(@Nullable V value) in guava 27, so this should be ignored -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler"/>
+    <Method name="updateApplicationPriority" />
+    <Local name="result" />
+    <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
+  </Match>
+
 </FindBugsFilter>

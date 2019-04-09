@@ -265,7 +265,7 @@ public abstract class RMStateStore extends AbstractService {
     public RMStateStoreState transition(RMStateStore store,
         RMStateStoreEvent event) {
       if (!(event instanceof RMStateUpdateAppEvent)) {
-        // should never happen
+        // should never happen.
         LOG.error("Illegal event type: " + event.getClass());
         return RMStateStoreState.ACTIVE;
       }
