@@ -50,19 +50,27 @@ public class BucketManagerImpl implements BucketManager {
   private final OMMetadataManager metadataManager;
   private final KeyProviderCryptoExtension kmsProvider;
 
+  private final boolean isRatisEnabled;
+
   /**
    * Constructs BucketManager.
    *
    * @param metadataManager
    */
   public BucketManagerImpl(OMMetadataManager metadataManager) {
-    this(metadataManager, null);
+    this(metadataManager, null, false);
   }
 
   public BucketManagerImpl(OMMetadataManager metadataManager,
                            KeyProviderCryptoExtension kmsProvider) {
+    this(metadataManager, kmsProvider, false);
+  }
+
+  public BucketManagerImpl(OMMetadataManager metadataManager,
+      KeyProviderCryptoExtension kmsProvider, boolean isRatisEnabled) {
     this.metadataManager = metadataManager;
     this.kmsProvider = kmsProvider;
+    this.isRatisEnabled = isRatisEnabled;
   }
 
   KeyProviderCryptoExtension getKMSProvider() {
@@ -94,7 +102,7 @@ public class BucketManagerImpl implements BucketManager {
    * @param bucketInfo - OmBucketInfo.
    */
   @Override
-  public void createBucket(OmBucketInfo bucketInfo) throws IOException {
+  public OmBucketInfo createBucket(OmBucketInfo bucketInfo) throws IOException {
     Preconditions.checkNotNull(bucketInfo);
     String volumeName = bucketInfo.getVolumeName();
     String bucketName = bucketInfo.getBucketName();
@@ -155,9 +163,13 @@ public class BucketManagerImpl implements BucketManager {
       if (bekb != null) {
         omBucketInfoBuilder.setBucketEncryptionKey(bekb.build());
       }
-      metadataManager.getBucketTable().put(bucketKey,
-          omBucketInfoBuilder.build());
+
+      OmBucketInfo omBucketInfo = omBucketInfoBuilder.build();
+      if (!isRatisEnabled) {
+        commitCreateBucketInfoToDB(omBucketInfo);
+      }
       LOG.debug("created bucket: {} in volume: {}", bucketName, volumeName);
+      return omBucketInfo;
     } catch (IOException | DBException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Bucket creation failed for bucket:{} in volume:{}",
@@ -168,6 +180,27 @@ public class BucketManagerImpl implements BucketManager {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
       metadataManager.getLock().releaseVolumeLock(volumeName);
     }
+  }
+
+
+  public void applyCreateBucket(OmBucketInfo omBucketInfo) throws IOException {
+    Preconditions.checkNotNull(omBucketInfo);
+    try {
+      commitCreateBucketInfoToDB(omBucketInfo);
+    } catch (IOException ex) {
+      LOG.error("Apply CreateBucket Failed for bucket: {}, volume: {}",
+          omBucketInfo.getBucketName(), omBucketInfo.getVolumeName(), ex);
+      throw ex;
+    }
+  }
+
+  private void commitCreateBucketInfoToDB(OmBucketInfo omBucketInfo)
+      throws IOException {
+    String dbBucketKey =
+        metadataManager.getBucketKey(omBucketInfo.getVolumeName(),
+            omBucketInfo.getBucketName());
+    metadataManager.getBucketTable().put(dbBucketKey,
+        omBucketInfo);
   }
 
   /**
@@ -210,7 +243,7 @@ public class BucketManagerImpl implements BucketManager {
    * @throws IOException - On Failure.
    */
   @Override
-  public void setBucketProperty(OmBucketArgs args) throws IOException {
+  public OmBucketInfo setBucketProperty(OmBucketArgs args) throws IOException {
     Preconditions.checkNotNull(args);
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
@@ -262,8 +295,12 @@ public class BucketManagerImpl implements BucketManager {
       }
       bucketInfoBuilder.setCreationTime(oldBucketInfo.getCreationTime());
 
-      metadataManager.getBucketTable()
-          .put(bucketKey, bucketInfoBuilder.build());
+      OmBucketInfo omBucketInfo = bucketInfoBuilder.build();
+
+      if (!isRatisEnabled) {
+        commitSetBucketPropertyInfoToDB(omBucketInfo);
+      }
+      return omBucketInfo;
     } catch (IOException | DBException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Setting bucket property failed for bucket:{} in volume:{}",
@@ -273,6 +310,23 @@ public class BucketManagerImpl implements BucketManager {
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
+  }
+
+  public void applySetBucketProperty(OmBucketInfo omBucketInfo)
+      throws IOException {
+    try {
+      commitSetBucketPropertyInfoToDB(omBucketInfo);
+    } catch (IOException ex) {
+      LOG.error("Apply SetBucket property failed for bucket:{} in " +
+              "volume:{}", omBucketInfo.getBucketName(),
+          omBucketInfo.getVolumeName(), ex);
+      throw ex;
+    }
+  }
+
+  private void commitSetBucketPropertyInfoToDB(OmBucketInfo omBucketInfo)
+      throws IOException {
+    commitCreateBucketInfoToDB(omBucketInfo);
   }
 
   /**
@@ -323,7 +377,10 @@ public class BucketManagerImpl implements BucketManager {
         throw new OMException("Bucket is not empty",
             OMException.ResultCodes.BUCKET_NOT_EMPTY);
       }
-      metadataManager.getBucketTable().delete(bucketKey);
+
+      if (!isRatisEnabled) {
+        commitDeleteBucketInfoToOMDB(bucketKey);
+      }
     } catch (IOException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Delete bucket failed for bucket:{} in volume:{}", bucketName,
@@ -333,6 +390,25 @@ public class BucketManagerImpl implements BucketManager {
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
+  }
+
+  public void applyDeleteBucket(String volumeName, String bucketName)
+      throws IOException {
+    Preconditions.checkNotNull(volumeName);
+    Preconditions.checkNotNull(bucketName);
+    try {
+      commitDeleteBucketInfoToOMDB(metadataManager.getBucketKey(volumeName,
+          bucketName));
+    } catch (IOException ex) {
+      LOG.error("Apply DeleteBucket Failed for bucket: {}, volume: {}",
+          bucketName, volumeName, ex);
+      throw ex;
+    }
+  }
+
+  private void commitDeleteBucketInfoToOMDB(String dbBucketKey)
+      throws IOException {
+    metadataManager.getBucketTable().delete(dbBucketKey);
   }
 
   /**

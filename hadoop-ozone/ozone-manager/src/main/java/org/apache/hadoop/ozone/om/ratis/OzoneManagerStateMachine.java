@@ -192,6 +192,9 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
       case CreateVolume:
       case SetVolumeProperty:
       case DeleteVolume:
+      case CreateBucket:
+      case SetBucketProperty:
+      case DeleteBucket:
         newOmRequest = handler.handleStartTransaction(omRequest);
         break;
       case AllocateBlock:
