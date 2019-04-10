@@ -18,17 +18,24 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import com.amazonaws.services.s3.model.DeleteObjectsRequest;
+import com.amazonaws.services.s3.model.MultiObjectDeleteException;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.InvalidRequestException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.LambdaTestUtils;
 
+import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
@@ -41,6 +48,13 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3AFailureHandling.class);
 
+  @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    S3ATestUtils.disableFilesystemCaching(conf);
+    conf.setBoolean(Constants.ENABLE_MULTI_DELETE, true);
+    return conf;
+  }
   @Test
   public void testReadFileChanged() throws Throwable {
     describe("overwrite a file with a shorter one during a read, seek");
@@ -126,5 +140,42 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
   private void assertIsEOF(String operation, int readResult) {
     assertEquals("Expected EOF from "+ operation
         + "; got char " + (char) readResult, -1, readResult);
+  }
+
+  @Test
+  public void testMultiObjectDeleteNoFile() throws Throwable {
+    describe("Deleting a missing object");
+    removeKeys(getFileSystem(), "ITestS3AFailureHandling/missingFile");
+  }
+
+  private void removeKeys(S3AFileSystem fileSystem, String... keys)
+      throws InvalidRequestException {
+    List<DeleteObjectsRequest.KeyVersion> request = new ArrayList<>(
+        keys.length);
+    for (String key : keys) {
+      request.add(new DeleteObjectsRequest.KeyVersion(key));
+    }
+    fileSystem.removeKeys(request, false, false);
+  }
+
+  @Test
+  public void testMultiObjectDeleteSomeFiles() throws Throwable {
+    Path valid = path("ITestS3AFailureHandling/validFile");
+    touch(getFileSystem(), valid);
+    NanoTimer timer = new NanoTimer();
+    removeKeys(getFileSystem(), getFileSystem().pathToKey(valid),
+        "ITestS3AFailureHandling/missingFile");
+    timer.end("removeKeys");
+  }
+
+  @Test(expected = MultiObjectDeleteException.class)
+  public void testMultiObjectDeleteNoPermissions() throws Throwable {
+    Configuration conf = getConfiguration();
+    String csvFile = conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE);
+    Assume.assumeTrue("CSV test file is not the default",
+        DEFAULT_CSVTEST_FILE.equals(csvFile));
+    Path testFile = new Path(csvFile);
+    S3AFileSystem fs = (S3AFileSystem)FileSystem.newInstance(testFile.toUri(), conf);
+    removeKeys(fs, fs.pathToKey(testFile));
   }
 }
