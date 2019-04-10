@@ -348,20 +348,26 @@ public class StateContext {
       throws InterruptedException, ExecutionException, TimeoutException {
     stateExecutionCount.incrementAndGet();
     DatanodeState<DatanodeStateMachine.DatanodeStates> task = getTask();
-    if (this.isEntering()) {
-      task.onEnter();
-    }
-    task.execute(service);
-    DatanodeStateMachine.DatanodeStates newState = task.await(time, unit);
-    if (this.state != newState) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Task {} executed, state transited from {} to {}",
-            task.getClass().getSimpleName(), this.state, newState);
+
+    // Adding not null check, in a case where datanode is still starting up, but
+    // we called stop DatanodeStateMachine, this sets state to SHUTDOWN, and
+    // there is a chance of getting task as null.
+    if (task != null) {
+      if (this.isEntering()) {
+        task.onEnter();
       }
-      if (isExiting(newState)) {
-        task.onExit();
+      task.execute(service);
+      DatanodeStateMachine.DatanodeStates newState = task.await(time, unit);
+      if (this.state != newState) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Task {} executed, state transited from {} to {}",
+              task.getClass().getSimpleName(), this.state, newState);
+        }
+        if (isExiting(newState)) {
+          task.onExit();
+        }
+        this.setState(newState);
       }
-      this.setState(newState);
     }
   }
 
