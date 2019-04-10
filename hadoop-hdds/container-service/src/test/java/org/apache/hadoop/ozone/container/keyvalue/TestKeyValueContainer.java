@@ -195,7 +195,7 @@ public class TestKeyValueContainer {
     for (int i = 0; i < numberOfKeysToWrite; i++) {
       metadataStore.put(("test" + i).getBytes(UTF_8), "test".getBytes(UTF_8));
     }
-    metadataStore.close();
+    BlockUtils.removeDB(keyValueContainerData, conf);
 
     Map<String, String> metadata = new HashMap<>();
     metadata.put("key1", "value1");

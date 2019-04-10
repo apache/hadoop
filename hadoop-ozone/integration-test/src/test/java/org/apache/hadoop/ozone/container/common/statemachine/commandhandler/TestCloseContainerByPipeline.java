@@ -34,16 +34,21 @@ import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
+import org.apache.hadoop.ozone.container.common.interfaces.Container;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
+import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.utils.MetadataStore;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
@@ -221,13 +226,25 @@ public class TestCloseContainerByPipeline {
     List<DatanodeDetails> datanodes = pipeline.getNodes();
     Assert.assertEquals(3, datanodes.size());
 
+    List<MetadataStore> metadataStores = new ArrayList<>(datanodes.size());
     for (DatanodeDetails details : datanodes) {
       Assert.assertFalse(isContainerClosed(cluster, containerID, details));
       //send the order to close the container
       cluster.getStorageContainerManager().getScmNodeManager()
           .addDatanodeCommand(details.getUuid(),
               new CloseContainerCommand(containerID, pipeline.getId()));
+      int index = cluster.getHddsDatanodeIndex(details);
+      Container dnContainer = cluster.getHddsDatanodes().get(index)
+          .getDatanodeStateMachine().getContainer().getContainerSet()
+          .getContainer(containerID);
+      metadataStores.add(BlockUtils.getDB((KeyValueContainerData) dnContainer
+          .getContainerData(), conf));
     }
+
+    // There should be as many rocks db as the number of datanodes in pipeline.
+    Assert.assertEquals(datanodes.size(),
+        metadataStores.stream().distinct().count());
+
     // Make sure that it is CLOSED
     for (DatanodeDetails datanodeDetails : datanodes) {
       GenericTestUtils.waitFor(

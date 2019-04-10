@@ -255,7 +255,7 @@ public class TestContainerPersistence {
         "Container cannot be deleted because it is not empty.");
     container2.delete();
     Assert.assertTrue(containerSet.getContainerMapCopy()
-        .containsKey(testContainerID1));
+        .containsKey(testContainerID2));
   }
 
   @Test

@@ -69,15 +69,15 @@ public final class ContainerCache extends LRUMap {
   /**
    * Closes a db instance.
    *
-   * @param containerID - ID of the container to be closed.
+   * @param containerPath - path of the container db to be closed.
    * @param db - db instance to close.
    */
-  private void closeDB(long containerID, MetadataStore db) {
+  private void closeDB(String containerPath, MetadataStore db) {
     if (db != null) {
       try {
         db.close();
-      } catch (IOException e) {
-        LOG.error("Error closing DB. Container: " + containerID, e);
+      } catch (Exception e) {
+        LOG.error("Error closing DB. Container: " + containerPath, e);
       }
     }
   }
@@ -93,7 +93,7 @@ public final class ContainerCache extends LRUMap {
       while (iterator.hasNext()) {
         iterator.next();
         MetadataStore db = (MetadataStore) iterator.getValue();
-        closeDB(((Number)iterator.getKey()).longValue(), db);
+        closeDB((String)iterator.getKey(), db);
       }
       // reset the cache
       cache.clear();
@@ -107,14 +107,18 @@ public final class ContainerCache extends LRUMap {
    */
   @Override
   protected boolean removeLRU(LinkEntry entry) {
+    MetadataStore db = (MetadataStore) entry.getValue();
+    String dbFile = (String)entry.getKey();
     lock.lock();
     try {
-      MetadataStore db = (MetadataStore) entry.getValue();
-      closeDB(((Number)entry.getKey()).longValue(), db);
+      closeDB(dbFile, db);
+      return true;
+    } catch (Exception e) {
+      LOG.error("Eviction for db:{} failed", dbFile, e);
+      return false;
     } finally {
       lock.unlock();
     }
-    return true;
   }
 
   /**
@@ -133,7 +137,7 @@ public final class ContainerCache extends LRUMap {
         "Container ID cannot be negative.");
     lock.lock();
     try {
-      MetadataStore db = (MetadataStore) this.get(containerID);
+      MetadataStore db = (MetadataStore) this.get(containerDBPath);
 
       if (db == null) {
         db = MetadataStoreBuilder.newBuilder()
@@ -142,7 +146,7 @@ public final class ContainerCache extends LRUMap {
             .setConf(conf)
             .setDBType(containerDBType)
             .build();
-        this.put(containerID, db);
+        this.put(containerDBPath, db);
       }
       return db;
     } catch (Exception e) {
@@ -157,16 +161,14 @@ public final class ContainerCache extends LRUMap {
   /**
    * Remove a DB handler from cache.
    *
-   * @param containerID - ID of the container.
+   * @param containerPath - path of the container db file.
    */
-  public void removeDB(long containerID) {
-    Preconditions.checkState(containerID >= 0,
-        "Container ID cannot be negative.");
+  public void removeDB(String containerPath) {
     lock.lock();
     try {
-      MetadataStore db = (MetadataStore)this.get(containerID);
-      closeDB(containerID, db);
-      this.remove(containerID);
+      MetadataStore db = (MetadataStore)this.get(containerPath);
+      closeDB(containerPath, db);
+      this.remove(containerPath);
     } finally {
       lock.unlock();
     }
