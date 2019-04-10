@@ -102,9 +102,6 @@ public final class ObjectStoreHandler implements Closeable {
                     Client.getRpcTimeout(conf))),
             StorageContainerLocationProtocol.class, conf);
 
-    InetSocketAddress scmBlockAddress =
-        getScmAddressForBlockClients(conf);
-
     RPC.setProtocolEngine(conf, OzoneManagerProtocolPB.class,
         ProtobufRpcEngine.class);
     long omVersion =
