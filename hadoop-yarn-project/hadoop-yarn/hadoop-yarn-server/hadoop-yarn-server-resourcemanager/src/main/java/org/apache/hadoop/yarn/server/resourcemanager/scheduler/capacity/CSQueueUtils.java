@@ -72,9 +72,10 @@ class CSQueueUtils {
       float absCapacity = queueCapacities.getAbsoluteCapacity(label);
       float absMaxCapacity = queueCapacities.getAbsoluteMaximumCapacity(label);
       if (absCapacity > absMaxCapacity) {
-        throw new IllegalArgumentException("Illegal queue capacity setting, "
+        throw new IllegalArgumentException("Illegal queue capacity setting "
             + "(abs-capacity=" + absCapacity + ") > (abs-maximum-capacity="
-            + absMaxCapacity + "). When label=[" + label + "]");
+            + absMaxCapacity + ") for queue=["
+            + queueName + "],label=[" + label + "]");
       }
     }
   }
