@@ -189,8 +189,8 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
           // factors are handled by pipeline creator
           pipeline = pipelineManager.createPipeline(type, factor);
         } catch (IOException e) {
-          LOG.error("pipeline creation failed type:{} factor:{}", type,
-              factor, e);
+          LOG.error("Pipeline creation failed for type:{} factor:{}",
+              type, factor, e);
           break;
         }
       } else {
