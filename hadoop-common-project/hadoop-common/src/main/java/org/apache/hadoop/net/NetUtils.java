@@ -833,7 +833,7 @@ public class NetUtils {
       Throwable t = ctor.newInstance(msg);
       return (T)(t.initCause(exception));
     } catch (Throwable e) {
-      LOG.warn("Unable to wrap exception of type {}: it has no (String) "
+      LOG.trace("Unable to wrap exception of type {}: it has no (String) "
           + "constructor", clazz, e);
       throw exception;
     }
