@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: datanode
+  labels:
+    app.kubernetes.io/component: ozone
+spec:
+  selector:
+    matchLabels:
+      app: ozone
+      component: datanode
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9882"
+        prometheus.io/path: /prom
+      labels:
+        app: ozone
+        component: datanode
+    spec:
+      containers:
+      - name: datanode
+        image: '@docker.image@'
+        args:
+        - ozone
+        - datanode
+        ports:
+        - containerPort: 9870
+          name: rpc
+        envFrom:
+        - configMapRef:
+            name: config
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      initContainers: []
+      volumes:
+      - name: data
+        emptyDir: {}
