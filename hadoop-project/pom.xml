@@ -102,6 +102,7 @@
     <apacheds.version>2.0.0-M21</apacheds.version>
     <ldap-api.version>1.0.0-M33</ldap-api.version>
 
+    <kerby.version>1.0.1</kerby.version>
     <jcache.version>1.0-alpha-1</jcache.version>
     <ehcache.version>3.3.1</ehcache.version>
     <hikari.version>2.4.12</hikari.version>
@@ -1463,7 +1464,12 @@
         <dependency>
           <groupId>org.apache.kerby</groupId>
           <artifactId>kerb-simplekdc</artifactId>
-          <version>1.0.1</version>
+          <version>${kerby.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.kerby</groupId>
+          <artifactId>kerb-core</artifactId>
+          <version>${kerby.version}</version>
         </dependency>
         <dependency>
           <groupId>org.apache.geronimo.specs</groupId>
