@@ -52,7 +52,6 @@ public class ChillModeHandler implements EventHandler<ChillModeStatus> {
   private final ReplicationManager replicationManager;
 
   private final PipelineManager scmPipelineManager;
-  private final Thread pipelineCleanupThread;
 
   /**
    * ChillModeHandler, to handle the logic once we exit chill mode.
@@ -87,27 +86,9 @@ public class ChillModeHandler implements EventHandler<ChillModeStatus> {
         HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED_DEFAULT);
     isInChillMode.set(chillModeEnabled);
 
-    pipelineCleanupThread = createPipelineCleanupThread();
-    pipelineCleanupThread.setDaemon(true);
-
   }
 
-  private Thread createPipelineCleanupThread() {
-    Thread thread = new Thread(() -> {
-      List<Pipeline> pipelineList = scmPipelineManager.getPipelines();
-      pipelineList.forEach((pipeline) -> {
-        try {
-          if (pipeline.getPipelineState() == Pipeline.PipelineState.ALLOCATED) {
-            scmPipelineManager.finalizeAndDestroyPipeline(pipeline, false);
-          }
-        } catch (IOException ex) {
-          LOG.error("Finalize and destroy pipeline failed for pipeline "
-              + pipeline.toString(), ex);
-        }
-      });
-    });
-    return thread;
-  }
+
 
   /**
    * Set ChillMode status based on
@@ -135,13 +116,27 @@ public class ChillModeHandler implements EventHandler<ChillModeStatus> {
           Thread.currentThread().interrupt();
         }
         replicationManager.start();
-        pipelineCleanupThread.start();
+        cleanupPipelines();
       });
 
       chillModeExitThread.setDaemon(true);
       chillModeExitThread.start();
     }
 
+  }
+
+  private void cleanupPipelines() {
+    List<Pipeline> pipelineList = scmPipelineManager.getPipelines();
+    pipelineList.forEach((pipeline) -> {
+      try {
+        if (pipeline.getPipelineState() == Pipeline.PipelineState.ALLOCATED) {
+          scmPipelineManager.finalizeAndDestroyPipeline(pipeline, false);
+        }
+      } catch (IOException ex) {
+        LOG.error("Finalize and destroy pipeline failed for pipeline "
+            + pipeline.toString(), ex);
+      }
+    });
   }
 
   public boolean getChillModeStatus() {
