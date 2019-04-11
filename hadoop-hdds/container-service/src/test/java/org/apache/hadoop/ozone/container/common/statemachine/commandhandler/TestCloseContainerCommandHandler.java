@@ -305,7 +305,6 @@ public class TestCloseContainerCommandHandler {
     request.setContainerID(containerId.getId());
     request.setCreateContainer(
         ContainerProtos.CreateContainerRequestProto.getDefaultInstance());
-    request.setTraceID(UUID.randomUUID().toString());
     request.setDatanodeUuid(datanodeDetails.getUuidString());
     ozoneContainer.getWriteChannel().submitRequest(
         request.build(), pipelineID.getProtobuf());

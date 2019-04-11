@@ -138,7 +138,6 @@ public class CloseContainerCommandHandler implements CommandHandler {
     command.setContainerID(containerId);
     command.setCloseContainer(
         ContainerProtos.CloseContainerRequestProto.getDefaultInstance());
-    command.setTraceID(UUID.randomUUID().toString());
     command.setDatanodeUuid(datanodeDetails.getUuidString());
     return command.build();
   }

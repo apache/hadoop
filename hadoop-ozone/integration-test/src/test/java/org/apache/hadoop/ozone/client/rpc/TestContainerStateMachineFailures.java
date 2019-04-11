@@ -181,7 +181,6 @@ public class TestContainerStateMachineFailures {
     request.setContainerID(containerID);
     request.setCreateContainer(
         ContainerProtos.CreateContainerRequestProto.getDefaultInstance());
-    request.setTraceID(UUID.randomUUID().toString());
     request.setDatanodeUuid(
         cluster.getHddsDatanodes().get(0).getDatanodeDetails().getUuidString());
     Assert.assertEquals(ContainerProtos.Result.CONTAINER_MISSING,
