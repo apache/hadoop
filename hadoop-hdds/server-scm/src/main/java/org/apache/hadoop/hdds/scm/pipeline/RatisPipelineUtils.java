@@ -41,7 +41,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinWorkerThread;
 
 /**
  * Utility class for Ratis pipelines. Contains methods to create and destroy
@@ -53,12 +55,21 @@ final class RatisPipelineUtils {
       LoggerFactory.getLogger(RatisPipelineUtils.class);
 
   // Set parallelism at 3, as now in Ratis we create 1 and 3 node pipelines.
-  private static int parallelismForPool =
+  private final static int PARALLELISIM_FOR_POOL =
       (Runtime.getRuntime().availableProcessors() > 3) ? 3 :
           Runtime.getRuntime().availableProcessors();
 
-  private static ForkJoinPool pool = new ForkJoinPool(parallelismForPool);
 
+  private final static ForkJoinPool.ForkJoinWorkerThreadFactory FACTORY =
+      (forkJoinPool -> {
+        final ForkJoinWorkerThread worker = ForkJoinPool.
+            defaultForkJoinWorkerThreadFactory.newThread(forkJoinPool);
+        worker.setName("ratisCreatePipeline" + worker.getPoolIndex());
+        return worker;
+      });
+
+  private final static ForkJoinPool POOL = new ForkJoinPool(
+      PARALLELISIM_FOR_POOL, FACTORY, null, false);
 
 
   private RatisPipelineUtils() {
@@ -156,22 +167,28 @@ final class RatisPipelineUtils {
         SecurityConfig(ozoneConf));
     final TimeDuration requestTimeout =
         RatisHelper.getClientRequestTimeout(ozoneConf);
-    pool.submit(() -> {
-      datanodes.parallelStream().forEach(d -> {
-        final RaftPeer p = RatisHelper.toRaftPeer(d);
-        try (RaftClient client = RatisHelper
-            .newRaftClient(SupportedRpcType.valueOfIgnoreCase(rpcType), p,
-                retryPolicy, maxOutstandingRequests, tlsConfig,
-                requestTimeout)) {
-          rpc.accept(client, p);
-        } catch (IOException ioe) {
-          String errMsg =
-              "Failed invoke Ratis rpc " + rpc + " for " + d.getUuid();
-          LOG.error(errMsg, ioe);
-          exceptions.add(new IOException(errMsg, ioe));
-        }
-      });
-    });
+    try {
+      POOL.submit(() -> {
+        datanodes.parallelStream().forEach(d -> {
+          final RaftPeer p = RatisHelper.toRaftPeer(d);
+          try (RaftClient client = RatisHelper
+              .newRaftClient(SupportedRpcType.valueOfIgnoreCase(rpcType), p,
+                  retryPolicy, maxOutstandingRequests, tlsConfig,
+                  requestTimeout)) {
+            rpc.accept(client, p);
+          } catch (IOException ioe) {
+            String errMsg =
+                "Failed invoke Ratis rpc " + rpc + " for " + d.getUuid();
+            LOG.error(errMsg, ioe);
+            exceptions.add(new IOException(errMsg, ioe));
+          }
+        });
+      }).get();
+    } catch (ExecutionException ex) {
+      LOG.error("Execution exception occurred during createPipeline", ex);
+    } catch (InterruptedException ex) {
+      Thread.currentThread().interrupt();
+    }
     if (!exceptions.isEmpty()) {
       throw MultipleIOException.createIOException(exceptions);
     }
