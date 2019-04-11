@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 
 import org.apache.hadoop.yarn.server.api.protocolrecords.RemoteNode;
+import org.apache.hadoop.yarn.server.metrics.OpportunisticSchedulerMetrics;
 import org.apache.hadoop.yarn.server.security.BaseContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
@@ -433,6 +434,7 @@ public class OpportunisticContainerAllocator {
             idCounter, id, userName, allocations, location,
             anyAsk, rNode);
         numAllocated++;
+        updateMetrics(loopIndex);
         // Try to spread the allocations across the nodes.
         // But don't add if it is a node local request.
         if (loopIndex != NODE_LOCAL_LOOP) {
@@ -456,6 +458,18 @@ public class OpportunisticContainerAllocator {
         LOG.warn("Unable to allocate any opportunistic containers.");
         break;
       }
+    }
+  }
+
+  private void updateMetrics(int loopIndex) {
+    OpportunisticSchedulerMetrics metrics =
+        OpportunisticSchedulerMetrics.getMetrics();
+    if (loopIndex == NODE_LOCAL_LOOP) {
+      metrics.incrNodeLocalOppContainers();
+    } else if (loopIndex == RACK_LOCAL_LOOP) {
+      metrics.incrRackLocalOppContainers();
+    } else {
+      metrics.incrOffSwitchOppContainers();
     }
   }
 
