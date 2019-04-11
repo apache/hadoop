@@ -34,6 +34,7 @@ import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.thirdparty.apache.http.conn.ssl.SSLConnectionSocketFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -51,6 +52,7 @@ import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.ProviderUtils;
+import org.apache.hadoop.security.ssl.OpenSSLSocketFactory;
 import org.apache.hadoop.util.VersionInfo;
 
 import com.google.common.collect.Lists;
@@ -58,6 +60,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.HostnameVerifier;
 import java.io.Closeable;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
@@ -1242,14 +1245,15 @@ public final class S3AUtils {
    *
    * @param conf Hadoop configuration
    * @param awsConf AWS SDK configuration
+   *
+   * @throws IOException if there was an error initializing the protocol
+   *                     settings
    */
   public static void initConnectionSettings(Configuration conf,
-      ClientConfiguration awsConf) {
+      ClientConfiguration awsConf) throws IOException {
     awsConf.setMaxConnections(intOption(conf, MAXIMUM_CONNECTIONS,
         DEFAULT_MAXIMUM_CONNECTIONS, 1));
-    boolean secureConnections = conf.getBoolean(SECURE_CONNECTIONS,
-        DEFAULT_SECURE_CONNECTIONS);
-    awsConf.setProtocol(secureConnections ?  Protocol.HTTPS : Protocol.HTTP);
+    initProtocolSettings(conf, awsConf);
     awsConf.setMaxErrorRetry(intOption(conf, MAX_ERROR_RETRIES,
         DEFAULT_MAX_ERROR_RETRIES, 0));
     awsConf.setConnectionTimeout(intOption(conf, ESTABLISH_TIMEOUT,
@@ -1265,6 +1269,32 @@ public final class S3AUtils {
     if (!signerOverride.isEmpty()) {
      LOG.debug("Signer override = {}", signerOverride);
       awsConf.setSignerOverride(signerOverride);
+    }
+  }
+
+  /**
+   * Initializes the connection protocol settings when connecting to S3 (e.g.
+   * either HTTP or HTTPS). If secure connections are enabled, this method
+   * will load the configured SSL providers.
+   *
+   * @param conf Hadoop configuration
+   * @param awsConf AWS SDK configuration
+   *
+   * @throws IOException if there is an error initializing the configured
+   *                     {@link javax.net.ssl.SSLSocketFactory}
+   */
+  private static void initProtocolSettings(Configuration conf,
+      ClientConfiguration awsConf) throws IOException {
+    boolean secureConnections = conf.getBoolean(SECURE_CONNECTIONS,
+        DEFAULT_SECURE_CONNECTIONS);
+    awsConf.setProtocol(secureConnections ?  Protocol.HTTPS : Protocol.HTTP);
+    if (secureConnections) {
+      OpenSSLSocketFactory.initializeDefaultFactory(
+              conf.getEnum(SSL_CHANNEL_MODE, DEFAULT_SSL_CHANNEL_MODE));
+      awsConf.getApacheHttpClientConfig().setSslSocketFactory(
+            new SSLConnectionSocketFactory(
+                    OpenSSLSocketFactory.getDefaultFactory(),
+                    (HostnameVerifier) null));
     }
   }
 
