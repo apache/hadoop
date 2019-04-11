@@ -15,21 +15,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-date=`date +"%Y-%m-%d--%H-%M-%S-%Z"`
+date=$(date +"%Y-%m-%d--%H-%M-%S-%Z")
 fileformat=".MiniOzoneChaosCluster.log"
 heapformat=".dump"
 current="/tmp/"
-filename=$current$date$fileformat
-heapdumpfile=$current$date$heapformat
+filename="${current}${date}${fileformat}"
+heapdumpfile="${current}${date}${heapformat}"
 
-export MAVEN_OPTS="-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath={$heapdumpfile}"
+export MAVEN_OPTS="-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=${heapdumpfile}"
 
-echo "logging to" ${filename}
-echo "heapdump to" ${heapdumpfile}
+echo "logging to ${filename}"
+echo "heapdump to ${heapdumpfile}"
 
 echo "Starting MiniOzoneChaosCluster"
-mvn clean install -DskipTests > ${filename} 2>&1
+mvn clean install -DskipTests > "${filename}" 2>&1
 mvn exec:java \
   -Dexec.mainClass="org.apache.hadoop.ozone.TestMiniChaosOzoneCluster" \
   -Dexec.classpathScope=test \
-  -Dexec.args="$*" >> ${filename} 2>&1
+  -Dexec.args="$*" >> "${filename}" 2>&1
