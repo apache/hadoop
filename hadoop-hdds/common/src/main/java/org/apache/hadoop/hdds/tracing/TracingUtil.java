@@ -34,7 +34,7 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
  */
 public final class TracingUtil {
   
-  private static String NULL_SPAN_AS_STRING = "";
+  private static final String NULL_SPAN_AS_STRING = "";
 
   private TracingUtil() {
   }
