@@ -189,19 +189,6 @@ ENV HADOOP_SKIP_YETUS_VERIFICATION true
 # YETUS CUT HERE
 ###
 
-####
-# Install svn & Forrest (for Apache Hadoop website)
-###
-RUN apt-get -q update && apt-get -q install -y subversion
-
-RUN mkdir -p /opt/apache-forrest && \
-    curl -L -s -S \
-      https://archive.apache.org/dist/forrest/0.8/apache-forrest-0.8.tar.gz \
-      -o /opt/forrest.tar.gz && \
-    tar xzf /opt/forrest.tar.gz --strip-components 1 -C /opt/apache-forrest
-RUN echo 'forrest.home=/opt/apache-forrest' > build.properties
-ENV FORREST_HOME=/opt/apache-forrest
-
 # Add a welcome message and environment checks.
 ADD hadoop_env_checks.sh /root/hadoop_env_checks.sh
 RUN chmod 755 /root/hadoop_env_checks.sh
