@@ -78,7 +78,6 @@ public final class KeyValueContainerLocationUtil {
                                                  String scmId,
                                                  long containerId) {
     Preconditions.checkNotNull(hddsVolumeDir, "Base Directory cannot be null");
-    Preconditions.checkNotNull(scmId, "scmUuid cannot be null");
     Preconditions.checkState(containerId >= 0,
         "Container Id cannot be negative.");
 
