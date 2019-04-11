@@ -87,11 +87,15 @@ public class MiniOzoneChaosCluster extends MiniOzoneClusterImpl {
   }
 
   private void failNodes() {
-    for (int i = 0; i < getNumberOfNodesToFail(); i++) {
+    final int numNodesToFail = getNumberOfNodesToFail();
+    LOG.info("Will restart {} nodes to simulate failure", numNodesToFail);
+    for (int i = 0; i < numNodesToFail; i++) {
       boolean failureMode = isFastRestart();
       int failedNodeIndex = getNodeToFail();
       try {
+        LOG.info("Restarting DataNodeIndex {}", failedNodeIndex);
         restartHddsDatanode(failedNodeIndex, failureMode);
+        LOG.info("Completed restarting DataNodeIndex {}", failedNodeIndex);
       } catch (Exception e) {
 
       }
@@ -118,7 +122,8 @@ public class MiniOzoneChaosCluster extends MiniOzoneClusterImpl {
   }
 
   void startChaos(long initialDelay, long period, TimeUnit timeUnit) {
-    LOG.info("Starting Chaos with failure period:{} unit:{}", period, timeUnit);
+    LOG.info("Starting Chaos with failure period:{} unit:{} numDataNodes:{}",
+        period, timeUnit, numDatanodes);
     scheduledFuture = executorService.scheduleAtFixedRate(this::fail,
         initialDelay, period, timeUnit);
   }
