@@ -49,18 +49,15 @@ import java.util.concurrent.ForkJoinWorkerThread;
  * Utility class for Ratis pipelines. Contains methods to create and destroy
  * ratis pipelines.
  */
-final class RatisPipelineUtils {
+public final class RatisPipelineUtils {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(RatisPipelineUtils.class);
 
   // Set parallelism at 3, as now in Ratis we create 1 and 3 node pipelines.
-  private final static int PARALLELISIM_FOR_POOL =
-      (Runtime.getRuntime().availableProcessors() > 3) ? 3 :
-          Runtime.getRuntime().availableProcessors();
+  private static final int PARALLELISIM_FOR_POOL = 3;
 
-
-  private final static ForkJoinPool.ForkJoinWorkerThreadFactory FACTORY =
+  private static final ForkJoinPool.ForkJoinWorkerThreadFactory FACTORY =
       (forkJoinPool -> {
         final ForkJoinWorkerThread worker = ForkJoinPool.
             defaultForkJoinWorkerThreadFactory.newThread(forkJoinPool);
@@ -68,7 +65,7 @@ final class RatisPipelineUtils {
         return worker;
       });
 
-  private final static ForkJoinPool POOL = new ForkJoinPool(
+  public static final ForkJoinPool POOL = new ForkJoinPool(
       PARALLELISIM_FOR_POOL, FACTORY, null, false);
 
 
