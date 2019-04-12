@@ -999,10 +999,10 @@ block the threads from performing other operations -including more I/O, the
 the autoscale may not scale fast enough.
 
 This is why the DynamoDB On-Demand appears to be a better option for
-workloads with Hadoop, Spark, Hive and othe rapplications.
+workloads with Hadoop, Spark, Hive and other applications.
 
 If autoscaling is to be used, we recommend experimenting with the option,
-based on usage information collected from previous days, and and choosing a
+based on usage information collected from previous days, and choosing a
 combination of retry counts and an interval which allow for the clients to cope with
 some throttling, but not to time-out other applications.
 
