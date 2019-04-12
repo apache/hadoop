@@ -251,7 +251,7 @@ public class KeyValueHandler extends Handler {
         // The create container request for an already existing container can
         // arrive in case the ContainerStateMachine reapplies the transaction
         // on datanode restart. Just log a warning msg here.
-        LOG.warn("Container already exists." +
+        LOG.debug("Container already exists." +
             "container Id " + containerID);
       }
     } catch (StorageContainerException ex) {
