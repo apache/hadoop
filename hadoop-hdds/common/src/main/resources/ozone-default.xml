@@ -1052,7 +1052,7 @@
   </property>
   <property>
     <name>ozone.scm.stale.node.interval</name>
-    <value>90s</value>
+    <value>5m</value>
     <tag>OZONE, MANAGEMENT</tag>
     <description>
       The interval for stale node flagging. Please
@@ -1291,7 +1291,7 @@
   </property>
   <property>
     <name>ozone.scm.pipeline.destroy.timeout</name>
-    <value>300s</value>
+    <value>66s</value>
     <tag>OZONE, SCM, PIPELINE</tag>
     <description>
       Once a pipeline is closed, SCM should wait for the above configured time
