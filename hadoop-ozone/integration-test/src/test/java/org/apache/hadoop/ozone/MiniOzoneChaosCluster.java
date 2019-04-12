@@ -136,11 +136,13 @@ public class MiniOzoneChaosCluster extends MiniOzoneClusterImpl {
   }
 
   public void shutdown() {
-    super.shutdown();
     try {
       stopChaos();
       executorService.shutdown();
       executorService.awaitTermination(1, TimeUnit.DAYS);
+      //this should be called after stopChaos to be sure that the
+      //datanode collection is not modified during the shutdown
+      super.shutdown();
     } catch (Exception e) {
       LOG.error("failed to shutdown MiniOzoneChaosCluster", e);
     }
