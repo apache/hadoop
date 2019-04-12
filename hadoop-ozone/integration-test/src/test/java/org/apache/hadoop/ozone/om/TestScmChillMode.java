@@ -342,7 +342,7 @@ public class TestScmChillMode {
     assertFalse(scm.isInChillMode());
 
     // Even on SCM restart, cluster should be out of chill mode immediately.
-    cluster.restartStorageContainerManager();
+    cluster.restartStorageContainerManager(true);
     assertFalse(scm.isInChillMode());
   }
 }

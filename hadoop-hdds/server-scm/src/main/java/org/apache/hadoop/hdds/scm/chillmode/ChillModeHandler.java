@@ -21,11 +21,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.scm.block.BlockManager;
 import org.apache.hadoop.hdds.scm.container.ReplicationManager;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
 import org.apache.hadoop.hdds.scm.chillmode.SCMChillModeManager.ChillModeStatus;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -36,12 +42,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class ChillModeHandler implements EventHandler<ChillModeStatus> {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ChillModeHandler.class);
+
   private final SCMClientProtocolServer scmClientProtocolServer;
   private final BlockManager scmBlockManager;
   private final long waitTime;
   private final AtomicBoolean isInChillMode = new AtomicBoolean(true);
   private final ReplicationManager replicationManager;
 
+  private final PipelineManager scmPipelineManager;
 
   /**
    * ChillModeHandler, to handle the logic once we exit chill mode.
@@ -53,13 +63,15 @@ public class ChillModeHandler implements EventHandler<ChillModeStatus> {
   public ChillModeHandler(Configuration configuration,
       SCMClientProtocolServer clientProtocolServer,
       BlockManager blockManager,
-      ReplicationManager replicationManager) {
+      ReplicationManager replicationManager, PipelineManager pipelineManager) {
     Objects.requireNonNull(configuration, "Configuration cannot be null");
     Objects.requireNonNull(clientProtocolServer, "SCMClientProtocolServer " +
         "object cannot be null");
     Objects.requireNonNull(blockManager, "BlockManager object cannot be null");
     Objects.requireNonNull(replicationManager, "ReplicationManager " +
         "object cannot be null");
+    Objects.requireNonNull(pipelineManager, "PipelineManager object cannot " +
+        "be" + "null");
     this.waitTime = configuration.getTimeDuration(
         HddsConfigKeys.HDDS_SCM_WAIT_TIME_AFTER_CHILL_MODE_EXIT,
         HddsConfigKeys.HDDS_SCM_WAIT_TIME_AFTER_CHILL_MODE_EXIT_DEFAULT,
@@ -67,6 +79,7 @@ public class ChillModeHandler implements EventHandler<ChillModeStatus> {
     this.scmClientProtocolServer = clientProtocolServer;
     this.scmBlockManager = blockManager;
     this.replicationManager = replicationManager;
+    this.scmPipelineManager = pipelineManager;
 
     final boolean chillModeEnabled = configuration.getBoolean(
         HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED,
@@ -74,6 +87,8 @@ public class ChillModeHandler implements EventHandler<ChillModeStatus> {
     isInChillMode.set(chillModeEnabled);
 
   }
+
+
 
   /**
    * Set ChillMode status based on
@@ -101,12 +116,27 @@ public class ChillModeHandler implements EventHandler<ChillModeStatus> {
           Thread.currentThread().interrupt();
         }
         replicationManager.start();
+        cleanupPipelines();
       });
 
       chillModeExitThread.setDaemon(true);
       chillModeExitThread.start();
     }
 
+  }
+
+  private void cleanupPipelines() {
+    List<Pipeline> pipelineList = scmPipelineManager.getPipelines();
+    pipelineList.forEach((pipeline) -> {
+      try {
+        if (pipeline.getPipelineState() == Pipeline.PipelineState.ALLOCATED) {
+          scmPipelineManager.finalizeAndDestroyPipeline(pipeline, false);
+        }
+      } catch (IOException ex) {
+        LOG.error("Finalize and destroy pipeline failed for pipeline "
+            + pipeline.toString(), ex);
+      }
+    });
   }
 
   public boolean getChillModeStatus() {
