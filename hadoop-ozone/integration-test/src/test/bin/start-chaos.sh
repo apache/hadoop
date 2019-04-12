@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-date=`date +"%m-%d-%y-%T"`
+date=`date +"%Y-%m-%d--%H-%M-%S-%Z"`
 fileformat=".MiniOzoneChaosCluster.log"
 heapformat=".dump"
 current="/tmp/"
