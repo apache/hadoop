@@ -540,13 +540,18 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
         Path metaDir = Paths.get(datanodeBaseDir, "meta");
         Path dataDir = Paths.get(datanodeBaseDir, "data", "containers");
         Path ratisDir = Paths.get(datanodeBaseDir, "data", "ratis");
+        Path wrokDir = Paths.get(datanodeBaseDir, "data", "replication",
+            "work");
         Files.createDirectories(metaDir);
         Files.createDirectories(dataDir);
         Files.createDirectories(ratisDir);
+        Files.createDirectories(wrokDir);
         dnConf.set(HddsConfigKeys.OZONE_METADATA_DIRS, metaDir.toString());
         dnConf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dataDir.toString());
         dnConf.set(OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR,
             ratisDir.toString());
+        dnConf.set(OzoneConfigKeys.OZONE_CONTAINER_COPY_WORKDIR,
+            wrokDir.toString());
 
         hddsDatanodes.add(
             HddsDatanodeService.createHddsDatanodeService(args, dnConf));
